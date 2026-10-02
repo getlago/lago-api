@@ -75,6 +75,7 @@ RSpec.describe Fees::ChargeService::MeteredItem do
       expect(metered_item).not_to be_dynamic
       expect(metered_item.billable_metric).to eq(billable_metric)
       expect(metered_item.properties).to eq("amount" => "24")
+      expect(metered_item.pricing_structure.product_catalog).to eq(true)
       travel_to(Time.utc(2026, 10, 2)) do
         expect(metered_item.elapsed_period_ratio).to eq(1.0)
       end

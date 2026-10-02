@@ -1771,7 +1771,8 @@ CREATE TYPE public.payment_payable_payment_status AS ENUM (
 
 CREATE TYPE public.payment_type AS ENUM (
     'provider',
-    'manual'
+    'manual',
+    'x402'
 );
 
 
@@ -15312,6 +15313,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260930161929'),
+('20260929105639'),
 ('20260928140425'),
 ('20260928140424'),
 ('20260928140423'),

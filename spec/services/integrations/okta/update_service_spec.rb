@@ -5,9 +5,12 @@ require "rails_helper"
 RSpec.describe Integrations::Okta::UpdateService do
   include_context "with mocked security logger"
 
-  let(:integration) { create(:okta_integration, organization:) }
+  let(:integration) do
+    create(:okta_integration, organization:, secrets: {client_secret: stored_client_secret}.to_json)
+  end
   let(:organization) { membership.organization }
   let(:membership) { create(:membership) }
+  let(:stored_client_secret) { "stored-client-secret" }
   let(:domain) { "foo.bar" }
   let(:organization_name) { "Footest" }
   let(:host) { "test.com" }
@@ -59,6 +62,41 @@ RSpec.describe Integrations::Okta::UpdateService do
 
           it_behaves_like "produces a security log", "integration.updated" do
             before { service_call }
+          end
+
+          context "without a client secret parameter" do
+            it "keeps the stored client secret" do
+              expect(service_call).to be_success
+              expect(integration.reload.client_secret).to eq(stored_client_secret)
+            end
+          end
+
+          context "with a blank client secret" do
+            let(:update_args) { super().merge(client_secret: "") }
+
+            it "keeps the stored client secret" do
+              expect(service_call).to be_success
+              expect(integration.reload.client_secret).to eq(stored_client_secret)
+            end
+          end
+
+          context "with a masked client secret" do
+            let(:update_args) { super().merge(client_secret: "••••••••…ret") }
+
+            it "keeps the stored client secret" do
+              expect(service_call).to be_success
+              expect(integration.reload.client_secret).to eq(stored_client_secret)
+            end
+          end
+
+          context "with a new client secret" do
+            let(:new_client_secret) { "new-client-secret" }
+            let(:update_args) { super().merge(client_secret: new_client_secret) }
+
+            it "replaces the stored client secret" do
+              expect(service_call).to be_success
+              expect(integration.reload.client_secret).to eq(new_client_secret)
+            end
           end
         end
 

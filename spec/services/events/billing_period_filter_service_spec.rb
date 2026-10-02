@@ -472,11 +472,11 @@ RSpec.describe Events::BillingPeriodFilterService do
 
           before { charge_filter2 }
 
-          it "returns the filters that the events can match" do
+          it "returns the filters that the events can match, leaving out the filter without values" do
             result = filter_result
 
             expect(result).to be_success
-            expect(result.filter_targets.transform_values(&:keys)).to match({charge.target_key => contain_exactly(charge_filter.id, charge_filter2.id)})
+            expect(result.filter_targets.transform_values(&:keys)).to eq({charge.target_key => [charge_filter.id]})
           end
         end
 

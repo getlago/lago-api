@@ -2,6 +2,8 @@
 
 module ChargeModels
   class GraduatedService < ChargeModels::BaseService
+    include AdjacentRanges
+
     protected
 
     def ranges
@@ -15,14 +17,6 @@ module ChargeModels
           break amounts if range[:to_value].nil? || range[:to_value] >= units
         end
       }
-    end
-
-    def adjacent_ranges?
-      return false if ranges.size < 2
-
-      ranges.each_cons(2).all? do |prev, curr|
-        BigDecimal(curr[:from_value].to_s) == BigDecimal((prev[:to_value] || 0).to_s)
-      end
     end
 
     def compute_amount
