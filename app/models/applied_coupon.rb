@@ -21,6 +21,11 @@ class AppliedCoupon < ApplicationRecord
     :forever
   ].freeze
 
+  # Pay-in-advance fixed charge fees have no charges boundaries, only fixed charges ones
+  BILLING_PERIOD_FROM_SQL = "COALESCE(properties->>'charges_from_datetime', properties->>'fixed_charges_from_datetime')::timestamptz"
+  BILLING_PERIOD_TO_SQL = "COALESCE(properties->>'charges_to_datetime', properties->>'fixed_charges_to_datetime')::timestamptz"
+  private_constant :BILLING_PERIOD_FROM_SQL, :BILLING_PERIOD_TO_SQL
+
   enum :status, STATUSES
   enum :frequency, FREQUENCIES
 
@@ -41,6 +46,45 @@ class AppliedCoupon < ApplicationRecord
 
     already_applied_amount = credits.active.sum(&:amount_cents)
     @remaining_amount = amount_cents - already_applied_amount
+  end
+
+  def remaining_amount_in_billing_period(invoice)
+    [amount_cents - amount_used_in_billing_period(invoice), 0].max
+  end
+
+  def used_in_billing_period?(invoice)
+    amount_used_in_billing_period(invoice).positive?
+  end
+
+  private
+
+  def amount_used_in_billing_period(invoice)
+    invoice.invoice_subscriptions.sum do |invoice_subscription|
+      credits.active.where(invoice_id: billing_period_invoice_ids(invoice_subscription, invoice)).sum(:amount_cents)
+    end
+  end
+
+  def billing_period_invoice_ids(invoice_subscription, invoice)
+    from_datetime, to_datetime = billing_period_boundaries(invoice_subscription, invoice)
+
+    Fee
+      .where(
+        organization_id: invoice.organization_id,
+        billing_entity_id: invoice.billing_entity_id,
+        subscription_id: invoice_subscription.subscription_id
+      )
+      .where("#{BILLING_PERIOD_FROM_SQL} >= ?::timestamptz", from_datetime)
+      .where("#{BILLING_PERIOD_TO_SQL} <= ?::timestamptz", to_datetime)
+      .select(:invoice_id)
+  end
+
+  # Pay-in-advance invoice subscriptions do not hold the boundaries of the period their fees belong to
+  def billing_period_boundaries(invoice_subscription, invoice)
+    invoice.fees
+      .where(subscription_id: invoice_subscription.subscription_id)
+      .where("#{BILLING_PERIOD_FROM_SQL} IS NOT NULL")
+      .pick(Arel.sql(BILLING_PERIOD_FROM_SQL), Arel.sql(BILLING_PERIOD_TO_SQL)) ||
+      [invoice_subscription.charges_from_datetime, invoice_subscription.charges_to_datetime]
   end
 end
 
