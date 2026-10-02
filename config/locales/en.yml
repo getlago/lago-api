@@ -73,6 +73,9 @@ en:
         not_allowed_with_proration: not_allowed_with_proration
         not_compatible_with_aggregation_type: not_compatible_with_aggregation_type
         not_compatible_with_pay_in_advance: not_compatible_with_pay_in_advance
+        not_connection_asset: not_connection_asset
+        not_connection_payout_address: not_connection_payout_address
+        not_offered_by_connection: not_offered_by_connection
         not_overridable: not_overridable
         one_of_plan_or_subscription_required: one_of_plan_or_subscription_required
         only_compatible_with_pay_in_advance_and_non_invoiceable: only_compatible_with_pay_in_advance_and_non_invoiceable

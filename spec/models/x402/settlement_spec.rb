@@ -67,7 +67,6 @@ describe X402::Settlement do
 
   describe "validations" do
     it do
-      expect(settlement).to validate_inclusion_of(:network).in_array(X402::Network::NETWORKS.keys)
       expect(settlement).to validate_presence_of(:asset)
       expect(settlement).to validate_presence_of(:payment_digest)
       expect(settlement).to validate_numericality_of(:settled_amount_atomic).only_integer.is_greater_than(0)
@@ -90,6 +89,8 @@ describe X402::Settlement do
       it "reports the network only" do
         expect(settlement.errors.attribute_names).to eq([:network])
       end
+
+      it { expect(settlement.errors.messages[:network]).to eq(["value_is_invalid"]) }
     end
 
     describe "address validation" do
@@ -131,7 +132,69 @@ describe X402::Settlement do
 
       it "stores them verbatim" do
         expect(settlement.errors).to be_empty
-        expect(settlement.payer_address).to eq("2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4")
+        expect(settlement.payer_address).to eq("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
+      end
+    end
+
+    describe "connection validation" do
+      let(:connection) { create(:x402_connection) }
+
+      before { settlement.valid? }
+
+      context "with a connection of another organization" do
+        subject(:settlement) { build(:x402_settlement, x402_connection: connection, organization: other_organization) }
+
+        let(:other_organization) { create(:organization) }
+
+        it { expect(settlement.errors.messages[:x402_connection]).to eq(["must_belong_to_same_organization"]) }
+      end
+
+      context "with a network the connection does not offer" do
+        subject(:settlement) do
+          build(:x402_settlement, x402_connection: connection, network: "eip155:8453", asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913")
+        end
+
+        it { expect(settlement.errors.messages[:network]).to eq(["not_offered_by_connection"]) }
+      end
+
+      context "with a payee other than the connection's payout address" do
+        subject(:settlement) { build(:x402_settlement, x402_connection: connection, payee_address: "0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359") }
+
+        it { expect(settlement.errors.messages[:payee_address]).to eq(["not_connection_payout_address"]) }
+      end
+
+      context "with another token than the connection's asset" do
+        subject(:settlement) { build(:x402_settlement, x402_connection: connection, asset: "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed") }
+
+        it { expect(settlement.errors.messages[:asset]).to eq(["not_connection_asset"]) }
+      end
+
+      context "with the connection's asset in lowercase" do
+        subject(:settlement) { build(:x402_settlement, x402_connection: connection, asset: "0x036cbd53842c5426634e7929541ec2318f3dcf7e") }
+
+        it "stores the checksummed asset" do
+          expect(settlement.errors).to be_empty
+          expect(settlement.asset).to eq("0x036CbD53842c5426634e7929541eC2318f3dCF7e")
+        end
+      end
+    end
+
+    describe "connection changes after creation" do
+      let(:connection) { create(:x402_connection) }
+      let(:settlement) { create(:x402_settlement, x402_connection: connection) }
+
+      before { settlement }
+
+      it "keeps an older row updatable after a payout rotation" do
+        connection.update!(payout_addresses: {"evm" => "0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359"})
+
+        expect(settlement.reload.update(status: "failed")).to be(true)
+      end
+
+      it "keeps an older row updatable after its network is removed" do
+        connection.update!(networks: ["eip155:8453"])
+
+        expect(settlement.reload.update(status: "failed")).to be(true)
       end
     end
   end

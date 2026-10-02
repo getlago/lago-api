@@ -28,6 +28,7 @@ module X402
     validates :settled_amount_cents, numericality: {only_integer: true}
     validates :invoice, presence: true, if: :invoice_payment?
     validate :validate_addresses
+    validate :validate_connection, on: :create
 
     scope :pending_reconciliation, -> { pending.where(reconcile_after: ..Time.current) }
 
@@ -43,6 +44,7 @@ module X402
       if family
         self.payer_address = X402::Network.normalize_address(payer_address, family:)
         self.payee_address = X402::Network.normalize_address(payee_address, family:)
+        self.asset = X402::Network.normalize_address(asset, family:)
       end
     end
 
@@ -51,6 +53,30 @@ module X402
         %i[payer_address payee_address]
           .reject { |attribute| X402::Network.valid_address?(self[attribute], family:) }
           .each { |attribute| errors.add(attribute, :invalid_format) }
+      end
+    end
+
+    def validate_connection
+      if x402_connection && x402_connection.organization_id != organization_id
+        errors.add(:x402_connection, :must_belong_to_same_organization)
+      end
+
+      if x402_connection && family
+        validate_connection_terms
+      end
+    end
+
+    def validate_connection_terms
+      if x402_connection.networks.exclude?(network)
+        errors.add(:network, :not_offered_by_connection)
+      end
+
+      if X402::Network.valid_address?(payee_address, family:) && payee_address != x402_connection.payout_addresses[family.to_s]
+        errors.add(:payee_address, :not_connection_payout_address)
+      end
+
+      if asset.present? && asset != X402::Asset::DEFINITIONS[[x402_connection.asset, network]]&.address
+        errors.add(:asset, :not_connection_asset)
       end
     end
   end

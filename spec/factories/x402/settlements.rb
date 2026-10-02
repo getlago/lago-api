@@ -39,10 +39,11 @@ FactoryBot.define do
     end
 
     trait :solana do
+      x402_connection { association(:x402_connection, :solana) }
       network { "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1" }
       asset { "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU" }
-      payer_address { "2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4" }
-      payee_address { "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" }
+      payer_address { "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" }
+      payee_address { "2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4" }
       transaction_hash { X402::Base58.encode(SecureRandom.random_bytes(64)) }
     end
   end
