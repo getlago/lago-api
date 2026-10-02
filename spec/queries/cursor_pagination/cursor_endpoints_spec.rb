@@ -125,6 +125,26 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
       ->(pagination) { ContractsQuery.call(organization:, pagination:, filters: {status: ["active"]}).contracts }
     end
 
-    it_behaves_like "a keyset-paginated query", table: "contracts", index: "index_contracts_by_cursor"
+    # A single status, the default: `status` comes right after the organization in the index.
+    it_behaves_like "a keyset-paginated query", table: "contracts", index: "index_contracts_by_status_cursor"
+
+    context "when asked for several statuses" do
+      let(:scope) do
+        ContractsQuery.call(organization:, pagination: CursorPagination::Cursor.new(table: "contracts"), filters: {status: %w[active pending]}).contracts
+      end
+
+      before do
+        %w[enable_seqscan enable_bitmapscan enable_sort].each do |setting|
+          ActiveRecord::Base.connection.execute("SET LOCAL #{setting} = off")
+        end
+      end
+
+      # The status index cannot return several statuses in order: the status-free one does.
+      it "serves the page in order from the status-free cursor index" do
+        plan = ActiveRecord::Base.connection.select_rows("EXPLAIN #{scope.to_sql}").flatten.join("\n")
+
+        expect(plan).to include("Index Scan using index_contracts_by_cursor on contracts")
+      end
+    end
   end
 end
