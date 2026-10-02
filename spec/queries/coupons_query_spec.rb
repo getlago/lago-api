@@ -12,7 +12,7 @@ RSpec.describe CouponsQuery do
   let(:search_term) { nil }
   let(:filters) { {} }
   let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let(:organization) { create_default(:organization) }
   let(:coupon_first) { create(:coupon, organization:, status: "active", name: "defgh", code: "11") }
   let(:coupon_second) { create(:coupon, organization:, status: "terminated", name: "abcde", code: "22") }
   let(:coupon_third) { create(:coupon, organization:, status: "active", name: "presuv", code: "33") }
