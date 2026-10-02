@@ -84,7 +84,7 @@ module X402
       end
 
       def history_page(before)
-        page = rpc.call("getSignaturesForAddress", [Base58.encode(authority), signature_query(before)]) || []
+        page = rpc.call("getSignaturesForAddress", [Base58.encode(authority), signature_query(before)])
 
         if page.is_a?(Array) && page.all? { |entry| signature_entry?(entry) }
           page

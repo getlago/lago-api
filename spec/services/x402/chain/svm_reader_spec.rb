@@ -195,6 +195,19 @@ describe X402::Chain::SvmReader do
     end
   end
 
+  [nil, false].each do |answer|
+    context "when a history page is #{answer.inspect}" do
+      before do
+        stub_request(:post, "https://api.devnet.solana.com").with { |request| JSON.parse(request.body)["method"] == "getSignaturesForAddress" }
+          .to_return(status: 200, body: {jsonrpc: "2.0", id: 1, result: answer}.to_json)
+      end
+
+      it "is inconclusive" do
+        expect { reader.settled? }.to raise_error(X402::Chain::InconclusiveError, /getSignaturesForAddress/)
+      end
+    end
+  end
+
   context "when the history holds an entry without a signature" do
     let(:history) { [{"slot" => landed["slot"], "blockTime" => landed["blockTime"]}] }
 
