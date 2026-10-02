@@ -4,6 +4,8 @@ module Fees
   class ChargeService < BaseService
     Result = BaseResult[:fees, :cached_aggregations]
 
+    SNAPSHOT_AGGREGATION_TYPES = %w[sum_agg weighted_sum_agg].freeze
+
     def initialize(
       invoice:,
       metered_item:,
@@ -67,6 +69,8 @@ module Fees
 
           adjusted_fee(charge_filter: fee.charge_filter, grouped_by: fee.grouped_by).update!(fee:)
         end
+
+        persist_recurring_snapshots
       end
 
       result
@@ -152,6 +156,8 @@ module Fees
     end
 
     def compute_fees(selected_metered_item:)
+      # Taken before the events are read, so no event ingested during the aggregation drops out of the snapshots
+      watermark = Time.current
       aggregation_result = aggregator(selected_metered_item:).aggregate(
         options: selected_metered_item.aggregation_options(current_usage: options.current_usage?)
       )
@@ -175,6 +181,7 @@ module Fees
           selected_metered_item,
           breakdowns_by_group
         )
+        collect_recurring_snapshot(aggregation_result.aggregations || [aggregation_result], selected_metered_item, watermark)
       end
 
       charge_fees = fees_from_charge_model_result(
@@ -517,6 +524,44 @@ module Fees
           aggregation.presentation_breakdowns = breakdowns_by_group.fetch(grouped_by, [])
           aggregation.save!
         end
+      end
+    end
+
+    def collect_recurring_snapshot(aggregation_results, selected_metered_item, watermark)
+      return unless snapshot_recurring_units?(selected_metered_item)
+
+      # A missing snapshot falls back to a full scan, a partial one would lose the missing groups
+      if aggregation_results.none? { it.recurring_units.nil? }
+        recurring_snapshots << {
+          charge: selected_metered_item.charge,
+          charge_filter: selected_metered_item.charge_filter,
+          watermark:,
+          values: aggregation_results.map { {grouped_by: it.grouped_by || {}, units: it.recurring_units} }
+        }
+      end
+    end
+
+    def snapshot_recurring_units?(selected_metered_item)
+      return false if options.current_usage?
+      return false if selected_metered_item.billing_segment
+      return false unless billing_context.subscription?
+
+      # A progressive billing invoice stops mid-period, its units do not close the period
+      !invoice&.progressive_billing? &&
+        SNAPSHOT_AGGREGATION_TYPES.include?(selected_metered_item.billable_metric.aggregation_type)
+    end
+
+    def recurring_snapshots
+      @recurring_snapshots ||= []
+    end
+
+    def persist_recurring_snapshots
+      recurring_snapshots.each do |snapshot|
+        RecurringAggregationSnapshots::PersistService.call!(
+          subscription:,
+          to_datetime: metered_item.boundaries.charges_to_datetime,
+          **snapshot
+        )
       end
     end
 
