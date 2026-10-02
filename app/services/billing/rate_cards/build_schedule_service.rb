@@ -46,10 +46,7 @@ module Billing
       end
 
       def schedule_ends_at
-        # Contract card dates are inclusive; the walker expects an exclusive instant.
-        card_end = contract_rate_card.ended_date&.next_day&.in_time_zone(timezone)
-
-        [ends_at, card_end, contract_rate_card.contract.ended_at].compact.min
+        [ends_at, contract_rate_card.contract.ended_at].compact.min
       end
 
       def phases

@@ -9,26 +9,26 @@ module Charges
       PERCENTAGE_CHARGE_AMOUNT_DETAILS_KEYS = %i[units free_units paid_units free_events paid_events fixed_fee_total_amount
         min_max_adjustment_total_amount per_unit_total_amount].freeze
 
-      def initialize(charge:, applied_charge_model:, applied_charge_model_excluding_event:)
-        @charge = charge
+      def initialize(metered_item:, applied_charge_model:, applied_charge_model_excluding_event:)
+        @metered_item = metered_item
         @all_charges_details = applied_charge_model.amount_details
         @charges_details_without_last_event = applied_charge_model_excluding_event.amount_details
       end
 
       def call
-        return {} unless AMOUNT_DETAILS_FOR_SINGLE_EVENT_ENABLED.include? charge.charge_model
+        return {} unless AMOUNT_DETAILS_FOR_SINGLE_EVENT_ENABLED.include? metered_item.charge_model
         return {} if all_charges_details.blank? || charges_details_without_last_event.blank?
 
-        if charge.percentage?
+        if metered_item.percentage?
           calculate_percentage_charge_details
-        elsif charge.graduated_percentage?
+        elsif metered_item.graduated_percentage?
           calculate_graduated_percentage_charge_details
         end
       end
 
       private
 
-      attr_reader :charge, :all_charges_details, :charges_details_without_last_event
+      attr_reader :metered_item, :all_charges_details, :charges_details_without_last_event
 
       def calculate_percentage_charge_details
         fixed_values = {rate: all_charges_details[:rate], fixed_fee_unit_amount: all_charges_details[:fixed_fee_unit_amount]}

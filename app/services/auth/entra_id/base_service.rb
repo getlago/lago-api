@@ -58,7 +58,8 @@ module Auth
         }
 
         token_client = LagoHttpClient::Client.new(
-          "https://#{result.entra_id_integration.host}/#{result.entra_id_integration.tenant_id}/oauth2/v2.0/token"
+          "https://#{result.entra_id_integration.host}/#{result.entra_id_integration.tenant_id}/oauth2/v2.0/token",
+          block_private_addresses: true
         )
         response = token_client.post_url_encoded(params, {})
         result.entra_id_access_token = response["access_token"]

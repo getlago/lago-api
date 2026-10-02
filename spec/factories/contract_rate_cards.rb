@@ -8,7 +8,6 @@ FactoryBot.define do
     billing_anchor_date { Date.current }
     next_billing_at { Time.current }
     effective_date { Date.current }
-    ended_date { nil }
     units { nil }
   end
 end

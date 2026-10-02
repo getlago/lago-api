@@ -46,6 +46,17 @@ RSpec.describe Webhooks::BaseService do
       end
     end
 
+    context "when SIDEKIQ_WEBHOOK is true" do
+      before { ENV["SIDEKIQ_WEBHOOK"] = "true" }
+      after { ENV.delete("SIDEKIQ_WEBHOOK") }
+
+      it "enqueues the http job on the webhook_worker queue" do
+        webhook_service.call
+
+        expect(SendHttpWebhookJob).to have_been_enqueued.on_queue("webhook_worker")
+      end
+    end
+
     context "when organization has 2 webhook endpoints" do
       it "calls 2 webhooks" do
         create(:webhook_endpoint, organization:)

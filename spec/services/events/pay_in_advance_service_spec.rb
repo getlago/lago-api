@@ -40,7 +40,7 @@ RSpec.describe Events::PayInAdvanceService do
     it "enqueues a job to perform the pay_in_advance aggregation" do
       expect { in_advance_service.call }
         .to have_enqueued_job(Fees::CreatePayInAdvanceJob)
-        .with(charge:, event: event.as_json)
+        .with(metered_item: have_attributes(charge:, event: have_attributes(id: event.id)))
     end
 
     context "when charge is invoiceable" do
@@ -72,7 +72,10 @@ RSpec.describe Events::PayInAdvanceService do
       it "enqueues a job to create the pay_in_advance charge invoice" do
         expect { in_advance_service.call }
           .to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
-          .with(charge:, event: event.as_json, timestamp: event.timestamp)
+          .with(
+            metered_item: have_attributes(charge:, event: have_attributes(id: event.id)),
+            timestamp: event.timestamp
+          )
       end
 
       context "when charge is not invoiceable" do
@@ -108,6 +111,45 @@ RSpec.describe Events::PayInAdvanceService do
         it "does not enqueue a job" do
           expect { in_advance_service.call }
             .not_to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
+        end
+      end
+    end
+
+    context "when the event matches a product catalog billing segment" do
+      let(:organization) { create(:organization, feature_flags: [:product_catalog]) }
+      let(:charge) { nil }
+      let(:contract) { create(:contract, organization:, customer:, external_id: external_subscription_id) }
+      let(:product) { create(:product, :metered, organization:, billable_metric:) }
+      let(:rate_card) { create(:rate_card, :advance, organization:, product:, display_on_invoice:) }
+      let(:display_on_invoice) { false }
+
+      before do
+        contract_rate_card = create(:contract_rate_card, organization:, contract:, rate_card:)
+        create(
+          :billing_segment,
+          organization:,
+          customer:,
+          contract:,
+          contract_rate_card:,
+          started_at: timestamp.beginning_of_day,
+          ended_at: timestamp.end_of_day,
+          status: :processing
+        )
+      end
+
+      it "enqueues a job to create the standalone pay in advance fee" do
+        expect do
+          expect { in_advance_service.call }.to have_enqueued_job(Fees::CreatePayInAdvanceJob)
+        end.not_to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
+      end
+
+      context "when the rate card is displayed on the invoice" do
+        let(:display_on_invoice) { true }
+
+        it "enqueues a job to create the pay in advance charge invoice" do
+          expect do
+            expect { in_advance_service.call }.to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
+          end.not_to have_enqueued_job(Fees::CreatePayInAdvanceJob)
         end
       end
     end

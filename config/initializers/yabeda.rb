@@ -44,4 +44,16 @@ Yabeda.configure do
       unit: :seconds,
       buckets: [0.1, 0.25, 0.5, 1, 2, 5]
   end
+
+  # Cursor pagination of the v2 lists. Tags are bounded by the paginated tables and the error
+  # codes; request latency per endpoint is already covered by yabeda-rails.
+  group :api_pagination do
+    counter :total_counts_total,
+      comment: "Totals computed for include_total_count, by whether they are exact or why they are estimated",
+      tags: %i[table outcome]
+
+    counter :errors_total,
+      comment: "Rejected pagination parameters, by error code",
+      tags: %i[code]
+  end
 end

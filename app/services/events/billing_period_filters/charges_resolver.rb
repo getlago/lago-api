@@ -105,7 +105,7 @@ module Events
         @current_recurring_targets ||= plan.charges
           .joins(:billable_metric)
           .where(billable_metrics: {recurring: true})
-          .includes(:filters)
+          .includes(filters: {values: :billable_metric_filter})
           .to_a
       end
     end

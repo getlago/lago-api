@@ -48,7 +48,8 @@ jobs:
       LAGO_DISABLE_SCHEMA_DUMP: true
       LAGO_KAFKA_EVENTS_CHARGED_IN_ADVANCE_TOPIC: events_charged_in_advance
       LAGO_KAFKA_REALTIME_USAGE_TRIGGERS_TOPIC: realtime_usage_triggers
-      ANNOTATE_SKIP_ON_DB_MIGRATE: 1
+      # Keep migrations from updating annotations before the frozen check below.
+      ANNOTATERB_SKIP_ON_DB_TASKS: 1
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

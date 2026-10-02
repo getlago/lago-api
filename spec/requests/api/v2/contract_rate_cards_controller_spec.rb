@@ -83,6 +83,25 @@ RSpec.describe Api::V2::ContractRateCardsController do
 
       expect(response).to have_http_status(:success)
       expect(json[:applied_rate_cards].map { it[:lago_id] }).to eq([contract_rate_card.id])
+      expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
+    end
+
+    context "with an invalid limit and an unknown contract" do
+      subject { get_with_token(organization, "/api/v2/contracts/unknown/applied_rate_cards", {limit: 0}) }
+
+      it "rejects the pagination parameters first" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:code]).to eq("invalid_pagination_limit")
+      end
+    end
+
+    it_behaves_like "a cursor paginated v2 endpoint", collection: :applied_rate_cards, model: ContractRateCard do
+      let(:paginated_path) { "/api/v2/contracts/#{contract.external_id}/applied_rate_cards" }
+      let(:create_paginated_record) { ->(created_at) { create(:contract_rate_card, organization:, contract:, created_at:) } }
+      # Rendered under the same collection name, from another table.
+      let(:other_table_record) { create(:plan_rate_card, organization:) }
     end
   end
 
@@ -119,18 +138,6 @@ RSpec.describe Api::V2::ContractRateCardsController do
       it "returns a not found error" do
         subject
         expect(response).to be_not_found_error("applied_rate_card")
-      end
-    end
-
-    context "when an ended card shares the rate card code" do
-      before { create(:contract_rate_card, organization:, contract:, rate_card:, effective_date: 3.days.ago, ended_date: 1.day.ago) }
-
-      it "resolves to the current open card, not the ended one" do
-        contract_rate_card
-        subject
-
-        expect(response).to have_http_status(:success)
-        expect(json[:applied_rate_card][:lago_id]).to eq(contract_rate_card.id)
       end
     end
   end

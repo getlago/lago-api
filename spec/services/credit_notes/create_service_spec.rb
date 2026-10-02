@@ -26,6 +26,7 @@ RSpec.describe CreditNotes::CreateService do
       organization:,
       customer:,
       currency: "EUR",
+      fees_amount_cents: 20,
       total_amount_cents: 24,
       total_paid_amount_cents: 6,
       payment_status: :succeeded,
@@ -425,7 +426,7 @@ RSpec.describe CreditNotes::CreateService do
     end
 
     context "with a refund, a payment and a succeeded invoice" do
-      let(:payment) { create(:payment, payable: invoice) }
+      let(:payment) { create(:payment, payable: invoice, payable_payment_status: "succeeded") }
 
       before { payment }
 
@@ -442,6 +443,7 @@ RSpec.describe CreditNotes::CreateService do
           create(
             :payment,
             payable: invoice,
+            payable_payment_status: "succeeded",
             payment_provider: gocardless_provider,
             payment_provider_customer: gocardless_customer
           )
@@ -451,6 +453,25 @@ RSpec.describe CreditNotes::CreateService do
           expect { subject }.to have_enqueued_job_after_commit(CreditNotes::Refunds::GocardlessCreateJob).with do |job_credit_note|
             expect(job_credit_note).to eq(credit_note)
           end
+        end
+      end
+
+      context "when the invoice was paid through a payment request" do
+        let(:payment_request) { create(:payment_request, :succeeded, customer:, invoices: [invoice]) }
+        let(:payment) { create(:payment, payable: payment_request, payable_payment_status: "succeeded") }
+
+        it "enqueues a refund job after commit" do
+          expect { subject }.to have_enqueued_job_after_commit(CreditNotes::Refunds::StripeCreateJob).with do |job_credit_note|
+            expect(job_credit_note).to eq(credit_note)
+          end
+        end
+      end
+
+      context "when the invoice payment is not succeeded" do
+        let(:payment) { create(:payment, payable: invoice, payable_payment_status: "failed") }
+
+        it "does not enqueue a refund job" do
+          expect { subject }.not_to have_enqueued_job(CreditNotes::Refunds::StripeCreateJob)
         end
       end
 
@@ -663,6 +684,7 @@ RSpec.describe CreditNotes::CreateService do
           customer:,
           currency: "EUR",
           fees_amount_cents: 1000,
+          taxes_amount_cents: 200,
           total_amount_cents: 1200,
           total_paid_amount_cents: 1200,
           payment_status: :succeeded
@@ -1072,7 +1094,7 @@ RSpec.describe CreditNotes::CreateService do
       context "when payment is pending" do
         let(:invoice) do
           create(:invoice, :credit, organization:, customer:, currency: "EUR",
-            fees_amount_cents: 1000, total_amount_cents: 1200, payment_status: :pending)
+            fees_amount_cents: 1000, taxes_amount_cents: 200, total_amount_cents: 1200, payment_status: :pending)
         end
 
         it "allows offset_amount_cents only" do
@@ -1117,7 +1139,7 @@ RSpec.describe CreditNotes::CreateService do
       context "when payment failed" do
         let(:invoice) do
           create(:invoice, :credit, organization:, customer:, currency: "EUR",
-            fees_amount_cents: 1000, total_amount_cents: 1200, payment_status: :failed)
+            fees_amount_cents: 1000, taxes_amount_cents: 200, total_amount_cents: 1200, payment_status: :failed)
         end
 
         it "allows offset_amount_cents only" do

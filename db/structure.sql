@@ -161,6 +161,7 @@ ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS fk
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_8eeaaf6494;
 ALTER TABLE IF EXISTS ONLY public.applied_pricing_units DROP CONSTRAINT IF EXISTS fk_rails_8e0c3d0c5b;
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_8df9bf2b6c;
+ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_8da4c18005;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alerts DROP CONSTRAINT IF EXISTS fk_rails_8c18828b53;
 ALTER TABLE IF EXISTS ONLY public.fixed_charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_8c09ee2428;
 ALTER TABLE IF EXISTS ONLY public.invoice_metadata DROP CONSTRAINT IF EXISTS fk_rails_8bb5b094c4;
@@ -195,6 +196,7 @@ ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_778
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_775eb0ecd8;
 ALTER TABLE IF EXISTS ONLY public.quote_owners DROP CONSTRAINT IF EXISTS fk_rails_7734750af9;
 ALTER TABLE IF EXISTS ONLY public.commitments DROP CONSTRAINT IF EXISTS fk_rails_76ceb88c74;
+ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_7616c2aca1;
 ALTER TABLE IF EXISTS ONLY public.integrations DROP CONSTRAINT IF EXISTS fk_rails_755d734f25;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_75577c354e;
 ALTER TABLE IF EXISTS ONLY public.fixed_charge_events DROP CONSTRAINT IF EXISTS fk_rails_752665cc51;
@@ -376,6 +378,7 @@ ALTER TABLE IF EXISTS ONLY public.invoice_settlements DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_01a4c0c7db;
 ALTER TABLE IF EXISTS ONLY public.pending_vies_checks DROP CONSTRAINT IF EXISTS fk_rails_019e2289e5;
 ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_00e7a45b0b;
+ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_fees_contract_rate_card_contract;
 DROP TRIGGER IF EXISTS record_deletions_on_invoices_taxes ON public.invoices_taxes;
 DROP TRIGGER IF EXISTS record_deletions_on_invoice_subscriptions ON public.invoice_subscriptions;
 DROP TRIGGER IF EXISTS record_deletions_on_fees_taxes ON public.fees_taxes;
@@ -540,6 +543,7 @@ DROP INDEX IF EXISTS public.index_rate_cards_on_product_filter_id;
 DROP INDEX IF EXISTS public.index_rate_cards_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_rate_cards_on_organization_id;
 DROP INDEX IF EXISTS public.index_rate_cards_on_deleted_at;
+DROP INDEX IF EXISTS public.index_rate_cards_by_cursor;
 DROP INDEX IF EXISTS public.index_rate_card_rates_on_rate_card_id_and_effective_from;
 DROP INDEX IF EXISTS public.index_rate_card_rates_on_rate_card_id_and_code;
 DROP INDEX IF EXISTS public.index_rate_card_rates_on_rate_card_id;
@@ -565,10 +569,12 @@ DROP INDEX IF EXISTS public.index_products_on_deleted_at;
 DROP INDEX IF EXISTS public.index_products_on_charge_id;
 DROP INDEX IF EXISTS public.index_products_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_products_on_add_on_id;
+DROP INDEX IF EXISTS public.index_products_by_cursor;
 DROP INDEX IF EXISTS public.index_product_filters_on_product_id_and_code;
 DROP INDEX IF EXISTS public.index_product_filters_on_product_id;
 DROP INDEX IF EXISTS public.index_product_filters_on_organization_id;
 DROP INDEX IF EXISTS public.index_product_filters_on_deleted_at;
+DROP INDEX IF EXISTS public.index_product_filters_by_cursor;
 DROP INDEX IF EXISTS public.index_product_filter_values_on_product_filter_id;
 DROP INDEX IF EXISTS public.index_product_filter_values_on_organization_id;
 DROP INDEX IF EXISTS public.index_product_filter_values_on_deleted_at;
@@ -576,6 +582,7 @@ DROP INDEX IF EXISTS public.index_product_filter_values_on_billable_metric_filte
 DROP INDEX IF EXISTS public.index_product_categories_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_product_categories_on_organization_id;
 DROP INDEX IF EXISTS public.index_product_categories_on_deleted_at;
+DROP INDEX IF EXISTS public.index_product_categories_by_cursor;
 DROP INDEX IF EXISTS public.index_pricing_units_on_organization_id;
 DROP INDEX IF EXISTS public.index_pricing_units_on_code_and_organization_id;
 DROP INDEX IF EXISTS public.index_pricing_unit_usages_on_pricing_unit_id;
@@ -600,6 +607,7 @@ DROP INDEX IF EXISTS public.index_plan_rate_cards_on_rate_card_id;
 DROP INDEX IF EXISTS public.index_plan_rate_cards_on_organization_id;
 DROP INDEX IF EXISTS public.index_plan_rate_cards_on_deleted_at;
 DROP INDEX IF EXISTS public.index_plan_rate_cards_on_catalog_plan_id_and_rate_card_id;
+DROP INDEX IF EXISTS public.index_plan_rate_cards_by_cursor;
 DROP INDEX IF EXISTS public.index_pending_vies_checks_on_organization_id;
 DROP INDEX IF EXISTS public.index_pending_vies_checks_on_customer_id;
 DROP INDEX IF EXISTS public.index_pending_vies_checks_on_billing_entity_id;
@@ -782,6 +790,8 @@ DROP INDEX IF EXISTS public.index_fees_on_invoice_id;
 DROP INDEX IF EXISTS public.index_fees_on_group_id;
 DROP INDEX IF EXISTS public.index_fees_on_fixed_charge_id;
 DROP INDEX IF EXISTS public.index_fees_on_deleted_at;
+DROP INDEX IF EXISTS public.index_fees_on_contract_rate_card_id;
+DROP INDEX IF EXISTS public.index_fees_on_contract_id;
 DROP INDEX IF EXISTS public.index_fees_on_charge_id_and_invoice_id;
 DROP INDEX IF EXISTS public.index_fees_on_charge_id;
 DROP INDEX IF EXISTS public.index_fees_on_charge_filter_id;
@@ -886,11 +896,16 @@ DROP INDEX IF EXISTS public.index_contracts_on_live_external_id;
 DROP INDEX IF EXISTS public.index_contracts_on_customer_id;
 DROP INDEX IF EXISTS public.index_contracts_on_catalog_plan_id;
 DROP INDEX IF EXISTS public.index_contracts_on_billing_entity_id;
+DROP INDEX IF EXISTS public.index_contracts_by_status_cursor;
+DROP INDEX IF EXISTS public.index_contracts_by_cursor;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_rate_card_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_organization_id;
+DROP INDEX IF EXISTS public.index_contract_rate_cards_on_next_billing_at;
+DROP INDEX IF EXISTS public.index_contract_rate_cards_on_id_and_contract_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_deleted_at;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_contract_id;
-DROP INDEX IF EXISTS public.index_contract_rate_cards_on_billing_clock;
+DROP INDEX IF EXISTS public.index_contract_rate_cards_on_contract_and_rate_card;
+DROP INDEX IF EXISTS public.index_contract_rate_cards_by_cursor;
 DROP INDEX IF EXISTS public.index_commitments_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_commitments_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_commitments_taxes_on_commitment_id_and_tax_id;
@@ -925,6 +940,7 @@ DROP INDEX IF EXISTS public.index_catalog_plans_on_organization_id_code_gin_trgm
 DROP INDEX IF EXISTS public.index_catalog_plans_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_catalog_plans_on_organization_id;
 DROP INDEX IF EXISTS public.index_catalog_plans_on_deleted_at;
+DROP INDEX IF EXISTS public.index_catalog_plans_by_cursor;
 DROP INDEX IF EXISTS public.index_cached_aggregations_on_external_subscription_id;
 DROP INDEX IF EXISTS public.index_cached_aggregations_on_event_transaction_id;
 DROP INDEX IF EXISTS public.index_cached_aggregations_on_charge_id;
@@ -990,7 +1006,6 @@ DROP INDEX IF EXISTS public.index_active_storage_blobs_on_key;
 DROP INDEX IF EXISTS public.index_active_storage_attachments_uniqueness;
 DROP INDEX IF EXISTS public.index_active_storage_attachments_on_blob_id;
 DROP INDEX IF EXISTS public.index_active_metric_filters;
-DROP INDEX IF EXISTS public.index_active_contract_rate_cards_on_contract_and_card;
 DROP INDEX IF EXISTS public.index_active_charge_filters;
 DROP INDEX IF EXISTS public.index_active_charge_filter_values;
 DROP INDEX IF EXISTS public.index_activation_rules_pending_with_expiry;
@@ -1756,7 +1771,8 @@ CREATE TYPE public.payment_payable_payment_status AS ENUM (
 
 CREATE TYPE public.payment_type AS ENUM (
     'provider',
-    'manual'
+    'manual',
+    'x402'
 );
 
 
@@ -2682,12 +2698,10 @@ CREATE TABLE public.contract_rate_cards (
     billing_anchor_date date NOT NULL,
     next_billing_at timestamp without time zone,
     effective_date date NOT NULL,
-    ended_date date,
     units numeric,
     deleted_at timestamp without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    CONSTRAINT contract_rate_cards_effective_before_ended CHECK (((ended_date IS NULL) OR (effective_date <= ended_date)))
+    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -3811,7 +3825,10 @@ CREATE TABLE public.fees (
     original_fee_id uuid,
     rate_card_rate_id uuid,
     rate_override_id uuid,
-    product_filter_id uuid
+    product_filter_id uuid,
+    contract_id uuid,
+    contract_rate_card_id uuid,
+    CONSTRAINT fees_contract_provenance_present_together CHECK (((contract_id IS NULL) = (contract_rate_card_id IS NULL)))
 );
 
 
@@ -8031,13 +8048,6 @@ CREATE INDEX index_active_charge_filters ON public.charge_filters USING btree (c
 
 
 --
--- Name: index_active_contract_rate_cards_on_contract_and_card; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX index_active_contract_rate_cards_on_contract_and_card ON public.contract_rate_cards USING btree (contract_id, rate_card_id) WHERE ((deleted_at IS NULL) AND (ended_date IS NULL));
-
-
---
 -- Name: index_active_metric_filters; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8493,6 +8503,13 @@ CREATE INDEX index_cached_aggregations_on_external_subscription_id ON public.cac
 
 
 --
+-- Name: index_catalog_plans_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_catalog_plans_by_cursor ON public.catalog_plans USING btree (organization_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_catalog_plans_on_deleted_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8731,10 +8748,17 @@ CREATE INDEX index_commitments_taxes_on_tax_id ON public.commitments_taxes USING
 
 
 --
--- Name: index_contract_rate_cards_on_billing_clock; Type: INDEX; Schema: public; Owner: -
+-- Name: index_contract_rate_cards_by_cursor; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX index_contract_rate_cards_on_billing_clock ON public.contract_rate_cards USING btree (next_billing_at, ended_date) WHERE (deleted_at IS NULL);
+CREATE INDEX index_contract_rate_cards_by_cursor ON public.contract_rate_cards USING btree (contract_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_contract_rate_cards_on_contract_and_rate_card; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_contract_rate_cards_on_contract_and_rate_card ON public.contract_rate_cards USING btree (contract_id, rate_card_id) WHERE (deleted_at IS NULL);
 
 
 --
@@ -8752,6 +8776,20 @@ CREATE INDEX index_contract_rate_cards_on_deleted_at ON public.contract_rate_car
 
 
 --
+-- Name: index_contract_rate_cards_on_id_and_contract_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_contract_rate_cards_on_id_and_contract_id ON public.contract_rate_cards USING btree (id, contract_id);
+
+
+--
+-- Name: index_contract_rate_cards_on_next_billing_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_contract_rate_cards_on_next_billing_at ON public.contract_rate_cards USING btree (next_billing_at) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_contract_rate_cards_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8763,6 +8801,20 @@ CREATE INDEX index_contract_rate_cards_on_organization_id ON public.contract_rat
 --
 
 CREATE INDEX index_contract_rate_cards_on_rate_card_id ON public.contract_rate_cards USING btree (rate_card_id);
+
+
+--
+-- Name: index_contracts_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_contracts_by_cursor ON public.contracts USING btree (organization_id, created_at DESC, id DESC);
+
+
+--
+-- Name: index_contracts_by_status_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_contracts_by_status_cursor ON public.contracts USING btree (organization_id, status, created_at DESC, id DESC);
 
 
 --
@@ -9491,6 +9543,20 @@ CREATE INDEX index_fees_on_charge_id ON public.fees USING btree (charge_id);
 --
 
 CREATE INDEX index_fees_on_charge_id_and_invoice_id ON public.fees USING btree (charge_id, invoice_id) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_fees_on_contract_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fees_on_contract_id ON public.fees USING btree (contract_id);
+
+
+--
+-- Name: index_fees_on_contract_rate_card_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fees_on_contract_rate_card_id ON public.fees USING btree (contract_rate_card_id);
 
 
 --
@@ -10768,6 +10834,13 @@ CREATE INDEX index_pending_vies_checks_on_organization_id ON public.pending_vies
 
 
 --
+-- Name: index_plan_rate_cards_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_plan_rate_cards_by_cursor ON public.plan_rate_cards USING btree (catalog_plan_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_plan_rate_cards_on_catalog_plan_id_and_rate_card_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10936,6 +11009,13 @@ CREATE INDEX index_pricing_units_on_organization_id ON public.pricing_units USIN
 
 
 --
+-- Name: index_product_categories_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_product_categories_by_cursor ON public.product_categories USING btree (organization_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_product_categories_on_deleted_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10985,6 +11065,13 @@ CREATE INDEX index_product_filter_values_on_product_filter_id ON public.product_
 
 
 --
+-- Name: index_product_filters_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_product_filters_by_cursor ON public.product_filters USING btree (product_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_product_filters_on_deleted_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11010,6 +11097,13 @@ CREATE INDEX index_product_filters_on_product_id ON public.product_filters USING
 --
 
 CREATE UNIQUE INDEX index_product_filters_on_product_id_and_code ON public.product_filters USING btree (product_id, code) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_products_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_products_by_cursor ON public.products USING btree (organization_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL);
 
 
 --
@@ -11185,6 +11279,13 @@ CREATE UNIQUE INDEX index_rate_card_rates_on_rate_card_id_and_code ON public.rat
 --
 
 CREATE UNIQUE INDEX index_rate_card_rates_on_rate_card_id_and_effective_from ON public.rate_card_rates USING btree (rate_card_id, effective_from) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_rate_cards_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_rate_cards_by_cursor ON public.rate_cards USING btree (organization_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL);
 
 
 --
@@ -12242,6 +12343,14 @@ CREATE CONSTRAINT TRIGGER record_deletions_on_invoice_subscriptions AFTER DELETE
 --
 
 CREATE CONSTRAINT TRIGGER record_deletions_on_invoices_taxes AFTER DELETE ON public.invoices_taxes DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION public.record_deletion();
+
+
+--
+-- Name: fees fk_fees_contract_rate_card_contract; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fees
+    ADD CONSTRAINT fk_fees_contract_rate_card_contract FOREIGN KEY (contract_rate_card_id, contract_id) REFERENCES public.contract_rate_cards(id, contract_id);
 
 
 --
@@ -13693,6 +13802,14 @@ ALTER TABLE ONLY public.integrations
 
 
 --
+-- Name: fees fk_rails_7616c2aca1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fees
+    ADD CONSTRAINT fk_rails_7616c2aca1 FOREIGN KEY (contract_rate_card_id) REFERENCES public.contract_rate_cards(id);
+
+
+--
 -- Name: commitments fk_rails_76ceb88c74; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -13962,6 +14079,14 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 
 ALTER TABLE ONLY public.usage_monitoring_alerts
     ADD CONSTRAINT fk_rails_8c18828b53 FOREIGN KEY (billable_metric_id) REFERENCES public.billable_metrics(id);
+
+
+--
+-- Name: fees fk_rails_8da4c18005; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fees
+    ADD CONSTRAINT fk_rails_8da4c18005 FOREIGN KEY (contract_id) REFERENCES public.contracts(id);
 
 
 --
@@ -15187,11 +15312,25 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261002142357'),
+('20260929105639'),
+('20260928140425'),
+('20260928140424'),
+('20260928140423'),
+('20260928140422'),
+('20260928140421'),
+('20260928140420'),
+('20260928140419'),
+('20260928140418'),
+('20260925110807'),
+('20260925110133'),
 ('20260924133109'),
 ('20260922172006'),
 ('20260922153925'),
 ('20260922110909'),
 ('20260921154906'),
+('20260918125239'),
+('20260918124413'),
 ('20260918103214'),
 ('20260917164501'),
 ('20260917114904'),

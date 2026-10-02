@@ -80,7 +80,10 @@ describe "Pay in advance charges Scenarios (Clickhouse)", clickhouse: true, tran
             ),
             event: Events::CommonFactory.new_instance(source: event)
           )
-          Fees::CreatePayInAdvanceService.call!(metered_item:)
+          Fees::CreatePayInAdvanceService.call!(
+            metered_item:,
+            billing_context: Billing::Context.from(subscription:)
+          )
         end
       end
 

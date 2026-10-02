@@ -23,8 +23,20 @@ module Fees
     unique :until_executed, on_conflict: :log
 
     def perform(charge: nil, metered_item: nil, event: nil, billing_at: nil)
+      resolved_metered_item = pay_in_advance_arguments.metered_item
+      billing_context = pay_in_advance_arguments.billing_context
+
+      unless billing_context
+        skip_missing_billing_context(
+          metered_item: resolved_metered_item,
+          timestamp: billing_at || resolved_metered_item.event.timestamp
+        )
+        return
+      end
+
       result = Fees::CreatePayInAdvanceService.call(
-        metered_item: pay_in_advance_arguments.metered_item,
+        metered_item: resolved_metered_item,
+        billing_context:,
         billing_at:
       )
 
@@ -38,11 +50,10 @@ module Fees
     private
 
     def pay_in_advance_arguments
-      job_arguments = arguments.first
       @pay_in_advance_arguments ||= PayInAdvanceArguments.new(
-        metered_item: job_arguments[:metered_item] || job_arguments["metered_item"],
-        charge: job_arguments[:charge] || job_arguments["charge"],
-        event: job_arguments[:event] || job_arguments["event"]
+        metered_item: arguments.first.with_indifferent_access[:metered_item],
+        charge: arguments.first.with_indifferent_access[:charge],
+        event: arguments.first.with_indifferent_access[:event]
       )
     end
 
@@ -50,6 +61,25 @@ module Fees
       return false unless result.error.is_a?(BaseService::ValidationFailure)
 
       result.error&.messages&.dig(:tax_error).present?
+    end
+
+    def skip_missing_billing_context(metered_item:, timestamp:)
+      event = metered_item.event
+      message = "Fees::CreatePayInAdvanceJob skipped: no billing context for event"
+      context = {
+        organization_id: event.organization_id,
+        external_subscription_id: event.external_subscription_id,
+        event_transaction_id: event.transaction_id,
+        event_timestamp: timestamp.iso8601
+      }.merge(
+        if metered_item.billing_segment
+          {billing_segment_id: metered_item.billing_segment.id}
+        else
+          {charge_id: metered_item.charge.id}
+        end
+      )
+
+      Rails.logger.error("#{message} #{context.map { |key, value| "#{key}=#{value}" }.join(" ")}")
     end
   end
 end

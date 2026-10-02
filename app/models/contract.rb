@@ -35,6 +35,7 @@ class Contract < ApplicationRecord
 
   has_many :applied_rate_cards, class_name: "ContractRateCard"
   has_many :billing_segments
+  has_many :fees
   has_many :invoices, -> { distinct }, through: :billing_segments
 
   enum :status, STATUSES, validate: true
@@ -156,6 +157,8 @@ end
 #
 # Indexes
 #
+#  index_contracts_by_cursor                                    (organization_id,created_at DESC,id DESC)
+#  index_contracts_by_status_cursor                             (organization_id,status,created_at DESC,id DESC)
 #  index_contracts_on_billing_entity_id                         (billing_entity_id)
 #  index_contracts_on_catalog_plan_id                           (catalog_plan_id)
 #  index_contracts_on_customer_id                               (customer_id)

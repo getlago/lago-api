@@ -19,7 +19,7 @@ RSpec.describe Events::Stores::UsageBucketStore do
     Events::Stores::PostgresStore.new(code: billable_metric.code, billing_context:, boundaries:)
   end
 
-  let(:aggregation_type) { "sum_agg" }
+  let(:aggregation_type) { "sum" }
   let(:totals) do
     Events::Stores::UsageBucketSet::Totals.new(
       aggregation_type:, units: BigDecimal("42.5"), events_count: 7, last_event_at: Time.current,
@@ -92,7 +92,7 @@ RSpec.describe Events::Stores::UsageBucketStore do
   end
 
   describe "#max" do
-    let(:aggregation_type) { "max_agg" }
+    let(:aggregation_type) { "max" }
 
     it "answers the units of the buckets" do
       expect(store.max).to eq(
@@ -102,7 +102,7 @@ RSpec.describe Events::Stores::UsageBucketStore do
   end
 
   describe "#last" do
-    let(:aggregation_type) { "latest_agg" }
+    let(:aggregation_type) { "latest" }
 
     it "answers the units of the buckets, counting every event of the window alongside" do
       expect(store.last).to eq(
@@ -164,7 +164,7 @@ RSpec.describe Events::Stores::UsageBucketStore do
   end
 
   describe "#grouped_max" do
-    let(:aggregation_type) { "max_agg" }
+    let(:aggregation_type) { "max" }
     let(:grouped_totals) do
       {[charge.id, ""] => {{"region" => "us"} => totals}}
     end
@@ -191,7 +191,7 @@ RSpec.describe Events::Stores::UsageBucketStore do
   end
 
   describe "#grouped_last" do
-    let(:aggregation_type) { "latest_agg" }
+    let(:aggregation_type) { "latest" }
     let(:grouped_totals) do
       {[charge.id, ""] => {{"region" => "us"} => totals}}
     end

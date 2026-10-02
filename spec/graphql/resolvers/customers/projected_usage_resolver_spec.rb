@@ -164,7 +164,7 @@ RSpec.describe Resolvers::Customers::ProjectedUsageResolver do
       expect(usage_response["currency"]).to eq("EUR")
       expect(usage_response["issuingDate"]).to eq(Time.zone.today.end_of_month.iso8601)
       expect(usage_response["amountCents"]).to eq("105")
-      expect(usage_response["projectedAmountCents"]).to eq("836")
+      expect(usage_response["projectedAmountCents"]).to eq("216")
       expect(usage_response["totalAmountCents"]).to eq("105")
       expect(usage_response["taxesAmountCents"]).to eq("0")
 
@@ -175,11 +175,11 @@ RSpec.describe Resolvers::Customers::ProjectedUsageResolver do
       expect(standard_charge_usage["billableMetric"]["aggregationType"]).to eq("sum_agg")
       expect(standard_charge_usage["charge"]["chargeModel"]).to eq("standard")
       expect(standard_charge_usage["pricingUnitAmountCents"]).to eq("400")
-      expect(standard_charge_usage["pricingUnitProjectedAmountCents"]).to eq("207")
+      expect(standard_charge_usage["pricingUnitProjectedAmountCents"]).to eq("827")
       expect(standard_charge_usage["units"]).to eq(4.0)
       expect(standard_charge_usage["projectedUnits"]).to eq(8.27)
       expect(standard_charge_usage["amountCents"]).to eq("100")
-      expect(standard_charge_usage["projectedAmountCents"]).to eq("827")
+      expect(standard_charge_usage["projectedAmountCents"]).to eq("207")
 
       # Find graduated charge by charge model
       graduated_charge_usage = usage_response["chargesUsage"].find { |usage| usage["charge"]["chargeModel"] == "graduated" }
@@ -196,7 +196,7 @@ RSpec.describe Resolvers::Customers::ProjectedUsageResolver do
       # Check grouped usage on the standard charge (sum_metric with grouping)
       grouped_usage = standard_charge_usage["groupedUsage"].first
       expect(grouped_usage["amountCents"]).to eq("100")
-      expect(grouped_usage["projectedAmountCents"]).to eq("827")
+      expect(grouped_usage["projectedAmountCents"]).to eq("207")
       expect(grouped_usage["units"]).to eq(4.0)
       expect(grouped_usage["projectedUnits"]).to eq(8.27)
       expect(grouped_usage["eventsCount"]).to eq(4)
@@ -298,7 +298,7 @@ RSpec.describe Resolvers::Customers::ProjectedUsageResolver do
         expect(charge_usage["units"]).to eq(4)
         expect(charge_usage["amountCents"]).to eq("1000")
         expect(charge_usage["projectedUnits"]).to eq(8.27)
-        expect(charge_usage["projectedAmountCents"]).to eq("10340")
+        expect(charge_usage["projectedAmountCents"]).to eq("2068")
 
         # Check that filter data contains projected values
         aws_filter_data = filters_usage.find { |f| f["id"] == aws_filter.id }

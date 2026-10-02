@@ -5,11 +5,11 @@ module Contracts
   # and changing its plan re-materialises its rate cards onto the contract.
   # Once active, its pricing and schedule are signed: only the administrative
   # fields in EDITABLE_WHILE_ACTIVE can change, and a locked field is accepted
-  # only when it carries the value already stored. The end date can come
-  # forward but not move later. Finished contracts are read-only. No billing
-  # side-effects — lifecycle transitions live in their own services, and
-  # bringing the end date in does not reschedule card clocks: that billing
-  # cutoff belongs to the billing engine, as for Contracts::TerminateService.
+  # only when it carries the value already stored. Finished contracts are
+  # read-only. No billing side-effects — lifecycle transitions live in their
+  # own services, and moving the end date does not reschedule card clocks: a
+  # clock that already stopped at the previous end stays stopped, and nothing
+  # restarts it yet.
   class UpdateService < BaseService
     include CustomerTimezone
     include SettingsResolvable
@@ -57,10 +57,6 @@ module Contracts
 
       if contract.active? && locked_field_changed?
         return result.single_validation_failure!(field: :contract, error_code: "contract_locked")
-      end
-
-      if contract.active? && extends_end_date?
-        return result.single_validation_failure!(field: :ended_at, error_code: "cannot_be_extended")
       end
 
       # A window that already closed would never terminate — reject it. A
@@ -132,15 +128,6 @@ module Contracts
       else
         true
       end
-    end
-
-    # Card clocks stop at the current end date and nothing restarts them yet,
-    # so moving an active contract's end later, or clearing it, would silently
-    # stop its billing.
-    def extends_end_date?
-      return false if !params.key?(:ended_at) || contract.ended_at.nil?
-
-      params[:ended_at].nil? || ended_at_in_customer_timezone.to_i > contract.ended_at.to_i
     end
 
     # The contract keeps its plan even once discarded, so a resend of the

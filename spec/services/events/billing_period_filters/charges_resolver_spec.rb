@@ -54,6 +54,27 @@ RSpec.describe Events::BillingPeriodFilters::ChargesResolver do
       expect(target_charges.map(&:object_id).uniq.size).to eq(2)
     end
 
+    context "with filters on a recurring charge" do
+      let(:charge_filters) { create_list(:charge_filter, 3, charge:) }
+      let(:filter_value_queries) { [] }
+      let(:record_query) do
+        ->(*, payload) { filter_value_queries << payload[:sql] if payload[:sql].include?(%("charge_filter_values")) }
+      end
+
+      before do
+        charge_filters.each do |filter|
+          create(:charge_filter_value, charge_filter: filter, billable_metric_filter:, values: ["eu"])
+        end
+      end
+
+      it "loads the filter values in a single query" do
+        ActiveSupport::Notifications.subscribed(record_query, "sql.active_record") { filter_targets }
+
+        expect(filter_targets[charge.target_key].keys).to match_array([*charge_filters.map(&:id), nil])
+        expect(filter_value_queries.size).to eq(1)
+      end
+    end
+
     context "with a charge served from the usage buckets" do
       let(:resolver) { described_class.new(subscription:, boundaries:, precomputed_filters:) }
       let(:precomputed_filters) { {charge => [nil, charge_filter.id]} }

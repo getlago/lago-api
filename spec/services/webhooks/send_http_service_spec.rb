@@ -48,7 +48,13 @@ RSpec.describe Webhooks::SendHttpService do
 
     before do
       allow(LagoHttpClient::Client).to receive(:new)
-        .with(webhook.webhook_endpoint.webhook_url, read_timeout: expected_timeout_seconds, write_timeout: expected_timeout_seconds, open_timeout: expected_timeout_seconds)
+        .with(
+          webhook.webhook_endpoint.webhook_url,
+          read_timeout: expected_timeout_seconds,
+          write_timeout: expected_timeout_seconds,
+          open_timeout: expected_timeout_seconds,
+          block_private_addresses: true
+        )
         .and_return(lago_client)
       allow(lago_client).to receive(:post_with_response).and_raise(
         LagoHttpClient::HttpError.new(403, error_body.to_json, "")
@@ -70,7 +76,13 @@ RSpec.describe Webhooks::SendHttpService do
         service.call
 
         expect(LagoHttpClient::Client).to have_received(:new)
-          .with(webhook.webhook_endpoint.webhook_url, read_timeout: expected_timeout_seconds, write_timeout: expected_timeout_seconds, open_timeout: expected_timeout_seconds)
+          .with(
+            webhook.webhook_endpoint.webhook_url,
+            read_timeout: expected_timeout_seconds,
+            write_timeout: expected_timeout_seconds,
+            open_timeout: expected_timeout_seconds,
+            block_private_addresses: true
+          )
       end
     end
 
@@ -107,6 +119,75 @@ RSpec.describe Webhooks::SendHttpService do
           expect(SendHttpWebhookJob).not_to have_been_enqueued
         end
       end
+    end
+  end
+
+  context "when the response body is larger than the stored limit" do
+    before do
+      stub_const("#{described_class}::MAX_STORED_RESPONSE_BYTES", 8)
+      WebMock.stub_request(:post, "https://wh.test.com").to_return(status: 200, body: "0123456789")
+    end
+
+    it "stores a truncated response" do
+      service.call
+
+      expect(webhook.response).to eq "01234567"
+    end
+
+    context "when the limit cuts a multibyte character" do
+      before do
+        WebMock.stub_request(:post, "https://wh.test.com").to_return(status: 200, body: "0123456é".b)
+      end
+
+      it "drops the partial character" do
+        service.call
+
+        expect(webhook).to be_succeeded
+        expect(webhook.response).to eq "0123456"
+      end
+    end
+  end
+
+  context "when the response body is not valid UTF-8" do
+    before do
+      WebMock.stub_request(:post, "https://wh.test.com").to_return(status: 200, body: "ok\xFF".b)
+    end
+
+    it "stores the valid part of the response" do
+      service.call
+
+      expect(webhook).to be_succeeded
+      expect(webhook.response).to eq "ok"
+    end
+  end
+
+  context "when the connection fails" do
+    before do
+      WebMock.stub_request(:post, "https://wh.test.com").to_raise(Errno::ECONNREFUSED)
+    end
+
+    it "stores a generic message" do
+      service.call
+
+      expect(webhook).to be_retrying
+      expect(webhook.response).to eq "Connection failed"
+    end
+  end
+
+  context "when the endpoint resolves to a private address" do
+    before do
+      webhook
+      stub_const("ENV", ENV.to_h.merge("LAGO_WEBHOOK_ALLOW_PRIVATE_URLS" => "false"))
+      allow(Addrinfo).to receive(:getaddrinfo).and_return([Addrinfo.tcp("169.254.169.254", 0)])
+      WebMock.stub_request(:post, "https://wh.test.com")
+    end
+
+    it "does not send the webhook" do
+      service.call
+
+      expect(WebMock).not_to have_requested(:post, "https://wh.test.com")
+      expect(webhook).to be_retrying
+      expect(webhook.response).to eq "Destination address is not allowed"
     end
   end
 
