@@ -82,6 +82,36 @@ RSpec.describe Fees::AdvanceChargesService do
           expect(eligible_fee.reload.invoice_id).to be_nil
         end
       end
+
+      context "with mixed subscription and contract contexts" do
+        let(:contract) { create(:contract, organization:, customer:) }
+        let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
+        let(:billing_contexts) { [Billing::Context.from(contract:), Billing::Context.from(subscription:)] }
+        let!(:fee_without_subscription) do
+          create_charge_fee(subscription: nil, contract:, contract_rate_card:)
+        end
+
+        it "does not attach fees with a null subscription identity" do
+          expect(result).to be_success
+          expect(invoice.fees.reload).to match_array([eligible_fee, fee_without_charges_to_datetime])
+          expect(fee_without_subscription.reload.invoice_id).to be_nil
+        end
+      end
+
+      context "with a pending successor subscription" do
+        let(:successor) { create(:subscription, organization:, customer:, plan:, previous_subscription: subscription, status: :pending) }
+
+        before do
+          successor
+        end
+
+        it "includes the current-period fees during the plan transition" do
+          expect(result).to be_success
+          expect(invoice.fees.reload).to match_array([
+            eligible_fee, fee_without_charges_to_datetime, excluded_fees[:charges_to_datetime]
+          ])
+        end
+      end
     end
 
     context "with product fees" do
@@ -198,6 +228,21 @@ RSpec.describe Fees::AdvanceChargesService do
           succeeded_at: false,
           charges_to_datetime: false
         )
+      end
+
+      context "when the contract is terminated" do
+        let(:contract) { create(:contract, organization:, customer:, status: :terminated, terminated_at: billing_at) }
+
+        it "attaches paid fees without restricting their charge-period end" do
+          expect(result).to be_success
+          expect(invoice.fees.reload).to match_array([
+            eligible_fee,
+            fee_without_charges_to_datetime,
+            *fees_with_ignored_pricing_attributes,
+            excluded_fees[:charges_to_datetime]
+          ])
+          expect(result.invoiced_metered_items).to eq([metered_item])
+        end
       end
 
       context "when the rate card does not regroup paid fees" do

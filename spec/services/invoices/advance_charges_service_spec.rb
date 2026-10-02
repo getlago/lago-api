@@ -4,10 +4,10 @@ require "rails_helper"
 
 RSpec.describe Invoices::AdvanceChargesService do
   subject(:invoice_service) do
-    billing_contexts = subscriptions.map { |subscription| Billing::Context.from(subscription:) }
     described_class.new(billing_contexts:, billing_at:)
   end
 
+  let(:billing_contexts) { subscriptions.map { |subscription| Billing::Context.from(subscription:) } }
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:tax_rate) { 89 }
@@ -83,6 +83,32 @@ RSpec.describe Invoices::AdvanceChargesService do
         )
 
         succeeded_fees.each { |fee| Fees::ApplyTaxesService.call(fee:) }
+      end
+
+      context "with only a contract context sharing the subscription external ID" do
+        subject(:result) { invoice_service.call }
+
+        let(:contract) { create(:contract, organization:, customer:, external_id: subscription.external_id) }
+        let(:billing_contexts) { [Billing::Context.from(contract:)] }
+
+        it "does not invoice subscription fees" do
+          expect { result }.not_to change(Invoice, :count)
+          expect(result).to be_success
+          expect(result.invoice).to be_nil
+        end
+      end
+
+      context "with a contract before the subscription context" do
+        let(:contract) { create(:contract) }
+        let(:billing_contexts) { [Billing::Context.from(contract:), Billing::Context.from(subscription:)] }
+
+        it "uses the subscription customer and currency" do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(result.invoice).to have_attributes(customer:, currency: subscription.plan.amount_currency)
+          expect(result.invoice.fees.count).to eq(3)
+        end
       end
 
       it "creates invoices" do

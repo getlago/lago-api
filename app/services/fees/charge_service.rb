@@ -591,6 +591,10 @@ module Fees
         raise ArgumentError, "metered_item must be a Fees::ChargeService::MeteredItem"
       end
 
+      if billing_context.contract? && !metered_item.billing_segment
+        raise ArgumentError, "contract billing contexts require a segment-backed metered item"
+      end
+
       unless options.is_a?(Options)
         raise ArgumentError, "options must be a Fees::ChargeService::Options"
       end

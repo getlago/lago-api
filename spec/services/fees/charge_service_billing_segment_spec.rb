@@ -90,6 +90,20 @@ RSpec.describe Fees::ChargeService do
     end
   end
 
+  context "with a charge-backed item and a contract context" do
+    let(:charge) { build_stubbed(:standard_charge, billable_metric:) }
+    let(:metered_item) do
+      described_class::MeteredItem.from_charge(
+        charge:,
+        boundaries: described_class::MeteredItem.from_billing_segment(billing_segment:).boundaries
+      )
+    end
+
+    it "rejects the source before querying subscription fees" do
+      expect { result }.to raise_error(ArgumentError, "contract billing contexts require a segment-backed metered item")
+    end
+  end
+
   context "when aggregation fails" do
     before do
       aggregator = instance_double(BillableMetrics::Aggregations::CountService)

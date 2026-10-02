@@ -35,7 +35,7 @@ module Billing
     def subscription_id
       return record.id if subscription?
 
-      raise NotImplementedError, "contract-backed billing contexts do not have a subscription id"
+      nil
     end
 
     def contract_id
@@ -89,51 +89,39 @@ module Billing
     def invoice_subscriptions
       return record.invoice_subscriptions if subscription?
 
-      raise_contract_context_not_supported(:invoice_subscriptions)
+      []
     end
 
     def previous_subscription
       return record.previous_subscription if subscription?
 
-      raise_contract_context_not_supported(:previous_subscription)
+      nil
     end
 
     def previous_subscription_id
       return record.previous_subscription_id if subscription?
 
-      raise_contract_context_not_supported(:previous_subscription_id)
+      nil
     end
 
     def previous_subscription_id?
-      return previous_subscription_id.present? if subscription?
-
-      raise_contract_context_not_supported(:previous_subscription_id?)
-    end
-
-    def next_subscription
-      return record.next_subscription if subscription?
-
-      raise_contract_context_not_supported(:next_subscription)
+      previous_subscription_id.present?
     end
 
     def upgraded?
       return record.upgraded? if subscription?
 
-      raise_contract_context_not_supported(:upgraded?)
+      false
     end
 
     def downgraded?
       return record.downgraded? if subscription?
 
-      raise_contract_context_not_supported(:downgraded?)
+      false
     end
 
     private
 
     attr_reader :record
-
-    def raise_contract_context_not_supported(method_name)
-      raise NotImplementedError, "contract-backed billing contexts do not have #{method_name} yet"
-    end
   end
 end

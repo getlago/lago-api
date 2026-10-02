@@ -41,6 +41,52 @@ RSpec.describe Billing::Context do
       expect(context.anniversary?).to eq(subscription.anniversary?)
       expect(context.active?).to eq(subscription.active?)
       expect(context).not_to respond_to(:plan)
+      expect(context).not_to respond_to(:next_subscription)
+    end
+
+    it "preserves subscription relationships" do
+      expect(context.invoice_subscriptions.proxy_association.owner).to eq(subscription)
+      expect(context.previous_subscription).to be_nil
+      expect(context.previous_subscription_id).to be_nil
+      expect(context.previous_subscription_id?).to be(false)
+      expect(context.upgraded?).to be(false)
+      expect(context.downgraded?).to be(false)
+    end
+
+    context "with a predecessor subscription" do
+      let(:predecessor) { build_stubbed(:subscription) }
+      let(:subscription) { build_stubbed(:subscription, previous_subscription: predecessor) }
+
+      it "preserves predecessor identity" do
+        expect(context.previous_subscription).to eq(predecessor)
+        expect(context.previous_subscription_id).to eq(predecessor.id)
+        expect(context.previous_subscription_id?).to be(true)
+      end
+    end
+
+    context "with a successor subscription" do
+      let(:plan) { build_stubbed(:plan, amount_cents: 1000) }
+      let(:subscription) { build_stubbed(:subscription, plan:) }
+      let(:successor_plan) { build_stubbed(:plan, amount_cents: 2000) }
+      let(:successor) { build_stubbed(:subscription, plan: successor_plan) }
+
+      before do
+        allow(subscription).to receive(:next_subscription).and_return(successor)
+      end
+
+      it "preserves upgrade classification" do
+        expect(context.upgraded?).to be(true)
+        expect(context.downgraded?).to be(false)
+      end
+
+      context "with a cheaper successor plan" do
+        let(:successor_plan) { build_stubbed(:plan, amount_cents: 500) }
+
+        it "preserves downgrade classification" do
+          expect(context.upgraded?).to be(false)
+          expect(context.downgraded?).to be(true)
+        end
+      end
     end
 
     context "when the subscription has a billing entity" do
@@ -90,8 +136,9 @@ RSpec.describe Billing::Context do
     end
 
     it "prevents using contract identity in subscription queries" do
-      expect { context.subscription_id }
-        .to raise_error(NotImplementedError, "contract-backed billing contexts do not have a subscription id")
+      expect(context.subscription_id).to be_nil
+      expect(context.plan_id).to be_nil
+      expect(context).not_to respond_to(:next_subscription)
     end
 
     context "with a customer timezone" do
@@ -117,19 +164,13 @@ RSpec.describe Billing::Context do
       end
     end
 
-    it "rejects subscription-only lifecycle methods" do
-      %i[
-        invoice_subscriptions
-        previous_subscription
-        previous_subscription_id
-        previous_subscription_id?
-        next_subscription
-        upgraded?
-        downgraded?
-      ].each do |method_name|
-        expect { context.public_send(method_name) }
-          .to raise_error(NotImplementedError, "contract-backed billing contexts do not have #{method_name} yet")
-      end
+    it "returns neutral subscription relationships and lifecycle predicates" do
+      expect(context.invoice_subscriptions).to eq([])
+      expect(context.previous_subscription).to be_nil
+      expect(context.previous_subscription_id).to be_nil
+      expect(context.previous_subscription_id?).to be(false)
+      expect(context.upgraded?).to be(false)
+      expect(context.downgraded?).to be(false)
     end
   end
 end

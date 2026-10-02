@@ -45,7 +45,7 @@ module Fees
     end
 
     def charge_fees
-      Fee.where(subscription_id: billing_contexts.map(&:subscription_id))
+      Fee.where(subscription_id: billing_contexts.filter_map(&:subscription_id))
         .where(invoice: nil, payment_status: :succeeded)
         .where("succeeded_at <= ?", billing_at)
         .then { |relation| filter_charges_to_datetime(relation) }
@@ -70,10 +70,9 @@ module Fees
     end
 
     def apply_charges_to_datetime_condition?
-      return true if metered_items.any?
-
       billing_contexts.all? do |billing_context|
-        billing_context.active? && billing_context.next_subscription.nil? && !billing_context.terminated?
+        billing_context.active? && !billing_context.terminated? &&
+          (!billing_context.subscription? || billing_context.subscription.next_subscription.nil?)
       end
     end
 

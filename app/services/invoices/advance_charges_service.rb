@@ -5,11 +5,11 @@ module Invoices
     Result = BaseResult[:invoice]
 
     def initialize(billing_contexts:, billing_at:)
-      @billing_contexts = billing_contexts
+      @billing_contexts = Array(billing_contexts).select(&:subscription?)
       @billing_at = billing_at
 
-      @customer = billing_contexts&.first&.customer
-      @currency = billing_contexts&.first&.currency
+      @customer = @billing_contexts.first&.customer
+      @currency = @billing_contexts.first&.currency
 
       super
     end
@@ -42,11 +42,12 @@ module Invoices
 
     # Apply the charges_to_datetime upper-bound only for regular periodic billing
     # (i.e., no upgrade/downgrade/termination context). We consider it regular when
-    # every source subscription is active AND has no pending next subscription AND
-    # is not being terminated.
+    # every billing context is active and not terminated; subscriptions must also
+    # have no next subscription.
     def apply_charges_to_datetime_condition?
       billing_contexts.all? do |billing_context|
-        billing_context.active? && billing_context.next_subscription.nil? && !billing_context.terminated?
+        billing_context.active? && !billing_context.terminated? &&
+          (!billing_context.subscription? || billing_context.subscription.next_subscription.nil?)
       end
     end
 
