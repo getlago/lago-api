@@ -741,6 +741,14 @@ RSpec.describe Customer do
       expect(customer.applicable_invoice_grace_period).to eq(3)
     end
 
+    context "when another billing entity is provided" do
+      let(:other_billing_entity) { build(:billing_entity, invoice_grace_period: 7) }
+
+      it "keeps the customer invoice_grace_period" do
+        expect(customer.applicable_invoice_grace_period(billing_entity: other_billing_entity)).to eq(3)
+      end
+    end
+
     context "when customer does not have an invoice grace period" do
       let(:billing_entity_invoice_grace_period) { 5 }
 
@@ -751,6 +759,14 @@ RSpec.describe Customer do
 
       it "returns the billing entity invoice_grace_period" do
         expect(customer.applicable_invoice_grace_period).to eq(5)
+      end
+
+      context "when another billing entity is provided" do
+        let(:other_billing_entity) { build(:billing_entity, invoice_grace_period: 7) }
+
+        it "returns the provided billing entity invoice_grace_period" do
+          expect(customer.applicable_invoice_grace_period(billing_entity: other_billing_entity)).to eq(7)
+        end
       end
 
       context "when billing entity invoice_grace_period is nil" do
