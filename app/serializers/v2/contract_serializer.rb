@@ -6,8 +6,19 @@ module V2
   # billing anchor. There are no plan-interval fields — pricing lives on the
   # applied rate cards.
   class ContractSerializer < ModelSerializer
+    EXPANDABLE_RELATIONS = {
+      # One card per rate card the contract prices.
+      applied_rate_cards: nil,
+      plan: :catalog_plan,
+      customer: {customer: :billing_entity}
+    }.freeze
+
+    def self.expandable_relations
+      EXPANDABLE_RELATIONS
+    end
+
     def serialize
-      payload = {
+      {
         lago_id: model.id,
         external_id: model.external_id,
         lago_customer_id: model.customer_id,
@@ -23,33 +34,26 @@ module V2
         canceled_at: model.canceled_at&.iso8601,
         created_at: model.created_at.iso8601,
         updated_at: model.updated_at.iso8601,
-        applied_rate_cards_count: applied_rate_cards_count
+        **expanded_payload
       }
-
-      payload[:applied_rate_cards] = applied_rate_cards if include?(:applied_rate_cards)
-
-      payload
     end
 
     private
 
-    # The index passes one grouped count for the whole page; show falls back
-    # to a count on the single record.
-    def applied_rate_cards_count
-      counts = options[:applied_rate_cards_counts]
-      return counts.fetch(model.id, 0) if counts
-
-      model.applied_rate_cards.count
+    # In the order of /applied_rate_cards.
+    def expand_applied_rate_cards
+      model.applied_rate_cards.preload(:rate_card, :contract).order(::CursorPagination::DEFAULT_SORT).map do |applied_rate_card|
+        ::V2::ContractAppliedRateCardSerializer.new(applied_rate_card, includes: nested_includes).serialize
+      end
     end
 
-    # In the order of /applied_rate_cards.
-    def applied_rate_cards
-      ::CollectionSerializer.new(
-        model.applied_rate_cards.includes(:rate_card, :contract).order(::CursorPagination::DEFAULT_SORT),
-        ::V2::ContractAppliedRateCardSerializer,
-        collection_name: "applied_rate_cards",
-        includes: nested_includes
-      ).serialize[:applied_rate_cards]
+    # Both associations read with_discarded, so that a discarded plan or customer carries its deleted_at.
+    def expand_plan
+      model.catalog_plan&.then { ::V2::CatalogPlanSerializer.new(it, includes: nested_includes).serialize }
+    end
+
+    def expand_customer
+      ::V2::CustomerSerializer.new(model.customer, includes: nested_includes).serialize
     end
   end
 end
