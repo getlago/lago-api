@@ -1,0 +1,284 @@
+# The self-extension surface for the golden billing matrix.
+#
+# Each area declares its axes, and each axis's domain is stated as the real code constant it comes
+# from (never a hand-copied value list), so a new enum value shows up tomorrow as an uncovered cell
+# rather than being silently missed.
+#
+#   domain: <constant + file, and what it is derived from>  — grows by itself
+#   values: [...]                                            — vocabulary Lago does not enumerate
+#
+# `services` are the path globs the area owns, used to map a code change to the areas it affects.
+# `legality` documents cell combinations that are impossible, and why.
+---
+interactions:
+  purpose: >-
+    Coverage of Invoices::CalculateFeesService's fixed application order
+    (app/services/invoices/calculate_fees_service.rb) — pairs of features that interact, stacks of
+    three-or-more reducers landing on one invoice, and the same feature appearing twice.
+  axes:
+    feature_a:
+      domain: >-
+        GoldenLegality.billing_features (billing_matrix/reference/legality.rb) —
+        BILLING_FEATURE_PRODUCERS (subscription_fee, charge, fixed_charge, advance_charge,
+        commitment_true_up, min_amount_true_up) plus BILLING_FEATURE_REDUCERS (progressive_billing,
+        coupon, tax, credit_note, prepaid_credit), named in CalculateFeesService's actual order.
+    feature_b:
+      domain: same domain as feature_a
+    stack:
+      domain: >-
+        GoldenLegality.reducer_stacks (legality.rb) — every combination of 3 or more of
+        BILLING_FEATURE_REDUCERS, joined in pipeline order.
+    arrangement:
+      values: [equal, unequal, capped]
+    observed_via:
+      values: [invoice, preview, regenerated]
+    premium:
+      values: [true, false]
+      requires:
+        false: {schema: setup.properties.premium}
+  legality: >-
+    `premium: false` is legal only with feature_a/feature_b in {commitment_true_up, progressive_billing}
+    and never with a `stack` containing progressive_billing: those are the producers/reducers
+    Plans::CreateService (:82) and Plans::UpdateService (:75, :79) gate on License.premium?, so every
+    other feature is licence-independent and a `false` cell there is the `true` cell relabelled.
+    Two producers never interact — GoldenLegality.interacting_pair? excludes producer/producer pairs,
+    since both simply add to fees_amount_cents with no stage between them to disagree over.
+    `arrangement: capped` is legal only for GoldenLegality::CAPPABLE_FEATURES (coupon, credit_note,
+    prepaid_credit); every other duplicable feature just adds and cannot be capped.
+  services:
+    - app/services/invoices/calculate_fees_service.rb
+    - app/services/invoices/compute_amounts_from_fees.rb
+    - app/services/invoices/preview_service.rb
+    - app/services/invoices/refresh_draft_service.rb
+    - app/services/credits
+
+identity_churn:
+  purpose: >-
+    Cells where a configuration change (a "churn") rewrites a record id that Lago also uses to look
+    up carried state, so the lookup can return nothing instead of failing.
+  axes:
+    churn:
+      domain: >-
+        GoldenLegality::CHURN_REWRITES.keys (legality.rb) — plan-override, subscription-override,
+        charge-replaced, plan-upgrade, filter-changed, metric-deleted — each mapped in the constant to
+        the columns it actually rewrites (e.g. plan-override rewrites plan_id, charge_id,
+        charge_filter_id).
+    carried_state:
+      domain: >-
+        GoldenLegality::CARRIED_STATE_KEYS.keys (legality.rb) — progressive_billing_credit,
+        paid_advance_fee, credit_note_balance, wallet_balance, coupon_application,
+        commitment_progress — each mapped to the columns Lago finds it by.
+    observed_via:
+      values: [invoice, draft, regenerated, preview]
+    premium:
+      values: [true, false]
+      requires:
+        false: {schema: setup.properties.premium}
+  legality: >-
+    `premium: false` is legal only with churn plan-override or subscription-override, and there the
+    cell is a rejection, not a silent drop: Subscriptions::CreateService (:36) and
+    Subscriptions::UpdateService (:57) answer 403 to any `plan_overrides` without a licence before
+    Plans::OverrideService's own `License.premium?` gates (override_service.rb:17, :57, :64) are reached.
+    GoldenLegality.identity_at_risk? — a cell is legal only when carried_state's lookup keys
+    intersect the churn's rewritten columns. E.g. wallet_balance (keyed on customer_id alone) is never
+    at risk from any of the six churns here, since none rewrites customer_id.
+  services:
+    - app/services/credits/progressive_billing_service.rb
+    - app/services/subscriptions/plan_upgrade_service.rb
+    - app/services/plans/override_service.rb
+    - app/services/invoices/refresh_draft_service.rb
+    - app/services/fees/charge_service.rb
+
+mid_flight:
+  purpose: >-
+    A configuration mutated while an invoice is in flight — a coupon replaced between two threshold
+    invoices, a tax rate edited before period close, a charge amount corrected on a draft — and which
+    surface re-reads the change versus was already fixed.
+  axes:
+    mutation:
+      values: [coupon, tax_rate, charge_amount, plan_amount, wallet_balance, grace_period]
+    stage:
+      values: [before-first-invoice, between-progressive-invoices, on-draft, after-finalize]
+    observed_via:
+      values: [draft, preview, regenerated, invoice]
+  legality: >-
+    GoldenLegality.observable_after_mutation? — stage `after-finalize` is illegal with observed_via
+    `draft` or `regenerated`: a finalized invoice has no draft and cannot be regenerated. `preview`
+    and `invoice` stay legal at every stage.
+  services:
+    - app/services/invoices/refresh_draft_service.rb
+    - app/services/invoices/refresh_draft_and_finalize_service.rb
+    - app/services/invoices/preview_service.rb
+    - app/services/invoices/calculate_fees_service.rb
+
+invoicing_settings:
+  purpose: >-
+    Invoice-level and billing-entity-level settings that decide whether and how an invoice is
+    produced and numbered, independent of any charge pricing.
+  axes:
+    invoice_type:
+      domain: >-
+        Invoice::INVOICE_TYPES (app/models/invoice.rb:92) — subscription, add_on, credit, one_off,
+        advance_charges, progressive_billing.
+    status:
+      domain: >-
+        Invoice::STATUS (app/models/invoice.rb:100-103) — VISIBLE_STATUS (draft, finalized, voided,
+        failed, pending) merged with INVISIBLE_STATUS (generating, open, closed, deleted).
+    invoicing_reason:
+      domain: >-
+        InvoiceSubscription::INVOICING_REASONS (app/models/invoice_subscription.rb:18-26) —
+        subscription_starting, subscription_periodic, subscription_terminating, in_advance_charge,
+        in_advance_charge_periodic, progressive_billing.
+    finalize_zero_amount_invoice:
+      domain: >-
+        Customer::FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS (app/models/customer.rb:15-19), a tri-state:
+        inherit, skip, finalize.
+    document_numbering:
+      domain: >-
+        BillingEntity::DOCUMENT_NUMBERINGS (app/models/billing_entity.rb:73-76) — per_customer,
+        per_billing_entity.
+  legality: >-
+    `finalize_zero_amount_invoice: inherit` at the customer level is a fallback to the billing
+    entity's own setting, not a third independent behaviour — a row asserting `inherit` alone is
+    indistinguishable from whichever concrete value the billing entity carries, so it is only a
+    legal, distinct cell when paired against a stated billing-entity value.
+  services:
+    - app/services/invoices
+    - app/services/billing_entities/update_service.rb
+    - app/models/invoice.rb
+    - app/models/invoice_subscription.rb
+    - app/models/customer.rb
+    - app/models/billing_entity.rb
+
+wallets:
+  purpose: >-
+    Wallet and prepaid-credit funding, limitation and application against usage — the highest
+    fix-rate cluster measured (85 fixes across wallets / wallet_transactions /
+    applied_prepaid_credits).
+  axes:
+    source:
+      values: [paid, paid-settled, granted, interval-rule, threshold-rule, target-method]
+      requires:
+        interval-rule: {step: perform_interval_wallet_top_ups}
+    limitation:
+      values: [none, fee-types, billable-metrics, target-wallet-code]
+      requires:
+        target-wallet-code: {schema: setup.properties.charges.items.properties.accepts_target_wallet}
+    application:
+      values: [full-cover, partial-cover, multi-wallet-priority, rounding, negative-total, ongoing-balance]
+  legality: >-
+    `paid` and `paid-settled` are distinct states: a purchased top-up's wallet transaction is created
+    PENDING, so its credits are unusable until the top-up invoice is paid. `interval-rule` reaches
+    only Clock::CreateIntervalWalletTransactionsJob's dispatch; `target-wallet-code` reaches only a
+    charge carrying `accepts_target_wallet`. Both requirements are declared even though currently
+    satisfied, so either re-blocks the affected cells by itself if the capability is ever dropped.
+  services:
+    - app/services/wallets
+    - app/services/wallet_transactions
+    - app/services/credits/applied_prepaid_credits_service.rb
+    - app/services/credits/allocate_prepaid_credits_by_wallets_service.rb
+
+surface_parity:
+  purpose: >-
+    One cell per (block, surface) checking that a draft, a regenerated draft and a preview agree with
+    a finalized invoice — declared only where a gated reducer can actually produce a different answer.
+  axes:
+    subject_block:
+      domain: >-
+        GoldenLegality::SURFACE_SUBJECT_BLOCKS (legality.rb) — B5, B6, B8, B9, B10, B12, B15, B19 —
+        the blocks whose behaviour can differ across surfaces because they involve a reducer gated on
+        finalization (app/services/invoices/calculate_fees_service.rb) or are recomputed on refresh.
+    surface:
+      domain: >-
+        GoldenLegality::SURFACES (legality.rb) — draft, regenerated, preview — deliberately narrower
+        than SURFACE_VOCABULARY; widening it to the full vocabulary would take the block from 24 cells
+        to 56, most of them cases where draft and final provably agree.
+  legality: >-
+    Widening `subject_block` to every block, or `surface` to the full vocabulary (current-usage,
+    daily-usage, lifetime-usage, or invoice itself), is deliberately excluded: those combinations
+    cannot diverge from a finalized invoice for a reducer-gated reason, so they would buy coverage
+    percentage with no findings.
+  services:
+    - app/services/invoices/calculate_fees_service.rb
+    - app/services/invoices/refresh_draft_service.rb
+    - app/services/invoices/preview_service.rb
+
+premium_gating:
+  purpose: >-
+    Features that answer 200 and silently no-op without a premium licence, or without the matching
+    entry in organization.premium_integrations — the post-mortem's named source of missed findings.
+    Each `feature` value is a pair of rows differing only in `setup.premium`, asserting figures that
+    must disagree; a pair that agrees means the axis has stopped being live.
+  axes:
+    premium:
+      values: [true, false]
+      requires:
+        false: {schema: setup.properties.premium}
+    feature:
+      values: [minimum_commitment, usage_thresholds, plan_override]
+  legality: >-
+    `plan_override` with `premium: false` is a 403 (Subscriptions::CreateService:36,
+    Subscriptions::UpdateService:57), so its `false` cell asserts `error`, not an invoice.
+    `usage_thresholds` also depends on organization.premium_integrations containing
+    progressive_billing, which World only sets under a premium licence (world.rb PREMIUM_FEATURE_OF).
+  services:
+    - app/services/plans/create_service.rb
+    - app/services/plans/update_service.rb
+    - app/services/plans/override_service.rb
+    - app/services/subscriptions/create_service.rb
+    - app/services/subscriptions/update_service.rb
+    - app/services/commitments
+    - lib/lago_utils/lago_utils/license.rb
+
+invoice_types:
+  status: deferred
+  purpose: >-
+    Type-specific invoice creation and serialization paths (one_off, add_on, credit) not exercised as
+    a first-class axis by any MVP area.
+  axes:
+    invoice_type:
+      domain: Invoice::INVOICE_TYPES (app/models/invoice.rb:92).
+  services:
+    - app/services/invoices/one_off_service.rb
+    - app/services/invoices/create_service.rb
+
+upgrade_downgrade:
+  status: deferred
+  purpose: Plan upgrade/downgrade transitions and their termination-credit-note settlement.
+  axes:
+    transition:
+      values: [upgrade, downgrade]
+    on_termination_credit_note:
+      domain: >-
+        Subscription::ON_TERMINATION_CREDIT_NOTES, cited as domain on_termination_credit_notes in
+        GoldenLegality.domains (billing_matrix/reference/legality.rb).
+  services:
+    - app/services/subscriptions/plan_upgrade_service.rb
+    - app/services/subscriptions/plan_downgrade_service.rb
+    - app/services/subscriptions/activate_service.rb
+
+taxes:
+  status: deferred
+  purpose: The tax precedence ladder across billing levels.
+  axes:
+    tax_level:
+      values: [billing-entity, customer, plan, charge, add-on, commitment, fixed-charge, explicit-codes]
+  legality: >-
+    GoldenLegality::ONE_OFF_ONLY_TAX_LEVELS — add-on and explicit-codes are legal only on a one-off
+    invoice; no Credits::AppliedCouponsService call site sits on the one-off path, so
+    coupon_with_one_off_only_tax_level? also makes either level illegal alongside a coupon axis.
+  services:
+    - app/services/fees/apply_taxes_service.rb
+    - app/services/invoices/apply_taxes_service.rb
+
+coupons:
+  status: deferred
+  purpose: Coupon type/frequency combinations and their application ordering ahead of tax.
+  axes:
+    coupon_type:
+      domain: Coupon::COUPON_TYPES, cited as domain coupon_types in GoldenLegality.domains (legality.rb).
+    coupon_frequency:
+      domain: Coupon::FREQUENCIES, cited as domain coupon_frequencies in GoldenLegality.domains (legality.rb).
+  services:
+    - app/services/credits/applied_coupon_service.rb
+    - app/services/credits/applied_coupons_service.rb

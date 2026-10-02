@@ -1,0 +1,198 @@
+# Two reducers on one invoice. Every row that asserts a pair names the control row on
+# which each reducer alone is correct, so a red pair points at the interaction and not at
+# either half.
+
+- id: interactions/commitment-true-up/progressive-billing
+  area: interactions
+  axes: {feature_a: commitment_true_up, feature_b: progressive_billing}
+  pins: [F08]
+  control: interactions/commitment-true-up/arrears-charge
+  setup:
+    metrics: [{code: m_cmt_pb, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: p_cmt_pb, interval: monthly, amount_cents: 0, pay_in_advance: false, minimum_commitment: {amount_cents: 25000}}
+    charges: [{metric: m_cmt_pb, charge_model: standard, properties: {amount: "1"}}]
+    thresholds: [{amount_cents: 5000}]
+    customer: {external_id: cust_cmt_pb}
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_cmt_pb, plan_code: p_cmt_pb}
+    - at: 2026-03-05T10:00:00Z
+      do: ingest_events
+      events: [{properties: {amount: 50}, count: 2}]
+    - {at: 2026-03-05T11:00:00Z, do: perform_usage_update}
+    - {at: 2026-04-01T01:00:00Z, do: perform_billing}
+  expect:
+    invoices: 2
+    invoice[1]:
+      invoice_type: progressive_billing
+      fees_amount_cents: 10000
+      total_amount_cents: 10000
+      fees_count: 1
+    invoice[2]:
+      invoice_type: subscription
+      fees_amount_cents: 25000
+      progressive_billing_credit_amount_cents: 10000
+      credit_notes_amount_cents: 0
+      sub_total_excluding_taxes_amount_cents: 15000
+      total_amount_cents: 15000
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 0}
+        - {fee_type: charge, amount_cents: 10000}
+        - {fee_type: commitment, amount_cents: 15000}
+  math: >-
+    100 units × 1.00 = 10_000¢ crosses the 5_000¢ threshold on 5 March, so a progressive_billing
+    invoice bills 10_000¢ (one charge fee; Invoices::ProgressiveBillingService only walks charges).
+    March usage is 10_000¢ against a 25_000¢ floor, so the true-up owed is 25_000 − 10_000 = 15_000¢
+    and the period invoice carries 0 + 10_000 + 15_000 = 25_000¢ of fees. Credits::ProgressiveBillingService
+    then credits the threshold invoice's 10_000¢, capped at the period invoice's charge fees sharing
+    its charge_id (10_000¢) — no credit note, sub_total 15_000¢. Customer pays 10_000 + 15_000 = 25_000¢,
+    the floor. LAGO INSTEAD: Commitments::Minimum::InArrears::CalculateTrueUpFeeService#charge_fees
+    selects by subscription_id and period with no invoice scoping, so the threshold invoice's
+    10_000¢ fee counts as spend alongside the period fee for the same usage → true-up 5_000¢,
+    fees 15_000¢, total 5_000¢, and the customer pays 15_000¢ against a 25_000¢ commitment.
+
+- id: interactions/commitment-true-up/arrears-charge
+  area: interactions
+  axes: {feature_a: commitment_true_up, feature_b: none}
+  setup:
+    metrics: [{code: m_cmt, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: p_cmt, interval: monthly, amount_cents: 0, pay_in_advance: false, minimum_commitment: {amount_cents: 25000}}
+    charges: [{metric: m_cmt, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: cust_cmt}
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_cmt, plan_code: p_cmt}
+    - at: 2026-03-05T10:00:00Z
+      do: ingest_events
+      events: [{properties: {amount: 50}, count: 2}]
+    - {at: 2026-04-01T01:00:00Z, do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      fees_amount_cents: 25000
+      progressive_billing_credit_amount_cents: 0
+      total_amount_cents: 25000
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 0}
+        - {fee_type: charge, amount_cents: 10000}
+        - {fee_type: commitment, amount_cents: 15000}
+  math: >-
+    Control for the commitment half. 100 units × 1.00 = 10_000¢ of charge fee against a 25_000¢
+    floor over a whole March (proration coefficient 1), so
+    Commitments::Minimum::CalculateTrueUpFeeService#amount_cents = 25_000 − (0 + 10_000) = 15_000¢.
+    The 0¢ subscription fee is a real fee and is listed.
+
+- id: interactions/arrears-charge/progressive-billing
+  area: interactions
+  axes: {feature_a: charge, feature_b: progressive_billing}
+  setup:
+    metrics: [{code: m_pb, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: p_pb, interval: monthly, amount_cents: 0, pay_in_advance: false}
+    charges: [{metric: m_pb, charge_model: standard, properties: {amount: "1"}}]
+    thresholds: [{amount_cents: 5000}]
+    customer: {external_id: cust_pb}
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_pb, plan_code: p_pb}
+    - at: 2026-03-05T10:00:00Z
+      do: ingest_events
+      events: [{properties: {amount: 50}, count: 2}]
+    - {at: 2026-03-05T11:00:00Z, do: perform_usage_update}
+    - at: 2026-03-20T10:00:00Z
+      do: ingest_events
+      events: [{properties: {amount: 20}}]
+    - {at: 2026-04-01T01:00:00Z, do: perform_billing}
+  expect:
+    invoices: 2
+    invoice[1]:
+      invoice_type: progressive_billing
+      fees_amount_cents: 10000
+      total_amount_cents: 10000
+      fees_count: 1
+    invoice[2]:
+      invoice_type: subscription
+      fees_amount_cents: 12000
+      progressive_billing_credit_amount_cents: 10000
+      credit_notes_amount_cents: 0
+      sub_total_excluding_taxes_amount_cents: 2000
+      total_amount_cents: 2000
+      fees_count: 2
+      fees:
+        - {fee_type: subscription, amount_cents: 0}
+        - {fee_type: charge, amount_cents: 12000}
+  math: >-
+    Control for the progressive-billing half. 100 units on 5 March cross the 5_000¢ threshold and
+    the threshold invoice bills 10_000¢. The period fee is 120 × 1.00 = 12_000¢.
+    Subscriptions::ProgressiveBilledAmount#to_credit_amount is the threshold invoice's 10_000¢ net of
+    nothing; Credits::ProgressiveBillingService caps it at the period invoice's charge fees on the
+    same charge_id (12_000¢), so 10_000 ≤ 12_000: the whole amount is credited, no credit note is cut,
+    and sub_total is 12_000 − 10_000 = 2_000¢.
+
+- id: interactions/credit-note/void
+  area: interactions
+  axes: {feature_a: credit_note, feature_b: void}
+  pins: [F04]
+  control: interactions/prepaid-credit/void
+  setup:
+    plan: {code: p_cn_void, interval: monthly, amount_cents: 5000, pay_in_advance: false}
+    customer: {external_id: cust_cn_void}
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_cn_void, plan_code: p_cn_void}
+    - {at: 2026-04-01, do: perform_billing}
+    - at: 2026-04-10
+      do: create_credit_note
+      invoice: first
+      credit_amount_cents: 3000
+      items: [{fee_type: subscription, amount_cents: 3000}]
+    - {at: 2026-05-01, do: perform_billing}
+    - {at: 2026-05-10, do: void_invoice, invoice: last}
+  expect:
+    invoices: 2
+    invoice[2]:
+      invoice_type: subscription
+      status: voided
+      fees_amount_cents: 5000
+      credit_notes_amount_cents: 3000
+      total_amount_cents: 2000
+    credit_note:
+      credit_amount_cents: 3000
+      balance_amount_cents: 3000
+      credit_status: available
+  math: >-
+    March bills 5_000¢. A 3_000¢ credit note is cut on it. April bills 5_000¢ and
+    Credits::CreditNoteService consumes the note in full: credit_notes_amount_cents 3_000, total 2_000,
+    note balance 0 / consumed. Voiding April must give that note back exactly as
+    Invoices::VoidService gives back applied coupons (AppliedCoupons::RecreditService) and wallet
+    outbound transactions (WalletTransactions::RecreditService): balance 3_000¢, available.
+    LAGO INSTEAD: VoidService recredits coupons and wallet transactions and nothing else —
+    CreditNotes::RecreditService exists but is not called — so the note stays consumed at 0¢ and the
+    customer has lost 3_000¢ of credit against an invoice that no longer exists.
+
+- id: interactions/prepaid-credit/void
+  area: interactions
+  axes: {feature_a: prepaid_credit, feature_b: void}
+  setup:
+    plan: {code: p_pc_void, interval: monthly, amount_cents: 5000, pay_in_advance: false}
+    customer: {external_id: cust_pc_void}
+    wallets: [{code: w_pc_void, rate_amount: "1"}]
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_pc_void, plan_code: p_pc_void}
+    - {at: 2026-04-01, do: perform_billing}
+    - {at: 2026-04-10, do: top_up_wallet, wallet: w_pc_void, granted_credits: "30"}
+    - {at: 2026-05-01, do: perform_billing}
+    - {at: 2026-05-10, do: void_invoice, invoice: last}
+  expect:
+    invoices: 2
+    invoice[2]:
+      invoice_type: subscription
+      status: voided
+      fees_amount_cents: 5000
+      prepaid_credit_amount_cents: 3000
+      total_amount_cents: 2000
+    wallet:
+      balance_cents: 3000
+  math: >-
+    Control for the void half. 30 granted credits at rate 1.00 = 3_000¢ of wallet balance, topped up
+    after March is billed so only April can draw on it. April: 5_000¢ fee, prepaid_credit 3_000¢,
+    total 2_000¢, wallet 0. Invoices::VoidService then calls WalletTransactions::RecreditService on
+    each outbound transaction of the voided invoice, so the wallet is back at 3_000¢.
