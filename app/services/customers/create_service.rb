@@ -107,6 +107,7 @@ module Customers
           payment_provider_code: args[:payment_provider_code]
         )
         create_billing_configuration(customer, billing_configuration)
+        PaymentProviderCustomers::SetDefaultIfUnsetService.call!(customer:)
       end
 
       result.customer = customer

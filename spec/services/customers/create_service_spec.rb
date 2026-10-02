@@ -259,6 +259,12 @@ RSpec.describe Customers::CreateService do
         expect(result.customer.stripe_customer).to be_present
         expect(result.customer.stripe_customer.provider_customer_id).to eq("cus_12345")
       end
+
+      it "flags the connection as default, so default-based reads resolve it" do
+        expect(result).to be_success
+        expect(result.customer.stripe_customer.reload).to be_is_default
+        expect(result.customer.payment_connection).to eq(result.customer.stripe_customer)
+      end
     end
   end
 
