@@ -45,6 +45,73 @@ RSpec.describe Mutations::Contracts::Update do
     expect(result_data["name"]).to eq("Renamed")
   end
 
+  context "when targeting the contract by id" do
+    let(:input) { {id: contract.id, name: "Renamed"} }
+
+    it "updates the contract" do
+      result_data = execution["data"]["updateContract"]
+
+      expect(result_data["id"]).to eq(contract.id)
+      expect(result_data["name"]).to eq("Renamed")
+    end
+  end
+
+  context "with an active contract and a pending sibling sharing its external id" do
+    let(:contract) { create(:contract, organization:, customer:, catalog_plan:, name: "Active") }
+    let(:pending_contract) do
+      create(:contract, :pending, organization:, customer:, catalog_plan:, external_id: contract.external_id, name: "Pending")
+    end
+
+    before { pending_contract }
+
+    context "when targeting the active contract by id" do
+      let(:input) { {id: contract.id, name: "Renamed"} }
+
+      it "updates the active contract only" do
+        expect(execution["data"]["updateContract"]["id"]).to eq(contract.id)
+        expect(contract.reload.name).to eq("Renamed")
+        expect(pending_contract.reload.name).to eq("Pending")
+      end
+    end
+
+    context "when targeting by external id" do
+      it "updates the pending contract" do
+        expect(execution["data"]["updateContract"]["id"]).to eq(pending_contract.id)
+        expect(contract.reload.name).to eq("Active")
+      end
+    end
+  end
+
+  context "when the id belongs to another organization" do
+    let(:input) { {id: create(:contract, :pending).id, name: "Renamed"} }
+
+    it "returns a not found error" do
+      expect_not_found(execution)
+    end
+  end
+
+  context "without id nor external id" do
+    let(:input) { {name: "Renamed"} }
+
+    it "returns an error" do
+      expect_graphql_error(
+        result: execution,
+        message: "UpdateContractInput must include exactly one of the following arguments: id, externalId."
+      )
+    end
+  end
+
+  context "with both id and external id" do
+    let(:input) { {id: contract.id, externalId: contract.external_id, name: "Renamed"} }
+
+    it "returns an error" do
+      expect_graphql_error(
+        result: execution,
+        message: "UpdateContractInput must include exactly one of the following arguments: id, externalId."
+      )
+    end
+  end
+
   context "when changing the plan" do
     let(:other_plan) { create(:catalog_plan, organization:) }
     let(:input) { {externalId: contract.external_id, planCode: other_plan.code} }

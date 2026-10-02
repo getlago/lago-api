@@ -15,8 +15,12 @@ module Mutations
       input_object_class Types::Contracts::UpdateInput
       type Types::Contracts::Object
 
-      def resolve(external_id:, **args)
-        contract = current_organization.contracts.live_by_external_id(external_id)
+      def resolve(id: nil, external_id: nil, **args)
+        contract = if id
+          current_organization.contracts.find_by(id:)
+        else
+          current_organization.contracts.live_by_external_id(external_id)
+        end
 
         result = ::Contracts::UpdateService.call(contract:, params: args)
 
