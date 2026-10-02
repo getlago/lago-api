@@ -34,6 +34,10 @@ charge_filters_single_scan:
   description: "Aggregate every filter of a count or sum charge in one ClickHouse read instead of one read per filter"
   owners: ["@jdenquin"]
 
+persisted_recurring_values:
+  description: "Start recurring sum and weighted sum aggregations from the snapshot of the latest closed billing period instead of scanning the full event history"
+  owners: ["@vincent-pochet"]
+
 skip_credit_invoice_auto_payment_delay:
   description: "Trigger the auto-payment of credit invoices (wallet top-ups) immediately instead of delaying it behind a possible hosted checkout payment"
   owners: ["@brunomiguelpinto"]
