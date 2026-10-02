@@ -2,7 +2,7 @@
 
 module PaymentMethods
   class DetermineService < BaseService
-    Result = BaseResult[:payment_method]
+    Result = BaseResult[:payment_method, :manual_payment]
 
     def initialize(invoice:, customer:, payment_method_params:)
       @invoice = invoice
@@ -26,8 +26,13 @@ module PaymentMethods
 
     attr_reader :invoice, :customer, :payment_method_params
 
+    def manual_payment
+      result.manual_payment = true
+      nil
+    end
+
     def determine_override_payment_method
-      return nil if payment_method_params[:payment_method_type] == "manual"
+      return manual_payment if payment_method_params[:payment_method_type] == "manual"
 
       if payment_method_params[:payment_method_id].present?
         customer.payment_methods.find_by(id: payment_method_params[:payment_method_id])
@@ -51,7 +56,7 @@ module PaymentMethods
       subscription = invoice.invoice_subscriptions.first&.subscription
       return nil unless subscription
 
-      return nil if subscription.payment_method_type == "manual"
+      return manual_payment if subscription.payment_method_type == "manual"
 
       if subscription.payment_method_id.present?
         return customer.payment_methods.find_by(id: subscription.payment_method_id)
@@ -64,7 +69,7 @@ module PaymentMethods
       wallet_transaction = invoice.wallet_transactions.first
       return nil unless wallet_transaction
 
-      return nil if wallet_transaction.payment_method_type == "manual"
+      return manual_payment if wallet_transaction.payment_method_type == "manual"
 
       if wallet_transaction.payment_method_id.present?
         return customer.payment_methods.find_by(id: wallet_transaction.payment_method_id)
@@ -72,12 +77,12 @@ module PaymentMethods
 
       if wallet_transaction.source.to_s.in?(%w[interval threshold])
         rule = wallet_transaction.wallet.recurring_transaction_rules.active.first
-        return nil if rule&.payment_method_type == "manual"
+        return manual_payment if rule&.payment_method_type == "manual"
         return customer.payment_methods.find_by(id: rule.payment_method_id) if rule&.payment_method_id.present?
       end
 
       wallet = wallet_transaction.wallet
-      return nil if wallet.payment_method_type == "manual"
+      return manual_payment if wallet.payment_method_type == "manual"
 
       if wallet.payment_method_id.present?
         return customer.payment_methods.find_by(id: wallet.payment_method_id)
