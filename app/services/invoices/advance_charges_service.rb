@@ -4,20 +4,17 @@ module Invoices
   class AdvanceChargesService < BaseService
     Result = BaseResult[:invoice]
 
-    def initialize(billing_contexts:, billing_at:, metered_items: [])
+    def initialize(billing_contexts:, billing_at:)
       @billing_contexts = billing_contexts
       @billing_at = billing_at
-      @metered_items = metered_items
 
       @customer = billing_contexts&.first&.customer
-      @organization = customer&.organization
       @currency = billing_contexts&.first&.currency
 
       super
     end
 
     def call
-      return result unless has_charges_with_statement?
       return result if pending_billing_contexts_with_fees.empty?
 
       invoices = create_group_invoices
@@ -41,7 +38,7 @@ module Invoices
 
     private
 
-    attr_reader :billing_contexts, :billing_at, :metered_items, :customer, :organization, :currency
+    attr_reader :billing_contexts, :billing_at, :customer, :currency
 
     # Apply the charges_to_datetime upper-bound only for regular periodic billing
     # (i.e., no upgrade/downgrade/termination context). We consider it regular when
@@ -79,23 +76,15 @@ module Invoices
         .map { |subscription| Billing::Context.from(subscription:) }
     end
 
-    def has_charges_with_statement?
-      Charge.where(
-        plan_id: pending_billing_contexts_with_fees.filter_map(&:plan_id).uniq,
-        pay_in_advance: true,
-        invoiceable: false,
-        regroup_paid_fees: :invoice
-      ).any?
-    end
-
     def create_manual_payment(invoice)
-      amount_cents = invoice.total_amount_cents
-      reference = I18n.t("invoice.charges_paid_in_advance")
-      created_at = invoice.created_at
+      params = {
+        invoice_id: invoice.id,
+        amount_cents: invoice.total_amount_cents,
+        reference: I18n.t("invoice.charges_paid_in_advance"),
+        created_at: invoice.created_at
+      }
 
-      params = {invoice_id: invoice.id, amount_cents:, reference:, created_at:}
-
-      ::Payments::ManualCreateJob.perform_later(organization:, params:)
+      ::Payments::ManualCreateJob.perform_later(organization: invoice.organization, params:)
     end
 
     # NOTE: The re-expanded subscription set (matched by external_id) can span several
@@ -112,13 +101,7 @@ module Invoices
 
       ActiveRecord::Base.transaction do
         invoice = create_generating_invoice(billing_contexts_group)
-        invoice.invoice_subscriptions.each do |is|
-          is.subscription.fees
-            .where(invoice: nil, payment_status: :succeeded)
-            .where("succeeded_at <= ?", is.timestamp)
-            .then { |rel| filter_charges_to_datetime(rel) }
-            .update_all(invoice_id: invoice.id) # rubocop:disable Rails/SkipsModelValidations
-        end
+        Fees::AdvanceChargesService.call!(invoice:, billing_contexts: billing_contexts_group, billing_at:)
 
         if invoice.fees.empty?
           invoice = nil
