@@ -156,10 +156,9 @@ module Fees
     end
 
     def compute_fees(selected_metered_item:)
-      # Taken before the events are read, so no event ingested during the aggregation drops out of the snapshots
-      watermark = Time.current
+      watermark = recurring_watermark(selected_metered_item)
       aggregation_result = aggregator(selected_metered_item:).aggregate(
-        options: selected_metered_item.aggregation_options(current_usage: options.current_usage?)
+        options: selected_metered_item.aggregation_options(current_usage: options.current_usage?).merge(recurring_watermark: watermark)
       )
 
       unless aggregation_result.success?
@@ -539,6 +538,12 @@ module Fees
           watermark:,
           values: aggregation_results.map { {grouped_by: it.grouped_by || {}, units: it.recurring_units} }
         }
+      end
+    end
+
+    def recurring_watermark(selected_metered_item)
+      if selected_metered_item.billable_metric.recurring? && snapshot_recurring_units?(selected_metered_item)
+        (Time.current - RecurringAggregationSnapshot::WATERMARK_LAG).floor(3)
       end
     end
 

@@ -14,7 +14,7 @@ module BillableMetrics
       def compute_aggregation(options: {})
         return empty_result if should_bypass_aggregation?
 
-        sum_result = options[:precomputed_aggregation] || event_store.sum
+        sum_result = options[:precomputed_aggregation] || recurring_sum(options) || event_store.sum
 
         if options[:is_pay_in_advance] && options[:is_current_usage]
           handle_in_advance_current_usage(sum_result.value)
@@ -22,7 +22,7 @@ module BillableMetrics
           result.aggregation = sum_result.value
         end
 
-        result.recurring_units = sum_result.value if billable_metric.recurring?
+        result.recurring_units = snapshot_units(sum_result) if billable_metric.recurring?
         result.pay_in_advance_aggregation = compute_pay_in_advance_aggregation
         result.count = sum_result.events_count
 
@@ -48,7 +48,7 @@ module BillableMetrics
       def compute_grouped_by_aggregation(options: {})
         return empty_results if should_bypass_aggregation?
 
-        aggregations = options[:precomputed_grouped_aggregations] || event_store.grouped_sum
+        aggregations = options[:precomputed_grouped_aggregations] || grouped_recurring_sum(options) || event_store.grouped_sum
         return empty_results if aggregations.blank?
 
         if presentation_by.present?
@@ -67,13 +67,30 @@ module BillableMetrics
             group_result.aggregation = aggregation_value
           end
 
-          group_result.recurring_units = aggregation_value if billable_metric.recurring?
+          group_result.recurring_units = snapshot_units(aggregation) if billable_metric.recurring?
           group_result.count = aggregation.events_count
           group_result.options = {running_total: running_total(options, grouped_by_values: group_result.grouped_by)}
           group_result
         end
       rescue ActiveRecord::StatementInvalid => e
         result.service_failure!(code: "aggregation_failure", message: e.message)
+      end
+
+      def recurring_sum(options)
+        if billable_metric.recurring? && options[:recurring_watermark]
+          event_store.recurring_sum(watermark: options[:recurring_watermark])
+        end
+      end
+
+      def grouped_recurring_sum(options)
+        if billable_metric.recurring? && options[:recurring_watermark]
+          event_store.grouped_recurring_sum(watermark: options[:recurring_watermark])
+        end
+      end
+
+      # A precomputed prorated result carries no snapshot value: its full value is persisted
+      def snapshot_units(sum_result)
+        sum_result.respond_to?(:snapshot_value) ? sum_result.snapshot_value : sum_result.value
       end
 
       def compute_precise_total_amount_cents(options: {})

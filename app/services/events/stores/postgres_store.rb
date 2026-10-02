@@ -289,6 +289,23 @@ module Events
         prepare_grouped_aggregated_values(results, columns: columns)
       end
 
+      def recurring_sum(watermark:, snapshot: nil)
+        sql = recurring_events(snapshot)
+          .select(recurring_sum_sql(watermark))
+          .to_sql
+
+        build_recurring_aggregation_result(select_one(sql))
+      end
+
+      def grouped_recurring_sum(watermark:, snapshot: nil)
+        sql = recurring_events(snapshot)
+          .group(sanitized_grouped_by)
+          .select("#{sanitized_grouped_by.join(", ")}, #{recurring_sum_sql(watermark)}")
+          .to_sql
+
+        prepare_grouped_recurring_values(select_all(sql).rows)
+      end
+
       def prorated_sum(period_duration:, persisted_duration: nil)
         ratio = if persisted_duration
           persisted_duration.fdiv(period_duration)
@@ -447,6 +464,26 @@ module Events
         else
           scope.to_datetime(applicable_to_datetime)
         end
+      end
+
+      def recurring_events(snapshot)
+        return events if snapshot.nil?
+
+        events.where(
+          "events.timestamp > :to_datetime OR events.created_at > :watermark",
+          to_datetime: snapshot.to_datetime,
+          watermark: snapshot.watermark
+        )
+      end
+
+      def recurring_sum_sql(watermark)
+        ingested_before_watermark = sanitize_sql_for_conditions(["events.created_at <= ?", watermark])
+
+        <<~SQL.squish
+          SUM((#{sanitized_property_name})::numeric) AS value,
+          SUM((#{sanitized_property_name})::numeric) FILTER (WHERE #{ingested_before_watermark}) AS snapshot_value,
+          COUNT(*) AS events_count
+        SQL
       end
 
       def filters_scope(scope)

@@ -33,6 +33,7 @@ RSpec.describe Events::Stores::Clickhouse::ReEnrichSubscriptionEventsService, :c
     allow(ENV).to receive(:fetch).and_call_original
     allow(ENV).to receive(:[]).and_call_original
     allow(ENV).to receive(:[]).with("LAGO_KAFKA_RAW_EVENTS_TOPIC").and_return("test-topic")
+    allow(RecurringAggregationSnapshots::InvalidateService).to receive(:call!).and_call_original
   end
 
   describe "#call" do
@@ -47,6 +48,12 @@ RSpec.describe Events::Stores::Clickhouse::ReEnrichSubscriptionEventsService, :c
         properties: {"key" => "value"},
         precise_total_amount_cents: "12.5"
       )
+    end
+
+    it "invalidates the recurring aggregation snapshots" do
+      service.call
+
+      expect(RecurringAggregationSnapshots::InvalidateService).to have_received(:call!).with(subscription:, codes:)
     end
 
     it "produces Kafka messages with expected payload structure" do
