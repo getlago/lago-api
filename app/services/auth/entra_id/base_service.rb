@@ -28,10 +28,7 @@ module Auth
 
       def check_entra_id_integration(email)
         email_domain = email.split("@").last
-        entra_id_integration = ::Integrations::EntraIdIntegration
-          .where("settings->>'domain' IS NOT NULL")
-          .where("settings->>'domain' = ?", email_domain)
-          .first
+        entra_id_integration = ::Integrations::EntraIdIntegration.with_domain(email_domain).first
 
         raise ValidationError, "domain_not_configured" if entra_id_integration.blank?
 

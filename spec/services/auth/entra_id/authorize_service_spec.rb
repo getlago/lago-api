@@ -21,6 +21,18 @@ RSpec.describe Auth::EntraId::AuthorizeService do
       expect(result.url).to include(entra_id_integration.client_id)
     end
 
+    context "when the email domain is an additional domain of the integration" do
+      let(:entra_id_integration) { create(:entra_id_integration, domain: "bosch.com", additional_domains: ["de.bosch.com"]) }
+      let(:email) { "Michael.Kolb3@DE.bosch.com" }
+
+      it "returns the authorize url of that integration" do
+        result = service.call
+
+        expect(result).to be_success
+        expect(result.url).to include(entra_id_integration.tenant_id)
+      end
+    end
+
     context "when domain is not configured with an integration" do
       let(:email) { "foo@bar.com" }
 
