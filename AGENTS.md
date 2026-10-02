@@ -91,7 +91,7 @@ When creating a service class:
 # Jobs
 To call the class service class asynchronously, create job:
 - jobs should have the exact same fully qualified class name except it ends with `Job` instead of `Service`.
-- the perform method of the job typically calls the matching service and forwards all it's arguements
+- the perform method of the job typically calls the matching service and forwards all it's arguments
 - the service is called using the class method `call!`
 - avoid using named parameters for jobs
 
