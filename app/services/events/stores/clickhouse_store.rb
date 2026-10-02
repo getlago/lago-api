@@ -573,6 +573,43 @@ module Events
         end
       end
 
+      def recurring_sum(watermark:, snapshot: nil)
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          ctes_sql = recurring_events_cte_queries(
+            snapshot,
+            select: [arel_table[:decimal_value].as("property"), arel_table[:enriched_at]],
+            deduplicated_columns: %w[decimal_value]
+          )
+
+          sql = with_ctes(ctes_sql, <<-SQL)
+            SELECT #{recurring_sum_sql(watermark)}
+            FROM events
+          SQL
+
+          build_recurring_aggregation_result(connection.select_one(sql))
+        end
+      end
+
+      def grouped_recurring_sum(watermark:, snapshot: nil)
+        groups, column_names = grouped_arel_columns
+
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          ctes_sql = recurring_events_cte_queries(
+            snapshot,
+            select: groups + [arel_table[:decimal_value].as("property"), arel_table[:enriched_at]],
+            deduplicated_columns: %w[decimal_value properties]
+          )
+
+          sql = with_ctes(ctes_sql, <<-SQL)
+            SELECT #{column_names}, #{recurring_sum_sql(watermark)}
+            FROM events
+            GROUP BY #{column_names}
+          SQL
+
+          prepare_grouped_recurring_values(connection.select_all(sql).rows)
+        end
+      end
+
       def prorated_sum(period_duration:, persisted_duration: nil)
         ratio = if persisted_duration
           persisted_duration.fdiv(period_duration)
@@ -764,6 +801,41 @@ module Events
             [timestamp, difference, cumul, second_duration.to_i, period_ratio]
           end
         end
+      end
+
+      def recurring_events_cte_queries(snapshot, select:, deduplicated_columns:)
+        return events_cte_queries(select:, deduplicated_columns: deduplicated_columns + %w[enriched_at]) if snapshot.nil?
+
+        query = arel_table
+        query = apply_arel_grouped_by_values(query) if grouped_by_values?
+        query = arel_filters_scope(query)
+
+        {
+          "events_enriched" => snapshot_delta_events_sql(snapshot, deduplicated_columns:),
+          "events" => query.project(select).to_sql
+        }
+      end
+
+      # The events dated after the snapshot and the late ones are read in two branches rather than
+      # one OR, so that the first is pruned by the primary key and the second by the enriched_at index.
+      # The branches cannot share a deduplication key, as the timestamp is part of it.
+      def snapshot_delta_events_sql(snapshot, deduplicated_columns:)
+        columns = (DEDUP_KEY_COLUMNS + deduplicated_columns + %w[properties enriched_at]).uniq.join(", ")
+        source = deduplicate ? "events_enriched FINAL" : "events_enriched"
+        where_sql = deduplicated_events_where_sql(from_datetime: nil, to_datetime: applicable_to_datetime)
+
+        [
+          sql_condition("timestamp > ?", snapshot.to_datetime),
+          sql_condition("timestamp <= ? AND enriched_at > ?", snapshot.to_datetime, snapshot.watermark)
+        ].map { "SELECT #{columns} FROM #{source} WHERE #{where_sql} AND #{it}" }.join(" UNION ALL ")
+      end
+
+      def recurring_sum_sql(watermark)
+        <<~SQL.squish
+          sum(events.property) AS value,
+          #{sql_condition("sumIf(events.property, events.enriched_at <= ?)", watermark)} AS snapshot_value,
+          count() AS events_count
+        SQL
       end
 
       def with_timestamp_boundaries(query, from_datetime, to_datetime)

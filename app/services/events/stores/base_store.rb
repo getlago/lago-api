@@ -56,6 +56,27 @@ module Events
         :events_count
       )
 
+      # NOTE: result of a recurring sum. `value` aggregates every event the period sees, while
+      #       `snapshot_value` only aggregates the events ingested up to the watermark of the snapshot
+      #       closing the period, as events ingested later are counted by the next period.
+      RecurringAggregationResult = Data.define(
+        :value,
+        :snapshot_value,
+        :events_count
+      )
+
+      # NOTE: grouped variant of RecurringAggregationResult.
+      GroupedRecurringAggregationResult = Data.define(
+        :groups,
+        :value,
+        :snapshot_value,
+        :events_count
+      ) do
+        def to_grouped_hash
+          {groups:, value:}
+        end
+      end
+
       def initialize(billing_context:, boundaries:, code: nil, filters: {}, deduplicate: false)
         @code = code
         @billing_context = billing_context
@@ -163,6 +184,18 @@ module Events
       end
 
       def grouped_sum_precise_total_amount_cents
+        raise NotImplementedError
+      end
+
+      # NOTE: sum of a recurring metric. Without a snapshot, it covers the full history. With the
+      #       snapshot of a closed period, it only covers what the snapshot did not count: the events
+      #       dated after it, and the late events dated before it but ingested after its watermark.
+      #       `watermark` bounds the snapshot_value of the snapshot to persist for this period.
+      def recurring_sum(watermark:, snapshot: nil)
+        raise NotImplementedError
+      end
+
+      def grouped_recurring_sum(watermark:, snapshot: nil)
         raise NotImplementedError
       end
 
@@ -301,6 +334,28 @@ module Events
       # NOTE: Build the { column => value } groups hash used by grouped aggregation results.
       def build_groups(values, columns: grouped_by)
         columns.zip(values.map(&:presence)).to_h
+      end
+
+      def build_recurring_aggregation_result(row)
+        RecurringAggregationResult.new(
+          value: row["value"] || 0,
+          snapshot_value: row["snapshot_value"] || 0,
+          events_count: row["events_count"].to_i
+        )
+      end
+
+      # NOTE: the last three columns of each row are the value, the snapshot value and the events count.
+      def prepare_grouped_recurring_values(rows, columns: grouped_by)
+        rows.map do |row|
+          flat = row.flatten
+
+          GroupedRecurringAggregationResult.new(
+            groups: build_groups(flat[...-3], columns:),
+            value: flat[-3] || 0,
+            snapshot_value: flat[-2] || 0,
+            events_count: flat[-1].to_i
+          )
+        end
       end
 
       # NOTE: grouped variant of build_weighted_aggregation_result.
