@@ -195,4 +195,104 @@ RSpec.describe UsageMonitoring::Alert do
       expect { alert.find_value(double) }.to raise_error(NotImplementedError)
     end
   end
+
+  describe "#find_thresholds_recovered" do
+    context "when the alert is increasing" do
+      let(:alert) { create(:alert, code: "rec-up", thresholds: [10, 30, 50]) }
+
+      it "returns the lines left behind on the way down" do
+        alert.previous_value = 55
+        expect(alert.find_thresholds_recovered(20)).to eq([30, 50])
+      end
+
+      it "keeps a line in alarm when the value lands exactly on it" do
+        alert.previous_value = 55
+        expect(alert.find_thresholds_recovered(30)).to eq([50])
+      end
+
+      it "returns nothing when the value did not fall" do
+        alert.previous_value = 20
+        expect(alert.find_thresholds_recovered(25)).to eq([])
+      end
+
+      it "ignores recurring lines" do
+        alert.thresholds.create!(organization: alert.organization, code: "rec", value: 20, recurring: true)
+        alert.reload
+        alert.previous_value = 55
+
+        expect(alert.find_thresholds_recovered(5)).to eq([10, 30, 50])
+      end
+    end
+
+    context "when the alert is decreasing" do
+      let(:alert) { create(:wallet_balance_amount_alert, code: "rec-down", thresholds: [100, 500]) }
+
+      it "returns the lines left behind on the way up" do
+        alert.previous_value = 0
+        expect(alert.find_thresholds_recovered(600)).to eq([100, 500])
+      end
+
+      it "keeps a line in alarm when the balance lands exactly on it" do
+        alert.previous_value = 0
+        expect(alert.find_thresholds_recovered(500)).to eq([100])
+      end
+
+      it "returns nothing when the balance did not rise" do
+        alert.previous_value = 600
+        expect(alert.find_thresholds_recovered(550)).to eq([])
+      end
+    end
+  end
+
+  describe "#in_alarm?" do
+    context "when the alert is increasing" do
+      let(:alert) { create(:alert, code: "alarm-up", thresholds: [10]) }
+
+      it "is in alarm once the value reaches the line" do
+        expect(alert.in_alarm?(10, 10)).to be true
+        expect(alert.in_alarm?(10, 11)).to be true
+        expect(alert.in_alarm?(10, 9)).to be false
+      end
+    end
+
+    context "when the alert is decreasing" do
+      let(:alert) { create(:wallet_balance_amount_alert, code: "alarm-down", thresholds: [100]) }
+
+      it "is in alarm once the balance reaches the line" do
+        expect(alert.in_alarm?(100, 100)).to be true
+        expect(alert.in_alarm?(100, 99)).to be true
+        expect(alert.in_alarm?(100, 101)).to be false
+      end
+    end
+  end
+
+  describe "#fully_resolved?" do
+    let(:alert) { create(:alert, code: "clear", thresholds: [10, 30]) }
+
+    it "is false while any line is still crossed, opted in or not" do
+      expect(alert.fully_resolved?(15)).to be false
+    end
+
+    it "is true only once every line is clear" do
+      expect(alert.fully_resolved?(5)).to be true
+    end
+
+    context "with a recurring threshold" do
+      let(:alert) { create(:alert, code: "clear-recurring", thresholds: [10], recurring_threshold: 5) }
+
+      it "measures the recurring step from the last one-time threshold, not from zero" do
+        expect(alert.fully_resolved?(7)).to be true
+        expect(alert.fully_resolved?(15)).to be false
+      end
+    end
+
+    context "when the alert is decreasing" do
+      let(:alert) { create(:wallet_balance_amount_alert, code: "clear-down", thresholds: [100], recurring_threshold: 30) }
+
+      it "measures the recurring step down from the first one-time threshold" do
+        expect(alert.fully_resolved?(120)).to be true
+        expect(alert.fully_resolved?(70)).to be false
+      end
+    end
+  end
 end

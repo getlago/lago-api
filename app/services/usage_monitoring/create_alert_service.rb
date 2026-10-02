@@ -92,6 +92,7 @@ module UsageMonitoring
         #       insert above took on the same row, which two concurrent creates would otherwise deadlock upgrading
         alert.update!(previous_value: alert.find_value(alertable.lock!("FOR NO KEY UPDATE"))) if alert.decreasing?
         alert.thresholds.create!(prepare_thresholds(params[:thresholds], organization.id))
+        seed_alarms_already_past(alert, alertable)
 
         result.alert = alert
       end
