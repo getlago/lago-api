@@ -27,7 +27,8 @@ module Mutations
           payment_method_params: args[:payment_method]&.to_h,
           invoice_custom_section: args[:invoice_custom_section],
           billing_entity_id: args[:billing_entity_id],
-          purchase_order_number: args[:purchase_order_number]
+          purchase_order_number: args[:purchase_order_number],
+          payment_term: args[:payment_term]&.to_h
         )
 
         result.success? ? result.invoice : result_error(result)

@@ -3927,6 +3927,7 @@ input CreateInvoiceInput {
   fees: [FeeInput!]!
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   paymentMethod: PaymentMethodReferenceInput
+  paymentTerm: PaymentTermInput
   purchaseOrderNumber: String
   voidedInvoiceId: ID
 }
@@ -7377,6 +7378,7 @@ input FetchDraftInvoiceTaxesInput {
   fees: [FeeInput!]!
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   paymentMethod: PaymentMethodReferenceInput
+  paymentTerm: PaymentTermInput
   purchaseOrderNumber: String
   voidedInvoiceId: ID
 }
