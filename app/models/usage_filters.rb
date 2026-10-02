@@ -33,6 +33,11 @@ class UsageFilters
     )
   end
 
+  # Lifetime usage has no period to project over, so full_usage is ignored.
+  def self.init_from_params_for_projected_usage(params)
+    init_from_params(params.except(:full_usage))
+  end
+
   def initialize(filter_by_charge_id: nil, filter_by_charge_code: nil, filter_by_metric_code: nil, filter_by_group: nil, filter_by_presentation: nil, skip_grouping: false, full_usage: false)
     @filter_by_charge_id = filter_by_charge_id
     @filter_by_charge_code = filter_by_charge_code
