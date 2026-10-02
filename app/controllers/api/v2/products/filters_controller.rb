@@ -25,7 +25,8 @@ module Api
                 page.records,
                 ::V2::ProductFilterSerializer,
                 collection_name: "filters",
-                meta: page.meta
+                meta: page.meta,
+                includes: serializer_includes
               )
             )
           else
@@ -111,7 +112,7 @@ module Api
         end
 
         def render_filter(filter, values: nil)
-          render(json: ::V2::ProductFilterSerializer.new(filter, root_name: "filter", values:))
+          render(json: ::V2::ProductFilterSerializer.new(filter, root_name: "filter", values:, includes: serializer_includes))
         end
 
         def resource_name

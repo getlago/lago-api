@@ -14,7 +14,8 @@ module V2
         product_type: model.product_type,
         filters_count: model.filters.size,
         created_at: model.created_at.iso8601,
-        updated_at: model.updated_at.iso8601
+        updated_at: model.updated_at.iso8601,
+        **deleted_at_payload
       }
     end
   end

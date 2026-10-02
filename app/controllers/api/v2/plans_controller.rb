@@ -16,7 +16,8 @@ module Api
               page.records,
               ::V2::CatalogPlanSerializer,
               collection_name: "plans",
-              meta: page.meta
+              meta: page.meta,
+              includes: serializer_includes
             )
           )
         else
@@ -59,7 +60,7 @@ module Api
       end
 
       def render_plan(catalog_plan)
-        render(json: ::V2::CatalogPlanSerializer.new(catalog_plan, root_name: "plan"))
+        render(json: ::V2::CatalogPlanSerializer.new(catalog_plan, root_name: "plan", includes: serializer_includes))
       end
 
       def resource_name

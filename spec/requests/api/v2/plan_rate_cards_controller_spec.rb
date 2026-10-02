@@ -162,6 +162,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
 
       expect(response).to have_http_status(:success)
       expect(json[:applied_rate_card][:lago_id]).to eq(plan_rate_card.id)
+      expect(json[:applied_rate_card]).to include(deleted_at: nil)
     end
 
     context "when it does not exist" do
@@ -222,6 +223,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
 
       expect(response).to have_http_status(:success)
       expect(catalog_plan.reload.applied_rate_cards).to be_empty
+      expect(json[:applied_rate_card][:deleted_at]).to eq(plan_rate_card.reload.deleted_at.iso8601)
     end
 
     context "when the plan has contracts" do
