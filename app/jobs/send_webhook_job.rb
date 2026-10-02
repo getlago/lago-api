@@ -85,7 +85,8 @@ class SendWebhookJob < ApplicationJob
     "wallet.depleted_ongoing_balance" => Webhooks::Wallets::DepletedOngoingBalanceService,
     "wallet_transaction.created" => Webhooks::WalletTransactions::CreatedService,
     "wallet_transaction.updated" => Webhooks::WalletTransactions::UpdatedService,
-    "wallet_transaction.payment_failure" => Webhooks::PaymentProviders::WalletTransactionPaymentFailureService
+    "wallet_transaction.payment_failure" => Webhooks::PaymentProviders::WalletTransactionPaymentFailureService,
+    "wallet_transaction.payment_failure_after_settlement" => Webhooks::WalletTransactions::PaymentFailureAfterSettlementService
   }.freeze
 
   HIGH_PRIORITY_WEBHOOK_TYPES = %w[alert.triggered].freeze
