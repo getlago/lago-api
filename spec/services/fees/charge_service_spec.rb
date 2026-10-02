@@ -4774,6 +4774,65 @@ RSpec.describe Fees::ChargeService, :premium do
         expect(snapshots).to be_empty
       end
     end
+
+    describe "initial value" do
+      let(:organization) { create(:organization, feature_flags: ["persisted_recurring_values"]) }
+      let(:previous_to_datetime) { boundaries.charges_from_datetime - 1.second }
+
+      before do
+        allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_call_original
+        create(:recurring_aggregation_snapshot, subscription:, charge:, to_datetime: previous_to_datetime, units: 12)
+      end
+
+      it "starts the aggregation from the snapshot of the previous period" do
+        charge_subscription_service.call
+
+        expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(
+          hash_including(initial_value: [have_attributes(grouped_by: {}, units: 12, to_datetime: previous_to_datetime)])
+        )
+      end
+
+      context "when context is current_usage" do
+        let(:context) { :current_usage }
+
+        it "starts the aggregation from the snapshot" do
+          charge_subscription_service.call
+
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
+            .with(hash_including(initial_value: [have_attributes(units: 12)]))
+        end
+      end
+
+      context "without a snapshot before the period" do
+        let(:previous_to_datetime) { boundaries.charges_from_datetime }
+
+        it "falls back to a full scan" do
+          charge_subscription_service.call
+
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_value: nil))
+        end
+      end
+
+      context "without the persisted_recurring_values feature flag" do
+        let(:organization) { create(:organization) }
+
+        it "falls back to a full scan" do
+          charge_subscription_service.call
+
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_value: nil))
+        end
+      end
+
+      context "with a non recurring billable metric" do
+        let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "value") }
+
+        it "reads no snapshot" do
+          charge_subscription_service.call
+
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_value: nil))
+        end
+      end
+    end
   end
 
   describe "presentation_breakdowns interaction with adjusted fees" do
