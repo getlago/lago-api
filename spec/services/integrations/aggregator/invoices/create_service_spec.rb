@@ -357,6 +357,37 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       end
     end
 
+    context "when the payload does not allow the sync" do
+      let(:invoice) { create(:invoice, customer:, organization:) }
+      let(:fee_sub) do
+        create(:fee, invoice:, amount_cents: 0, taxes_amount_cents: 0, created_at: current_time - 3.seconds)
+      end
+      let(:minimum_commitment_fee) { nil }
+      let(:charge_fee) { nil }
+      let(:response) { instance_double(Net::HTTPOK) }
+      let(:body) do
+        path = Rails.root.join("spec/fixtures/integration_aggregator/invoices/success_hash_response.json")
+        File.read(path)
+      end
+
+      before do
+        allow(lago_client).to receive(:post_with_response).and_return(response)
+        allow(response).to receive(:body).and_return(body)
+      end
+
+      it "returns a success result without making an API call" do
+        result = service_call
+
+        expect(result).to be_success
+        expect(result.external_id).to be_nil
+        expect(lago_client).not_to have_received(:post_with_response)
+      end
+
+      it "does not create integration resource object" do
+        expect { service_call }.not_to change(IntegrationResource, :count)
+      end
+    end
+
     context "when service call is successful" do
       let(:response) { instance_double(Net::HTTPOK) }
 

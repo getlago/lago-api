@@ -35,7 +35,7 @@ module Integrations
         end
 
         def payload
-          Integrations::Aggregator::Invoices::Payloads::Factory.new_instance(
+          @payload ||= Integrations::Aggregator::Invoices::Payloads::Factory.new_instance(
             integration_customer:,
             invoice:
           )
