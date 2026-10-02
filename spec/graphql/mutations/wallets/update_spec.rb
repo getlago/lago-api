@@ -416,4 +416,44 @@ RSpec.describe Mutations::Wallets::Update, :premium do
       expect(result["errors"].first["extensions"]["code"]).to eq("feature_unavailable")
     end
   end
+
+  context "with payment_term" do
+    let(:wallet) { create(:wallet, customer:, payment_term: {"term_type" => "net", "days" => 30}) }
+    let(:payment_term_mutation) do
+      <<~GQL
+        mutation($input: UpdateCustomerWalletInput!) {
+          updateCustomerWallet(input: $input) {
+            id
+            paymentTerm { termType days dayOfMonth monthOffset }
+          }
+        }
+      GQL
+    end
+
+    def update_wallet(payment_term)
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: payment_term_mutation,
+        variables: {input: {id: wallet.id, priority: wallet.priority, paymentTerm: payment_term}}
+      )
+    end
+
+    it "updates the term" do
+      response = update_wallet({termType: "end_of_month"})
+
+      expect(response["errors"]).to be_nil
+      expect(response.dig("data", "updateCustomerWallet", "paymentTerm")).to eq("termType" => "end_of_month", "days" => nil, "dayOfMonth" => nil, "monthOffset" => nil)
+      expect(wallet.reload.payment_term).to eq("term_type" => "end_of_month")
+    end
+
+    it "clears the term when null is sent" do
+      response = update_wallet(nil)
+
+      expect(response["errors"]).to be_nil
+      expect(response.dig("data", "updateCustomerWallet", "paymentTerm")).to be_nil
+      expect(wallet.reload.payment_term).to be_nil
+    end
+  end
 end

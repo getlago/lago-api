@@ -28,6 +28,7 @@ RSpec.describe ::V1::WalletSerializer do
       "currency" => wallet.currency,
       "name" => wallet.name,
       "purchase_order_number" => wallet.purchase_order_number,
+      "payment_term" => wallet.payment_term,
       "priority" => wallet.priority,
       "rate_amount" => wallet.rate_amount.to_s,
       "created_at" => wallet.created_at.iso8601,

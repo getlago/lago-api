@@ -26,6 +26,7 @@ module Wallets
       return result unless valid_limitations?
       return result unless valid_payment_method?
       return result unless valid_connections?
+      return result unless PaymentTerms::ValidateService.new(result, payment_term: params[:payment_term]).valid?
 
       if billing_entity_param_sent?
         if billing_entity_value_provided? && billing_entity.nil?
@@ -41,6 +42,7 @@ module Wallets
         wallet.priority = params[:priority] if params[:priority]
         wallet.expiration_at = params[:expiration_at] if params.key?(:expiration_at)
         wallet.purchase_order_number = params[:purchase_order_number] if params.key?(:purchase_order_number)
+        wallet.payment_term = params[:payment_term] && PaymentTerm.from_h(params[:payment_term]).to_h if params.key?(:payment_term)
         unless params[:invoice_requires_successful_payment].nil?
           wallet.invoice_requires_successful_payment = ActiveModel::Type::Boolean.new.cast(params[:invoice_requires_successful_payment])
         end
