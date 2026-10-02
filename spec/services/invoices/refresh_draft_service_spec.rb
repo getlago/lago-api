@@ -362,6 +362,27 @@ RSpec.describe Invoices::RefreshDraftService do
         expect(invoice.fees.sole).to have_attributes(invoiceable: product, amount_cents: 7_500)
       end
 
+      it "hard-deletes the previous draft fees and their applied taxes" do
+        previous_fee = create(
+          :fee,
+          invoice:,
+          organization:,
+          billing_entity: invoice.billing_entity,
+          subscription: nil,
+          contract:,
+          contract_rate_card:,
+          rate_card_rate:,
+          fee_type: :product,
+          invoiceable: product,
+          amount_currency: "USD"
+        )
+        applied_tax = create(:fee_applied_tax, fee: previous_fee, organization:)
+
+        expect(refresh_service.call).to be_success
+        expect(Fee.unscoped.exists?(previous_fee.id)).to be(false)
+        expect(Fee::AppliedTax.exists?(applied_tax.id)).to be(false)
+      end
+
       it "applies the shared custom section and wallet refresh steps" do
         invoice_custom_section = create(:invoice_custom_section, organization:)
         create(
