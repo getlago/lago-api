@@ -10,7 +10,8 @@ require "rails_helper"
 RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeClass
   let(:organization) { create(:organization) }
 
-  shared_examples "a keyset-paginated query" do |table:, index:|
+  # Without `index`, only the ordering is checked: for a query several indexes can serve.
+  shared_examples "a keyset-paginated query" do |table:, index: nil|
     let(:anchor_token) { CursorPagination::Token.encode(table:, record: Struct.new(:id, :created_at).new(SecureRandom.uuid, Time.current)) }
 
     it "ends with the keyset ordering and runs" do
@@ -20,27 +21,29 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
       expect(scope.to_a).to eq([])
     end
 
-    context "when the planner can only use an index already in the tuple order" do
-      # Scoped to the transaction wrapping the example. The test tables are nearly empty,
-      # so the costs would not tell the indexes apart: without scans nor sorts, only an
-      # index serving both the bound and the order is left. The plan tells that the index
-      # CAN serve the page, not that the planner will prefer it on production data.
-      before do
-        %w[enable_seqscan enable_bitmapscan enable_sort].each do |setting|
-          ActiveRecord::Base.connection.execute("SET LOCAL #{setting} = off")
+    if index
+      context "when the planner can only use an index already in the tuple order" do
+        # Scoped to the transaction wrapping the example. The test tables are nearly empty,
+        # so the costs would not tell the indexes apart: without scans nor sorts, only an
+        # index serving both the bound and the order is left. The plan tells that the index
+        # CAN serve the page, not that the planner will prefer it on production data.
+        before do
+          %w[enable_seqscan enable_bitmapscan enable_sort].each do |setting|
+            ActiveRecord::Base.connection.execute("SET LOCAL #{setting} = off")
+          end
         end
-      end
 
-      it "serves the first page and the following ones from the cursor index" do
-        {
-          CursorPagination::Cursor.new(table:) => "Index Scan",
-          CursorPagination::Cursor.new(table:, after: anchor_token) => "Index Scan",
-          # Paging backward walks the same index in reverse.
-          CursorPagination::Cursor.new(table:, before: anchor_token) => "Index Scan Backward"
-        }.each do |cursor, scan|
-          plan = ActiveRecord::Base.connection.select_rows("EXPLAIN #{default_scope.call(cursor).to_sql}").flatten.join("\n")
+        it "serves the first page and the following ones from the cursor index" do
+          {
+            CursorPagination::Cursor.new(table:) => "Index Scan",
+            CursorPagination::Cursor.new(table:, after: anchor_token) => "Index Scan",
+            # Paging backward walks the same index in reverse.
+            CursorPagination::Cursor.new(table:, before: anchor_token) => "Index Scan Backward"
+          }.each do |cursor, scan|
+            plan = ActiveRecord::Base.connection.select_rows("EXPLAIN #{default_scope.call(cursor).to_sql}").flatten.join("\n")
 
-          expect(plan).to include("#{scan} using #{index} on #{table}")
+            expect(plan).to include("#{scan} using #{index} on #{table}")
+          end
         end
       end
     end
@@ -120,13 +123,10 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
         ).contracts
       end
     end
-    # The endpoint always filters on a status, active by default.
-    let(:default_scope) do
-      ->(pagination) { ContractsQuery.call(organization:, pagination:, filters: {status: ["active"]}).contracts }
-    end
 
-    # A single status, the default: `status` comes right after the organization in the index.
-    it_behaves_like "a keyset-paginated query", table: "contracts", index: "index_contracts_by_status_cursor"
+    # No index for the default single status: both cursor indexes serve it in order, at the
+    # same cost on the near-empty test table, so the planner's pick is arbitrary.
+    it_behaves_like "a keyset-paginated query", table: "contracts"
 
     context "when asked for several statuses" do
       let(:scope) do
