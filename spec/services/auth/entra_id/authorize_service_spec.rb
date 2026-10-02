@@ -33,6 +33,30 @@ RSpec.describe Auth::EntraId::AuthorizeService do
       end
     end
 
+    context "when integrations exist whose primary domains differ only by casing" do
+      let(:entra_id_integration) { build(:entra_id_integration, domain: "example.com") }
+      let(:upper_integration) { build(:entra_id_integration, domain: "Example.com") }
+
+      before do
+        upper_integration.save!(validate: false)
+        entra_id_integration.save!(validate: false)
+      end
+
+      it "routes each spelling to the integration with the exact domain" do
+        lower_result = described_class.new(email: "foo@example.com").call
+        upper_result = described_class.new(email: "foo@Example.com").call
+
+        expect(lower_result.entra_id_integration).to eq(entra_id_integration)
+        expect(upper_result.entra_id_integration).to eq(upper_integration)
+      end
+
+      it "falls back to the oldest case-insensitive match for another spelling" do
+        result = described_class.new(email: "foo@EXAMPLE.COM").call
+
+        expect(result.entra_id_integration).to eq(upper_integration)
+      end
+    end
+
     context "when domain is not configured with an integration" do
       let(:email) { "foo@bar.com" }
 
