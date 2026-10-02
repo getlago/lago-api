@@ -133,10 +133,10 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
       expect(Events::Stores::Utils::ClickhouseConnection).to have_received(:connection_with_retry).once
     end
 
-    it "counts an event in each filter it matches" do
+    it "counts an event in the one filter it is billed on" do
       totals = pricing_buckets.to_h { [it.charge_filter.id, scanned_store(it).sum.value] }
 
-      expect(totals.values).to match_array([4, 3, 36, 72, 144 + 256])
+      expect(totals.values).to match_array([4, 3, 32, 72, 144 + 256])
     end
 
     context "without deduplication" do
