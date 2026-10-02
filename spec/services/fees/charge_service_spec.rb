@@ -3553,7 +3553,7 @@ RSpec.describe Fees::ChargeService, :premium do
             Subscriptions::ChargeCacheMiddleware.new(
               subscription:,
               charge:,
-              to_datetime: boundaries.charges_to_datetime,
+              to_datetime: boundaries.charges_to_datetime.floor(6),
               cache: true
             )
           end
@@ -4236,7 +4236,7 @@ RSpec.describe Fees::ChargeService, :premium do
           Subscriptions::ChargeCacheMiddleware.new(
             subscription:,
             charge:,
-            to_datetime: boundaries.charges_to_datetime,
+            to_datetime: boundaries.charges_to_datetime.floor(6),
             cache: true
           )
         end
@@ -4594,6 +4594,139 @@ RSpec.describe Fees::ChargeService, :premium do
     end
   end
 
+  describe "recurring aggregation snapshots" do
+    let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:, field_name: "value") }
+    let(:snapshots) { RecurringAggregationSnapshot.where(subscription:, charge:) }
+    let(:event_values) { [10, 5] }
+    let(:now) { Time.zone.parse("2022-04-01T01:00:00") }
+
+    around { |example| travel_to(now) { example.run } }
+
+    before do
+      event_values.each_with_index do |value, index|
+        create(:event, organization:, subscription:, code: billable_metric.code,
+          timestamp: Time.zone.parse("2022-03-16") + index.days, properties: {value:, region: "eu"})
+      end
+    end
+
+    it "persists the cumulative units at the end of the period" do
+      charge_subscription_service.call
+
+      expect(snapshots.sole).to have_attributes(
+        charge_filter_id: nil,
+        billable_metric_id: billable_metric.id,
+        grouped_by: {},
+        to_datetime: boundaries.charges_to_datetime.floor(6),
+        watermark: now,
+        units: 15
+      )
+    end
+
+    context "with a rounding function" do
+      let(:billable_metric) do
+        create(:sum_billable_metric, :recurring, organization:, field_name: "value", rounding_function: "round", rounding_precision: 0)
+      end
+      let(:event_values) { [1.4, 1.4] }
+
+      it "persists the units before rounding" do
+        result = charge_subscription_service.call
+
+        expect(result.fees.sole.units).to eq(3)
+        expect(snapshots.sole.units).to eq(2.8)
+      end
+    end
+
+    context "with pricing group keys" do
+      let(:charge) do
+        create(:standard_charge, plan: subscription.plan, billable_metric:, properties: {amount: "20", pricing_group_keys: ["region"]})
+      end
+
+      before do
+        create(:event, organization:, subscription:, code: billable_metric.code,
+          timestamp: Time.zone.parse("2022-03-20"), properties: {value: 7, region: "us"})
+      end
+
+      it "persists one snapshot per group" do
+        charge_subscription_service.call
+
+        expect(snapshots.pluck(:grouped_by, :units)).to match_array([[{"region" => "eu"}, 15], [{"region" => "us"}, 7]])
+      end
+    end
+
+    context "with a prorated charge" do
+      let(:charge) do
+        create(:standard_charge, plan: subscription.plan, billable_metric:, prorated: true, properties: {amount: "20"})
+      end
+
+      it "persists the units without proration" do
+        result = charge_subscription_service.call
+
+        expect(result.fees.sole.precise_amount_cents).to be < 15 * 2_000
+        expect(snapshots.sole.units).to eq(15)
+      end
+    end
+
+    context "with a weighted sum billable metric" do
+      let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
+
+      it "persists the active units at the end of the period" do
+        charge_subscription_service.call
+
+        expect(snapshots.sole.units).to eq(15)
+      end
+    end
+
+    context "with a non recurring billable metric" do
+      let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "value") }
+
+      it "persists no snapshot" do
+        charge_subscription_service.call
+
+        expect(snapshots).to be_empty
+      end
+    end
+
+    context "with a recurring unique count billable metric" do
+      let(:billable_metric) { create(:unique_count_billable_metric, :recurring, organization:, field_name: "value") }
+
+      it "persists no snapshot" do
+        charge_subscription_service.call
+
+        expect(snapshots).to be_empty
+      end
+    end
+
+    context "with a progressive billing invoice" do
+      let(:invoice) { create(:invoice, :progressive_billing_invoice, customer:, organization:) }
+
+      it "persists no snapshot" do
+        charge_subscription_service.call
+
+        expect(snapshots).to be_empty
+      end
+    end
+
+    context "when context is invoice_preview" do
+      let(:context) { :invoice_preview }
+
+      it "persists no snapshot" do
+        charge_subscription_service.call
+
+        expect(snapshots).to be_empty
+      end
+    end
+
+    context "when context is current_usage" do
+      let(:context) { :current_usage }
+
+      it "persists no snapshot" do
+        charge_subscription_service.call
+
+        expect(snapshots).to be_empty
+      end
+    end
+  end
+
   describe "presentation_breakdowns interaction with adjusted fees" do
     let(:billable_metric) do
       create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value")
@@ -4749,7 +4882,7 @@ RSpec.describe Fees::ChargeService, :premium do
       Subscriptions::ChargeCacheMiddleware.new(
         subscription:,
         charge:,
-        to_datetime: boundaries.charges_to_datetime,
+        to_datetime: boundaries.charges_to_datetime.floor(6),
         cache: true
       )
     end
