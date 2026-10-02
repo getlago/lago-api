@@ -142,6 +142,43 @@ RSpec.describe Api::V1::InvoicesController do
       end
     end
 
+    context "with a payment_term" do
+      let(:payment_term) { {term_type: "day_of_month", day_of_month: 10, month_offset: 1} }
+      let(:create_params) do
+        {
+          external_customer_id: customer_external_id,
+          currency: "EUR",
+          payment_term:,
+          fees: [
+            {
+              add_on_code: add_on_first.code,
+              unit_amount_cents: 1200,
+              units: 2
+            }
+          ]
+        }
+      end
+
+      it "creates an invoice with the given term" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoice][:payment_term]).to eq(term_type: "day_of_month", day_of_month: 10, month_offset: 1)
+        expect(Invoice.find(json[:invoice][:lago_id]).payment_term_source).to eq("invoice")
+      end
+
+      context "when the payment_term is not an object" do
+        let(:payment_term) { "net 30" }
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json[:error_details][:payment_term]).to eq(["invalid_format"])
+        end
+      end
+    end
+
     context "when multi_entity_billing feature flag is enabled" do
       let(:other_billing_entity) { create(:billing_entity, organization:) }
 
