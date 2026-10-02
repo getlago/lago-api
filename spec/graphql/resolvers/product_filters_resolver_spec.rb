@@ -44,6 +44,16 @@ RSpec.describe Resolvers::ProductFiltersResolver do
     expect(response["metadata"]["totalCount"]).to eq(2)
   end
 
+  # The v2 REST list pages the filters newest first; GraphQL keeps the model's ordering.
+  context "with filters created at different times" do
+    let!(:filter_one) { create(:product_filter, organization:, product:, name: "US cards", created_at: 1.day.ago) }
+    let!(:filter_two) { create(:product_filter, organization:, name: "EU cards", created_at: 2.days.ago) }
+
+    it "returns the oldest filters first" do
+      expect(execution["data"]["productFilters"]["collection"].map { it["id"] }).to eq([filter_two.id, filter_one.id])
+    end
+  end
+
   context "with a product filter" do
     let(:variables) { {productId: product.id} }
 

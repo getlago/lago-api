@@ -12,7 +12,6 @@ class ContractRateCardsQuery < BaseQuery
     contract_rate_cards = with_contract(contract_rate_cards) if filters.contract_id.present?
     contract_rate_cards = with_external_id(contract_rate_cards) if filters.external_id.present?
     contract_rate_cards = apply_rate_card_filters(contract_rate_cards, phase_parent: :contract_rate_card_id)
-    contract_rate_cards = paginate(contract_rate_cards)
     contract_rate_cards = if order == :product_category
       order_by_product_category(contract_rate_cards).order(:effective_date, :id)
     else
@@ -20,7 +19,7 @@ class ContractRateCardsQuery < BaseQuery
       apply_consistent_ordering(contract_rate_cards, default_order: {effective_date: :asc})
     end
 
-    result.contract_rate_cards = contract_rate_cards
+    result.contract_rate_cards = paginate(contract_rate_cards)
     result
   end
 

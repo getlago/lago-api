@@ -3,6 +3,8 @@
 module Api
   module V2
     class ContractsController < Api::V2::BaseController
+      cursor_paginated_index(Contract)
+
       def create
         result = ::Contracts::CreateService.call(
           organization: current_organization,
@@ -55,29 +57,26 @@ module Api
 
         result = ::ContractsQuery.call(
           organization: current_organization,
-          pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
-          },
+          pagination: cursor,
           filters:,
           search_term: params[:search_term]
         )
 
         if result.success?
-          contracts = result.contracts.includes(:catalog_plan, :customer)
+          page = ::CursorPagination::Page.new(records: result.contracts.includes(:catalog_plan, :customer), cursor:)
 
           # One grouped query instead of one COUNT per row in the serializer.
           applied_rate_cards_counts = ContractRateCard
-            .where(contract_id: contracts.map(&:id))
+            .where(contract_id: page.records.map(&:id))
             .group(:contract_id)
             .count
 
           render(
             json: ::CollectionSerializer.new(
-              contracts,
+              page.records,
               ::V2::ContractSerializer,
               collection_name: "contracts",
-              meta: pagination_metadata(contracts),
+              meta: page.meta,
               applied_rate_cards_counts:
             )
           )
