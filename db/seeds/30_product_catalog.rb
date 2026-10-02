@@ -3,17 +3,25 @@
 # The product catalog is the v2 billing surface. Seed it on a dedicated
 # organization that has the product_catalog integration enabled, keeping
 # Hooli as the legacy (v1) demo so the two flows never mix.
+#
+# NOTE: see 00_seed_config.rb — LAGO_SEED_ORGS alone skips this organization,
+# set LAGO_SEED_ORG_CATALOG to seed it under another name.
+org_data = SeedOrganizations.product_catalog_config
+return if org_data.nil?
+
 gavin = User.find_by!(email: "gavin@hooli.com")
 
-organization = Organization.find_by(name: "Hooli v2") ||
-  Organization.create!(id: "33333333-4444-5555-6666-777777777777", name: "Hooli v2")
+name, id, api_key_value = org_data.values_at(:name, :id, :api_key)
+entity_name, entity_code = org_data.values_at(:billing_entity_name, :billing_entity_code)
+
+organization = Organization.find_by(name:) || Organization.create!(id:, name:)
 organization.update!(
   premium_integrations: Organization::PREMIUM_INTEGRATIONS,
   feature_flags: organization.feature_flags.to_a | ["product_catalog"],
-  invoice_footer: "Hooli v2 is a fictional company on the product catalog."
+  invoice_footer: "#{entity_name} is a fictional company on the product catalog."
 )
 
-BillingEntity.find_or_create_by!(organization:, name: "Hooli v2", code: "hooli_v2").update!(
+BillingEntity.find_or_create_by!(organization:, name: entity_name, code: entity_code).update!(
   email: "gavin@hooli.com",
   email_settings: BillingEntity::EMAIL_SETTINGS
 )
@@ -22,8 +30,8 @@ membership = Membership.find_or_create_by!(user: gavin, organization:)
 MembershipRole.find_or_create_by!(membership:, organization:, role: Role.find_by!(admin: true))
 
 unless organization.api_keys.exists?
-  api_key = organization.api_keys.create!(name: "Hooli v2 Key", permissions: ApiKey.default_permissions)
-  api_key.update_columns(value: "lago_key-hooli-v2-1234567890") # rubocop:disable Rails/SkipsModelValidations
+  api_key = organization.api_keys.create!(name: "#{entity_name} Key", permissions: ApiKey.default_permissions)
+  api_key.update_columns(value: api_key_value) if api_key_value # rubocop:disable Rails/SkipsModelValidations
 end
 
 unless ProductCategory.exists?(organization:, code: "cloud_platform")
