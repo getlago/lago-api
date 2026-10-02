@@ -4,6 +4,7 @@ module Api
   module V2
     class RateCardsController < Api::V2::BaseController
       cursor_paginated_index(RateCard)
+      expandable_with ::V2::RateCardSerializer
 
       def create
         if create_params[:product_filter_code].present? && product && product_filter.nil?
@@ -51,7 +52,7 @@ module Api
       def show
         return not_found_error(resource: "rate_card") unless rate_card
 
-        render_rate_card(rate_card)
+        render_rate_card(preload_expansions(rate_card))
       end
 
       def index
@@ -69,7 +70,7 @@ module Api
         )
 
         if result.success?
-          page = ::CursorPagination::Page.new(records: result.rate_cards.includes(:product, :product_filter, :rates), cursor:)
+          page = ::CursorPagination::Page.new(records: result.rate_cards.includes(:product, :product_filter), cursor:)
 
           render(
             json: ::CollectionSerializer.new(
@@ -144,7 +145,7 @@ module Api
       end
 
       def render_rate_card(rate_card)
-        render(json: ::V2::RateCardSerializer.new(rate_card, root_name: "rate_card", includes: [:active_rate, :taxes, *serializer_includes]))
+        render(json: ::V2::RateCardSerializer.new(rate_card, root_name: "rate_card", includes: serializer_includes))
       end
 
       def resource_name

@@ -61,4 +61,27 @@ RSpec.describe V2::RateCardSerializer do
       expect(payload[:taxes].pluck(:lago_id)).to eq(expected)
     end
   end
+
+  # What the activity log passes, with the rates left out.
+  context "with taxes and counts" do
+    let(:includes) { %i[taxes counts] }
+    let!(:applied_tax) { create(:rate_card_applied_tax, rate_card:) }
+
+    it "renders the rates count and each tax in the V1 shape, with its zero counts" do
+      expect(payload[:rates_count]).to eq(1)
+      expect(payload[:taxes]).to eq([V1::TaxSerializer.new(applied_tax.tax).serialize])
+    end
+  end
+
+  # What a v2 show passes with expand[]=taxes.
+  context "with taxes and deleted_at" do
+    let(:includes) { %i[taxes deleted_at] }
+    let!(:applied_tax) { create(:rate_card_applied_tax, rate_card:) }
+
+    it "renders deleted_at on each tax, and no count" do
+      expect(payload).not_to have_key(:rates_count)
+      expect(payload[:taxes].sole).to include(lago_id: applied_tax.tax_id, deleted_at: nil)
+      expect(payload[:taxes].sole.keys & V2::TaxSerializer::ZERO_COUNTS.keys).to be_empty
+    end
+  end
 end
