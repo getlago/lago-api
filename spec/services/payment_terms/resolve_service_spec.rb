@@ -9,6 +9,33 @@ RSpec.describe PaymentTerms::ResolveService do
   let(:billing_entity) { create(:billing_entity, organization:) }
   let(:customer) { create(:customer, organization:, billing_entity:) }
 
+  context "when a subscription with its own payment term is given" do
+    subject(:result) { described_class.call(customer:, subscription:) }
+
+    let(:subscription) { create(:subscription, customer:, payment_term: {term_type: "net", days: 60}) }
+
+    before do
+      customer.update!(payment_term: {term_type: "net", days: 30})
+    end
+
+    it "returns the subscription term with source subscription" do
+      expect(result).to be_success
+      expect(result.payment_term.term_type).to eq("net")
+      expect(result.payment_term.days).to eq(60)
+      expect(result.source).to eq("subscription")
+    end
+
+    context "when the subscription has no payment term" do
+      let(:subscription) { create(:subscription, customer:) }
+
+      it "falls back to the customer term" do
+        expect(result).to be_success
+        expect(result.payment_term.days).to eq(30)
+        expect(result.source).to eq("customer")
+      end
+    end
+  end
+
   context "when the customer has a payment term" do
     before do
       customer.update!(payment_term: {term_type: "net", days: 45})
@@ -35,6 +62,29 @@ RSpec.describe PaymentTerms::ResolveService do
       expect(result.payment_term.day_of_month).to eq(15)
       expect(result.payment_term.month_offset).to eq(1)
       expect(result.source).to eq("billing_entity")
+    end
+  end
+
+  context "when the subscription is issued by another billing entity" do
+    subject(:result) { described_class.call(customer:, subscription:) }
+
+    let(:other_billing_entity) { create(:billing_entity, organization:, payment_term: {term_type: "end_of_month"}) }
+    let(:subscription) { create(:subscription, customer:, billing_entity: other_billing_entity) }
+
+    before { billing_entity.update!(payment_term: {term_type: "net", days: 30}) }
+
+    it "returns the term of the subscription's billing entity" do
+      expect(result.payment_term.term_type).to eq("end_of_month")
+      expect(result.source).to eq("billing_entity")
+    end
+
+    context "when the issuing billing entity is given" do
+      subject(:result) { described_class.call(customer:, subscription:, billing_entity:) }
+
+      it "returns the term of the given billing entity" do
+        expect(result.payment_term.term_type).to eq("net")
+        expect(result.source).to eq("billing_entity")
+      end
     end
   end
 
