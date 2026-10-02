@@ -56,6 +56,7 @@ module Invoices
       result.invoice = invoice
       SendWebhookJob.perform_later("invoice.voided", result.invoice)
       Invoices::ProviderTaxes::VoidJob.perform_later(invoice:)
+      Integrations::Aggregator::Invoices::VoidJob.perform_later(invoice:) if invoice.should_sync_voided_invoice?
       Integrations::Aggregator::Invoices::Hubspot::UpdateJob.perform_later(invoice:) if invoice.should_update_hubspot_invoice?
 
       result
