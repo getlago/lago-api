@@ -55,5 +55,13 @@ RSpec.describe PaymentRequests::Payments::PaymentProviders::Factory do
         expect(factory_service).to eq(PaymentRequests::Payments::FlutterwaveService)
       end
     end
+
+    context "when paystack" do
+      let(:payment_provider) { "paystack" }
+
+      it "returns correct class" do
+        expect(factory_service).to eq(PaymentRequests::Payments::PaystackService)
+      end
+    end
   end
 end
