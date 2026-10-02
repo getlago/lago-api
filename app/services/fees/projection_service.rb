@@ -14,20 +14,21 @@ module Fees
       keyword_init: true
     )
 
-    def initialize(fee:, timezone:)
+    def initialize(fee:, metered_item:, timezone:)
       @fee = fee
+      @metered_item = metered_item
       @timezone = timezone
 
       super(nil)
     end
 
     def call
-      result.projection = if charge.billable_metric.recurring?
+      result.projection = if metered_item.billable_metric.recurring?
         current_projection
       elsif period_ratio.positive?
         projection
       else
-        UsageProjection.zero(pricing_unit_amount_cents: charge.applied_pricing_unit ? 0 : nil)
+        UsageProjection.zero(pricing_unit_amount_cents: metered_item.applied_pricing_unit ? 0 : nil)
       end
 
       result
@@ -35,9 +36,7 @@ module Fees
 
     private
 
-    attr_reader :fee, :timezone
-
-    delegate :charge, :charge_filter, to: :fee
+    attr_reader :fee, :metered_item, :timezone
 
     def current_projection
       UsageProjection.new(
@@ -61,17 +60,17 @@ module Fees
 
     # Prorated charges only exist on recurring metrics, which are never extrapolated.
     def repriced?
-      REPRICED_CHARGE_MODELS.include?(charge.charge_model)
+      REPRICED_CHARGE_MODELS.include?(metered_item.charge_model)
     end
 
     def repriced_amounts
       charge_model_result = ChargeModels::Factory.new_instance(
-        pricing_structure: ChargeModels::PricingStructure.from_charge(charge).with(properties: properties_for_charge_model),
+        pricing_structure: metered_item.pricing_structure,
         aggregation_result: units_aggregation_result,
         period_ratio:,
         calculate_projected_usage: true
       ).apply.raise_if_error!
-      return [0, charge.applied_pricing_unit ? 0 : nil] if charge_model_result.projected_amount.nil?
+      return [0, metered_item.applied_pricing_unit ? 0 : nil] if charge_model_result.projected_amount.nil?
 
       projected_result = ChargeModels::BaseService::Result.new.tap do |projected|
         projected.units = charge_model_result.projected_units
@@ -82,7 +81,7 @@ module Fees
       amount = Fees::AmountsService.call!(
         currency:,
         charge_model_result: projected_result,
-        applied_pricing_unit: Fees::AmountsService::AppliedPricingUnit.from_applied_pricing_unit(charge.applied_pricing_unit)
+        applied_pricing_unit: Fees::AmountsService::AppliedPricingUnit.from_applied_pricing_unit(metered_item.applied_pricing_unit)
       ).amount
 
       [amount.amount_cents.to_i, amount.pricing_unit_usage&.amount_cents&.to_i]
@@ -126,10 +125,6 @@ module Fees
           projected.units = (BigDecimal(breakdown.units.to_s) / period_ratio.to_d).round(currency.exponent)
         end
       end
-    end
-
-    def properties_for_charge_model
-      charge_filter&.properties.presence || charge.properties
     end
 
     def currency

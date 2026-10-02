@@ -292,10 +292,22 @@ module Invoices
 
       timezone = customer.applicable_timezone
       projections_by_fee = invoice.fees.each_with_object({}.compare_by_identity) do |fee, by_fee|
-        by_fee[fee] = Fees::ProjectionService.call!(fee:, timezone:).projection
+        by_fee[fee] = Fees::ProjectionService.call!(fee:, metered_item: metered_item_for(fee), timezone:).projection
       end
 
       UsageProjections.new(projections_by_fee)
+    end
+
+    # Default-filter fees carry no charge filter and are priced with the charge properties.
+    def metered_item_for(fee)
+      @metered_items_by_charge_id ||= metered_items.index_by(&:charge_id)
+      metered_item = @metered_items_by_charge_id.fetch(fee.charge_id)
+
+      if fee.charge_filter
+        metered_item.with_filter(fee.charge_filter)
+      else
+        metered_item
+      end
     end
 
     def customer_provider_taxation?

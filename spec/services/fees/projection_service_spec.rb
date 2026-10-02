@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Fees::ProjectionService do
-  subject(:result) { described_class.call!(fee:, timezone:) }
+  subject(:result) { described_class.call!(fee:, metered_item:, timezone:) }
 
   let(:organization) { create(:organization) }
   let(:billable_metric) { create(:billable_metric, organization:) }
@@ -40,6 +40,21 @@ RSpec.describe Fees::ProjectionService do
         "charges_from_datetime" => from_datetime,
         "charges_to_datetime" => to_datetime
       }
+    )
+  end
+
+  let(:metered_item) do
+    Fees::ChargeService::MeteredItem.from_charge(
+      charge:,
+      charge_filter:,
+      boundaries: BillingPeriodBoundaries.new(
+        from_datetime: billing_from_datetime,
+        to_datetime: billing_to_datetime,
+        charges_from_datetime: from_datetime,
+        charges_to_datetime: to_datetime,
+        charges_duration: 10,
+        timestamp: current_time
+      )
     )
   end
 
