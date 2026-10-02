@@ -53,7 +53,9 @@ module BillableMetrics
         result
       end
 
-      def initialize(event_store:, metered_item:, billing_context:, boundaries:, filters: {}, bypass_aggregation: false)
+      # initial_value: snapshots of the latest closed period (RecurringAggregationSnapshots::FetchService),
+      # nil when a recurring aggregation must scan the full history
+      def initialize(event_store:, metered_item:, billing_context:, boundaries:, filters: {}, bypass_aggregation: false, initial_value: nil)
         super(nil)
         @event_store = event_store
         @metered_item = metered_item
@@ -70,6 +72,7 @@ module BillableMetrics
         @boundaries = boundaries
 
         @bypass_aggregation = bypass_aggregation
+        @initial_value = initial_value
 
         result.aggregator = self
         result.pay_in_advance_event = event if event
@@ -149,6 +152,7 @@ module BillableMetrics
         :grouped_by_values,
         :presentation_by,
         :bypass_aggregation,
+        :initial_value,
         :uniq_grouped_by_and_presentation_by
 
       delegate :billable_metric, to: :metered_item
