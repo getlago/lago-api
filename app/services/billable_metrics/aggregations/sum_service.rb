@@ -22,6 +22,7 @@ module BillableMetrics
           result.aggregation = sum_result.value
         end
 
+        result.recurring_units = sum_result.value if billable_metric.recurring?
         result.pay_in_advance_aggregation = compute_pay_in_advance_aggregation
         result.count = sum_result.events_count
 
@@ -66,6 +67,7 @@ module BillableMetrics
             group_result.aggregation = aggregation_value
           end
 
+          group_result.recurring_units = aggregation_value if billable_metric.recurring?
           group_result.count = aggregation.events_count
           group_result.options = {running_total: running_total(options, grouped_by_values: group_result.grouped_by)}
           group_result
