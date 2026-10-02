@@ -37,7 +37,8 @@ describe X402::Connection do
       expect(connection).to validate_presence_of(:code)
       expect(connection).to validate_presence_of(:name)
       expect(connection).to validate_presence_of(:networks)
-      expect(connection).to validate_presence_of(:secrets)
+      expect(connection).to validate_presence_of(:cdp_api_key_id)
+      expect(connection).to validate_presence_of(:cdp_api_key_secret)
     end
 
     describe "code uniqueness" do

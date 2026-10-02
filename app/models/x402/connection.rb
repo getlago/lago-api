@@ -22,7 +22,7 @@ module X402
     before_validation :normalize_payout_addresses
 
     validates :code, presence: true, uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id}
-    validates :name, :networks, :secrets, presence: true
+    validates :name, :networks, :cdp_api_key_id, :cdp_api_key_secret, presence: true
     validates :auto_create_customers, inclusion: {in: [true, false]}
     validate :validate_networks
     validate :validate_payout_addresses
