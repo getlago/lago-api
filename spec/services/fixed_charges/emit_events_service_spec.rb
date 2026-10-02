@@ -199,6 +199,8 @@ RSpec.describe FixedCharges::EmitEventsService do
         described_class.new(fixed_charge:, subscription:, apply_units_immediately: true)
       end
 
+      before { freeze_time }
+
       it "creates fixed charge events for all active subscriptions with timestamp current Time" do
         expect { result }.to change(FixedChargeEvent, :count).by(2)
 
@@ -208,12 +210,12 @@ RSpec.describe FixedCharges::EmitEventsService do
         expect(event_1).to be_present
         expect(event_1.organization).to eq(active_subscription_1.organization)
         expect(event_1.units).to eq(fixed_charge.units)
-        expect(event_1.timestamp).to be_within(1.second).of(Time.current)
+        expect(event_1.timestamp).to eq(Time.current)
 
         expect(event_2).to be_present
         expect(event_2.organization).to eq(active_subscription_2.organization)
         expect(event_2.units).to eq(fixed_charge.units)
-        expect(event_2.timestamp).to be_within(1.second).of(Time.current)
+        expect(event_2.timestamp).to eq(Time.current)
       end
 
       context "when passing timestamp as datetime object" do
@@ -297,7 +299,7 @@ RSpec.describe FixedCharges::EmitEventsService do
           active_event = FixedChargeEvent.find_by(subscription: active_subscription_1, fixed_charge:)
           incomplete_event = FixedChargeEvent.find_by(subscription: incomplete_subscription, fixed_charge:)
 
-          expect(active_event.timestamp).to be_within(1.second).of(Time.current)
+          expect(active_event.timestamp).to eq(Time.current)
           expect(incomplete_event.timestamp)
             .to be_within(1.second).of(incomplete_subscription.started_at.beginning_of_day + 1.month)
         end
