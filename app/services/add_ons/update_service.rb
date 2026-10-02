@@ -30,6 +30,7 @@ module AddOns
       end
 
       result.add_on = add_on
+      SendWebhookJob.perform_after_commit("add_on.updated", add_on)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
