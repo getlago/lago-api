@@ -12,7 +12,7 @@ module IntegrationMappings
     belongs_to :organization
     belongs_to :billing_entity, optional: true
 
-    MAPPABLE_TYPES = %i[AddOn BillableMetric].freeze
+    MAPPABLE_TYPES = %i[AddOn BillableMetric Product].freeze
 
     validates :mappable_type, inclusion: {in: MAPPABLE_TYPES.map(&:to_s)}
     validates :mappable_type,
