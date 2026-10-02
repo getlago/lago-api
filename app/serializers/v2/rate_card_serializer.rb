@@ -38,18 +38,21 @@ module V2
       ::V2::RateCardRateSerializer.new(rate, includes: nested_includes).serialize
     end
 
+    # Latest effective_from first, as /rates lists them. Sorted in memory, so that every
+    # status reads its siblings from the loaded association rather than querying them.
     def rates
       ::CollectionSerializer.new(
-        model.rates,
+        model.rates.sort_by(&:effective_from).reverse,
         ::V2::RateCardRateSerializer,
         collection_name: "rates",
         includes: nested_includes
       ).serialize
     end
 
+    # A tax discarded between the query of the links and the preload of their taxes loads as nil.
     def taxes
       ::CollectionSerializer.new(
-        model.taxes,
+        model.applied_taxes.listed.filter_map(&:tax),
         ::V1::TaxSerializer,
         collection_name: "taxes"
       ).serialize
