@@ -66,6 +66,23 @@ RSpec.describe PaymentTerm do
     end
   end
 
+  describe "#==" do
+    it "compares terms by value" do
+      expect(described_class.from_h(term_type: "net", days: 30))
+        .to eq(described_class.from_h("term_type" => "net", "days" => 30))
+      expect(described_class.from_h(term_type: "net", days: 30))
+        .not_to eq(described_class.from_h(term_type: "net", days: 15))
+      expect(described_class.from_h(term_type: "due_on_receipt"))
+        .not_to eq("term_type" => "due_on_receipt")
+    end
+
+    it "hashes equal terms identically for group_by" do
+      terms = [described_class.from_h(term_type: "net", days: 30), described_class.from_h("term_type" => "net", "days" => 30)]
+
+      expect(terms.group_by(&:itself).size).to eq(1)
+    end
+  end
+
   describe "#net_payment_term_alias" do
     it "returns N for net, 0 for due_on_receipt and nil for the four new types" do
       expect(described_class.from_h(term_type: "net", days: 30).net_payment_term_alias).to eq(30)
