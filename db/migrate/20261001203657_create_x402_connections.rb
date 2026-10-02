@@ -6,7 +6,7 @@ class CreateX402Connections < ActiveRecord::Migration[8.0]
     create_enum :x402_asset, %w[usdc]
 
     create_table :x402_connections, id: :uuid do |t|
-      t.references :organization, type: :uuid, null: false, foreign_key: true, index: false
+      t.references :organization, type: :uuid, null: false, index: false
       t.string :code, null: false
       t.string :name, null: false
       t.enum :facilitator, enum_type: :x402_facilitator, null: false, default: "coinbase_cdp"

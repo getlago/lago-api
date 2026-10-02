@@ -7,13 +7,13 @@ class CreateX402Settlements < ActiveRecord::Migration[8.0]
     create_enum :x402_settlement_settled_by, %w[lago merchant]
 
     create_table :x402_settlements, id: :uuid do |t|
-      t.references :organization, type: :uuid, null: false, foreign_key: true
+      t.references :organization, type: :uuid, null: false
       t.references :x402_connection, type: :uuid, null: false, foreign_key: true
-      t.references :customer, type: :uuid, foreign_key: true
-      t.references :subscription, type: :uuid, foreign_key: true, index: false
-      t.references :wallet_transaction, type: :uuid, foreign_key: true, index: false
-      t.references :payment, type: :uuid, foreign_key: true, index: false
-      t.references :invoice, type: :uuid, foreign_key: true
+      t.references :customer, type: :uuid
+      t.references :subscription, type: :uuid, index: false
+      t.references :wallet_transaction, type: :uuid, index: false
+      t.references :payment, type: :uuid, index: false
+      t.references :invoice, type: :uuid
       t.enum :kind, enum_type: :x402_settlement_kind, null: false
       t.enum :status, enum_type: :x402_settlement_status, null: false, default: "pending"
       t.enum :settled_by, enum_type: :x402_settlement_settled_by, null: false, default: "lago"
