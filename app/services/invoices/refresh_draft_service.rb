@@ -36,26 +36,26 @@ module Invoices
       ActiveRecord::Base.transaction do
         invoice.update!(ready_to_be_refreshed: false) if invoice.ready_to_be_refreshed?
         old_total_amount_cents = invoice.total_amount_cents
-        billing_segment_invoice = billing_segment_invoice?
-        subscription_refresh_data = build_subscription_refresh_data unless billing_segment_invoice
+        product_catalog_invoice = product_catalog_invoice?
+        subscription_refresh_data = build_subscription_refresh_data unless product_catalog_invoice
 
-        calculate_result = if billing_segment_invoice
-          refresh_billing_segment_fees
+        calculate_result = if product_catalog_invoice
+          refresh_product_catalog_fees!
         else
-          refresh_subscription_fees(subscription_refresh_data)
+          refresh_subscription_fees!(subscription_refresh_data)
         end
 
         Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
-        refresh_subscription_credit_notes(subscription_refresh_data) unless billing_segment_invoice
+        refresh_subscription_credit_notes(subscription_refresh_data) unless product_catalog_invoice
 
         calculate_result.raise_if_error! unless tax_error?(calculate_result.error)
 
         if old_total_amount_cents != invoice.total_amount_cents
-          flag_lifetime_usage_for_refresh unless billing_segment_invoice
+          flag_lifetime_usage_for_refresh unless product_catalog_invoice
           invoice.customer.flag_wallets_for_refresh
         end
 
-        preserve_subscription_fee_creation_date unless billing_segment_invoice
+        preserve_subscription_fee_creation_date unless product_catalog_invoice
 
         return result if tax_error?(calculate_result.error) # rubocop:disable Rails/TransactionExitStatement
 
@@ -66,7 +66,7 @@ module Invoices
 
       result
     rescue BaseService::FailedResult => e
-      if billing_segment_invoice?
+      if product_catalog_invoice?
         result.fail_with_error!(e)
       else
         e.result
@@ -77,10 +77,10 @@ module Invoices
 
     attr_accessor :invoice, :subscription_ids, :invoicing_reason, :recurring, :context, :invoice_subscriptions
 
-    def billing_segment_invoice?
-      return @billing_segment_invoice if defined?(@billing_segment_invoice)
+    def product_catalog_invoice?
+      return @product_catalog_invoice if defined?(@product_catalog_invoice)
 
-      @billing_segment_invoice = invoice.billing_segments.exists?
+      @product_catalog_invoice = invoice.billing_segments.exists?
     end
 
     def billing_segment_context
@@ -91,8 +91,8 @@ module Invoices
       end
     end
 
-    def refresh_billing_segment_fees
-      reset_billing_segment_invoice_values!
+    def refresh_product_catalog_fees!
+      reset_product_catalog_invoice_values!
 
       BillingSegments::ComputeInvoiceService.call!(
         invoice:,
@@ -101,7 +101,7 @@ module Invoices
       )
     end
 
-    def refresh_subscription_fees(refresh_data)
+    def refresh_subscription_fees!(refresh_data)
       reset_subscription_invoice_values!
 
       Invoices::CreateInvoiceSubscriptionService.call(
@@ -196,8 +196,8 @@ module Invoices
       invoice.save!
     end
 
-    def reset_billing_segment_invoice_values!
-      invoice.fees.discard_all!
+    def reset_product_catalog_invoice_values!
+      invoice.fees.destroy_all
       reset_shared_invoice_values!
 
       invoice.save!
