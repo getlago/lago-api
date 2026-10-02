@@ -442,6 +442,7 @@ DROP INDEX IF EXISTS public.index_webhooks_on_endpoint_and_timestamps;
 DROP INDEX IF EXISTS public.index_webhooks_for_query;
 DROP INDEX IF EXISTS public.index_webhook_endpoints_on_webhook_url_and_organization_id;
 DROP INDEX IF EXISTS public.index_webhook_endpoints_on_organization_id;
+DROP INDEX IF EXISTS public.index_wallets_on_x402_enabled;
 DROP INDEX IF EXISTS public.index_wallets_on_ready_to_be_refreshed;
 DROP INDEX IF EXISTS public.index_wallets_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_wallets_on_organization_id_and_customer_id;
@@ -5028,7 +5029,8 @@ CREATE TABLE public.wallets (
     traceable boolean DEFAULT false NOT NULL,
     code character varying,
     billing_entity_id uuid,
-    purchase_order_number character varying
+    purchase_order_number character varying,
+    x402_enabled boolean DEFAULT false NOT NULL
 );
 
 
@@ -12284,6 +12286,13 @@ CREATE INDEX index_wallets_on_ready_to_be_refreshed ON public.wallets USING btre
 
 
 --
+-- Name: index_wallets_on_x402_enabled; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_wallets_on_x402_enabled ON public.wallets USING btree (x402_enabled) WHERE x402_enabled;
+
+
+--
 -- Name: index_webhook_endpoints_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -15608,6 +15617,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261002140945'),
+('20261002140944'),
 ('20261002140603'),
 ('20261002140602'),
 ('20261002103242'),
