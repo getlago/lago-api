@@ -57,6 +57,9 @@ class Customer < ApplicationRecord
   enum :subscription_invoice_issuing_date_anchor, SUBSCRIPTION_INVOICE_ISSUING_DATE_ANCHORS, prefix: true, validate: {allow_nil: true}
   enum :subscription_invoice_issuing_date_adjustment, SUBSCRIPTION_INVOICE_ISSUING_DATE_ADJUSTMENTS, prefix: true, validate: {allow_nil: true}
 
+  attr_readonly :x402_agent_address
+
+  before_validation :normalize_x402_agent_address, on: :create
   before_save :ensure_slug
 
   belongs_to :organization
@@ -138,6 +141,15 @@ class Customer < ApplicationRecord
     lock_key: ->(customer) { customer.organization_id }
 
   scope :awaiting_wallet_refresh, -> { where(awaiting_wallet_refresh: true) }
+  scope :by_x402_agent_address, ->(address) {
+    family = X402::Network.family_of_address(address)
+
+    if family
+      where(x402_agent_address: X402::Network.normalize_address(address, family:))
+    else
+      none
+    end
+  }
   scope :with_active_wallets, -> { joins(:wallets).where(wallets: {status: :active}) }
 
   scope :falling_back_to_default_dunning_campaign, -> {
@@ -169,6 +181,7 @@ class Customer < ApplicationRecord
   validates :payment_provider, inclusion: {in: PAYMENT_PROVIDERS}, allow_nil: true
   validates :timezone, timezone: true, allow_nil: true
   validates :email, email: true, if: -> { email? && will_save_change_to_email? }
+  validate :validate_x402_agent_address, on: :create, if: :x402_agent_address
 
   BILLING_ADDRESS_FIELDS = %i[
     address_line1 address_line2 city zipcode state country
@@ -415,6 +428,22 @@ class Customer < ApplicationRecord
 
     self.slug = "#{organization.document_number_prefix}-#{formatted_sequential_id}"
   end
+
+  def normalize_x402_agent_address
+    family = X402::Network.family_of_address(x402_agent_address)
+
+    if family
+      self.x402_agent_address = X402::Network.normalize_address(x402_agent_address, family:)
+    end
+  end
+
+  def validate_x402_agent_address
+    family = X402::Network.family_of_address(x402_agent_address)
+
+    if family.nil? || !X402::Network.valid_address?(x402_agent_address, family:)
+      errors.add(:x402_agent_address, :invalid_format)
+    end
+  end
 end
 
 # == Schema Information
@@ -467,6 +496,7 @@ end
 #  timezone                                     :string
 #  url                                          :string
 #  vat_rate                                     :float
+#  x402_agent_address                           :string
 #  zipcode                                      :string
 #  created_at                                   :datetime         not null
 #  updated_at                                   :datetime         not null
@@ -488,6 +518,7 @@ end
 #  index_customers_on_external_id                               (organization_id,external_id)
 #  index_customers_on_external_id_and_organization_id           (external_id,organization_id) UNIQUE WHERE (deleted_at IS NULL)
 #  index_customers_on_org_id_and_sequential_id_unique           (organization_id,sequential_id) UNIQUE WHERE (sequential_id IS NOT NULL)
+#  index_customers_on_organization_id_and_x402_agent_address    (organization_id,x402_agent_address) UNIQUE WHERE ((deleted_at IS NULL) AND (x402_agent_address IS NOT NULL))
 #  index_customers_on_organization_id_email_gin_trgm_ops        (organization_id,email) WHERE (deleted_at IS NULL) USING gin
 #  index_customers_on_organization_id_external_id_gin_trgm_ops  (organization_id,external_id) WHERE (deleted_at IS NULL) USING gin
 #  index_customers_on_organization_id_firstname_gin_trgm_ops    (organization_id,firstname) WHERE (deleted_at IS NULL) USING gin

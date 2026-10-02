@@ -863,6 +863,7 @@ DROP INDEX IF EXISTS public.index_customers_on_organization_id_kept;
 DROP INDEX IF EXISTS public.index_customers_on_organization_id_firstname_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_customers_on_organization_id_external_id_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_customers_on_organization_id_email_gin_trgm_ops;
+DROP INDEX IF EXISTS public.index_customers_on_organization_id_and_x402_agent_address;
 DROP INDEX IF EXISTS public.index_customers_on_org_id_and_sequential_id_unique;
 DROP INDEX IF EXISTS public.index_customers_on_external_id_and_organization_id;
 DROP INDEX IF EXISTS public.index_customers_on_external_id;
@@ -3051,6 +3052,7 @@ CREATE TABLE public.customers (
     awaiting_wallet_refresh boolean DEFAULT false NOT NULL,
     dunning_currency_attempts jsonb DEFAULT '{}'::jsonb NOT NULL,
     payment_term jsonb,
+    x402_agent_address character varying,
     CONSTRAINT check_customers_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_customers_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -9328,6 +9330,13 @@ CREATE UNIQUE INDEX index_customers_on_org_id_and_sequential_id_unique ON public
 
 
 --
+-- Name: index_customers_on_organization_id_and_x402_agent_address; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_customers_on_organization_id_and_x402_agent_address ON public.customers USING btree (organization_id, x402_agent_address) WHERE ((deleted_at IS NULL) AND (x402_agent_address IS NOT NULL));
+
+
+--
 -- Name: index_customers_on_organization_id_email_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -15599,6 +15608,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261002140603'),
+('20261002140602'),
 ('20261002103242'),
 ('20261002103241'),
 ('20261001204136'),
