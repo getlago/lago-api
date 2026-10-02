@@ -60,7 +60,7 @@ class FeeDisplayHelper
 
   def self.format_percentage_rate(rate)
     if rate.present?
-      "#{BigDecimal(rate).round(6).to_s("F").sub(/\.?0+\z/, "")}%"
+      "#{RoundingHelper.round_decimal_part(BigDecimal(rate))}%"
     end
   end
 
