@@ -115,7 +115,7 @@ module Events
 
         def event_columns_sql
           columns = [
-            "#{sql_condition("attribution_labels[?]", group_key)} AS node",
+            "#{label_sql(group_key)} AS node",
             "code",
             "toDecimal128(coalesce(decimal_value, 0), #{SCALE}) AS event_units"
           ]
@@ -195,33 +195,41 @@ module Events
         end
 
         def search_match_sql
-          sql_condition("positionCaseInsensitiveUTF8(node, ?) > 0", search)
+          "positionCaseInsensitiveUTF8(node, #{quote(search)}) > 0"
         end
 
         def where_sql
           conditions = [
-            sql_condition(
-              "organization_id = ? AND external_subscription_id = ? AND code IN (?)",
-              organization_id,
-              external_subscription_id,
-              charge_columns.map(&:code).uniq
-            ),
+            "organization_id = #{quote(organization_id)}",
+            "external_subscription_id = #{quote(external_subscription_id)}",
+            "code IN (#{quote_list(charge_columns.map(&:code).uniq)})",
             sql_condition("timestamp >= ? AND timestamp <= ?", from_datetime, to_datetime)
           ]
 
           label_filters.each do |key, values|
-            conditions << sql_condition("attribution_labels[?] IN (?)", key, values)
+            conditions << "#{label_sql(key)} IN (#{quote_list(values)})"
           end
 
           conditions.join(" AND ")
         end
 
         def code_condition(column)
-          sql_condition("code = ?", column.code)
+          "code = #{quote(column.code)}"
+        end
+
+        def label_sql(key)
+          "attribution_labels[#{quote(key)}]"
         end
 
         def property_sql(key)
-          sql_condition("properties[?]", key.to_s)
+          "properties[#{quote(key.to_s)}]"
+        end
+
+        # Values coming from the API or the organization's configuration are quoted by the ClickHouse
+        # adapter: unlike `sql_condition`, which applies the PostgreSQL rules, it escapes backslashes,
+        # that ClickHouse reads as escape characters inside a string.
+        def quote_list(values)
+          values.map { quote(it) }.join(", ")
         end
 
         def decimal_sql(value)

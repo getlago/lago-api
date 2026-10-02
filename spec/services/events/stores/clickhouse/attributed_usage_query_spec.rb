@@ -205,6 +205,28 @@ RSpec.describe Events::Stores::Clickhouse::AttributedUsageQuery, clickhouse: {cl
       end
     end
 
+    context "with values holding quotes and backslashes" do
+      let(:tricky_team) { "o\\'brien" }
+
+      before { create_event(code: "tokens", value: 1, labels: {"team" => tricky_team}) }
+
+      context "with a label filter" do
+        let(:label_filters) { {"team" => [tricky_team]} }
+
+        it "matches the value as a plain string" do
+          expect(attributed_usage_query.rows.map { it["node"] }).to eq([tricky_team])
+        end
+      end
+
+      context "with a search" do
+        let(:search) { "\\' OR 1=1 OR '" }
+
+        it "searches for the value as a plain string" do
+          expect(attributed_usage_query.rows.select { it["in_page"].to_i == 1 }).to eq([])
+        end
+      end
+    end
+
     context "with a lookup past the ClickHouse parser defaults" do
       let(:tokens_lookup) do
         entries = Array.new(20_000) { |index| ["model-#{index.to_s.rjust(12, "0")}", index + 1] }.to_h.merge("opus" => 20_001)
