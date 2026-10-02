@@ -100,6 +100,47 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
       end
     end
 
+    context "when a threshold already opted in to resolution" do
+      let(:alert) { create(:alert, organization:, thresholds: nil) }
+      let(:params) { {thresholds: [{code: "warn", value: 20}]} }
+
+      before do
+        create(:alert_threshold, alert:, code: "warn", value: 10, notify_on: %w[triggered resolved])
+      end
+
+      it "keeps notify_on when the update leaves it out" do
+        expect(result).to be_success
+        expect(alert.reload.thresholds.sole).to have_attributes(value: 20, notify_on: %w[triggered resolved])
+      end
+
+      context "when the update opts the threshold out" do
+        let(:params) { {thresholds: [{code: "warn", value: 20, notify_on: %w[triggered]}]} }
+
+        it "honors the explicit value" do
+          expect(result).to be_success
+          expect(alert.reload.thresholds.sole.notify_on).to eq(%w[triggered])
+        end
+      end
+
+      context "when the update renames the threshold" do
+        let(:params) { {thresholds: [{code: "renamed", value: 20}]} }
+
+        it "falls back to the default" do
+          expect(result).to be_success
+          expect(alert.reload.thresholds.sole.notify_on).to eq(%w[triggered])
+        end
+      end
+
+      context "when the update turns the threshold into a recurring one" do
+        let(:params) { {thresholds: [{code: "warn", value: 20, recurring: true}]} }
+
+        it "falls back to the default instead of failing on an unsupported combination" do
+          expect(result).to be_success
+          expect(alert.reload.thresholds.sole).to have_attributes(recurring: true, notify_on: %w[triggered])
+        end
+      end
+    end
+
     context "with too many thresholds" do
       let(:params) do
         {
