@@ -91,6 +91,7 @@ ALTER TABLE IF EXISTS ONLY public.invites DROP CONSTRAINT IF EXISTS fk_rails_c71
 ALTER TABLE IF EXISTS ONLY public.customers_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_c64033bcb0;
 ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_c60c12efbd;
 ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS fk_rails_c545103d57;
+ALTER TABLE IF EXISTS ONLY public.x402_settlements DROP CONSTRAINT IF EXISTS fk_rails_c4c81e73af;
 ALTER TABLE IF EXISTS ONLY public.cs_admin_audit_logs DROP CONSTRAINT IF EXISTS fk_rails_c47aa068a0;
 ALTER TABLE IF EXISTS ONLY public.active_storage_attachments DROP CONSTRAINT IF EXISTS fk_rails_c3b3935057;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_c29bf4ff0f;
@@ -98,6 +99,7 @@ ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_b
 ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS fk_rails_bf661ef73d;
 ALTER TABLE IF EXISTS ONLY public.dunning_campaign_thresholds DROP CONSTRAINT IF EXISTS fk_rails_bf1f386f75;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_subscription_activities DROP CONSTRAINT IF EXISTS fk_rails_bda048a8d9;
+ALTER TABLE IF EXISTS ONLY public.x402_settlements DROP CONSTRAINT IF EXISTS fk_rails_bcc60b1259;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_bcb5aecd6c;
 ALTER TABLE IF EXISTS ONLY public.rate_phases DROP CONSTRAINT IF EXISTS fk_rails_bc33c71114;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_bacde7a063;
@@ -131,6 +133,7 @@ ALTER TABLE IF EXISTS ONLY public.billing_object_connections DROP CONSTRAINT IF 
 ALTER TABLE IF EXISTS ONLY public.contracts DROP CONSTRAINT IF EXISTS fk_rails_a48f7202cc;
 ALTER TABLE IF EXISTS ONLY public.invoice_connections DROP CONSTRAINT IF EXISTS fk_rails_a3fff9bd72;
 ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS fk_rails_a2d2cb3819;
+ALTER TABLE IF EXISTS ONLY public.x402_settlements DROP CONSTRAINT IF EXISTS fk_rails_a1b7668ced;
 ALTER TABLE IF EXISTS ONLY public.quotes DROP CONSTRAINT IF EXISTS fk_rails_a1ab65f1f7;
 ALTER TABLE IF EXISTS ONLY public.rate_cards DROP CONSTRAINT IF EXISTS fk_rails_a026c79cab;
 ALTER TABLE IF EXISTS ONLY public.contracts DROP CONSTRAINT IF EXISTS fk_rails_a00d802491;
@@ -158,6 +161,7 @@ ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXIST
 ALTER TABLE IF EXISTS ONLY public.data_export_parts DROP CONSTRAINT IF EXISTS fk_rails_909197908c;
 ALTER TABLE IF EXISTS ONLY public.fixed_charge_events DROP CONSTRAINT IF EXISTS fk_rails_90302b3ca3;
 ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS fk_rails_8fa6f0d920;
+ALTER TABLE IF EXISTS ONLY public.x402_settlements DROP CONSTRAINT IF EXISTS fk_rails_8f16abb305;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_8eeaaf6494;
 ALTER TABLE IF EXISTS ONLY public.applied_pricing_units DROP CONSTRAINT IF EXISTS fk_rails_8e0c3d0c5b;
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_8df9bf2b6c;
@@ -215,6 +219,7 @@ ALTER TABLE IF EXISTS ONLY public.dunning_campaigns DROP CONSTRAINT IF EXISTS fk
 ALTER TABLE IF EXISTS ONLY public.usage_attribution_values DROP CONSTRAINT IF EXISTS fk_rails_6b11e175f4;
 ALTER TABLE IF EXISTS ONLY public.products DROP CONSTRAINT IF EXISTS fk_rails_6a4ad694b3;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_69ec920393;
+ALTER TABLE IF EXISTS ONLY public.x402_settlements DROP CONSTRAINT IF EXISTS fk_rails_699da0a829;
 ALTER TABLE IF EXISTS ONLY public.billing_entities_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_699cd1384f;
 ALTER TABLE IF EXISTS ONLY public.customers_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_68754484c0;
 ALTER TABLE IF EXISTS ONLY public.integration_resources DROP CONSTRAINT IF EXISTS fk_rails_67d4eb3c92;
@@ -248,6 +253,7 @@ ALTER TABLE IF EXISTS ONLY public.billing_segments DROP CONSTRAINT IF EXISTS fk_
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_58234c715e;
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_56b7167125;
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_56b3626631;
+ALTER TABLE IF EXISTS ONLY public.x402_connections DROP CONSTRAINT IF EXISTS fk_rails_56763cd4b5;
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_5628a713de;
 ALTER TABLE IF EXISTS ONLY public.cs_admin_audit_logs DROP CONSTRAINT IF EXISTS fk_rails_559c8fe04c;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS fk_rails_54c6fe0506;
@@ -275,6 +281,7 @@ ALTER TABLE IF EXISTS ONLY public.contract_rate_cards DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.quote_owners DROP CONSTRAINT IF EXISTS fk_rails_45230f8485;
 ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rails_4117574b51;
 ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rails_41088c7d45;
+ALTER TABLE IF EXISTS ONLY public.x402_settlements DROP CONSTRAINT IF EXISTS fk_rails_40fb23816d;
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_3ff27d7624;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_3f7be5debc;
 ALTER TABLE IF EXISTS ONLY public.invoices_payment_requests DROP CONSTRAINT IF EXISTS fk_rails_3ec3563cf3;
@@ -354,6 +361,7 @@ ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS fk_ra
 ALTER TABLE IF EXISTS ONLY public.rate_cards_taxes DROP CONSTRAINT IF EXISTS fk_rails_133ae613c4;
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_12d29bc654;
 ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS fk_rails_123667657c;
+ALTER TABLE IF EXISTS ONLY public.x402_settlements DROP CONSTRAINT IF EXISTS fk_rails_1124f79783;
 ALTER TABLE IF EXISTS ONLY public.quote_versions DROP CONSTRAINT IF EXISTS fk_rails_10ee148d0d;
 ALTER TABLE IF EXISTS ONLY public.applied_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_10428ecad2;
 ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fk_rails_103e187859;
@@ -413,6 +421,17 @@ SELECT
     NULL::json AS filters,
     NULL::jsonb AS filters_grouped_by;
 DROP INDEX IF EXISTS public.unique_default_payment_method_per_customer;
+DROP INDEX IF EXISTS public.index_x402_settlements_on_x402_connection_id;
+DROP INDEX IF EXISTS public.index_x402_settlements_on_pending_reconcile_after;
+DROP INDEX IF EXISTS public.index_x402_settlements_on_pending_invoice_id;
+DROP INDEX IF EXISTS public.index_x402_settlements_on_pending_credit_purchase_payer;
+DROP INDEX IF EXISTS public.index_x402_settlements_on_payment_id;
+DROP INDEX IF EXISTS public.index_x402_settlements_on_organization_network_and_hash;
+DROP INDEX IF EXISTS public.index_x402_settlements_on_organization_id_and_payment_digest;
+DROP INDEX IF EXISTS public.index_x402_settlements_on_organization_id;
+DROP INDEX IF EXISTS public.index_x402_settlements_on_invoice_id;
+DROP INDEX IF EXISTS public.index_x402_settlements_on_customer_id;
+DROP INDEX IF EXISTS public.index_x402_connections_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_wt_invoice_custom_sections_unique;
 DROP INDEX IF EXISTS public.index_webhooks_on_webhook_endpoint_id;
 DROP INDEX IF EXISTS public.index_webhooks_on_updated_at_for_cleanup;
@@ -1093,6 +1112,8 @@ DROP INDEX IF EXISTS public.idx_billing_on_enriched_events;
 DROP INDEX IF EXISTS public.idx_lookup_on_enriched_events;
 DROP INDEX IF EXISTS public.idx_unique_on_enriched_events;
 DROP INDEX IF EXISTS public.index_enriched_events_on_event_id;
+ALTER TABLE IF EXISTS ONLY public.x402_settlements DROP CONSTRAINT IF EXISTS x402_settlements_pkey;
+ALTER TABLE IF EXISTS ONLY public.x402_connections DROP CONSTRAINT IF EXISTS x402_connections_pkey;
 ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS webhooks_pkey;
 ALTER TABLE IF EXISTS ONLY public.webhook_endpoints DROP CONSTRAINT IF EXISTS webhook_endpoints_pkey;
 ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS wallets_pkey;
@@ -1240,6 +1261,8 @@ ALTER TABLE IF EXISTS ONLY public.active_storage_attachments DROP CONSTRAINT IF 
 ALTER TABLE IF EXISTS public.versions ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.usage_monitoring_subscription_activities ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.quote_owners ALTER COLUMN id DROP DEFAULT;
+DROP TABLE IF EXISTS public.x402_settlements;
+DROP TABLE IF EXISTS public.x402_connections;
 DROP TABLE IF EXISTS public.webhooks;
 DROP TABLE IF EXISTS public.webhook_endpoints;
 DROP TABLE IF EXISTS public.wallets_invoice_custom_sections;
@@ -1427,6 +1450,11 @@ DROP TABLE IF EXISTS partman.template_public_enriched_events;
 DROP FUNCTION IF EXISTS public.set_payment_receipt_number();
 DROP FUNCTION IF EXISTS public.record_deletion();
 DROP FUNCTION IF EXISTS public.ensure_role_consistency();
+DROP TYPE IF EXISTS public.x402_settlement_status;
+DROP TYPE IF EXISTS public.x402_settlement_settled_by;
+DROP TYPE IF EXISTS public.x402_settlement_kind;
+DROP TYPE IF EXISTS public.x402_facilitator;
+DROP TYPE IF EXISTS public.x402_asset;
 DROP TYPE IF EXISTS public.usage_monitoring_triggered_alert_kinds;
 DROP TYPE IF EXISTS public.usage_monitoring_alert_types;
 DROP TYPE IF EXISTS public.usage_monitoring_alert_direction;
@@ -2025,6 +2053,55 @@ CREATE TYPE public.usage_monitoring_triggered_alert_kinds AS ENUM (
     'triggered',
     'resolved',
     'seeded'
+);
+
+
+--
+-- Name: x402_asset; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.x402_asset AS ENUM (
+    'usdc'
+);
+
+
+--
+-- Name: x402_facilitator; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.x402_facilitator AS ENUM (
+    'coinbase_cdp'
+);
+
+
+--
+-- Name: x402_settlement_kind; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.x402_settlement_kind AS ENUM (
+    'credit_purchase',
+    'invoice_payment'
+);
+
+
+--
+-- Name: x402_settlement_settled_by; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.x402_settlement_settled_by AS ENUM (
+    'lago',
+    'merchant'
+);
+
+
+--
+-- Name: x402_settlement_status; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.x402_settlement_status AS ENUM (
+    'pending',
+    'settled',
+    'failed'
 );
 
 
@@ -6227,6 +6304,67 @@ CREATE TABLE public.webhooks (
 
 
 --
+-- Name: x402_connections; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.x402_connections (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    code character varying NOT NULL,
+    name character varying NOT NULL,
+    facilitator public.x402_facilitator DEFAULT 'coinbase_cdp'::public.x402_facilitator NOT NULL,
+    secrets character varying NOT NULL,
+    payout_addresses jsonb DEFAULT '{}'::jsonb NOT NULL,
+    networks character varying[] DEFAULT '{}'::character varying[] NOT NULL,
+    asset public.x402_asset DEFAULT 'usdc'::public.x402_asset NOT NULL,
+    auto_create_customers boolean DEFAULT true NOT NULL,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: x402_settlements; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.x402_settlements (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    x402_connection_id uuid NOT NULL,
+    customer_id uuid,
+    subscription_id uuid,
+    wallet_transaction_id uuid,
+    payment_id uuid,
+    invoice_id uuid,
+    kind public.x402_settlement_kind NOT NULL,
+    status public.x402_settlement_status DEFAULT 'pending'::public.x402_settlement_status NOT NULL,
+    settled_by public.x402_settlement_settled_by DEFAULT 'lago'::public.x402_settlement_settled_by NOT NULL,
+    network character varying NOT NULL,
+    asset character varying NOT NULL,
+    payer_address character varying NOT NULL,
+    payee_address character varying NOT NULL,
+    settled_amount_atomic numeric(38,0) NOT NULL,
+    settled_amount_cents bigint NOT NULL,
+    transaction_hash character varying,
+    reconcile_after timestamp(6) without time zone,
+    payment_digest character varying NOT NULL,
+    purchase_settings jsonb,
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    error_reason character varying,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT check_x402_settlements_amount_positive CHECK ((settled_amount_atomic > (0)::numeric)),
+    CONSTRAINT check_x402_settlements_credit_purchase_has_settings CHECK (((kind <> 'credit_purchase'::public.x402_settlement_kind) OR (purchase_settings IS NOT NULL))),
+    CONSTRAINT check_x402_settlements_granted_has_subscription CHECK (((wallet_transaction_id IS NULL) OR (subscription_id IS NOT NULL))),
+    CONSTRAINT check_x402_settlements_invoice_payment_has_invoice CHECK (((kind <> 'invoice_payment'::public.x402_settlement_kind) OR (invoice_id IS NOT NULL))),
+    CONSTRAINT check_x402_settlements_merchant_settled_credit_purchase CHECK (((settled_by = 'lago'::public.x402_settlement_settled_by) OR ((kind = 'credit_purchase'::public.x402_settlement_kind) AND (status = 'settled'::public.x402_settlement_status)))),
+    CONSTRAINT check_x402_settlements_pending_has_reconcile_after CHECK (((status <> 'pending'::public.x402_settlement_status) OR (reconcile_after IS NOT NULL))),
+    CONSTRAINT check_x402_settlements_settled_has_hash CHECK (((status <> 'settled'::public.x402_settlement_status) OR (transaction_hash IS NOT NULL)))
+);
+
+
+--
 -- Name: enriched_events_default; Type: TABLE ATTACH; Schema: public; Owner: -
 --
 
@@ -7404,6 +7542,22 @@ ALTER TABLE ONLY public.webhook_endpoints
 
 ALTER TABLE ONLY public.webhooks
     ADD CONSTRAINT webhooks_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: x402_connections x402_connections_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.x402_connections
+    ADD CONSTRAINT x402_connections_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: x402_settlements x402_settlements_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.x402_settlements
+    ADD CONSTRAINT x402_settlements_pkey PRIMARY KEY (id);
 
 
 --
@@ -12199,6 +12353,83 @@ CREATE UNIQUE INDEX index_wt_invoice_custom_sections_unique ON public.wallet_tra
 
 
 --
+-- Name: index_x402_connections_on_organization_id_and_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_x402_connections_on_organization_id_and_code ON public.x402_connections USING btree (organization_id, code) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_x402_settlements_on_customer_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_x402_settlements_on_customer_id ON public.x402_settlements USING btree (customer_id);
+
+
+--
+-- Name: index_x402_settlements_on_invoice_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_x402_settlements_on_invoice_id ON public.x402_settlements USING btree (invoice_id);
+
+
+--
+-- Name: index_x402_settlements_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_x402_settlements_on_organization_id ON public.x402_settlements USING btree (organization_id);
+
+
+--
+-- Name: index_x402_settlements_on_organization_id_and_payment_digest; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_x402_settlements_on_organization_id_and_payment_digest ON public.x402_settlements USING btree (organization_id, payment_digest) WHERE (status = ANY (ARRAY['pending'::public.x402_settlement_status, 'settled'::public.x402_settlement_status]));
+
+
+--
+-- Name: index_x402_settlements_on_organization_network_and_hash; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_x402_settlements_on_organization_network_and_hash ON public.x402_settlements USING btree (organization_id, network, transaction_hash) WHERE (transaction_hash IS NOT NULL);
+
+
+--
+-- Name: index_x402_settlements_on_payment_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_x402_settlements_on_payment_id ON public.x402_settlements USING btree (payment_id) WHERE (payment_id IS NOT NULL);
+
+
+--
+-- Name: index_x402_settlements_on_pending_credit_purchase_payer; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_x402_settlements_on_pending_credit_purchase_payer ON public.x402_settlements USING btree (organization_id, payer_address) WHERE ((kind = 'credit_purchase'::public.x402_settlement_kind) AND (status = 'pending'::public.x402_settlement_status));
+
+
+--
+-- Name: index_x402_settlements_on_pending_invoice_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_x402_settlements_on_pending_invoice_id ON public.x402_settlements USING btree (invoice_id) WHERE (status = 'pending'::public.x402_settlement_status);
+
+
+--
+-- Name: index_x402_settlements_on_pending_reconcile_after; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_x402_settlements_on_pending_reconcile_after ON public.x402_settlements USING btree (reconcile_after) WHERE (status = 'pending'::public.x402_settlement_status);
+
+
+--
+-- Name: index_x402_settlements_on_x402_connection_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_x402_settlements_on_x402_connection_id ON public.x402_settlements USING btree (x402_connection_id);
+
+
+--
 -- Name: unique_default_payment_method_per_customer; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12543,6 +12774,14 @@ ALTER TABLE ONLY public.applied_invoice_custom_sections
 
 ALTER TABLE ONLY public.quote_versions
     ADD CONSTRAINT fk_rails_10ee148d0d FOREIGN KEY (quote_id) REFERENCES public.quotes(id);
+
+
+--
+-- Name: x402_settlements fk_rails_1124f79783; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.x402_settlements
+    ADD CONSTRAINT fk_rails_1124f79783 FOREIGN KEY (x402_connection_id) REFERENCES public.x402_connections(id);
 
 
 --
@@ -13178,6 +13417,14 @@ ALTER TABLE ONLY public.charges_taxes
 
 
 --
+-- Name: x402_settlements fk_rails_40fb23816d; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.x402_settlements
+    ADD CONSTRAINT fk_rails_40fb23816d FOREIGN KEY (invoice_id) REFERENCES public.invoices(id);
+
+
+--
 -- Name: credit_notes fk_rails_41088c7d45; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -13391,6 +13638,14 @@ ALTER TABLE ONLY public.cs_admin_audit_logs
 
 ALTER TABLE ONLY public.credits
     ADD CONSTRAINT fk_rails_5628a713de FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: x402_connections fk_rails_56763cd4b5; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.x402_connections
+    ADD CONSTRAINT fk_rails_56763cd4b5 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -13655,6 +13910,14 @@ ALTER TABLE ONLY public.customers_invoice_custom_sections
 
 ALTER TABLE ONLY public.billing_entities_invoice_custom_sections
     ADD CONSTRAINT fk_rails_699cd1384f FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id);
+
+
+--
+-- Name: x402_settlements fk_rails_699da0a829; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.x402_settlements
+    ADD CONSTRAINT fk_rails_699da0a829 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -14114,6 +14377,14 @@ ALTER TABLE ONLY public.coupon_targets
 
 
 --
+-- Name: x402_settlements fk_rails_8f16abb305; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.x402_settlements
+    ADD CONSTRAINT fk_rails_8f16abb305 FOREIGN KEY (wallet_transaction_id) REFERENCES public.wallet_transactions(id);
+
+
+--
 -- Name: commitments_taxes fk_rails_8fa6f0d920; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14327,6 +14598,14 @@ ALTER TABLE ONLY public.rate_cards
 
 ALTER TABLE ONLY public.quotes
     ADD CONSTRAINT fk_rails_a1ab65f1f7 FOREIGN KEY (customer_id) REFERENCES public.customers(id);
+
+
+--
+-- Name: x402_settlements fk_rails_a1b7668ced; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.x402_settlements
+    ADD CONSTRAINT fk_rails_a1b7668ced FOREIGN KEY (customer_id) REFERENCES public.customers(id);
 
 
 --
@@ -14594,6 +14873,14 @@ ALTER TABLE ONLY public.wallet_transactions
 
 
 --
+-- Name: x402_settlements fk_rails_bcc60b1259; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.x402_settlements
+    ADD CONSTRAINT fk_rails_bcc60b1259 FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id);
+
+
+--
 -- Name: usage_monitoring_subscription_activities fk_rails_bda048a8d9; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14647,6 +14934,14 @@ ALTER TABLE ONLY public.active_storage_attachments
 
 ALTER TABLE ONLY public.cs_admin_audit_logs
     ADD CONSTRAINT fk_rails_c47aa068a0 FOREIGN KEY (actor_user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: x402_settlements fk_rails_c4c81e73af; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.x402_settlements
+    ADD CONSTRAINT fk_rails_c4c81e73af FOREIGN KEY (payment_id) REFERENCES public.payments(id);
 
 
 --
@@ -15313,6 +15608,10 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20261002142357'),
+('20261002103242'),
+('20261002103241'),
+('20261001204136'),
+('20261001203657'),
 ('20260929105639'),
 ('20260928140425'),
 ('20260928140424'),

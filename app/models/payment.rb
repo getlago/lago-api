@@ -17,6 +17,7 @@ class Payment < ApplicationRecord
   has_many :integration_resources, as: :syncable
   has_one :invoice_settlement, foreign_key: :source_payment_id
   has_one :payment_receipt, dependent: :destroy
+  has_one :x402_settlement, class_name: "X402::Settlement", inverse_of: :payment
 
   alias_attribute :currency, :amount_currency
 

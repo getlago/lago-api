@@ -26,6 +26,7 @@ en:
         invalid_amount: invalid_amount
         invalid_billable_metric_or_charge_model: invalid_billable_metric_or_charge_model
         invalid_charge_model: invalid_charge_model
+        invalid_checksum: invalid_checksum
         invalid_content_type: invalid_content_type
         invalid_date: invalid_date
         invalid_date_range: invalid_date_range
@@ -49,8 +50,11 @@ en:
         invalid_volume_ranges: invalid_volume_ranges
         language_code_invalid: not_a_valid_language_code
         less_than_or_equal_to: value_is_out_of_range
+        missing_evm_payout_address: missing_evm_payout_address
         missing_graduated_ranges: missing_graduated_ranges
+        missing_svm_payout_address: missing_svm_payout_address
         missing_volume_ranges: missing_volume_ranges
+        mixed_environments: mixed_environments
         modification_not_allowed: modification_not_allowed
         must_be_after_active_rate: must_be_after_active_rate
         must_be_after_effective_date: must_be_after_effective_date
@@ -69,6 +73,9 @@ en:
         not_allowed_with_proration: not_allowed_with_proration
         not_compatible_with_aggregation_type: not_compatible_with_aggregation_type
         not_compatible_with_pay_in_advance: not_compatible_with_pay_in_advance
+        not_connection_asset: not_connection_asset
+        not_connection_payout_address: not_connection_payout_address
+        not_offered_by_connection: not_offered_by_connection
         not_overridable: not_overridable
         one_of_plan_or_subscription_required: one_of_plan_or_subscription_required
         only_compatible_with_pay_in_advance_and_non_invoiceable: only_compatible_with_pay_in_advance_and_non_invoiceable
