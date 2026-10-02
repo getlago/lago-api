@@ -10,6 +10,18 @@ RSpec.describe PaymentProviders::StripeProvider do
   it { is_expected.to validate_length_of(:success_redirect_url).is_at_most(1024).allow_nil }
   it { is_expected.to validate_presence_of(:name) }
 
+  describe "stripe error classification" do
+    it "splits stripe errors into transient and permanent, with no overlap" do
+      transient = described_class::TRANSIENT_ERRORS
+      permanent = described_class::PERMANENT_ERRORS
+
+      expect(transient).to match_array([::Stripe::APIConnectionError, ::Stripe::APIError, ::Stripe::RateLimitError])
+      expect(permanent).to match_array([::Stripe::AuthenticationError, ::Stripe::InvalidRequestError, ::Stripe::PermissionError])
+      expect(transient & permanent).to be_empty
+      expect(transient + permanent).to all(be < ::Stripe::StripeError)
+    end
+  end
+
   describe "validations" do
     it "validates uniqueness of the code" do
       expect(stripe_provider).to validate_uniqueness_of(:code).scoped_to(:organization_id)
