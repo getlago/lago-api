@@ -341,6 +341,16 @@ RSpec.describe ChargeModels::PercentageService do
           expect(apply_percentage_service.amount).to eq(2.691)
         end
       end
+
+      context "when free units per events are used up before free units per total aggregation" do
+        let(:free_units_per_events) { 1 }
+        let(:free_units_per_total_aggregation) { "100" }
+
+        it "stops applying free units after the free events" do
+          # 0 (first event is free) + 2.392 (80 * 0.0299) + 12 (max as 10000 * 0.0299 > 12)
+          expect(apply_percentage_service.amount).to eq(14.392)
+        end
+      end
     end
   end
 end
