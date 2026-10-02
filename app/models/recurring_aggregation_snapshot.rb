@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 class RecurringAggregationSnapshot < ApplicationRecord
+  # An event ingested just before the aggregation may not be readable yet (open transaction,
+  # ClickHouse insert in progress): the snapshot stops short of it and the next period counts it.
+  WATERMARK_LAG = 10.seconds
+
   belongs_to :organization
   belongs_to :subscription
   belongs_to :charge, -> { with_discarded }
