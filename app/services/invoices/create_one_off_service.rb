@@ -4,7 +4,7 @@ module Invoices
   class CreateOneOffService < BaseService
     Result = BaseResult[:invoice, :payment_method]
 
-    def initialize(customer:, currency:, fees:, timestamp:, skip_psp: false, voided_invoice_id: nil, payment_method_params: nil, invoice_custom_section: {}, billing_entity_id: nil, billing_entity_code: nil, purchase_order_number: nil, with_discarded_add_ons: false)
+    def initialize(customer:, currency:, fees:, timestamp:, skip_psp: false, voided_invoice_id: nil, payment_method_params: nil, invoice_custom_section: {}, billing_entity_id: nil, billing_entity_code: nil, purchase_order_number: nil, with_discarded_add_ons: false, payment_term: nil)
       @customer = customer
       @currency = currency || customer&.currency
       @fees = fees
@@ -17,6 +17,7 @@ module Invoices
       @billing_entity_code = billing_entity_code
       @purchase_order_number = purchase_order_number
       @with_discarded_add_ons = with_discarded_add_ons
+      @payment_term = payment_term
 
       super(nil)
     end
@@ -32,6 +33,7 @@ module Invoices
       return result.not_found_failure!(resource: "fees") if fees.blank?
       return result.not_found_failure!(resource: "add_on") unless add_ons.count == add_on_identifiers.count
       return result unless valid_payment_method?
+      return result unless PaymentTerms::ValidateService.new(result, payment_term:).valid?
 
       resolve_billing_entity
       return result unless result.success?
@@ -99,7 +101,7 @@ module Invoices
     private
 
     attr_accessor :timestamp, :currency, :customer, :fees, :invoice, :skip_psp, :voided_invoice_id, :payment_method_params, :invoice_custom_section
-    attr_reader :billing_entity_id, :billing_entity_code, :billing_entity, :purchase_order_number, :with_discarded_add_ons
+    attr_reader :billing_entity_id, :billing_entity_code, :billing_entity, :purchase_order_number, :with_discarded_add_ons, :payment_term
 
     def create_generating_invoice
       invoice_result = Invoices::CreateGeneratingService.call(
@@ -108,11 +110,20 @@ module Invoices
         currency:,
         datetime: Time.zone.at(timestamp),
         billing_entity:,
-        purchase_order_number:
+        purchase_order_number:,
+        **invoice_payment_term
       )
       invoice_result.raise_if_error!
 
       @invoice = invoice_result.invoice
+    end
+
+    # The invoice is the billing object: a given term wins, otherwise CreateGeneratingService
+    # resolves the customer and billing entity levels.
+    def invoice_payment_term
+      return {} if payment_term.nil?
+
+      {payment_term: PaymentTerm.from_h(payment_term), payment_term_source: "invoice"}
     end
 
     def resolve_billing_entity

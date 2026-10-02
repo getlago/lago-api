@@ -17854,6 +17854,18 @@
               "deprecationReason": null
             },
             {
+              "name": "paymentTerm",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "PaymentTermInput",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "purchaseOrderNumber",
               "description": null,
               "type": {
@@ -36577,6 +36589,18 @@
               "type": {
                 "kind": "INPUT_OBJECT",
                 "name": "PaymentMethodReferenceInput",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "paymentTerm",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "PaymentTermInput",
                 "ofType": null
               },
               "defaultValue": null,
