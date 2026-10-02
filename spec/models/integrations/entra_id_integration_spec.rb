@@ -110,6 +110,45 @@ RSpec.describe Integrations::EntraIdIntegration do
       end
     end
 
+    context "when legacy integrations have primary domains that differ only by casing" do
+      let!(:legacy_integration) { build(:entra_id_integration, domain: "Example.com").tap { it.save!(validate: false) } }
+
+      before { build(:entra_id_integration, domain: "example.com").save!(validate: false) }
+
+      it "still saves unrelated changes" do
+        legacy_integration.host = "login.microsoftonline.us"
+
+        expect(legacy_integration).to be_valid
+      end
+
+      it "still saves a change that only alters the domain casing" do
+        legacy_integration.domain = "EXAMPLE.com"
+
+        expect(legacy_integration).to be_valid
+      end
+
+      it "rejects a newly claimed additional domain held by another integration" do
+        other = create(:entra_id_integration, domain: "other.test")
+        legacy_integration.additional_domains = [other.domain]
+
+        expect(legacy_integration).not_to be_valid
+        expect(legacy_integration.errors.details[:additional_domains]).to include(error: "domain_not_unique")
+      end
+    end
+
+    context "when an existing integration moves to a domain held by another integration" do
+      subject(:entra_id_integration) { create(:entra_id_integration, domain: "mine.test") }
+
+      before { create(:entra_id_integration, domain: "Taken.test") }
+
+      it "is invalid" do
+        entra_id_integration.domain = "taken.test"
+
+        expect(entra_id_integration).not_to be_valid
+        expect(entra_id_integration.errors.details[:domain]).to include(error: "domain_not_unique")
+      end
+    end
+
     context "when an additional domain repeats the integration's own primary domain" do
       subject(:entra_id_integration) { create(:entra_id_integration, domain: "bosch.com") }
 

@@ -42,13 +42,29 @@ module Integrations
 
     private
 
+    # NOTE: Only domains this save newly claims are checked. Primary domains used to be unique
+    #       case-sensitively, so legacy integrations whose domains differ only by casing must
+    #       keep saving unrelated changes (credentials, host).
     def domain_uniqueness
       return if domain.blank?
 
-      errors.add(:domain, "domain_not_unique") if domain_claimed_elsewhere?(domain)
-      return unless additional_domains.any? { domain_claimed_elsewhere?(it) }
+      claimed_before = persisted? ? claimed_domains(settings_in_database) : []
+
+      if !claimed_before.include?(domain.downcase) && domain_claimed_elsewhere?(domain)
+        errors.add(:domain, "domain_not_unique")
+      end
+
+      return unless (additional_domains - claimed_before).any? { domain_claimed_elsewhere?(it) }
 
       errors.add(:additional_domains, "domain_not_unique")
+    end
+
+    def claimed_domains(stored_settings)
+      stored_settings = stored_settings.is_a?(String) ? JSON.parse(stored_settings) : (stored_settings || {})
+
+      ([stored_settings["domain"]] + Array(stored_settings["additional_domains"]))
+        .compact_blank
+        .map(&:downcase)
     end
 
     def domain_claimed_elsewhere?(email_domain)
