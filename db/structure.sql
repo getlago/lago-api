@@ -125,6 +125,7 @@ ALTER TABLE IF EXISTS ONLY public.entitlement_entitlement_values DROP CONSTRAINT
 ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fk_rails_aa04ceacf6;
 ALTER TABLE IF EXISTS ONLY public.integration_items DROP CONSTRAINT IF EXISTS fk_rails_a9dc2ea536;
 ALTER TABLE IF EXISTS ONLY public.rate_phases DROP CONSTRAINT IF EXISTS fk_rails_a9ba49506f;
+ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_a958b8f5a7;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_a7f20c73bb;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_a710519346;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_a6d07eec6e;
@@ -704,6 +705,8 @@ DROP INDEX IF EXISTS public.index_invoices_taxes_on_invoice_id;
 DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_payment_request_id;
 DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_organization_id;
 DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_invoice_id;
+DROP INDEX IF EXISTS public.index_invoices_on_x402_payment_token;
+DROP INDEX IF EXISTS public.index_invoices_on_x402_connection_id;
 DROP INDEX IF EXISTS public.index_invoices_on_voided_invoice_id;
 DROP INDEX IF EXISTS public.index_invoices_on_ready_to_be_refreshed;
 DROP INDEX IF EXISTS public.index_invoices_on_payment_method_id;
@@ -3993,6 +3996,8 @@ CREATE TABLE public.invoices (
     payment_term jsonb,
     payment_term_source character varying,
     search_terms text,
+    x402_payment_token character varying,
+    x402_connection_id uuid,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 
@@ -10459,6 +10464,20 @@ CREATE INDEX index_invoices_on_voided_invoice_id ON public.invoices USING btree 
 
 
 --
+-- Name: index_invoices_on_x402_connection_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoices_on_x402_connection_id ON public.invoices USING btree (x402_connection_id) WHERE (x402_connection_id IS NOT NULL);
+
+
+--
+-- Name: index_invoices_on_x402_payment_token; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_invoices_on_x402_payment_token ON public.invoices USING btree (x402_payment_token) WHERE (x402_payment_token IS NOT NULL);
+
+
+--
 -- Name: index_invoices_payment_requests_on_invoice_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -14683,6 +14702,14 @@ ALTER TABLE ONLY public.recurring_transaction_rules_invoice_custom_sections
 
 
 --
+-- Name: invoices fk_rails_a958b8f5a7; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.invoices
+    ADD CONSTRAINT fk_rails_a958b8f5a7 FOREIGN KEY (x402_connection_id) REFERENCES public.x402_connections(id);
+
+
+--
 -- Name: rate_phases fk_rails_a9ba49506f; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -15617,6 +15644,10 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261002141245'),
+('20261002141244'),
+('20261002141243'),
+('20261002141242'),
 ('20261002140945'),
 ('20261002140944'),
 ('20261002140603'),

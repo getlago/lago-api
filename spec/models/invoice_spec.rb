@@ -14,6 +14,8 @@ RSpec.describe Invoice do
     it do
       expect(invoice).to have_many(:billing_segments)
       expect(invoice).to have_many(:contracts).through(:billing_segments)
+      expect(invoice).to belong_to(:x402_connection).class_name("X402::Connection").optional
+      expect(invoice).to have_many(:x402_settlements).class_name("X402::Settlement").inverse_of(:invoice)
     end
 
     it "returns each contract once across multiple billing segments" do
@@ -143,6 +145,67 @@ RSpec.describe Invoice do
           expect(invoice).to validate_absence_of(:payment_dispute_lost_at)
         end
       end
+    end
+
+    describe "x402_connection validation" do
+      subject(:invoice) { build(:invoice, organization:, x402_connection_id: connection.id) }
+
+      let(:connection) { create(:x402_connection, organization:) }
+
+      before { invoice.valid? }
+
+      it { expect(invoice.errors.messages[:x402_connection]).to be_empty }
+
+      context "with a connection of another organization" do
+        let(:connection) { create(:x402_connection) }
+
+        it { expect(invoice.errors.messages[:x402_connection]).to eq(["must_belong_to_same_organization"]) }
+      end
+
+      context "with a discarded connection of another organization" do
+        let(:connection) { create(:x402_connection, :discarded) }
+
+        it { expect(invoice.errors.messages[:x402_connection]).to eq(["must_belong_to_same_organization"]) }
+      end
+    end
+  end
+
+  describe "x402_connection" do
+    subject(:invoice) { create(:invoice, organization:, x402_connection_id: connection.id) }
+
+    let(:connection) { create(:x402_connection, :discarded, organization:) }
+
+    it "reads a discarded connection as none" do
+      reloaded = described_class.find(invoice.id)
+
+      expect(reloaded.x402_connection).to be_nil
+      expect(reloaded.x402_connection_id).to eq(connection.id)
+    end
+
+    context "with an unknown connection" do
+      subject(:invoice) { build(:invoice, organization:, x402_connection_id: SecureRandom.uuid) }
+
+      it { expect { invoice.save! }.to raise_error(ActiveRecord::InvalidForeignKey) }
+    end
+  end
+
+  describe "x402_payment_token uniqueness" do
+    subject(:duplicate) { build(:invoice, organization:, x402_payment_token:) }
+
+    let(:x402_payment_token) { "x402-token" }
+    let(:existing_token) { "x402-token" }
+
+    before { create(:invoice, organization:, x402_payment_token: existing_token) }
+
+    it "refuses a second invoice with the token" do
+      expect { duplicate.save! }.to raise_error(ActiveRecord::RecordNotUnique, /index_invoices_on_x402_payment_token/)
+    end
+
+    context "without a token" do
+      let(:x402_payment_token) { nil }
+      let(:existing_token) { nil }
+
+      it { expect(duplicate.save).to be(true) }
     end
   end
 
