@@ -1,0 +1,40 @@
+-- case: payable_type_invoice (count) phase: baseline selective: false
+-- filters: {"payable_type":["Invoice"]} search_term: nil page: 1
+SELECT COUNT(*) FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND "payments"."payable_type" = 'Invoice'
+
+Aggregate  (cost=13029791.67..13029791.68 rows=1 width=8) (actual time=15349.363..15349.369 rows=1 loops=1)
+  Buffers: shared hit=18949531 read=237180
+  I/O Timings: shared/local read=1778.634
+  ->  Bitmap Heap Scan on payments  (cost=135293.95..13023868.55 rows=2369248 width=0) (actual time=769.084..15216.405 rows=4702553 loops=1)
+        Recheck Cond: ((organization_id = '<org-uuid>'::uuid) AND ((payable_type)::text = 'Invoice'::text) AND (payable_id IS NOT NULL))
+        Filter: ((customer_id IS NOT NULL) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+        Rows Removed by Filter: 47281
+        Heap Blocks: exact=157734
+        Buffers: shared hit=18949531 read=237180
+        I/O Timings: shared/local read=1778.634
+        ->  BitmapAnd  (cost=135293.95..135293.95 rows=4738497 width=0) (actual time=687.821..687.826 rows=0 loops=1)
+              Buffers: shared hit=4 read=29637
+              I/O Timings: shared/local read=129.543
+              ->  Bitmap Index Scan on idx_on_organization_id_provider_payment_id_gin_trgm_2bcf073c0b  (cost=0.00..39409.49 rows=4986492 width=0) (actual time=178.364..178.368 rows=5000000 loops=1)
+                    Index Cond: (organization_id = '<org-uuid>'::uuid)
+                    Buffers: shared hit=3 read=670
+                    I/O Timings: shared/local read=3.268
+              ->  Bitmap Index Scan on index_payments_on_payable_type_and_payable_id  (cost=0.00..94699.59 rows=6227763 width=0) (actual time=505.785..505.786 rows=6226721 loops=1)
+                    Index Cond: (((payable_type)::text = 'Invoice'::text) AND (payable_id IS NOT NULL))
+                    Buffers: shared hit=1 read=28967
+                    I/O Timings: shared/local read=126.275
+        SubPlan 1
+          ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (actual time=0.003..0.003 rows=1 loops=4749834)
+                Index Cond: (id = payments.payable_id)
+                Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                Rows Removed by Filter: 0
+                Buffers: shared hit=18949514 read=49822
+                I/O Timings: shared/local read=853.979
+Planning:
+  Buffers: shared hit=8
+Planning Time: 0.133 ms
+JIT:
+  Functions: 15
+  Options: Inlining true, Optimization true, Expressions true, Deforming true
+  Timing: Generation 4.190 ms, Inlining 7.849 ms, Optimization 31.720 ms, Emission 27.462 ms, Total 71.220 ms
+Execution Time: 15354.056 ms

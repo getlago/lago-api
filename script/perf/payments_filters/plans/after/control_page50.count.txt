@@ -1,0 +1,30 @@
+-- case: control_page50 (count) phase: after selective: false
+-- filters: {} search_term: nil page: 50
+-- runs_ms: [14896.9, 14584.6, 14840.4]
+SELECT COUNT(*) FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END)
+
+Aggregate  (cost=13547284.36..13547284.37 rows=1 width=8) (actual time=14839.381..14839.382 rows=1 loops=1)
+  Buffers: shared hit=18991130 read=170218
+  I/O Timings: shared/local read=1323.073
+  ->  Index Scan using index_payments_on_organization_id on payments  (cost=0.43..13541067.54 rows=2486731 width=0) (actual time=59.535..14710.075 rows=4952719 loops=1)
+        Index Cond: (organization_id = '<org-uuid>'::uuid)
+        Filter: ((customer_id IS NOT NULL) AND (payable_id IS NOT NULL) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+        Rows Removed by Filter: 47281
+        Buffers: shared hit=18991130 read=170218
+        I/O Timings: shared/local read=1323.073
+        SubPlan 1
+          ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (actual time=0.003..0.003 rows=1 loops=4749834)
+                Index Cond: (id = payments.payable_id)
+                Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                Rows Removed by Filter: 0
+                Buffers: shared hit=18991130 read=8206
+                I/O Timings: shared/local read=632.775
+Planning:
+  Buffers: shared hit=3 read=5
+  I/O Timings: shared/local read=0.250
+Planning Time: 0.467 ms
+JIT:
+  Functions: 14
+  Options: Inlining true, Optimization true, Expressions true, Deforming true
+  Timing: Generation 0.735 ms, Inlining 4.148 ms, Optimization 30.455 ms, Emission 24.796 ms, Total 60.134 ms
+Execution Time: 14840.409 ms

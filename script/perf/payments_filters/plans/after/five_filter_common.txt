@@ -1,0 +1,22 @@
+-- case: five_filter_common (list) phase: after selective: false
+-- filters: {"payment_status":["succeeded"],"currency":"EUR","created_at_from":"2024-09-08","created_at_to":"2026-09-08","amount_from":100,"payment_provider_type":["stripe"]} search_term: nil page: 1
+-- runs_ms: [1.9, 0.2, 0.1]
+SELECT "payments"."id", "payments"."invoice_id", "payments"."payment_provider_id", "payments"."payment_provider_customer_id", "payments"."amount_cents", "payments"."amount_currency", "payments"."provider_payment_id", "payments"."status", "payments"."created_at", "payments"."updated_at", "payments"."payable_type", "payments"."payable_id", "payments"."provider_payment_data", "payments"."payable_payment_status", "payments"."payment_type", "payments"."reference", "payments"."provider_payment_method_data", "payments"."provider_payment_method_id", "payments"."organization_id", "payments"."customer_id", "payments"."error_code", "payments"."payment_method_id" FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND "payments"."amount_currency" = 'EUR' AND "payments"."payable_payment_status" = 'succeeded' AND (payments.amount_cents >= 100::bigint) AND "payments"."created_at" >= '2024-09-08 00:00:00' AND "payments"."created_at" <= '2026-09-08 23:59:59.999999' AND "payments"."payment_provider_id" = '<uuid>' ORDER BY "payments"."created_at" DESC, "payments"."id" ASC LIMIT 20 OFFSET 0
+
+Limit  (cost=0.56..230.94 rows=20 width=330) (actual time=0.041..0.154 rows=20 loops=1)
+  Buffers: shared hit=123
+  ->  Index Scan using index_payments_by_cursor on payments  (cost=0.56..13620972.85 rows=1182472 width=330) (actual time=0.041..0.153 rows=20 loops=1)
+        Index Cond: ((organization_id = '<org-uuid>'::uuid) AND (created_at >= '2024-09-08 00:00:00'::timestamp without time zone) AND (created_at <= '2026-09-08 23:59:59.999999'::timestamp without time zone))
+        Filter: ((customer_id IS NOT NULL) AND (payable_id IS NOT NULL) AND (amount_cents >= '100'::bigint) AND ((amount_currency)::text = 'EUR'::text) AND (payable_payment_status = 'succeeded'::payment_payable_payment_status) AND (payment_provider_id = '<uuid>'::uuid) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+        Rows Removed by Filter: 19
+        Buffers: shared hit=123
+        SubPlan 1
+          ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (actual time=0.004..0.004 rows=1 loops=20)
+                Index Cond: (id = payments.payable_id)
+                Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                Rows Removed by Filter: 0
+                Buffers: shared hit=80
+Planning:
+  Buffers: shared hit=8
+Planning Time: 0.189 ms
+Execution Time: 0.181 ms

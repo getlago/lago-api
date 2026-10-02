@@ -1,0 +1,28 @@
+-- case: method_fallback_only (list) phase: baseline selective: true
+-- filters: {"payment_method_type":["bacs_debit"]} search_term: nil page: 1
+SELECT "payments"."id", "payments"."invoice_id", "payments"."payment_provider_id", "payments"."payment_provider_customer_id", "payments"."amount_cents", "payments"."amount_currency", "payments"."provider_payment_id", "payments"."status", "payments"."created_at", "payments"."updated_at", "payments"."payable_type", "payments"."payable_id", "payments"."provider_payment_data", "payments"."payable_payment_status", "payments"."payment_type", "payments"."reference", "payments"."provider_payment_method_data", "payments"."provider_payment_method_id", "payments"."organization_id", "payments"."customer_id", "payments"."error_code", "payments"."payment_method_id" FROM "payments" LEFT JOIN payment_methods ON payment_methods.id = payments.payment_method_id WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND (COALESCE(NULLIF(payments.provider_payment_method_data->>'type', ''), payment_methods.provider_method_type) IN ('bacs_debit')) ORDER BY "payments"."created_at" DESC, "payments"."id" ASC LIMIT 20 OFFSET 0
+
+Limit  (cost=0.97..23660.48 rows=20 width=330) (actual time=2.370..37.347 rows=20 loops=1)
+  Buffers: shared hit=78120
+  ->  Nested Loop Left Join  (cost=0.97..14746969.56 rows=12466 width=330) (actual time=2.370..37.345 rows=20 loops=1)
+        Filter: (COALESCE(NULLIF((payments.provider_payment_method_data ->> 'type'::text), ''::text), (payment_methods.provider_method_type)::text) = 'bacs_debit'::text)
+        Rows Removed by Filter: 8998
+        Buffers: shared hit=78120
+        ->  Index Scan using index_payments_by_cursor on payments  (cost=0.56..13616707.68 rows=2493246 width=330) (actual time=0.022..27.964 rows=9018 loops=1)
+              Index Cond: (organization_id = '<org-uuid>'::uuid)
+              Filter: ((customer_id IS NOT NULL) AND (payable_id IS NOT NULL) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+              Rows Removed by Filter: 93
+              Buffers: shared hit=43728
+              SubPlan 1
+                ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (actual time=0.002..0.002 rows=1 loops=8637)
+                      Index Cond: (id = payments.payable_id)
+                      Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                      Rows Removed by Filter: 0
+                      Buffers: shared hit=34548
+        ->  Index Scan using payment_methods_pkey on payment_methods  (cost=0.42..0.44 rows=1 width=22) (actual time=0.001..0.001 rows=1 loops=9018)
+              Index Cond: (id = payments.payment_method_id)
+              Buffers: shared hit=34392
+Planning:
+  Buffers: shared hit=24
+Planning Time: 0.297 ms
+Execution Time: 37.406 ms
