@@ -8,9 +8,16 @@ RSpec.describe BillingSegments::ProcessService do
 
     let(:organization) { create(:organization) }
     let(:customer) do
-      create(:customer, organization:, currency: "USD", finalize_zero_amount_invoice: customer_finalize_zero_amount_invoice)
+      create(
+        :customer,
+        organization:,
+        currency: "USD",
+        finalize_zero_amount_invoice: customer_finalize_zero_amount_invoice,
+        invoice_grace_period:
+      )
     end
     let(:customer_finalize_zero_amount_invoice) { "inherit" }
+    let(:invoice_grace_period) { 0 }
     let(:contract) { create(:contract, organization:, customer:, consolidate_invoice:, started_at: Time.zone.parse("2026-07-01")) }
     let(:consolidate_invoice) { true }
     let(:product) { create(:product, :fixed, organization:) }
@@ -121,6 +128,32 @@ RSpec.describe BillingSegments::ProcessService do
             precise_unit_amount: BigDecimal("15.00")
           )
           expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
+        end
+
+        context "with an invoice grace period" do
+          let(:invoice_grace_period) { 3 }
+          let(:late_event) do
+            create(
+              :event,
+              organization:,
+              customer:,
+              external_subscription_id: contract.external_id,
+              code: billable_metric.code,
+              timestamp: Time.zone.parse("2026-08-25"),
+              properties: event_properties
+            )
+          end
+
+          it "includes usage received during the grace period when finalizing" do
+            invoice = result.invoices.sole.reload
+            expect(invoice.fees.sole).to have_attributes(units: 2, amount_cents: 3_000)
+
+            late_event
+            Invoices::RefreshDraftAndFinalizeService.call!(invoice:)
+
+            expect(invoice.reload.status).to eq("finalized")
+            expect(invoice.fees.sole).to have_attributes(units: 3, amount_cents: 4_500)
+          end
         end
 
         context "with a minimum amount" do
@@ -598,6 +631,46 @@ RSpec.describe BillingSegments::ProcessService do
       expect(invoice.subscriptions).to be_empty
       expect(invoice.fees.sole).to have_attributes(invoiceable: product, subscription_id: nil)
       expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
+    end
+
+    context "with an invoice grace period" do
+      let(:invoice_grace_period) { 3 }
+
+      it "creates a draft invoice until the expected finalization date" do
+        invoice = result.invoices.sole.reload
+        expect(invoice).to have_attributes(
+          status: "draft",
+          expected_finalization_date: Date.parse("2026-09-03")
+        )
+        expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
+        expect(SendWebhookJob).to have_been_enqueued.with("invoice.drafted", invoice)
+        expect(SendWebhookJob).to have_been_enqueued.with("invoice.ready_to_finalize", invoice)
+      end
+    end
+
+    context "when the contract billing entity has an invoice grace period" do
+      let(:invoice_grace_period) { nil }
+      let(:contract_billing_entity) { create(:billing_entity, organization:, invoice_grace_period: 3) }
+      let(:contract) do
+        create(
+          :contract,
+          organization:,
+          customer:,
+          billing_entity: contract_billing_entity,
+          consolidate_invoice:,
+          started_at: Time.zone.parse("2026-07-01")
+        )
+      end
+
+      it "uses the contract billing entity grace period" do
+        invoice = result.invoices.sole.reload
+
+        expect(invoice).to have_attributes(
+          billing_entity: contract_billing_entity,
+          status: "draft",
+          expected_finalization_date: Date.parse("2026-09-03")
+        )
+      end
     end
 
     it "does not create duplicate invoices or fees on repeated invocation" do

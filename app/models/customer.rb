@@ -223,7 +223,7 @@ class Customer < ApplicationRecord
     billing_entity.timezone || "UTC"
   end
 
-  def applicable_invoice_grace_period
+  def applicable_invoice_grace_period(billing_entity: self.billing_entity)
     return invoice_grace_period if invoice_grace_period.present?
 
     billing_entity.invoice_grace_period || 0

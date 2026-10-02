@@ -78,8 +78,12 @@ module Invoices
     end
 
     def issuing_date_keep_anchor?
-      invoice.invoice_subscriptions.first&.recurring? &&
+      recurring_invoice? &&
         invoice.customer.applicable_subscription_invoice_issuing_date_adjustment == "keep_anchor"
+    end
+
+    def recurring_invoice?
+      invoice.invoice_subscriptions.first&.recurring? || invoice.billing_segments.exists?
     end
 
     def payment_due_date

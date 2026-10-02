@@ -16,7 +16,7 @@ module Invoices
 
       invoice.issuing_date = invoice.issuing_date + issuing_date_adjustment.days
       invoice.expected_finalization_date = invoice.expected_finalization_date + grace_period_adjustment
-      invoice.applied_grace_period = invoice.customer.applicable_invoice_grace_period
+      invoice.applied_grace_period = invoice.customer.applicable_invoice_grace_period(billing_entity: invoice.billing_entity)
       invoice.payment_due_date = invoice.issuing_date + invoice.customer.applicable_net_payment_term.days
       invoice.save!
 
