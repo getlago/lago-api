@@ -12,7 +12,6 @@ module X402
 
       OPEN_TIMEOUT = 5
       READ_TIMEOUT = 10
-      TRANSPORT_ERRORS = [SystemCallError, IOError, SocketError, Timeout::Error, OpenSSL::SSL::SSLError, Net::HTTPBadResponse].freeze
 
       attr_reader :url
 
@@ -21,10 +20,7 @@ module X402
       end
 
       def call(method, params)
-        response = LagoHttpClient::Client
-          .new(url, open_timeout: OPEN_TIMEOUT, read_timeout: READ_TIMEOUT, retry_on_transient_errors: true)
-          .post_with_response({jsonrpc: "2.0", id: 1, method:, params:}, {})
-        body = JSON.parse(response.body.to_s)
+        body = parse(method, post(method, params))
         raise UnreachableError, "#{method}: not a JSON-RPC response" unless body.is_a?(Hash)
 
         error = body["error"]
@@ -35,13 +31,30 @@ module X402
         else
           raise UnreachableError, "#{method}: no result"
         end
-      rescue LagoHttpClient::HttpError => e
-        raise UnreachableError, "#{method}: HTTP #{e.error_code}", cause: nil
-      rescue JSON::ParserError, *TRANSPORT_ERRORS => e
-        raise UnreachableError, "#{method}: #{e.class}", cause: nil
       end
 
       private
+
+      def post(method, params)
+        LagoHttpClient::Client
+          .new(url, open_timeout: OPEN_TIMEOUT, read_timeout: READ_TIMEOUT, retry_on_transient_errors: true)
+          .post_with_response({jsonrpc: "2.0", id: 1, method:, params:}, {})
+          .body.to_s
+      rescue LagoHttpClient::HttpError => e
+        raise UnreachableError, "#{method}: HTTP #{e.error_code}", cause: nil
+      rescue => e
+        raise UnreachableError, "#{method}: #{e.class}", cause: nil
+      end
+
+      def parse(method, text)
+        if text.dup.force_encoding(Encoding::UTF_8).valid_encoding?
+          JSON.parse(text)
+        else
+          raise UnreachableError, "#{method}: the answer is not valid UTF-8"
+        end
+      rescue JSON::ParserError
+        raise UnreachableError, "#{method}: JSON::ParserError", cause: nil
+      end
 
       def configured_urls
         raw = ENV["LAGO_X402_RPC_URLS"]

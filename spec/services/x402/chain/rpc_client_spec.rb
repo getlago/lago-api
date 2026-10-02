@@ -206,5 +206,29 @@ describe X402::Chain::RpcClient do
         end
       end
     end
+
+    {
+      "a proxy refusing the tunnel" => Net::HTTPClientException.new("403 \"Forbidden\"", nil),
+      "a proxy failing the tunnel" => Net::HTTPFatalError.new("502 \"Bad Gateway\"", nil),
+      "a body that fails to inflate" => Zlib::DataError.new("incorrect header check"),
+      "a malformed header" => Net::HTTPHeaderSyntaxError.new("wrong Content-Length format"),
+      "a header the parser rejects" => ArgumentError.new("header field value cannot include CR/LF")
+    }.each do |failure, error|
+      context "when the exchange fails with #{failure}" do
+        before { stub_request(:post, url).to_raise(error) }
+
+        it "raises" do
+          expect { call }.to raise_error(X402::Chain::UnreachableError, "eth_blockNumber: #{error.class}")
+        end
+      end
+    end
+
+    context "when the answer is not valid UTF-8" do
+      before { stub_request(:post, url).to_return(status: 200, body: "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":\"\xFF\"}".b) }
+
+      it "raises" do
+        expect { call }.to raise_error(X402::Chain::UnreachableError, "eth_blockNumber: the answer is not valid UTF-8")
+      end
+    end
   end
 end
