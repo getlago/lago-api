@@ -33,6 +33,8 @@ module Events
             sleep(sleep_seconds)
           end
 
+          RecurringAggregationSnapshots::InvalidateService.call!(subscription:, codes:)
+
           result.events_count = events_count
           result.batch_count = batches
           result
