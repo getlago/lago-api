@@ -16,8 +16,9 @@ module X402
       MAX_BOUND_ATTEMPTS = 3
 
       BOOLEAN_WORD = /\A0x0{63}[01]\z/
-      NONCE = /\A0x\h{64}\z/
+      HEX_WORD = /\A0x\h{64}\z/
       HEX_QUANTITY = /\A0x\h+\z/
+      NONCE = HEX_WORD
 
       def initialize(network:, payment:, payment_requirements:, since:)
         @network = network
@@ -66,13 +67,45 @@ module X402
       def classify(log)
         return :canceled if log["topics"].first == AUTHORIZATION_CANCELED
 
-        receipt = rpc.call("eth_getTransactionReceipt", [log["transactionHash"]])
-        raise InconclusiveError, "no successful receipt for #{log["transactionHash"]}" unless receipt.is_a?(Hash) && receipt["status"] == "0x1"
-        raise InconclusiveError, "the receipt for #{log["transactionHash"]} lists no logs" unless receipt["logs"].is_a?(Array) && receipt["logs"].all?(Hash)
-        return :superseded unless paid_payee?(receipt)
+        transfer = authorized_transfer(log["transactionHash"])
 
-        @identifier = log["transactionHash"]
-        :settled
+        if transfer["topics"][2].downcase == "0x#{padded(payee)}" && transfer["data"].to_i(16) == value
+          @identifier = log["transactionHash"]
+          :settled
+        else
+          :superseded
+        end
+      end
+
+      def authorized_transfer(hash)
+        logs = receipt_logs(hash)
+        index = logs.index { |entry| from_asset?(entry) && entry["topics"] == [AUTHORIZATION_USED, "0x#{padded(payer)}", nonce.downcase] }
+        transfer = index && logs[index + 1]
+
+        if transfer && from_asset?(transfer) && token_transfer_from_payer?(transfer)
+          transfer
+        else
+          raise InconclusiveError, "the receipt for #{hash} doesn't show the authorization's transfer"
+        end
+      end
+
+      def receipt_logs(hash)
+        receipt = rpc.call("eth_getTransactionReceipt", [hash])
+
+        if receipt.is_a?(Hash) && receipt["status"] == "0x1" && receipt["transactionHash"].to_s.casecmp?(hash) && receipt["logs"].is_a?(Array) && receipt["logs"].all?(Hash)
+          receipt["logs"]
+        else
+          raise InconclusiveError, "no successful receipt for #{hash}"
+        end
+      end
+
+      def token_transfer_from_payer?(entry)
+        topics = entry["topics"]
+        topics.is_a?(Array) && topics.size == 3 && topics.first(2) == [TRANSFER, "0x#{padded(payer)}"] && HEX_WORD.match?(topics[2].to_s) && HEX_WORD.match?(entry["data"].to_s)
+      end
+
+      def from_asset?(entry)
+        entry["address"].to_s.casecmp?(asset)
       end
 
       def authorization_used?
@@ -116,14 +149,6 @@ module X402
 
       def usable_log?(entry)
         entry.is_a?(Hash) && entry["topics"].is_a?(Array) && entry["transactionHash"].is_a?(String)
-      end
-
-      def paid_payee?(receipt)
-        receipt["logs"].any? do |entry|
-          entry["address"].to_s.casecmp?(asset) &&
-            entry["topics"] == [TRANSFER, "0x#{padded(payer)}", "0x#{padded(payee)}"] &&
-            entry["data"].to_s.to_i(16) == value
-        end
       end
 
       def lower_bound

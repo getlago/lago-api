@@ -289,6 +289,69 @@ describe X402::Chain::EvmReader do
     end
   end
 
+  context "when the receipt's logs are empty" do
+    let(:receipt) { chain_data["receipt"].merge("logs" => []) }
+
+    it "is inconclusive" do
+      expect { reader.settled? }.to raise_error(X402::Chain::InconclusiveError, /receipt/)
+    end
+  end
+
+  context "when the receipt belongs to another transaction" do
+    let(:receipt) { chain_data["receipt"].merge("transactionHash" => "0x#{"22" * 32}") }
+
+    it "is inconclusive" do
+      expect { reader.settled? }.to raise_error(X402::Chain::InconclusiveError, /receipt/)
+    end
+  end
+
+  context "when the receipt holds only the authorization's event" do
+    let(:receipt) { chain_data["receipt"].merge("logs" => [chain_data["receipt"]["logs"].first]) }
+
+    it "is inconclusive" do
+      expect { reader.settled? }.to raise_error(X402::Chain::InconclusiveError, /transfer/)
+    end
+  end
+
+  context "when the receipt's event is for another nonce" do
+    let(:receipt) do
+      used, transfer = chain_data["receipt"]["logs"]
+      chain_data["receipt"].merge("logs" => [used.merge("topics" => [*used["topics"].first(2), "0x#{"33" * 32}"]), transfer])
+    end
+
+    it "is inconclusive" do
+      expect { reader.settled? }.to raise_error(X402::Chain::InconclusiveError, /transfer/)
+    end
+  end
+
+  context "when the log after the authorization's event is not the token's transfer" do
+    let(:receipt) do
+      used, transfer = chain_data["receipt"]["logs"]
+      chain_data["receipt"].merge("logs" => [used, transfer.merge("address" => "0x#{"44" * 20}")])
+    end
+
+    it "is inconclusive" do
+      expect { reader.settled? }.to raise_error(X402::Chain::InconclusiveError, /transfer/)
+    end
+  end
+
+  context "when another authorization in the same transaction pays the payee" do
+    let(:receipt) do
+      used, transfer = chain_data["receipt"]["logs"]
+      elsewhere = transfer.merge("topics" => [*transfer["topics"].first(2), "0x#{"11" * 32}"])
+      other_used = used.merge("topics" => [*used["topics"].first(2), "0x#{"55" * 32}"])
+      chain_data["receipt"].merge("logs" => [used, elsewhere, other_used, transfer])
+    end
+
+    it "is not settled" do
+      expect(reader.settled?).to be(false)
+    end
+
+    it "is final" do
+      expect(reader.final?).to be(true)
+    end
+  end
+
   context "when the transaction failed" do
     let(:receipt) { chain_data["receipt"].merge("status" => "0x0") }
 
