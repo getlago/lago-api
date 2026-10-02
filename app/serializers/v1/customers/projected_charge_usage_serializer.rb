@@ -52,77 +52,12 @@ module V1
       end
 
       def projected_usage_data(fees)
-        projection = memoized_projection(fees)
+        projection = projections.for(fees)
 
         {
-          projected_units: projection[:units].to_s,
-          projected_amount_cents: projection[:amount_cents].to_i,
-          projected_presentation_breakdowns: projection[:presentation_breakdowns].map { |breakdown| ::V1::PresentationBreakdownSerializer.new(breakdown).serialize }
-        }
-      end
-
-      def calculate_projection(fees)
-        if charge_has_filters?(fees)
-          calculate_filtered_projection(fees)
-        elsif charge_has_grouping?(fees)
-          calculate_grouped_projection(fees)
-        else
-          calculate_simple_projection(fees)
-        end
-      end
-
-      def charge_has_filters?(fees)
-        fees.first.charge&.filters&.any?
-      end
-
-      def charge_has_grouping?(fees)
-        fees.any? { |f| f.grouped_by.present? }
-      end
-
-      def calculate_filtered_projection(fees)
-        fees_with_defined_filters = fees.select(&:charge_filter_id)
-
-        fees_with_defined_filters.reduce(initial_projection_values) do |totals, fee|
-          result = ::Fees::ProjectionService.call!(fees: [fee])
-          accumulate_projection(totals, result)
-        end
-      end
-
-      def calculate_grouped_projection(fees)
-        grouped_fees = fees.group_by(&:grouped_by).values
-
-        grouped_fees.reduce(initial_projection_values) do |totals, group_fee_list|
-          result = ::Fees::ProjectionService.call!(fees: group_fee_list)
-          accumulate_projection(totals, result)
-        end
-      end
-
-      def calculate_simple_projection(fees)
-        result = ::Fees::ProjectionService.call!(fees: fees)
-
-        {
-          units: result.projected_units,
-          amount_cents: result.projected_amount_cents,
-          pricing_unit_amount_cents: result.projected_pricing_unit_amount_cents.to_i,
-          presentation_breakdowns: result.projected_presentation_breakdowns
-        }
-      end
-
-      def initial_projection_values
-        {
-          units: BigDecimal("0.0"),
-          amount_cents: 0,
-          pricing_unit_amount_cents: 0,
-          presentation_breakdowns: []
-        }
-      end
-
-      def accumulate_projection(totals, result)
-        {
-          units: totals[:units] + result.projected_units,
-          amount_cents: totals[:amount_cents] + result.projected_amount_cents,
-          pricing_unit_amount_cents: totals[:pricing_unit_amount_cents] + result.projected_pricing_unit_amount_cents.to_i,
-          presentation_breakdowns: totals[:presentation_breakdowns].concat(result.projected_presentation_breakdowns)
+          projected_units: projection.units.to_s,
+          projected_amount_cents: projection.amount_cents.to_i,
+          projected_presentation_breakdowns: serialize_breakdowns(projection.presentation_breakdowns)
         }
       end
 
@@ -138,7 +73,7 @@ module V1
       end
 
       def projected_pricing_unit_amount_cents(fees)
-        memoized_projection(fees)[:pricing_unit_amount_cents]
+        projections.for(fees).pricing_unit_amount_cents.to_i
       end
 
       def charge_data(fee)
@@ -226,14 +161,9 @@ module V1
 
       def precompute_groupings
         {
-          by_charge_filter: model.group_by { |f| f.charge_filter&.id },
-          by_grouped_by: model.group_by(&:grouped_by)
+          by_charge_filter: model.group_by { |f| [f.charge_id, f.charge_filter&.id] },
+          by_grouped_by: model.group_by { |f| [f.charge_id, f.grouped_by] }
         }
-      end
-
-      def memoized_projection(fees)
-        @projections ||= {}
-        @projections[fees.object_id] ||= calculate_projection(fees)
       end
 
       def memoized_usage_data(fees)
@@ -243,14 +173,16 @@ module V1
 
       def project_ungrouped_presentation_breakdowns(fees)
         ungrouped_fees = fees.reject { |f| f.grouped_by.present? }
-        return [] if ungrouped_fees.empty?
 
-        # NOTE: Since the memoization is done by object_id, we try as much as possible to reuse the memoized calculated data
-        projection_fees = (ungrouped_fees.length == fees.length) ? fees : ungrouped_fees
+        serialize_breakdowns(projections.for(ungrouped_fees).presentation_breakdowns)
+      end
 
-        (memoized_projection(projection_fees)[:presentation_breakdowns] || []).map do |breakdown|
-          ::V1::PresentationBreakdownSerializer.new(breakdown).serialize
-        end
+      def serialize_breakdowns(breakdowns)
+        breakdowns.map { |breakdown| ::V1::PresentationBreakdownSerializer.new(breakdown).serialize }
+      end
+
+      def projections
+        options.fetch(:projections)
       end
     end
   end

@@ -158,6 +158,7 @@ end
 # Indexes
 #
 #  index_contracts_by_cursor                                    (organization_id,created_at DESC,id DESC)
+#  index_contracts_by_status_cursor                             (organization_id,status,created_at DESC,id DESC)
 #  index_contracts_on_billing_entity_id                         (billing_entity_id)
 #  index_contracts_on_catalog_plan_id                           (catalog_plan_id)
 #  index_contracts_on_customer_id                               (customer_id)

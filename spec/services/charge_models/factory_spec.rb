@@ -49,7 +49,13 @@ RSpec.describe ChargeModels::Factory do
           let(:charge) { build(:graduated_charge, prorated: true) }
           let(:aggregation_result) { BillableMetrics::Aggregations::BaseService::Result.new.tap { |r| r.aggregator = [BillableMetrics::Aggregations::BaseService::Result.new] } }
 
-          it { expect(result).to be_a(ChargeModels::ProratedGraduatedService) }
+          it { expect(result).to be_an_instance_of(ChargeModels::ProratedGraduatedService) }
+
+          context "with a catalog rate" do
+            let(:pricing_structure) { ChargeModels::PricingStructure.from_charge(charge).with(product_catalog: true) }
+
+            it { expect(result).to be_an_instance_of(ChargeModels::ProratedAdjacentGraduatedService) }
+          end
         end
 
         context "when charge is prorated, but we are forecasting amounts" do

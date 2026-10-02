@@ -83,6 +83,25 @@ RSpec.describe Api::V2::ContractRateCardsController do
 
       expect(response).to have_http_status(:success)
       expect(json[:applied_rate_cards].map { it[:lago_id] }).to eq([contract_rate_card.id])
+      expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
+    end
+
+    context "with an invalid limit and an unknown contract" do
+      subject { get_with_token(organization, "/api/v2/contracts/unknown/applied_rate_cards", {limit: 0}) }
+
+      it "rejects the pagination parameters first" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:code]).to eq("invalid_pagination_limit")
+      end
+    end
+
+    it_behaves_like "a cursor paginated v2 endpoint", collection: :applied_rate_cards, model: ContractRateCard do
+      let(:paginated_path) { "/api/v2/contracts/#{contract.external_id}/applied_rate_cards" }
+      let(:create_paginated_record) { ->(created_at) { create(:contract_rate_card, organization:, contract:, created_at:) } }
+      # Rendered under the same collection name, from another table.
+      let(:other_table_record) { create(:plan_rate_card, organization:) }
     end
   end
 

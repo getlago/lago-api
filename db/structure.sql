@@ -915,6 +915,7 @@ DROP INDEX IF EXISTS public.index_contracts_on_live_external_id;
 DROP INDEX IF EXISTS public.index_contracts_on_customer_id;
 DROP INDEX IF EXISTS public.index_contracts_on_catalog_plan_id;
 DROP INDEX IF EXISTS public.index_contracts_on_billing_entity_id;
+DROP INDEX IF EXISTS public.index_contracts_by_status_cursor;
 DROP INDEX IF EXISTS public.index_contracts_by_cursor;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_rate_card_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_organization_id;
@@ -8964,6 +8965,13 @@ CREATE INDEX index_contracts_by_cursor ON public.contracts USING btree (organiza
 
 
 --
+-- Name: index_contracts_by_status_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_contracts_by_status_cursor ON public.contracts USING btree (organization_id, status, created_at DESC, id DESC);
+
+
+--
 -- Name: index_contracts_on_billing_entity_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -15599,6 +15607,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261002142357'),
 ('20261002103242'),
 ('20261002103241'),
 ('20261001204136'),

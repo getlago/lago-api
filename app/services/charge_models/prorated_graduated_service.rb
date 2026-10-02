@@ -4,17 +4,8 @@ module ChargeModels
   class ProratedGraduatedService < ChargeModels::BaseService
     protected
 
-    # This calculator steps one whole unit between tiers. Catalog tiers touch
-    # instead, so each one after the first is read as starting one unit later:
-    # with whole bounds, which a prorating card requires, it covers the same units.
     def ranges
-      @ranges ||= if pricing_structure.product_catalog && AdjacentRanges.adjacent?(stored_ranges) && whole_bounds?
-        stored_ranges.each_with_index.map do |range, index|
-          index.zero? ? range : range.merge(from_value: range[:from_value] + 1)
-        end
-      else
-        stored_ranges
-      end
+      properties["graduated_ranges"]&.map(&:with_indifferent_access)
     end
 
     def compute_amount
@@ -118,14 +109,6 @@ module ChargeModels
 
     private
 
-    def stored_ranges
-      @stored_ranges ||= properties["graduated_ranges"]&.map(&:with_indifferent_access)
-    end
-
-    def whole_bounds?
-      stored_ranges.all? { BigDecimal(it[:from_value].to_s).frac.zero? }
-    end
-
     def result_with_flat_amount(result, total_full_units, max_full_units)
       return 0 if total_full_units.negative?
 
@@ -149,11 +132,7 @@ module ChargeModels
       end
 
       ranges.each_with_index do |range, index|
-        # Usage resting on a tier's top moves to the next tier when an event follows.
-        # A catalog tier one unit wide starts on its top, so while an overflow is
-        # spread that unit is its own: only usage at rest moves on there.
-        at_rest = overflow.zero? || !pricing_structure.product_catalog
-        return ranges[index + 1] if at_rest && units == range[:to_value] && next_full_unit&.positive?
+        return ranges[index + 1] if units == range[:to_value] && next_full_unit&.positive?
         return range if units == range[:to_value]
         return range if units >= range[:from_value] && (range[:to_value].nil? || units < range[:to_value])
       end

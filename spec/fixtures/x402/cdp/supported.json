@@ -1,0 +1,10 @@
+{
+  "kinds": [
+    {"x402Version": 2, "scheme": "exact", "network": "eip155:84532"},
+    {"x402Version": 2, "scheme": "exact", "network": "eip155:8453"},
+    {"x402Version": 2, "scheme": "exact", "network": "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1", "extra": {"feePayer": "GVJJ7rdGiXr5xaYbRwRbjfaJL7fmwRygFi1H6aGqDveb"}},
+    {"x402Version": 1, "scheme": "exact", "network": "base-sepolia"}
+  ],
+  "extensions": ["bazaar"],
+  "signers": {"eip155:*": ["0x0000000000000000000000000000000000000001"]}
+}

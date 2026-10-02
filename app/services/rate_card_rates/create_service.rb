@@ -24,7 +24,7 @@ module RateCardRates
         return result.single_validation_failure!(field: :effective_from, error_code: "must_not_be_before_today")
       end
 
-      normalized = ::RateProperties::NormalizeRangesService.call(rate_properties: params[:rate_properties], proration: rate_card.proration?)
+      normalized = ::RateProperties::NormalizeRangesService.call(rate_properties: params[:rate_properties])
       return result.fail_with_error!(normalized.error) if normalized.failure?
 
       rate = rate_card.rates.create!(
