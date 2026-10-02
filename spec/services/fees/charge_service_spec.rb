@@ -4604,7 +4604,7 @@ RSpec.describe Fees::ChargeService, :premium do
 
     before do
       event_values.each_with_index do |value, index|
-        create(:event, organization:, subscription:, code: billable_metric.code,
+        create(:event, organization:, subscription:, code: billable_metric.code, created_at: now - 1.minute,
           timestamp: Time.zone.parse("2022-03-16") + index.days, properties: {value:, region: "eu"})
       end
     end
@@ -4617,9 +4617,23 @@ RSpec.describe Fees::ChargeService, :premium do
         billable_metric_id: billable_metric.id,
         grouped_by: {},
         to_datetime: boundaries.charges_to_datetime.floor(6),
-        watermark: now,
+        watermark: now - RecurringAggregationSnapshot::WATERMARK_LAG,
         units: 15
       )
+    end
+
+    context "with an event ingested after the watermark" do
+      before do
+        create(:event, organization:, subscription:, code: billable_metric.code, created_at: now - 1.second,
+          timestamp: Time.zone.parse("2022-03-20"), properties: {value: 7})
+      end
+
+      it "bills the event but leaves it to the next period's snapshot" do
+        result = charge_subscription_service.call
+
+        expect(result.fees.sole.units).to eq(22)
+        expect(snapshots.sole.units).to eq(15)
+      end
     end
 
     context "with a rounding function" do
@@ -4642,7 +4656,7 @@ RSpec.describe Fees::ChargeService, :premium do
       end
 
       before do
-        create(:event, organization:, subscription:, code: billable_metric.code,
+        create(:event, organization:, subscription:, code: billable_metric.code, created_at: now - 1.minute,
           timestamp: Time.zone.parse("2022-03-20"), properties: {value: 7, region: "us"})
       end
 

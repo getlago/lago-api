@@ -1641,6 +1641,99 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     end
   end
 
+  if include_feature?(:recurring_sum)
+    describe "#recurring_sum" do
+      subject(:result) { event_store.recurring_sum(watermark:, snapshot:) }
+
+      let(:watermark) { Time.current + 1.minute }
+      let(:snapshot) { nil }
+
+      before do
+        event_store.aggregation_property = billable_metric.field_name
+        event_store.numeric_property = true
+        event_store.use_from_boundary = false
+
+        create_event(timestamp: subscription_started_at - 1.day, value: 100)
+        create_event(timestamp: subscription_started_at + 2.days, value: 1000, created_at: Time.current + 1.hour)
+      end
+
+      it "sums the full history and bounds the snapshot value by the watermark" do
+        expect(result).to eq(
+          Events::Stores::BaseStore::RecurringAggregationResult.new(value: 1115, snapshot_value: 115, events_count: 7)
+        )
+      end
+
+      context "with a snapshot" do
+        let(:snapshot) do
+          RecurringAggregationSnapshots::FetchService::Snapshot.new(
+            grouped_by: {},
+            units: 106,
+            to_datetime: subscription_started_at + 3.days,
+            watermark: Time.current + 1.minute
+          )
+        end
+        let(:watermark) { Time.current + 2.hours }
+
+        it "sums the events dated after the snapshot and the late events" do
+          expect(result).to eq(
+            Events::Stores::BaseStore::RecurringAggregationResult.new(value: 1009, snapshot_value: 1009, events_count: 3)
+          )
+        end
+
+        context "when the late event is ingested after the watermark" do
+          let(:watermark) { Time.current + 30.minutes }
+
+          it "excludes it from the snapshot value" do
+            expect(result).to eq(
+              Events::Stores::BaseStore::RecurringAggregationResult.new(value: 1009, snapshot_value: 9, events_count: 3)
+            )
+          end
+        end
+      end
+    end
+
+    describe "#grouped_recurring_sum" do
+      subject(:result) { event_store.grouped_recurring_sum(watermark:, snapshot:) }
+
+      let(:grouped_by) { %w[region] }
+      let(:watermark) { Time.current + 30.minutes }
+      let(:snapshot) do
+        RecurringAggregationSnapshots::FetchService::Snapshot.new(
+          grouped_by: {},
+          units: 6,
+          to_datetime: subscription_started_at + 3.days,
+          watermark: Time.current + 1.minute
+        )
+      end
+
+      before do
+        event_store.aggregation_property = billable_metric.field_name
+        event_store.numeric_property = true
+        event_store.use_from_boundary = false
+
+        create_event(timestamp: subscription_started_at + 2.days, value: 1000, properties: {"region" => "europe"}, created_at: Time.current + 1.hour)
+      end
+
+      it "sums the events dated after the snapshot and the late events per group" do
+        expect(result).to match_array([
+          Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(groups: {"region" => nil}, value: 4, snapshot_value: 4, events_count: 1),
+          Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(groups: {"region" => "europe"}, value: 1005, snapshot_value: 5, events_count: 2)
+        ])
+      end
+
+      context "without a snapshot" do
+        let(:snapshot) { nil }
+
+        it "sums the full history per group" do
+          expect(result).to match_array([
+            Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(groups: {"region" => nil}, value: 6, snapshot_value: 6, events_count: 2),
+            Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(groups: {"region" => "europe"}, value: 1009, snapshot_value: 9, events_count: 4)
+          ])
+        end
+      end
+    end
+  end
+
   if include_feature?(:grouped_sum_breakdown)
     describe "#grouped_sum with breakdown columns" do
       subject(:event_store) do
