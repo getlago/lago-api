@@ -129,6 +129,11 @@ RSpec.describe UsageMonitoring::Alert do
         alert.previous_value = 33
         expect(alert.find_thresholds_crossed(351)).to eq([50, 150, 250, 350])
       end
+
+      it "does not return again a recurring threshold equal to previous_value" do
+        alert.previous_value = 150
+        expect(alert.find_thresholds_crossed(260)).to eq([250])
+      end
     end
 
     context "when direction is decreasing" do
@@ -155,6 +160,11 @@ RSpec.describe UsageMonitoring::Alert do
       it "returns recurring thresholds if crossed" do
         alert.previous_value = 600
         expect(alert.find_thresholds_crossed(-100)).to eq([-100, 0, 100, 200, 500])
+      end
+
+      it "does not return again a recurring threshold equal to previous_value" do
+        alert.previous_value = 100
+        expect(alert.find_thresholds_crossed(-50)).to eq([0])
       end
     end
   end
