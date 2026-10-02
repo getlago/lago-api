@@ -89,6 +89,7 @@ module BillableMetrics
           group_result = BillableMetrics::Aggregations::BaseService::Result.new
           group_result.grouped_by = aggregation[:groups]
           group_result.full_units_number = group_result_without_proration&.aggregation || 0
+          group_result.recurring_units = group_result_without_proration&.recurring_units
 
           if options[:is_current_usage]
             handle_current_usage(
