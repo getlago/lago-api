@@ -21,6 +21,10 @@ module Mutations
       def resolve(**args)
         raise not_enough_permissions_error(PRIVILEGED_PERMISSION) if privileged_params?(args) && !context.dig(:permissions, PRIVILEGED_PERMISSION)
 
+        if args[:payment_term]
+          args[:payment_term] = args[:payment_term].to_h
+        end
+
         result = ::Wallets::CreateService.call(
           params: args.merge(organization_id: current_organization.id)
             .merge(customer: current_customer(args[:customer_id]))
