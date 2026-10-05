@@ -34,6 +34,73 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
   end
 
   describe "#call" do
+    describe "billable metric amounts" do
+      let(:charge) { create(:standard_charge, organization:) }
+      let(:billable_metric_id) { charge.billable_metric_id }
+
+      context "when usage overflows the first wallet" do
+        let(:current_usage_fees) { [usage_fee(amount_cents: 80, charge:)] }
+
+        it "records each wallet's part of the billable metric" do
+          expect(result.billable_metric_amounts).to eq({
+            wallet_b => {billable_metric_id => 50},
+            wallet_a => {billable_metric_id => 30}
+          })
+        end
+      end
+
+      context "when a wallet absorbs nothing" do
+        let(:current_usage_fees) { [usage_fee(amount_cents: 30, charge:)] }
+
+        it "records an empty breakdown, so a refresh clears what it held before" do
+          expect(result.billable_metric_amounts).to eq({wallet_b => {billable_metric_id => 30}, wallet_a => {}})
+        end
+      end
+
+      context "with a subscription fee on a draft invoice" do
+        let(:current_usage_fees) { [usage_fee(amount_cents: 30, charge:)] }
+        let(:draft_invoices_fees) do
+          [create(:fee, subscription:, organization:, invoice:, amount_cents: 40, taxes_amount_cents: 0, amount_currency: "EUR")]
+        end
+
+        it "records only charge usage, while the subscription fee still takes its share of the balance" do
+          expect(result.wallet_allocations).to eq({wallet_b => 50, wallet_a => 20})
+          expect(result.billable_metric_amounts).to eq({
+            wallet_b => {billable_metric_id => 10},
+            wallet_a => {billable_metric_id => 20}
+          })
+        end
+      end
+
+      context "when a coupon leaves a fraction of a cent" do
+        let(:current_usage_fees) { [] }
+        let(:draft_invoices_fees) do
+          [create(:charge_fee, charge:, subscription:, organization:, invoice:, amount_cents: 30,
+            taxes_amount_cents: 0, precise_coupons_amount_cents: 0.4, amount_currency: "EUR")]
+        end
+
+        it "records whole cents" do
+          expect(result.billable_metric_amounts).to eq({wallet_b => {billable_metric_id => 30}, wallet_a => {}})
+        end
+      end
+
+      context "when the fee targets a wallet" do
+        around { |test| lago_premium! { test.run } }
+
+        let(:organization) { create(:organization, premium_integrations: ["events_targeting_wallets"]) }
+        let(:charge) { create(:standard_charge, organization:, accepts_target_wallet: true) }
+        let(:wallet_a) { create(:wallet, customer:, organization:, code: "wallet-a", balance_cents: 150, priority: 2) }
+        let(:current_usage_fees) do
+          [create(:charge_fee, charge:, subscription:, organization:, invoice:, amount_cents: 80,
+            taxes_amount_cents: 0, amount_currency: "EUR", grouped_by: {"target_wallet_code" => "wallet-a"})]
+        end
+
+        it "records it on the targeted wallet, ahead of priority" do
+          expect(result.billable_metric_amounts).to eq({wallet_b => {}, wallet_a => {billable_metric_id => 80}})
+        end
+      end
+    end
+
     context "with a single fee that overflows the first wallet" do
       let(:current_usage_fees) { [usage_fee(amount_cents: 80)] }
 

@@ -5063,7 +5063,8 @@ CREATE TABLE public.wallets (
     code character varying,
     billing_entity_id uuid,
     purchase_order_number character varying,
-    x402_enabled boolean DEFAULT false NOT NULL
+    x402_enabled boolean DEFAULT false NOT NULL,
+    ongoing_billable_metric_amounts jsonb DEFAULT '{}'::jsonb NOT NULL
 );
 
 
@@ -15754,6 +15755,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20261006134840'),
+('20261005134744'),
 ('20261005133729'),
 ('20261005112941'),
 ('20261005105630'),
