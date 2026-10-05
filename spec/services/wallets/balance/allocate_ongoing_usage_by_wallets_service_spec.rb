@@ -49,6 +49,32 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
         end
       end
 
+      context "when usage exceeds every wallet's balance" do
+        let(:current_usage_fees) { [usage_fee(amount_cents: 300, charge:)] }
+
+        it "records no more than each balance, as billing would take, while the ongoing balance goes negative" do
+          expect(result.wallet_allocations).to eq({wallet_b => 50, wallet_a => 250})
+          expect(result.billable_metric_amounts).to eq({
+            wallet_b => {billable_metric_id => 50},
+            wallet_a => {billable_metric_id => 150}
+          })
+        end
+      end
+
+      context "when the first wallet has an active threshold-based recurring rule" do
+        let(:current_usage_fees) { [usage_fee(amount_cents: 80, charge:)] }
+
+        before { create(:recurring_transaction_rule, wallet: wallet_b, organization:, trigger: :threshold) }
+
+        it "records what billing would take, which cascades past the threshold wallet" do
+          expect(result.wallet_allocations).to eq({wallet_b => 80, wallet_a => 0})
+          expect(result.billable_metric_amounts).to eq({
+            wallet_b => {billable_metric_id => 50},
+            wallet_a => {billable_metric_id => 30}
+          })
+        end
+      end
+
       context "when a wallet absorbs nothing" do
         let(:current_usage_fees) { [usage_fee(amount_cents: 30, charge:)] }
 

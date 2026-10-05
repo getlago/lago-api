@@ -38,11 +38,13 @@ module Wallets
         balances = fresh_balances
         metas = wallets.map { |wallet| wallet_meta(wallet, balances) }
         allocations = wallets.index_with(0)
+        covered = wallets.index_with(0)
 
         allocatable_pool(net_amounts).each do |fee_key, key_amount|
           currency = fee_key.last
           remaining = [key_amount, budgets[currency]].min
           applicable = metas.select { |meta| applicable_fee?(fee_key:, wallet: meta[:wallet], targets: meta[:targets], types: meta[:types]) }
+          cover(fee_key, remaining, applicable, balances, covered)
 
           applicable.each_with_index do |meta, index|
             break if remaining <= 0
@@ -58,13 +60,29 @@ module Wallets
             end
 
             allocations[meta[:wallet]] += take
-            result.billable_metric_amounts[meta[:wallet]][fee_key.second] += take if fee_key.first == "charge"
             remaining -= take
             budgets[currency] -= take
           end
         end
 
         allocations
+      end
+
+      # What billing would take from each wallet for this key: wallets in priority order, each up to
+      # its real balance, cascading past threshold wallets, and leaving the rest uncovered. The
+      # ongoing balance lets a wallet go negative so its rule can refill it; billing never does.
+      def cover(fee_key, amount, applicable, balances, covered)
+        applicable.each do |meta|
+          break if amount <= 0
+
+          wallet = meta[:wallet]
+          take = [amount, balances.fetch(wallet.id, 0) - covered[wallet]].min
+          next if take <= 0
+
+          covered[wallet] += take
+          amount -= take
+          result.billable_metric_amounts[wallet][fee_key.second] += take if fee_key.first == "charge"
+        end
       end
 
       def wallet_meta(wallet, balances)
