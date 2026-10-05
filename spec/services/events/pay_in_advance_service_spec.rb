@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Events::PayInAdvanceService do
-  let(:in_advance_service) { described_class.new(event:) }
+  subject(:in_advance_service) { described_class.new(event:) }
 
   let(:organization) { create(:organization) }
   let(:billable_metric) { create(:billable_metric, organization:) }
@@ -41,6 +41,33 @@ RSpec.describe Events::PayInAdvanceService do
       expect { in_advance_service.call }
         .to have_enqueued_job(Fees::CreatePayInAdvanceJob)
         .with(metered_item: have_attributes(charge:, event: have_attributes(id: event.id)))
+    end
+
+    context "when the product catalog is enabled after resolving legacy charges" do
+      let(:resolved_items) { Events::PayInAdvanceMeteredItemsResolver.call!(event:) }
+
+      before do
+        resolved_items
+        allow(event.organization).to receive(:product_catalog_enabled?).and_return(true)
+        allow(Events::PayInAdvanceMeteredItemsResolver).to receive(:call!).with(event:).and_return(resolved_items)
+      end
+
+      it "enqueues the legacy charge without requiring a contract rate card" do
+        expect { in_advance_service.call }
+          .to have_enqueued_job(Fees::CreatePayInAdvanceJob)
+          .with(metered_item: have_attributes(charge:, contract_rate_card: nil))
+          .once
+      end
+
+      context "when the legacy event already has a fee" do
+        before do
+          create(:fee, subscription:, invoice: nil, pay_in_advance_event_transaction_id: event.transaction_id)
+        end
+
+        it "does not enqueue the charge again" do
+          expect { in_advance_service.call }.not_to have_enqueued_job(Fees::CreatePayInAdvanceJob)
+        end
+      end
     end
 
     context "when charge is invoiceable" do

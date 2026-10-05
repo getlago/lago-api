@@ -35,8 +35,8 @@ module Invoices
         timestamp:
       )
       return if result.success?
-      # NOTE: We don't want a dead job for failed invoice due to the tax reason.
-      #       This invoice should be in failed status and can be retried.
+      # NOTE: Tax failures and duplicate fees should not produce dead jobs.
+      #       Failed invoices can be retried; duplicate fees are already processed and need no retry.
       unless tax_error?(result) || duplicate_fee?(result)
         result.raise_if_error!
       end
