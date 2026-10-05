@@ -15,8 +15,10 @@ module Invoices
     end
 
     def call
-      return result unless Fees::AdvanceChargesService::RegroupingChargeService.call!(billing_contexts:).regrouping_charge
       return result if pending_billing_contexts_with_fees.empty?
+      return result unless Fees::RegroupingChargeService.call!(
+        billing_contexts: pending_billing_contexts_with_fees
+      ).regrouping_charge
 
       invoices = create_group_invoices
 
@@ -47,22 +49,15 @@ module Invoices
       # NOTE: filter all active/terminated subscriptions having non-invoiceable (in advance) fees not yet attached to an invoice
       @pending_billing_contexts_with_fees ||= customer.subscriptions
         .where(
-          id: Fee.joins(:subscription)
-            .where(invoice_id: nil, payment_status: :succeeded)
-            .where("succeeded_at <= ?", billing_at)
-            .then do |relation|
-              Fees::AdvanceChargesService::AdvanceChargesToDatetimeFilterService.call!(
-                relation:, billing_contexts:, billing_at:
-              ).relation
-            end
-            .where(subscriptions: {
-              customer_id: customer.id,
-              external_id: billing_contexts.map(&:external_id).uniq,
-              status: [:active, :terminated]
-            })
-            .select("DISTINCT(subscriptions.id)")
+          id: charge_fees_resolver.call.select("DISTINCT(subscriptions.id)")
         )
         .map { |subscription| Billing::Context.from(subscription:) }
+    end
+
+    def charge_fees_resolver
+      @charge_fees_resolver ||= Fees::AdvanceChargesToDatetimeFilterResolver.new(
+        billing_contexts:, billing_at:, customer:
+      )
     end
 
     def create_manual_payment(invoice)
@@ -90,7 +85,9 @@ module Invoices
 
       ActiveRecord::Base.transaction do
         invoice = create_generating_invoice(billing_contexts_group)
-        Fees::AdvanceChargesService.call!(invoice:, billing_contexts: billing_contexts_group, billing_at:)
+        Fees::AdvanceChargesService.call!(
+          invoice:, billing_contexts: billing_contexts_group, charge_fees_resolver:, billing_at:
+        )
 
         if invoice.fees.empty?
           invoice = nil
