@@ -87,6 +87,30 @@ RSpec.describe EventDestinations::CustomerUsageSerializer do
       end
     end
 
+    context "when whole units are shared by more wallets than there are units" do
+      let(:wallet_ids) { Array.new(7) { "00000000-0000-4000-8000-00000000001#{it}" } }
+      let(:wallet_amounts) { {billable_metric.id => wallet_ids.index_with { 300 }} }
+      let(:usage) do
+        SubscriptionUsage.new(
+          from_datetime: "2026-09-01T00:00:00Z",
+          to_datetime: "2026-09-30T23:59:59Z",
+          issuing_date: "2026-09-30",
+          currency: "EUR",
+          amount_cents: 1500,
+          total_amount_cents: 1500,
+          taxes_amount_cents: 0,
+          fees: [build(:charge_fee, charge:, subscription:, units: "5", events_count: 5, amount_cents: 1500, amount_currency: "EUR", charge_filter: nil, grouped_by: {})]
+        )
+      end
+
+      it "never sends negative units, and the parts still add up" do
+        units = entries.map { BigDecimal(it[:units]) }
+
+        expect(units).to all(be >= 0)
+        expect(units.sum).to eq(5)
+      end
+    end
+
     context "when the units carry decimals" do
       let(:wallet_amounts) { {billable_metric.id => {second_wallet_id => 600, first_wallet_id => 1050}} }
       let(:usage) do
