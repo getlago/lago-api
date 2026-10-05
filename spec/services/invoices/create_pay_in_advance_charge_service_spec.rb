@@ -134,6 +134,15 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
       expect(result.invoice).to be_finalized
     end
 
+    it "returns a validation failure when the charge fee already exists" do
+      invoice_service.call
+
+      retry_result = invoice_service.call
+
+      expect(retry_result.error.messages).to eq(pay_in_advance_event_transaction_id: ["pay_in_advance_fee_already_exists"])
+      expect(Fee.where(pay_in_advance_event_transaction_id: event.transaction_id).count).to eq(1)
+    end
+
     it "creates InvoiceSubscription object" do
       expect { invoice_service.call.invoice }.to change(InvoiceSubscription, :count).by(1)
     end
@@ -188,6 +197,16 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
         )
         expect(result.invoice.invoice_subscriptions).to be_empty
         expect(result.invoice.fees.sole).to have_attributes(subscription: nil, charge: nil, fee_type: "product")
+      end
+
+      it "does not persist another invoice when the same product event is retried" do
+        invoice_service.call
+        result = nil
+
+        expect { result = invoice_service.call }.not_to change(Invoice, :count)
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq(pay_in_advance_event_transaction_id: ["pay_in_advance_fee_already_exists"])
+        expect(Fee.where(pay_in_advance_event_transaction_id: event.transaction_id).count).to eq(1)
       end
     end
 
