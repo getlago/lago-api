@@ -23,7 +23,8 @@ class PaymentTerm < Data.define(:term_type, :days, :day_of_month, :month_offset)
   end
 
   def initialize(term_type:, days: nil, day_of_month: nil, month_offset: nil)
-    term_type = term_type.to_s
+    # Data freezes the object, not its members: copy so the caller's string cannot change the term
+    term_type = term_type.to_s.dup.freeze
     fields = FIELDS_BY_TERM_TYPE.fetch(term_type, [])
 
     super(

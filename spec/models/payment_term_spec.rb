@@ -21,6 +21,21 @@ RSpec.describe PaymentTerm do
       expect(term.month_offset).to eq(2)
     end
 
+    context "when the caller later mutates the term_type string" do
+      subject(:term) { described_class.from_h("term_type" => term_type, "days" => 30) }
+
+      let(:term_type) { +"net" }
+
+      it "keeps its own frozen copy" do
+        lookup = {term => :found}
+        term_type.replace("end_of_month")
+
+        expect(term.term_type).to eq("net")
+        expect(term.term_type).to be_frozen
+        expect(lookup[term]).to eq(:found)
+      end
+    end
+
     it "defaults month_offset to 1 for day_of_month" do
       term = described_class.from_h(term_type: "day_of_month", day_of_month: 15)
 
