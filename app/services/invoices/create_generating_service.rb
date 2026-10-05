@@ -73,7 +73,7 @@ module Invoices
     end
 
     def resolved_payment_term
-      @resolved_payment_term ||= PaymentTerms::ResolveService.call!(customer:)
+      @resolved_payment_term ||= PaymentTerms::ResolveService.call!(customer:, billing_entity: invoice_billing_entity)
     end
 
     # NOTE: accounting date must be in customer timezone
