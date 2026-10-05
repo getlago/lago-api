@@ -74,7 +74,16 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::DraftTaxesCacheService
     end
 
     it "is scoped to the integration" do
-      expect(cache_service.cache_key).to start_with("anrok-draft-taxes/1/#{integration.id}/#{integration.updated_at.to_i}/")
+      expect(cache_service.cache_key).to start_with("anrok-draft-taxes/1/#{integration.id}/#{integration.updated_at.utc.iso8601(6)}/")
+    end
+
+    context "when the integration is updated within the same second" do
+      let(:integration) { build_stubbed(:anrok_integration, updated_at: Time.zone.parse("2026-10-05 10:00:00.100")) }
+      let(:updated_integration) { build_stubbed(:anrok_integration, id: integration.id, updated_at: Time.zone.parse("2026-10-05 10:00:00.200")) }
+
+      it "changes" do
+        expect(cache_service.cache_key).not_to eq(described_class.new(integration: updated_integration, payload:).cache_key)
+      end
     end
 
     context "when an amount changes by one cent" do

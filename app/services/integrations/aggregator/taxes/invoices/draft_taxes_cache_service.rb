@@ -54,7 +54,7 @@ module Integrations
               "anrok-draft-taxes",
               CACHE_KEY_VERSION,
               integration.id,
-              integration.updated_at.to_i,
+              integration.updated_at.utc.iso8601(6),
               payload_digest
             ].join("/")
           end
