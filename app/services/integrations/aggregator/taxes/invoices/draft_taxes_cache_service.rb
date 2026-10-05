@@ -38,7 +38,11 @@ module Integrations
             super(expires_in: self.class.ttl)
           end
 
+          # NOTE: A zero TTL turns the cache off entirely, reads included, so entries written before
+          #       it was disabled stop being served right away.
           def call
+            return yield unless expires_in > 0
+
             super do
               track(:miss)
               yield

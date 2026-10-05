@@ -193,6 +193,19 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::DraftTaxesCacheService
 
         expect(cache.read(cache_service.cache_key)).to be_nil
       end
+
+      context "with an answer cached before the cache was disabled" do
+        let(:fresh_body) { success_body.deep_dup.tap { |body| body["succeededInvoices"].first["fees"].first["tax_amount_cents"] = 25 } }
+
+        before { cache.write(cache_service.cache_key, success_body) }
+
+        it "asks the provider instead of serving it" do
+          result = cache_service.call { fresh_body }
+
+          expect(result).to eq(fresh_body)
+          expect(counter).not_to have_received(:increment)
+        end
+      end
     end
   end
 end
