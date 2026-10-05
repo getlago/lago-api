@@ -50,6 +50,36 @@ RSpec.describe Mutations::RateCardRates::Create do
     expect(result_data["rateModel"]).to eq("standard")
   end
 
+  context "with graduated tiers" do
+    let(:input) do
+      super().merge(
+        rateModel: "graduated",
+        rateProperties: {
+          graduatedRanges: [
+            {toValue: "10", flatAmount: "0", perUnitAmount: "1"},
+            {toValue: nil, flatAmount: "0", perUnitAmount: "0.5"}
+          ]
+        }
+      )
+    end
+
+    let(:mutation) do
+      <<-GQL
+        mutation($input: CreateRateCardRateInput!) {
+          createRateCardRate(input: $input) {
+            id rateProperties { graduatedRanges { toValue flatAmount perUnitAmount } }
+          }
+        }
+      GQL
+    end
+
+    it "takes and returns tiers by their upper bound" do
+      ranges = execution["data"]["createRateCardRate"]["rateProperties"]["graduatedRanges"]
+
+      expect(ranges.map { it["toValue"] }).to eq(["10", nil])
+    end
+  end
+
   context "when the rate card belongs to another organization" do
     let(:rate_card) { create(:rate_card) }
 

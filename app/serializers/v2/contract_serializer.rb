@@ -17,6 +17,7 @@ module V2
         status: model.status,
         billing_time: model.billing_time,
         billing_anchor_date: model.billing_anchor_date&.iso8601,
+        effective_billing_anchor_date: model.effective_billing_anchor_date&.iso8601,
         started_at: model.started_at&.iso8601,
         ended_at: model.ended_at&.iso8601,
         terminated_at: model.terminated_at&.iso8601,

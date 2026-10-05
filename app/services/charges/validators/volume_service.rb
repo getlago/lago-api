@@ -16,7 +16,7 @@ module Charges
               add_error(field: :volume_ranges, error_code: "invalid_volume_ranges")
             end
 
-            next_from_value = (range[:to_value] || 0) + 1
+            next_from_value = next_from_value(range)
           end
         end
 
@@ -27,6 +27,10 @@ module Charges
 
       def ranges
         properties["volume_ranges"]&.map(&:with_indifferent_access)
+      end
+
+      def next_from_value(range)
+        (range[:to_value] || 0) + 1
       end
 
       def validate_amounts(range)

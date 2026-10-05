@@ -16,6 +16,8 @@ module Types
       field :status, Types::Contracts::StatusEnum, null: false
 
       field :billing_anchor_date, GraphQL::Types::ISO8601Date, null: true
+      field :effective_billing_anchor_date, GraphQL::Types::ISO8601Date, null: true,
+        description: "The anchor billing uses: billing_anchor_date when set, else the start day in the customer's timezone"
 
       field :canceled_at, GraphQL::Types::ISO8601DateTime, null: true
       field :ended_at, GraphQL::Types::ISO8601DateTime, null: true
@@ -50,6 +52,16 @@ module Types
       # fire one query per contract; both fields read the same loaded set.
       def plan
         dataloader.with(Sources::ActiveRecordAssociation, :catalog_plan).load(object)
+      end
+
+      # The customer and its billing entity hold the timezone; loading them across
+      # the page keeps a list of contracts from querying them one by one.
+      def effective_billing_anchor_date
+        return object.billing_anchor_date if object.billing_anchor_date
+
+        customer = dataloader.with(Sources::ActiveRecordAssociation, :customer).load(object)
+        dataloader.with(Sources::ActiveRecordAssociation, :billing_entity).load(customer)
+        object.effective_billing_anchor_date
       end
 
       def applied_rate_cards

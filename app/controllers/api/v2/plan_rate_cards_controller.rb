@@ -2,8 +2,8 @@
 
 module Api
   module V2
-    class PlanRateCardsController < Api::BaseController
-      include Api::RequiresProductCatalog
+    class PlanRateCardsController < Api::V2::BaseController
+      cursor_paginated_index(PlanRateCard)
 
       def create
         result = ::PlanRateCards::CreateService.call(
@@ -56,20 +56,19 @@ module Api
 
         result = ::PlanRateCardsQuery.call(
           organization: current_organization,
-          pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
-          },
-          filters: {plan_code: params[:plan_code]}
+          pagination: cursor,
+          filters: {plan_id: find_catalog_plan.id}
         )
 
         if result.success?
+          page = ::CursorPagination::Page.new(records: result.plan_rate_cards.includes(:catalog_plan, :rate_card, :rate_phases), cursor:)
+
           render(
             json: ::CollectionSerializer.new(
-              result.plan_rate_cards.includes(:catalog_plan, :rate_card, :rate_phases),
+              page.records,
               ::V2::PlanRateCardSerializer,
               collection_name: "applied_rate_cards",
-              meta: pagination_metadata(result.plan_rate_cards)
+              meta: page.meta
             )
           )
         else
@@ -80,7 +79,9 @@ module Api
       private
 
       def find_catalog_plan
-        current_organization.catalog_plans.find_by(code: params[:plan_code])
+        return @find_catalog_plan if defined?(@find_catalog_plan)
+
+        @find_catalog_plan = current_organization.catalog_plans.find_by(code: params[:plan_code])
       end
 
       def find_plan_rate_card

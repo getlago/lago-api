@@ -2,8 +2,8 @@
 
 module Api
   module V2
-    class ProductsController < Api::BaseController
-      include Api::RequiresProductCatalog
+    class ProductsController < Api::V2::BaseController
+      cursor_paginated_index(Product)
 
       ERROR_FIELDS = {billable_metric: :billable_metric_code, product_category: :product_category_code}.freeze
 
@@ -85,10 +85,7 @@ module Api
         result = ::ProductsQuery.call(
           organization: current_organization,
           search_term: params[:search_term],
-          pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
-          },
+          pagination: cursor,
           filters: {
             product_category_ids: index_product_categories.map(&:id).presence,
             without_product_category: ActiveModel::Type::Boolean.new.cast(params[:without_product_category]),
@@ -97,13 +94,15 @@ module Api
         )
 
         if result.success?
+          # Preloaded so filters_count reads the loaded association.
+          page = ::CursorPagination::Page.new(records: result.products.includes(:filters), cursor:)
+
           render(
             json: ::CollectionSerializer.new(
-              # Preloaded so filters_count reads the loaded association.
-              result.products.includes(:filters),
+              page.records,
               ::V2::ProductSerializer,
               collection_name: "products",
-              meta: pagination_metadata(result.products)
+              meta: page.meta
             )
           )
         else

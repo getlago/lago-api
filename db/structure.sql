@@ -543,6 +543,7 @@ DROP INDEX IF EXISTS public.index_rate_cards_on_product_filter_id;
 DROP INDEX IF EXISTS public.index_rate_cards_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_rate_cards_on_organization_id;
 DROP INDEX IF EXISTS public.index_rate_cards_on_deleted_at;
+DROP INDEX IF EXISTS public.index_rate_cards_by_cursor;
 DROP INDEX IF EXISTS public.index_rate_card_rates_on_rate_card_id_and_effective_from;
 DROP INDEX IF EXISTS public.index_rate_card_rates_on_rate_card_id_and_code;
 DROP INDEX IF EXISTS public.index_rate_card_rates_on_rate_card_id;
@@ -568,10 +569,12 @@ DROP INDEX IF EXISTS public.index_products_on_deleted_at;
 DROP INDEX IF EXISTS public.index_products_on_charge_id;
 DROP INDEX IF EXISTS public.index_products_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_products_on_add_on_id;
+DROP INDEX IF EXISTS public.index_products_by_cursor;
 DROP INDEX IF EXISTS public.index_product_filters_on_product_id_and_code;
 DROP INDEX IF EXISTS public.index_product_filters_on_product_id;
 DROP INDEX IF EXISTS public.index_product_filters_on_organization_id;
 DROP INDEX IF EXISTS public.index_product_filters_on_deleted_at;
+DROP INDEX IF EXISTS public.index_product_filters_by_cursor;
 DROP INDEX IF EXISTS public.index_product_filter_values_on_product_filter_id;
 DROP INDEX IF EXISTS public.index_product_filter_values_on_organization_id;
 DROP INDEX IF EXISTS public.index_product_filter_values_on_deleted_at;
@@ -579,6 +582,7 @@ DROP INDEX IF EXISTS public.index_product_filter_values_on_billable_metric_filte
 DROP INDEX IF EXISTS public.index_product_categories_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_product_categories_on_organization_id;
 DROP INDEX IF EXISTS public.index_product_categories_on_deleted_at;
+DROP INDEX IF EXISTS public.index_product_categories_by_cursor;
 DROP INDEX IF EXISTS public.index_pricing_units_on_organization_id;
 DROP INDEX IF EXISTS public.index_pricing_units_on_code_and_organization_id;
 DROP INDEX IF EXISTS public.index_pricing_unit_usages_on_pricing_unit_id;
@@ -603,6 +607,7 @@ DROP INDEX IF EXISTS public.index_plan_rate_cards_on_rate_card_id;
 DROP INDEX IF EXISTS public.index_plan_rate_cards_on_organization_id;
 DROP INDEX IF EXISTS public.index_plan_rate_cards_on_deleted_at;
 DROP INDEX IF EXISTS public.index_plan_rate_cards_on_catalog_plan_id_and_rate_card_id;
+DROP INDEX IF EXISTS public.index_plan_rate_cards_by_cursor;
 DROP INDEX IF EXISTS public.index_pending_vies_checks_on_organization_id;
 DROP INDEX IF EXISTS public.index_pending_vies_checks_on_customer_id;
 DROP INDEX IF EXISTS public.index_pending_vies_checks_on_billing_entity_id;
@@ -891,6 +896,8 @@ DROP INDEX IF EXISTS public.index_contracts_on_live_external_id;
 DROP INDEX IF EXISTS public.index_contracts_on_customer_id;
 DROP INDEX IF EXISTS public.index_contracts_on_catalog_plan_id;
 DROP INDEX IF EXISTS public.index_contracts_on_billing_entity_id;
+DROP INDEX IF EXISTS public.index_contracts_by_status_cursor;
+DROP INDEX IF EXISTS public.index_contracts_by_cursor;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_rate_card_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_organization_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_next_billing_at;
@@ -898,6 +905,7 @@ DROP INDEX IF EXISTS public.index_contract_rate_cards_on_id_and_contract_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_deleted_at;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_contract_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_contract_and_rate_card;
+DROP INDEX IF EXISTS public.index_contract_rate_cards_by_cursor;
 DROP INDEX IF EXISTS public.index_commitments_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_commitments_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_commitments_taxes_on_commitment_id_and_tax_id;
@@ -932,6 +940,7 @@ DROP INDEX IF EXISTS public.index_catalog_plans_on_organization_id_code_gin_trgm
 DROP INDEX IF EXISTS public.index_catalog_plans_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_catalog_plans_on_organization_id;
 DROP INDEX IF EXISTS public.index_catalog_plans_on_deleted_at;
+DROP INDEX IF EXISTS public.index_catalog_plans_by_cursor;
 DROP INDEX IF EXISTS public.index_cached_aggregations_on_external_subscription_id;
 DROP INDEX IF EXISTS public.index_cached_aggregations_on_event_transaction_id;
 DROP INDEX IF EXISTS public.index_cached_aggregations_on_charge_id;
@@ -1763,7 +1772,8 @@ CREATE TYPE public.payment_payable_payment_status AS ENUM (
 
 CREATE TYPE public.payment_type AS ENUM (
     'provider',
-    'manual'
+    'manual',
+    'x402'
 );
 
 
@@ -8501,6 +8511,13 @@ CREATE INDEX index_cached_aggregations_on_external_subscription_id ON public.cac
 
 
 --
+-- Name: index_catalog_plans_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_catalog_plans_by_cursor ON public.catalog_plans USING btree (organization_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_catalog_plans_on_deleted_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8739,6 +8756,13 @@ CREATE INDEX index_commitments_taxes_on_tax_id ON public.commitments_taxes USING
 
 
 --
+-- Name: index_contract_rate_cards_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_contract_rate_cards_by_cursor ON public.contract_rate_cards USING btree (contract_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_contract_rate_cards_on_contract_and_rate_card; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8785,6 +8809,20 @@ CREATE INDEX index_contract_rate_cards_on_organization_id ON public.contract_rat
 --
 
 CREATE INDEX index_contract_rate_cards_on_rate_card_id ON public.contract_rate_cards USING btree (rate_card_id);
+
+
+--
+-- Name: index_contracts_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_contracts_by_cursor ON public.contracts USING btree (organization_id, created_at DESC, id DESC);
+
+
+--
+-- Name: index_contracts_by_status_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_contracts_by_status_cursor ON public.contracts USING btree (organization_id, status, created_at DESC, id DESC);
 
 
 --
@@ -10804,6 +10842,13 @@ CREATE INDEX index_pending_vies_checks_on_organization_id ON public.pending_vies
 
 
 --
+-- Name: index_plan_rate_cards_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_plan_rate_cards_by_cursor ON public.plan_rate_cards USING btree (catalog_plan_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_plan_rate_cards_on_catalog_plan_id_and_rate_card_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10972,6 +11017,13 @@ CREATE INDEX index_pricing_units_on_organization_id ON public.pricing_units USIN
 
 
 --
+-- Name: index_product_categories_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_product_categories_by_cursor ON public.product_categories USING btree (organization_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_product_categories_on_deleted_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11021,6 +11073,13 @@ CREATE INDEX index_product_filter_values_on_product_filter_id ON public.product_
 
 
 --
+-- Name: index_product_filters_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_product_filters_by_cursor ON public.product_filters USING btree (product_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_product_filters_on_deleted_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11046,6 +11105,13 @@ CREATE INDEX index_product_filters_on_product_id ON public.product_filters USING
 --
 
 CREATE UNIQUE INDEX index_product_filters_on_product_id_and_code ON public.product_filters USING btree (product_id, code) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_products_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_products_by_cursor ON public.products USING btree (organization_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL);
 
 
 --
@@ -11221,6 +11287,13 @@ CREATE UNIQUE INDEX index_rate_card_rates_on_rate_card_id_and_code ON public.rat
 --
 
 CREATE UNIQUE INDEX index_rate_card_rates_on_rate_card_id_and_effective_from ON public.rate_card_rates USING btree (rate_card_id, effective_from) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_rate_cards_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_rate_cards_by_cursor ON public.rate_cards USING btree (organization_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL);
 
 
 --
@@ -15247,7 +15320,17 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261002142357'),
 ('20260930161929'),
+('20260929105639'),
+('20260928140425'),
+('20260928140424'),
+('20260928140423'),
+('20260928140422'),
+('20260928140421'),
+('20260928140420'),
+('20260928140419'),
+('20260928140418'),
 ('20260925110807'),
 ('20260925110133'),
 ('20260924133109'),
