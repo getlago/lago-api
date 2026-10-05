@@ -26,6 +26,7 @@ module Types
     field :api_log, resolver: Resolvers::ApiLogResolver
     field :api_logs, resolver: Resolvers::ApiLogsResolver
     field :applied_coupons, resolver: Resolvers::AppliedCouponsResolver
+    field :attributed_usage, resolver: Resolvers::AttributedUsageResolver
     field :billable_metric, resolver: Resolvers::BillableMetricResolver
     field :billable_metrics, resolver: Resolvers::BillableMetricsResolver
     field :billing_entities, resolver: Resolvers::BillingEntitiesResolver
