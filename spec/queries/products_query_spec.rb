@@ -71,4 +71,13 @@ RSpec.describe ProductsQuery do
       expect(result.products.total_count).to eq(2)
     end
   end
+
+  context "with cursor pagination" do
+    let(:pagination) { CursorPagination::Cursor.new(table: "products", limit: 1) }
+    let(:filters) { {product_type: "fixed"} }
+
+    it "paginates after filtering" do
+      expect(result.products).to eq([fixed_item])
+    end
+  end
 end

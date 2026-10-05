@@ -2,8 +2,8 @@
 
 module Api
   module V2
-    class RateCardsController < Api::BaseController
-      include Api::RequiresProductCatalog
+    class RateCardsController < Api::V2::BaseController
+      cursor_paginated_index(RateCard)
 
       def create
         if create_params[:product_filter_code].present? && product && product_filter.nil?
@@ -58,10 +58,7 @@ module Api
         result = ::RateCardsQuery.call(
           organization: current_organization,
           search_term: params[:search_term],
-          pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
-          },
+          pagination: cursor,
           filters: {
             product_ids: Array(params[:product_id]).presence,
             product_filter_ids: Array(params[:product_filter_id]).presence,
@@ -72,12 +69,14 @@ module Api
         )
 
         if result.success?
+          page = ::CursorPagination::Page.new(records: result.rate_cards.includes(:product, :product_filter, :rates), cursor:)
+
           render(
             json: ::CollectionSerializer.new(
-              result.rate_cards.includes(:product, :product_filter, :rates),
+              page.records,
               ::V2::RateCardSerializer,
               collection_name: "rate_cards",
-              meta: pagination_metadata(result.rate_cards)
+              meta: page.meta
             )
           )
         else

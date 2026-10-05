@@ -341,6 +341,24 @@ RSpec.describe Payment do
         end
       end
 
+      context "when payment type is x402" do
+        let(:payment_type) { "x402" }
+
+        context "when reference is present" do
+          let(:reference) { "0xabc" }
+
+          it "adds an error" do
+            expect(errors.where(:reference, :present)).to be_present
+          end
+        end
+
+        context "when reference is not present" do
+          it "does not add an error" do
+            expect(errors.where(:reference, :present)).not_to be_present
+          end
+        end
+      end
+
       context "when payment type is manual" do
         let(:payment_type) { "manual" }
 

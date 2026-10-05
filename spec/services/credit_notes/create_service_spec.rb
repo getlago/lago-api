@@ -426,7 +426,7 @@ RSpec.describe CreditNotes::CreateService do
     end
 
     context "with a refund, a payment and a succeeded invoice" do
-      let(:payment) { create(:payment, payable: invoice) }
+      let(:payment) { create(:payment, payable: invoice, payable_payment_status: "succeeded") }
 
       before { payment }
 
@@ -443,6 +443,7 @@ RSpec.describe CreditNotes::CreateService do
           create(
             :payment,
             payable: invoice,
+            payable_payment_status: "succeeded",
             payment_provider: gocardless_provider,
             payment_provider_customer: gocardless_customer
           )
@@ -452,6 +453,25 @@ RSpec.describe CreditNotes::CreateService do
           expect { subject }.to have_enqueued_job_after_commit(CreditNotes::Refunds::GocardlessCreateJob).with do |job_credit_note|
             expect(job_credit_note).to eq(credit_note)
           end
+        end
+      end
+
+      context "when the invoice was paid through a payment request" do
+        let(:payment_request) { create(:payment_request, :succeeded, customer:, invoices: [invoice]) }
+        let(:payment) { create(:payment, payable: payment_request, payable_payment_status: "succeeded") }
+
+        it "enqueues a refund job after commit" do
+          expect { subject }.to have_enqueued_job_after_commit(CreditNotes::Refunds::StripeCreateJob).with do |job_credit_note|
+            expect(job_credit_note).to eq(credit_note)
+          end
+        end
+      end
+
+      context "when the invoice payment is not succeeded" do
+        let(:payment) { create(:payment, payable: invoice, payable_payment_status: "failed") }
+
+        it "does not enqueue a refund job" do
+          expect { subject }.not_to have_enqueued_job(CreditNotes::Refunds::StripeCreateJob)
         end
       end
 

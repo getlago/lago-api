@@ -102,6 +102,7 @@ end
 #
 # Indexes
 #
+#  index_products_by_cursor                    (organization_id,created_at DESC,id DESC) WHERE (deleted_at IS NULL)
 #  index_products_on_add_on_id                 (add_on_id)
 #  index_products_on_billable_metric_id        (billable_metric_id)
 #  index_products_on_charge_id                 (charge_id)

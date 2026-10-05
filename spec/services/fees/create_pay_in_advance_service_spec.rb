@@ -358,6 +358,8 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           }
         end
 
+        before { create(:charge_filter_value, values: ["visa"], billable_metric_filter: scheme, charge_filter:) }
+
         it "creates a fee" do
           result = fee_service.call
 
@@ -402,6 +404,8 @@ RSpec.describe Fees::CreatePayInAdvanceService do
             group_key: "group_value"
           }
         end
+
+        before { create(:charge_filter_value, values: ["visa"], billable_metric_filter: scheme, charge_filter:) }
 
         it "creates a fee" do
           result = fee_service.call

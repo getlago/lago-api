@@ -4214,6 +4214,29 @@ RSpec.describe Fees::ChargeService, :premium do
         end
       end
 
+      context "with a recurring charge filter without values" do
+        let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:, field_name: "value") }
+        let(:empty_charge_filter) { create(:charge_filter, charge:, properties: {amount: "50"}) }
+        let(:filtered_aggregations) { [eu_charge_filter.id, nil] }
+
+        before do
+          empty_charge_filter
+          create(:event, organization:, subscription:, code: billable_metric.code,
+            timestamp: Time.zone.parse("2022-03-16"), properties: {region: "eu", value: 10})
+          create(:event, organization:, subscription:, code: billable_metric.code,
+            timestamp: Time.zone.parse("2022-03-16"), properties: {value: 5})
+        end
+
+        it "bills the unmatched usage on the default bucket only" do
+          result = charge_subscription_service.call
+
+          expect(result.fees.map { [it.charge_filter_id, it.units] }).to match_array([
+            [eu_charge_filter.id, 10],
+            [nil, 5]
+          ])
+        end
+      end
+
       context "when context is current_usage", cache: :memory do
         subject(:charge_subscription_service) do
           described_class.new(
