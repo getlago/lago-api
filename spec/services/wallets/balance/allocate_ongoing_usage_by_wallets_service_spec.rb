@@ -75,6 +75,21 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
         end
       end
 
+      context "when the usage is taxed" do
+        let(:current_usage_fees) do
+          [create(:charge_fee, charge:, subscription:, organization:, invoice:, amount_cents: 100,
+            taxes_amount_cents: 20, amount_currency: "EUR")]
+        end
+
+        it "records each wallet's part of the usage without its tax" do
+          expect(result.wallet_allocations).to eq({wallet_b => 50, wallet_a => 70})
+          expect(result.billable_metric_amounts).to eq({
+            wallet_b => {billable_metric_id => 42},
+            wallet_a => {billable_metric_id => 58}
+          })
+        end
+      end
+
       context "when a wallet absorbs nothing" do
         let(:current_usage_fees) { [usage_fee(amount_cents: 30, charge:)] }
 

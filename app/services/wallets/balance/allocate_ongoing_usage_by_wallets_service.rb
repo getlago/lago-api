@@ -81,8 +81,30 @@ module Wallets
 
           covered[wallet] += take
           amount -= take
-          result.billable_metric_amounts[wallet][fee_key.second] += take if fee_key.first == "charge"
+          result.billable_metric_amounts[wallet][fee_key.second] += tax_exclusive(fee_key, take) if fee_key.first == "charge"
         end
+      end
+
+      # Usage and draft fees enter the pool with their taxes, so what a wallet covers for a key is
+      # split the same way to keep the taxes out.
+      def tax_exclusive(fee_key, amount)
+        if taxes_by_fee_key[fee_key].zero?
+          amount
+        else
+          amount * sub_totals_by_fee_key[fee_key] / (sub_totals_by_fee_key[fee_key] + taxes_by_fee_key[fee_key])
+        end
+      end
+
+      def sub_totals_by_fee_key
+        @sub_totals_by_fee_key ||= sum_by_fee_key { |fee| fee.amount_cents - fee.precise_coupons_amount_cents }
+      end
+
+      def taxes_by_fee_key
+        @taxes_by_fee_key ||= sum_by_fee_key(&:taxes_amount_cents)
+      end
+
+      def sum_by_fee_key
+        (current_usage_fees + draft_invoices_fees).each_with_object(Hash.new(0)) { |fee, sums| sums[fee_key(fee)] += yield(fee) }
       end
 
       def wallet_meta(wallet, balances)
