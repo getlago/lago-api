@@ -77,8 +77,8 @@ RSpec.describe "Advance graduated pricing across persisted rate segments" do
   let(:first_rate_properties) do
     {
       graduated_ranges: [
-        {from_value: 0, to_value: 100, per_unit_amount: "1", flat_amount: "0"},
-        {from_value: 101, to_value: nil, per_unit_amount: "0.80", flat_amount: "0"}
+        {to_value: "100", per_unit_amount: "1", flat_amount: "0"},
+        {to_value: nil, per_unit_amount: "0.80", flat_amount: "0"}
       ]
     }
   end
@@ -88,8 +88,8 @@ RSpec.describe "Advance graduated pricing across persisted rate segments" do
       code: "r2", effective_from: rate_changed_at.iso8601, rate_model: "graduated",
       billing_interval_unit: "month", rate_properties: {
         graduated_ranges: [
-          {from_value: 0, to_value: 100, per_unit_amount: "2", flat_amount: "0"},
-          {from_value: 101, to_value: nil, per_unit_amount: "1.50", flat_amount: "0"}
+          {to_value: "100", per_unit_amount: "2", flat_amount: "0"},
+          {to_value: nil, per_unit_amount: "1.50", flat_amount: "0"}
         ]
       }
     }

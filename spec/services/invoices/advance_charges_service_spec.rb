@@ -176,6 +176,28 @@ RSpec.describe Invoices::AdvanceChargesService do
       end
     end
 
+    context "when succeeded fees belong to a standalone advance charge" do
+      let(:charge) do
+        create(:standard_charge, plan:, pay_in_advance: true, invoiceable: false, regroup_paid_fees: nil)
+      end
+      let(:standalone_fee) do
+        create(:charge_fee, :succeeded, organization:, subscription:, charge:, invoice: nil,
+          succeeded_at: billing_at - 1.day)
+      end
+
+      before do
+        standalone_fee
+        allow(Invoices::CreateGeneratingService).to receive(:call).and_call_original
+      end
+
+      it "does not create and roll back an invoice on each billing run" do
+        expect(invoice_service.call.invoice).to be_nil
+        expect(invoice_service.call.invoice).to be_nil
+        expect(Invoices::CreateGeneratingService).not_to have_received(:call)
+        expect(standalone_fee.reload.invoice_id).to be_nil
+      end
+    end
+
     context "when there is a successful non invoiceable paid in advance fees" do
       let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
 
