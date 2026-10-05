@@ -292,6 +292,7 @@ RSpec.describe Wallet do
       status
       terminated_at
       traceable
+      x402_enabled
       created_at
       updated_at
       billing_entity_id

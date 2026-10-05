@@ -21,6 +21,7 @@ class Invoice < ApplicationRecord
   belongs_to :organization
   belongs_to :billing_entity, optional: true
   belongs_to :payment_method, optional: true
+  belongs_to :x402_connection, class_name: "X402::Connection", optional: true
 
   has_many :fees
   has_many :credits
@@ -39,6 +40,7 @@ class Invoice < ApplicationRecord
   has_one :crm_connection, -> { where(category: :crm) }, class_name: "InvoiceConnection"
   has_many :progressive_billing_credits, class_name: "Credit", foreign_key: :progressive_billing_invoice_id
   has_many :invoice_settlements, foreign_key: :target_invoice_id
+  has_many :x402_settlements, class_name: "X402::Settlement", inverse_of: :invoice
 
   has_many :applied_taxes, class_name: "Invoice::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
@@ -166,6 +168,7 @@ class Invoice < ApplicationRecord
   validates :timezone, timezone: true, allow_nil: true
   validates :total_amount_cents, numericality: {greater_than_or_equal_to: 0}
   validates :payment_dispute_lost_at, absence: true, unless: :payment_dispute_losable?
+  validate :validate_x402_connection_organization, if: :x402_connection_id_changed?
 
   attr_writer :precalculated_offset_amount_cents
 
@@ -825,6 +828,14 @@ class Invoice < ApplicationRecord
 
     self.finalized_at ||= Time.current
   end
+
+  def validate_x402_connection_organization
+    connection = X402::Connection.with_discarded.find_by(id: x402_connection_id)
+
+    if connection && connection.organization_id != organization_id
+      errors.add(:x402_connection, :must_belong_to_same_organization)
+    end
+  end
 end
 
 # == Schema Information
@@ -874,6 +885,7 @@ end
 #  total_paid_amount_cents                 :bigint           default(0), not null
 #  version_number                          :integer          default(4), not null
 #  voided_at                               :datetime
+#  x402_payment_token                      :string
 #  xml_file                                :string
 #  created_at                              :datetime         not null
 #  updated_at                              :datetime         not null
@@ -885,6 +897,7 @@ end
 #  payment_method_id                       :uuid
 #  sequential_id                           :integer
 #  voided_invoice_id                       :uuid
+#  x402_connection_id                      :uuid
 #
 # Indexes
 #
@@ -902,6 +915,8 @@ end
 #  index_invoices_on_payment_method_id                             (payment_method_id)
 #  index_invoices_on_ready_to_be_refreshed                         (ready_to_be_refreshed) WHERE (ready_to_be_refreshed = true)
 #  index_invoices_on_voided_invoice_id                             (voided_invoice_id)
+#  index_invoices_on_x402_connection_id                            (x402_connection_id) WHERE (x402_connection_id IS NOT NULL)
+#  index_invoices_on_x402_payment_token                            (x402_payment_token) UNIQUE WHERE (x402_payment_token IS NOT NULL)
 #
 # Foreign Keys
 #
@@ -909,4 +924,5 @@ end
 #  fk_rails_...  (customer_id => customers.id)
 #  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (payment_method_id => payment_methods.id)
+#  fk_rails_...  (x402_connection_id => x402_connections.id)
 #

@@ -127,6 +127,7 @@ ALTER TABLE IF EXISTS ONLY public.entitlement_entitlement_values DROP CONSTRAINT
 ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fk_rails_aa04ceacf6;
 ALTER TABLE IF EXISTS ONLY public.integration_items DROP CONSTRAINT IF EXISTS fk_rails_a9dc2ea536;
 ALTER TABLE IF EXISTS ONLY public.rate_phases DROP CONSTRAINT IF EXISTS fk_rails_a9ba49506f;
+ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_a958b8f5a7;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_a7f20c73bb;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_a710519346;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_a6d07eec6e;
@@ -434,6 +435,7 @@ DROP INDEX IF EXISTS public.index_x402_settlements_on_organization_id_and_paymen
 DROP INDEX IF EXISTS public.index_x402_settlements_on_organization_id;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_invoice_id;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_customer_id;
+DROP INDEX IF EXISTS public.index_x402_enabled_wallets_on_customer_id;
 DROP INDEX IF EXISTS public.index_x402_connections_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_wt_invoice_custom_sections_unique;
 DROP INDEX IF EXISTS public.index_webhooks_on_webhook_endpoint_id;
@@ -706,6 +708,8 @@ DROP INDEX IF EXISTS public.index_invoices_taxes_on_invoice_id;
 DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_payment_request_id;
 DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_organization_id;
 DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_invoice_id;
+DROP INDEX IF EXISTS public.index_invoices_on_x402_payment_token;
+DROP INDEX IF EXISTS public.index_invoices_on_x402_connection_id;
 DROP INDEX IF EXISTS public.index_invoices_on_voided_invoice_id;
 DROP INDEX IF EXISTS public.index_invoices_on_ready_to_be_refreshed;
 DROP INDEX IF EXISTS public.index_invoices_on_payment_method_id;
@@ -866,6 +870,7 @@ DROP INDEX IF EXISTS public.index_customers_on_organization_id_kept;
 DROP INDEX IF EXISTS public.index_customers_on_organization_id_firstname_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_customers_on_organization_id_external_id_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_customers_on_organization_id_email_gin_trgm_ops;
+DROP INDEX IF EXISTS public.index_customers_on_organization_id_and_x402_agent_address;
 DROP INDEX IF EXISTS public.index_customers_on_org_id_and_sequential_id_unique;
 DROP INDEX IF EXISTS public.index_customers_on_external_id_and_organization_id;
 DROP INDEX IF EXISTS public.index_customers_on_external_id;
@@ -3076,6 +3081,7 @@ CREATE TABLE public.customers (
     awaiting_wallet_refresh boolean DEFAULT false NOT NULL,
     dunning_currency_attempts jsonb DEFAULT '{}'::jsonb NOT NULL,
     payment_term jsonb,
+    x402_agent_address character varying,
     CONSTRAINT check_customers_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_customers_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -4015,6 +4021,8 @@ CREATE TABLE public.invoices (
     payment_term jsonb,
     payment_term_source character varying,
     search_terms text,
+    x402_payment_token character varying,
+    x402_connection_id uuid,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 
@@ -5051,7 +5059,8 @@ CREATE TABLE public.wallets (
     traceable boolean DEFAULT false NOT NULL,
     code character varying,
     billing_entity_id uuid,
-    purchase_order_number character varying
+    purchase_order_number character varying,
+    x402_enabled boolean DEFAULT false NOT NULL
 );
 
 
@@ -9396,6 +9405,13 @@ CREATE UNIQUE INDEX index_customers_on_org_id_and_sequential_id_unique ON public
 
 
 --
+-- Name: index_customers_on_organization_id_and_x402_agent_address; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_customers_on_organization_id_and_x402_agent_address ON public.customers USING btree (organization_id, x402_agent_address) WHERE ((deleted_at IS NULL) AND (x402_agent_address IS NOT NULL));
+
+
+--
 -- Name: index_customers_on_organization_id_email_gin_trgm_ops; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10513,6 +10529,20 @@ CREATE INDEX index_invoices_on_ready_to_be_refreshed ON public.invoices USING bt
 --
 
 CREATE INDEX index_invoices_on_voided_invoice_id ON public.invoices USING btree (voided_invoice_id);
+
+
+--
+-- Name: index_invoices_on_x402_connection_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoices_on_x402_connection_id ON public.invoices USING btree (x402_connection_id) WHERE (x402_connection_id IS NOT NULL);
+
+
+--
+-- Name: index_invoices_on_x402_payment_token; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_invoices_on_x402_payment_token ON public.invoices USING btree (x402_payment_token) WHERE (x402_payment_token IS NOT NULL);
 
 
 --
@@ -12417,6 +12447,13 @@ CREATE UNIQUE INDEX index_wt_invoice_custom_sections_unique ON public.wallet_tra
 --
 
 CREATE UNIQUE INDEX index_x402_connections_on_organization_id_and_code ON public.x402_connections USING btree (organization_id, code) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_x402_enabled_wallets_on_customer_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_x402_enabled_wallets_on_customer_id ON public.wallets USING btree (customer_id) WHERE x402_enabled;
 
 
 --
@@ -14741,6 +14778,14 @@ ALTER TABLE ONLY public.recurring_transaction_rules_invoice_custom_sections
 
 
 --
+-- Name: invoices fk_rails_a958b8f5a7; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.invoices
+    ADD CONSTRAINT fk_rails_a958b8f5a7 FOREIGN KEY (x402_connection_id) REFERENCES public.x402_connections(id);
+
+
+--
 -- Name: rate_phases fk_rails_a9ba49506f; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -15694,6 +15739,14 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261005105630'),
 ('20261005094159'),
 ('20261002142357'),
+('20261002141245'),
+('20261002141244'),
+('20261002141243'),
+('20261002141242'),
+('20261002140945'),
+('20261002140944'),
+('20261002140603'),
+('20261002140602'),
 ('20261002103242'),
 ('20261002103241'),
 ('20261001204136'),
