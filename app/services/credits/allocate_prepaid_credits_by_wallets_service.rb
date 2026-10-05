@@ -67,9 +67,9 @@ module Credits
       end
     end
 
-    # What the wallet paid for charge usage, per billable metric, so usage can later be attributed
-    # to the wallets that paid for it. Rounded on the running total, so the parts never add up to
-    # more than the wallet transaction.
+    # What the wallet paid for charge usage, excluding taxes, per billable metric, so usage can
+    # later be attributed to the wallets that paid for it. Rounded on the running total, so the
+    # parts never add up to more than the wallet transaction.
     def charge_amounts_by_billable_metric(wallet_fee_transactions)
       running_total = 0
 
@@ -77,11 +77,28 @@ module Credits
         .select { |transaction| transaction[:fee_key].first == "charge" }
         .group_by { |transaction| transaction[:fee_key].second }
         .transform_values do |transactions|
-          amount = transactions.sum { it[:amount_cents] }
+          amount = transactions.sum { tax_exclusive(it[:fee_key], it[:amount_cents]) }
           rounded = (running_total + amount).round - running_total.round
           running_total += amount
           rounded
         end
+    end
+
+    # A fee's cap covers its taxes too, so what a wallet paid for a fee key is split the same way.
+    def tax_exclusive(fee_key, amount_cents)
+      if taxes_by_fee_key[fee_key].zero?
+        amount_cents
+      else
+        amount_cents * sub_totals_by_fee_key[fee_key] / (sub_totals_by_fee_key[fee_key] + taxes_by_fee_key[fee_key])
+      end
+    end
+
+    def sub_totals_by_fee_key
+      @sub_totals_by_fee_key ||= Hash.new(0)
+    end
+
+    def taxes_by_fee_key
+      @taxes_by_fee_key ||= Hash.new(0)
     end
 
     def calculate_amounts_for_fees_by_type_and_bm
@@ -102,6 +119,8 @@ module Credits
           key << fee.grouped_by&.dig("target_wallet_code")
         end
         remaining[key] += cap
+        sub_totals_by_fee_key[key] += fee.sub_total_excluding_taxes_amount_cents
+        taxes_by_fee_key[key] += booked_tax.fetch(fee)
       end
 
       ordered = remaining.sort_by { |_, v| -v }.to_h
