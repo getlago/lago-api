@@ -163,6 +163,27 @@ RSpec.describe BillingSegments::ProcessService do
             expect(Fees::AdvanceChargesService).to have_received(:call!).once
           end
 
+          context "with customer invoice custom sections" do
+            let(:custom_section) { create(:invoice_custom_section, organization:) }
+
+            before do
+              create(:customer_applied_invoice_custom_section,
+                organization:, customer:, billing_entity: customer.billing_entity, invoice_custom_section: custom_section)
+            end
+
+            it "applies the custom section to the reconciliation invoice" do
+              expect(result).to be_success
+
+              invoice = result.invoices.sole.reload
+              expect(invoice.applied_invoice_custom_sections.sole).to have_attributes(
+                code: custom_section.code,
+                name: custom_section.name,
+                display_name: custom_section.display_name,
+                details: custom_section.details
+              )
+            end
+          end
+
           context "when the rate card keeps paid fees standalone" do
             let(:rate_card) do
               create(
