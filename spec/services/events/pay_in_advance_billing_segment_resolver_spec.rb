@@ -93,6 +93,31 @@ RSpec.describe Events::PayInAdvanceBillingSegmentResolver do
       end
     end
 
+    context "when the later attachment bills in arrears" do
+      let(:other_card) { create(:rate_card, organization:, product:, billing_timing: :arrears) }
+
+      it "returns no pay-in-advance segment after the replacement takes effect" do
+        expect(billing_segments).to be_empty
+      end
+
+      context "when the event is exactly at the replacement's local effective date" do
+        let(:timezone) { "America/New_York" }
+        let(:timestamp) { other_effective_date.in_time_zone(timezone) }
+
+        it "returns no pay-in-advance segment" do
+          expect(billing_segments).to be_empty
+        end
+
+        context "when the event is just before the replacement takes effect" do
+          let(:timestamp) { other_effective_date.in_time_zone(timezone) - 1.second }
+
+          it "still selects the earlier advance attachment" do
+            expect(billing_segments.sole.contract_rate_card).to eq(contract_rate_card)
+          end
+        end
+      end
+    end
+
     context "when the event falls between the second and third versions" do
       let(:other_effective_date) { Date.new(2027, 1, 10) }
       let(:future_card) { create(:rate_card, organization:, product:, billing_timing: :advance) }

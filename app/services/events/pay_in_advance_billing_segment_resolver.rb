@@ -30,7 +30,6 @@ module Events
         .joins(:contract, rate_card: :product)
         .where(
           contracts: {external_id: event.external_subscription_id, status: Contract::BILLABLE_STATUSES},
-          rate_cards: {billing_timing: :advance},
           products: {billable_metric_id: billable_metric.id, product_type: :metered},
           organization_id: organization.id
         )
@@ -46,6 +45,9 @@ module Events
           first_later_index = versions.bsearch_index { |card| card.effective_date > event_date } || versions.length
           versions[first_later_index - 1] unless first_later_index.zero?
         end
+
+      # An effective arrears replacement must supersede the older advance card.
+      selected_cards.select! { |card| card.rate_card.advance? }
 
       return [] if selected_cards.empty?
 
