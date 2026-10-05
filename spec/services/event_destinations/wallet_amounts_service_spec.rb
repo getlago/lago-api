@@ -14,9 +14,9 @@ RSpec.describe EventDestinations::WalletAmountsService do
 
   before { wallet }
 
-  def bill(wallet:, amounts:, invoice_subscription: subscription, charges_from_datetime: from_datetime, status: :finalized)
+  def bill(wallet:, amounts:, invoice_subscription: subscription, charges_from_datetime: from_datetime, status: :finalized, **invoice_subscription_attributes)
     invoice = create(:invoice, customer:, organization:, status:)
-    create(:invoice_subscription, invoice:, subscription: invoice_subscription, charges_from_datetime:)
+    create(:invoice_subscription, invoice:, subscription: invoice_subscription, charges_from_datetime:, **invoice_subscription_attributes)
     create(:wallet_transaction, wallet:, invoice:, transaction_type: :outbound, billable_metric_amounts: amounts)
   end
 
@@ -48,6 +48,28 @@ RSpec.describe EventDestinations::WalletAmountsService do
     before { bill(wallet:, amounts: {billable_metric_id => 200}, status: :voided) }
 
     it "ignores it, since voiding gives the credits back" do
+      expect(result.amounts).to eq({billable_metric_id => {wallet.id => 300}})
+    end
+  end
+
+  context "with a pay-in-advance invoice issued in the period" do
+    before do
+      bill(wallet:, amounts: {billable_metric_id => 200}, charges_from_datetime: from_datetime - 1.month,
+        invoicing_reason: :in_advance_charge, timestamp: from_datetime + 2.days)
+    end
+
+    it "counts it, although it records the previous period as its charges window" do
+      expect(result.amounts).to eq({billable_metric_id => {wallet.id => 500}})
+    end
+  end
+
+  context "with a pay-in-advance invoice issued before the period" do
+    before do
+      bill(wallet:, amounts: {billable_metric_id => 200}, charges_from_datetime: from_datetime - 1.month,
+        invoicing_reason: :in_advance_charge, timestamp: from_datetime - 1.day)
+    end
+
+    it "ignores it" do
       expect(result.amounts).to eq({billable_metric_id => {wallet.id => 300}})
     end
   end

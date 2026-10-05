@@ -41,11 +41,20 @@ module EventDestinations
         .where.not(billable_metric_amounts: nil)
         .joins(:wallet, invoice: :invoice_subscriptions)
         .where(wallets: {customer_id: subscription.customer_id})
-        .where(invoice_subscriptions: {subscription_id: subscription.id, charges_from_datetime: from_datetime..})
+        .where(invoice_subscriptions: {subscription_id: subscription.id})
+        .merge(invoiced_in_period)
         .merge(Invoice.where.not(status: :voided))
         .joins("CROSS JOIN LATERAL jsonb_each_text(wallet_transactions.billable_metric_amounts) AS amounts(billable_metric_id, cents)")
         .group("amounts.billable_metric_id", "wallet_transactions.wallet_id")
         .sum("amounts.cents::bigint")
+    end
+
+    # A pay-in-advance invoice records the previous period as its charges window, so it is matched
+    # on when it was issued instead.
+    def invoiced_in_period
+      InvoiceSubscription
+        .where(charges_from_datetime: from_datetime..)
+        .or(InvoiceSubscription.in_advance_charge.where(timestamp: from_datetime..))
     end
   end
 end
