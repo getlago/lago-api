@@ -8,6 +8,7 @@ module Types
 
         argument :id, ID, required: false
 
+        argument :additional_domains, [String], required: false
         argument :client_id, String, required: false
         argument :client_secret, String, required: false
         argument :domain, String, required: false

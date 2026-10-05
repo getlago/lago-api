@@ -420,10 +420,35 @@ module Fees
     end
 
     def already_billed?
-      # BillingSegment persistence is the source of truth for billing state.
-      # TODO: Review this fee-level idempotency bypass once segment processing is finalized.
-      return false if metered_item.billing_segment
+      if metered_item.billing_segment
+        already_billed_segment?
+      else
+        already_billed_charge?
+      end
+    end
 
+    def already_billed_segment?
+      return false if options.invoice_preview?
+
+      fees = if invoice
+        invoice.fees
+      else
+        Fee.where(invoice_id: nil, contract_id: metered_item.billing_segment.contract_id)
+      end
+
+      existing_fees = fees.matching_contract_period(
+        contract_rate_card_id: metered_item.billing_segment.contract_rate_card_id,
+        from_datetime: metered_item.boundaries.charges_from_datetime,
+        to_datetime: metered_item.boundaries.charges_to_datetime
+      ).to_a
+
+      return false if existing_fees.empty?
+
+      result.fees = existing_fees
+      true
+    end
+
+    def already_billed_charge?
       existing_fees = if invoice
         invoice.fees.where(charge_id: metered_item.charge.id, subscription_id: billing_context.subscription_id)
       else

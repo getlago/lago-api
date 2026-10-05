@@ -44,6 +44,7 @@ ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF
 ALTER TABLE IF EXISTS ONLY public.billing_segments DROP CONSTRAINT IF EXISTS fk_rails_e88ab4465f;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_e88403f4b9;
 ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_rails_e86903e081;
+ALTER TABLE IF EXISTS ONLY public.contracts_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_e7b1c26689;
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_e744efbe51;
 ALTER TABLE IF EXISTS ONLY public.charge_filters DROP CONSTRAINT IF EXISTS fk_rails_e711e8089e;
 ALTER TABLE IF EXISTS ONLY public.user_devices DROP CONSTRAINT IF EXISTS fk_rails_e700a96826;
@@ -113,6 +114,7 @@ ALTER TABLE IF EXISTS ONLY public.orders DROP CONSTRAINT IF EXISTS fk_rails_b687
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS fk_rails_b61aa73940;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_b50dc82c1e;
 ALTER TABLE IF EXISTS ONLY public.billing_segments DROP CONSTRAINT IF EXISTS fk_rails_b3bd992995;
+ALTER TABLE IF EXISTS ONLY public.contracts_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_b3aef9be8c;
 ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS fk_rails_b3864df641;
 ALTER TABLE IF EXISTS ONLY public.billing_entities_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_b283a89721;
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_b07fc711f7;
@@ -140,6 +142,7 @@ ALTER TABLE IF EXISTS ONLY public.rate_cards DROP CONSTRAINT IF EXISTS fk_rails_
 ALTER TABLE IF EXISTS ONLY public.contracts DROP CONSTRAINT IF EXISTS fk_rails_a00d802491;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_9f724c2094;
 ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_9f22076477;
+ALTER TABLE IF EXISTS ONLY public.contracts_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_9ebcef0f5b;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_9ea6759859;
 ALTER TABLE IF EXISTS ONLY public.products DROP CONSTRAINT IF EXISTS fk_rails_9e90c6f4aa;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_9e3f99b7a2;
@@ -920,6 +923,9 @@ DROP INDEX IF EXISTS public.index_contracts_on_live_external_id;
 DROP INDEX IF EXISTS public.index_contracts_on_customer_id;
 DROP INDEX IF EXISTS public.index_contracts_on_catalog_plan_id;
 DROP INDEX IF EXISTS public.index_contracts_on_billing_entity_id;
+DROP INDEX IF EXISTS public.index_contracts_invoice_custom_sections_unique;
+DROP INDEX IF EXISTS public.index_contracts_invoice_custom_sections_on_section_id;
+DROP INDEX IF EXISTS public.index_contracts_invoice_custom_sections_on_organization_id;
 DROP INDEX IF EXISTS public.index_contracts_by_status_cursor;
 DROP INDEX IF EXISTS public.index_contracts_by_cursor;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_rate_card_id;
@@ -1048,6 +1054,7 @@ DROP INDEX IF EXISTS public.idx_unique_feature_per_catalog_plan;
 DROP INDEX IF EXISTS public.idx_subscription_unique;
 DROP INDEX IF EXISTS public.idx_privileges_code_unique_per_feature;
 DROP INDEX IF EXISTS public.idx_pif_values_on_filter_metric_filter_and_value;
+DROP INDEX IF EXISTS public.idx_pay_in_advance_product_card_event;
 DROP INDEX IF EXISTS public.idx_pay_in_advance_duplication_guard_charge_filter;
 DROP INDEX IF EXISTS public.idx_pay_in_advance_duplication_guard_charge;
 DROP INDEX IF EXISTS public.idx_on_wallet_transaction_id_ac2826109e;
@@ -1232,6 +1239,7 @@ ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS cr
 ALTER TABLE IF EXISTS ONLY public.coupons DROP CONSTRAINT IF EXISTS coupons_pkey;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS coupon_targets_pkey;
 ALTER TABLE IF EXISTS ONLY public.contracts DROP CONSTRAINT IF EXISTS contracts_pkey;
+ALTER TABLE IF EXISTS ONLY public.contracts_invoice_custom_sections DROP CONSTRAINT IF EXISTS contracts_invoice_custom_sections_pkey;
 ALTER TABLE IF EXISTS ONLY public.contract_rate_cards DROP CONSTRAINT IF EXISTS contract_rate_cards_pkey;
 ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS commitments_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.commitments DROP CONSTRAINT IF EXISTS commitments_pkey;
@@ -1419,6 +1427,7 @@ DROP TABLE IF EXISTS public.credit_notes;
 DROP TABLE IF EXISTS public.credit_note_items;
 DROP TABLE IF EXISTS public.coupons;
 DROP TABLE IF EXISTS public.coupon_targets;
+DROP TABLE IF EXISTS public.contracts_invoice_custom_sections;
 DROP TABLE IF EXISTS public.contracts;
 DROP TABLE IF EXISTS public.contract_rate_cards;
 DROP TABLE IF EXISTS public.commitments_taxes;
@@ -2811,7 +2820,22 @@ CREATE TABLE public.contracts (
     payment_method_id uuid,
     purchase_order_number character varying,
     consolidate_invoice boolean DEFAULT true NOT NULL,
-    payment_method_type public.contract_payment_method_type DEFAULT 'provider'::public.contract_payment_method_type NOT NULL
+    payment_method_type public.contract_payment_method_type DEFAULT 'provider'::public.contract_payment_method_type NOT NULL,
+    skip_invoice_custom_sections boolean DEFAULT false NOT NULL
+);
+
+
+--
+-- Name: contracts_invoice_custom_sections; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.contracts_invoice_custom_sections (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    contract_id uuid NOT NULL,
+    invoice_custom_section_id uuid NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -6650,6 +6674,14 @@ ALTER TABLE ONLY public.contract_rate_cards
 
 
 --
+-- Name: contracts_invoice_custom_sections contracts_invoice_custom_sections_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contracts_invoice_custom_sections
+    ADD CONSTRAINT contracts_invoice_custom_sections_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: contracts contracts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8081,6 +8113,13 @@ CREATE UNIQUE INDEX idx_pay_in_advance_duplication_guard_charge_filter ON public
 
 
 --
+-- Name: idx_pay_in_advance_product_card_event; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_pay_in_advance_product_card_event ON public.fees USING btree (pay_in_advance_event_transaction_id, contract_rate_card_id) WHERE ((deleted_at IS NULL) AND (charge_id IS NULL) AND (contract_rate_card_id IS NOT NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false) AND (original_fee_id IS NULL));
+
+
+--
 -- Name: idx_pif_values_on_filter_metric_filter_and_value; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8978,6 +9017,27 @@ CREATE INDEX index_contracts_by_cursor ON public.contracts USING btree (organiza
 --
 
 CREATE INDEX index_contracts_by_status_cursor ON public.contracts USING btree (organization_id, status, created_at DESC, id DESC);
+
+
+--
+-- Name: index_contracts_invoice_custom_sections_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_contracts_invoice_custom_sections_on_organization_id ON public.contracts_invoice_custom_sections USING btree (organization_id);
+
+
+--
+-- Name: index_contracts_invoice_custom_sections_on_section_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_contracts_invoice_custom_sections_on_section_id ON public.contracts_invoice_custom_sections USING btree (invoice_custom_section_id);
+
+
+--
+-- Name: index_contracts_invoice_custom_sections_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_contracts_invoice_custom_sections_unique ON public.contracts_invoice_custom_sections USING btree (contract_id, invoice_custom_section_id);
 
 
 --
@@ -14598,6 +14658,14 @@ ALTER TABLE ONLY public.wallet_transactions
 
 
 --
+-- Name: contracts_invoice_custom_sections fk_rails_9ebcef0f5b; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contracts_invoice_custom_sections
+    ADD CONSTRAINT fk_rails_9ebcef0f5b FOREIGN KEY (invoice_custom_section_id) REFERENCES public.invoice_custom_sections(id);
+
+
+--
 -- Name: credit_note_items fk_rails_9f22076477; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14811,6 +14879,14 @@ ALTER TABLE ONLY public.billing_entities_invoice_custom_sections
 
 ALTER TABLE ONLY public.entitlement_subscription_feature_removals
     ADD CONSTRAINT fk_rails_b3864df641 FOREIGN KEY (entitlement_feature_id) REFERENCES public.entitlement_features(id);
+
+
+--
+-- Name: contracts_invoice_custom_sections fk_rails_b3aef9be8c; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contracts_invoice_custom_sections
+    ADD CONSTRAINT fk_rails_b3aef9be8c FOREIGN KEY (contract_id) REFERENCES public.contracts(id);
 
 
 --
@@ -15366,6 +15442,14 @@ ALTER TABLE ONLY public.subscriptions
 
 
 --
+-- Name: contracts_invoice_custom_sections fk_rails_e7b1c26689; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contracts_invoice_custom_sections
+    ADD CONSTRAINT fk_rails_e7b1c26689 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: customers_taxes fk_rails_e86903e081; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -15652,6 +15736,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261005105630'),
+('20261005094159'),
 ('20261002142357'),
 ('20261002141245'),
 ('20261002141244'),
@@ -15665,6 +15751,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261002103241'),
 ('20261001204136'),
 ('20261001203657'),
+('20260930161929'),
 ('20260929105639'),
 ('20260928140425'),
 ('20260928140424'),

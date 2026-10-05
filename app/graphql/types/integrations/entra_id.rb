@@ -5,6 +5,7 @@ module Types
     class EntraId < Types::BaseObject
       graphql_name "EntraIdIntegration"
 
+      field :additional_domains, [String], null: false
       field :client_id, String, null: true
       field :client_secret, ObfuscatedStringType, null: true
       field :code, String, null: false

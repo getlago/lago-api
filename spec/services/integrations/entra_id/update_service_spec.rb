@@ -64,6 +64,24 @@ RSpec.describe Integrations::EntraId::UpdateService do
             before { service_call }
           end
 
+          context "with additional domains" do
+            let(:update_args) { super().merge(additional_domains: ["de.foo.bar"]) }
+
+            it "replaces the additional domains" do
+              expect(service_call).to be_success
+              expect(integration.reload.additional_domains).to eq(["de.foo.bar"])
+            end
+          end
+
+          context "without an additional domains parameter" do
+            before { integration.update!(additional_domains: ["de.foo.bar"]) }
+
+            it "keeps the stored additional domains" do
+              expect(service_call).to be_success
+              expect(integration.reload.additional_domains).to eq(["de.foo.bar"])
+            end
+          end
+
           context "without a client secret parameter" do
             it "keeps the stored client secret" do
               expect(service_call).to be_success
