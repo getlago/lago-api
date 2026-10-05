@@ -13,13 +13,20 @@ module Resolvers
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
     argument :search_term, String, required: false
+    argument :with_deleted, Boolean, required: false
+
+    argument :product_category_ids, [ID], required: false
+    argument :product_filter_ids, [ID], required: false
+    argument :product_ids, [ID], required: false
+    argument :rate_card_ids, [ID], required: false
 
     type Types::CatalogPlans::Object.collection_type, null: false
 
-    def resolve(page: nil, limit: nil, search_term: nil)
+    def resolve(page: nil, limit: nil, search_term: nil, with_deleted: nil, product_ids: nil, product_filter_ids: nil, product_category_ids: nil, rate_card_ids: nil)
       result = CatalogPlansQuery.call(
         organization: current_organization,
         search_term:,
+        filters: {with_deleted:, product_ids:, product_filter_ids:, product_category_ids:, rate_card_ids:},
         pagination: {
           page:,
           limit:
