@@ -22,8 +22,8 @@ end
 #
 # Indexes
 #
-#  idx_on_invoice_custom_section_id_227386d639                 (invoice_custom_section_id)
 #  index_contracts_invoice_custom_sections_on_organization_id  (organization_id)
+#  index_contracts_invoice_custom_sections_on_section_id       (invoice_custom_section_id)
 #  index_contracts_invoice_custom_sections_unique              (contract_id,invoice_custom_section_id) UNIQUE
 #
 # Foreign Keys

@@ -900,6 +900,7 @@ DROP INDEX IF EXISTS public.index_contracts_on_customer_id;
 DROP INDEX IF EXISTS public.index_contracts_on_catalog_plan_id;
 DROP INDEX IF EXISTS public.index_contracts_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_contracts_invoice_custom_sections_unique;
+DROP INDEX IF EXISTS public.index_contracts_invoice_custom_sections_on_section_id;
 DROP INDEX IF EXISTS public.index_contracts_invoice_custom_sections_on_organization_id;
 DROP INDEX IF EXISTS public.index_contracts_by_status_cursor;
 DROP INDEX IF EXISTS public.index_contracts_by_cursor;
@@ -1063,7 +1064,6 @@ DROP INDEX IF EXISTS public.idx_on_invoice_custom_section_id_b381df5bb5;
 DROP INDEX IF EXISTS public.idx_on_invoice_custom_section_id_aca4661c33;
 DROP INDEX IF EXISTS public.idx_on_invoice_custom_section_id_5f37496c8c;
 DROP INDEX IF EXISTS public.idx_on_invoice_custom_section_id_50c2a2e7c0;
-DROP INDEX IF EXISTS public.idx_on_invoice_custom_section_id_227386d639;
 DROP INDEX IF EXISTS public.idx_on_inbound_wallet_transaction_id_e54d00758d;
 DROP INDEX IF EXISTS public.idx_on_fixed_charge_id_06503ae1a5;
 DROP INDEX IF EXISTS public.idx_on_entitlement_privilege_id_entitlement_entitle_9d0542eb1a;
@@ -7711,13 +7711,6 @@ CREATE INDEX idx_on_inbound_wallet_transaction_id_e54d00758d ON public.wallet_tr
 
 
 --
--- Name: idx_on_invoice_custom_section_id_227386d639; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_on_invoice_custom_section_id_227386d639 ON public.contracts_invoice_custom_sections USING btree (invoice_custom_section_id);
-
-
---
 -- Name: idx_on_invoice_custom_section_id_50c2a2e7c0; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8860,6 +8853,13 @@ CREATE INDEX index_contracts_by_status_cursor ON public.contracts USING btree (o
 --
 
 CREATE INDEX index_contracts_invoice_custom_sections_on_organization_id ON public.contracts_invoice_custom_sections USING btree (organization_id);
+
+
+--
+-- Name: index_contracts_invoice_custom_sections_on_section_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_contracts_invoice_custom_sections_on_section_id ON public.contracts_invoice_custom_sections USING btree (invoice_custom_section_id);
 
 
 --
@@ -15388,6 +15388,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261005105630'),
 ('20261005094159'),
 ('20261002142357'),
 ('20260929105639'),
