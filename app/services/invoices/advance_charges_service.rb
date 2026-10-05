@@ -15,6 +15,7 @@ module Invoices
     end
 
     def call
+      return result unless Fees::AdvanceChargesService::RegroupingChargeService.call!(billing_contexts:).regrouping_charge
       return result if pending_billing_contexts_with_fees.empty?
 
       invoices = create_group_invoices
@@ -40,22 +41,6 @@ module Invoices
 
     attr_reader :billing_contexts, :billing_at, :customer, :currency
 
-    # Apply the charges_to_datetime upper-bound only for regular periodic billing
-    # (i.e., no upgrade/downgrade/termination context). We consider it regular when
-    # every source subscription is active AND has no pending next subscription AND
-    # is not being terminated.
-    def apply_charges_to_datetime_condition?
-      billing_contexts.all? do |billing_context|
-        billing_context.active? && billing_context.next_subscription.nil? && !billing_context.terminated?
-      end
-    end
-
-    def filter_charges_to_datetime(relation)
-      return relation unless apply_charges_to_datetime_condition?
-
-      relation.where("(properties ->> 'charges_to_datetime') IS NULL OR (properties ->> 'charges_to_datetime')::timestamp <= ?", billing_at)
-    end
-
     def pending_billing_contexts_with_fees
       return [] unless customer
 
@@ -65,7 +50,11 @@ module Invoices
           id: Fee.joins(:subscription)
             .where(invoice_id: nil, payment_status: :succeeded)
             .where("succeeded_at <= ?", billing_at)
-            .then { |rel| filter_charges_to_datetime(rel) }
+            .then do |relation|
+              Fees::AdvanceChargesService::AdvanceChargesToDatetimeFilterService.call!(
+                relation:, billing_contexts:, billing_at:
+              ).relation
+            end
             .where(subscriptions: {
               customer_id: customer.id,
               external_id: billing_contexts.map(&:external_id).uniq,

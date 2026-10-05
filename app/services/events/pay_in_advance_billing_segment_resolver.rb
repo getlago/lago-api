@@ -41,16 +41,25 @@ module Events
       return [] if cards.empty?
 
       event_date = event.timestamp.in_time_zone(cards.first.contract.customer.applicable_timezone).to_date
-      cards.group_by { |card| [card.contract_id, card.rate_card.product_id, card.rate_card.product_filter_id] }
+      selected_cards = cards.group_by { |card| [card.contract_id, card.rate_card.product_id, card.rate_card.product_filter_id] }
         .filter_map do |_key, versions|
           first_later_index = versions.bsearch_index { |card| card.effective_date > event_date } || versions.length
-          next if first_later_index.zero?
-
-          segment_for(versions[first_later_index - 1])
+          versions[first_later_index - 1] unless first_later_index.zero?
         end
+
+      return [] if selected_cards.empty?
+
+      ActiveRecord::Associations::Preloader.new(
+        records: selected_cards, associations: [{rate_card: :rates}, {rate_phases: :rate_override}]
+      ).call
+
+      pricing_unit_codes = selected_cards.filter_map { |card| card.rate_card.applied_pricing_unit_code }.uniq
+      pricing_units = organization.pricing_units.where(code: pricing_unit_codes).index_by(&:code) if pricing_unit_codes.any?
+
+      selected_cards.filter_map { |card| segment_for(card, pricing_units || {}) }
     end
 
-    def segment_for(card)
+    def segment_for(card, pricing_units)
       return if card.rate_card.rates.empty?
 
       schedule = Billing::RateCards::BuildScheduleService.call!(
@@ -59,7 +68,9 @@ module Events
       segment = schedule.segment_covering(event.timestamp)
 
       if segment
-        BillingSegments::BuildEventSegmentService.call!(contract_rate_card: card, billable_segment: segment).billing_segment
+        BillingSegments::BuildEventSegmentService.call!(
+          contract_rate_card: card, billable_segment: segment, pricing_units_by_code: pricing_units
+        ).billing_segment
       end
     end
   end

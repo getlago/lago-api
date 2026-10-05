@@ -14,7 +14,11 @@ module Billing
 
       def call
         rate_card = contract_rate_card.rate_card
-        rates = rate_card.ordered_rates.to_a
+        rates = if rate_card.rates.loaded?
+          rate_card.rates.sort_by(&:effective_from)
+        else
+          rate_card.ordered_rates.to_a
+        end
 
         if rates.empty?
           result.not_found_failure!(resource: "rate")

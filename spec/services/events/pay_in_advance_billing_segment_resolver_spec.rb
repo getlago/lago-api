@@ -144,6 +144,50 @@ RSpec.describe Events::PayInAdvanceBillingSegmentResolver do
       expect(billing_segments).to all(be_new_record)
     end
 
+    it "loads pricing for the selected cards in batches" do
+      queries = []
+      subscriber = ->(_name, _started, _finished, _id, payload) { queries << payload[:sql] }
+
+      ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") { billing_segments }
+
+      expect(queries.grep(/FROM "rate_card_rates"/).length).to eq(1)
+      expect(queries.grep(/FROM "rate_phases"/).length).to eq(1)
+    end
+
+    context "when both cards use a pricing unit" do
+      let(:pricing_unit) { create(:pricing_unit, organization:) }
+      let(:rate_card) do
+        create(:rate_card, organization:, product:, billing_timing:, applied_pricing_unit_code: pricing_unit.code)
+      end
+      let(:other_card) do
+        create(:rate_card, organization:, product: other_product, billing_timing: :advance,
+          applied_pricing_unit_code: pricing_unit.code)
+      end
+      let(:first_rate) do
+        create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2027-01-01"),
+          applied_pricing_unit_conversion_rate: 2)
+      end
+      let(:second_rate) do
+        create(:rate_card_rate, organization:, rate_card:, effective_from: rate_changed_at,
+          applied_pricing_unit_conversion_rate: 3)
+      end
+      let(:other_rate) do
+        create(:rate_card_rate, organization:, rate_card: other_card, effective_from: effective_date.in_time_zone(timezone),
+          applied_pricing_unit_conversion_rate: 4)
+      end
+
+      it "fetches the shared pricing unit once" do
+        queries = []
+        subscriber = ->(_name, _started, _finished, _id, payload) { queries << payload[:sql] }
+
+        ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") do
+          expect(billing_segments.map(&:pricing_unit)).to eq([pricing_unit, pricing_unit])
+        end
+
+        expect(queries.grep(/FROM "pricing_units"/).length).to eq(1)
+      end
+    end
+
     it "creates a metered-item selection for each product" do
       selections = Events::PayInAdvanceMeteredItemsResolver.call!(event:).selections
 

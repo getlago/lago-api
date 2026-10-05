@@ -5,9 +5,10 @@ module BillingSegments
   class BuildEventSegmentService < BaseService
     Result = BaseResult[:billing_segment]
 
-    def initialize(contract_rate_card:, billable_segment:)
+    def initialize(contract_rate_card:, billable_segment:, pricing_units_by_code: nil)
       @contract_rate_card = contract_rate_card
       @billable_segment = billable_segment
+      @pricing_units_by_code = pricing_units_by_code
       super
     end
 
@@ -34,13 +35,19 @@ module BillingSegments
 
     private
 
-    attr_reader :contract_rate_card, :billable_segment
+    attr_reader :contract_rate_card, :billable_segment, :pricing_units_by_code
 
     def pricing_unit
       code = contract_rate_card.rate_card.applied_pricing_unit_code
       return if code.blank?
 
-      contract_rate_card.organization.pricing_units.find_by(code:) || result.not_found_failure!(resource: "pricing_unit").raise_if_error!
+      unit = if pricing_units_by_code
+        pricing_units_by_code[code]
+      else
+        contract_rate_card.organization.pricing_units.find_by(code:)
+      end
+
+      unit || result.not_found_failure!(resource: "pricing_unit").raise_if_error!
     end
   end
 end

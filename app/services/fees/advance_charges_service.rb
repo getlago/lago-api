@@ -11,6 +11,64 @@ module Fees
       invoiceable_id
     ].freeze
 
+    class AdvanceChargesToDatetimeFilterService < BaseService
+      Result = BaseResult[:relation]
+
+      def initialize(relation:, billing_contexts:, billing_at:)
+        @relation = relation
+        @billing_contexts = billing_contexts
+        @billing_at = billing_at
+        super
+      end
+
+      def call
+        # Upgrades, downgrades and terminations may invoice fees before their period ends.
+        result.relation = if regular_periodic_billing?
+          relation.where(
+            "(properties ->> 'charges_to_datetime') IS NULL OR (properties ->> 'charges_to_datetime')::timestamp <= ?",
+            billing_at
+          )
+        else
+          relation
+        end
+
+        result
+      end
+
+      private
+
+      attr_reader :relation, :billing_contexts, :billing_at
+
+      def regular_periodic_billing?
+        billing_contexts.all? do |context|
+          context.active? && context.next_subscription.nil? && !context.terminated?
+        end
+      end
+    end
+
+    class RegroupingChargeService < BaseService
+      Result = BaseResult[:regrouping_charge]
+
+      def initialize(billing_contexts:)
+        @billing_contexts = billing_contexts
+        super
+      end
+
+      def call
+        result.regrouping_charge = Charge.where(
+          plan_id: billing_contexts.filter_map(&:plan_id).uniq,
+          pay_in_advance: true,
+          invoiceable: false,
+          regroup_paid_fees: :invoice
+        ).exists?
+        result
+      end
+
+      private
+
+      attr_reader :billing_contexts
+    end
+
     def initialize(invoice:, billing_contexts:, billing_at:, metered_items: [])
       @invoice = invoice
       @billing_contexts = billing_contexts
@@ -37,7 +95,7 @@ module Fees
     attr_reader :invoice, :billing_contexts, :billing_at, :metered_items
 
     def attach_charge_fees
-      return unless regrouping_charge?
+      return unless RegroupingChargeService.call!(billing_contexts:).regrouping_charge
 
       charge_fees.find_each do |fee|
         fee.update_column(:invoice_id, invoice.id) # rubocop:disable Rails/SkipsModelValidations
@@ -48,33 +106,9 @@ module Fees
       Fee.where(subscription_id: billing_contexts.map(&:subscription_id))
         .where(invoice: nil, payment_status: :succeeded)
         .where("succeeded_at <= ?", billing_at)
-        .then { |relation| filter_charges_to_datetime(relation) }
-    end
-
-    def regrouping_charge?
-      Charge.where(
-        plan_id: billing_contexts.filter_map(&:plan_id).uniq,
-        pay_in_advance: true,
-        invoiceable: false,
-        regroup_paid_fees: :invoice
-      ).any?
-    end
-
-    def filter_charges_to_datetime(relation)
-      return relation unless apply_charges_to_datetime_condition?
-
-      relation.where(
-        "(properties ->> 'charges_to_datetime') IS NULL OR (properties ->> 'charges_to_datetime')::timestamp <= ?",
-        billing_at
-      )
-    end
-
-    def apply_charges_to_datetime_condition?
-      return true if metered_items.any?
-
-      billing_contexts.all? do |billing_context|
-        billing_context.active? && billing_context.next_subscription.nil? && !billing_context.terminated?
-      end
+        .then do |relation|
+          AdvanceChargesToDatetimeFilterService.call!(relation:, billing_contexts:, billing_at:).relation
+        end
     end
 
     def attach_product_fees
