@@ -29,7 +29,7 @@ module Invoices
         invoice = Invoice.create!(
           id: invoice_id || SecureRandom.uuid,
           organization:,
-          billing_entity: billing_entity || customer.billing_entity,
+          billing_entity: issuing_billing_entity,
           customer:,
           invoice_type:,
           currency:,
@@ -73,7 +73,11 @@ module Invoices
     end
 
     def resolved_payment_term
-      @resolved_payment_term ||= PaymentTerms::ResolveService.call!(customer:)
+      @resolved_payment_term ||= PaymentTerms::ResolveService.call!(customer:, billing_entity: issuing_billing_entity)
+    end
+
+    def issuing_billing_entity
+      billing_entity || customer.billing_entity
     end
 
     # NOTE: accounting date must be in customer timezone

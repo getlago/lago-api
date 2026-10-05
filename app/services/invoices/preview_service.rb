@@ -171,7 +171,7 @@ module Invoices
     end
 
     def resolved_payment_term
-      @resolved_payment_term ||= PaymentTerms::ResolveService.call!(customer:)
+      @resolved_payment_term ||= PaymentTerms::ResolveService.call!(customer:, billing_entity:)
     end
 
     def add_subscription_fee(subscription, boundaries)
