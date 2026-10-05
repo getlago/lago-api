@@ -63,6 +63,31 @@ RSpec.describe Resolvers::ContractResolver do
     expect(execution["data"]["contract"]["appliedRateCards"].sole["nextBillingAt"]).to be_nil
   end
 
+  describe "effectiveBillingAnchorDate" do
+    let(:customer) { create(:customer, organization:, timezone: "America/Los_Angeles") }
+    let(:contract) { create(:contract, organization:, customer:, catalog_plan:, started_at: Time.zone.parse("2026-10-01T02:00:00Z"), billing_anchor_date:) }
+    let(:billing_anchor_date) { nil }
+    let(:query) do
+      <<~GQL
+        query($contractId: ID!) {
+          contract(id: $contractId) { billingAnchorDate effectiveBillingAnchorDate }
+        }
+      GQL
+    end
+
+    it "follows the start day in the customer's timezone when no anchor is set" do
+      expect(execution["data"]["contract"]).to eq("billingAnchorDate" => nil, "effectiveBillingAnchorDate" => "2026-09-30")
+    end
+
+    context "with an anchor set" do
+      let(:billing_anchor_date) { Date.new(2026, 10, 15) }
+
+      it "answers the anchor" do
+        expect(execution["data"]["contract"]).to eq("billingAnchorDate" => "2026-10-15", "effectiveBillingAnchorDate" => "2026-10-15")
+      end
+    end
+  end
+
   context "when the contract belongs to another organization" do
     let(:contract) { create(:contract) }
 
