@@ -189,6 +189,23 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
         expect(result.invoice.invoice_subscriptions).to be_empty
         expect(result.invoice.fees.sole).to have_attributes(subscription: nil, charge: nil, fee_type: "product")
       end
+
+      it_behaves_like "applies invoice_custom_sections from resource" do
+        let(:service_call) { invoice_service.call }
+        let(:resource_with_custom_section) { contract }
+        let(:applied_section_factory) { :contract_applied_invoice_custom_section }
+        let(:resource_association_key) { :contract }
+      end
+
+      context "when the contract skips invoice custom sections" do
+        let(:contract) { create(:contract, organization:, customer:, billing_entity:, skip_invoice_custom_sections: true) }
+
+        before { create(:billing_entity_applied_invoice_custom_section, organization:, billing_entity:, invoice_custom_section: create(:invoice_custom_section, organization:)) }
+
+        it "applies no section" do
+          expect(invoice_service.call.invoice.applied_invoice_custom_sections).to be_empty
+        end
+      end
     end
 
     context "with billing entity resolution" do

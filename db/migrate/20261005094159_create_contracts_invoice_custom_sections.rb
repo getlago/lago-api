@@ -2,7 +2,7 @@
 
 class CreateContractsInvoiceCustomSections < ActiveRecord::Migration[8.0]
   def change
-    create_table :contracts_invoice_custom_sections, id: :uuid do |t|
+    create_table :contracts_invoice_custom_sections, id: :uuid, if_not_exists: true do |t|
       t.references :organization, null: false, foreign_key: true, type: :uuid, index: true
       t.references :contract, null: false, foreign_key: true, type: :uuid, index: false
       t.references :invoice_custom_section, null: false, foreign_key: true, type: :uuid, index: true
@@ -12,6 +12,6 @@ class CreateContractsInvoiceCustomSections < ActiveRecord::Migration[8.0]
         name: "index_contracts_invoice_custom_sections_unique"
     end
 
-    add_column :contracts, :skip_invoice_custom_sections, :boolean, default: false, null: false
+    add_column :contracts, :skip_invoice_custom_sections, :boolean, default: false, null: false, if_not_exists: true
   end
 end

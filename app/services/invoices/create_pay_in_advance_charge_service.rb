@@ -29,7 +29,7 @@ module Invoices
 
         # NOTE: Custom sections are applied before computing taxes so they are persisted even when
         #       tax computation is deferred to a tax provider (the `next` below skips the rest of the block).
-        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:, resources: [billing_context.subscription].compact)
+        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:, resources: [billing_context.subscription || billing_context.contract].compact)
 
         totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice:)
         if totals_result.failure? && totals_result.error.is_a?(BaseService::UnknownTaxFailure)
