@@ -164,6 +164,16 @@ RSpec.describe Api::V2::ContractsController do
       expect(json[:contract][:applied_rate_cards].sole[:lago_id]).to eq(card.id)
     end
 
+    context "without a billing anchor" do
+      let(:contract) { create(:contract, organization:, customer:, catalog_plan:, started_at: Time.zone.parse("2026-10-01")) }
+
+      it "returns the start day as the effective anchor" do
+        subject
+
+        expect(json[:contract]).to include(billing_anchor_date: nil, effective_billing_anchor_date: "2026-10-01")
+      end
+    end
+
     context "when the external id contains a dot" do
       let(:contract) { create(:contract, organization:, customer:, external_id: "contract.2026-01") }
 

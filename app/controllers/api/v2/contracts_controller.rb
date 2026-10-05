@@ -63,7 +63,7 @@ module Api
         )
 
         if result.success?
-          page = ::CursorPagination::Page.new(records: result.contracts.includes(:catalog_plan, :customer), cursor:)
+          page = ::CursorPagination::Page.new(records: result.contracts.includes(:catalog_plan, customer: :billing_entity), cursor:)
 
           # One grouped query instead of one COUNT per row in the serializer.
           applied_rate_cards_counts = ContractRateCard

@@ -1733,6 +1733,11 @@ type Contract {
   consolidateInvoice: Boolean!
   createdAt: ISO8601DateTime!
   customer: Customer!
+
+  """
+  The anchor billing uses: billing_anchor_date when set, else the start day in the customer's timezone
+  """
+  effectiveBillingAnchorDate: ISO8601Date
   endedAt: ISO8601DateTime
   externalId: String!
   id: ID!

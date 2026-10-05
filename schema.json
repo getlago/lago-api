@@ -10201,6 +10201,18 @@
               "deprecationReason": null
             },
             {
+              "name": "effectiveBillingAnchorDate",
+              "description": "The anchor billing uses: billing_anchor_date when set, else the start day in the customer's timezone",
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601Date",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "endedAt",
               "description": null,
               "args": [],
