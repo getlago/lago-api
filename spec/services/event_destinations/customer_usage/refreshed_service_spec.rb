@@ -90,6 +90,33 @@ RSpec.describe EventDestinations::CustomerUsage::RefreshedService do
       end
     end
 
+    context "with usage that a wallet absorbed" do
+      let(:billable_metric) { create(:billable_metric, organization:) }
+      let(:wallet) { create(:wallet, customer:, organization:, ongoing_billable_metric_amounts: {billable_metric.id => 1_000_000}) }
+      let(:producer_calls) { [] }
+
+      before do
+        create(:standard_charge, plan:, billable_metric:, organization:)
+        wallet
+        create(:event, organization:, subscription:, customer:, code: billable_metric.code)
+        allow(producer).to receive(:produce) { |args| producer_calls << args }
+        allow(EventDestinations::WalletAmountsService).to receive(:call!).and_call_original
+      end
+
+      it "attributes the charge to that wallet" do
+        service.call
+
+        expect(producer_calls.first[:data][:customer_usage][:charges_usage].map { it[:wallet_id] }).to eq([wallet.id])
+      end
+
+      it "counts what wallets paid in the period the record covers" do
+        service.call
+
+        expect(EventDestinations::WalletAmountsService).to have_received(:call!)
+          .with(hash_including(subscription:, from_datetime: producer_calls.first[:data][:customer_usage][:from_datetime]))
+      end
+    end
+
     context "when the caller supplied no usage to deliver" do
       before { allow(Invoices::CustomerUsageService).to receive(:call).and_call_original }
 

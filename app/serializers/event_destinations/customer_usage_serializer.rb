@@ -38,28 +38,80 @@ module EventDestinations
       end
     end
 
+    def wallet_amounts
+      options[:wallet_amounts] || {}
+    end
+
     # A plan carries a charge per feature, so a customer using a handful of them would otherwise
     # ship a long tail of zeroes on every record. Dropping them keeps headroom under the 1MB cap.
     # Fee#non_zero? is the trim daily usage already applies, so both payloads agree on what counts.
+    #
+    # One entry per charge and wallet: the charge's usage is split in proportion to what each wallet
+    # absorbed for its billable metric, and the entries add up exactly to the charge totals.
     def charges_usage
-      model.fees.select(&:non_zero?).group_by(&:charge_id).map do |_charge_id, fees|
+      model.fees.select(&:non_zero?).group_by(&:charge_id).flat_map do |_charge_id, fees|
         fee = fees.first
+        units = fees.sum { BigDecimal(it.units) }
+        events_count = fees.sum { it.events_count.to_i }
+        amount_cents = fees.sum(&:amount_cents)
+        weights = wallet_weights(fee.charge.billable_metric_id, amount_cents)
 
-        {
-          units: fees.sum { BigDecimal(it.units) }.to_s,
-          events_count: fees.sum { it.events_count.to_i },
-          amount_cents: fees.sum(&:amount_cents),
-          amount_currency: fee.amount_currency,
-          charge: {
-            lago_id: fee.charge_id,
-            code: fee.charge.code
-          },
-          billable_metric: {
-            lago_id: fee.charge.billable_metric_id,
-            code: fee.charge.billable_metric.code
+        weights.keys.zip(
+          split_units(units, weights.values),
+          split_integer(events_count, weights.values),
+          split_integer(amount_cents, weights.values)
+        ).map do |wallet_id, wallet_units, wallet_events_count, wallet_amount_cents|
+          {
+            units: wallet_units.to_s,
+            events_count: wallet_events_count,
+            amount_cents: wallet_amount_cents,
+            amount_currency: fee.amount_currency,
+            charge: {
+              lago_id: fee.charge_id,
+              code: fee.charge.code
+            },
+            billable_metric: {
+              lago_id: fee.charge.billable_metric_id,
+              code: fee.charge.billable_metric.code
+            },
+            wallet_id:
           }
-        }
+        end
       end
+    end
+
+    # The money each wallet absorbed for the billable metric, largest first. What no wallet absorbed
+    # goes to a nil wallet, and so does the whole charge when no wallet absorbed anything.
+    def wallet_weights(billable_metric_id, amount_cents)
+      weights = wallet_amounts.fetch(billable_metric_id, {})
+        .select { |_wallet_id, cents| cents.positive? }
+        .sort_by { |wallet_id, cents| [-cents, wallet_id] }
+        .to_h
+      unattributed = amount_cents - weights.values.sum
+
+      if unattributed.positive?
+        weights.merge(nil => unattributed)
+      elsif weights.empty?
+        {nil => 1}
+      else
+        weights
+      end
+    end
+
+    # Largest remainder, so the parts add up to the total.
+    def split_integer(total, weights)
+      sum = weights.sum
+      parts = weights.map { (total * it).div(sum) }
+      order = weights.each_index.sort_by { |index| [-((total * weights[index]) % sum), index] }
+      (total - parts.sum).times { parts[order[it]] += 1 }
+      parts
+    end
+
+    # Each part keeps the precision of the total, and the last one takes the rounding difference.
+    def split_units(units, weights)
+      sum = weights.sum
+      parts = weights[0...-1].map { (units * it / sum).round(units.scale).to_d }
+      parts << (units - parts.sum)
     end
   end
 end
