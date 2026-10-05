@@ -3,6 +3,9 @@
 require "rails_helper"
 
 RSpec.describe InvoiceCustomSections::AttachToResourceService do
+  # The examples set the request source, which would otherwise leak into later specs.
+  after { CurrentContext.reset }
+
   describe "#call" do
     subject { service.call }
 
