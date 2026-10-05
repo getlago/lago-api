@@ -97,6 +97,43 @@ RSpec.describe EventDestinations::CustomerFullUsage::RefreshedService do
       end
     end
 
+    # Nothing stubbed but the producer: billing records what the first wallet paid, the refresh
+    # records the next wallet taking over, and the lifetime record attributes each part.
+    context "with an invoice paid by one wallet and ongoing usage on the next" do
+      let!(:charge) { create(:standard_charge, plan:, billable_metric:, organization:, properties: {amount: "10"}) }
+      let(:first_wallet) do
+        create(:wallet, :with_inbound_transaction, customer:, organization:, priority: 1, balance_cents: 1000, credits_balance: 10.0)
+      end
+      let(:second_wallet) do
+        create(:wallet, :with_inbound_transaction, customer:, organization:, priority: 2, balance_cents: 5000, credits_balance: 50.0)
+      end
+      let(:past_invoice) do
+        create(:invoice, customer:, organization:, status: :finalized, currency: "EUR", total_amount_cents: 1000, taxes_amount_cents: 0)
+      end
+
+      before do
+        first_wallet
+        second_wallet
+        create(:invoice_subscription, invoice: past_invoice, subscription:, charges_from_datetime: 5.months.ago)
+        create(:charge_fee, invoice: past_invoice, subscription:, charge:, amount_cents: 1000, precise_amount_cents: 1000,
+          taxes_amount_cents: 0, taxes_precise_amount_cents: 0)
+        create(:event, organization:, subscription:, customer:, code: billable_metric.code, timestamp: 4.months.ago)
+        create(:event, organization:, subscription:, customer:, code: billable_metric.code)
+        Credits::AppliedPrepaidCreditsService.call!(invoice: past_invoice)
+      end
+
+      it "attributes each part of the lifetime usage to the wallet that covered it" do
+        service.call
+
+        entries = producer_calls.first[:data][:customer_usage][:charges_usage].map { it.slice(:wallet_id, :amount_cents) }
+
+        expect(entries).to match_array([
+          {wallet_id: first_wallet.id, amount_cents: 1000},
+          {wallet_id: second_wallet.id, amount_cents: 1000}
+        ])
+      end
+    end
+
     it "carries the full usage event type and the shared object type" do
       service.call
 
