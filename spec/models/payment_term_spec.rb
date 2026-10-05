@@ -126,6 +126,15 @@ RSpec.describe PaymentTerm do
         .to eq("Due on the 15, 2 months after invoice")
     end
 
+    context "when an issuing date is given" do
+      it "names the month the day_of_month due date falls in" do
+        term = described_class.from_h(term_type: "day_of_month", day_of_month: 10, month_offset: 0)
+
+        expect(term.label(issuing_date: Date.new(2026, 7, 15))).to eq("Due on the 10 of the following month")
+        expect(term.label(issuing_date: Date.new(2026, 7, 5))).to eq("Due on the 10 of this month")
+      end
+    end
+
     it "renders in the current locale" do
       I18n.with_locale(:fr) do
         expect(described_class.from_h(term_type: "end_of_month").label).to eq("Payable fin de mois")
