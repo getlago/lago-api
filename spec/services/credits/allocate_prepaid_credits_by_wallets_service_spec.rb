@@ -121,9 +121,9 @@ RSpec.describe Credits::AllocatePrepaidCreditsByWalletsService do
 
         before { create(:fee, invoice:, subscription:, amount_cents: 60, precise_amount_cents: 60, taxes_precise_amount_cents: 6) }
 
-        it "records only the charge usage, which is what usage is attributed from" do
+        it "records only the charge usage, without its tax, which is what usage is attributed from" do
           expect(result.wallet_transactions).to eq({priority_wallet => 110})
-          expect(result.billable_metric_amounts).to eq({priority_wallet => {billable_metric_id => 44}})
+          expect(result.billable_metric_amounts).to eq({priority_wallet => {billable_metric_id => 40}})
         end
       end
 
