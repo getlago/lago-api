@@ -6,6 +6,7 @@ module Types
       class CreateInput < Types::BaseInputObject
         graphql_name "CreateEntraIdIntegrationInput"
 
+        argument :additional_domains, [String], required: false
         argument :client_id, String, required: true
         argument :client_secret, String, required: true
         argument :domain, String, required: true
