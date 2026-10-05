@@ -125,6 +125,26 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
         end
       end
 
+      context "when several billable metrics each carry half a cent" do
+        let(:other_charge) { create(:standard_charge, organization:) }
+        let(:current_usage_fees) { [] }
+        let(:draft_invoices_fees) do
+          [
+            create(:charge_fee, charge:, subscription:, organization:, invoice:, amount_cents: 21,
+              taxes_amount_cents: 0, precise_coupons_amount_cents: 0.5, amount_currency: "EUR"),
+            create(:charge_fee, charge: other_charge, subscription:, organization:, invoice:, amount_cents: 11,
+              taxes_amount_cents: 0, precise_coupons_amount_cents: 0.5, amount_currency: "EUR")
+          ]
+        end
+
+        it "never records more than the wallet covers" do
+          expect(result.billable_metric_amounts).to eq({
+            wallet_b => {billable_metric_id => 21, other_charge.billable_metric_id => 10},
+            wallet_a => {}
+          })
+        end
+      end
+
       context "when the fee targets a wallet" do
         around { |test| lago_premium! { test.run } }
 

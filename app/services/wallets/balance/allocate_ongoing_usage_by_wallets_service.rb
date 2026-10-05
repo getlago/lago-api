@@ -23,7 +23,7 @@ module Wallets
       def call
         result.billable_metric_amounts = wallets.index_with { Hash.new(0) }
         result.wallet_allocations = calculate_wallet_allocations
-        result.billable_metric_amounts.transform_values! { |amounts| amounts.transform_values(&:round) }
+        result.billable_metric_amounts.transform_values! { |amounts| round_on_running_total(amounts) }
         result
       end
 
@@ -82,6 +82,17 @@ module Wallets
           covered[wallet] += take
           amount -= take
           result.billable_metric_amounts[wallet][fee_key.second] += tax_exclusive(fee_key, take) if fee_key.first == "charge"
+        end
+      end
+
+      # Rounded on the running total, so the parts never add up to more than the wallet covers.
+      def round_on_running_total(amounts)
+        running_total = 0
+
+        amounts.transform_values do |amount|
+          rounded = (running_total + amount).round - running_total.round
+          running_total += amount
+          rounded
         end
       end
 
