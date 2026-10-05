@@ -155,6 +155,7 @@ RSpec.describe BillingSegments::ProcessService do
             invoice = result.invoices.sole.reload
             expect(invoice).to be_finalized.and have_attributes(
               invoice_type: "advance_charges",
+              payment_status: "succeeded",
               total_amount_cents: 600
             )
             expect(invoice.fees).to contain_exactly(paid_fee)

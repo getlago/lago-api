@@ -146,6 +146,7 @@ module BillingSegments
           end
 
           Invoices::AggregateAmountsAndTaxesFromFees.call!(invoice:)
+          invoice.payment_status = :succeeded
           invoice.save!
         end
 
