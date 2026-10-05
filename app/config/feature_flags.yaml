@@ -37,3 +37,11 @@ skip_credit_invoice_auto_payment_delay:
 account_tree:
   description: "Enable the account tree - hierarchy based attributed usage below the customer"
   owners: ["@lovrocolic"]
+
+x402_payments:
+  description: "Enable x402 agentic payments: Coinbase CDP connections, gate checks, credit purchases and invoice payments settled in USDC"
+  owners: ["@osmarluz"]
+
+x402_reservation_counter_disabled:
+  description: "Switch off the x402 reservation counter for an organization; the gate check then applies the static per-call floor. Operated by Lago"
+  owners: ["@osmarluz"]

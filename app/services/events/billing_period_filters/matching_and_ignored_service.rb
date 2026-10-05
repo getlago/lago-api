@@ -13,6 +13,40 @@ module Events
       def call
         result.matching_filters = target_filter.filter_values(target_filter.selected_filter)
 
+        ignored_filters = target_filter.charge? ? preceding_filters : child_filters
+        result.ignored_filters = MinimizeIgnoredFiltersService.call(ignored_filters:).ignored_filters
+
+        result
+      end
+
+      private
+
+      attr_reader :target_filter
+
+      def other_filters
+        @other_filters ||= target_filter.filters.reject { it.id == target_filter.selected_filter.id }
+      end
+
+      # An event matching several charge filters is billed on the one EventMatchingService picks, so
+      # the selected filter ignores every overlapping filter taking precedence over it.
+      def preceding_filters
+        selected_precedence = target_filter.filter_precedence(target_filter.selected_filter)
+
+        other_filters.filter_map do |filter|
+          next unless (target_filter.filter_precedence(filter) <=> selected_precedence).negative?
+
+          child = target_filter.filter_values(filter)
+          child if overlapping?(child)
+        end
+      end
+
+      def overlapping?(child)
+        child.all? do |key, values|
+          !result.matching_filters.key?(key) || values.intersect?(result.matching_filters[key])
+        end
+      end
+
+      def child_filters
         children = other_filters.find_all do |filter|
           child = target_filter.filter_values(filter)
 
@@ -21,7 +55,7 @@ module Events
           end
         end
 
-        ignored_filters = children.map do |child_filter|
+        children.map do |child_filter|
           child = target_filter.filter_values(child_filter).dup
 
           if child.keys.sort == result.matching_filters.keys.sort
@@ -38,18 +72,6 @@ module Events
 
           child
         end.compact
-
-        result.ignored_filters = MinimizeIgnoredFiltersService.call(ignored_filters:).ignored_filters
-
-        result
-      end
-
-      private
-
-      attr_reader :target_filter
-
-      def other_filters
-        @other_filters ||= target_filter.filters.reject { it.id == target_filter.selected_filter.id }
       end
 
       def subset_of_matching_filters?(child)

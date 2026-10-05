@@ -68,6 +68,11 @@ module Invoices
       result.record_validation_failure!(record: e.record)
     rescue Sequenced::SequenceError, ActiveRecord::StaleObjectError, BaseLockService::FailedToAcquireLock
       raise
+    rescue ActiveRecord::RecordNotUnique
+      result.single_validation_failure!(
+        field: :pay_in_advance_event_transaction_id,
+        error_code: "pay_in_advance_fee_already_exists"
+      )
     rescue => e
       result.fail_with_error!(e)
     end

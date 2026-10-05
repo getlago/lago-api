@@ -14,7 +14,7 @@ module Types
       field :status, Types::RateCardRates::StatusEnum, null: false
 
       field :rate_model, Types::RateCardRates::RateModelEnum, null: false
-      field :rate_properties, Types::Charges::Properties, null: false
+      field :rate_properties, Types::RateProperties::Properties, null: false
 
       field :applied_pricing_unit_conversion_rate, GraphQL::Types::Float, null: true
       field :billing_interval_count, Integer, null: false
@@ -23,6 +23,10 @@ module Types
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+
+      def rate_properties
+        ::RateProperties.present(object.rate_properties)
+      end
     end
   end
 end

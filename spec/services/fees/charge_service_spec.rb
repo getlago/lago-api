@@ -147,6 +147,29 @@ RSpec.describe Fees::ChargeService, :premium do
       end
     end
 
+    context "without an invoice for a charge" do
+      let(:invoice) { nil }
+      let(:fee_result) { charge_subscription_service.call }
+      let(:existing_fee) do
+        create(:charge_fee, invoice: nil, subscription:, organization:, charge:,
+          properties: {
+            charges_from_datetime: boundaries.charges_from_datetime.iso8601(3),
+            charges_to_datetime: boundaries.charges_to_datetime.iso8601(3)
+          })
+      end
+
+      before do
+        existing_fee
+        allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_call_original
+      end
+
+      it "returns the existing charge fee without recalculating" do
+        expect { fee_result }.not_to change(Fee, :count)
+        expect(fee_result.fees).to match_array([existing_fee])
+        expect(BillableMetrics::AggregationFactory).not_to have_received(:new_instance)
+      end
+    end
+
     context "without filters" do
       it "creates a fee" do
         result = charge_subscription_service.call
@@ -4188,6 +4211,29 @@ RSpec.describe Fees::ChargeService, :premium do
             expect(Events::BillingPeriodFilters::MatchingAndIgnoredService).to have_received(:call)
               .with(target_filter: Events::BillingPeriodFilters::FilterTarget.from_charge(charge:, filter: asia_charge_filter))
           end
+        end
+      end
+
+      context "with a recurring charge filter without values" do
+        let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:, field_name: "value") }
+        let(:empty_charge_filter) { create(:charge_filter, charge:, properties: {amount: "50"}) }
+        let(:filtered_aggregations) { [eu_charge_filter.id, nil] }
+
+        before do
+          empty_charge_filter
+          create(:event, organization:, subscription:, code: billable_metric.code,
+            timestamp: Time.zone.parse("2022-03-16"), properties: {region: "eu", value: 10})
+          create(:event, organization:, subscription:, code: billable_metric.code,
+            timestamp: Time.zone.parse("2022-03-16"), properties: {value: 5})
+        end
+
+        it "bills the unmatched usage on the default bucket only" do
+          result = charge_subscription_service.call
+
+          expect(result.fees.map { [it.charge_filter_id, it.units] }).to match_array([
+            [eu_charge_filter.id, 10],
+            [nil, 5]
+          ])
         end
       end
 

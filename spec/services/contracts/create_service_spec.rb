@@ -35,6 +35,37 @@ RSpec.describe Contracts::CreateService do
     expect(contract.applied_rate_cards.sole).to have_attributes(rate_card:, units: 5)
   end
 
+  context "with invoice custom sections" do
+    let(:section) { create(:invoice_custom_section, organization:) }
+    let(:params) { super().merge(invoice_custom_section: {invoice_custom_section_ids: [section.id]}) }
+
+    it "attaches the sections to the contract" do
+      expect(result).to be_success
+      expect(result.contract.selected_invoice_custom_sections).to eq([section])
+      expect(result.contract.skip_invoice_custom_sections).to be(false)
+    end
+  end
+
+  context "when skipping invoice custom sections" do
+    let(:params) { super().merge(invoice_custom_section: {skip_invoice_custom_sections: true}) }
+
+    it "flags the contract to skip them" do
+      expect(result).to be_success
+      expect(result.contract.skip_invoice_custom_sections).to be(true)
+      expect(result.contract.applied_invoice_custom_sections).to be_empty
+    end
+  end
+
+  context "with a section from another organization" do
+    let(:section) { create(:invoice_custom_section) }
+    let(:params) { super().merge(invoice_custom_section: {invoice_custom_section_ids: [section.id]}) }
+
+    it "does not attach it" do
+      expect(result).to be_success
+      expect(result.contract.applied_invoice_custom_sections).to be_empty
+    end
+  end
+
   context "without a plan" do
     let(:params) { {external_customer_id: customer.external_id, external_id: "contract-1"} }
 

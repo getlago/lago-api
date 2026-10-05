@@ -5,9 +5,12 @@ require "rails_helper"
 RSpec.describe Integrations::EntraId::UpdateService do
   include_context "with mocked security logger"
 
-  let(:integration) { create(:entra_id_integration, organization:) }
+  let(:integration) do
+    create(:entra_id_integration, organization:, secrets: {client_secret: stored_client_secret}.to_json)
+  end
   let(:organization) { membership.organization }
   let(:membership) { create(:membership) }
+  let(:stored_client_secret) { "stored-client-secret" }
   let(:domain) { "foo.bar" }
   let(:tenant_id) { SecureRandom.uuid }
   let(:host) { "login.microsoftonline.us" }
@@ -59,6 +62,59 @@ RSpec.describe Integrations::EntraId::UpdateService do
 
           it_behaves_like "produces a security log", "integration.updated" do
             before { service_call }
+          end
+
+          context "with additional domains" do
+            let(:update_args) { super().merge(additional_domains: ["de.foo.bar"]) }
+
+            it "replaces the additional domains" do
+              expect(service_call).to be_success
+              expect(integration.reload.additional_domains).to eq(["de.foo.bar"])
+            end
+          end
+
+          context "without an additional domains parameter" do
+            before { integration.update!(additional_domains: ["de.foo.bar"]) }
+
+            it "keeps the stored additional domains" do
+              expect(service_call).to be_success
+              expect(integration.reload.additional_domains).to eq(["de.foo.bar"])
+            end
+          end
+
+          context "without a client secret parameter" do
+            it "keeps the stored client secret" do
+              expect(service_call).to be_success
+              expect(integration.reload.client_secret).to eq(stored_client_secret)
+            end
+          end
+
+          context "with a blank client secret" do
+            let(:update_args) { super().merge(client_secret: "") }
+
+            it "keeps the stored client secret" do
+              expect(service_call).to be_success
+              expect(integration.reload.client_secret).to eq(stored_client_secret)
+            end
+          end
+
+          context "with a masked client secret" do
+            let(:update_args) { super().merge(client_secret: "••••••••…ret") }
+
+            it "keeps the stored client secret" do
+              expect(service_call).to be_success
+              expect(integration.reload.client_secret).to eq(stored_client_secret)
+            end
+          end
+
+          context "with a new client secret" do
+            let(:new_client_secret) { "new-client-secret" }
+            let(:update_args) { super().merge(client_secret: new_client_secret) }
+
+            it "replaces the stored client secret" do
+              expect(service_call).to be_success
+              expect(integration.reload.client_secret).to eq(new_client_secret)
+            end
           end
         end
 

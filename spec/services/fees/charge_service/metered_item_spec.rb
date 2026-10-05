@@ -67,6 +67,19 @@ RSpec.describe Fees::ChargeService::MeteredItem do
       )
     end
 
+    describe "#filtered_for_charge_boundaries" do
+      subject(:properties) { described_class.from_billing_segment(billing_segment: billing_segment).filtered_for_charge_boundaries.as_json }
+
+      it "preserves microsecond precision in contract fee properties" do
+        expect(properties.slice("from_datetime", "to_datetime", "charges_from_datetime", "charges_to_datetime")).to eq(
+          "from_datetime" => "2026-09-01T00:00:00.000000Z",
+          "to_datetime" => "2026-09-30T23:59:59.999999Z",
+          "charges_from_datetime" => "2026-09-01T00:00:00.000000Z",
+          "charges_to_datetime" => "2026-09-30T23:59:59.999999Z"
+        )
+      end
+    end
+
     it "builds a metered item backed by a billing segment source" do
       metered_item = described_class.from_billing_segment(billing_segment:)
 
@@ -75,6 +88,7 @@ RSpec.describe Fees::ChargeService::MeteredItem do
       expect(metered_item).not_to be_dynamic
       expect(metered_item.billable_metric).to eq(billable_metric)
       expect(metered_item.properties).to eq("amount" => "24")
+      expect(metered_item.pricing_structure.product_catalog).to eq(true)
       travel_to(Time.utc(2026, 10, 2)) do
         expect(metered_item.elapsed_period_ratio).to eq(1.0)
       end

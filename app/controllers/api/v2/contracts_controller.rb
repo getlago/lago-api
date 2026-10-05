@@ -2,8 +2,8 @@
 
 module Api
   module V2
-    class ContractsController < Api::BaseController
-      include Api::RequiresProductCatalog
+    class ContractsController < Api::V2::BaseController
+      cursor_paginated_index(Contract)
 
       def create
         result = ::Contracts::CreateService.call(
@@ -57,29 +57,26 @@ module Api
 
         result = ::ContractsQuery.call(
           organization: current_organization,
-          pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
-          },
+          pagination: cursor,
           filters:,
           search_term: params[:search_term]
         )
 
         if result.success?
-          contracts = result.contracts.includes(:catalog_plan, :customer)
+          page = ::CursorPagination::Page.new(records: result.contracts.includes(:catalog_plan, customer: :billing_entity), cursor:)
 
           # One grouped query instead of one COUNT per row in the serializer.
           applied_rate_cards_counts = ContractRateCard
-            .where(contract_id: contracts.map(&:id))
+            .where(contract_id: page.records.map(&:id))
             .group(:contract_id)
             .count
 
           render(
             json: ::CollectionSerializer.new(
-              contracts,
+              page.records,
               ::V2::ContractSerializer,
               collection_name: "contracts",
-              meta: pagination_metadata(contracts),
+              meta: page.meta,
               applied_rate_cards_counts:
             )
           )
@@ -107,7 +104,7 @@ module Api
           json: ::V2::ContractSerializer.new(
             contract,
             root_name: "contract",
-            includes: %i[applied_rate_cards]
+            includes: %i[applied_rate_cards applied_invoice_custom_sections]
           )
         )
       end
@@ -133,7 +130,8 @@ module Api
           :billing_time,
           :billing_anchor_date,
           :started_at,
-          :ended_at
+          :ended_at,
+          invoice_custom_section: [:skip_invoice_custom_sections, {invoice_custom_section_codes: []}]
         )
       end
 
@@ -147,12 +145,13 @@ module Api
           :billing_time,
           :billing_anchor_date,
           :started_at,
-          :ended_at
+          :ended_at,
+          invoice_custom_section: [:skip_invoice_custom_sections, {invoice_custom_section_codes: []}]
         )
       end
 
       def render_contract(contract)
-        render(json: ::V2::ContractSerializer.new(contract, root_name: "contract", includes: %i[applied_rate_cards]))
+        render(json: ::V2::ContractSerializer.new(contract, root_name: "contract", includes: %i[applied_rate_cards applied_invoice_custom_sections]))
       end
 
       def resource_name

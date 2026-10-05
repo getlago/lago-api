@@ -18,8 +18,9 @@ module Integrations
         end
 
         integration.client_id = params[:client_id] if params.key?(:client_id)
-        integration.client_secret = params[:client_secret] if params.key?(:client_secret)
+        integration.client_secret = params[:client_secret] if client_secret_update?
         integration.domain = params[:domain] if params.key?(:domain)
+        integration.additional_domains = params[:additional_domains] if params.key?(:additional_domains)
         integration.tenant_id = params[:tenant_id] if params.key?(:tenant_id)
         integration.host = params[:host] if params.key?(:host)
 
@@ -34,6 +35,10 @@ module Integrations
       private
 
       attr_reader :integration, :params
+
+      def client_secret_update?
+        params[:client_secret].present? && !params[:client_secret].match?(/\A•{8}…/)
+      end
     end
   end
 end

@@ -131,13 +131,7 @@ module Fees
       end
 
       def filtered_for_charge_boundaries
-        properties = boundaries.to_h
-        if billing_segment
-          %w[from_datetime to_datetime charges_from_datetime charges_to_datetime].each do |key|
-            value = properties[key]
-            properties[key] = value.iso8601(6) if value.respond_to?(:usec)
-          end
-        end
+        properties = billing_segment ? boundaries.to_contract_fee_properties : boundaries.to_h
         properties["fixed_charges_from_datetime"] = nil
         properties["fixed_charges_to_datetime"] = nil
         properties["fixed_charges_duration"] = nil

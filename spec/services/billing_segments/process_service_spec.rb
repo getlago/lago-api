@@ -889,7 +889,11 @@ RSpec.describe BillingSegments::ProcessService do
         expect(invoice.fees.count).to eq(4)
 
         [[segments.first, 8_000, 8_000, 16], [segments.last, 10_500, 3_500, 21]].each do |segment, base_cents, true_up_cents, unit_amount|
-          fees = invoice.fees.where("properties ->> 'billing_segment_id' = ?", segment.id)
+          fees = invoice.fees.matching_contract_period(
+            contract_rate_card_id: segment.contract_rate_card_id,
+            from_datetime: segment.started_at,
+            to_datetime: segment.ended_at
+          )
           fee = fees.find_by!(true_up_parent_fee_id: nil)
           true_up_fee = fees.where.not(true_up_parent_fee_id: nil).sole
 
@@ -901,6 +905,39 @@ RSpec.describe BillingSegments::ProcessService do
           expect(fees.sum(:amount_cents)).to eq(segment.prorated_min_amount_cents.round)
           expect(segment.reload).to have_attributes(status: "done", invoice:)
         end
+      end
+    end
+
+    context "with a prorated recurring sum and decimal graduated tiers" do
+      let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "quantity", recurring: true) }
+      let(:product) { create(:product, :metered, organization:, billable_metric:) }
+      let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD", proration: true) }
+      let(:rate_override) { nil }
+      let(:rate_model) { "graduated" }
+      let(:rate_properties) do
+        RateProperties::NormalizeRangesService.call!(
+          rate_properties: {"graduated_ranges" => [
+            {"to_value" => "10.5", "per_unit_amount" => "1", "flat_amount" => "0"},
+            {"to_value" => "20", "per_unit_amount" => "2", "flat_amount" => "0"},
+            {"to_value" => nil, "per_unit_amount" => "3", "flat_amount" => "0"}
+          ]}
+        ).rate_properties
+      end
+      let(:billing_segment_rate_properties) { rate_properties }
+
+      before do
+        create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+          code: billable_metric.code, timestamp: Time.zone.parse("2026-08-01"), properties: {"quantity" => 15})
+        create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+          code: billable_metric.code, timestamp: Time.zone.parse("2026-08-16"), properties: {"quantity" => -6})
+      end
+
+      # 15 units all month: 10.5 x 1 + 4.5 x 2 = 19.5. The 6 removed on Aug 16 empty the second
+      # tier, then 1.5 of the first, for the last 16 of 31 days: (4.5 x 2 + 1.5 x 1) x 16/31 = 5.42.
+      it "takes a removal back across a decimal bound at its proration" do
+        expect(result).to be_success
+
+        expect(result.invoices.sole.fees.sole.amount_cents).to eq(1_408)
       end
     end
 

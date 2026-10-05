@@ -20,6 +20,7 @@ RSpec.describe Mutations::Integrations::EntraId::Update, :premium do
           clientId,
           clientSecret,
           domain,
+          additionalDomains,
           tenantId,
         }
       }
@@ -46,6 +47,7 @@ RSpec.describe Mutations::Integrations::EntraId::Update, :premium do
           input: {
             id: integration.id,
             domain: "foo.bar",
+            additionalDomains: ["de.foo.bar"],
             tenantId: "tenant-456"
           }
         }
@@ -56,6 +58,7 @@ RSpec.describe Mutations::Integrations::EntraId::Update, :premium do
       result_data = result["data"]["updateEntraIdIntegration"]
 
       expect(result_data["domain"]).to eq("foo.bar")
+      expect(result_data["additionalDomains"]).to eq(["de.foo.bar"])
       expect(result_data["tenantId"]).to eq("tenant-456")
     end
 

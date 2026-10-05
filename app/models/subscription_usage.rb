@@ -8,5 +8,6 @@ SubscriptionUsage = Struct.new(
   :amount_cents,
   :total_amount_cents,
   :taxes_amount_cents,
-  :fees
+  :fees,
+  :projections
 )

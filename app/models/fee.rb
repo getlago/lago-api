@@ -67,6 +67,12 @@ class Fee < ApplicationRecord
 
   scope :positive_units, -> { where("fees.units > ?", 0) }
 
+  scope :matching_contract_period, ->(contract_rate_card_id:, from_datetime:, to_datetime:) do
+    where(contract_rate_card_id:, fee_type: :product, pay_in_advance_event_id: nil, pay_in_advance_event_transaction_id: nil)
+      .where("(properties->>'charges_from_datetime')::timestamptz = ?", from_datetime.iso8601(6))
+      .where("(properties->>'charges_to_datetime')::timestamptz = ?", to_datetime.iso8601(6))
+  end
+
   # NOTE: pay_in_advance fees are not be linked to any invoice, but add_on fees does not have any subscriptions
   #       so we need a bit of logic to find the fee in the right organization scope
   scope :from_organization, ->(org) { where(organization_id: org.id) }
@@ -465,6 +471,7 @@ end
 #
 #  idx_pay_in_advance_duplication_guard_charge          (pay_in_advance_event_transaction_id,charge_id) UNIQUE WHERE ((deleted_at IS NULL) AND (charge_filter_id IS NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false) AND (original_fee_id IS NULL))
 #  idx_pay_in_advance_duplication_guard_charge_filter   (pay_in_advance_event_transaction_id,charge_id,charge_filter_id) UNIQUE WHERE ((deleted_at IS NULL) AND (charge_filter_id IS NOT NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false) AND (original_fee_id IS NULL))
+#  idx_pay_in_advance_product_card_event                (pay_in_advance_event_transaction_id,contract_rate_card_id) UNIQUE WHERE ((deleted_at IS NULL) AND (charge_id IS NULL) AND (contract_rate_card_id IS NOT NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false) AND (original_fee_id IS NULL))
 #  index_fees_on_add_on_id                              (add_on_id)
 #  index_fees_on_applied_add_on_id                      (applied_add_on_id)
 #  index_fees_on_billing_entity_id                      (billing_entity_id)
