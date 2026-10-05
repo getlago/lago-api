@@ -21,6 +21,10 @@ module ChargeModels
       self.class.new(**to_h.merge(changes))
     end
 
+    def prorated_product_catalog?
+      product_catalog && prorated
+    end
+
     def self.from_charge(charge)
       unless charge.is_a?(Charge)
         raise NotImplementedError, "Chargeable: #{charge.class.name} is not implemented"
