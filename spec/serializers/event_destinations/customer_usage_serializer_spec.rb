@@ -111,6 +111,23 @@ RSpec.describe EventDestinations::CustomerUsageSerializer do
       end
     end
 
+    context "when two charges share the billable metric" do
+      let(:other_charge) { create(:standard_charge, plan:, billable_metric:) }
+      let(:wallet_amounts) { {billable_metric.id => {first_wallet_id => 1500}} }
+
+      before do
+        usage.fees << build(:charge_fee, charge: other_charge, subscription:, units: "15.0", events_count: 6,
+          amount_cents: 1500, amount_currency: "EUR", charge_filter: nil, grouped_by: {})
+      end
+
+      it "counts the wallet's money once across both charges" do
+        wallet_entries = result[:charges_usage].select { it[:wallet_id] == first_wallet_id }
+
+        expect(wallet_entries.sum { it[:amount_cents] }).to eq(1500)
+        expect(result[:charges_usage].sum { it[:amount_cents] }).to eq(3000)
+      end
+    end
+
     context "when the units carry decimals" do
       let(:wallet_amounts) { {billable_metric.id => {second_wallet_id => 600, first_wallet_id => 1050}} }
       let(:usage) do

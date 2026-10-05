@@ -49,12 +49,15 @@ module EventDestinations
     # One entry per charge and wallet: the charge's usage is split in proportion to what each wallet
     # absorbed for its billable metric, and the entries add up exactly to the charge totals.
     def charges_usage
-      model.fees.select(&:non_zero?).group_by(&:charge_id).flat_map do |_charge_id, fees|
+      usage_fees = model.fees.select(&:non_zero?)
+      metric_amounts = usage_fees.group_by { it.charge.billable_metric_id }.transform_values { |fees| fees.sum(&:amount_cents) }
+
+      usage_fees.group_by(&:charge_id).flat_map do |_charge_id, fees|
         fee = fees.first
         units = fees.sum { BigDecimal(it.units) }
         events_count = fees.sum { it.events_count.to_i }
         amount_cents = fees.sum(&:amount_cents)
-        weights = wallet_weights(fee.charge.billable_metric_id, amount_cents)
+        weights = wallet_weights(fee.charge.billable_metric_id, metric_amounts[fee.charge.billable_metric_id])
 
         weights.keys.zip(
           split_units(units, weights.values),
@@ -80,8 +83,9 @@ module EventDestinations
       end
     end
 
-    # The money each wallet absorbed for the billable metric, largest first. What no wallet absorbed
-    # goes to a nil wallet, and so does the whole charge when no wallet absorbed anything.
+    # The money each wallet absorbed for the billable metric, largest first. Wallets are recorded per
+    # billable metric, so they are weighed against the metric's amount across all its charges. What
+    # no wallet absorbed goes to a nil wallet, and so does the whole charge when no wallet did.
     def wallet_weights(billable_metric_id, amount_cents)
       weights = wallet_amounts.fetch(billable_metric_id, {})
         .select { |_wallet_id, cents| cents.positive? }
