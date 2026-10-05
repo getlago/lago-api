@@ -15,6 +15,7 @@ module WalletTransactions
     def call
       transaction = wallet.wallet_transactions.create!(
         **transaction_params.slice(
+          :billable_metric_amounts,
           :credit_note_id,
           :invoice_id,
           :invoice_requires_successful_payment,

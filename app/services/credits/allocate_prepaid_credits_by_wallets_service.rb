@@ -2,7 +2,7 @@
 
 module Credits
   class AllocatePrepaidCreditsByWalletsService < BaseService
-    Result = BaseResult[:wallet_transactions]
+    Result = BaseResult[:wallet_transactions, :billable_metric_amounts]
 
     def initialize(invoice:)
       @invoice = invoice
@@ -12,9 +12,10 @@ module Credits
 
     def call
       result.wallet_transactions ||= {}
+      result.billable_metric_amounts ||= {}
       return result if wallets.empty?
 
-      result.wallet_transactions = calculate_wallet_transactions
+      calculate_wallet_transactions
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -29,7 +30,6 @@ module Credits
     def calculate_wallet_transactions
       ordered_remaining_amounts = calculate_amounts_for_fees_by_type_and_bm
       remaining_invoice_amount = invoice.total_amount_cents
-      wallets_transactions = {}
 
       wallets.each do |wallet|
         wallet.reload
@@ -62,9 +62,18 @@ module Credits
         end
         total_amount_cents = wallet_fee_transactions.sum { |t| t[:amount_cents] }
         next if total_amount_cents <= 0
-        wallets_transactions[wallet] = total_amount_cents
+        result.wallet_transactions[wallet] = total_amount_cents
+        result.billable_metric_amounts[wallet] = charge_amounts_by_billable_metric(wallet_fee_transactions)
       end
-      wallets_transactions
+    end
+
+    # What the wallet paid for charge usage, per billable metric, so usage can later be attributed
+    # to the wallets that paid for it.
+    def charge_amounts_by_billable_metric(wallet_fee_transactions)
+      wallet_fee_transactions
+        .select { |transaction| transaction[:fee_key].first == "charge" }
+        .group_by { |transaction| transaction[:fee_key].second }
+        .transform_values { |transactions| transactions.sum { it[:amount_cents] }.round }
     end
 
     def calculate_amounts_for_fees_by_type_and_bm

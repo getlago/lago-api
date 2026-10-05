@@ -135,6 +135,7 @@ end
 #
 #  id                                  :uuid             not null, primary key
 #  amount                              :decimal(30, 5)   default(0.0), not null
+#  billable_metric_amounts             :jsonb
 #  credit_amount                       :decimal(30, 5)   default(0.0), not null
 #  failed_at                           :datetime
 #  invoice_requires_successful_payment :boolean          default(FALSE), not null

@@ -4971,6 +4971,7 @@ CREATE TABLE public.wallet_transactions (
     voided_invoice_id uuid,
     billing_entity_id uuid,
     purchase_order_number character varying,
+    billable_metric_amounts jsonb,
     CONSTRAINT remaining_amount_cents_non_negative CHECK (((remaining_amount_cents >= 0) OR (remaining_amount_cents IS NULL)))
 );
 
@@ -15753,6 +15754,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20261006134840'),
+('20261005133729'),
 ('20261005112941'),
 ('20261005105630'),
 ('20261005094159'),
