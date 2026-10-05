@@ -2,11 +2,10 @@
 
 class CatalogPlansQuery < BaseQuery
   Result = BaseResult[:catalog_plans]
-  Filters = BaseFilters[:with_deleted, :product_ids, :product_filter_ids, :product_category_ids, :rate_card_ids]
+  Filters = BaseFilters[:product_ids, :product_filter_ids, :product_category_ids, :rate_card_ids]
 
   def call
     catalog_plans = base_scope.result
-    catalog_plans = catalog_plans.with_discarded if filters.with_deleted
     catalog_plans = with_rate_cards(catalog_plans) if rate_card_filters?
     catalog_plans = apply_consistent_ordering(catalog_plans)
     # The serializer reads applied_rate_cards.size per plan; preload so the

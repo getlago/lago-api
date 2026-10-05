@@ -63155,18 +63155,6 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "withDeleted",
-                  "description": null,
-                  "type": {
-                    "kind": "SCALAR",
-                    "name": "Boolean",
-                    "ofType": null
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
                   "name": "productCategoryIds",
                   "description": null,
                   "type": {
