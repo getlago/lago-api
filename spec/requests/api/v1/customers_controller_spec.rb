@@ -57,6 +57,17 @@ RSpec.describe Api::V1::CustomersController do
       end
     end
 
+    context "with a payment_term sent as an array of objects" do
+      before { create_params[:payment_term] = [{term_type: "net", days: 30}] }
+
+      it "returns a validation error instead of raising" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:payment_term]).to eq(["invalid_format"])
+      end
+    end
+
     context "with a non-hash payment_term" do
       before { create_params[:payment_term] = "net 30" }
 
