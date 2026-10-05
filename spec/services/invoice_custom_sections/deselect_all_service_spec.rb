@@ -23,6 +23,22 @@ RSpec.describe InvoiceCustomSections::DeselectAllService do
           .and change(customer.applied_invoice_custom_sections, :count).from(1).to(0)
         expect(service_result).to be_success
       end
+
+      context "with subscriptions and contracts using it" do
+        let(:subscription) { create(:subscription, organization:, customer:) }
+        let(:contract) { create(:contract, organization:, customer:) }
+
+        before do
+          create(:subscription_applied_invoice_custom_section, organization:, subscription:, invoice_custom_section: section)
+          create(:contract_applied_invoice_custom_section, organization:, contract:, invoice_custom_section: section)
+        end
+
+        it "deselects it for them too" do
+          expect { service_result }
+            .to change(subscription.applied_invoice_custom_sections, :count).from(1).to(0)
+            .and change(contract.applied_invoice_custom_sections, :count).from(1).to(0)
+        end
+      end
     end
 
     context "when the section is not selected" do

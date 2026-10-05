@@ -34,6 +34,19 @@ RSpec.describe Api::V2::ContractsController do
       expect(json[:contract][:applied_rate_cards].sole[:rate_card_code]).to eq(rate_card.code)
     end
 
+    context "with invoice custom sections" do
+      let(:section) { create(:invoice_custom_section, organization:) }
+      let(:create_params) { super().merge(invoice_custom_section: {invoice_custom_section_codes: [section.code]}) }
+
+      it "attaches the sections and returns them" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:skip_invoice_custom_sections]).to be(false)
+        expect(json[:contract][:applied_invoice_custom_sections].map { |s| s[:invoice_custom_section_id] }).to eq([section.id])
+      end
+    end
+
     context "without a plan" do
       let(:create_params) { {external_customer_id: customer.external_id, external_id: "contract-1"} }
 
@@ -174,6 +187,22 @@ RSpec.describe Api::V2::ContractsController do
       end
     end
 
+    context "with a section deleted while the contract still links it" do
+      let(:section) { create(:invoice_custom_section, organization:) }
+
+      before do
+        create(:contract_applied_invoice_custom_section, organization:, contract:, invoice_custom_section: section)
+        section.discard!
+      end
+
+      it "returns the contract without the deleted section" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:applied_invoice_custom_sections]).to be_empty
+      end
+    end
+
     context "when the external id contains a dot" do
       let(:contract) { create(:contract, organization:, customer:, external_id: "contract.2026-01") }
 
@@ -244,6 +273,20 @@ RSpec.describe Api::V2::ContractsController do
       expect(response).to have_http_status(:success)
       expect(json[:contract][:external_id]).to eq(contract.external_id)
       expect(json[:contract][:name]).to eq("Renamed")
+    end
+
+    context "when skipping invoice custom sections" do
+      let(:update_params) { {invoice_custom_section: {skip_invoice_custom_sections: true}} }
+
+      before { create(:contract_applied_invoice_custom_section, organization:, contract:) }
+
+      it "flags the contract and removes the attached sections" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:skip_invoice_custom_sections]).to be(true)
+        expect(json[:contract][:applied_invoice_custom_sections]).to be_empty
+      end
     end
 
     context "when changing the plan" do
