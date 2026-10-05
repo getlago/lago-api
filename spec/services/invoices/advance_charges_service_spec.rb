@@ -200,11 +200,13 @@ RSpec.describe Invoices::AdvanceChargesService do
 
     context "when there is a successful non invoiceable paid in advance fees" do
       let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+      let(:charge_plan) { plan }
+      let(:paid_fee_properties) { fee_boundaries }
 
       let(:charge) do
         create(
           :charge,
-          plan:,
+          plan: charge_plan,
           billable_metric:,
           prorated: true,
           pay_in_advance: true,
@@ -221,7 +223,7 @@ RSpec.describe Invoices::AdvanceChargesService do
           status: :terminated,
           terminated_at: Time.current,
           started_at: Time.current - 1.year,
-          plan:
+          plan: charge_plan
         })
       end
 
@@ -235,7 +237,7 @@ RSpec.describe Invoices::AdvanceChargesService do
           subscription: subscription_2,
           amount_cents: 999,
           taxes_amount_cents: 24,
-          properties: fee_boundaries,
+          properties: paid_fee_properties,
           charge:
         )
       end
@@ -266,6 +268,50 @@ RSpec.describe Invoices::AdvanceChargesService do
         expect(sub.charges_to_datetime).to match_datetime fee_boundaries[:charges_to_datetime]
         expect(sub.charges_from_datetime).to match_datetime fee_boundaries[:charges_from_datetime]
         expect(sub.invoicing_reason).to eq "in_advance_charge_periodic"
+      end
+
+      context "when the terminated predecessor uses a different plan" do
+        let(:charge_plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: true) }
+
+        it "invoices the predecessor's regrouped fee even without a regrouping charge on the current plan" do
+          invoice = invoice_service.call.invoice
+
+          expect(invoice.fees).to contain_exactly(paid_in_advance_fee)
+          expect(paid_in_advance_fee.reload.invoice).to eq(invoice)
+        end
+      end
+
+      context "when the current subscription has a fee with a future charge boundary" do
+        let(:future_fee) do
+          create(:fee, :succeeded, organization:, subscription:, charge:, invoice: nil,
+            succeeded_at: billing_at - 1.day,
+            properties: fee_boundaries.merge(charges_to_datetime: billing_at + 1.day))
+        end
+
+        before { future_fee }
+
+        it "uses the original active context to exclude the fee despite a terminated predecessor" do
+          expect(invoice_service.call.invoice.fees).to contain_exactly(paid_in_advance_fee)
+          expect(future_fee.reload.invoice_id).to be_nil
+        end
+      end
+
+      context "when a terminated context starts billing an active successor" do
+        let(:subscription) do
+          create(:subscription, plan:, customer:, status: :terminated, terminated_at: billing_at - 1.day,
+            started_at:, subscription_at: started_at.to_date)
+        end
+        let(:subscription_2) do
+          create(:subscription, external_id: subscription.external_id, customer:, plan: charge_plan,
+            started_at:, subscription_at: started_at.to_date)
+        end
+        let(:paid_fee_properties) { fee_boundaries.merge(charges_to_datetime: billing_at + 1.day) }
+
+        it "uses the original terminated context to attach the selected successor's fee" do
+          invoice = invoice_service.call.invoice
+
+          expect(invoice.fees).to contain_exactly(paid_in_advance_fee)
+        end
       end
 
       context "when a terminated subscription started after a backdated active subscription" do
