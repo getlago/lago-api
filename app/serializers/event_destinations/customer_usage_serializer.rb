@@ -107,11 +107,11 @@ module EventDestinations
       parts
     end
 
-    # Each part keeps the precision of the total, and the last one takes the rounding difference.
+    # Split like the integers, at the precision of the total, so no part can go negative.
     def split_units(units, weights)
-      sum = weights.sum
-      parts = weights[0...-1].map { (units * it / sum).round(units.scale).to_d }
-      parts << (units - parts.sum)
+      factor = 10**units.scale
+
+      split_integer((units * factor).to_i, weights).map { BigDecimal(it) / factor }
     end
   end
 end
