@@ -421,26 +421,34 @@ module Fees
 
     def already_billed?
       if metered_item.billing_segment
-        return false if options.invoice_preview?
+        already_billed_segment?
+      else
+        already_billed_charge?
+      end
+    end
 
-        fees = if invoice
-          invoice.fees
-        else
-          Fee.where(invoice_id: nil, contract_id: metered_item.billing_segment.contract_id)
-        end
-        existing_fees = fees.matching_contract_period(
-          contract_rate_card_id: metered_item.billing_segment.contract_rate_card_id,
-          from_datetime: metered_item.boundaries.charges_from_datetime,
-          to_datetime: metered_item.boundaries.charges_to_datetime
-        )
-        if existing_fees.exists?
-          result.fees = existing_fees.to_a
-          return true
-        end
+    def already_billed_segment?
+      return false if options.invoice_preview?
 
-        return false
+      fees = if invoice
+        invoice.fees
+      else
+        Fee.where(invoice_id: nil, contract_id: metered_item.billing_segment.contract_id)
       end
 
+      existing_fees = fees.matching_contract_period(
+        contract_rate_card_id: metered_item.billing_segment.contract_rate_card_id,
+        from_datetime: metered_item.boundaries.charges_from_datetime,
+        to_datetime: metered_item.boundaries.charges_to_datetime
+      ).to_a
+
+      return false if existing_fees.empty?
+
+      result.fees = existing_fees
+      true
+    end
+
+    def already_billed_charge?
       existing_fees = if invoice
         invoice.fees.where(charge_id: metered_item.charge.id, subscription_id: billing_context.subscription_id)
       else

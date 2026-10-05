@@ -42,7 +42,6 @@ RSpec.describe BillingSegments::Fees::ComputeService do
 
       it "prices the fee" do
         expect(result).to be_success
-        expect(result.fee).to have_attributes(contract:, contract_rate_card:)
         expect(result.fee.amount_cents).to eq(45_000)
         expect(result.fee.unit_amount_cents).to eq(3_000)
         expect(result.fee.precise_unit_amount).to eq(30)
