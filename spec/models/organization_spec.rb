@@ -94,6 +94,11 @@ RSpec.describe Organization do
       expect(organization).to be_valid
     end
 
+    it "validates net_payment_term as a non-negative integer" do
+      expect(organization).to allow_values(0, 30).for(:net_payment_term)
+      expect(organization).not_to allow_values(1.5, -1).for(:net_payment_term)
+    end
+
     it "is not valid without name" do
       organization.name = nil
 
