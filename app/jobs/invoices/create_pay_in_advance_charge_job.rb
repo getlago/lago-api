@@ -37,9 +37,9 @@ module Invoices
       return if result.success?
       # NOTE: We don't want a dead job for failed invoice due to the tax reason.
       #       This invoice should be in failed status and can be retried.
-      return if tax_error?(result)
-
-      result.raise_if_error!
+      unless tax_error?(result) || duplicate_fee?(result)
+        result.raise_if_error!
+      end
     end
 
     delegate :lock_key_arguments, to: :pay_in_advance_arguments
@@ -52,6 +52,12 @@ module Invoices
         charge: arguments.first.with_indifferent_access[:charge],
         event: arguments.first.with_indifferent_access[:event]
       )
+    end
+
+    def duplicate_fee?(result)
+      return false unless result.error.is_a?(BaseService::ValidationFailure)
+
+      result.error.messages[:pay_in_advance_event_transaction_id]&.include?("pay_in_advance_fee_already_exists")
     end
 
     def tax_error?(result)
