@@ -29,6 +29,7 @@ module Contracts
         # Card and phase edits lock the card, then read the contract: holding the
         # cards makes an edit in flight finish first, and a later one see the activation.
         contract.applied_rate_cards.lock.pluck(:id)
+        reseed_stale_rate_cards
 
         contract.update!(status: :active)
         BillingSegments::ScheduleJob.perform_after_commit(contract.customer_id)
@@ -50,6 +51,18 @@ module Contracts
     # A customer deleted since the job was enqueued has nothing left to bill.
     def due?
       contract.pending? && contract.started_at.present? && contract.started_at <= timestamp && contract.customer.kept?
+    end
+
+    # Cards seeded before a pending contract's start moved still start on the old
+    # day, from which billing would invoice periods before the contract started.
+    # An anchor on that old day was inherited and follows; any other is the card's own.
+    def reseed_stale_rate_cards
+      start_day = contract.default_rate_card_lifecycle[:effective_date]
+
+      contract.applied_rate_cards.where.not(effective_date: start_day).find_each do |card|
+        own_anchor = (card.billing_anchor_date == card.effective_date) ? nil : card.billing_anchor_date
+        ContractRateCards::SeedLifecycleService.call!(contract_rate_card: card, billing_anchor_date: own_anchor)
+      end
     end
 
     def active_sibling?

@@ -35,6 +35,41 @@ RSpec.describe Contracts::ActivateService do
     end
   end
 
+  context "with cards still starting on a previous start date" do
+    let(:inherited_card) do
+      create(
+        :contract_rate_card,
+        organization:,
+        contract:,
+        effective_date: Date.new(2026, 10, 15),
+        billing_anchor_date: Date.new(2026, 10, 15),
+        next_billing_at: Time.zone.parse("2026-10-15")
+      )
+    end
+    let(:anchored_card) do
+      create(
+        :contract_rate_card,
+        organization:,
+        contract:,
+        effective_date: Date.new(2026, 10, 15),
+        billing_anchor_date: Date.new(2026, 10, 1),
+        next_billing_at: Time.zone.parse("2026-10-15")
+      )
+    end
+
+    before do
+      inherited_card
+      anchored_card
+    end
+
+    it "starts them with the contract, keeping an anchor set on a card" do
+      result
+
+      expect(inherited_card.reload).to have_attributes(effective_date: Date.new(2026, 9, 30), billing_anchor_date: Date.new(2026, 9, 30))
+      expect(anchored_card.reload).to have_attributes(effective_date: Date.new(2026, 9, 30), billing_anchor_date: Date.new(2026, 10, 1))
+    end
+  end
+
   context "when the start has not arrived yet" do
     let(:timestamp) { started_at - 1.second }
 
