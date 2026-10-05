@@ -14,10 +14,11 @@ module Integrations
             return result unless ::Integrations::BaseIntegration::INTEGRATION_TAX_TYPES.include?(integration.type)
             return no_taxable_fees_result if taxable_fees.empty?
 
-            throttle!(:anrok, :avalara)
-
-            response = http_client.post_with_response(payload, headers)
-            body = parse_response(response)
+            body = if cache_taxes?
+              DraftTaxesCacheService.new(integration:, payload:).call { request_taxes }
+            else
+              request_taxes
+            end
 
             process_response(body)
 
@@ -39,8 +40,22 @@ module Integrations
 
           private
 
+          # NOTE: Throttling happens here, so an answer served from the cache doesn't use up the
+          #       provider rate limit.
+          def request_taxes
+            throttle!(:anrok, :avalara)
+
+            response = http_client.post_with_response(payload, headers)
+            parse_response(response)
+          end
+
+          # NOTE: Only Anrok draft taxes are cached, see DraftTaxesCacheService.
+          def cache_taxes?
+            integration.type.to_s == "Integrations::AnrokIntegration"
+          end
+
           def payload
-            Integrations::Aggregator::Taxes::Invoices::Payloads::Factory.new_instance(
+            @payload ||= Integrations::Aggregator::Taxes::Invoices::Payloads::Factory.new_instance(
               integration:,
               invoice:,
               customer:,
