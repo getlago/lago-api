@@ -5,19 +5,104 @@ require "rails_helper"
 RSpec.describe Fee do
   subject { build(:fee) }
 
-  it { is_expected.to belong_to(:add_on).optional }
-  it { is_expected.to belong_to(:charge).optional }
-  it { is_expected.to belong_to(:fixed_charge).optional }
-  it { is_expected.to belong_to(:rate_card_rate).optional }
-  it { is_expected.to belong_to(:rate_override).optional }
-  it { is_expected.to have_many(:presentation_breakdowns) }
-  it { is_expected.to have_one(:fixed_charge_add_on).through(:fixed_charge) }
-  it { is_expected.to have_one(:adjusted_fee).dependent(:nullify) }
-  it { is_expected.to have_one(:billable_metric).through(:charge) }
-  it { is_expected.to have_one(:customer).through(:subscription) }
-  it { is_expected.to have_one(:pricing_unit_usage).dependent(:destroy) }
-  it { is_expected.to have_one(:true_up_fee).with_foreign_key(:true_up_parent_fee_id).class_name("Fee").dependent(:destroy) }
-  it { is_expected.to belong_to(:original_fee).class_name("Fee").optional }
+  describe "associations" do
+    it do
+      expect(subject).to belong_to(:invoice).optional
+      expect(subject).to belong_to(:charge).optional
+      expect(subject).to belong_to(:add_on).optional
+      expect(subject).to belong_to(:applied_add_on).optional
+      expect(subject).to belong_to(:subscription).optional
+      expect(subject).to belong_to(:contract).optional
+      expect(subject).to belong_to(:contract_rate_card).optional
+      expect(subject).to belong_to(:charge_filter).optional
+      expect(subject).to belong_to(:product_filter).optional
+      expect(subject).to belong_to(:group).optional
+      expect(subject).to belong_to(:invoiceable).optional
+      expect(subject).to belong_to(:true_up_parent_fee).class_name("Fee").optional
+      expect(subject).to belong_to(:original_fee).class_name("Fee").optional
+      expect(subject).to belong_to(:organization)
+      expect(subject).to belong_to(:billing_entity)
+      expect(subject).to belong_to(:fixed_charge).optional
+      expect(subject).to belong_to(:rate_card_rate).optional
+      expect(subject).to belong_to(:rate_override).optional
+      expect(subject).to have_one(:adjusted_fee).dependent(:nullify)
+      expect(subject).to have_one(:billable_metric).through(:charge)
+      expect(subject).to have_one(:fixed_charge_add_on).class_name("AddOn").through(:fixed_charge).source(:add_on)
+      expect(subject).to have_one(:customer).through(:subscription)
+      expect(subject).to have_one(:pricing_unit_usage).dependent(:destroy)
+      expect(subject).to have_one(:true_up_fee).with_foreign_key(:true_up_parent_fee_id).class_name("Fee").dependent(:destroy)
+      expect(subject).to have_many(:credit_note_items).dependent(:destroy)
+      expect(subject).to have_many(:credit_notes).through(:credit_note_items)
+      expect(subject).to have_many(:applied_taxes).class_name("Fee::AppliedTax").dependent(:destroy)
+      expect(subject).to have_many(:taxes).through(:applied_taxes)
+      expect(subject).to have_many(:presentation_breakdowns).dependent(:destroy)
+    end
+  end
+
+  describe "contract provenance validation" do
+    subject(:fee) { build(:fee, contract:, contract_rate_card:) }
+
+    let(:contract_rate_card) { build_stubbed(:contract_rate_card) }
+    let(:contract) { contract_rate_card.contract }
+
+    it "accepts a card belonging to the fee contract" do
+      expect(fee).to be_valid
+    end
+
+    context "with a card belonging to another contract" do
+      let(:contract) { build_stubbed(:contract) }
+
+      it "rejects the mismatched contract" do
+        expect(fee).not_to be_valid
+        expect(fee.errors[:contract_rate_card]).to eq(["must belong to the fee contract"])
+      end
+    end
+
+    context "without a contract" do
+      let(:contract) { nil }
+
+      it "requires both provenance references" do
+        expect(fee).not_to be_valid
+        expect(fee.errors[:base]).to eq(["contract and contract rate card must both be present"])
+      end
+    end
+
+    context "without a card" do
+      let(:contract_rate_card) { nil }
+      let(:contract) { build_stubbed(:contract) }
+
+      it "requires both provenance references" do
+        expect(fee).not_to be_valid
+        expect(fee.errors[:base]).to eq(["contract and contract rate card must both be present"])
+      end
+    end
+
+    context "without contract provenance" do
+      let(:contract_rate_card) { nil }
+      let(:contract) { nil }
+
+      it "accepts legacy fees" do
+        expect(fee).to be_valid
+      end
+    end
+  end
+
+  describe "contract rate card history" do
+    subject(:fee) do
+      create(:fee, contract: contract_rate_card.contract, contract_rate_card:, organization: contract_rate_card.organization)
+    end
+
+    let(:contract_rate_card) { create(:contract_rate_card) }
+
+    before do
+      fee
+      contract_rate_card.discard!
+    end
+
+    it "resolves a discarded pricing attachment" do
+      expect(fee.reload.contract_rate_card).to eq(contract_rate_card)
+    end
+  end
 
   describe "#ordered_by_period" do
     let(:fee1) do

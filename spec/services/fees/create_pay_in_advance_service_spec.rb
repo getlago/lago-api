@@ -156,6 +156,27 @@ RSpec.describe Fees::CreatePayInAdvanceService do
         )
       end
 
+      context "with a legacy charge linked to the product" do
+        let(:product) { create(:product, :metered, organization:, billable_metric:, charge:) }
+
+        it "persists the product fee without its legacy charge" do
+          expect(fee_service.call.fees.sole.reload).to have_attributes(
+            fee_type: "product", charge_id: nil, contract_rate_card:
+          )
+        end
+      end
+
+      context "with a legacy add-on linked to the product" do
+        let(:add_on) { create(:add_on, organization:) }
+        let(:product) { create(:product, :metered, organization:, billable_metric:, add_on:) }
+
+        it "keeps the product fee distinct from a one-off add-on fee" do
+          expect(fee_service.call.fees.sole.reload).to have_attributes(
+            fee_type: "product", add_on_id: nil, charge_id: nil, contract_rate_card:
+          )
+        end
+      end
+
       it "does not persist another product fee on retry" do
         fee_service.call
         result = nil
@@ -163,12 +184,6 @@ RSpec.describe Fees::CreatePayInAdvanceService do
         expect { result = fee_service.call }.not_to change(Fee, :count)
         expect(result).not_to be_success
         expect(result.error.messages).to eq(pay_in_advance_event_transaction_id: ["pay_in_advance_fee_already_exists"])
-      end
-
-      it "enforces the per-card event uniqueness at the database" do
-        fee = fee_service.call.fees.sole
-
-        expect { fee.dup.save! }.to raise_error(ActiveRecord::RecordNotUnique)
       end
 
       context "when the card uses a product filter" do
@@ -181,11 +196,14 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           create(:product_filter_value, organization:, product_filter:, billable_metric_filter: metric_filter, value: "eu")
         end
 
-        it "enforces the same per-card uniqueness for a filtered fee" do
+        it "returns a validation failure on retry for a filtered fee" do
           fee = fee_service.call.fees.sole
+          retry_result = fee_service.call
 
           expect(fee.product_filter).to eq(product_filter)
-          expect { fee.dup.save! }.to raise_error(ActiveRecord::RecordNotUnique)
+          expect(retry_result).not_to be_success
+          expect(retry_result.error.messages).to eq(pay_in_advance_event_transaction_id: ["pay_in_advance_fee_already_exists"])
+          expect(Fee.where(pay_in_advance_event_transaction_id: event.transaction_id).count).to eq(1)
         end
       end
 
