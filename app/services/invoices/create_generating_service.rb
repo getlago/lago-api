@@ -27,7 +27,7 @@ module Invoices
         invoice = Invoice.create!(
           id: invoice_id || SecureRandom.uuid,
           organization:,
-          billing_entity: billing_entity || customer.billing_entity,
+          billing_entity: invoice_billing_entity,
           customer:,
           invoice_type:,
           currency:,
@@ -63,7 +63,11 @@ module Invoices
       date = datetime.in_time_zone(customer.applicable_timezone).to_date
       return date if !grace_period? || charge_in_advance
 
-      issuing_date_service = Invoices::IssuingDateService.new(customer_settings: customer, recurring:)
+      issuing_date_service = Invoices::IssuingDateService.new(
+        customer_settings: customer,
+        billing_entity_settings: invoice_billing_entity,
+        recurring:
+      )
       date + issuing_date_service.issuing_date_adjustment.days
     end
 
@@ -71,13 +75,21 @@ module Invoices
       date = datetime.in_time_zone(customer.applicable_timezone).to_date
       return date if !grace_period? || charge_in_advance
 
-      date + customer.applicable_invoice_grace_period.days
+      date + applicable_invoice_grace_period.days
     end
 
     def grace_period?
       return false if subscription_gated
 
       invoice_type.to_sym == :subscription
+    end
+
+    def invoice_billing_entity
+      @invoice_billing_entity ||= billing_entity || customer.billing_entity
+    end
+
+    def applicable_invoice_grace_period
+      customer.applicable_invoice_grace_period(billing_entity: invoice_billing_entity)
     end
 
     def payment_due_date

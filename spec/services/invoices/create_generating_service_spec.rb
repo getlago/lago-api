@@ -65,6 +65,20 @@ RSpec.describe Invoices::CreateGeneratingService do
         expect(result).to be_success
         expect(result.invoice.billing_entity).to eq(billing_entity)
       end
+
+      context "with a subscription invoice" do
+        let(:billing_entity) { create(:billing_entity, organization: customer.organization, invoice_grace_period: 5) }
+        let(:invoice_type) { :subscription }
+
+        it "uses the provided billing entity grace period" do
+          result = create_service.call
+
+          expect(result.invoice).to have_attributes(
+            issuing_date: datetime.to_date + 5.days,
+            expected_finalization_date: datetime.to_date + 5.days
+          )
+        end
+      end
     end
 
     context "when purchase_order_number is passed" do

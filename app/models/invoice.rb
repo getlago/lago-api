@@ -159,6 +159,12 @@ class Invoice < ApplicationRecord
       .distinct
   }
 
+  scope :with_active_contracts, -> {
+    joins(:contracts)
+      .where(contracts: {status: Contract::BILLABLE_STATUSES})
+      .distinct
+  }
+
   scope :self_billed, -> { where(self_billed: true) }
   scope :non_self_billed, -> { where(self_billed: false) }
 
