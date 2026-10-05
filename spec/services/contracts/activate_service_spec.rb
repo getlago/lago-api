@@ -56,10 +56,21 @@ RSpec.describe Contracts::ActivateService do
         next_billing_at: Time.zone.parse("2026-10-15")
       )
     end
+    let(:current_card) do
+      create(
+        :contract_rate_card,
+        organization:,
+        contract:,
+        effective_date: Date.new(2026, 9, 30),
+        billing_anchor_date: Date.new(2026, 9, 20),
+        next_billing_at: Time.zone.parse("2026-09-30")
+      )
+    end
 
     before do
       inherited_card
       anchored_card
+      current_card
     end
 
     it "starts them with the contract, keeping an anchor set on a card" do
@@ -67,6 +78,42 @@ RSpec.describe Contracts::ActivateService do
 
       expect(inherited_card.reload).to have_attributes(effective_date: Date.new(2026, 9, 30), billing_anchor_date: Date.new(2026, 9, 30))
       expect(anchored_card.reload).to have_attributes(effective_date: Date.new(2026, 9, 30), billing_anchor_date: Date.new(2026, 10, 1))
+    end
+
+    it "leaves a card already starting with the contract as it is" do
+      result
+
+      expect(current_card.reload).to have_attributes(effective_date: Date.new(2026, 9, 30), billing_anchor_date: Date.new(2026, 9, 20))
+    end
+  end
+
+  context "with a card whose cadence changed while the contract was pending" do
+    let(:rate_card) { create(:rate_card, organization:) }
+    # Seeded while the rate was monthly: the clock waits for the end of the first month.
+    let(:contract_rate_card) do
+      create(
+        :contract_rate_card,
+        organization:,
+        contract:,
+        rate_card:,
+        effective_date: Date.new(2026, 9, 30),
+        billing_anchor_date: Date.new(2026, 9, 30),
+        next_billing_at: Time.zone.parse("2026-10-30")
+      )
+    end
+
+    around { |example| travel_to(Time.zone.parse("2026-10-20T10:00:00Z")) { example.run } }
+
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2026-09-01"), billing_interval_unit: "week")
+      create(:rate_phase, :contract_level, organization:, contract_rate_card:)
+    end
+
+    # Activated three weeks late: the first weekly period is due at once.
+    it "waits for the first billing date of the current cadence" do
+      result
+
+      expect(contract_rate_card.reload.next_billing_at).to eq(Time.zone.parse("2026-10-07"))
     end
   end
 

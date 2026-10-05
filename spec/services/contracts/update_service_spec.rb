@@ -337,6 +337,29 @@ RSpec.describe Contracts::UpdateService do
       expect(anchored_card.reload).to have_attributes(effective_date: Date.new(2026, 11, 1), billing_anchor_date: Date.new(2026, 10, 1))
     end
 
+    context "with a card left on a start date moved before cards followed it" do
+      let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:, started_at: Time.zone.parse("2026-10-20")) }
+      let(:stale_card) do
+        create(
+          :contract_rate_card,
+          organization:,
+          contract:,
+          effective_date: Date.new(2026, 10, 15),
+          billing_anchor_date: Date.new(2026, 10, 15),
+          next_billing_at: Time.zone.parse("2026-10-15")
+        )
+      end
+      let(:params) { {started_at: "2026-11-01T00:00:00"} }
+
+      before { stale_card }
+
+      it "treats its anchor on the old start day as inherited" do
+        result
+
+        expect(stale_card.reload).to have_attributes(effective_date: Date.new(2026, 11, 1), billing_anchor_date: Date.new(2026, 11, 1))
+      end
+    end
+
     context "when only the anchor moves" do
       let(:params) { {billing_anchor_date: "2026-10-20"} }
 

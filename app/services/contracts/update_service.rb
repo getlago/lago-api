@@ -126,12 +126,11 @@ module Contracts
       result.contract = contract
     end
 
-    # The cards were seeded from the previous start and anchor. An anchor still
-    # equal to the contract's previous one was inherited, so it follows the
-    # contract; any other was set on the card and is kept.
+    # The cards were seeded from the previous start and anchor: an inherited
+    # anchor follows the contract, one set on the card is kept.
     def reseed_rate_cards(previous_billing_anchor_date)
       contract.applied_rate_cards.find_each do |card|
-        own_anchor = (card.billing_anchor_date == previous_billing_anchor_date) ? nil : card.billing_anchor_date
+        own_anchor = card.inherited_billing_anchor?(previous_billing_anchor_date) ? nil : card.billing_anchor_date
         ContractRateCards::SeedLifecycleService.call!(contract_rate_card: card, billing_anchor_date: own_anchor)
       end
     end

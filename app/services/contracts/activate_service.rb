@@ -30,6 +30,7 @@ module Contracts
         # cards makes an edit in flight finish first, and a later one see the activation.
         contract.applied_rate_cards.lock.pluck(:id)
         reseed_stale_rate_cards
+        reset_billing_clocks
 
         contract.update!(status: :active)
         BillingSegments::ScheduleJob.perform_after_commit(contract.customer_id)
@@ -55,13 +56,22 @@ module Contracts
 
     # Cards seeded before a pending contract's start moved still start on the old
     # day, from which billing would invoice periods before the contract started.
-    # An anchor on that old day was inherited and follows; any other is the card's own.
     def reseed_stale_rate_cards
       start_day = contract.default_rate_card_lifecycle[:effective_date]
 
       contract.applied_rate_cards.where.not(effective_date: start_day).find_each do |card|
-        own_anchor = (card.billing_anchor_date == card.effective_date) ? nil : card.billing_anchor_date
+        own_anchor = card.inherited_billing_anchor?(contract.effective_billing_anchor_date) ? nil : card.billing_anchor_date
         ContractRateCards::SeedLifecycleService.call!(contract_rate_card: card, billing_anchor_date: own_anchor)
+      end
+    end
+
+    # A clock was set from the schedule its card had when seeded; phases and
+    # rates edited while the contract was pending can change the cadence since.
+    # A card never billed yet waits for its first billing date, so a late
+    # activation still bills the periods elapsed since the start.
+    def reset_billing_clocks
+      contract.applied_rate_cards.find_each do |card|
+        ContractRateCards::ResetBillingClockService.call!(contract_rate_card: card, timestamp: contract.started_at)
       end
     end
 

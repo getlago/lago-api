@@ -17,28 +17,18 @@ module ContractRateCards
 
     def call
       contract_rate_card.update!(contract_rate_card.contract.default_rate_card_lifecycle(billing_anchor_date:))
-      contract_rate_card.update!(next_billing_at: initial_next_billing_at)
+      ContractRateCards::ResetBillingClockService.call!(contract_rate_card:)
 
       result.contract_rate_card = contract_rate_card
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      e.result
     end
 
     private
 
     attr_reader :contract_rate_card, :billing_anchor_date
-
-    # Built from the stored lifecycle and phases, so it runs once both are saved.
-    def initial_next_billing_at
-      build = Billing::RateCards::BuildScheduleService.call(contract_rate_card:)
-
-      if build.success?
-        # An ended schedule has no next date: the card keeps its start as clock.
-        build.schedule.billing_at_covering(Time.current) || contract_rate_card.next_billing_at
-      else
-        contract_rate_card.next_billing_at
-      end
-    end
   end
 end

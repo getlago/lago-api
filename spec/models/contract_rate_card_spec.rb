@@ -173,6 +173,28 @@ RSpec.describe ContractRateCard do
     end
   end
 
+  describe "#inherited_billing_anchor?" do
+    let(:card) { build(:contract_rate_card, effective_date: Date.new(2026, 10, 15), billing_anchor_date:) }
+
+    context "with the contract's anchor" do
+      let(:billing_anchor_date) { Date.new(2026, 10, 1) }
+
+      it { expect(card.inherited_billing_anchor?(Date.new(2026, 10, 1))).to be(true) }
+    end
+
+    context "with the card's own start day" do
+      let(:billing_anchor_date) { Date.new(2026, 10, 15) }
+
+      it { expect(card.inherited_billing_anchor?(Date.new(2026, 10, 20))).to be(true) }
+    end
+
+    context "with any other day" do
+      let(:billing_anchor_date) { Date.new(2026, 10, 5) }
+
+      it { expect(card.inherited_billing_anchor?(Date.new(2026, 10, 20))).to be(false) }
+    end
+  end
+
   describe "#edit_error_code" do
     it "is nil while the contract is pending" do
       card = create(:contract_rate_card, contract: create(:contract, :pending))
