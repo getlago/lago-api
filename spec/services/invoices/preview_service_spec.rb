@@ -175,6 +175,33 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
         end
       end
 
+      context "with a subscription issued by another billing entity" do
+        let(:billing_entity) { create(:billing_entity, organization:, payment_term: {term_type: "net", days: 30}) }
+        let(:other_billing_entity) { create(:billing_entity, organization:, payment_term: {term_type: "end_of_month"}) }
+        let(:subscription) do
+          build(
+            :subscription,
+            customer:,
+            plan:,
+            billing_entity: other_billing_entity,
+            billing_time:,
+            subscription_at: timestamp,
+            started_at: timestamp,
+            created_at: timestamp
+          )
+        end
+
+        it "stamps the term of the subscription's billing entity" do
+          travel_to(timestamp) do
+            result = preview_service.call
+
+            expect(result.invoice.billing_entity).to eq(other_billing_entity)
+            expect(result.invoice.payment_term).to eq("term_type" => "end_of_month")
+            expect(result.invoice.payment_term_source).to eq("billing_entity")
+          end
+        end
+      end
+
       context "with a billing entity non-net payment term" do
         let(:billing_entity) { create(:billing_entity, organization:, payment_term: {term_type: "end_of_month"}, net_payment_term: nil) }
 

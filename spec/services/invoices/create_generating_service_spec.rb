@@ -81,6 +81,19 @@ RSpec.describe Invoices::CreateGeneratingService do
           )
         end
       end
+
+      context "when that billing entity has its own payment term" do
+        let(:billing_entity) { create(:billing_entity, organization: customer.organization, payment_term: {term_type: "end_of_month"}) }
+
+        before { customer.billing_entity.update!(payment_term: {term_type: "net", days: 30}) }
+
+        it "snapshots the issuing entity's term rather than the customer's default entity" do
+          result = create_service.call
+
+          expect(result.invoice.payment_term).to eq("term_type" => "end_of_month")
+          expect(result.invoice.payment_term_source).to eq("billing_entity")
+        end
+      end
     end
 
     context "when purchase_order_number is passed" do
