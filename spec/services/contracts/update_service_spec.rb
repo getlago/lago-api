@@ -210,6 +210,61 @@ RSpec.describe Contracts::UpdateService do
     end
   end
 
+  context "with invoice custom sections" do
+    let(:section) { create(:invoice_custom_section, organization:) }
+    let(:params) { {invoice_custom_section: {invoice_custom_section_ids: [section.id]}} }
+
+    it "attaches the sections to the contract" do
+      expect(result).to be_success
+      expect(contract.reload.selected_invoice_custom_sections).to eq([section])
+    end
+  end
+
+  context "when changing the invoice custom sections of an active contract" do
+    let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
+    let(:section) { create(:invoice_custom_section, organization:) }
+    let(:params) { {invoice_custom_section: {invoice_custom_section_ids: [section.id]}} }
+
+    it "attaches them, as an administrative field" do
+      expect(result).to be_success
+      expect(contract.reload.selected_invoice_custom_sections).to eq([section])
+    end
+  end
+
+  context "when an active contract sends sections with a locked field" do
+    let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
+    let(:section) { create(:invoice_custom_section, organization:) }
+    let(:params) { {billing_time: "anniversary", invoice_custom_section: {invoice_custom_section_ids: [section.id]}} }
+
+    it "rejects the edit and attaches nothing" do
+      expect(result.error.messages[:contract]).to eq(["contract_locked"])
+      expect(contract.reload.selected_invoice_custom_sections).to be_empty
+    end
+  end
+
+  context "when a terminated contract sends sections" do
+    let(:contract) { create(:contract, :terminated, organization:, customer:, catalog_plan:) }
+    let(:section) { create(:invoice_custom_section, organization:) }
+    let(:params) { {invoice_custom_section: {invoice_custom_section_ids: [section.id]}} }
+
+    it "rejects the edit" do
+      expect(result.error.messages[:contract]).to eq(["contract_locked"])
+      expect(contract.reload.selected_invoice_custom_sections).to be_empty
+    end
+  end
+
+  context "when skipping invoice custom sections" do
+    let(:params) { {invoice_custom_section: {skip_invoice_custom_sections: true}} }
+
+    before { create(:contract_applied_invoice_custom_section, organization:, contract:) }
+
+    it "flags the contract and removes the attached sections" do
+      expect(result).to be_success
+      expect(contract.reload.skip_invoice_custom_sections).to be(true)
+      expect(contract.applied_invoice_custom_sections).to be_empty
+    end
+  end
+
   context "when changing the plan" do
     let(:new_rate_card) { create(:rate_card, organization:) }
     let(:other_plan) { create(:catalog_plan, organization:) }

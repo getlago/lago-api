@@ -174,6 +174,18 @@ RSpec.describe ::V1::SubscriptionSerializer do
 
       expect(result["subscription"]["applied_invoice_custom_sections"]).to be_present
     end
+
+    context "with a link to a deleted section" do
+      let(:deleted_section) { create(:invoice_custom_section, organization: subscription.organization, deleted_at: Time.current) }
+
+      before { create(:subscription_applied_invoice_custom_section, subscription:, invoice_custom_section: deleted_section) }
+
+      it "skips the deleted section" do
+        result = JSON.parse(serializer.to_json)
+
+        expect(result["subscription"]["applied_invoice_custom_sections"].size).to eq(1)
+      end
+    end
   end
 
   context "when terminated with credit note" do

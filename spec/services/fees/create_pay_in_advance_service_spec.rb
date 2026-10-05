@@ -155,6 +155,102 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           "charges_to_datetime" => billing_segment.ended_at.iso8601(6)
         )
       end
+
+      context "with a legacy charge linked to the product" do
+        let(:product) { create(:product, :metered, organization:, billable_metric:, charge:) }
+
+        it "persists the product fee without its legacy charge" do
+          expect(fee_service.call.fees.sole.reload).to have_attributes(
+            fee_type: "product", charge_id: nil, contract_rate_card:
+          )
+        end
+      end
+
+      context "with a legacy add-on linked to the product" do
+        let(:add_on) { create(:add_on, organization:) }
+        let(:product) { create(:product, :metered, organization:, billable_metric:, add_on:) }
+
+        it "keeps the product fee distinct from a one-off add-on fee" do
+          expect(fee_service.call.fees.sole.reload).to have_attributes(
+            fee_type: "product", add_on_id: nil, charge_id: nil, contract_rate_card:
+          )
+        end
+      end
+
+      it "does not persist another product fee on retry" do
+        fee_service.call
+        result = nil
+
+        expect { result = fee_service.call }.not_to change(Fee, :count)
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq(pay_in_advance_event_transaction_id: ["pay_in_advance_fee_already_exists"])
+      end
+
+      context "when the card uses a product filter" do
+        let(:metric_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
+        let(:product_filter) { create(:product_filter, organization:, product:) }
+        let(:rate_card) { create(:rate_card, :advance, organization:, product:, product_filter:, display_on_invoice: false) }
+        let(:event_properties) { {"region" => "eu"} }
+
+        before do
+          create(:product_filter_value, organization:, product_filter:, billable_metric_filter: metric_filter, value: "eu")
+        end
+
+        it "returns a validation failure on retry for a filtered fee" do
+          fee = fee_service.call.fees.sole
+          retry_result = fee_service.call
+
+          expect(fee.product_filter).to eq(product_filter)
+          expect(retry_result).not_to be_success
+          expect(retry_result.error.messages).to eq(pay_in_advance_event_transaction_id: ["pay_in_advance_fee_already_exists"])
+          expect(Fee.where(pay_in_advance_event_transaction_id: event.transaction_id).count).to eq(1)
+        end
+      end
+
+      context "when two products share the metric" do
+        let(:other_product) { create(:product, :metered, organization:, billable_metric:) }
+        let(:other_rate_card) { create(:rate_card, :advance, organization:, product: other_product, display_on_invoice: false) }
+        let(:other_contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card: other_rate_card) }
+        let(:other_billing_segment) do
+          create(:billing_segment, organization:, customer:, contract:, contract_rate_card: other_contract_rate_card)
+        end
+        let(:other_metered_item) do
+          Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: other_billing_segment, event:)
+        end
+        let(:other_fee_service) { described_class.new(metered_item: other_metered_item, billing_context:) }
+
+        it "persists one fee for each contract rate card" do
+          first = fee_service.call.fees.sole
+          second = other_fee_service.call.fees.sole
+
+          expect([first.contract_rate_card_id, second.contract_rate_card_id])
+            .to eq([contract_rate_card.id, other_contract_rate_card.id])
+          expect(Fee.where(pay_in_advance_event_transaction_id: event.transaction_id).count).to eq(2)
+        end
+      end
+
+      context "when a different transaction uses the same card" do
+        let(:other_event) do
+          Events::CommonFactory.new_instance(source: create(
+            :event,
+            external_subscription_id: contract.external_id,
+            external_customer_id: customer.external_id,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            properties: event_properties
+          ))
+        end
+        let(:other_metered_item) { metered_item.with_event(event: other_event) }
+        let(:other_fee_service) { described_class.new(metered_item: other_metered_item, billing_context:) }
+
+        it "persists a separate fee for each transaction" do
+          first = fee_service.call.fees.sole
+          second = other_fee_service.call.fees.sole
+
+          expect([first, second].map(&:pay_in_advance_event_transaction_id))
+            .to eq([event.transaction_id, other_event.transaction_id])
+        end
+      end
     end
 
     it "creates a fee" do
@@ -189,6 +285,15 @@ RSpec.describe Fees::CreatePayInAdvanceService do
         taxes_precise_amount_cents: 0.0
       )
       expect(result.fees.first.applied_taxes.count).to eq(0)
+    end
+
+    it "returns a validation failure when the charge fee already exists" do
+      fee_service.call
+
+      retry_result = fee_service.call
+
+      expect(retry_result.error.messages).to eq(pay_in_advance_event_transaction_id: ["pay_in_advance_fee_already_exists"])
+      expect(Fee.where(pay_in_advance_event_transaction_id: event.transaction_id).count).to eq(1)
     end
 
     it "does not create pricing unit usage" do

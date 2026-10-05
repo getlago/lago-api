@@ -778,7 +778,11 @@ RSpec.describe BillingSegments::ProcessService do
         expect(invoice.fees.count).to eq(4)
 
         [[segments.first, 8_000, 8_000, 16], [segments.last, 10_500, 3_500, 21]].each do |segment, base_cents, true_up_cents, unit_amount|
-          fees = invoice.fees.where("properties ->> 'billing_segment_id' = ?", segment.id)
+          fees = invoice.fees.matching_contract_period(
+            contract_rate_card_id: segment.contract_rate_card_id,
+            from_datetime: segment.started_at,
+            to_datetime: segment.ended_at
+          )
           fee = fees.find_by!(true_up_parent_fee_id: nil)
           true_up_fee = fees.where.not(true_up_parent_fee_id: nil).sole
 
