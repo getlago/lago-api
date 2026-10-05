@@ -432,6 +432,7 @@ DROP INDEX IF EXISTS public.index_x402_settlements_on_organization_id_and_paymen
 DROP INDEX IF EXISTS public.index_x402_settlements_on_organization_id;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_invoice_id;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_customer_id;
+DROP INDEX IF EXISTS public.index_x402_enabled_wallets_on_customer_id;
 DROP INDEX IF EXISTS public.index_x402_connections_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_wt_invoice_custom_sections_unique;
 DROP INDEX IF EXISTS public.index_webhooks_on_webhook_endpoint_id;
@@ -443,7 +444,6 @@ DROP INDEX IF EXISTS public.index_webhooks_on_endpoint_and_timestamps;
 DROP INDEX IF EXISTS public.index_webhooks_for_query;
 DROP INDEX IF EXISTS public.index_webhook_endpoints_on_webhook_url_and_organization_id;
 DROP INDEX IF EXISTS public.index_webhook_endpoints_on_organization_id;
-DROP INDEX IF EXISTS public.index_wallets_on_x402_enabled;
 DROP INDEX IF EXISTS public.index_wallets_on_ready_to_be_refreshed;
 DROP INDEX IF EXISTS public.index_wallets_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_wallets_on_organization_id_and_customer_id;
@@ -12313,13 +12313,6 @@ CREATE INDEX index_wallets_on_ready_to_be_refreshed ON public.wallets USING btre
 
 
 --
--- Name: index_wallets_on_x402_enabled; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_wallets_on_x402_enabled ON public.wallets USING btree (x402_enabled) WHERE x402_enabled;
-
-
---
 -- Name: index_webhook_endpoints_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12394,6 +12387,13 @@ CREATE UNIQUE INDEX index_wt_invoice_custom_sections_unique ON public.wallet_tra
 --
 
 CREATE UNIQUE INDEX index_x402_connections_on_organization_id_and_code ON public.x402_connections USING btree (organization_id, code) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_x402_enabled_wallets_on_customer_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_x402_enabled_wallets_on_customer_id ON public.wallets USING btree (customer_id) WHERE x402_enabled;
 
 
 --

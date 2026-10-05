@@ -183,7 +183,7 @@ end
 #  index_wallets_on_organization_id_and_customer_id  (organization_id,customer_id)
 #  index_wallets_on_payment_method_id                (payment_method_id)
 #  index_wallets_on_ready_to_be_refreshed            (ready_to_be_refreshed) WHERE ready_to_be_refreshed
-#  index_wallets_on_x402_enabled                     (x402_enabled) WHERE x402_enabled
+#  index_x402_enabled_wallets_on_customer_id         (customer_id) WHERE x402_enabled
 #
 # Foreign Keys
 #
