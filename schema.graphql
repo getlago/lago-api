@@ -1746,6 +1746,8 @@ type Contract {
   paymentMethodType: PaymentMethodTypeEnum!
   plan: CatalogPlan
   purchaseOrderNumber: String
+  selectedInvoiceCustomSections: [InvoiceCustomSection!]
+  skipInvoiceCustomSections: Boolean!
   startedAt: ISO8601DateTime
   status: ContractStatusEnum!
   terminatedAt: ISO8601DateTime
@@ -3352,6 +3354,7 @@ input CreateContractInput {
   endedAt: ISO8601DateTime
   externalCustomerId: String!
   externalId: String
+  invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   name: String
   paymentMethod: PaymentMethodReferenceInput
   planCode: String
@@ -15390,6 +15393,7 @@ input UpdateContractInput {
   External id of the contract to update
   """
   externalId: String!
+  invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   name: String
   paymentMethod: PaymentMethodReferenceInput
   planCode: String

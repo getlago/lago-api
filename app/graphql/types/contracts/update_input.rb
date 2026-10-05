@@ -19,6 +19,7 @@ module Types
 
       argument :billing_entity_id, ID, required: false
       argument :consolidate_invoice, Boolean, required: false
+      argument :invoice_custom_section, Types::InvoiceCustomSections::ReferenceInput, required: false
       argument :payment_method, Types::PaymentMethods::ReferenceInput, required: false
       argument :purchase_order_number, String, required: false
     end
