@@ -95,6 +95,10 @@ RSpec.describe Customers::RefreshWalletsService do
       expect(wallet.credits_ongoing_balance).to eq 1.0
     end
 
+    it "records what the wallet absorbs per billable metric, net of what pay in advance already billed" do
+      expect(result.wallets.first.ongoing_billable_metric_amounts).to eq({billable_metric.id => 900})
+    end
+
     it "marks customer as not awaiting wallet refresh" do
       expect { subject }.to change(customer, :awaiting_wallet_refresh).from(true).to(false)
     end

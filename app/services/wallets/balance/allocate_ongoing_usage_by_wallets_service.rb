@@ -7,7 +7,7 @@ module Wallets
     # threshold-based recurring rule is the exception: it absorbs everything and may go
     # negative (no cascade) so the rule can fire and refill it.
     class AllocateOngoingUsageByWalletsService < BaseService
-      Result = BaseResult[:wallet_allocations]
+      Result = BaseResult[:wallet_allocations, :billable_metric_amounts]
 
       def initialize(customer:, wallets:, current_usage_fees:, draft_invoices_fees:, progressive_billing_fees:, pay_in_advance_fees:)
         @customer = customer
@@ -21,7 +21,9 @@ module Wallets
       end
 
       def call
+        result.billable_metric_amounts = wallets.index_with { Hash.new(0) }
         result.wallet_allocations = calculate_wallet_allocations
+        result.billable_metric_amounts.transform_values! { |amounts| amounts.transform_values(&:round) }
         result
       end
 
@@ -56,6 +58,7 @@ module Wallets
             end
 
             allocations[meta[:wallet]] += take
+            result.billable_metric_amounts[meta[:wallet]][fee_key.second] += take if fee_key.first == "charge"
             remaining -= take
             budgets[currency] -= take
           end
