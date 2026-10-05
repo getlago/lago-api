@@ -1024,8 +1024,6 @@ DROP INDEX IF EXISTS public.idx_unique_feature_per_catalog_plan;
 DROP INDEX IF EXISTS public.idx_subscription_unique;
 DROP INDEX IF EXISTS public.idx_privileges_code_unique_per_feature;
 DROP INDEX IF EXISTS public.idx_pif_values_on_filter_metric_filter_and_value;
-DROP INDEX IF EXISTS public.idx_pay_in_advance_duplication_guard_contract_rate_card_filter;
-DROP INDEX IF EXISTS public.idx_pay_in_advance_duplication_guard_contract_rate_card;
 DROP INDEX IF EXISTS public.idx_pay_in_advance_duplication_guard_charge_filter;
 DROP INDEX IF EXISTS public.idx_pay_in_advance_duplication_guard_charge;
 DROP INDEX IF EXISTS public.idx_on_wallet_transaction_id_ac2826109e;
@@ -7917,20 +7915,6 @@ CREATE UNIQUE INDEX idx_pay_in_advance_duplication_guard_charge ON public.fees U
 --
 
 CREATE UNIQUE INDEX idx_pay_in_advance_duplication_guard_charge_filter ON public.fees USING btree (pay_in_advance_event_transaction_id, charge_id, charge_filter_id) WHERE ((deleted_at IS NULL) AND (charge_filter_id IS NOT NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false) AND (original_fee_id IS NULL));
-
-
---
--- Name: idx_pay_in_advance_duplication_guard_contract_rate_card; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_pay_in_advance_duplication_guard_contract_rate_card ON public.fees USING btree (pay_in_advance_event_transaction_id, contract_rate_card_id) WHERE ((deleted_at IS NULL) AND (charge_id IS NULL) AND (contract_rate_card_id IS NOT NULL) AND (product_filter_id IS NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false) AND (original_fee_id IS NULL));
-
-
---
--- Name: idx_pay_in_advance_duplication_guard_contract_rate_card_filter; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_pay_in_advance_duplication_guard_contract_rate_card_filter ON public.fees USING btree (pay_in_advance_event_transaction_id, contract_rate_card_id, product_filter_id) WHERE ((deleted_at IS NULL) AND (charge_id IS NULL) AND (contract_rate_card_id IS NOT NULL) AND (product_filter_id IS NOT NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false) AND (original_fee_id IS NULL));
 
 
 --
@@ -15329,7 +15313,6 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20261002142357'),
-('20260930113824'),
 ('20260929105639'),
 ('20260928140425'),
 ('20260928140424'),
