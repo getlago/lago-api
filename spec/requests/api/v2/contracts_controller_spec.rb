@@ -187,6 +187,22 @@ RSpec.describe Api::V2::ContractsController do
       end
     end
 
+    context "with a section deleted while the contract still links it" do
+      let(:section) { create(:invoice_custom_section, organization:) }
+
+      before do
+        create(:contract_applied_invoice_custom_section, organization:, contract:, invoice_custom_section: section)
+        section.discard!
+      end
+
+      it "returns the contract without the deleted section" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:applied_invoice_custom_sections]).to be_empty
+      end
+    end
+
     context "when the external id contains a dot" do
       let(:contract) { create(:contract, organization:, customer:, external_id: "contract.2026-01") }
 

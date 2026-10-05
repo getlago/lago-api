@@ -53,9 +53,10 @@ module V2
       ).serialize[:applied_rate_cards]
     end
 
+    # A section deleted before its links were cleaned up is skipped, not served as nil.
     def applied_invoice_custom_sections
       ::CollectionSerializer.new(
-        model.applied_invoice_custom_sections.includes(:invoice_custom_section),
+        model.applied_invoice_custom_sections.joins(:invoice_custom_section).includes(:invoice_custom_section),
         ::V1::AppliedInvoiceCustomSectionSerializer,
         collection_name: "applied_invoice_custom_sections"
       ).serialize[:applied_invoice_custom_sections]

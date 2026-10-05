@@ -56,6 +56,19 @@ RSpec.describe Mutations::Contracts::Update do
     end
   end
 
+  context "when skipping invoice custom sections" do
+    let(:input) { {externalId: contract.external_id, invoiceCustomSection: {skipInvoiceCustomSections: true}} }
+
+    before { create(:contract_applied_invoice_custom_section, organization:, contract:) }
+
+    it "flags the contract and drops its sections" do
+      result_data = execution["data"]["updateContract"]
+
+      expect(result_data["skipInvoiceCustomSections"]).to be(true)
+      expect(result_data["selectedInvoiceCustomSections"]).to be_empty
+    end
+  end
+
   context "when changing the plan" do
     let(:other_plan) { create(:catalog_plan, organization:) }
     let(:input) { {externalId: contract.external_id, planCode: other_plan.code} }
