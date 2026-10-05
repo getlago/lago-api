@@ -140,6 +140,29 @@ RSpec.describe Credits::AllocatePrepaidCreditsByWalletsService do
         end
       end
 
+      context "when several billable metrics each carry half a cent" do
+        let(:wallets) { [priority_wallet] }
+        let(:amount_cents) { 40 }
+        let(:fee) do
+          create(:charge_fee, invoice:, subscription:, amount_cents: 21, precise_amount_cents: 21,
+            taxes_precise_amount_cents: 0, precise_credit_notes_amount_cents: 0.5)
+        end
+        let(:other_fee) do
+          create(:charge_fee, invoice:, subscription:, amount_cents: 11, precise_amount_cents: 11,
+            taxes_precise_amount_cents: 0, precise_credit_notes_amount_cents: 0.5)
+        end
+
+        before { other_fee }
+
+        it "never records more than the wallet transaction" do
+          expect(result.wallet_transactions[priority_wallet].round).to eq(31)
+          expect(result.billable_metric_amounts[priority_wallet]).to eq({
+            billable_metric_id => 21,
+            other_fee.charge.billable_metric_id => 10
+          })
+        end
+      end
+
       context "when the fee targets a wallet" do
         around { |test| lago_premium! { test.run } }
 
