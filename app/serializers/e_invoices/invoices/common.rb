@@ -44,7 +44,7 @@ module EInvoices
       end
 
       def payment_terms_description
-        invoice.snapshotted_payment_term.label
+        invoice.payment_term_label
       end
 
       def allowances
