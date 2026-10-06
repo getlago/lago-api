@@ -85,28 +85,34 @@ module X402
           payment: verified_payment.payment,
           payment_requirements: verified_payment.payment_requirements
         )
-        settled_hash = settled_transaction(settle_result)
-        malformed = settle_result.settled? && settled_hash.nil?
-        log_failure("malformed_transaction") if malformed
+        problem = answer_problem(settle_result)
+        log_failure(problem) if problem
 
         record(
           settlement,
           payload: settlement.payload.merge("settle_response" => settle_result.response),
-          error_reason: malformed ? "malformed_response" : settle_result.error_reason,
-          transaction_hash: pending_hash(settle_result)
+          error_reason: problem || settle_result.error_reason,
+          transaction_hash: problem ? nil : pending_hash(settle_result)
         )
 
-        result.outcome = settled_hash ? :settled : :pending
-        result.transaction_hash = settled_hash
+        settled = settle_result.settled? && problem.nil?
+        result.outcome = settled ? :settled : :pending
+        result.transaction_hash = settled ? settle_result.transaction : nil
       rescue X402::Facilitator::CredentialError => e
         record_unsettled(settlement, "credential_error", e)
       rescue X402::Facilitator::RateLimitError => e
         record_unsettled(settlement, "rate_limited", e)
       end
 
-      def settled_transaction(settle_result)
-        if settle_result.settled? && well_formed_hash?(settle_result.transaction)
-          settle_result.transaction
+      def answer_problem(settle_result)
+        return unless settle_result.outcome.in?(%i[settled settlement_pending])
+
+        if settle_result.network != network
+          "network_mismatch"
+        elsif settle_result.payer.present? && X402::Network.normalize_address(settle_result.payer, family: verified_payment.family) != verified_payment.payer_address
+          "payer_mismatch"
+        elsif settle_result.settled? && !well_formed_hash?(settle_result.transaction)
+          "malformed_response"
         end
       end
 

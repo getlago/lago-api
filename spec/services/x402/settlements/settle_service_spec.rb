@@ -53,6 +53,27 @@ describe X402::Settlements::SettleService do
       end
     end
 
+    shared_examples "a mismatched answer" do |reason|
+      it_behaves_like "a pending outcome"
+
+      it "records the mismatch" do
+        expect(settlement.error_reason).to eq(reason)
+      end
+
+      it "keeps the answer in the payload" do
+        expect(settlement.payload["settle_response"]).to eq(settle_answer.as_json)
+      end
+
+      it "logs the mismatch" do
+        result
+        expect(Rails.logger).to have_received(:warn).with(/reason=#{reason}/)
+      end
+
+      it "stores no hash" do
+        expect(settlement.transaction_hash).to be_nil
+      end
+    end
+
     shared_examples "a refusal before settle" do |errors|
       it "fails with the exact messages" do
         expect(result.error.messages).to eq(errors)
@@ -277,7 +298,7 @@ describe X402::Settlements::SettleService do
 
         it "logs the malformed transaction" do
           result
-          expect(Rails.logger).to have_received(:warn).with(/reason=malformed_transaction/)
+          expect(Rails.logger).to have_received(:warn).with(/reason=malformed_response/)
         end
       end
     end
@@ -325,6 +346,54 @@ describe X402::Settlements::SettleService do
 
       it "stores no hash" do
         expect(settlement.transaction_hash).to be_nil
+      end
+    end
+
+    context "when checking the settle answer against the payment" do
+      let(:settle_answer) { {success: true, transaction: "0x#{"ef" * 32}", network: "eip155:84532", payer: payer_address} }
+      let(:settle_status) { 200 }
+
+      before { stub_cdp_answer("/settle", status: settle_status, body: settle_answer) }
+
+      context "with another network" do
+        let(:settle_answer) { super().merge(network: "eip155:8453") }
+
+        it_behaves_like "a mismatched answer", "network_mismatch"
+      end
+
+      context "without a network" do
+        let(:settle_answer) { super().except(:network) }
+
+        it_behaves_like "a mismatched answer", "network_mismatch"
+      end
+
+      context "with another payer" do
+        let(:settle_answer) { super().merge(payer: "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed") }
+
+        it_behaves_like "a mismatched answer", "payer_mismatch"
+      end
+
+      context "with the payer in lowercase" do
+        let(:settle_answer) { super().merge(payer: payer_address.downcase) }
+
+        it "settles" do
+          expect(result).to have_attributes(outcome: :settled, transaction_hash: "0x#{"ef" * 32}")
+        end
+      end
+
+      context "without a payer" do
+        let(:settle_answer) { super().except(:payer) }
+
+        it "settles" do
+          expect(result).to have_attributes(outcome: :settled, transaction_hash: "0x#{"ef" * 32}")
+        end
+      end
+
+      context "with a pending answer on another network" do
+        let(:settle_answer) { {success: false, errorReason: "settlement_pending", network: "eip155:8453", transaction: "0x#{"cd" * 32}"} }
+        let(:settle_status) { 500 }
+
+        it_behaves_like "a mismatched answer", "network_mismatch"
       end
     end
 

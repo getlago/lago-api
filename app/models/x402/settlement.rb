@@ -18,7 +18,7 @@ module X402
     enum :status, STATUSES, validate: true
     enum :settled_by, SETTLED_BY, prefix: true, validate: true
 
-    attr_readonly :payer_address, :payee_address, :payment_digest, :purchase_settings
+    attr_readonly :payer_address, :payee_address, :payment_digest, :purchase_settings, :invoice_id
 
     before_validation :normalize_addresses, on: :create
 

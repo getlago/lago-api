@@ -231,6 +231,11 @@ describe X402::Settlement do
 
   describe "read-only attributes" do
     let(:settlement) { create(:x402_settlement) }
+    let(:other_invoice) { create(:invoice) }
+
+    it "refuses to move the settlement to another invoice" do
+      expect { settlement.invoice = other_invoice }.to raise_error(ActiveRecord::ReadonlyAttributeError)
+    end
 
     it "refuses to rewrite a verified fact" do
       expect { settlement.payer_address = "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed" }.to raise_error(ActiveRecord::ReadonlyAttributeError)
