@@ -1,7 +1,10 @@
 # frozen_string_literal: true
 
 class CreateProductEventsRawMv < ActiveRecord::Migration[8.0]
+  # The queue is skipped when the product topic is not configured.
   def up
+    return unless table_exists?(:product_events_raw_queue)
+
     safety_assured do
       execute <<~SQL
         CREATE MATERIALIZED VIEW IF NOT EXISTS product_events_raw_mv TO product_events_raw AS
