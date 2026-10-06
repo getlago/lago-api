@@ -89,6 +89,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     expect(result.from_datetime).to eq(Time.zone.parse("2026-09-01"))
     expect(result.to_datetime).to eq(Time.zone.parse("2026-09-30").end_of_day)
     expect(result.currency).to eq("EUR")
+    expect(result).to have_attributes(subscription:, group_by: "team", limit: 50, offset: 0)
   end
 
   it "returns the units, amount and events count of each charge" do
@@ -160,6 +161,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
       expect(summary(result.rows)).to eq([["eng", 75_200, 3]])
       expect(result.groups_count).to eq(2)
       expect(result.totals).to have_attributes(amount_cents: 180_200, events_count: 5)
+      expect(result).to have_attributes(limit: 1, offset: 1)
     end
 
     context "when on the first page" do

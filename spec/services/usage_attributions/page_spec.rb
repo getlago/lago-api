@@ -24,4 +24,20 @@ RSpec.describe UsageAttributions::Page do
       it { expect(page.total_pages).to eq(3) }
     end
   end
+
+  describe ".from_query_result" do
+    subject(:page) { described_class.from_query_result(result) }
+
+    let(:result) do
+      UsageAttributions::QueryService::Result.new.tap do |result|
+        result.limit = 50
+        result.offset = 100
+        result.groups_count = 120
+      end
+    end
+
+    it "converts the offset to a page" do
+      expect(page).to have_attributes(current_page: 3, limit_value: 50, total_count: 120, total_pages: 3)
+    end
+  end
 end

@@ -9,11 +9,6 @@ module Resolvers
 
     QUERY_LIMIT_ERRORS = %w[too_many_groups query_timeout memory_limit_exceeded].freeze
 
-    AttributedUsage = Data.define(
-      :subscription_id, :external_subscription_id, :group_by, :basis, :currency, :from_datetime, :to_datetime,
-      :rows, :unattributed, :totals, :metadata
-    )
-
     description "Query the attributed usage of one tree level of an active subscription"
 
     argument :filters, [Types::AttributedUsage::FilterInput], required: false
@@ -55,21 +50,8 @@ module Resolvers
         limit:,
         offset: (page - 1) * limit
       )
-      return query_error(result) if result.failure?
 
-      AttributedUsage.new(
-        subscription_id: subscription.id,
-        external_subscription_id: subscription.external_id,
-        group_by:,
-        basis: result.basis,
-        currency: result.currency,
-        from_datetime: result.from_datetime,
-        to_datetime: result.to_datetime,
-        rows: result.rows,
-        unattributed: result.unattributed,
-        totals: result.totals,
-        metadata: UsageAttributions::Page.new(current_page: page, limit_value: limit, total_count: result.groups_count)
-      )
+      result.success? ? result : query_error(result)
     end
 
     private

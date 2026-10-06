@@ -19,6 +19,18 @@ module Types
       field :unattributed, Types::AttributedUsage::Aggregate, null: false
 
       field :metadata, GraphqlPagination::CollectionMetadataType, null: false
+
+      def subscription_id
+        object.subscription.id
+      end
+
+      def external_subscription_id
+        object.subscription.external_id
+      end
+
+      def metadata
+        UsageAttributions::Page.from_query_result(object)
+      end
     end
   end
 end
