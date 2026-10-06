@@ -4,21 +4,21 @@ module Invoices
   class AdvanceChargesService < BaseService
     Result = BaseResult[:invoice]
 
-    def initialize(billing_contexts:, billing_at:, metered_items: [])
+    def initialize(billing_contexts:, billing_at:)
       @billing_contexts = billing_contexts
       @billing_at = billing_at
-      @metered_items = metered_items
 
       @customer = billing_contexts&.first&.customer
-      @organization = customer&.organization
       @currency = billing_contexts&.first&.currency
 
       super
     end
 
     def call
-      return result unless has_charges_with_statement?
       return result if pending_billing_contexts_with_fees.empty?
+      return result unless Fees::RegroupingChargeService.call!(
+        billing_contexts: pending_billing_contexts_with_fees
+      ).regrouping_charge
 
       invoices = create_group_invoices
 
@@ -41,23 +41,7 @@ module Invoices
 
     private
 
-    attr_reader :billing_contexts, :billing_at, :metered_items, :customer, :organization, :currency
-
-    # Apply the charges_to_datetime upper-bound only for regular periodic billing
-    # (i.e., no upgrade/downgrade/termination context). We consider it regular when
-    # every source subscription is active AND has no pending next subscription AND
-    # is not being terminated.
-    def apply_charges_to_datetime_condition?
-      billing_contexts.all? do |billing_context|
-        billing_context.active? && billing_context.next_subscription.nil? && !billing_context.terminated?
-      end
-    end
-
-    def filter_charges_to_datetime(relation)
-      return relation unless apply_charges_to_datetime_condition?
-
-      relation.where("(properties ->> 'charges_to_datetime') IS NULL OR (properties ->> 'charges_to_datetime')::timestamp <= ?", billing_at)
-    end
+    attr_reader :billing_contexts, :billing_at, :customer, :currency
 
     def pending_billing_contexts_with_fees
       return [] unless customer
@@ -65,37 +49,26 @@ module Invoices
       # NOTE: filter all active/terminated subscriptions having non-invoiceable (in advance) fees not yet attached to an invoice
       @pending_billing_contexts_with_fees ||= customer.subscriptions
         .where(
-          id: Fee.joins(:subscription)
-            .where(invoice_id: nil, payment_status: :succeeded)
-            .where("succeeded_at <= ?", billing_at)
-            .then { |rel| filter_charges_to_datetime(rel) }
-            .where(subscriptions: {
-              customer_id: customer.id,
-              external_id: billing_contexts.map(&:external_id).uniq,
-              status: [:active, :terminated]
-            })
-            .select("DISTINCT(subscriptions.id)")
+          id: charge_fees_resolver.call.select("DISTINCT(subscriptions.id)")
         )
         .map { |subscription| Billing::Context.from(subscription:) }
     end
 
-    def has_charges_with_statement?
-      Charge.where(
-        plan_id: pending_billing_contexts_with_fees.filter_map(&:plan_id).uniq,
-        pay_in_advance: true,
-        invoiceable: false,
-        regroup_paid_fees: :invoice
-      ).any?
+    def charge_fees_resolver
+      @charge_fees_resolver ||= Fees::AdvanceChargesToDatetimeFilterResolver.new(
+        billing_contexts:, billing_at:, customer:
+      )
     end
 
     def create_manual_payment(invoice)
-      amount_cents = invoice.total_amount_cents
-      reference = I18n.t("invoice.charges_paid_in_advance")
-      created_at = invoice.created_at
+      params = {
+        invoice_id: invoice.id,
+        amount_cents: invoice.total_amount_cents,
+        reference: I18n.t("invoice.charges_paid_in_advance"),
+        created_at: invoice.created_at
+      }
 
-      params = {invoice_id: invoice.id, amount_cents:, reference:, created_at:}
-
-      ::Payments::ManualCreateJob.perform_later(organization:, params:)
+      ::Payments::ManualCreateJob.perform_later(organization: invoice.organization, params:)
     end
 
     # NOTE: The re-expanded subscription set (matched by external_id) can span several
@@ -112,13 +85,9 @@ module Invoices
 
       ActiveRecord::Base.transaction do
         invoice = create_generating_invoice(billing_contexts_group)
-        invoice.invoice_subscriptions.each do |is|
-          is.subscription.fees
-            .where(invoice: nil, payment_status: :succeeded)
-            .where("succeeded_at <= ?", is.timestamp)
-            .then { |rel| filter_charges_to_datetime(rel) }
-            .update_all(invoice_id: invoice.id) # rubocop:disable Rails/SkipsModelValidations
-        end
+        Fees::AdvanceChargesService.call!(
+          invoice:, billing_contexts: billing_contexts_group, charge_fees_resolver:, billing_at:
+        )
 
         if invoice.fees.empty?
           invoice = nil
