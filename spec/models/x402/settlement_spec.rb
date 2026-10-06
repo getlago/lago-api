@@ -81,6 +81,28 @@ describe X402::Settlement do
       it { expect(settlement.errors.where(:invoice, :blank)).to be_present }
     end
 
+    describe "purchase settings validation" do
+      subject(:settlement) { build(:x402_settlement, purchase_settings:) }
+
+      let(:purchase_settings) { nil }
+
+      before { settlement.valid? }
+
+      it { expect(settlement.errors.where(:purchase_settings, :blank)).to be_present }
+
+      context "with empty purchase settings" do
+        let(:purchase_settings) { {} }
+
+        it { expect(settlement.errors.where(:purchase_settings, :blank)).to be_present }
+      end
+
+      context "with an invoice payment" do
+        subject(:settlement) { build(:x402_settlement, :invoice_payment) }
+
+        it { expect(settlement.errors.where(:purchase_settings)).to be_empty }
+      end
+    end
+
     describe "network validation" do
       subject(:settlement) { build(:x402_settlement, network: "eip155:1") }
 

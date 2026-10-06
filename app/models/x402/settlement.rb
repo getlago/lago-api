@@ -27,6 +27,7 @@ module X402
     validates :settled_amount_atomic, numericality: {only_integer: true, greater_than: 0}
     validates :settled_amount_cents, numericality: {only_integer: true}
     validates :invoice, presence: true, if: :invoice_payment?
+    validates :purchase_settings, presence: true, if: :credit_purchase?
     validate :validate_addresses
     validate :validate_connection, on: :create
 

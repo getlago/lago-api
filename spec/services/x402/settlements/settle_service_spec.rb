@@ -381,6 +381,19 @@ describe X402::Settlements::SettleService do
       end
     end
 
+    context "without purchase settings on a credit purchase" do
+      let(:purchase_settings) { nil }
+
+      it "fails on the purchase settings" do
+        expect(result.error.messages).to eq(purchase_settings: ["value_is_mandatory"])
+      end
+
+      it "does not request /settle" do
+        result
+        expect(a_request(:post, "#{cdp_facilitator_url}/settle")).not_to have_been_made
+      end
+    end
+
     context "with a connection paying out to another address" do
       let(:x402_connection) do
         create(
