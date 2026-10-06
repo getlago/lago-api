@@ -23,15 +23,7 @@ module Invoices
       invoices = create_group_invoices
 
       invoices.each do |invoice|
-        next if invoice.closed?
-
-        SendWebhookJob.perform_later("invoice.created", invoice)
-        Utils::ActivityLog.produce(invoice, "invoice.created")
-        create_manual_payment(invoice)
-        Invoices::GenerateDocumentsJob.perform_later(invoice:, notify: false)
-        Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
-        Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
-        Utils::SegmentTrack.invoice_created(invoice)
+        Invoices::FinalizeAndPublishAdvanceChargesService.call!(invoice:)
       end
 
       result.invoice = invoices.last
@@ -58,17 +50,6 @@ module Invoices
       @charge_fees_resolver ||= Fees::AdvanceChargesToDatetimeFilterResolver.new(
         billing_contexts:, billing_at:
       )
-    end
-
-    def create_manual_payment(invoice)
-      params = {
-        invoice_id: invoice.id,
-        amount_cents: invoice.total_amount_cents,
-        reference: I18n.t("invoice.charges_paid_in_advance"),
-        created_at: invoice.created_at
-      }
-
-      ::Payments::ManualCreateJob.perform_later(organization: invoice.organization, params:)
     end
 
     # NOTE: The re-expanded subscription set (matched by external_id) can span several

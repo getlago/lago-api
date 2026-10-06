@@ -230,8 +230,12 @@ module BillingSegments
         .select(:invoice_id)
 
       Invoice.where(id: invoice_ids).find_each do |invoice|
-        Invoices::TransitionToFinalStatusService.call!(invoice:)
-        invoice.save! if invoice.changed?
+        if invoice.advance_charges?
+          Invoices::FinalizeAndPublishAdvanceChargesService.call!(invoice:)
+        else
+          Invoices::TransitionToFinalStatusService.call!(invoice:)
+          invoice.save! if invoice.changed?
+        end
       end
     end
   end

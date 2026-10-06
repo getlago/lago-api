@@ -192,6 +192,8 @@ RSpec.describe BillingSegments::ProcessService do
           before do
             paid_fee
             allow(Fees::AdvanceChargesService).to receive(:call!).and_call_original
+            allow(Invoices::CreateGeneratingService).to receive(:call!).and_call_original
+            allow(Invoices::FinalizeAndPublishAdvanceChargesService).to receive(:call!).and_call_original
           end
 
           it "creates the advance invoice and completes the segment" do
@@ -205,7 +207,42 @@ RSpec.describe BillingSegments::ProcessService do
             )
             expect(invoice.fees).to contain_exactly(paid_fee)
             expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
+            expect(Invoices::CreateGeneratingService).to have_received(:call!).once
             expect(Fees::AdvanceChargesService).to have_received(:call!).once
+            expect(Invoices::FinalizeAndPublishAdvanceChargesService).to have_received(:call!).once.with(invoice:)
+          end
+
+          it "does not publish or record another payment on a repeated run" do
+            result
+
+            expect { described_class.call!(customer:) }.not_to have_enqueued_job(Payments::ManualCreateJob)
+            expect(Invoices::FinalizeAndPublishAdvanceChargesService).to have_received(:call!).once
+          end
+
+          it "enqueues the advance invoice lifecycle after finalization" do
+            invoice = result.invoices.sole
+
+            expect(SendWebhookJob).to have_been_enqueued.with("invoice.created", invoice)
+            expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
+            expect(Invoices::GenerateDocumentsJob).to have_been_enqueued.with(invoice:, notify: false)
+            expect(SegmentTrackJob).to have_been_enqueued.once
+            expect(Payments::ManualCreateJob).to have_been_enqueued.once.with(
+              organization:,
+              params: {
+                invoice_id: invoice.id,
+                amount_cents: invoice.total_amount_cents,
+                reference: I18n.t("invoice.charges_paid_in_advance"),
+                created_at: invoice.created_at
+              }
+            )
+          end
+
+          it "records the paid fees so the invoice has no remaining balance" do
+            perform_enqueued_jobs(only: Payments::ManualCreateJob) { result }
+
+            invoice = result.invoices.sole.reload
+            expect(invoice.total_paid_amount_cents).to eq(invoice.total_amount_cents)
+            expect(invoice.total_due_amount_cents).to eq(0)
           end
 
           context "with customer invoice custom sections" do
@@ -246,6 +283,8 @@ RSpec.describe BillingSegments::ProcessService do
               expect(result.invoices).to eq([])
               expect(billing_segment.reload).to have_attributes(status: "done", invoice_id: nil)
               expect(paid_fee.reload.invoice_id).to be_nil
+              expect(Payments::ManualCreateJob).not_to have_been_enqueued
+              expect(SendWebhookJob).not_to have_been_enqueued.with("invoice.created", anything)
             end
           end
 
@@ -275,6 +314,39 @@ RSpec.describe BillingSegments::ProcessService do
 
               expect(billing_segment.reload).to have_attributes(status: "processing", invoice_id: nil)
               expect(paid_fee.reload.invoice_id).to be_nil
+            end
+          end
+
+          context "when finalization fails" do
+            let(:finalization_attempts) { [true, false] }
+
+            before do
+              allow(Invoices::TransitionToFinalStatusService).to receive(:call!).and_wrap_original do |original, **arguments|
+                raise ActiveRecord::RecordInvalid if finalization_attempts.shift
+
+                original.call(**arguments)
+              end
+            end
+
+            it "records the payment when finalization succeeds on retry" do
+              expect { result }.to raise_error(ActiveRecord::RecordInvalid)
+
+              invoice = billing_segment.reload.invoice
+              expect(invoice).to be_generating
+              expect(Payments::ManualCreateJob).not_to have_been_enqueued
+
+              expect(described_class.call!(customer:).invoices).to eq([])
+
+              expect(invoice.reload).to be_finalized
+              expect(Payments::ManualCreateJob).to have_been_enqueued.once.with(
+                organization:,
+                params: {
+                  invoice_id: invoice.id,
+                  amount_cents: invoice.total_amount_cents,
+                  reference: I18n.t("invoice.charges_paid_in_advance"),
+                  created_at: invoice.created_at
+                }
+              )
             end
           end
         end
