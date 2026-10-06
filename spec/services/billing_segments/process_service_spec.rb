@@ -55,6 +55,48 @@ RSpec.describe BillingSegments::ProcessService do
       billing_segment
     end
 
+    context "when a contract selects invoice custom sections" do
+      let(:section) { create(:invoice_custom_section, organization:) }
+
+      before do
+        create(:contract_applied_invoice_custom_section, organization:, contract:, invoice_custom_section: section)
+      end
+
+      it "copies the selection onto the periodic invoice" do
+        expect(result.invoices.sole.applied_invoice_custom_sections.pluck(:code)).to eq([section.code])
+      end
+    end
+
+    context "when a contract has no invoice custom section selection" do
+      let(:section) { create(:invoice_custom_section, organization:) }
+
+      before do
+        create(:billing_entity_applied_invoice_custom_section, organization:,
+          billing_entity: customer.billing_entity, invoice_custom_section: section)
+      end
+
+      it "uses the customer's billing entity fallback" do
+        expect(result.invoices.sole.applied_invoice_custom_sections.pluck(:code)).to eq([section.code])
+      end
+    end
+
+    context "when the contract skips invoice custom sections" do
+      let(:contract) do
+        create(:contract, organization:, customer:, consolidate_invoice:, purchase_order_number: purchase_number,
+          started_at: Time.zone.parse("2026-07-01"), skip_invoice_custom_sections: true)
+      end
+      let(:section) { create(:invoice_custom_section, organization:) }
+
+      before do
+        create(:billing_entity_applied_invoice_custom_section, organization:,
+          billing_entity: customer.billing_entity, invoice_custom_section: section)
+      end
+
+      it "does not apply the billing entity's fallback sections" do
+        expect(result.invoices.sole.applied_invoice_custom_sections).to be_empty
+      end
+    end
+
     describe "#pending_segments" do
       it "loads the shared rate card once for both association paths" do
         queries = []
@@ -274,6 +316,20 @@ RSpec.describe BillingSegments::ProcessService do
             code: second_billable_metric.code, timestamp: Time.zone.parse("2026-08-18"), properties: {})
           create(:event, organization:, customer:, external_subscription_id: second_contract.external_id,
             code: second_billable_metric.code, timestamp: Time.zone.parse("2026-08-25"), properties: {})
+        end
+
+        context "when both contracts select invoice custom sections" do
+          let(:first_section) { create(:invoice_custom_section, organization:) }
+          let(:second_section) { create(:invoice_custom_section, organization:) }
+
+          before do
+            create(:contract_applied_invoice_custom_section, organization:, contract:, invoice_custom_section: first_section)
+            create(:contract_applied_invoice_custom_section, organization:, contract: second_contract, invoice_custom_section: second_section)
+          end
+
+          it "includes the selections from both contracts" do
+            expect(result.invoices.sole.applied_invoice_custom_sections.pluck(:code)).to match_array([first_section.code, second_section.code])
+          end
         end
 
         it "creates a consolidated invoice with fees from both contracts using each contract's events" do
