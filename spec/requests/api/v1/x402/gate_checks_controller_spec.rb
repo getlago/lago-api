@@ -62,9 +62,9 @@ describe Api::V1::X402::GateChecksController, :premium do
   context "with the API key cache watched" do
     before { allow(ApiKeys::CacheService).to receive(:call).and_call_original }
 
-    it "reads the API key through the cache" do
+    it "reads the API key from the database" do
       subject
-      expect(ApiKeys::CacheService).to have_received(:call).with(anything, with_cache: true)
+      expect(ApiKeys::CacheService).to have_received(:call).with(anything, with_cache: false)
     end
   end
 
@@ -75,15 +75,6 @@ describe Api::V1::X402::GateChecksController, :premium do
       subject
       expect(response).to have_http_status(:unprocessable_content)
       expect(json[:error_details]).to eq(base: ["buyer_not_recognized"])
-    end
-  end
-
-  context "with the key usage cache watched" do
-    before { allow(Rails.cache).to receive(:write).and_call_original }
-
-    it "does not track the key usage" do
-      subject
-      expect(Rails.cache).not_to have_received(:write).with(/\Aapi_key_last_used_/, anything)
     end
   end
 

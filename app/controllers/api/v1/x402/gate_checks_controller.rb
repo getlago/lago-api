@@ -31,14 +31,6 @@ module Api
         def resource_name
           "x402"
         end
-
-        def cached_api_key?
-          true
-        end
-
-        def track_api_key_usage?
-          false
-        end
       end
     end
   end
