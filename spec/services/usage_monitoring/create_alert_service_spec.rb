@@ -545,6 +545,17 @@ RSpec.describe UsageMonitoring::CreateAlertService do
         end
       end
 
+      context "when an alert of the same type with the same code exists on the wallet" do
+        before { create(:wallet_balance_amount_alert, organization:, wallet:, code: "wallet1") }
+
+        it "returns an alert_already_exists failure" do
+          expect { result }.not_to change(UsageMonitoring::Alert, :count)
+
+          expect(result).to be_failure
+          expect(result.error.messages[:base]).to eq(["alert_already_exists"])
+        end
+      end
+
       context "when the same code is used on another wallet" do
         before do
           other = create(:wallet, organization:)

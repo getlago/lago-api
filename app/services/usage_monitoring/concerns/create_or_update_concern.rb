@@ -26,6 +26,12 @@ module UsageMonitoring
         result.not_found_failure!(resource: "billable_metric")
       end
 
+      def wallet_alert_type_taken?(wallet_id:, alert_type:)
+        return false if wallet_id.blank?
+
+        organization.alerts.where(wallet_id:, alert_type:, billable_metric_id: nil).exists?
+      end
+
       def wallet_alert_code_taken?(wallet_id:, code:, alert_type:, excluding_id: nil)
         return false if wallet_id.blank? || code.blank?
 

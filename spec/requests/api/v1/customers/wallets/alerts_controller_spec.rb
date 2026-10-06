@@ -348,7 +348,7 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
               thresholds: [{value: 2000}]
             },
             {
-              code: "other",
+              code: "duplicated",
               alert_type: "wallet_balance_amount",
               thresholds: [{value: 3000}]
             }
