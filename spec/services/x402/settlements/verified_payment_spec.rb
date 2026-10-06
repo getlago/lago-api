@@ -35,9 +35,7 @@ describe X402::Settlements::VerifiedPayment do
 
     context "when the authorization value differs from the requirement amount" do
       let(:x402_evm_requirements) { super().merge("amount" => "1050000") }
-      let(:x402_evm_payment) do
-        super().deep_merge("payload" => {"authorization" => {"value" => "1050001"}})
-      end
+      let(:x402_evm_payment) { super().deep_merge("payload" => {"authorization" => {"value" => "1050001"}}) }
 
       it "settles the authorized value, floored to cents" do
         expect(verified_payment).to have_attributes(settled_amount_atomic: 1_050_001, settled_amount_cents: 105)

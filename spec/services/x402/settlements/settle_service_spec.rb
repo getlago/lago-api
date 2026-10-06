@@ -233,23 +233,98 @@ describe X402::Settlements::SettleService do
 
     [401, 402, 403].each do |status|
       context "with a #{status} answer" do
-        before { stub_cdp_answer("/settle", status:, body: {errorType: "unauthorized", errorMessage: "no"}) }
+        before { stub_cdp_answer("/settle", status:, body: {errorType: "unauthorized", errorMessage: "no", correlationId: "corr-#{status}"}) }
 
         it_behaves_like "a pending outcome"
 
         it "records the reason" do
           expect(settlement.error_reason).to eq("credential_error")
         end
+
+        it "records the facilitator's details" do
+          expect(settlement.payload["settle_response"]).to eq("httpStatus" => status, "errorType" => "unauthorized", "correlationId" => "corr-#{status}")
+        end
       end
     end
 
     context "with a 429 answer" do
-      before { stub_cdp_answer("/settle", status: 429, body: {errorType: "rate_limit_exceeded", errorMessage: "slow down"}) }
+      before { stub_cdp_answer("/settle", status: 429, body: {errorType: "rate_limit_exceeded", errorMessage: "slow down", correlationId: "corr-429"}) }
 
       it_behaves_like "a pending outcome"
 
       it "records the reason" do
         expect(settlement.error_reason).to eq("rate_limited")
+      end
+
+      it "records the facilitator's details" do
+        expect(settlement.payload["settle_response"]).to eq("httpStatus" => 429, "errorType" => "rate_limit_exceeded", "correlationId" => "corr-429")
+      end
+    end
+
+    [123, "not-a-hash"].each do |transaction|
+      context "with a settled answer whose transaction is #{transaction.inspect}" do
+        before { stub_cdp_answer("/settle", status: 200, body: {success: true, transaction:, network: "eip155:84532"}) }
+
+        it_behaves_like "a pending outcome"
+
+        it "records the answer as malformed" do
+          expect(settlement.error_reason).to eq("malformed_response")
+        end
+
+        it "keeps the answer in the payload" do
+          expect(settlement.payload["settle_response"]["transaction"]).to eq(transaction)
+        end
+
+        it "logs the malformed transaction" do
+          result
+          expect(Rails.logger).to have_received(:warn).with(/reason=malformed_transaction/)
+        end
+      end
+    end
+
+    context "with a pending settlement whose hash is malformed" do
+      before { stub_cdp_answer("/settle", status: 500, body: {success: false, errorReason: "settlement_pending", network: "eip155:84532", transaction: "not-a-hash"}) }
+
+      it_behaves_like "a pending outcome"
+
+      it "stores no hash" do
+        expect(settlement.transaction_hash).to be_nil
+      end
+    end
+
+    context "with a settled answer that cannot be stored" do
+      let(:settled_hash) { "0x#{"ef" * 32}" }
+
+      before { stub_cdp_answer("/settle", status: 200, body: {success: true, transaction: settled_hash, network: "eip155:84532", note: "a\u0000b"}) }
+
+      it "reports the settled outcome" do
+        expect(result).to have_attributes(outcome: :settled, transaction_hash: settled_hash)
+      end
+
+      it "leaves the row pending without the answer" do
+        expect(settlement.status).to eq("pending")
+        expect(settlement.payload).not_to have_key("settle_response")
+      end
+
+      it "logs the failure" do
+        result
+        expect(Rails.logger).to have_received(:warn).with(/reason=record_failed/)
+      end
+
+      it "leaves the row updatable by the caller" do
+        expect(result.settlement.update!(status: "settled", transaction_hash: settled_hash)).to be(true)
+      end
+    end
+
+    context "with a pending settlement whose hash another row holds" do
+      let(:fault) { :settlement_pending }
+
+      before { create(:x402_settlement, :failed, organization:, x402_connection: other_connection, transaction_hash: "0x#{"cd" * 32}") }
+
+      it_behaves_like "a pending outcome"
+
+      it "stores no hash" do
+        expect(settlement.transaction_hash).to be_nil
       end
     end
 
@@ -340,6 +415,12 @@ describe X402::Settlements::SettleService do
         expect(settlement.invoice).to eq(invoice)
       end
 
+      context "with an invoice of another organization" do
+        let(:invoice) { create(:invoice) }
+
+        it_behaves_like "a refusal before settle", {invoice: ["must_belong_to_same_organization"]}
+      end
+
       context "when an earlier attempt is pending for the invoice" do
         before { create(:x402_settlement, :pending, :invoice_payment, organization:, x402_connection: other_connection, invoice:) }
 
@@ -363,6 +444,26 @@ describe X402::Settlements::SettleService do
 
       it "records the payee" do
         expect(settlement.payee_address).to eq("HHU1aLQQCbCzW9ebjFTntq2vkvsQsxkDyPjMsW2WtiLG")
+      end
+
+      context "with a settled answer" do
+        let(:signature) { X402::Base58.encode("\xAB".b * 64) }
+
+        before { stub_cdp_answer("/settle", status: 200, body: {success: true, transaction: signature, network: "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"}) }
+
+        it "reports the signature" do
+          expect(result).to have_attributes(outcome: :settled, transaction_hash: signature)
+        end
+      end
+
+      context "with a settled answer carrying an EVM hash" do
+        before { stub_cdp_answer("/settle", status: 200, body: {success: true, transaction: "0x#{"ef" * 32}", network: "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"}) }
+
+        it_behaves_like "a pending outcome"
+
+        it "records the answer as malformed" do
+          expect(settlement.error_reason).to eq("malformed_response")
+        end
       end
     end
 

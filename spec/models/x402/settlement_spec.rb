@@ -74,11 +74,19 @@ describe X402::Settlement do
     end
 
     describe "invoice validation" do
-      subject(:settlement) { build(:x402_settlement, :invoice_payment, invoice: nil) }
+      subject(:settlement) { build(:x402_settlement, :invoice_payment, invoice:) }
+
+      let(:invoice) { nil }
 
       before { settlement.valid? }
 
       it { expect(settlement.errors.where(:invoice, :blank)).to be_present }
+
+      context "with an invoice of another organization" do
+        let(:invoice) { create(:invoice) }
+
+        it { expect(settlement.errors.where(:invoice, :must_belong_to_same_organization)).to be_present }
+      end
     end
 
     describe "purchase settings validation" do

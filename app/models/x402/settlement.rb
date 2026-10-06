@@ -30,6 +30,7 @@ module X402
     validates :purchase_settings, presence: true, if: :credit_purchase?
     validate :validate_addresses
     validate :validate_connection, on: :create
+    validate :validate_invoice, on: :create
 
     scope :pending_reconciliation, -> { pending.where(reconcile_after: ..Time.current) }
 
@@ -64,6 +65,12 @@ module X402
 
       if x402_connection && family
         validate_connection_terms
+      end
+    end
+
+    def validate_invoice
+      if invoice && invoice.organization_id != organization_id
+        errors.add(:invoice, :must_belong_to_same_organization)
       end
     end
 
