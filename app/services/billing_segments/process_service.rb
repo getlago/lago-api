@@ -89,6 +89,10 @@ module BillingSegments
         invoice.fees.reload
 
         Invoices::ComputeAmountsFromFees.call!(invoice:)
+        Invoices::ApplyInvoiceCustomSectionsService.call!(
+          invoice:,
+          resources: segments.map(&:contract).uniq.map { |contract| Invoices::ApplyInvoiceCustomSectionsService::Resource.from(resource: contract) }
+        )
         invoice.save!
         segments.each { |segment| segment.update!(status: :done, invoice:) }
       end
