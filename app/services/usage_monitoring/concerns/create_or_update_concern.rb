@@ -29,7 +29,7 @@ module UsageMonitoring
       def wallet_alert_type_taken?(wallet_id:, alert_type:)
         return false if wallet_id.blank?
 
-        organization.alerts.where(wallet_id:, alert_type:, billable_metric_id: nil).exists?
+        organization.alerts.where(wallet_id:, alert_type:).exists?
       end
 
       def wallet_alert_code_taken?(wallet_id:, code:, alert_type:, excluding_id: nil)

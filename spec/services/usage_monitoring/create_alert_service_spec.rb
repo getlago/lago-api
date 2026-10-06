@@ -556,15 +556,6 @@ RSpec.describe UsageMonitoring::CreateAlertService do
         end
       end
 
-      context "when an alert of the same type with another code exists on the wallet" do
-        before { create(:wallet_balance_amount_alert, organization:, wallet:, code: "other") }
-
-        it "returns an alert_already_exists failure" do
-          expect(result).to be_failure
-          expect(result.error.messages).to eq(base: ["alert_already_exists"])
-        end
-      end
-
       context "when the type is taken on the wallet and the code is held by an alert of another type" do
         before do
           create(:wallet_balance_amount_alert, organization:, wallet:, code: "other")
