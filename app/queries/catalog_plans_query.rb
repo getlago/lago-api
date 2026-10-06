@@ -2,11 +2,16 @@
 
 class CatalogPlansQuery < BaseQuery
   Result = BaseResult[:catalog_plans]
-  Filters = BaseFilters[:product_ids, :product_filter_ids, :product_category_ids, :rate_card_ids]
+
+  class Filters < BaseFilters[:product_ids, :product_filter_ids, :product_category_ids, :rate_card_ids]
+    def rate_card_scoped?
+      [product_ids, product_filter_ids, product_category_ids, rate_card_ids].any?(&:present?)
+    end
+  end
 
   def call
     catalog_plans = base_scope.result
-    catalog_plans = with_rate_cards(catalog_plans) if rate_card_filters?
+    catalog_plans = with_rate_cards(catalog_plans) if filters.rate_card_scoped?
     catalog_plans = apply_consistent_ordering(catalog_plans)
     # The serializer reads applied_rate_cards.size per plan; preload so the
     # collection resolves the counts in one query instead of one per plan.
@@ -30,10 +35,6 @@ class CatalogPlansQuery < BaseQuery
       name_cont: search_term,
       code_cont: search_term
     }
-  end
-
-  def rate_card_filters?
-    [filters.product_ids, filters.product_filter_ids, filters.product_category_ids, filters.rate_card_ids].any?(&:present?)
   end
 
   # A plan matches when one of its rate cards matches every given filter.
