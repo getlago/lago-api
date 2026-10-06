@@ -19,6 +19,8 @@ authentication_methods:
 analytics:
   view:
     - finance
+attributed_usage:
+  view:
 billable_metrics:
   view:
   create:
