@@ -72,7 +72,7 @@ module UsageMonitoring
         return result.single_validation_failure!(field: :base, error_code: "alert_already_exists")
       end
 
-      if wallet_alert_code_taken?(wallet_id: wallet&.id, code: params[:code], alert_type: params[:alert_type])
+      if wallet_alert_code_taken?(wallet_id: wallet&.id, code: params[:code])
         return result.single_validation_failure!(field: :code, error_code: "value_already_exist")
       end
 

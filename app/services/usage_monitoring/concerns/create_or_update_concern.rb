@@ -32,10 +32,10 @@ module UsageMonitoring
         organization.alerts.where(wallet_id:, alert_type:).exists?
       end
 
-      def wallet_alert_code_taken?(wallet_id:, code:, alert_type:, excluding_id: nil)
+      def wallet_alert_code_taken?(wallet_id:, code:, excluding_id: nil)
         return false if wallet_id.blank? || code.blank?
 
-        scope = organization.alerts.where(wallet_id:, code:).where.not(alert_type:)
+        scope = organization.alerts.where(wallet_id:, code:)
         scope = scope.where.not(id: excluding_id) if excluding_id
         scope.exists?
       end
