@@ -98,11 +98,11 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
       context "with graduated pricing" do
         let(:rate_model) { "graduated" }
 
-        it "starts aggregation at the cycle while retaining the segment service period and duration" do
+        it "resets aggregation at the rate segment while retaining its service period and duration" do
           expect(boundaries).to have_attributes(
             from_datetime: billing_segment.started_at,
             to_datetime: billing_segment.ended_at,
-            charges_from_datetime: billing_segment.cycle_started_at,
+            charges_from_datetime: billing_segment.started_at,
             charges_to_datetime: billing_segment.ended_at,
             charges_duration: billing_segment.duration_in_days,
             timestamp: billing_segment.billing_at
@@ -123,7 +123,7 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
       context "with graduated percentage pricing" do
         let(:rate_model) { "graduated_percentage" }
 
-        it "keeps the segment start pending a graduated-percentage carry policy" do
+        it "keeps aggregation within the rate segment" do
           expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
         end
       end
@@ -132,7 +132,7 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
         context "with #{model} pricing" do
           let(:rate_model) { model }
 
-          it "keeps the segment start pending a model-specific carry policy" do
+          it "keeps aggregation within the rate segment" do
             expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
           end
         end
@@ -141,8 +141,8 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
       context "with a graduated rate override on a standard rate" do
         let(:rate_override) { build(:rate_override, organization:, rate_model: "graduated") }
 
-        it "uses the effective model from the override" do
-          expect(boundaries.charges_from_datetime).to eq(billing_segment.cycle_started_at)
+        it "keeps the segment start with a graduated override" do
+          expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
         end
       end
 

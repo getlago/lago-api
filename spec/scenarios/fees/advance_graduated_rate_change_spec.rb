@@ -139,10 +139,10 @@ RSpec.describe "Advance graduated pricing across persisted rate segments" do
     end
   end
 
-  it "carries cycle usage into the new tiers without repricing the earlier fee" do
+  it "resets tiers at the new rate without repricing the earlier fee" do
     first_fee, second_fee = fees
 
-    expect([first_fee.amount_cents, second_fee.amount_cents]).to eq([8_000, 7_000])
+    expect([first_fee.amount_cents, second_fee.amount_cents]).to eq([8_000, 8_000])
     expect([first_fee.units, second_fee.units]).to eq([80, 40])
     expect([first_fee.rate_card_rate, second_fee.rate_card_rate]).to eq([first_rate, second_rate])
     expect(first_fee.reload.amount_cents).to eq(8_000)
@@ -151,7 +151,7 @@ RSpec.describe "Advance graduated pricing across persisted rate segments" do
     ])
     expect(second_fee.properties).to include(
       "from_datetime" => rate_changed_at.iso8601(6),
-      "charges_from_datetime" => cycle_started_at.iso8601(6),
+      "charges_from_datetime" => rate_changed_at.iso8601(6),
       "charges_to_datetime" => BillingSegment.inclusive_end(cycle_ended_at).iso8601(6)
     )
   end
@@ -161,17 +161,17 @@ RSpec.describe "Advance graduated pricing across persisted rate segments" do
     let(:first_rate_properties) { {amount: "1"} }
     let(:third_event_quantity) { 30 }
 
-    it "carries standard-priced usage into both graduated events without repricing the first fee" do
+    it "resets standard-priced usage and accumulates only events under the graduated rate" do
       first_fee, second_fee, third_fee = fees
 
-      expect([first_fee.amount_cents, second_fee.amount_cents, third_fee.amount_cents]).to eq([8_000, 7_000, 4_500])
+      expect([first_fee.amount_cents, second_fee.amount_cents, third_fee.amount_cents]).to eq([8_000, 8_000, 6_000])
       expect([first_fee.units, second_fee.units, third_fee.units]).to eq([80, 40, 30])
       expect([first_fee.rate_card_rate, second_fee.rate_card_rate, third_fee.rate_card_rate]).to eq([
         first_rate, second_rate, second_rate
       ])
       expect(first_fee.reload.amount_cents).to eq(8_000)
       expect([second_fee, third_fee].map { |fee| fee.properties["charges_from_datetime"] }).to eq([
-        cycle_started_at.iso8601(6), cycle_started_at.iso8601(6)
+        rate_changed_at.iso8601(6), rate_changed_at.iso8601(6)
       ])
     end
   end
@@ -182,7 +182,7 @@ RSpec.describe "Advance graduated pricing across persisted rate segments" do
 
     it "creates one fee per event with the rate on its side of the microsecond boundary" do
       expect(fees.map { |fee| [fee.rate_card_rate, fee.amount_cents] }).to eq([
-        [first_rate, 8_000], [second_rate, 7_000]
+        [first_rate, 8_000], [second_rate, 8_000]
       ])
     end
   end
@@ -194,12 +194,12 @@ RSpec.describe "Advance graduated pricing across persisted rate segments" do
       first_fee, second_fee = fees
 
       expect([first_fee.rate_card_rate, second_fee.rate_card_rate]).to eq([first_rate, second_rate])
-      expect([first_fee.amount_cents, second_fee.amount_cents]).to eq([8_000, 7_000])
+      expect([first_fee.amount_cents, second_fee.amount_cents]).to eq([8_000, 8_000])
       expect(first_fee.reload.amount_cents).to eq(8_000)
       expect(second_fee.properties).to include(
         "from_datetime" => rate_changed_at.iso8601(6),
         "to_datetime" => BillingSegment.inclusive_end(cycle_ended_at).iso8601(6),
-        "charges_from_datetime" => cycle_started_at.iso8601(6)
+        "charges_from_datetime" => rate_changed_at.iso8601(6)
       )
       expect(BillingSegment.where(contract:).pluck(:rate_card_rate_id, :ended_at)).to eq([
         [first_rate.id, BillingSegment.inclusive_end(cycle_ended_at)]
