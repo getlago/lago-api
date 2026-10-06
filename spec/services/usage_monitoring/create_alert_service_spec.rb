@@ -556,6 +556,14 @@ RSpec.describe UsageMonitoring::CreateAlertService do
         end
       end
 
+      context "when a discarded alert of the same type exists on the wallet" do
+        before { create(:wallet_balance_amount_alert, organization:, wallet:, code: "wallet1").discard! }
+
+        it "allows it" do
+          expect(result).to be_success
+        end
+      end
+
       context "when the same code is used on another wallet" do
         before do
           other = create(:wallet, organization:)
