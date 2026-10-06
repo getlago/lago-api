@@ -3,15 +3,9 @@
 require "rails_helper"
 require Rails.root.join("db/migrate/20260805104301_add_alerts_code_unique_per_wallet_index")
 
-RSpec.describe AddAlertsCodeUniquePerWalletIndex do
-  describe "#rename_codes_already_taken_on_the_same_wallet" do
-    subject(:rename) do
-      verbose = ActiveRecord::Migration.verbose
-      ActiveRecord::Migration.verbose = false
-      described_class.new.send(:rename_codes_already_taken_on_the_same_wallet)
-    ensure
-      ActiveRecord::Migration.verbose = verbose
-    end
+RSpec.describe AddAlertsCodeUniquePerWalletIndex::DuplicateCodeRename do
+  describe "#call" do
+    subject(:rename) { described_class.new.call }
 
     let(:organization) { create(:organization) }
     let(:wallet) { create(:wallet, organization:) }
@@ -41,6 +35,12 @@ RSpec.describe AddAlertsCodeUniquePerWalletIndex do
 
         expect(earliest.reload.code).to eq("low")
         expect(later.reload.code).to eq("low-wallet_credits_balance")
+      end
+
+      it "returns the renamed alert with its wallet and both codes" do
+        expect(rename).to eq([
+          {"wallet_id" => wallet.id, "wallet_code" => wallet.code, "old_code" => "low", "new_code" => "low-wallet_credits_balance"}
+        ])
       end
     end
 

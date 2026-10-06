@@ -5,52 +5,10 @@ class AddAlertsCodeUniquePerWalletIndex < ActiveRecord::Migration[8.0]
 
   INDEX_NAME = "idx_alerts_code_unique_per_wallet"
 
-  def up
-    case index_state
-    when :valid
-      say "#{INDEX_NAME} is already in place, skipping the rename and the build"
-      return
-    when :invalid
-      # A failed concurrent build leaves an invalid index still holding the name, which if_not_exists skips.
-      say "Dropping #{INDEX_NAME} left invalid by an earlier failed build, so it can be rebuilt"
-      remove_index :usage_monitoring_alerts, name: INDEX_NAME, algorithm: :concurrently
-    end
-
-    rename_codes_already_taken_on_the_same_wallet
-
-    add_index :usage_monitoring_alerts, %i[code wallet_id organization_id],
-      unique: true,
-      where: "deleted_at IS NULL AND wallet_id IS NOT NULL",
-      algorithm: :concurrently,
-      if_not_exists: true,
-      name: INDEX_NAME
-  end
-
-  def down
-    remove_index :usage_monitoring_alerts, name: INDEX_NAME, algorithm: :concurrently, if_exists: true
-  end
-
-  private
-
-  def index_state
-    validity = select_value(<<~SQL.squish)
-      SELECT i.indisvalid FROM pg_class c
-      JOIN pg_index i ON i.indexrelid = c.oid
-      WHERE c.relname = '#{INDEX_NAME}'
-    SQL
-
-    if validity.nil?
-      :missing
-    elsif validity
-      :valid
-    else
-      :invalid
-    end
-  end
-
-  def rename_codes_already_taken_on_the_same_wallet
-    # safety_assured: only touches rows the new index would reject.
-    renamed = safety_assured { execute(<<~SQL) }
+  # Renames the wallet alerts whose code is already used on the same wallet, so the index can be built.
+  # It lives in the migration rather than in app code, so later app changes cannot alter what it does.
+  class DuplicateCodeRename
+    SQL = <<~SQL
       WITH duplicates AS (
         SELECT a.id,
                a.code AS old_code,
@@ -83,9 +41,58 @@ class AddAlertsCodeUniquePerWalletIndex < ActiveRecord::Migration[8.0]
       RETURNING a.wallet_id, d.wallet_code, d.old_code, a.code AS new_code
     SQL
 
-    return if renamed.ntuples.zero?
+    def call
+      ActiveRecord::Base.connection.exec_query(SQL).to_a
+    end
+  end
 
-    say "Renamed #{renamed.ntuples} wallet alert(s) whose code was already used on the same wallet."
+  def up
+    case index_state
+    when :valid
+      say "#{INDEX_NAME} is already in place, skipping the rename and the build"
+      return
+    when :invalid
+      # A failed concurrent build leaves an invalid index still holding the name, which if_not_exists skips.
+      say "Dropping #{INDEX_NAME} left invalid by an earlier failed build, so it can be rebuilt"
+      remove_index :usage_monitoring_alerts, name: INDEX_NAME, algorithm: :concurrently
+    end
+
+    report_renames(DuplicateCodeRename.new.call)
+
+    add_index :usage_monitoring_alerts, %i[code wallet_id organization_id],
+      unique: true,
+      where: "deleted_at IS NULL AND wallet_id IS NOT NULL",
+      algorithm: :concurrently,
+      if_not_exists: true,
+      name: INDEX_NAME
+  end
+
+  def down
+    remove_index :usage_monitoring_alerts, name: INDEX_NAME, algorithm: :concurrently, if_exists: true
+  end
+
+  private
+
+  def index_state
+    validity = select_value(<<~SQL.squish)
+      SELECT i.indisvalid FROM pg_class c
+      JOIN pg_index i ON i.indexrelid = c.oid
+      WHERE c.relname = '#{INDEX_NAME}'
+    SQL
+
+    if validity.nil?
+      :missing
+    elsif validity
+      :valid
+    else
+      :invalid
+    end
+  end
+
+  def report_renames(renamed)
+    return if renamed.empty?
+
+    say "Renamed #{renamed.size} wallet alert(s) whose code was already used on the same wallet."
 
     renamed.sort_by { [it["wallet_id"], it["old_code"]] }.each do |row|
       wallet = row["wallet_code"].present? ? "#{row["wallet_id"]} (#{row["wallet_code"]})" : row["wallet_id"]
