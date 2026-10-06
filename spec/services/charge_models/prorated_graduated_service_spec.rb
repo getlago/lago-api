@@ -87,6 +87,45 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
     expect(apply_graduated_service.amount_details).to eq({})
   end
 
+  context "when a charge spans 30 of 31 days across two tiers" do
+    let(:proration_ratio) { BigDecimal("30") / 31 }
+    let(:aggregation) { 5 * proration_ratio }
+    let(:flat_amounts) { %w[0.00 0.00] }
+    let(:charge) do
+      create(
+        :graduated_charge,
+        billable_metric:,
+        organization:,
+        plan:,
+        prorated: true,
+        properties: {
+          graduated_ranges: [
+            {from_value: 0, to_value: 3, per_unit_amount: "10.00", flat_amount: flat_amounts[0]},
+            {from_value: 4, to_value: nil, per_unit_amount: "6.00", flat_amount: flat_amounts[1]}
+          ]
+        }
+      )
+    end
+    let(:per_event_aggregation) do
+      BillableMetrics::ProratedAggregations::BaseService::ProratedPerEventAggregationResult.new.tap do |r|
+        r.event_aggregation = [5]
+        r.event_prorated_aggregation = [aggregation]
+      end
+    end
+
+    it "assigns full units to tiers before prorating their per-unit amounts" do
+      expect(apply_graduated_service.amount.round(2)).to eq(40.65)
+    end
+
+    context "with flat fees in both tiers" do
+      let(:flat_amounts) { %w[5.00 2.00] }
+
+      it "keeps both reached-tier flat fees whole" do
+        expect(apply_graduated_service.amount.round(2)).to eq(47.65)
+      end
+    end
+  end
+
   context "when zero usage" do
     let(:aggregation) { 0 }
     let(:per_event_aggregation) do
