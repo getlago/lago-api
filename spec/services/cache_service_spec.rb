@@ -68,6 +68,30 @@ RSpec.describe CacheService do
         expect(Rails.cache).not_to have_received(:write)
       end
     end
+
+    context "when the subclass rejects the value" do
+      let(:cache_service) do
+        Class.new(test_cache_service_class) do
+          private
+
+          def cacheable?(value)
+            value != "error"
+          end
+        end.new("test")
+      end
+
+      before do
+        allow(Rails.cache).to receive(:read).with(cache_key).and_return(nil)
+        allow(Rails.cache).to receive(:write)
+      end
+
+      it "returns the value without caching it" do
+        result = cache_service.call { "error" }
+
+        expect(result).to eq("error")
+        expect(Rails.cache).not_to have_received(:write)
+      end
+    end
   end
 
   describe "#call with lazy validation" do
