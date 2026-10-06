@@ -72,6 +72,18 @@ describe X402::Chain::SvmReader do
     landed_as_json.merge("transaction" => {"signatures" => [X402::Base58.encode(OpenSSL::Random.random_bytes(64))]})
   end
 
+  describe "#payer" do
+    it "is the buyer, the TransferChecked authority" do
+      expect(reader.payer).to eq(buyer)
+    end
+
+    it "makes no RPC call" do
+      reader.payer
+
+      expect(rpc_calls).to be_empty
+    end
+  end
+
   context "when the buyer's transaction landed" do
     it "is settled" do
       expect(reader.settled?).to be(true)
@@ -404,6 +416,10 @@ describe X402::Chain::SvmReader do
     it "raises, since it would never expire" do
       expect { reader.settled? }.to raise_error(X402::Chain::UnreadablePaymentError, /durable nonce/)
     end
+
+    it "raises when asked for the payer" do
+      expect { reader.payer }.to raise_error(X402::Chain::UnreadablePaymentError)
+    end
   end
 
   context "when the transaction has no TransferChecked" do
@@ -411,6 +427,10 @@ describe X402::Chain::SvmReader do
 
     it "raises" do
       expect { reader.settled? }.to raise_error(X402::Chain::UnreadablePaymentError, /TransferChecked/)
+    end
+
+    it "raises when asked for the payer" do
+      expect { reader.payer }.to raise_error(X402::Chain::UnreadablePaymentError)
     end
   end
 
@@ -426,6 +446,10 @@ describe X402::Chain::SvmReader do
     it "raises" do
       expect { reader.settled? }.to raise_error(X402::Chain::UnreadablePaymentError, /TransferChecked/)
     end
+
+    it "raises when asked for the payer" do
+      expect { reader.payer }.to raise_error(X402::Chain::UnreadablePaymentError)
+    end
   end
 
   context "when the authority does not sign" do
@@ -440,6 +464,10 @@ describe X402::Chain::SvmReader do
     it "raises" do
       expect { reader.settled? }.to raise_error(X402::Chain::UnreadablePaymentError, /signer/)
     end
+
+    it "raises when asked for the payer" do
+      expect { reader.payer }.to raise_error(X402::Chain::UnreadablePaymentError)
+    end
   end
 
   context "when the transaction is not base64" do
@@ -448,6 +476,10 @@ describe X402::Chain::SvmReader do
     it "raises" do
       expect { reader.settled? }.to raise_error(X402::Chain::UnreadablePaymentError)
     end
+
+    it "raises when asked for the payer" do
+      expect { reader.payer }.to raise_error(X402::Chain::UnreadablePaymentError)
+    end
   end
 
   context "when the stored payload is not an object" do
@@ -455,6 +487,10 @@ describe X402::Chain::SvmReader do
 
     it "raises" do
       expect { reader.settled? }.to raise_error(X402::Chain::UnreadablePaymentError)
+    end
+
+    it "raises when asked for the payer" do
+      expect { reader.payer }.to raise_error(X402::Chain::UnreadablePaymentError)
     end
   end
 end
