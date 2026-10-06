@@ -254,6 +254,19 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
             )
           end
         end
+
+        context "with the draft taxes cache" do
+          before { allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new) }
+
+          it "asks Anrok once for identical requests" do
+            described_class.call(invoice:)
+            result = service_call
+
+            expect(result).to be_success
+            expect(result.fees.first.tax_breakdown.first.name).to eq("GST/HST")
+            expect(WebMock).to have_requested(:post, endpoint).once
+          end
+        end
       end
 
       context "when taxes are not successfully fetched" do
@@ -283,6 +296,17 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
                 error_code: "taxDateTooFarInFuture"
               }
             )
+        end
+
+        context "with the draft taxes cache" do
+          before { allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new) }
+
+          it "asks Anrok again on the next call" do
+            described_class.call(invoice:)
+            service_call
+
+            expect(WebMock).to have_requested(:post, endpoint).twice
+          end
         end
 
         context "when no integration mapping is defined" do

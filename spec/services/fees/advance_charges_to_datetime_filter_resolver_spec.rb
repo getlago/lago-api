@@ -4,13 +4,10 @@ require "rails_helper"
 
 RSpec.describe Fees::AdvanceChargesToDatetimeFilterResolver do
   subject(:relation) do
-    described_class.new(billing_contexts: [billing_context], billing_at: Time.current, customer:).call
+    described_class.new(billing_contexts: [billing_context], billing_at: Time.current).call
   end
 
-  let(:customer) { nil }
-
   context "when the context is a contract" do
-    let(:customer) { build_stubbed(:customer) }
     let(:billing_context) { Billing::Context.from(contract: build_stubbed(:contract, status: :active)) }
 
     it "applies the charge boundary without looking for a next subscription" do
@@ -30,8 +27,8 @@ RSpec.describe Fees::AdvanceChargesToDatetimeFilterResolver do
       expect(relation.to_sql).not_to include("charges_to_datetime")
     end
 
-    it "scopes eligible fees to the subscription and succeeded payment" do
-      expect(relation.to_sql).to include("subscription_id", "invoice_id", "payment_status", "succeeded_at")
+    it "scopes eligible fees to the customer's subscription lineage and succeeded payment" do
+      expect(relation.to_sql).to include("customer_id", "external_id", "status", "invoice_id", "payment_status", "succeeded_at")
     end
   end
 end

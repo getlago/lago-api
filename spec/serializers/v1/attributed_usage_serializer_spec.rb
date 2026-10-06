@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe ::V1::AttributedUsageSerializer do
   subject(:serializer) do
-    described_class.new(query_result, root_name: "attributed_usage", subscription:, group_by: "team")
+    described_class.new(query_result, root_name: "attributed_usage")
   end
 
   let(:result) { JSON.parse(serializer.to_json)["attributed_usage"] }
@@ -27,6 +27,8 @@ RSpec.describe ::V1::AttributedUsageSerializer do
 
   let(:query_result) do
     UsageAttributions::QueryService::Result.new.tap do |result|
+      result.subscription = subscription
+      result.group_by = "team"
       result.rows = [
         UsageAttributions::QueryService::Row.new(
           value: "eng", rank: 1, amount_cents: decimal(total_amount_cents), events_count: 3, cells: [filter_cell, default_cell]

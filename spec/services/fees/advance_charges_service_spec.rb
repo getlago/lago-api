@@ -42,18 +42,23 @@ RSpec.describe Fees::AdvanceChargesService do
           charges_to_datetime: create_charge_fee(
             properties: {"charges_to_datetime" => (billing_at + 1.second).iso8601(6)}
           ),
-          subscription: create_charge_fee(subscription: create(:subscription, organization:, customer:, plan:))
+          subscription: create_charge_fee(subscription: create(:subscription, organization:, customer:, plan:)),
+          invoice_group: create_charge_fee(subscription: create(
+            :subscription, organization:, customer:, plan:, external_id: subscription.external_id,
+            status: :terminated, terminated_at: billing_at - 1.day
+          ))
         }
       end
 
       before do
         charge
+        create(:invoice_subscription, invoice:, subscription:)
         eligible_fee
         fee_without_charges_to_datetime
         excluded_fees
       end
 
-      it "attaches only due succeeded fees for the supplied subscriptions" do
+      it "attaches only due succeeded fees for the invoice's subscriptions" do
         expect(result).to be_success
         expect(invoice.fees.reload).to match_array([eligible_fee, fee_without_charges_to_datetime])
         expect(excluded_fees.transform_values { |fee| fee.reload.invoice_id == invoice.id }).to eq(
@@ -61,8 +66,33 @@ RSpec.describe Fees::AdvanceChargesService do
           succeeded_at: false,
           invoice: false,
           charges_to_datetime: false,
-          subscription: false
+          subscription: false,
+          invoice_group: false
         )
+      end
+
+      it "attaches the eligible fees in a single database update" do
+        statements = capture_sql { result }
+
+        expect(statements.grep(/\AUPDATE "fees"/).size).to eq(1)
+        expect(invoice.fees.reload).to match_array([eligible_fee, fee_without_charges_to_datetime])
+      end
+
+      context "when the invoice groups a predecessor on a different plan" do
+        let(:subscription) do
+          create(:subscription, organization:, customer:, plan:, status: :terminated,
+            terminated_at: billing_at - 1.day)
+        end
+        let(:current_subscription) do
+          create(:subscription, organization:, customer:, external_id: subscription.external_id)
+        end
+        let(:billing_contexts) { [Billing::Context.from(subscription: current_subscription)] }
+
+        it "uses the original periodic boundary and the predecessor's regrouping charge" do
+          expect(result).to be_success
+          expect(invoice.fees.reload).to match_array([eligible_fee, fee_without_charges_to_datetime])
+          expect(excluded_fees[:charges_to_datetime].reload.invoice_id).to be_nil
+        end
       end
 
       context "when the charge does not regroup paid fees" do

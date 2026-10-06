@@ -8,8 +8,6 @@ module Api
         MAX_PER_PAGE = UsageAttributions::QueryService::MAX_LIMIT
         QUERY_LIMIT_ERRORS = %w[too_many_groups query_timeout memory_limit_exceeded].freeze
 
-        Page = Data.define(:total_count, :current_page, :limit_value)
-
         before_action :ensure_feature_flag!
 
         def show
@@ -35,8 +33,8 @@ module Api
           if result.success?
             render(
               json: {
-                attributed_usage: ::V1::AttributedUsageSerializer.new(result, subscription:, group_by: params[:group_by]).serialize,
-                meta: pagination_metadata(Page.new(total_count: result.groups_count, current_page: page, limit_value: per_page))
+                attributed_usage: ::V1::AttributedUsageSerializer.new(result).serialize,
+                meta: pagination_metadata(::UsageAttributions::Page.from_query_result(result))
               }
             )
           else

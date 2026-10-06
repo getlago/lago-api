@@ -191,10 +191,10 @@ RSpec.describe Fees::ChargeService::MeteredItem do
       context "with a graduated model" do
         let(:rate_model) { "graduated" }
 
-        it "uses the cycle start for nonrecurring advance pricing" do
+        it "resets nonrecurring advance aggregation at the rate segment" do
           expect(metered_item).to be_graduated
-          expect(boundaries.charges_from_datetime).to eq(billing_segment.cycle_started_at)
-          expect(metered_item.aggregation_boundaries[:from_datetime]).to eq(billing_segment.cycle_started_at)
+          expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
+          expect(metered_item.aggregation_boundaries[:from_datetime]).to eq(billing_segment.started_at)
           expect(boundaries.from_datetime).to eq(billing_segment.started_at)
         end
 
@@ -220,7 +220,7 @@ RSpec.describe Fees::ChargeService::MeteredItem do
       context "with a graduated percentage model" do
         let(:rate_model) { "graduated_percentage" }
 
-        it "does not carry tiers without an explicit graduated-percentage policy" do
+        it "keeps aggregation within the rate segment" do
           expect(metered_item).to be_graduated_percentage
           expect(metered_item).not_to be_graduated
           expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
@@ -231,7 +231,7 @@ RSpec.describe Fees::ChargeService::MeteredItem do
         context "with a #{model} model" do
           let(:rate_model) { model }
 
-          it "keeps the segment start pending model-specific carry rules" do
+          it "keeps aggregation within the rate segment" do
             expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
           end
         end
@@ -240,9 +240,9 @@ RSpec.describe Fees::ChargeService::MeteredItem do
       context "with a graduated rate override on a standard rate" do
         let(:rate_override) { build(:rate_override, organization:, rate_model: "graduated") }
 
-        it "uses the override's effective model for tier carry" do
+        it "keeps the segment start with a graduated override" do
           expect(metered_item).to be_graduated
-          expect(boundaries.charges_from_datetime).to eq(billing_segment.cycle_started_at)
+          expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
         end
       end
 
