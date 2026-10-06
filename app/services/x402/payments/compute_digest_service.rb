@@ -61,10 +61,21 @@ module X402
         transaction = payload["transaction"]
         return invalid("invalid_transaction") unless transaction.is_a?(String) && transaction.present?
 
-        Base64.strict_decode64(transaction)
-        ["svm", network, transaction]
+        message = signed_message(Base64.strict_decode64(transaction))
+        if message
+          ["svm", network, Base64.strict_encode64(message)]
+        else
+          invalid("invalid_transaction")
+        end
       rescue ArgumentError
         invalid("invalid_transaction")
+      end
+
+      def signed_message(bytes)
+        count = bytes.getbyte(0)
+        if count&.between?(1, 0x7f)
+          bytes.byteslice((1 + (count * 64))..).presence
+        end
       end
 
       def payload
