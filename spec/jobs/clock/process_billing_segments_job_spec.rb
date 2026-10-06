@@ -51,25 +51,24 @@ describe Clock::ProcessBillingSegmentsJob, job: true do
       end
     end
 
-    # Both unbilled states, not just pending: the consumer selects its segments by the same
-    # scope, so a customer offered here is always a customer it has work for.
     context "when a customer's segments are processing" do
       let(:claimed_customer) { create(:customer, organization:) }
       let(:advance_product) { create(:product, organization:) }
 
       before { segment(claimed_customer, :processing, product: advance_product, billing_timing: :advance) }
 
-      it "enqueues that customer" do
+      it "does not enqueue that customer" do
         described_class.perform_now
 
-        expect(BillingSegments::ProcessJob).to have_been_enqueued.with(claimed_customer.id)
+        expect(BillingSegments::ProcessJob).not_to have_been_enqueued.with(claimed_customer.id)
       end
     end
 
-    # Pending advance-metered usage is priced per event, not by the billing clock.
     context "when the only pending segment is metered and billed in advance" do
       let(:streaming_customer) { create(:customer, organization:) }
       let(:metered_product) { create(:product, organization:, billable_metric: create(:billable_metric, organization:)) }
+
+      let(:ended_at) { 1.day.from_now }
 
       before do
         rate_card = create(:rate_card, organization:, product: metered_product, billing_timing: "advance")
@@ -82,14 +81,27 @@ describe Clock::ProcessBillingSegmentsJob, job: true do
           customer: streaming_customer,
           contract:,
           contract_rate_card:,
-          status: :pending
+          status: :pending,
+          cycle_started_at: 2.days.ago,
+          started_at: 2.days.ago,
+          ended_at:
         )
       end
 
-      it "leaves that customer out" do
+      it "waits for the segment to end" do
         described_class.perform_now
 
         expect(BillingSegments::ProcessJob).not_to have_been_enqueued.with(streaming_customer.id)
+      end
+
+      context "when the segment has ended" do
+        let(:ended_at) { 1.day.ago }
+
+        it "enqueues that customer for reconciliation" do
+          described_class.perform_now
+
+          expect(BillingSegments::ProcessJob).to have_been_enqueued.with(streaming_customer.id)
+        end
       end
     end
 

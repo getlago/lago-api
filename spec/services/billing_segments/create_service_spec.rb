@@ -55,8 +55,8 @@ RSpec.describe BillingSegments::CreateService do
     context "with a metered advance rate card" do
       let(:rate_card) { create(:rate_card, :advance, organization:, product:, currency: "USD") }
 
-      it "stores the slice as a processing segment" do
-        expect(result.billing_segments.sole.status).to eq("processing")
+      it "stores the slice as a pending segment" do
+        expect(result.billing_segments.sole.status).to eq("pending")
       end
     end
 

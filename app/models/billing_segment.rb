@@ -30,23 +30,20 @@ class BillingSegment < ApplicationRecord
 
   enum :status, STATUSES, validate: true, prefix: true
 
-  # What the periodic consumer still owes an invoice for. One name for both ends of the pipe:
-  # the clock selects customers by it and the consumer selects their segments by it, so
-  # neither can drift into offering work the other will not do.
-  #
-  # Pending advance-metered segments are priced per event, not on the tick. Once processing,
-  # they can have paid fees to reconcile. Other segments are invoiced while pending.
-  scope :awaiting_invoicing, -> {
-    where(status: [:pending, :processing])
+  # The clock and the consumer select only segments not yet claimed for invoicing.
+  scope :awaiting_invoicing, -> { status_pending }
+
+  # Advance-metered usage can arrive throughout its segment; reconcile it only once
+  # the segment ends. Other pending segments were scheduled at their billing time.
+  scope :ready_for_invoicing, ->(timestamp = Time.current) {
+    awaiting_invoicing
       .joins(contract_rate_card: {rate_card: :product})
       .where(
-        "(billing_segments.status = :pending AND NOT (rate_cards.billing_timing = :advance AND " \
-          "products.product_type = :metered)) OR (billing_segments.status = :processing AND " \
-          "rate_cards.billing_timing = :advance AND products.product_type = :metered)",
-        pending: STATUSES[:pending],
-        processing: STATUSES[:processing],
+        "NOT (rate_cards.billing_timing = :advance AND products.product_type = :metered) " \
+          "OR billing_segments.ended_at <= :timestamp",
         advance: RateCard::BILLING_TIMINGS[:advance],
-        metered: Product::PRODUCT_TYPES[:metered]
+        metered: Product::PRODUCT_TYPES[:metered],
+        timestamp:
       )
   }
 

@@ -32,6 +32,8 @@ RSpec.describe BillingSegments::ProcessService do
     let(:billing_segment_proration_ratio) { 1 }
     let(:billing_segment_status) { :pending }
     let(:billing_segment_billing_at) { Time.zone.parse("2026-08-31 23:59:59") }
+    let(:billing_segment_started_at) { Time.zone.parse("2026-08-01") }
+    let(:billing_segment_ended_at) { Time.zone.parse("2026-08-31 23:59:59") }
     let(:min_amount_cents) { 0 }
     let(:billing_segment) do
       create(
@@ -49,8 +51,8 @@ RSpec.describe BillingSegments::ProcessService do
         status: billing_segment_status,
         billing_at: billing_segment_billing_at,
         cycle_started_at: Time.zone.parse("2026-08-01"),
-        started_at: Time.zone.parse("2026-08-01"),
-        ended_at: Time.zone.parse("2026-08-31 23:59:59")
+        started_at: billing_segment_started_at,
+        ended_at: billing_segment_ended_at
       )
     end
 
@@ -115,7 +117,7 @@ RSpec.describe BillingSegments::ProcessService do
             segment = service.send(:pending_segments).sole
 
             expect(segment.contract_rate_card.rate_card).to equal(segment.rate_card_rate.rate_card)
-            expect(service.send(:processing_advance_segments)).to eq([])
+            expect(service.send(:pending_advance_segments)).to eq([])
           end
         end
 
@@ -144,16 +146,26 @@ RSpec.describe BillingSegments::ProcessService do
         let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD", billing_timing: :advance) }
         let(:billing_segment_billing_at) { Time.zone.parse("2026-08-01") }
 
-        it "does not process the segment through periodic billing" do
+        it "completes an advance segment without paid fees" do
           expect { result }.not_to change(Invoice, :count)
 
           expect(result).to be_success
           expect(result.invoices).to be_empty
-          expect(billing_segment.reload).to have_attributes(status: "pending", invoice_id: nil)
+          expect(billing_segment.reload).to have_attributes(status: "done", invoice_id: nil)
         end
 
-        context "when the segment is processing" do
-          let(:billing_segment_status) { :processing }
+        context "when the advance segment has not ended" do
+          let(:billing_segment_ended_at) { 1.day.from_now }
+
+          it "leaves the segment pending for later usage" do
+            expect { result }.not_to change(Invoice, :count)
+
+            expect(result.invoices).to eq([])
+            expect(billing_segment.reload).to have_attributes(status: "pending", invoice_id: nil)
+          end
+        end
+
+        context "when the segment has paid fees" do
           let(:rate_card) do
             create(
               :rate_card,
@@ -210,6 +222,23 @@ RSpec.describe BillingSegments::ProcessService do
             expect(Invoices::CreateGeneratingService).to have_received(:call!).once
             expect(Fees::AdvanceChargesService).to have_received(:call!).once
             expect(Invoices::FinalizeAndPublishAdvanceChargesService).to have_received(:call!).once.with(invoice:)
+          end
+
+          context "when reconciling the paid fees" do
+            let(:status_during_reconciliation) { [] }
+
+            before do
+              allow(Fees::AdvanceChargesService).to receive(:call!).and_wrap_original do |original, **arguments|
+                status_during_reconciliation << billing_segment.reload.status
+                original.call(**arguments)
+              end
+            end
+
+            it "claims the segment before reconciling" do
+              expect(result).to be_success
+              expect(status_during_reconciliation).to eq(["processing"])
+              expect(billing_segment.reload.status).to eq("done")
+            end
           end
 
           it "does not publish or record another payment on a repeated run" do
@@ -312,7 +341,7 @@ RSpec.describe BillingSegments::ProcessService do
                 expect { result }.to raise_error(ActiveRecord::RecordInvalid)
               end.not_to change(Invoice, :count)
 
-              expect(billing_segment.reload).to have_attributes(status: "processing", invoice_id: nil)
+              expect(billing_segment.reload).to have_attributes(status: "pending", invoice_id: nil)
               expect(paid_fee.reload.invoice_id).to be_nil
             end
           end
@@ -869,6 +898,23 @@ RSpec.describe BillingSegments::ProcessService do
 
       expect { described_class.call!(customer:) }.to not_change(Invoice, :count).and not_change(Fee, :count)
       expect(billing_segment.reload.invoice).to eq(invoice)
+    end
+
+    context "when computing a pending segment's fees" do
+      let(:status_during_fee_computation) { [] }
+
+      before do
+        allow(BillingSegments::Fees::ComputeService).to receive(:call!).and_wrap_original do |original, **arguments|
+          status_during_fee_computation << billing_segment.reload.status
+          original.call(**arguments)
+        end
+      end
+
+      it "claims the segment before computing its fees" do
+        expect(result).to be_success
+        expect(status_during_fee_computation).to eq(["processing"])
+        expect(billing_segment.reload.status).to eq("done")
+      end
     end
 
     it "raises a retryable error when the advisory lock cannot be acquired" do

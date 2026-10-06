@@ -17,7 +17,7 @@ module BillingSegments
           result.invoices << build_invoice(invoice_segments)
         end
 
-        processing_advance_segments.group_by { |segment| invoice_key(segment) }.each_value do |invoice_segments|
+        pending_advance_segments.group_by { |segment| invoice_key(segment) }.each_value do |invoice_segments|
           invoice = process_advance_segments(invoice_segments)
           result.invoices << invoice if invoice
         end
@@ -41,12 +41,12 @@ module BillingSegments
       grouped_segments.fetch(:pending_segments, [])
     end
 
-    def processing_advance_segments
-      grouped_segments.fetch(:processing_advance_segments, [])
+    def pending_advance_segments
+      grouped_segments.fetch(:pending_advance_segments, [])
     end
 
     def grouped_segments
-      @grouped_segments ||= BillingSegment.awaiting_invoicing
+      @grouped_segments ||= BillingSegment.ready_for_invoicing
         .where(customer_id: customer.id)
         .includes(:pricing_unit, :rate_override, :contract, contract_rate_card: {rate_card: :product}, rate_card_rate: :rate_card)
         .group_by { |segment| segment_group(segment) }
@@ -56,11 +56,7 @@ module BillingSegments
     def segment_group(segment)
       advance_metered = segment.contract_rate_card.rate_card.advance? && segment.contract_rate_card.product.metered?
 
-      if advance_metered
-        :processing_advance_segments if segment.status_processing?
-      elsif segment.status_pending?
-        :pending_segments
-      end
+      advance_metered ? :pending_advance_segments : :pending_segments
     end
 
     def invoice_key(segment)
@@ -95,6 +91,7 @@ module BillingSegments
       fixed_segments = grouped[Product::PRODUCT_TYPES[:fixed]] || []
 
       ActiveRecord::Base.transaction do
+        segments.each { |segment| segment.update!(status: :processing) }
         invoice = Invoices::CreateGeneratingService.call!(
           customer:,
           billing_entity: contract.billing_entity || customer.billing_entity,
@@ -135,6 +132,7 @@ module BillingSegments
       fee_result = nil
 
       ActiveRecord::Base.transaction do
+        segments.each { |segment| segment.update!(status: :processing) }
         ActiveRecord::Base.transaction(requires_new: true) do
           invoice = create_advance_invoice(segments)
           fee_result = ::Fees::AdvanceChargesService.call!(
