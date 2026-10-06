@@ -43,11 +43,11 @@ class ContractRateCard < ApplicationRecord
       )
   }
 
-  # A card seeded from its contract carries the contract's anchor, or its own
-  # start day when the contract set none: an anchor matching either was
-  # inherited, any other was set on the card.
+  # A card seeded from its contract carries the contract's explicit anchor, or
+  # its own start day when the contract set none: an anchor matching what it
+  # would have inherited follows the contract, any other was set on the card.
   def inherited_billing_anchor?(contract_billing_anchor_date)
-    billing_anchor_date == contract_billing_anchor_date || billing_anchor_date == effective_date
+    billing_anchor_date == (contract_billing_anchor_date || effective_date)
   end
 
   def edit_error_code

@@ -360,6 +360,40 @@ RSpec.describe Contracts::UpdateService do
       end
     end
 
+    context "with an anchor set on a card to the start day of a contract with its own anchor" do
+      let(:contract) do
+        create(:contract, :pending, organization:, customer:, catalog_plan:, started_at: Time.zone.parse("2026-10-15"), billing_anchor_date: Date.new(2026, 10, 1))
+      end
+      let(:own_anchor_card) do
+        create(
+          :contract_rate_card,
+          organization:,
+          contract:,
+          effective_date: Date.new(2026, 10, 15),
+          billing_anchor_date: Date.new(2026, 10, 15),
+          next_billing_at: Time.zone.parse("2026-10-15")
+        )
+      end
+
+      before { own_anchor_card }
+
+      it "keeps the card's anchor" do
+        result
+
+        expect(own_anchor_card.reload).to have_attributes(effective_date: Date.new(2026, 11, 1), billing_anchor_date: Date.new(2026, 10, 15))
+      end
+    end
+
+    context "when the anchor moves along with the invoice section settings" do
+      let(:params) { {billing_anchor_date: "2026-10-20", invoice_custom_section: {skip_invoice_custom_sections: true}} }
+
+      it "still moves the inherited card anchors" do
+        result
+
+        expect(inherited_card.reload.billing_anchor_date).to eq(Date.new(2026, 10, 20))
+      end
+    end
+
     context "when only the anchor moves" do
       let(:params) { {billing_anchor_date: "2026-10-20"} }
 

@@ -60,7 +60,7 @@ module Contracts
       start_day = contract.default_rate_card_lifecycle[:effective_date]
 
       contract.applied_rate_cards.where.not(effective_date: start_day).find_each do |card|
-        own_anchor = card.inherited_billing_anchor?(contract.effective_billing_anchor_date) ? nil : card.billing_anchor_date
+        own_anchor = card.inherited_billing_anchor?(contract.billing_anchor_date) ? nil : card.billing_anchor_date
         ContractRateCards::SeedLifecycleService.call!(contract_rate_card: card, billing_anchor_date: own_anchor)
       end
     end

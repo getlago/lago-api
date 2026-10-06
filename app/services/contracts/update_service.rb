@@ -88,7 +88,7 @@ module Contracts
       end
 
       plan_changed = params.key?(:plan_code) && catalog_plan != contract.catalog_plan
-      previous_billing_anchor_date = contract.effective_billing_anchor_date
+      previous_billing_anchor_date = contract.billing_anchor_date
 
       contract.name = params[:name] if params.key?(:name)
       contract.ended_at = ended_at_in_customer_timezone if params.key?(:ended_at)
@@ -102,7 +102,10 @@ module Contracts
         contract.started_at = started_at_in_customer_timezone if params[:started_at].present?
         contract.catalog_plan = catalog_plan if params.key?(:plan_code)
       end
+      # Read before saving: attaching invoice sections saves the contract again,
+      # which resets its saved changes.
       start_moved = contract.started_at_changed?
+      lifecycle_moved = start_moved || contract.billing_anchor_date_changed?
       contract.save!
       InvoiceCustomSections::AttachToResourceService.call!(resource: contract, params:)
 
@@ -114,7 +117,7 @@ module Contracts
           ContractRateCards::DestroyService.call!(contract_rate_card: card)
         end
         Contracts::MaterializeRateCardsService.call!(contract:) if contract.catalog_plan
-      elsif contract.saved_change_to_started_at? || contract.saved_change_to_billing_anchor_date?
+      elsif lifecycle_moved
         reseed_rate_cards(previous_billing_anchor_date)
       end
 
