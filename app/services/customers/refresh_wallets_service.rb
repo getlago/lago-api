@@ -29,7 +29,7 @@ module Customers
         Wallets::Balance::RefreshOngoingUsageService.call!(
           wallet:,
           ongoing_usage_amount_cents: allocation.wallet_allocations[wallet],
-          ongoing_billable_metric_amounts: allocation.billable_metric_amounts[wallet],
+          ongoing_billable_metric_amounts: ongoing_billable_metric_amounts(allocation, wallet),
           skip_single_wallet_update: true
         )
       end
@@ -103,6 +103,16 @@ module Customers
         .where(organization: customer.organization, active: true)
         .flat_map { |destination| destination.event_types.map { [it, destination] } }
         .to_h
+    end
+
+    # Only streamed usage reads the split, so an organization that streams nothing keeps it empty
+    # and its wallets get no extra write.
+    def ongoing_billable_metric_amounts(allocation, wallet)
+      if streamed_event_types.any?
+        allocation.billable_metric_amounts[wallet]
+      else
+        {}
+      end
     end
 
     def streamed_event_types
