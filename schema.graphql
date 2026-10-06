@@ -12289,7 +12289,7 @@ type Query {
   """
   Query catalog plans of an organization
   """
-  catalogPlans(limit: Int, page: Int, searchTerm: String): CatalogPlanCollection!
+  catalogPlans(limit: Int, page: Int, productCategoryIds: [ID!], productFilterIds: [ID!], productIds: [ID!], rateCardIds: [ID!], searchTerm: String): CatalogPlanCollection!
 
   """
   Query a single contract of an organization
