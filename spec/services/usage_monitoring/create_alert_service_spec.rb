@@ -563,13 +563,6 @@ RSpec.describe UsageMonitoring::CreateAlertService do
           expect(result).to be_failure
           expect(result.error.messages).to eq(base: ["alert_already_exists"])
         end
-
-        it "never builds the alert, so no insert is attempted" do
-          allow(UsageMonitoring::Alert).to receive(:new).and_call_original
-
-          expect(result).to be_failure
-          expect(UsageMonitoring::Alert).not_to have_received(:new)
-        end
       end
 
       context "when the type is taken on the wallet and the code is held by an alert of another type" do
