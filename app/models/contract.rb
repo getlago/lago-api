@@ -59,6 +59,12 @@ class Contract < ApplicationRecord
   # active contract. Terminated and canceled siblings are history.
   scope :live, -> { where(status: LIVE_STATUSES) }
 
+  # Pending contracts whose start has arrived, compared as an instant: the rule
+  # creation uses to choose pending or active. A start given as a date is the
+  # customer's local midnight, so it activates on the customer's day. No
+  # timezone expression, so the bound stays on index_contracts_on_started_at_pending.
+  scope :due_for_activation, ->(timestamp) { pending.where(started_at: ..timestamp) }
+
   def self.live_by_external_id(external_id)
     # Prefer the pending contract over an active sibling — the replacement
     # being authored is the target every consumer wants; started_at/created_at
@@ -175,6 +181,7 @@ end
 #  index_contracts_on_organization_id_external_id_gin_trgm_ops  (organization_id,external_id) USING gin
 #  index_contracts_on_organization_id_name_gin_trgm_ops         (organization_id,name) USING gin
 #  index_contracts_on_payment_method_id                         (payment_method_id)
+#  index_contracts_on_started_at_pending                        (started_at) WHERE (status = 'pending'::contract_status)
 #
 # Foreign Keys
 #

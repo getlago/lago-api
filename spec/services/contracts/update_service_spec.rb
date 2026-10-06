@@ -295,6 +295,159 @@ RSpec.describe Contracts::UpdateService do
     end
   end
 
+  context "when moving the start of a pending contract" do
+    let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:, started_at: Time.zone.parse("2026-10-15")) }
+    let(:inherited_card) do
+      create(
+        :contract_rate_card,
+        organization:,
+        contract:,
+        effective_date: Date.new(2026, 10, 15),
+        billing_anchor_date: Date.new(2026, 10, 15),
+        next_billing_at: Time.zone.parse("2026-10-15")
+      )
+    end
+    let(:anchored_card) do
+      create(
+        :contract_rate_card,
+        organization:,
+        contract:,
+        effective_date: Date.new(2026, 10, 15),
+        billing_anchor_date: Date.new(2026, 10, 1),
+        next_billing_at: Time.zone.parse("2026-10-15")
+      )
+    end
+    let(:params) { {started_at: "2026-11-01T00:00:00"} }
+
+    around { |example| travel_to(Time.zone.parse("2026-09-30T12:00:00Z")) { example.run } }
+
+    before do
+      inherited_card
+      anchored_card
+    end
+
+    it "starts its cards on the new date, keeping an anchor set on a card" do
+      expect(result).to be_success
+      expect(contract.reload).to be_pending
+      expect(inherited_card.reload).to have_attributes(
+        effective_date: Date.new(2026, 11, 1),
+        billing_anchor_date: Date.new(2026, 11, 1),
+        next_billing_at: Time.zone.parse("2026-11-01")
+      )
+      expect(anchored_card.reload).to have_attributes(effective_date: Date.new(2026, 11, 1), billing_anchor_date: Date.new(2026, 10, 1))
+    end
+
+    context "with a card left on a start date moved before cards followed it" do
+      let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:, started_at: Time.zone.parse("2026-10-20")) }
+      let(:stale_card) do
+        create(
+          :contract_rate_card,
+          organization:,
+          contract:,
+          effective_date: Date.new(2026, 10, 15),
+          billing_anchor_date: Date.new(2026, 10, 15),
+          next_billing_at: Time.zone.parse("2026-10-15")
+        )
+      end
+      let(:params) { {started_at: "2026-11-01T00:00:00"} }
+
+      before { stale_card }
+
+      it "treats its anchor on the old start day as inherited" do
+        result
+
+        expect(stale_card.reload).to have_attributes(effective_date: Date.new(2026, 11, 1), billing_anchor_date: Date.new(2026, 11, 1))
+      end
+    end
+
+    context "with an anchor set on a card to the start day of a contract with its own anchor" do
+      let(:contract) do
+        create(:contract, :pending, organization:, customer:, catalog_plan:, started_at: Time.zone.parse("2026-10-15"), billing_anchor_date: Date.new(2026, 10, 1))
+      end
+      let(:own_anchor_card) do
+        create(
+          :contract_rate_card,
+          organization:,
+          contract:,
+          effective_date: Date.new(2026, 10, 15),
+          billing_anchor_date: Date.new(2026, 10, 15),
+          next_billing_at: Time.zone.parse("2026-10-15")
+        )
+      end
+
+      before { own_anchor_card }
+
+      it "keeps the card's anchor" do
+        result
+
+        expect(own_anchor_card.reload).to have_attributes(effective_date: Date.new(2026, 11, 1), billing_anchor_date: Date.new(2026, 10, 15))
+      end
+    end
+
+    context "when the anchor moves along with the invoice section settings" do
+      let(:params) { {billing_anchor_date: "2026-10-20", invoice_custom_section: {skip_invoice_custom_sections: true}} }
+
+      it "still moves the inherited card anchors" do
+        result
+
+        expect(inherited_card.reload.billing_anchor_date).to eq(Date.new(2026, 10, 20))
+      end
+    end
+
+    context "when only the anchor moves" do
+      let(:params) { {billing_anchor_date: "2026-10-20"} }
+
+      it "moves the inherited card anchors only" do
+        expect(result).to be_success
+        expect(inherited_card.reload.billing_anchor_date).to eq(Date.new(2026, 10, 20))
+        expect(anchored_card.reload.billing_anchor_date).to eq(Date.new(2026, 10, 1))
+      end
+    end
+
+    context "when the clock activated the contract since it was loaded" do
+      before { Contract.where(id: contract.id).update_all(status: :active) } # rubocop:disable Rails/SkipsModelValidations
+
+      it "applies the active rules and leaves the start in place" do
+        expect(result.error.messages[:contract]).to eq(["contract_locked"])
+        expect(contract.reload.started_at).to eq(Time.zone.parse("2026-10-15"))
+        expect(inherited_card.reload.effective_date).to eq(Date.new(2026, 10, 15))
+      end
+    end
+
+    context "when the new start has arrived" do
+      let(:params) { {started_at: "2026-09-29T00:00:00"} }
+
+      it "activates the contract and schedules its billing" do
+        expect(result).to be_success
+        expect(contract.reload).to be_active
+        expect(inherited_card.reload.effective_date).to eq(Date.new(2026, 9, 29))
+        expect(BillingSegments::ScheduleJob).to have_been_enqueued.with(customer.id)
+      end
+
+      context "when an active contract shares its external id" do
+        before { create(:contract, organization:, customer:, external_id: contract.external_id) }
+
+        it "fails and keeps the previous start" do
+          expect(result.error.messages[:external_id]).to eq(["active_contract_exists"])
+          expect(contract.reload).to have_attributes(status: "pending", started_at: Time.zone.parse("2026-10-15"))
+          expect(inherited_card.reload.effective_date).to eq(Date.new(2026, 10, 15))
+        end
+      end
+    end
+  end
+
+  context "when renaming a pending contract whose start has passed" do
+    let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:, started_at: 1.hour.ago) }
+    let(:params) { {name: "Renamed"} }
+
+    before { create(:contract, organization:, customer:, external_id: contract.external_id) }
+
+    it "leaves activation to the clock, so the edit goes through next to an active sibling" do
+      expect(result).to be_success
+      expect(contract.reload).to have_attributes(name: "Renamed", status: "pending")
+    end
+  end
+
   context "when resending the current plan code" do
     let(:params) { {name: "Renamed", plan_code: catalog_plan.code} }
 
