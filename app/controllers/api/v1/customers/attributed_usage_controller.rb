@@ -33,8 +33,8 @@ module Api
           if result.success?
             render(
               json: {
-                attributed_usage: ::V1::AttributedUsageSerializer.new(result, subscription:, group_by: params[:group_by]).serialize,
-                meta: pagination_metadata(::UsageAttributions::Page.new(current_page: page, limit_value: per_page, total_count: result.groups_count))
+                attributed_usage: ::V1::AttributedUsageSerializer.new(result).serialize,
+                meta: pagination_metadata(::UsageAttributions::Page.from_query_result(result))
               }
             )
           else
