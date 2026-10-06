@@ -4,9 +4,9 @@ module V1
   class AttributedUsageSerializer < ModelSerializer
     def serialize
       {
-        lago_subscription_id: subscription.id,
-        external_subscription_id: subscription.external_id,
-        group_by: options[:group_by],
+        lago_subscription_id: model.subscription.id,
+        external_subscription_id: model.subscription.external_id,
+        group_by: model.group_by,
         basis: model.basis,
         from_datetime: model.from_datetime.iso8601,
         to_datetime: model.to_datetime.iso8601,
@@ -18,10 +18,6 @@ module V1
     end
 
     private
-
-    def subscription
-      options.fetch(:subscription)
-    end
 
     def serialize_row(row)
       {

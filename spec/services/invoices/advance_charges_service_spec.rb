@@ -397,6 +397,8 @@ RSpec.describe Invoices::AdvanceChargesService do
 
         invoices = Invoice.where(invoice_type: :advance_charges)
         expect(invoices.map(&:purchase_order_number)).to match_array(%w[PO-1 PO-2])
+        expect(invoices.find_by!(purchase_order_number: "PO-1").fees.pluck(:subscription_id)).to eq([subscription.id])
+        expect(invoices.find_by!(purchase_order_number: "PO-2").fees.pluck(:subscription_id)).to eq([subscription_2.id])
       end
     end
 

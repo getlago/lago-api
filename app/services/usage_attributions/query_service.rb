@@ -3,7 +3,8 @@
 module UsageAttributions
   class QueryService < BaseService
     Result = BaseResult[
-      :rows, :unattributed, :totals, :groups_count, :basis, :from_datetime, :to_datetime, :currency
+      :subscription, :group_by, :rows, :unattributed, :totals, :groups_count, :basis, :from_datetime, :to_datetime,
+      :currency, :limit, :offset
     ]
 
     Row = Data.define(:value, :rank, :amount_cents, :events_count, :cells)
@@ -58,6 +59,10 @@ module UsageAttributions
       return result.not_found_failure!(resource: "charge") unless requested_charges_in_plan?
       return result.validation_failure!(errors: validation_errors) if validation_errors.any?
 
+      result.subscription = subscription
+      result.group_by = group_by
+      result.limit = limit
+      result.offset = offset
       result.basis = basis
       result.from_datetime = window_from
       result.to_datetime = window_to

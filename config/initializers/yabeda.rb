@@ -45,6 +45,14 @@ Yabeda.configure do
       buckets: [0.1, 0.25, 0.5, 1, 2, 5]
   end
 
+  # Draft tax requests answered from the cache instead of the tax provider. Tags are bounded by
+  # the provider list.
+  group :tax_providers do
+    counter :draft_taxes_cache_total,
+      comment: "Draft tax requests, by whether the cache answered them (hit) or the provider did (miss)",
+      tags: %i[provider outcome]
+  end
+
   # Cursor pagination of the v2 lists. Tags are bounded by the paginated tables and the error
   # codes; request latency per endpoint is already covered by yabeda-rails.
   group :api_pagination do

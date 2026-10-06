@@ -4,7 +4,33 @@ module Invoices
   class ApplyInvoiceCustomSectionsService < BaseService
     Result = BaseResult[:applied_sections]
 
+    class Resource
+      SUPPORTED_TYPES = [::Subscription, ::Contract, ::Wallet, ::WalletTransaction].freeze
+
+      def self.from(resource:)
+        new(resource:)
+      end
+
+      def initialize(resource:)
+        unless SUPPORTED_TYPES.any? { |type| resource.is_a?(type) }
+          raise ArgumentError, "unsupported invoice custom section resource"
+        end
+
+        @resource = resource
+      end
+
+      delegate :skip_invoice_custom_sections, :selected_invoice_custom_sections, to: :resource
+
+      private
+
+      attr_reader :resource
+    end
+
     def initialize(invoice:, resources: [], custom_section_ids: [])
+      unless resources.all? { |resource| resource.is_a?(Resource) }
+        raise ArgumentError, "resources must be invoice custom section resources"
+      end
+
       @invoice = invoice
       @customer = invoice.customer
       @resources = resources
@@ -37,7 +63,7 @@ module Invoices
     attr_reader :invoice, :customer, :resources, :custom_section_ids
 
     def skip_custom_sections?
-      return false if participating_resources.any? { |r| resource_has_invoice_custom_sections?(r) }
+      return false if participating_resources.any? { |resource| resource.selected_invoice_custom_sections.any? }
       return true if resources.any? && participating_resources.none?
       return false if custom_section_ids.present?
 
@@ -57,7 +83,7 @@ module Invoices
     end
 
     def sections_from_resources
-      with_ics, without_ics = participating_resources.partition { |r| resource_has_invoice_custom_sections?(r) }
+      with_ics, without_ics = participating_resources.partition { |resource| resource.selected_invoice_custom_sections.any? }
 
       return customer.configurable_invoice_custom_sections if with_ics.empty?
 
@@ -69,12 +95,6 @@ module Invoices
 
     def participating_resources
       @participating_resources ||= resources.reject(&:skip_invoice_custom_sections)
-    end
-
-    def resource_has_invoice_custom_sections?(resource)
-      return false unless resource&.respond_to?(:selected_invoice_custom_sections)
-
-      resource.selected_invoice_custom_sections.any?
     end
 
     def organization
