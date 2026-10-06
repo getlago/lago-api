@@ -56,7 +56,7 @@ module Invoices
 
     def charge_fees_resolver
       @charge_fees_resolver ||= Fees::AdvanceChargesToDatetimeFilterResolver.new(
-        billing_contexts:, billing_at:, customer:
+        billing_contexts:, billing_at:
       )
     end
 
@@ -86,7 +86,7 @@ module Invoices
       ActiveRecord::Base.transaction do
         invoice = create_generating_invoice(billing_contexts_group)
         Fees::AdvanceChargesService.call!(
-          invoice:, billing_contexts: billing_contexts_group, charge_fees_resolver:, billing_at:
+          invoice:, billing_contexts:, billing_at:
         )
 
         if invoice.fees.empty?

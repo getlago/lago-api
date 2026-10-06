@@ -2,25 +2,23 @@
 
 module Fees
   class AdvanceChargesToDatetimeFilterResolver
-    def initialize(billing_contexts:, billing_at:, customer: nil)
+    def initialize(billing_contexts:, billing_at:)
       @billing_contexts = billing_contexts
       @billing_at = billing_at
-      @customer = customer
+      @customer = billing_contexts.first&.customer
     end
 
     def call
-      relation = Fee.where(invoice: nil, payment_status: :succeeded)
-        .where("succeeded_at <= ?", billing_at)
+      return Fee.none unless customer
 
-      relation = if customer
-        relation.joins(:subscription).where(subscriptions: {
+      relation = Fee.joins(:subscription)
+        .where(invoice: nil, payment_status: :succeeded)
+        .where("succeeded_at <= ?", billing_at)
+        .where(subscriptions: {
           customer_id: customer.id,
           external_id: billing_contexts.map(&:external_id).uniq,
           status: [:active, :terminated]
         })
-      else
-        relation.where(subscription_id: billing_contexts.map(&:subscription_id))
-      end
 
       # Upgrades, downgrades and terminations may invoice fees before their period ends.
       if regular_periodic_billing?
