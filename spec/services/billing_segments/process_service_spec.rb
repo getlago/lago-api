@@ -11,8 +11,11 @@ RSpec.describe BillingSegments::ProcessService do
       create(:customer, organization:, currency: "USD", finalize_zero_amount_invoice: customer_finalize_zero_amount_invoice)
     end
     let(:customer_finalize_zero_amount_invoice) { "inherit" }
-    let(:contract) { create(:contract, organization:, customer:, consolidate_invoice:, started_at: Time.zone.parse("2026-07-01")) }
+    let(:contract) do
+      create(:contract, organization:, customer:, consolidate_invoice:, purchase_order_number: purchase_number, started_at: Time.zone.parse("2026-07-01"))
+    end
     let(:consolidate_invoice) { true }
+    let(:purchase_number) { nil }
     let(:product) { create(:product, :fixed, organization:) }
     let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD") }
     let(:contract_rate_card) do
@@ -1005,12 +1008,27 @@ RSpec.describe BillingSegments::ProcessService do
       end
 
       context "with different contracts" do
-        let(:second_contract) { create(:contract, organization:, customer:, consolidate_invoice: true) }
+        let(:second_contract) do
+          create(:contract, organization:, customer:, consolidate_invoice: true, purchase_order_number: second_purchase_number)
+        end
+        let(:second_purchase_number) { nil }
 
         it "links both contracts to the consolidated invoice" do
           invoice = result.invoices.sole
           expect(invoice.contracts).to match_array([contract, second_contract])
           expect(invoice.billing_segments.pluck(:contract_id)).to match_array([contract.id, second_contract.id])
+        end
+
+        context "with the same purchase order number" do
+          let(:purchase_number) { "PO-SAME" }
+          let(:second_purchase_number) { "PO-SAME" }
+
+          it "consolidates the fees and sets the purchase order on the invoice" do
+            invoice = result.invoices.sole
+
+            expect(invoice.purchase_order_number).to eq("PO-SAME")
+            expect(invoice.fees.count).to eq(2)
+          end
         end
 
         shared_examples "splits invoices" do
@@ -1046,9 +1064,15 @@ RSpec.describe BillingSegments::ProcessService do
         end
 
         context "with different purchase order numbers" do
-          before { second_contract.update!(purchase_order_number: "PO-123") }
+          let(:purchase_number) { "PO-111" }
+          let(:second_purchase_number) { "PO-222" }
 
-          it_behaves_like "splits invoices"
+          it "creates separate invoices with their respective purchase orders" do
+            expect(result).to be_success
+            expect(result.invoices.map(&:purchase_order_number)).to match_array(["PO-111", "PO-222"])
+            expect(result.invoices.map { |invoice| invoice.fees.count }).to eq([1, 1])
+            expect(billing_segment.reload.invoice_id).not_to eq(second_segment.reload.invoice_id)
+          end
         end
       end
 

@@ -34,6 +34,20 @@ RSpec.describe Api::V2::ContractsController do
       expect(json[:contract][:applied_rate_cards].sole[:rate_card_code]).to eq(rate_card.code)
     end
 
+    context "with invoicing settings" do
+      let(:create_params) { super().merge(consolidate_invoice: false, purchase_order_number: "PO-111") }
+
+      it "persists and returns the settings used to group invoices" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract]).to include(consolidate_invoice: false, purchase_order_number: "PO-111")
+        expect(organization.contracts.find_by!(external_id: "contract-1")).to have_attributes(
+          consolidate_invoice: false, purchase_order_number: "PO-111"
+        )
+      end
+    end
+
     context "with invoice custom sections" do
       let(:section) { create(:invoice_custom_section, organization:) }
       let(:create_params) { super().merge(invoice_custom_section: {invoice_custom_section_codes: [section.code]}) }
@@ -177,6 +191,18 @@ RSpec.describe Api::V2::ContractsController do
       expect(json[:contract][:applied_rate_cards].sole[:lago_id]).to eq(card.id)
     end
 
+    context "with invoicing settings" do
+      let(:contract) do
+        create(:contract, organization:, customer:, catalog_plan:, consolidate_invoice: false, purchase_order_number: "PO-222")
+      end
+
+      it "returns the persisted settings" do
+        subject
+
+        expect(json[:contract]).to include(consolidate_invoice: false, purchase_order_number: "PO-222")
+      end
+    end
+
     context "without a billing anchor" do
       let(:contract) { create(:contract, organization:, customer:, catalog_plan:, started_at: Time.zone.parse("2026-10-01")) }
 
@@ -313,6 +339,30 @@ RSpec.describe Api::V2::ContractsController do
 
         expect(response).to have_http_status(:success)
         expect(json[:contract][:name]).to eq("Renamed")
+      end
+
+      context "with invoicing settings" do
+        let(:update_params) { {consolidate_invoice: false, purchase_order_number: "PO-222"} }
+
+        it "persists and returns both settings" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:contract]).to include(consolidate_invoice: false, purchase_order_number: "PO-222")
+          expect(contract.reload).to have_attributes(consolidate_invoice: false, purchase_order_number: "PO-222")
+        end
+
+        context "when clearing the purchase order" do
+          let(:contract) { create(:contract, organization:, customer:, catalog_plan:, purchase_order_number: "PO-111") }
+          let(:update_params) { {purchase_order_number: nil} }
+
+          it "clears the stored purchase order without changing consolidation" do
+            subject
+
+            expect(json[:contract]).to include(consolidate_invoice: true, purchase_order_number: nil)
+            expect(contract.reload).to have_attributes(consolidate_invoice: true, purchase_order_number: nil)
+          end
+        end
       end
 
       context "when changing the plan" do

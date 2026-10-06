@@ -131,6 +131,8 @@ module Api
           :billing_anchor_date,
           :started_at,
           :ended_at,
+          :consolidate_invoice,
+          :purchase_order_number,
           invoice_custom_section: [:skip_invoice_custom_sections, {invoice_custom_section_codes: []}]
         )
       end
@@ -146,6 +148,8 @@ module Api
           :billing_anchor_date,
           :started_at,
           :ended_at,
+          :consolidate_invoice,
+          :purchase_order_number,
           invoice_custom_section: [:skip_invoice_custom_sections, {invoice_custom_section_codes: []}]
         )
       end
