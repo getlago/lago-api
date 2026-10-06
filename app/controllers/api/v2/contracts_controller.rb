@@ -227,7 +227,9 @@ module Api
           :billing_time,
           :billing_anchor_date,
           :started_at,
-          :ended_at
+          :ended_at,
+          :consolidate_invoice,
+          :purchase_order_number
         )
       end
 
@@ -241,7 +243,9 @@ module Api
           :billing_time,
           :billing_anchor_date,
           :started_at,
-          :ended_at
+          :ended_at,
+          :consolidate_invoice,
+          :purchase_order_number
         )
       end
 
