@@ -170,6 +170,59 @@ RSpec.describe Events::PayInAdvanceService do
         end.not_to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
       end
 
+      context "when another product shares the billable metric" do
+        let(:other_product) { create(:product, :metered, organization:, billable_metric:) }
+        let(:other_card) { create(:rate_card, :advance, organization:, product: other_product, display_on_invoice: false) }
+        let(:other_attachment) { create(:contract_rate_card, organization:, contract:, rate_card: other_card) }
+        let(:other_rate) { create(:rate_card_rate, organization:, rate_card: other_card) }
+
+        before do
+          other_attachment
+          other_rate
+        end
+
+        it "enqueues one fee job for each product" do
+          expect { in_advance_service.call }.to have_enqueued_job(Fees::CreatePayInAdvanceJob).twice
+        end
+      end
+
+      context "when a newer arrears attachment replaces the advance attachment" do
+        let(:contract_rate_card) do
+          create(:contract_rate_card, organization:, contract:, rate_card:,
+            effective_date: Date.current - 2.days, billing_anchor_date: Date.current - 2.days)
+        end
+        let(:replacement_card) { create(:rate_card, organization:, product:, billing_timing: :arrears) }
+        let(:replacement_attachment) do
+          create(:contract_rate_card, organization:, contract:, rate_card: replacement_card,
+            effective_date: Date.current - 1.day, billing_anchor_date: Date.current - 1.day)
+        end
+        let(:replacement_rate) do
+          create(:rate_card_rate, organization:, rate_card: replacement_card,
+            effective_from: replacement_attachment.effective_date.in_time_zone)
+        end
+
+        before do
+          replacement_attachment
+          replacement_rate
+        end
+
+        it "does not enqueue a pay-in-advance fee or invoice job" do
+          expect do
+            expect { in_advance_service.call }.not_to have_enqueued_job(Fees::CreatePayInAdvanceJob)
+          end.not_to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
+        end
+
+        context "when the superseded advance card is displayed on the invoice" do
+          let(:display_on_invoice) { true }
+
+          it "does not enqueue a pay-in-advance fee or invoice job" do
+            expect do
+              expect { in_advance_service.call }.not_to have_enqueued_job(Fees::CreatePayInAdvanceJob)
+            end.not_to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
+          end
+        end
+      end
+
       context "when the rate card is displayed on the invoice" do
         let(:display_on_invoice) { true }
 
