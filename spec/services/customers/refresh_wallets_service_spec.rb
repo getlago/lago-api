@@ -95,8 +95,16 @@ RSpec.describe Customers::RefreshWalletsService do
       expect(wallet.credits_ongoing_balance).to eq 1.0
     end
 
-    it "records what the wallet absorbs per billable metric, net of what pay in advance already billed" do
-      expect(result.wallets.first.ongoing_billable_metric_amounts).to eq({billable_metric.id => 900})
+    it "keeps the per-metric split empty when the organization streams nothing, so its wallets get no extra write" do
+      expect(result.wallets.first.ongoing_billable_metric_amounts).to eq({})
+    end
+
+    context "when the organization streams usage" do
+      before { create(:kinesis_destination, organization:) }
+
+      it "records what the wallet absorbs per billable metric, net of what pay in advance already billed" do
+        expect(result.wallets.first.ongoing_billable_metric_amounts).to eq({billable_metric.id => 900})
+      end
     end
 
     it "marks customer as not awaiting wallet refresh" do
