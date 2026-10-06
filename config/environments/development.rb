@@ -68,8 +68,8 @@ Rails.application.configure do
   config.action_mailer.raise_delivery_errors = true
   config.action_mailer.delivery_method = :smtp
   config.action_mailer.smtp_settings = {
-    address: "mailhog",
-    port: 1025
+    address: ENV.fetch("LAGO_SMTP_ADDRESS", "mailpit"),
+    port: ENV.fetch("LAGO_SMTP_PORT", 1025)
   }
   config.action_mailer.preview_paths << Rails.root.join("spec/mailers/previews").to_s
 
