@@ -4,6 +4,7 @@ module X402
   module GateChecks
     class CheckService < BaseService
       DEGRADED_CALL_HEADROOM = 1_000
+      MAX_AGENT_ADDRESS_LENGTH = 44
 
       Result = BaseResult[:balance_credits, :requirements, :external_subscription_id]
 
@@ -87,7 +88,15 @@ module X402
       end
 
       def agent_family
-        X402::Network.family_of_address(agent_address) if agent_address
+        if defined?(@agent_family)
+          @agent_family
+        else
+          @agent_family = decodable_agent_address? ? X402::Network.family_of_address(agent_address) : nil
+        end
+      end
+
+      def decodable_agent_address?
+        agent_address.present? && agent_address.length <= MAX_AGENT_ADDRESS_LENGTH
       end
 
       def amount_cents

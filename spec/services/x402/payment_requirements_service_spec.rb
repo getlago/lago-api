@@ -49,6 +49,7 @@ describe X402::PaymentRequirementsService do
   context "when the fee payer rotates between challenges" do
     let(:connection) { create(:x402_connection, :solana, cdp_api_key_id:, cdp_api_key_secret:) }
     let(:rotated) { "HHU1aLQQCbCzW9ebjFTntq2vkvsQsxkDyPjMsW2WtiLG" }
+    let(:fee_payers) { Array.new(2) { described_class.call(connection:, amount_cents: 1_000).requirements.sole[:extra]["feePayer"] } }
 
     before do
       stub_request(:get, "#{cdp_facilitator_url}/supported")
@@ -56,7 +57,6 @@ describe X402::PaymentRequirementsService do
     end
 
     it "reads it afresh for each challenge" do
-      fee_payers = Array.new(2) { described_class.call(connection:, amount_cents: 1_000).requirements.sole[:extra]["feePayer"] }
       expect(fee_payers).to eq([fee_payer, rotated])
     end
   end

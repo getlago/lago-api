@@ -49,6 +49,22 @@ describe X402::GateChecks::CheckService, :premium do
       expect(a_request(:any, /api\.cdp\.coinbase\.com/)).not_to have_been_made
     end
 
+    context "with the agent address claimed in lowercase" do
+      let(:params) { super().merge(agent_address: agent_address.downcase) }
+
+      it "passes with the checksummed external subscription id" do
+        expect(result).to have_attributes(requirements: nil, external_subscription_id: subscription.external_id)
+      end
+    end
+
+    context "with the agent address claimed in uppercase hex" do
+      let(:params) { super().merge(agent_address: "0x#{agent_address.delete_prefix("0x").upcase}") }
+
+      it "passes with the checksummed external subscription id" do
+        expect(result).to have_attributes(requirements: nil, external_subscription_id: subscription.external_id)
+      end
+    end
+
     context "with a wallet restricted to other fee types" do
       let(:wallet) do
         create(:wallet, customer:, code: "agent_credits", currency: "USD", x402_enabled: true, allowed_fee_types: ["subscription"],
@@ -82,6 +98,22 @@ describe X402::GateChecks::CheckService, :premium do
 
     it "challenges for the route's top-up" do
       expect(result).to have_attributes(requirements: [evm_requirement], external_subscription_id: subscription.external_id, balance_credits: 9)
+    end
+  end
+
+  context "when the computed base equals the floor" do
+    let(:wallet) do
+      create(:wallet, customer:, code: "agent_credits", currency: "USD", x402_enabled: true,
+        balance_cents: 1_200, credits_balance: 12, ongoing_usage_balance_cents: 200, credits_ongoing_usage_balance: 2)
+    end
+
+    before do
+      wallet
+      subscription
+    end
+
+    it "passes" do
+      expect(result.requirements).to be_nil
     end
   end
 
@@ -145,16 +177,18 @@ describe X402::GateChecks::CheckService, :premium do
     end
   end
 
-  context "with a known agent when the connection refuses strangers" do
+  context "when the connection refuses strangers" do
     let(:connection) { create(:x402_connection, organization:, auto_create_customers: false) }
 
-    before do
-      wallet
-      subscription
-    end
+    context "with a known agent" do
+      before do
+        wallet
+        subscription
+      end
 
-    it "passes" do
-      expect(result.requirements).to be_nil
+      it "passes" do
+        expect(result.requirements).to be_nil
+      end
     end
   end
 
@@ -171,6 +205,21 @@ describe X402::GateChecks::CheckService, :premium do
       it "refuses the field as invalid_format" do
         expect(result.error.messages).to eq(agent_address: ["invalid_format"])
       end
+    end
+  end
+
+  context "with an agent address longer than any address" do
+    let(:agent_address) { "1" * 45 }
+
+    before { allow(X402::Base58).to receive(:decode).and_call_original }
+
+    it "refuses the field as invalid_format" do
+      expect(result.error.messages).to eq(agent_address: ["invalid_format"])
+    end
+
+    it "never decodes it" do
+      result
+      expect(X402::Base58).not_to have_received(:decode).with("1" * 45)
     end
   end
 
@@ -235,11 +284,13 @@ describe X402::GateChecks::CheckService, :premium do
   context "with a misconfigured route" do
     let(:plan) { create(:plan, organization:, amount_cents: 0, amount_currency: "EUR") }
 
-    context "with a stranger when the connection refuses strangers" do
+    context "when the connection refuses strangers" do
       let(:connection) { create(:x402_connection, organization:, auto_create_customers: false) }
 
-      it "answers the route code first" do
-        expect(result.error.messages).to eq(base: ["plan_currency_not_supported"])
+      context "with a stranger" do
+        it "answers the route code first" do
+          expect(result.error.messages).to eq(base: ["plan_currency_not_supported"])
+        end
       end
     end
 
@@ -442,6 +493,25 @@ describe X402::GateChecks::CheckService, :premium do
       it "refuses with agent_address_family_unsupported" do
         expect(result.error.messages).to eq(base: ["agent_address_family_unsupported"])
       end
+    end
+  end
+
+  context "with a funded Solana agent" do
+    let(:connection) { create(:x402_connection, :solana, organization:) }
+    let(:agent_address) { "HHU1aLQQCbCzW9ebjFTntq2vkvsQsxkDyPjMsW2WtiLG" }
+
+    before do
+      wallet
+      subscription
+    end
+
+    it "passes with its external subscription id" do
+      expect(result).to have_attributes(requirements: nil, external_subscription_id: "x402_#{agent_address}_#{plan.code}")
+    end
+
+    it "makes no facilitator call" do
+      result
+      expect(a_request(:any, /api\.cdp\.coinbase\.com/)).not_to have_been_made
     end
   end
 

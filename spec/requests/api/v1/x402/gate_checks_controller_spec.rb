@@ -78,6 +78,31 @@ describe Api::V1::X402::GateChecksController, :premium do
     end
   end
 
+  context "with the key usage cache watched" do
+    before { allow(Rails.cache).to receive(:write).and_call_original }
+
+    it "does not track the key usage" do
+      subject
+      expect(Rails.cache).not_to have_received(:write).with(/\Aapi_key_last_used_/, anything)
+    end
+  end
+
+  context "when /supported is unavailable" do
+    include_context "with an x402 payment"
+
+    let(:organization) { create(:organization, feature_flags: ["x402_payments"], premium_integrations: ["events_targeting_wallets"]) }
+    let(:connection) { create(:x402_connection, :solana, organization:, cdp_api_key_id:, cdp_api_key_secret:) }
+    let(:params) { super().except(:agent_address) }
+
+    before { stub_request(:get, "#{cdp_facilitator_url}/supported").to_return(status: 503, body: "{}") }
+
+    it "answers 422 with third_party_error" do
+      subject
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(json[:code]).to eq("third_party_error")
+    end
+  end
+
   context "with an unknown connection code" do
     let(:params) { super().merge(connection_code: "unknown") }
 

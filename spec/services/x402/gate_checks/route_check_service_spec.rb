@@ -124,6 +124,14 @@ describe X402::GateChecks::RouteCheckService, :premium do
     end
   end
 
+  context "with a second route charge that is pay-in-advance and not invoiceable" do
+    before { create(:standard_charge, :regroup_paid_fees, plan:, billable_metric:, accepts_target_wallet: true) }
+
+    it "refuses with charge_not_invoiceable" do
+      expect(result.error.messages).to eq(base: ["charge_not_invoiceable"])
+    end
+  end
+
   context "with an invoiceable pay-in-advance route charge" do
     let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:, accepts_target_wallet: true) }
 
