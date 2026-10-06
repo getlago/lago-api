@@ -308,7 +308,7 @@ describe X402::Settlement do
       context "when a settled attempt holds the digest" do
         before { create(:x402_settlement, organization:, x402_connection: connection, payment_digest: "digest") }
 
-        it { expect { insert }.to raise_error(ActiveRecord::RecordNotUnique, /index_x402_settlements_on_organization_id_and_payment_digest/) }
+        it { expect { insert }.to raise_error(ActiveRecord::RecordNotUnique, /index_x402_settlements_on_payment_digest/) }
       end
 
       context "when only a failed attempt holds the digest" do
@@ -320,7 +320,7 @@ describe X402::Settlement do
       context "when another organization holds the digest" do
         before { create(:x402_settlement, payment_digest: "digest") }
 
-        it { expect(insert).to be(true) }
+        it { expect { insert }.to raise_error(ActiveRecord::RecordNotUnique, /index_x402_settlements_on_payment_digest/) }
       end
     end
 
@@ -357,17 +357,24 @@ describe X402::Settlement do
     end
 
     describe "transaction hash" do
-      let(:duplicate) { build(:x402_settlement, organization:, x402_connection: connection, network:, transaction_hash: "0xabc") }
+      let(:duplicate) { build(:x402_settlement, organization: duplicate_connection.organization, x402_connection: duplicate_connection, network:, transaction_hash: "0xabc") }
+      let(:duplicate_connection) { connection }
       let(:network) { "eip155:84532" }
 
       before { create(:x402_settlement, organization:, x402_connection: connection, transaction_hash: "0xabc") }
 
-      it { expect { insert }.to raise_error(ActiveRecord::RecordNotUnique, /index_x402_settlements_on_organization_network_and_hash/) }
+      it { expect { insert }.to raise_error(ActiveRecord::RecordNotUnique, /index_x402_settlements_on_network_and_transaction_hash/) }
 
       context "with another network" do
         let(:network) { "eip155:8453" }
 
         it { expect(insert).to be(true) }
+      end
+
+      context "with another organization" do
+        let(:duplicate_connection) { create(:x402_connection) }
+
+        it { expect { insert }.to raise_error(ActiveRecord::RecordNotUnique, /index_x402_settlements_on_network_and_transaction_hash/) }
       end
     end
 

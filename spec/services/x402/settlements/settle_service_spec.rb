@@ -314,9 +314,7 @@ describe X402::Settlements::SettleService do
     context "when another organization holds the digest" do
       before { create(:x402_settlement, :pending, payment_digest: "digest") }
 
-      it "settles" do
-        expect(result.outcome).to eq(:settled)
-      end
+      it_behaves_like "a refusal before settle", {base: ["payment_already_recorded"]}
     end
 
     context "when the payer has a pending credit purchase" do

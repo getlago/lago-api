@@ -6,7 +6,7 @@ module X402
       Result = BaseResult[:settlement, :outcome, :transaction_hash]
       RECONCILE_MARGIN = 30.seconds
       RACE_CODES = {
-        "index_x402_settlements_on_organization_id_and_payment_digest" => "payment_already_recorded",
+        "index_x402_settlements_on_payment_digest" => "payment_already_recorded",
         "index_x402_settlements_on_pending_credit_purchase_payer" => "credit_purchase_pending",
         "index_x402_settlements_on_pending_invoice_id" => "invoice_payment_pending"
       }.freeze
