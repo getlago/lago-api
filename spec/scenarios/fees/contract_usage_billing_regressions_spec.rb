@@ -219,6 +219,45 @@ RSpec.describe "Contract usage billing QA regressions" do
       end
     end
 
+    context "with recurring prorated unique-count pricing BIL-769" do
+      let(:started_at) { Time.zone.parse("2026-10-07 00:00:00") }
+      let(:aggregation_type) { :unique_count_agg }
+      let(:field_name) { "user_id" }
+      let(:proration) { true }
+      let(:rate_properties) { {"amount" => "10"} }
+      let(:card) do
+        create(:contract_rate_card, organization:, contract:, rate_card:,
+          effective_date: started_at.to_date, billing_anchor_date: Date.new(2026, 10, 1), next_billing_at: started_at)
+      end
+      let(:same_day_at) { Time.zone.parse("2026-10-07 08:38:41 UTC") }
+      let(:inputs) do
+        ["user-1", "user-2"].map do |user_id|
+          {at: same_day_at, value: user_id, properties: {operation_type: "add"}}
+        end
+      end
+
+      it "charges each distinct user the 25/31 opening-period amount" do
+        expect(event_fees.map(&:amount_cents)).to eq([806, 806])
+        expect(invoices.map(&:status)).to eq(["finalized", "finalized"])
+        expect(invoices.map(&:total_amount_cents)).to eq([806, 806])
+      end
+
+      context "when the distinct users are added on separate days" do
+        let(:inputs) do
+          [
+            {at: same_day_at, value: "user-1", properties: {operation_type: "add"}},
+            {at: Time.zone.parse("2026-10-15 08:38:41 UTC"), value: "user-2", properties: {operation_type: "add"}}
+          ]
+        end
+
+        it "charges the opening-period amount and then prorates the later user" do
+          expect(event_fees.map(&:amount_cents)).to eq([806, 548])
+          expect(invoices.map(&:status)).to eq(["finalized", "finalized"])
+          expect(invoices.map(&:total_amount_cents)).to eq([806, 548])
+        end
+      end
+    end
+
     context "with nonrecurring unique package pricing K4" do
       let(:aggregation_type) { :unique_count_agg }
       let(:recurring) { false }
