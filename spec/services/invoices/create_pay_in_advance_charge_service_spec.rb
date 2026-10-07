@@ -143,6 +143,12 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
       expect(Fee.where(pay_in_advance_event_transaction_id: event.transaction_id).count).to eq(1)
     end
 
+    it "enqueues the fee webhook once with the fee attached to its invoice" do
+      invoice = invoice_service.call.invoice
+
+      expect(SendWebhookJob).to have_been_enqueued.with("fee.created", invoice.fees.sole).once
+    end
+
     it "creates InvoiceSubscription object" do
       expect { invoice_service.call.invoice }.to change(InvoiceSubscription, :count).by(1)
     end
@@ -225,6 +231,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
             expect(CachedAggregation.where(contract:, product:)).to be_empty
             expect(Fee.where(contract:)).to be_empty
             expect(Invoice.where(customer:)).to be_empty
+            expect(SendWebhookJob).not_to have_been_enqueued.with("fee.created", anything)
           end
         end
       end
@@ -451,7 +458,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
       it "enqueues fee webhooks but not invoice webhooks" do
         invoice_service.call
 
-        expect(SendWebhookJob).to have_been_enqueued.with("fee.created", anything)
+        expect(SendWebhookJob).to have_been_enqueued.with("fee.created", anything).once
         expect(SendWebhookJob).not_to have_been_enqueued.with("invoice.created", anything)
       end
 

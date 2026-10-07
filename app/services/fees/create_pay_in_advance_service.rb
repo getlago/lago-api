@@ -2,15 +2,14 @@
 
 module Fees
   class CreatePayInAdvanceService < BaseService
-    Result = BaseResult[:fees, :invoice_id]
+    Result = BaseResult[:fees, :invoice_id, :cached_aggregations]
 
-    def initialize(metered_item:, billing_context:, billing_at: nil, estimate: false, skip_webhooks: false)
+    def initialize(metered_item:, billing_context:, billing_at: nil, estimate: false)
       @metered_item = metered_item
       @billing_context = billing_context
       @billing_at = billing_at || metered_item.event.timestamp
 
       @estimate = estimate
-      @skip_webhooks = skip_webhooks
       raise ArgumentError, "estimate must be true if event if not persisted" if !metered_item.event.persisted && !estimate
 
       super
@@ -18,6 +17,7 @@ module Fees
 
     def call
       fees = []
+      result.cached_aggregations = []
 
       metered_item.with_aggregation_lock do
         ActiveRecord::Base.transaction(**isolation_mode) do
@@ -53,7 +53,7 @@ module Fees
 
     private
 
-    attr_reader :metered_item, :billing_context, :billing_at, :estimate, :skip_webhooks
+    attr_reader :metered_item, :billing_context, :billing_at, :estimate
 
     delegate :charge, :event, :billable_metric, to: :metered_item
 
@@ -145,7 +145,7 @@ module Fees
     end
 
     def deliver_webhooks
-      return if estimate || skip_webhooks
+      return if estimate
 
       result.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
     end
@@ -161,12 +161,11 @@ module Fees
     end
 
     def cache_aggregation_result(selected_metered_item:, aggregation_result:)
-      return if estimate
       return unless aggregation_result.current_aggregation.present? ||
         aggregation_result.max_aggregation.present? ||
         aggregation_result.max_aggregation_with_proration.present?
 
-      CachedAggregation.create!(
+      aggregation = CachedAggregation.new(
         organization_id: event.organization_id,
         event_transaction_id: event.transaction_id,
         timestamp: billing_at,
@@ -182,6 +181,11 @@ module Fees
           selected_metered_item:
         )
       )
+
+      unless estimate
+        aggregation.save!
+      end
+      result.cached_aggregations << aggregation
     end
 
     def remove_formated_grouped_by_keys(breakdowns, selected_metered_item:)

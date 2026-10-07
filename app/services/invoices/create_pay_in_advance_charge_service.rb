@@ -29,6 +29,7 @@ module Invoices
 
         create_generating_invoice
         fees.each { |f| f.update!(invoice:) }
+        fee_result.cached_aggregations.each(&:save!)
 
         invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
         invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
@@ -115,8 +116,8 @@ module Invoices
     end
 
     def generate_fees
-      # Persist real fees and aggregation state within the invoice transaction.
-      Fees::CreatePayInAdvanceService.call!(metered_item:, billing_context:, skip_webhooks: true).tap do |fee_result|
+      # The invoice transaction persists both the estimated fees and their aggregation state.
+      Fees::CreatePayInAdvanceService.call!(metered_item:, billing_context:, estimate: true).tap do |fee_result|
         result.invoice_id = fee_result.invoice_id
       end
     end

@@ -195,6 +195,12 @@ RSpec.describe Fees::CreatePayInAdvanceService do
             expect { fee_service.call }.to not_change(CachedAggregation, :count)
               .and not_change(Fee, :count)
           end
+
+          it "returns unsaved aggregation state for the invoice transaction" do
+            expect(fee_service.call.cached_aggregations.sole).to have_attributes(
+              new_record?: true, current_aggregation: 7, max_aggregation: 10
+            )
+          end
         end
 
         context "when saving the fee fails" do
