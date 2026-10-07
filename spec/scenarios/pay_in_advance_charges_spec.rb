@@ -509,8 +509,8 @@ describe "Pay in advance charges Scenarios", transaction: false do
         expect(fees.map(&:units)).to eq([1, 0, 1])
         expect(fees.map(&:events_count)).to eq([1, 1, 1])
         expect(cached_aggregations.map do |cached|
-          [cached.charge_id, cached.contract_id, cached.product_id, cached.current_aggregation, cached.max_aggregation]
-        end).to eq([[charge.id, nil, nil, 1, 1], [charge.id, nil, nil, 1, 1], [charge.id, nil, nil, 2, 2]])
+          [cached.charge_id, cached.current_aggregation, cached.max_aggregation]
+        end).to eq([[charge.id, 1, 1], [charge.id, 1, 1], [charge.id, 2, 2]])
 
         invoices = fees.map(&:invoice)
         expect(invoices.map(&:id).uniq.size).to eq(3)

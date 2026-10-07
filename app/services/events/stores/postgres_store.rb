@@ -117,6 +117,7 @@ module Events
             event.id
           )
         elsif event.persisted? && event.id.present?
+          # Jobs queued before created_at was serialized still need the database tie-breaker.
           current_event = events.where(id: event.id).select(:created_at, :id)
           previous_events = previous_events.where(
             "events.timestamp < ? OR (events.timestamp = ? AND (events.created_at, events.id) < (#{current_event.to_sql}))",
@@ -124,6 +125,7 @@ module Events
             event.timestamp
           )
         else
+          # Estimates and events without an ID have no persisted position among timestamp ties.
           previous_events = previous_events.where("events.timestamp < ?", event.timestamp)
         end
 
