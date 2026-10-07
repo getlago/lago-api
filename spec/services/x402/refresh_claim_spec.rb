@@ -12,6 +12,23 @@ describe X402::RefreshClaim, cache: :redis do
 
   before { allow(Sentry).to receive(:capture_exception) }
 
+  def losing_first_reply(hook)
+    lost = false
+
+    Module.new do
+      define_method(hook) do |commands, config, &block|
+        result = super(commands, config, &block)
+
+        if !lost && yield(commands)
+          lost = true
+          raise RedisClient::ReadTimeoutError, "reply lost"
+        end
+
+        result
+      end
+    end
+  end
+
   describe ".acquire" do
     subject(:claim) { described_class.acquire(customer) }
 
@@ -36,6 +53,24 @@ describe X402::RefreshClaim, cache: :redis do
         claim
 
         expect(Rails.cache.redis.then { it.get(claim_key) }).to eq("other")
+      end
+    end
+
+    context "when the SET reply is lost" do
+      let(:lossy_client) do
+        Redis.new(url: ENV.fetch("REDIS_URL"), middlewares: [losing_first_reply(:call) { |command| command.first.to_s.casecmp?("set") }])
+      end
+
+      before { allow(X402::ReservationCounter).to receive(:redis).and_return(lossy_client) }
+
+      it "returns a claim" do
+        expect(claim).to be_a(described_class)
+      end
+
+      it "holds a token under the claim key" do
+        claim
+
+        expect(Rails.cache.redis.then { it.get(claim_key) }).to be_present
       end
     end
 
@@ -96,10 +131,34 @@ describe X402::RefreshClaim, cache: :redis do
     context "with a counter about to expire" do
       before { Rails.cache.redis.then { it.set(counter_key, 30, ex: 60) } }
 
-      it "does not reset the TTL" do
+      it "re-arms the TTL to one hour" do
         release
 
-        expect(Rails.cache.redis.then { it.ttl(counter_key) }).to be <= 60
+        expect(Rails.cache.redis.then { it.ttl(counter_key) }).to be_between(3500, 3600)
+      end
+    end
+
+    context "when the EXEC reply is lost" do
+      let(:lossy_client) do
+        Redis.new(url: ENV.fetch("REDIS_URL"), middlewares: [losing_first_reply(:call_pipelined) { |commands| commands.last.first.to_s.casecmp?("exec") }])
+      end
+
+      before do
+        Rails.cache.redis.then { it.set(counter_key, 30, ex: 3600) }
+        claim
+        allow(X402::ReservationCounter).to receive(:redis).and_return(lossy_client)
+      end
+
+      it "releases the counter exactly once" do
+        release
+
+        expect(counter).to eq("0")
+      end
+
+      it "reports the failure" do
+        release
+
+        expect(Sentry).to have_received(:capture_exception).with(an_instance_of(Redis::TimeoutError), extra:)
       end
     end
 

@@ -14,7 +14,9 @@ module X402
     end
 
     def acquire
-      claimed = ReservationCounter.redis.then { |client| client.set(key, token, nx: true, px: TTL.in_milliseconds) }
+      claimed = ReservationCounter.redis.then do |client|
+        client.set(key, token, nx: true, px: TTL.in_milliseconds) || client.get(key) == token
+      end
 
       if claimed
         self
@@ -27,17 +29,19 @@ module X402
     def release(reservations)
       ReservationCounter.redis.then do |client|
         client.watch(key) do
-          if client.get(key) == token
-            client.multi do |transaction|
-              reservations.each do |wallet, cents|
-                counter = ReservationCounter.key(wallet)
-                transaction.decrby(counter, cents)
-                transaction.expire(counter, ReservationCounter::TTL.to_i, nx: true)
+          client.without_reconnect do
+            if client.get(key) == token
+              client.multi do |transaction|
+                reservations.each do |wallet, cents|
+                  counter = ReservationCounter.key(wallet)
+                  transaction.decrby(counter, cents)
+                  transaction.expire(counter, ReservationCounter::TTL.to_i)
+                end
+                transaction.del(key)
               end
-              transaction.del(key)
+            else
+              client.unwatch
             end
-          else
-            client.unwatch
           end
         end
       end

@@ -657,7 +657,10 @@ RSpec.describe Customers::RefreshWalletsService do
     let(:key) { "x402:reserved:#{wallet.id}" }
     let(:claim_key) { "x402:refreshing:#{customer.id}" }
 
-    before { wallet }
+    before do
+      wallet
+      allow(X402::RefreshClaim).to receive(:acquire).and_call_original
+    end
 
     context "with a reservation" do
       before { Rails.cache.redis.then { it.set(key, 30, ex: 3600) } }
@@ -734,6 +737,12 @@ RSpec.describe Customers::RefreshWalletsService do
 
           expect(Rails.cache.read(key, raw: true)).to eq("30")
         end
+
+        it "takes no claim" do
+          result
+
+          expect(X402::RefreshClaim).not_to have_received(:acquire)
+        end
       end
 
       context "when the counter is switched off" do
@@ -743,6 +752,12 @@ RSpec.describe Customers::RefreshWalletsService do
           result
 
           expect(Rails.cache.read(key, raw: true)).to eq("30")
+        end
+
+        it "takes no claim" do
+          result
+
+          expect(X402::RefreshClaim).not_to have_received(:acquire)
         end
       end
 
