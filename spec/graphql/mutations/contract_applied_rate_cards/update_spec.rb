@@ -45,6 +45,25 @@ RSpec.describe Mutations::ContractAppliedRateCards::Update do
     expect(contract_rate_card.reload.units).to eq(20)
   end
 
+  context "when units are cleared" do
+    let(:input) { {id: contract_rate_card.id, units: nil} }
+
+    it "removes the units" do
+      expect(execution["data"]["updateContractAppliedRateCard"]["units"]).to be_nil
+      expect(contract_rate_card.reload.units).to be_nil
+    end
+  end
+
+  context "when the anchor is cleared" do
+    let(:input) { {id: contract_rate_card.id, billingAnchorDate: nil} }
+
+    it "rejects the anchor as invalid" do
+      expect_unprocessable_entity(execution, details: {billingAnchorDate: ["value_is_invalid"]})
+
+      expect(contract_rate_card.reload.billing_anchor_date).to eq(Date.current)
+    end
+  end
+
   context "when the anchor moves on a card with a rate" do
     let(:contract) do
       create(:contract, :pending, organization:, started_at: Time.zone.parse("2026-11-01"))
@@ -80,6 +99,16 @@ RSpec.describe Mutations::ContractAppliedRateCards::Update do
 
   context "when the contract is already active" do
     let(:contract) { create(:contract, organization:) }
+
+    it "rejects the change as locked" do
+      expect_unprocessable_entity(execution, details: {contract: ["contract_locked"]})
+
+      expect(contract_rate_card.reload.units).to eq(5)
+    end
+  end
+
+  context "when the contract is terminated" do
+    let(:contract) { create(:contract, :terminated, organization:) }
 
     it "rejects the change as locked" do
       expect_unprocessable_entity(execution, details: {contract: ["contract_locked"]})
