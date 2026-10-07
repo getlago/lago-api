@@ -10356,6 +10356,16 @@ type Mutation {
   ): Contract
 
   """
+  Updates a rate card attached to a pending contract
+  """
+  updateContractAppliedRateCard(
+    """
+    Parameters for UpdateContractAppliedRateCard
+    """
+    input: UpdateContractAppliedRateCardInput!
+  ): ContractAppliedRateCard
+
+  """
   Updates a single phase of a contract rate card, addressed by its code
   """
   updateContractRatePhase(
@@ -10644,6 +10654,16 @@ type Mutation {
     """
     input: UpdatePlanInput!
   ): Plan
+
+  """
+  Updates a rate card applied to a plan without contracts
+  """
+  updatePlanAppliedRateCard(
+    """
+    Parameters for UpdatePlanAppliedRateCard
+    """
+    input: UpdatePlanAppliedRateCardInput!
+  ): PlanAppliedRateCard
   updatePricingUnit(
     """
     Parameters for UpdatePricingUnit
@@ -15606,6 +15626,20 @@ input UpdateCatalogPlanInput {
 }
 
 """
+Update contract applied rate card input arguments
+"""
+input UpdateContractAppliedRateCardInput {
+  billingAnchorDate: ISO8601Date
+
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  id: ID!
+  units: Float
+}
+
+"""
 Update contract input arguments
 """
 input UpdateContractInput {
@@ -16163,6 +16197,18 @@ input UpdatePaymentProviderCustomerInput {
   providerCustomerId: ID
   providerPaymentMethods: [ProviderPaymentMethodsEnum!]
   syncWithProvider: Boolean
+}
+
+"""
+Update plan applied rate card input arguments
+"""
+input UpdatePlanAppliedRateCardInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  id: ID!
+  units: Float
 }
 
 """
