@@ -58,7 +58,7 @@ describe X402::RefreshClaim, cache: :redis do
 
     context "when the SET reply is lost" do
       let(:lossy_client) do
-        Redis.new(url: ENV.fetch("REDIS_URL"), middlewares: [losing_first_reply(:call) { |command| command.first.to_s.casecmp?("set") }])
+        Redis.new(middlewares: [losing_first_reply(:call) { |command| command.first.to_s.casecmp?("set") }])
       end
 
       before { allow(X402::ReservationCounter).to receive(:redis).and_return(lossy_client) }
@@ -140,7 +140,7 @@ describe X402::RefreshClaim, cache: :redis do
 
     context "when the EXEC reply is lost" do
       let(:lossy_client) do
-        Redis.new(url: ENV.fetch("REDIS_URL"), middlewares: [losing_first_reply(:call_pipelined) { |commands| commands.last.first.to_s.casecmp?("exec") }])
+        Redis.new(middlewares: [losing_first_reply(:call_pipelined) { |commands| commands.last.first.to_s.casecmp?("exec") }])
       end
 
       before do
