@@ -428,11 +428,13 @@ module Invoices
 
     # The subscription invoice closes the billing period: recurring coupons used earlier in it,
     # on progressive billing or pay-in-advance invoices, consume one duration even if not applied here.
+    # Here we're reducing usage of recurring coupons that were used in the billing period but NOT applied to this invoice.
     def consume_recurring_coupons_used_in_billing_period
       return unless subscription_invoice?
 
+      coupons_applied_on_current_invoice = invoice.credits.coupon_kind.select(:applied_coupon_id)
       customer.applied_coupons.active.recurring
-        .where.not(id: invoice.credits.coupon_kind.select(:applied_coupon_id))
+        .where.not(id: coupons_applied_on_current_invoice)
         .find_each do |applied_coupon|
           next unless applied_coupon.used_in_billing_period?(invoice)
 
