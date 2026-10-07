@@ -129,7 +129,7 @@ module Customers
         new_customer: true
       )
 
-      SendWebhookJob.perform_later("customer.created", customer)
+      SendWebhookJob.perform_after_commit("customer.created", customer)
       result
     rescue BaseService::FailedResult => e
       result.fail_with_error!(e)

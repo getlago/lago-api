@@ -68,6 +68,18 @@ RSpec.describe Customers::CreateService do
     expect(SendWebhookJob).to have_been_enqueued.with("customer.created", result.customer)
   end
 
+  context "when the caller holds a transaction" do
+    it "sends customer.created only once the caller commits" do
+      ActiveRecord::Base.transaction do
+        result
+
+        expect(SendWebhookJob).not_to have_been_enqueued.with("customer.created", anything)
+      end
+
+      expect(SendWebhookJob).to have_been_enqueued.with("customer.created", result.customer)
+    end
+  end
+
   it "produces an activity log" do
     result
 
