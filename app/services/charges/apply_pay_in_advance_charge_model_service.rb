@@ -32,7 +32,8 @@ module Charges
       result.count = 1
       result.amount = amount_cents
       result.precise_amount = amount * currency.subunit_to_unit.to_d
-      result.unit_amount = rounded_amount.zero? ? BigDecimal(0) : rounded_amount / compute_units
+      # Avoid Infinity for fixed-fee events with zero units; it overflows the database numeric column.
+      result.unit_amount = (rounded_amount.zero? || result.units.zero?) ? BigDecimal(0) : rounded_amount / result.units
       result.amount_details = calculated_single_event_amount_details if with_persisted_event?
       result
     end
@@ -74,7 +75,7 @@ module Charges
 
       result_without_event = build_aggregation_result(
         aggregation: aggregation_result.aggregation - aggregation_result.pay_in_advance_aggregation,
-        count: aggregation_result.count - 1,
+        count: aggregation_result.count - count_delta,
         precise_total_amount_cents:
       )
 
@@ -100,7 +101,7 @@ module Charges
 
       result_with_event = build_aggregation_result(
         aggregation: aggregation_result.aggregation + aggregation_result.pay_in_advance_aggregation,
-        count: aggregation_result.count + 1,
+        count: aggregation_result.count + count_delta,
         precise_total_amount_cents:
       )
 
@@ -114,6 +115,14 @@ module Charges
 
     def amount_including_non_persisted_event
       applied_charge_model_including_non_persisted_event.amount
+    end
+
+    def count_delta
+      if metered_item.billable_metric.unique_count_agg?
+        aggregation_result.pay_in_advance_aggregation
+      else
+        1
+      end
     end
 
     def currency
