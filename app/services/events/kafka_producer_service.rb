@@ -27,15 +27,15 @@ module Events
     attr_reader :events, :organization
 
     # Product catalog organizations get their own pipeline, falling back to the
-    # legacy topic until the product topic is configured.
-    def product_pipeline?
-      return @product_pipeline if defined?(@product_pipeline)
+    # legacy topic until the catalog topic is configured.
+    def catalog_pipeline?
+      return @catalog_pipeline if defined?(@catalog_pipeline)
 
-      @product_pipeline = organization.product_catalog_enabled? && ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"].present?
+      @catalog_pipeline = organization.product_catalog_enabled? && ENV["LAGO_KAFKA_CATALOG_RAW_EVENTS_TOPIC"].present?
     end
 
     def topic
-      product_pipeline? ? ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] : ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"]
+      catalog_pipeline? ? ENV["LAGO_KAFKA_CATALOG_RAW_EVENTS_TOPIC"] : ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"]
     end
 
     def build_message(event)
@@ -66,9 +66,9 @@ module Events
     end
 
     # The create services store external_contract_id in external_subscription_id;
-    # the product tables key on the contract.
+    # the catalog tables key on the contract.
     def scope_key(event)
-      if product_pipeline?
+      if catalog_pipeline?
         {external_contract_id: event.external_subscription_id}
       else
         {external_subscription_id: event.external_subscription_id}

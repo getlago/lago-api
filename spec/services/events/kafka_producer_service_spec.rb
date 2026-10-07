@@ -61,15 +61,15 @@ RSpec.describe Events::KafkaProducerService, :capture_kafka_messages do
       context "when the organization uses the product catalog" do
         let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
 
-        context "with the product topic configured" do
-          before { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = "product_events_raw" }
-          after { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = nil }
+        context "with the catalog topic configured" do
+          before { ENV["LAGO_KAFKA_CATALOG_RAW_EVENTS_TOPIC"] = "catalog_events_raw" }
+          after { ENV["LAGO_KAFKA_CATALOG_RAW_EVENTS_TOPIC"] = nil }
 
-          it "produces the events on the product topic" do
+          it "produces the events on the catalog topic" do
             producer_service.call
 
             expect(karafka_producer).to have_received(:produce_many_async) do |messages|
-              expect(messages.map { it[:topic] }).to eq(%w[product_events_raw product_events_raw])
+              expect(messages.map { it[:topic] }).to eq(%w[catalog_events_raw catalog_events_raw])
             end
           end
 
@@ -84,8 +84,8 @@ RSpec.describe Events::KafkaProducerService, :capture_kafka_messages do
           end
         end
 
-        context "without the product topic configured" do
-          before { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = nil }
+        context "without the catalog topic configured" do
+          before { ENV["LAGO_KAFKA_CATALOG_RAW_EVENTS_TOPIC"] = nil }
 
           it "falls back to the raw events topic with the legacy payload" do
             producer_service.call
@@ -98,9 +98,9 @@ RSpec.describe Events::KafkaProducerService, :capture_kafka_messages do
         end
       end
 
-      context "when the product topic is configured but the organization does not use the product catalog" do
-        before { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = "product_events_raw" }
-        after { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = nil }
+      context "when the catalog topic is configured but the organization does not use the product catalog" do
+        before { ENV["LAGO_KAFKA_CATALOG_RAW_EVENTS_TOPIC"] = "catalog_events_raw" }
+        after { ENV["LAGO_KAFKA_CATALOG_RAW_EVENTS_TOPIC"] = nil }
 
         it "produces the events on the raw events topic" do
           producer_service.call

@@ -1,4 +1,4 @@
-CREATE TABLE default.product_events_raw
+CREATE TABLE default.catalog_events_raw
 (
     `organization_id` String,
     `external_customer_id` String,

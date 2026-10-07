@@ -1,15 +1,15 @@
 # frozen_string_literal: true
 
 module Clickhouse
-  class ProductEventsRaw < BaseRecord
-    self.table_name = "product_events_raw"
+  class CatalogEventsRaw < BaseRecord
+    self.table_name = "catalog_events_raw"
     self.primary_key = nil
   end
 end
 
 # == Schema Information
 #
-# Table name: product_events_raw
+# Table name: catalog_events_raw
 # Database name: clickhouse
 #
 #  code                       :string           not null

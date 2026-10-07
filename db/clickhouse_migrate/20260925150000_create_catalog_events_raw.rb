@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-class CreateProductEventsRaw < ActiveRecord::Migration[8.0]
+class CreateCatalogEventsRaw < ActiveRecord::Migration[8.0]
   def up
     safety_assured do
       execute <<~SQL
-        CREATE TABLE IF NOT EXISTS product_events_raw (
+        CREATE TABLE IF NOT EXISTS catalog_events_raw (
           organization_id String,
           external_customer_id String,
           external_contract_id String,
@@ -22,7 +22,7 @@ class CreateProductEventsRaw < ActiveRecord::Migration[8.0]
 
   def down
     safety_assured do
-      execute "DROP TABLE IF EXISTS product_events_raw"
+      execute "DROP TABLE IF EXISTS catalog_events_raw"
     end
   end
 end
