@@ -477,15 +477,45 @@ describe X402::Settlements::SettleService do
 
     context "with an invoice payment" do
       let(:kind) { :invoice_payment }
-      let(:invoice) { create(:invoice, organization:) }
+      let(:invoice) { create(:invoice, organization:, currency: "USD", total_amount_cents: 105) }
       let(:purchase_settings) { nil }
+      let(:x402_evm_requirements) { super().merge("amount" => "1050000") }
+      let(:x402_evm_payment) { super().deep_merge("payload" => {"authorization" => {"value" => "1050000"}}) }
 
       it "links the invoice" do
         expect(settlement.invoice).to eq(invoice)
       end
 
+      it "settles the amount due" do
+        expect(result.outcome).to eq(:settled)
+      end
+
+      context "with a payment below the amount due" do
+        let(:invoice) { create(:invoice, organization:, currency: "USD", total_amount_cents: 5_000) }
+
+        it_behaves_like "a refusal before settle", {payment: ["amount_mismatch"]}
+      end
+
+      context "with a payment above the amount due" do
+        let(:invoice) { create(:invoice, organization:, currency: "USD", total_amount_cents: 100) }
+
+        it_behaves_like "a refusal before settle", {payment: ["amount_mismatch"]}
+      end
+
+      context "with an invoice already paid" do
+        let(:invoice) { create(:invoice, organization:, currency: "USD", total_amount_cents: 105, total_paid_amount_cents: 105) }
+
+        it_behaves_like "a refusal before settle", {payment: ["amount_mismatch"]}
+      end
+
+      context "with an invoice in another currency" do
+        let(:invoice) { create(:invoice, organization:, currency: "EUR", total_amount_cents: 105) }
+
+        it_behaves_like "a refusal before settle", {invoice: ["currencies_does_not_match"]}
+      end
+
       context "with an invoice of another organization" do
-        let(:invoice) { create(:invoice) }
+        let(:invoice) { create(:invoice, currency: "USD", total_amount_cents: 105) }
 
         it_behaves_like "a refusal before settle", {invoice: ["must_belong_to_same_organization"]}
       end

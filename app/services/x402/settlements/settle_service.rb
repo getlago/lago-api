@@ -6,6 +6,7 @@ module X402
       Result = BaseResult[:settlement, :outcome, :transaction_hash]
       RECONCILE_MARGIN = 30.seconds
       SVM_SIGNATURE_BYTES = 64
+      INVOICE_CURRENCY = "USD"
       RACE_CODES = {
         "index_x402_settlements_on_payment_digest" => "payment_already_recorded",
         "index_x402_settlements_on_pending_credit_purchase_payer" => "credit_purchase_pending",
@@ -24,6 +25,9 @@ module X402
       def call
         raise "#{self.class.name} must run outside a database transaction" if in_transaction?
 
+        invoice_errors = invoice_failure
+        return result.validation_failure!(errors: invoice_errors) if invoice_errors
+
         settlement = insert_pending
         return result if result.failure?
 
@@ -37,6 +41,26 @@ module X402
       attr_reader :verified_payment, :kind, :invoice, :purchase_settings
 
       delegate :connection, :network, :asset, to: :verified_payment, private: true
+
+      def invoice_failure
+        return unless invoice
+
+        if invoice.currency != INVOICE_CURRENCY
+          {invoice: ["currencies_does_not_match"]}
+        elsif verified_payment.settled_amount_atomic != amount_due_atomic
+          {payment: ["amount_mismatch"]}
+        end
+      end
+
+      def amount_due_atomic
+        due_cents = invoice.total_due_amount_cents
+
+        if due_cents.positive?
+          X402::Asset.fetch(code: connection.asset, network:).atomic_from_cents(due_cents)
+        else
+          0
+        end
+      end
 
       def insert_pending
         X402::Settlement.create!(
