@@ -30,6 +30,7 @@ describe X402::Customers::ResolveService do
 
       it "links no tax integration" do
         expect(result.customer.tax_customer).to be_nil
+        expect(IntegrationCustomers::CreateJob).not_to have_been_enqueued
       end
     end
   end
