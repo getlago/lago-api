@@ -170,6 +170,8 @@ module Types
           object.adyen_customer
         when :moneyhash
           object.moneyhash_customer
+        when :paystack
+          object.paystack_customer
         end
       end
 
