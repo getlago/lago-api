@@ -5,6 +5,7 @@ module X402
     class CheckService < BaseService
       DEGRADED_CALL_HEADROOM = 1_000
       MAX_AGENT_ADDRESS_LENGTH = 44
+      MAX_ESTIMATED_CALL_COST_CENTS = 2**63 - 1
 
       Result = BaseResult[:balance_credits, :requirements, :external_subscription_id]
 
@@ -62,7 +63,7 @@ module X402
           billable_metric_code: mandatory(:billable_metric_code),
           wallet_code: mandatory(:wallet_code),
           amount_cents: positive_integer(:amount_cents),
-          estimated_call_cost_cents: positive_integer(:estimated_call_cost_cents),
+          estimated_call_cost_cents: positive_integer(:estimated_call_cost_cents, max: MAX_ESTIMATED_CALL_COST_CENTS),
           agent_address: (["invalid_format"] if agent_address && !valid_agent_address?)
         }.compact
       end
@@ -71,10 +72,12 @@ module X402
         ["value_is_mandatory"] if params[field].blank?
       end
 
-      def positive_integer(field)
+      def positive_integer(field, max: nil)
+        value = X402::UnsignedInteger.parse(params[field])
+
         if params[field].nil?
           ["value_is_mandatory"]
-        elsif !X402::UnsignedInteger.parse(params[field])&.positive?
+        elsif !value&.positive? || (max && value > max)
           ["invalid_value"]
         end
       end
@@ -141,7 +144,30 @@ module X402
       end
 
       def covered?
-        wallet.balance_cents - wallet.ongoing_usage_balance_cents >= DEGRADED_CALL_HEADROOM * estimated_call_cost_cents
+        reserved = reserve
+
+        if reserved.nil?
+          computed_base >= DEGRADED_CALL_HEADROOM * estimated_call_cost_cents
+        elsif computed_base - reserved >= estimated_call_cost_cents
+          true
+        else
+          reservation_counter.release(estimated_call_cost_cents)
+          false
+        end
+      end
+
+      def reserve
+        if X402::ReservationCounter.enabled?(organization)
+          reservation_counter.reserve(estimated_call_cost_cents)
+        end
+      end
+
+      def reservation_counter
+        @reservation_counter ||= X402::ReservationCounter.new(wallet)
+      end
+
+      def computed_base
+        wallet.balance_cents - wallet.ongoing_usage_balance_cents
       end
 
       def balance_credits
