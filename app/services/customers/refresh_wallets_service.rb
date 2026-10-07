@@ -12,6 +12,8 @@ module Customers
     end
 
     def call
+      reservations = capture_reservations
+
       wallet_allocations = Wallets::Balance::AllocateOngoingUsageByWalletsService.call!(
         customer:,
         wallets: all_wallets,
@@ -33,6 +35,8 @@ module Customers
 
       Wallet.where(id: all_wallets.map(&:id)).touch_all(:last_ongoing_balance_sync_at) # rubocop:disable Rails/SkipsModelValidations
 
+      release_reservations(reservations) if reservations.any?
+
       customer.update!(awaiting_wallet_refresh: false)
 
       deliver_streaming_events
@@ -46,6 +50,22 @@ module Customers
     private
 
     attr_reader :customer, :include_generating_invoices
+
+    def capture_reservations
+      x402_wallets = all_wallets.select(&:x402_enabled)
+
+      if x402_wallets.any? && X402::ReservationCounter.enabled?(customer.organization)
+        x402_wallets.index_with { X402::ReservationCounter.new(it).capture }.reject { |_, cents| cents.zero? }
+      else
+        {}
+      end
+    end
+
+    def release_reservations(reservations)
+      after_commit do
+        reservations.each { |wallet, cents| X402::ReservationCounter.new(wallet).release(cents) }
+      end
+    end
 
     def deliver_streaming_events
       streamed_event_types.each do |event_type|
