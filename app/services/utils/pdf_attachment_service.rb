@@ -1,12 +1,15 @@
 # frozen_string_literal: true
 
+require "tmpdir"
+
 module Utils
   class PdfAttachmentService < BaseService
     Result = BaseResult[:file]
 
-    def initialize(file:, attachment:)
+    def initialize(file:, attachment_content:, attachment_name:)
       @file = file
-      @attachment = attachment
+      @attachment_content = attachment_content
+      @attachment_name = attachment_name
 
       super
     end
@@ -14,9 +17,8 @@ module Utils
     def call
       return result.not_found_failure!(resource: "file") unless File.file?(file)
       return result.not_allowed_failure!(code: "not_a_pdf_file") unless file.path.downcase.ends_with?(".pdf")
-      return result.not_found_failure!(resource: "attachment") unless File.file?(attachment)
 
-      success = Kernel.system("pdfcpu", "attach", "add", file.path, attachment.path)
+      success = attach_file
 
       if success
         result.file = file
@@ -29,6 +31,15 @@ module Utils
 
     private
 
-    attr_reader :file, :attachment
+    attr_reader :file, :attachment_content, :attachment_name
+
+    def attach_file
+      Dir.mktmpdir("pdf-attachment") do |directory|
+        attachment_path = File.join(directory, attachment_name)
+        File.write(attachment_path, attachment_content)
+
+        Kernel.system("pdfcpu", "attachments", "add", file.path, attachment_path)
+      end
+    end
   end
 end
