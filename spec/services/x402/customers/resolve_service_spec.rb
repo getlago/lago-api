@@ -132,6 +132,16 @@ describe X402::Customers::ResolveService do
         expect(result.customer).to eq(customer)
       end
     end
+
+    context "when the re-read still misses" do
+      let(:customer) { create(:customer, organization:, x402_agent_address: address) }
+
+      before { allow(Customer).to receive(:by_x402_agent_address).and_return(Customer.none) }
+
+      it "raises the unique violation" do
+        expect { result }.to raise_error(ActiveRecord::RecordNotUnique)
+      end
+    end
   end
 
   context "when the external id belongs to another customer" do
@@ -145,12 +155,9 @@ describe X402::Customers::ResolveService do
   context "when the create fails after the insert" do
     subject(:result) { ActiveRecord::Base.transaction { described_class.call(organization:, address:, family: :evm) } }
 
-    let(:eu_tax_result) { Customers::EuAutoTaxesService::Result.new }
+    let(:eu_tax_result) { Customers::EuAutoTaxesService::Result.new.tap { |eu_result| eu_result.tax_code = "lago_eu_missing" } }
 
-    before do
-      eu_tax_result.tax_code = "lago_eu_missing"
-      allow(Customers::EuAutoTaxesService).to receive(:call).and_return(eu_tax_result)
-    end
+    before { allow(Customers::EuAutoTaxesService).to receive(:call).and_return(eu_tax_result) }
 
     it "returns the failure" do
       expect(result.error.error_code).to eq("tax_not_found")
