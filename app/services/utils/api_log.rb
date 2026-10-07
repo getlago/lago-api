@@ -26,6 +26,7 @@ module Utils
       current_time = Time.current.iso8601[...-1]
       KafkaProducer.produce_async(
         topic: ENV["LAGO_KAFKA_API_LOGS_TOPIC"],
+        invalid_message_level: :warning,
         key:,
         payload: {
           **payload,
