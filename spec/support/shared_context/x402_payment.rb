@@ -1,6 +1,18 @@
 # frozen_string_literal: true
 
 RSpec.shared_context "with an x402 payment" do
+  let(:organization) { create(:organization) }
+  let(:x402_connection) do
+    create(
+      :x402_connection,
+      organization:,
+      networks: ["eip155:84532", "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"],
+      payout_addresses: {"evm" => "0x94bA479439C2f1bA5f5DaCBD06Ea0c129604B4a5", "svm" => "HHU1aLQQCbCzW9ebjFTntq2vkvsQsxkDyPjMsW2WtiLG"},
+      cdp_api_key_id:,
+      cdp_api_key_secret:
+    )
+  end
+  let(:x402_svm_payer) { "BprZ3eTVMHAcqC2wcE4XY71tvjdxJ6C6pSYjVmD75ujf" }
   let(:cdp_host) { "https://api.cdp.coinbase.com" }
   let(:cdp_facilitator_url) { "#{cdp_host}/platform/v2/x402" }
   let(:cdp_api_key_id) { "organizations/lago-test/apiKeys/x402" }
@@ -50,7 +62,15 @@ RSpec.shared_context "with an x402 payment" do
     }
   end
   let(:x402_svm_payment) do
-    {"x402Version" => 2, "accepted" => x402_svm_requirements, "payload" => {"transaction" => Base64.strict_encode64("\x01".b + ("\x00".b * 64))}}
+    landed = JSON.parse(File.read(Rails.root.join("spec/fixtures/x402/chain/solana_devnet_transfer.json")))
+    bytes = Base64.strict_decode64(landed["transaction"].first)
+    bytes[1, 64] = "\x00".b * 64
+
+    {"x402Version" => 2, "accepted" => x402_svm_requirements, "payload" => {"transaction" => Base64.strict_encode64(bytes)}}
+  end
+
+  def stub_cdp_answer(path, status:, body:)
+    stub_request(:post, "#{cdp_facilitator_url}#{path}").to_return(status:, body: body.is_a?(String) ? body : body.to_json)
   end
 
   def cdp_fixture(name)
@@ -71,6 +91,12 @@ RSpec.shared_context "with an x402 payment" do
       settle = {status: 400, body: {success: false, errorReason: "settle_exact_failed_onchain", network: "eip155:84532", transaction:}.to_json}
     when :settlement_pending
       settle = {status: 500, body: {success: false, errorReason: "settlement_pending", network: "eip155:84532", transaction:}.to_json}
+    when :verify_without_payer
+      verify = {status: 200, body: {isValid: true}.to_json}
+    when :verify_kyt_decline
+      verify = {status: 403, body: {errorType: "kyt_risk_detected", errorMessage: "risk"}.to_json}
+    when :settle_kyt_decline
+      settle = {status: 403, body: {errorType: "kyt_risk_detected", errorMessage: "risk"}.to_json}
     when :settle_server_error
       settle = {status: 500, body: {errorType: "internal_server_error", errorMessage: "internal error", correlationId: "corr-1"}.to_json}
     end
@@ -78,6 +104,8 @@ RSpec.shared_context "with an x402 payment" do
     stub_request(:post, "#{cdp_facilitator_url}/verify").to_return(verify)
     if fault == :settle_timeout
       stub_request(:post, "#{cdp_facilitator_url}/settle").to_raise(Net::ReadTimeout)
+    elsif fault == :settle_dropped
+      stub_request(:post, "#{cdp_facilitator_url}/settle").to_raise(Errno::ECONNRESET)
     else
       stub_request(:post, "#{cdp_facilitator_url}/settle").to_return(settle)
     end
