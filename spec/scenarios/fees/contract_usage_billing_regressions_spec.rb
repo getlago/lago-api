@@ -30,10 +30,11 @@ RSpec.describe "Contract usage billing QA regressions" do
   end
   let(:rate_model) { :standard }
   let(:rate_properties) { {"amount" => "1"} }
+  let(:billing_interval_unit) { :month }
   let(:rate) do
     RateCardRates::CreateService.call!(rate_card:, params: {
       code: "qa-rate", effective_from: started_at, rate_model:, rate_properties:,
-      billing_interval_unit: :month, billing_interval_count: 1
+      billing_interval_unit:, billing_interval_count: 1
     }).rate_card_rate
   end
   let(:card) do
@@ -64,6 +65,7 @@ RSpec.describe "Contract usage billing QA regressions" do
     end
 
     let(:inputs) { [3, 7, -3, 4].map { |value| {value: value.to_s} } }
+    let(:invoices) { event_fees.map(&:invoice).uniq }
 
     context "when the rebound stays below the billed maximum" do
       let(:inputs) { [3, 7, -3, 2, 2].map { |value| {value: value.to_s} } }
@@ -151,7 +153,8 @@ RSpec.describe "Contract usage billing QA regressions" do
       expect(CachedAggregation.where(contract:, product:).order(:created_at).pluck(:current_aggregation, :max_aggregation))
         .to eq([[3, 3], [10, 10], [7, 10], [11, 11]])
       expect(event_fees.map(&:amount_cents)).to eq([300, 700, 0, 100])
-      expect(event_fees.map { |fee| fee.invoice.status }).to eq(["finalized"] * 4)
+      expect(invoices.map(&:status)).to eq(["finalized"] * 4)
+      expect(invoices.sum(&:total_amount_cents)).to eq(1100)
     end
 
     context "with graduated pricing G10" do
@@ -165,6 +168,8 @@ RSpec.describe "Contract usage billing QA regressions" do
 
       it "bills only unit eleven" do
         expect(event_fees.map(&:amount_cents)).to eq([300, 700, 0, 50])
+        expect(invoices.map(&:status)).to eq(["finalized"] * 4)
+        expect(invoices.sum(&:total_amount_cents)).to eq(1050)
       end
     end
 
@@ -176,6 +181,8 @@ RSpec.describe "Contract usage billing QA regressions" do
       it "bills only the newly reached hundred units plus the event fee" do
         expect(event_fees.map(&:amount_cents)).to eq([780, 1780, 0, 280])
         expect(event_fees.third.amount_details).to include("fixed_fee_total_amount" => "0.0", "paid_events" => "0.0")
+        expect(invoices.map(&:status)).to eq(["finalized"] * 4)
+        expect(invoices.sum(&:total_amount_cents)).to eq(2840)
       end
     end
 
@@ -191,6 +198,8 @@ RSpec.describe "Contract usage billing QA regressions" do
 
       it "bills only the new tier exposure and flat fee" do
         expect(event_fees.map(&:amount_cents)).to eq([600, 1400, 0, 600])
+        expect(invoices.map(&:status)).to eq(["finalized"] * 4)
+        expect(invoices.sum(&:total_amount_cents)).to eq(2600)
       end
     end
 
@@ -205,6 +214,8 @@ RSpec.describe "Contract usage billing QA regressions" do
 
       it "prorates the one newly reached unit" do
         expect(event_fees.map(&:amount_cents)).to eq([3000, 6774, 0, 548])
+        expect(invoices.map(&:status)).to eq(["finalized"] * 4)
+        expect(invoices.sum(&:total_amount_cents)).to eq(10_322)
       end
     end
 
@@ -265,6 +276,37 @@ RSpec.describe "Contract usage billing QA regressions" do
 
     it "bills ten weighted units without a subscription context" do
       expect(billing_result.invoices.sole.fees.sole).to have_attributes(units: 10, amount_cents: 1000)
+    end
+
+    context "when manually billing the monthly contract" do
+      subject(:manual_billing) do
+        post_with_token(organization, "/api/v2/contracts/#{contract.external_id}/bill?end_on=#{end_on}")
+      end
+
+      let(:end_on) { "2026-11-02" }
+
+      it "returns the finalized first-period invoice and fee" do
+        manual_billing
+
+        expect(response).to have_http_status(:success)
+        invoice = Invoice.where(customer:).sole
+        expect(json[:invoices].sole).to include(lago_id: invoice.id, status: "finalized", total_amount_cents: 1000)
+        expect(invoice.fees.sole).to have_attributes(units: 10, amount_cents: 1000)
+      end
+
+      context "when billing through the second period" do
+        let(:end_on) { "2026-12-02" }
+
+        it "returns finalized invoices for both periods" do
+          manual_billing
+
+          expect(response).to have_http_status(:success)
+          expect(json[:invoices].map { |invoice| [invoice[:status], invoice[:total_amount_cents]] })
+            .to eq([["finalized", 1000]] * 2)
+          expect(Invoice.where(customer:).order(:created_at).flat_map(&:fees).map { |fee| [fee.units, fee.amount_cents] })
+            .to eq([[10, 1000]] * 2)
+        end
+      end
     end
 
     it "carries ten units into an eventless second period" do
@@ -352,8 +394,9 @@ RSpec.describe "Contract usage billing QA regressions" do
 
     context "when billing runs naturally on a three-day cadence" do
       subject(:natural_invoice) do
-        BillingSegments::ScheduleJob.perform_now(customer.id)
-        BillingSegments::ProcessJob.perform_now(customer.id)
+        Clock::CreateBillingSegmentsJob.perform_now
+        Clock::ProcessBillingSegmentsJob.perform_now
+        perform_all_enqueued_jobs(only: [BillingSegments::ScheduleJob, BillingSegments::ProcessJob])
         Invoice.where(customer:).sole
       end
 
@@ -365,63 +408,135 @@ RSpec.describe "Contract usage billing QA regressions" do
         }).rate_card_rate
       end
 
-      before { travel_to(boundary + 1.hour) }
+      before { travel_to(boundary + 14.hours + 58.minutes + 14.seconds) }
 
-      it "creates the first invoice after scheduling advances the cursor" do
+      it "creates a finalized first-period invoice visible after the cursor advances" do
+        expect(natural_invoice).to have_attributes(status: "finalized", total_amount_cents: 1000)
         expect(natural_invoice.fees.sole).to have_attributes(units: 10, amount_cents: 1000)
+        expect(contract.reload).to be_active
+        expect(card.reload.next_billing_at).to eq(boundary + 3.days)
+
+        get_with_token(organization, "/api/v2/invoices?external_customer_id=#{customer.external_id}")
+        expect(response).to have_http_status(:success)
+        expect(json[:invoices].map { |invoice| invoice[:lago_id] }).to eq([natural_invoice.id])
+
+        get_with_token(organization, "/api/v2/fees?external_customer_id=#{customer.external_id}")
+        expect(response).to have_http_status(:success)
+        expect(json[:fees].map { |fee| fee[:lago_id] }).to eq([natural_invoice.fees.sole.id])
       end
     end
   end
 
   describe "BIL-768 TM4 paid fee reconciliation" do
-    subject(:billing_result) { Contracts::BillService.call!(contracts: [contract], timestamp: boundary) }
+    subject(:natural_invoices) do
+      [boundary, observed_at].each do |timestamp|
+        travel_to(timestamp)
+        Clock::CreateBillingSegmentsJob.perform_now
+        Clock::ProcessBillingSegmentsJob.perform_now
+        perform_all_enqueued_jobs(only: billing_jobs)
+      end
+      Invoice.where(customer:).to_a
+    end
 
     let(:recurring) { false }
     let(:display) { false }
     let(:regroup) { :invoice }
-    let(:segment_status) { :pending }
-    let(:segment) do
-      create(:billing_segment, organization:, customer:, contract:, contract_rate_card: card,
-        rate_card_rate: rate, rate_override: nil, currency: "USD", rate_properties:,
-        started_at:, ended_at: BillingSegment.inclusive_end(boundary), cycle_started_at: started_at,
-        billing_at: started_at, status: segment_status)
+    let(:billing_interval_unit) { :day }
+    let(:boundary) { started_at + 1.day }
+    let(:observed_at) { boundary + 8.hours + 11.minutes }
+    let(:billing_jobs) { [BillingSegments::ScheduleJob, BillingSegments::ProcessJob] }
+    let(:fees) { Fee.where(contract:, fee_type: :product).order(:created_at).to_a }
+
+    before do
+      travel_to(started_at)
+      Clock::CreateBillingSegmentsJob.perform_now
+      perform_all_enqueued_jobs(only: billing_jobs)
+
+      [3, 7, 1, 1, 1].each_with_index do |units, index|
+        travel_to(started_at + (index + 1).hours)
+        create_event({external_contract_id: contract.external_id, code: billable_metric.code,
+          timestamp: Time.current.to_i, properties: {field_name => units}}, perform_jobs: false)
+        perform_all_enqueued_jobs(except: billing_jobs)
+      end
+
+      fees.first(3).each { |fee| Fees::UpdateService.call!(fee:, params: {payment_status: "succeeded"}) }
     end
-    let(:metered_item) { Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: segment) }
-    let!(:fees) do
-      [300, 700, 100, 100, 100].each_with_index.map do |amount_cents, index|
-        create(:fee, organization:, invoice: nil, subscription: nil, contract:, contract_rate_card: card,
-          invoiceable: product, rate_card_rate: rate, fee_type: :product, billing_entity: customer.billing_entity,
-          amount_cents:, precise_amount_cents: amount_cents, amount_currency: "USD", taxes_amount_cents: 0,
-          payment_status: (index < 3) ? :succeeded : :pending, succeeded_at: (index < 3) ? started_at + 1.hour : nil,
-          pay_in_advance: true, properties: metered_item.filtered_for_charge_boundaries)
+
+    it "creates standalone event fees before the natural close" do
+      expect(fees.map(&:amount_cents)).to eq([300, 700, 100, 100, 100])
+      expect(fees.map(&:payment_status)).to eq(%w[succeeded succeeded succeeded pending pending])
+      expect(fees.map(&:invoice_id)).to eq([nil] * 5)
+      expect(Invoice.where(customer:)).to be_empty
+      expect(card.reload.next_billing_at).to eq(boundary)
+    end
+
+    it "regroups only paid fees at daily close and has one invoice at 08:11 UTC" do
+      invoice = natural_invoices.sole
+
+      expect(invoice).to have_attributes(
+        total_amount_cents: 1100, payment_status: "succeeded", status: "finalized", created_at: boundary
+      )
+      expect(invoice.fees.pluck(:id)).to match_array(fees.first(3).map(&:id))
+      expect(fees.map { |fee| fee.reload.invoice_id }).to eq([invoice.id, invoice.id, invoice.id, nil, nil])
+      expect(fees.map(&:amount_cents)).to eq([300, 700, 100, 100, 100])
+      expect(fees.map(&:payment_status)).to eq(%w[succeeded succeeded succeeded pending pending])
+      expect(contract.reload).to be_active
+      expect(card.reload.next_billing_at).to eq(boundary + 1.day)
+
+      %w[v1 v2].each do |version|
+        get_with_token(organization, "/api/#{version}/customers/#{customer.external_id}/invoices")
+        expect(response).to have_http_status(:success)
+        expect(json[:invoices].map { |item| item[:lago_id] }).to eq([invoice.id])
       end
     end
 
-    it "honors a future manual billing cutoff" do
-      expect(billing_result.invoices.map(&:total_amount_cents)).to eq([1100])
+    context "without paid-fee regrouping" do
+      let(:regroup) { nil }
+
+      it "advances the daily billing date without invoicing any fees" do
+        expect(natural_invoices).to eq([])
+        expect(card.reload.next_billing_at).to eq(boundary + 1.day)
+        expect(contract.reload).to be_active
+        expect(fees.map { |fee| fee.reload.invoice_id }).to eq([nil] * 5)
+        expect(fees.map(&:amount_cents)).to eq([300, 700, 100, 100, 100])
+        expect(fees.map(&:payment_status)).to eq(%w[succeeded succeeded succeeded pending pending])
+
+        %w[v1 v2].each do |version|
+          get_with_token(organization, "/api/#{version}/customers/#{customer.external_id}/invoices")
+          expect(response).to have_http_status(:success)
+          expect(json[:invoices]).to eq([])
+        end
+      end
     end
 
-    context "when the wall clock reaches the boundary" do
-      before { travel_to(boundary) }
+    context "when manually billing a separate monthly fixture early" do
+      subject(:manual_billing) { post_with_token(organization, bill_path) }
 
-      it "regroups only the three paid fees and is idempotent" do
-        invoice = billing_result.invoices.sole.reload
+      let(:billing_interval_unit) { :month }
+      let(:boundary) { started_at + 1.month }
+      let(:bill_path) { "/api/v2/contracts/#{contract.external_id}/bill?end_on=#{boundary.to_date.iso8601}" }
+
+      it "supports the future November 6 cutoff and returns the paid invoice" do
+        manual_billing
+
+        expect(Time.current.to_date).to eq(started_at.to_date)
+        expect(response).to have_http_status(:success)
+        expect(json[:invoices].sole).to include(total_amount_cents: 1100, payment_status: "succeeded", status: "finalized")
+        invoice = Invoice.where(customer:).sole
         expect(invoice).to have_attributes(total_amount_cents: 1100, payment_status: "succeeded", status: "finalized")
+        expect(json[:invoices].sole[:lago_id]).to eq(invoice.id)
         expect(invoice.fees.pluck(:id)).to match_array(fees.first(3).map(&:id))
-        expect(Contracts::BillService.call!(contracts: [contract], timestamp: boundary).invoices).to eq([])
+        expect(fees.map { |fee| fee.reload.invoice_id }).to eq([invoice.id, invoice.id, invoice.id, nil, nil])
       end
 
-      context "when the scheduled jobs perform billing" do
-        subject(:scheduled_invoice) do
-          BillingSegments::ScheduleJob.perform_now(customer.id)
-          BillingSegments::ProcessJob.perform_now(customer.id)
-          Invoice.where(customer:).sole
-        end
+      it "does not invoice the paid fees again on retry" do
+        manual_billing
 
-        it "regroups only paid fees" do
-          expect(scheduled_invoice).to have_attributes(total_amount_cents: 1100, payment_status: "succeeded", status: "finalized")
-          expect(scheduled_invoice.fees.pluck(:id)).to match_array(fees.first(3).map(&:id))
-        end
+        expect do
+          post_with_token(organization, bill_path)
+        end.not_to change(Invoice, :count)
+        expect(response).to have_http_status(:success)
+        expect(json[:invoices]).to eq([])
       end
     end
   end

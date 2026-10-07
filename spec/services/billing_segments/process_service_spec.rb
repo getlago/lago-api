@@ -211,7 +211,7 @@ RSpec.describe BillingSegments::ProcessService do
           it "creates the advance invoice and completes the segment" do
             expect(result).to be_success
 
-            invoice = result.invoices.sole.reload
+            invoice = result.invoices.sole
             expect(invoice).to be_finalized.and have_attributes(
               invoice_type: "advance_charges",
               payment_status: "succeeded",
@@ -882,7 +882,7 @@ RSpec.describe BillingSegments::ProcessService do
     it "links planless contracts through segments, without subscriptions" do
       expect { result }.not_to change(InvoiceSubscription, :count)
 
-      invoice = result.invoices.sole.reload
+      invoice = result.invoices.sole
       expect(contract.catalog_plan).to be_nil
       expect(invoice.status).to eq("finalized")
       expect(invoice.billing_segments).to eq([billing_segment])

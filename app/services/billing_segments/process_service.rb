@@ -24,6 +24,7 @@ module BillingSegments
         end
 
         finalize_generating_invoices
+        result.invoices.each(&:reload)
         true
       end
 
