@@ -368,6 +368,26 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
         )
       end
     end
+
+    context "when two alerts of different types share a code" do
+      let(:params) do
+        {
+          alerts: [
+            {code: "duplicated", alert_type: "wallet_balance_amount", thresholds: [{value: 1000}]},
+            {code: "duplicated", alert_type: "wallet_credits_balance", thresholds: [{value: 2000}]}
+          ]
+        }
+      end
+
+      it "returns an error naming the code" do
+        expect { subject }.not_to change(UsageMonitoring::Alert, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details]).to match(
+          "1": match(params: params[:alerts][1], errors: include("value_already_exist"))
+        )
+      end
+    end
   end
 
   describe "DELETE /api/v1/customers/:external_id/wallets/:wallet_code/alerts" do

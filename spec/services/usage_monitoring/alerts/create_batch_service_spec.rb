@@ -81,6 +81,23 @@ RSpec.describe UsageMonitoring::Alerts::CreateBatchService do
           have_attributes(code: "alert2", name: "Second Alert", wallet: alertable)
         ])
       end
+
+      context "when two alerts of the same type share a code" do
+        let(:alerts_params) do
+          [
+            {alert_type: "wallet_balance_amount", code: "duplicated", thresholds: [{value: 80}]},
+            {alert_type: "wallet_balance_amount", code: "duplicated", thresholds: [{value: 100}]}
+          ]
+        end
+
+        it "rejects the second one as an existing alert" do
+          expect { result }.not_to change(UsageMonitoring::Alert, :count)
+
+          expect(result).to be_failure
+          expect(result.error.messages.keys).to eq([1])
+          expect(result.error.messages[1][:errors]).to eq('Validation errors: {"base":["alert_already_exists"]}')
+        end
+      end
     end
 
     context "when alerts_params is empty" do
