@@ -106,10 +106,22 @@ module Events
       # NOTE: check if an event created before the current on belongs to an active (as in present and not removed)
       #       unique property
       def active_unique_property?(event)
-        previous_event = events.where.not(id: event.id)
+        previous_events = events.where.not(id: event.id)
           .where("events.properties @> ?", {aggregation_property => event.properties[aggregation_property]}.to_json)
-          .where("events.timestamp < ?", event.timestamp)
-          .order(timestamp: :desc)
+
+        if (event.respond_to?(:persisted?) ? event.persisted? : event.persisted) && event.id.present?
+          current_event = events.where(id: event.id).select(:created_at, :id)
+          previous_events = previous_events.where(
+            "events.timestamp < ? OR (events.timestamp = ? AND (events.created_at, events.id) < (#{current_event.to_sql}))",
+            event.timestamp,
+            event.timestamp
+          )
+        else
+          previous_events = previous_events.where("events.timestamp < ?", event.timestamp)
+        end
+
+        previous_event = previous_events
+          .order(timestamp: :desc, created_at: :desc, id: :desc)
           .first
 
         previous_event && (
