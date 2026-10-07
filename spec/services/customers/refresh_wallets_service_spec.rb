@@ -713,6 +713,25 @@ RSpec.describe Customers::RefreshWalletsService do
         end
       end
 
+      context "when a wrapping transaction commits" do
+        subject(:key_inside_transaction) do
+          ActiveRecord::Base.transaction do
+            described_class.call(customer:)
+            Rails.cache.read(key, raw: true)
+          end
+        end
+
+        it "defers the release until the commit" do
+          expect(key_inside_transaction).to eq("30")
+        end
+
+        it "releases the captured amount after the commit" do
+          key_inside_transaction
+
+          expect(Rails.cache.read(key, raw: true)).to eq("0")
+        end
+      end
+
       context "when the refresh fails" do
         let(:failed_result) { BaseResult.new }
         let(:failure) { BaseService::ServiceFailure.new(failed_result, code: "failed", error_message: "failed") }
@@ -730,6 +749,16 @@ RSpec.describe Customers::RefreshWalletsService do
 
           expect(Rails.cache.read(key, raw: true)).to eq("30")
         end
+      end
+    end
+
+    context "with a negative reservation" do
+      before { Rails.cache.redis.then { it.set(key, -5, ex: 3600) } }
+
+      it "releases it" do
+        result
+
+        expect(Rails.cache.read(key, raw: true)).to eq("0")
       end
     end
 

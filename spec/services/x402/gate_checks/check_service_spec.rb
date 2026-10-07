@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe X402::GateChecks::CheckService, :premium do
+describe X402::GateChecks::CheckService, :premium, cache: :null do
   subject(:result) { described_class.call(organization:, params:) }
 
   include_context "with an x402 payment"
@@ -257,24 +257,11 @@ describe X402::GateChecks::CheckService, :premium do
     end
   end
 
-  context "with an estimate beyond Redis's integer range" do
-    let(:params) { super().merge(estimated_call_cost_cents: 2**63) }
+  context "with an estimate beyond the cap" do
+    let(:params) { super().merge(estimated_call_cost_cents: 2**53) }
 
     it "refuses the field as invalid_value" do
       expect(result.error.messages).to eq(estimated_call_cost_cents: ["invalid_value"])
-    end
-  end
-
-  context "with the largest estimate Redis accepts" do
-    let(:params) { super().merge(estimated_call_cost_cents: 2**63 - 1) }
-
-    before do
-      wallet
-      subscription
-    end
-
-    it "accepts the field and challenges" do
-      expect(result.requirements).to eq([evm_requirement])
     end
   end
 
@@ -313,6 +300,23 @@ describe X402::GateChecks::CheckService, :premium do
       it "challenges and undoes the reservation" do
         expect(result.requirements).to eq([evm_requirement])
         expect(Rails.cache.read(key, raw: true)).to eq("899")
+      end
+    end
+
+    context "with the largest accepted estimate" do
+      let(:params) { super().merge(estimated_call_cost_cents: 2**53 - 1) }
+
+      before { Rails.cache.redis.then { it.set(key, 5, ex: 60) } }
+
+      it "challenges and restores the held reservation" do
+        expect(result.requirements).to eq([evm_requirement])
+        expect(Rails.cache.read(key, raw: true)).to eq("5")
+      end
+
+      it "does not report to Sentry" do
+        result
+
+        expect(Sentry).not_to have_received(:capture_exception)
       end
     end
 

@@ -5,7 +5,7 @@ module X402
     class CheckService < BaseService
       DEGRADED_CALL_HEADROOM = 1_000
       MAX_AGENT_ADDRESS_LENGTH = 44
-      MAX_ESTIMATED_CALL_COST_CENTS = 2**63 - 1
+      MAX_ESTIMATED_CALL_COST_CENTS = 2**53 - 1
 
       Result = BaseResult[:balance_credits, :requirements, :external_subscription_id]
 
