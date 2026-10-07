@@ -71,26 +71,42 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Run a container to completion under a deadline. Echoes its exit status, or
-# 124 (the `timeout` convention) if it was still running when time ran out.
-# `timeout` itself is not portable enough to rely on — it is absent from a
-# stock macOS, where this script also has to run.
+# Start a container, having cleared any leftover of the same name from an
+# earlier run and registered it for teardown.
+start_container() {
+  local name=$1
+  shift
+  docker rm -f "$name" >/dev/null 2>&1 || true
+  cleanup_containers+=("$name")
+  docker run -d --name "$name" "$@" >/dev/null
+}
+
+# Run a container to completion under a deadline, leaving its exit status in
+# RUN_STATUS — or 124 (the `timeout` convention) if it was still running when
+# time ran out. `timeout` itself is not portable enough to rely on; it is
+# absent from a stock macOS, where this script also has to run.
+#
+# The status comes back in a global rather than on stdout so that callers do
+# not have to wrap this in `$(...)`. Command substitution runs in a subshell,
+# and the `cleanup_containers` registration inside would be made against that
+# subshell's copy of the array and lost on return — leaving these one-shot
+# containers un-torn-down, their logs undumped, and the next local run failing
+# on a name that is already in use.
 run_bounded() {
   local name=$1
   shift
-  cleanup_containers+=("$name")
-  docker run -d --name "$name" "$@" >/dev/null
+  start_container "$name" "$@"
   local waited=0
   while [ "$waited" -lt "$RUN_DEADLINE" ]; do
     if [ "$(docker inspect "$name" --format '{{.State.Running}}')" != "true" ]; then
-      docker inspect "$name" --format '{{.State.ExitCode}}'
+      RUN_STATUS=$(docker inspect "$name" --format '{{.State.ExitCode}}')
       return 0
     fi
     sleep 2
     waited=$((waited + 2))
   done
   docker kill "$name" >/dev/null 2>&1 || true
-  echo 124
+  RUN_STATUS=124
 }
 
 # Poll an HTTP endpoint from *inside* the container, which is what the compose
@@ -183,7 +199,8 @@ section "migrate.sh boots, seeds and exits"
 
 # This is the compose `migrate` service verbatim. It has to exit 0, or the
 # service_completed_successfully gate holds every other service down.
-migrate_status=$(run_bounded lago-boot-migrate --network "$NET" "${docker_env[@]}" "$IMAGE" ./scripts/migrate.sh)
+run_bounded lago-boot-migrate --network "$NET" "${docker_env[@]}" "$IMAGE" ./scripts/migrate.sh
+migrate_status=$RUN_STATUS
 case "$migrate_status" in
 0)
   pass "./scripts/migrate.sh exited 0"
@@ -201,8 +218,9 @@ esac
 # roles:seed_predefined must land before signup:seed_organization, which looks
 # the admin role up by `admin: true` alone and would otherwise insert a Role
 # with a NULL code.
-roles_status=$(run_bounded lago-boot-roles --network "$NET" "${docker_env[@]}" "$IMAGE" \
-  bundle exec rails runner 'puts "ROLES=" + Role.where(organization_id: nil).order(:code).pluck(:code).join(",")')
+run_bounded lago-boot-roles --network "$NET" "${docker_env[@]}" "$IMAGE" \
+  bundle exec rails runner 'puts "ROLES=" + Role.where(organization_id: nil).order(:code).pluck(:code).join(",")'
+roles_status=$RUN_STATUS
 roles=$(docker logs lago-boot-roles 2>/dev/null | sed -n 's/^ROLES=//p' | tail -1)
 if [ "$roles_status" = "0" ] && [ "$roles" = "admin,finance,manager" ]; then
   pass "predefined roles seeded ($roles)"
@@ -214,9 +232,7 @@ fi
 section "start.api.sh boots and answers its own healthcheck"
 # --------------------------------------------------------------------------
 
-cleanup_containers+=("lago-boot-api")
-docker run -d --name lago-boot-api --network "$NET" \
-  "${docker_env[@]}" "$IMAGE" ./scripts/start.api.sh >/dev/null
+start_container lago-boot-api --network "$NET" "${docker_env[@]}" "$IMAGE" ./scripts/start.api.sh
 
 # Run the compose healthcheck command inside the container, which is the thing
 # that actually regressed — the API itself was healthy from the host all along.
@@ -231,9 +247,7 @@ fi
 section "start.worker.sh boots and answers its own healthcheck"
 # --------------------------------------------------------------------------
 
-cleanup_containers+=("lago-boot-worker")
-docker run -d --name lago-boot-worker --network "$NET" \
-  "${docker_env[@]}" "$IMAGE" ./scripts/start.worker.sh >/dev/null
+start_container lago-boot-worker --network "$NET" "${docker_env[@]}" "$IMAGE" ./scripts/start.worker.sh
 
 if wait_healthy lago-boot-worker "http://localhost:${WORKER_PORT}"; then
   pass "in-container 'curl -f http://localhost:${WORKER_PORT}' succeeds"
@@ -263,17 +277,16 @@ docker stop lago-boot-api >/dev/null 2>&1 || true
 
 # start.sh migrates but does not create — only migrate.sh carries the db:create
 # fallback — so stand the empty database up first, as an operator would.
-create_status=$(run_bounded lago-boot-createdb --network "$NET" \
+run_bounded lago-boot-createdb --network "$NET" \
   "${docker_env[@]}" -e "DATABASE_URL=$bootstrap_url" "$IMAGE" \
-  bundle exec rails db:create)
+  bundle exec rails db:create
+create_status=$RUN_STATUS
 if [ "$create_status" != "0" ]; then
   fail "could not create the empty bootstrap database (exit $create_status)"
   docker logs lago-boot-createdb 2>&1 | tail -20
 fi
 
-cleanup_containers+=("lago-boot-default")
-docker run -d --name lago-boot-default --network "$NET" \
-  "${docker_env[@]}" -e "DATABASE_URL=$bootstrap_url" "$IMAGE" >/dev/null
+start_container lago-boot-default --network "$NET" "${docker_env[@]}" -e "DATABASE_URL=$bootstrap_url" "$IMAGE"
 
 if wait_healthy lago-boot-default "http://localhost:${API_PORT}/health"; then
   pass "\`docker run $IMAGE\` migrates an empty database and boots the API"
