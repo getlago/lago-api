@@ -27,7 +27,7 @@ RSpec.describe Events::Common do
   let(:external_subscription_id) { subscription.external_id }
 
   describe "#persisted?" do
-    it { expect(event.persisted).to be_truthy }
+    it { expect(event.persisted?).to be(true) }
 
     context "when persisted value is passed to the event" do
       subject(:event) do
@@ -45,6 +45,7 @@ RSpec.describe Events::Common do
 
       it "sets the value to the instance" do
         expect(event.persisted).to be_falsey
+        expect(event.persisted?).to be(false)
       end
     end
   end

@@ -109,7 +109,7 @@ module Events
         previous_events = events.where.not(id: event.id)
           .where("events.properties @> ?", {aggregation_property => event.properties[aggregation_property]}.to_json)
 
-        if (event.respond_to?(:persisted?) ? event.persisted? : event.persisted) && event.id.present?
+        if event.persisted? && event.id.present?
           current_event = events.where(id: event.id).select(:created_at, :id)
           previous_events = previous_events.where(
             "events.timestamp < ? OR (events.timestamp = ? AND (events.created_at, events.id) < (#{current_event.to_sql}))",

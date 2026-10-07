@@ -276,17 +276,11 @@ module Events
       # NOTE: check if an event created before the current on belongs to an active (as in present and not removed)
       #       unique property
       def active_unique_property?(event)
-        persisted_event = if event.is_a?(Events::Common)
-          event.persisted
-        else
-          event.persisted?
-        end
-
         previous_event = Events::Stores::Utils::ClickhouseConnection.with_retry do
           query = events
             .where("events_enriched.properties[?] = ?", aggregation_property, event.properties[aggregation_property])
 
-          if persisted_event
+          if event.persisted? && event.transaction_id.present?
             query
               .where(
                 "events_enriched.timestamp < ? OR (events_enriched.timestamp = ? AND events_enriched.transaction_id < ?)",

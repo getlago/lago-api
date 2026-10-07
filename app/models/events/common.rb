@@ -22,6 +22,10 @@ module Events
       id || transaction_id
     end
 
+    def persisted?
+      persisted
+    end
+
     def organization
       @organization ||= Organization.find_by(id: organization_id)
     end
