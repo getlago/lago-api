@@ -133,6 +133,21 @@ RSpec.describe PaymentTerm do
         expect(term.label(issuing_date: Date.new(2026, 7, 15))).to eq("Due on the 10 of the following month")
         expect(term.label(issuing_date: Date.new(2026, 7, 5))).to eq("Due on the 10 of this month")
       end
+
+      it "names the day the due date is clamped to in a short month" do
+        term = described_class.from_h(term_type: "day_of_month", day_of_month: 31)
+
+        expect(term.label(issuing_date: Date.new(2026, 1, 15))).to eq("Due on the 28 of the following month")
+        expect(term.label(issuing_date: Date.new(2028, 1, 15))).to eq("Due on the 29 of the following month")
+        expect(term.label(issuing_date: Date.new(2026, 7, 15))).to eq("Due on the 31 of the following month")
+      end
+
+      it "re-clamps the day when an offset-0 term rolls into a shorter month" do
+        term = described_class.from_h(term_type: "day_of_month", day_of_month: 30, month_offset: 0)
+
+        expect(term.due_date_for(Date.new(2027, 1, 31))).to eq(Date.new(2027, 2, 28))
+        expect(term.label(issuing_date: Date.new(2027, 1, 31))).to eq("Due on the 28 of the following month")
+      end
     end
 
     it "renders in the current locale" do
