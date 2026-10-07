@@ -295,11 +295,21 @@ else
   docker logs lago-boot-default 2>&1 | tail -40
 fi
 
-bootstrap_roles=$(docker logs lago-boot-default 2>&1 | grep -c "NotNullViolation" || true)
-if [ "$bootstrap_roles" = "0" ]; then
-  pass "start.sh seeded roles before the organization"
+# Assert the resulting state, not the absence of one error string in the log.
+# Grepping for NotNullViolation only catches the one failure we already know
+# about: any other seeding error — a different exception, a missing env var
+# raising inside signup.rake — would leave the database equally unseeded and
+# still pass a log grep. The admin membership role is the end product of the
+# whole seed path, so its presence is the thing worth asserting.
+run_bounded lago-boot-seedcheck --network "$NET" \
+  "${docker_env[@]}" -e "DATABASE_URL=$bootstrap_url" "$IMAGE" \
+  bundle exec rails runner 'puts "SEEDED=" + MembershipRole.joins(:role).where(roles: {code: "admin"}).exists?.to_s'
+seeded=$(docker logs lago-boot-seedcheck 2>/dev/null | sed -n 's/^SEEDED=//p' | tail -1)
+if [ "$RUN_STATUS" = "0" ] && [ "$seeded" = "true" ]; then
+  pass "start.sh seeded an admin membership role on the empty database"
 else
-  fail "start.sh hit a NOT NULL violation while seeding — roles:seed_predefined must run before signup:seed_organization"
+  fail "start.sh left the database unseeded (admin membership role present: '${seeded:-unknown}') — the seed path failed and Puma booted anyway"
+  docker logs lago-boot-default 2>&1 | tail -40
 fi
 
 # --------------------------------------------------------------------------

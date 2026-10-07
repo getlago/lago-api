@@ -21,6 +21,14 @@ on:
       - "scripts/**"
       - "ci/docker-boot-contract.sh"
       - ".github/workflows/docker-image.yml"
+  # Base drift between releases. Both bases are consumed as floating `:latest`
+  # and lago-packages rebuilds them daily at 07:00 UTC for Wolfi CVE fixes, so
+  # the image this repo produces can change with no commit here and no path
+  # filter firing. 08:00 is after that rebuild. The release pipeline has its own
+  # gate on the exact artifact; this one is so drift surfaces within a day
+  # rather than at the next release.
+  schedule:
+    - cron: "0 8 * * *"
   workflow_dispatch:
 
 permissions: {}
