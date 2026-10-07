@@ -136,7 +136,7 @@ module BillableMetrics
         query = CachedAggregation
           .where(organization_id: billable_metric.organization_id)
           .where(external_subscription_id: billing_context.external_id)
-          .where(charge_id: metered_item.charge_id)
+          .where(metered_item.cached_aggregation_identity)
           .where(timestamp: ...from_datetime)
           .order(timestamp: :desc, created_at: :desc)
 
@@ -150,7 +150,7 @@ module BillableMetrics
       def latest_value_from_events
         return @latest_value_from_events if defined?(@latest_value_from_events)
 
-        store = event_store.for_window(to_datetime: from_datetime - 1.second)
+        store = event_store.for_window(to_datetime: from_datetime - 0.000001.seconds)
         store.use_from_boundary = false
 
         breakdowns = presentation_by.present? ? store.grouped_sum(uniq_grouped_by_and_presentation_by, with_count: false).map(&:to_grouped_hash) : []
@@ -200,11 +200,11 @@ module BillableMetrics
           query = query.where("grouped_by?:key", key:)
         end
 
-        @grouped_latest_cached_aggregations = query.to_a
+        @grouped_latest_cached_aggregations = query.to_a.uniq(&:grouped_by)
       end
 
       def grouped_latest_values_from_events
-        store = event_store.for_window(to_datetime: from_datetime - 1.second)
+        store = event_store.for_window(to_datetime: from_datetime - 0.000001.seconds)
         store.use_from_boundary = false
 
         breakdowns = presentation_by.present? ? store.grouped_sum(uniq_grouped_by_and_presentation_by, with_count: false).map(&:to_grouped_hash) : []

@@ -515,9 +515,6 @@ module Fees
     end
 
     def persist_recurring_value(aggregation_results, selected_metered_item, breakdowns_by_group)
-      # TODO: Review recurring product usage persistence. CachedAggregation needs
-      # product_id and product_filter_id support before segment-backed values can be persisted.
-      return if selected_metered_item.billing_segment
       return if options.current_usage?
 
       # NOTE: Only weighted sum and custom aggregations are setting this value
@@ -532,10 +529,9 @@ module Fees
         result.cached_aggregations << CachedAggregation.find_or_initialize_by(
           organization_id: selected_metered_item.organization_id,
           external_subscription_id: billing_context.external_id,
-          charge_id: selected_metered_item.charge.id,
-          charge_filter_id: selected_metered_item.charge_filter&.id,
+          **selected_metered_item.cached_aggregation_identity,
           grouped_by:,
-          timestamp: aggregation_result.recurring_updated_at
+          timestamp: selected_metered_item.billing_segment&.ended_at || aggregation_result.recurring_updated_at
         ) do |aggregation|
           aggregation.current_aggregation = aggregation_result.total_aggregated_units || aggregation_result.aggregation
           aggregation.current_amount = aggregation_result.custom_aggregation&.[](:amount)
@@ -556,8 +552,6 @@ module Fees
       #
       # TODO: Support product_id in BaseStore and the enriched-event schema, enrichment, queries, and dedup keys.
       # Adding a product_id key here alone would be ignored. StoreFactory also needs a product-compatible path.
-      # CachedAggregation reads in Aggregations::{BaseService, WeightedSumService, CustomService} obtain
-      # charge_id from MeteredItem directly; those lookups and the cache schema also need product identity.
       filters = if selected_metered_item.billing_segment
         {}
       else
@@ -577,10 +571,6 @@ module Fees
           # Aggregations::BaseService retains this object for charge_filter_id cache lookups;
           # WeightedSumService and CustomService also scope cached state by it. CustomService reads
           # its custom_properties, while BaseStore extracts its ID for enriched-event queries.
-          #
-          # TODO: Carry product_filter/selected_filter through aggregators, stores, enrichment, and cache
-          # schemas/keys, preserving nil as the default bucket. Keep product custom_properties on the
-          # segment's pricing snapshot; product event matching already uses matching/ignored_filters below.
           filters[:charge_filter] = selected_metered_item.charge_filter
         end
 

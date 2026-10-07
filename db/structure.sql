@@ -283,6 +283,7 @@ ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS fk_rails_49
 ALTER TABLE IF EXISTS ONLY public.integration_items DROP CONSTRAINT IF EXISTS fk_rails_47d8081062;
 ALTER TABLE IF EXISTS ONLY public.contract_rate_cards DROP CONSTRAINT IF EXISTS fk_rails_457dfe353b;
 ALTER TABLE IF EXISTS ONLY public.quote_owners DROP CONSTRAINT IF EXISTS fk_rails_45230f8485;
+ALTER TABLE IF EXISTS ONLY public.cached_aggregations DROP CONSTRAINT IF EXISTS fk_rails_41915ef8ff;
 ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rails_4117574b51;
 ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rails_41088c7d45;
 ALTER TABLE IF EXISTS ONLY public.x402_settlements DROP CONSTRAINT IF EXISTS fk_rails_40fb23816d;
@@ -300,6 +301,7 @@ ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS fk_
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_3ab959bfc4;
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_3a303bf667;
 ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS fk_rails_3926855f12;
+ALTER TABLE IF EXISTS ONLY public.cached_aggregations DROP CONSTRAINT IF EXISTS fk_rails_38a23701e2;
 ALTER TABLE IF EXISTS ONLY public.products DROP CONSTRAINT IF EXISTS fk_rails_37c75ac37a;
 ALTER TABLE IF EXISTS ONLY public.product_filter_values DROP CONSTRAINT IF EXISTS fk_rails_36e9122b3e;
 ALTER TABLE IF EXISTS ONLY public.inbound_webhooks DROP CONSTRAINT IF EXISTS fk_rails_36cda06530;
@@ -1115,6 +1117,7 @@ DROP INDEX IF EXISTS public.idx_cs_audit_feature_created;
 DROP INDEX IF EXISTS public.idx_cs_audit_batch;
 DROP INDEX IF EXISTS public.idx_cs_audit_actor_created;
 DROP INDEX IF EXISTS public.idx_cached_aggregation_filtered_lookup;
+DROP INDEX IF EXISTS public.idx_cached_aggregation_contract_lookup;
 DROP INDEX IF EXISTS public.idx_billable_metrics_id_agg_type;
 DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_wallet;
 DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_subscription_with_bm;
@@ -2641,7 +2644,7 @@ CREATE TABLE public.cached_aggregations (
     organization_id uuid NOT NULL,
     "timestamp" timestamp(6) without time zone NOT NULL,
     external_subscription_id character varying NOT NULL,
-    charge_id uuid NOT NULL,
+    charge_id uuid,
     group_id uuid,
     current_aggregation numeric,
     max_aggregation numeric,
@@ -2652,7 +2655,9 @@ CREATE TABLE public.cached_aggregations (
     charge_filter_id uuid,
     current_amount numeric,
     event_transaction_id character varying,
-    presentation_breakdowns jsonb DEFAULT '[]'::jsonb NOT NULL
+    presentation_breakdowns jsonb DEFAULT '[]'::jsonb NOT NULL,
+    contract_rate_card_id uuid,
+    product_filter_id uuid
 );
 
 
@@ -7698,6 +7703,13 @@ CREATE UNIQUE INDEX idx_alerts_unique_per_type_per_wallet ON public.usage_monito
 --
 
 CREATE INDEX idx_billable_metrics_id_agg_type ON public.billable_metrics USING btree (id) INCLUDE (aggregation_type);
+
+
+--
+-- Name: idx_cached_aggregation_contract_lookup; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_cached_aggregation_contract_lookup ON public.cached_aggregations USING btree (contract_rate_card_id, product_filter_id, "timestamp" DESC) WHERE (contract_rate_card_id IS NOT NULL);
 
 
 --
@@ -13410,6 +13422,14 @@ ALTER TABLE ONLY public.products
 
 
 --
+-- Name: cached_aggregations fk_rails_38a23701e2; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cached_aggregations
+    ADD CONSTRAINT fk_rails_38a23701e2 FOREIGN KEY (contract_rate_card_id) REFERENCES public.contract_rate_cards(id);
+
+
+--
 -- Name: quantified_events fk_rails_3926855f12; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -13543,6 +13563,14 @@ ALTER TABLE ONLY public.credit_notes
 
 ALTER TABLE ONLY public.credit_notes
     ADD CONSTRAINT fk_rails_4117574b51 FOREIGN KEY (invoice_id) REFERENCES public.invoices(id);
+
+
+--
+-- Name: cached_aggregations fk_rails_41915ef8ff; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cached_aggregations
+    ADD CONSTRAINT fk_rails_41915ef8ff FOREIGN KEY (product_filter_id) REFERENCES public.product_filters(id);
 
 
 --
@@ -15744,6 +15772,9 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261007084605'),
+('20261007084542'),
+('20261007084457'),
 ('20261005112941'),
 ('20261005105630'),
 ('20261005094159'),

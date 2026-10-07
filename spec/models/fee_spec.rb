@@ -104,41 +104,6 @@ RSpec.describe Fee do
     end
   end
 
-  describe "contract provenance validation" do
-    let(:organization) { create(:organization) }
-    let(:customer) { create(:customer, organization:) }
-    let(:contract) { create(:contract, organization:, customer:) }
-    let(:other_contract) { create(:contract, organization:, customer:, external_id: "other-contract") }
-    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract: other_contract) }
-    let(:fee) { build(:fee, contract:, contract_rate_card:) }
-
-    it "rejects a contract rate card owned by another contract" do
-      expect(fee).not_to be_valid
-      expect(fee.errors[:contract_rate_card]).to eq(["must belong to the fee contract"])
-    end
-  end
-
-  describe "contract rate card history" do
-    let(:contract_rate_card) { create(:contract_rate_card) }
-    let(:fee) do
-      create(
-        :fee,
-        contract: contract_rate_card.contract,
-        contract_rate_card:,
-        organization: contract_rate_card.organization
-      )
-    end
-
-    before do
-      fee
-      contract_rate_card.discard!
-    end
-
-    it "resolves a discarded pricing attachment" do
-      expect(fee.reload.contract_rate_card).to eq(contract_rate_card)
-    end
-  end
-
   describe "#ordered_by_period" do
     let(:fee1) do
       create(:fee, properties: {

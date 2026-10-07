@@ -17,7 +17,9 @@ module Charges
         return result.service_failure!(code: "apply_charge_model_error", message: "Charge is not pay_in_advance")
       end
 
-      amount = if with_persisted_event?
+      amount = if non_billable_sum_event?
+        BigDecimal(0)
+      elsif with_persisted_event?
         amount_from_aggregation - amount_excluding_persisted_event
       else
         amount_including_non_persisted_event - amount_from_aggregation
@@ -32,7 +34,7 @@ module Charges
       result.count = 1
       result.amount = amount_cents
       result.precise_amount = amount * currency.subunit_to_unit.to_d
-      result.unit_amount = rounded_amount.zero? ? BigDecimal(0) : rounded_amount / compute_units
+      result.unit_amount = (rounded_amount.zero? || result.units.zero?) ? BigDecimal(0) : rounded_amount / result.units
       result.amount_details = calculated_single_event_amount_details if with_persisted_event?
       result
     end
@@ -67,6 +69,7 @@ module Charges
 
     def applied_charge_model_excluding_persisted_event
       return @applied_charge_model_excluding_persisted_event if defined?(@applied_charge_model_excluding_persisted_event)
+      return applied_charge_model if non_billable_sum_event?
 
       precise_total_amount_cents = if aggregation_result.precise_total_amount_cents
         aggregation_result.precise_total_amount_cents - aggregation_result.pay_in_advance_precise_total_amount_cents
@@ -118,6 +121,12 @@ module Charges
 
     def currency
       @currency ||= metered_item.currency
+    end
+
+    def non_billable_sum_event?
+      metered_item.billable_metric.sum_agg? &&
+        aggregation_result.max_aggregation &&
+        aggregation_result.pay_in_advance_aggregation.zero?
     end
 
     def compute_units

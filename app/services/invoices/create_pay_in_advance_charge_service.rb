@@ -13,13 +13,20 @@ module Invoices
     end
 
     def call
-      fee_result = generate_fees
-      fees = fee_result.fees
-      return result if fees.none?
+      metered_item.with_aggregation_lock { create_invoice }
+      result
+    end
 
+    private
+
+    def create_invoice
       tax_deferred = false
 
       ApplicationRecord.transaction do
+        fee_result = generate_fees
+        fees = fee_result.fees
+        return result if fees.none?
+
         create_generating_invoice
         fees.each { |f| f.update!(invoice:) }
 
@@ -80,8 +87,6 @@ module Invoices
       result.fail_with_error!(e)
     end
 
-    private
-
     attr_reader :timestamp, :invoice, :metered_item, :billing_context
 
     delegate :event, to: :metered_item
@@ -110,7 +115,8 @@ module Invoices
     end
 
     def generate_fees
-      Fees::CreatePayInAdvanceService.call!(metered_item:, billing_context:, estimate: true).tap do |fee_result|
+      # Persist real fees and aggregation state within the invoice transaction.
+      Fees::CreatePayInAdvanceService.call!(metered_item:, billing_context:, skip_webhooks: true).tap do |fee_result|
         result.invoice_id = fee_result.invoice_id
       end
     end

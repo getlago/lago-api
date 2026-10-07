@@ -199,6 +199,36 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
         expect(result.invoice.fees.sole).to have_attributes(subscription: nil, charge: nil, fee_type: "product")
       end
 
+      context "with aggregation state" do
+        let(:aggregation_result) do
+          super().tap do |result|
+            result.current_aggregation = 7
+            result.max_aggregation = 10
+          end
+        end
+
+        it "does not advance state or create another invoice on retry" do
+          invoice_service.call
+
+          expect { invoice_service.call }.to not_change(CachedAggregation, :count)
+            .and not_change(Fee, :count)
+            .and not_change(Invoice, :count)
+        end
+
+        context "when invoice calculation fails" do
+          before do
+            allow(Invoices::ComputeTaxesAndTotalsService).to receive(:call).and_raise("invoice failure")
+          end
+
+          it "rolls back the fees and aggregation state together" do
+            expect(invoice_service.call).not_to be_success
+            expect(CachedAggregation.where(contract_rate_card:)).to be_empty
+            expect(Fee.where(contract:)).to be_empty
+            expect(Invoice.where(customer:)).to be_empty
+          end
+        end
+      end
+
       context "when the contract selects an invoice custom section" do
         let(:section) { create(:invoice_custom_section, organization:) }
 

@@ -105,9 +105,11 @@ module Billing
     end
 
     def previous_subscription_id?
-      return previous_subscription_id.present? if subscription?
-
-      raise_contract_context_not_supported(:previous_subscription_id?)
+      if subscription?
+        previous_subscription_id.present?
+      else
+        true
+      end
     end
 
     def next_subscription

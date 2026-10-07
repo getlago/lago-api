@@ -23,7 +23,7 @@ module Contracts
     def call
       result.invoices = customers.flat_map do |customer|
         BillingSegments::ScheduleService.call!(customer:, timestamp:)
-        BillingSegments::ProcessService.call!(customer:).invoices
+        BillingSegments::ProcessService.call!(customer:, timestamp:).invoices
       end
 
       result

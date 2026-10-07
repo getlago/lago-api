@@ -119,12 +119,15 @@ RSpec.describe Billing::Context do
       end
     end
 
+    it "allows recurring aggregation to recover opening balances from contract events" do
+      expect(context.previous_subscription_id?).to be(true)
+    end
+
     it "rejects subscription-only lifecycle methods" do
       %i[
         invoice_subscriptions
         previous_subscription
         previous_subscription_id
-        previous_subscription_id?
         next_subscription
         upgraded?
         downgraded?

@@ -4,8 +4,9 @@ module BillingSegments
   class ProcessService < BaseService
     Result = BaseResult[:invoices]
 
-    def initialize(customer:)
+    def initialize(customer:, timestamp: Time.current)
       @customer = customer
+      @timestamp = timestamp
       super
     end
 
@@ -35,7 +36,7 @@ module BillingSegments
 
     private
 
-    attr_reader :customer
+    attr_reader :customer, :timestamp
 
     def pending_segments
       grouped_segments.fetch(:pending_segments, [])
@@ -46,7 +47,7 @@ module BillingSegments
     end
 
     def grouped_segments
-      @grouped_segments ||= BillingSegment.ready_for_invoicing
+      @grouped_segments ||= BillingSegment.ready_for_invoicing(timestamp)
         .where(customer_id: customer.id)
         .includes(:pricing_unit, :rate_override, :contract, contract_rate_card: {rate_card: :product}, rate_card_rate: :rate_card)
         .group_by { |segment| segment_group(segment) }

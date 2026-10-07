@@ -4,12 +4,13 @@ module Fees
   class CreatePayInAdvanceService < BaseService
     Result = BaseResult[:fees, :invoice_id]
 
-    def initialize(metered_item:, billing_context:, billing_at: nil, estimate: false)
+    def initialize(metered_item:, billing_context:, billing_at: nil, estimate: false, skip_webhooks: false)
       @metered_item = metered_item
       @billing_context = billing_context
       @billing_at = billing_at || metered_item.event.timestamp
 
       @estimate = estimate
+      @skip_webhooks = skip_webhooks
       raise ArgumentError, "estimate must be true if event if not persisted" if !metered_item.event.persisted && !estimate
 
       super
@@ -18,21 +19,21 @@ module Fees
     def call
       fees = []
 
-      ActiveRecord::Base.transaction(**isolation_mode) do
-        metered_item.pricing_buckets.each do |selected_metered_item|
-          fees << init_fee(selected_metered_item:)
+      metered_item.with_aggregation_lock do
+        ActiveRecord::Base.transaction(**isolation_mode) do
+          metered_item.pricing_buckets.each do |selected_metered_item|
+            fees << init_fee(selected_metered_item:)
 
-          return result unless result.success?
-        end
-      end
+            return result unless result.success?
+          end
 
-      ActiveRecord::Base.transaction do
-        result.fees = persist_fees(fees.compact)
+          result.fees = persist_fees(fees.compact)
 
-        if !metered_item.invoiceable? && customer_provider_taxation?
-          Fees::ApplyProviderTaxesToStandaloneFeesService.call!(
-            customer: billing_context.customer, fees: result.fees, currency: metered_item.currency
-          )
+          if !metered_item.invoiceable? && customer_provider_taxation?
+            Fees::ApplyProviderTaxesToStandaloneFeesService.call!(
+              customer: billing_context.customer, fees: result.fees, currency: metered_item.currency
+            )
+          end
         end
       end
 
@@ -52,7 +53,7 @@ module Fees
 
     private
 
-    attr_reader :metered_item, :billing_context, :billing_at, :estimate
+    attr_reader :metered_item, :billing_context, :billing_at, :estimate, :skip_webhooks
 
     delegate :charge, :event, :billable_metric, to: :metered_item
 
@@ -60,7 +61,7 @@ module Fees
       properties = selected_metered_item.properties
       charge_filter = selected_metered_item.charge_filter
       aggregation_result = aggregate(selected_metered_item:, properties:, charge_filter:)
-      cache_aggregation_result(selected_metered_item:, aggregation_result:, charge_filter:)
+      cache_aggregation_result(selected_metered_item:, aggregation_result:)
 
       charge_model_result = apply_charge_model(selected_metered_item:, aggregation_result:, properties:)
 
@@ -144,7 +145,7 @@ module Fees
     end
 
     def deliver_webhooks
-      return if estimate
+      return if estimate || skip_webhooks
 
       result.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
     end
@@ -159,10 +160,8 @@ module Fees
       end
     end
 
-    def cache_aggregation_result(selected_metered_item:, aggregation_result:, charge_filter:)
-      # TODO: Review recurring product usage persistence. CachedAggregation needs
-      # product_id and product_filter_id support before segment-backed values can be persisted.
-      return if selected_metered_item.billing_segment
+    def cache_aggregation_result(selected_metered_item:, aggregation_result:)
+      return if estimate
       return unless aggregation_result.current_aggregation.present? ||
         aggregation_result.max_aggregation.present? ||
         aggregation_result.max_aggregation_with_proration.present?
@@ -172,8 +171,7 @@ module Fees
         event_transaction_id: event.transaction_id,
         timestamp: billing_at,
         external_subscription_id: event.external_subscription_id,
-        charge_id: selected_metered_item.charge_id,
-        charge_filter_id: charge_filter&.id,
+        **selected_metered_item.cached_aggregation_identity,
         current_aggregation: aggregation_result.current_aggregation,
         current_amount: aggregation_result.current_amount,
         max_aggregation: aggregation_result.max_aggregation,
