@@ -10,6 +10,7 @@ module Events
     :code,
     :properties,
     :precise_total_amount_cents,
+    :created_at,
     :persisted,
     keyword_init: true
   ) do
@@ -53,6 +54,7 @@ module Events
       super.tap do |j|
         j["timestamp"] = timestamp.to_f
         j["timestamp_with_precision"] = timestamp.iso8601(9)
+        j["created_at"] = created_at&.iso8601(9)
       end
     end
 

@@ -11,13 +11,15 @@ RSpec.describe Events::Common do
       external_subscription_id: subscription.external_id,
       timestamp:,
       code: billable_metric.code,
-      properties: {}
+      properties: {},
+      created_at:
     )
   end
 
   let(:organization) { create(:organization) }
   let(:billable_metric) { create(:billable_metric, organization: organization) }
   let(:timestamp) { Time.current - 1.second }
+  let(:created_at) { nil }
 
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:) }
@@ -47,6 +49,12 @@ RSpec.describe Events::Common do
         expect(event.persisted).to be_falsey
         expect(event.persisted?).to be(false)
       end
+    end
+  end
+
+  describe "#created_at" do
+    it "defaults to nil" do
+      expect(event.created_at).to be_nil
     end
   end
 
@@ -152,8 +160,17 @@ RSpec.describe Events::Common do
         "code" => billable_metric.code,
         "properties" => {},
         "timestamp" => timestamp.to_f,
-        "timestamp_with_precision" => timestamp.iso8601(9)
+        "timestamp_with_precision" => timestamp.iso8601(9),
+        "created_at" => nil
       )
+    end
+
+    context "when created_at is set" do
+      let(:created_at) { Time.zone.parse("2026-05-22 10:04:50.227587123 +0000") }
+
+      it "serializes created_at with nanosecond precision" do
+        expect(event.as_json["created_at"]).to eq(created_at.iso8601(9))
+      end
     end
   end
 
