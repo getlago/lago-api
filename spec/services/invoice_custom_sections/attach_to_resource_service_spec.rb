@@ -3,6 +3,9 @@
 require "rails_helper"
 
 RSpec.describe InvoiceCustomSections::AttachToResourceService do
+  # The examples set the request source, which would otherwise leak into later specs.
+  after { CurrentContext.reset }
+
   describe "#call" do
     subject { service.call }
 
@@ -83,6 +86,13 @@ RSpec.describe InvoiceCustomSections::AttachToResourceService do
 
       context "when WalletTransaction" do
         let(:resource) { create(:wallet_transaction) }
+
+        it_behaves_like "section attachable"
+        it_behaves_like "section skippable"
+      end
+
+      context "when Contract" do
+        let(:resource) { create(:contract) }
 
         it_behaves_like "section attachable"
         it_behaves_like "section skippable"

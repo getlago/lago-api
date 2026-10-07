@@ -67,6 +67,19 @@ RSpec.describe Fees::ChargeService::MeteredItem do
       )
     end
 
+    describe "#filtered_for_charge_boundaries" do
+      subject(:properties) { described_class.from_billing_segment(billing_segment: billing_segment).filtered_for_charge_boundaries.as_json }
+
+      it "preserves microsecond precision in contract fee properties" do
+        expect(properties.slice("from_datetime", "to_datetime", "charges_from_datetime", "charges_to_datetime")).to eq(
+          "from_datetime" => "2026-09-01T00:00:00.000000Z",
+          "to_datetime" => "2026-09-30T23:59:59.999999Z",
+          "charges_from_datetime" => "2026-09-01T00:00:00.000000Z",
+          "charges_to_datetime" => "2026-09-30T23:59:59.999999Z"
+        )
+      end
+    end
+
     it "builds a metered item backed by a billing segment source" do
       metered_item = described_class.from_billing_segment(billing_segment:)
 
@@ -178,10 +191,10 @@ RSpec.describe Fees::ChargeService::MeteredItem do
       context "with a graduated model" do
         let(:rate_model) { "graduated" }
 
-        it "uses the cycle start for nonrecurring advance pricing" do
+        it "resets nonrecurring advance aggregation at the rate segment" do
           expect(metered_item).to be_graduated
-          expect(boundaries.charges_from_datetime).to eq(billing_segment.cycle_started_at)
-          expect(metered_item.aggregation_boundaries[:from_datetime]).to eq(billing_segment.cycle_started_at)
+          expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
+          expect(metered_item.aggregation_boundaries[:from_datetime]).to eq(billing_segment.started_at)
           expect(boundaries.from_datetime).to eq(billing_segment.started_at)
         end
 
@@ -207,7 +220,7 @@ RSpec.describe Fees::ChargeService::MeteredItem do
       context "with a graduated percentage model" do
         let(:rate_model) { "graduated_percentage" }
 
-        it "does not carry tiers without an explicit graduated-percentage policy" do
+        it "keeps aggregation within the rate segment" do
           expect(metered_item).to be_graduated_percentage
           expect(metered_item).not_to be_graduated
           expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
@@ -218,7 +231,7 @@ RSpec.describe Fees::ChargeService::MeteredItem do
         context "with a #{model} model" do
           let(:rate_model) { model }
 
-          it "keeps the segment start pending model-specific carry rules" do
+          it "keeps aggregation within the rate segment" do
             expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
           end
         end
@@ -227,9 +240,9 @@ RSpec.describe Fees::ChargeService::MeteredItem do
       context "with a graduated rate override on a standard rate" do
         let(:rate_override) { build(:rate_override, organization:, rate_model: "graduated") }
 
-        it "uses the override's effective model for tier carry" do
+        it "keeps the segment start with a graduated override" do
           expect(metered_item).to be_graduated
-          expect(boundaries.charges_from_datetime).to eq(billing_segment.cycle_started_at)
+          expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
         end
       end
 

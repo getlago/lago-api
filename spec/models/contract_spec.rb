@@ -37,6 +37,8 @@ RSpec.describe Contract do
       expect(contract).to have_many(:billing_segments)
       expect(contract).to have_many(:fees)
       expect(contract).to have_many(:invoices).through(:billing_segments)
+      expect(contract).to have_many(:applied_invoice_custom_sections).class_name("Contract::AppliedInvoiceCustomSection").dependent(:destroy)
+      expect(contract).to have_many(:selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section)
     end
 
     it "resolves a discarded customer and catalog plan" do
@@ -267,6 +269,43 @@ RSpec.describe Contract do
   end
 
   describe "Scopes" do
+    describe ".due_for_activation" do
+      let(:timestamp) { Time.zone.parse("2026-09-30T00:00:00Z") }
+      let(:due) { create(:contract, :pending, started_at: timestamp) }
+      let(:not_yet) { create(:contract, :pending, started_at: timestamp + 1.second) }
+      let(:active) { create(:contract, started_at: timestamp - 1.day) }
+
+      before do
+        due
+        not_yet
+        active
+      end
+
+      it "returns the pending contracts whose start has arrived" do
+        expect(described_class.due_for_activation(timestamp)).to eq([due])
+      end
+
+      context "with sequential scans disabled" do
+        around do |example|
+          ActiveRecord::Base.connection.execute("SET enable_seqscan = off")
+          example.run
+        ensure
+          ActiveRecord::Base.connection.execute("SET enable_seqscan = on")
+        end
+
+        # Fresh statistics: without them the planner costs every partial index on
+        # status alike and may settle on the live external id one.
+        before { ActiveRecord::Base.connection.execute("ANALYZE contracts") }
+
+        # The relation the activation clock batches over.
+        it "reads the pending start index" do
+          relation = described_class.due_for_activation(timestamp).joins(:customer).where(customers: {deleted_at: nil})
+
+          expect(relation.order(:id).limit(1000).explain.inspect).to include("index_contracts_on_started_at_pending")
+        end
+      end
+    end
+
     describe ".live" do
       it "returns only pending and active contracts" do
         pending = create(:contract, :pending)

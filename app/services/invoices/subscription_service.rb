@@ -58,7 +58,10 @@ module Invoices
           recurring:,
           context:
         )
-        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:, resources: subscriptions)
+        Invoices::ApplyInvoiceCustomSectionsService.call(
+          invoice:,
+          resources: subscriptions.map { |subscription| Invoices::ApplyInvoiceCustomSectionsService::Resource.from(resource: subscription) }
+        )
 
         skip_payment_gating_for_zero_amount if subscription_payment_gated? && invoice.total_amount_cents.zero? && !invoice.tax_pending?
 

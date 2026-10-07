@@ -67,6 +67,12 @@ class Fee < ApplicationRecord
 
   scope :positive_units, -> { where("fees.units > ?", 0) }
 
+  scope :matching_contract_period, ->(contract_rate_card_id:, from_datetime:, to_datetime:) do
+    where(contract_rate_card_id:, fee_type: :product, pay_in_advance_event_id: nil, pay_in_advance_event_transaction_id: nil)
+      .where("(properties->>'charges_from_datetime')::timestamptz = ?", from_datetime.iso8601(6))
+      .where("(properties->>'charges_to_datetime')::timestamptz = ?", to_datetime.iso8601(6))
+  end
+
   # NOTE: pay_in_advance fees are not be linked to any invoice, but add_on fees does not have any subscriptions
   #       so we need a bit of logic to find the fee in the right organization scope
   scope :from_organization, ->(org) { where(organization_id: org.id) }

@@ -17,6 +17,9 @@ namespace :organizations do
       invoice.invoice_subscriptions.destroy_all
       AdjustedFee.where(invoice_id: invoice.id).destroy_all
       Credit.where(invoice_id: invoice.id).destroy_all
+      X402::Settlement.where(invoice_id: invoice.id)
+        .or(X402::Settlement.where(wallet_transaction_id: WalletTransaction.where(invoice_id: invoice.id).select(:id)))
+        .destroy_all
       WalletTransaction.where(invoice_id: invoice.id).destroy_all
       invoice.destroy
     end

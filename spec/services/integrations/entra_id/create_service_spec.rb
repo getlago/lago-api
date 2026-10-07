@@ -61,6 +61,18 @@ RSpec.describe Integrations::EntraId::CreateService do
             expect(integration.tenant_id).to eq(tenant_id)
           end
 
+          it "has no additional domain" do
+            expect(service_call.integration.additional_domains).to eq([])
+          end
+
+          context "with additional domains" do
+            let(:create_args) { super().merge(additional_domains: ["DE.foo.bar", "us.foo.bar"]) }
+
+            it "stores them normalized" do
+              expect(service_call.integration.reload.additional_domains).to eq(["de.foo.bar", "us.foo.bar"])
+            end
+          end
+
           it "enables entra_id authentication" do
             service_call
             expect(organization.reload).to be_entra_id_authentication_enabled
@@ -68,6 +80,17 @@ RSpec.describe Integrations::EntraId::CreateService do
 
           it_behaves_like "produces a security log", "integration.created" do
             before { service_call }
+          end
+        end
+
+        context "with an invalid additional domain" do
+          let(:create_args) { super().merge(additional_domains: ["com"]) }
+
+          it "returns an error" do
+            result = service_call
+
+            expect(result).not_to be_success
+            expect(result.error.messages[:additional_domains]).to eq(["invalid_format"])
           end
         end
 

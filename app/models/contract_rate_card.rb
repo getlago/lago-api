@@ -5,6 +5,9 @@ class ContractRateCard < ApplicationRecord
   include Discard::Model
 
   self.discard_column = :deleted_at
+  # The contract end date is the only end of a card; drop once released.
+  self.ignored_columns += %w[ended_date]
+
   belongs_to :organization
   belongs_to :contract
   belongs_to :rate_card
@@ -26,6 +29,7 @@ class ContractRateCard < ApplicationRecord
 
   scope :schedulable, ->(timestamp) {
     joins(contract: {customer: :billing_entity})
+      .where(contracts: {status: Contract::BILLABLE_STATUSES, started_at: ..timestamp})
       .where(customers: {deleted_at: nil})
       # Only a priced card owes anything: a period with no price is not one to be paid for.
       .where(rate_card_id: RateCardRate.select(:rate_card_id))
@@ -38,11 +42,14 @@ class ContractRateCard < ApplicationRecord
       )
   }
 
-  scope :due_for_billing, ->(timestamp) {
-    schedulable(timestamp)
-      .where(next_billing_at: ..timestamp)
-      .where(contracts: {status: Contract::BILLABLE_STATUSES, started_at: ..timestamp})
-  }
+  scope :due_for_billing, ->(timestamp) { schedulable(timestamp).where(next_billing_at: ..timestamp) }
+
+  # A card seeded from its contract carries the contract's explicit anchor, or
+  # its own start day when the contract set none: an anchor matching what it
+  # would have inherited follows the contract, any other was set on the card.
+  def inherited_billing_anchor?(contract_billing_anchor_date)
+    billing_anchor_date == (contract_billing_anchor_date || effective_date)
+  end
 
   def edit_error_code
     "contract_locked" unless contract.editable?

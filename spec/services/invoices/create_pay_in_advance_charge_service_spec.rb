@@ -199,6 +199,37 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
         expect(result.invoice.fees.sole).to have_attributes(subscription: nil, charge: nil, fee_type: "product")
       end
 
+      context "when the contract selects an invoice custom section" do
+        let(:section) { create(:invoice_custom_section, organization:) }
+
+        before do
+          create(:contract_applied_invoice_custom_section, organization:, contract:, invoice_custom_section: section)
+        end
+
+        it "copies the contract's section onto the invoice" do
+          invoice = invoice_service.call.invoice
+
+          expect(invoice.applied_invoice_custom_sections.pluck(:code)).to eq([section.code])
+        end
+      end
+
+      context "when the contract skips invoice custom sections" do
+        let(:contract) do
+          create(:contract, organization:, customer:, billing_entity:, skip_invoice_custom_sections: true)
+        end
+        let(:section) { create(:invoice_custom_section, organization:) }
+
+        before do
+          create(:billing_entity_applied_invoice_custom_section, organization:, billing_entity:, invoice_custom_section: section)
+        end
+
+        it "does not fall back to the billing entity's sections" do
+          invoice = invoice_service.call.invoice
+
+          expect(invoice.applied_invoice_custom_sections).to be_empty
+        end
+      end
+
       it "does not persist another invoice when the same product event is retried" do
         invoice_service.call
         result = nil

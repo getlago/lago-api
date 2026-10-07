@@ -37,6 +37,12 @@ class Contract < ApplicationRecord
   has_many :billing_segments
   has_many :fees
   has_many :invoices, -> { distinct }, through: :billing_segments
+  has_many :applied_invoice_custom_sections,
+    class_name: "Contract::AppliedInvoiceCustomSection",
+    dependent: :destroy
+  has_many :selected_invoice_custom_sections,
+    through: :applied_invoice_custom_sections,
+    source: :invoice_custom_section
 
   enum :status, STATUSES, validate: true
   enum :billing_time, BILLING_TIMES, validate: true
@@ -52,6 +58,12 @@ class Contract < ApplicationRecord
   # unique index is per status), so a pending replacement can coexist with the
   # active contract. Terminated and canceled siblings are history.
   scope :live, -> { where(status: LIVE_STATUSES) }
+
+  # Pending contracts whose start has arrived, compared as an instant: the rule
+  # creation uses to choose pending or active. A start given as a date is the
+  # customer's local midnight, so it activates on the customer's day. No
+  # timezone expression, so the bound stays on index_contracts_on_started_at_pending.
+  scope :due_for_activation, ->(timestamp) { pending.where(started_at: ..timestamp) }
 
   def self.live_by_external_id(external_id)
     # Prefer the pending contract over an active sibling — the replacement
@@ -134,30 +146,32 @@ end
 # Table name: contracts
 # Database name: primary
 #
-#  id                    :uuid             not null, primary key
-#  billing_anchor_date   :date
-#  billing_time          :enum             default("calendar"), not null
-#  canceled_at           :datetime
-#  consolidate_invoice   :boolean          default(TRUE), not null
-#  ended_at              :datetime
-#  name                  :string
-#  payment_method_type   :enum             default("provider"), not null
-#  purchase_order_number :string
-#  started_at            :datetime
-#  status                :enum             default("pending"), not null
-#  terminated_at         :datetime
-#  created_at            :datetime         not null
-#  updated_at            :datetime         not null
-#  billing_entity_id     :uuid
-#  catalog_plan_id       :uuid
-#  customer_id           :uuid             not null
-#  external_id           :string           not null
-#  organization_id       :uuid             not null
-#  payment_method_id     :uuid
+#  id                           :uuid             not null, primary key
+#  billing_anchor_date          :date
+#  billing_time                 :enum             default("calendar"), not null
+#  canceled_at                  :datetime
+#  consolidate_invoice          :boolean          default(TRUE), not null
+#  ended_at                     :datetime
+#  name                         :string
+#  payment_method_type          :enum             default("provider"), not null
+#  purchase_order_number        :string
+#  skip_invoice_custom_sections :boolean          default(FALSE), not null
+#  started_at                   :datetime
+#  status                       :enum             default("pending"), not null
+#  terminated_at                :datetime
+#  created_at                   :datetime         not null
+#  updated_at                   :datetime         not null
+#  billing_entity_id            :uuid
+#  catalog_plan_id              :uuid
+#  customer_id                  :uuid             not null
+#  external_id                  :string           not null
+#  organization_id              :uuid             not null
+#  payment_method_id            :uuid
 #
 # Indexes
 #
 #  index_contracts_by_cursor                                    (organization_id,created_at DESC,id DESC)
+#  index_contracts_by_status_cursor                             (organization_id,status,created_at DESC,id DESC)
 #  index_contracts_on_billing_entity_id                         (billing_entity_id)
 #  index_contracts_on_catalog_plan_id                           (catalog_plan_id)
 #  index_contracts_on_customer_id                               (customer_id)
@@ -167,6 +181,7 @@ end
 #  index_contracts_on_organization_id_external_id_gin_trgm_ops  (organization_id,external_id) USING gin
 #  index_contracts_on_organization_id_name_gin_trgm_ops         (organization_id,name) USING gin
 #  index_contracts_on_payment_method_id                         (payment_method_id)
+#  index_contracts_on_started_at_pending                        (started_at) WHERE (status = 'pending'::contract_status)
 #
 # Foreign Keys
 #

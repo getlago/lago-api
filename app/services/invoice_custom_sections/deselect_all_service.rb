@@ -12,6 +12,8 @@ module InvoiceCustomSections
     def call
       section.billing_entity_applied_invoice_custom_sections.destroy_all
       section.customer_applied_invoice_custom_sections.destroy_all
+      section.subscription_applied_invoice_custom_sections.destroy_all
+      section.contract_applied_invoice_custom_sections.destroy_all
 
       result.invoice_custom_section = section
       result
