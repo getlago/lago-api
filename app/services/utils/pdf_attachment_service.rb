@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "open3"
 require "tmpdir"
 
 module Utils
@@ -18,12 +19,12 @@ module Utils
       return result.not_found_failure!(resource: "file") unless File.file?(file)
       return result.not_allowed_failure!(code: "not_a_pdf_file") unless file.path.downcase.ends_with?(".pdf")
 
-      success = attach_file
+      output, status = attach_file
 
-      if success
+      if status.success?
         result.file = file
       else
-        result.third_party_failure!(third_party: "pdfcpu", error_code: "failed", error_message: "")
+        result.third_party_failure!(third_party: "pdfcpu", error_code: "failed", error_message: output)
       end
 
       result
@@ -38,7 +39,7 @@ module Utils
         attachment_path = File.join(directory, attachment_name)
         File.write(attachment_path, attachment_content)
 
-        Kernel.system("pdfcpu", "attachments", "add", file.path, attachment_path)
+        Open3.capture2e("pdfcpu", "attachments", "add", file.path, attachment_path)
       end
     end
   end

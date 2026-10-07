@@ -51,15 +51,19 @@ RSpec.describe Utils::PdfAttachmentService do
     end
 
     context "when pdfcpu fails" do
+      let(:pdfcpu_output) { "pdfcpu: invalid PDF" }
+      let(:pdfcpu_status) { instance_double(Process::Status, success?: false) }
+
       before do
-        allow(Kernel).to receive(:system)
+        allow(Open3).to receive(:capture2e)
           .with("pdfcpu", "attachments", "add", file.path, kind_of(String))
-          .and_return(false)
+          .and_return([pdfcpu_output, pdfcpu_status])
       end
 
       it "fails" do
         expect(result).to be_failure
         expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+        expect(result.error.error_message).to eq(pdfcpu_output)
       end
     end
   end
