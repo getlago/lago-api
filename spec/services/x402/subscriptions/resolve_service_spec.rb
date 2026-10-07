@@ -70,6 +70,27 @@ describe X402::Subscriptions::ResolveService do
     end
   end
 
+  context "with a pending subscription" do
+    let(:pending_subscription) { create(:subscription, :pending, customer:, plan:, external_id:) }
+
+    before { pending_subscription }
+
+    it "returns a validation failure" do
+      expect(result.error.messages).to eq(base: ["subscription_not_active"])
+    end
+
+    context "with the pending subscription on another plan" do
+      let(:other_plan) { create(:plan, organization:, amount_cents: 0, amount_currency: "USD") }
+      let(:pending_subscription) { create(:subscription, :pending, customer:, plan: other_plan, external_id:) }
+
+      it "leaves its plan unchanged" do
+        result
+
+        expect(pending_subscription.reload.plan).to eq(other_plan)
+      end
+    end
+  end
+
   context "with another customer's active subscription under the same id" do
     let(:other_customer) { create(:customer, organization:) }
 
@@ -106,6 +127,10 @@ describe X402::Subscriptions::ResolveService do
 
     it "leaves no subscription behind" do
       expect { result }.not_to change(Subscription, :count)
+    end
+
+    it "leaves the customer currency unset" do
+      expect { result }.not_to change { customer.reload.currency }
     end
   end
 end

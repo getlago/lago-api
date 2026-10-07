@@ -19,11 +19,17 @@ module X402
         return result.not_found_failure!(resource: "plan") unless plan
 
         result.subscription = ActiveRecord::Base.transaction(requires_new: true) do
-          ::Subscriptions::CreateService.call!(
+          subscription = ::Subscriptions::CreateService.call!(
             customer:,
             plan:,
             params: {external_id:, external_customer_id: customer.external_id, billing_time: :calendar}
           ).subscription
+
+          if subscription.active?
+            subscription
+          else
+            result.single_validation_failure!(error_code: "subscription_not_active").raise_if_error!
+          end
         end
         result
       rescue BaseService::FailedResult => e
