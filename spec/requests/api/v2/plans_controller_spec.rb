@@ -120,6 +120,34 @@ RSpec.describe Api::V2::PlansController do
       expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
     end
 
+    context "with scoping params" do
+      let(:rate_card) { create(:rate_card, organization:) }
+      let(:params) { {rate_card_id: [rate_card.id]} }
+
+      before do
+        create(:catalog_plan, organization:)
+        create(:plan_rate_card, organization:, catalog_plan:, rate_card:)
+      end
+
+      it "lists the plans holding those rate cards" do
+        subject
+
+        expect(json[:plans].map { it[:lago_id] }).to eq([catalog_plan.id])
+      end
+    end
+
+    context "with a search term" do
+      let(:params) { {search_term: catalog_plan.code} }
+
+      before { create(:catalog_plan, organization:) }
+
+      it "lists the plans matching it" do
+        subject
+
+        expect(json[:plans].map { it[:lago_id] }).to eq([catalog_plan.id])
+      end
+    end
+
     it_behaves_like "a cursor paginated v2 endpoint", collection: :plans, model: CatalogPlan do
       let(:paginated_path) { "/api/v2/plans" }
       let(:create_paginated_record) { ->(created_at) { create(:catalog_plan, organization:, created_at:) } }

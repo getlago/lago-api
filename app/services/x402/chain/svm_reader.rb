@@ -30,6 +30,11 @@ module X402
         (outcome != :absent) || blockhash_expired?
       end
 
+      def payer
+        buyer_signature
+        Base58.encode(authority)
+      end
+
       private
 
       attr_reader :network, :payment, :payment_requirements, :since
