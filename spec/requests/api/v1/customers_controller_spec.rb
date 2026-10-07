@@ -95,6 +95,31 @@ RSpec.describe Api::V1::CustomersController do
       end
     end
 
+    context "with an x402 agent address" do
+      let(:create_params) { {external_id: SecureRandom.uuid, x402_agent_address: "0xf4a43B9cc729c9E4E139CB86808f48e3eD09Dcb2"} }
+
+      it "ignores the address" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:customer]).to include(x402_agent_address: nil)
+      end
+
+      context "when the customer is an agent" do
+        let(:customer) { create(:customer, organization:, x402_agent_address: "0x94bA479439C2f1bA5f5DaCBD06Ea0c129604B4a5") }
+        let(:create_params) { {external_id: customer.external_id, x402_agent_address: "0xf4a43B9cc729c9E4E139CB86808f48e3eD09Dcb2"} }
+
+        before { customer }
+
+        it "keeps the stored address" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:customer][:x402_agent_address]).to eq("0x94bA479439C2f1bA5f5DaCBD06Ea0c129604B4a5")
+        end
+      end
+    end
+
     context "with billing configuration", :premium do
       let(:create_params) do
         {

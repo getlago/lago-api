@@ -181,6 +181,38 @@ RSpec.describe Customers::CreateService do
     end
   end
 
+  context "with an x402 agent address" do
+    let(:create_args) { {organization_id: organization.id, external_id:, x402_agent_address: "0xf4a43b9cc729c9e4e139cb86808f48e3ed09dcb2"} }
+
+    it "stores the checksummed address" do
+      expect(result.customer.x402_agent_address).to eq("0xf4a43B9cc729c9E4E139CB86808f48e3eD09Dcb2")
+    end
+  end
+
+  context "with a malformed x402 agent address" do
+    let(:create_args) { {organization_id: organization.id, external_id:, x402_agent_address: "0x1234"} }
+
+    it "returns a validation failure" do
+      expect(result.error.messages).to eq(x402_agent_address: ["invalid_format"])
+    end
+  end
+
+  context "with exclude_from_dunning_campaign" do
+    let(:create_args) { {organization_id: organization.id, external_id:, exclude_from_dunning_campaign: true} }
+
+    it "excludes the customer from dunning campaigns" do
+      expect(result.customer).to be_exclude_from_dunning_campaign
+    end
+
+    context "with revenue share enabled", :premium do
+      let(:organization) { create(:organization, premium_integrations: ["revenue_share"]) }
+
+      it "keeps the exclusion" do
+        expect(result.customer).to be_exclude_from_dunning_campaign
+      end
+    end
+  end
+
   context "with metadata" do
     let(:create_args) do
       {

@@ -37,7 +37,8 @@ module V1
         finalize_zero_amount_invoice: model.finalize_zero_amount_invoice,
         billing_configuration:,
         shipping_address: model.shipping_address,
-        skip_invoice_custom_sections: model.skip_invoice_custom_sections
+        skip_invoice_custom_sections: model.skip_invoice_custom_sections,
+        x402_agent_address: model.x402_agent_address
       }
 
       payload = payload.merge(metadata)
