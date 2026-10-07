@@ -10,11 +10,14 @@ class IndexContractCachedAggregations < ActiveRecord::Migration[8.0]
       remove_index :cached_aggregations, name: INDEX_NAME, algorithm: :concurrently
     end
 
-    add_index :cached_aggregations,
-      [:contract_rate_card_id, :product_filter_id, :timestamp],
-      order: {timestamp: :desc},
-      where: "contract_rate_card_id IS NOT NULL",
-      name: INDEX_NAME, algorithm: :concurrently, if_not_exists: true
+    # The three equality keys isolate a usage bucket before the timestamp range scan.
+    safety_assured do
+      add_index :cached_aggregations,
+        [:contract_id, :product_id, :product_filter_id, :timestamp],
+        order: {timestamp: :desc},
+        where: "contract_id IS NOT NULL",
+        name: INDEX_NAME, algorithm: :concurrently, if_not_exists: true
+    end
   end
 
   def down

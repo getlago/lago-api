@@ -141,14 +141,14 @@ RSpec.describe "Contract usage billing QA regressions" do
 
       it "keeps unmatched events out of both pricing and persisted state" do
         expect(event_fees.map(&:amount_cents)).to eq([300, 700, 0, 100])
-        expect(CachedAggregation.where(contract_rate_card: card).order(:created_at).pluck(:current_aggregation))
+        expect(CachedAggregation.where(contract:, product:).order(:created_at).pluck(:current_aggregation))
           .to eq([3, 10, 7, 11])
       end
     end
 
     it "O10 bills only the newly reached unit" do
       event_fees
-      expect(CachedAggregation.where(contract_rate_card: card).order(:created_at).pluck(:current_aggregation, :max_aggregation))
+      expect(CachedAggregation.where(contract:, product:).order(:created_at).pluck(:current_aggregation, :max_aggregation))
         .to eq([[3, 3], [10, 10], [7, 10], [11, 11]])
       expect(event_fees.map(&:amount_cents)).to eq([300, 700, 0, 100])
       expect(event_fees.map { |fee| fee.invoice.status }).to eq(["finalized"] * 4)
@@ -272,6 +272,60 @@ RSpec.describe "Contract usage billing QA regressions" do
       second_period = Contracts::BillService.call!(contracts: [contract], timestamp: boundary + 1.month)
 
       expect(second_period.invoices.sole.fees.sole).to have_attributes(units: 10, amount_cents: 1000)
+    end
+
+    context "when an effective-date change replaces the contract rate card" do
+      subject(:replacement_result) do
+        Fees::ChargeService.call!(
+          invoice:, metered_item: replacement_item, billing_context: Billing::Context.from(contract:),
+          options: Fees::ChargeService::Options.new(context: :finalize)
+        )
+      end
+
+      let(:event) { nil }
+      let(:invoice) { create(:invoice, organization:, customer:, currency: "USD", status: :generating) }
+      let(:replacement_rate_card) { create(:rate_card, organization:, product:, currency: "USD", billing_timing: timing) }
+      let(:replacement_rate) do
+        create(:rate_card_rate, organization:, rate_card: replacement_rate_card, rate_properties: {"amount" => "2"})
+      end
+      let(:replacement_card) do
+        create(:contract_rate_card, organization:, contract:, rate_card: replacement_rate_card,
+          effective_date: boundary.to_date, billing_anchor_date: started_at.to_date)
+      end
+      let(:replacement_segment) do
+        create(:billing_segment, organization:, customer:, contract:, contract_rate_card: replacement_card,
+          rate_card_rate: replacement_rate, rate_override: nil, currency: "USD", rate_properties: {"amount" => "2"},
+          started_at: boundary, ended_at: BillingSegment.inclusive_end(boundary + 1.month),
+          cycle_started_at: boundary, billing_at: boundary + 1.month)
+      end
+      let(:replacement_item) { Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: replacement_segment) }
+      let(:closing_balance) do
+        create(:cached_aggregation, organization:, charge: nil, contract: card.contract, product: card.product,
+          external_subscription_id: contract.external_id, current_aggregation: 10,
+          timestamp: BillingSegment.inclusive_end(boundary))
+      end
+
+      before { closing_balance }
+
+      it "carries the cached units into the replacement price without replaying events" do
+        expect(replacement_result.fees.sole).to have_attributes(
+          contract_rate_card: replacement_card, units: 10, amount_cents: 2000
+        )
+        expect(replacement_result.cached_aggregations.sole).to have_attributes(contract:, product:, current_aggregation: 10)
+      end
+
+      context "with a balance for another contract" do
+        let(:other_contract) { create(:contract, organization:, customer:) }
+        let(:closing_balance) do
+          create(:cached_aggregation, organization:, charge: nil, contract: other_contract, product:,
+            external_subscription_id: contract.external_id, current_aggregation: 10,
+            timestamp: BillingSegment.inclusive_end(boundary))
+        end
+
+        it "keeps the replacement contract's usage isolated" do
+          expect(replacement_result.fees).to be_empty
+        end
+      end
     end
 
     context "when several periods are billed together" do

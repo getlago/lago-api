@@ -451,7 +451,7 @@ RSpec.describe Fees::ChargeService do
       expect(result).to be_success
       expect(result.fees.sole.amount_cents).to eq(400)
       expect(result.cached_aggregations.sole).to have_attributes(
-        contract_rate_card:, charge_id: nil, product_filter_id: nil,
+        contract:, product:, charge_id: nil, product_filter_id: nil,
         current_aggregation: 2, timestamp: billing_segment.ended_at
       )
     end

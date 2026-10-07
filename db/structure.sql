@@ -117,6 +117,7 @@ ALTER TABLE IF EXISTS ONLY public.billing_segments DROP CONSTRAINT IF EXISTS fk_
 ALTER TABLE IF EXISTS ONLY public.contracts_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_b3aef9be8c;
 ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS fk_rails_b3864df641;
 ALTER TABLE IF EXISTS ONLY public.billing_entities_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_b283a89721;
+ALTER TABLE IF EXISTS ONLY public.cached_aggregations DROP CONSTRAINT IF EXISTS fk_rails_b205a930f5;
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_b07fc711f7;
 ALTER TABLE IF EXISTS ONLY public.billing_object_connections DROP CONSTRAINT IF EXISTS fk_rails_aed4cbd20b;
 ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS fk_rails_aea6422e6a;
@@ -128,6 +129,7 @@ ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.integration_items DROP CONSTRAINT IF EXISTS fk_rails_a9dc2ea536;
 ALTER TABLE IF EXISTS ONLY public.rate_phases DROP CONSTRAINT IF EXISTS fk_rails_a9ba49506f;
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_a958b8f5a7;
+ALTER TABLE IF EXISTS ONLY public.cached_aggregations DROP CONSTRAINT IF EXISTS fk_rails_a808f6f3b4;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_a7f20c73bb;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_a710519346;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_a6d07eec6e;
@@ -301,7 +303,6 @@ ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS fk_
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_3ab959bfc4;
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_3a303bf667;
 ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS fk_rails_3926855f12;
-ALTER TABLE IF EXISTS ONLY public.cached_aggregations DROP CONSTRAINT IF EXISTS fk_rails_38a23701e2;
 ALTER TABLE IF EXISTS ONLY public.products DROP CONSTRAINT IF EXISTS fk_rails_37c75ac37a;
 ALTER TABLE IF EXISTS ONLY public.product_filter_values DROP CONSTRAINT IF EXISTS fk_rails_36e9122b3e;
 ALTER TABLE IF EXISTS ONLY public.inbound_webhooks DROP CONSTRAINT IF EXISTS fk_rails_36cda06530;
@@ -2656,7 +2657,8 @@ CREATE TABLE public.cached_aggregations (
     current_amount numeric,
     event_transaction_id character varying,
     presentation_breakdowns jsonb DEFAULT '[]'::jsonb NOT NULL,
-    contract_rate_card_id uuid,
+    contract_id uuid,
+    product_id uuid,
     product_filter_id uuid
 );
 
@@ -7709,7 +7711,7 @@ CREATE INDEX idx_billable_metrics_id_agg_type ON public.billable_metrics USING b
 -- Name: idx_cached_aggregation_contract_lookup; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_cached_aggregation_contract_lookup ON public.cached_aggregations USING btree (contract_rate_card_id, product_filter_id, "timestamp" DESC) WHERE (contract_rate_card_id IS NOT NULL);
+CREATE INDEX idx_cached_aggregation_contract_lookup ON public.cached_aggregations USING btree (contract_id, product_id, product_filter_id, "timestamp" DESC) WHERE (contract_id IS NOT NULL);
 
 
 --
@@ -13422,14 +13424,6 @@ ALTER TABLE ONLY public.products
 
 
 --
--- Name: cached_aggregations fk_rails_38a23701e2; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.cached_aggregations
-    ADD CONSTRAINT fk_rails_38a23701e2 FOREIGN KEY (contract_rate_card_id) REFERENCES public.contract_rate_cards(id);
-
-
---
 -- Name: quantified_events fk_rails_3926855f12; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14814,6 +14808,14 @@ ALTER TABLE ONLY public.recurring_transaction_rules_invoice_custom_sections
 
 
 --
+-- Name: cached_aggregations fk_rails_a808f6f3b4; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cached_aggregations
+    ADD CONSTRAINT fk_rails_a808f6f3b4 FOREIGN KEY (product_id) REFERENCES public.products(id);
+
+
+--
 -- Name: invoices fk_rails_a958b8f5a7; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14899,6 +14901,14 @@ ALTER TABLE ONLY public.billing_object_connections
 
 ALTER TABLE ONLY public.daily_usages
     ADD CONSTRAINT fk_rails_b07fc711f7 FOREIGN KEY (customer_id) REFERENCES public.customers(id);
+
+
+--
+-- Name: cached_aggregations fk_rails_b205a930f5; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cached_aggregations
+    ADD CONSTRAINT fk_rails_b205a930f5 FOREIGN KEY (contract_id) REFERENCES public.contracts(id);
 
 
 --

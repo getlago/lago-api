@@ -222,7 +222,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
 
           it "rolls back the fees and aggregation state together" do
             expect(invoice_service.call).not_to be_success
-            expect(CachedAggregation.where(contract_rate_card:)).to be_empty
+            expect(CachedAggregation.where(contract:, product:)).to be_empty
             expect(Fee.where(contract:)).to be_empty
             expect(Invoice.where(customer:)).to be_empty
           end

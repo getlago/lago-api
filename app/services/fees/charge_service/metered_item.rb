@@ -85,7 +85,7 @@ module Fees
       # recurring closing balances remain available across those windows.
       def cached_aggregation_identity
         if billing_segment
-          {contract_rate_card_id: contract_rate_card.id, product_filter_id: product_filter&.id}
+          {contract_id: contract.id, product_id: invoiceable.id, product_filter_id: product_filter&.id}
         else
           {charge_id:, charge_filter_id: charge_filter&.id}
         end
@@ -93,8 +93,8 @@ module Fees
 
       def with_aggregation_lock(&block)
         # Invoice creation holds the same reentrant lock until its transaction commits.
-        if contract_rate_card
-          contract_rate_card.with_advisory_lock!("advance_aggregation_#{contract_rate_card.id}", &block)
+        if contract
+          contract.with_advisory_lock!("advance_aggregation_#{contract.id}_#{invoiceable.id}", &block)
         else
           yield
         end

@@ -176,7 +176,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
 
         it "persists the decrease and billed maximum with the fee" do
           expect(fee_service.call).to be_success
-          expect(CachedAggregation.where(contract_rate_card:).sole).to have_attributes(
+          expect(CachedAggregation.where(contract:, product:).sole).to have_attributes(
             charge_id: nil, product_filter_id: nil, current_aggregation: 7, max_aggregation: 10,
             external_subscription_id: contract.external_id, event_transaction_id: event.transaction_id
           )
@@ -204,7 +204,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
 
           it "rolls back the snapshot so a retry starts from the same state" do
             expect { fee_service.call }.to raise_error("tax failure")
-            expect(CachedAggregation.where(contract_rate_card:)).to be_empty
+            expect(CachedAggregation.where(contract:, product:)).to be_empty
           end
         end
       end
