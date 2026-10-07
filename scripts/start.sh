@@ -15,5 +15,10 @@ else
   bundle exec rails db:migrate
 fi
 
+# Must run before signup:seed_organization, which looks the admin role up by
+# `admin: true` alone and would otherwise create a Role with a NULL code/name
+# and fail the NOT NULL constraint. migrate.sh pairs these two the same way.
+bundle exec rails roles:seed_predefined
+
 bundle exec rails signup:seed_organization
 exec bundle exec rails s -b ::

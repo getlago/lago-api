@@ -1,0 +1,91 @@
+name: Docker Image Boot Contract
+
+# Builds ./Dockerfile — the file the OSS release, staging and production all
+# ship — and asserts that the resulting image still boots the way everything
+# downstream assumes it does.
+#
+# This exists because v1.54.0 shipped an image whose ENTRYPOINT swallowed every
+# `command:` override and whose runtime had no curl, and nothing in this repo
+# noticed. The lago repo's Docker CI did, four hours later, in another
+# repository, after the release was already public.
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "Dockerfile"
+      - "Gemfile"
+      - "Gemfile.lock"
+      - "scripts/**"
+      - "ci/docker-boot-contract.sh"
+      - ".github/workflows/docker-image.yml"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  boot-contract:
+    name: Boot Contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: getlago/postgres-partman:15.0-alpine
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_DB: lago
+          POSTGRES_USER: lago
+          POSTGRES_PASSWORD: lago
+        options: >-
+          --health-cmd "pg_isready -U lago -d lago"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - "6379:6379"
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # amd64 only, and loaded into the local daemon rather than pushed. The
+      # contract under test is architecture-independent; the release workflow
+      # still builds and publishes both arches.
+      #
+      # No build secret: sidekiq-pro lives in an optional bundler group that
+      # BUNDLE_WITH leaves off by default, so this is the same dependency set
+      # the OSS release builds, and it works on community PRs.
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: lago-api:boot-contract
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Generate RSA key
+        run: echo "LAGO_RSA_PRIVATE_KEY=$(openssl genrsa 2048 | openssl base64 -A)" >> "$GITHUB_ENV"
+
+      - name: Assert boot contract
+        run: ci/docker-boot-contract.sh lago-api:boot-contract
+        env:
+          DATABASE_URL: postgresql://lago:lago@127.0.0.1:5432/lago
+          REDIS_URL: redis://127.0.0.1:6379
+
+      - name: Container logs on failure
+        if: failure()
+        run: tail -n 200 /tmp/*.log || true
