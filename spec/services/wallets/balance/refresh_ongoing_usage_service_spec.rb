@@ -24,7 +24,7 @@ RSpec.describe Wallets::Balance::RefreshOngoingUsageService do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:ongoing_usage_amount_cents) { 1100 }
-  let(:ongoing_billable_metric_amounts) { {"00000000-0000-4000-8000-000000000001" => 1100} }
+  let(:ongoing_billable_metric_amounts) { {"00000000-0000-4000-8000-000000000002" => {"00000000-0000-4000-8000-000000000001" => 1100}} }
 
   describe ".call" do
     it "writes the precomputed ongoing usage onto the wallet" do
@@ -37,7 +37,7 @@ RSpec.describe Wallets::Balance::RefreshOngoingUsageService do
 
     it "writes what the wallet absorbs per billable metric" do
       expect { subject }.to change { wallet.reload.ongoing_billable_metric_amounts }
-        .from({}).to({"00000000-0000-4000-8000-000000000001" => 1100})
+        .from({}).to({"00000000-0000-4000-8000-000000000002" => {"00000000-0000-4000-8000-000000000001" => 1100}})
     end
 
     it "returns the wallet" do
