@@ -640,6 +640,17 @@ RSpec.describe Events::Stores::Provider do
       end
     end
 
+    context "with the filters the caller aggregates" do
+      before { allow(Events::Stores::ChargeFiltersScan).to receive(:new).and_call_original }
+
+      it "restricts the scan to them" do
+        provider.store_for(metered_item:, boundaries:, filters:, aggregated_filter_ids: [charge_filter.id, nil])
+
+        expect(Events::Stores::ChargeFiltersScan).to have_received(:new)
+          .with(charge: metered_item.charge, filter_ids: [charge_filter.id, nil])
+      end
+    end
+
     context "without the feature flag" do
       let(:organization) { create(:organization, clickhouse_events_store: true) }
 

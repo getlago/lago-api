@@ -10,8 +10,14 @@ module Events
     # the filter stores apply (ClickhouseStore#filters_condition_sql), and the rows are grouped by
     # filter.
     #
-    # An event matching several filters counts in each of them, as it does in the filter stores:
-    # the attribution is an ARRAY JOIN over the matching filters, not an exclusive multiIf.
+    # An event counts in every filter of the batch whose conditions it meets, as it does in the
+    # filter stores: the attribution is an ARRAY JOIN over the matching filters, not an exclusive
+    # multiIf, and it is the ignored filters of each condition that bill an event on one filter.
+    #
+    # Only the filters the billing period pre-filter found events for are read, when the caller
+    # gives them: on a charge with thousands of filters, few of them see usage in a period, and
+    # attributing every event to the others would cost far more than their own queries, which are
+    # never run.
     #
     # The groups are the union of the pricing group keys of every filter, and each filter's store
     # sums the rows back to its own keys, which count and sum allow.
@@ -37,8 +43,11 @@ module Events
           charge.filters.size.positive?
       end
 
-      def initialize(charge:)
+      # `filter_ids` are the filters to aggregate, `nil` standing for the default bucket as in the
+      # pre-filter. Without them every filter of the charge is read.
+      def initialize(charge:, filter_ids: nil)
         @charge = charge
+        @filter_keys = filter_ids&.to_set { filter_key(it) }
         @buckets = {}
         @rows = {}
       end
@@ -94,17 +103,23 @@ module Events
 
       private
 
-      attr_reader :charge
+      attr_reader :charge, :filter_keys
 
       def filter_key(charge_filter_id)
         charge_filter_id || DEFAULT_FILTER_KEY
       end
 
-      # The pricing buckets Fees::ChargeService computes the charge fees for, keyed by filter.
+      # The pricing buckets Fees::ChargeService computes the charge fees for, keyed by filter, down
+      # to the ones to aggregate. The conditions of those still ignore the events of every filter
+      # they rank behind, aggregated or not.
       def pricing_buckets
-        @pricing_buckets ||= Fees::ChargeService::Sources::Charge.new(charge:, boundaries: nil)
-          .pricing_buckets
-          .index_by { filter_key(it.charge_filter&.id) }
+        @pricing_buckets ||= begin
+          buckets = Fees::ChargeService::Sources::Charge.new(charge:, boundaries: nil)
+            .pricing_buckets
+            .index_by { filter_key(it.charge_filter&.id) }
+
+          filter_keys ? buckets.slice(*filter_keys) : buckets
+        end
       end
 
       def batch_index

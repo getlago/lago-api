@@ -192,6 +192,59 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
     end
   end
 
+  describe "the filters to aggregate" do
+    subject(:scan) { described_class.new(charge: loaded_charge, filter_ids:) }
+
+    # The first filter of the charge and the default bucket, which a batch of two would read apart.
+    let(:kept) { [pricing_buckets.first, pricing_buckets.last] }
+    let(:left_out) { pricing_buckets - kept }
+    let(:filter_ids) { kept.map { it.charge_filter.id } }
+    let(:queries) { [] }
+
+    before do
+      stub_const("#{described_class}::FILTERS_PER_SCAN", 2)
+      allow(Events::Stores::Utils::ClickhouseConnection).to receive(:connection_with_retry).and_call_original
+    end
+
+    def record_queries(&)
+      ActiveSupport::Notifications.subscribed(->(*, payload) { queries << payload[:sql] }, "sql.active_record", &)
+    end
+
+    it "sums and counts them as their own stores do" do
+      kept.each do |item|
+        expect(scanned_store(item).sum).to eq(filter_store(item).sum)
+        expect(scanned_store(item).count).to eq(filter_store(item).count)
+      end
+    end
+
+    it "reads them in one batch, however far apart they are in the charge" do
+      kept.each { scanned_store(it).sum }
+
+      expect(Events::Stores::Utils::ClickhouseConnection).to have_received(:connection_with_retry).once
+    end
+
+    it "attributes the events to them only" do
+      record_queries { scanned_store(kept.first).sum }
+
+      expect(queries.grep(/ARRAY JOIN/).sole.scan("if(").size).to eq(kept.size)
+    end
+
+    it "leaves the filters left out to their own store" do
+      left_out.each do |item|
+        expect(scan.covers?(filter_store(item))).to be(false)
+        expect(scanned_store(item).sum).to eq(filter_store(item).sum)
+      end
+    end
+
+    context "without any filter" do
+      let(:filter_ids) { [] }
+
+      it "covers no store" do
+        expect(pricing_buckets.map { scan.covers?(filter_store(it)) }).to all(be(false))
+      end
+    end
+  end
+
   describe "the windows" do
     before do
       Clickhouse::EventsEnriched.create!(

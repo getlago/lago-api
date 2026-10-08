@@ -15,7 +15,9 @@ module Events
 
       attr_reader :billing_context
 
-      def store_for(metered_item:, boundaries:, filters: {})
+      # `aggregated_filter_ids` are the filters of the charge the caller will aggregate, when it
+      # knows them (see ChargeFiltersScan).
+      def store_for(metered_item:, boundaries:, filters: {}, aggregated_filter_ids: nil)
         store = store_class.new(
           code: metered_item.billable_metric.code,
           billing_context:,
@@ -30,7 +32,7 @@ module Events
             charge_id: metered_item.charge.id,
             charge_filter_id: filters[:charge_filter]&.id || "" # clickhouse stores an empty string instead of nil
           )
-        elsif (scan = charge_filters_scan(metered_item:, filters:))
+        elsif (scan = charge_filters_scan(metered_item:, filters:, aggregated_filter_ids:))
           ChargeFiltersScanStore.new(store, scan:)
         else
           store
@@ -124,7 +126,7 @@ module Events
 
       # One scan per charge, shared by the stores of all its filters so that the first one to
       # aggregate reads the events for every other.
-      def charge_filters_scan(metered_item:, filters:)
+      def charge_filters_scan(metered_item:, filters:, aggregated_filter_ids:)
         return unless charge_filters_scan_enabled?
         return if metered_item.billing_segment
         # A pay-in-advance event and its group narrow the store to themselves.
@@ -135,9 +137,12 @@ module Events
 
         # A charge the scan cannot answer is remembered too: telling costs a count of its filters.
         @charge_filters_scans ||= {}
-        return @charge_filters_scans[charge.id] if @charge_filters_scans.key?(charge.id)
+        key = [charge.id, aggregated_filter_ids]
+        return @charge_filters_scans[key] if @charge_filters_scans.key?(key)
 
-        @charge_filters_scans[charge.id] = (ChargeFiltersScan.new(charge:) if ChargeFiltersScan.supported_charge?(charge))
+        @charge_filters_scans[key] = if ChargeFiltersScan.supported_charge?(charge)
+          ChargeFiltersScan.new(charge:, filter_ids: aggregated_filter_ids)
+        end
       end
 
       # The override belongs to the ClickHouse migration comparison, which has to keep comparing
