@@ -13,6 +13,8 @@ module X402
         Sequenced::SequenceError
       ].freeze
 
+      SUBSCRIPTION_LOCK_TIMEOUT = "500ms"
+
       def initialize(settlement:)
         @settlement = settlement
 
@@ -48,7 +50,9 @@ module X402
         family = X402::Network.family_of_network(settlement.network)
         customer = X402::Customers::ResolveService.call!(organization: settlement.organization, address: settlement.payer_address, family:).customer
         wallet = X402::Wallets::ResolveService.call!(customer:, code: purchase_settings["wallet_code"], shape: purchase_settings["wallet"]).wallet
-        subscription = X402::Subscriptions::ResolveService.call!(customer:, plan_code: purchase_settings["plan_code"], family:).subscription
+        subscription = with_lock_timeout(SUBSCRIPTION_LOCK_TIMEOUT) do
+          X402::Subscriptions::ResolveService.call!(customer:, plan_code: purchase_settings["plan_code"], family:).subscription
+        end
 
         wallet_transaction = purchase_credits(wallet)
         BillPaidCreditJob.perform_after_commit(wallet_transaction, Time.current.to_i)
@@ -72,6 +76,13 @@ module X402
         Utils::ActivityLog.produce_after_commit(wallet_transaction, "wallet_transaction.created")
         ::Wallets::ApplyPaidCreditsService.call!(wallet_transaction:)
         wallet_transaction
+      end
+
+      def with_lock_timeout(timeout)
+        connection = settlement.class.connection
+        previous = connection.select_value("SHOW lock_timeout")
+        connection.execute("SET LOCAL lock_timeout = #{connection.quote(timeout)}")
+        yield.tap { connection.execute("SET LOCAL lock_timeout = #{connection.quote(previous)}") }
       end
 
       def purchase_settings
