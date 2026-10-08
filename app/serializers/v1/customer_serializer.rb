@@ -37,10 +37,10 @@ module V1
         finalize_zero_amount_invoice: model.finalize_zero_amount_invoice,
         billing_configuration:,
         shipping_address: model.shipping_address,
-        skip_invoice_custom_sections: model.skip_invoice_custom_sections,
-        x402_agent_address: model.x402_agent_address
+        skip_invoice_custom_sections: model.skip_invoice_custom_sections
       }
 
+      payload[:x402_agent_address] = model.x402_agent_address if model.organization.x402_payments_enabled?
       payload = payload.merge(metadata)
       payload = payload.merge(taxes) if include?(:taxes)
       payload = payload.merge(vies_check) if include?(:vies_check)

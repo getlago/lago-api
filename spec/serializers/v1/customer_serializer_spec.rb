@@ -63,7 +63,6 @@ RSpec.describe ::V1::CustomerSerializer do
         hash_including("lago_id" => it.id)
       end,
       "skip_invoice_custom_sections" => false,
-      "x402_agent_address" => nil,
       "billing_configuration" => {
         "payment_provider" => customer.payment_provider,
         "payment_provider_code" => customer.payment_provider_code,
@@ -100,8 +99,22 @@ RSpec.describe ::V1::CustomerSerializer do
   context "with an x402 agent address" do
     let(:customer) { create(:customer, x402_agent_address: "0xf4a43B9cc729c9E4E139CB86808f48e3eD09Dcb2") }
 
-    it "serializes the address" do
-      expect(result["customer"]["x402_agent_address"]).to eq("0xf4a43B9cc729c9E4E139CB86808f48e3eD09Dcb2")
+    it "omits the address" do
+      expect(result["customer"]).not_to have_key("x402_agent_address")
+    end
+
+    context "with x402 payments enabled", :premium do
+      let(:customer) do
+        create(
+          :customer,
+          organization: create(:organization, feature_flags: ["x402_payments"]),
+          x402_agent_address: "0xf4a43B9cc729c9E4E139CB86808f48e3eD09Dcb2"
+        )
+      end
+
+      it "serializes the address" do
+        expect(result["customer"]["x402_agent_address"]).to eq("0xf4a43B9cc729c9E4E139CB86808f48e3eD09Dcb2")
+      end
     end
   end
 

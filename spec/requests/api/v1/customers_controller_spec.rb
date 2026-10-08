@@ -102,7 +102,13 @@ RSpec.describe Api::V1::CustomersController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:customer]).to include(x402_agent_address: nil)
+        expect(organization.customers.find_by(external_id: create_params[:external_id]).x402_agent_address).to be_nil
+      end
+
+      it "omits the address from the response" do
+        subject
+
+        expect(json[:customer]).not_to have_key(:x402_agent_address)
       end
 
       context "when the customer is an agent" do
@@ -115,7 +121,7 @@ RSpec.describe Api::V1::CustomersController do
           subject
 
           expect(response).to have_http_status(:success)
-          expect(json[:customer][:x402_agent_address]).to eq("0x94bA479439C2f1bA5f5DaCBD06Ea0c129604B4a5")
+          expect(customer.reload.x402_agent_address).to eq("0x94bA479439C2f1bA5f5DaCBD06Ea0c129604B4a5")
         end
       end
     end
