@@ -21,7 +21,7 @@ module Wallets
       end
 
       def call
-        result.billable_metric_amounts = wallets.index_with { Hash.new(0) }
+        result.billable_metric_amounts = wallets.index_with { Hash.new { |hash, subscription_id| hash[subscription_id] = Hash.new(0) } }
         result.wallet_allocations = calculate_wallet_allocations
         result.billable_metric_amounts.transform_values! { |amounts| round_on_running_total(amounts) }
         result
@@ -86,20 +86,34 @@ module Wallets
 
           covered[wallet] += take
           uncovered -= take
-          result.billable_metric_amounts[wallet][fee_key.second] += tax_exclusive(fee_key, take) if fee_key.first == "charge"
+          record_coverage(wallet, fee_key, take) if fee_key.first == "charge"
         end
 
         amount - uncovered
+      end
+
+      # A fee key can span several subscriptions, so what a wallet covers for it is split between
+      # them by what each still has to cover.
+      def record_coverage(wallet, fee_key, take)
+        nets = nets_by_fee_key_and_subscription[fee_key].select { |_subscription_id, net| net.positive? }
+        total = nets.values.sum
+        amount = tax_exclusive(fee_key, take).to_d
+
+        nets.each do |subscription_id, net|
+          result.billable_metric_amounts[wallet][subscription_id][fee_key.second] += amount * net / total
+        end
       end
 
       # Rounded on the running total, so the parts never add up to more than the wallet covers.
       def round_on_running_total(amounts)
         running_total = 0
 
-        amounts.transform_values do |amount|
-          rounded = (running_total + amount).round - running_total.round
-          running_total += amount
-          rounded
+        amounts.transform_values do |by_metric|
+          by_metric.transform_values do |amount|
+            rounded = (running_total + amount).round - running_total.round
+            running_total += amount
+            rounded
+          end
         end
       end
 
@@ -173,7 +187,16 @@ module Wallets
       end
 
       def add_to_pool(remaining, fees)
-        fees.each { |fee| remaining[fee_key(fee)] += yield(fee) }
+        fees.each do |fee|
+          key = fee_key(fee)
+          amount = yield(fee)
+          remaining[key] += amount
+          nets_by_fee_key_and_subscription[key][fee.subscription_id] += amount
+        end
+      end
+
+      def nets_by_fee_key_and_subscription
+        @nets_by_fee_key_and_subscription ||= Hash.new { |hash, fee_key| hash[fee_key] = Hash.new(0) }
       end
 
       def fee_key(fee)
