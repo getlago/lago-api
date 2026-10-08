@@ -29,9 +29,7 @@ RSpec.describe Mutations::Invites::Create do
   end
 
   let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:membership) { create_default(:membership) }
-
-  before { create(:role, :finance) }
+  let_it_be(:membership) { create_default(:membership, roles: %i[finance]) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
