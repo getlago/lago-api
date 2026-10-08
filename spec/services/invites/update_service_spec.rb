@@ -11,6 +11,7 @@ RSpec.describe Invites::UpdateService do
 
   describe "#call" do
     context "when invite is pending" do
+      let(:acting_user) { create(:membership, organization:, roles: %i[admin]).user }
       let(:invite) { create(:invite, organization:, status: "pending", roles: %w[admin]) }
       let(:params) { {roles: %w[manager]} }
 
@@ -53,6 +54,36 @@ RSpec.describe Invites::UpdateService do
 
         expect(result).to be_success
         expect(result.invite.reload.roles).to eq(%w[admin])
+      end
+    end
+
+    context "when non-admin adds a role holding permissions they do not hold" do
+      let(:acting_user) { create(:membership, organization:, roles: %i[finance]).user }
+      let(:custom_role) { create(:role, :custom, organization:, permissions: %w[developers:keys:manage]) }
+      let(:invite) { create(:invite, organization:, status: "pending", roles: %w[finance]) }
+      let(:params) { {roles: ["finance", custom_role.code]} }
+
+      it "returns an error" do
+        result = described_class.call(user: acting_user, invite:, params:)
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("cannot_grant_permissions")
+        expect(invite.reload.roles).to eq(%w[finance])
+      end
+    end
+
+    context "when non-admin keeps a role they do not hold and removes another" do
+      let(:acting_user) { create(:membership, organization:, roles: %i[finance]).user }
+      let(:custom_role) { create(:role, :custom, organization:, permissions: %w[developers:keys:manage]) }
+      let(:invite) { create(:invite, organization:, status: "pending", roles: ["finance", custom_role.code]) }
+      let(:params) { {roles: [custom_role.code]} }
+
+      it "updates the roles" do
+        result = described_class.call(user: acting_user, invite:, params:)
+
+        expect(result).to be_success
+        expect(invite.reload.roles).to eq([custom_role.code])
       end
     end
 

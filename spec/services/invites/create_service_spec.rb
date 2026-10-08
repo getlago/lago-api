@@ -56,6 +56,47 @@ RSpec.describe Invites::CreateService do
       end
     end
 
+    context "when non-admin invites with a role holding permissions they do not hold" do
+      let(:finance_membership) { create(:membership, organization:, roles: %i[finance]) }
+      let(:custom_role) { create(:role, :custom, organization:, permissions: %w[developers:keys:manage]) }
+      let(:create_args) do
+        {
+          email: Faker::Internet.email,
+          current_organization: organization,
+          user: finance_membership.user,
+          roles: [custom_role.code]
+        }
+      end
+
+      it "returns an error" do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("cannot_grant_permissions")
+      end
+
+      it "does not create an invite" do
+        expect { create_service.call }.not_to change(Invite, :count)
+      end
+    end
+
+    context "when non-admin invites with a role within their own permissions" do
+      let(:finance_membership) { create(:membership, organization:, roles: %i[finance]) }
+      let(:create_args) do
+        {
+          email: Faker::Internet.email,
+          current_organization: organization,
+          user: finance_membership.user,
+          roles: %w[finance]
+        }
+      end
+
+      it "creates an invite" do
+        expect { create_service.call }.to change(Invite, :count).by(1)
+      end
+    end
+
     context "with validation error" do
       let(:create_args) do
         {

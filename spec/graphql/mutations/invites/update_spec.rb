@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Mutations::Invites::Update do
   let(:required_permission) { "organization:members:update" }
-  let(:membership) { create(:membership) }
+  let(:membership) { create(:membership, roles: %i[finance]) }
   let(:organization) { membership.organization }
   let(:user) { membership.user }
 
