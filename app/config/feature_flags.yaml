@@ -49,3 +49,7 @@ x402_payments:
 x402_reservation_counter_disabled:
   description: "Switch off the x402 reservation counter for an organization; the gate check then applies the static per-call floor. Operated by Lago"
   owners: ["@osmarluz"]
+
+usage_prefilter_short_cache:
+  description: "Reuse the ClickHouse pre-filter result of the current usage API for 5 seconds, bounding how often polling clients scan the events of a subscription"
+  owners: ["@jdenquin"]

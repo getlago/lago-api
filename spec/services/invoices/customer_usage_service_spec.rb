@@ -938,6 +938,58 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         end
       end
 
+      context "when the caller asks for the pre-filter cache" do
+        subject(:usage_service) do
+          described_class.new(customer:, subscription:, apply_taxes: false, with_cache:, cache_prefilter: true)
+        end
+
+        let(:with_cache) { true }
+
+        it "keeps the pre-filter uncached without the feature flag" do
+          usage_service.call
+
+          expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
+            .with(hash_including(combinations_cache_ttl: nil))
+        end
+
+        context "with the usage_prefilter_short_cache feature flag" do
+          before { organization.enable_feature_flag!(:usage_prefilter_short_cache) }
+
+          it "caches the pre-filter for five seconds" do
+            usage_service.call
+
+            expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
+              .with(hash_including(combinations_cache_ttl: 5.seconds))
+          end
+
+          context "when the cache is disabled by the caller" do
+            let(:with_cache) { false }
+
+            it "keeps the pre-filter uncached" do
+              usage_service.call
+
+              expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
+                .with(hash_including(combinations_cache_ttl: nil))
+            end
+          end
+        end
+      end
+
+      context "when the feature flag is on but the caller does not ask for the pre-filter cache" do
+        subject(:usage_service) do
+          described_class.new(customer:, subscription:, apply_taxes: false, with_cache: true)
+        end
+
+        before { organization.enable_feature_flag!(:usage_prefilter_short_cache) }
+
+        it "keeps the pre-filter uncached" do
+          usage_service.call
+
+          expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
+            .with(hash_including(combinations_cache_ttl: nil))
+        end
+      end
+
       context "when the cache is disabled by the caller" do
         subject(:usage_service) do
           described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false)
