@@ -83,7 +83,7 @@ RSpec.describe WalletTransactions::CreateService do
           name: "Custom Transaction Name",
           purchase_order_number: "PO-123",
           payment_method: payment_method_params,
-          billable_metric_amounts: {"00000000-0000-4000-8000-000000000001" => 1000}
+          billable_metric_amounts: {"00000000-0000-4000-8000-000000000002" => {"00000000-0000-4000-8000-000000000001" => 1000}}
         }
       end
 
@@ -109,7 +109,7 @@ RSpec.describe WalletTransactions::CreateService do
         expect(wallet_transaction.purchase_order_number).to eq("PO-123")
         expect(wallet_transaction.payment_method_id).to eq(payment_method.id)
         expect(wallet_transaction.payment_method_type).to eq("provider")
-        expect(wallet_transaction.billable_metric_amounts).to eq({"00000000-0000-4000-8000-000000000001" => 1000})
+        expect(wallet_transaction.billable_metric_amounts).to eq({"00000000-0000-4000-8000-000000000002" => {"00000000-0000-4000-8000-000000000001" => 1000}})
       end
     end
 
