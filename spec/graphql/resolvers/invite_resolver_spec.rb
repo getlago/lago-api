@@ -8,6 +8,7 @@ RSpec.describe Resolvers::InviteResolver do
       query($token: String!) {
         invite(token: $token) {
           id
+          token
           email
           organization {
             id
@@ -34,6 +35,12 @@ RSpec.describe Resolvers::InviteResolver do
 
     expect(data["email"]).to eq(invite.email)
     expect(data["organization"]["name"]).to eq(organization.name)
+  end
+
+  it "does not expose the invite token to an anonymous caller" do
+    result = execute_graphql(query:, variables: {token: invite.token})
+
+    expect(result["data"]["invite"]["token"]).to be_nil
   end
 
   context "when invite is not found" do
