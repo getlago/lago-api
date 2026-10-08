@@ -6,9 +6,10 @@ RSpec.describe Roles::UpdateService do
   include_context "with mocked security logger"
 
   describe "#call" do
-    subject(:result) { described_class.call(role:, params:) }
+    subject(:result) { described_class.call(role:, acting_membership:, params:) }
 
     let(:organization) { create(:organization) }
+    let(:acting_membership) { create(:membership, organization:, roles: %i[admin]) }
     let(:role) { create(:role, organization:, code: "old_role", name: "Old Name", description: "Old description", permissions: %w[customers:view addons:view]) }
     let(:params) { {name: "New Name", description: "New description", permissions: %w[customers:view plans:view]} }
 
@@ -50,6 +51,53 @@ RSpec.describe Roles::UpdateService do
 
         it_behaves_like "does not produce a security log" do
           before { result }
+        end
+      end
+    end
+
+    context "when the acting member is not an admin" do
+      let(:acting_membership) { create(:membership, organization:, role: acting_role) }
+      let(:acting_role) { create(:role, :custom, organization:, permissions: %w[roles:update customers:view customers:create]) }
+
+      context "when adding a permission the member holds" do
+        let(:params) { {permissions: %w[customers:view addons:view customers:create]} }
+
+        it "updates the permissions" do
+          expect { result }.to change { role.reload.permissions }.to(match_array(%w[customers:view addons:view customers:create]))
+        end
+      end
+
+      context "when adding a permission the member does not hold" do
+        let(:params) { {permissions: %w[customers:view addons:view plans:view]} }
+
+        it "does not update the role" do
+          expect { result }.not_to change { role.reload.permissions }
+        end
+
+        it "returns a forbidden error" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          expect(result.error.code).to eq("cannot_grant_permissions")
+        end
+
+        it_behaves_like "does not produce a security log" do
+          before { result }
+        end
+      end
+
+      context "when removing a permission the member does not hold" do
+        let(:params) { {permissions: %w[customers:view]} }
+
+        it "updates the permissions" do
+          expect { result }.to change { role.reload.permissions }.to(%w[customers:view])
+        end
+      end
+
+      context "when only renaming the role" do
+        let(:params) { {name: "New Name"} }
+
+        it "updates the role" do
+          expect { result }.to change { role.reload.name }.to("New Name")
         end
       end
     end

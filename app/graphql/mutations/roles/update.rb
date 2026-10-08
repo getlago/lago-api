@@ -17,7 +17,7 @@ module Mutations
 
       def resolve(id:, **args)
         role = Role.with_organization(current_organization.id).find_by(id:)
-        result = ::Roles::UpdateService.call(role:, params: args)
+        result = ::Roles::UpdateService.call(role:, acting_membership: current_membership, params: args)
 
         result.success? ? result.role : result_error(result)
       end

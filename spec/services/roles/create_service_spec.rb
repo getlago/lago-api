@@ -6,13 +6,17 @@ RSpec.describe Roles::CreateService do
   include_context "with mocked security logger"
 
   describe "#call" do
-    subject(:result) { described_class.call(organization:, code:, name:, description:, permissions:) }
+    subject(:result) { described_class.call(organization:, acting_membership:, code:, name:, description:, permissions:) }
 
     let(:organization) { create(:organization) }
+    let(:acting_membership) { create(:membership, organization:, roles: %i[admin]) }
     let(:code) { "custom_role" }
     let(:name) { "Custom Role" }
     let(:description) { "A custom role description" }
     let(:permissions) { %w[customers:view customers:create] }
+
+    # Create the acting member and its roles outside the Role.count expectations
+    before { acting_membership }
 
     context "with premium license and custom_roles integration", :premium do
       before { organization.update!(premium_integrations: ["custom_roles"]) }
@@ -52,6 +56,37 @@ RSpec.describe Roles::CreateService do
 
         it_behaves_like "does not produce a security log" do
           before { result }
+        end
+      end
+
+      context "when the acting member is not an admin" do
+        let(:acting_membership) { create(:membership, organization:, role: acting_role) }
+        let(:acting_role) { create(:role, :custom, organization:, permissions: %w[roles:create customers:view]) }
+
+        context "with permissions the member holds" do
+          let(:permissions) { %w[customers:view] }
+
+          it "creates the role" do
+            expect { result }.to change(Role, :count).by(1)
+          end
+        end
+
+        context "with a permission the member does not hold" do
+          let(:permissions) { %w[customers:view customers:create] }
+
+          it "does not create the role" do
+            expect { result }.not_to change(Role, :count)
+          end
+
+          it "returns a forbidden error" do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ForbiddenFailure)
+            expect(result.error.code).to eq("cannot_grant_permissions")
+          end
+
+          it_behaves_like "does not produce a security log" do
+            before { result }
+          end
         end
       end
 

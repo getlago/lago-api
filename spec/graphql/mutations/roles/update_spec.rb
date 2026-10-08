@@ -29,7 +29,7 @@ RSpec.describe Mutations::Roles::Update do
 
   let(:required_permission) { "roles:update" }
   let(:organization) { create(:organization) }
-  let(:membership) { create(:membership, organization:) }
+  let(:membership) { create(:membership, organization:, roles: %i[admin]) }
   let(:role) { create(:role, organization:, name: "Old Name", description: "Old description") }
   let(:new_name) { "New Name" }
   let(:new_description) { "New description" }
