@@ -15,7 +15,8 @@ module BillingSegments
 
       acquired = customer.with_advisory_lock("billing_segment_process_customer_#{customer.id}", timeout_seconds: 0) do
         pending_segments.group_by { |segment| invoice_key(segment) }.each_value do |invoice_segments|
-          result.invoices << build_invoice(invoice_segments)
+          invoice = build_invoice(invoice_segments)
+          result.invoices << invoice if invoice
         end
 
         pending_advance_segments.group_by { |segment| invoice_key(segment) }.each_value do |invoice_segments|
@@ -50,7 +51,8 @@ module BillingSegments
     def grouped_segments
       @grouped_segments ||= BillingSegment.ready_for_invoicing(timestamp)
         .where(customer_id: customer.id)
-        .includes(:pricing_unit, :rate_override, :contract, contract_rate_card: {rate_card: :product}, rate_card_rate: :rate_card)
+        .includes(:pricing_unit, :rate_override, :contract,
+          contract_rate_card: {rate_card: {product: :billable_metric}}, rate_card_rate: :rate_card)
         .group_by { |segment| segment_group(segment) }
         .except(nil)
     end
@@ -58,7 +60,11 @@ module BillingSegments
     def segment_group(segment)
       advance_metered = segment.contract_rate_card.rate_card.advance? && segment.contract_rate_card.product.metered?
 
-      advance_metered ? :pending_advance_segments : :pending_segments
+      if advance_metered && !segment.recurring_advance_invoiceable?
+        :pending_advance_segments
+      else
+        :pending_segments
+      end
     end
 
     def invoice_key(segment)
@@ -86,7 +92,6 @@ module BillingSegments
     end
 
     def build_invoice(segments)
-      contract = segments.first.contract
       invoice = nil
       grouped = segments.group_by { |s| s.contract_rate_card.product.product_type }
       metered_segments = grouped[Product::PRODUCT_TYPES[:metered]] || []
@@ -94,32 +99,69 @@ module BillingSegments
 
       ActiveRecord::Base.transaction do
         segments.each { |segment| segment.update!(status: :processing) }
-        invoice = Invoices::CreateGeneratingService.call!(
-          customer:,
-          billing_entity: contract.billing_entity || customer.billing_entity,
-          invoice_type: :subscription,
-          invoicing_reason: :subscription_periodic,
-          currency: segments.first.currency,
-          datetime: segments.first.billing_at,
-          purchase_order_number: contract.purchase_order_number
-        ).invoice
 
-        filtered_aggregations = event_filters(metered_segments)
-
-        attach_fixed_fees(fixed_segments, invoice)
-        attach_metered_fees(metered_segments, invoice, filtered_aggregations)
-
-        invoice.fees.reload
-
-        Invoices::ComputeAmountsFromFees.call!(invoice:)
-        Invoices::ApplyInvoiceCustomSectionsService.call!(
-          invoice:,
-          resources: segments.map(&:contract).uniq.map { |contract| Invoices::ApplyInvoiceCustomSectionsService::Resource.from(resource: contract) }
-        )
-        invoice.save!
-        segments.each { |segment| segment.update!(status: :done, invoice:) }
+        if segments.any?(&:recurring_advance_invoiceable?)
+          invoice = build_recurring_advance_invoice(
+            segments,
+            metered_segments,
+            fixed_segments,
+            suppress_empty: recurring_advance_segments?(segments)
+          )
+        else
+          invoice = build_periodic_invoice(segments, metered_segments, fixed_segments)
+          segments.each { |segment| segment.update!(status: :done, invoice:) }
+        end
       end
 
+      invoice
+    end
+
+    def recurring_advance_segments?(segments)
+      segments.all?(&:recurring_advance_invoiceable?)
+    end
+
+    def build_recurring_advance_invoice(segments, metered_segments, fixed_segments, suppress_empty:)
+      invoice = nil
+      empty_invoice = false
+
+      ActiveRecord::Base.transaction(requires_new: true) do
+        invoice = build_periodic_invoice(segments, metered_segments, fixed_segments)
+        if suppress_empty && invoice.fees.reload.empty?
+          invoice = nil
+          empty_invoice = true
+          raise ActiveRecord::Rollback
+        end
+
+        Invoices::TransitionToFinalStatusService.call!(invoice:)
+        invoice.save! if invoice.changed?
+      end
+
+      segments.each { |segment| segment.update!(status: :done, invoice:) } if empty_invoice || invoice
+      invoice
+    end
+
+    def build_periodic_invoice(segments, metered_segments, fixed_segments)
+      contract = segments.first.contract
+      invoice = Invoices::CreateGeneratingService.call!(
+        customer:,
+        billing_entity: contract.billing_entity || customer.billing_entity,
+        invoice_type: :subscription,
+        invoicing_reason: :subscription_periodic,
+        currency: segments.first.currency,
+        datetime: segments.first.billing_at,
+        purchase_order_number: contract.purchase_order_number
+      ).invoice
+
+      filtered_aggregations = event_filters(metered_segments)
+      attach_fixed_fees(fixed_segments, invoice)
+      attach_metered_fees(metered_segments, invoice, filtered_aggregations)
+      invoice.fees.reload
+      Invoices::ComputeAmountsFromFees.call!(invoice:)
+      Invoices::ApplyInvoiceCustomSectionsService.call!(
+        invoice:,
+        resources: segments.map(&:contract).uniq.map { |segment_contract| Invoices::ApplyInvoiceCustomSectionsService::Resource.from(resource: segment_contract) }
+      )
+      invoice.save!
       invoice
     end
 
@@ -206,10 +248,20 @@ module BillingSegments
     def compute_metered_fees(segment, invoice, filtered_aggregations)
       ::Fees::ChargeService.call!(
         invoice:,
-        metered_item: ::Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: segment),
+        metered_item: build_metered_item(segment),
         billing_context: Billing::Context.from(contract: segment.contract),
         options: ::Fees::ChargeService::Options.new(context: :finalize, skip_adjusted_fees: true),
         filtered_aggregations: filtered_aggregations[segment.target_key]&.keys || []
+      )
+    end
+
+    def build_metered_item(segment)
+      max_timestamp = if segment.recurring_advance_invoiceable?
+        ::BillingSegment.inclusive_end(segment.started_at)
+      end
+
+      ::Fees::ChargeService::MeteredItem.new(
+        source: ::Fees::ChargeService::Sources::BillingSegment.new(billing_segment: segment, max_timestamp:)
       )
     end
 

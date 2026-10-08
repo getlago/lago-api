@@ -33,14 +33,18 @@ class BillingSegment < ApplicationRecord
   # The clock and the consumer select only segments not yet claimed for invoicing.
   scope :awaiting_invoicing, -> { status_pending }
 
-  # Advance-metered usage can arrive throughout its segment; reconcile it only once
-  # the segment ends. Other pending segments were scheduled at their billing time.
+  # Displayed recurring advance-metered segments are eligible at renewal, regardless of
+  # aggregation type or segment proration; other advance-metered usage waits until segment end.
   scope :ready_for_invoicing, ->(timestamp = Time.current) {
     awaiting_invoicing
       .joins(contract_rate_card: {rate_card: :product})
+      .joins("LEFT OUTER JOIN billable_metrics ON billable_metrics.id = products.billable_metric_id")
       .where(
         "NOT (rate_cards.billing_timing = :advance AND products.product_type = :metered) " \
-          "OR billing_segments.ended_at <= :timestamp",
+        "OR billing_segments.ended_at <= :timestamp " \
+        "OR (rate_cards.billing_timing = :advance AND products.product_type = :metered " \
+        "AND rate_cards.display_on_invoice = TRUE AND billable_metrics.recurring = TRUE " \
+        "AND billing_segments.billing_at <= :timestamp)",
         advance: RateCard::BILLING_TIMINGS[:advance],
         metered: Product::PRODUCT_TYPES[:metered],
         timestamp:
@@ -60,6 +64,16 @@ class BillingSegment < ApplicationRecord
 
   def rate
     rate_override || rate_card_rate
+  end
+
+  def recurring_advance_invoiceable?
+    rate_card = contract_rate_card.rate_card
+    product = rate_card.product
+
+    metric = product.billable_metric
+
+    rate_card.advance? && product.metered? && rate_card.display_on_invoice? &&
+      metric&.recurring?
   end
 
   def target_key

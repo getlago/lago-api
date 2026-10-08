@@ -98,19 +98,87 @@ RSpec.describe BillingSegment do
 
       let(:timestamp) { Time.zone.parse("2026-10-01") }
       let(:organization) { create(:organization) }
-      let(:rate_card) { create(:rate_card, :advance, organization:) }
+      let(:product) { create(:product, organization:) }
+      let(:rate_card) { create(:rate_card, :advance, organization:, product:, display_on_invoice:) }
+      let(:display_on_invoice) { true }
       let(:contract_rate_card) { create(:contract_rate_card, organization:, rate_card:) }
       let(:ended_at) { timestamp + 1.day }
+      let(:proration_ratio) { 1 }
       let(:segment) do
         create(:billing_segment, organization:, contract_rate_card:, contract: contract_rate_card.contract,
-          customer: contract_rate_card.contract.customer, cycle_started_at: timestamp - 1.month,
-          started_at: timestamp - 1.month, ended_at:)
+          customer: contract_rate_card.contract.customer, billing_at:, cycle_started_at: timestamp - 1.month,
+          started_at: timestamp - 1.month, ended_at:, proration_ratio:)
       end
+      let(:billing_at) { timestamp - 1.day }
 
       before { segment }
 
       it "waits for advance-metered usage to finish" do
         expect(segments).to be_empty
+      end
+
+      context "when recurring usage is displayed on the invoice" do
+        let(:product) { create(:product, organization:, billable_metric: create(:unique_count_billable_metric, :recurring, organization:)) }
+
+        it "selects it at its billing time even before the segment ends" do
+          expect(segments).to eq([segment])
+        end
+
+        context "when the recurring segment is partial" do
+          let(:proration_ratio) { 0.5 }
+
+          it "selects it at its billing time" do
+            expect(segments).to eq([segment])
+          end
+        end
+
+        context "when the renewal billing time is in the future" do
+          let(:billing_at) { timestamp + 1.day }
+
+          it "does not select the segment" do
+            expect(segments).to be_empty
+          end
+        end
+
+        context "when it is hidden on the invoice" do
+          let(:display_on_invoice) { false }
+
+          it "waits until the segment ends" do
+            expect(segments).to be_empty
+          end
+
+          context "when the segment has ended" do
+            let(:ended_at) { timestamp }
+
+            it "selects it for reconciliation" do
+              expect(segments).to eq([segment])
+            end
+          end
+        end
+      end
+
+      context "when the recurring metric is custom" do
+        let(:product) { create(:product, organization:, billable_metric: create(:custom_billable_metric, :recurring, organization:)) }
+
+        it "selects it at its billing time" do
+          expect(segments).to eq([segment])
+        end
+      end
+
+      context "when the recurring metric is a sum" do
+        let(:product) { create(:product, organization:, billable_metric: create(:sum_billable_metric, :recurring, organization:)) }
+
+        it "selects it at its billing time" do
+          expect(segments).to eq([segment])
+        end
+      end
+
+      context "when nonrecurring usage is displayed on the invoice" do
+        let(:product) { create(:product, organization:, billable_metric: create(:billable_metric, organization:)) }
+
+        it "waits until the segment ends" do
+          expect(segments).to be_empty
+        end
       end
 
       context "when the advance-metered segment has ended" do
@@ -122,11 +190,73 @@ RSpec.describe BillingSegment do
       end
 
       context "when the product is fixed" do
-        let(:rate_card) { create(:rate_card, :advance, organization:, product: create(:product, :fixed, organization:)) }
+        let(:product) { create(:product, :fixed, organization:) }
 
         it "selects it before its end" do
           expect(segments).to eq([segment])
         end
+      end
+
+      context "when the segment bills in arrears" do
+        let(:rate_card) { create(:rate_card, organization:, product:, display_on_invoice:) }
+
+        it "selects it at its billing time before the segment ends" do
+          expect(segments).to eq([segment])
+        end
+      end
+    end
+  end
+
+  describe "#recurring_advance_invoiceable?" do
+    subject(:recurring_advance_invoiceable) { billing_segment.recurring_advance_invoiceable? }
+
+    let(:organization) { create(:organization) }
+    let(:product) { create(:product, organization:, billable_metric: create(:unique_count_billable_metric, :recurring, organization:)) }
+    let(:rate_card) { create(:rate_card, :advance, organization:, product:, display_on_invoice: true) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, rate_card:) }
+    let(:billing_segment) { build(:billing_segment, organization:, contract_rate_card:) }
+
+    it "returns true for displayed recurring advance-metered usage" do
+      expect(recurring_advance_invoiceable).to be(true)
+    end
+
+    context "when the usage is not recurring" do
+      let(:product) { create(:product, organization:) }
+
+      it "returns false" do
+        expect(recurring_advance_invoiceable).to be(false)
+      end
+    end
+
+    context "when the usage is hidden on the invoice" do
+      let(:rate_card) { create(:rate_card, :advance, organization:, product:, display_on_invoice: false) }
+
+      it "returns false" do
+        expect(recurring_advance_invoiceable).to be(false)
+      end
+    end
+
+    context "when the recurring segment is partial" do
+      let(:billing_segment) { build(:billing_segment, organization:, contract_rate_card:, proration_ratio: 0.5) }
+
+      it "returns true" do
+        expect(recurring_advance_invoiceable).to be(true)
+      end
+    end
+
+    context "when the metric is custom" do
+      let(:product) { create(:product, organization:, billable_metric: create(:custom_billable_metric, :recurring, organization:)) }
+
+      it "returns true" do
+        expect(recurring_advance_invoiceable).to be(true)
+      end
+    end
+
+    context "when the metric is a sum" do
+      let(:product) { create(:product, organization:, billable_metric: create(:sum_billable_metric, :recurring, organization:)) }
+
+      it "returns true" do
+        expect(recurring_advance_invoiceable).to be(true)
       end
     end
   end

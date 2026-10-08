@@ -387,6 +387,113 @@ RSpec.describe BillingSegments::ProcessService do
         let(:event_properties) { {} }
         let(:rate_properties) { {"amount" => "15.00"} }
 
+        context "when the advance product is a displayed recurring metric" do
+          let(:billable_metric) do
+            create(:billable_metric, organization:, aggregation_type: :unique_count_agg, field_name: "user_id", recurring: true)
+          end
+          let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD", billing_timing: :advance) }
+          let(:billing_segment_billing_at) { Time.zone.parse("2026-08-01") }
+          let(:prior_users) { %w[user-1 user-2] }
+          let(:charged_metered_items) { [] }
+
+          before do
+            allow(Fees::ChargeService).to receive(:call!).and_wrap_original do |original, **arguments|
+              charged_metered_items << arguments.fetch(:metered_item)
+              original.call(**arguments)
+            end
+
+            prior_users.each_with_index do |user_id, index|
+              create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+                code: billable_metric.code, timestamp: Time.zone.parse("2026-07-#{10 + (index * 10)}"), properties: {"user_id" => user_id})
+            end
+          end
+
+          it "creates a periodic invoice with the recurring usage fee" do
+            expect(billing_segment.recurring_advance_invoiceable?).to be(true)
+
+            expect(result).to be_success
+            invoice = result.invoices.sole.reload
+            expect(invoice).to have_attributes(status: "finalized", invoice_type: "subscription")
+            expect(invoice.fees.sole).to have_attributes(units: 2, amount_cents: 3_000)
+            expect(charged_metered_items.sole.source.max_timestamp).to eq(BillingSegment.inclusive_end(billing_segment.started_at))
+            expect(invoice.fees.sole.properties).to include(
+              "charges_from_datetime" => billing_segment.started_at.iso8601(6),
+              "charges_to_datetime" => billing_segment.ended_at.iso8601(6)
+            )
+            expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
+          end
+
+          context "when the opening segment has no usage" do
+            let(:prior_users) { [] }
+
+            it "completes without creating an empty invoice" do
+              expect { result }.not_to change(Invoice, :count)
+
+              expect(result.invoices).to eq([])
+              expect(billing_segment.reload).to have_attributes(status: "done", invoice_id: nil)
+            end
+          end
+
+          context "when fee creation fails" do
+            before do
+              allow(Fees::ChargeService).to receive(:call!).and_raise(ActiveRecord::RecordInvalid)
+            end
+
+            it "rolls back the invoice and leaves the segment retryable" do
+              expect do
+                expect { result }.to raise_error(ActiveRecord::RecordInvalid)
+              end.not_to change(Invoice, :count)
+
+              expect(billing_segment.reload).to have_attributes(status: "pending", invoice_id: nil)
+            end
+          end
+
+          context "when consolidated with a fixed segment" do
+            let(:fixed_product) { create(:product, :fixed, organization:) }
+            let(:fixed_rate_card) { create(:rate_card, organization:, product: fixed_product, currency: "USD") }
+            let(:fixed_contract_rate_card) do
+              create(:contract_rate_card, organization:, contract:, rate_card: fixed_rate_card, effective_date: Date.parse("2026-07-01"))
+            end
+            let(:fixed_rate_card_rate) do
+              create(:rate_card_rate, organization:, rate_card: fixed_rate_card, rate_properties: {"amount" => "20.00"})
+            end
+            let(:fixed_segment) do
+              create(:billing_segment, organization:, contract:, customer:,
+                contract_rate_card: fixed_contract_rate_card, rate_card_rate: fixed_rate_card_rate,
+                currency: "USD", rate_properties: {"amount" => "20.00"},
+                billing_at: Time.zone.parse("2026-08-31 23:59:59"), cycle_started_at: Time.zone.parse("2026-08-01"),
+                started_at: Time.zone.parse("2026-08-01"), ended_at: Time.zone.parse("2026-08-31 23:59:59"))
+            end
+
+            before { fixed_segment }
+
+            it "finalizes one invoice with both segment fees" do
+              expect(result).to be_success
+
+              invoice = result.invoices.sole.reload
+              expect(invoice).to have_attributes(status: "finalized", invoice_type: "subscription")
+              expect(invoice.fees.pluck(:invoiceable_id)).to match_array([product.id, fixed_product.id])
+              expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
+              expect(fixed_segment.reload).to have_attributes(status: "done", invoice:)
+            end
+
+            context "when finalization fails" do
+              before do
+                allow(Invoices::TransitionToFinalStatusService).to receive(:call!).and_raise(ActiveRecord::RecordInvalid)
+              end
+
+              it "rolls back the invoice and leaves both segments retryable" do
+                expect do
+                  expect { result }.to raise_error(ActiveRecord::RecordInvalid)
+                end.not_to change(Invoice, :count)
+
+                expect(billing_segment.reload).to have_attributes(status: "pending", invoice_id: nil)
+                expect(fixed_segment.reload).to have_attributes(status: "pending", invoice_id: nil)
+              end
+            end
+          end
+        end
+
         it "creates an invoice with a metered fee based on event count" do
           expect(result).to be_success
 
