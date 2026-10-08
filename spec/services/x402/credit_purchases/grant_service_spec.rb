@@ -225,7 +225,7 @@ describe X402::CreditPurchases::GrantService do
     before do
       allow(settlement).to receive(:update!).and_wrap_original do |_original, **attributes|
         settlement.assign_attributes(attributes)
-        raise ActiveRecord::Deadlocked
+        raise ActiveRecord::Deadlocked, "PG::TRDeadlockDetected: ERROR:  deadlock detected"
       end
     end
 
@@ -237,6 +237,14 @@ describe X402::CreditPurchases::GrantService do
 
     it "returns credit_grant_failed" do
       expect(result.error.code).to eq("credit_grant_failed")
+    end
+
+    it "keeps the original error" do
+      expect(result.error.original_error).to be_a(ActiveRecord::Deadlocked)
+    end
+
+    it "names the error class only" do
+      expect(result.error.error_message).to eq("ActiveRecord::Deadlocked")
     end
 
     it "rolls the grant back" do
