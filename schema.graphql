@@ -7819,7 +7819,7 @@ type Invite {
   revokedAt: ISO8601DateTime
   roles: [String!]!
   status: InviteStatusTypeEnum!
-  token: String!
+  token: String
 }
 
 """

@@ -8,7 +8,6 @@ RSpec.describe Resolvers::InviteResolver do
       query($token: String!) {
         invite(token: $token) {
           id
-          token
           email
           organization {
             id
@@ -33,7 +32,6 @@ RSpec.describe Resolvers::InviteResolver do
 
     data = result["data"]["invite"]
 
-    expect(data["token"]).to eq(invite.token)
     expect(data["email"]).to eq(invite.email)
     expect(data["organization"]["name"]).to eq(organization.name)
   end
