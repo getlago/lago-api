@@ -14133,6 +14133,11 @@ type Role {
   code: String!
   createdAt: ISO8601DateTime!
   description: String
+
+  """
+  Whether the current member can assign this role
+  """
+  grantable: Boolean!
   id: ID!
   memberships: [Membership!]!
   name: String!
