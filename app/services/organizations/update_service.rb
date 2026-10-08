@@ -36,6 +36,10 @@ module Organizations
         additions = params[:authentication_methods] - organization.authentication_methods
         organization.authentication_methods = params[:authentication_methods]
 
+        if organization.authentication_methods_changed?
+          after_commit { register_authentication_methods_security_log(additions:, deletions:) }
+        end
+
         if organization.authentication_methods_changed? && user
           after_commit do
             OrganizationMailer.with(
@@ -96,6 +100,16 @@ module Organizations
 
       organization.timezone = params[:timezone] if params.key?(:timezone)
       organization.email_settings = params[:email_settings] if params.key?(:email_settings)
+    end
+
+    def register_authentication_methods_security_log(additions:, deletions:)
+      Utils::SecurityLog.produce(
+        organization:,
+        log_type: "organization",
+        log_event: "organization.authentication_methods_updated",
+        user:,
+        resources: {authentication_methods: {deleted: deletions.presence, added: additions.presence}.compact}
+      )
     end
 
     def handle_base64_logo

@@ -43453,6 +43453,12 @@
               "deprecationReason": null
             },
             {
+              "name": "organization_authentication_methods_updated",
+              "description": "organization.authentication_methods_updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "role_created",
               "description": "role.created",
               "isDeprecated": false,
@@ -43562,6 +43568,12 @@
             {
               "name": "integration",
               "description": "integration",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "organization",
+              "description": "organization",
               "isDeprecated": false,
               "deprecationReason": null
             },

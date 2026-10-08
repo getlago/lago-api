@@ -40,7 +40,7 @@ RSpec.describe Mutations::Organizations::Update do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", %w[organization:update authentication_methods:update]
+  it_behaves_like "requires permission", "organization:update"
 
   it "updates an organization" do
     result = execute_graphql(
@@ -99,7 +99,7 @@ RSpec.describe Mutations::Organizations::Update do
     expect(result_data["finalizeZeroAmountInvoice"]).to be false
   end
 
-  context "without organization:update or authentication_methods:update" do
+  context "without organization:update" do
     it "returns a forbidden error" do
       result = execute_graphql(
         current_user: membership.user,
@@ -152,9 +152,10 @@ RSpec.describe Mutations::Organizations::Update do
     end
   end
 
-  context "with authentication_methods:update only" do
-    it "updates authentication methods and ignores organization fields" do
+  context "with authentication_methods:update but without organization:update" do
+    it "returns a forbidden error" do
       organization = membership.organization
+      original_authentication_methods = organization.authentication_methods
 
       result = execute_graphql(
         current_user: membership.user,
@@ -162,17 +163,28 @@ RSpec.describe Mutations::Organizations::Update do
         permissions: %w[authentication_methods:update],
         query: mutation,
         variables: {
-          input: {
-            email: "foo@bar2.com",
-            authenticationMethods: ["email_password"]
-          }
+          input: {authenticationMethods: ["email_password"]}
         }
       )
 
-      result_data = result["data"]["updateOrganization"]
+      expect_forbidden_error(result)
+      expect(organization.reload.authentication_methods).to eq(original_authentication_methods)
+    end
+  end
 
-      expect(result_data["authenticationMethods"]).to eq(["email_password"])
-      expect(organization.reload.email).not_to eq("foo@bar2.com")
+  context "with organization:update and authentication_methods:update" do
+    it "updates authentication methods" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: %w[organization:update authentication_methods:update],
+        query: mutation,
+        variables: {
+          input: {authenticationMethods: ["email_password"]}
+        }
+      )
+
+      expect(result["data"]["updateOrganization"]["authenticationMethods"]).to eq(["email_password"])
     end
   end
 
