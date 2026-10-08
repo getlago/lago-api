@@ -97,6 +97,24 @@ RSpec.describe Invoices::VoidService do
           expect(Utils::ActivityLog).to have_produced("invoice.voided").after_commit.with(invoice)
         end
 
+        context "with a provider payment awaiting funds" do
+          let(:payment) { create(:payment, :awaiting_bank_transfer, payable: invoice, payable_payment_status: :processing) }
+
+          before { payment }
+
+          it "enqueues a job to cancel the provider payment" do
+            expect { void_service.call }.to have_enqueued_job_after_commit(PaymentProviders::CancelPaymentJob).with(payment)
+          end
+        end
+
+        context "without an open provider payment" do
+          before { create(:payment, payable: invoice, status: "failed", payable_payment_status: :failed) }
+
+          it "does not enqueue a cancel job" do
+            expect { void_service.call }.not_to have_enqueued_job(PaymentProviders::CancelPaymentJob)
+          end
+        end
+
         context "when the invoice has applied credits from the wallet" do
           let(:wallet) { create(:wallet, credits_balance: 100, balance_cents: 100) }
           let(:wallet_transaction) do
