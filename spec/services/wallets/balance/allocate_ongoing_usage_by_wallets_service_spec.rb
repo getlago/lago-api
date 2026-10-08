@@ -187,6 +187,27 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
         end
       end
 
+      context "when subscriptions in two currencies share the billable metric" do
+        let(:usd_subscription) { create(:subscription, customer:, organization:) }
+        let(:usd_wallet) { create(:wallet, customer:, organization:, currency: "USD", balance_cents: 500, priority: 3) }
+        let(:wallets) { [wallet_b, wallet_a, usd_wallet] }
+        let(:current_usage_fees) do
+          [
+            usage_fee(amount_cents: 80, charge:),
+            create(:charge_fee, charge:, subscription: usd_subscription, organization:, invoice:, amount_cents: 70,
+              taxes_amount_cents: 0, amount_currency: "USD")
+          ]
+        end
+
+        it "records each subscription only on wallets of its currency" do
+          expect(result.billable_metric_amounts).to eq({
+            wallet_b => {subscription.id => {billable_metric_id => 50}},
+            wallet_a => {subscription.id => {billable_metric_id => 30}},
+            usd_wallet => {usd_subscription.id => {billable_metric_id => 70}}
+          })
+        end
+      end
+
       context "when the fee targets a wallet" do
         around { |test| lago_premium! { test.run } }
 
