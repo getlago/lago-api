@@ -190,7 +190,18 @@ describe X402::CreditPurchases::GrantService do
   end
 
   context "when linking the grant deadlocks" do
-    before { allow(settlement).to receive(:update!).and_raise(ActiveRecord::Deadlocked) }
+    before do
+      allow(settlement).to receive(:update!).and_wrap_original do |_original, **attributes|
+        settlement.assign_attributes(attributes)
+        raise ActiveRecord::Deadlocked
+      end
+    end
+
+    it "restores the settlement" do
+      result
+
+      expect(settlement).not_to be_changed
+    end
 
     it "returns credit_grant_failed" do
       expect(result.error.code).to eq("credit_grant_failed")
@@ -218,7 +229,10 @@ describe X402::CreditPurchases::GrantService do
       attempts = 0
       allow(settlement).to receive(:update!).and_wrap_original do |original, **attributes|
         attempts += 1
-        raise ActiveRecord::Deadlocked if attempts == 1
+        if attempts == 1
+          settlement.assign_attributes(attributes)
+          raise ActiveRecord::Deadlocked
+        end
 
         original.call(**attributes)
       end
