@@ -37,7 +37,7 @@ module X402
         result.fail_with_error!(e)
       rescue *TRANSIENT_ERRORS => e
         settlement.reload
-        result.service_failure!(code: "credit_grant_failed", message: e.message)
+        result.service_failure!(code: "credit_grant_failed", message: e.class.name, error: e)
       end
 
       private
