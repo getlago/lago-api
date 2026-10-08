@@ -8212,6 +8212,11 @@ enum LogEventEnum {
   integration_updated
 
   """
+  organization.authentication_methods_updated
+  """
+  organization_authentication_methods_updated
+
+  """
   role.created
   """
   role_created
@@ -8300,6 +8305,11 @@ enum LogTypeEnum {
   integration
   """
   integration
+
+  """
+  organization
+  """
+  organization
 
   """
   role
