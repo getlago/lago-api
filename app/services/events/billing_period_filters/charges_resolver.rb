@@ -38,10 +38,17 @@ module Events
         )
       end
 
+      # A polled entry is read many times per second, so when it expires the first reader refills it
+      # while the others keep the expired answer (race_condition_ttl) instead of each running the
+      # same scan. An answer can then be up to twice the TTL old if the refill is slow.
       def fetch_combinations(**options)
         return super if combinations_cache_ttl.blank?
 
-        Rails.cache.fetch(combinations_cache_key(**options), expires_in: combinations_cache_ttl) { super(**options) }
+        Rails.cache.fetch(
+          combinations_cache_key(**options),
+          expires_in: combinations_cache_ttl,
+          race_condition_ttl: combinations_cache_ttl
+        ) { super(**options) }
       end
 
       # The query depends on the codes and filter keys (order aside), the window and whether

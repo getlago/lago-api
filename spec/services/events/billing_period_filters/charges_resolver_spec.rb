@@ -118,6 +118,34 @@ RSpec.describe Events::BillingPeriodFilters::ChargesResolver do
         expect(combination_queries.size).to eq(2)
       end
 
+      context "when other resolvers read the entry while it is being refilled" do
+        let(:concurrent_resolver) { described_class.new(subscription:, boundaries:, combinations_cache_ttl:) }
+        let(:concurrent_targets) { [] }
+
+        before do
+          filter_targets
+
+          # The refill query runs another resolver first, which stands for a request arriving
+          # while the refill is in flight.
+          allow(Events::Stores::PostgresStore).to receive(:new).and_wrap_original do |build, **args|
+            build.call(**args).tap do |store|
+              allow(store).to receive(:distinct_codes_and_property_combinations).and_wrap_original do |query, **options|
+                combination_queries << options
+                concurrent_targets << concurrent_resolver.filter_targets if combination_queries.size == 2
+                query.call(**options)
+              end
+            end
+          end
+        end
+
+        it "serves them the expired answer instead of scanning again" do
+          travel(6.seconds) { other_resolver.filter_targets }
+
+          expect(concurrent_targets).to eq([filter_targets])
+          expect(combination_queries.size).to eq(2)
+        end
+      end
+
       context "with another window" do
         let(:other_resolver) do
           described_class.new(subscription:, boundaries: other_boundaries, combinations_cache_ttl:)
