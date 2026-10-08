@@ -75,7 +75,7 @@ RSpec.describe EventDestinations::CustomerFullUsage::RefreshedService do
     end
 
     context "with usage that a wallet absorbed" do
-      let(:wallet) { create(:wallet, customer:, organization:, ongoing_billable_metric_amounts: {billable_metric.id => 1_000_000}) }
+      let(:wallet) { create(:wallet, customer:, organization:, ongoing_billable_metric_amounts: {subscription.id => {billable_metric.id => 1_000_000}}) }
 
       before do
         wallet

@@ -3,7 +3,8 @@
 module EventDestinations
   # What each wallet absorbed per billable metric for a subscription's usage since from_datetime:
   # what the latest refresh allocates to it now, plus what billing charged to it on the invoices of
-  # that period. Usage is attributed to wallets in proportion to these amounts.
+  # that period. Both are recorded per subscription, so only this subscription's share is read.
+  # Usage is attributed to wallets in proportion to these amounts.
   class WalletAmountsService < BaseService
     Result = BaseResult[:amounts]
 
@@ -19,7 +20,9 @@ module EventDestinations
       amounts = Hash.new { |hash, billable_metric_id| hash[billable_metric_id] = Hash.new(0) }
 
       active_wallets.each do |wallet|
-        wallet.ongoing_billable_metric_amounts.each { |billable_metric_id, cents| amounts[billable_metric_id][wallet.id] += cents }
+        wallet.ongoing_billable_metric_amounts.fetch(subscription.id, {}).each do |billable_metric_id, cents|
+          amounts[billable_metric_id][wallet.id] += cents
+        end
       end
 
       billed_amounts.each { |(billable_metric_id, wallet_id), cents| amounts[billable_metric_id][wallet_id] += cents }
@@ -44,7 +47,10 @@ module EventDestinations
         .where(invoice_subscriptions: {subscription_id: subscription.id})
         .merge(invoiced_in_period)
         .merge(Invoice.where.not(status: :voided))
-        .joins("CROSS JOIN LATERAL jsonb_each_text(wallet_transactions.billable_metric_amounts) AS amounts(billable_metric_id, cents)")
+        .joins(ActiveRecord::Base.sanitize_sql_array([
+          "CROSS JOIN LATERAL jsonb_each_text(wallet_transactions.billable_metric_amounts -> ?) AS amounts(billable_metric_id, cents)",
+          subscription.id
+        ]))
         .group("amounts.billable_metric_id", "wallet_transactions.wallet_id")
         .sum("amounts.cents::bigint")
     end
