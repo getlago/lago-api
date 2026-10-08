@@ -46,13 +46,14 @@ module Events
 
       # The query depends on the codes and filter keys (order aside), the window and whether
       # last_seen_at is computed; the store reads the window from the charges boundaries.
+      # Codes and filter keys accept any character, commas included, so they are encoded as JSON
+      # rather than joined: ["a,b"] and ["a", "b"] must not share an entry.
       def combinations_cache_key(codes:, filter_keys:, include_all_history: false, with_last_seen_at: true)
         [
           "billing-period-filter-combinations",
           COMBINATIONS_CACHE_KEY_VERSION,
           subscription.id,
-          Digest::SHA256.hexdigest(codes.sort.join(",")),
-          Digest::SHA256.hexdigest(filter_keys.sort.join(",")),
+          Digest::SHA256.hexdigest([codes.sort, filter_keys.sort].to_json),
           include_all_history ? "all" : boundaries.charges_from_datetime.iso8601(6),
           boundaries.charges_to_datetime.iso8601(6),
           with_last_seen_at

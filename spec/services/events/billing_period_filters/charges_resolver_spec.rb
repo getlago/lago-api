@@ -141,6 +141,28 @@ RSpec.describe Events::BillingPeriodFilters::ChargesResolver do
         end
       end
 
+      context "with codes that would read the same once joined with commas" do
+        let(:resolver) do
+          described_class.new(subscription:, boundaries:, codes: [comma_metric.code], combinations_cache_ttl:)
+        end
+        let(:other_resolver) do
+          described_class.new(subscription:, boundaries:, codes: [billable_metric.code, "other"], combinations_cache_ttl:)
+        end
+        # Same filter key as billable_metric, so only the codes tell the two queries apart.
+        let(:comma_metric) { create(:sum_billable_metric, organization:, code: "#{billable_metric.code},other") }
+
+        before do
+          create(:billable_metric_filter, billable_metric: comma_metric, key: "region", values: %w[eu us])
+          create(:standard_charge, plan:, billable_metric: comma_metric)
+        end
+
+        it "does not share the entry" do
+          expect(filter_targets).to eq({})
+          expect(other_resolver.filter_targets).to match({charge.target_key => {charge_filter.id => be_present}})
+          expect(combination_queries.size).to eq(2)
+        end
+      end
+
       context "without a TTL" do
         let(:combinations_cache_ttl) { nil }
 
