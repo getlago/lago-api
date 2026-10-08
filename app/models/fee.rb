@@ -58,6 +58,17 @@ class Fee < ApplicationRecord
   enum :fee_type, FEE_TYPES
   enum :payment_status, PAYMENT_STATUS, prefix: :payment
 
+  SERVICE_PERIOD_FEE_TYPES = %w[charge fixed_charge subscription commitment].freeze
+
+  # Subscription fees also hold the charges boundaries of their invoice, so the key depends on the fee type
+  SERVICE_PERIOD_FROM_SQL = <<~SQL.squish.freeze
+    (CASE fees.fee_type
+      WHEN #{fee_types[:charge]} THEN fees.properties->>'charges_from_datetime'
+      WHEN #{fee_types[:fixed_charge]} THEN fees.properties->>'fixed_charges_from_datetime'
+      ELSE fees.properties->>'from_datetime'
+    END)::timestamptz
+  SQL
+
   validates :amount_currency, inclusion: {in: currency_list}
   validates :units, numericality: {greater_than_or_equal_to: 0}
   validates :events_count, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
@@ -182,6 +193,16 @@ class Fee < ApplicationRecord
     return "" if !charge? || grouped_by.values.compact.blank?
 
     " • #{grouped_by.values.compact.join(" • ")}"
+  end
+
+  def service_period_from
+    key = case fee_type
+    when "charge" then "charges_from_datetime"
+    when "fixed_charge" then "fixed_charges_from_datetime"
+    else "from_datetime"
+    end
+
+    properties[key]&.in_time_zone
   end
 
   def invoice_sorting_clause

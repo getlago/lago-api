@@ -21,11 +21,6 @@ class AppliedCoupon < ApplicationRecord
     :forever
   ].freeze
 
-  # Pay-in-advance fixed charge fees have no charges boundaries, only fixed charges ones
-  BILLING_PERIOD_FROM_SQL = "COALESCE(properties->>'charges_from_datetime', properties->>'fixed_charges_from_datetime')::timestamptz"
-  BILLING_PERIOD_TO_SQL = "COALESCE(properties->>'charges_to_datetime', properties->>'fixed_charges_to_datetime')::timestamptz"
-  private_constant :BILLING_PERIOD_FROM_SQL, :BILLING_PERIOD_TO_SQL
-
   enum :status, STATUSES
   enum :frequency, FREQUENCIES
 
@@ -58,33 +53,37 @@ class AppliedCoupon < ApplicationRecord
 
   private
 
+  # An invoice mixing service periods (e.g. next month's pay-in-advance subscription fee and last
+  # month's usage) belongs to the latest one.
   def amount_used_in_billing_period(invoice)
-    invoice.invoice_subscriptions.sum do |invoice_subscription|
-      credits.active.where(invoice_id: billing_period_invoice_ids(invoice_subscription, invoice)).sum(:amount_cents)
+    scopes = billing_periods(invoice).map do |subscription_id, period_from|
+      credits.active.where(invoice_id: invoice_ids_in_billing_period(subscription_id, period_from))
+    end
+
+    if scopes.empty?
+      0
+    else
+      scopes.reduce(:or).sum(:amount_cents)
     end
   end
 
-  def billing_period_invoice_ids(invoice_subscription, invoice)
-    from_datetime, to_datetime = billing_period_boundaries(invoice_subscription, invoice)
+  # Previewed invoices are not persisted, their fees only exist in memory
+  def billing_periods(invoice)
+    fees = invoice.persisted? ? Fee.where(invoice_id: invoice.id) : invoice.fees
 
-    Fee
-      .where(
-        organization_id: invoice.organization_id,
-        billing_entity_id: invoice.billing_entity_id,
-        subscription_id: invoice_subscription.subscription_id
-      )
-      .where("#{BILLING_PERIOD_FROM_SQL} >= ?::timestamptz", from_datetime)
-      .where("#{BILLING_PERIOD_TO_SQL} <= ?::timestamptz", to_datetime)
-      .select(:invoice_id)
+    fees
+      .select { |fee| Fee::SERVICE_PERIOD_FEE_TYPES.include?(fee.fee_type) }
+      .group_by(&:subscription_id)
+      .transform_values { |subscription_fees| subscription_fees.filter_map(&:service_period_from).max }
+      .compact
   end
 
-  # Pay-in-advance invoice subscriptions do not hold the boundaries of the period their fees belong to
-  def billing_period_boundaries(invoice_subscription, invoice)
-    invoice.fees
-      .where(subscription_id: invoice_subscription.subscription_id)
-      .where("#{BILLING_PERIOD_FROM_SQL} IS NOT NULL")
-      .pick(Arel.sql(BILLING_PERIOD_FROM_SQL), Arel.sql(BILLING_PERIOD_TO_SQL)) ||
-      [invoice_subscription.charges_from_datetime, invoice_subscription.charges_to_datetime]
+  def invoice_ids_in_billing_period(subscription_id, period_from)
+    Fee
+      .where(invoice_id: credits.active.select(:invoice_id), subscription_id:, fee_type: Fee::SERVICE_PERIOD_FEE_TYPES)
+      .group(:invoice_id)
+      .having("MAX(#{Fee::SERVICE_PERIOD_FROM_SQL}) = ?", period_from)
+      .select(:invoice_id)
   end
 end
 
