@@ -40,7 +40,12 @@ module Events
 
       # A polled entry is read many times per second, so when it expires the first reader refills it
       # while the others keep the expired answer (race_condition_ttl) instead of each running the
-      # same scan. An answer can then be up to twice the TTL old if the refill is slow.
+      # same scan. The expired answer is not capped in age: a refill still running after another TTL
+      # lets the next reader extend it again and start one more refill. It is served until a refill
+      # succeeds, so its age is bounded by how long the events store takes to answer, not by twice
+      # the TTL. This is deliberate: refusing it while the store is slow or down would send every
+      # reader back to scanning when the store can least absorb it, and only the current usage API
+      # reads this cache.
       def fetch_combinations(**options)
         return super if combinations_cache_ttl.blank?
 
