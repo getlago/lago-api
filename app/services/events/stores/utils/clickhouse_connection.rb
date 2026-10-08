@@ -52,9 +52,22 @@ module Events
 
           begin
             attempts += 1
+            started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 
             yield settings
           rescue *RETRYABLE_ERRORS => e
+            SentryContext.breadcrumb(
+              "clickhouse.retry",
+              "ClickHouse query failed",
+              level: "warning",
+              attempt: attempts,
+              max_attempts: MAX_RETRIES,
+              error_class: e.class.name,
+              cause_class: e.cause&.class&.name,
+              duration_ms: ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at) * 1000).round,
+              raised_parser_limits: settings.present?
+            )
+
             raise Events::Stores::Clickhouse::MemoryLimitError, e.message if memory_limit_error?(e)
 
             if settings.empty? && parser_limit_error?(e)

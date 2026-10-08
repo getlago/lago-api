@@ -73,6 +73,7 @@ module ChargeModels
         (period_ratio > 0) ? (units / BigDecimal(period_ratio.to_s)).round(2) : BigDecimal(0)
       rescue => e
         Rails.logger.error "Error calculating projected_units in #{self.class}: #{e.message}"
+        Sentry.capture_exception(e, level: :warning)
         BigDecimal(0)
       end
     end

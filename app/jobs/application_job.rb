@@ -10,6 +10,8 @@ class ApplicationJob < ActiveJob::Base
   # The max attempt is set to avoid infinite loops
   retry_on RetriableError, wait: :polynomially_longer, attempts: 20
 
+  before_perform { |job| SentryContext.tag_job(job) }
+
   # This method is used to perform a job after a commit.
   #
   # It is meant to avoid race-conditions where a job run before changes are committed to the DB and we end up with stale

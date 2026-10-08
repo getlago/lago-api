@@ -70,6 +70,15 @@ module Lago
           attempt: attempt + 1,
           attempts: attempts.size
         )
+        if defined?(Sentry)
+          Sentry.add_breadcrumb(
+            Sentry::Breadcrumb.new(
+              category: "redis.loading_retry",
+              level: "warning",
+              data: {interval_seconds: interval, attempt: attempt + 1, attempts: attempts.size}
+            )
+          )
+        end
         sleep(interval)
         attempt += 1
         retry

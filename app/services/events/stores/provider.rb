@@ -42,6 +42,9 @@ module Events
         @may_precompute = serve_current_usage_from_buckets &&
           whole_charge_read? &&
           RealtimeUsage.enabled?(organization)
+        add_store_breadcrumb if serve_current_usage_from_buckets
+
+        @may_precompute
       end
 
       # Every gate a charge can be ruled out by before an aggregator and a store exist, so that
@@ -99,6 +102,18 @@ module Events
         !usage_filters.full_usage && usage_filters.filter_by_group.blank?
       end
 
+      # Only the current usage path asks for the buckets, once per computation.
+      def add_store_breadcrumb
+        SentryContext.breadcrumb(
+          "usage.store_selected",
+          store_class: store_class.name,
+          deduplicate:,
+          may_precompute: @may_precompute,
+          whole_charge_read: whole_charge_read?,
+          realtime_usage_disabled_reason: RealtimeUsage.disabled_reason(organization)
+        )
+      end
+
       def served_from_buckets?(metered_item:, boundaries:, filters: {})
         return false unless may_precompute_charge?(metered_item:, boundaries:)
         return false unless filters[:grouped_by_values].blank? &&
@@ -139,6 +154,17 @@ module Events
           # Only the parity comparison opens the gate, and there the silent fallback would have it
           # compare the events store with itself and report a match it never established.
           fetch.raise_if_error! if RealtimeUsage.forced_gate?
+
+          if fetch.failure? || fetch.usage_buckets.blank?
+            SentryContext.breadcrumb(
+              "realtime_usage.fallback",
+              "Current usage falls back to the events store",
+              subscription_id: billing_context.subscription.id,
+              reason: fetch.failure? ? "read_failure" : "empty_set",
+              from_datetime: boundaries.charges_from_datetime&.iso8601,
+              to_datetime: boundaries.charges_to_datetime&.iso8601
+            )
+          end
 
           fetch.usage_buckets
         end

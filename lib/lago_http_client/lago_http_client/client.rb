@@ -189,6 +189,15 @@ module LagoHttpClient
         response
       rescue => e
         if retryable?(e) && attempt < MAX_RETRIES_ATTEMPTS
+          SentryContext.breadcrumb(
+            "http_client.retry",
+            level: "warning",
+            host: uri.host,
+            attempt:,
+            max_attempts: MAX_RETRIES_ATTEMPTS,
+            error_class: e.class.name,
+            http_status: e.is_a?(::LagoHttpClient::HttpError) ? e.error_code : nil
+          )
           backoff
           retry
         end

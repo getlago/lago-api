@@ -8,5 +8,6 @@ if ENV["SENTRY_DSN"].present?
     config.traces_sample_rate = 0
     config.traces_sample_rate = ENV["SENTRY_TRACES_SAMPLE_RATE"].to_f
     config.environment = ENV["SENTRY_ENVIRONMENT"] || Rails.env
+    config.before_send = ->(event, _hint) { SentryContext.add_organization_context(event) }
   end
 end

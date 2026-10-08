@@ -94,6 +94,36 @@ RSpec.describe RealtimeUsage do
     end
   end
 
+  describe ".disabled_reason" do
+    subject(:disabled_reason) { described_class.disabled_reason(organization) }
+
+    let(:organization) do
+      create(:organization, clickhouse_events_store: true, feature_flags: ["realtime_usage"])
+    end
+
+    include_context "with realtime usage availability"
+
+    it { expect(disabled_reason).to be_nil }
+
+    context "when the organization flag is off" do
+      let(:organization) { create(:organization, clickhouse_events_store: true) }
+
+      it { expect(disabled_reason).to eq("feature_flag_disabled") }
+    end
+
+    context "when the kill switch is off" do
+      let(:realtime_usage_enabled) { nil }
+
+      it { expect(disabled_reason).to eq("kill_switch") }
+    end
+
+    context "without a premium license" do
+      let(:premium_license) { false }
+
+      it { expect(disabled_reason).to eq("not_premium") }
+    end
+  end
+
   describe ".with_forced_gate" do
     it "opens the gate for the duration of the block only" do
       described_class.with_forced_gate do

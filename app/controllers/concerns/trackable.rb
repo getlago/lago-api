@@ -9,6 +9,7 @@ module Trackable
 
   def set_tracing_information
     CurrentContext.membership = "membership/#{membership_id || "unidentifiable"}"
+    SentryContext.tag_request(organization: current_organization, user: (current_user if defined?(current_user)))
   end
 
   def membership_id

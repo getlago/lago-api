@@ -43,14 +43,19 @@ module RealtimeUsage
     # The override belongs to the ClickHouse migration comparison, which has to keep
     # comparing two event stores.
     def enabled?(organization)
-      return false unless License.premium?
-      return false if Events::Stores::StoreFactory.override
-      return false unless Events::Stores::StoreFactory.supports_clickhouse?
-      return false unless organization.clickhouse_events_store?
-      return true if forced_gate?
-      return false unless ActiveModel::Type::Boolean.new.cast(ENV["LAGO_REALTIME_USAGE_ENABLED"])
+      disabled_reason(organization).nil?
+    end
 
-      organization.feature_flag_enabled?(:realtime_usage)
+    def disabled_reason(organization)
+      return "not_premium" unless License.premium?
+      return "store_override" if Events::Stores::StoreFactory.override
+      return "clickhouse_disabled" unless Events::Stores::StoreFactory.supports_clickhouse?
+      return "postgres_events_store" unless organization.clickhouse_events_store?
+      return nil if forced_gate?
+      return "kill_switch" unless ActiveModel::Type::Boolean.new.cast(ENV["LAGO_REALTIME_USAGE_ENABLED"])
+      return "feature_flag_disabled" unless organization.feature_flag_enabled?(:realtime_usage)
+
+      nil
     end
 
     def supported_charge?(charge)

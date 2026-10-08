@@ -12,6 +12,17 @@ RSpec.describe Trackable do
       expect(CurrentContext.membership).to eq "membership/#{membership.id}"
     end
 
+    context "with Sentry" do
+      before { allow(SentryContext).to receive(:tag_request) }
+
+      it "tags the Sentry scope with the organization and the user" do
+        build_dummy(current_user: membership.user).set_tracing_information
+
+        expect(SentryContext).to have_received(:tag_request)
+          .with(organization: membership.organization, user: membership.user)
+      end
+    end
+
     context "when current organization is not present" do
       it 'sets an "unidentifiable" membership identifier to context' do
         build_dummy(current_organization: nil).set_tracing_information

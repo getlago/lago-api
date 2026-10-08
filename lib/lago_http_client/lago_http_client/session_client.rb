@@ -69,8 +69,19 @@ module LagoHttpClient
         store_cookies(response)
         validate_response(response)
         response
-      rescue OpenSSL::SSL::SSLError, Net::OpenTimeout, Net::ReadTimeout
-        retry if attempt < MAX_RETRIES_ATTEMPTS
+      rescue OpenSSL::SSL::SSLError, Net::OpenTimeout, Net::ReadTimeout => e
+        if attempt < MAX_RETRIES_ATTEMPTS
+          SentryContext.breadcrumb(
+            "http_client.retry",
+            level: "warning",
+            host: http_client.address,
+            attempt:,
+            max_attempts: MAX_RETRIES_ATTEMPTS,
+            error_class: e.class.name
+          )
+          retry
+        end
+
         raise
       end
     end

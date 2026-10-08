@@ -62,6 +62,19 @@ RSpec.describe ApplicationJob do
     end
   end
 
+  describe "before_perform" do
+    let(:customer) { create(:customer) }
+
+    before { allow(SentryContext).to receive(:tag_job) }
+
+    it "tags the Sentry scope with the job context" do
+      job = job_class.new(customer, 2)
+      job.perform_now
+
+      expect(SentryContext).to have_received(:tag_job).with(job)
+    end
+  end
+
   describe "#perform_after_commit" do
     it "performs the job after the commit" do
       ApplicationRecord.transaction do

@@ -77,6 +77,13 @@ module WalletTransactions
       result.fail_with_error!(e)
     rescue ActiveRecord::StaleObjectError
       if @update_attempts <= MAX_WALLET_UPDATE_ATTEMPTS
+        SentryContext.breadcrumb(
+          "wallet_transaction.stale_retry",
+          level: "warning",
+          wallet_id: result.current_wallet&.id,
+          attempt: @update_attempts,
+          max_attempts: MAX_WALLET_UPDATE_ATTEMPTS
+        )
         sleep(rand(0.1..0.5))
         result.current_wallet.reload # Make sure the wallet is reloaded before retrying
         retry

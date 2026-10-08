@@ -162,6 +162,22 @@ RSpec.describe Events::Stores::Utils::ClickhouseConnection do
       expect(described_class).not_to have_received(:sleep)
     end
 
+    context "when the query keeps failing" do
+      before { allow(SentryContext).to receive(:breadcrumb) }
+
+      it "leaves a breadcrumb per failed attempt" do
+        expect do
+          described_class.connection_with_retry { |_conn| raise Net::ReadTimeout }
+        end.to raise_error(Net::ReadTimeout)
+
+        expect(SentryContext).to have_received(:breadcrumb).with(
+          "clickhouse.retry",
+          "ClickHouse query failed",
+          hash_including(level: "warning", error_class: "Net::ReadTimeout", max_attempts: described_class::MAX_RETRIES)
+        ).exactly(described_class::MAX_RETRIES).times
+      end
+    end
+
     it "re-raises a memory limit error as MemoryLimitError without retrying" do
       attempts = 0
 
