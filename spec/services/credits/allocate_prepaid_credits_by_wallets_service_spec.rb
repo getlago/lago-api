@@ -183,6 +183,28 @@ RSpec.describe Credits::AllocatePrepaidCreditsByWalletsService do
         end
       end
 
+      context "when subscriptions sharing the billable metric are taxed differently" do
+        let(:wallets) { [priority_wallet] }
+        let(:amount_cents) { 300 }
+        let(:taxes_amount_cents) { 100 }
+        let(:other_subscription) { create(:subscription, customer:) }
+        let(:fee) { create(:charge_fee, invoice:, subscription:, amount_cents: 100, precise_amount_cents: 100, taxes_precise_amount_cents: 0) }
+
+        before do
+          create(:charge_fee, invoice:, subscription: other_subscription, charge: fee.charge, amount_cents: 100,
+            precise_amount_cents: 100, taxes_amount_cents: 100, taxes_precise_amount_cents: 100)
+        end
+
+        it "removes each subscription's own tax" do
+          expect(result.billable_metric_amounts).to eq({
+            priority_wallet => {
+              subscription.id => {billable_metric_id => 100},
+              other_subscription.id => {billable_metric_id => 100}
+            }
+          })
+        end
+      end
+
       context "when the fee targets a wallet" do
         around { |test| lago_premium! { test.run } }
 
