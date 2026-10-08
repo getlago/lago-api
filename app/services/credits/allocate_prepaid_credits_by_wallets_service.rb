@@ -78,11 +78,13 @@ module Credits
         fee_key = transaction[:fee_key]
         next unless fee_key.first == "charge"
 
-        paid = tax_exclusive(fee_key, transaction[:amount_cents]).to_d
-        caps = caps_by_fee_key_and_subscription[fee_key]
-        total_cap = caps.values.sum
+        paid = transaction[:amount_cents].to_d
+        shares = fee_shares[fee_key]
+        total_cap = shares.values.sum { it[:cap] }
 
-        caps.each { |subscription_id, cap| amounts[subscription_id][fee_key.second] += paid * cap / total_cap }
+        shares.each do |subscription_id, share|
+          amounts[subscription_id][fee_key.second] += tax_exclusive(share, paid * share[:cap] / total_cap)
+        end
       end
 
       round_on_running_total(amounts)
@@ -101,25 +103,21 @@ module Credits
       end
     end
 
-    # A fee's cap covers its taxes too, so what a wallet paid for a fee key is split the same way.
-    def tax_exclusive(fee_key, amount_cents)
-      if taxes_by_fee_key[fee_key].zero?
-        amount_cents
+    # A fee's cap covers its taxes too, so what a wallet paid for a subscription's fees is split the
+    # same way. Subscriptions sharing a fee key can be taxed differently, hence one share each.
+    def tax_exclusive(share, amount)
+      if share[:taxes].zero?
+        amount
       else
-        amount_cents * sub_totals_by_fee_key[fee_key] / (sub_totals_by_fee_key[fee_key] + taxes_by_fee_key[fee_key])
+        amount * share[:sub_total] / (share[:sub_total] + share[:taxes])
       end
     end
 
-    def sub_totals_by_fee_key
-      @sub_totals_by_fee_key ||= Hash.new(0)
-    end
-
-    def caps_by_fee_key_and_subscription
-      @caps_by_fee_key_and_subscription ||= Hash.new { |hash, fee_key| hash[fee_key] = Hash.new(0) }
-    end
-
-    def taxes_by_fee_key
-      @taxes_by_fee_key ||= Hash.new(0)
+    # Per fee key and subscription: what its fees cap at, their amount before tax, and their tax.
+    def fee_shares
+      @fee_shares ||= Hash.new do |hash, fee_key|
+        hash[fee_key] = Hash.new { |shares, subscription_id| shares[subscription_id] = {cap: 0, sub_total: 0, taxes: 0} }
+      end
     end
 
     def calculate_amounts_for_fees_by_type_and_bm
@@ -140,9 +138,10 @@ module Credits
           key << fee.grouped_by&.dig("target_wallet_code")
         end
         remaining[key] += cap
-        caps_by_fee_key_and_subscription[key][fee.subscription_id] += cap
-        sub_totals_by_fee_key[key] += fee.sub_total_excluding_taxes_amount_cents
-        taxes_by_fee_key[key] += booked_tax.fetch(fee)
+        share = fee_shares[key][fee.subscription_id]
+        share[:cap] += cap
+        share[:sub_total] += fee.sub_total_excluding_taxes_amount_cents
+        share[:taxes] += booked_tax.fetch(fee)
       end
 
       ordered = remaining.sort_by { |_, v| -v }.to_h
