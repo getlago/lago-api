@@ -278,7 +278,24 @@ describe "Coupons billing period", :premium, transaction: false do
       it "caps the coupon on the latest month billed by each invoice" do
         bill_two_months
 
-        expect(billed_invoices).to eq([])
+        expect(billed_invoices).to eq([
+          {issued: Date.new(2025, 1, 1), reason: "in_advance_charge", fees: [["fixed_charge", 10_00, month(1)]], coupon: 10_00},
+          {issued: Date.new(2025, 1, 10), reason: "in_advance_charge", fees: [["charge", 10_00, month(1)]], coupon: 10_00},
+          {issued: Date.new(2025, 1, 20), reason: "progressive_billing", fees: [["charge", 30_00, month(1)]], coupon: 20_00},
+          {
+            issued: Date.new(2025, 2, 1),
+            reason: "subscription_periodic",
+            fees: [["charge", 30_00, month(1)], ["commitment", 5_00, month(1)], ["fixed_charge", 5_00, month(1)], ["fixed_charge", 10_00, month(2)], ["subscription", 10_00, month(1)]],
+            coupon: 30_00
+          },
+          {issued: Date.new(2025, 2, 10), reason: "in_advance_charge", fees: [["charge", 10_00, month(2)]], coupon: 10_00},
+          {
+            issued: Date.new(2025, 3, 1),
+            reason: "subscription_periodic",
+            fees: [["charge", 30_00, month(2)], ["commitment", 35_00, month(2)], ["fixed_charge", 5_00, month(2)], ["fixed_charge", 10_00, month(3)], ["subscription", 10_00, month(2)]],
+            coupon: 40_00
+          }
+        ])
       end
     end
 
@@ -288,7 +305,24 @@ describe "Coupons billing period", :premium, transaction: false do
       it "caps the coupon on the latest month billed by each invoice" do
         bill_two_months
 
-        expect(billed_invoices).to eq([])
+        expect(billed_invoices).to eq([
+          {issued: Date.new(2025, 1, 1), reason: "subscription_starting", fees: [["fixed_charge", 10_00, month(1)], ["subscription", 10_00, month(1)]], coupon: 20_00},
+          {issued: Date.new(2025, 1, 10), reason: "in_advance_charge", fees: [["charge", 10_00, month(1)]], coupon: 10_00},
+          {issued: Date.new(2025, 1, 20), reason: "progressive_billing", fees: [["charge", 30_00, month(1)]], coupon: 10_00},
+          {
+            issued: Date.new(2025, 2, 1),
+            reason: "subscription_periodic",
+            fees: [["charge", 30_00, month(1)], ["commitment", 35_00, month(1)], ["fixed_charge", 5_00, month(1)], ["fixed_charge", 10_00, month(2)], ["subscription", 10_00, month(2)]],
+            coupon: 40_00
+          },
+          {issued: Date.new(2025, 2, 10), reason: "in_advance_charge", fees: [["charge", 10_00, month(2)]], coupon: 0},
+          {
+            issued: Date.new(2025, 3, 1),
+            reason: "subscription_periodic",
+            fees: [["charge", 30_00, month(2)], ["commitment", 35_00, month(2)], ["fixed_charge", 5_00, month(2)], ["fixed_charge", 10_00, month(3)], ["subscription", 10_00, month(3)]],
+            coupon: 40_00
+          }
+        ])
       end
     end
   end
