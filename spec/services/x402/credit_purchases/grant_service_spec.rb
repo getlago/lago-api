@@ -25,6 +25,24 @@ describe X402::CreditPurchases::GrantService do
 
   before { plan }
 
+  def race(&block)
+    Thread.new do
+      ActiveRecord::Base.connection_pool.with_connection(&block)
+    rescue => e
+      e
+    end
+  end
+
+  def await_a_blocked_session
+    50.times do
+      break if ActiveRecord::Base.with_connection { |connection| connection.select_value(<<~SQL) }
+        SELECT EXISTS (SELECT 1 FROM pg_locks WHERE NOT granted AND pg_backend_pid() = ANY(pg_blocking_pids(pid)))
+      SQL
+
+      sleep(0.1)
+    end
+  end
+
   context "with a first purchase" do
     it "creates the agent's customer" do
       expect(result.settlement.customer).to have_attributes(x402_agent_address: payer_address, external_id: "x402_#{payer_address}")
@@ -165,6 +183,37 @@ describe X402::CreditPurchases::GrantService do
 
     it "credits the existing wallet" do
       expect(result.settlement.wallet_transaction.wallet).to eq(wallet)
+    end
+  end
+
+  context "when opening a subscription" do
+    let(:lock_timeouts) { {} }
+
+    before do
+      allow(X402::Wallets::ResolveService).to receive(:call!).and_wrap_original do |original, **kwargs|
+        lock_timeouts[:wallet] = ActiveRecord::Base.connection.select_value("SHOW lock_timeout")
+        original.call(**kwargs)
+      end
+      allow(Subscriptions::CreateService).to receive(:call).and_wrap_original do |original, **kwargs|
+        lock_timeouts[:subscription] = ActiveRecord::Base.connection.select_value("SHOW lock_timeout")
+        original.call(**kwargs)
+      end
+      allow(Wallets::ApplyPaidCreditsService).to receive(:call!).and_wrap_original do |original, **kwargs|
+        lock_timeouts[:credits] = ActiveRecord::Base.connection.select_value("SHOW lock_timeout")
+        original.call(**kwargs)
+      end
+    end
+
+    it "waits at most 500 ms for the customer" do
+      result
+
+      expect(lock_timeouts[:subscription]).to eq("500ms")
+    end
+
+    it "restores the lock timeout" do
+      result
+
+      expect(lock_timeouts[:credits]).to eq(lock_timeouts[:wallet])
     end
   end
 
@@ -346,24 +395,6 @@ describe X402::CreditPurchases::GrantService do
       end
     end
 
-    def race(&block)
-      Thread.new do
-        ActiveRecord::Base.connection_pool.with_connection(&block)
-      rescue => e
-        e
-      end
-    end
-
-    def await_a_blocked_session
-      50.times do
-        break if ActiveRecord::Base.with_connection { |connection| connection.select_value(<<~SQL) }
-          SELECT EXISTS (SELECT 1 FROM pg_locks WHERE NOT granted AND pg_backend_pid() = ANY(pg_blocking_pids(pid)))
-        SQL
-
-        sleep(0.1)
-      end
-    end
-
     it "settles the invoice" do
       expect(outcomes.first).to be_success
     end
@@ -376,6 +407,63 @@ describe X402::CreditPurchases::GrantService do
       outcomes
 
       expect(wallet.reload.credits_balance).to eq(BigDecimal("19000"))
+    end
+  end
+
+  context "with an invoice holding the customer while it draws on the wallet", transaction: false do
+    subject(:outcomes) do
+      customer_id = customer.id
+      subscription_id = ended_subscription.id
+      settlement_id = settlement.id
+      grant_side = race { described_class.call(settlement: X402::Settlement.find(settlement_id)) }
+      raise "the grant never locked the wallet" unless wallet_held.wait(5)
+
+      invoice_side = race { draw_on_a_new_invoice(customer_id, subscription_id) }
+      [invoice_side, grant_side].map { |side| side.join(15) ? side.value : :timed_out }
+    end
+
+    let(:customer) { create(:customer, organization:, currency: "USD", external_id: "x402_#{payer_address}", x402_agent_address: payer_address) }
+    let(:ended_subscription) { create(:subscription, :terminated, customer:, plan:, external_id: "x402_#{payer_address}_agent_api") }
+    let(:wallet) do
+      create(:wallet, :with_inbound_transaction, customer:, code: "agent_credits", currency: "USD", rate_amount: "0.001", balance_cents: 1000, credits_balance: 10_000, x402_enabled: true)
+    end
+    let(:wallet_held) { Concurrent::CountDownLatch.new }
+
+    before do
+      ended_subscription
+      wallet
+      wallet_held
+      allow(X402::Subscriptions::ResolveService).to receive(:call!).and_wrap_original do |original, **kwargs|
+        wallet_held.count_down
+        await_a_blocked_session
+        original.call(**kwargs)
+      end
+    end
+
+    def draw_on_a_new_invoice(customer_id, subscription_id)
+      ActiveRecord::Base.transaction do
+        invoice = create(:invoice, customer: Customer.find(customer_id), currency: "USD", total_amount_cents: 100, taxes_amount_cents: 0)
+        create(:charge_fee, invoice:, subscription: Subscription.find(subscription_id), amount_cents: 100, precise_amount_cents: 100, taxes_precise_amount_cents: 0)
+        Credits::AppliedPrepaidCreditsService.call!(invoice:)
+      end
+    end
+
+    it "settles the invoice" do
+      expect(outcomes.first).to be_success
+    end
+
+    it "gives up the grant" do
+      expect(outcomes.last.error.code).to eq("credit_grant_failed")
+    end
+
+    it "times out on the customer lock" do
+      expect(outcomes.last.error.original_error).to be_a(ActiveRecord::LockWaitTimeout)
+    end
+
+    it "draws on the wallet once" do
+      outcomes
+
+      expect(wallet.reload.credits_balance).to eq(BigDecimal("9000"))
     end
   end
 end
