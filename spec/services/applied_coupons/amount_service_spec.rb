@@ -128,12 +128,18 @@ RSpec.describe AppliedCoupons::AmountService do
           )
         end
         let(:prev_invoice_fee) do
-          create(:fee, invoice: prev_invoice, subscription:, amount_cents: 20,
+          create(:charge_fee, invoice: prev_invoice, subscription:, amount_cents: 20,
             properties: {charges_from_datetime: prev_invoice_subscription.charges_from_datetime,
                          charges_to_datetime: prev_invoice_subscription.charges_to_datetime})
         end
+        let(:invoice_fee) do
+          create(:charge_fee, invoice:, subscription:, amount_cents: 20,
+            properties: {charges_from_datetime: invoice_subscription.charges_from_datetime,
+                         charges_to_datetime: invoice_subscription.charges_to_datetime})
+        end
 
         before do
+          invoice_fee
           prev_invoice_fee
           credit
         end

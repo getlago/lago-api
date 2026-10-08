@@ -192,15 +192,18 @@ describe "Coupons billing period", :premium, transaction: false do
     end
     let(:plan_options) { {usage_thresholds: [{amount_cents: 20_00, threshold_display_name: "Threshold"}]} }
 
-    it "caps the coupon across the progressive billing and subscription invoices of each month" do
+    it "caps the coupon across the progressive billing invoice and the subscription invoice of its month" do
       ingest_on(Date.new(2025, 1, 10), 20)
       ingest_on(Date.new(2025, 1, 20), 10)
       bill_on(Date.new(2025, 2, 1))
-      ingest_on(Date.new(2025, 2, 10), 20)
-      ingest_on(Date.new(2025, 2, 20), 10)
+      ingest_on(Date.new(2025, 2, 10), 30)
       bill_on(Date.new(2025, 3, 1))
 
-      expect(billed_invoices).to eq([])
+      expect(billed_invoices).to eq([
+        {issued: Date.new(2025, 1, 10), reason: "progressive_billing", fees: [["charge", 20_00, month(1)]], coupon: 15_00},
+        {issued: Date.new(2025, 2, 1), reason: "subscription_periodic", fees: [["charge", 30_00, month(1)], ["subscription", 0, month(1)]], coupon: 0},
+        {issued: Date.new(2025, 3, 1), reason: "subscription_periodic", fees: [["charge", 30_00, month(2)], ["subscription", 0, month(2)]], coupon: 15_00}
+      ])
     end
   end
 
@@ -212,7 +215,10 @@ describe "Coupons billing period", :premium, transaction: false do
       bill_on(Date.new(2025, 2, 1))
       bill_on(Date.new(2025, 3, 1))
 
-      expect(billed_invoices).to eq([])
+      expect(billed_invoices).to eq([
+        {issued: Date.new(2025, 2, 1), reason: "subscription_periodic", fees: [["commitment", 40_00, month(1)], ["subscription", 10_00, month(1)]], coupon: 15_00},
+        {issued: Date.new(2025, 3, 1), reason: "subscription_periodic", fees: [["commitment", 40_00, month(2)], ["subscription", 10_00, month(2)]], coupon: 15_00}
+      ])
     end
   end
 
@@ -229,7 +235,11 @@ describe "Coupons billing period", :premium, transaction: false do
       ingest_on(Date.new(2025, 2, 10), 20)
       travel_to(Time.zone.parse("2025-02-15 12:00")) { terminate_subscription(subscription) }
 
-      expect(billed_invoices).to eq([])
+      expect(billed_invoices).to eq([
+        {issued: Date.new(2025, 1, 1), reason: "subscription_starting", fees: [["subscription", 10_00, month(1)]], coupon: 10_00},
+        {issued: Date.new(2025, 2, 1), reason: "subscription_periodic", fees: [["charge", 20_00, month(1)], ["subscription", 10_00, month(2)]], coupon: 15_00},
+        {issued: Date.new(2025, 2, 15), reason: "subscription_terminating", fees: [["charge", 20_00, Date.new(2025, 2, 1)..Date.new(2025, 2, 15)]], coupon: 0}
+      ])
     end
   end
 
@@ -250,7 +260,7 @@ describe "Coupons billing period", :premium, transaction: false do
     end
     let(:plan_options) do
       {
-        usage_thresholds: [{amount_cents: 20_00, threshold_display_name: "Threshold"}],
+        usage_thresholds: [{amount_cents: 40_00, threshold_display_name: "Threshold"}],
         minimum_commitment: {amount_cents: 100_00, invoice_display_name: "Minimum"}
       }
     end
