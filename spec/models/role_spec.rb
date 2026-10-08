@@ -268,4 +268,33 @@ RSpec.describe Role do
       expect(role.permissions).to eq(%w[a:action z:action])
     end
   end
+
+  describe "#permissions_hash" do
+    it "resolves a custom role from its code and ignores its display name" do
+      role = build(:role, :custom, name: "admin", permissions: %w[addons:view])
+
+      hash = role.permissions_hash
+
+      expect(hash["addons:view"]).to be(true)
+      expect(hash.except("addons:view").values).to all(be(false))
+    end
+
+    it "does not inherit a predefined role's permissions when a custom role is named after it" do
+      role = build(:role, :custom, name: "finance", permissions: %w[addons:view])
+
+      expect(role.permissions_hash["billing_entities:create"]).to be(false)
+    end
+
+    it "grants the predefined admin role every permission" do
+      role = create(:role, :admin)
+
+      expect(role.permissions_hash.values).to all(be(true))
+    end
+
+    it "resolves a predefined role from its code" do
+      role = create(:role, :finance)
+
+      expect(role.permissions_hash["addons:view"]).to be(true)
+    end
+  end
 end
