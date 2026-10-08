@@ -127,4 +127,55 @@ describe X402::Wallets::ResolveService do
       end
     end
   end
+
+  context "when the wallet is terminated while the lookup waits", transaction: false do
+    subject(:result) do
+      ActiveRecord::Base.transaction { described_class.call(customer:, code: "agent_credits", shape:) }.tap { terminator.join(10) }
+    end
+
+    let(:wallet) { create(:wallet, customer:, code: "agent_credits", currency: "USD") }
+    let(:terminated) { Concurrent::CountDownLatch.new }
+    let(:terminator) do
+      wallet_id = wallet.id
+      latch = terminated
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          ActiveRecord::Base.transaction do
+            Wallets::TerminateService.call!(wallet: Wallet.find(wallet_id))
+            latch.count_down
+            await_a_blocked_session
+          end
+        end
+      end
+    end
+
+    before do
+      terminator
+      raise "the wallet was never terminated" unless terminated.wait(5)
+    end
+
+    def await_a_blocked_session
+      50.times do
+        break if ActiveRecord::Base.with_connection { |connection| connection.select_value(<<~SQL) }
+          SELECT EXISTS (SELECT 1 FROM pg_locks WHERE NOT granted AND pg_backend_pid() = ANY(pg_blocking_pids(pid)))
+        SQL
+
+        sleep(0.1)
+      end
+    end
+
+    it "creates a fresh wallet" do
+      expect(result.wallet).to have_attributes(code: "agent_credits", status: "active")
+    end
+
+    it "never returns the terminated wallet" do
+      expect(result.wallet).not_to eq(wallet)
+    end
+
+    it "leaves the terminated wallet terminated" do
+      result
+
+      expect(wallet.reload).to be_terminated
+    end
+  end
 end
