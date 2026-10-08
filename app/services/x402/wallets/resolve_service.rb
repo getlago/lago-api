@@ -27,7 +27,7 @@ module X402
       attr_reader :customer, :code, :shape
 
       def find_wallet
-        customer.wallets.active.find_by(code:)
+        customer.wallets.active.lock.find_by(code:)
       end
 
       def create_wallet

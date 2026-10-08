@@ -47,9 +47,8 @@ module X402
       def grant
         family = X402::Network.family_of_network(settlement.network)
         customer = X402::Customers::ResolveService.call!(organization: settlement.organization, address: settlement.payer_address, family:).customer
-        subscription = X402::Subscriptions::ResolveService.call!(customer:, plan_code: purchase_settings["plan_code"], family:).subscription
         wallet = X402::Wallets::ResolveService.call!(customer:, code: purchase_settings["wallet_code"], shape: purchase_settings["wallet"]).wallet
-        wallet.lock!
+        subscription = X402::Subscriptions::ResolveService.call!(customer:, plan_code: purchase_settings["plan_code"], family:).subscription
 
         wallet_transaction = purchase_credits(wallet)
         BillPaidCreditJob.perform_after_commit(wallet_transaction, Time.current.to_i)

@@ -136,6 +136,38 @@ describe X402::CreditPurchases::GrantService do
     end
   end
 
+  context "with a wallet outliving the subscription" do
+    let(:customer) { create(:customer, organization:, currency: "USD", external_id: "x402_#{payer_address}", x402_agent_address: payer_address) }
+    let(:wallet) { create(:wallet, customer:, code: "agent_credits", currency: "USD", rate_amount: "0.001", x402_enabled: true) }
+    let(:steps) { [] }
+
+    before do
+      create(:subscription, :terminated, customer:, plan:, external_id: "x402_#{payer_address}_agent_api")
+      wallet
+      allow(X402::Wallets::ResolveService).to receive(:call!).and_wrap_original do |original, **kwargs|
+        original.call(**kwargs).tap { steps << :wallet_locked }
+      end
+      allow(Subscriptions::CreateService).to receive(:call).and_wrap_original do |original, **kwargs|
+        steps << :customer_locking
+        original.call(**kwargs)
+      end
+    end
+
+    it "locks the wallet before the customer" do
+      result
+
+      expect(steps).to eq(%i[wallet_locked customer_locking])
+    end
+
+    it "opens a new subscription" do
+      expect(result.settlement.subscription).to have_attributes(external_id: "x402_#{payer_address}_agent_api", status: "active")
+    end
+
+    it "credits the existing wallet" do
+      expect(result.settlement.wallet_transaction.wallet).to eq(wallet)
+    end
+  end
+
   context "with a granted settlement" do
     let(:granted_transaction) { create(:wallet_transaction) }
     let(:settlement) do
@@ -273,6 +305,69 @@ describe X402::CreditPurchases::GrantService do
       expect(results).to all(be_success)
       expect(WalletTransaction.count).to eq(1)
       expect(results.map { |r| r.settlement.wallet_transaction_id }.uniq).to eq([settlement.reload.wallet_transaction_id])
+    end
+  end
+
+  context "with an invoice drawing on the wallet", transaction: false do
+    subject(:outcomes) do
+      invoice_id = invoice.id
+      settlement_id = settlement.id
+      invoice_side = race { Credits::AppliedPrepaidCreditsService.call(invoice: Invoice.find(invoice_id)) }
+      raise "the invoice never locked the wallet" unless wallet_held.wait(5)
+
+      grant_side = race { described_class.call(settlement: X402::Settlement.find(settlement_id)) }
+      [invoice_side, grant_side].map { |side| side.join(15) ? side.value : :timed_out }
+    end
+
+    let(:customer) { create(:customer, organization:, currency: "USD", external_id: "x402_#{payer_address}", x402_agent_address: payer_address) }
+    let(:ended_subscription) { create(:subscription, :terminated, customer:, plan:, external_id: "x402_#{payer_address}_agent_api") }
+    let(:wallet) do
+      create(:wallet, :with_inbound_transaction, customer:, code: "agent_credits", currency: "USD", rate_amount: "0.001", balance_cents: 1000, credits_balance: 10_000, x402_enabled: true)
+    end
+    let(:invoice) { create(:invoice, customer:, currency: "USD", total_amount_cents: 100, taxes_amount_cents: 0) }
+    let(:wallet_held) { Concurrent::CountDownLatch.new }
+
+    before do
+      create(:charge_fee, invoice:, subscription: ended_subscription, amount_cents: 100, precise_amount_cents: 100, taxes_precise_amount_cents: 0)
+      wallet
+      wallet_held
+      allow(Customers::RefreshWalletsService).to receive(:call).and_wrap_original do |original, **kwargs|
+        wallet_held.count_down
+        await_a_blocked_session
+        original.call(**kwargs)
+      end
+    end
+
+    def race(&block)
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection(&block)
+      rescue => e
+        e
+      end
+    end
+
+    def await_a_blocked_session
+      50.times do
+        break if ActiveRecord::Base.with_connection { |connection| connection.select_value(<<~SQL) }
+          SELECT EXISTS (SELECT 1 FROM pg_locks WHERE NOT granted AND pg_backend_pid() = ANY(pg_blocking_pids(pid)))
+        SQL
+
+        sleep(0.1)
+      end
+    end
+
+    it "settles the invoice" do
+      expect(outcomes.first).to be_success
+    end
+
+    it "grants the purchase" do
+      expect(outcomes.last).to be_success
+    end
+
+    it "credits the wallet once" do
+      outcomes
+
+      expect(wallet.reload.credits_balance).to eq(BigDecimal("19000"))
     end
   end
 end
