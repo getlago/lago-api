@@ -277,11 +277,23 @@ module Events
       #       unique property
       def active_unique_property?(event)
         previous_event = Events::Stores::Utils::ClickhouseConnection.with_retry do
-          events
+          query = events
             .where("events_enriched.properties[?] = ?", aggregation_property, event.properties[aggregation_property])
-            .where("events_enriched.timestamp < ?", event.timestamp)
-            .order(timestamp: :desc)
-            .first
+
+          if event.persisted? && event.transaction_id.present?
+            query
+              .where(
+                "events_enriched.timestamp < ? OR (events_enriched.timestamp = ? AND events_enriched.transaction_id < ?)",
+                event.timestamp,
+                event.timestamp,
+                event.transaction_id
+              )
+              .order(timestamp: :desc, transaction_id: :desc)
+          else
+            query
+              .where("events_enriched.timestamp < ?", event.timestamp)
+              .order(timestamp: :desc)
+          end.first
         end
 
         previous_event && (

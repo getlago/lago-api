@@ -2,7 +2,7 @@
 
 module Utils
   class KafkaProducer
-    def self.produce_async(topic:, key:, payload:)
+    def self.produce_async(topic:, key:, payload:, invalid_message_level: :error)
       Karafka.producer.produce_async(topic:, key:, payload:)
       true
     rescue WaterDrop::Errors::MessageInvalidError,
@@ -15,7 +15,8 @@ module Utils
       raise if ENV["SENTRY_DSN"].blank?
 
       # Avoid raising error up to the end-user
-      Sentry.capture_exception(e)
+      level = e.is_a?(WaterDrop::Errors::MessageInvalidError) ? invalid_message_level : :error
+      Sentry.capture_exception(e, level:)
       false
     end
   end

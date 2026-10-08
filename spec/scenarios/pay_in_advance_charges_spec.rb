@@ -467,6 +467,183 @@ describe "Pay in advance charges Scenarios", transaction: false do
     end
   end
 
+  describe "with legacy unique_count_agg / package duplicate events" do
+    subject(:event_fee_records) do
+      process_events = lambda do
+        inputs.each do |input|
+          travel_to(input.fetch(:received_at), with_usec: true)
+          event_attributes = {
+            transaction_id: input.fetch(:transaction_id),
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            code: billable_metric.code,
+            timestamp: input.fetch(:timestamp),
+            properties: {user_id: input.fetch(:user_id)}
+          }
+
+          if organization.clickhouse_events_store?
+            create_clickhouse_event(event_attributes.merge(value: input.fetch(:user_id), enriched_at: Time.current))
+          else
+            create_event({
+              code: billable_metric.code,
+              transaction_id: input.fetch(:transaction_id),
+              external_subscription_id: subscription.external_id,
+              timestamp: input.fetch(:timestamp).to_i,
+              properties: {user_id: input.fetch(:user_id)}
+            })
+          end
+        end
+      end
+
+      if organization.clickhouse_events_store?
+        Events::Stores::StoreFactory.with_override(
+          store_class: Events::Stores::ClickhouseStore,
+          deduplicate: false,
+          &process_events
+        )
+      else
+        process_events.call
+      end
+
+      transaction_ids = inputs.map { |input| input.fetch(:transaction_id) }
+      fees_by_transaction = Fee.where(
+        subscription:, charge:, pay_in_advance_event_transaction_id: transaction_ids
+      ).index_by(&:pay_in_advance_event_transaction_id)
+      cached_aggregations = CachedAggregation.where(
+        organization:, external_subscription_id: subscription.external_id, charge:,
+        event_transaction_id: transaction_ids
+      ).index_by(&:event_transaction_id)
+
+      inputs.map do |input|
+        transaction_id = input.fetch(:transaction_id)
+        event = if organization.clickhouse_events_store?
+          Clickhouse::EventsEnriched.find_by!(transaction_id:)
+        else
+          Event.find_by!(organization:, transaction_id:)
+        end
+        [event, fees_by_transaction[transaction_id], cached_aggregations[transaction_id]]
+      end
+    end
+
+    let(:organization) do
+      create(:organization, feature_flags: [], webhook_url: nil, clickhouse_events_store: clickhouse_events_store)
+    end
+    let(:clickhouse_events_store) { false }
+    let(:customer) { create(:customer, organization:, timezone: "UTC", currency: "USD") }
+    let(:plan) do
+      create(:plan, organization:, amount_cents: 0, amount_currency: "USD", interval: "monthly", pay_in_advance: false)
+    end
+    let(:subscription) do
+      started_at = Time.utc(2026, 9, 7)
+      create(
+        :subscription,
+        organization:,
+        customer:,
+        plan:,
+        external_id: "qa_rm11_full_adv_5935be3d_amx_k4_sub",
+        status: :active,
+        billing_time: :anniversary,
+        started_at:,
+        subscription_at: started_at,
+        activated_at: started_at,
+        created_at: Time.utc(2026, 10, 6, 15, 18, 13, 906_000)
+      )
+    end
+    let(:billable_metric) do
+      create(
+        :billable_metric,
+        organization:,
+        code: "qa_rm11_full_adv_5935be3d_amx_k4_bm",
+        aggregation_type: "unique_count_agg",
+        field_name: "user_id",
+        recurring: false
+      )
+    end
+    let(:charge) do
+      create(
+        :package_charge,
+        :pay_in_advance,
+        invoiceable: true,
+        prorated: false,
+        plan:,
+        billable_metric:,
+        properties: {amount: "5.00", free_units: 0, package_size: 2}
+      )
+    end
+    let(:inputs) do
+      [
+        {
+          transaction_id: "qa_rm11_full_adv_5935be3d_amx_k4_e1",
+          user_id: "A", timestamp: Time.utc(2026, 9, 7),
+          received_at: Time.utc(2026, 10, 6, 15, 18, 14, 156_149)
+        },
+        {
+          transaction_id: "qa_rm11_full_adv_5935be3d_amx_k4_e2",
+          user_id: "A", timestamp: Time.utc(2026, 9, 7),
+          received_at: Time.utc(2026, 10, 6, 15, 18, 14, 444_518)
+        },
+        {
+          transaction_id: "qa_rm11_full_adv_5935be3d_amx_k4_e3",
+          user_id: "B", timestamp: Time.utc(2026, 9, 7),
+          received_at: Time.utc(2026, 10, 6, 15, 18, 14, 690_127)
+        }
+      ]
+    end
+
+    before do
+      subscription
+      charge
+    end
+
+    shared_examples "a legacy package outcome" do
+      it "bills three events against the legacy subscription by transaction" do
+        records = event_fee_records
+        transaction_ids = inputs.map { |input| input.fetch(:transaction_id) }
+        fees = records.map { |_event, fee, _cached| fee }
+        cached_aggregations = records.map { |_event, _fee, cached| cached }
+
+        expect(records.size).to eq(3)
+        expect(records.map { |event, _fee, _cached| event.transaction_id }).to eq(transaction_ids)
+        expect(Fee.where(subscription:, charge:, pay_in_advance_event_transaction_id: transaction_ids).count).to eq(3)
+        expect(fees.map(&:amount_cents)).to eq([500, 0, 0])
+        expect(fees.map(&:units)).to eq([1, 0, 1])
+        expect(fees.map(&:events_count)).to eq([1, 1, 1])
+        expect(cached_aggregations.map do |cached|
+          [cached.charge_id, cached.current_aggregation, cached.max_aggregation]
+        end).to eq([[charge.id, 1, 1], [charge.id, 1, 1], [charge.id, 2, 2]])
+
+        invoices = fees.map(&:invoice)
+        expect(invoices.map(&:id).uniq.size).to eq(3)
+        expect(invoices.map(&:invoice_type)).to eq(["subscription"] * 3)
+        expect(invoices.map(&:status)).to eq(["finalized"] * 3)
+        expect(invoices.map(&:total_amount_cents)).to eq([500, 0, 0])
+        expect(invoices.sum(&:total_amount_cents)).to eq(500)
+
+        expect(records.map do |event, _fee, _cached|
+          [event.timestamp, event.respond_to?(:created_at) ? event.created_at : event.enriched_at]
+        end).to eq(
+          inputs.map do |input|
+            # ClickHouse stores enriched_at at millisecond precision.
+            received_at = if organization.clickhouse_events_store?
+              input.fetch(:received_at).floor(3)
+            else
+              input.fetch(:received_at)
+            end
+            [input.fetch(:timestamp), received_at]
+          end
+        )
+      end
+    end
+
+    it_behaves_like "a legacy package outcome"
+
+    context "with ClickHouse-backed event aggregation", clickhouse: true do
+      let(:clickhouse_events_store) { true }
+
+      it_behaves_like "a legacy package outcome"
+    end
+  end
+
   describe "with sum_agg / standard" do
     let(:aggregation_type) { "sum_agg" }
     let(:field_name) { "amount" }

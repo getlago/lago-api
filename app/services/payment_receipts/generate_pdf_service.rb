@@ -35,11 +35,11 @@ module PaymentReceipts
     def generate_pdf
       I18n.with_locale(payment_receipt.payment.customer.preferred_document_locale) do
         pdf_file = build_pdf_file
-        xml_file = attach_cii(pdf_file) if should_generate_cii_einvoice_xml?
+        attach_cii(pdf_file) if should_generate_cii_einvoice_xml?
         attach_pdf_to_payment_receipt(pdf_file)
         payment_receipt.save!
       ensure
-        cleanup_tempfiles(pdf_file, xml_file)
+        cleanup_tempfile(pdf_file)
       end
     end
 
@@ -55,12 +55,13 @@ module PaymentReceipts
     end
 
     def attach_cii(pdf_file)
-      xml_file = Tempfile.new([payment_receipt.number, ".xml"])
-      xml_file.write(EInvoices::Payments::Cii::CreateService.call(payment: payment_receipt.payment).xml)
-      xml_file.flush
+      xml = EInvoices::Payments::Cii::CreateService.call(payment: payment_receipt.payment).xml
 
-      Utils::PdfAttachmentService.call(file: pdf_file, attachment: xml_file)
-      xml_file
+      Utils::PdfAttachmentService.call!(
+        file: pdf_file,
+        attachment_content: xml,
+        attachment_name: "factur-x.xml"
+      )
     end
 
     def attach_pdf_to_payment_receipt(pdf_file)
@@ -81,9 +82,8 @@ module PaymentReceipts
       context == "admin" || payment_receipt.file.blank?
     end
 
-    def cleanup_tempfiles(pdf_file, xml_file)
+    def cleanup_tempfile(pdf_file)
       pdf_file&.unlink
-      xml_file&.unlink
     end
 
     def template
