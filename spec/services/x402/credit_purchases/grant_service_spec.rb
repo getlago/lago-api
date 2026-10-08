@@ -313,6 +313,24 @@ describe X402::CreditPurchases::GrantService do
     end
   end
 
+  context "when a statement times out" do
+    before do
+      allow(settlement).to receive(:update!).and_raise(ActiveRecord::QueryCanceled, "PG::QueryCanceled: ERROR:  canceling statement due to statement timeout")
+    end
+
+    it "returns credit_grant_failed" do
+      expect(result.error.code).to eq("credit_grant_failed")
+    end
+
+    it "keeps the original error" do
+      expect(result.error.original_error).to be_a(ActiveRecord::QueryCanceled)
+    end
+
+    it "rolls the grant back" do
+      expect { result }.not_to change(WalletTransaction, :count)
+    end
+  end
+
   context "when replayed after a deadlock" do
     before do
       attempts = 0
