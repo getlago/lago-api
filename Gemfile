@@ -7,14 +7,14 @@ ruby "~> 4.0.6"
 
 # Core
 gem "aasm"
-gem "activejob-uniqueness", require: "active_job/uniqueness/sidekiq_patch"
+gem "activejob-uniqueness", github: "getlago/activejob-uniqueness", branch: "main", require: "active_job/uniqueness/sidekiq_patch"
 gem "redlock", "~> 2.0.6" # Used through `activejob-uniqueness`. It's pinned to 2.0.x because we patched the library to fix a bug.
 gem "active_storage_validations"
 gem "bootsnap", require: false
 gem "clockwork", require: false
 gem "parallel"
 gem "puma", "~> 7.2"
-gem "rails", "~> 8.0"
+gem "rails", "~> 8.1.4"
 gem "redis"
 gem "sidekiq"
 gem "sidekiq-prometheus-exporter"
