@@ -98,7 +98,7 @@ RSpec.describe Credits::AllocatePrepaidCreditsByWalletsService do
       let(:billable_metric_id) { fee.charge.billable_metric_id }
 
       it "records what each wallet paid for each billable metric" do
-        expect(result.billable_metric_amounts).to eq({priority_wallet => {billable_metric_id => 100}})
+        expect(result.billable_metric_amounts).to eq({priority_wallet => {subscription.id => {billable_metric_id => 100}}})
       end
 
       context "when the first wallet runs out" do
@@ -107,8 +107,8 @@ RSpec.describe Credits::AllocatePrepaidCreditsByWalletsService do
 
         it "records each wallet's part of the billable metric" do
           expect(result.billable_metric_amounts).to eq({
-            priority_wallet => {billable_metric_id => 1000},
-            priority_limited_charge_wallet => {billable_metric_id => 500}
+            priority_wallet => {subscription.id => {billable_metric_id => 1000}},
+            priority_limited_charge_wallet => {subscription.id => {billable_metric_id => 500}}
           })
         end
       end
@@ -123,7 +123,7 @@ RSpec.describe Credits::AllocatePrepaidCreditsByWalletsService do
 
         it "records only the charge usage, without its tax, which is what usage is attributed from" do
           expect(result.wallet_transactions).to eq({priority_wallet => 110})
-          expect(result.billable_metric_amounts).to eq({priority_wallet => {billable_metric_id => 40}})
+          expect(result.billable_metric_amounts).to eq({priority_wallet => {subscription.id => {billable_metric_id => 40}}})
         end
       end
 
@@ -136,7 +136,7 @@ RSpec.describe Credits::AllocatePrepaidCreditsByWalletsService do
         end
 
         it "records whole cents, rounded the way the wallet transaction is" do
-          expect(result.billable_metric_amounts).to eq({priority_wallet => {billable_metric_id => 43}})
+          expect(result.billable_metric_amounts).to eq({priority_wallet => {subscription.id => {billable_metric_id => 43}}})
         end
       end
 
@@ -157,8 +157,28 @@ RSpec.describe Credits::AllocatePrepaidCreditsByWalletsService do
         it "never records more than the wallet transaction" do
           expect(result.wallet_transactions[priority_wallet].round).to eq(31)
           expect(result.billable_metric_amounts[priority_wallet]).to eq({
-            billable_metric_id => 21,
-            other_fee.charge.billable_metric_id => 10
+            subscription.id => {billable_metric_id => 21, other_fee.charge.billable_metric_id => 10}
+          })
+        end
+      end
+
+      context "when two subscriptions on the invoice share the billable metric" do
+        let(:wallets) { [priority_wallet] }
+        let(:amount_cents) { 400 }
+        let(:other_subscription) { create(:subscription, customer:) }
+        let(:fee) { create(:charge_fee, invoice:, subscription:, amount_cents: 300, precise_amount_cents: 300, taxes_precise_amount_cents: 0) }
+
+        before do
+          create(:charge_fee, invoice:, subscription: other_subscription, charge: fee.charge, amount_cents: 100,
+            precise_amount_cents: 100, taxes_precise_amount_cents: 0)
+        end
+
+        it "splits what the wallet paid between them by their fees" do
+          expect(result.billable_metric_amounts).to eq({
+            priority_wallet => {
+              subscription.id => {billable_metric_id => 300},
+              other_subscription.id => {billable_metric_id => 100}
+            }
           })
         end
       end
@@ -177,7 +197,7 @@ RSpec.describe Credits::AllocatePrepaidCreditsByWalletsService do
         end
 
         it "records it on the targeted wallet, ahead of priority" do
-          expect(result.billable_metric_amounts).to eq({target_wallet => {billable_metric_id => 100}})
+          expect(result.billable_metric_amounts).to eq({target_wallet => {subscription.id => {billable_metric_id => 100}}})
         end
       end
     end
