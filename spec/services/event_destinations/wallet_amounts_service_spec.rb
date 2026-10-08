@@ -10,14 +10,14 @@ RSpec.describe EventDestinations::WalletAmountsService do
   let(:subscription) { create(:subscription, customer:, organization:) }
   let(:billable_metric_id) { create(:billable_metric, organization:).id }
   let(:from_datetime) { Time.zone.parse("2026-10-01") }
-  let(:wallet) { create(:wallet, customer:, organization:, ongoing_billable_metric_amounts: {billable_metric_id => 300}) }
+  let(:wallet) { create(:wallet, customer:, organization:, ongoing_billable_metric_amounts: {subscription.id => {billable_metric_id => 300}}) }
 
   before { wallet }
 
   def bill(wallet:, amounts:, invoice_subscription: subscription, charges_from_datetime: from_datetime, status: :finalized, **invoice_subscription_attributes)
     invoice = create(:invoice, customer:, organization:, status:)
     create(:invoice_subscription, invoice:, subscription: invoice_subscription, charges_from_datetime:, **invoice_subscription_attributes)
-    create(:wallet_transaction, wallet:, invoice:, transaction_type: :outbound, billable_metric_amounts: amounts)
+    create(:wallet_transaction, wallet:, invoice:, transaction_type: :outbound, billable_metric_amounts: amounts && {invoice_subscription.id => amounts})
   end
 
   it "returns what each active wallet absorbs now" do
@@ -34,13 +34,45 @@ RSpec.describe EventDestinations::WalletAmountsService do
 
   context "with a terminated wallet that paid in the period" do
     let(:terminated_wallet) do
-      create(:wallet, :terminated, customer:, organization:, ongoing_billable_metric_amounts: {billable_metric_id => 999})
+      create(:wallet, :terminated, customer:, organization:, ongoing_billable_metric_amounts: {subscription.id => {billable_metric_id => 999}})
     end
 
     before { bill(wallet: terminated_wallet, amounts: {billable_metric_id => 100}) }
 
     it "keeps what it paid, but not its stale ongoing amounts" do
       expect(result.amounts).to eq({billable_metric_id => {wallet.id => 300, terminated_wallet.id => 100}})
+    end
+  end
+
+  context "with ongoing usage of another subscription on the wallet" do
+    let(:other_subscription) { create(:subscription, customer:, organization:) }
+    let(:wallet) do
+      create(:wallet, customer:, organization:, ongoing_billable_metric_amounts: {
+        subscription.id => {billable_metric_id => 300},
+        other_subscription.id => {billable_metric_id => 999}
+      })
+    end
+
+    it "reads only this subscription's share" do
+      expect(result.amounts).to eq({billable_metric_id => {wallet.id => 300}})
+    end
+  end
+
+  context "with an invoice covering this subscription and another one" do
+    let(:other_subscription) { create(:subscription, customer:, organization:) }
+
+    before do
+      invoice = create(:invoice, customer:, organization:, status: :finalized)
+      create(:invoice_subscription, invoice:, subscription:, charges_from_datetime: from_datetime)
+      create(:invoice_subscription, invoice:, subscription: other_subscription, charges_from_datetime: from_datetime)
+      create(:wallet_transaction, wallet:, invoice:, transaction_type: :outbound, billable_metric_amounts: {
+        subscription.id => {billable_metric_id => 200},
+        other_subscription.id => {billable_metric_id => 700}
+      })
+    end
+
+    it "counts only what the wallet paid for this subscription" do
+      expect(result.amounts).to eq({billable_metric_id => {wallet.id => 500}})
     end
   end
 
