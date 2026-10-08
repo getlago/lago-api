@@ -46,6 +46,7 @@ module Wallets
       }
 
       attributes[:priority] = params[:priority] if params[:priority]
+      attributes[:x402_enabled] = params[:x402_enabled] if params[:x402_enabled]
 
       if params.key?(:invoice_requires_successful_payment)
         attributes[:invoice_requires_successful_payment] = ActiveModel::Type::Boolean.new.cast(params[:invoice_requires_successful_payment]) || false
