@@ -89,4 +89,42 @@ RSpec.describe Resolvers::RolesResolver do
 
     expect(admin["memberships"]).to be_empty
   end
+
+  describe "grantable" do
+    subject(:roles_response) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        current_membership: membership,
+        permissions: required_permission,
+        query: "query { roles { name grantable } }"
+      )["data"]["roles"].to_h { |role| [role["name"], role["grantable"]] }
+    end
+
+    before do
+      create(:role, :custom, organization:, name: "Viewer", permissions: %w[organization:view])
+      create(:role, :custom, organization:, name: "KeyManager", permissions: %w[developers:keys:manage])
+    end
+
+    context "when the current member is admin" do
+      let(:membership) { create(:membership, roles: %i[admin]) }
+
+      it "marks every role as grantable" do
+        expect(roles_response.values).to all(be(true))
+      end
+    end
+
+    context "when the current member is not admin" do
+      let(:membership) { create(:membership, roles: %i[finance]) }
+
+      it "marks only roles within the member permissions as grantable" do
+        expect(roles_response).to include(
+          "Admin" => false,
+          "Finance" => true,
+          "Viewer" => true,
+          "KeyManager" => false
+        )
+      end
+    end
+  end
 end
