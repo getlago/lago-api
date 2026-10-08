@@ -972,6 +972,14 @@ RSpec.describe Wallets::CreateService do
       end
     end
 
+    context "with x402_enabled" do
+      let(:params) { {name: "Agent credits", customer:, organization_id: organization.id, currency: "EUR", rate_amount: "1.00", x402_enabled: true} }
+
+      it "enables x402 on the wallet" do
+        expect(service_result.wallet).to be_x402_enabled
+      end
+    end
+
     context "when metadata is nil" do
       let(:params) do
         {
