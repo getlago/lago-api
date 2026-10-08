@@ -8,6 +8,7 @@ module X402
       TRANSIENT_ERRORS = [
         ActiveRecord::Deadlocked,
         ActiveRecord::LockWaitTimeout,
+        ActiveRecord::QueryCanceled,
         ActiveRecord::RecordNotUnique,
         ActiveRecord::StaleObjectError,
         Sequenced::SequenceError
