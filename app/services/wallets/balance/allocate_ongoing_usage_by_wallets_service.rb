@@ -97,10 +97,10 @@ module Wallets
       def record_coverage(wallet, fee_key, take)
         nets = nets_by_fee_key_and_subscription[fee_key].select { |_subscription_id, net| net.positive? }
         total = nets.values.sum
-        amount = tax_exclusive(fee_key, take).to_d
 
         nets.each do |subscription_id, net|
-          result.billable_metric_amounts[wallet][subscription_id][fee_key.second] += amount * net / total
+          share = take.to_d * net / total
+          result.billable_metric_amounts[wallet][subscription_id][fee_key.second] += tax_exclusive(fee_key, subscription_id, share)
         end
       end
 
@@ -117,26 +117,32 @@ module Wallets
         end
       end
 
-      # Usage and draft fees enter the pool with their taxes, so what a wallet covers for a key is
-      # split the same way to keep the taxes out.
-      def tax_exclusive(fee_key, amount)
-        if taxes_by_fee_key[fee_key].zero?
+      # Usage and draft fees enter the pool with their taxes, so what a wallet covers for a
+      # subscription's fees is split the same way to keep the taxes out. Subscriptions sharing a fee
+      # key can be taxed differently, so each keeps its own ratio.
+      def tax_exclusive(fee_key, subscription_id, amount)
+        taxes = taxes_by_fee_key_and_subscription[[fee_key, subscription_id]]
+        sub_total = sub_totals_by_fee_key_and_subscription[[fee_key, subscription_id]]
+
+        if taxes.zero?
           amount
         else
-          amount * sub_totals_by_fee_key[fee_key] / (sub_totals_by_fee_key[fee_key] + taxes_by_fee_key[fee_key])
+          amount * sub_total / (sub_total + taxes)
         end
       end
 
-      def sub_totals_by_fee_key
-        @sub_totals_by_fee_key ||= sum_by_fee_key { |fee| fee.amount_cents - fee.precise_coupons_amount_cents }
+      def sub_totals_by_fee_key_and_subscription
+        @sub_totals_by_fee_key_and_subscription ||= sum_by_fee_key_and_subscription { |fee| fee.amount_cents - fee.precise_coupons_amount_cents }
       end
 
-      def taxes_by_fee_key
-        @taxes_by_fee_key ||= sum_by_fee_key(&:taxes_amount_cents)
+      def taxes_by_fee_key_and_subscription
+        @taxes_by_fee_key_and_subscription ||= sum_by_fee_key_and_subscription(&:taxes_amount_cents)
       end
 
-      def sum_by_fee_key
-        (current_usage_fees + draft_invoices_fees).each_with_object(Hash.new(0)) { |fee, sums| sums[fee_key(fee)] += yield(fee) }
+      def sum_by_fee_key_and_subscription
+        (current_usage_fees + draft_invoices_fees).each_with_object(Hash.new(0)) do |fee, sums|
+          sums[[fee_key(fee), fee.subscription_id]] += yield(fee)
+        end
       end
 
       def wallet_meta(wallet, balances)

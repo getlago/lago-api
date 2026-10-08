@@ -208,6 +208,24 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
         end
       end
 
+      context "when subscriptions sharing the billable metric are taxed differently" do
+        let(:wallets) { [wallet_a] }
+        let(:other_subscription) { create(:subscription, customer:, organization:) }
+        let(:current_usage_fees) do
+          [
+            usage_fee(amount_cents: 100, charge:),
+            create(:charge_fee, charge:, subscription: other_subscription, organization:, invoice:, amount_cents: 100,
+              taxes_amount_cents: 100, amount_currency: "EUR")
+          ]
+        end
+
+        it "removes each subscription's own tax" do
+          expect(result.billable_metric_amounts).to eq({
+            wallet_a => {subscription.id => {billable_metric_id => 50}, other_subscription.id => {billable_metric_id => 50}}
+          })
+        end
+      end
+
       context "when the fee targets a wallet" do
         around { |test| lago_premium! { test.run } }
 
