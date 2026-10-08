@@ -270,31 +270,39 @@ RSpec.describe Role do
   end
 
   describe "#permissions_hash" do
-    it "resolves a custom role from its code and ignores its display name" do
-      role = build(:role, :custom, name: "admin", permissions: %w[addons:view])
+    subject(:permissions_hash) { role.permissions_hash }
 
-      hash = role.permissions_hash
+    let(:role) { build(:role, :custom, name:, permissions: %w[addons:view]) }
+    let(:name) { "admin" }
 
-      expect(hash["addons:view"]).to be(true)
-      expect(hash.except("addons:view").values).to all(be(false))
+    context "when a custom role is named after the admin role" do
+      it "grants only the role's explicit permissions" do
+        expect(permissions_hash.select { |_, granted| granted }.keys).to eq(%w[addons:view])
+      end
     end
 
-    it "does not inherit a predefined role's permissions when a custom role is named after it" do
-      role = build(:role, :custom, name: "finance", permissions: %w[addons:view])
+    context "when a custom role is named after the finance role" do
+      let(:name) { "finance" }
 
-      expect(role.permissions_hash["billing_entities:create"]).to be(false)
+      it "does not inherit the finance permissions" do
+        expect(permissions_hash["billing_entities:create"]).to be(false)
+      end
     end
 
-    it "grants the predefined admin role every permission" do
-      role = create(:role, :admin)
+    context "with the predefined admin role" do
+      let(:role) { create(:role, :admin) }
 
-      expect(role.permissions_hash.values).to all(be(true))
+      it "grants every permission" do
+        expect(permissions_hash.values).to all(be(true))
+      end
     end
 
-    it "resolves a predefined role from its code" do
-      role = create(:role, :finance)
+    context "with the predefined finance role" do
+      let(:role) { create(:role, :finance) }
 
-      expect(role.permissions_hash["addons:view"]).to be(true)
+      it "resolves the permissions from the role code" do
+        expect(permissions_hash["addons:view"]).to be(true)
+      end
     end
   end
 end
