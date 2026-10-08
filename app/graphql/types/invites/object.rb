@@ -22,9 +22,12 @@ module Types
       # exposed to members who could have created this invite themselves.
       def token
         return unless context.dig(:permissions, "organization:members:create")
-        return if object.roles.include?("admin") && !context[:current_membership]&.admin?
 
-        object.token
+        if object.roles.include?("admin") && !context[:current_membership]&.admin?
+          nil
+        else
+          object.token
+        end
       end
     end
   end
