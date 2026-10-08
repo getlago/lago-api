@@ -57,6 +57,22 @@ describe X402::Customers::ResolveService do
     end
   end
 
+  context "with an address of another family" do
+    let(:address) { "BprZ3eTVMHAcqC2wcE4XY71tvjdxJ6C6pSYjVmD75ujf" }
+
+    it "raises" do
+      expect { result }.to raise_error(ArgumentError, /invalid evm address/)
+    end
+
+    context "with a customer for the address" do
+      before { create(:customer, organization:, x402_agent_address: address) }
+
+      it "raises" do
+        expect { result }.to raise_error(ArgumentError, /invalid evm address/)
+      end
+    end
+  end
+
   context "with a customer for the address" do
     let(:customer) { create(:customer, organization:, x402_agent_address: "0xf4a43B9cc729c9E4E139CB86808f48e3eD09Dcb2") }
 

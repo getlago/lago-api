@@ -14,7 +14,8 @@ module X402
       end
 
       def call
-        result.customer = find_customer || create_customer
+        external_id = X402::ExternalIds.customer(address, family:)
+        result.customer = find_customer || create_customer(external_id)
         result
       rescue BaseService::FailedResult => e
         result.fail_with_error!(e)
@@ -28,11 +29,11 @@ module X402
         organization.customers.by_x402_agent_address(address).first
       end
 
-      def create_customer
+      def create_customer(external_id)
         ActiveRecord::Base.transaction(requires_new: true) do
           ::Customers::CreateService.call!(
             organization_id: organization.id,
-            external_id: X402::ExternalIds.customer(address, family:),
+            external_id:,
             x402_agent_address: address,
             finalize_zero_amount_invoice: :skip,
             exclude_from_dunning_campaign: true
