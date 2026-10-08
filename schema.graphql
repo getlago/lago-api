@@ -7062,6 +7062,7 @@ enum FeatureFlagEnum {
   realtime_usage
   skip_credit_invoice_auto_payment_delay
   stripe_shared_payment_token
+  usage_prefilter_short_cache
   wallet_traceability
   x402_payments
   x402_reservation_counter_disabled

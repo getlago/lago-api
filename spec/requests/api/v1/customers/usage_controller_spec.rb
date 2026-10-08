@@ -90,6 +90,21 @@ RSpec.describe Api::V1::Customers::UsageController do
       expect(charge_usage[:amount_currency]).to eq("EUR")
     end
 
+    context "with the usage_prefilter_short_cache feature flag" do
+      before do
+        organization.enable_feature_flag!(:usage_prefilter_short_cache)
+        allow(Events::BillingPeriodFilterService).to receive(:for_charges!).and_call_original
+      end
+
+      it "caches the pre-filter for five seconds" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
+          .with(hash_including(combinations_cache_ttl: 5.seconds))
+      end
+    end
+
     context "when apply_taxes is false" do
       let(:params) { {external_subscription_id: subscription.external_id, apply_taxes: false} }
 

@@ -12,7 +12,7 @@ module Events
         return targets if metric_codes.empty?
 
         combinations = event_values_with_history do |**options|
-          event_store.distinct_codes_and_property_combinations(filter_keys: billable_metric_filter_keys, **options)
+          fetch_combinations(filter_keys: billable_metric_filter_keys, **options)
         end
 
         filter_targets_from_combinations(
@@ -27,6 +27,10 @@ module Events
       # Only the charges resolver has targets the usage buckets can answer.
       def record_precomputed_targets(_result)
         nil
+      end
+
+      def fetch_combinations(**options)
+        event_store.distinct_codes_and_property_combinations(**options)
       end
 
       def event_values_with_history
