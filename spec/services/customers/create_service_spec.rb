@@ -78,6 +78,15 @@ RSpec.describe Customers::CreateService do
 
       expect(SendWebhookJob).to have_been_enqueued.with("customer.created", result.customer)
     end
+
+    it "sends no customer.created when the caller rolls back" do
+      ActiveRecord::Base.transaction do
+        result
+        raise ActiveRecord::Rollback
+      end
+
+      expect(SendWebhookJob).not_to have_been_enqueued.with("customer.created", anything)
+    end
   end
 
   it "produces an activity log" do
