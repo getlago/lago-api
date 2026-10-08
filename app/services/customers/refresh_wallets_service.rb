@@ -12,6 +12,8 @@ module Customers
     end
 
     def call
+      reservations = capture_reservations
+
       wallet_allocations = Wallets::Balance::AllocateOngoingUsageByWalletsService.call!(
         customer:,
         wallets: all_wallets,
@@ -33,6 +35,8 @@ module Customers
 
       Wallet.where(id: all_wallets.map(&:id)).touch_all(:last_ongoing_balance_sync_at) # rubocop:disable Rails/SkipsModelValidations
 
+      hand_off_reservations(reservations)
+
       customer.update!(awaiting_wallet_refresh: false)
 
       deliver_streaming_events
@@ -41,11 +45,44 @@ module Customers
       result
     rescue BaseService::FailedResult => e
       e.result
+    ensure
+      drop_unreleased_claim
     end
 
     private
 
-    attr_reader :customer, :include_generating_invoices
+    attr_reader :customer, :include_generating_invoices, :refresh_claim
+
+    def capture_reservations
+      x402_wallets = all_wallets.select(&:x402_enabled)
+
+      if x402_wallets.any? && X402::ReservationCounter.enabled?(customer.organization)
+        @refresh_claim = X402::RefreshClaim.acquire(customer)
+      end
+
+      if refresh_claim
+        x402_wallets.index_with { X402::ReservationCounter.new(it).capture }.reject { |_, cents| cents.zero? }
+      else
+        {}
+      end
+    end
+
+    def hand_off_reservations(reservations)
+      if refresh_claim
+        claim = refresh_claim
+        @refresh_claim = nil
+
+        after_commit { claim.release(reservations) }
+
+        if in_transaction?
+          after_rollback { claim.drop }
+        end
+      end
+    end
+
+    def drop_unreleased_claim
+      refresh_claim&.drop
+    end
 
     def deliver_streaming_events
       streamed_event_types.each do |event_type|

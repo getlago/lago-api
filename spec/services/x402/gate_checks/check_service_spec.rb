@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe X402::GateChecks::CheckService, :premium do
+describe X402::GateChecks::CheckService, :premium, cache: :null do
   subject(:result) { described_class.call(organization:, params:) }
 
   include_context "with an x402 payment"
@@ -253,6 +253,136 @@ describe X402::GateChecks::CheckService, :premium do
 
       it "refuses the field as invalid_value" do
         expect(result.error.messages).to eq(estimated_call_cost_cents: ["invalid_value"])
+      end
+    end
+  end
+
+  context "with an estimate beyond the cap" do
+    let(:params) { super().merge(estimated_call_cost_cents: 2**53) }
+
+    it "refuses the field as invalid_value" do
+      expect(result.error.messages).to eq(estimated_call_cost_cents: ["invalid_value"])
+    end
+  end
+
+  context "with the reservation counter", cache: :redis do
+    let(:wallet) do
+      create(:wallet, customer:, code: "agent_credits", currency: "USD", x402_enabled: true,
+        balance_cents: 1_100, credits_balance: 11, ongoing_usage_balance_cents: 200, credits_ongoing_usage_balance: 2)
+    end
+    let(:key) { "x402:reserved:#{wallet.id}" }
+
+    before do
+      wallet
+      subscription
+      allow(Sentry).to receive(:capture_exception)
+    end
+
+    it "passes below the floor and holds the reservation for an hour" do
+      expect(result.requirements).to be_nil
+      expect(Rails.cache.read(key, raw: true)).to eq("1")
+      expect(Rails.cache.redis.then { it.ttl(key) }).to be_between(3_590, 3_600)
+    end
+
+    context "with reservations already held" do
+      before { Rails.cache.redis.then { it.set(key, 898, ex: 60) } }
+
+      it "passes and re-arms the expiry" do
+        expect(result.requirements).to be_nil
+        expect(Rails.cache.read(key, raw: true)).to eq("899")
+        expect(Rails.cache.redis.then { it.ttl(key) }).to be > 3_500
+      end
+    end
+
+    context "when one more call is not covered" do
+      before { Rails.cache.redis.then { it.set(key, 899, ex: 60) } }
+
+      it "challenges and undoes the reservation" do
+        expect(result.requirements).to eq([evm_requirement])
+        expect(Rails.cache.read(key, raw: true)).to eq("899")
+      end
+    end
+
+    context "with the largest accepted estimate" do
+      let(:params) { super().merge(estimated_call_cost_cents: 2**53 - 1) }
+
+      before { Rails.cache.redis.then { it.set(key, 5, ex: 60) } }
+
+      it "challenges and restores the held reservation" do
+        expect(result.requirements).to eq([evm_requirement])
+        expect(Rails.cache.read(key, raw: true)).to eq("5")
+      end
+
+      it "does not report to Sentry" do
+        result
+
+        expect(Sentry).not_to have_received(:capture_exception)
+      end
+    end
+
+    context "with several calls in a row" do
+      let(:params) { super().merge(estimated_call_cost_cents: 300) }
+
+      before { 2.times { described_class.call(organization:, params:) } }
+
+      it "challenges the third and holds only the first two" do
+        expect(result.requirements).to eq([evm_requirement])
+        expect(Rails.cache.read(key, raw: true)).to eq("600")
+      end
+    end
+
+    context "with a pending subscription" do
+      let(:subscription) { create(:subscription, :pending, customer:, plan:, external_id: "x402_#{agent_address}_#{plan.code}") }
+
+      it "refuses without touching the counter" do
+        expect(result.error.messages).to eq(base: ["subscription_not_active"])
+        expect(Rails.cache.redis.then { it.exists?(key) }).to be(false)
+      end
+    end
+
+    context "when Redis is unreachable" do
+      before { allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::RedisCacheStore.new(url: "redis://localhost:1")) }
+
+      it "falls back to the floor" do
+        expect(result.requirements).to eq([evm_requirement])
+      end
+
+      it "reports the connection error" do
+        result
+        expect(Sentry).to have_received(:capture_exception).with(an_instance_of(Redis::CannotConnectError), anything)
+      end
+    end
+
+    context "without a Redis cache store", cache: :null do
+      it "falls back to the floor" do
+        expect(result.requirements).to eq([evm_requirement])
+      end
+
+      it "reports the unavailable store" do
+        result
+        expect(Sentry).to have_received(:capture_exception).with(an_instance_of(X402::ReservationCounter::UnavailableError), anything)
+      end
+    end
+
+    context "when the counter is switched off" do
+      let(:organization) do
+        create(:organization, premium_integrations: ["events_targeting_wallets"], feature_flags: ["x402_reservation_counter_disabled"])
+      end
+
+      before { allow(Rails.cache).to receive(:redis).and_call_original }
+
+      it "applies the floor" do
+        expect(result.requirements).to eq([evm_requirement])
+      end
+
+      it "never reaches for Redis" do
+        result
+        expect(Rails.cache).not_to have_received(:redis)
+      end
+
+      it "reports nothing" do
+        result
+        expect(Sentry).not_to have_received(:capture_exception)
       end
     end
   end
