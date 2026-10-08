@@ -367,6 +367,106 @@ describe "Pay in advance charges Scenarios", transaction: false do
     end
   end
 
+  describe "with unique_count_agg / percentage duplicate events" do
+    subject(:event_fee_records) do
+      inputs.each do |input|
+        travel_to(input.fetch(:received_at, input.fetch(:at))) do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: input.fetch(:transaction_id),
+              external_subscription_id: subscription.external_id,
+              timestamp: input.fetch(:at).to_i,
+              properties: {user_id: input.fetch(:user_id), operation_type: "add"}
+            }
+          )
+        end
+      end
+
+      events = Event.where(organization:, transaction_id: inputs.map { |input| input.fetch(:transaction_id) })
+        .order(:timestamp).to_a
+      fees_by_event = Fee.where(pay_in_advance_event_id: events.map(&:id)).index_by(&:pay_in_advance_event_id)
+      cached_aggregations = CachedAggregation.where(
+        organization:, external_subscription_id: subscription.external_id, charge:,
+        event_transaction_id: inputs.map { |input| input.fetch(:transaction_id) }
+      ).index_by(&:event_transaction_id)
+      events.map { |event| [event, fees_by_event[event.id], cached_aggregations[event.transaction_id]] }
+    end
+
+    let(:organization) { create(:organization, feature_flags: [], webhook_url: nil) }
+    let(:customer) { create(:customer, organization:, timezone: "UTC", currency: "USD") }
+    let(:subscription) { customer.subscriptions.sole }
+    let(:plan) { create(:plan, organization:, amount_cents: 0, amount_currency: "USD", pay_in_advance: false) }
+    let(:aggregation_type) { "unique_count_agg" }
+    let(:field_name) { "user_id" }
+    let(:billable_metric) do
+      create(:billable_metric, organization:, aggregation_type:, field_name:, recurring: true)
+    end
+    let(:charge) do
+      create(:percentage_charge, :pay_in_advance, invoiceable: true, plan:, billable_metric:,
+        properties: {rate: "2.5", fixed_amount: "0.30"})
+    end
+    let(:inputs) do
+      [
+        {
+          transaction_id: "qa_rm11_match_8b06627d_m5_v1_p1_sub_tx1", user_id: "A",
+          at: Time.utc(2026, 10, 7, 9, 6, 17), received_at: Time.utc(2026, 10, 7, 9, 7, 16)
+        },
+        {
+          transaction_id: "qa_rm11_match_8b06627d_m5_v1_p1_sub_tx2", user_id: "A",
+          at: Time.utc(2026, 10, 7, 9, 6, 18), received_at: Time.utc(2026, 10, 7, 9, 7, 17)
+        },
+        {
+          transaction_id: "qa_rm11_match_8b06627d_m5_v1_p1_sub_tx3", user_id: "B",
+          at: Time.utc(2026, 10, 7, 9, 6, 19), received_at: Time.utc(2026, 10, 7, 9, 7, 17)
+        }
+      ]
+    end
+
+    before do
+      travel_to(Time.utc(2026, 10, 7)) do
+        create_subscription({
+          external_customer_id: customer.external_id,
+          external_id: customer.external_id,
+          plan_code: plan.code,
+          billing_time: "anniversary"
+        })
+      end
+      charge
+    end
+
+    it "creates a zero-amount fee and invoice for the duplicate user event" do
+      records = event_fee_records
+
+      expect(records.size).to eq(3)
+      expect(records.map { |event, _fee, _cached| event.transaction_id })
+        .to eq(inputs.map { |input| input.fetch(:transaction_id) })
+      expect(records.map { |_event, fee, _cached| fee&.amount_cents }).to eq([33, 0, 33])
+
+      fees = records.filter_map { |_event, fee, _cached| fee }
+      expect(fees.map(&:amount_cents)).to eq([33, 0, 33])
+      expect(fees.map(&:units)).to eq([1, 0, 1])
+      expect(fees.map(&:events_count)).to eq([1, 1, 1])
+      expect(records.second[1]).to have_attributes(unit_amount_cents: 0, precise_unit_amount: 0)
+      expect(records.second[1].amount_details).to include(
+        "paid_events" => "0.0",
+        "fixed_fee_total_amount" => "0.0",
+        "fixed_fee_unit_amount" => "0.3"
+      )
+      expect(records.map { |_event, _fee, cached| [cached&.current_aggregation, cached&.max_aggregation] })
+        .to eq([[1, 1], [1, 1], [2, 2]])
+      expect(records.map { |_event, _fee, cached| cached&.timestamp })
+        .to eq(inputs.map { |input| input.fetch(:at) })
+      expect(records.map { |event, _fee, cached| [event.timestamp, event.created_at, cached.created_at] })
+        .to eq(inputs.map { |input| [input.fetch(:at), input.fetch(:received_at), input.fetch(:received_at)] })
+      expect(fees.map(&:invoice).map(&:status)).to eq(["finalized"] * 3)
+
+      expect(Invoice.where(customer:).count).to eq(3)
+      expect(fees.map { |fee| fee.invoice.total_amount_cents }).to eq([33, 0, 33])
+      expect(fees.sum { |fee| fee.invoice.total_amount_cents }).to eq(66)
+    end
+  end
+
   describe "with legacy unique_count_agg / package duplicate events" do
     subject(:event_fee_records) do
       process_events = lambda do
