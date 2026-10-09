@@ -7,6 +7,14 @@ describe Api::V1::X402::ConnectionsController, :premium do
   let(:evm_address) { "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed" }
   let(:svm_address) { "2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4" }
 
+  include_context "with CDP credentials"
+
+  before do
+    stub_cdp_supported
+    stub_cdp_account(:evm, evm_address)
+    stub_cdp_account(:svm, svm_address)
+  end
+
   shared_examples "an endpoint behind the x402_payments flag" do
     context "without the x402_payments flag" do
       let(:organization) { create(:organization) }
@@ -25,7 +33,7 @@ describe Api::V1::X402::ConnectionsController, :premium do
     let(:params) do
       {
         code: "my_cdp", name: "My CDP", networks: ["eip155:84532"], payout_addresses: {evm: evm_address},
-        cdp_api_key_id: "key-id", cdp_api_key_secret: "key-secret"
+        cdp_api_key_id:, cdp_api_key_secret:
       }
     end
 
@@ -64,6 +72,11 @@ describe Api::V1::X402::ConnectionsController, :premium do
         subject
         expect(json[:x402_connection][:payout_addresses]).to eq(evm: evm_address)
       end
+
+      it "looks up the checksummed address" do
+        subject
+        expect(a_request(:get, cdp_account_url(:evm, evm_address))).to have_been_made.once
+      end
     end
 
     context "with a Solana network" do
@@ -98,6 +111,11 @@ describe Api::V1::X402::ConnectionsController, :premium do
         expect(response).to have_http_status(:unprocessable_content)
         expect(json[:error_details]).to eq(payout_addresses: ["invalid_checksum"])
       end
+
+      it "calls CDP for nothing" do
+        subject
+        expect(a_request(:any, /api\.cdp\.coinbase\.com/)).not_to have_been_made
+      end
     end
 
     context "with a string for networks" do
@@ -118,6 +136,40 @@ describe Api::V1::X402::ConnectionsController, :premium do
         subject
         expect(response).to have_http_status(:unprocessable_content)
         expect(json[:error_details]).to eq(code: ["value_already_exist"])
+      end
+    end
+
+    context "when CDP rejects the credentials" do
+      before { stub_cdp_supported(status: 401, body: "Unauthorized") }
+
+      it "returns a validation error on cdp_api_key" do
+        subject
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(cdp_api_key: ["invalid_credentials"])
+      end
+    end
+
+    context "when the payout address is not in the key's CDP project" do
+      before { stub_cdp_account(:evm, evm_address, status: 404) }
+
+      it "returns a validation error on payout_addresses" do
+        subject
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(payout_addresses: ["evm_not_in_cdp_project"])
+      end
+
+      it "persists nothing" do
+        expect { subject }.not_to change(X402::Connection, :count)
+      end
+    end
+
+    context "when CDP is unavailable" do
+      before { stub_cdp_supported(status: 503, body: "") }
+
+      it "returns a third-party error" do
+        subject
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to include(code: "third_party_error", error_details: {third_party: "coinbase_cdp", thirdparty_error: "unavailable_error: supported: HTTP 503"})
       end
     end
   end
@@ -190,7 +242,7 @@ describe Api::V1::X402::ConnectionsController, :premium do
   describe "PUT /api/v1/x402_connections/:code" do
     subject { put_with_token(organization, "/api/v1/x402_connections/#{code}", {x402_connection: params}) }
 
-    let(:connection) { create(:x402_connection, organization:) }
+    let(:connection) { create(:x402_connection, organization:, cdp_api_key_id:, cdp_api_key_secret:) }
     let(:code) { connection.code }
     let(:params) { {name: "Renamed"} }
 
@@ -201,7 +253,25 @@ describe Api::V1::X402::ConnectionsController, :premium do
       subject
       expect(response).to have_http_status(:ok)
       expect(json[:x402_connection][:name]).to eq("Renamed")
-      expect(connection.reload).to have_attributes(cdp_api_key_id: "test-key-id", cdp_api_key_secret: "test-key-secret")
+      expect(connection.reload).to have_attributes(cdp_api_key_id:, cdp_api_key_secret:)
+    end
+
+    it "calls CDP for nothing" do
+      subject
+      expect(a_request(:any, /api\.cdp\.coinbase\.com/)).not_to have_been_made
+    end
+
+    context "when the new payout address is not in the key's CDP project" do
+      let(:other_evm_address) { "0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359" }
+      let(:params) { {payout_addresses: {evm: other_evm_address}} }
+
+      before { stub_cdp_account(:evm, other_evm_address, status: 404) }
+
+      it "returns a validation error on payout_addresses" do
+        subject
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(payout_addresses: ["evm_not_in_cdp_project"])
+      end
     end
 
     context "with invalid params" do

@@ -17,6 +17,11 @@ module X402
 
       def call
         connection = organization.x402_connections.new(params.slice(*ATTRIBUTES))
+        return result.record_validation_failure!(record: connection) unless connection.valid?
+
+        verify_result = X402::Connections::VerifyService.call(connection:)
+        return result.fail_with_error!(verify_result.error) if verify_result.failure?
+
         connection.save!
 
         register_security_log(connection)
