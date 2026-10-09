@@ -92,7 +92,7 @@ RSpec.describe EventDestinations::CustomerUsage::RefreshedService do
 
     context "with usage that a wallet absorbed" do
       let(:billable_metric) { create(:billable_metric, organization:) }
-      let(:wallet) { create(:wallet, customer:, organization:, ongoing_billable_metric_amounts: {subscription.id => {billable_metric.id => 1_000_000}}) }
+      let(:wallet) { create(:wallet, customer:, organization:, ongoing_billable_metric_amounts: {subscription.id => {Time.current.utc.iso8601 => {billable_metric.id => 1_000_000}}}) }
       let(:producer_calls) { [] }
 
       before do

@@ -20,8 +20,10 @@ module EventDestinations
       amounts = Hash.new { |hash, billable_metric_id| hash[billable_metric_id] = Hash.new(0) }
 
       active_wallets.each do |wallet|
-        wallet.ongoing_billable_metric_amounts.fetch(subscription.id, {}).each do |billable_metric_id, cents|
-          amounts[billable_metric_id][wallet.id] += cents
+        wallet.ongoing_billable_metric_amounts.fetch(subscription.id, {}).each do |period, by_metric|
+          next unless in_window?(period)
+
+          by_metric.each { |billable_metric_id, cents| amounts[billable_metric_id][wallet.id] += cents }
         end
       end
 
@@ -53,6 +55,17 @@ module EventDestinations
         ]))
         .group("amounts.billable_metric_id", "wallet_transactions.wallet_id")
         .sum("amounts.cents::bigint")
+    end
+
+    # During its grace period, the previous period's draft is still in the ongoing amounts: it belongs
+    # to the lifetime window, not to the current period's.
+    def in_window?(period)
+      start = Time.zone.parse(period.to_s)
+      start.present? && start >= window_start
+    end
+
+    def window_start
+      @window_start ||= Time.zone.parse(from_datetime.to_s).change(usec: 0)
     end
 
     # A pay-in-advance invoice records the previous period as its charges window, so it is matched
