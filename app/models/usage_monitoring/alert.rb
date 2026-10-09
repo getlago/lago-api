@@ -161,7 +161,8 @@ module UsageMonitoring
     def find_recurring_thresholds_crossed_increasing(previous, current, step, initial)
       return [] unless step
 
-      previous_steps = ((previous - initial) / step).ceil
+      # NOTE: a recurring threshold equal to previous_value was already crossed when the value reached it
+      previous_steps = ((previous - initial) / step).floor + 1
       previous_recurring = initial + [previous_steps, 1].max * step
 
       current_steps = ((current - initial) / step).floor
@@ -175,7 +176,8 @@ module UsageMonitoring
     def find_recurring_thresholds_crossed_decreasing(previous, current, step, initial)
       return [] unless step
 
-      previous_steps = ((initial - previous) / step).ceil
+      # NOTE: a recurring threshold equal to previous_value was already crossed when the value reached it
+      previous_steps = ((initial - previous) / step).floor + 1
       previous_recurring = initial - [previous_steps, 1].max * step
 
       current_steps = ((initial - current) / step).floor
