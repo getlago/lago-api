@@ -171,6 +171,8 @@ resources :webhooks, only: %i[] do
   get :json_public_key, on: :collection
 end
 
+resources :x402_connections, param: :code, code: /.*/, controller: "x402/connections", only: %i[index show create update destroy]
+
 namespace :x402 do
   resources :gate_checks, only: :create
 end
