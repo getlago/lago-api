@@ -10,7 +10,8 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
       current_usage_fees:,
       draft_invoices_fees:,
       progressive_billing_fees:,
-      pay_in_advance_fees:
+      pay_in_advance_fees:,
+      with_billable_metric_amounts:
     )
   end
 
@@ -22,6 +23,7 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
   let(:draft_invoices_fees) { [] }
   let(:progressive_billing_fees) { [] }
   let(:pay_in_advance_fees) { [] }
+  let(:with_billable_metric_amounts) { false }
 
   # Wallet B (free, consumed first) and Wallet A (paid), as in the ticket worked example.
   let(:wallet_b) { create(:wallet, customer:, organization:, balance_cents: 50, priority: 1) }
@@ -35,8 +37,19 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
 
   describe "#call" do
     describe "billable metric amounts" do
+      let(:with_billable_metric_amounts) { true }
       let(:charge) { create(:standard_charge, organization:) }
       let(:billable_metric_id) { charge.billable_metric_id }
+
+      context "without being asked for them" do
+        let(:with_billable_metric_amounts) { false }
+        let(:current_usage_fees) { [usage_fee(amount_cents: 80, charge:)] }
+
+        it "computes none, leaving the allocation as it was" do
+          expect(result.billable_metric_amounts).to eq({})
+          expect(result.wallet_allocations).to eq({wallet_b => 50, wallet_a => 30})
+        end
+      end
 
       context "when usage overflows the first wallet" do
         let(:current_usage_fees) { [usage_fee(amount_cents: 80, charge:)] }
