@@ -1,0 +1,79 @@
+# frozen_string_literal: true
+
+module EventDestinations
+  # What each wallet absorbed per billable metric for a subscription's usage since from_datetime:
+  # what the latest refresh allocates to it now, plus what billing charged to it on the invoices of
+  # that period. Both are recorded per subscription, so only this subscription's share is read.
+  # Usage is attributed to wallets in proportion to these amounts.
+  class WalletAmountsService < BaseService
+    Result = BaseResult[:amounts]
+
+    def initialize(subscription:, active_wallets:, from_datetime:)
+      @subscription = subscription
+      @active_wallets = active_wallets
+      @from_datetime = from_datetime
+
+      super
+    end
+
+    def call
+      amounts = Hash.new { |hash, billable_metric_id| hash[billable_metric_id] = Hash.new(0) }
+
+      active_wallets.each do |wallet|
+        wallet.ongoing_billable_metric_amounts.fetch(subscription.id, {}).each do |period, by_metric|
+          next unless in_window?(period)
+
+          by_metric.each { |billable_metric_id, cents| amounts[billable_metric_id][wallet.id] += cents }
+        end
+      end
+
+      billed_amounts.each { |(billable_metric_id, wallet_id), cents| amounts[billable_metric_id][wallet_id] += cents }
+
+      result.amounts = amounts
+      result
+    end
+
+    private
+
+    attr_reader :subscription, :active_wallets, :from_datetime
+
+    # Terminated wallets are included: expiring credits end up in terminated wallets, and what they
+    # paid is still part of the subscription's history. Voided invoices are not, since voiding gives
+    # the credits back.
+    def billed_amounts
+      WalletTransaction
+        .outbound
+        .where.not(billable_metric_amounts: nil)
+        .joins(:wallet, invoice: :invoice_subscriptions)
+        .where(wallets: {customer_id: subscription.customer_id})
+        .where(invoice_subscriptions: {subscription_id: subscription.id})
+        .merge(invoiced_in_period)
+        .merge(Invoice.where.not(status: :voided))
+        .joins(ActiveRecord::Base.sanitize_sql_array([
+          "CROSS JOIN LATERAL jsonb_each_text(wallet_transactions.billable_metric_amounts -> ?) AS amounts(billable_metric_id, cents)",
+          subscription.id
+        ]))
+        .group("amounts.billable_metric_id", "wallet_transactions.wallet_id")
+        .sum("amounts.cents::bigint")
+    end
+
+    # During its grace period, the previous period's draft is still in the ongoing amounts: it belongs
+    # to the lifetime window, not to the current period's.
+    def in_window?(period)
+      start = Time.zone.parse(period.to_s)
+      start.present? && start >= window_start
+    end
+
+    def window_start
+      @window_start ||= Time.zone.parse(from_datetime.to_s).change(usec: 0)
+    end
+
+    # A pay-in-advance invoice records the previous period as its charges window, so it is matched
+    # on when it was issued instead.
+    def invoiced_in_period
+      InvoiceSubscription
+        .where(charges_from_datetime: from_datetime..)
+        .or(InvoiceSubscription.in_advance_charge.where(timestamp: from_datetime..))
+    end
+  end
+end
