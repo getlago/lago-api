@@ -2,7 +2,7 @@
 
 module Credits
   class AllocatePrepaidCreditsByWalletsService < BaseService
-    Result = BaseResult[:wallet_transactions]
+    Result = BaseResult[:wallet_transactions, :billable_metric_amounts]
 
     def initialize(invoice:)
       @invoice = invoice
@@ -12,9 +12,10 @@ module Credits
 
     def call
       result.wallet_transactions ||= {}
+      result.billable_metric_amounts ||= {}
       return result if wallets.empty?
 
-      result.wallet_transactions = calculate_wallet_transactions
+      calculate_wallet_transactions
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -29,7 +30,6 @@ module Credits
     def calculate_wallet_transactions
       ordered_remaining_amounts = calculate_amounts_for_fees_by_type_and_bm
       remaining_invoice_amount = invoice.total_amount_cents
-      wallets_transactions = {}
 
       wallets.each do |wallet|
         wallet.reload
@@ -62,9 +62,62 @@ module Credits
         end
         total_amount_cents = wallet_fee_transactions.sum { |t| t[:amount_cents] }
         next if total_amount_cents <= 0
-        wallets_transactions[wallet] = total_amount_cents
+        result.wallet_transactions[wallet] = total_amount_cents
+        result.billable_metric_amounts[wallet] = charge_amounts_by_subscription(wallet_fee_transactions)
       end
-      wallets_transactions
+    end
+
+    # What the wallet paid for charge usage, excluding taxes, per subscription and billable metric,
+    # so usage can later be attributed to the wallets that paid for it. A fee key can span several
+    # subscriptions of the invoice, so what the wallet paid for it is split between them by their
+    # fees.
+    def charge_amounts_by_subscription(wallet_fee_transactions)
+      amounts = Hash.new { |hash, subscription_id| hash[subscription_id] = Hash.new(0) }
+
+      wallet_fee_transactions.each do |transaction|
+        fee_key = transaction[:fee_key]
+        next unless fee_key.first == "charge"
+
+        paid = transaction[:amount_cents].to_d
+        shares = fee_shares[fee_key]
+        total_cap = shares.values.sum { it[:cap] }
+
+        shares.each do |subscription_id, share|
+          amounts[subscription_id][fee_key.second] += tax_exclusive(share, paid * share[:cap] / total_cap)
+        end
+      end
+
+      round_on_running_total(amounts)
+    end
+
+    # Rounded on the running total, so the parts never add up to more than the wallet transaction.
+    def round_on_running_total(amounts)
+      running_total = 0
+
+      amounts.transform_values do |by_metric|
+        by_metric.transform_values do |amount|
+          rounded = (running_total + amount).round - running_total.round
+          running_total += amount
+          rounded
+        end
+      end
+    end
+
+    # A fee's cap covers its taxes too, so what a wallet paid for a subscription's fees is split the
+    # same way. Subscriptions sharing a fee key can be taxed differently, hence one share each.
+    def tax_exclusive(share, amount)
+      if share[:taxes].zero?
+        amount
+      else
+        amount * share[:sub_total] / (share[:sub_total] + share[:taxes])
+      end
+    end
+
+    # Per fee key and subscription: what its fees cap at, their amount before tax, and their tax.
+    def fee_shares
+      @fee_shares ||= Hash.new do |hash, fee_key|
+        hash[fee_key] = Hash.new { |shares, subscription_id| shares[subscription_id] = {cap: 0, sub_total: 0, taxes: 0} }
+      end
     end
 
     def calculate_amounts_for_fees_by_type_and_bm
@@ -85,6 +138,10 @@ module Credits
           key << fee.grouped_by&.dig("target_wallet_code")
         end
         remaining[key] += cap
+        share = fee_shares[key][fee.subscription_id]
+        share[:cap] += cap
+        share[:sub_total] += fee.sub_total_excluding_taxes_amount_cents
+        share[:taxes] += booked_tax.fetch(fee)
       end
 
       ordered = remaining.sort_by { |_, v| -v }.to_h

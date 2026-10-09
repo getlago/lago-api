@@ -93,6 +93,11 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       expect(invoice.prepaid_credit_amount_cents).to eq(100)
     end
 
+    it "records on the wallet transaction what it paid per billable metric" do
+      expect(result.wallet_transactions.first.reload.billable_metric_amounts)
+        .to eq({subscription.id => {fee.charge.billable_metric_id => 100}})
+    end
+
     it "updates wallet balance" do
       subject
       wallet = priority_wallet.reload
@@ -138,6 +143,15 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
         expect(wallet_transaction_2.amount).to eq(5.0)
         expect(result.prepaid_credit_amount_cents).to eq(1500)
         expect(invoice.prepaid_credit_amount_cents).to eq(1500)
+      end
+
+      it "records each wallet transaction's part of the billable metric" do
+        amounts = result.wallet_transactions.to_h { [it.wallet_id, it.reload.billable_metric_amounts] }
+
+        expect(amounts).to eq({
+          priority_wallet.id => {subscription.id => {fee.charge.billable_metric_id => 1000}},
+          priority_limited_charge_wallet.id => {subscription.id => {fee.charge.billable_metric_id => 500}}
+        })
       end
 
       it "updates wallets balance" do

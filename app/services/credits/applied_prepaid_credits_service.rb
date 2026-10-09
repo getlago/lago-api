@@ -22,11 +22,11 @@ module Credits
 
       ActiveRecord::Base.transaction do
         Customers::LockService.call(customer:, scope: :prepaid_credit) do
-          # per each wallet we create a single wallet transaction. wallets_transaction_amounts is a hash with wallet and total transaction amount
-          wallets_transaction_amounts = AllocatePrepaidCreditsByWalletsService.call!(invoice:).wallet_transactions
+          # per each wallet we create a single wallet transaction. wallet_transactions is a hash with wallet and total transaction amount
+          allocation = AllocatePrepaidCreditsByWalletsService.call!(invoice:)
 
-          wallets_transaction_amounts.each do |wallet, amount_cents|
-            wallet_transaction = create_wallet_transaction(wallet, amount_cents)
+          allocation.wallet_transactions.each do |wallet, amount_cents|
+            wallet_transaction = create_wallet_transaction(wallet, amount_cents, allocation.billable_metric_amounts[wallet])
             if wallet.traceable?
               WalletTransactions::TrackConsumptionService.call!(outbound_wallet_transaction: wallet_transaction)
             end
@@ -92,12 +92,13 @@ module Credits
       invoice.prepaid_purchased_credit_amount_cents = purchased_amount if purchased_amount > 0
     end
 
-    def create_wallet_transaction(wallet, amount_cents)
+    def create_wallet_transaction(wallet, amount_cents, billable_metric_amounts)
       wallet_credit = WalletCredit.from_amount_cents(wallet:, amount_cents:)
 
       result = WalletTransactions::CreateService.call!(
         wallet:,
         wallet_credit:,
+        billable_metric_amounts:,
         invoice_id: invoice.id,
         transaction_type: :outbound,
         status: :settled,

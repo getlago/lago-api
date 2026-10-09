@@ -94,6 +94,136 @@ RSpec.describe Credits::AllocatePrepaidCreditsByWalletsService do
       end
     end
 
+    describe "billable metric amounts" do
+      let(:billable_metric_id) { fee.charge.billable_metric_id }
+
+      it "records what each wallet paid for each billable metric" do
+        expect(result.billable_metric_amounts).to eq({priority_wallet => {subscription.id => {billable_metric_id => 100}}})
+      end
+
+      context "when the first wallet runs out" do
+        let(:amount_cents) { 1500 }
+        let(:fee_amount_cents) { 1500 }
+
+        it "records each wallet's part of the billable metric" do
+          expect(result.billable_metric_amounts).to eq({
+            priority_wallet => {subscription.id => {billable_metric_id => 1000}},
+            priority_limited_charge_wallet => {subscription.id => {billable_metric_id => 500}}
+          })
+        end
+      end
+
+      context "with a subscription fee on the invoice" do
+        let(:wallets) { [priority_wallet] }
+        let(:amount_cents) { 110 }
+        let(:taxes_amount_cents) { 10 }
+        let(:fee) { create(:charge_fee, invoice:, subscription:, amount_cents: 40, precise_amount_cents: 40, taxes_precise_amount_cents: 4) }
+
+        before { create(:fee, invoice:, subscription:, amount_cents: 60, precise_amount_cents: 60, taxes_precise_amount_cents: 6) }
+
+        it "records only the charge usage, without its tax, which is what usage is attributed from" do
+          expect(result.wallet_transactions).to eq({priority_wallet => 110})
+          expect(result.billable_metric_amounts).to eq({priority_wallet => {subscription.id => {billable_metric_id => 40}}})
+        end
+      end
+
+      context "when a fee cap carries a fraction of a cent" do
+        let(:wallets) { [priority_wallet] }
+        let(:amount_cents) { 50 }
+        let(:fee) do
+          create(:charge_fee, invoice:, subscription:, amount_cents: 44, precise_amount_cents: 44,
+            taxes_precise_amount_cents: 0, precise_credit_notes_amount_cents: 0.6)
+        end
+
+        it "records whole cents, rounded the way the wallet transaction is" do
+          expect(result.billable_metric_amounts).to eq({priority_wallet => {subscription.id => {billable_metric_id => 43}}})
+        end
+      end
+
+      context "when several billable metrics each carry half a cent" do
+        let(:wallets) { [priority_wallet] }
+        let(:amount_cents) { 40 }
+        let(:fee) do
+          create(:charge_fee, invoice:, subscription:, amount_cents: 21, precise_amount_cents: 21,
+            taxes_precise_amount_cents: 0, precise_credit_notes_amount_cents: 0.5)
+        end
+        let(:other_fee) do
+          create(:charge_fee, invoice:, subscription:, amount_cents: 11, precise_amount_cents: 11,
+            taxes_precise_amount_cents: 0, precise_credit_notes_amount_cents: 0.5)
+        end
+
+        before { other_fee }
+
+        it "never records more than the wallet transaction" do
+          expect(result.wallet_transactions[priority_wallet].round).to eq(31)
+          expect(result.billable_metric_amounts[priority_wallet]).to eq({
+            subscription.id => {billable_metric_id => 21, other_fee.charge.billable_metric_id => 10}
+          })
+        end
+      end
+
+      context "when two subscriptions on the invoice share the billable metric" do
+        let(:wallets) { [priority_wallet] }
+        let(:amount_cents) { 400 }
+        let(:other_subscription) { create(:subscription, customer:) }
+        let(:fee) { create(:charge_fee, invoice:, subscription:, amount_cents: 300, precise_amount_cents: 300, taxes_precise_amount_cents: 0) }
+
+        before do
+          create(:charge_fee, invoice:, subscription: other_subscription, charge: fee.charge, amount_cents: 100,
+            precise_amount_cents: 100, taxes_precise_amount_cents: 0)
+        end
+
+        it "splits what the wallet paid between them by their fees" do
+          expect(result.billable_metric_amounts).to eq({
+            priority_wallet => {
+              subscription.id => {billable_metric_id => 300},
+              other_subscription.id => {billable_metric_id => 100}
+            }
+          })
+        end
+      end
+
+      context "when subscriptions sharing the billable metric are taxed differently" do
+        let(:wallets) { [priority_wallet] }
+        let(:amount_cents) { 300 }
+        let(:taxes_amount_cents) { 100 }
+        let(:other_subscription) { create(:subscription, customer:) }
+        let(:fee) { create(:charge_fee, invoice:, subscription:, amount_cents: 100, precise_amount_cents: 100, taxes_precise_amount_cents: 0) }
+
+        before do
+          create(:charge_fee, invoice:, subscription: other_subscription, charge: fee.charge, amount_cents: 100,
+            precise_amount_cents: 100, taxes_amount_cents: 100, taxes_precise_amount_cents: 100)
+        end
+
+        it "removes each subscription's own tax" do
+          expect(result.billable_metric_amounts).to eq({
+            priority_wallet => {
+              subscription.id => {billable_metric_id => 100},
+              other_subscription.id => {billable_metric_id => 100}
+            }
+          })
+        end
+      end
+
+      context "when the fee targets a wallet" do
+        around { |test| lago_premium! { test.run } }
+
+        let(:organization) { create(:organization, premium_integrations: ["events_targeting_wallets"]) }
+        let(:customer) { create(:customer, organization:) }
+        let(:target_wallet) { create(:wallet, :with_inbound_transaction, customer:, code: "target", balance_cents: 1000, credits_balance: 10.0) }
+        let(:wallets) { [priority_wallet, target_wallet] }
+        let(:charge) { create(:standard_charge, organization:, accepts_target_wallet: true) }
+        let(:fee) do
+          create(:charge_fee, invoice:, subscription:, charge:, amount_cents: 100, precise_amount_cents: 100,
+            taxes_precise_amount_cents: 0, grouped_by: {"target_wallet_code" => "target"})
+        end
+
+        it "records it on the targeted wallet, ahead of priority" do
+          expect(result.billable_metric_amounts).to eq({target_wallet => {subscription.id => {billable_metric_id => 100}}})
+        end
+      end
+    end
+
     context "when priority wallet credits are less than invoice amount" do
       let(:amount_cents) { 1500 }
       let(:fee_amount_cents) { 1500 }
