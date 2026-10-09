@@ -1,0 +1,630 @@
+{
+  "phase": "baseline",
+  "mode": "http",
+  "clients": 20,
+  "duration_s": 30.0,
+  "generated_at": "2026-09-09T02:32:57Z",
+  "target": "http://localhost:3000",
+  "cases": [
+    {
+      "name": "control",
+      "selective": false,
+      "page": 1,
+      "requests": 20,
+      "rps": 0.7,
+      "errors": 19,
+      "error_rate": 0.95,
+      "p50_ms": 51394.8,
+      "p95_ms": 51394.8,
+      "p99_ms": 51394.8,
+      "max_ms": 51394.8,
+      "error_samples": [
+        "HTTP 500: {\"status\":500,\"error\":\"Internal Server Error\",\"exception\":\"#\\u003cActiveRecord::QueryCanceled:\\\"PG::QueryCanceled: ERROR"
+      ]
+    },
+    {
+      "name": "control_page50",
+      "selective": false,
+      "page": 50,
+      "requests": 20,
+      "rps": 0.7,
+      "errors": 19,
+      "error_rate": 0.95,
+      "p50_ms": 51379.6,
+      "p95_ms": 51379.6,
+      "p99_ms": 51379.6,
+      "max_ms": 51379.6,
+      "error_samples": [
+        "HTTP 500: {\"status\":500,\"error\":\"Internal Server Error\",\"exception\":\"#\\u003cActiveRecord::QueryCanceled:\\\"PG::QueryCanceled: ERROR"
+      ]
+    },
+    {
+      "name": "status_common_succeeded",
+      "selective": false,
+      "page": 1,
+      "requests": 20,
+      "rps": 0.7,
+      "errors": 20,
+      "error_rate": 1.0,
+      "p50_ms": null,
+      "p95_ms": null,
+      "p99_ms": null,
+      "max_ms": null,
+      "error_samples": [
+        "HTTP 500: {\"status\":500,\"error\":\"Internal Server Error\",\"exception\":\"#\\u003cActiveRecord::QueryCanceled:\\\"PG::QueryCanceled: ERROR"
+      ]
+    },
+    {
+      "name": "status_common_succeeded_page50",
+      "selective": false,
+      "page": 50,
+      "requests": 20,
+      "rps": 0.7,
+      "errors": 19,
+      "error_rate": 0.95,
+      "p50_ms": 50229.5,
+      "p95_ms": 50229.5,
+      "p99_ms": 50229.5,
+      "max_ms": 50229.5,
+      "error_samples": [
+        "HTTP 500: {\"status\":500,\"error\":\"Internal Server Error\",\"exception\":\"#\\u003cActiveRecord::QueryCanceled:\\\"PG::QueryCanceled: ERROR"
+      ]
+    },
+    {
+      "name": "status_rare_failed",
+      "selective": true,
+      "page": 1,
+      "requests": 40,
+      "rps": 1.3,
+      "errors": 0,
+      "error_rate": 0.0,
+      "p50_ms": 22334.2,
+      "p95_ms": 43340.0,
+      "p99_ms": 43353.1,
+      "max_ms": 43353.1,
+      "error_samples": []
+    },
+    {
+      "name": "status_rare_pending",
+      "selective": true,
+      "page": 1,
+      "requests": 166,
+      "rps": 5.5,
+      "errors": 0,
+      "error_rate": 0.0,
+      "p50_ms": 2646.4,
+      "p95_ms": 9685.4,
+      "p99_ms": 12945.7,
+      "max_ms": 12952.4,
+      "error_samples": []
+    },
+    {
+      "name": "status_rare_processing",
+      "selective": true,
+      "page": 1,
+      "requests": 179,
+      "rps": 6.0,
+      "errors": 0,
+      "error_rate": 0.0,
+      "p50_ms": 2675.2,
+      "p95_ms": 8238.0,
+      "p99_ms": 8259.4,
+      "max_ms": 8259.8,
+      "error_samples": []
+    },
+    {
+      "name": "status_rare_pending_processing",
+      "selective": true,
+      "page": 1,
+      "requests": 57,
+      "rps": 1.9,
+      "errors": 0,
+      "error_rate": 0.0,
+      "p50_ms": 12532.6,
+      "p95_ms": 24907.5,
+      "p99_ms": 24924.9,
+      "max_ms": 24924.9,
+      "error_samples": []
+    },
+    {
+      "name": "amount_common_from_p50",
+      "selective": false,
+      "page": 1,
+      "requests": 20,
+      "rps": 0.7,
+      "errors": 20,
+      "error_rate": 1.0,
+      "p50_ms": null,
+      "p95_ms": null,
+      "p99_ms": null,
+      "max_ms": null,
+      "error_samples": [
+        "HTTP 500: {\"status\":500,\"error\":\"Internal Server Error\",\"exception\":\"#\\u003cActiveRecord::QueryCanceled:\\\"PG::QueryCanceled: ERROR"
+      ]
+    },
+    {
+      "name": "amount_rare_from_p99",
+      "selective": true,
+      "page": 1,
+      "requests": 193,
+      "rps": 6.4,
+      "errors": 0,
+      "error_rate": 0.0,
+      "p50_ms": 2661.7,
+      "p95_ms": 6906.6,
+      "p99_ms": 6951.5,
+      "max_ms": 6952.2,
+      "error_samples": []
+    },
+    {
+      "name": "amount_rare_range",
+      "selective": true,
+      "page": 1,
+      "requests": 233,
+      "rps": 7.8,
+      "errors": 0,
+      "error_rate": 0.0,
+      "p50_ms": 2578.0,
+      "p95_ms": 3963.4,
+      "p99_ms": 4773.6,
+      "max_ms": 5082.0,
+      "error_samples": []
+    },
+    {
+      "name": "created_7d",
+      "selective": true,
+      "page": 1,
+      "requests": 334,
+      "rps": 11.1,
+      "errors": 0,
+      "error_rate": 0.0,
+      "p50_ms": 1783.3,
+      "p95_ms": 2392.3,
+      "p99_ms": 3128.2,
+      "max_ms": 3563.3,
+      "error_samples": []
+    },
+    {
+      "name": "created_24m",
+      "selective": false,
+      "page": 1,
+      "requests": 20,
+      "rps": 0.7,
+      "errors": 20,
+      "error_rate": 1.0,
+      "p50_ms": null,
+      "p95_ms": null,
+      "p99_ms": null,
+      "max_ms": null,
+      "error_samples": [
+        "HTTP 500: {\"status\":500,\"error\":\"Internal Server Error\",\"exception\":\"#\\u003cActiveRecord::QueryCanceled:\\\"PG::QueryCanceled: ERROR"
+      ]
+    },
+    {
+      "name": "currency_common",
+      "selective": false,
+      "page": 1,
+      "requests": 20,
+      "rps": 0.7,
+      "errors": 17,
+      "error_rate": 0.85,
+      "p50_ms": 56284.2,
+      "p95_ms": 56285.7,
+      "p99_ms": 56285.7,
+      "max_ms": 56285.7,
+      "error_samples": [
+        "HTTP 500: {\"status\":500,\"error\":\"Internal Server Error\",\"exception\":\"#\\u003cActiveRecord::QueryCanceled:\\\"PG::QueryCanceled: ERROR"
+      ]
+    },
+    {
+      "name": "currency_rare",
+      "selective": true,
+      "page": 1,
+      "requests": 203,
+      "rps": 6.8,
+      "errors": 0,
+      "error_rate": 0.0,
+      "p50_ms": 2654.2,
+      "p95_ms": 6290.5,
+      "p99_ms": 6324.0,
+      "max_ms": 8610.6,
+      "error_samples": []
+    },
+    {
+      "name": "provider_common",
+      "selective": false,
+      "page": 1,
+      "requests": 20,
+      "rps": 0.7,
+      "errors": 20,
+      "error_rate": 1.0,
+      "p50_ms": null,
+      "p95_ms": null,
+      "p99_ms": null,
+      "max_ms": null,
+      "error_samples": [
+        "HTTP 500: {\"status\":500,\"error\":\"Internal Server Error\",\"exception\":\"#\\u003cActiveRecord::QueryCanceled:\\\"PG::QueryCanceled: ERROR"
+      ]
+    },
+    {
+      "name": "provider_rare",
+      "selective": true,
+      "page": 1,
+      "requests": 39,
+      "rps": 1.3,
+      "errors": 0,
+      "error_rate": 0.0,
+      "p50_ms": 25634.5,
+      "p95_ms": 46707.1,
+      "p99_ms": 47897.0,
+      "max_ms": 47897.0,
+      "error_samples": []
+    },
+    {
+      "name": "provider_miss",
+      "selective": true,
+      "page": 1,
+      "requests": 20,
+      "rps": 0.7,
+      "errors": 20,
+      "error_rate": 1.0,
+      "p50_ms": null,
+      "p95_ms": null,
+      "p99_ms": null,
+      "max_ms": null,
+      "error_samples": [
+        "HTTP 500: {\"status\":500,\"error\":\"Internal Server Error\",\"exception\":\"#\\u003cActiveRecord::QueryCanceled:\\\"PG::QueryCanceled: ERROR"
+      ]
+    },
+    {
+      "name": "method_common_json",
+      "selective": false,
+      "page": 1,
+      "requests": 20,
+      "rps": 0.7,
+      "errors": 20,
+      "error_rate": 1.0,
+      "p50_ms": null,
+      "p95_ms": null,
+      "p99_ms": null,
+      "max_ms": null,
+      "error_samples": [
+        "HTTP 500: {\"status\":500,\"error\":\"Internal Server Error\",\"exception\":\"#\\u003cActiveRecord::QueryCanceled:\\\"PG::QueryCanceled: ERROR"
+      ]
+    },
+    {
+      "name": "method_rare_json",
+      "selective": true,
+      "page": 1,
+      "requests": 20,
+      "rps": 0.7,
+      "errors": 20,
+      "error_rate": 1.0,
+      "p50_ms": null,
+      "p95_ms": null,
+      "p99_ms": null,
+      "max_ms": null,
+      "error_samples": [
+        "HTTP 500: {\"status\":500,\"error\":\"Internal Server Error\",\"exception\":\"#\\u003cActiveRecord::QueryCanceled:\\\"PG::QueryCanceled: ERROR"
+      ]
+    },
+    {
+      "name": "method_fallback_only",
+      "selective": true,
+      "page": 1,
+      "requests": 20,
+      "rps": 0.7,
+      "errors": 20,
+      "error_rate": 1.0,
+      "p50_ms": null,
+      "p95_ms": null,
+      "p99_ms": null,
+      "max_ms": null,
+      "error_samples": [
+        "HTTP 500: {\"status\":500,\"error\":\"Internal Server Error\",\"exception\":\"#\\u003cActiveRecord::QueryCanceled:\\\"PG::QueryCanceled: ERROR"
+      ]
+    },
+    {
+      "name": "method_multi",
+      "selective": false,
+      "page": 1,
+      "requests": 20,
+      "rps": 0.7,
+      "errors": 20,
+      "error_rate": 1.0,
+      "p50_ms": null,
+      "p95_ms": null,
+      "p99_ms": null,
+      "max_ms": null,
+      "error_samples": [
+        "HTTP 500: {\"status\":500,\"error\":\"Internal Server Error\",\"exception\":\"#\\u003cActiveRecord::QueryCanceled:\\\"PG::QueryCanceled: ERROR"
+      ]
+    },
+    {
+      "name": "receipt_hit",
+      "selective": true,
+      "page": 1,
+      "requests": 20,
+      "rps": 0.7,
+      "errors": 20,
+      "error_rate": 1.0,
+      "p50_ms": null,
+      "p95_ms": null,
+      "p99_ms": null,
+      "max_ms": null,
+      "error_samples": [
+        "HTTP 500: {\"status\":500,\"error\":\"Internal Server Error\",\"exception\":\"#\\u003cActiveRecord::QueryCanceled:\\\"PG::QueryCanceled: ERROR"
+      ]
+    },
+    {
+      "name": "receipt_miss",
+      "selective": true,
+      "page": 1,
+      "requests": 20,
+      "rps": 0.7,
+      "errors": 20,
+      "error_rate": 1.0,
+      "p50_ms": null,
+      "p95_ms": null,
+      "p99_ms": null,
+      "max_ms": null,
+      "error_samples": [
+        "HTTP 500: {\"status\":500,\"error\":\"Internal Server Error\",\"exception\":\"#\\u003cActiveRecord::QueryCanceled:\\\"PG::QueryCanceled: ERROR"
+      ]
+    },
+    {
+      "name": "invoice_hit_direct",
+      "selective": true,
+      "page": 1,
+      "requests": 40,
+      "rps": 1.3,
+      "errors": 40,
+      "error_rate": 1.0,
+      "p50_ms": null,
+      "p95_ms": null,
+      "p99_ms": null,
+      "max_ms": null,
+      "error_samples": [
+        "HTTP 500: {\"status\":500,\"error\":\"Internal Server Error\",\"exception\":\"#\\u003cActiveRecord::ConnectionFailed:\\\"PQconsumeInput() serv",
+        "HTTP 500: {\"status\":500,\"error\":\"Internal Server Error\",\"exception\":\"#\\u003cActiveRecord::QueryCanceled:\\\"PG::QueryCanceled: ERROR"
+      ]
+    },
+    {
+      "name": "invoice_hit_request",
+      "selective": true,
+      "page": 1,
+      "requests": 38,
+      "rps": 1.3,
+      "errors": 38,
+      "error_rate": 1.0,
+      "p50_ms": null,
+      "p95_ms": null,
+      "p99_ms": null,
+      "max_ms": null,
+      "error_samples": [
+        "HTTP 500: {\"status\":500,\"error\":\"Internal Server Error\",\"exception\":\"#\\u003cActiveRecord::ConnectionFailed:\\\"PQconsumeInput() serv",
+        "HTTP 500: {\"status\":500,\"error\":\"Internal Server Error\",\"exception\":\"#\\u003cActiveRecord::QueryCanceled:\\\"PG::QueryCanceled: ERROR"
+      ]
+    },
+    {
+      "name": "invoice_miss",
+      "selective": true,
+      "page": 1,
+      "requests": 20,
+      "rps": 0.7,
+      "errors": 20,
+      "error_rate": 1.0,
+      "p50_ms": null,
+      "p95_ms": null,
+      "p99_ms": null,
+      "max_ms": null,
+      "error_samples": [
+        "HTTP 500: {\"status\":500,\"error\":\"Internal Server Error\",\"exception\":\"#\\u003cActiveRecord::QueryCanceled:\\\"PG::QueryCanceled: ERROR"
+      ]
+    },
+    {
+      "name": "customer_heavy",
+      "selective": true,
+      "page": 1,
+      "requests": 153,
+      "rps": 5.1,
+      "errors": 0,
+      "error_rate": 0.0,
+      "p50_ms": 3873.6,
+      "p95_ms": 5860.3,
+      "p99_ms": 7430.9,
+      "max_ms": 9444.4,
+      "error_samples": []
+    },
+    {
+      "name": "customer_light",
+      "selective": true,
+      "page": 1,
+      "requests": 346,
+      "rps": 11.5,
+      "errors": 0,
+      "error_rate": 0.0,
+      "p50_ms": 1752.6,
+      "p95_ms": 2204.5,
+      "p99_ms": 2874.6,
+      "max_ms": 3060.5,
+      "error_samples": []
+    },
+    {
+      "name": "payment_type_manual",
+      "selective": false,
+      "page": 1,
+      "requests": 40,
+      "rps": 1.3,
+      "errors": 0,
+      "error_rate": 0.0,
+      "p50_ms": 17043.7,
+      "p95_ms": 26829.8,
+      "p99_ms": 26834.8,
+      "max_ms": 26834.8,
+      "error_samples": []
+    },
+    {
+      "name": "payment_type_provider",
+      "selective": false,
+      "page": 1,
+      "requests": 20,
+      "rps": 0.7,
+      "errors": 19,
+      "error_rate": 0.95,
+      "p50_ms": 45414.8,
+      "p95_ms": 45414.8,
+      "p99_ms": 45414.8,
+      "max_ms": 45414.8,
+      "error_samples": [
+        "HTTP 500: {\"status\":500,\"error\":\"Internal Server Error\",\"exception\":\"#\\u003cActiveRecord::QueryCanceled:\\\"PG::QueryCanceled: ERROR"
+      ]
+    },
+    {
+      "name": "payable_type_request",
+      "selective": false,
+      "page": 1,
+      "requests": 212,
+      "rps": 7.1,
+      "errors": 0,
+      "error_rate": 0.0,
+      "p50_ms": 2636.1,
+      "p95_ms": 5076.7,
+      "p99_ms": 5145.7,
+      "max_ms": 5251.2,
+      "error_samples": []
+    },
+    {
+      "name": "payable_type_invoice",
+      "selective": false,
+      "page": 1,
+      "requests": 20,
+      "rps": 0.7,
+      "errors": 19,
+      "error_rate": 0.95,
+      "p50_ms": 54239.9,
+      "p95_ms": 54239.9,
+      "p99_ms": 54239.9,
+      "max_ms": 54239.9,
+      "error_samples": [
+        "HTTP 500: {\"status\":500,\"error\":\"Internal Server Error\",\"exception\":\"#\\u003cActiveRecord::QueryCanceled:\\\"PG::QueryCanceled: ERROR"
+      ]
+    },
+    {
+      "name": "search_term",
+      "selective": true,
+      "page": 1,
+      "requests": 351,
+      "rps": 11.7,
+      "errors": 0,
+      "error_rate": 0.0,
+      "p50_ms": 1701.7,
+      "p95_ms": 2119.3,
+      "p99_ms": 3074.3,
+      "max_ms": 3368.8,
+      "error_samples": []
+    },
+    {
+      "name": "search_term_status",
+      "selective": true,
+      "page": 1,
+      "requests": 344,
+      "rps": 11.5,
+      "errors": 0,
+      "error_rate": 0.0,
+      "p50_ms": 1749.4,
+      "p95_ms": 2913.3,
+      "p99_ms": 3283.3,
+      "max_ms": 3425.2,
+      "error_samples": []
+    },
+    {
+      "name": "combo_status_currency_date",
+      "selective": true,
+      "page": 1,
+      "requests": 333,
+      "rps": 11.1,
+      "errors": 0,
+      "error_rate": 0.0,
+      "p50_ms": 1790.3,
+      "p95_ms": 2500.8,
+      "p99_ms": 3386.7,
+      "max_ms": 3729.3,
+      "error_samples": []
+    },
+    {
+      "name": "combo_status_amount",
+      "selective": true,
+      "page": 1,
+      "requests": 40,
+      "rps": 1.3,
+      "errors": 0,
+      "error_rate": 0.0,
+      "p50_ms": 20788.9,
+      "p95_ms": 20840.6,
+      "p99_ms": 27367.6,
+      "max_ms": 27367.6,
+      "error_samples": []
+    },
+    {
+      "name": "combo_customer_status_date",
+      "selective": true,
+      "page": 1,
+      "requests": 170,
+      "rps": 5.7,
+      "errors": 0,
+      "error_rate": 0.0,
+      "p50_ms": 3332.2,
+      "p95_ms": 5876.8,
+      "p99_ms": 6887.4,
+      "max_ms": 7350.1,
+      "error_samples": []
+    },
+    {
+      "name": "combo_provider_status",
+      "selective": true,
+      "page": 1,
+      "requests": 20,
+      "rps": 0.7,
+      "errors": 19,
+      "error_rate": 0.95,
+      "p50_ms": 48962.4,
+      "p95_ms": 48962.4,
+      "p99_ms": 48962.4,
+      "max_ms": 48962.4,
+      "error_samples": [
+        "HTTP 500: {\"status\":500,\"error\":\"Internal Server Error\",\"exception\":\"#\\u003cActiveRecord::QueryCanceled:\\\"PG::QueryCanceled: ERROR"
+      ]
+    },
+    {
+      "name": "five_filter_common",
+      "selective": false,
+      "page": 1,
+      "requests": 20,
+      "rps": 0.7,
+      "errors": 20,
+      "error_rate": 1.0,
+      "p50_ms": null,
+      "p95_ms": null,
+      "p99_ms": null,
+      "max_ms": null,
+      "error_samples": [
+        "HTTP 500: {\"status\":500,\"error\":\"Internal Server Error\",\"exception\":\"#\\u003cActiveRecord::QueryCanceled:\\\"PG::QueryCanceled: ERROR"
+      ]
+    },
+    {
+      "name": "five_filter_rare",
+      "selective": true,
+      "page": 1,
+      "requests": 365,
+      "rps": 12.2,
+      "errors": 0,
+      "error_rate": 0.0,
+      "p50_ms": 1606.9,
+      "p95_ms": 1997.5,
+      "p99_ms": 2920.0,
+      "max_ms": 3026.0,
+      "error_samples": []
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+-- case: status_rare_pending (list) phase: after selective: true
+-- filters: {"payment_status":["pending"]} search_term: nil page: 1
+-- runs_ms: [0.3, 0.1, 0.1]
+SELECT "payments"."id", "payments"."invoice_id", "payments"."payment_provider_id", "payments"."payment_provider_customer_id", "payments"."amount_cents", "payments"."amount_currency", "payments"."provider_payment_id", "payments"."status", "payments"."created_at", "payments"."updated_at", "payments"."payable_type", "payments"."payable_id", "payments"."provider_payment_data", "payments"."payable_payment_status", "payments"."payment_type", "payments"."reference", "payments"."provider_payment_method_data", "payments"."provider_payment_method_id", "payments"."organization_id", "payments"."customer_id", "payments"."error_code", "payments"."payment_method_id" FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND "payments"."payable_payment_status" = 'pending' ORDER BY "payments"."created_at" DESC, "payments"."id" ASC LIMIT 20 OFFSET 0
+
+Limit  (cost=0.42..140.19 rows=20 width=330) (actual time=0.012..0.043 rows=20 loops=1)
+  Buffers: shared hit=103
+  ->  Index Scan using index_payments_on_org_pending_processing_created_at on payments  (cost=0.42..317455.83 rows=45424 width=330) (actual time=0.012..0.042 rows=20 loops=1)
+        Index Cond: ((organization_id = '<org-uuid>'::uuid) AND (payable_payment_status = 'pending'::payment_payable_payment_status))
+        Filter: ((customer_id IS NOT NULL) AND (payable_id IS NOT NULL) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+        Buffers: shared hit=103
+        SubPlan 1
+          ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (actual time=0.001..0.001 rows=1 loops=20)
+                Index Cond: (id = payments.payable_id)
+                Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                Buffers: shared hit=80
+Planning:
+  Buffers: shared hit=8
+Planning Time: 0.116 ms
+Execution Time: 0.063 ms

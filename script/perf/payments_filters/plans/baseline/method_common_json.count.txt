@@ -1,0 +1,41 @@
+-- case: method_common_json (count) phase: baseline selective: false
+-- filters: {"payment_method_type":["card"]} search_term: nil page: 1
+SELECT COUNT(*) FROM "payments" LEFT JOIN payment_methods ON payment_methods.id = payments.payment_method_id WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND (COALESCE(NULLIF(payments.provider_payment_method_data->>'type', ''), payment_methods.provider_method_type) IN ('card'))
+
+Aggregate  (cost=13585517.46..13585517.47 rows=1 width=8) (actual time=14712.277..14712.283 rows=1 loops=1)
+  Buffers: shared hit=18998944 read=163895
+  I/O Timings: shared/local read=1015.517
+  ->  Hash Left Join  (cost=3315.51..13585486.29 rows=12466 width=0) (actual time=174.376..14602.775 rows=3950520 loops=1)
+        Hash Cond: (payments.payment_method_id = payment_methods.id)
+        Filter: (COALESCE(NULLIF((payments.provider_payment_method_data ->> 'type'::text), ''::text), (payment_methods.provider_method_type)::text) = 'card'::text)
+        Rows Removed by Filter: 1002199
+        Buffers: shared hit=18998944 read=163895
+        I/O Timings: shared/local read=1015.517
+        ->  Index Scan using index_payments_on_organization_id on payments  (cost=0.43..13575625.91 rows=2493246 width=58) (actual time=161.102..13152.336 rows=4952719 loops=1)
+              Index Cond: (organization_id = '<org-uuid>'::uuid)
+              Filter: ((customer_id IS NOT NULL) AND (payable_id IS NOT NULL) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+              Rows Removed by Filter: 47281
+              Buffers: shared hit=18998923 read=162425
+              I/O Timings: shared/local read=1012.483
+              SubPlan 1
+                ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (actual time=0.002..0.002 rows=1 loops=4749834)
+                      Index Cond: (id = payments.payable_id)
+                      Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                      Rows Removed by Filter: 0
+                      Buffers: shared hit=18998737 read=599
+                      I/O Timings: shared/local read=9.635
+        ->  Hash  (cost=2301.70..2301.70 rows=81070 width=22) (actual time=13.098..13.099 rows=81070 loops=1)
+              Buckets: 131072  Batches: 1  Memory Usage: 5308kB
+              Buffers: shared hit=21 read=1470
+              I/O Timings: shared/local read=3.034
+              ->  Seq Scan on payment_methods  (cost=0.00..2301.70 rows=81070 width=22) (actual time=0.019..6.933 rows=81070 loops=1)
+                    Buffers: shared hit=21 read=1470
+                    I/O Timings: shared/local read=3.034
+Planning:
+  Buffers: shared hit=24
+Planning Time: 0.179 ms
+JIT:
+  Functions: 26
+  Options: Inlining true, Optimization true, Expressions true, Deforming true
+  Timing: Generation 1.694 ms, Inlining 11.489 ms, Optimization 80.683 ms, Emission 69.028 ms, Total 162.893 ms
+Execution Time: 14714.496 ms

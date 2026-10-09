@@ -1,0 +1,29 @@
+-- case: five_filter_rare (count) phase: after selective: true
+-- filters: {"payment_status":["failed"],"currency":"GBP","created_at_from":"2026-09-01","created_at_to":"2026-09-08","amount_from":4914,"payment_provider_type":["gocardless"]} search_term: nil page: 1
+-- runs_ms: [19.8, 18.8, 16.9]
+SELECT COUNT(*) FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND "payments"."amount_currency" = 'GBP' AND "payments"."payable_payment_status" = 'failed' AND (payments.amount_cents >= 4914::bigint) AND "payments"."created_at" >= '2026-09-01 00:00:00' AND "payments"."created_at" <= '2026-09-08 23:59:59.999999' AND "payments"."payment_provider_id" = '<uuid>'
+
+Aggregate  (cost=9686.95..9686.96 rows=1 width=8) (actual time=18.776..18.777 rows=1 loops=1)
+  Buffers: shared hit=1072
+  ->  Bitmap Heap Scan on payments  (cost=6389.91..9686.95 rows=1 width=0) (actual time=18.775..18.776 rows=0 loops=1)
+        Recheck Cond: ((organization_id = '<org-uuid>'::uuid) AND (created_at >= '2026-09-01 00:00:00'::timestamp without time zone) AND (created_at <= '2026-09-08 23:59:59.999999'::timestamp without time zone) AND (payment_provider_id = '<uuid>'::uuid))
+        Filter: ((customer_id IS NOT NULL) AND (payable_id IS NOT NULL) AND (amount_cents >= '4914'::bigint) AND ((amount_currency)::text = 'GBP'::text) AND (payable_payment_status = 'failed'::payment_payable_payment_status) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+        Rows Removed by Filter: 406
+        Heap Blocks: exact=405
+        Buffers: shared hit=1072
+        ->  BitmapAnd  (cost=6389.91..6389.91 rows=872 width=0) (actual time=18.359..18.360 rows=0 loops=1)
+              Buffers: shared hit=667
+              ->  Bitmap Index Scan on index_payments_by_cursor  (cost=0.00..159.07 rows=7753 width=0) (actual time=0.246..0.247 rows=2648 loops=1)
+                    Index Cond: ((organization_id = '<org-uuid>'::uuid) AND (created_at >= '2026-09-01 00:00:00'::timestamp without time zone) AND (created_at <= '2026-09-08 23:59:59.999999'::timestamp without time zone))
+                    Buffers: shared hit=23
+              ->  Bitmap Index Scan on index_payments_on_payment_provider_id  (cost=0.00..6230.59 rows=737554 width=0) (actual time=17.829..17.829 rows=749818 loops=1)
+                    Index Cond: (payment_provider_id = '<uuid>'::uuid)
+                    Buffers: shared hit=644
+        SubPlan 1
+          ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (never executed)
+                Index Cond: (id = payments.payable_id)
+                Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+Planning:
+  Buffers: shared hit=8
+Planning Time: 0.221 ms
+Execution Time: 18.833 ms

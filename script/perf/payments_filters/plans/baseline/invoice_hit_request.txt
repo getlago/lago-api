@@ -1,0 +1,51 @@
+-- case: invoice_hit_request (list) phase: baseline selective: true
+-- filters: {"invoice_number":"her-1556-202609-000765141"} search_term: nil page: 1
+SELECT "payments"."id", "payments"."invoice_id", "payments"."payment_provider_id", "payments"."payment_provider_customer_id", "payments"."amount_cents", "payments"."amount_currency", "payments"."provider_payment_id", "payments"."status", "payments"."created_at", "payments"."updated_at", "payments"."payable_type", "payments"."payable_id", "payments"."provider_payment_data", "payments"."payable_payment_status", "payments"."payment_type", "payments"."reference", "payments"."provider_payment_method_data", "payments"."provider_payment_method_id", "payments"."organization_id", "payments"."customer_id", "payments"."error_code", "payments"."payment_method_id" FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND (EXISTS ( SELECT 1 FROM invoices WHERE invoices.organization_id = '<org-uuid>' AND LOWER(invoices.number) = LOWER('her-1556-202609-000765141') AND ( (payments.payable_type = 'Invoice' AND invoices.id = payments.payable_id) OR (payments.payable_type = 'PaymentRequest' AND EXISTS ( SELECT 1 FROM invoices_payment_requests WHERE invoices_payment_requests.payment_request_id = payments.payable_id AND invoices_payment_requests.invoice_id = invoices.id )) ) )) ORDER BY "payments"."created_at" DESC, "payments"."id" ASC LIMIT 20 OFFSET 0
+
+Limit  (cost=1000.56..24038570.74 rows=20 width=330) (actual time=1935.709..83840.740 rows=1 loops=1)
+  Buffers: shared hit=21201392 read=3070354
+  I/O Timings: shared/local read=54826.375
+  ->  Nested Loop Semi Join  (cost=1000.56..85076173164.12 rows=70786 width=330) (actual time=1761.283..83666.309 rows=1 loops=1)
+        Join Filter: ((((payments.payable_type)::text = 'Invoice'::text) AND (invoices.id = payments.payable_id)) OR (((payments.payable_type)::text = 'PaymentRequest'::text) AND (hashed SubPlan 3)))
+        Rows Removed by Join Filter: 4952718
+        Buffers: shared hit=21201392 read=3070354
+        I/O Timings: shared/local read=54826.375
+        ->  Index Scan using index_payments_by_cursor on payments  (cost=0.56..13616707.68 rows=2493246 width=330) (actual time=1.082..80188.038 rows=4952719 loops=1)
+              Index Cond: (organization_id = '<org-uuid>'::uuid)
+              Filter: ((customer_id IS NOT NULL) AND (payable_id IS NOT NULL) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+              Rows Removed by Filter: 47281
+              Buffers: shared hit=21087593 read=2947433
+              I/O Timings: shared/local read=51805.554
+              SubPlan 1
+                ->  Index Scan using invoices_pkey on invoices invoices_1  (cost=0.43..2.66 rows=1 width=0) (actual time=0.012..0.012 rows=1 loops=4749834)
+                      Index Cond: (id = payments.payable_id)
+                      Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                      Rows Removed by Filter: 0
+                      Buffers: shared hit=17471319 read=1528017
+                      I/O Timings: shared/local read=36652.872
+        ->  Materialize  (cost=1000.00..273258.07 rows=22437 width=16) (actual time=0.000..0.000 rows=1 loops=4952719)
+              Buffers: shared hit=113799 read=113089
+              I/O Timings: shared/local read=2986.872
+              ->  Gather  (cost=1000.00..273145.88 rows=22437 width=16) (actual time=1494.704..1494.910 rows=1 loops=1)
+                    Workers Planned: 2
+                    Workers Launched: 2
+                    Buffers: shared hit=113799 read=113089
+                    I/O Timings: shared/local read=2986.872
+                    ->  Parallel Seq Scan on invoices  (cost=0.00..269902.18 rows=9349 width=16) (actual time=1477.632..1477.692 rows=0 loops=3)
+                          Filter: ((organization_id = '<org-uuid>'::uuid) AND (lower((number)::text) = 'her-1556-202609-000765141'::text))
+                          Rows Removed by Filter: 1966358
+                          Buffers: shared hit=113799 read=113089
+                          I/O Timings: shared/local read=2986.872
+        SubPlan 3
+          ->  Seq Scan on invoices_payment_requests  (cost=0.00..17205.38 rows=737338 width=32) (actual time=9.755..78.417 rows=737338 loops=1)
+                Buffers: shared read=9832
+                I/O Timings: shared/local read=33.949
+Planning:
+  Buffers: shared hit=6 read=5
+  I/O Timings: shared/local read=0.570
+Planning Time: 1.406 ms
+JIT:
+  Functions: 49
+  Options: Inlining true, Optimization true, Expressions true, Deforming true
+  Timing: Generation 7.542 ms, Inlining 64.079 ms, Optimization 118.912 ms, Emission 102.503 ms, Total 293.035 ms
+Execution Time: 83846.898 ms

@@ -1,0 +1,2028 @@
+{
+  "phase": "after",
+  "rebuilt_from_plans": true,
+  "cases": [
+    {
+      "name": "amount_common_from_p50",
+      "page": 1,
+      "selective": false,
+      "filters": {
+        "amount_from": 4914
+      },
+      "search_term": null,
+      "count": {
+        "ms": 9161.0,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 4851663,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 9497639,
+        "shared_read": 164193,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          9161.0,
+          9264.5,
+          8918.3
+        ]
+      },
+      "list": {
+        "ms": 0.3,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 58,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 117,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          4.1,
+          0.3,
+          0.1
+        ]
+      },
+      "flags": [
+        "COUNT>500"
+      ]
+    },
+    {
+      "name": "amount_rare_from_p99",
+      "page": 1,
+      "selective": false,
+      "filters": {
+        "amount_from": 80467
+      },
+      "search_term": null,
+      "count": {
+        "ms": 1023.5,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 97188,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 352469,
+        "shared_read": 23,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          2176.3,
+          1023.5,
+          613.1
+        ]
+      },
+      "list": {
+        "ms": 2.7,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 60,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 2738,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          21.1,
+          2.7,
+          1.7
+        ]
+      },
+      "flags": [
+        "COUNT>500"
+      ]
+    },
+    {
+      "name": "amount_rare_range",
+      "page": 1,
+      "selective": false,
+      "filters": {
+        "amount_from": 80467,
+        "amount_to": 160934
+      },
+      "search_term": null,
+      "count": {
+        "ms": 523.1,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 78490,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 315860,
+        "shared_read": 0,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          523.1,
+          514.1,
+          543.2
+        ]
+      },
+      "list": {
+        "ms": 8.5,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 60,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 3209,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          11.1,
+          8.0,
+          8.5
+        ]
+      },
+      "flags": [
+        "COUNT>500"
+      ]
+    },
+    {
+      "name": "combo_customer_status_date",
+      "page": 1,
+      "selective": true,
+      "filters": {
+        "external_customer_id": "perf-cust-0-1",
+        "payment_status": [
+          "succeeded"
+        ],
+        "created_at_from": "2024-09-08",
+        "created_at_to": "2026-09-08"
+      },
+      "search_term": null,
+      "count": {
+        "ms": 465.2,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 5354374,
+        "nodes": [
+          "Bitmap Heap Scan",
+          "BitmapAnd",
+          "Bitmap Index Scan",
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 520301,
+        "shared_read": 0,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          465.2,
+          467.6,
+          456.5
+        ]
+      },
+      "list": {
+        "ms": 0.5,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 60,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 1191,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          7.4,
+          0.5,
+          0.4
+        ]
+      },
+      "flags": []
+    },
+    {
+      "name": "combo_provider_status",
+      "page": 1,
+      "selective": false,
+      "filters": {
+        "payment_provider_type": [
+          "stripe"
+        ],
+        "payment_status": [
+          "failed"
+        ]
+      },
+      "search_term": null,
+      "count": {
+        "ms": 5853.3,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 10126301,
+        "nodes": [
+          "Bitmap Heap Scan",
+          "BitmapAnd",
+          "Bitmap Index Scan",
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 2143493,
+        "shared_read": 222535,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          6277.8,
+          5853.3,
+          5536.7
+        ]
+      },
+      "list": {
+        "ms": 0.2,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 60,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 412,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          1.7,
+          0.1,
+          0.2
+        ]
+      },
+      "flags": [
+        "COUNT>500"
+      ]
+    },
+    {
+      "name": "combo_status_amount",
+      "page": 1,
+      "selective": false,
+      "filters": {
+        "payment_status": [
+          "failed"
+        ],
+        "amount_from": 4914
+      },
+      "search_term": null,
+      "count": {
+        "ms": 4364.5,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 704109,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 1327787,
+        "shared_read": 212285,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          4144.2,
+          4364.5,
+          4557.5
+        ]
+      },
+      "list": {
+        "ms": 0.2,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 60,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 584,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          0.7,
+          0.2,
+          0.2
+        ]
+      },
+      "flags": [
+        "COUNT>500"
+      ]
+    },
+    {
+      "name": "combo_status_currency_date",
+      "page": 1,
+      "selective": true,
+      "filters": {
+        "payment_status": [
+          "succeeded"
+        ],
+        "currency": "EUR",
+        "created_at_from": "2026-09-01",
+        "created_at_to": "2026-09-08"
+      },
+      "search_term": null,
+      "count": {
+        "ms": 5.6,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 4138,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 10755,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          8.4,
+          5.6,
+          4.6
+        ]
+      },
+      "list": {
+        "ms": 0.1,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 60,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 109,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          0.2,
+          0.1,
+          0.1
+        ]
+      },
+      "flags": []
+    },
+    {
+      "name": "control",
+      "page": 1,
+      "selective": false,
+      "filters": {},
+      "search_term": null,
+      "count": {
+        "ms": 15417.3,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 9702554,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 18989927,
+        "shared_read": 171421,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          15417.3,
+          14304.5,
+          17266.3
+        ]
+      },
+      "list": {
+        "ms": 0.1,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 60,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 105,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          1.6,
+          0.1,
+          0.1
+        ]
+      },
+      "flags": [
+        "COUNT>500"
+      ]
+    },
+    {
+      "name": "control_page50",
+      "page": 50,
+      "selective": false,
+      "filters": {},
+      "search_term": null,
+      "count": {
+        "ms": 14840.4,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 9702554,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 18991130,
+        "shared_read": 170218,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          14896.9,
+          14584.6,
+          14840.4
+        ]
+      },
+      "list": {
+        "ms": 3.5,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 1979,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 4860,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          28.6,
+          3.5,
+          1.8
+        ]
+      },
+      "flags": [
+        "COUNT>500"
+      ]
+    },
+    {
+      "name": "created_24m",
+      "page": 1,
+      "selective": false,
+      "filters": {
+        "created_at_from": "2024-09-08",
+        "created_at_to": "2026-09-08"
+      },
+      "search_term": null,
+      "count": {
+        "ms": 14673.2,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 9700367,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 18991594,
+        "shared_read": 165462,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          14211.8,
+          16234.0,
+          14673.2
+        ]
+      },
+      "list": {
+        "ms": 0.1,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 60,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 105,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          1.4,
+          0.1,
+          0.1
+        ]
+      },
+      "flags": [
+        "COUNT>500"
+      ]
+    },
+    {
+      "name": "created_7d",
+      "page": 1,
+      "selective": true,
+      "filters": {
+        "created_at_from": "2026-09-01",
+        "created_at_to": "2026-09-08"
+      },
+      "search_term": null,
+      "count": {
+        "ms": 9.6,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 5123,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 12699,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          9.6,
+          9.7,
+          8.2
+        ]
+      },
+      "list": {
+        "ms": 0.1,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 60,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 105,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          0.2,
+          0.1,
+          0.1
+        ]
+      },
+      "flags": []
+    },
+    {
+      "name": "currency_common",
+      "page": 1,
+      "selective": false,
+      "filters": {
+        "currency": "EUR"
+      },
+      "search_term": null,
+      "count": {
+        "ms": 14084.0,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 9217625,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 18047083,
+        "shared_read": 164189,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          14084.0,
+          14744.6,
+          13934.5
+        ]
+      },
+      "list": {
+        "ms": 0.1,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 60,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 106,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          2.0,
+          0.1,
+          0.1
+        ]
+      },
+      "flags": [
+        "COUNT>500"
+      ]
+    },
+    {
+      "name": "currency_rare",
+      "page": 1,
+      "selective": true,
+      "filters": {
+        "currency": "GBP"
+      },
+      "search_term": null,
+      "count": {
+        "ms": 636.3,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 97248,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 352466,
+        "shared_read": 18,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          2033.1,
+          636.3,
+          566.2
+        ]
+      },
+      "list": {
+        "ms": 2.5,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 60,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 2554,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          22.6,
+          2.5,
+          1.4
+        ]
+      },
+      "flags": [
+        "COUNT>500"
+      ]
+    },
+    {
+      "name": "customer_heavy",
+      "page": 1,
+      "selective": true,
+      "filters": {
+        "external_customer_id": "perf-cust-0-1"
+      },
+      "search_term": null,
+      "count": {
+        "ms": 532.8,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 5400131,
+        "nodes": [
+          "Bitmap Heap Scan",
+          "BitmapAnd",
+          "Bitmap Index Scan",
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 609885,
+        "shared_read": 0,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          573.9,
+          530.5,
+          532.8
+        ]
+      },
+      "list": {
+        "ms": 1.8,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 60,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 1191,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          10.4,
+          1.8,
+          0.6
+        ]
+      },
+      "flags": [
+        "COUNT>500"
+      ]
+    },
+    {
+      "name": "customer_light",
+      "page": 1,
+      "selective": true,
+      "filters": {
+        "external_customer_id": "perf-cust-0-23830"
+      },
+      "search_term": null,
+      "count": {
+        "ms": 0.1,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 105,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 265,
+        "shared_read": 0,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          0.1,
+          0.1,
+          0.1
+        ]
+      },
+      "list": {
+        "ms": 0.1,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 144,
+        "nodes": [
+          "Sort",
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 20,
+        "shared_hit": 265,
+        "shared_read": 0,
+        "cursor_index": false,
+        "sort_on_created_at": true,
+        "all_runs_ms": [
+          0.1,
+          0.1,
+          0.1
+        ]
+      },
+      "flags": []
+    },
+    {
+      "name": "five_filter_common",
+      "page": 1,
+      "selective": false,
+      "filters": {
+        "payment_status": [
+          "succeeded"
+        ],
+        "currency": "EUR",
+        "created_at_from": "2024-09-08",
+        "created_at_to": "2026-09-08",
+        "amount_from": 100,
+        "payment_provider_type": [
+          "stripe"
+        ]
+      },
+      "search_term": null,
+      "count": {
+        "ms": 9715.4,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 15104334,
+        "nodes": [
+          "Bitmap Heap Scan",
+          "BitmapAnd",
+          "Bitmap Index Scan",
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 11945440,
+        "shared_read": 168752,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          9227.8,
+          9715.4,
+          9742.8
+        ]
+      },
+      "list": {
+        "ms": 0.2,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 60,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 123,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          1.9,
+          0.2,
+          0.1
+        ]
+      },
+      "flags": [
+        "COUNT>500"
+      ]
+    },
+    {
+      "name": "five_filter_rare",
+      "page": 1,
+      "selective": true,
+      "filters": {
+        "payment_status": [
+          "failed"
+        ],
+        "currency": "GBP",
+        "created_at_from": "2026-09-01",
+        "created_at_to": "2026-09-08",
+        "amount_from": 4914,
+        "payment_provider_type": [
+          "gocardless"
+        ]
+      },
+      "search_term": null,
+      "count": {
+        "ms": 18.8,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 752467,
+        "nodes": [
+          "Bitmap Heap Scan",
+          "BitmapAnd",
+          "Bitmap Index Scan",
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 1072,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          19.8,
+          18.8,
+          16.9
+        ]
+      },
+      "list": {
+        "ms": 18.6,
+        "timeout": false,
+        "rows_returned": 0,
+        "rows_scanned": 752466,
+        "nodes": [
+          "Sort",
+          "Bitmap Heap Scan",
+          "BitmapAnd",
+          "Bitmap Index Scan",
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 1072,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": true,
+        "all_runs_ms": [
+          19.1,
+          18.3,
+          18.6
+        ]
+      },
+      "flags": []
+    },
+    {
+      "name": "invoice_hit_direct",
+      "page": 1,
+      "selective": true,
+      "filters": {
+        "invoice_number": "her-1556-202609-000457624"
+      },
+      "search_term": null,
+      "count": {
+        "ms": 0.0,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 5,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 13,
+        "shared_read": 0,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "list": {
+        "ms": 0.0,
+        "timeout": false,
+        "rows_returned": 2,
+        "rows_scanned": 8,
+        "nodes": [
+          "Sort",
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 2,
+        "shared_hit": 13,
+        "shared_read": 0,
+        "cursor_index": false,
+        "sort_on_created_at": true,
+        "all_runs_ms": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "flags": []
+    },
+    {
+      "name": "invoice_hit_request",
+      "page": 1,
+      "selective": true,
+      "filters": {
+        "invoice_number": "her-1556-202609-000765141"
+      },
+      "search_term": null,
+      "count": {
+        "ms": 0.0,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 3,
+        "nodes": [
+          "Bitmap Heap Scan",
+          "BitmapOr",
+          "Bitmap Index Scan",
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 7,
+        "shared_read": 0,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "list": {
+        "ms": 0.0,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 4,
+        "nodes": [
+          "Sort",
+          "Bitmap Heap Scan",
+          "BitmapOr",
+          "Bitmap Index Scan",
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 1,
+        "shared_hit": 7,
+        "shared_read": 0,
+        "cursor_index": false,
+        "sort_on_created_at": true,
+        "all_runs_ms": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "flags": []
+    },
+    {
+      "name": "invoice_miss",
+      "page": 1,
+      "selective": true,
+      "filters": {
+        "invoice_number": "PERF-NOPE-000000-000000001"
+      },
+      "search_term": null,
+      "count": {
+        "ms": 0.0,
+        "timeout": false,
+        "rows_returned": 0,
+        "rows_scanned": 0,
+        "nodes": [],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": null,
+        "shared_read": null,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          0.0
+        ]
+      },
+      "list": {
+        "ms": 0.0,
+        "timeout": false,
+        "rows_returned": 0,
+        "rows_scanned": 0,
+        "nodes": [
+          "Sort",
+          "Result"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": null,
+        "shared_read": null,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "flags": []
+    },
+    {
+      "name": "payable_type_invoice",
+      "page": 1,
+      "selective": false,
+      "filters": {
+        "payable_type": [
+          "Invoice"
+        ]
+      },
+      "search_term": null,
+      "count": {
+        "ms": 15783.2,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 20679132,
+        "nodes": [
+          "Bitmap Heap Scan",
+          "BitmapAnd",
+          "Bitmap Index Scan",
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 18958875,
+        "shared_read": 227837,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          17310.6,
+          15608.7,
+          15783.2
+        ]
+      },
+      "list": {
+        "ms": 0.1,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 61,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 110,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          1.0,
+          0.1,
+          0.1
+        ]
+      },
+      "flags": [
+        "COUNT>500"
+      ]
+    },
+    {
+      "name": "payable_type_request",
+      "page": 1,
+      "selective": false,
+      "filters": {
+        "payable_type": [
+          "PaymentRequest"
+        ]
+      },
+      "search_term": null,
+      "count": {
+        "ms": 389.8,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 5578006,
+        "nodes": [
+          "Bitmap Heap Scan",
+          "BitmapAnd",
+          "Bitmap Index Scan",
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 129481,
+        "shared_read": 0,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          670.6,
+          375.3,
+          389.8
+        ]
+      },
+      "list": {
+        "ms": 0.3,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 40,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 427,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          4.8,
+          0.3,
+          0.1
+        ]
+      },
+      "flags": []
+    },
+    {
+      "name": "payment_type_manual",
+      "page": 1,
+      "selective": false,
+      "filters": {
+        "payment_type": [
+          "manual"
+        ]
+      },
+      "search_term": null,
+      "count": {
+        "ms": 6287.7,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 5811961,
+        "nodes": [
+          "Bitmap Heap Scan",
+          "BitmapAnd",
+          "Bitmap Index Scan",
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 891856,
+        "shared_read": 183147,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          6076.1,
+          6287.7,
+          6971.9
+        ]
+      },
+      "list": {
+        "ms": 0.3,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 61,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 743,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          1.4,
+          0.3,
+          0.2
+        ]
+      },
+      "flags": [
+        "COUNT>500"
+      ]
+    },
+    {
+      "name": "payment_type_provider",
+      "page": 1,
+      "selective": false,
+      "filters": {
+        "payment_type": [
+          "provider"
+        ]
+      },
+      "search_term": null,
+      "count": {
+        "ms": 15557.3,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 20445177,
+        "nodes": [
+          "Bitmap Heap Scan",
+          "BitmapAnd",
+          "Bitmap Index Scan",
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 18040957,
+        "shared_read": 173910,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          15593.5,
+          15557.3,
+          14939.9
+        ]
+      },
+      "list": {
+        "ms": 0.1,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 60,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 107,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          2.5,
+          0.1,
+          0.1
+        ]
+      },
+      "flags": [
+        "COUNT>500"
+      ]
+    },
+    {
+      "name": "provider_common",
+      "page": 1,
+      "selective": false,
+      "filters": {
+        "payment_provider_type": [
+          "stripe"
+        ]
+      },
+      "search_term": null,
+      "count": {
+        "ms": 12901.0,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 16764092,
+        "nodes": [
+          "Bitmap Heap Scan",
+          "BitmapAnd",
+          "Bitmap Index Scan",
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 15202828,
+        "shared_read": 161916,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          12901.0,
+          14283.5,
+          12684.0
+        ]
+      },
+      "list": {
+        "ms": 0.1,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 60,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 117,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          2.5,
+          0.1,
+          0.1
+        ]
+      },
+      "flags": [
+        "COUNT>500"
+      ]
+    },
+    {
+      "name": "provider_miss",
+      "page": 1,
+      "selective": true,
+      "filters": {
+        "payment_provider_type": [
+          "cashfree"
+        ]
+      },
+      "search_term": null,
+      "count": {
+        "ms": 0.0,
+        "timeout": false,
+        "rows_returned": 0,
+        "rows_scanned": 0,
+        "nodes": [],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": null,
+        "shared_read": null,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          0.0
+        ]
+      },
+      "list": {
+        "ms": 0.0,
+        "timeout": false,
+        "rows_returned": 0,
+        "rows_scanned": 0,
+        "nodes": [
+          "Sort",
+          "Result"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": null,
+        "shared_read": null,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          0.9,
+          0.0,
+          0.0
+        ]
+      },
+      "flags": []
+    },
+    {
+      "name": "provider_rare",
+      "page": 1,
+      "selective": false,
+      "filters": {
+        "payment_provider_type": [
+          "gocardless"
+        ]
+      },
+      "search_term": null,
+      "count": {
+        "ms": 9222.5,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 7204768,
+        "nodes": [
+          "Bitmap Heap Scan",
+          "BitmapAnd",
+          "Bitmap Index Scan",
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 2785257,
+        "shared_read": 220988,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          7478.4,
+          9222.5,
+          10728.5
+        ]
+      },
+      "list": {
+        "ms": 0.1,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 59,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 188,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          2.4,
+          0.1,
+          0.1
+        ]
+      },
+      "flags": [
+        "COUNT>500"
+      ]
+    },
+    {
+      "name": "receipt_hit",
+      "page": 1,
+      "selective": true,
+      "filters": {
+        "receipt_number": "her-1556-335-rcpt-000123"
+      },
+      "search_term": null,
+      "count": {
+        "ms": 0.0,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 9,
+        "nodes": [
+          "Nested Loop",
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 22,
+        "shared_read": 0,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          0.0,
+          0.1,
+          0.0
+        ]
+      },
+      "list": {
+        "ms": 0.1,
+        "timeout": false,
+        "rows_returned": 2,
+        "rows_scanned": 12,
+        "nodes": [
+          "Sort",
+          "Nested Loop",
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 2,
+        "shared_hit": 22,
+        "shared_read": 0,
+        "cursor_index": false,
+        "sort_on_created_at": true,
+        "all_runs_ms": [
+          0.1,
+          0.1,
+          0.1
+        ]
+      },
+      "flags": []
+    },
+    {
+      "name": "receipt_miss",
+      "page": 1,
+      "selective": true,
+      "filters": {
+        "receipt_number": "PERF-NOPE-RCPT-000001"
+      },
+      "search_term": null,
+      "count": {
+        "ms": 0.0,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 1,
+        "nodes": [
+          "Nested Loop",
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 4,
+        "shared_read": 0,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "list": {
+        "ms": 0.0,
+        "timeout": false,
+        "rows_returned": 0,
+        "rows_scanned": 0,
+        "nodes": [
+          "Sort",
+          "Nested Loop",
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 4,
+        "shared_read": 0,
+        "cursor_index": false,
+        "sort_on_created_at": true,
+        "all_runs_ms": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "flags": []
+    },
+    {
+      "name": "search_term",
+      "page": 1,
+      "selective": true,
+      "filters": {},
+      "search_term": "_0_4031686",
+      "count": {
+        "ms": 56.6,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 8,
+        "nodes": [
+          "Nested Loop",
+          "HashAggregate",
+          "Append",
+          "Bitmap Heap Scan",
+          "Bitmap Index Scan",
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 4565,
+        "shared_read": 0,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          56.8,
+          56.6,
+          52.0
+        ]
+      },
+      "list": {
+        "ms": 52.4,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 9,
+        "nodes": [
+          "Sort",
+          "Nested Loop",
+          "HashAggregate",
+          "Append",
+          "Bitmap Heap Scan",
+          "Bitmap Index Scan",
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 1,
+        "shared_hit": 4565,
+        "shared_read": 0,
+        "cursor_index": false,
+        "sort_on_created_at": true,
+        "all_runs_ms": [
+          54.0,
+          52.4,
+          51.8
+        ]
+      },
+      "flags": []
+    },
+    {
+      "name": "search_term_status",
+      "page": 1,
+      "selective": true,
+      "filters": {
+        "payment_status": [
+          "succeeded"
+        ]
+      },
+      "search_term": "_0_4031686",
+      "count": {
+        "ms": 51.2,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 8,
+        "nodes": [
+          "Nested Loop",
+          "HashAggregate",
+          "Append",
+          "Bitmap Heap Scan",
+          "Bitmap Index Scan",
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 4565,
+        "shared_read": 0,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          53.4,
+          51.2,
+          50.9
+        ]
+      },
+      "list": {
+        "ms": 54.0,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 9,
+        "nodes": [
+          "Sort",
+          "Nested Loop",
+          "HashAggregate",
+          "Append",
+          "Bitmap Heap Scan",
+          "Bitmap Index Scan",
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 1,
+        "shared_hit": 4565,
+        "shared_read": 0,
+        "cursor_index": false,
+        "sort_on_created_at": true,
+        "all_runs_ms": [
+          54.0,
+          52.7,
+          55.4
+        ]
+      },
+      "flags": []
+    },
+    {
+      "name": "status_common_succeeded",
+      "page": 1,
+      "selective": false,
+      "filters": {
+        "payment_status": [
+          "succeeded"
+        ]
+      },
+      "search_term": null,
+      "count": {
+        "ms": 12473.4,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 8033558,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 15731507,
+        "shared_read": 162161,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          12041.6,
+          12572.8,
+          12473.4
+        ]
+      },
+      "list": {
+        "ms": 0.1,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 60,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 108,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          2.3,
+          0.1,
+          0.1
+        ]
+      },
+      "flags": [
+        "COUNT>500"
+      ]
+    },
+    {
+      "name": "status_common_succeeded_page50",
+      "page": 50,
+      "selective": false,
+      "filters": {
+        "payment_status": [
+          "succeeded"
+        ]
+      },
+      "search_term": null,
+      "count": {
+        "ms": 15925.3,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 8033558,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 15711524,
+        "shared_read": 182144,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          16027.1,
+          15925.3,
+          14960.4
+        ]
+      },
+      "list": {
+        "ms": 3.8,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 1971,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 4980,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          38.0,
+          3.8,
+          1.8
+        ]
+      },
+      "flags": [
+        "COUNT>500"
+      ]
+    },
+    {
+      "name": "status_rare_failed",
+      "page": 1,
+      "selective": false,
+      "filters": {
+        "payment_status": [
+          "failed"
+        ]
+      },
+      "search_term": null,
+      "count": {
+        "ms": 10938.7,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 1407053,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 2687888,
+        "shared_read": 228988,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          9734.0,
+          11470.9,
+          10938.7
+        ]
+      },
+      "list": {
+        "ms": 0.3,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 60,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 409,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          9.1,
+          0.3,
+          0.2
+        ]
+      },
+      "flags": [
+        "COUNT>500"
+      ]
+    },
+    {
+      "name": "status_rare_pending",
+      "page": 1,
+      "selective": true,
+      "filters": {
+        "payment_status": [
+          "pending"
+        ]
+      },
+      "search_term": null,
+      "count": {
+        "ms": 353.9,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 174707,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 432875,
+        "shared_read": 0,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          398.1,
+          353.9,
+          330.5
+        ]
+      },
+      "list": {
+        "ms": 0.1,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 60,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 103,
+        "shared_read": 0,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          0.3,
+          0.1,
+          0.1
+        ]
+      },
+      "flags": []
+    },
+    {
+      "name": "status_rare_pending_processing",
+      "page": 1,
+      "selective": true,
+      "filters": {
+        "payment_status": [
+          "pending",
+          "processing"
+        ]
+      },
+      "search_term": null,
+      "count": {
+        "ms": 528.3,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 261945,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 648943,
+        "shared_read": 0,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          646.4,
+          528.3,
+          498.9
+        ]
+      },
+      "list": {
+        "ms": 0.5,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 61,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 770,
+        "shared_read": 0,
+        "cursor_index": true,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          12.2,
+          0.5,
+          0.3
+        ]
+      },
+      "flags": [
+        "COUNT>500"
+      ]
+    },
+    {
+      "name": "status_rare_processing",
+      "page": 1,
+      "selective": true,
+      "filters": {
+        "payment_status": [
+          "processing"
+        ]
+      },
+      "search_term": null,
+      "count": {
+        "ms": 177.2,
+        "timeout": false,
+        "rows_returned": 1,
+        "rows_scanned": 87239,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 216071,
+        "shared_read": 0,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          177.2,
+          178.9,
+          172.1
+        ]
+      },
+      "list": {
+        "ms": 0.1,
+        "timeout": false,
+        "rows_returned": 20,
+        "rows_scanned": 61,
+        "nodes": [
+          "Index Scan"
+        ],
+        "seq_scan_watched": [],
+        "sort_rows_max": 0,
+        "shared_hit": 108,
+        "shared_read": 0,
+        "cursor_index": false,
+        "sort_on_created_at": false,
+        "all_runs_ms": [
+          0.2,
+          0.1,
+          0.1
+        ]
+      },
+      "flags": []
+    }
+  ]
+}
