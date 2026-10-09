@@ -362,7 +362,7 @@ module Lago
         output.puts "  ## Settings"
         setting("DATABASE_URL", "DATABASE_URL")
 
-        pool_size = safe { ApplicationRecord.connection_pool.db_config.pool }
+        pool_size = safe { ApplicationRecord.connection_pool.db_config.max_connections }
         if pool_size.to_s.start_with?("error:")
           pool_size = ENV["DATABASE_POOL"].presence || "(unset)"
         end
