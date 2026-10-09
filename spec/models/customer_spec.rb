@@ -126,6 +126,11 @@ RSpec.describe Customer do
 
     let(:external_id) { SecureRandom.uuid }
 
+    it "validates net_payment_term as a non-negative integer" do
+      expect(customer).to allow_values(nil, 0, 30).for(:net_payment_term)
+      expect(customer).not_to allow_values(1.5, -1).for(:net_payment_term)
+    end
+
     it "validates the language code" do
       customer.document_locale = nil
       expect(customer).to be_valid
