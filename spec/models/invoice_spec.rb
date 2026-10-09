@@ -3074,6 +3074,19 @@ RSpec.describe Invoice do
     end
   end
 
+  describe "#payment_term_label" do
+    it "labels the snapshotted term against the invoice issuing date" do
+      invoice = build(
+        :invoice,
+        issuing_date: Date.new(2026, 7, 15),
+        payment_term: {"term_type" => "day_of_month", "day_of_month" => 10, "month_offset" => 0},
+        net_payment_term: nil
+      )
+
+      expect(invoice.payment_term_label).to eq("Due on the 10 of the following month")
+    end
+  end
+
   describe "#snapshotted_payment_term" do
     it "builds a term from the jsonb snapshot when present" do
       invoice = build(:invoice, payment_term: {"term_type" => "end_of_month"}, net_payment_term: nil)

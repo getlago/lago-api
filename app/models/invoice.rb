@@ -218,6 +218,10 @@ class Invoice < ApplicationRecord
     end
   end
 
+  def payment_term_label
+    snapshotted_payment_term.label(issuing_date:)
+  end
+
   def visible?
     !invisible?
   end
