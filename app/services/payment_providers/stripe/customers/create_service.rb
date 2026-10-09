@@ -31,6 +31,10 @@ module PaymentProviders
             provider_customer.sync_with_provider = params[:sync_with_provider].presence
           end
 
+          if params.key?(:default_shared_payment_token)
+            provider_customer.default_shared_payment_token = params[:default_shared_payment_token].presence
+          end
+
           provider_customer = handle_provider_payment_methods(provider_customer:, params:)
           provider_customer.save!
 
