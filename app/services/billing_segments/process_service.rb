@@ -13,11 +13,11 @@ module BillingSegments
       result.invoices = []
 
       acquired = customer.with_advisory_lock("billing_segment_process_customer_#{customer.id}", timeout_seconds: 0) do
-        pending_segments.group_by { |segment| invoice_key(segment) }.each_value do |invoice_segments|
+        pending_segments.group_by { |segment| pending_invoice_key(segment) }.each_value do |invoice_segments|
           result.invoices << build_invoice(invoice_segments)
         end
 
-        pending_advance_segments.group_by { |segment| invoice_key(segment) }.each_value do |invoice_segments|
+        processing_advance_segments.group_by { |segment| invoice_key(segment) }.each_value do |invoice_segments|
           invoice = process_advance_segments(invoice_segments)
           result.invoices << invoice if invoice
         end
@@ -41,28 +41,41 @@ module BillingSegments
       grouped_segments.fetch(:pending_segments, [])
     end
 
-    def pending_advance_segments
-      grouped_segments.fetch(:pending_advance_segments, [])
+    def processing_advance_segments
+      grouped_segments.fetch(:processing_advance_segments, [])
     end
 
     def grouped_segments
       @grouped_segments ||= BillingSegment.ready_for_invoicing
         .where(customer_id: customer.id)
         .includes(:pricing_unit, :rate_override, :contract, contract_rate_card: {rate_card: :product}, rate_card_rate: :rate_card)
-        .group_by { |segment| segment_group(segment) }
-        .except(nil)
+        .sort_by { |segment| [segment.billing_at, segment.id] }
+        .filter_map do |segment|
+          group = segment_group(segment)
+          [group, segment] if group
+        end
+        .group_by(&:first)
+        .transform_values { |grouped_segments| grouped_segments.map(&:last) }
     end
 
     def segment_group(segment)
       advance_metered = segment.contract_rate_card.rate_card.advance? && segment.contract_rate_card.product.metered?
 
-      advance_metered ? :pending_advance_segments : :pending_segments
+      if advance_metered
+        :processing_advance_segments
+      elsif segment.status_pending?
+        :pending_segments
+      end
     end
 
-    def invoice_key(segment)
+    def pending_invoice_key(segment)
+      invoice_key(segment, billing_at: segment.billing_at)
+    end
+
+    def invoice_key(segment, billing_at: segment.cycle_started_at)
       contract = segment.contract
       [
-        segment.cycle_started_at.in_time_zone(customer.applicable_timezone).to_date,
+        billing_at.in_time_zone(customer.applicable_timezone).to_date,
         contract.consolidate_invoice ? :shared : segment.id,
         segment.currency,
         contract.billing_entity_id || customer.billing_entity_id,
@@ -148,7 +161,10 @@ module BillingSegments
           end
 
           Invoices::AggregateAmountsAndTaxesFromFees.call!(invoice:)
-          Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
+          Invoices::ApplyInvoiceCustomSectionsService.call!(
+            invoice:,
+            resources: segments.map(&:contract).uniq.map { |contract| Invoices::ApplyInvoiceCustomSectionsService::Resource.from(resource: contract) }
+          )
           invoice.payment_status = :succeeded
           invoice.save!
         end

@@ -33,87 +33,30 @@ RSpec.describe BillingSegment do
   end
 
   describe "Scopes" do
-    describe ".awaiting_invoicing" do
-      subject(:segments) { described_class.awaiting_invoicing }
-
-      let(:organization) { create(:organization) }
-      let(:product) { create(:product, organization:) }
-      let(:rate_card) { create(:rate_card, :advance, organization:, product:) }
-      let(:contract_rate_card) { create(:contract_rate_card, organization:, rate_card:) }
-      let(:segment) do
-        create(:billing_segment, organization:, contract_rate_card:, contract: contract_rate_card.contract,
-          customer: contract_rate_card.contract.customer, status:)
-      end
-      let(:status) { :pending }
-
-      before { segment }
-
-      it "selects pending advance-metered segments" do
-        expect(segments).to eq([segment])
-      end
-
-      context "when the advance-metered segment is processing" do
-        let(:status) { :processing }
-
-        it "excludes it" do
-          expect(segments).to be_empty
-        end
-      end
-
-      context "when the segment bills in arrears" do
-        let(:rate_card) { create(:rate_card, organization:, product:) }
-
-        it "selects it while pending" do
-          expect(segments).to eq([segment])
-        end
-
-        context "when the segment is processing" do
-          let(:status) { :processing }
-
-          it "excludes it" do
-            expect(segments).to be_empty
-          end
-        end
-      end
-
-      context "when the advance product is fixed" do
-        let(:product) { create(:product, :fixed, organization:) }
-
-        it "selects it while pending" do
-          expect(segments).to eq([segment])
-        end
-
-        context "when the segment is processing" do
-          let(:status) { :processing }
-
-          it "excludes it" do
-            expect(segments).to be_empty
-          end
-        end
-      end
-    end
-
     describe ".ready_for_invoicing" do
       subject(:segments) { described_class.ready_for_invoicing(timestamp) }
 
       let(:timestamp) { Time.zone.parse("2026-10-01") }
       let(:organization) { create(:organization) }
-      let(:rate_card) { create(:rate_card, :advance, organization:) }
+      let(:product) { create(:product, organization:) }
+      let(:billing_timing) { :advance }
+      let(:rate_card) { create(:rate_card, organization:, product:, billing_timing:) }
       let(:contract_rate_card) { create(:contract_rate_card, organization:, rate_card:) }
+      let(:status) { :pending }
       let(:ended_at) { timestamp + 1.day }
       let(:segment) do
         create(:billing_segment, organization:, contract_rate_card:, contract: contract_rate_card.contract,
-          customer: contract_rate_card.contract.customer, cycle_started_at: timestamp - 1.month,
+          customer: contract_rate_card.contract.customer, status:, cycle_started_at: timestamp - 1.month,
           started_at: timestamp - 1.month, ended_at:)
       end
 
       before { segment }
 
-      it "waits for advance-metered usage to finish" do
+      it "excludes active pending advance-metered usage" do
         expect(segments).to be_empty
       end
 
-      context "when the advance-metered segment has ended" do
+      context "when pending advance-metered usage has ended" do
         let(:ended_at) { timestamp }
 
         it "selects it for reconciliation" do
@@ -121,11 +64,35 @@ RSpec.describe BillingSegment do
         end
       end
 
-      context "when the product is fixed" do
-        let(:rate_card) { create(:rate_card, :advance, organization:, product: create(:product, :fixed, organization:)) }
+      context "when the advance-metered segment is already processing" do
+        let(:status) { :processing }
 
-        it "selects it before its end" do
+        it "excludes it while active" do
+          expect(segments).to be_empty
+        end
+
+        context "when the segment has ended" do
+          let(:ended_at) { timestamp }
+
+          it "selects it for legacy reconciliation" do
+            expect(segments).to eq([segment])
+          end
+        end
+      end
+
+      context "when the segment bills in arrears" do
+        let(:billing_timing) { :arrears }
+
+        it "selects it while pending" do
           expect(segments).to eq([segment])
+        end
+
+        context "when the segment is processing" do
+          let(:status) { :processing }
+
+          it "excludes it" do
+            expect(segments).to be_empty
+          end
         end
       end
     end

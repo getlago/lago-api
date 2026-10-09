@@ -64,11 +64,12 @@ describe Clock::ProcessBillingSegmentsJob, job: true do
       end
     end
 
-    context "when the only pending segment is metered and billed in advance" do
+    context "when the only advance-metered segment is pending" do
       let(:streaming_customer) { create(:customer, organization:) }
       let(:metered_product) { create(:product, organization:, billable_metric: create(:billable_metric, organization:)) }
 
       let(:ended_at) { 1.day.from_now }
+      let(:status) { :pending }
 
       before do
         rate_card = create(:rate_card, organization:, product: metered_product, billing_timing: "advance")
@@ -81,7 +82,7 @@ describe Clock::ProcessBillingSegmentsJob, job: true do
           customer: streaming_customer,
           contract:,
           contract_rate_card:,
-          status: :pending,
+          status:,
           cycle_started_at: 2.days.ago,
           started_at: 2.days.ago,
           ended_at:
@@ -97,10 +98,30 @@ describe Clock::ProcessBillingSegmentsJob, job: true do
       context "when the segment has ended" do
         let(:ended_at) { 1.day.ago }
 
-        it "enqueues that customer for reconciliation" do
+        it "enqueues that customer for invoicing" do
           described_class.perform_now
 
           expect(BillingSegments::ProcessJob).to have_been_enqueued.with(streaming_customer.id)
+        end
+      end
+
+      context "when the segment is already processing" do
+        let(:status) { :processing }
+
+        it "waits for the segment to end" do
+          described_class.perform_now
+
+          expect(BillingSegments::ProcessJob).not_to have_been_enqueued.with(streaming_customer.id)
+        end
+
+        context "when the segment has ended" do
+          let(:ended_at) { 1.day.ago }
+
+          it "enqueues that customer for reconciliation" do
+            described_class.perform_now
+
+            expect(BillingSegments::ProcessJob).to have_been_enqueued.with(streaming_customer.id)
+          end
         end
       end
     end

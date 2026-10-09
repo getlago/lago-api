@@ -30,17 +30,18 @@ class BillingSegment < ApplicationRecord
 
   enum :status, STATUSES, validate: true, prefix: true
 
-  # The clock and the consumer select only segments not yet claimed for invoicing.
-  scope :awaiting_invoicing, -> { status_pending }
-
-  # Advance-metered usage can arrive throughout its segment; reconcile it only once
-  # the segment ends. Other pending segments were scheduled at their billing time.
+  # The clock and consumer share this scope so advance-metered usage is reconciled only
+  # after its segment ends, whether it is still pending or was already claimed for processing.
   scope :ready_for_invoicing, ->(timestamp = Time.current) {
-    awaiting_invoicing
+    where(status: [:pending, :processing])
       .joins(contract_rate_card: {rate_card: :product})
       .where(
-        "NOT (rate_cards.billing_timing = :advance AND products.product_type = :metered) " \
-          "OR billing_segments.ended_at <= :timestamp",
+        "(billing_segments.status = :pending AND NOT (rate_cards.billing_timing = :advance AND " \
+        "products.product_type = :metered)) OR (billing_segments.status IN (:pending, :processing) " \
+        "AND rate_cards.billing_timing = :advance AND products.product_type = :metered AND " \
+        "billing_segments.ended_at <= :timestamp)",
+        pending: STATUSES[:pending],
+        processing: STATUSES[:processing],
         advance: RateCard::BILLING_TIMINGS[:advance],
         metered: Product::PRODUCT_TYPES[:metered],
         timestamp:

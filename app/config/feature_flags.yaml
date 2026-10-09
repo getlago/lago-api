@@ -30,6 +30,10 @@ realtime_usage:
   description: "Serve count and sum current usage from the pre-aggregated ClickHouse usage buckets instead of aggregating raw events"
   owners: ["@vincent-pochet"]
 
+charge_filters_single_scan:
+  description: "Aggregate every filter of a count or sum charge in one ClickHouse read instead of one read per filter"
+  owners: ["@jdenquin"]
+
 skip_credit_invoice_auto_payment_delay:
   description: "Trigger the auto-payment of credit invoices (wallet top-ups) immediately instead of delaying it behind a possible hosted checkout payment"
   owners: ["@brunomiguelpinto"]
@@ -45,3 +49,7 @@ x402_payments:
 x402_reservation_counter_disabled:
   description: "Switch off the x402 reservation counter for an organization; the gate check then applies the static per-call floor. Operated by Lago"
   owners: ["@osmarluz"]
+
+usage_prefilter_short_cache:
+  description: "Reuse the ClickHouse pre-filter result of the current usage API for 5 seconds, bounding how often polling clients scan the events of a subscription"
+  owners: ["@jdenquin"]

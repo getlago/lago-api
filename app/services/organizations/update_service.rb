@@ -36,15 +36,8 @@ module Organizations
         additions = params[:authentication_methods] - organization.authentication_methods
         organization.authentication_methods = params[:authentication_methods]
 
-        if organization.authentication_methods_changed? && user
-          after_commit do
-            OrganizationMailer.with(
-              organization:,
-              user:,
-              additions:,
-              deletions:
-            ).authentication_methods_updated.deliver_later
-          end
+        if organization.authentication_methods_changed?
+          @authentication_methods_diff = {additions:, deletions:}
         end
       end
 
@@ -75,6 +68,8 @@ module Organizations
         update_billing_entity_result =
           BillingEntities::UpdateService.call(billing_entity: organization.default_billing_entity, params: params)
         update_billing_entity_result.raise_if_error!
+
+        notify_authentication_methods_change if @authentication_methods_diff
       end
 
       ApiKeys::CacheService.expire_all_cache(organization)
@@ -96,6 +91,27 @@ module Organizations
 
       organization.timezone = params[:timezone] if params.key?(:timezone)
       organization.email_settings = params[:email_settings] if params.key?(:email_settings)
+    end
+
+    # NOTE: Registered inside the transaction so nothing is sent when the update is rolled back.
+    def notify_authentication_methods_change
+      additions = @authentication_methods_diff[:additions]
+      deletions = @authentication_methods_diff[:deletions]
+
+      after_commit do
+        Utils::SecurityLog.produce(
+          organization:,
+          log_type: "organization",
+          log_event: "organization.authentication_methods_updated",
+          user:,
+          resources: {authentication_methods: {deleted: deletions.presence, added: additions.presence}.compact}
+        )
+
+        if user
+          OrganizationMailer.with(organization:, user:, additions:, deletions:)
+            .authentication_methods_updated.deliver_later
+        end
+      end
     end
 
     def handle_base64_logo

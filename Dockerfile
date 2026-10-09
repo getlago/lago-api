@@ -62,4 +62,14 @@ COPY --chown=nonroot:nonroot . .
 
 USER nonroot
 
+# Explicitly empty, and load-bearing. The runtime base used to set an
+# ENTRYPOINT of its own; anything inherited here would turn the `command:` of
+# every docker-compose service and the `command` of every k8s container into a
+# mere argument of that entrypoint, which start.sh ignores. That is how
+# v1.54.0 shipped an image where `migrate` silently booted Puma. The base no
+# longer sets one, and this line keeps the contract true regardless of which
+# revision of the floating `:latest` base this is built against.
+# `ci/docker-boot-contract.sh` asserts it.
+ENTRYPOINT []
+
 CMD ["/app/scripts/start.sh"]

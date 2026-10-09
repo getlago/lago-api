@@ -4110,6 +4110,32 @@ RSpec.describe Fees::ChargeService, :premium do
           expect(asia_fee).to be_nil
           expect(default_fee).to be_nil
         end
+
+        context "when aggregating the filters" do
+          before { allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_call_original }
+
+          it "gives the events store the filters it aggregates" do
+            charge_subscription_service.call
+
+            expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
+              .with(hash_including(aggregated_filter_ids: [eu_charge_filter.id, us_charge_filter.id])).at_least(:once)
+            expect(BillableMetrics::AggregationFactory).not_to have_received(:new_instance)
+              .with(hash_including(aggregated_filter_ids: nil))
+          end
+
+          context "with a recurring metric" do
+            let(:billable_metric) do
+              create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value", recurring: true)
+            end
+
+            it "gives the events store no filters, every one of them being aggregated" do
+              charge_subscription_service.call
+
+              expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
+                .with(hash_including(aggregated_filter_ids: nil)).at_least(:once)
+            end
+          end
+        end
       end
 
       context "when filtered_aggregations is an empty array" do

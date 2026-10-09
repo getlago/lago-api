@@ -267,6 +267,19 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
           expect(result).to be_failure
           expect(alert).not_to have_received(:save!)
         end
+
+        context "when another request takes the code between the check and the save" do
+          subject(:result) { service.call }
+
+          let(:service) { described_class.new(alert:, params:) }
+
+          before { allow(service).to receive(:wallet_alert_code_taken?).and_return(false) }
+
+          it "reports the wallet index violation on the code field" do
+            expect(result).to be_failure
+            expect(result.error.messages).to eq(code: ["value_already_exist"])
+          end
+        end
       end
 
       context "when keeping its own code" do

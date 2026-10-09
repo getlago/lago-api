@@ -648,4 +648,269 @@ RSpec.describe Customers::RefreshWalletsService do
       end
     end
   end
+
+  describe "reservation counter", cache: :redis do
+    subject(:result) { described_class.call(customer:) }
+
+    let(:customer) { create(:customer) }
+    let(:wallet) { create(:wallet, customer:, x402_enabled: true) }
+    let(:key) { "x402:reserved:#{wallet.id}" }
+    let(:claim_key) { "x402:refreshing:#{customer.id}" }
+
+    before do
+      wallet
+      allow(X402::RefreshClaim).to receive(:acquire).and_call_original
+    end
+
+    context "with a reservation" do
+      before { Rails.cache.redis.then { it.set(key, 30, ex: 3600) } }
+
+      it "releases the captured amount" do
+        result
+
+        expect(Rails.cache.read(key, raw: true)).to eq("0")
+      end
+
+      it "drops the claim after the refresh" do
+        result
+
+        expect(Rails.cache.redis.then { it.exists?(claim_key) }).to be(false)
+      end
+
+      context "when another refresh holds the claim" do
+        before { Rails.cache.redis.then { it.set(claim_key, "other", ex: 300) } }
+
+        it "leaves the counter untouched" do
+          result
+
+          expect(Rails.cache.read(key, raw: true)).to eq("30")
+        end
+
+        it "leaves the claim untouched" do
+          result
+
+          expect(Rails.cache.redis.then { it.get(claim_key) }).to eq("other")
+        end
+      end
+
+      context "with an overlapping refresh" do
+        before do
+          overlapped = false
+
+          allow(Wallets::Balance::AllocateOngoingUsageByWalletsService).to receive(:call!).and_wrap_original do |original, **args|
+            unless overlapped
+              overlapped = true
+              described_class.call(customer:)
+            end
+
+            original.call(**args)
+          end
+        end
+
+        it "releases the captured amount once" do
+          result
+
+          expect(Rails.cache.read(key, raw: true)).to eq("0")
+        end
+      end
+
+      context "with a reservation made during the refresh" do
+        before do
+          allow(Wallets::Balance::AllocateOngoingUsageByWalletsService).to receive(:call!).and_wrap_original do |original, **args|
+            Rails.cache.redis.then { it.incrby(key, 7) }
+            original.call(**args)
+          end
+        end
+
+        it "keeps the reservation made after the capture" do
+          result
+
+          expect(Rails.cache.read(key, raw: true)).to eq("7")
+        end
+      end
+
+      context "with a wallet not enabled for x402" do
+        let(:wallet) { create(:wallet, customer:, x402_enabled: false) }
+
+        it "leaves the key untouched" do
+          result
+
+          expect(Rails.cache.read(key, raw: true)).to eq("30")
+        end
+
+        it "takes no claim" do
+          result
+
+          expect(X402::RefreshClaim).not_to have_received(:acquire)
+        end
+      end
+
+      context "when the counter is switched off" do
+        let(:customer) { create(:customer, organization: create(:organization, feature_flags: ["x402_reservation_counter_disabled"])) }
+
+        it "leaves the key untouched" do
+          result
+
+          expect(Rails.cache.read(key, raw: true)).to eq("30")
+        end
+
+        it "takes no claim" do
+          result
+
+          expect(X402::RefreshClaim).not_to have_received(:acquire)
+        end
+      end
+
+      context "when the wrapping transaction rolls back" do
+        it "leaves the key untouched" do
+          ActiveRecord::Base.transaction do
+            described_class.call(customer:)
+            raise ActiveRecord::Rollback
+          end
+
+          expect(Rails.cache.read(key, raw: true)).to eq("30")
+        end
+
+        it "drops the claim" do
+          ActiveRecord::Base.transaction do
+            described_class.call(customer:)
+            raise ActiveRecord::Rollback
+          end
+
+          expect(Rails.cache.redis.then { it.exists?(claim_key) }).to be(false)
+        end
+      end
+
+      context "when a wrapping transaction commits" do
+        subject(:key_inside_transaction) do
+          ActiveRecord::Base.transaction do
+            described_class.call(customer:)
+            Rails.cache.read(key, raw: true)
+          end
+        end
+
+        it "defers the release until the commit" do
+          expect(key_inside_transaction).to eq("30")
+        end
+
+        it "releases the captured amount after the commit" do
+          key_inside_transaction
+
+          expect(Rails.cache.read(key, raw: true)).to eq("0")
+        end
+
+        it "holds the claim until the commit" do
+          ActiveRecord::Base.transaction do
+            described_class.call(customer:)
+
+            expect(Rails.cache.redis.then { it.exists?(claim_key) }).to be(true)
+          end
+        end
+
+        it "drops the claim after the commit" do
+          key_inside_transaction
+
+          expect(Rails.cache.redis.then { it.exists?(claim_key) }).to be(false)
+        end
+      end
+
+      context "when the refresh fails" do
+        let(:failed_result) { BaseResult.new }
+        let(:failure) { BaseService::ServiceFailure.new(failed_result, code: "failed", error_message: "failed") }
+
+        before do
+          allow(Wallets::Balance::RefreshOngoingUsageService).to receive(:call!).and_raise(failure)
+        end
+
+        it "returns the failed result" do
+          expect(result).to eq(failed_result)
+        end
+
+        it "leaves the key untouched" do
+          result
+
+          expect(Rails.cache.read(key, raw: true)).to eq("30")
+        end
+
+        it "drops the claim" do
+          result
+
+          expect(Rails.cache.redis.then { it.exists?(claim_key) }).to be(false)
+        end
+      end
+
+      context "when the refresh raises an unexpected error" do
+        before do
+          allow(Wallets::Balance::RefreshOngoingUsageService).to receive(:call!).and_raise(StandardError)
+        end
+
+        it "raises the error" do
+          expect { result }.to raise_error(StandardError)
+        end
+
+        it "leaves the counter untouched" do
+          begin
+            result
+          rescue
+            nil
+          end
+
+          expect(Rails.cache.read(key, raw: true)).to eq("30")
+        end
+
+        it "drops the claim" do
+          begin
+            result
+          rescue
+            nil
+          end
+
+          expect(Rails.cache.redis.then { it.exists?(claim_key) }).to be(false)
+        end
+      end
+
+      context "when the refresh fails inside a committing transaction" do
+        subject(:result_in_transaction) do
+          ActiveRecord::Base.transaction { described_class.call(customer:) }
+        end
+
+        let(:failed_result) { BaseResult.new }
+        let(:failure) { BaseService::ServiceFailure.new(failed_result, code: "failed", error_message: "failed") }
+
+        before do
+          allow(Wallets::Balance::RefreshOngoingUsageService).to receive(:call!).and_raise(failure)
+        end
+
+        it "leaves the counter untouched" do
+          result_in_transaction
+
+          expect(Rails.cache.read(key, raw: true)).to eq("30")
+        end
+
+        it "drops the claim" do
+          result_in_transaction
+
+          expect(Rails.cache.redis.then { it.exists?(claim_key) }).to be(false)
+        end
+      end
+    end
+
+    context "with a negative reservation" do
+      before { Rails.cache.redis.then { it.set(key, -5, ex: 3600) } }
+
+      it "releases it" do
+        result
+
+        expect(Rails.cache.read(key, raw: true)).to eq("0")
+      end
+    end
+
+    context "without reservations" do
+      it "does not create the key" do
+        result
+
+        expect(Rails.cache.redis.then { it.exists?(key) }).to be(false)
+      end
+    end
+  end
 end

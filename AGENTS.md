@@ -190,6 +190,10 @@ To create a webhook:
 # Environment variables
 
 - When a change introduces a new environment variable, document it in this file (name, purpose, example value)
+- `LAGO_REDIS_SIDEKIQ_SENTINEL_USERNAME` — optional ACL username for Sidekiq Redis Sentinel authentication. Used only when `LAGO_REDIS_SIDEKIQ_SENTINELS` is configured; blank leaves the username unset. Omit for password-only authentication. Example: `LAGO_REDIS_SIDEKIQ_SENTINEL_USERNAME=sentinel`
+- `LAGO_REDIS_SIDEKIQ_SENTINEL_PASSWORD` — optional password for Sidekiq Redis Sentinel authentication, separate from the data Redis password (`REDIS_PASSWORD`). Used only when `LAGO_REDIS_SIDEKIQ_SENTINELS` is configured; blank leaves the password unset. Example: `LAGO_REDIS_SIDEKIQ_SENTINEL_PASSWORD=***`
+- `LAGO_REDIS_CACHE_SENTINEL_USERNAME` — optional ACL username for cache Redis Sentinel authentication. Used only when `LAGO_REDIS_CACHE_SENTINELS` is configured; blank leaves the username unset. Omit for password-only authentication. Example: `LAGO_REDIS_CACHE_SENTINEL_USERNAME=sentinel`
+- `LAGO_REDIS_CACHE_SENTINEL_PASSWORD` — optional password for cache Redis Sentinel authentication, separate from the data Redis password (`LAGO_REDIS_CACHE_PASSWORD`). Used only when `LAGO_REDIS_CACHE_SENTINELS` is configured; blank leaves the password unset. Example: `LAGO_REDIS_CACHE_SENTINEL_PASSWORD=***`
 - `LAGO_ENABLE_YJIT` — when true, enables YJIT (`config.yjit`). Disabled by default. Example: `LAGO_ENABLE_YJIT=true`
 - `SIDEKIQ_WALLETS` — when true, wallet jobs (e.g. `Customers::RefreshWalletJob`) are routed to the `wallets` queue, processed by the dedicated wallet worker (`scripts/start.wallets.worker.sh`). Example: `SIDEKIQ_WALLETS=true`
 - `SIDEKIQ_AI_AGENT` — when true, AI conversation jobs (`AiConversations::StreamJob`) are routed to the `ai_agent` queue. Example: `SIDEKIQ_AI_AGENT=true`
