@@ -237,6 +237,34 @@ RSpec.describe Api::V2::ContractsController do
       end
     end
 
+    context "with applied rate cards sharing created_at" do
+      let(:created_at) { Time.zone.parse("2026-09-28T10:00:00.000001Z") }
+
+      # Ties to the microsecond, created out of order, next to cards neither list may show.
+      before do
+        [1, 0, 2, 1, 0, 1].each { create(:contract_rate_card, organization:, contract:, created_at: created_at - it.seconds) }
+        create(:contract_rate_card, organization:, contract:, created_at:).discard!
+        create(:contract_rate_card, organization:, created_at:)
+        sibling = create(:contract, :terminated, organization:, customer:, external_id: contract.external_id, started_at: 2.months.ago)
+        create(:contract_rate_card, organization:, contract: sibling, created_at:)
+      end
+
+      it "embeds every page of /applied_rate_cards, in its order" do
+        listed = []
+        params = {limit: 2}
+        while params
+          get_with_token(organization, "/api/v2/contracts/#{contract.external_id}/applied_rate_cards", params)
+          listed.concat(json[:applied_rate_cards])
+          params = json[:meta][:next_cursor] && {limit: 2, after: json[:meta][:next_cursor]}
+        end
+
+        subject
+
+        expect(listed.size).to eq(6)
+        expect(json[:contract][:applied_rate_cards]).to eq(listed)
+      end
+    end
+
     context "when the external id contains a dot" do
       let(:contract) { create(:contract, organization:, customer:, external_id: "contract.2026-01") }
 
