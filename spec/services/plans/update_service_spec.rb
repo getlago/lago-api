@@ -1089,6 +1089,102 @@ RSpec.describe Plans::UpdateService do
             end.not_to have_enqueued_job(Charges::DestroyChildrenJob)
           end
         end
+
+        context "when the cascaded attributes of the charge are unchanged" do
+          let(:charge_args) do
+            {
+              id: existing_charge.id,
+              billable_metric_id: sum_billable_metric.id,
+              charge_model: "standard",
+              properties: {amount: "300"}
+            }
+          end
+          let(:update_args) { {charges: [charge_args]} }
+
+          it "does not enqueue the job for updating charge" do
+            expect do
+              plans_service.call
+            end.not_to have_enqueued_job(Charges::UpdateChildrenJob)
+          end
+
+          context "when only the invoice display name and the taxes change" do
+            let(:charge_args) { super().merge(invoice_display_name: "Renamed charge", tax_codes: [tax1.code]) }
+
+            it "does not enqueue the job for updating charge" do
+              expect do
+                plans_service.call
+              end.not_to have_enqueued_job(Charges::UpdateChildrenJob)
+            end
+          end
+
+          context "when the properties change" do
+            let(:charge_args) { super().merge(properties: {amount: "400"}) }
+
+            it "enqueues the job for updating charge" do
+              expect do
+                plans_service.call
+              end.to have_enqueued_job(Charges::UpdateChildrenJob)
+            end
+          end
+
+          context "when only accepts_target_wallet changes", :premium do
+            let!(:existing_charge) { create(:standard_charge, plan:, billable_metric: sum_billable_metric, properties: {amount: "300"}) }
+            let(:charge_args) { super().merge(accepts_target_wallet: true) }
+
+            before { organization.update!(premium_integrations: ["events_targeting_wallets"]) }
+
+            it "enqueues the job for updating charge" do
+              expect do
+                plans_service.call
+              end.to have_enqueued_job(Charges::UpdateChildrenJob)
+            end
+          end
+
+          context "when only the filters change" do
+            let(:charge_args) do
+              super().merge(
+                filters: [
+                  {
+                    invoice_display_name: "Card filter",
+                    properties: {amount: "90"},
+                    values: {billable_metric_filter.key => ["card"]}
+                  }
+                ]
+              )
+            end
+
+            it "enqueues the filter cascade job only" do
+              plans_service.call
+
+              expect(ChargeFilters::CascadeJob).to have_been_enqueued
+              expect(Charges::UpdateChildrenJob).not_to have_been_enqueued
+            end
+          end
+
+          context "with an applied pricing unit" do
+            before { create(:applied_pricing_unit, pricing_unitable: existing_charge, conversion_rate: 1.1) }
+
+            context "when the conversion rate is unchanged" do
+              let(:charge_args) { super().merge(applied_pricing_unit: {conversion_rate: 1.1}) }
+
+              it "does not enqueue the job for updating charge" do
+                expect do
+                  plans_service.call
+                end.not_to have_enqueued_job(Charges::UpdateChildrenJob)
+              end
+            end
+
+            context "when the conversion rate changes" do
+              let(:charge_args) { super().merge(applied_pricing_unit: {conversion_rate: 2.5}) }
+
+              it "enqueues the job for updating charge" do
+                expect do
+                  plans_service.call
+                end.to have_enqueued_job(Charges::UpdateChildrenJob)
+              end
+            end
+          end
+        end
       end
 
       context "with cascade option and create charge case" do
@@ -1762,6 +1858,39 @@ RSpec.describe Plans::UpdateService do
             expect do
               plans_service.call
             end.to have_enqueued_job(FixedCharges::DestroyChildrenJob).exactly(1).times
+          end
+
+          context "when the cascaded attributes of the fixed charge are unchanged" do
+            let(:fixed_charge_to_update) { create(:fixed_charge, plan:, units: 1, add_on:, properties: {amount: "150"}) }
+            let(:fixed_charges_args) do
+              [
+                {
+                  id: fixed_charge_to_update.id,
+                  add_on_id: add_on.id,
+                  charge_model: "standard",
+                  invoice_display_name: "renamed fixed charge",
+                  units: 1,
+                  properties: {amount: "150"},
+                  tax_codes: [tax1.code]
+                }
+              ]
+            end
+
+            it "does not schedule the job to update fixed_charges of children plans" do
+              expect do
+                plans_service.call
+              end.not_to have_enqueued_job(FixedCharges::CascadePlanUpdateJob)
+            end
+
+            context "when the units change" do
+              let(:fixed_charges_args) { [super().first.merge(units: 2)] }
+
+              it "schedules job to update fixed_charges of children plans" do
+                expect do
+                  plans_service.call
+                end.to have_enqueued_job(FixedCharges::CascadePlanUpdateJob).exactly(1).times
+              end
+            end
           end
         end
       end
