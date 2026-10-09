@@ -8,8 +8,10 @@ module PaymentProviders
           status = event.data.object.status
           reason = event.data.object.reason
           provider_payment_id = event.data.object.payment_intent
+          # NOTE: a blank payment_intent would match manual payments, which store no provider id.
+          return result if provider_payment_id.blank?
 
-          payment = Payment.find_by(provider_payment_id:)
+          payment = Payment.where(organization_id: organization.id).find_by(provider_payment_id:)
           return result unless payment
 
           if status == "lost"
