@@ -82,6 +82,23 @@ RSpec.describe Invoices::CreateGeneratingService do
       end
     end
 
+    context "when a subscription with its own payment term is passed" do
+      subject(:create_service) do
+        described_class.new(customer:, invoice_type:, currency:, datetime:, subscription:)
+      end
+
+      let(:customer) { create(:customer, payment_term: {term_type: "net", days: 30}) }
+      let(:subscription) { create(:subscription, customer:, payment_term: {term_type: "net", days: 45}) }
+
+      it "snapshots the subscription term" do
+        result = create_service.call
+
+        expect(result.invoice.payment_term).to eq("term_type" => "net", "days" => 45)
+        expect(result.invoice.payment_term_source).to eq("subscription")
+        expect(result.invoice.payment_due_date).to eq(datetime.to_date + 45.days)
+      end
+    end
+
     context "when purchase_order_number is passed" do
       subject(:create_service) do
         described_class.new(customer:, invoice_type:, currency:, datetime:, purchase_order_number: "PO-123")

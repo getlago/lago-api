@@ -202,6 +202,32 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
         end
       end
 
+      context "with a subscription payment term overriding the customer's" do
+        let(:customer) { build(:customer, organization:, billing_entity:, payment_term: {term_type: "net", days: 5}, net_payment_term: 5) }
+        let(:subscription) do
+          build(
+            :subscription,
+            customer:,
+            plan:,
+            billing_time:,
+            subscription_at: timestamp,
+            started_at: timestamp,
+            created_at: timestamp,
+            payment_term: {"term_type" => "end_of_month"}
+          )
+        end
+
+        it "stamps the subscription term" do
+          travel_to(timestamp) do
+            result = preview_service.call
+
+            expect(result.invoice.payment_term).to eq("term_type" => "end_of_month")
+            expect(result.invoice.payment_term_source).to eq("subscription")
+            expect(result.invoice.payment_due_date).to eq(result.invoice.issuing_date.end_of_month)
+          end
+        end
+      end
+
       context "with a billing entity non-net payment term" do
         let(:billing_entity) { create(:billing_entity, organization:, payment_term: {term_type: "end_of_month"}, net_payment_term: nil) }
 

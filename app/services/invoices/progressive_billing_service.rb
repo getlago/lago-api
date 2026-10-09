@@ -80,7 +80,8 @@ module Invoices
         currency: subscription.plan.amount_currency,
         datetime: Time.zone.at(timestamp),
         billing_entity: subscription.billing_entity || subscription.customer.billing_entity,
-        purchase_order_number: subscription.purchase_order_number
+        purchase_order_number: subscription.purchase_order_number,
+        subscription:
       ) do |invoice|
         CreateInvoiceSubscriptionService
           .call(invoice:, subscriptions: [subscription], timestamp:, invoicing_reason: :progressive_billing)
