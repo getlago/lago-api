@@ -1226,6 +1226,30 @@ RSpec.describe BillingSegments::ProcessService do
       expect(other_invoice.reload.status).to eq("generating")
     end
 
+    context "when finalizing existing generating invoices" do
+      let(:earlier_invoice) do
+        create(:invoice, :generating, organization:, customer:, issuing_date: Date.parse("2026-08-01"))
+      end
+      let(:later_invoice) do
+        create(:invoice, :generating, organization:, customer:, issuing_date: Date.parse("2026-09-01"))
+      end
+      let(:finalized_invoice_ids) { [] }
+
+      before do
+        create(:billing_segment, organization:, customer:, invoice: later_invoice, status: :done)
+        create(:billing_segment, organization:, customer:, invoice: earlier_invoice, status: :done)
+        allow(Invoices::TransitionToFinalStatusService).to receive(:call!).and_wrap_original do |_original, invoice:|
+          finalized_invoice_ids << invoice.id
+        end
+      end
+
+      it "finalizes invoices in issuing-date order" do
+        described_class.new(customer:).send(:finalize_generating_invoices)
+
+        expect(finalized_invoice_ids).to eq([earlier_invoice.id, later_invoice.id])
+      end
+    end
+
     context "with a fractional unit amount and tax" do
       let(:contract_rate_card) do
         create(:contract_rate_card, organization:, contract:, rate_card:, units: 3, effective_date: Date.parse("2026-07-01"))
@@ -1550,11 +1574,12 @@ RSpec.describe BillingSegments::ProcessService do
         create(:rate_card_rate, organization:, rate_card: second_rate_card, rate_properties: {"amount" => "20.00"})
       end
       let(:second_segment_billing_at) { Time.zone.parse("2026-08-31 23:59:59") }
+      let(:second_segment_cycle_started_at) { Time.zone.parse("2026-08-01") }
       let(:second_segment) do
         create(:billing_segment, organization:, contract: second_contract, customer:,
           contract_rate_card: second_contract_rate_card, rate_card_rate: second_rate_card_rate,
           currency: second_rate_card.currency, rate_properties: {"amount" => "20.00"},
-          billing_at: second_segment_billing_at, cycle_started_at: Time.zone.parse("2026-08-01"),
+          billing_at: second_segment_billing_at, cycle_started_at: second_segment_cycle_started_at,
           started_at: Time.zone.parse("2026-08-01"), ended_at: Time.zone.parse("2026-08-31 23:59:59"))
       end
 
@@ -1623,9 +1648,16 @@ RSpec.describe BillingSegments::ProcessService do
         end
 
         context "with different cycle start dates" do
-          before { second_segment.update!(cycle_started_at: Time.zone.parse("2026-07-01")) }
+          let(:second_segment_cycle_started_at) { Time.zone.parse("2026-07-01") }
 
-          it_behaves_like "splits invoices"
+          it "consolidates segments with the same billing date across cycles" do
+            expect(result).to be_success
+
+            invoice = result.invoices.sole.reload
+            expect(invoice.fees.count).to eq(2)
+            expect(billing_segment.reload.invoice_id).to eq(second_segment.reload.invoice_id)
+            expect(billing_segment.cycle_started_at).not_to eq(second_segment.cycle_started_at)
+          end
         end
 
         context "with different currencies" do

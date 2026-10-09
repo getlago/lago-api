@@ -243,7 +243,7 @@ module BillingSegments
         .where(invoices: {status: :generating})
         .select(:invoice_id)
 
-      Invoice.where(id: invoice_ids).find_each do |invoice|
+      Invoice.where(id: invoice_ids).order(:issuing_date, :id).each do |invoice|
         if invoice.advance_charges?
           Invoices::FinalizeAndPublishAdvanceChargesService.call!(invoice:)
         else
