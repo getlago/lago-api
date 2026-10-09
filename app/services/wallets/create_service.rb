@@ -42,6 +42,7 @@ module Wallets
         paid_top_up_min_amount_cents: params[:paid_top_up_min_amount_cents],
         paid_top_up_max_amount_cents: params[:paid_top_up_max_amount_cents],
         purchase_order_number: params[:purchase_order_number],
+        payment_term: params[:payment_term] && PaymentTerm.from_h(params[:payment_term]).to_h,
         traceable: traceable?
       }
 
@@ -181,7 +182,8 @@ module Wallets
     end
 
     def valid?
-      Wallets::ValidateService.new(result, **params).valid?
+      Wallets::ValidateService.new(result, **params).valid? &&
+        PaymentTerms::ValidateService.new(result, payment_term: params[:payment_term]).valid?
     end
 
     def validate_wallet_initial_amount!(wallet)

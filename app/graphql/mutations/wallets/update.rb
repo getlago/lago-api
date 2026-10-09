@@ -16,6 +16,10 @@ module Mutations
       type Types::Wallets::Object
 
       def resolve(**args)
+        if args[:payment_term]
+          args[:payment_term] = args[:payment_term].to_h
+        end
+
         wallet = current_organization.wallets.find_by(id: args[:id])
         result = ::Wallets::UpdateService.call(wallet:, params: args)
 

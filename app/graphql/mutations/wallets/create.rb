@@ -16,6 +16,10 @@ module Mutations
       type Types::Wallets::Object
 
       def resolve(**args)
+        if args[:payment_term]
+          args[:payment_term] = args[:payment_term].to_h
+        end
+
         result = ::Wallets::CreateService.call(
           params: args.merge(organization_id: current_organization.id)
             .merge(customer: current_customer(args[:customer_id]))

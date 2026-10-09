@@ -3607,6 +3607,7 @@ input CreateCustomerWalletInput {
   paidTopUpMaxAmountCents: BigInt
   paidTopUpMinAmountCents: BigInt
   paymentMethod: PaymentMethodReferenceInput
+  paymentTerm: PaymentTermInput
   priority: Int!
   purchaseOrderNumber: String
   rateAmount: String!
@@ -15904,6 +15905,7 @@ input UpdateCustomerWalletInput {
   paidTopUpMaxAmountCents: BigInt
   paidTopUpMinAmountCents: BigInt
   paymentMethod: PaymentMethodReferenceInput
+  paymentTerm: PaymentTermInput
   priority: Int!
   purchaseOrderNumber: String
   recurringTransactionRules: [UpdateRecurringTransactionRuleInput!]
@@ -16836,6 +16838,7 @@ type Wallet {
   paidTopUpMinCredits: BigInt
   paymentMethod: PaymentMethod
   paymentMethodType: PaymentMethodTypeEnum
+  paymentTerm: PaymentTerm
   priority: Int!
   purchaseOrderNumber: String
   rateAmount: Float!
