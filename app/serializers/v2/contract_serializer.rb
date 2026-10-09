@@ -50,7 +50,7 @@ module V2
     # In the order of /applied_rate_cards.
     def applied_rate_cards
       ::CollectionSerializer.new(
-        model.applied_rate_cards.includes(:rate_phases, :rate_card, :contract).order(::CursorPagination::DEFAULT_SORT),
+        model.applied_rate_cards.includes(:rate_card, :contract).order(::CursorPagination::DEFAULT_SORT),
         ::V2::ContractAppliedRateCardSerializer,
         collection_name: "applied_rate_cards",
         includes: nested_includes

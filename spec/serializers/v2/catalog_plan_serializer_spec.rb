@@ -3,9 +3,10 @@
 require "rails_helper"
 
 RSpec.describe V2::CatalogPlanSerializer do
-  subject(:serializer) { described_class.new(catalog_plan, root_name: "plan") }
+  subject(:serializer) { described_class.new(catalog_plan, root_name: "plan", includes:) }
 
   let(:catalog_plan) { create(:catalog_plan) }
+  let(:includes) { %i[counts] }
   let(:result) { JSON.parse(serializer.to_json) }
 
   it "serializes the catalog plan" do
@@ -21,9 +22,20 @@ RSpec.describe V2::CatalogPlanSerializer do
     )
   end
 
-  it "counts the plan's applied rate cards" do
-    create(:plan_rate_card, organization: catalog_plan.organization, catalog_plan:)
+  context "with an applied rate card" do
+    before { create(:plan_rate_card, organization: catalog_plan.organization, catalog_plan:) }
 
-    expect(result["plan"]["applied_rate_cards_count"]).to eq(1)
+    it "counts the plan's applied rate cards" do
+      expect(result["plan"]["applied_rate_cards_count"]).to eq(1)
+    end
+  end
+
+  # Webhooks and activity logs pass counts; v2 REST never does.
+  context "without counts" do
+    let(:includes) { [] }
+
+    it "renders no applied_rate_cards_count" do
+      expect(result["plan"]).not_to have_key("applied_rate_cards_count")
+    end
   end
 end
