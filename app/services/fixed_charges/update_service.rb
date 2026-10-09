@@ -23,7 +23,6 @@ module FixedCharges
       return result if cascade && fixed_charge.charge_model != params[:charge_model]
 
       old_parent_attrs = fixed_charge.attributes.deep_dup
-      old_cascaded_attrs = fixed_charge.cascaded_attributes
 
       ActiveRecord::Base.transaction do
         # Note: when updating a fixed_charge, we can't update pay_in_advance and prorated,
@@ -69,7 +68,7 @@ module FixedCharges
         end
       end
 
-      trigger_cascade(old_cascaded_attrs:, old_parent_attrs:)
+      trigger_cascade(old_parent_attrs:)
 
       result
     rescue ActiveRecord::RecordInvalid => e

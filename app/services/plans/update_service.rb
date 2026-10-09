@@ -176,13 +176,12 @@ module Plans
     def cascade_charge_update(charge, payload_charge)
       return unless cascade_needed?
 
-      old_parent_attrs = charge.attributes
-      old_parent_applied_pricing_unit_attrs = charge.applied_pricing_unit&.attributes
-      old_cascaded_attrs = charge.cascaded_attributes
+      old_parent_attrs = charge.attributes.deep_dup
+      old_parent_applied_pricing_unit_attrs = charge.applied_pricing_unit&.attributes&.deep_dup
       before_filters = capture_filters(charge) if payload_charge.key?(:filters)
 
       after_commit do
-        if charge.cascaded_attributes != old_cascaded_attrs
+        if charge.cascaded_attributes_changed?(old_parent_attrs, old_parent_applied_pricing_unit_attrs)
           Charges::UpdateChildrenJob.perform_later(
             params: payload_charge.except(:filters).deep_stringify_keys,
             old_parent_attrs:,
@@ -287,11 +286,10 @@ module Plans
         fixed_charge = plan.fixed_charges.find_by(id: payload_fixed_charge[:id])
 
         if fixed_charge
-          old_parent_attrs = fixed_charge.attributes
-          old_cascaded_attrs = fixed_charge.cascaded_attributes
+          old_parent_attrs = fixed_charge.attributes.deep_dup
           FixedCharges::UpdateService.call!(fixed_charge:, params: payload_fixed_charge, timestamp:, trigger_billing: false)
 
-          if fixed_charge.cascaded_attributes != old_cascaded_attrs
+          if fixed_charge.cascaded_attributes_changed?(old_parent_attrs)
             cascade_fixed_charges_payload << payload_fixed_charge.merge(old_parent_attrs:, action: :update)
           end
 
