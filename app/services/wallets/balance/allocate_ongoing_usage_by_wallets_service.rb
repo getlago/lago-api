@@ -25,7 +25,7 @@ module Wallets
       end
 
       def call
-        result.billable_metric_amounts = with_billable_metric_amounts ? wallets.index_with { Hash.new { |hash, subscription_id| hash[subscription_id] = Hash.new(0) } } : {}
+        result.billable_metric_amounts = with_billable_metric_amounts ? wallets.index_with { empty_billable_metric_amounts } : {}
         result.wallet_allocations = calculate_wallet_allocations
         result.billable_metric_amounts.transform_values! { |amounts| round_on_running_total(amounts) }
         result
@@ -98,37 +98,72 @@ module Wallets
         amount - uncovered
       end
 
-      # A fee key can span several subscriptions, so what a wallet covers for it is split between
-      # them by what each still has to cover.
-      def record_coverage(wallet, fee_key, take)
-        nets = nets_by_fee_key_and_subscription[fee_key].select { |_subscription_id, net| net.positive? }
-        total = nets.values.sum
+      # Per subscription, then billing period, then billable metric. The period is kept because the
+      # pool also holds the previous period's draft invoices during their grace period.
+      def empty_billable_metric_amounts
+        Hash.new { |by_subscription, subscription_id| by_subscription[subscription_id] = Hash.new { |by_period, period| by_period[period] = Hash.new(0) } }
+      end
 
-        nets.each do |subscription_id, net|
-          share = take.to_d * net / total
-          result.billable_metric_amounts[wallet][subscription_id][fee_key.second] += tax_exclusive(fee_key, subscription_id, share)
+      # A fee key can mix the previous period's draft with this period's usage, and billing settles
+      # the draft first, so wallets cover the oldest period first. Within a period, what a wallet
+      # covers is split between subscriptions by what each still has to cover.
+      def record_coverage(wallet, fee_key, take)
+        remaining = take.to_d
+
+        uncovered_by_period(fee_key).each do |period, uncovered|
+          break if remaining <= 0
+          next if uncovered <= 0
+
+          portion = [remaining, uncovered].min
+          uncovered_by_period(fee_key)[period] -= portion
+          remaining -= portion
+
+          nets = positive_period_nets(fee_key, period)
+          total = nets.values.sum
+
+          nets.each do |subscription_id, net|
+            result.billable_metric_amounts[wallet][subscription_id][period][fee_key.second] +=
+              tax_exclusive(fee_key, subscription_id, period, portion * net / total)
+          end
         end
+      end
+
+      def uncovered_by_period(fee_key)
+        @uncovered_by_period ||= {}
+        @uncovered_by_period[fee_key] ||= period_nets[fee_key].keys.sort_by(&:to_s).index_with do |period|
+          positive_period_nets(fee_key, period).values.sum
+        end
+      end
+
+      def positive_period_nets(fee_key, period)
+        period_nets[fee_key][period].select { |_subscription_id, net| net.positive? }
+      end
+
+      def period(fee)
+        Time.zone.parse(fee.properties["charges_from_datetime"].to_s)&.utc&.iso8601
       end
 
       # Rounded on the running total, so the parts never add up to more than the wallet covers.
       def round_on_running_total(amounts)
         running_total = 0
 
-        amounts.transform_values do |by_metric|
-          by_metric.transform_values do |amount|
-            rounded = (running_total + amount).round - running_total.round
-            running_total += amount
-            rounded
+        amounts.transform_values do |by_period|
+          by_period.transform_values do |by_metric|
+            by_metric.transform_values do |amount|
+              rounded = (running_total + amount).round - running_total.round
+              running_total += amount
+              rounded
+            end
           end
         end
       end
 
       # Usage and draft fees enter the pool with their taxes, so what a wallet covers for a
       # subscription's fees is split the same way to keep the taxes out. Subscriptions sharing a fee
-      # key can be taxed differently, so each keeps its own ratio.
-      def tax_exclusive(fee_key, subscription_id, amount)
-        taxes = taxes_by_fee_key_and_subscription[[fee_key, subscription_id]]
-        sub_total = sub_totals_by_fee_key_and_subscription[[fee_key, subscription_id]]
+      # key, and periods, can be taxed differently, so each keeps its own ratio.
+      def tax_exclusive(fee_key, subscription_id, period, amount)
+        taxes = taxes_by_share[[fee_key, subscription_id, period]]
+        sub_total = sub_totals_by_share[[fee_key, subscription_id, period]]
 
         if taxes.zero?
           amount
@@ -137,17 +172,18 @@ module Wallets
         end
       end
 
-      def sub_totals_by_fee_key_and_subscription
-        @sub_totals_by_fee_key_and_subscription ||= sum_by_fee_key_and_subscription { |fee| fee.amount_cents - fee.precise_coupons_amount_cents }
+      # A share is a subscription's fees for a fee key in one period.
+      def sub_totals_by_share
+        @sub_totals_by_share ||= sum_by_share { |fee| fee.amount_cents - fee.precise_coupons_amount_cents }
       end
 
-      def taxes_by_fee_key_and_subscription
-        @taxes_by_fee_key_and_subscription ||= sum_by_fee_key_and_subscription(&:taxes_amount_cents)
+      def taxes_by_share
+        @taxes_by_share ||= sum_by_share(&:taxes_amount_cents)
       end
 
-      def sum_by_fee_key_and_subscription
+      def sum_by_share
         (current_usage_fees + draft_invoices_fees).each_with_object(Hash.new(0)) do |fee, sums|
-          sums[[fee_key(fee), fee.subscription_id]] += yield(fee)
+          sums[[fee_key(fee), fee.subscription_id, period(fee)]] += yield(fee)
         end
       end
 
@@ -203,12 +239,13 @@ module Wallets
           key = fee_key(fee)
           amount = yield(fee)
           remaining[key] += amount
-          nets_by_fee_key_and_subscription[key][fee.subscription_id] += amount if with_billable_metric_amounts
+          period_nets[key][period(fee)][fee.subscription_id] += amount if with_billable_metric_amounts
         end
       end
 
-      def nets_by_fee_key_and_subscription
-        @nets_by_fee_key_and_subscription ||= Hash.new { |hash, fee_key| hash[fee_key] = Hash.new(0) }
+      # Signed nets per fee key, billing period and subscription.
+      def period_nets
+        @period_nets ||= Hash.new { |by_key, fee_key| by_key[fee_key] = Hash.new { |by_period, period| by_period[period] = Hash.new(0) } }
       end
 
       def fee_key(fee)

@@ -40,6 +40,8 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
       let(:with_billable_metric_amounts) { true }
       let(:charge) { create(:standard_charge, organization:) }
       let(:billable_metric_id) { charge.billable_metric_id }
+      # The billing period of the factory's charge fees.
+      let(:period) { "2022-08-01T00:00:00Z" }
 
       context "without being asked for them" do
         let(:with_billable_metric_amounts) { false }
@@ -56,8 +58,8 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
 
         it "records each wallet's part of the billable metric" do
           expect(result.billable_metric_amounts).to eq({
-            wallet_b => {subscription.id => {billable_metric_id => 50}},
-            wallet_a => {subscription.id => {billable_metric_id => 30}}
+            wallet_b => {subscription.id => {period => {billable_metric_id => 50}}},
+            wallet_a => {subscription.id => {period => {billable_metric_id => 30}}}
           })
         end
       end
@@ -68,8 +70,8 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
         it "records no more than each balance, as billing would take, while the ongoing balance goes negative" do
           expect(result.wallet_allocations).to eq({wallet_b => 50, wallet_a => 250})
           expect(result.billable_metric_amounts).to eq({
-            wallet_b => {subscription.id => {billable_metric_id => 50}},
-            wallet_a => {subscription.id => {billable_metric_id => 150}}
+            wallet_b => {subscription.id => {period => {billable_metric_id => 50}}},
+            wallet_a => {subscription.id => {period => {billable_metric_id => 150}}}
           })
         end
       end
@@ -82,8 +84,8 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
         it "records what billing would take, which cascades past the threshold wallet" do
           expect(result.wallet_allocations).to eq({wallet_b => 80, wallet_a => 0})
           expect(result.billable_metric_amounts).to eq({
-            wallet_b => {subscription.id => {billable_metric_id => 50}},
-            wallet_a => {subscription.id => {billable_metric_id => 30}}
+            wallet_b => {subscription.id => {period => {billable_metric_id => 50}}},
+            wallet_a => {subscription.id => {period => {billable_metric_id => 30}}}
           })
         end
       end
@@ -97,8 +99,8 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
         it "records each wallet's part of the usage without its tax" do
           expect(result.wallet_allocations).to eq({wallet_b => 50, wallet_a => 70})
           expect(result.billable_metric_amounts).to eq({
-            wallet_b => {subscription.id => {billable_metric_id => 42}},
-            wallet_a => {subscription.id => {billable_metric_id => 58}}
+            wallet_b => {subscription.id => {period => {billable_metric_id => 42}}},
+            wallet_a => {subscription.id => {period => {billable_metric_id => 58}}}
           })
         end
       end
@@ -107,7 +109,7 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
         let(:current_usage_fees) { [usage_fee(amount_cents: 30, charge:)] }
 
         it "records an empty breakdown, so a refresh clears what it held before" do
-          expect(result.billable_metric_amounts).to eq({wallet_b => {subscription.id => {billable_metric_id => 30}}, wallet_a => {}})
+          expect(result.billable_metric_amounts).to eq({wallet_b => {subscription.id => {period => {billable_metric_id => 30}}}, wallet_a => {}})
         end
       end
 
@@ -120,8 +122,8 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
         it "records only charge usage, while the subscription fee still takes its share of the balance" do
           expect(result.wallet_allocations).to eq({wallet_b => 50, wallet_a => 20})
           expect(result.billable_metric_amounts).to eq({
-            wallet_b => {subscription.id => {billable_metric_id => 10}},
-            wallet_a => {subscription.id => {billable_metric_id => 20}}
+            wallet_b => {subscription.id => {period => {billable_metric_id => 10}}},
+            wallet_a => {subscription.id => {period => {billable_metric_id => 20}}}
           })
         end
       end
@@ -134,7 +136,7 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
         end
 
         it "records whole cents" do
-          expect(result.billable_metric_amounts).to eq({wallet_b => {subscription.id => {billable_metric_id => 30}}, wallet_a => {}})
+          expect(result.billable_metric_amounts).to eq({wallet_b => {subscription.id => {period => {billable_metric_id => 30}}}, wallet_a => {}})
         end
       end
 
@@ -152,7 +154,7 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
 
         it "never records more than the wallet covers" do
           expect(result.billable_metric_amounts).to eq({
-            wallet_b => {subscription.id => {billable_metric_id => 21, other_charge.billable_metric_id => 10}},
+            wallet_b => {subscription.id => {period => {billable_metric_id => 21, other_charge.billable_metric_id => 10}}},
             wallet_a => {}
           })
         end
@@ -176,8 +178,8 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
 
         it "keeps for the next metric the budget billing would still apply to it" do
           expect(result.billable_metric_amounts).to eq({
-            wallet_b => {subscription.id => {billable_metric_id => 50}},
-            wallet_a => {subscription.id => {other_charge.billable_metric_id => 60}}
+            wallet_b => {subscription.id => {period => {billable_metric_id => 50}}},
+            wallet_a => {subscription.id => {period => {other_charge.billable_metric_id => 60}}}
           })
         end
       end
@@ -194,8 +196,8 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
 
         it "splits what each wallet covers between them by their usage, keeping the cents" do
           expect(result.billable_metric_amounts).to eq({
-            wallet_b => {subscription.id => {billable_metric_id => 33}, other_subscription.id => {billable_metric_id => 17}},
-            wallet_a => {subscription.id => {billable_metric_id => 27}, other_subscription.id => {billable_metric_id => 13}}
+            wallet_b => {subscription.id => {period => {billable_metric_id => 33}}, other_subscription.id => {period => {billable_metric_id => 17}}},
+            wallet_a => {subscription.id => {period => {billable_metric_id => 27}}, other_subscription.id => {period => {billable_metric_id => 13}}}
           })
         end
       end
@@ -214,9 +216,9 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
 
         it "records each subscription only on wallets of its currency" do
           expect(result.billable_metric_amounts).to eq({
-            wallet_b => {subscription.id => {billable_metric_id => 50}},
-            wallet_a => {subscription.id => {billable_metric_id => 30}},
-            usd_wallet => {usd_subscription.id => {billable_metric_id => 70}}
+            wallet_b => {subscription.id => {period => {billable_metric_id => 50}}},
+            wallet_a => {subscription.id => {period => {billable_metric_id => 30}}},
+            usd_wallet => {usd_subscription.id => {period => {billable_metric_id => 70}}}
           })
         end
       end
@@ -234,7 +236,27 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
 
         it "removes each subscription's own tax" do
           expect(result.billable_metric_amounts).to eq({
-            wallet_a => {subscription.id => {billable_metric_id => 50}, other_subscription.id => {billable_metric_id => 50}}
+            wallet_a => {subscription.id => {period => {billable_metric_id => 50}}, other_subscription.id => {period => {billable_metric_id => 50}}}
+          })
+        end
+      end
+
+      context "when last period's draft invoice is still in its grace period" do
+        let(:wallet_b) { create(:wallet, customer:, organization:, balance_cents: 100, priority: 1) }
+        let(:wallet_a) { create(:wallet, customer:, organization:, balance_cents: 1000, priority: 2) }
+        let(:draft_invoices_fees) do
+          [create(:charge_fee, charge:, subscription:, organization:, invoice:, amount_cents: 100, taxes_amount_cents: 0,
+            amount_currency: "EUR", properties: {"charges_from_datetime" => "2026-09-01T00:00:00Z"})]
+        end
+        let(:current_usage_fees) do
+          [create(:charge_fee, charge:, subscription:, organization:, invoice:, amount_cents: 50, taxes_amount_cents: 0,
+            amount_currency: "EUR", properties: {"charges_from_datetime" => "2026-10-01T00:00:00Z"})]
+        end
+
+        it "covers the draft first, as billing will, and keeps each period apart" do
+          expect(result.billable_metric_amounts).to eq({
+            wallet_b => {subscription.id => {"2026-09-01T00:00:00Z" => {billable_metric_id => 100}}},
+            wallet_a => {subscription.id => {"2026-10-01T00:00:00Z" => {billable_metric_id => 50}}}
           })
         end
       end
@@ -251,7 +273,7 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
         end
 
         it "records it on the targeted wallet, ahead of priority" do
-          expect(result.billable_metric_amounts).to eq({wallet_b => {}, wallet_a => {subscription.id => {billable_metric_id => 80}}})
+          expect(result.billable_metric_amounts).to eq({wallet_b => {}, wallet_a => {subscription.id => {period => {billable_metric_id => 80}}}})
         end
       end
     end
