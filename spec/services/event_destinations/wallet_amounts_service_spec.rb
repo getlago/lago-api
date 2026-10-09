@@ -10,7 +10,8 @@ RSpec.describe EventDestinations::WalletAmountsService do
   let(:subscription) { create(:subscription, customer:, organization:) }
   let(:billable_metric_id) { create(:billable_metric, organization:).id }
   let(:from_datetime) { Time.zone.parse("2026-10-01") }
-  let(:wallet) { create(:wallet, customer:, organization:, ongoing_billable_metric_amounts: {subscription.id => {billable_metric_id => 300}}) }
+  let(:period) { "2026-10-01T00:00:00Z" }
+  let(:wallet) { create(:wallet, customer:, organization:, ongoing_billable_metric_amounts: {subscription.id => {period => {billable_metric_id => 300}}}) }
 
   before { wallet }
 
@@ -34,7 +35,7 @@ RSpec.describe EventDestinations::WalletAmountsService do
 
   context "with a terminated wallet that paid in the period" do
     let(:terminated_wallet) do
-      create(:wallet, :terminated, customer:, organization:, ongoing_billable_metric_amounts: {subscription.id => {billable_metric_id => 999}})
+      create(:wallet, :terminated, customer:, organization:, ongoing_billable_metric_amounts: {subscription.id => {period => {billable_metric_id => 999}}})
     end
 
     before { bill(wallet: terminated_wallet, amounts: {billable_metric_id => 100}) }
@@ -48,13 +49,33 @@ RSpec.describe EventDestinations::WalletAmountsService do
     let(:other_subscription) { create(:subscription, customer:, organization:) }
     let(:wallet) do
       create(:wallet, customer:, organization:, ongoing_billable_metric_amounts: {
-        subscription.id => {billable_metric_id => 300},
-        other_subscription.id => {billable_metric_id => 999}
+        subscription.id => {period => {billable_metric_id => 300}},
+        other_subscription.id => {period => {billable_metric_id => 999}}
       })
     end
 
     it "reads only this subscription's share" do
       expect(result.amounts).to eq({billable_metric_id => {wallet.id => 300}})
+    end
+  end
+
+  context "with last period's draft still in the ongoing amounts" do
+    let(:wallet) do
+      create(:wallet, customer:, organization:, ongoing_billable_metric_amounts: {
+        subscription.id => {"2026-09-01T00:00:00Z" => {billable_metric_id => 100}, period => {billable_metric_id => 300}}
+      })
+    end
+
+    it "leaves it out of the current period" do
+      expect(result.amounts).to eq({billable_metric_id => {wallet.id => 300}})
+    end
+
+    context "with a window starting before that period, as the lifetime record has" do
+      let(:from_datetime) { Time.zone.parse("2026-09-01") }
+
+      it "counts it" do
+        expect(result.amounts).to eq({billable_metric_id => {wallet.id => 400}})
+      end
     end
   end
 
