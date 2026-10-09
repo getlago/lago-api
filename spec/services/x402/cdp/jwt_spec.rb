@@ -74,4 +74,44 @@ describe X402::Cdp::Jwt do
       end
     end
   end
+
+  {
+    "a plain string" => -> { "key-secret" },
+    "an RSA key" => -> { OpenSSL::PKey::RSA.new(2048).to_pem },
+    "a P-384 key" => -> { OpenSSL::PKey::EC.generate("secp384r1").to_pem },
+    "a public EC key" => -> { OpenSSL::PKey::EC.generate("prime256v1").public_to_pem },
+    "an Ed25519 PEM" => -> { OpenSSL::PKey.generate_key("ED25519").private_to_pem },
+    "nil" => -> {}
+  }.each do |description, build_secret|
+    context "with #{description} as the secret" do
+      let(:api_key_secret) { build_secret.call }
+
+      it "raises an invalid key error" do
+        expect { token }.to raise_error(described_class::InvalidKeyError, /\Aunusable CDP API key secret: /)
+      end
+    end
+  end
+
+  context "with an encrypted PEM as the secret" do
+    let(:api_key_secret) { OpenSSL::PKey::EC.generate("prime256v1").private_to_pem(OpenSSL::Cipher.new("aes-256-cbc"), "passphrase") }
+
+    before { allow(OpenSSL::PKey).to receive(:read).and_call_original }
+
+    it "raises an invalid key error" do
+      expect { token }.to raise_error(described_class::InvalidKeyError, /\Aunusable CDP API key secret: /)
+    end
+
+    it "never asks for a passphrase" do
+      expect { token }.to raise_error(described_class::InvalidKeyError)
+      expect(OpenSSL::PKey).to have_received(:read).with(anything, "")
+    end
+  end
+
+  context "with a secret that cannot be parsed" do
+    let(:api_key_secret) { "key-secret" }
+
+    it "keeps the secret out of the message" do
+      expect { token }.to raise_error(described_class::InvalidKeyError, "unusable CDP API key secret: OpenSSL::PKey::PKeyError")
+    end
+  end
 end

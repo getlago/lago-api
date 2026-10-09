@@ -50,9 +50,7 @@ en:
         invalid_volume_ranges: invalid_volume_ranges
         language_code_invalid: not_a_valid_language_code
         less_than_or_equal_to: value_is_out_of_range
-        missing_evm_payout_address: missing_evm_payout_address
         missing_graduated_ranges: missing_graduated_ranges
-        missing_svm_payout_address: missing_svm_payout_address
         missing_volume_ranges: missing_volume_ranges
         mixed_environments: mixed_environments
         modification_not_allowed: modification_not_allowed

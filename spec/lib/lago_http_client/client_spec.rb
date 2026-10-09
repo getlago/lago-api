@@ -136,6 +136,36 @@ RSpec.describe LagoHttpClient::Client do
         end
       end
     end
+
+    context "with max_retries set to zero" do
+      let(:server) { TCPServer.new("127.0.0.1", 0) }
+      let(:url) { "http://127.0.0.1:#{server.addr[1]}/stalled" }
+      let(:client_options) { {read_timeout: 0.1, max_retries: 0} }
+
+      before { WebMock.disable_net_connect!(allow_localhost: true) }
+
+      after do
+        WebMock.disable_net_connect!
+        server.close
+      end
+
+      def connections_made
+        count = 0
+        loop do
+          server.accept_nonblock.close
+          count += 1
+        end
+      rescue IO::WaitReadable
+        count
+      end
+
+      context "when the server never answers a GET" do
+        it "sends the request once" do
+          expect { client.get }.to raise_error(Net::ReadTimeout)
+          expect(connections_made).to eq(1)
+        end
+      end
+    end
   end
 
   describe "#post" do

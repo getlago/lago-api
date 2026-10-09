@@ -17,6 +17,11 @@ module X402
 
       def call
         connection = organization.x402_connections.new(params.slice(*ATTRIBUTES))
+        return result.validation_failure!(errors: connection.validation_error_messages) unless connection.valid?
+
+        verify_result = X402::Connections::VerifyService.call(connection:)
+        return result.fail_with_error!(verify_result.error) if verify_result.failure?
+
         connection.save!
 
         register_security_log(connection)
@@ -24,7 +29,7 @@ module X402
         result.connection = connection
         result
       rescue ActiveRecord::RecordInvalid => e
-        result.record_validation_failure!(record: e.record)
+        result.validation_failure!(errors: e.record.validation_error_messages)
       end
 
       private

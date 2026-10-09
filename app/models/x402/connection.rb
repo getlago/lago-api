@@ -29,6 +29,16 @@ module X402
 
     default_scope -> { kept }
 
+    def validation_error_messages
+      family_errors = errors.where(:payout_addresses).select { |error| error.options.key?(:family) }
+
+      if family_errors.any?
+        errors.to_hash.merge(payout_addresses: family_errors.group_by { |error| error.options[:family] }.transform_values { |grouped| grouped.map(&:message) })
+      else
+        errors.to_hash
+      end
+    end
+
     private
 
     def known_networks
@@ -53,10 +63,12 @@ module X402
 
     def validate_payout_addresses
       if payout_addresses.is_a?(Hash) && payout_addresses.keys.all? { |key| PAYOUT_FAMILIES.key?(key) }
-        payout_addresses
-          .filter_map { |key, address| payout_address_error(PAYOUT_FAMILIES.fetch(key), address) }
-          .each { |error| errors.add(:payout_addresses, error) }
-        missing_families.each { |family| errors.add(:payout_addresses, :"missing_#{family}_payout_address") }
+        payout_addresses.each do |key, address|
+          family = PAYOUT_FAMILIES.fetch(key)
+          error = payout_address_error(family, address)
+          errors.add(:payout_addresses, error, family:) if error
+        end
+        missing_families.each { |family| errors.add(:payout_addresses, :blank, family:) }
       else
         errors.add(:payout_addresses, :invalid)
       end
