@@ -15,7 +15,10 @@ module RateCards
       return result.not_found_failure!(resource: "tax") if (tax_codes - taxes_by_code.keys).present?
 
       rate_card.with_lock do
-        rate_card.applied_taxes.where.not(tax_id: taxes_by_code.values.map(&:id)).destroy_all
+        current_tax_ids = rate_card.applied_taxes.pluck(:tax_id)
+        requested_tax_ids = taxes_by_code.values.map(&:id)
+
+        rate_card.applied_taxes.where.not(tax_id: requested_tax_ids).destroy_all
 
         result.applied_taxes = tax_codes.map do |tax_code|
           rate_card.applied_taxes
@@ -25,6 +28,8 @@ module RateCards
 
         rate_card.applied_taxes.reset
         rate_card.taxes.reset
+
+        refresh_draft_invoices if current_tax_ids.sort != requested_tax_ids.sort
       end
 
       result
@@ -38,6 +43,14 @@ module RateCards
 
     def taxes_by_code
       @taxes_by_code ||= rate_card.organization.taxes.where(code: tax_codes).index_by(&:code)
+    end
+
+    def refresh_draft_invoices
+      invoice_ids = Fee.where(rate_card_rate_id: rate_card.rates.select(:id)).select(:invoice_id)
+
+      rate_card.organization.invoices.draft
+        .where(id: invoice_ids)
+        .update_all(ready_to_be_refreshed: true, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
     end
   end
 end

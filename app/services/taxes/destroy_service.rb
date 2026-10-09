@@ -51,10 +51,12 @@ module Taxes
     attr_reader :tax
 
     def draft_invoice_ids
-      @draft_invoice_ids ||= tax.organization.invoices
+      @draft_invoice_ids ||= (
+        tax.organization.invoices
         .where(customer_id: tax.applicable_customers.select(:id))
         .draft
-        .pluck(:id)
+        .pluck(:id) + tax.draft_fee_taxes.distinct.pluck("fees.invoice_id")
+      ).uniq
     end
   end
 end
