@@ -109,6 +109,38 @@ describe X402::Connections::UpdateService do
       end
     end
 
+    context "when another update saved after the connection was loaded" do
+      let(:connection) do
+        create(
+          :x402_connection,
+          organization:,
+          payout_addresses: {
+            "evm" => "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed",
+            "svm" => "2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4"
+          }
+        )
+      end
+      let(:params) { {networks: ["eip155:84532", "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"]} }
+
+      before do
+        described_class.call(
+          connection: X402::Connection.find(connection.id),
+          params: {payout_addresses: {evm: "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed"}}
+        )
+      end
+
+      it "validates against the saved connection" do
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq({payout_addresses: ["missing_svm_payout_address"]})
+      end
+
+      it "keeps the saved networks" do
+        result
+
+        expect(connection.reload.networks).to eq(["eip155:84532"])
+      end
+    end
+
     context "without a connection" do
       let(:connection) { nil }
 

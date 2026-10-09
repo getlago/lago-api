@@ -18,8 +18,10 @@ module X402
       def call
         return result.not_found_failure!(resource: "x402_connection") unless connection
 
-        connection.assign_attributes(params.slice(*ATTRIBUTES))
-        connection.save!
+        connection.with_lock do
+          connection.assign_attributes(params.slice(*ATTRIBUTES))
+          connection.save!
+        end
 
         register_security_log
 
