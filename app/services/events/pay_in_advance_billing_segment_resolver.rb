@@ -39,7 +39,7 @@ module Events
       return [] if cards.empty?
 
       event_date = event.timestamp.in_time_zone(cards.first.contract.customer.applicable_timezone).to_date
-      selected_cards = ContractRateCards::SelectInForceService.call!(contract_rate_cards: cards, date: event_date).contract_rate_cards
+      selected_cards = ContractRateCards::SelectEffectiveService.call!(contract_rate_cards: cards, date: event_date).contract_rate_cards
 
       # An effective arrears replacement must supersede the older advance card.
       selected_cards.select! { |card| card.rate_card.advance? }

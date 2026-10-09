@@ -3,8 +3,8 @@
 module ContractRateCards
   # A contract can hold several versions of the card pricing the same product and product
   # filter, each taking over from its effective date. This picks, for each of them, the
-  # version in force on the given date: the latest that started on or before it.
-  class SelectInForceService < BaseService
+  # version effective on the given date: the latest that started on or before it.
+  class SelectEffectiveService < BaseService
     Result = BaseResult[:contract_rate_cards]
 
     def initialize(contract_rate_cards:, date:)
@@ -16,7 +16,7 @@ module ContractRateCards
     def call
       result.contract_rate_cards = contract_rate_cards
         .group_by { |card| [card.contract_id, card.rate_card.product_id, card.rate_card.product_filter_id] }
-        .filter_map { |_key, versions| version_in_force(versions) }
+        .filter_map { |_key, versions| effective_version(versions) }
       result
     end
 
@@ -24,7 +24,7 @@ module ContractRateCards
 
     attr_reader :contract_rate_cards, :date
 
-    def version_in_force(versions)
+    def effective_version(versions)
       ordered = versions.sort_by { |card| [card.effective_date, card.created_at, card.id] }
       first_later_index = ordered.bsearch_index { |card| card.effective_date > date } || ordered.length
 

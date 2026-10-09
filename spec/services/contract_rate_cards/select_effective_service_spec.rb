@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe ContractRateCards::SelectInForceService do
+RSpec.describe ContractRateCards::SelectEffectiveService do
   subject(:selected_cards) { described_class.call!(contract_rate_cards:, date:).contract_rate_cards }
 
   let(:organization) { build_stubbed(:organization) }
@@ -46,7 +46,7 @@ RSpec.describe ContractRateCards::SelectInForceService do
     let(:api_calls_december) { card(api_calls_rate_card, Date.new(2026, 12, 1)) }
     let(:contract_rate_cards) { [api_calls_february, api_calls_january, api_calls_december, seats_january] }
 
-    it "still selects the version in force" do
+    it "still selects the effective version" do
       expect(selected_cards).to contain_exactly(api_calls_january, seats_january)
     end
   end
