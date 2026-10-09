@@ -99,6 +99,17 @@ RSpec.describe Customers::RefreshWalletsService do
       expect(result.wallets.first.ongoing_billable_metric_amounts).to eq({})
     end
 
+    context "when the organization streams nothing" do
+      before { allow(Wallets::Balance::AllocateOngoingUsageByWalletsService).to receive(:call!).and_call_original }
+
+      it "does not ask for the per-metric split, keeping the refresh as cheap as before" do
+        result
+
+        expect(Wallets::Balance::AllocateOngoingUsageByWalletsService)
+          .to have_received(:call!).with(hash_including(with_billable_metric_amounts: false))
+      end
+    end
+
     context "when the organization streams usage" do
       before { create(:kinesis_destination, organization:) }
 

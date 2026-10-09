@@ -9,19 +9,23 @@ module Wallets
     class AllocateOngoingUsageByWalletsService < BaseService
       Result = BaseResult[:wallet_allocations, :billable_metric_amounts]
 
-      def initialize(customer:, wallets:, current_usage_fees:, draft_invoices_fees:, progressive_billing_fees:, pay_in_advance_fees:)
+      # with_billable_metric_amounts: the per-metric split runs on every refresh and only streamed
+      # usage reads it, so callers ask for it when the organization streams.
+      def initialize(customer:, wallets:, current_usage_fees:, draft_invoices_fees:, progressive_billing_fees:, pay_in_advance_fees:,
+        with_billable_metric_amounts: false)
         @customer = customer
         @wallets = wallets
         @current_usage_fees = current_usage_fees
         @draft_invoices_fees = draft_invoices_fees
         @progressive_billing_fees = progressive_billing_fees
         @pay_in_advance_fees = pay_in_advance_fees
+        @with_billable_metric_amounts = with_billable_metric_amounts
 
         super
       end
 
       def call
-        result.billable_metric_amounts = wallets.index_with { Hash.new { |hash, subscription_id| hash[subscription_id] = Hash.new(0) } }
+        result.billable_metric_amounts = with_billable_metric_amounts ? wallets.index_with { Hash.new { |hash, subscription_id| hash[subscription_id] = Hash.new(0) } } : {}
         result.wallet_allocations = calculate_wallet_allocations
         result.billable_metric_amounts.transform_values! { |amounts| round_on_running_total(amounts) }
         result
@@ -30,7 +34,7 @@ module Wallets
       private
 
       attr_reader :customer, :wallets, :current_usage_fees, :draft_invoices_fees,
-        :progressive_billing_fees, :pay_in_advance_fees
+        :progressive_billing_fees, :pay_in_advance_fees, :with_billable_metric_amounts
 
       def calculate_wallet_allocations
         net_amounts = net_usage_by_fee_key
@@ -47,7 +51,9 @@ module Wallets
           currency = fee_key.last
           remaining = [key_amount, budgets[currency]].min
           applicable = metas.select { |meta| applicable_fee?(fee_key:, wallet: meta[:wallet], targets: meta[:targets], types: meta[:types]) }
-          coverage_budgets[currency] -= cover(fee_key, [key_amount, coverage_budgets[currency]].min, applicable, balances, covered)
+          if with_billable_metric_amounts
+            coverage_budgets[currency] -= cover(fee_key, [key_amount, coverage_budgets[currency]].min, applicable, balances, covered)
+          end
 
           applicable.each_with_index do |meta, index|
             break if remaining <= 0
@@ -197,7 +203,7 @@ module Wallets
           key = fee_key(fee)
           amount = yield(fee)
           remaining[key] += amount
-          nets_by_fee_key_and_subscription[key][fee.subscription_id] += amount
+          nets_by_fee_key_and_subscription[key][fee.subscription_id] += amount if with_billable_metric_amounts
         end
       end
 
