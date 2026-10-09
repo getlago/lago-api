@@ -52,22 +52,21 @@ module EventDestinations
       usage_fees = model.fees.select(&:non_zero?)
       metric_amounts = usage_fees.group_by { it.charge.billable_metric_id }.transform_values { |fees| fees.sum(&:amount_cents) }
 
+      ledgers = Hash.new { |hash, key| hash[key] = Hash.new(0) }
+
       usage_fees.group_by(&:charge_id).flat_map do |_charge_id, fees|
         fee = fees.first
-        units = fees.sum { BigDecimal(it.units) }
-        events_count = fees.sum { it.events_count.to_i }
-        amount_cents = fees.sum(&:amount_cents)
-        weights = wallet_weights(fee.charge.billable_metric_id, metric_amounts[fee.charge.billable_metric_id])
+        billable_metric_id = fee.charge.billable_metric_id
+        weights = wallet_weights(billable_metric_id, metric_amounts[billable_metric_id])
+        units = split_units(fees.sum { BigDecimal(it.units) }, weights, ledgers[[billable_metric_id, :units]])
+        events_count = split_integer(fees.sum { it.events_count.to_i }, weights, ledgers[[billable_metric_id, :events_count]])
+        amount_cents = split_integer(fees.sum(&:amount_cents), weights, ledgers[[billable_metric_id, :amount_cents]])
 
-        weights.keys.zip(
-          split_units(units, weights.values),
-          split_integer(events_count, weights.values),
-          split_integer(amount_cents, weights.values)
-        ).map do |wallet_id, wallet_units, wallet_events_count, wallet_amount_cents|
+        weights.keys.map do |wallet_id|
           {
-            units: wallet_units.to_s,
-            events_count: wallet_events_count,
-            amount_cents: wallet_amount_cents,
+            units: units[wallet_id].to_s,
+            events_count: events_count[wallet_id],
+            amount_cents: amount_cents[wallet_id],
             amount_currency: fee.amount_currency,
             charge: {
               lago_id: fee.charge_id,
@@ -102,20 +101,27 @@ module EventDestinations
       end
     end
 
-    # Largest remainder, so the parts add up to the total.
-    def split_integer(total, weights)
-      sum = weights.sum
-      parts = weights.map { (total * it).div(sum) }
-      order = weights.each_index.sort_by { |index| [-((total * weights[index]) % sum), index] }
-      (total - parts.sum).times { parts[order[it]] += 1 }
+    # Largest remainder, so the parts add up to the total. The ledger carries, per wallet, how much it
+    # has been shorted so far on the billable metric: when a metric has several charges, the leftover
+    # units go to whoever is owed most, so rounding does not keep favouring the same wallet.
+    def split_integer(total, weights, ledger, factor = 1)
+      sum = weights.values.sum
+      exact = weights.transform_values { |weight| Rational(total * weight, sum) }
+      parts = exact.transform_values(&:floor)
+      owed = exact.to_h { |wallet_id, share| [wallet_id, ledger[wallet_id] + Rational(share - parts[wallet_id], factor)] }
+      recipients = weights.keys.each_with_index.sort_by { |wallet_id, index| [-owed[wallet_id], index] }
+        .first(total - parts.values.sum).map(&:first)
+
+      recipients.each { parts[it] += 1 }
+      parts.each_key { |wallet_id| ledger[wallet_id] = owed[wallet_id] - (recipients.include?(wallet_id) ? Rational(1, factor) : 0) }
       parts
     end
 
     # Split like the integers, at the precision of the total, so no part can go negative.
-    def split_units(units, weights)
+    def split_units(units, weights, ledger)
       factor = 10**units.scale
 
-      split_integer((units * factor).to_i, weights).map { BigDecimal(it) / factor }
+      split_integer((units * factor).to_i, weights, ledger, factor).transform_values { BigDecimal(it) / factor }
     end
   end
 end

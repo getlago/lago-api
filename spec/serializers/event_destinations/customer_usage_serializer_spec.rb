@@ -128,6 +128,34 @@ RSpec.describe EventDestinations::CustomerUsageSerializer do
       end
     end
 
+    context "when charges sharing the billable metric each leave a unit to round" do
+      let(:other_charge) { create(:standard_charge, plan:, billable_metric:) }
+      let(:wallet_amounts) { {billable_metric.id => {first_wallet_id => 1, second_wallet_id => 1}} }
+      let(:usage) do
+        SubscriptionUsage.new(
+          from_datetime: "2026-09-01T00:00:00Z",
+          to_datetime: "2026-09-30T23:59:59Z",
+          issuing_date: "2026-09-30",
+          currency: "EUR",
+          amount_cents: 2,
+          total_amount_cents: 2,
+          taxes_amount_cents: 0,
+          fees: [
+            build(:charge_fee, charge:, subscription:, units: "1", events_count: 1, amount_cents: 1, amount_currency: "EUR", charge_filter: nil, grouped_by: {}),
+            build(:charge_fee, charge: other_charge, subscription:, units: "1", events_count: 1, amount_cents: 1, amount_currency: "EUR", charge_filter: nil, grouped_by: {})
+          ]
+        )
+      end
+
+      it "spreads the leftovers across wallets instead of giving them all to the first" do
+        totals = result[:charges_usage].group_by { it[:wallet_id] }.transform_values do |entries|
+          [entries.sum { it[:amount_cents] }, entries.sum { it[:events_count] }, entries.sum { BigDecimal(it[:units]) }]
+        end
+
+        expect(totals).to eq({first_wallet_id => [1, 1, 1], second_wallet_id => [1, 1, 1]})
+      end
+    end
+
     context "when the units carry decimals" do
       let(:wallet_amounts) { {billable_metric.id => {second_wallet_id => 600, first_wallet_id => 1050}} }
       let(:usage) do
