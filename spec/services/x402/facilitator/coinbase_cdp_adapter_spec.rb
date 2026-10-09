@@ -206,7 +206,7 @@ describe X402::Facilitator::CoinbaseCdpAdapter do
       subject(:adapter) { described_class.new(api_key_id: cdp_api_key_id, api_key_secret: "not a key") }
 
       it "raises instead of reporting CDP unavailable" do
-        expect { verification }.to raise_error(OpenSSL::PKey::PKeyError)
+        expect { verification }.to raise_error(X402::Cdp::Jwt::InvalidKeyError)
       end
     end
 
@@ -419,11 +419,11 @@ describe X402::Facilitator::CoinbaseCdpAdapter do
       subject(:adapter) { described_class.new(api_key_id: cdp_api_key_id, api_key_secret: "not a key") }
 
       it "raises instead of reporting no response" do
-        expect { settlement }.to raise_error(OpenSSL::PKey::PKeyError)
+        expect { settlement }.to raise_error(X402::Cdp::Jwt::InvalidKeyError)
       end
 
       it "sends nothing" do
-        expect { settlement }.to raise_error(OpenSSL::PKey::PKeyError)
+        expect { settlement }.to raise_error(X402::Cdp::Jwt::InvalidKeyError)
         expect(a_request(:post, "#{cdp_facilitator_url}/settle")).not_to have_been_made
       end
     end
