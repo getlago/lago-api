@@ -14,7 +14,7 @@ module Events
 
     def call
       return result if ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"].blank?
-      return result if ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"].blank?
+      return result if topic.blank?
 
       messages = events.map { |event| build_message(event) }
       Karafka.producer.produce_many_async(messages)
@@ -26,9 +26,21 @@ module Events
 
     attr_reader :events, :organization
 
+    # Product catalog organizations get their own pipeline, falling back to the
+    # legacy topic until the catalog topic is configured.
+    def catalog_pipeline?
+      return @catalog_pipeline if defined?(@catalog_pipeline)
+
+      @catalog_pipeline = organization.product_catalog_enabled? && ENV["LAGO_KAFKA_CATALOG_RAW_EVENTS_TOPIC"].present?
+    end
+
+    def topic
+      catalog_pipeline? ? ENV["LAGO_KAFKA_CATALOG_RAW_EVENTS_TOPIC"] : ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"]
+    end
+
     def build_message(event)
       {
-        topic: ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"],
+        topic:,
         payload: build_payload(event).to_json
       }
     end
@@ -37,7 +49,7 @@ module Events
       {
         organization_id: organization.id,
         external_customer_id: event.external_customer_id,
-        external_subscription_id: event.external_subscription_id,
+        **scope_key(event),
         transaction_id: event.transaction_id,
         # NOTE: Removes trailing 'Z' to allow clickhouse parsing
         timestamp: event.timestamp.to_f.to_s,
@@ -51,6 +63,16 @@ module Events
           api_post_processed: !organization.clickhouse_events_store?
         }
       }
+    end
+
+    # The create services store external_contract_id in external_subscription_id;
+    # the catalog tables key on the contract.
+    def scope_key(event)
+      if catalog_pipeline?
+        {external_contract_id: event.external_subscription_id}
+      else
+        {external_subscription_id: event.external_subscription_id}
+      end
     end
   end
 end

@@ -1,0 +1,24 @@
+# frozen_string_literal: true
+
+module Clickhouse
+  class CatalogEventsRaw < BaseRecord
+    self.table_name = "catalog_events_raw"
+    self.primary_key = nil
+  end
+end
+
+# == Schema Information
+#
+# Table name: catalog_events_raw
+# Database name: clickhouse
+#
+#  code                       :string           not null
+#  ingested_at                :datetime         not null
+#  precise_total_amount_cents :decimal(40, 15)
+#  properties                 :string           not null
+#  timestamp                  :datetime         not null
+#  external_customer_id       :string           not null
+#  external_contract_id       :string           not null
+#  organization_id            :string           not null
+#  transaction_id             :string           not null
+#
