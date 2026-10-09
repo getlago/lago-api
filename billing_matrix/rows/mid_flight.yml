@@ -1,0 +1,71 @@
+# A configuration mutated while an invoice is in flight. Each mutation row names the control
+# on which the same draft is observed without the surface re-reading the change, so a red row
+# points at the re-read and not at the mutation itself.
+
+- id: mid_flight/charge_amount/on-draft/regenerated
+  area: mid_flight
+  axes: {mutation: charge_amount, stage: on-draft, observed_via: regenerated}
+  control: mid_flight/charge_amount/on-draft/draft
+  setup:
+    metrics: [{code: m_mf_amt, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: p_mf_amt, interval: monthly, amount_cents: 0, pay_in_advance: false}
+    charges: [{metric: m_mf_amt, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: cust_mf_amt, invoice_grace_period: 5}
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_mf_amt, plan_code: p_mf_amt}
+    - at: 2026-03-05T10:00:00Z
+      do: ingest_events
+      events: [{properties: {amount: 50}, count: 2}]
+    - {at: 2026-04-01T01:00:00Z, do: perform_billing}
+    - {at: 2026-04-02T10:00:00Z, do: update_charge, properties: {amount: "2"}}
+    - {at: 2026-04-02T11:00:00Z, do: refresh_invoice}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: draft
+      fees_amount_cents: 20000
+      total_amount_cents: 20000
+      fees_count: 2
+      fees:
+        - {fee_type: subscription, amount_cents: 0}
+        - {fee_type: charge, amount_cents: 20000}
+  math: >-
+    100 units × 1.00 = 10_000¢ land in a draft held by the customer's 5-day grace period. The charge
+    is repriced to 2.00 through PUT /plans/:code/charges/:code and the draft is refreshed explicitly.
+    Invoices::RefreshDraftService#reset_invoice_values destroys the fees, then
+    Invoices::CalculateFeesService rebuilds them from subscription.plan.charges as they are now, so
+    Fees::ChargeService prices the same 100 units at 2.00 = 20_000¢. The refresh runs with context
+    :refresh, so the invoice stays a draft.
+
+- id: mid_flight/charge_amount/on-draft/draft
+  area: mid_flight
+  axes: {mutation: charge_amount, stage: on-draft, observed_via: draft}
+  setup:
+    metrics: [{code: m_mf_amt_d, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: p_mf_amt_d, interval: monthly, amount_cents: 0, pay_in_advance: false}
+    charges: [{metric: m_mf_amt_d, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: cust_mf_amt_d, invoice_grace_period: 5}
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_mf_amt_d, plan_code: p_mf_amt_d}
+    - at: 2026-03-05T10:00:00Z
+      do: ingest_events
+      events: [{properties: {amount: 50}, count: 2}]
+    - {at: 2026-04-01T01:00:00Z, do: perform_billing}
+    - {at: 2026-04-02T10:00:00Z, do: update_charge, properties: {amount: "2"}}
+  expect:
+    invoices: 1
+    invoice:
+      invoice_type: subscription
+      status: draft
+      fees_amount_cents: 10000
+      total_amount_cents: 10000
+      fees_count: 2
+      fees:
+        - {fee_type: subscription, amount_cents: 0}
+        - {fee_type: charge, amount_cents: 10000}
+  math: >-
+    Control for the regenerated row: the same repricing with no refresh. A draft is a snapshot —
+    Charges::UpdateService rewrites the charge's properties but touches no existing fee, and unlike
+    Plans::UpdateService (plans/update_service.rb:89) it does not even flag the draft
+    ready_to_be_refreshed — so the draft still reads 100 × 1.00 = 10_000¢ at the old price.
