@@ -8,18 +8,29 @@ module Events
       # combinations_cache_ttl reuses the events store answer for that long, so a client polling the
       # same usage does not scan the events at every call. Any event ingested meanwhile is missed
       # until the entry expires, so it is only passed where that delay is acceptable.
-      def initialize(subscription:, boundaries:, codes: nil, with_last_seen_at: true, precomputed_filters: {}, combinations_cache_ttl: nil)
+      #
+      # scan_unfiltered_charges: false records the default bucket of every charge without filters
+      # instead of querying its events, which only saves work when such charges almost always have
+      # usage. Without ingestion timestamps only: a nil one would never expire a live charge cache.
+      def initialize(subscription:, boundaries:, codes: nil, with_last_seen_at: true, precomputed_filters: {}, combinations_cache_ttl: nil,
+        scan_unfiltered_charges: true)
+        if with_last_seen_at && !scan_unfiltered_charges
+          raise ArgumentError, "unfiltered charges can only skip the scan without ingestion timestamps"
+        end
+
         @subscription = subscription
         @boundaries = boundaries
         @codes = codes
         @with_last_seen_at = with_last_seen_at
         @precomputed_filters = precomputed_filters
         @combinations_cache_ttl = combinations_cache_ttl
+        @scan_unfiltered_charges = scan_unfiltered_charges
       end
 
       private
 
-      attr_reader :subscription, :boundaries, :codes, :with_last_seen_at, :precomputed_filters, :combinations_cache_ttl
+      attr_reader :subscription, :boundaries, :codes, :with_last_seen_at, :precomputed_filters, :combinations_cache_ttl,
+        :scan_unfiltered_charges
 
       delegate :organization, :plan, to: :subscription
 
@@ -72,7 +83,7 @@ module Events
         ].join("/")
       end
 
-      def record_precomputed_targets(result)
+      def record_known_targets(result)
         precomputed_filters.each do |charge, filter_ids|
           target_key = filter_target_for(charge).target_key
 
@@ -80,37 +91,51 @@ module Events
           # so nothing compares against it.
           filter_ids.each { record(result, target_key, it, nil) }
         end
+
+        unscanned_charges.each { record(result, filter_target_for(it).target_key, nil, nil) }
       end
 
       # A code outside of the plan matches no event, so codes is used as is: dropping it would leave
       # its charge out of the result, billed as zero units instead of surfaced.
       def metric_codes(record_id: nil)
-        @metric_codes ||= scoped_codes - precomputed_only_codes
+        @metric_codes ||= scoped_codes - unscanned_only_codes
       end
 
       def scoped_codes
         @scoped_codes ||= codes || plan.billable_metrics.distinct.pluck(:code)
       end
 
-      # A code is dropped only when every charge carrying it is served from the buckets: shared with
-      # a charge the buckets cannot answer, it still has to be resolved from the events store.
-      def precomputed_only_codes
-        return [] if precomputed_filters.empty?
+      # A code is dropped only when no charge carrying it needs the scan: shared with a charge whose
+      # targets are not known up front, it still has to be resolved from the events store.
+      def unscanned_only_codes
+        return [] if unscanned_charge_ids.empty?
 
-        precomputed_filters.keys.map { it.billable_metric.code }.uniq - delegated_codes
+        (precomputed_filters.keys + unscanned_charges).map { it.billable_metric.code }.uniq - delegated_codes
       end
 
       def delegated_codes
         @delegated_codes ||= plan.charges
           .joins(:billable_metric)
           .where(billable_metrics: {code: scoped_codes})
-          .where.not(id: precomputed_charge_ids)
+          .where.not(id: unscanned_charge_ids)
           .distinct
           .pluck("billable_metrics.code")
       end
 
-      def precomputed_charge_ids
-        @precomputed_charge_ids ||= precomputed_filters.keys.map(&:id)
+      def unscanned_charges
+        return [] if scan_unfiltered_charges
+
+        @unscanned_charges ||= plan.charges
+          .joins(:billable_metric)
+          .where(billable_metrics: {code: scoped_codes})
+          .where.missing(:filters)
+          .where.not(id: precomputed_filters.keys.map(&:id))
+          .includes(:billable_metric)
+          .to_a
+      end
+
+      def unscanned_charge_ids
+        @unscanned_charge_ids ||= (precomputed_filters.keys + unscanned_charges).map(&:id)
       end
 
       def filter_target_for(charge)
@@ -123,11 +148,11 @@ module Events
           .joins(:billable_metric)
           .where(billable_metrics: {code: codes})
           .includes(billable_metric: :filters, filters: {values: :billable_metric_filter})
-        return targets if precomputed_filters.empty?
+        return targets if unscanned_charge_ids.empty?
 
-        # A served charge sharing its code with a delegated one is in the queried codes but takes
-        # its filters from the buckets, so the combinations must not reach it.
-        targets.where.not(id: precomputed_charge_ids)
+        # A served or unscanned charge sharing its code with a scanned one is in the queried codes
+        # but its targets are already recorded, so the combinations must not reach it.
+        targets.where.not(id: unscanned_charge_ids)
       end
 
       def billable_metric_filter_keys

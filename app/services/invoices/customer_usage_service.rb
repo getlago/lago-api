@@ -328,8 +328,15 @@ module Invoices
         codes: filtered_metric_codes,
         with_last_seen_at: charge_cache_enabled?,
         precomputed_filters:,
-        combinations_cache_ttl: (PREFILTER_CACHE_TTL if prefilter_cache_enabled?)
+        combinations_cache_ttl: (PREFILTER_CACHE_TTL if prefilter_cache_enabled?),
+        scan_unfiltered_charges: !skip_unfiltered_charges_scan?
       )
+    end
+
+    # Over the whole subscription lifetime a charge almost always has usage, so scanning every code
+    # of the plan to find the few without any costs more than aggregating them to zero.
+    def skip_unfiltered_charges_scan?
+      usage_filters.full_usage && !charge_cache_enabled?
     end
 
     # Opt-in per caller and per organization: the pre-filter result is reused for a few seconds, so

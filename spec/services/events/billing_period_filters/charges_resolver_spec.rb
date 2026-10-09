@@ -28,6 +28,19 @@ RSpec.describe Events::BillingPeriodFilters::ChargesResolver do
       timestamp: Time.zone.parse("2026-09-30 23:59:59").to_i
     )
   end
+  let(:combination_queries) { [] }
+  let(:queried_codes) { combination_queries.flat_map { it[:codes] } }
+
+  before do
+    allow(Events::Stores::PostgresStore).to receive(:new).and_wrap_original do |build, **args|
+      build.call(**args).tap do |store|
+        allow(store).to receive(:distinct_codes_and_property_combinations).and_wrap_original do |query, **options|
+          combination_queries << options
+          query.call(**options)
+        end
+      end
+    end
+  end
 
   describe "#filter_targets" do
     it "memoizes filter targets by charge instance rather than charge id" do
@@ -80,7 +93,6 @@ RSpec.describe Events::BillingPeriodFilters::ChargesResolver do
       let(:other_resolver) { described_class.new(subscription:, boundaries:, combinations_cache_ttl:) }
       let(:combinations_cache_ttl) { 5.seconds }
       let(:billable_metric) { create(:sum_billable_metric, organization:) }
-      let(:combination_queries) { [] }
 
       before do
         create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ["eu"])
@@ -93,15 +105,6 @@ RSpec.describe Events::BillingPeriodFilters::ChargesResolver do
           timestamp: boundaries.charges_from_datetime + 1.day,
           properties: {"region" => "eu"}
         )
-
-        allow(Events::Stores::PostgresStore).to receive(:new).and_wrap_original do |build, **args|
-          build.call(**args).tap do |store|
-            allow(store).to receive(:distinct_codes_and_property_combinations).and_wrap_original do |query, **options|
-              combination_queries << options
-              query.call(**options)
-            end
-          end
-        end
       end
 
       it "reuses the events store answer across resolvers" do
@@ -207,21 +210,8 @@ RSpec.describe Events::BillingPeriodFilters::ChargesResolver do
       let(:resolver) { described_class.new(subscription:, boundaries:, precomputed_filters:) }
       let(:precomputed_filters) { {charge => [nil, charge_filter.id]} }
       let(:billable_metric) { create(:sum_billable_metric, organization:) }
-      let(:combination_queries) { [] }
-      let(:queried_codes) { combination_queries.flat_map { it[:codes] } }
 
-      before do
-        create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ["eu"])
-
-        allow(Events::Stores::PostgresStore).to receive(:new).and_wrap_original do |build, **args|
-          build.call(**args).tap do |store|
-            allow(store).to receive(:distinct_codes_and_property_combinations).and_wrap_original do |query, **options|
-              combination_queries << options
-              query.call(**options)
-            end
-          end
-        end
-      end
+      before { create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ["eu"]) }
 
       it "records the filters the buckets hold usage for, without querying the events store" do
         expect(filter_targets).to eq({charge.target_key => {nil => nil, charge_filter.id => nil}})
@@ -253,6 +243,67 @@ RSpec.describe Events::BillingPeriodFilters::ChargesResolver do
             }
           )
           expect(queried_codes).to eq([billable_metric.code])
+        end
+      end
+    end
+
+    context "without scanning unfiltered charges" do
+      let(:resolver) do
+        described_class.new(subscription:, boundaries:, with_last_seen_at: false, scan_unfiltered_charges: false)
+      end
+      let(:billable_metric) { create(:sum_billable_metric, organization:) }
+
+      before { charge }
+
+      it "records the default bucket without querying the events store" do
+        expect(filter_targets).to eq({charge.target_key => {nil => nil}})
+        expect(combination_queries).to be_empty
+      end
+
+      context "with a filtered charge on the same code" do
+        let(:filtered_charge) { create(:standard_charge, plan:, billable_metric:) }
+        let(:charge_filter) { create(:charge_filter, charge: filtered_charge) }
+
+        before do
+          create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ["eu"])
+          create(
+            :event,
+            organization:,
+            customer:,
+            external_subscription_id: subscription.external_id,
+            code: billable_metric.code,
+            timestamp: boundaries.charges_from_datetime + 1.day,
+            properties: {"region" => "eu"}
+          )
+        end
+
+        it "keeps the code in the query and leaves the unfiltered charge out of the combinations" do
+          expect(filter_targets).to eq(
+            {
+              charge.target_key => {nil => nil},
+              filtered_charge.target_key => {charge_filter.id => nil}
+            }
+          )
+          expect(queried_codes).to eq([billable_metric.code])
+        end
+      end
+
+      context "with a discarded charge filter" do
+        before { create(:charge_filter, charge:).discard! }
+
+        it "treats the charge as unfiltered" do
+          expect(filter_targets).to eq({charge.target_key => {nil => nil}})
+          expect(combination_queries).to be_empty
+        end
+      end
+
+      context "with ingestion timestamps" do
+        let(:resolver) do
+          described_class.new(subscription:, boundaries:, with_last_seen_at: true, scan_unfiltered_charges: false)
+        end
+
+        it "raises" do
+          expect { resolver }.to raise_error(ArgumentError)
         end
       end
     end

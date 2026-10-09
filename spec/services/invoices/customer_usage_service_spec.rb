@@ -1029,7 +1029,35 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         it "skips both the cache and the ingestion timestamps" do
           expect { usage_service.call }.not_to change { Rails.cache.exist?(charge_cache_key) }.from(false)
           expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
-            .with(hash_including(with_last_seen_at: false))
+            .with(hash_including(with_last_seen_at: false, scan_unfiltered_charges: true))
+        end
+
+        context "with full usage", :premium do
+          subject(:usage_service) do
+            described_class.new(
+              customer:,
+              subscription:,
+              apply_taxes: false,
+              with_cache: true,
+              usage_filters: UsageFilters.new(filter_by_group: {"cloud" => ["aws"]}, full_usage: true)
+            )
+          end
+
+          let(:unused_charge) { create(:standard_charge, plan:, properties: {amount: "10"}) }
+
+          before do
+            organization.update!(premium_integrations: %w[granular_lifetime_usage])
+            unused_charge
+          end
+
+          it "skips the scan of unfiltered charges and still returns a fee for each charge" do
+            result = usage_service.call
+
+            expect(result.usage.fees.map { [it.charge_id, it.units] })
+              .to match_array([[charge.id, 10], [unused_charge.id, 0]])
+            expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
+              .with(hash_including(with_last_seen_at: false, scan_unfiltered_charges: false))
+          end
         end
       end
 

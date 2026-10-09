@@ -5,9 +5,9 @@ module Events
     class BaseResolver
       def filter_targets
         targets = recurring_event_filter_targets
-        record_precomputed_targets(targets)
+        record_known_targets(targets)
 
-        # No code left to resolve: every target in scope is answered from the usage buckets, and
+        # No code left to resolve: every target in scope is known without the events store, and
         # querying would scan the whole billing window for a result already known to be empty.
         return targets if metric_codes.empty?
 
@@ -24,8 +24,8 @@ module Events
 
       private
 
-      # Only the charges resolver has targets the usage buckets can answer.
-      def record_precomputed_targets(_result)
+      # Only the charges resolver has targets known without the events store.
+      def record_known_targets(_result)
         nil
       end
 
