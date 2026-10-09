@@ -23,6 +23,7 @@ module Types
       argument :logo_url, String, required: false
       argument :name, String, required: false
       argument :net_payment_term, Integer, required: false
+      argument :payment_term, Types::PaymentTerms::Input, required: false
       argument :phone, String, required: false
       argument :state, String, required: false
       argument :tax_codes, [String], required: false
