@@ -8,6 +8,7 @@ module Integrations
 
         SPECIAL_TAXATION_TYPES = %w[exempt notCollecting productNotTaxed jurisNotTaxed jurisHasNoTax].freeze
         CUSTOMER_ADDRESS_INVALID = "customerAddressCouldNotResolve"
+        ANROK_JURISDICTION_NOT_FOUND = "jurisNotFound"
         OUT_OF_MEMORY_ERROR = "function_runtime_out_of_memory"
 
         def initialize
@@ -67,9 +68,16 @@ module Integrations
             raise Integrations::Aggregator::OutOfMemoryError if message.include?(OUT_OF_MEMORY_ERROR)
             raise Integrations::Aggregator::ServerContentionError, message if server_contention_error?(message)
 
-            deliver_tax_error_webhook(customer:, code:, message:) if customer.persisted? # Do not send this webhook in preview mode
+            # Preview customers and temporary Anrok failures do not need error webhooks.
+            if customer.persisted? && !temporary_anrok_failure?(code)
+              deliver_tax_error_webhook(customer:, code:, message:)
+            end
             result.service_failure!(code:, message:)
           end
+        end
+
+        def temporary_anrok_failure?(code)
+          provider == "anrok" && code == ANROK_JURISDICTION_NOT_FOUND
         end
 
         def tax_breakdown(breakdown, taxes_to_pay)

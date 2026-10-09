@@ -108,6 +108,42 @@ RSpec.describe Customers::RefreshWalletJob do
           end
         end
 
+        context "when Anrok temporarily cannot find the jurisdiction" do
+          let(:result) do
+            Customers::RefreshWalletsService::Result.new.validation_failure!(
+              errors: {tax_error: ["jurisNotFound: Service failure"]}
+            )
+          end
+
+          before do
+            allow(Rails.logger).to receive(:warn)
+          end
+
+          it "logs the failure without creating a tax error" do
+            expect { subject }.not_to change { customer.error_details.tax_error.count }
+            expect(Rails.logger).to have_received(:warn).with(
+              "RefreshWalletJob skipped wallet refresh after temporary Anrok tax failure customer_id=#{customer.id}"
+            )
+          end
+
+          context "with the uniqueness lock enforced" do
+            around do |example|
+              ActiveJob::Uniqueness.reset_manager!
+              example.run
+              described_class.unlock!(customer)
+              ActiveJob::Uniqueness.test_mode!
+            end
+
+            it "allows the next scheduled refresh to enqueue" do
+              assert_performed_jobs(1, only: [described_class]) do
+                described_class.perform_later(customer)
+              end
+
+              expect { described_class.perform_later(customer) }.to have_enqueued_job(described_class).with(customer)
+            end
+          end
+        end
+
         [
           Integrations::Aggregator::OutOfMemoryError,
           Integrations::Aggregator::TaskInProgressError,

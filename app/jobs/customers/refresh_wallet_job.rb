@@ -48,6 +48,14 @@ module Customers
     rescue BaseService::ValidationFailure => e
       tax_error = Array(e.messages[:tax_error])
 
+      if tax_error.any? { |msg| msg.include?(Integrations::Aggregator::Taxes::BaseService::ANROK_JURISDICTION_NOT_FOUND) }
+        Rails.logger.warn(
+          "RefreshWalletJob skipped wallet refresh after temporary Anrok tax failure " \
+          "customer_id=#{customer.id}"
+        )
+        return
+      end
+
       raise unless tax_error.any? { |msg| msg.include?(Integrations::Aggregator::Taxes::BaseService::CUSTOMER_ADDRESS_INVALID) }
 
       ErrorDetails::CreateService.call!(

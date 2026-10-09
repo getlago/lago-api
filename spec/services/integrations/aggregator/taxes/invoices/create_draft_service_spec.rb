@@ -298,6 +298,19 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
             )
         end
 
+        context "when Anrok temporarily cannot find the jurisdiction" do
+          let(:body) do
+            {
+              "succeededInvoices" => [],
+              "failedInvoices" => [{"validation_errors" => {"type" => "jurisNotFound"}}]
+            }.to_json
+          end
+
+          it "does not deliver an error webhook" do
+            expect { service_call }.not_to enqueue_job(SendWebhookJob)
+          end
+        end
+
         context "with the draft taxes cache" do
           before { allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new) }
 
