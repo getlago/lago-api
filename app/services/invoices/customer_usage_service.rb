@@ -328,7 +328,8 @@ module Invoices
         codes: filtered_metric_codes,
         with_last_seen_at: charge_cache_enabled?,
         precomputed_filters:,
-        combinations_cache_ttl: (PREFILTER_CACHE_TTL if prefilter_cache_enabled?)
+        combinations_cache_ttl: (PREFILTER_CACHE_TTL if prefilter_cache_enabled?),
+        incremental_combinations: organization.feature_flag_enabled?(:usage_prefilter_incremental)
       )
     end
 

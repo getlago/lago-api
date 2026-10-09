@@ -53,3 +53,7 @@ x402_reservation_counter_disabled:
 usage_prefilter_short_cache:
   description: "Reuse the ClickHouse pre-filter result of the current usage API for 5 seconds, bounding how often polling clients scan the events of a subscription"
   owners: ["@jdenquin"]
+
+usage_prefilter_incremental:
+  description: "Keep the current usage pre-filter result of each subscription and only read the events ingested since, instead of every event of the billing period"
+  owners: ["@jdenquin"]

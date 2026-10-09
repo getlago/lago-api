@@ -118,7 +118,9 @@ module Events
         raise NotImplementedError
       end
 
-      def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false, with_last_seen_at: true)
+      # `ingested_after` narrows the read to the events ingested after that time, for callers
+      # keeping an earlier answer up to date (see BillingPeriodFilters::IncrementalCombinations).
+      def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false, with_last_seen_at: true, ingested_after: nil)
         []
       end
 
