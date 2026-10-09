@@ -8,13 +8,6 @@ RSpec.describe CustomersQuery do
   end
 
   let(:returned_ids) { result.customers.pluck(:id) }
-  let(:pagination) { nil }
-  let(:search_term) { nil }
-  let(:filters) { {} }
-  let(:organization) { create(:organization) }
-  let(:billing_entity1) { organization.default_billing_entity }
-  let(:billing_entity2) { create(:billing_entity, organization:) }
-
   let(:customer_first) do
     create(
       :customer,
@@ -71,6 +64,13 @@ RSpec.describe CustomersQuery do
       customer_type: nil
     )
   end
+  let(:pagination) { nil }
+  let(:search_term) { nil }
+  let(:filters) { {} }
+
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:billing_entity1) { organization.default_billing_entity }
+  let_it_be(:billing_entity2) { create(:billing_entity, organization:) }
 
   before do
     customer_first
@@ -366,6 +366,7 @@ RSpec.describe CustomersQuery do
     let(:filters) do
       {active_subscriptions_count_from: from, active_subscriptions_count_to: to}
     end
+
     let(:subscriptionless_customer) do
       create(:customer, organization:, billing_entity: billing_entity1)
     end

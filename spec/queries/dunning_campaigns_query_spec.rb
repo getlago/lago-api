@@ -8,21 +8,13 @@ RSpec.describe DunningCampaignsQuery do
   end
 
   let(:returned_ids) { result.dunning_campaigns.pluck(:id) }
-  let(:pagination) { nil }
-  let(:search_term) { nil }
-  let(:filters) { nil }
-  let(:order) { nil }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:default_billing_entity) { organization.default_billing_entity }
-  let(:billing_entity) { create(:billing_entity, organization:) }
   let(:dunning_campaign_first) do
     create(:dunning_campaign, organization:, name: "defgh", code: "11")
   end
   let(:dunning_campaign_second) do
     create(:dunning_campaign, organization:, name: "abcde", code: "22")
   end
-
   let(:dunning_campaign_third) do
     create(
       :dunning_campaign,
@@ -34,6 +26,14 @@ RSpec.describe DunningCampaignsQuery do
   let(:dunning_campaign_fourth) do
     create(:dunning_campaign, organization:, name: "qwerty", code: "44")
   end
+  let(:pagination) { nil }
+  let(:search_term) { nil }
+  let(:filters) { nil }
+  let(:order) { nil }
+
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billing_entity) { create(:billing_entity, organization:) }
 
   before do
     default_billing_entity.update!(applied_dunning_campaign: dunning_campaign_first)

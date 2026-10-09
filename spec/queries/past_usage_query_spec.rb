@@ -5,20 +5,10 @@ require "rails_helper"
 RSpec.describe PastUsageQuery do
   subject(:result) { described_class.call(organization:, pagination:, filters:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:pagination) { nil }
-  let(:filters) do
-    {
-      external_customer_id: customer.external_id,
-      external_subscription_id: subscription.external_id
-    }
-  end
-
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, customer:, plan:) }
   let(:subscription2) { create(:subscription, customer:, plan:) }
-
   let(:invoice_subscription1) do
     create(
       :invoice_subscription,
@@ -27,7 +17,6 @@ RSpec.describe PastUsageQuery do
       subscription:
     )
   end
-
   let(:invoice_subscription2) do
     create(
       :invoice_subscription,
@@ -36,7 +25,6 @@ RSpec.describe PastUsageQuery do
       subscription:
     )
   end
-
   let(:invoice_subscription3) do
     create(
       :invoice_subscription,
@@ -45,6 +33,15 @@ RSpec.describe PastUsageQuery do
       subscription: subscription2
     )
   end
+  let(:filters) do
+    {
+      external_customer_id: customer.external_id,
+      external_subscription_id: subscription.external_id
+    }
+  end
+
+  let_it_be(:customer) { create_default(:customer, organization:) }
+  let_it_be(:plan) { create(:plan, organization:) }
 
   before do
     invoice_subscription1
@@ -158,17 +155,12 @@ RSpec.describe PastUsageQuery do
   end
 
   context "with billable_metric_code" do
-    let(:billable_metric1) { create(:billable_metric, organization:) }
+    let_it_be(:billable_metric1) { create(:billable_metric, organization:) }
     let(:billable_metric_code) { billable_metric1&.code }
-
-    let(:billable_metric2) { create(:billable_metric, organization:) }
-
     let(:charge1) { create(:standard_charge, plan:, billable_metric: billable_metric1) }
     let(:charge2) { create(:standard_charge, plan:, billable_metric: billable_metric2) }
-
     let(:fee1) { create(:charge_fee, charge: charge1, subscription:, invoice: invoice_subscription1.invoice) }
     let(:fee2) { create(:charge_fee, charge: charge2, subscription:, invoice: invoice_subscription1.invoice) }
-
     let(:filters) do
       {
         external_customer_id: customer.external_id,
@@ -176,6 +168,8 @@ RSpec.describe PastUsageQuery do
         billable_metric_code:
       }
     end
+
+    let_it_be(:billable_metric2) { create(:billable_metric, organization:) }
 
     before do
       fee1
