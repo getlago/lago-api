@@ -261,6 +261,54 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
         end
       end
 
+      context "when last period's draft and this period's usage are on different metrics" do
+        let(:other_charge) { create(:standard_charge, organization:) }
+        let(:wallet_b) { create(:wallet, customer:, organization:, balance_cents: 100, priority: 1) }
+        let(:wallet_a) { create(:wallet, customer:, organization:, balance_cents: 1000, priority: 2) }
+        let(:draft_invoices_fees) do
+          [create(:charge_fee, charge: other_charge, subscription:, organization:, invoice:, amount_cents: 80, taxes_amount_cents: 0,
+            amount_currency: "EUR", properties: {"charges_from_datetime" => "2026-09-01T00:00:00Z"})]
+        end
+        let(:current_usage_fees) do
+          [create(:charge_fee, charge:, subscription:, organization:, invoice:, amount_cents: 120, taxes_amount_cents: 0,
+            amount_currency: "EUR", properties: {"charges_from_datetime" => "2026-10-01T00:00:00Z"})]
+        end
+
+        it "still covers the draft first, although this period's metric is larger" do
+          expect(result.billable_metric_amounts).to eq({
+            wallet_b => {subscription.id => {
+              "2026-09-01T00:00:00Z" => {other_charge.billable_metric_id => 80},
+              "2026-10-01T00:00:00Z" => {billable_metric_id => 20}
+            }},
+            wallet_a => {subscription.id => {"2026-10-01T00:00:00Z" => {billable_metric_id => 100}}}
+          })
+        end
+      end
+
+      context "when this period is over-billed while last period's draft is pending" do
+        let(:other_charge) { create(:standard_charge, organization:) }
+        let(:wallets) { [wallet_a] }
+        let(:wallet_a) { create(:wallet, customer:, organization:, balance_cents: 1000, priority: 2) }
+        let(:draft_invoices_fees) do
+          [create(:charge_fee, charge:, subscription:, organization:, invoice:, amount_cents: 100, taxes_amount_cents: 0,
+            amount_currency: "EUR", properties: {"charges_from_datetime" => "2026-09-01T00:00:00Z"})]
+        end
+        let(:current_usage_fees) do
+          [create(:charge_fee, charge: other_charge, subscription:, organization:, invoice:, amount_cents: 10, taxes_amount_cents: 0,
+            amount_currency: "EUR", properties: {"charges_from_datetime" => "2026-10-01T00:00:00Z"})]
+        end
+        let(:progressive_billing_fees) do
+          [create(:charge_fee, charge: other_charge, subscription:, organization:, invoice:, amount_cents: 60, taxes_amount_cents: 0,
+            amount_currency: "EUR", properties: {"charges_from_datetime" => "2026-10-01T00:00:00Z"})]
+        end
+
+        it "still covers the draft in full, since it lands on its own invoice" do
+          expect(result.billable_metric_amounts).to eq({
+            wallet_a => {subscription.id => {"2026-09-01T00:00:00Z" => {billable_metric_id => 100}}}
+          })
+        end
+      end
+
       context "when the fee targets a wallet" do
         around { |test| lago_premium! { test.run } }
 
