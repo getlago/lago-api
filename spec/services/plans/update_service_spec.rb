@@ -1128,6 +1128,7 @@ RSpec.describe Plans::UpdateService do
           end
 
           context "when only accepts_target_wallet changes", :premium do
+            let!(:existing_charge) { create(:standard_charge, plan:, billable_metric: sum_billable_metric, properties: {amount: "300"}) }
             let(:charge_args) { super().merge(accepts_target_wallet: true) }
 
             before { organization.update!(premium_integrations: ["events_targeting_wallets"]) }
