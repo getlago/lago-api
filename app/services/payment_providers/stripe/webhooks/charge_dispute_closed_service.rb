@@ -9,11 +9,6 @@ module PaymentProviders
         def call
           return result unless payment
 
-          # NOTE: unblock only once no dispute on the payment blocks refunds any more. On a lost
-          #       dispute the charge stays unrefundable, and payment_dispute_lost_at takes over
-          #       as the permanent refund block.
-          ::Payments::CloseDisputeService.call(payment:) if charge_refundable?
-
           if event.data.object.status == "lost"
             return ::Payments::LoseDisputeService.call(
               payment:,
@@ -22,7 +17,11 @@ module PaymentProviders
             )
           end
 
-          result
+          if charge_refundable?
+            ::Payments::CloseDisputeService.call(payment:)
+          else
+            result
+          end
         end
 
         private

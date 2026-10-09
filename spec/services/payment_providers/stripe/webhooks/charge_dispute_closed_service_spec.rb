@@ -299,6 +299,16 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeClosedService do
           it "marks the invoice as dispute lost" do
             expect { service.call && payable.reload }.to change(payable, :payment_dispute_lost_at).from(nil)
           end
+
+          context "when stripe cannot be reached" do
+            before do
+              allow(::Stripe::Dispute).to receive(:list).and_raise(::Stripe::APIConnectionError.new("boom"))
+            end
+
+            it "still marks the invoice as dispute lost" do
+              expect { service.call && payable.reload }.to change(payable, :payment_dispute_lost_at).from(nil)
+            end
+          end
         end
       end
     end
