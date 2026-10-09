@@ -29,6 +29,7 @@ end
 #
 # Indexes
 #
+#  index_rate_cards_taxes_by_cursor                   (rate_card_id,created_at DESC,id DESC)
 #  index_rate_cards_taxes_on_organization_id          (organization_id)
 #  index_rate_cards_taxes_on_rate_card_id             (rate_card_id)
 #  index_rate_cards_taxes_on_rate_card_id_and_tax_id  (rate_card_id,tax_id) UNIQUE
