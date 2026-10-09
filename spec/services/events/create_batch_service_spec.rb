@@ -80,6 +80,14 @@ RSpec.describe Events::CreateBatchService do
       end
     end
 
+    it "tracks the usage attribution values of the events" do
+      allow(UsageAttributionValues::TrackEventsService).to receive(:call)
+
+      result = create_batch_service.call
+
+      expect(UsageAttributionValues::TrackEventsService).to have_received(:call).with(organization:, events: result.events)
+    end
+
     it "enqueues post processing jobs with correct event arguments" do
       result = create_batch_service.call
 
