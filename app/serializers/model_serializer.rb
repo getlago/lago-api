@@ -1,7 +1,16 @@
 # frozen_string_literal: true
 
 class ModelSerializer
+  NO_EXPANDABLE_RELATIONS = {}.freeze
+
   attr_reader :model, :options
+
+  # Names a v2 `show` accepts in `expand`, mapped to what a single record loads in advance:
+  # nil for a computed value or a list built by its own query. Each renders through `expand`.
+  # Internal options (`:counts`, `:deleted_at`) are never listed.
+  def self.expandable_relations
+    NO_EXPANDABLE_RELATIONS
+  end
 
   # The possible values for the options are:
   # - includes: Specify the relation to include in the payload
@@ -58,5 +67,17 @@ class ModelSerializer
     return default if include.is_a?(Symbol) || include.nil?
 
     include[value]
+  end
+
+  private
+
+  def expanded_payload
+    self.class.expandable_relations.keys.select { include?(it) }.index_with { expand(it) }
+  end
+
+  # Renders one name of the expand list. A serializer with a list overrides it with a `case` on
+  # the names, falling back to `super` for any other.
+  def expand(name)
+    raise NotImplementedError, "#{self.class} cannot expand #{name}"
   end
 end
