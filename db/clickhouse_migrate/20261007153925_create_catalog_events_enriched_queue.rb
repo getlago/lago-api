@@ -11,7 +11,6 @@ class CreateCatalogEventsEnrichedQueue < ActiveRecord::Migration[8.0]
         CREATE TABLE IF NOT EXISTS catalog_events_enriched_queue (
           organization_id String,
           external_contract_id String,
-          contract_id Nullable(String),
           code String,
           timestamp String,
           transaction_id String,

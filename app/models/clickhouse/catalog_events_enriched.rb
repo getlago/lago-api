@@ -21,7 +21,6 @@ end
 #  sorted_properties          :string           not null
 #  timestamp                  :datetime         not null, primary key
 #  value                      :string
-#  contract_id                :string
 #  external_contract_id       :string           not null, primary key
 #  organization_id            :string           not null, primary key
 #  transaction_id             :string           not null

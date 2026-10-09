@@ -2,7 +2,6 @@ CREATE TABLE default.catalog_events_enriched
 (
     `organization_id` String,
     `external_contract_id` String,
-    `contract_id` Nullable(String),
     `code` String,
     `timestamp` DateTime64(3),
     `transaction_id` String,
