@@ -32,16 +32,18 @@ describe X402::Connections::VerifyService do
     expect(a_request(:get, cdp_account_url(:evm, evm_address))).to have_been_made.once
   end
 
-  context "when CDP rejects the credentials" do
-    before { stub_cdp_supported(status: 401, body: "Unauthorized") }
+  {401 => "Unauthorized", 403 => {errorType: "forbidden"}.to_json}.each do |status, body|
+    context "when CDP answers #{status} to /supported" do
+      before { stub_cdp_supported(status:, body:) }
 
-    it "fails on cdp_api_key" do
-      expect(result.error.messages).to eq(cdp_api_key: ["invalid_credentials"])
-    end
+      it "fails on cdp_api_key" do
+        expect(result.error.messages).to eq(cdp_api_key: ["invalid_credentials"])
+      end
 
-    it "makes no account lookup" do
-      result
-      expect(a_request(:get, cdp_account_url(:evm, evm_address))).not_to have_been_made
+      it "makes no account lookup" do
+        result
+        expect(a_request(:get, cdp_account_url(:evm, evm_address))).not_to have_been_made
+      end
     end
   end
 

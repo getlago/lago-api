@@ -26,6 +26,11 @@ describe X402::Connections::UpdateService do
   end
   let(:params) { {name: "Renamed"} }
 
+  def signed_by?(request, key)
+    signing_input, _, signature = request.headers["Authorization"].delete_prefix("Bearer ").rpartition(".")
+    key.verify(nil, Base64.urlsafe_decode64(signature), signing_input)
+  end
+
   describe "#call" do
     before do
       stub_cdp_supported
@@ -83,9 +88,14 @@ describe X402::Connections::UpdateService do
         expect(connection.reload).to have_attributes(cdp_api_key_id:, cdp_api_key_secret: rotated_secret)
       end
 
+      it "checks the credentials with the new key" do
+        result
+        expect(a_request(:get, "#{cdp_host}/platform/v2/x402/supported").with { |request| signed_by?(request, rotated_signing_key) }).to have_been_made.once
+      end
+
       it "verifies the addresses with the new key" do
         result
-        expect(a_request(:get, cdp_account_url(:evm, evm_address))).to have_been_made.once
+        expect(a_request(:get, cdp_account_url(:evm, evm_address)).with { |request| signed_by?(request, rotated_signing_key) }).to have_been_made.once
       end
 
       it "produces a security log without the secrets" do
@@ -164,7 +174,7 @@ describe X402::Connections::UpdateService do
         expect(connection.reload.payout_addresses).to eq({"evm" => evm_address})
       end
 
-      it "verifies the new address" do
+      it "verifies the EVM address" do
         result
         expect(a_request(:get, cdp_account_url(:evm, evm_address))).to have_been_made.once
       end
@@ -267,6 +277,28 @@ describe X402::Connections::UpdateService do
       it "keeps the other update" do
         result
         expect(connection.reload).to have_attributes(networks: ["eip155:84532"], payout_addresses: {"evm" => other_evm_address, "svm" => svm_address})
+      end
+    end
+
+    context "when another update saved a checked field after the connection was loaded" do
+      let(:other_evm_address) { "0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359" }
+      let(:params) { {payout_addresses: {evm: evm_address, svm: svm_address}} }
+
+      before do
+        stub_cdp_account(:evm, other_evm_address)
+        described_class.call(
+          connection: X402::Connection.find(connection.id),
+          params: {payout_addresses: {evm: other_evm_address, svm: svm_address}}
+        )
+      end
+
+      it "refuses to save an unchecked change" do
+        expect(result.error.messages).to eq(base: ["changed_concurrently"])
+      end
+
+      it "keeps the other update" do
+        result
+        expect(connection.reload.payout_addresses).to eq({"evm" => other_evm_address, "svm" => svm_address})
       end
     end
 
