@@ -75,6 +75,134 @@ RSpec.describe Events::BillingPeriodFilters::ChargesResolver do
       end
     end
 
+    context "with a combinations cache TTL", cache: :memory do
+      let(:resolver) { described_class.new(subscription:, boundaries:, combinations_cache_ttl:) }
+      let(:other_resolver) { described_class.new(subscription:, boundaries:, combinations_cache_ttl:) }
+      let(:combinations_cache_ttl) { 5.seconds }
+      let(:billable_metric) { create(:sum_billable_metric, organization:) }
+      let(:combination_queries) { [] }
+
+      before do
+        create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ["eu"])
+        create(
+          :event,
+          organization:,
+          customer:,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: boundaries.charges_from_datetime + 1.day,
+          properties: {"region" => "eu"}
+        )
+
+        allow(Events::Stores::PostgresStore).to receive(:new).and_wrap_original do |build, **args|
+          build.call(**args).tap do |store|
+            allow(store).to receive(:distinct_codes_and_property_combinations).and_wrap_original do |query, **options|
+              combination_queries << options
+              query.call(**options)
+            end
+          end
+        end
+      end
+
+      it "reuses the events store answer across resolvers" do
+        expect(filter_targets).to match({charge.target_key => {charge_filter.id => be_present}})
+        expect(other_resolver.filter_targets).to eq(filter_targets)
+        expect(combination_queries.size).to eq(1)
+      end
+
+      it "queries the events store again once the entry expired" do
+        filter_targets
+
+        travel(6.seconds) { other_resolver.filter_targets }
+
+        expect(combination_queries.size).to eq(2)
+      end
+
+      context "when other resolvers read the entry while it is being refilled" do
+        let(:concurrent_resolver) { described_class.new(subscription:, boundaries:, combinations_cache_ttl:) }
+        let(:concurrent_targets) { [] }
+
+        before do
+          filter_targets
+
+          # The refill query runs another resolver first, which stands for a request arriving
+          # while the refill is in flight.
+          allow(Events::Stores::PostgresStore).to receive(:new).and_wrap_original do |build, **args|
+            build.call(**args).tap do |store|
+              allow(store).to receive(:distinct_codes_and_property_combinations).and_wrap_original do |query, **options|
+                combination_queries << options
+                concurrent_targets << concurrent_resolver.filter_targets if combination_queries.size == 2
+                query.call(**options)
+              end
+            end
+          end
+        end
+
+        it "serves them the expired answer instead of scanning again" do
+          travel(6.seconds) { other_resolver.filter_targets }
+
+          expect(concurrent_targets).to eq([filter_targets])
+          expect(combination_queries.size).to eq(2)
+        end
+      end
+
+      context "with another window" do
+        let(:other_resolver) do
+          described_class.new(subscription:, boundaries: other_boundaries, combinations_cache_ttl:)
+        end
+        let(:other_boundaries) do
+          BillingPeriodBoundaries.new(
+            from_datetime: Time.zone.parse("2026-08-01"),
+            to_datetime: Time.zone.parse("2026-09-30 23:59:59"),
+            charges_from_datetime: Time.zone.parse("2026-08-01"),
+            charges_to_datetime: Time.zone.parse("2026-09-30 23:59:59"),
+            charges_duration: 61.days,
+            timestamp: Time.zone.parse("2026-09-30 23:59:59").to_i
+          )
+        end
+
+        it "does not share the entry" do
+          filter_targets
+          other_resolver.filter_targets
+
+          expect(combination_queries.size).to eq(2)
+        end
+      end
+
+      context "with codes that would read the same once joined with commas" do
+        let(:resolver) do
+          described_class.new(subscription:, boundaries:, codes: [comma_metric.code], combinations_cache_ttl:)
+        end
+        let(:other_resolver) do
+          described_class.new(subscription:, boundaries:, codes: [billable_metric.code, "other"], combinations_cache_ttl:)
+        end
+        # Same filter key as billable_metric, so only the codes tell the two queries apart.
+        let(:comma_metric) { create(:sum_billable_metric, organization:, code: "#{billable_metric.code},other") }
+
+        before do
+          create(:billable_metric_filter, billable_metric: comma_metric, key: "region", values: %w[eu us])
+          create(:standard_charge, plan:, billable_metric: comma_metric)
+        end
+
+        it "does not share the entry" do
+          expect(filter_targets).to eq({})
+          expect(other_resolver.filter_targets).to match({charge.target_key => {charge_filter.id => be_present}})
+          expect(combination_queries.size).to eq(2)
+        end
+      end
+
+      context "without a TTL" do
+        let(:combinations_cache_ttl) { nil }
+
+        it "queries the events store for every resolver" do
+          filter_targets
+          other_resolver.filter_targets
+
+          expect(combination_queries.size).to eq(2)
+        end
+      end
+    end
+
     context "with a charge served from the usage buckets" do
       let(:resolver) { described_class.new(subscription:, boundaries:, precomputed_filters:) }
       let(:precomputed_filters) { {charge => [nil, charge_filter.id]} }

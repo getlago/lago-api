@@ -68,7 +68,7 @@ class Wallet < ApplicationRecord
   scope :ready_to_be_refreshed, -> { where(ready_to_be_refreshed: true) }
 
   def self.in_application_order
-    order(:priority, :created_at)
+    order(:priority, arel_table[:expiration_at].asc.nulls_last, :created_at)
   end
 
   def billing_entity

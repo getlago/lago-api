@@ -63,6 +63,51 @@ RSpec.shared_examples "a lago diagnostics report" do
     end
   end
 
+  context "with Redis Sentinel credentials configured" do
+    let(:sentinel_username) { "diagnostics-sentinel-user" }
+    let(:sentinel_password) { "diagnostics-sentinel-password" }
+
+    before do
+      allow(ENV).to receive(:[]).and_call_original
+      %w[LAGO_REDIS_SIDEKIQ LAGO_REDIS_CACHE].each do |prefix|
+        allow(ENV).to receive(:[]).with("#{prefix}_SENTINEL_USERNAME").and_return(sentinel_username)
+        allow(ENV).to receive(:[]).with("#{prefix}_SENTINEL_PASSWORD").and_return(sentinel_password)
+      end
+    end
+
+    it "prints the usernames and masks the passwords in Redis settings" do
+      expect(report).to match(/^    Sidekiq sentinel username\s+: diagnostics-sentinel-user$/)
+      expect(report).to match(/^    Cache sentinel username\s+: diagnostics-sentinel-user$/)
+      expect(report).to match(/^    Sidekiq sentinel password\s+: \*\*\*$/)
+      expect(report).to match(/^    Cache sentinel password\s+: \*\*\*$/)
+      expect(report).not_to include(sentinel_password)
+    end
+
+    context "without Sentinel credentials" do
+      let(:sentinel_username) { nil }
+      let(:sentinel_password) { nil }
+
+      it "prints all four settings as unset" do
+        expect(report).to match(/^    Sidekiq sentinel username\s+: \(unset\)$/)
+        expect(report).to match(/^    Cache sentinel username\s+: \(unset\)$/)
+        expect(report).to match(/^    Sidekiq sentinel password\s+: \(unset\)$/)
+        expect(report).to match(/^    Cache sentinel password\s+: \(unset\)$/)
+      end
+    end
+
+    context "with blank Sentinel credentials" do
+      let(:sentinel_username) { " " }
+      let(:sentinel_password) { "" }
+
+      it "prints all four settings as unset" do
+        expect(report).to match(/^    Sidekiq sentinel username\s+: \(unset\)$/)
+        expect(report).to match(/^    Cache sentinel username\s+: \(unset\)$/)
+        expect(report).to match(/^    Sidekiq sentinel password\s+: \(unset\)$/)
+        expect(report).to match(/^    Cache sentinel password\s+: \(unset\)$/)
+      end
+    end
+  end
+
   it "labels the row counts as estimated" do
     expect(report).to include("## Key Table Row Counts (estimated)")
   end

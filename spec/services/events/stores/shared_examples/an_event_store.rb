@@ -599,6 +599,91 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     describe "#active_unique_property?" do
       before { event_store.aggregation_property = billable_metric.field_name }
 
+      context "with events sharing a timestamp" do
+        let(:started_at) { Time.zone.parse("2026-09-07T00:00:00Z") }
+        let(:same_timestamp) { Time.zone.parse("2026-09-07T00:00:00Z") }
+        let(:event_one) do
+          create_event(
+            timestamp: same_timestamp,
+            value: 1,
+            properties: {user_id: "A"},
+            transaction_id: "qa_rm11_full_adv_5935be3d_amx_k4_e1",
+            created_at: Time.zone.parse("2026-10-06T15:18:14.156149Z")
+          )
+        end
+        let(:event_two) do
+          create_event(
+            timestamp: same_timestamp,
+            value: 1,
+            properties: {user_id: "A"},
+            transaction_id: "qa_rm11_full_adv_5935be3d_amx_k4_e2",
+            created_at: Time.zone.parse("2026-10-06T15:18:14.444518Z")
+          )
+        end
+        let(:event_three) do
+          create_event(
+            timestamp: same_timestamp,
+            value: 2,
+            properties: {user_id: "B"},
+            transaction_id: "qa_rm11_full_adv_5935be3d_amx_k4_e3",
+            created_at: Time.zone.parse("2026-10-06T15:18:14.690127Z")
+          )
+        end
+
+        before do
+          event_store.aggregation_property = "user_id"
+          [event_one, event_two, event_three]
+        end
+
+        it "considers only earlier receipts at the same event timestamp" do
+          expect(event_store).not_to be_active_unique_property(event_one)
+          expect(event_store).to be_active_unique_property(event_two)
+          expect(event_store).not_to be_active_unique_property(event_three)
+        end
+
+        it "does not let a future tied receipt affect an earlier lookup" do
+          expect(event_store).not_to be_active_unique_property(event_one)
+        end
+
+        context "when the latest tied event removes the property" do
+          let(:tied_add) do
+            create_event(
+              timestamp: same_timestamp,
+              value: 1,
+              properties: {user_id: "A"},
+              transaction_id: "qa_rm11_full_adv_5935be3d_amx_k4_tied_add",
+              created_at: Time.zone.parse("2026-10-06T15:18:14.156149Z")
+            )
+          end
+          let(:tied_remove) do
+            create_event(
+              timestamp: same_timestamp,
+              value: 1,
+              properties: {user_id: "A", operation_type: "remove"},
+              transaction_id: "qa_rm11_full_adv_5935be3d_amx_k4_tied_remove",
+              created_at: Time.zone.parse("2026-10-06T15:18:14.600000Z")
+            )
+          end
+          let(:later_event) do
+            create_event(
+              timestamp: same_timestamp,
+              value: 1,
+              properties: {user_id: "A"},
+              transaction_id: "qa_rm11_full_adv_5935be3d_amx_k4_z_after_remove",
+              created_at: Time.zone.parse("2026-10-06T15:18:14.800000Z")
+            )
+          end
+
+          before do
+            [tied_add, tied_remove, later_event]
+          end
+
+          it "treats the property as inactive" do
+            expect(event_store).not_to be_active_unique_property(later_event)
+          end
+        end
+      end
+
       it "returns false when no previous events exist" do
         event = create_event(timestamp: subscription_started_at + 2.days, value: 999)
         expect(event_store).not_to be_active_unique_property(event)

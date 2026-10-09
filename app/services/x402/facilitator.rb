@@ -46,11 +46,17 @@ module X402
 
     class SupportedResult < Data.define(:kinds, :response)
       def supports?(network:, scheme: "exact", x402_version: 2)
-        kinds.any? { |kind| kind["network"] == network && kind["scheme"] == scheme && kind["x402Version"] == x402_version }
+        !kind(network:, scheme:, x402_version:).nil?
       end
 
-      def fee_payer(network:)
-        kinds.find { |kind| kind["network"] == network }&.dig("extra", "feePayer")
+      def fee_payer(network:, scheme: "exact", x402_version: 2)
+        kind(network:, scheme:, x402_version:)&.dig("extra", "feePayer")
+      end
+
+      private
+
+      def kind(network:, scheme:, x402_version:)
+        kinds.find { |kind| kind["network"] == network && kind["scheme"] == scheme && kind["x402Version"] == x402_version }
       end
     end
   end

@@ -63,7 +63,7 @@ RSpec.describe CreditNotes::GeneratePdfService do
       end
     end
 
-    context "when using temp files" do
+    context "when creating temp files" do
       let(:pdf_tempfile) { instance_double(Tempfile).as_null_object }
       let(:blank_pdf_path) { Rails.root.join("spec/fixtures/blank.pdf") }
 
@@ -78,24 +78,6 @@ RSpec.describe CreditNotes::GeneratePdfService do
 
         expect(pdf_tempfile).to have_received(:unlink)
       end
-
-      context "with einvoicing enabled" do
-        let(:xml_tempfile) { instance_double(Tempfile).as_null_object }
-
-        before do
-          invoice.billing_entity.update(country: "FR", einvoicing: true)
-
-          allow(Tempfile).to receive(:new).with([credit_note.number, ".xml"]).and_return(xml_tempfile)
-          allow(Utils::PdfAttachmentService).to receive(:call)
-        end
-
-        it "unlink all files at the end" do
-          described_class.call(credit_note:, context:)
-
-          expect(pdf_tempfile).to have_received(:unlink)
-          expect(xml_tempfile).to have_received(:unlink)
-        end
-      end
     end
 
     context "when einvoicing is enabled" do
@@ -107,7 +89,7 @@ RSpec.describe CreditNotes::GeneratePdfService do
         credit_note.billing_entity.update(country:, einvoicing: true)
 
         allow(EInvoices::CreditNotes::Cii::CreateService).to receive(:call).and_return(create_xml_result)
-        allow(Utils::PdfAttachmentService).to receive(:call)
+        allow(Utils::PdfAttachmentService).to receive(:call!)
       end
 
       context "with FR country" do
@@ -117,8 +99,31 @@ RSpec.describe CreditNotes::GeneratePdfService do
           result = described_class.call(credit_note:, context:)
 
           expect(EInvoices::CreditNotes::Cii::CreateService).to have_received(:call)
-          expect(Utils::PdfAttachmentService).to have_received(:call)
+          expect(Utils::PdfAttachmentService).to have_received(:call!).with(
+            file: kind_of(Tempfile),
+            attachment_content: fake_xml,
+            attachment_name: "factur-x.xml"
+          )
           expect(result.credit_note.file).to be_present
+        end
+
+        context "when attaching the CII XML fails" do
+          let(:attachment_error) do
+            BaseService::ThirdPartyFailure.new(
+              Utils::PdfAttachmentService::Result.new,
+              third_party: "pdfcpu",
+              error_code: "failed",
+              error_message: ""
+            )
+          end
+
+          before do
+            allow(Utils::PdfAttachmentService).to receive(:call!).and_raise(attachment_error)
+          end
+
+          it "fails PDF generation" do
+            expect { credit_note_generate_service.call }.to raise_error(BaseService::ThirdPartyFailure)
+          end
         end
       end
     end

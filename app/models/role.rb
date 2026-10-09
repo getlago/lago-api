@@ -32,7 +32,7 @@ class Role < ApplicationRecord
   validates :permissions, presence: true, if: :organization_id
 
   def permissions_hash
-    Permission.permissions_hash(name).dup.tap do |h|
+    Permission.permissions_hash(code).dup.tap do |h|
       permissions.each { |key| h[key] = true if h.key?(key) }
     end
   end

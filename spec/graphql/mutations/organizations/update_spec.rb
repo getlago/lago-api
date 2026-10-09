@@ -40,6 +40,7 @@ RSpec.describe Mutations::Organizations::Update do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "organization:update"
 
   it "updates an organization" do
     result = execute_graphql(
@@ -98,27 +99,116 @@ RSpec.describe Mutations::Organizations::Update do
     expect(result_data["finalizeZeroAmountInvoice"]).to be false
   end
 
-  context "without necessary permissions" do
-    it "ignores permissions-protected field and updates the rest" do
+  context "without organization:update" do
+    it "returns a forbidden error" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: membership.organization,
-        permissions: %w[],
+        permissions: %w[organization:view organization:invoices:view organization:emails:view developers:manage],
+        query: mutation,
+        variables: {
+          input: {email: "foo@bar2.com"}
+        }
+      )
+
+      expect_forbidden_error(result)
+      expect(membership.organization.reload.email).not_to eq("foo@bar2.com")
+    end
+  end
+
+  context "with organization:update only", :premium do
+    it "updates organization fields and ignores the other protected fields" do
+      organization = membership.organization
+      original_authentication_methods = organization.authentication_methods
+      original_email_settings = organization.email_settings
+
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: %w[organization:update],
         query: mutation,
         variables: {
           input: {
             email: "foo@bar2.com",
             taxIdentificationNumber: "tax007",
-            emailSettings: ["invoice_finalized"]
+            authenticationMethods: ["email_password"],
+            billingConfiguration: {invoiceFooter: "invoice footer"},
+            emailSettings: ["invoice_finalized"],
+            webhookUrl: "https://app.test.dev"
           }
         }
       )
 
       result_data = result["data"]["updateOrganization"]
 
-      expect(result_data["email"]).to eq "foo@bar2.com"
-      expect(result_data["taxIdentificationNumber"]).to eq "tax007"
-      expect(result_data["emailSettings"]).to be_nil
+      expect(result_data["email"]).to eq("foo@bar2.com")
+      expect(result_data["taxIdentificationNumber"]).to eq("tax007")
+
+      organization.reload
+      expect(organization.authentication_methods).to eq(original_authentication_methods)
+      expect(organization.invoice_footer).to be_nil
+      expect(organization.email_settings).to eq(original_email_settings)
+      expect(organization.webhook_endpoints.pluck(:webhook_url)).not_to include("https://app.test.dev")
+    end
+  end
+
+  context "with authentication_methods:update but without organization:update" do
+    it "returns a forbidden error" do
+      organization = membership.organization
+      original_authentication_methods = organization.authentication_methods
+
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: %w[authentication_methods:update],
+        query: mutation,
+        variables: {
+          input: {authenticationMethods: ["email_password"]}
+        }
+      )
+
+      expect_forbidden_error(result)
+      expect(organization.reload.authentication_methods).to eq(original_authentication_methods)
+    end
+  end
+
+  context "with organization:update and authentication_methods:update" do
+    it "updates authentication methods" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: %w[organization:update authentication_methods:update],
+        query: mutation,
+        variables: {
+          input: {authenticationMethods: ["email_password"]}
+        }
+      )
+
+      expect(result["data"]["updateOrganization"]["authenticationMethods"]).to eq(["email_password"])
+    end
+  end
+
+  context "with view permissions on invoices and emails", :premium do
+    it "does not update billing configuration nor email settings" do
+      organization = membership.organization
+      original_email_settings = organization.email_settings
+
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: %w[organization:update organization:invoices:view organization:emails:view],
+        query: mutation,
+        variables: {
+          input: {
+            billingConfiguration: {invoiceFooter: "invoice footer"},
+            emailSettings: ["invoice_finalized"]
+          }
+        }
+      )
+
+      organization.reload
+      expect(organization.invoice_footer).to be_nil
+      expect(organization.email_settings).to eq(original_email_settings)
     end
   end
 
@@ -129,7 +219,12 @@ RSpec.describe Mutations::Organizations::Update do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: membership.organization,
-        permissions: %w[organization:emails:view organization:invoices:view],
+        permissions: %w[
+          organization:update
+          organization:emails:view organization:emails:update
+          organization:invoices:view organization:invoices:update
+          authentication_methods:update
+        ],
         query: mutation,
         variables: {
           input: {
@@ -159,7 +254,7 @@ RSpec.describe Mutations::Organizations::Update do
         result = execute_graphql(
           current_user: membership.user,
           current_organization: membership.organization,
-          permissions: "organization:invoices:view",
+          permissions: %w[organization:update organization:invoices:view organization:invoices:update],
           query: mutation,
           variables: {
             input: {
