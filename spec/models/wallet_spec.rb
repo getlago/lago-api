@@ -286,6 +286,7 @@ RSpec.describe Wallet do
       lock_version
       name
       ongoing_balance_cents
+      ongoing_billable_metric_amounts
       ongoing_usage_balance_cents
       paid_top_up_max_amount_cents
       paid_top_up_min_amount_cents

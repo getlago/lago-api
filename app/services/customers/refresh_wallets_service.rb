@@ -14,21 +14,23 @@ module Customers
     def call
       reservations = capture_reservations
 
-      wallet_allocations = Wallets::Balance::AllocateOngoingUsageByWalletsService.call!(
+      allocation = Wallets::Balance::AllocateOngoingUsageByWalletsService.call!(
         customer:,
         wallets: all_wallets,
         current_usage_fees:,
         draft_invoices_fees:,
         progressive_billing_fees:,
-        pay_in_advance_fees:
-      ).wallet_allocations
+        pay_in_advance_fees:,
+        with_billable_metric_amounts: streamed_event_types.any?
+      )
 
       # The cascade makes every wallet's allocation depend on the others' balances, so all
       # wallets must be persisted together; refreshing a subset would leave the rest stale.
       all_wallets.each do |wallet|
         Wallets::Balance::RefreshOngoingUsageService.call!(
           wallet:,
-          ongoing_usage_amount_cents: wallet_allocations[wallet],
+          ongoing_usage_amount_cents: allocation.wallet_allocations[wallet],
+          ongoing_billable_metric_amounts: allocation.billable_metric_amounts.fetch(wallet, {}),
           skip_single_wallet_update: true
         )
       end
