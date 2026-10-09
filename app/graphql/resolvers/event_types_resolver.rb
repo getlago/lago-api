@@ -11,7 +11,12 @@ module Resolvers
     type [Types::WebhookEndpoints::EventType], null: false
 
     def resolve
-      WebhookEndpoint::WEBHOOK_EVENT_TYPE_CONFIG.map do |key, event_type|
+      event_types = WebhookEndpoint::WEBHOOK_EVENT_TYPE_CONFIG
+      unless context[:current_organization]&.product_catalog_enabled?
+        event_types = event_types.reject { |_, event_type| event_type[:product_catalog_only] }
+      end
+
+      event_types.map do |_, event_type|
         {
           key: event_type[:name],
           name: event_type[:name],

@@ -68,6 +68,20 @@ RSpec.describe Types::ActivityLogs::ActivityTypeEnum do
         rate_card_created
         rate_card_updated
         rate_card_deleted
+        rate_card_rate_created
+        rate_card_rate_updated
+        rate_card_rate_deleted
+        plan_rate_card_created
+        plan_rate_card_updated
+        plan_rate_card_deleted
+        contract_rate_card_created
+        contract_rate_card_updated
+        contract_rate_card_deleted
+        contract_created
+        contract_updated
+        contract_started
+        contract_terminated
+        contract_canceled
         email_sent
         quote_created
         quote_updated

@@ -283,6 +283,162 @@ plan_deleted:
   description: A plan has been deleted
   category: Plans
   deprecated: false
+product_category_created:
+  name: product_category.created
+  description: A new product category has been created
+  category: Product Catalog
+  deprecated: false
+  product_catalog_only: true
+product_category_updated:
+  name: product_category.updated
+  description: A product category has been updated
+  category: Product Catalog
+  deprecated: false
+  product_catalog_only: true
+product_category_deleted:
+  name: product_category.deleted
+  description: A product category has been deleted
+  category: Product Catalog
+  deprecated: false
+  product_catalog_only: true
+product_created:
+  name: product.created
+  description: A new product has been created
+  category: Product Catalog
+  deprecated: false
+  product_catalog_only: true
+product_updated:
+  name: product.updated
+  description: A product has been updated
+  category: Product Catalog
+  deprecated: false
+  product_catalog_only: true
+product_deleted:
+  name: product.deleted
+  description: A product has been deleted
+  category: Product Catalog
+  deprecated: false
+  product_catalog_only: true
+product_filter_created:
+  name: product_filter.created
+  description: A new product filter has been created
+  category: Product Catalog
+  deprecated: false
+  product_catalog_only: true
+product_filter_updated:
+  name: product_filter.updated
+  description: A product filter has been updated
+  category: Product Catalog
+  deprecated: false
+  product_catalog_only: true
+product_filter_deleted:
+  name: product_filter.deleted
+  description: A product filter has been deleted
+  category: Product Catalog
+  deprecated: false
+  product_catalog_only: true
+rate_card_created:
+  name: rate_card.created
+  description: A new rate card has been created
+  category: Product Catalog
+  deprecated: false
+  product_catalog_only: true
+rate_card_updated:
+  name: rate_card.updated
+  description: A rate card has been updated
+  category: Product Catalog
+  deprecated: false
+  product_catalog_only: true
+rate_card_deleted:
+  name: rate_card.deleted
+  description: A rate card has been deleted
+  category: Product Catalog
+  deprecated: false
+  product_catalog_only: true
+rate_card_rate_created:
+  name: rate_card_rate.created
+  description: A new rate card rate has been created
+  category: Product Catalog
+  deprecated: false
+  product_catalog_only: true
+rate_card_rate_updated:
+  name: rate_card_rate.updated
+  description: A rate card rate has been updated
+  category: Product Catalog
+  deprecated: false
+  product_catalog_only: true
+rate_card_rate_deleted:
+  name: rate_card_rate.deleted
+  description: A rate card rate has been deleted
+  category: Product Catalog
+  deprecated: false
+  product_catalog_only: true
+plan_rate_card_created:
+  name: plan_rate_card.created
+  description: A plan rate card association has been created
+  category: Product Catalog
+  deprecated: false
+  product_catalog_only: true
+plan_rate_card_updated:
+  name: plan_rate_card.updated
+  description: A plan rate card association has been updated
+  category: Product Catalog
+  deprecated: false
+  product_catalog_only: true
+plan_rate_card_deleted:
+  name: plan_rate_card.deleted
+  description: A plan rate card association has been deleted
+  category: Product Catalog
+  deprecated: false
+  product_catalog_only: true
+contract_rate_card_created:
+  name: contract_rate_card.created
+  description: A contract rate card association has been created
+  category: Product Catalog
+  deprecated: false
+  product_catalog_only: true
+contract_rate_card_updated:
+  name: contract_rate_card.updated
+  description: A contract rate card association has been updated
+  category: Product Catalog
+  deprecated: false
+  product_catalog_only: true
+contract_rate_card_deleted:
+  name: contract_rate_card.deleted
+  description: A contract rate card association has been deleted
+  category: Product Catalog
+  deprecated: false
+  product_catalog_only: true
+contract_created:
+  name: contract.created
+  description: A new contract has been created
+  category: Product Catalog
+  deprecated: false
+  product_catalog_only: true
+contract_updated:
+  name: contract.updated
+  description: A contract has been updated
+  category: Product Catalog
+  deprecated: false
+  product_catalog_only: true
+contract_started:
+  name: contract.started
+  description: A contract has started
+  category: Product Catalog
+  deprecated: false
+  product_catalog_only: true
+contract_terminated:
+  name: contract.terminated
+  description: A contract has been terminated
+  category: Product Catalog
+  deprecated: false
+  product_catalog_only: true
+contract_canceled:
+  name: contract.canceled
+  description: A contract has been canceled
+  category: Product Catalog
+  deprecated: false
+  product_catalog_only: true
 quote_created:
   name: quote.created
   description: A new quote has been created

@@ -72,7 +72,7 @@ type ActivityLogCollection {
 """
 Activity log resource
 """
-union ActivityLogResourceObject = BillableMetric | BillingEntity | CatalogPlan | Coupon | CreditNote | Customer | FeatureObject | Invoice | Order | OrderForm | PaymentReceipt | PaymentRequest | Plan | Product | ProductCategory | ProductFilter | Quote | RateCard | Subscription | Wallet
+union ActivityLogResourceObject = BillableMetric | BillingEntity | CatalogPlan | Contract | ContractAppliedRateCard | Coupon | CreditNote | Customer | FeatureObject | Invoice | Order | OrderForm | PaymentReceipt | PaymentRequest | Plan | PlanAppliedRateCard | Product | ProductCategory | ProductFilter | Quote | RateCard | RateCardRate | Subscription | Wallet
 
 """
 Activity Logs source enums
@@ -126,6 +126,46 @@ enum ActivityTypeEnum {
   billing_entities.updated
   """
   billing_entities_updated
+
+  """
+  contract.canceled
+  """
+  contract_canceled
+
+  """
+  contract.created
+  """
+  contract_created
+
+  """
+  contract_rate_card.created
+  """
+  contract_rate_card_created
+
+  """
+  contract_rate_card.deleted
+  """
+  contract_rate_card_deleted
+
+  """
+  contract_rate_card.updated
+  """
+  contract_rate_card_updated
+
+  """
+  contract.started
+  """
+  contract_started
+
+  """
+  contract.terminated
+  """
+  contract_terminated
+
+  """
+  contract.updated
+  """
+  contract_updated
 
   """
   coupon.created
@@ -323,6 +363,21 @@ enum ActivityTypeEnum {
   plan_deleted
 
   """
+  plan_rate_card.created
+  """
+  plan_rate_card_created
+
+  """
+  plan_rate_card.deleted
+  """
+  plan_rate_card_deleted
+
+  """
+  plan_rate_card.updated
+  """
+  plan_rate_card_updated
+
+  """
   plan.updated
   """
   plan_updated
@@ -406,6 +461,21 @@ enum ActivityTypeEnum {
   rate_card.deleted
   """
   rate_card_deleted
+
+  """
+  rate_card_rate.created
+  """
+  rate_card_rate_created
+
+  """
+  rate_card_rate.deleted
+  """
+  rate_card_rate_deleted
+
+  """
+  rate_card_rate.updated
+  """
+  rate_card_rate_updated
 
   """
   rate_card.updated
@@ -6912,6 +6982,7 @@ enum EventCategoryEnum {
   PAYMENTS
   PAYMENT_RECEIPTS
   PLANS
+  PRODUCT_CATALOG
   QUOTES
   SUBSCRIPTIONS_AND_FEES
   WALLETS_AND_CREDITS
@@ -6938,6 +7009,14 @@ enum EventTypeEnum {
   billable_metric_created
   billable_metric_deleted
   billable_metric_updated
+  contract_canceled
+  contract_created
+  contract_rate_card_created
+  contract_rate_card_deleted
+  contract_rate_card_updated
+  contract_started
+  contract_terminated
+  contract_updated
   credit_note_created
   credit_note_generated
   credit_note_provider_refund_failure
@@ -6990,10 +7069,28 @@ enum EventTypeEnum {
   payment_succeeded
   plan_created
   plan_deleted
+  plan_rate_card_created
+  plan_rate_card_deleted
+  plan_rate_card_updated
   plan_updated
+  product_category_created
+  product_category_deleted
+  product_category_updated
+  product_created
+  product_deleted
+  product_filter_created
+  product_filter_deleted
+  product_filter_updated
+  product_updated
   quote_approved
   quote_created
   quote_voided
+  rate_card_created
+  rate_card_deleted
+  rate_card_rate_created
+  rate_card_rate_deleted
+  rate_card_rate_updated
+  rate_card_updated
   subscription_canceled
   subscription_incomplete
   subscription_started
@@ -13945,6 +14042,16 @@ enum ResourceTypeEnum {
   catalog_plan
 
   """
+  Contract
+  """
+  contract
+
+  """
+  ContractRateCard
+  """
+  contract_rate_card
+
+  """
   Coupon
   """
   coupon
@@ -13995,6 +14102,11 @@ enum ResourceTypeEnum {
   plan
 
   """
+  PlanRateCard
+  """
+  plan_rate_card
+
+  """
   Product
   """
   product
@@ -14018,6 +14130,11 @@ enum ResourceTypeEnum {
   RateCard
   """
   rate_card
+
+  """
+  RateCardRate
+  """
+  rate_card_rate
 
   """
   Subscription
