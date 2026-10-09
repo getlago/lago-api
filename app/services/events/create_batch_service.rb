@@ -74,6 +74,7 @@ module Events
       # downstream either.
       enqueue_post_process_jobs if organization.postgres_events_store?
       KafkaProducerService.call!(events: result.events, organization:)
+      UsageAttributionValues::TrackEventsService.call(organization:, events: result.events)
     end
 
     def bulk_insert_events

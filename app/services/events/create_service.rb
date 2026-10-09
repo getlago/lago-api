@@ -41,6 +41,7 @@ module Events
       # downstream either.
       enqueue_post_process(event) unless organization.clickhouse_events_store?
       produce_kafka_event(event)
+      UsageAttributionValues::TrackEventsService.call(organization:, events: event)
 
       result
     rescue ActiveRecord::RecordInvalid => e
