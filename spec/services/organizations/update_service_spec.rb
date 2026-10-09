@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe Organizations::UpdateService do
   subject(:update_service) { described_class.new(organization:, params:) }
 
+  include_context "with mocked security logger"
+
   let(:organization) { create(:organization) }
 
   let(:timezone) { nil }
@@ -398,6 +400,49 @@ RSpec.describe Organizations::UpdateService do
       it "delivers a email notification" do
         expect { subject.call }.to have_enqueued_mail(OrganizationMailer, :authentication_methods_updated)
           .with(params: {organization:, user:, additions:, deletions:}, args: [])
+      end
+
+      it "produces a security log with the actor and the changed methods" do
+        subject.call
+
+        expect(security_logger).to have_received(:produce).with(
+          organization:,
+          log_type: "organization",
+          log_event: "organization.authentication_methods_updated",
+          user:,
+          resources: {authentication_methods: {deleted: deletions, added: additions}}
+        )
+      end
+    end
+
+    context "when authentication_methods change but the update fails" do
+      subject { described_class.new(organization:, params:, user:) }
+
+      let(:params) { {authentication_methods: ["email_password", "okta"], email: "not-an-email"} }
+      let(:user) { create(:user) }
+
+      before { create(:membership, organization:, roles: %i[admin], user:) }
+
+      it "does not persist the change, produce a security log nor send an email" do
+        result = nil
+
+        expect { result = subject.call }.not_to have_enqueued_mail(OrganizationMailer, :authentication_methods_updated)
+
+        expect(result).not_to be_success
+        expect(organization.reload.authentication_methods).to eq(%w[email_password google_oauth])
+        expect(security_logger).not_to have_received(:produce)
+          .with(hash_including(log_event: "organization.authentication_methods_updated"))
+      end
+    end
+
+    context "when authentication_methods do not change" do
+      let(:params) { {authentication_methods: organization.authentication_methods} }
+
+      it "does not produce an authentication methods security log" do
+        update_service.call
+
+        expect(security_logger).not_to have_received(:produce)
+          .with(hash_including(log_event: "organization.authentication_methods_updated"))
       end
     end
   end

@@ -543,6 +543,61 @@ RSpec.describe UsageMonitoring::CreateAlertService do
           expect(result).to be_failure
           expect(UsageMonitoring::Alert).not_to have_received(:new)
         end
+
+        context "when another request takes the code between the check and the insert" do
+          subject(:result) { service.call }
+
+          let(:service) { described_class.new(organization:, alertable: wallet, params:) }
+
+          before { allow(service).to receive(:wallet_alert_code_taken?).and_return(false) }
+
+          it "reports the wallet index violation on the code field" do
+            expect(result).to be_failure
+            expect(result.error.messages).to eq(code: ["value_already_exist"])
+          end
+        end
+      end
+
+      context "when an alert of the same type with the same code exists on the wallet" do
+        before { create(:wallet_balance_amount_alert, organization:, wallet:, code: "wallet1") }
+
+        it "returns an alert_already_exists failure" do
+          expect { result }.not_to change(UsageMonitoring::Alert, :count)
+
+          expect(result).to be_failure
+          expect(result.error.messages[:base]).to eq(["alert_already_exists"])
+        end
+      end
+
+      context "when the type is taken on the wallet and the code is held by an alert of another type" do
+        before do
+          create(:wallet_balance_amount_alert, organization:, wallet:, code: "other")
+          create(:wallet_credits_balance_alert, organization:, wallet:, code: "wallet1")
+        end
+
+        it "reports the taken type rather than the taken code" do
+          expect(result).to be_failure
+          expect(result.error.messages).to eq(base: ["alert_already_exists"])
+        end
+      end
+
+      context "when an alert of the same type exists on another wallet" do
+        before do
+          other = create(:wallet, organization:)
+          create(:wallet_balance_amount_alert, organization:, wallet: other, code: "wallet1")
+        end
+
+        it "allows it" do
+          expect(result).to be_success
+        end
+      end
+
+      context "when a discarded alert of the same type exists on the wallet" do
+        before { create(:wallet_balance_amount_alert, organization:, wallet:, code: "wallet1").discard! }
+
+        it "allows it" do
+          expect(result).to be_success
+        end
       end
 
       context "when the same code is used on another wallet" do

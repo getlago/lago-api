@@ -18,7 +18,7 @@ module X402
     enum :status, STATUSES, validate: true
     enum :settled_by, SETTLED_BY, prefix: true, validate: true
 
-    attr_readonly :payer_address, :payee_address, :payment_digest, :purchase_settings
+    attr_readonly :payer_address, :payee_address, :payment_digest, :purchase_settings, :invoice_id
 
     before_validation :normalize_addresses, on: :create
 
@@ -27,8 +27,10 @@ module X402
     validates :settled_amount_atomic, numericality: {only_integer: true, greater_than: 0}
     validates :settled_amount_cents, numericality: {only_integer: true}
     validates :invoice, presence: true, if: :invoice_payment?
+    validates :purchase_settings, presence: true, if: :credit_purchase?
     validate :validate_addresses
     validate :validate_connection, on: :create
+    validate :validate_invoice, on: :create
 
     scope :pending_reconciliation, -> { pending.where(reconcile_after: ..Time.current) }
 
@@ -63,6 +65,12 @@ module X402
 
       if x402_connection && family
         validate_connection_terms
+      end
+    end
+
+    def validate_invoice
+      if invoice && invoice.organization_id != organization_id
+        errors.add(:invoice, :must_belong_to_same_organization)
       end
     end
 
@@ -115,16 +123,16 @@ end
 #
 # Indexes
 #
-#  index_x402_settlements_on_customer_id                         (customer_id)
-#  index_x402_settlements_on_invoice_id                          (invoice_id)
-#  index_x402_settlements_on_organization_id                     (organization_id)
-#  index_x402_settlements_on_organization_id_and_payment_digest  (organization_id,payment_digest) UNIQUE WHERE (status = ANY (ARRAY['pending'::x402_settlement_status, 'settled'::x402_settlement_status]))
-#  index_x402_settlements_on_organization_network_and_hash       (organization_id,network,transaction_hash) UNIQUE WHERE (transaction_hash IS NOT NULL)
-#  index_x402_settlements_on_payment_id                          (payment_id) UNIQUE WHERE (payment_id IS NOT NULL)
-#  index_x402_settlements_on_pending_credit_purchase_payer       (organization_id,payer_address) UNIQUE WHERE ((kind = 'credit_purchase'::x402_settlement_kind) AND (status = 'pending'::x402_settlement_status))
-#  index_x402_settlements_on_pending_invoice_id                  (invoice_id) UNIQUE WHERE (status = 'pending'::x402_settlement_status)
-#  index_x402_settlements_on_pending_reconcile_after             (reconcile_after) WHERE (status = 'pending'::x402_settlement_status)
-#  index_x402_settlements_on_x402_connection_id                  (x402_connection_id)
+#  index_x402_settlements_on_customer_id                    (customer_id)
+#  index_x402_settlements_on_invoice_id                     (invoice_id)
+#  index_x402_settlements_on_network_and_transaction_hash   (network,transaction_hash) UNIQUE WHERE (transaction_hash IS NOT NULL)
+#  index_x402_settlements_on_organization_id                (organization_id)
+#  index_x402_settlements_on_payment_digest                 (payment_digest) UNIQUE WHERE (status = ANY (ARRAY['pending'::x402_settlement_status, 'settled'::x402_settlement_status]))
+#  index_x402_settlements_on_payment_id                     (payment_id) UNIQUE WHERE (payment_id IS NOT NULL)
+#  index_x402_settlements_on_pending_credit_purchase_payer  (organization_id,payer_address) UNIQUE WHERE ((kind = 'credit_purchase'::x402_settlement_kind) AND (status = 'pending'::x402_settlement_status))
+#  index_x402_settlements_on_pending_invoice_id             (invoice_id) UNIQUE WHERE (status = 'pending'::x402_settlement_status)
+#  index_x402_settlements_on_pending_reconcile_after        (reconcile_after) WHERE (status = 'pending'::x402_settlement_status)
+#  index_x402_settlements_on_x402_connection_id             (x402_connection_id)
 #
 # Foreign Keys
 #

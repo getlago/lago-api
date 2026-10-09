@@ -430,9 +430,9 @@ DROP INDEX IF EXISTS public.index_x402_settlements_on_pending_reconcile_after;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_pending_invoice_id;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_pending_credit_purchase_payer;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_payment_id;
-DROP INDEX IF EXISTS public.index_x402_settlements_on_organization_network_and_hash;
-DROP INDEX IF EXISTS public.index_x402_settlements_on_organization_id_and_payment_digest;
+DROP INDEX IF EXISTS public.index_x402_settlements_on_payment_digest;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_organization_id;
+DROP INDEX IF EXISTS public.index_x402_settlements_on_network_and_transaction_hash;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_invoice_id;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_customer_id;
 DROP INDEX IF EXISTS public.index_x402_enabled_wallets_on_customer_id;
@@ -1119,6 +1119,7 @@ DROP INDEX IF EXISTS public.idx_billable_metrics_id_agg_type;
 DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_wallet;
 DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_subscription_with_bm;
 DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_subscription;
+DROP INDEX IF EXISTS public.idx_alerts_code_unique_per_wallet;
 DROP INDEX IF EXISTS public.idx_alerts_code_unique_per_subscription;
 DROP INDEX IF EXISTS public.idx_aggregation_lookup;
 DROP INDEX IF EXISTS public.idx_billing_on_enriched_events;
@@ -7673,6 +7674,13 @@ CREATE UNIQUE INDEX idx_alerts_code_unique_per_subscription ON public.usage_moni
 
 
 --
+-- Name: idx_alerts_code_unique_per_wallet; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_alerts_code_unique_per_wallet ON public.usage_monitoring_alerts USING btree (code, wallet_id, organization_id) WHERE ((deleted_at IS NULL) AND (wallet_id IS NOT NULL));
+
+
+--
 -- Name: idx_alerts_unique_per_type_per_subscription; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12479,6 +12487,13 @@ CREATE INDEX index_x402_settlements_on_invoice_id ON public.x402_settlements USI
 
 
 --
+-- Name: index_x402_settlements_on_network_and_transaction_hash; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_x402_settlements_on_network_and_transaction_hash ON public.x402_settlements USING btree (network, transaction_hash) WHERE (transaction_hash IS NOT NULL);
+
+
+--
 -- Name: index_x402_settlements_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12486,17 +12501,10 @@ CREATE INDEX index_x402_settlements_on_organization_id ON public.x402_settlement
 
 
 --
--- Name: index_x402_settlements_on_organization_id_and_payment_digest; Type: INDEX; Schema: public; Owner: -
+-- Name: index_x402_settlements_on_payment_digest; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX index_x402_settlements_on_organization_id_and_payment_digest ON public.x402_settlements USING btree (organization_id, payment_digest) WHERE (status = ANY (ARRAY['pending'::public.x402_settlement_status, 'settled'::public.x402_settlement_status]));
-
-
---
--- Name: index_x402_settlements_on_organization_network_and_hash; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX index_x402_settlements_on_organization_network_and_hash ON public.x402_settlements USING btree (organization_id, network, transaction_hash) WHERE (transaction_hash IS NOT NULL);
+CREATE UNIQUE INDEX index_x402_settlements_on_payment_digest ON public.x402_settlements USING btree (payment_digest) WHERE (status = ANY (ARRAY['pending'::public.x402_settlement_status, 'settled'::public.x402_settlement_status]));
 
 
 --
@@ -15744,6 +15752,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261006134840'),
 ('20261005112941'),
 ('20261005105630'),
 ('20261005094159'),
@@ -15827,6 +15836,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260805201143'),
 ('20260805110509'),
 ('20260805110508'),
+('20260805104301'),
 ('20260804131008'),
 ('20260803162623'),
 ('20260803120212'),

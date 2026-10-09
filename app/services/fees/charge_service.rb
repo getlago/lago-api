@@ -500,8 +500,18 @@ module Fees
         provider:,
         boundaries: selected_metered_item.aggregation_boundaries,
         filters: aggregation_filters(selected_metered_item:, bypass_aggregation: !aggregate),
-        bypass_aggregation: !aggregate
+        bypass_aggregation: !aggregate,
+        aggregated_filter_ids: aggregated_filter_ids(selected_metered_item)
       )
+    end
+
+    # The filters whose aggregation is not bypassed, which the events store reads together when it
+    # can. A recurring metric aggregates every filter, its usage carrying over from previous periods.
+    def aggregated_filter_ids(selected_metered_item)
+      return if filtered_aggregations.nil?
+      return if selected_metered_item.billable_metric.recurring?
+
+      filtered_aggregations
     end
 
     # Callers that run one provider for the whole computation pass theirs; the others get one

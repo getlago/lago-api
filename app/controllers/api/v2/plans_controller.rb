@@ -6,7 +6,17 @@ module Api
       cursor_paginated_index(CatalogPlan)
 
       def index
-        result = ::CatalogPlansQuery.call(organization: current_organization, pagination: cursor)
+        result = ::CatalogPlansQuery.call(
+          organization: current_organization,
+          search_term: params[:search_term],
+          pagination: cursor,
+          filters: {
+            product_ids: Array(params[:product_id]).presence,
+            product_filter_ids: Array(params[:product_filter_id]).presence,
+            product_category_ids: Array(params[:product_category_id]).presence,
+            rate_card_ids: Array(params[:rate_card_id]).presence
+          }
+        )
 
         if result.success?
           page = ::CursorPagination::Page.new(records: result.catalog_plans, cursor:)

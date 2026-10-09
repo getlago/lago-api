@@ -1,0 +1,182 @@
+# frozen_string_literal: true
+
+module X402
+  module Settlements
+    class SettleService < BaseService
+      Result = BaseResult[:settlement, :outcome, :transaction_hash]
+      RECONCILE_MARGIN = 30.seconds
+      SVM_SIGNATURE_BYTES = 64
+      INVOICE_CURRENCY = "USD"
+      RACE_CODES = {
+        "index_x402_settlements_on_payment_digest" => "payment_already_recorded",
+        "index_x402_settlements_on_pending_credit_purchase_payer" => "credit_purchase_pending",
+        "index_x402_settlements_on_pending_invoice_id" => "invoice_payment_pending"
+      }.freeze
+
+      def initialize(verified_payment:, kind:, invoice: nil, purchase_settings: nil)
+        @verified_payment = verified_payment
+        @kind = kind
+        @invoice = invoice
+        @purchase_settings = purchase_settings
+
+        super
+      end
+
+      def call
+        raise "#{self.class.name} must run outside a database transaction" if in_transaction?
+
+        invoice_errors = invoice_failure
+        return result.validation_failure!(errors: invoice_errors) if invoice_errors
+
+        settlement = insert_pending
+        return result if result.failure?
+
+        result.settlement = settlement
+        settle(settlement)
+        result
+      end
+
+      private
+
+      attr_reader :verified_payment, :kind, :invoice, :purchase_settings
+
+      delegate :connection, :network, :asset, to: :verified_payment, private: true
+
+      def invoice_failure
+        return unless invoice
+
+        if invoice.currency != INVOICE_CURRENCY
+          {invoice: ["currencies_does_not_match"]}
+        elsif verified_payment.settled_amount_atomic != amount_due_atomic
+          {payment: ["amount_mismatch"]}
+        end
+      end
+
+      def amount_due_atomic
+        due_cents = invoice.total_due_amount_cents
+
+        if due_cents.positive?
+          X402::Asset.fetch(code: connection.asset, network:).atomic_from_cents(due_cents)
+        else
+          0
+        end
+      end
+
+      def insert_pending
+        X402::Settlement.create!(
+          organization_id: connection.organization_id,
+          x402_connection: connection,
+          kind:,
+          status: :pending,
+          invoice:,
+          purchase_settings:,
+          network:,
+          asset:,
+          payer_address: verified_payment.payer_address,
+          payee_address: verified_payment.payee_address,
+          settled_amount_atomic: verified_payment.settled_amount_atomic,
+          settled_amount_cents: verified_payment.settled_amount_cents,
+          payment_digest: verified_payment.payment_digest,
+          reconcile_after:,
+          payload: {
+            "payment" => verified_payment.payment,
+            "payment_requirements" => verified_payment.payment_requirements,
+            "verify_response" => verified_payment.verify_response
+          }
+        )
+      rescue ActiveRecord::RecordInvalid => e
+        result.record_validation_failure!(record: e.record)
+      rescue ActiveRecord::RecordNotUnique => e
+        code = RACE_CODES.find { |index, _| e.message.include?(index) }&.last
+
+        if code
+          result.single_validation_failure!(error_code: code)
+        else
+          raise
+        end
+      end
+
+      def reconcile_after
+        if verified_payment.family == :evm
+          Time.zone.at(verified_payment.payment_payload.valid_before) + RECONCILE_MARGIN
+        else
+          Time.current + X402::Chain::SvmReader::EXPIRY_PROOF
+        end
+      end
+
+      def settle(settlement)
+        settle_result = X402::Facilitator::Client.for(connection).settle(
+          payment: verified_payment.payment,
+          payment_requirements: verified_payment.payment_requirements
+        )
+        problem = answer_problem(settle_result)
+        log_failure(problem) if problem
+
+        record(
+          settlement,
+          payload: settlement.payload.merge("settle_response" => settle_result.response),
+          error_reason: problem || settle_result.error_reason,
+          transaction_hash: problem ? nil : pending_hash(settle_result)
+        )
+
+        settled = settle_result.settled? && problem.nil?
+        result.outcome = settled ? :settled : :pending
+        result.transaction_hash = settled ? settle_result.transaction : nil
+      rescue X402::Facilitator::CredentialError => e
+        record_unsettled(settlement, "credential_error", e)
+      rescue X402::Facilitator::RateLimitError => e
+        record_unsettled(settlement, "rate_limited", e)
+      end
+
+      def answer_problem(settle_result)
+        return unless settle_result.outcome.in?(%i[settled settlement_pending])
+
+        if settle_result.network != network
+          "network_mismatch"
+        elsif settle_result.payer.present? && X402::Network.normalize_address(settle_result.payer, family: verified_payment.family) != verified_payment.payer_address
+          "payer_mismatch"
+        elsif settle_result.settled? && !well_formed_hash?(settle_result.transaction)
+          "malformed_response"
+        end
+      end
+
+      def pending_hash(settle_result)
+        transaction = settle_result.transaction
+
+        if settle_result.outcome == :settlement_pending && well_formed_hash?(transaction)
+          transaction
+        end
+      end
+
+      def well_formed_hash?(transaction)
+        return false unless transaction.is_a?(String)
+
+        if verified_payment.family == :evm
+          X402::Chain::EvmReader::HEX_WORD.match?(transaction)
+        else
+          X402::Base58.decode(transaction)&.bytesize == SVM_SIGNATURE_BYTES
+        end
+      end
+
+      def record_unsettled(settlement, error_reason, error)
+        settle_response = {"httpStatus" => error.http_status, "errorType" => error.error_type, "correlationId" => error.correlation_id}.compact
+
+        record(settlement, payload: settlement.payload.merge("settle_response" => settle_response), error_reason:)
+        result.outcome = :pending
+      end
+
+      def record(settlement, **attributes)
+        settlement.update!(**attributes)
+      rescue ActiveRecord::ActiveRecordError, ArgumentError => e
+        settlement.restore_attributes
+        log_failure("record_failed", error: e.class.name)
+      end
+
+      def log_failure(reason, **details)
+        context = {reason:, **details, network:}.map { |key, value| "#{key}=#{value}" }.join(" ")
+
+        Rails.logger.warn("#{self.class.name} call failed #{context}")
+      end
+    end
+  end
+end
