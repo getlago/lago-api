@@ -42,18 +42,11 @@ module Wallets
         balances = fresh_balances
         metas = wallets.map { |wallet| wallet_meta(wallet, balances) }
         allocations = wallets.index_with(0)
-        covered = wallets.index_with(0)
-        # Billing only takes from the invoice what wallets actually pay, so the split keeps its own
-        # budget, reduced by what was covered rather than by what the ongoing balance absorbed.
-        coverage_budgets = budgets.dup
 
         allocatable_pool(net_amounts).each do |fee_key, key_amount|
           currency = fee_key.last
           remaining = [key_amount, budgets[currency]].min
           applicable = metas.select { |meta| applicable_fee?(fee_key:, wallet: meta[:wallet], targets: meta[:targets], types: meta[:types]) }
-          if with_billable_metric_amounts
-            coverage_budgets[currency] -= cover(fee_key, [key_amount, coverage_budgets[currency]].min, applicable, balances, covered)
-          end
 
           applicable.each_with_index do |meta, index|
             break if remaining <= 0
@@ -74,13 +67,52 @@ module Wallets
           end
         end
 
+        if with_billable_metric_amounts
+          cover_by_period(metas, balances)
+        end
+
         allocations
       end
 
-      # What billing would take from each wallet for this key: wallets in priority order, each up to
-      # its real balance, cascading past threshold wallets, and leaving the rest uncovered. The
-      # ongoing balance lets a wallet go negative so its rule can refill it; billing never does.
-      def cover(fee_key, amount, applicable, balances, covered)
+      # What billing will take from each wallet, period by period: last period's draft invoice is
+      # finalized before this period's usage is billed, so every fee of an older period is covered
+      # before any of a newer one, larger amounts first within a period. Each period is budgeted on
+      # its own, like the invoice it ends up on, and wallets give up to their real balance, cascading
+      # past threshold wallets: the ongoing balance lets a wallet go negative, billing never does.
+      def cover_by_period(metas, balances)
+        budgets = coverage_budgets
+        covered = wallets.index_with(0)
+
+        coverage_buckets.each do |bucket, amount|
+          budget_key = [bucket.first, bucket.last.last]
+          applicable = metas.select { |meta| applicable_fee?(fee_key: bucket.last, wallet: meta[:wallet], targets: meta[:targets], types: meta[:types]) }
+          budgets[budget_key] -= cover(bucket, [amount, budgets[budget_key]].min, applicable, balances, covered)
+        end
+      end
+
+      # Positive nets per billing period and fee key, oldest period first, then largest amount, with
+      # ties broken by fee key so the order is stable across refreshes.
+      def coverage_buckets
+        period_nets
+          .flat_map { |fee_key, by_period| by_period.map { |period, by_subscription| [[period, fee_key], by_subscription.values.sum] } }
+          .select { |_bucket, amount| amount.positive? }
+          .sort_by { |(period, fee_key), amount| [period.to_s, -amount, fee_key.map(&:to_s)] }
+      end
+
+      # Per billing period and currency, mirroring billing's remaining_invoice_amount on the invoice
+      # the period ends up on: an over-billed key offsets the others of its period.
+      def coverage_budgets
+        budgets = Hash.new(0)
+
+        period_nets.each do |fee_key, by_period|
+          by_period.each { |period, by_subscription| budgets[[period, fee_key.last]] += by_subscription.values.sum }
+        end
+
+        budgets.transform_values! { |amount| [amount, 0].max }
+      end
+
+      def cover(bucket, amount, applicable, balances, covered)
+        period, fee_key = bucket
         uncovered = amount
 
         applicable.each do |meta|
@@ -92,7 +124,7 @@ module Wallets
 
           covered[wallet] += take
           uncovered -= take
-          record_coverage(wallet, fee_key, take) if fee_key.first == "charge"
+          record_coverage(wallet, fee_key, period, take) if fee_key.first == "charge"
         end
 
         amount - uncovered
@@ -104,39 +136,16 @@ module Wallets
         Hash.new { |by_subscription, subscription_id| by_subscription[subscription_id] = Hash.new { |by_period, period| by_period[period] = Hash.new(0) } }
       end
 
-      # A fee key can mix the previous period's draft with this period's usage, and billing settles
-      # the draft first, so wallets cover the oldest period first. Within a period, what a wallet
-      # covers is split between subscriptions by what each still has to cover.
-      def record_coverage(wallet, fee_key, take)
-        remaining = take.to_d
+      # Within a period, what a wallet covers for a fee key is split between subscriptions by what each
+      # still has to cover.
+      def record_coverage(wallet, fee_key, period, take)
+        nets = period_nets[fee_key][period].select { |_subscription_id, net| net.positive? }
+        total = nets.values.sum
 
-        uncovered_by_period(fee_key).each do |period, uncovered|
-          break if remaining <= 0
-          next if uncovered <= 0
-
-          portion = [remaining, uncovered].min
-          uncovered_by_period(fee_key)[period] -= portion
-          remaining -= portion
-
-          nets = positive_period_nets(fee_key, period)
-          total = nets.values.sum
-
-          nets.each do |subscription_id, net|
-            result.billable_metric_amounts[wallet][subscription_id][period][fee_key.second] +=
-              tax_exclusive(fee_key, subscription_id, period, portion * net / total)
-          end
+        nets.each do |subscription_id, net|
+          result.billable_metric_amounts[wallet][subscription_id][period][fee_key.second] +=
+            tax_exclusive(fee_key, subscription_id, period, take.to_d * net / total)
         end
-      end
-
-      def uncovered_by_period(fee_key)
-        @uncovered_by_period ||= {}
-        @uncovered_by_period[fee_key] ||= period_nets[fee_key].keys.sort_by(&:to_s).index_with do |period|
-          positive_period_nets(fee_key, period).values.sum
-        end
-      end
-
-      def positive_period_nets(fee_key, period)
-        period_nets[fee_key][period].select { |_subscription_id, net| net.positive? }
       end
 
       def period(fee)
