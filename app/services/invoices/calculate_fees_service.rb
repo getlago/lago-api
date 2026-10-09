@@ -52,6 +52,7 @@ module Invoices
 
         Credits::ProgressiveBillingService.call(invoice:)
         Credits::AppliedCouponsService.call(invoice:) if should_create_coupon_credit?
+        consume_recurring_coupons_used_in_billing_period if finalizing_invoice?
 
         totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice:, finalizing: finalizing_invoice?)
         return totals_result if !totals_result.success? && totals_result.error.is_a?(BaseService::UnknownTaxFailure) # rubocop:disable Rails/TransactionExitStatement
@@ -423,6 +424,31 @@ module Invoices
       Events::BillingPeriodFilterService.for_charges!(
         subscription:, boundaries:, with_last_seen_at: false
       )
+    end
+
+    # The subscription invoice closes the billing period: recurring coupons used earlier in it,
+    # on progressive billing or pay-in-advance invoices, consume one duration even if not applied here.
+    # Here we're reducing usage of recurring coupons that were used in the billing period but NOT applied to this invoice.
+    def consume_recurring_coupons_used_in_billing_period
+      return unless subscription_invoice?
+
+      coupons_applied_on_current_invoice = invoice.credits.coupon_kind.select(:applied_coupon_id)
+      customer.applied_coupons.active.recurring
+        .where.not(id: coupons_applied_on_current_invoice)
+        .find_each do |applied_coupon|
+          next unless applied_coupon.used_in_billing_period?(invoice)
+
+          applied_coupon.frequency_duration_remaining -= 1
+          if applied_coupon.frequency_duration_remaining.zero?
+            applied_coupon.mark_as_terminated!
+          else
+            applied_coupon.save!
+          end
+        end
+    end
+
+    def subscription_invoice?
+      invoice.invoice_subscriptions.any?(&:subscription_invoicing_reason?)
     end
   end
 end

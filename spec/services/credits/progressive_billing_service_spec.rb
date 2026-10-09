@@ -574,6 +574,36 @@ Rspec.describe Credits::ProgressiveBillingService do
     end
   end
 
+  context "with a progressive billing fee on a recreated charge" do
+    let(:progressive_billing_invoice) do
+      create(:invoice, :with_subscriptions, organization:, customer:, subscriptions: [subscription],
+        status: :finalized, invoice_type: :progressive_billing, issuing_date: invoice.issuing_date - 1.day,
+        fees_amount_cents: 30_00, total_amount_cents: 30_00)
+    end
+    let(:discarded_charge) { create(:standard_charge, code: subscription_fee1.charge.code, deleted_at: 1.day.ago) }
+    let(:progressive_billing_fee) do
+      create(:charge_fee, invoice: progressive_billing_invoice, subscription:, charge: discarded_charge,
+        amount_cents: 30_00, precise_amount_cents: 30_00, taxes_amount_cents: 0)
+    end
+    let(:subscription_fee1) { create(:charge_fee, invoice:, subscription:, amount_cents: 50_00) }
+
+    before do
+      progressive_billing_fee
+      progressive_billing_invoice.invoice_subscriptions.sole.update!(
+        charges_from_datetime: invoice.issuing_date - 1.month,
+        charges_to_datetime: invoice.issuing_date
+      )
+    end
+
+    it "offsets the fee of the charge with the same code" do
+      result = credit_service.call
+
+      expect(result.credits.sole.amount_cents).to eq(30_00)
+      expect(subscription_fee1.reload.precise_coupons_amount_cents).to eq(30_00)
+      expect(progressive_billing_invoice.credit_notes).to be_empty
+    end
+  end
+
   context "with a spy on Subscriptions::ProgressiveBilledAmount" do
     let(:progressive_billing_invoice) do
       create(
