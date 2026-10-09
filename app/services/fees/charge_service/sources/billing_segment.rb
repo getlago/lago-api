@@ -73,6 +73,7 @@ module Fees
         end
 
         def boundaries
+          # Each rate segment starts a fresh aggregation window, even within the same cycle.
           BillingPeriodBoundaries.new(
             from_datetime: billing_segment.started_at,
             to_datetime: billing_segment.ended_at,
