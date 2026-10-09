@@ -22,6 +22,7 @@ module Integrations
           return result unless integration.sync_invoices
           return result unless invoice.finalized?
           return result if payload.integration_invoice
+          return result unless payload.sync_allowed?
 
           throttle!(:anrok, :netsuite, :xero)
 
