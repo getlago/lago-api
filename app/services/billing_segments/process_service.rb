@@ -13,7 +13,7 @@ module BillingSegments
       result.invoices = []
 
       acquired = customer.with_advisory_lock("billing_segment_process_customer_#{customer.id}", timeout_seconds: 0) do
-        pending_segments.group_by { |segment| invoice_key(segment) }.each_value do |invoice_segments|
+        pending_segments.group_by { |segment| pending_invoice_key(segment) }.each_value do |invoice_segments|
           result.invoices << build_invoice(invoice_segments)
         end
 
@@ -46,27 +46,36 @@ module BillingSegments
     end
 
     def grouped_segments
-      @grouped_segments ||= BillingSegment.awaiting_invoicing
+      @grouped_segments ||= BillingSegment.ready_for_invoicing
         .where(customer_id: customer.id)
         .includes(:pricing_unit, :rate_override, :contract, contract_rate_card: {rate_card: :product}, rate_card_rate: :rate_card)
-        .group_by { |segment| segment_group(segment) }
-        .except(nil)
+        .sort_by { |segment| [segment.billing_at, segment.id] }
+        .filter_map do |segment|
+          group = segment_group(segment)
+          [group, segment] if group
+        end
+        .group_by(&:first)
+        .transform_values { |grouped_segments| grouped_segments.map(&:last) }
     end
 
     def segment_group(segment)
       advance_metered = segment.contract_rate_card.rate_card.advance? && segment.contract_rate_card.product.metered?
 
       if advance_metered
-        :processing_advance_segments if segment.status_processing?
+        :processing_advance_segments
       elsif segment.status_pending?
         :pending_segments
       end
     end
 
-    def invoice_key(segment)
+    def pending_invoice_key(segment)
+      invoice_key(segment, billing_at: segment.billing_at)
+    end
+
+    def invoice_key(segment, billing_at: segment.cycle_started_at)
       contract = segment.contract
       [
-        segment.cycle_started_at.in_time_zone(customer.applicable_timezone).to_date,
+        billing_at.in_time_zone(customer.applicable_timezone).to_date,
         contract.consolidate_invoice ? :shared : segment.id,
         segment.currency,
         contract.billing_entity_id || customer.billing_entity_id,
@@ -95,6 +104,7 @@ module BillingSegments
       fixed_segments = grouped[Product::PRODUCT_TYPES[:fixed]] || []
 
       ActiveRecord::Base.transaction do
+        segments.each { |segment| segment.update!(status: :processing) }
         invoice = Invoices::CreateGeneratingService.call!(
           customer:,
           billing_entity: contract.billing_entity || customer.billing_entity,
@@ -135,6 +145,7 @@ module BillingSegments
       fee_result = nil
 
       ActiveRecord::Base.transaction do
+        segments.each { |segment| segment.update!(status: :processing) }
         ActiveRecord::Base.transaction(requires_new: true) do
           invoice = create_advance_invoice(segments)
           fee_result = ::Fees::AdvanceChargesService.call!(
@@ -232,7 +243,7 @@ module BillingSegments
         .where(invoices: {status: :generating})
         .select(:invoice_id)
 
-      Invoice.where(id: invoice_ids).find_each do |invoice|
+      Invoice.where(id: invoice_ids).order(:issuing_date, :id).each do |invoice|
         if invoice.advance_charges?
           Invoices::FinalizeAndPublishAdvanceChargesService.call!(invoice:)
         else
