@@ -22,11 +22,7 @@ module Integrations
               "options" => {
                 "ignoreMandatoryFields" => false,
                 "fullInvoicePayload" => {
-                  "invoice_payload" => ::V1::InvoiceSerializer.new(
-                    invoice,
-                    root_name: "invoice",
-                    includes: %i[customer integration_customers billing_periods subscriptions fees credits metadata applied_taxes]
-                  ).serialize
+                  "invoice_payload" => invoice_payload
                 }
               }
             }
@@ -43,7 +39,26 @@ module Integrations
             result
           end
 
+          def void_body
+            unless integration_invoice
+              raise Integrations::Aggregator::BasePayload::Failure.new(nil, code: "invoice_missing")
+            end
+
+            {
+              "type" => "void-invoice",
+              "payload" => invoice_payload
+            }
+          end
+
           private
+
+          def invoice_payload
+            ::V1::InvoiceSerializer.new(
+              invoice,
+              root_name: "invoice",
+              includes: %i[customer integration_customers billing_periods subscriptions fees credits metadata applied_taxes]
+            ).serialize
+          end
 
           def columns
             result = {

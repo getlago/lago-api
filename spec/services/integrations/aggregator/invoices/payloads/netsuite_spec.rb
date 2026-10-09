@@ -737,6 +737,35 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
     end
   end
 
+  describe "#void_body" do
+    subject(:void_body_call) { payload.void_body }
+
+    context "when integration invoice exists" do
+      before { create(:integration_resource, integration:, syncable: invoice, resource_type: :invoice) }
+
+      it "returns the void payload" do
+        expect(void_body_call).to eq(
+          {
+            "type" => "void-invoice",
+            "payload" => ::V1::InvoiceSerializer.new(
+              invoice,
+              root_name: "invoice",
+              includes: %i[customer integration_customers billing_periods subscriptions fees credits metadata applied_taxes]
+            ).serialize
+          }
+        )
+      end
+    end
+
+    context "when integration invoice does not exist" do
+      it "raises an invoice missing failure" do
+        expect { void_body_call }.to raise_error(Integrations::Aggregator::BasePayload::Failure) do |error|
+          expect(error.code).to eq("invoice_missing")
+        end
+      end
+    end
+  end
+
   describe "#tax_item_complete?" do
     subject(:tax_item_complete_call) { payload.__send__(:tax_item_complete?) }
 
