@@ -24,10 +24,15 @@ Role.find_or_create_by!(code: "manager", organization_id: nil) do |role|
 end
 
 # NOTE: create users and an organization
-user = User.create_with(password: "ILoveLago")
+# The default password is public in this repository. db/seeds.rb requires
+# LAGO_SEED_USER_PASSWORD outside of development and test, so the default is
+# only ever used on a local machine.
+seed_password = ENV.fetch("LAGO_SEED_USER_PASSWORD", "ILoveLago")
+
+user = User.create_with(password: seed_password)
   .find_or_create_by(email: "gavin@hooli.com")
 
-dinesh = User.create_with(password: "ILoveLago")
+dinesh = User.create_with(password: seed_password)
   .find_or_create_by(email: "dinesh@hooli.com")
 
 organizations_data = [
