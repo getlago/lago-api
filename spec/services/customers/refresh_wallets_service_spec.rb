@@ -113,10 +113,12 @@ RSpec.describe Customers::RefreshWalletsService do
     context "when the organization streams usage" do
       before { create(:kinesis_destination, organization:) }
 
-      it "records what the wallet absorbs per subscription and billable metric, net of what pay in advance already billed" do
+      it "records what the wallet absorbs per subscription, period and billable metric, net of what pay in advance already billed" do
+        period = Time.current.beginning_of_month.utc.iso8601
+
         expect(result.wallets.first.ongoing_billable_metric_amounts).to eq({
-          subscriptions.first.id => {billable_metric.id => 600},
-          subscriptions.second.id => {billable_metric.id => 300}
+          subscriptions.first.id => {period => {billable_metric.id => 600}},
+          subscriptions.second.id => {period => {billable_metric.id => 300}}
         })
       end
     end
