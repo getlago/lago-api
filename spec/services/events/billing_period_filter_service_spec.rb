@@ -320,12 +320,23 @@ RSpec.describe Events::BillingPeriodFilterService do
         allow(Events::Stores::StoreFactory).to receive(:new_instance).and_return(event_store)
 
         described_class.for_billing_segments!(billing_segments: [billing_segment],
-          codes: [billable_metric.code, "other_code"], with_last_seen_at: false)
+          codes: [billable_metric.code, "other_code"], with_last_seen_at: true)
 
         expect(event_store).to have_received(:distinct_codes_and_property_combinations)
-          .with(codes: ["other_code"], filter_keys: [], with_last_seen_at: false)
+          .with(codes: ["other_code"], filter_keys: [], with_last_seen_at: true)
         expect(event_store).to have_received(:distinct_codes_and_property_combinations)
-          .with(codes: [billable_metric.code], filter_keys: [], include_all_history: true, with_last_seen_at: false)
+          .with(codes: [billable_metric.code], filter_keys: [], include_all_history: true, with_last_seen_at: true)
+      end
+
+      it "skips the recurring history without ingestion timestamps" do
+        event_store = instance_double(Events::Stores::PostgresStore, distinct_codes_and_property_combinations: [])
+        allow(Events::Stores::StoreFactory).to receive(:new_instance).and_return(event_store)
+
+        described_class.for_billing_segments!(billing_segments: [billing_segment],
+          codes: [billable_metric.code, "other_code"], with_last_seen_at: false)
+
+        expect(event_store).to have_received(:distinct_codes_and_property_combinations).once
+          .with(codes: ["other_code"], filter_keys: [], with_last_seen_at: false)
       end
 
       it "does not seed recurring products excluded by explicit codes" do

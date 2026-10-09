@@ -80,7 +80,7 @@ module Events
 
         values = yield(codes: non_recurring_metric_codes, with_last_seen_at:)
 
-        if recurring_codes.any?
+        if with_last_seen_at && recurring_codes.any?
           values += yield(codes: recurring_codes, include_all_history: true, with_last_seen_at:)
         end
 

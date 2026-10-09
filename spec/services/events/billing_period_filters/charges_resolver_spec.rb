@@ -206,6 +206,19 @@ RSpec.describe Events::BillingPeriodFilters::ChargesResolver do
       end
     end
 
+    context "with a recurring charge without ingestion timestamps" do
+      let(:resolver) { described_class.new(subscription:, boundaries:, with_last_seen_at: false) }
+
+      before { create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ["eu"]) }
+
+      it "seeds every filter without scanning the recurring history" do
+        expect(filter_targets).to eq(
+          {charge.target_key => {charge_filter.id => boundaries.charges_from_datetime, nil => boundaries.charges_from_datetime}}
+        )
+        expect(combination_queries).to eq([{codes: [], filter_keys: ["region"], with_last_seen_at: false}])
+      end
+    end
+
     context "with a charge served from the usage buckets" do
       let(:resolver) { described_class.new(subscription:, boundaries:, precomputed_filters:) }
       let(:precomputed_filters) { {charge => [nil, charge_filter.id]} }

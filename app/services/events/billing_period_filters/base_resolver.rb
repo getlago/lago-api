@@ -37,8 +37,8 @@ module Events
         values = yield(codes: non_recurring_metric_codes, with_last_seen_at:)
 
         # Recurring usage carries over all-time, so its lazy cache key must reflect events ingested
-        # for prior periods.
-        if recurring_metric_codes.any?
+        # for prior periods. Its targets are all seeded, so without that key the scan adds nothing.
+        if with_last_seen_at && recurring_metric_codes.any?
           values += yield(codes: recurring_metric_codes, include_all_history: true, with_last_seen_at:)
         end
 
