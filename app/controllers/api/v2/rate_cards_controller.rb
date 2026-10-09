@@ -76,7 +76,8 @@ module Api
               page.records,
               ::V2::RateCardSerializer,
               collection_name: "rate_cards",
-              meta: page.meta
+              meta: page.meta,
+              includes: serializer_includes
             )
           )
         else
@@ -143,7 +144,7 @@ module Api
       end
 
       def render_rate_card(rate_card)
-        render(json: ::V2::RateCardSerializer.new(rate_card, root_name: "rate_card", includes: %i[active_rate taxes]))
+        render(json: ::V2::RateCardSerializer.new(rate_card, root_name: "rate_card", includes: [:active_rate, :taxes, *serializer_includes]))
       end
 
       def resource_name

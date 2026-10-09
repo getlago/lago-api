@@ -10,7 +10,11 @@ module Utils
 
     SERIALIZED_INCLUDED_OBJECTS = {
       billing_entity: %i[taxes],
-      rate_card: %i[rates taxes],
+      # `counts` keeps the record counts of the v2 catalog serializers, an option v2 REST never passes.
+      catalog_plan: %i[counts],
+      product: %i[counts],
+      product_category: %i[counts],
+      rate_card: %i[rates taxes counts],
       credit_note: %i[items applied_taxes error_details],
       customer: %i[taxes integration_customers applicable_invoice_custom_sections],
       invoice: %i[customer integration_customers billing_periods subscriptions fees credits metadata applied_taxes error_details applied_invoice_custom_sections],

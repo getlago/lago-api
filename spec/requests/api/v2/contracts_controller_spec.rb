@@ -116,7 +116,12 @@ RSpec.describe Api::V2::ContractsController do
 
     it_behaves_like "a cursor paginated v2 endpoint", collection: :contracts, model: Contract do
       let(:paginated_path) { "/api/v2/contracts" }
-      let(:create_paginated_record) { ->(created_at) { create(:contract, organization:, customer:, created_at:) } }
+      # A customer and a plan per contract, so that a page missing their preload makes more queries.
+      let(:create_paginated_record) do
+        lambda do |created_at|
+          create(:contract, organization:, customer: create(:customer, organization:), catalog_plan: create(:catalog_plan, organization:), created_at:)
+        end
+      end
     end
 
     context "with a pending contract" do
@@ -189,6 +194,9 @@ RSpec.describe Api::V2::ContractsController do
       expect(response).to have_http_status(:success)
       expect(json[:contract][:lago_id]).to eq(contract.id)
       expect(json[:contract][:applied_rate_cards].sole[:lago_id]).to eq(card.id)
+      # A contract is never deleted, while its applied rate cards are.
+      expect(json[:contract]).not_to have_key(:deleted_at)
+      expect(json[:contract][:applied_rate_cards].sole).to include(deleted_at: nil)
     end
 
     context "with invoicing settings" do
@@ -402,6 +410,7 @@ RSpec.describe Api::V2::ContractsController do
       expect(response).to have_http_status(:success)
       expect(json[:contract][:external_id]).to eq(contract.external_id)
       expect(json[:contract][:status]).to eq("terminated")
+      expect(json[:contract]).not_to have_key(:deleted_at)
     end
 
     context "when the contract is pending" do

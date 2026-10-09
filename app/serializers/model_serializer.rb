@@ -80,4 +80,13 @@ class ModelSerializer
   def expand(name)
     raise NotImplementedError, "#{self.class} cannot expand #{name}"
   end
+
+  # Includes of a record rendered inside this one: never expansions, so it stays flat.
+  def nested_includes(forward: [])
+    [:deleted_at, *forward].select { include?(it) }
+  end
+
+  def deleted_at_payload
+    include?(:deleted_at) ? {deleted_at: model.deleted_at&.iso8601} : {}
+  end
 end

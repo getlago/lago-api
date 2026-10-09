@@ -496,8 +496,32 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
     context "when object is a rate card" do
       let(:object) { create(:rate_card, organization:) }
 
-      it "includes rates and taxes" do
-        expect(method_call).to eq(%i[rates taxes])
+      it "includes rates, taxes and counts" do
+        expect(method_call).to eq(%i[rates taxes counts])
+      end
+    end
+
+    context "when object is a catalog plan" do
+      let(:object) { build_stubbed(:catalog_plan, organization:) }
+
+      it "includes the counts" do
+        expect(method_call).to eq(%i[counts])
+      end
+    end
+
+    context "when object is a product" do
+      let(:object) { build_stubbed(:product, organization:) }
+
+      it "includes the counts" do
+        expect(method_call).to eq(%i[counts])
+      end
+    end
+
+    context "when object is a product category" do
+      let(:object) { build_stubbed(:product_category, organization:) }
+
+      it "includes the counts" do
+        expect(method_call).to eq(%i[counts])
       end
     end
 

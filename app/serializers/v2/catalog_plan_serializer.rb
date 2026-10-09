@@ -11,7 +11,8 @@ module V2
         description: model.description,
         currency: model.currency,
         applied_rate_cards_count: model.applied_rate_cards.size,
-        created_at: model.created_at.iso8601
+        created_at: model.created_at.iso8601,
+        **deleted_at_payload
       }
     end
   end
