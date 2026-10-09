@@ -168,7 +168,7 @@ module X402
       end
 
       def client(path, read_timeout)
-        LagoHttpClient::Client.new("https://#{HOST}#{BASE_PATH}#{path}", open_timeout: OPEN_TIMEOUT, read_timeout:)
+        LagoHttpClient::Client.new("https://#{HOST}#{BASE_PATH}#{path}", open_timeout: OPEN_TIMEOUT, read_timeout:, max_retries: 0)
       end
 
       def authorization(method, path)

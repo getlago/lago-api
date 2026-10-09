@@ -27,7 +27,7 @@ module X402
       attr_reader :api_key_id, :api_key_secret
 
       def request(family, path, headers)
-        LagoHttpClient::Client.new("https://#{HOST}#{path}", open_timeout: OPEN_TIMEOUT, read_timeout: READ_TIMEOUT).get(headers:)
+        LagoHttpClient::Client.new("https://#{HOST}#{path}", open_timeout: OPEN_TIMEOUT, read_timeout: READ_TIMEOUT, max_retries: 0).get(headers:)
         Lookup.new(family:, outcome: :found, http_status: 200, error_type: nil, correlation_id: nil)
       rescue LagoHttpClient::HttpError => e
         refused(family, e.error_code.to_i, e.error_body)

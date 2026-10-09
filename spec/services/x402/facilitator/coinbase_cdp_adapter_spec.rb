@@ -243,7 +243,7 @@ describe X402::Facilitator::CoinbaseCdpAdapter do
       it "settles behind the hard timeout" do
         settlement
 
-        expect(LagoHttpClient::Client).to have_received(:new).with("#{cdp_facilitator_url}/settle", open_timeout: 5, read_timeout: 20)
+        expect(LagoHttpClient::Client).to have_received(:new).with("#{cdp_facilitator_url}/settle", open_timeout: 5, read_timeout: 20, max_retries: 0)
       end
     end
 
@@ -524,6 +524,16 @@ describe X402::Facilitator::CoinbaseCdpAdapter do
 
       it "raises" do
         expect { supported }.to raise_error(X402::Facilitator::UnavailableError)
+      end
+    end
+
+    context "with a spy on the HTTP client" do
+      before { allow(LagoHttpClient::Client).to receive(:new).and_call_original }
+
+      it "builds a client that sends the request once" do
+        supported
+
+        expect(LagoHttpClient::Client).to have_received(:new).with("#{cdp_facilitator_url}/supported", open_timeout: 5, read_timeout: 10, max_retries: 0)
       end
     end
   end

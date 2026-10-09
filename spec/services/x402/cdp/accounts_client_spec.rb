@@ -139,6 +139,16 @@ describe X402::Cdp::AccountsClient do
       lookup
       expect(Rails.logger).to have_received(:warn).with(include("reason=no_response", "error=Net::ReadTimeout"))
     end
+
+    context "with a spy on the HTTP client" do
+      before { allow(LagoHttpClient::Client).to receive(:new).and_call_original }
+
+      it "builds a client that sends the lookup once" do
+        lookup
+
+        expect(LagoHttpClient::Client).to have_received(:new).with(cdp_account_url(family, address), open_timeout: 5, read_timeout: 5, max_retries: 0)
+      end
+    end
   end
 
   context "with an unusable secret" do
