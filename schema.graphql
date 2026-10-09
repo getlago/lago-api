@@ -14818,6 +14818,11 @@ enum TimezoneEnum {
   TZ_AMERICA_ARGENTINA_BUENOS_AIRES
 
   """
+  America/Asuncion
+  """
+  TZ_AMERICA_ASUNCION
+
+  """
   America/Bogota
   """
   TZ_AMERICA_BOGOTA

@@ -16,7 +16,7 @@ module BillableMetricFilters
         .where(billable_metrics: {id: billable_metric.id})
         .distinct
         .in_batches do |batch|
-          batch.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
+          batch.distinct(false).update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
         end
     end
   end

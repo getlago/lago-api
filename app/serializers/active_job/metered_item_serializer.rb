@@ -2,8 +2,12 @@
 
 module ActiveJob
   class MeteredItemSerializer < ActiveJob::Serializers::ObjectSerializer
-    def self.serialize?(argument)
-      argument.is_a?(Fees::ChargeService::MeteredItem) && [
+    def klass
+      Fees::ChargeService::MeteredItem
+    end
+
+    def serialize?(argument)
+      argument.is_a?(klass) && [
         Fees::ChargeService::Sources::Charge,
         Fees::ChargeService::Sources::BillingSegment
       ].any? { |source_class| argument.source.is_a?(source_class) }

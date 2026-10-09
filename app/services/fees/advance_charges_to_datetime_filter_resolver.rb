@@ -13,7 +13,7 @@ module Fees
 
       relation = Fee.joins(:subscription)
         .where(invoice: nil, payment_status: :succeeded)
-        .where("succeeded_at <= ?", billing_at)
+        .where("fees.succeeded_at <= ?", billing_at)
         .where(subscriptions: {
           customer_id: customer.id,
           external_id: billing_contexts.map(&:external_id).uniq,
@@ -23,7 +23,7 @@ module Fees
       # Upgrades, downgrades and terminations may invoice fees before their period ends.
       if regular_periodic_billing?
         relation.where(
-          "(properties ->> 'charges_to_datetime') IS NULL OR (properties ->> 'charges_to_datetime')::timestamp <= ?",
+          "(fees.properties ->> 'charges_to_datetime') IS NULL OR (fees.properties ->> 'charges_to_datetime')::timestamp <= ?",
           billing_at
         )
       else

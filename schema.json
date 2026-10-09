@@ -81322,6 +81322,12 @@
               "deprecationReason": null
             },
             {
+              "name": "TZ_AMERICA_ASUNCION",
+              "description": "America/Asuncion",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "TZ_AMERICA_BOGOTA",
               "description": "America/Bogota",
               "isDeprecated": false,
