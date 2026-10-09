@@ -1312,7 +1312,7 @@ type BillingEntity {
   legalNumber: String
   logoUrl: String
   name: String!
-  netPaymentTerm: Int!
+  netPaymentTerm: Int
   organization: Organization!
   phone: String
   selectedInvoiceCustomSections: [InvoiceCustomSection!]
@@ -5203,7 +5203,7 @@ type CurrentOrganization {
   legalNumber: String
   logoUrl: String
   name: String!
-  netPaymentTerm: Int!
+  netPaymentTerm: Int
   premiumIntegrations: [PremiumIntegrationTypeEnum!]!
   slug: String!
   state: String
