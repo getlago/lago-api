@@ -266,6 +266,22 @@ RSpec.describe BillingSegments::ProcessService do
             end
           end
 
+          context "when the contract selects invoice custom sections" do
+            let(:custom_section) { create(:invoice_custom_section, organization:) }
+
+            before do
+              create(:contract_applied_invoice_custom_section,
+                organization:, contract:, invoice_custom_section: custom_section)
+            end
+
+            it "applies the contract's selection to the reconciliation invoice" do
+              expect(result).to be_success
+
+              invoice = result.invoices.sole.reload
+              expect(invoice.applied_invoice_custom_sections.pluck(:code)).to eq([custom_section.code])
+            end
+          end
+
           context "when the rate card keeps paid fees standalone" do
             let(:rate_card) do
               create(

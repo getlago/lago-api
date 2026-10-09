@@ -150,7 +150,10 @@ module BillingSegments
           end
 
           Invoices::AggregateAmountsAndTaxesFromFees.call!(invoice:)
-          Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
+          Invoices::ApplyInvoiceCustomSectionsService.call!(
+            invoice:,
+            resources: segments.map(&:contract).uniq.map { |contract| Invoices::ApplyInvoiceCustomSectionsService::Resource.from(resource: contract) }
+          )
           invoice.payment_status = :succeeded
           invoice.save!
         end
