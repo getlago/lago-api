@@ -4,9 +4,14 @@ module Api
   module V1
     module X402
       class ConnectionsController < BaseController
+        MALFORMED_FIELD_ERRORS = {networks: "must_be_array", payout_addresses: "value_is_invalid"}.freeze
+
         filter_audit_log_params! :secret, :_key
 
         def create
+          errors = malformed_field_errors
+          return validation_errors(errors:) if errors.any?
+
           result = ::X402::Connections::CreateService.call(
             organization: current_organization,
             params: input_params.to_h
@@ -22,6 +27,9 @@ module Api
         def update
           connection = find_connection
           return not_found_error(resource: "x402_connection") unless connection
+
+          errors = malformed_field_errors
+          return validation_errors(errors:) if errors.any?
 
           result = ::X402::Connections::UpdateService.call(connection:, params: input_params.to_h)
 
@@ -80,6 +88,14 @@ module Api
             :code, :name, :facilitator, :asset, :auto_create_customers, :cdp_api_key_id, :cdp_api_key_secret,
             networks: [], payout_addresses: {}
           )
+        end
+
+        def malformed_field_errors
+          raw = params.require(:x402_connection)
+
+          MALFORMED_FIELD_ERRORS.each_with_object({}) do |(field, code), errors|
+            errors[field] = [code] if raw.key?(field) && !input_params.key?(field)
+          end
         end
 
         def render_connection(connection)

@@ -100,6 +100,17 @@ describe Api::V1::X402::ConnectionsController, :premium do
       end
     end
 
+    context "with a string for networks" do
+      let(:params) { super().merge(networks: "eip155:84532") }
+
+      it "returns a validation error and creates nothing" do
+        expect { subject }.not_to change { organization.x402_connections.count }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(networks: ["must_be_array"])
+      end
+    end
+
     context "with an existing code" do
       before { create(:x402_connection, organization:, code: "my_cdp") }
 
@@ -200,6 +211,37 @@ describe Api::V1::X402::ConnectionsController, :premium do
         subject
         expect(response).to have_http_status(:unprocessable_content)
         expect(json[:error_details]).to eq(networks: ["value_is_invalid"])
+      end
+    end
+
+    context "with a string for networks" do
+      let(:params) { {networks: "eip155:8453"} }
+
+      it "returns a validation error and keeps the networks" do
+        expect { subject }.not_to change { connection.reload.networks }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(networks: ["must_be_array"])
+      end
+
+      context "with an unknown code" do
+        let(:code) { "unknown" }
+
+        it "returns a not found error" do
+          subject
+          expect(response).to be_not_found_error("x402_connection")
+        end
+      end
+    end
+
+    context "with a string for payout addresses" do
+      let(:params) { {payout_addresses: evm_address} }
+
+      it "returns a validation error and keeps the payout addresses" do
+        expect { subject }.not_to change { connection.reload.payout_addresses }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(payout_addresses: ["value_is_invalid"])
       end
     end
 
