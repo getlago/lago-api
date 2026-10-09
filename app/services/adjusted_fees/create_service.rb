@@ -152,11 +152,11 @@ module AdjustedFees
         taxes_precise_amount_cents: 0.to_d,
         units: 0,
         total_aggregated_units: 0,
-        properties: fee_boundaries(invoice_subscription, fee_type)
+        properties: fee_boundaries(invoice_subscription, subscription:, chargeable:, fee_type:)
       )
     end
 
-    def fee_boundaries(invoice_subscription, fee_type)
+    def fee_boundaries(invoice_subscription, subscription:, chargeable:, fee_type:)
       base = {timestamp: invoice_subscription.timestamp}
 
       if fee_type == :charge
@@ -165,11 +165,19 @@ module AdjustedFees
           charges_to_datetime: invoice_subscription.charges_to_datetime
         )
       else
-        base.merge(
+        base.merge(fixed_charge_boundaries(invoice_subscription, subscription, chargeable))
+      end
+    end
+
+    def fixed_charge_boundaries(invoice_subscription, subscription, fixed_charge)
+      unless fixed_charge.pay_in_advance?
+        return {
           fixed_charges_from_datetime: invoice_subscription.fixed_charges_from_datetime,
           fixed_charges_to_datetime: invoice_subscription.fixed_charges_to_datetime
-        )
+        }
       end
+
+      Subscriptions::DatesService.fixed_charge_pay_in_advance_interval(invoice_subscription.timestamp, subscription)
     end
 
     def disabled_charge_model?(charge)
