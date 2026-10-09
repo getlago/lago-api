@@ -8,7 +8,7 @@ RSpec.describe CsAdminAuditLog, type: :model do
   describe "enums" do
     it do
       expect(subject).to define_enum_for(:action)
-        .with_values(toggle_on: 0, toggle_off: 1, org_created: 2, rollback: 3)
+        .with_values(toggle_on: 0, toggle_off: 1, org_created: 2, rollback: 3, org_renamed: 4)
         .validating
 
       expect(subject).to define_enum_for(:feature_type)
