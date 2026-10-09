@@ -19,7 +19,6 @@ module UsageAttributionValues
     TYPES_TTL = 15.seconds
     KEY_SEPARATOR = "\u001F"
 
-    # What the labels need of a type.
     AttributionType = Data.define(:code, :attribution_keys)
 
     Result = BaseResult
@@ -56,7 +55,7 @@ module UsageAttributionValues
 
     def cached_attribution_types
       types = Rails.cache.fetch("usage_attribution_values/types/#{organization.id}", expires_in: TYPES_TTL) do
-        UsageAttributionType.where(organization_id: organization.id).pluck(:code, :attribution_keys)
+        organization.usage_attribution_types.pluck(:code, :attribution_keys)
       end
 
       types.map { |code, attribution_keys| AttributionType.new(code:, attribution_keys:) }
@@ -66,11 +65,12 @@ module UsageAttributionValues
       combinations = latest_combinations(attribution_types)
       return [] if combinations.empty?
 
-      already_seen = Rails.cache.read_multi(*combinations.pluck(:key)).keys.to_set
+      seen_keys = Rails.cache.read_multi(*combinations.pluck(:key)).keys
+      unseen_combinations = combinations.reject { |combination| seen_keys.include?(combination[:key]) }
 
-      combinations
-        .select { |combination| !already_seen.include?(combination[:key]) && mark_seen(combination[:key]) }
-        .pluck(:entry)
+      first_seen_combinations = unseen_combinations.select { |combination| mark_seen(combination[:key]) }
+
+      first_seen_combinations.pluck(:entry)
     end
 
     def latest_combinations(attribution_types)
