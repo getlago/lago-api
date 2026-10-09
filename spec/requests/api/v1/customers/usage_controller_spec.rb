@@ -101,7 +101,7 @@ RSpec.describe Api::V1::Customers::UsageController do
 
         expect(response).to have_http_status(:success)
         expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
-          .with(hash_including(combinations_cache_ttl: 5.seconds))
+          .with(hash_including(combinations_cache_ttl: 15.seconds))
       end
     end
 

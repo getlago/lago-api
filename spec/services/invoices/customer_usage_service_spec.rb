@@ -959,7 +959,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             usage_service.call
 
             expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
-              .with(hash_including(combinations_cache_ttl: 5.seconds))
+              .with(hash_including(combinations_cache_ttl: 15.seconds))
           end
 
           context "when the cache is disabled by the caller" do
