@@ -131,6 +131,18 @@ RSpec.describe Api::V2::BaseController, type: :controller do
     end
   end
 
+  context "with an expansion and an invalid limit" do
+    let(:params) { {limit: "0", expand: ["fees"]} }
+
+    it "rejects the expansion before reading the cursor" do
+      index
+
+      expect(response).to have_http_status(:bad_request)
+      expect(json[:code]).to eq("expand_not_supported")
+      expect(errors_counter).not_to have_received(:increment)
+    end
+  end
+
   context "with an invalid cursor" do
     let(:params) { {after: "a"} }
 
@@ -178,6 +190,22 @@ RSpec.describe Api::V2::BaseController, type: :controller do
         error: "Bad Request",
         code: "missing_parameter",
         error_details: {product: {reason: "missing"}}
+      )
+    end
+  end
+
+  context "with an expansion on a show that declares no expandable list" do
+    subject(:show) { get(:show, params: {id: "1", expand: ["product_category"]}) }
+
+    it "returns a not supported error" do
+      show
+
+      expect(response).to have_http_status(:bad_request)
+      expect(json).to eq(
+        status: 400,
+        error: "Bad Request",
+        code: "expand_not_supported",
+        error_details: {expand: {reason: "not_expandable", invalid_values: ["product_category"]}}
       )
     end
   end

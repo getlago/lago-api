@@ -13,4 +13,10 @@ RSpec.describe "API v2 fallback to v1" do
     expect(response).to have_http_status(:success)
     expect(json[:billable_metrics].map { it[:lago_id] }).to include(billable_metric.id)
   end
+
+  it "ignores expand, which only the native v2 controllers validate" do
+    get_with_token(organization, "/api/v2/billable_metrics?expand[]=__nope__")
+
+    expect(response).to have_http_status(:success)
+  end
 end
