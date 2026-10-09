@@ -192,7 +192,6 @@ RSpec.describe Fees::ChargeService::MeteredItem do
         let(:rate_model) { "graduated" }
 
         it "resets nonrecurring advance aggregation at the rate segment" do
-          expect(metered_item).to be_graduated
           expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
           expect(metered_item.aggregation_boundaries[:from_datetime]).to eq(billing_segment.started_at)
           expect(boundaries.from_datetime).to eq(billing_segment.started_at)
@@ -222,7 +221,6 @@ RSpec.describe Fees::ChargeService::MeteredItem do
 
         it "keeps aggregation within the rate segment" do
           expect(metered_item).to be_graduated_percentage
-          expect(metered_item).not_to be_graduated
           expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
         end
       end
@@ -241,7 +239,6 @@ RSpec.describe Fees::ChargeService::MeteredItem do
         let(:rate_override) { build(:rate_override, organization:, rate_model: "graduated") }
 
         it "keeps the segment start with a graduated override" do
-          expect(metered_item).to be_graduated
           expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
         end
       end
@@ -251,7 +248,6 @@ RSpec.describe Fees::ChargeService::MeteredItem do
         let(:rate_override) { build(:rate_override, organization:, rate_model: "standard") }
 
         it "keeps the segment start for the effective standard model" do
-          expect(metered_item).not_to be_graduated
           expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
         end
       end

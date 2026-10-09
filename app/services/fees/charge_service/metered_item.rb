@@ -65,10 +65,6 @@ module Fees
         charge_model == "dynamic"
       end
 
-      def graduated?
-        charge_model == "graduated"
-      end
-
       def percentage?
         charge_model == "percentage"
       end
