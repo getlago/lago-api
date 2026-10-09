@@ -10,12 +10,6 @@ RSpec.describe PaymentProviders::Stripe::RefreshWebhookService do
 
   describe ".call" do
     let(:url) { "#{ENV["LAGO_API_URL"]}/webhooks/stripe/#{organization.id}?code=stripe_sandbox" }
-    let(:expected_request_body) do
-      {
-        enabled_events: PaymentProviders::StripeProvider::WEBHOOKS_EVENTS,
-        url: url
-      }
-    end
     let(:stripe_api_response) do
       get_stripe_fixtures("webhook_endpoint_update_response.json") do |h|
         h["url"] = url
@@ -25,7 +19,14 @@ RSpec.describe PaymentProviders::Stripe::RefreshWebhookService do
     before do
       stub_const("ENV", ENV.to_h.merge("LAGO_API_URL" => "https://billing.example.com"))
       stub_request(:post, "https://api.stripe.com/v1/webhook_endpoints/#{payment_provider.webhook_id}")
-        .with(body: expected_request_body)
+        .with do |request|
+          # NOTE: webmock normalises a form-encoded array by sorting its keys as strings, so
+          #       enabled_events[10] lands between [1] and [2]. Decode it ourselves instead.
+          params = CGI.parse(request.body)
+          params["url"] == [url] &&
+            params.select { |k, _| k.start_with?("enabled_events[") }.values.flatten ==
+              PaymentProviders::StripeProvider::WEBHOOKS_EVENTS
+        end
         .and_return(status: 200, body: stripe_api_response)
     end
 

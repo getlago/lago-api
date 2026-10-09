@@ -10,13 +10,7 @@ RSpec.describe PaymentProviders::Stripe::RegisterWebhookService do
 
   describe ".call" do
     let(:url) { "#{ENV["LAGO_API_URL"]}/webhooks/stripe/#{organization.id}?code=stripe_sandbox" }
-    let(:expected_request_body) do
-      {
-        enabled_events: PaymentProviders::StripeProvider::WEBHOOKS_EVENTS,
-        url:,
-        api_version: ::Stripe.api_version
-      }
-    end
+    let(:expected_api_version) { ::Stripe.api_version }
     let(:stripe_api_response) do
       get_stripe_fixtures("webhook_endpoint_create_response.json") do |h|
         h["url"] = url
@@ -26,7 +20,15 @@ RSpec.describe PaymentProviders::Stripe::RegisterWebhookService do
     before do
       stub_const("ENV", ENV.to_h.merge("LAGO_API_URL" => "https://billing.example.com"))
       stub_request(:post, "https://api.stripe.com/v1/webhook_endpoints")
-        .with(body: expected_request_body)
+        .with do |request|
+          # NOTE: webmock normalises a form-encoded array by sorting its keys as strings, so
+          #       enabled_events[10] lands between [1] and [2]. Decode it ourselves instead.
+          params = CGI.parse(request.body)
+          params["url"] == [url] &&
+            params["api_version"] == [expected_api_version] &&
+            params.select { |k, _| k.start_with?("enabled_events[") }.values.flatten ==
+              PaymentProviders::StripeProvider::WEBHOOKS_EVENTS
+        end
         .and_return(status: 200, body: stripe_api_response)
     end
 
@@ -96,13 +98,7 @@ RSpec.describe PaymentProviders::Stripe::RegisterWebhookService do
     context "when overriding version" do
       subject(:provider_service) { described_class.new(payment_provider, version: "YYYY-MM-DD.name") }
 
-      let(:expected_request_body) do
-        {
-          enabled_events: PaymentProviders::StripeProvider::WEBHOOKS_EVENTS,
-          url:,
-          api_version: "YYYY-MM-DD.name"
-        }
-      end
+      let(:expected_api_version) { "YYYY-MM-DD.name" }
 
       it "registers a webhook on stripe" do
         expect(provider_service.call).to be_success
