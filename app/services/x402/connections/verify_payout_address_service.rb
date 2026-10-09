@@ -11,16 +11,16 @@ module X402
       end
 
       def call
-        errors = []
+        errors = {}
 
         in_use_families.each do |family|
           lookup = client.lookup(family:, address: connection.payout_addresses.fetch(family.to_s))
 
           case lookup.outcome
           when :not_found
-            errors << "#{family}_not_in_cdp_project"
+            errors[family] = ["not_in_cdp_project"]
           when :invalid
-            errors << "#{family}_rejected_by_cdp"
+            errors[family] = ["rejected_by_cdp"]
           when :forbidden
             return result.single_validation_failure!(field: :cdp_api_key, error_code: "missing_account_read_permission")
           when :rate_limited, :unavailable

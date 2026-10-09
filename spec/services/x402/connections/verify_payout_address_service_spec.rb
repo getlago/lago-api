@@ -52,7 +52,7 @@ describe X402::Connections::VerifyPayoutAddressService do
 
     it "fails on payout_addresses naming the family" do
       expect(result).not_to be_success
-      expect(result.error.messages).to eq(payout_addresses: ["evm_not_in_cdp_project"])
+      expect(result.error.messages).to eq(payout_addresses: {evm: ["not_in_cdp_project"]})
     end
   end
 
@@ -61,7 +61,7 @@ describe X402::Connections::VerifyPayoutAddressService do
     let(:svm_status) { 404 }
 
     it "reports every family in one failure" do
-      expect(result.error.messages).to eq(payout_addresses: ["evm_not_in_cdp_project", "svm_not_in_cdp_project"])
+      expect(result.error.messages).to eq(payout_addresses: {evm: ["not_in_cdp_project"], svm: ["not_in_cdp_project"]})
     end
   end
 
@@ -69,7 +69,7 @@ describe X402::Connections::VerifyPayoutAddressService do
     let(:svm_status) { 400 }
 
     it "fails on payout_addresses" do
-      expect(result.error.messages).to eq(payout_addresses: ["svm_rejected_by_cdp"])
+      expect(result.error.messages).to eq(payout_addresses: {svm: ["rejected_by_cdp"]})
     end
   end
 

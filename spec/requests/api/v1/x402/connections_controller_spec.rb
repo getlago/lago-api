@@ -86,7 +86,7 @@ describe Api::V1::X402::ConnectionsController, :premium do
         it "returns a validation error" do
           subject
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:error_details]).to eq(payout_addresses: ["missing_svm_payout_address"])
+          expect(json[:error_details]).to eq(payout_addresses: {svm: ["value_is_mandatory"]})
         end
       end
     end
@@ -109,7 +109,7 @@ describe Api::V1::X402::ConnectionsController, :premium do
       it "returns a validation error" do
         subject
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details]).to eq(payout_addresses: ["invalid_checksum"])
+        expect(json[:error_details]).to eq(payout_addresses: {evm: ["invalid_checksum"]})
       end
 
       it "calls CDP for nothing" do
@@ -155,7 +155,7 @@ describe Api::V1::X402::ConnectionsController, :premium do
       it "returns a validation error on payout_addresses" do
         subject
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details]).to eq(payout_addresses: ["evm_not_in_cdp_project"])
+        expect(json[:error_details]).to eq(payout_addresses: {evm: ["not_in_cdp_project"]})
       end
 
       it "persists nothing" do
@@ -270,7 +270,7 @@ describe Api::V1::X402::ConnectionsController, :premium do
       it "returns a validation error on payout_addresses" do
         subject
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details]).to eq(payout_addresses: ["evm_not_in_cdp_project"])
+        expect(json[:error_details]).to eq(payout_addresses: {evm: ["not_in_cdp_project"]})
       end
     end
 

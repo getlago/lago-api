@@ -109,7 +109,7 @@ describe X402::Connections::VerifyService do
     before { stub_cdp_account(:evm, evm_address, status: 404) }
 
     it "fails on payout_addresses" do
-      expect(result.error.messages).to eq(payout_addresses: ["evm_not_in_cdp_project"])
+      expect(result.error.messages).to eq(payout_addresses: {evm: ["not_in_cdp_project"]})
     end
   end
 end

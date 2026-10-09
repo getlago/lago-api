@@ -67,7 +67,7 @@ describe X402::Connections::CreateService do
 
       it "fails with the validation errors" do
         expect(result).not_to be_success
-        expect(result.error.messages).to eq({payout_addresses: ["missing_svm_payout_address"]})
+        expect(result.error.messages).to eq(payout_addresses: {svm: ["value_is_mandatory"]})
       end
 
       it "persists nothing" do
@@ -88,7 +88,7 @@ describe X402::Connections::CreateService do
       before { stub_cdp_account(:evm, evm_address, status: 404) }
 
       it "fails with the address error" do
-        expect(result.error.messages).to eq(payout_addresses: ["evm_not_in_cdp_project"])
+        expect(result.error.messages).to eq(payout_addresses: {evm: ["not_in_cdp_project"]})
       end
 
       it "persists nothing" do

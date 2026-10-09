@@ -113,7 +113,7 @@ describe X402::Connections::UpdateService do
         before { stub_cdp_account(:evm, evm_address, status: 404) }
 
         it "fails with the address error" do
-          expect(result.error.messages).to eq(payout_addresses: ["evm_not_in_cdp_project"])
+          expect(result.error.messages).to eq(payout_addresses: {evm: ["not_in_cdp_project"]})
         end
 
         it "keeps the previous secret" do
@@ -156,7 +156,7 @@ describe X402::Connections::UpdateService do
         before { stub_cdp_account(:svm, svm_address, status: 404) }
 
         it "fails with the address error" do
-          expect(result.error.messages).to eq(payout_addresses: ["svm_not_in_cdp_project"])
+          expect(result.error.messages).to eq(payout_addresses: {svm: ["not_in_cdp_project"]})
         end
 
         it "keeps the connection EVM-only" do
@@ -240,7 +240,7 @@ describe X402::Connections::UpdateService do
 
       it "validates against the saved connection" do
         expect(result).not_to be_success
-        expect(result.error.messages).to eq({payout_addresses: ["missing_svm_payout_address"]})
+        expect(result.error.messages).to eq(payout_addresses: {svm: ["value_is_mandatory"]})
       end
 
       it "keeps the saved networks" do

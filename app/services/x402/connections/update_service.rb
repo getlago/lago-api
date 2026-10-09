@@ -21,7 +21,7 @@ module X402
         return result.not_found_failure!(resource: "x402_connection") unless connection
 
         connection.assign_attributes(attributes)
-        return result.record_validation_failure!(record: connection) unless connection.valid?
+        return result.validation_failure!(errors: connection.validation_error_messages) unless connection.valid?
 
         if live_check_needed?
           verify_result = X402::Connections::VerifyService.call(connection:)
@@ -38,7 +38,7 @@ module X402
         result.connection = connection
         result
       rescue ActiveRecord::RecordInvalid => e
-        result.record_validation_failure!(record: e.record)
+        result.validation_failure!(errors: e.record.validation_error_messages)
       end
 
       private
