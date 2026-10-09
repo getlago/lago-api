@@ -32,6 +32,53 @@ RSpec.describe Resolvers::Wallets::AlertsResolver do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "wallets:update"
 
+  context "when reading the evaluation state" do
+    let(:query) do
+      <<~GQL
+        query($walletId: String!) {
+          walletAlerts(walletId: $walletId) {
+            collection { id previousValue lastProcessedAt thresholds { code value } }
+          }
+        }
+      GQL
+    end
+
+    it "returns the last observed value on the same scale as the thresholds" do
+      balance_alert.update!(previous_value: 42, last_processed_at: nil)
+
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {walletId: wallet.id}
+      )
+
+      alert = result["data"]["walletAlerts"]["collection"].find { it["id"] == balance_alert.id }
+
+      expect(alert["previousValue"]).to eq("42.0")
+      expect(alert["thresholds"].pluck("value")).to include("75.0")
+      expect(alert["lastProcessedAt"]).to be_nil
+    end
+
+    it "returns when the alert was last evaluated" do
+      processed_at = Time.current.change(usec: 0)
+      balance_alert.update!(last_processed_at: processed_at)
+
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {walletId: wallet.id}
+      )
+
+      alert = result["data"]["walletAlerts"]["collection"].find { it["id"] == balance_alert.id }
+
+      expect(alert["lastProcessedAt"]).to eq(processed_at.iso8601)
+    end
+  end
+
   it "returns all alerts" do
     result = execute_graphql(
       current_user: membership.user,

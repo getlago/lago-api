@@ -116,12 +116,61 @@ module UsageMonitoring
       crossed.uniq.sort
     end
 
+    def find_thresholds_recovered(current)
+      one_time_thresholds_values.filter { in_alarm?(it, previous_value) && !in_alarm?(it, current) }
+    end
+
+    def in_alarm?(threshold_value, observed_value)
+      if increasing?
+        threshold_value <= observed_value
+      else
+        threshold_value >= observed_value
+      end
+    end
+
+    def opted_in_thresholds
+      thresholds.filter { !it.recurring && it.notify_on_resolved? && it.code.present? }
+    end
+
+    def thresholds_in_alarm(observed_value)
+      opted_in_thresholds.filter { in_alarm?(it.value, observed_value) }
+    end
+
+    def in_alarm_threshold_codes(observed_value)
+      thresholds_in_alarm(observed_value).map(&:code)
+    end
+
+    def fully_resolved?(observed_value)
+      alarm_lines.none? { in_alarm?(it, observed_value) }
+    end
+
+    # A recurring threshold holds a step, not a line: its first line sits one step past the last one-time threshold.
+    def alarm_lines
+      return one_time_thresholds_values unless recurring_threshold
+
+      step = recurring_threshold.value
+      if increasing?
+        one_time_thresholds_values + [(one_time_thresholds_values.last || 0) + step]
+      else
+        one_time_thresholds_values + [(one_time_thresholds_values.first || 0) - step]
+      end
+    end
+
+    def recorded_alarm_codes
+      all_triggered_alerts
+        .where(kind: [:triggered, :seeded])
+        .pluck(:crossed_thresholds)
+        .flatten
+        .filter_map { it["code"].presence }
+        .to_set
+    end
+
     def recurring_threshold
       @recurring_threshold ||= thresholds.find { |th| th.recurring }
     end
 
     def one_time_thresholds_values
-      @one_time_thresholds_values ||= thresholds.all.filter_map { |th| th.value unless th.recurring }.uniq.sort
+      @one_time_thresholds_values ||= thresholds.filter_map { |th| th.value unless th.recurring }.uniq.sort
     end
 
     def formatted_crossed_thresholds(crossed_threshold_values)
@@ -142,6 +191,10 @@ module UsageMonitoring
 
     def find_value(current_metrics)
       raise NotImplementedError
+    end
+
+    def window_resets_each_period?(_alertable)
+      false
     end
 
     private
@@ -211,6 +264,7 @@ end
 # Indexes
 #
 #  idx_alerts_code_unique_per_subscription                    (code,subscription_external_id,organization_id) UNIQUE WHERE (deleted_at IS NULL)
+#  idx_alerts_code_unique_per_wallet                          (code,wallet_id,organization_id) UNIQUE WHERE ((deleted_at IS NULL) AND (wallet_id IS NOT NULL))
 #  idx_alerts_unique_per_type_per_subscription                (subscription_external_id,organization_id,alert_type) UNIQUE WHERE ((billable_metric_id IS NULL) AND (deleted_at IS NULL))
 #  idx_alerts_unique_per_type_per_subscription_with_bm        (subscription_external_id,organization_id,alert_type,billable_metric_id) UNIQUE WHERE ((billable_metric_id IS NOT NULL) AND (deleted_at IS NULL))
 #  idx_alerts_unique_per_type_per_wallet                      (wallet_id,organization_id,alert_type) UNIQUE WHERE ((billable_metric_id IS NULL) AND (deleted_at IS NULL))

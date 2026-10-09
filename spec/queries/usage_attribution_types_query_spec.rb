@@ -13,9 +13,9 @@ RSpec.describe UsageAttributionTypesQuery do
   let(:filters) { {} }
   let(:search_term) { nil }
 
-  let(:department) { create(:usage_attribution_type, organization:, code: "department", name: "Department", attribution_key: "department_id") }
-  let(:user) { create(:usage_attribution_type, organization:, code: "user", name: "User", attribution_key: "user_id", parent: department) }
-  let(:model) { create(:flat_usage_attribution_type, organization:, code: "model", name: "Model", attribution_key: "model_name") }
+  let(:department) { create(:usage_attribution_type, organization:, code: "department", name: "Department", attribution_keys: ["department_id"]) }
+  let(:user) { create(:usage_attribution_type, organization:, code: "user", name: "User", attribution_keys: ["user_id"], parent: department) }
+  let(:model) { create(:flat_usage_attribution_type, organization:, code: "model", name: "Model", attribution_keys: ["model_name"]) }
 
   before do
     department
@@ -59,6 +59,31 @@ RSpec.describe UsageAttributionTypesQuery do
     end
   end
 
+  context "with a roots filter" do
+    let(:filters) { {roots: true} }
+
+    it "returns only the types without a parent" do
+      expect(returned_ids).to match_array([department.id, model.id])
+    end
+
+    context "when a parent has been discarded" do
+      before { department.discard! }
+
+      it "promotes its kept children to roots" do
+        expect(returned_ids).to match_array([user.id, model.id])
+      end
+    end
+
+    context "with pagination" do
+      let(:pagination) { {page: 1, limit: 1} }
+
+      it "paginates the roots, not the whole tree" do
+        expect(result.usage_attribution_types.count).to eq(1)
+        expect(result.usage_attribution_types.total_count).to eq(2)
+      end
+    end
+  end
+
   context "with an invalid role filter" do
     let(:filters) { {role: "unknown"} }
 
@@ -69,18 +94,26 @@ RSpec.describe UsageAttributionTypesQuery do
     end
   end
 
-  context "when searching by code, name or attribution key" do
+  context "when searching by code or name" do
     let(:search_term) { "depart" }
 
     it "returns the matching types" do
       expect(returned_ids).to eq([department.id])
     end
 
-    context "when the term matches an attribution key" do
-      let(:search_term) { "model_name" }
+    context "when the term matches a name" do
+      let(:search_term) { "Model" }
 
       it "returns the matching types" do
         expect(returned_ids).to eq([model.id])
+      end
+    end
+
+    context "when the term matches an attribution key" do
+      let(:search_term) { "model_name" }
+
+      it "returns nothing" do
+        expect(returned_ids).to be_empty
       end
     end
   end

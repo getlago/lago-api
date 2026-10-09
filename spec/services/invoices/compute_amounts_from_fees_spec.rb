@@ -160,6 +160,97 @@ RSpec.describe Invoices::ComputeAmountsFromFees do
       expect(invoice.total_amount_cents).to eq(272)
     end
 
+    context "with allocated provider taxes" do
+      subject(:compute_provider_amounts) { described_class.new(invoice:, provider_taxes:).call }
+
+      let(:charge) { create(:standard_charge, organization:) }
+      let(:fee_amounts) { [333, 333, 334] }
+      let(:fee1) { charge_fees.first }
+      let(:charge_fees) do
+        fee_amounts.map { |amount| create(:charge_fee, invoice:, charge:, amount_cents: amount, precise_amount_cents: amount) }
+      end
+      let(:breakdown) { [["VAT", "0.10", 100]] }
+      let(:provider_total) { 100 }
+      let(:expected_fee_taxes) { [33, 33, 34] }
+      let(:expected_jurisdictions) { {"VAT" => 100} }
+      let(:group_taxes) do
+        build(:tax_result, tax_amount_cents: provider_total, tax_breakdown: breakdown.map do |name, rate, amount|
+          build(:tax_breakdown_item, name:, type: "tax", rate:, tax_amount: amount)
+        end)
+      end
+      let(:provider_taxes) do
+        Integrations::Aggregator::Taxes::Invoices::ChargeFeeGroup.new(fees: charge_fees).split_taxes(group_taxes)
+      end
+
+      shared_examples "reconciled provider taxes" do
+        it "preserves fee, jurisdiction and invoice totals" do
+          compute_provider_amounts
+
+          fee_taxes = charge_fees.map { |fee| fee.reload.taxes_amount_cents }
+          expect(fee_taxes).to eq(expected_fee_taxes)
+          expect(charge_fees.map { |fee| fee.applied_taxes.sum(&:amount_cents) }).to eq(fee_taxes)
+          expect(invoice.taxes_amount_cents).to eq(fee_taxes.sum)
+          expect(invoice.applied_taxes.to_h { |tax| [tax.tax_name, tax.amount_cents] }).to eq(expected_jurisdictions)
+          expect(charge_fees.flat_map(&:applied_taxes).group_by(&:tax_name)
+            .transform_values { |taxes| taxes.sum(&:amount_cents) }).to eq(expected_jurisdictions)
+        end
+      end
+
+      include_examples "reconciled provider taxes"
+
+      context "with different jurisdiction rates" do
+        let(:fee_amounts) { [268, 25] }
+        let(:breakdown) { [["State", "0.06", 18], ["City", "0.02", 6]] }
+        let(:provider_total) { 24 }
+        let(:expected_fee_taxes) { [21, 3] }
+        let(:expected_jurisdictions) { {"State" => 18, "City" => 6} }
+
+        include_examples "reconciled provider taxes"
+      end
+
+      context "with three jurisdictions and two fees" do
+        let(:fee_amounts) { [100, 100] }
+        let(:breakdown) { %w[State County City].map { |name| [name, "0.025", 5] } }
+        let(:provider_total) { 15 }
+        let(:expected_fee_taxes) { [9, 6] }
+        let(:expected_jurisdictions) { {"State" => 5, "County" => 5, "City" => 5} }
+
+        include_examples "reconciled provider taxes"
+
+        context "with fifty fees" do
+          let(:fee_amounts) { Array.new(50, 100) }
+          let(:breakdown) { %w[State County City].map { |name| [name, "0.025", 125] } }
+          let(:provider_total) { 375 }
+          let(:expected_fee_taxes) { Array.new(25, 9) + Array.new(25, 6) }
+          let(:expected_jurisdictions) { {"State" => 125, "County" => 125, "City" => 125} }
+
+          include_examples "reconciled provider taxes"
+
+          it "retains fractional cents on every fee and jurisdiction" do
+            compute_provider_amounts
+
+            expect(charge_fees.map { |fee| fee.reload.taxes_precise_amount_cents }).to eq(Array.new(50, 7.5.to_d))
+            expect(charge_fees.flat_map(&:applied_taxes).map(&:precise_amount_cents)).to eq(Array.new(150, 2.5.to_d))
+            expect(charge_fees.map(&:taxes_base_rate)).to eq(Array.new(50, 1))
+          end
+        end
+      end
+
+      context "with ungrouped fees" do
+        let(:charge_fees) do
+          [create(:charge_fee, invoice:, charge:, amount_cents: 100, precise_amount_cents: 100),
+            create(:add_on_fee, invoice:, amount_cents: 100, precise_amount_cents: 100)]
+        end
+        let(:breakdown) { %w[State County City].map { |name| [name, "0.025", 2.5] } }
+        let(:provider_total) { 8 }
+        let(:expected_fee_taxes) { [8, 8] }
+        let(:expected_jurisdictions) { {"State" => 6, "County" => 6, "City" => 4} }
+        let(:provider_taxes) { charge_fees.map { |fee| group_taxes.with(item_key: fee.item_key, item_id: fee.id) } }
+
+        include_examples "reconciled provider taxes"
+      end
+    end
+
     context "when provider taxes are not provided" do
       subject(:compute_amounts) { described_class.new(invoice:, provider_taxes: nil) }
 

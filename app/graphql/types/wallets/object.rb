@@ -35,6 +35,7 @@ module Types
       field :last_ongoing_balance_sync_at, GraphQL::Types::ISO8601DateTime, null: true
 
       field :activity_logs, [Types::ActivityLogs::Object], null: true
+      field :connections, [Types::Connections::Object], null: false, method: :connection_routing
       field :recurring_transaction_rules, [Types::Wallets::RecurringTransactionRules::Object], null: true
 
       field :invoice_requires_successful_payment, Boolean, null: false

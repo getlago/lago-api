@@ -76,7 +76,7 @@ module RatePhases
     end
 
     def ordered_params
-      @ordered_params ||= phases_params.sort_by { |phase| phase[:position].to_i }
+      @ordered_params ||= phases_params.sort_by { |phase| RatePhase.parse_position(phase[:position]) || 0 }
     end
 
     def validate_sequence
@@ -84,16 +84,21 @@ module RatePhases
         return result.single_validation_failure!(field: :rate_phases, error_code: "value_is_mandatory")
       end
 
-      positions = ordered_params.map { |phase| phase[:position].to_i }
+      positions = ordered_params.map { |phase| RatePhase.parse_position(phase[:position]) }
       unless positions == (1..phases_params.size).to_a
         return result.single_validation_failure!(field: :rate_phases, error_code: "positions_must_be_contiguous")
       end
 
-      # An indefinite tail (null billing_interval_cycle_count) is only allowed on the last phase.
+      # The timeline ends with exactly one indefinite phase (null
+      # billing_interval_cycle_count): none before the last, and the last is one.
       ordered_params[0...-1].each do |phase|
         if phase[:billing_interval_cycle_count].blank?
           return result.single_validation_failure!(field: :rate_phases, error_code: "indefinite_phase_must_be_last")
         end
+      end
+
+      if ordered_params.last[:billing_interval_cycle_count].present?
+        return result.single_validation_failure!(field: :rate_phases, error_code: "last_phase_must_be_indefinite")
       end
 
       nil

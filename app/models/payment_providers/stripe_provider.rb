@@ -19,6 +19,7 @@ module PaymentProviders
       charge.refund.updated
       customer.updated
       charge.dispute.closed
+      customer_cash_balance_transaction.created
     ].freeze
 
     PROCESSING_STATUSES = %w[

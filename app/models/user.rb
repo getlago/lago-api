@@ -33,6 +33,7 @@ end
 # Database name: primary
 #
 #  id              :uuid             not null, primary key
+#  cs_admin        :boolean          default(FALSE), not null
 #  email           :string
 #  password_digest :string
 #  created_at      :datetime         not null

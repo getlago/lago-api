@@ -141,4 +141,56 @@ RSpec.describe Resolvers::WalletResolver do
       end
     end
   end
+
+  context "with connections" do
+    let(:connections_query) do
+      <<~GQL
+        query($id: ID!) {
+          wallet(id: $id) {
+            id
+            connections { category behavior code }
+            recurringTransactionRules {
+              connections { category behavior code }
+            }
+          }
+        }
+      GQL
+    end
+
+    let(:pinned) { create(:gocardless_customer, customer:, organization:, code: "gocardless_eu") }
+
+    before do
+      create(:stripe_customer, customer:, organization:, code: "stripe_default", is_default: true)
+      create(:billing_object_connection, owner: wallet, organization:, category: "tax", behavior: "skip")
+      create(:billing_object_connection, owner: wallet, organization:, category: "payment",
+        behavior: "specific", payment_provider_customer: pinned)
+    end
+
+    def wallet_connections
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query: connections_query,
+        variables: {id: wallet.id}
+      )
+      result["data"]["wallet"]
+    end
+
+    it "returns every category with its behaviour and effective code" do
+      connections = wallet_connections["connections"].index_by { it["category"] }
+
+      expect(connections.keys).to match_array(%w[payment tax accounting crm])
+      expect(connections["payment"]).to eq({"category" => "payment", "behavior" => "specific", "code" => "gocardless_eu"})
+      expect(connections["tax"]).to eq({"category" => "tax", "behavior" => "skip", "code" => nil})
+      expect(connections["crm"]).to eq({"category" => "crm", "behavior" => "inherit", "code" => nil})
+    end
+
+    it "returns the rule's own routing, inherited from the customer" do
+      rule_connections = wallet_connections["recurringTransactionRules"].first["connections"].index_by { it["category"] }
+
+      expect(rule_connections["payment"]).to eq(
+        {"category" => "payment", "behavior" => "inherit", "code" => "stripe_default"}
+      )
+    end
+  end
 end

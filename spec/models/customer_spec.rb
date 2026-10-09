@@ -360,6 +360,87 @@ RSpec.describe Customer do
     end
 
     it { is_expected.to validate_inclusion_of(:customer_type).in_array(described_class::CUSTOMER_TYPES.keys) }
+
+    describe "x402_agent_address validation" do
+      subject(:customer) { build(:customer, x402_agent_address:) }
+
+      before { customer.valid? }
+
+      context "with a lowercase EVM address" do
+        let(:x402_agent_address) { "0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed" }
+
+        it "stores the checksummed address" do
+          expect(customer.errors).to be_empty
+          expect(customer.x402_agent_address).to eq("0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed")
+        end
+      end
+
+      context "with a Solana address" do
+        let(:x402_agent_address) { "2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4" }
+
+        it "stores the address verbatim" do
+          expect(customer.errors).to be_empty
+          expect(customer.x402_agent_address).to eq("2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4")
+        end
+      end
+
+      context "with a wrong EIP-55 checksum" do
+        let(:x402_agent_address) { "0x5AAeb6053F3E94C9b9A09f33669435E7Ef1BeAed" }
+
+        it { expect(customer.errors.messages[:x402_agent_address]).to eq(["invalid_format"]) }
+      end
+
+      context "with a malformed address" do
+        let(:x402_agent_address) { "0x5aaeb6053f3e94c9b9a09f33669435e7ef1beae" }
+
+        it { expect(customer.errors.messages[:x402_agent_address]).to eq(["invalid_format"]) }
+      end
+
+      context "without an address" do
+        let(:x402_agent_address) { nil }
+
+        it { expect(customer.errors.messages[:x402_agent_address]).to be_empty }
+      end
+    end
+  end
+
+  describe "x402_agent_address after creation" do
+    subject(:customer) { create(:customer, x402_agent_address: "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed") }
+
+    it "refuses a new address" do
+      expect { customer.x402_agent_address = "0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359" }
+        .to raise_error(ActiveRecord::ReadonlyAttributeError)
+    end
+
+    it "updates the other attributes" do
+      expect(customer.update(name: "Agent")).to be(true)
+    end
+  end
+
+  describe "x402_agent_address uniqueness" do
+    subject(:duplicate) { build(:customer, organization:, x402_agent_address: address) }
+
+    let(:address) { "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed" }
+    let(:deleted_at) { nil }
+
+    before { create(:customer, organization:, x402_agent_address: address, deleted_at:) }
+
+    it "refuses a second customer of the organization" do
+      expect { duplicate.save! }
+        .to raise_error(ActiveRecord::RecordNotUnique, /index_customers_on_organization_id_and_x402_agent_address/)
+    end
+
+    context "when the first customer is deleted" do
+      let(:deleted_at) { Time.current }
+
+      it { expect(duplicate.save).to be(true) }
+    end
+
+    context "with another organization" do
+      subject(:duplicate) { build(:customer, x402_agent_address: address) }
+
+      it { expect(duplicate.save).to be(true) }
+    end
   end
 
   describe ".awaiting_wallet_refresh" do
@@ -401,6 +482,32 @@ RSpec.describe Customer do
 
     it "returns customers that have no dunning campaign but should" do
       expect(subject).to contain_exactly(scoped)
+    end
+  end
+
+  describe ".by_x402_agent_address" do
+    subject(:customers) { described_class.by_x402_agent_address(address) }
+
+    let!(:agent) { create(:customer, x402_agent_address: "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed") }
+
+    before { create(:customer) }
+
+    context "with a lowercase variant" do
+      let(:address) { "0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed" }
+
+      it { expect(customers).to contain_exactly(agent) }
+    end
+
+    context "with a malformed address" do
+      let(:address) { "0x5aaeb6053f3e94c9b9a09f33669435e7ef1beae" }
+
+      it { expect(customers).to be_empty }
+    end
+
+    context "without an address" do
+      let(:address) { nil }
+
+      it { expect(customers).to be_empty }
     end
   end
 

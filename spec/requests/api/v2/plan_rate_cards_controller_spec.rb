@@ -63,6 +63,25 @@ RSpec.describe Api::V2::PlanRateCardsController do
 
       expect(response).to have_http_status(:success)
       expect(json[:applied_rate_cards].map { |i| i[:lago_id] }).to eq([plan_rate_card.id])
+      expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
+    end
+
+    context "with an invalid limit and an unknown plan" do
+      subject { get_with_token(organization, "/api/v2/plans/unknown/applied_rate_cards", {limit: 0}) }
+
+      it "rejects the pagination parameters first" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:code]).to eq("invalid_pagination_limit")
+      end
+    end
+
+    it_behaves_like "a cursor paginated v2 endpoint", collection: :applied_rate_cards, model: PlanRateCard do
+      let(:paginated_path) { "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards" }
+      let(:create_paginated_record) { ->(created_at) { create(:plan_rate_card, organization:, catalog_plan:, created_at:) } }
+      # Rendered under the same collection name, from another table.
+      let(:other_table_record) { create(:contract_rate_card, organization:) }
     end
 
     context "when the plan does not exist" do
@@ -94,6 +113,25 @@ RSpec.describe Api::V2::PlanRateCardsController do
       expect(response).to have_http_status(:success)
       expect(json[:applied_rate_card][:rate_phases_count]).to eq(2)
       expect(RateOverride.count).to eq(1)
+    end
+
+    context "when no phase is indefinite" do
+      subject do
+        post_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards", {applied_rate_card: {
+          rate_card_code: rate_card.code,
+          rate_phases: [
+            {code: "a", position: 1, billing_interval_cycle_count: 2},
+            {code: "b", position: 2, billing_interval_cycle_count: 3}
+          ]
+        }})
+      end
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json.dig(:error_details, :rate_phases)).to eq(["last_phase_must_be_indefinite"])
+      end
     end
 
     context "when the list is explicitly empty" do

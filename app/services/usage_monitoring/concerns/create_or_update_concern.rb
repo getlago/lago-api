@@ -26,12 +26,40 @@ module UsageMonitoring
         result.not_found_failure!(resource: "billable_metric")
       end
 
-      def wallet_alert_code_taken?(wallet_id:, code:, alert_type:, excluding_id: nil)
+      def wallet_alert_type_taken?(wallet_id:, alert_type:)
+        return false if wallet_id.blank?
+
+        organization.alerts.where(wallet_id:, alert_type:).exists?
+      end
+
+      def wallet_alert_code_taken?(wallet_id:, code:, excluding_id: nil)
         return false if wallet_id.blank? || code.blank?
 
-        scope = organization.alerts.where(wallet_id:, code:).where.not(alert_type:)
+        scope = organization.alerts.where(wallet_id:, code:)
         scope = scope.where.not(id: excluding_id) if excluding_id
         scope.exists?
+      end
+
+      def seed_alarms_already_past(alert, alertable)
+        return if alertable.nil?
+
+        in_alarm = alert.thresholds_in_alarm(alert.previous_value)
+        return if in_alarm.empty?
+
+        recorded = alert.recorded_alarm_codes
+        already_past = in_alarm.reject { recorded.include?(it.code) }
+        return if already_past.empty?
+
+        TriggeredAlert.create!(
+          alert:,
+          organization: alert.organization,
+          alertable:,
+          kind: :seeded,
+          current_value: alert.previous_value,
+          previous_value: alert.previous_value,
+          crossed_thresholds: alert.formatted_crossed_thresholds(already_past.map(&:value)),
+          triggered_at: Time.current
+        )
       end
 
       def duplicate_threshold_values?(thresholds)

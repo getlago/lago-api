@@ -3,23 +3,79 @@
 module Events
   module Stores
     class Provider
-      def initialize(organization:, billing_context:, usage_buckets: nil, current_usage: false)
+      def initialize(organization:, billing_context:, serve_current_usage_from_buckets: false,
+        boundaries: nil, usage_filters: UsageFilters::NONE, charges: [])
         @organization = organization
         @billing_context = billing_context
-        @usage_buckets = usage_buckets
-        @current_usage = current_usage
+        @serve_current_usage_from_buckets = serve_current_usage_from_buckets
+        @boundaries = boundaries
+        @usage_filters = usage_filters
+        @charges = charges
       end
 
-      attr_reader :billing_context, :usage_buckets
+      attr_reader :billing_context
 
-      def store_for(metered_item:, boundaries:, filters: {})
-        store_class.new(
+      # `aggregated_filter_ids` are the filters of the charge the caller will aggregate, when it
+      # knows them (see ChargeFiltersScan).
+      def store_for(metered_item:, boundaries:, filters: {}, aggregated_filter_ids: nil)
+        store = store_class.new(
           code: metered_item.billable_metric.code,
           billing_context:,
           boundaries:,
           filters:,
           deduplicate:
         )
+        if served_from_buckets?(metered_item:, boundaries:, filters:)
+          UsageBucketStore.new(
+            store,
+            usage_buckets:,
+            charge_id: metered_item.charge.id,
+            charge_filter_id: filters[:charge_filter]&.id || "" # clickhouse stores an empty string instead of nil
+          )
+        elsif (scan = charge_filters_scan(metered_item:, filters:, aggregated_filter_ids:))
+          ChargeFiltersScanStore.new(store, scan:)
+        else
+          store
+        end
+      end
+
+      # Callers ask this before building anything, so it must stay free of queries and per-charge work.
+      def may_precompute?
+        return @may_precompute if defined?(@may_precompute)
+
+        @may_precompute = serve_current_usage_from_buckets &&
+          whole_charge_read? &&
+          RealtimeUsage.enabled?(organization)
+      end
+
+      # Every gate a charge can be ruled out by before an aggregator and a store exist, so that
+      # a charge the buckets cannot answer costs nothing to skip.
+      def may_precompute_charge?(metered_item:, boundaries:)
+        return false unless may_precompute?
+        # The buckets are keyed by charge, and a billing segment is priced from its product
+        # rather than from the optional legacy charge that product may carry.
+        return false if metered_item.billing_segment
+
+        charge = metered_item.charge
+        return false if charge.nil?
+        return false if boundaries[:max_timestamp].present?
+        return false unless same_window_as_prefetch?(boundaries)
+
+        RealtimeUsage.supported_charge?(charge)
+      end
+
+      # Charge-wide counterpart of `served_from_buckets?`: true only when every pricing bucket of
+      # the charge will be served.
+      def serves_whole_charge_from_buckets?(metered_item:, boundaries:)
+        return false if requested_presentation_by(metered_item).present?
+
+        served_from_buckets?(metered_item:, boundaries:)
+      end
+
+      # The charge filters the buckets hold usage for, the default bucket being nil as in the
+      # events store. Only meaningful for a charge `serves_whole_charge_from_buckets?` accepted.
+      def precomputed_filter_ids(charge_id:)
+        usage_buckets&.charge_filter_ids_for(charge_id:)&.map(&:presence) || []
       end
 
       def store_class
@@ -37,40 +93,97 @@ module Events
         end
       end
 
-      def precomputed_options_for(charge:, boundaries:, filters: {})
-        return {} unless served_from_buckets?(charge:, boundaries:, filters:)
-
-        charge_id = charge.id
-        charge_filter_id = bucket_charge_filter_id(filters[:charge_filter])
-
-        {
-          precomputed_aggregation: usage_buckets.aggregation_result_for(charge_id:, charge_filter_id:),
-          precomputed_grouped_aggregations: usage_buckets.grouped_aggregation_results_for(charge_id:, charge_filter_id:)
-        }
-      end
-
-      def served_from_buckets?(charge:, boundaries:, filters: {})
-        return false unless current_usage
-        return false unless RealtimeUsage.enabled?(organization)
-        return false if usage_buckets.blank?
-        return false if boundaries[:max_timestamp].present?
-        return false if RealtimeUsage.deduplicated?(organization)
-        return false unless RealtimeUsage.supported_charge?(charge)
-
-        filters[:grouped_by_values].blank? &&
-          filters[:event].blank? &&
-          filters[:presentation_by].blank? &&
-          filters[:filter_by_group].blank?
-      end
-
       private
 
-      attr_reader :organization, :current_usage
+      attr_reader :organization, :serve_current_usage_from_buckets, :boundaries, :usage_filters, :charges
 
-      # The sink writes `COALESCE(charge_filter_id, '')`, while the unfiltered fee carries
-      # an unpersisted ChargeFilter whose id is nil.
-      def bucket_charge_filter_id(charge_filter)
-        charge_filter&.id || ""
+      # A full usage window opens on `subscription.started_at`, which `same_window_as_prefetch?`
+      # cannot tell apart from a first billing period.
+      def whole_charge_read?
+        !usage_filters.full_usage && usage_filters.filter_by_group.blank?
+      end
+
+      def served_from_buckets?(metered_item:, boundaries:, filters: {})
+        return false unless may_precompute_charge?(metered_item:, boundaries:)
+        return false unless filters[:grouped_by_values].blank? &&
+          filters[:event].blank? &&
+          filters[:presentation_by].blank?
+
+        # Asked last so the ClickHouse read is skipped when no charge of the plan could use it.
+        # An empty set is no proof the pipeline wrote this window, so it falls back to the events
+        # store rather than serving a zero a lagging pipeline cannot be told apart from.
+        usage_buckets.present?
+      end
+
+      # The breakdown Fees::ChargeService will ask each pricing bucket for, which reads events. A
+      # caller wanting none, like the wallet refresh, narrows it to nothing.
+      def requested_presentation_by(metered_item)
+        values = metered_item.presentation_group_keys_values
+        return values if values.blank?
+
+        values & (usage_filters.filter_by_presentation || values)
+      end
+
+      # One scan per charge, shared by the stores of all its filters so that the first one to
+      # aggregate reads the events for every other.
+      def charge_filters_scan(metered_item:, filters:, aggregated_filter_ids:)
+        return unless charge_filters_scan_enabled?
+        return if metered_item.billing_segment
+        # A pay-in-advance event and its group narrow the store to themselves.
+        return unless filters[:charge_filter] && filters[:event].blank? && filters[:grouped_by_values].blank?
+
+        charge = metered_item.charge
+        return if charge.nil?
+
+        # A charge the scan cannot answer is remembered too: telling costs a count of its filters.
+        @charge_filters_scans ||= {}
+        key = [charge.id, aggregated_filter_ids]
+        return @charge_filters_scans[key] if @charge_filters_scans.key?(key)
+
+        @charge_filters_scans[key] = if ChargeFiltersScan.supported_charge?(charge)
+          ChargeFiltersScan.new(charge:, filter_ids: aggregated_filter_ids)
+        end
+      end
+
+      # The override belongs to the ClickHouse migration comparison, which has to keep comparing
+      # the stores themselves.
+      def charge_filters_scan_enabled?
+        return @charge_filters_scan_enabled if defined?(@charge_filters_scan_enabled)
+
+        @charge_filters_scan_enabled = Events::Stores::StoreFactory.override.nil? &&
+          store_class == Events::Stores::ClickhouseStore &&
+          organization.feature_flag_enabled?(:charge_filters_single_scan)
+      end
+
+      def same_window_as_prefetch?(window)
+        return false if boundaries.nil?
+
+        window[:from_datetime] == boundaries.charges_from_datetime &&
+          window[:to_datetime] == boundaries.charges_to_datetime
+      end
+
+      # `call` rather than `call!`: an unreachable ClickHouse has to make current usage slow,
+      # not broken. A nil set falls back to the events store.
+      def usage_buckets
+        return @usage_buckets if defined?(@usage_buckets)
+
+        @usage_buckets = if serve_current_usage_from_buckets && bucket_charges.any?
+          fetch = RealtimeUsage::FetchBucketsService
+            .call(subscription: billing_context.subscription, boundaries:, charges: bucket_charges)
+
+          # Only the parity comparison opens the gate, and there the silent fallback would have it
+          # compare the events store with itself and report a match it never established.
+          fetch.raise_if_error! if RealtimeUsage.forced_gate?
+
+          fetch.usage_buckets
+        end
+      end
+
+      # The charges the buckets could answer. A plan whose charges are all recurring, prorated or
+      # pay-in-advance pays no bucket read at all, and the ones left scope that read to the
+      # table's `organization_id, subscription_id, charge_id` prefix.
+      def bucket_charges
+        @bucket_charges ||= charges.select { RealtimeUsage.supported_charge?(it) }
       end
     end
   end

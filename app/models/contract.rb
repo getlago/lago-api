@@ -35,7 +35,14 @@ class Contract < ApplicationRecord
 
   has_many :applied_rate_cards, class_name: "ContractRateCard"
   has_many :billing_segments
+  has_many :fees
   has_many :invoices, -> { distinct }, through: :billing_segments
+  has_many :applied_invoice_custom_sections,
+    class_name: "Contract::AppliedInvoiceCustomSection",
+    dependent: :destroy
+  has_many :selected_invoice_custom_sections,
+    through: :applied_invoice_custom_sections,
+    source: :invoice_custom_section
 
   enum :status, STATUSES, validate: true
   enum :billing_time, BILLING_TIMES, validate: true
@@ -43,17 +50,38 @@ class Contract < ApplicationRecord
 
   LIVE_STATUSES = %w[pending active].freeze
 
+  # Which contracts the billing clock may produce segments for. A terminated contract's
+  # final arrears period is the termination path's, so it is not billable from the clock.
+  BILLABLE_STATUSES = %w[active].freeze
+
   # The live contracts for an external id: at most one per status (the partial
   # unique index is per status), so a pending replacement can coexist with the
   # active contract. Terminated and canceled siblings are history.
   scope :live, -> { where(status: LIVE_STATUSES) }
 
+  # Pending contracts whose start has arrived, compared as an instant: the rule
+  # creation uses to choose pending or active. A start given as a date is the
+  # customer's local midnight, so it activates on the customer's day. No
+  # timezone expression, so the bound stays on index_contracts_on_started_at_pending.
+  scope :due_for_activation, ->(timestamp) { pending.where(started_at: ..timestamp) }
+
   def self.live_by_external_id(external_id)
-    # Prefer the pending (editable) contract over an active sibling — the
-    # editable target every consumer wants; started_at/created_at then breaks
-    # ties deterministically within a status.
+    # Prefer the pending contract over an active sibling — the replacement
+    # being authored is the target every consumer wants; started_at/created_at
+    # then breaks ties deterministically within a status.
     live.where(external_id:)
       .order(Arel.sql("status = 'pending' DESC"), started_at: :desc, created_at: :desc)
+      .first
+  end
+
+  def self.terminatable_by_external_id(external_id)
+    # Termination ends the agreement in force, so it prefers the active
+    # contract over a pending replacement — the reverse of live_by_external_id.
+    # Ending the active row leaves the future replacement to start on its own;
+    # with no active sibling the pending row is the one to cancel.
+    # started_at/created_at break ties deterministically within a status.
+    live.where(external_id:)
+      .order(Arel.sql("status = 'active' DESC"), started_at: :desc, created_at: :desc)
       .first
   end
 
@@ -70,17 +98,12 @@ class Contract < ApplicationRecord
     billing_anchor_date || started_at&.in_time_zone(customer.applicable_timezone)&.to_date
   end
 
-  # Authoring is pending-only: once the agreement is active (or ended) its
-  # attached rate cards are signed. Unit changes on an active contract are a
+  # Rate cards are authored while pending only: once the agreement is active
+  # (or ended) they are signed. Unit changes on an active contract are a
   # lifecycle concern priced by the billing engine, not an authoring edit.
+  # The contract's own settings follow Contracts::UpdateService instead.
   def editable?
     pending?
-  end
-
-  # Error code for an edit blocked by the pending-only rule; nil when allowed.
-  # Mirrors ContractRateCard#edit_error_code.
-  def edit_error_code
-    "contract_locked" unless editable?
   end
 
   # The currency fees bill in: the plan's when there is one, otherwise the
@@ -123,36 +146,42 @@ end
 # Table name: contracts
 # Database name: primary
 #
-#  id                    :uuid             not null, primary key
-#  billing_anchor_date   :date
-#  billing_time          :enum             default("calendar"), not null
-#  canceled_at           :datetime
-#  consolidate_invoice   :boolean          default(TRUE), not null
-#  ended_at              :datetime
-#  name                  :string
-#  payment_method_type   :enum             default("provider"), not null
-#  purchase_order_number :string
-#  started_at            :datetime
-#  status                :enum             default("pending"), not null
-#  terminated_at         :datetime
-#  created_at            :datetime         not null
-#  updated_at            :datetime         not null
-#  billing_entity_id     :uuid
-#  catalog_plan_id       :uuid
-#  customer_id           :uuid             not null
-#  external_id           :string           not null
-#  organization_id       :uuid             not null
-#  payment_method_id     :uuid
+#  id                           :uuid             not null, primary key
+#  billing_anchor_date          :date
+#  billing_time                 :enum             default("calendar"), not null
+#  canceled_at                  :datetime
+#  consolidate_invoice          :boolean          default(TRUE), not null
+#  ended_at                     :datetime
+#  name                         :string
+#  payment_method_type          :enum             default("provider"), not null
+#  purchase_order_number        :string
+#  skip_invoice_custom_sections :boolean          default(FALSE), not null
+#  started_at                   :datetime
+#  status                       :enum             default("pending"), not null
+#  terminated_at                :datetime
+#  created_at                   :datetime         not null
+#  updated_at                   :datetime         not null
+#  billing_entity_id            :uuid
+#  catalog_plan_id              :uuid
+#  customer_id                  :uuid             not null
+#  external_id                  :string           not null
+#  organization_id              :uuid             not null
+#  payment_method_id            :uuid
 #
 # Indexes
 #
-#  index_contracts_on_billing_entity_id                (billing_entity_id)
-#  index_contracts_on_catalog_plan_id                  (catalog_plan_id)
-#  index_contracts_on_customer_id                      (customer_id)
-#  index_contracts_on_live_external_id                 (organization_id,external_id,status) UNIQUE WHERE (status = ANY (ARRAY['pending'::contract_status, 'active'::contract_status]))
-#  index_contracts_on_organization_id                  (organization_id)
-#  index_contracts_on_organization_id_and_external_id  (organization_id,external_id)
-#  index_contracts_on_payment_method_id                (payment_method_id)
+#  index_contracts_by_cursor                                    (organization_id,created_at DESC,id DESC)
+#  index_contracts_by_status_cursor                             (organization_id,status,created_at DESC,id DESC)
+#  index_contracts_on_billing_entity_id                         (billing_entity_id)
+#  index_contracts_on_catalog_plan_id                           (catalog_plan_id)
+#  index_contracts_on_customer_id                               (customer_id)
+#  index_contracts_on_live_external_id                          (organization_id,external_id,status) UNIQUE WHERE (status = ANY (ARRAY['pending'::contract_status, 'active'::contract_status]))
+#  index_contracts_on_organization_id                           (organization_id)
+#  index_contracts_on_organization_id_and_external_id           (organization_id,external_id)
+#  index_contracts_on_organization_id_external_id_gin_trgm_ops  (organization_id,external_id) USING gin
+#  index_contracts_on_organization_id_name_gin_trgm_ops         (organization_id,name) USING gin
+#  index_contracts_on_payment_method_id                         (payment_method_id)
+#  index_contracts_on_started_at_pending                        (started_at) WHERE (status = 'pending'::contract_status)
 #
 # Foreign Keys
 #

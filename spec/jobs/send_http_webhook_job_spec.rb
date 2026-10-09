@@ -8,6 +8,12 @@ RSpec.describe SendHttpWebhookJob do
 
   let(:webhook) { create(:webhook) }
 
+  describe "queue" do
+    it_behaves_like "a configurable queue", "webhook_worker", "SIDEKIQ_WEBHOOK", "webhook" do
+      let(:arguments) { create(:webhook, webhook_type: "alert.triggered") }
+    end
+  end
+
   describe "#perform" do
     before { allow(Webhooks::SendHttpService).to receive(:call) }
 

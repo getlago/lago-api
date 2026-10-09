@@ -81,6 +81,10 @@ module Events
         grouped_by_values.present?
       end
 
+      def precomputed?
+        false
+      end
+
       def with_grouped_by_values(grouped_by_values, &block)
         previous_grouped_by_values = @grouped_by_values
         return yield block if grouped_by_values.nil?
@@ -114,7 +118,9 @@ module Events
         raise NotImplementedError
       end
 
-      def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false, with_last_seen_at: true)
+      # `ingested_after` narrows the read to the events ingested after that time, for callers
+      # keeping an earlier answer up to date (see BillingPeriodFilters::IncrementalCombinations).
+      def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false, with_last_seen_at: true, ingested_after: nil)
         []
       end
 
@@ -227,10 +233,6 @@ module Events
       protected
 
       delegate :customer, to: :billing_context
-
-      def period_duration
-        @period_duration ||= billing_context.charges_duration_at(to_datetime + 1.day)
-      end
 
       def build_aggregation_result(row)
         AggregationResult.new(

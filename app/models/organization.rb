@@ -97,6 +97,9 @@ class Organization < ApplicationRecord
   has_many :usage_attribution_types
   has_many :usage_attribution_values
 
+  has_many :x402_connections, class_name: "X402::Connection"
+  has_many :x402_settlements, class_name: "X402::Settlement"
+
   has_many :subscription_activities, class_name: "UsageMonitoring::SubscriptionActivity"
   has_many :alerts, class_name: "UsageMonitoring::Alert"
   has_many :triggered_alerts, -> { triggered }, class_name: "UsageMonitoring::TriggeredAlert"
@@ -218,6 +221,10 @@ class Organization < ApplicationRecord
 
   def account_tree_enabled?
     feature_flag_enabled?(:account_tree)
+  end
+
+  def x402_payments_enabled?
+    License.premium? && feature_flag_enabled?(:x402_payments)
   end
 
   def using_lifetime_usage?
@@ -374,7 +381,6 @@ end
 #  max_wallets                      :integer
 #  name                             :string           not null
 #  net_payment_term                 :integer          default(0), not null
-#  pre_filter_events                :boolean          default(FALSE), not null
 #  premium_integrations             :string           default([]), not null, is an Array
 #  slug                             :string           not null
 #  state                            :string

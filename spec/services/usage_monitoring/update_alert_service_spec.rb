@@ -18,6 +18,13 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
       ]}
     end
 
+    it "uses with_lock so evaluation cannot read half-rewritten thresholds" do
+      allow(alert).to receive(:with_lock).and_call_original
+      described_class.call(alert:, params:)
+
+      expect(alert).to have_received(:with_lock)
+    end
+
     it "updates the alert" do
       expect(result).to be_success
       expect(result.alert).to eq(alert)
@@ -131,6 +138,27 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
           expect(result).to be_success
           expect(alert.reload.thresholds.sole).to have_attributes(recurring: true, notify_on: %w[triggered])
         end
+      end
+    end
+
+    context "when a line is opted in while already past" do
+      let(:alert) { create(:wallet_balance_amount_alert, thresholds: [100], organization:, previous_value: 0) }
+      let(:params) { {thresholds: [{code: "critical", value: 100, notify_on: %w[triggered resolved]}]} }
+
+      it "records a silent alarm so the next recovery can announce" do
+        expect(described_class.call(alert:, params:)).to be_success
+
+        seeded = alert.all_triggered_alerts.sole
+        expect(seeded).to be_seeded
+        expect(seeded.crossed_thresholds.map { it["code"] }).to eq(%w[critical])
+      end
+
+      it "does not record a second one when an alarm is already on record" do
+        create(:triggered_alert, alert:, organization:, subscription: nil, wallet: alert.wallet,
+          crossed_thresholds: [{code: "critical", value: "100.0", recurring: false}])
+
+        expect { described_class.call(alert:, params:) }
+          .not_to change { alert.all_triggered_alerts.where(kind: :seeded).count }
       end
     end
 
@@ -300,6 +328,19 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
 
           expect(result).to be_failure
           expect(alert).not_to have_received(:save!)
+        end
+
+        context "when another request takes the code between the check and the save" do
+          subject(:result) { service.call }
+
+          let(:service) { described_class.new(alert:, params:) }
+
+          before { allow(service).to receive(:wallet_alert_code_taken?).and_return(false) }
+
+          it "reports the wallet index violation on the code field" do
+            expect(result).to be_failure
+            expect(result.error.messages).to eq(code: ["value_already_exist"])
+          end
         end
       end
 

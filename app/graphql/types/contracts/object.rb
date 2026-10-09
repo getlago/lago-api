@@ -6,7 +6,7 @@ module Types
       graphql_name "Contract"
       description "The agreement a customer signed: an optional plan, a validity window and the billing anchor"
 
-      dataload_association :customer, :billing_entity, :payment_method
+      dataload_association :customer, :billing_entity, :payment_method, :selected_invoice_custom_sections
 
       field :external_id, String, null: false
       field :id, ID, null: false
@@ -16,6 +16,8 @@ module Types
       field :status, Types::Contracts::StatusEnum, null: false
 
       field :billing_anchor_date, GraphQL::Types::ISO8601Date, null: true
+      field :effective_billing_anchor_date, GraphQL::Types::ISO8601Date, null: true,
+        description: "The anchor billing uses: billing_anchor_date when set, else the start day in the customer's timezone"
 
       field :canceled_at, GraphQL::Types::ISO8601DateTime, null: true
       field :ended_at, GraphQL::Types::ISO8601DateTime, null: true
@@ -32,6 +34,8 @@ module Types
       field :payment_method, Types::PaymentMethods::Object, null: true
       field :payment_method_type, Types::PaymentMethods::MethodTypeEnum, null: false
       field :purchase_order_number, String, null: true
+      field :selected_invoice_custom_sections, [Types::InvoiceCustomSections::Object], null: true
+      field :skip_invoice_custom_sections, Boolean, null: false
 
       field :customer, Types::Customers::Object, null: false
       # Nullable by design: a plan-less contract prices through directly
@@ -52,12 +56,22 @@ module Types
         dataloader.with(Sources::ActiveRecordAssociation, :catalog_plan).load(object)
       end
 
+      # The customer and its billing entity hold the timezone; loading them across
+      # the page keeps a list of contracts from querying them one by one.
+      def effective_billing_anchor_date
+        return object.billing_anchor_date if object.billing_anchor_date
+
+        customer = dataloader.with(Sources::ActiveRecordAssociation, :customer).load(object)
+        dataloader.with(Sources::ActiveRecordAssociation, :billing_entity).load(customer)
+        object.effective_billing_anchor_date
+      end
+
       def applied_rate_cards
-        dataloader.with(Sources::ContractCurrentRateCards).load(object.id)
+        dataloader.with(Sources::ContractAppliedRateCards).load(object.id)
       end
 
       def applied_rate_cards_count
-        dataloader.with(Sources::ContractCurrentRateCards).load(object.id).size
+        dataloader.with(Sources::ContractAppliedRateCards).load(object.id).size
       end
     end
   end

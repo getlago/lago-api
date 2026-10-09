@@ -17,22 +17,35 @@ module ContractRateCards
     def call
       return result.not_found_failure!(resource: "applied_rate_card") unless contract_rate_card
 
-      unless contract_rate_card.contract.editable?
-        return result.single_validation_failure!(field: :contract, error_code: "contract_locked")
-      end
-
       if params.key?(:billing_anchor_date) && !Utils::Datetime.valid_format?(params[:billing_anchor_date].to_s)
         return result.single_validation_failure!(field: :billing_anchor_date, error_code: "value_is_invalid")
       end
 
-      contract_rate_card.units = params[:units] if params.key?(:units)
-      contract_rate_card.billing_anchor_date = params[:billing_anchor_date] if params.key?(:billing_anchor_date)
-      contract_rate_card.save!
+      # Locked so the editable check holds: the clock may activate the contract meanwhile.
+      contract_rate_card.contract.with_lock do
+        unless contract_rate_card.contract.editable?
+          return result.single_validation_failure!(field: :contract, error_code: "contract_locked")
+        end
+
+        contract_rate_card.units = params[:units] if params.key?(:units)
+        contract_rate_card.billing_anchor_date = params[:billing_anchor_date] if params.key?(:billing_anchor_date)
+        contract_rate_card.save!
+
+        # The clock was seeded from the previous anchor.
+        if contract_rate_card.saved_change_to_billing_anchor_date?
+          ContractRateCards::SeedLifecycleService.call!(
+            contract_rate_card:,
+            billing_anchor_date: contract_rate_card.billing_anchor_date
+          )
+        end
+      end
 
       result.contract_rate_card = contract_rate_card
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      e.result
     end
 
     private

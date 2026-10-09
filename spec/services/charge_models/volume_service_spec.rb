@@ -74,6 +74,22 @@ RSpec.describe ChargeModels::VolumeService do
     end
   end
 
+  context "when aggregation is negative" do
+    let(:aggregation) { -5 }
+
+    it "charges nothing as no range applies" do
+      expect(apply_volume_service.amount).to eq(0)
+      expect(apply_volume_service.unit_amount).to eq(0)
+      expect(apply_volume_service.amount_details).to eq(
+        {
+          flat_unit_amount: 0,
+          per_unit_amount: "0.0",
+          per_unit_total_amount: 0
+        }
+      )
+    end
+  end
+
   context "when aggregation is 1" do
     let(:aggregation) { 1 }
 

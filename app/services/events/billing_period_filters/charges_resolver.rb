@@ -3,16 +3,29 @@
 module Events
   module BillingPeriodFilters
     class ChargesResolver < BaseResolver
-      def initialize(subscription:, boundaries:, codes: nil, with_last_seen_at: true)
+      COMBINATIONS_CACHE_KEY_VERSION = "1"
+
+      # combinations_cache_ttl reuses the events store answer for that long, so a client polling the
+      # same usage does not scan the events at every call. Any event ingested meanwhile is missed
+      # until the entry expires, so it is only passed where that delay is acceptable.
+      #
+      # incremental_combinations keeps the events store answer and only reads the events ingested
+      # since, which misses no event (see IncrementalCombinations).
+      def initialize(subscription:, boundaries:, codes: nil, with_last_seen_at: true, precomputed_filters: {}, combinations_cache_ttl: nil,
+        incremental_combinations: false)
         @subscription = subscription
         @boundaries = boundaries
         @codes = codes
         @with_last_seen_at = with_last_seen_at
+        @precomputed_filters = precomputed_filters
+        @combinations_cache_ttl = combinations_cache_ttl
+        @incremental_combinations = incremental_combinations
       end
 
       private
 
-      attr_reader :subscription, :boundaries, :codes, :with_last_seen_at
+      attr_reader :subscription, :boundaries, :codes, :with_last_seen_at, :precomputed_filters, :combinations_cache_ttl,
+        :incremental_combinations
 
       delegate :organization, :plan, to: :subscription
 
@@ -31,21 +44,118 @@ module Events
         )
       end
 
+      # A polled entry is read many times per second, so when it expires the first reader refills it
+      # while the others keep the expired answer (race_condition_ttl) instead of each running the
+      # same scan. The expired answer is not capped in age: a refill still running after another TTL
+      # lets the next reader extend it again and start one more refill. It is served until a refill
+      # succeeds, so its age is bounded by how long the events store takes to answer, not by twice
+      # the TTL. This is deliberate: refusing it while the store is slow or down would send every
+      # reader back to scanning when the store can least absorb it, and only the current usage API
+      # reads this cache.
+      def fetch_combinations(**options)
+        return read_combinations(**options) if combinations_cache_ttl.blank?
+
+        Rails.cache.fetch(
+          combinations_cache_key(**options),
+          expires_in: combinations_cache_ttl,
+          race_condition_ttl: combinations_cache_ttl
+        ) { read_combinations(**options) }
+      end
+
+      def read_combinations(**options)
+        if incremental_combinations
+          IncrementalCombinations.new(cache_key: incremental_combinations_cache_key(**options)).fetch do |ingested_after:|
+            event_store.distinct_codes_and_property_combinations(**options, ingested_after:)
+          end
+        else
+          event_store.distinct_codes_and_property_combinations(**options)
+        end
+      end
+
+      # The query depends on the codes and filter keys (order aside), the window and whether
+      # last_seen_at is computed; the store reads the window from the charges boundaries.
+      # Codes and filter keys accept any character, commas included, so they are encoded as JSON
+      # rather than joined: ["a,b"] and ["a", "b"] must not share an entry.
+      def combinations_cache_key(**options)
+        ["billing-period-filter-combinations", COMBINATIONS_CACHE_KEY_VERSION, *query_cache_key_parts(**options)].join("/")
+      end
+
+      # The ingestion times an incremental read compares belong to one events store.
+      def incremental_combinations_cache_key(**options)
+        [
+          "billing-period-filter-incremental-combinations",
+          IncrementalCombinations::CACHE_KEY_VERSION,
+          event_store.class.name.demodulize,
+          *query_cache_key_parts(**options)
+        ].join("/")
+      end
+
+      def query_cache_key_parts(codes:, filter_keys:, include_all_history: false, with_last_seen_at: true)
+        [
+          subscription.id,
+          Digest::SHA256.hexdigest([codes.sort, filter_keys.sort].to_json),
+          include_all_history ? "all" : boundaries.charges_from_datetime.iso8601(6),
+          boundaries.charges_to_datetime.iso8601(6),
+          with_last_seen_at
+        ]
+      end
+
+      def record_precomputed_targets(result)
+        precomputed_filters.each do |charge, filter_ids|
+          target_key = filter_target_for(charge).target_key
+
+          # No ingestion timestamp: the charge cache is bypassed for a precomputed pricing bucket,
+          # so nothing compares against it.
+          filter_ids.each { record(result, target_key, it, nil) }
+        end
+      end
+
       # A code outside of the plan matches no event, so codes is used as is: dropping it would leave
       # its charge out of the result, billed as zero units instead of surfaced.
-      def metric_codes
-        @metric_codes ||= codes || plan.billable_metrics.distinct.pluck(:code)
+      def metric_codes(record_id: nil)
+        @metric_codes ||= scoped_codes - precomputed_only_codes
+      end
+
+      def scoped_codes
+        @scoped_codes ||= codes || plan.billable_metrics.distinct.pluck(:code)
+      end
+
+      # A code is dropped only when every charge carrying it is served from the buckets: shared with
+      # a charge the buckets cannot answer, it still has to be resolved from the events store.
+      def precomputed_only_codes
+        return [] if precomputed_filters.empty?
+
+        precomputed_filters.keys.map { it.billable_metric.code }.uniq - delegated_codes
+      end
+
+      def delegated_codes
+        @delegated_codes ||= plan.charges
+          .joins(:billable_metric)
+          .where(billable_metrics: {code: scoped_codes})
+          .where.not(id: precomputed_charge_ids)
+          .distinct
+          .pluck("billable_metrics.code")
+      end
+
+      def precomputed_charge_ids
+        @precomputed_charge_ids ||= precomputed_filters.keys.map(&:id)
       end
 
       def filter_target_for(charge)
-        Events::BillingPeriodFilters::FilterTarget.from_charge(charge:)
+        @filter_targets ||= {}.compare_by_identity
+        @filter_targets[charge] ||= Events::BillingPeriodFilters::FilterTarget.from_charge(charge:)
       end
 
       def targets_with_events(codes)
-        plan.charges
+        targets = plan.charges
           .joins(:billable_metric)
           .where(billable_metrics: {code: codes})
           .includes(billable_metric: :filters, filters: {values: :billable_metric_filter})
+        return targets if precomputed_filters.empty?
+
+        # A served charge sharing its code with a delegated one is in the queried codes but takes
+        # its filters from the buckets, so the combinations must not reach it.
+        targets.where.not(id: precomputed_charge_ids)
       end
 
       def billable_metric_filter_keys
@@ -63,7 +173,7 @@ module Events
         @current_recurring_targets ||= plan.charges
           .joins(:billable_metric)
           .where(billable_metrics: {recurring: true})
-          .includes(:filters)
+          .includes(filters: {values: :billable_metric_filter})
           .to_a
       end
     end

@@ -26,6 +26,7 @@ module PaymentProviderCustomers
     has_many :payments
     has_many :payment_methods, foreign_key: :payment_provider_customer_id
     has_many :refunds, foreign_key: :payment_provider_customer_id
+    has_many :billing_object_connections, foreign_key: :payment_provider_customer_id, dependent: :destroy
 
     before_validation :set_code
 

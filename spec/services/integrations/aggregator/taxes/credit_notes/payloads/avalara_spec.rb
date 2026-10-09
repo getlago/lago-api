@@ -5,6 +5,42 @@ require "rails_helper"
 RSpec.describe Integrations::Aggregator::Taxes::CreditNotes::Payloads::Avalara do
   subject(:payload) { described_class.new(integration:, customer:, integration_customer:, credit_note:).body }
 
+  describe "when a charge is credited over several fees" do
+    let(:integration) { create(:avalara_integration) }
+    let(:organization) { integration.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:integration_customer) { create(:avalara_customer, integration:, customer:) }
+    let(:invoice) { create(:invoice, customer:, organization:) }
+    let(:credit_note) { create(:credit_note, customer:, invoice:) }
+    let(:billable_metric) { create(:billable_metric, organization:) }
+    let(:charge) { create(:standard_charge, organization:, billable_metric:) }
+    let(:charge_fee) { create(:charge_fee, invoice:, charge:, units: 2, amount_cents: 115, precise_amount_cents: 115) }
+    let(:charge_fee_two) { create(:charge_fee, invoice:, charge:, units: 3, amount_cents: 115, precise_amount_cents: 115) }
+
+    before do
+      integration_customer
+      create(:credit_note_item, credit_note:, fee: charge_fee, amount_cents: 115, precise_amount_cents: 115, created_at: 2.seconds.ago)
+      create(:credit_note_item, credit_note:, fee: charge_fee_two, amount_cents: 115, precise_amount_cents: 115, created_at: 1.second.ago)
+
+      create(
+        :avalara_mapping,
+        integration:,
+        mappable_type: "BillableMetric",
+        mappable_id: billable_metric.id,
+        settings: {external_id: "ext_123"}
+      )
+    end
+
+    it "sends one line per credit note item, since Avalara rounds tax per line" do
+      expect(payload.first["fees"]).to eq(
+        [
+          {"item_id" => billable_metric.id, "item_code" => "ext_123", "unit" => 2, "amount" => "-1.15"},
+          {"item_id" => billable_metric.id, "item_code" => "ext_123", "unit" => 3, "amount" => "-1.15"}
+        ]
+      )
+    end
+  end
+
   describe "shipping address fallback" do
     let(:integration) { create(:avalara_integration) }
     let(:customer) do

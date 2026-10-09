@@ -140,7 +140,7 @@ module Events
       #
       # ClickHouse stores properties as a Map(String, String); a missing key reads back as an
       # empty string, so blank values are dropped to mirror the Postgres jsonb behaviour.
-      def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false, with_last_seen_at: true)
+      def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false, with_last_seen_at: true, ingested_after: nil)
         return [] if codes.empty?
 
         Events::Stores::Utils::ClickhouseConnection.with_retry do
@@ -150,6 +150,9 @@ module Events
             .where(code: codes)
             .where("events_enriched.timestamp <= ?", applicable_to_datetime)
           scope = scope.where("events_enriched.timestamp >= ?", from_datetime) unless include_all_history
+          # Only the properties of the rows passing this condition are read, which is what makes an
+          # incremental read cheap: the properties map is most of the bytes of a row.
+          scope = scope.where("events_enriched.enriched_at > ?", ingested_after) if ingested_after
 
           selects = ["code AS code"]
           group_columns = ["code"]
@@ -277,11 +280,23 @@ module Events
       #       unique property
       def active_unique_property?(event)
         previous_event = Events::Stores::Utils::ClickhouseConnection.with_retry do
-          events
+          query = events
             .where("events_enriched.properties[?] = ?", aggregation_property, event.properties[aggregation_property])
-            .where("events_enriched.timestamp < ?", event.timestamp)
-            .order(timestamp: :desc)
-            .first
+
+          if event.persisted? && event.transaction_id.present?
+            query
+              .where(
+                "events_enriched.timestamp < ? OR (events_enriched.timestamp = ? AND events_enriched.transaction_id < ?)",
+                event.timestamp,
+                event.timestamp,
+                event.transaction_id
+              )
+              .order(timestamp: :desc, transaction_id: :desc)
+          else
+            query
+              .where("events_enriched.timestamp < ?", event.timestamp)
+              .order(timestamp: :desc)
+          end.first
         end
 
         previous_event && (
@@ -765,20 +780,8 @@ module Events
           scope = scope.where("events_enriched.properties[?] IN (?)", key.to_s, values)
         end
 
-        conditions = ignored_filters.filter_map do |filters|
-          next if filters.empty?
-
-          clause = filters.filter_map do |key, values|
-            next if values.empty?
-
-            ActiveRecord::Base.sanitize_sql_for_conditions(
-              ["(coalesce(events_enriched.properties[?], '') IN (?))", key.to_s, values.map(&:to_s)]
-            )
-          end.join(" AND ")
-          clause.presence
-        end
-        sql = conditions.map { "(#{it})" }.join(" OR ")
-        scope = scope.where.not(sql) if sql.present?
+        sql = ignored_filters_sql
+        scope = scope.where.not(sql) if sql
 
         scope
       end
@@ -790,6 +793,31 @@ module Events
           )
         end
 
+        sql = ignored_filters_sql
+        scope = scope.where(Arel::Nodes::Not.new(Arel::Nodes::SqlLiteral.new(sql))) if sql
+
+        scope
+      end
+
+      # The condition the filters above apply, as one boolean expression, so that
+      # Events::Stores::ChargeFiltersScan can evaluate it for every filter of a charge in one read.
+      def filters_condition_sql(matching_filters: self.matching_filters, ignored_filters: self.ignored_filters)
+        conditions = matching_filters.map do |key, values|
+          ActiveRecord::Base.sanitize_sql_for_conditions(
+            ["events_enriched.properties[?] IN (?)", key.to_s, values.map(&:to_s)]
+          )
+        end
+
+        ignored_sql = ignored_filters_sql(ignored_filters)
+        conditions << "NOT (#{ignored_sql})" if ignored_sql
+
+        return "1" if conditions.empty?
+
+        conditions.map { "(#{it})" }.join(" AND ")
+      end
+
+      # An event is left out when it matches every key of one of the ignored filters.
+      def ignored_filters_sql(ignored_filters = self.ignored_filters)
         conditions = ignored_filters.filter_map do |filters|
           next if filters.empty?
 
@@ -802,10 +830,8 @@ module Events
           end.join(" AND ")
           clause.presence
         end
-        sql = conditions.map { "(#{it})" }.join(" OR ")
-        scope = scope.where(Arel::Nodes::Not.new(Arel::Nodes::SqlLiteral.new(sql))) if conditions.present?
 
-        scope
+        conditions.map { "(#{it})" }.join(" OR ").presence
       end
 
       def apply_grouped_by_values(scope)

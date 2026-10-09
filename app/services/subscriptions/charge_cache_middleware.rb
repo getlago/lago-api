@@ -13,7 +13,8 @@ module Subscriptions
       @last_seen_at = last_seen_at || {}
     end
 
-    def call(charge_filter:)
+    def call(charge_filter:, bypass: false)
+      return yield if bypass
       return yield unless cache
 
       # Lazily invalidate the cache when a more recent event was ingested for this charge/filter.

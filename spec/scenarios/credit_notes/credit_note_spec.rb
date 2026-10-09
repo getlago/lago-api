@@ -544,9 +544,8 @@ describe "Create credit note Scenarios", :premium do
               taxes_rounding_adjustment: 0.4
             )
           end
-          # this value is wrong because of all rounding because if we subtract issued credit notes from the invoice, it
-          # will result in 327_98 - 82_00 * 3 = 81_98
-          expect(invoice.creditable_amount_cents).to eq(8200)
+          # real remaining: 327_98 - 82_00 * 3 = 81_98
+          expect(invoice.creditable_amount_cents).to eq(8198)
 
           # split last refundable item into three chunks, first's taxes are rounded to lower number
           # next two are rounded to higher number
@@ -596,7 +595,7 @@ describe "Create credit note Scenarios", :premium do
           expect(credit_note.precise_total).to eq(1640.4)
           expect(credit_note.taxes_rounding_adjustment).to eq(-0.4)
           # real remaining: 81_98 - 16_40 = 65_58
-          expect(invoice.creditable_amount_cents).to eq(6559)
+          expect(invoice.creditable_amount_cents).to eq(6558)
 
           # cn_1 => 13.67, cn2 => 22.33, cn3 => 32.33
           # CN2
@@ -644,7 +643,7 @@ describe "Create credit note Scenarios", :premium do
             taxes_rounding_adjustment: 0.4
           )
           # real remaining: 65_58 - 26_80 = 38_78
-          expect(invoice.creditable_amount_cents).to eq(3880)
+          expect(invoice.creditable_amount_cents).to eq(3878)
 
           # cn_1 => 13.67, cn2 => 22.33, cn3 => 32.33
           # CN3
@@ -827,7 +826,7 @@ describe "Create credit note Scenarios", :premium do
         )
 
         # real remaining: 334_38 - 23_16 = 311_22
-        expect(invoice.creditable_amount_cents).to eq(31122.253421098216)
+        expect(invoice.creditable_amount_cents).to eq(311_22)
 
         # issue a CN for the full first charge - 68_33 before taxes and coupons
         first_charge = invoice.fees.find { |fee| fee.amount_cents == 68_33 }
@@ -873,7 +872,7 @@ describe "Create credit note Scenarios", :premium do
         expect(credit_note.precise_total).to eq(7915.5328)
         expect(credit_note.taxes_rounding_adjustment).to eq(-0.25547)
         # real remaining: 311_22 - 79_16 = 232_07
-        expect(invoice.creditable_amount_cents).to eq(23206.97609561753)
+        expect(invoice.creditable_amount_cents).to eq(232_07)
 
         # issue a CN for the full last charge - 200_33 before taxes and coupons
         last_charge = invoice.fees.find { |fee| fee.amount_cents == 200_33 }

@@ -106,6 +106,7 @@ RSpec.describe Fees::CreateTrueUpService do
       let(:fee) do
         create(
           :fee, organization:, customer:, invoice:, subscription: nil, charge: nil,
+          contract:, contract_rate_card:,
           fee_type: :product, invoiceable: rate_card.product, rate_card_rate:, product_filter:,
           amount_currency: currency, amount_cents: used_amount_cents,
           precise_amount_cents: used_precise_amount_cents, properties: {},
@@ -120,6 +121,7 @@ RSpec.describe Fees::CreateTrueUpService do
         expect(result).to be_success
         expect(result.true_up_fee).to be_new_record.and have_attributes(
           organization:, invoice:, subscription: nil, charge: nil,
+          contract:, contract_rate_card:,
           fee_type: "product", invoiceable: rate_card.product, rate_card_rate:,
           amount_currency: currency, properties: {}, true_up_parent_fee: fee,
           product_filter_id: nil, charge_filter_id: nil,

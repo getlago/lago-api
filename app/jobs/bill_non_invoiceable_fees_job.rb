@@ -14,7 +14,8 @@ class BillNonInvoiceableFeesJob < ApplicationJob
   unique :until_executed, on_conflict: :log, lock_ttl: 4.hours
 
   def perform(subscriptions, billing_at)
-    result = Invoices::AdvanceChargesService.call(initial_subscriptions: subscriptions, billing_at:)
+    billing_contexts = subscriptions.map { |subscription| Billing::Context.from(subscription:) }
+    result = Invoices::AdvanceChargesService.call(billing_contexts:, billing_at:)
     result.raise_if_error!
   end
 end

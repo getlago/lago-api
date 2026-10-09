@@ -24,6 +24,7 @@ RSpec.describe Contracts::MaterializeRateCardsService do
     expect(card.effective_date).to eq(Date.new(2026, 10, 1))
     expect(card.billing_anchor_date).to eq(Date.new(2026, 10, 1))
     expect(card.next_billing_at).to eq(contract.started_at)
+    expect(card.rate_phases).to be_empty
     expect(result.contract_rate_cards).to eq([card])
   end
 
@@ -59,12 +60,64 @@ RSpec.describe Contracts::MaterializeRateCardsService do
     end
   end
 
-  it "does not copy the plan entry's phases: pricing resolves by reference" do
-    plan_rate_card = catalog_plan.applied_rate_cards.sole
-    create(:rate_phase, organization:, plan_rate_card:, position: 1)
+  describe "rate phases" do
+    let(:plan_rate_card) { catalog_plan.applied_rate_cards.sole }
+    let(:rate_override) do
+      create(:rate_override, organization:, rate_properties: {"amount" => "1.00"}, billing_interval_count: 1, billing_interval_unit: "week", pricing_unit_conversion_rate: 2.5)
+    end
 
-    expect { result }.not_to change(RatePhase, :count)
-    expect(contract.reload.applied_rate_cards.sole.rate_phases).to be_empty
+    before do
+      create(:rate_phase, organization:, plan_rate_card:, code: "intro", position: 1, name: "Intro", billing_interval_cycle_count: 2, rate_override:)
+      create(:rate_phase, organization:, plan_rate_card:, code: "regular", position: 2)
+    end
+
+    it "copies the plan entry's timeline onto the card" do
+      expect { result }.to change(RatePhase, :count).by(2)
+
+      phases = contract.reload.applied_rate_cards.sole.rate_phases
+      expect(phases.map { [it.code, it.position, it.name, it.billing_interval_cycle_count] })
+        .to eq([["intro", 1, "Intro", 2], ["regular", 2, nil, nil]])
+      expect(phases.map(&:plan_rate_card_id)).to all(be_nil)
+    end
+
+    it "gives the copied phase its own override" do
+      expect { result }.to change(RateOverride, :count).by(1)
+
+      copy = contract.reload.applied_rate_cards.sole.rate_phases.first.rate_override
+      expect(copy).not_to eq(rate_override)
+      expect(copy).to have_attributes(
+        rate_model: rate_override.rate_model,
+        rate_properties: rate_override.rate_properties,
+        min_amount_cents: rate_override.min_amount_cents,
+        billing_interval_count: 1,
+        billing_interval_unit: "week",
+        pricing_unit_conversion_rate: 2.5
+      )
+    end
+
+    it "leaves the plan entry untouched" do
+      result
+
+      expect(plan_rate_card.rate_phases.map(&:code)).to eq(%w[intro regular])
+      expect(plan_rate_card.rate_phases.first.rate_override).to eq(rate_override)
+    end
+
+    context "when the plan has several rate cards" do
+      let(:other_rate_card) { create(:rate_card, organization:) }
+      let(:other_plan_rate_card) { create(:plan_rate_card, organization:, catalog_plan:, rate_card: other_rate_card) }
+
+      before do
+        create(:rate_phase, organization:, plan_rate_card: other_plan_rate_card, code: "trial", position: 1, billing_interval_cycle_count: 1)
+      end
+
+      it "copies each entry's phases onto its own card" do
+        result
+
+        cards = contract.reload.applied_rate_cards.index_by(&:rate_card_id)
+        expect(cards.fetch(rate_card.id).rate_phases.map(&:code)).to eq(%w[intro regular])
+        expect(cards.fetch(other_rate_card.id).rate_phases.map(&:code)).to eq(%w[trial])
+      end
+    end
   end
 
   context "when the contract has no plan" do

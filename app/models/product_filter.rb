@@ -69,6 +69,7 @@ end
 #
 # Indexes
 #
+#  index_product_filters_by_cursor               (product_id,created_at DESC,id DESC) WHERE (deleted_at IS NULL)
 #  index_product_filters_on_deleted_at           (deleted_at)
 #  index_product_filters_on_organization_id      (organization_id)
 #  index_product_filters_on_product_id           (product_id)

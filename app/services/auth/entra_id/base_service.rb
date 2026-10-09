@@ -28,10 +28,12 @@ module Auth
 
       def check_entra_id_integration(email)
         email_domain = email.split("@").last
-        entra_id_integration = ::Integrations::EntraIdIntegration
-          .where("settings->>'domain' IS NOT NULL")
-          .where("settings->>'domain' = ?", email_domain)
-          .first
+        # NOTE: An exact match on the primary domain wins, as it did before domains were compared
+        #       case-insensitively, so integrations whose domains differ only by casing keep
+        #       their routing. The fallback order is fixed so the result is deterministic.
+        entra_id_integration =
+          ::Integrations::EntraIdIntegration.find_by("settings->>'domain' = ?", email_domain) ||
+          ::Integrations::EntraIdIntegration.with_domain(email_domain).order(:created_at).first
 
         raise ValidationError, "domain_not_configured" if entra_id_integration.blank?
 
@@ -58,7 +60,8 @@ module Auth
         }
 
         token_client = LagoHttpClient::Client.new(
-          "https://#{result.entra_id_integration.host}/#{result.entra_id_integration.tenant_id}/oauth2/v2.0/token"
+          "https://#{result.entra_id_integration.host}/#{result.entra_id_integration.tenant_id}/oauth2/v2.0/token",
+          block_private_addresses: true
         )
         response = token_client.post_url_encoded(params, {})
         result.entra_id_access_token = response["access_token"]

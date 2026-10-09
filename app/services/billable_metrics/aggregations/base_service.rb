@@ -129,6 +129,8 @@ module BillableMetrics
         result
       end
 
+      delegate :precomputed?, to: :event_store
+
       protected
 
       attr_accessor :event_store,
@@ -196,6 +198,7 @@ module BillableMetrics
 
       def should_bypass_aggregation?
         return false if billable_metric.recurring?
+        return false if precomputed?
 
         bypass_aggregation
       end

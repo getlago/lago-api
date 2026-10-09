@@ -32,19 +32,34 @@ RSpec.describe Billing::Context do
       expect(context.customer).to eq(subscription.customer)
       expect(context.external_id).to eq(subscription.external_id)
       expect(context.applicable_billing_entity_id).to eq(subscription.applicable_billing_entity_id)
+      expect(context.purchase_order_number).to eq(subscription.purchase_order_number)
       expect(context.subscription_at).to eq(subscription.subscription_at)
       expect(context.organization).to eq(subscription.organization)
+      expect(context.currency).to eq(subscription.plan.amount_currency)
+      expect(context.fees.proxy_association.owner).to eq(subscription)
+      expect(context.plan_id).to eq(subscription.plan_id)
       expect(context.anniversary?).to eq(subscription.anniversary?)
+      expect(context.active?).to eq(subscription.active?)
+      expect(context).not_to respond_to(:plan)
     end
 
-    it "preserves subscription charge duration calculation" do
-      dates_service = instance_double(Subscriptions::DatesService, charges_duration_in_days: 31)
-      allow(Subscriptions::DatesService).to receive(:new_instance).and_return(dates_service)
-      billing_at = Time.current
+    context "when the subscription has a billing entity" do
+      let(:billing_entity) { build_stubbed(:billing_entity) }
+      let(:subscription) { build_stubbed(:subscription, billing_entity:) }
 
-      expect(context.charges_duration_at(billing_at)).to eq(31)
-      expect(Subscriptions::DatesService).to have_received(:new_instance)
-        .with(subscription, billing_at, current_usage: false)
+      it "uses the subscription billing entity" do
+        expect(context.applicable_billing_entity).to eq(billing_entity)
+      end
+    end
+
+    context "when the subscription has no billing entity" do
+      let(:billing_entity) { build_stubbed(:billing_entity) }
+      let(:customer) { build_stubbed(:customer, billing_entity:) }
+      let(:subscription) { build_stubbed(:subscription, customer:, organization: customer.organization) }
+
+      it "uses the customer billing entity" do
+        expect(context.applicable_billing_entity).to eq(billing_entity)
+      end
     end
   end
 
@@ -63,10 +78,16 @@ RSpec.describe Billing::Context do
       expect(context.organization_id).to eq(contract.organization_id)
       expect(context.customer).to eq(contract.customer)
       expect(context.external_id).to eq(contract.external_id)
+      expect(context.applicable_billing_entity).to eq(contract.applicable_billing_entity)
+      expect(context.purchase_order_number).to eq(contract.purchase_order_number)
       expect(context.applicable_billing_entity_id).to eq(contract.applicable_billing_entity_id)
+      expect(context.active?).to eq(contract.active?)
       expect(context.subscription_at).to eq(contract.started_at)
       expect(context.started_at).to eq(contract.started_at)
       expect(context.organization).to eq(contract.organization)
+      expect(context.currency).to eq(contract.currency)
+      expect(context.fees.proxy_association.owner).to eq(contract)
+      expect(context.plan_id).to be_nil
     end
 
     it "prevents using contract identity in subscription queries" do
@@ -110,11 +131,6 @@ RSpec.describe Billing::Context do
         expect { context.public_send(method_name) }
           .to raise_error(NotImplementedError, "contract-backed billing contexts do not have #{method_name} yet")
       end
-    end
-
-    it "rejects subscription charge duration calculation" do
-      expect { context.charges_duration_at(Time.current) }
-        .to raise_error(NotImplementedError, "contract-backed billing contexts do not have charges_duration_at yet")
     end
   end
 end

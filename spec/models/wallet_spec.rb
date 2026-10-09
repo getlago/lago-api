@@ -74,11 +74,15 @@ RSpec.describe Wallet do
     let!(:wallet_10_newer) { create(:wallet, priority: 10, created_at: 1.day.ago) }
     let!(:wallet_5) { create(:wallet, priority: 5, created_at: 1.second.ago) }
     let!(:wallet_10_older) { create(:wallet, priority: 10, created_at: 3.days.ago) }
+    let!(:wallet_10_expiring_later) { create(:wallet, priority: 10, created_at: 1.second.ago, expiration_at: 2.months.from_now) }
+    let!(:wallet_10_expiring_sooner) { create(:wallet, priority: 10, created_at: 2.seconds.ago, expiration_at: 1.month.from_now) }
     let!(:wallet_50) { create(:wallet, created_at: 2.seconds.ago) }
 
-    it "orders by priority first then by created_at" do
+    it "orders by priority, then by expiration_at with non-expiring wallets last, then by created_at" do
       expect(subject.to_a).to eq([
         wallet_5,
+        wallet_10_expiring_sooner,
+        wallet_10_expiring_later,
         wallet_10_older,
         wallet_10_newer,
         wallet_50
@@ -292,6 +296,7 @@ RSpec.describe Wallet do
       status
       terminated_at
       traceable
+      x402_enabled
       created_at
       updated_at
       billing_entity_id

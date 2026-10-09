@@ -27,6 +27,8 @@ RSpec.describe Mutations::Contracts::Update do
       mutation($input: UpdateContractInput!) {
         updateContract(input: $input) {
           id externalId name
+          selectedInvoiceCustomSections { id }
+          skipInvoiceCustomSections
           plan { id }
           appliedRateCards { id }
         }
@@ -43,6 +45,28 @@ RSpec.describe Mutations::Contracts::Update do
 
     expect(result_data["externalId"]).to eq(contract.external_id)
     expect(result_data["name"]).to eq("Renamed")
+  end
+
+  context "with invoice custom sections" do
+    let(:section) { create(:invoice_custom_section, organization:) }
+    let(:input) { {externalId: contract.external_id, invoiceCustomSection: {invoiceCustomSectionIds: [section.id]}} }
+
+    it "attaches the sections to the contract" do
+      expect(execution["data"]["updateContract"]["selectedInvoiceCustomSections"].map { it["id"] }).to eq([section.id])
+    end
+  end
+
+  context "when skipping invoice custom sections" do
+    let(:input) { {externalId: contract.external_id, invoiceCustomSection: {skipInvoiceCustomSections: true}} }
+
+    before { create(:contract_applied_invoice_custom_section, organization:, contract:) }
+
+    it "flags the contract and drops its sections" do
+      result_data = execution["data"]["updateContract"]
+
+      expect(result_data["skipInvoiceCustomSections"]).to be(true)
+      expect(result_data["selectedInvoiceCustomSections"]).to be_empty
+    end
   end
 
   context "when changing the plan" do
@@ -62,8 +86,34 @@ RSpec.describe Mutations::Contracts::Update do
   context "when the contract is already active" do
     let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
 
-    it "returns a validation error" do
-      expect_unprocessable_entity(execution)
+    it "updates the fields that stay editable" do
+      expect(execution["data"]["updateContract"]["name"]).to eq("Renamed")
+    end
+
+    context "when changing the plan" do
+      let(:other_plan) { create(:catalog_plan, organization:) }
+      let(:input) { {externalId: contract.external_id, planCode: other_plan.code} }
+
+      it "returns a validation error" do
+        expect_unprocessable_entity(execution)
+      end
+    end
+
+    context "when the form resends the locked fields unchanged" do
+      let(:input) do
+        {
+          externalId: contract.external_id,
+          name: "Renamed",
+          planCode: catalog_plan.code,
+          billingTime: "calendar",
+          startedAt: contract.started_at.iso8601,
+          billingAnchorDate: contract.effective_billing_anchor_date.iso8601
+        }
+      end
+
+      it "updates the contract" do
+        expect(execution["data"]["updateContract"]["name"]).to eq("Renamed")
+      end
     end
   end
 end

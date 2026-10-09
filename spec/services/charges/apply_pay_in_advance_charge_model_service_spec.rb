@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
-  let(:charge_service) { described_class.new(charge:, aggregation_result:, properties:) }
+  let(:charge_service) { described_class.new(metered_item:, aggregation_result:, properties:) }
 
   let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:) }
@@ -196,11 +196,271 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
       it_behaves_like "a charge model"
     end
 
+    context "when the metered item is backed by a billing segment" do
+      let(:customer) { create(:customer, organization:) }
+      let(:contract) { create(:contract, organization:, customer:) }
+      let(:billable_metric) { create(:billable_metric, organization:) }
+      let(:product) { create(:product, :metered, organization:, billable_metric:) }
+      let(:rate_card) { create(:rate_card, :advance, organization:, product:) }
+      let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+      let(:billing_segment) do
+        create(
+          :billing_segment,
+          organization:,
+          customer:,
+          contract:,
+          contract_rate_card:,
+          currency: "EUR",
+          rate_properties: {"amount" => "2"}
+        )
+      end
+      let(:metered_item) { Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment:) }
+      let(:charge_model_result) do
+        ChargeModels::StandardService::Result.new.tap do |result|
+          result.amount = 10
+        end
+      end
+
+      before do
+        allow(ChargeModels::StandardService).to receive(:apply).and_return(charge_model_result)
+      end
+
+      it "applies the billing segment pricing structure" do
+        result = charge_service.call
+
+        expect(result).to be_success
+        expect(ChargeModels::StandardService).to have_received(:apply).with(
+          pricing_structure: ChargeModels::PricingStructure.from_billing_segment(billing_segment).with(properties:),
+          aggregation_result:
+        )
+      end
+    end
+
     describe "when percentage charge model" do
       let(:charge) { create(:percentage_charge, :pay_in_advance, plan:) }
       let(:charge_model_class) { ChargeModels::PercentageService }
 
       it_behaves_like "a charge model"
+
+      context "when a unique-count event does not add a unit" do
+        let(:charge) do
+          create(:percentage_charge, :pay_in_advance, plan:, billable_metric: create(:unique_count_billable_metric, organization:))
+        end
+        let(:aggregator) do
+          BillableMetrics::Aggregations::UniqueCountService.new(
+            event_store: Events::Stores::PostgresStore.new(billing_context:, boundaries: nil),
+            metered_item:,
+            billing_context:,
+            boundaries: nil
+          )
+        end
+        let(:aggregation_result) do
+          super().tap { |result| result.pay_in_advance_aggregation = 0 }
+        end
+        let(:amount_details) do
+          {
+            rate: "10",
+            fixed_fee_unit_amount: "0",
+            units: "0",
+            free_units: "0",
+            paid_units: "0",
+            free_events: "0",
+            paid_events: "0",
+            fixed_fee_total_amount: "0",
+            min_max_adjustment_total_amount: "0",
+            per_unit_total_amount: "0"
+          }
+        end
+
+        before do
+          allow(charge_model_class).to receive(:apply) do
+            charge_model_class::Result.new.tap do |result|
+              result.amount = 0
+              result.amount_details = amount_details
+            end
+          end
+        end
+
+        it "keeps zero-unit fixed-fee details finite and zero" do
+          result = charge_service.call
+
+          expect(result.units).to eq(0)
+          expect(result.amount).to eq(0)
+          expect(result.unit_amount).to eq(BigDecimal(0))
+          expect(result.unit_amount.finite?).to be(true)
+          expect(result.amount_details[:fixed_fee_total_amount]).to eq("0.0")
+          expect(result.amount_details[:units]).to eq("0.0")
+          expect(charge_model_class).to have_received(:apply).with(
+            pricing_structure: anything,
+            aggregation_result: have_attributes(count: aggregation_result.count)
+          ).twice
+        end
+
+        context "when pricing returns a nonzero amount despite zero units" do
+          before do
+            allow(charge_model_class).to receive(:apply) do |pricing_structure:, **|
+              charge_model_class::Result.new.tap do |result|
+                result.amount = pricing_structure.properties[:exclude_event] ? 0 : BigDecimal("0.3")
+                result.amount_details = amount_details.merge(
+                  fixed_fee_unit_amount: "0.3",
+                  fixed_fee_total_amount: pricing_structure.properties[:exclude_event] ? "0" : "0.3"
+                )
+              end
+            end
+          end
+
+          it "returns the nonzero amount with a finite zero unit amount" do
+            result = charge_service.call
+
+            expect(result.amount).to eq(30)
+            expect(result.units).to eq(0)
+            expect(result.unit_amount).to eq(BigDecimal(0))
+            expect(result.unit_amount.finite?).to be(true)
+            expect(result.amount_details[:fixed_fee_unit_amount]).to eq("0.3")
+            expect(result.amount_details[:fixed_fee_total_amount]).to eq("0.3")
+          end
+        end
+
+        context "when the event is not persisted" do
+          before { pay_in_advance_event.persisted = false }
+
+          it "does not adjust the count when estimating the event" do
+            charge_service.call
+
+            expect(charge_model_class).to have_received(:apply).with(
+              pricing_structure: anything,
+              aggregation_result: have_attributes(count: aggregation_result.count)
+            ).twice
+          end
+        end
+
+        context "when the event adds a unique unit" do
+          let(:aggregation_result) do
+            super().tap { |result| result.pay_in_advance_aggregation = 1 }
+          end
+
+          it "adjusts the count by the new unique unit" do
+            charge_service.call
+
+            expect(charge_model_class).to have_received(:apply).with(
+              pricing_structure: anything,
+              aggregation_result: have_attributes(count: aggregation_result.count - 1)
+            )
+          end
+
+          context "when the event is not persisted" do
+            before { pay_in_advance_event.persisted = false }
+
+            it "adjusts the count by the new unique unit" do
+              charge_service.call
+
+              expect(charge_model_class).to have_received(:apply).with(
+                pricing_structure: anything,
+                aggregation_result: have_attributes(count: aggregation_result.count + 1)
+              )
+            end
+          end
+        end
+      end
+
+      context "when a sum event has multiple units" do
+        let(:charge) do
+          create(:percentage_charge, :pay_in_advance, plan:, billable_metric: create(:sum_billable_metric, organization:))
+        end
+        let(:aggregator) do
+          BillableMetrics::Aggregations::SumService.new(
+            event_store: Events::Stores::PostgresStore.new(billing_context:, boundaries: nil),
+            metered_item:,
+            billing_context:,
+            boundaries: nil
+          )
+        end
+        let(:aggregation_result) do
+          super().tap { |result| result.pay_in_advance_aggregation = 3 }
+        end
+
+        before do
+          allow(charge_model_class).to receive(:apply) do
+            charge_model_class::Result.new.tap { |result| result.amount = 1 }
+          end
+        end
+
+        it "adjusts the persisted-event count by one" do
+          charge_service.call
+
+          expect(charge_model_class).to have_received(:apply).with(
+            pricing_structure: anything,
+            aggregation_result: have_attributes(count: aggregation_result.count - 1)
+          )
+        end
+
+        context "when the event is not persisted" do
+          before { pay_in_advance_event.persisted = false }
+
+          it "adjusts the estimated-event count by one" do
+            charge_service.call
+
+            expect(charge_model_class).to have_received(:apply).with(
+              pricing_structure: anything,
+              aggregation_result: have_attributes(count: aggregation_result.count + 1)
+            )
+          end
+        end
+
+        context "when the event has zero units" do
+          let(:aggregation_result) do
+            super().tap { |result| result.pay_in_advance_aggregation = 0 }
+          end
+
+          before do
+            allow(charge_model_class).to receive(:apply) do |pricing_structure:, **|
+              charge_model_class::Result.new.tap do |result|
+                result.amount = pricing_structure.properties[:exclude_event] ? 0 : BigDecimal("0.3")
+                result.amount_details = {
+                  rate: "10",
+                  fixed_fee_unit_amount: "0.3",
+                  units: "0",
+                  free_units: "0",
+                  paid_units: "0",
+                  free_events: "0",
+                  paid_events: "0",
+                  fixed_fee_total_amount: pricing_structure.properties[:exclude_event] ? "0" : "0.3",
+                  min_max_adjustment_total_amount: "0",
+                  per_unit_total_amount: "0"
+                }
+              end
+            end
+          end
+
+          it "retains the fixed fee and keeps its zero-unit amount finite" do
+            result = charge_service.call
+
+            expect(result.amount).to eq(30)
+            expect(result.units).to eq(0)
+            expect(result.unit_amount).to eq(BigDecimal(0))
+            expect(result.unit_amount.finite?).to be(true)
+            expect(result.amount_details[:fixed_fee_unit_amount]).to eq("0.3")
+            expect(result.amount_details[:fixed_fee_total_amount]).to eq("0.3")
+            expect(charge_model_class).to have_received(:apply).with(
+              pricing_structure: anything,
+              aggregation_result: have_attributes(count: aggregation_result.count - 1)
+            )
+          end
+
+          context "when the event is not persisted" do
+            before { pay_in_advance_event.persisted = false }
+
+            it "adjusts the estimated-event count by one" do
+              charge_service.call
+
+              expect(charge_model_class).to have_received(:apply).with(
+                pricing_structure: anything,
+                aggregation_result: have_attributes(count: aggregation_result.count + 1)
+              )
+            end
+          end
+        end
+      end
     end
 
     describe "when graduated percentage charge model", :premium do

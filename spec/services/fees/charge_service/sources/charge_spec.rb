@@ -78,6 +78,46 @@ RSpec.describe Fees::ChargeService::Sources::Charge do
     end
   end
 
+  describe "#pricing_buckets" do
+    let(:region) { create(:billable_metric_filter, billable_metric:, key: "region", values: ["us"]) }
+    let(:charge_filter) { create(:charge_filter, charge:) }
+    let(:charge_filter_value) do
+      create(
+        :charge_filter_value,
+        values: ["us"],
+        billable_metric_filter: region,
+        charge_filter:
+      )
+    end
+    let(:event) { create(:event, organization:, properties: event_properties) }
+    let(:event_properties) { {"region" => "us"} }
+
+    before { charge_filter_value }
+
+    it "returns only the filter matching the event" do
+      buckets = source.pricing_buckets(event:)
+
+      expect(buckets).to match([have_attributes(charge_filter:)])
+    end
+
+    context "when the event does not match any filter" do
+      let(:event_properties) { {"region" => "eu"} }
+
+      it "returns the default bucket with configured filter exclusions" do
+        matching_event = create(:event, organization:, properties: {"region" => "us"})
+        matching_bucket = source.pricing_buckets(event: matching_event).sole
+        default_bucket = source.pricing_buckets(event:).sole
+
+        expect(matching_bucket.charge_filter).to eq(charge_filter)
+        expect(default_bucket).to have_attributes(
+          charge_filter: have_attributes(charge:),
+          properties: charge.properties
+        )
+        expect(default_bucket.matching_and_ignored_filters.ignored_filters).not_to be_empty
+      end
+    end
+  end
+
   describe "#elapsed_period_ratio" do
     around { |test| travel_to(Time.zone.parse("2022-03-16")) { test.run } }
 
@@ -87,8 +127,20 @@ RSpec.describe Fees::ChargeService::Sources::Charge do
   end
 
   describe "#pricing_group_keys" do
-    it "returns charge pricing group keys" do
+    it "returns pricing_group_keys properties" do
       charge.update!(properties: charge.properties.merge("pricing_group_keys" => ["region"]))
+
+      expect(source.pricing_group_keys).to eq(["region"])
+    end
+
+    it "returns legacy grouped_by properties" do
+      charge.update!(properties: charge.properties.merge("grouped_by" => ["region"]))
+
+      expect(source.pricing_group_keys).to eq(["region"])
+    end
+
+    it "prefers pricing_group_keys over legacy grouped_by properties" do
+      charge.update!(properties: charge.properties.merge("pricing_group_keys" => ["region"], "grouped_by" => ["cloud"]))
 
       expect(source.pricing_group_keys).to eq(["region"])
     end

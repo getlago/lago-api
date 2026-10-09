@@ -22,6 +22,7 @@ resources :customers, param: :external_id, only: %i[create index show destroy] d
   get :current_usage, to: "customers/usage#current"
   get :projected_usage, to: "customers/projected_usage#current"
   get :past_usage, to: "customers/usage#past"
+  get :attributed_usage, to: "customers/attributed_usage#show"
 
   post :checkout_url
 
@@ -168,4 +169,8 @@ resources :webhook_endpoints, only: %i[create index show destroy update]
 resources :webhooks, only: %i[] do
   get :public_key, on: :collection
   get :json_public_key, on: :collection
+end
+
+namespace :x402 do
+  resources :gate_checks, only: :create
 end

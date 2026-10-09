@@ -3,20 +3,22 @@
 module Billing
   module RateCards
     class BuildScheduleService < BaseService
-      class MismatchedPlanRateCard < StandardError; end
-
       Result = BaseResult[:schedule]
 
-      def initialize(contract_rate_card:, plan_rate_card: nil, ends_at: nil)
+      def initialize(contract_rate_card:, ends_at: nil, resume_from_billing_segments: true)
         @contract_rate_card = contract_rate_card
-        @plan_rate_card = plan_rate_card
         @ends_at = ends_at
+        @resume_from_billing_segments = resume_from_billing_segments
         super
       end
 
       def call
         rate_card = contract_rate_card.rate_card
-        rates = rate_card.ordered_rates.to_a
+        rates = if rate_card.rates.loaded?
+          rate_card.rates.sort_by(&:effective_from)
+        else
+          rate_card.ordered_rates.to_a
+        end
 
         if rates.empty?
           result.not_found_failure!(resource: "rate")
@@ -27,7 +29,7 @@ module Billing
             rates:,
             terms:,
             phases:,
-            resume_at: contract_rate_card.billing_segments.maximum(:cycle_started_at),
+            resume_at: resume_from_billing_segments ? contract_rate_card.billing_segments.maximum(:cycle_started_at) : nil,
             starts_at: contract_rate_card.effective_date.in_time_zone(timezone),
             ends_at: schedule_ends_at,
             anchor_date: contract_rate_card.billing_anchor_date,
@@ -42,26 +44,18 @@ module Billing
 
       private
 
-      attr_reader :contract_rate_card, :plan_rate_card, :ends_at
+      attr_reader :contract_rate_card, :ends_at, :resume_from_billing_segments
 
       def timezone
         contract_rate_card.contract.customer.applicable_timezone
       end
 
       def schedule_ends_at
-        # Contract card dates are inclusive; the walker expects an exclusive instant.
-        card_end = contract_rate_card.ended_date&.next_day&.in_time_zone(timezone)
-
-        [ends_at, card_end, contract_rate_card.contract.ended_at].compact.min
+        [ends_at, contract_rate_card.contract.ended_at].compact.min
       end
 
       def phases
-        rate_phases = ::ContractRateCards::ResolveRatePhasesService.call!(
-          contract_rate_card:,
-          plan_rate_card: resolved_plan_rate_card
-        ).rate_phases
-
-        configured = rate_phases.map do |rate_phase|
+        configured = contract_rate_card.rate_phases.map do |rate_phase|
           Phase.new(
             code: rate_phase.code,
             billing_interval_cycle_count: rate_phase.billing_interval_cycle_count,
@@ -73,18 +67,6 @@ module Billing
           configured
         else
           configured + [Phase.default]
-        end
-      end
-
-      def resolved_plan_rate_card
-        if plan_rate_card.nil?
-          contract_rate_card.contract.catalog_plan&.applied_rate_cards
-            &.find { it.rate_card_id == contract_rate_card.rate_card_id }
-        elsif plan_rate_card.rate_card_id != contract_rate_card.rate_card_id
-          raise MismatchedPlanRateCard, "plan_rate_card #{plan_rate_card.id} prices rate card " \
-            "#{plan_rate_card.rate_card_id}, not #{contract_rate_card.rate_card_id}"
-        else
-          plan_rate_card
         end
       end
     end

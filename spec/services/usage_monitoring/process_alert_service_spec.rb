@@ -10,6 +10,37 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
     let(:alert) { create(:usage_current_amount_alert, recurring_threshold: 35, thresholds: [10, 20], previous_value: 4, code: "test", organization:, subscription_external_id: subscription.external_id) }
     let(:subscription) { create(:subscription, organization:) }
 
+    context "when locking" do
+      let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 5) }
+
+      it "uses with_lock to prevent racing a config change" do
+        allow(alert).to receive(:with_lock).and_call_original
+        described_class.call(alert:, alertable: subscription, current_metrics:)
+
+        expect(alert).to have_received(:with_lock)
+      end
+    end
+
+    context "when the metric changed after the caller measured usage" do
+      subject(:result) do
+        described_class.call(alert:, alertable: subscription, current_metrics:, expected_billable_metric_id: measured_metric.id)
+      end
+
+      let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 50) }
+      let(:measured_metric) { create(:billable_metric, organization:) }
+
+      it "skips the evaluation rather than measuring it against the new configuration" do
+        expect(result).to be_success
+        expect(organization.triggered_alerts.count).to eq 0
+        expect(SendWebhookJob).not_to have_been_enqueued
+      end
+
+      it "leaves the evaluation time untouched, so the next run picks it up" do
+        expect(result).to be_success
+        expect(alert.reload.last_processed_at).to be_nil
+      end
+    end
+
     context "when no thresholds are crossed" do
       let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 5) }
 
@@ -84,9 +115,262 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
 
       it "does not update alert last_processed_at or previous_value" do
         expect(SendWebhookJob).not_to have_been_enqueued
-        expect { service.call }.to raise_error(StandardError)
+        expect { result }.to raise_error(StandardError)
         expect(alert.reload.last_processed_at).to be_nil
         expect(alert.previous_value).to eq 4
+      end
+    end
+
+    context "when a value comes back to the safe side" do
+      let(:alert) do
+        create(:usage_current_amount_alert, thresholds: [8000, 10000], previous_value: 10400, code: "rec",
+          organization:, subscription_external_id: subscription.external_id)
+      end
+      let(:hard) { alert.thresholds.find_by(value: 10000) }
+      let(:warn) { alert.thresholds.find_by(value: 8000) }
+      let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 8500) }
+
+      before { hard.update!(notify_on: %w[triggered resolved]) }
+
+      context "with an alarm Lago recorded" do
+        before do
+          create(:triggered_alert, alert:, organization:, subscription:,
+            crossed_thresholds: [{code: hard.code, value: "10000.0", recurring: false}])
+        end
+
+        it "records the recovery" do
+          expect(result).to be_success
+
+          resolved = alert.all_triggered_alerts.find_by(kind: :resolved)
+          expect(resolved.crossed_thresholds.map { it["code"] }).to eq([hard.code])
+          expect(resolved.current_value).to eq(8500)
+          expect(resolved.previous_value).to eq(10400)
+        end
+
+        it "reports the alert as not fully resolved while a lower line is still crossed" do
+          result
+          resolved = alert.all_triggered_alerts.find_by(kind: :resolved)
+
+          expect(resolved.fully_resolved).to be false
+          expect(resolved.in_alarm_thresholds).to eq([])
+        end
+
+        it "sends the resolution webhook" do
+          result
+          resolved = alert.all_triggered_alerts.find_by(kind: :resolved)
+
+          expect(SendWebhookJob).to have_been_enqueued.once.with("alert.resolved", resolved)
+        end
+
+        context "when a watched line is also still crossed" do
+          before { warn.update!(notify_on: %w[triggered resolved]) }
+
+          it "lists it as still in alarm" do
+            result
+            resolved = alert.all_triggered_alerts.find_by(kind: :resolved)
+
+            expect(resolved.in_alarm_thresholds).to eq([warn.code])
+            expect(resolved.fully_resolved).to be false
+          end
+        end
+      end
+
+      context "when a line has no code" do
+        before do
+          hard.update!(code: nil, notify_on: %w[triggered resolved])
+          create(:triggered_alert, alert:, organization:, subscription:,
+            crossed_thresholds: [{code: nil, value: "10000.0", recurring: false}])
+        end
+
+        it "stays silent rather than pairing on a blank code" do
+          expect(result).to be_success
+          expect(alert.all_triggered_alerts.where(kind: :resolved)).to be_empty
+        end
+      end
+
+      context "without an alarm Lago recorded" do
+        it "stays silent" do
+          expect(result).to be_success
+          expect(alert.all_triggered_alerts.where(kind: :resolved)).to be_empty
+        end
+      end
+
+      context "when the line is not opted in" do
+        before { hard.update!(notify_on: %w[triggered]) }
+
+        it "stays silent" do
+          create(:triggered_alert, alert:, organization:, subscription:,
+            crossed_thresholds: [{code: hard.code, value: "10000.0", recurring: false}])
+
+          expect(result).to be_success
+          expect(alert.all_triggered_alerts.where(kind: :resolved)).to be_empty
+          expect(SendWebhookJob).not_to have_been_enqueued
+        end
+      end
+    end
+
+    context "when the last evaluation is from a previous period" do
+      let(:period_start) { Time.current.beginning_of_month }
+      let(:alert) do
+        create(:usage_current_amount_alert, thresholds: [10, 20], previous_value: 90, code: "roll",
+          last_processed_at: period_start - 1.day, organization:, subscription_external_id: subscription.external_id)
+      end
+      let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 15, from_datetime: period_start.iso8601) }
+
+      before do
+        alert.thresholds.each { it.update!(notify_on: %w[triggered resolved]) }
+        create(:triggered_alert, alert:, organization:, subscription:,
+          crossed_thresholds: [{code: alert.thresholds.find_by(value: 20).code, value: "20.0", recurring: false}])
+      end
+
+      it "fires the thresholds the new period already crossed" do
+        recorded_before = alert.all_triggered_alerts.pluck(:id)
+        expect(result).to be_success
+
+        triggered = alert.all_triggered_alerts.where.not(id: recorded_before).sole
+        expect(triggered).to be_triggered
+        expect(triggered.crossed_thresholds.map { it["value"] }).to eq(%w[10.0])
+        expect(triggered.previous_value).to eq(0)
+      end
+
+      it "does not report a recovery at the boundary" do
+        result
+        expect(alert.all_triggered_alerts.where(kind: :resolved)).to be_empty
+      end
+
+      context "when the new period opens above the old value" do
+        let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 95, from_datetime: period_start.iso8601) }
+
+        it "fires every threshold the new period crossed, not only those above the old value" do
+          recorded_before = alert.all_triggered_alerts.pluck(:id)
+          expect(result).to be_success
+
+          triggered = alert.all_triggered_alerts.where.not(id: recorded_before).sole
+          expect(triggered.crossed_thresholds.map { it["value"] }).to eq(%w[10.0 20.0])
+          expect(triggered.previous_value).to eq(0)
+        end
+      end
+
+      context "when a charge on the plan meters a recurring metric" do
+        # A recurring billable metric aggregates from subscription start, so the plan total does not reset.
+        let(:subscription) { create(:subscription, organization:, plan: recurring_plan) }
+        let(:recurring_plan) { create(:plan, organization:) }
+        let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 90, from_datetime: period_start.iso8601) }
+
+        before do
+          create(:standard_charge, plan: recurring_plan, organization:,
+            billable_metric: create(:sum_billable_metric, :recurring, organization:))
+        end
+
+        it "keeps the baseline and does not re-fire across two consecutive boundaries" do
+          expect do
+            described_class.call(alert:, alertable: subscription, current_metrics:)
+            alert.update!(last_processed_at: period_start - 1.day)
+            described_class.call(alert:, alertable: subscription, current_metrics:)
+          end.not_to change { alert.all_triggered_alerts.count }
+        end
+      end
+
+      context "when a continuous metric recovers across the boundary" do
+        let(:subscription) { create(:subscription, organization:, plan: recurring_plan) }
+        let(:recurring_plan) { create(:plan, organization:) }
+        let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 15, from_datetime: period_start.iso8601) }
+
+        before do
+          create(:standard_charge, plan: recurring_plan, organization:,
+            billable_metric: create(:sum_billable_metric, :recurring, organization:))
+        end
+
+        it "still announces the recovery, because its window never restarted" do
+          expect(result).to be_success
+
+          resolved = alert.all_triggered_alerts.where(kind: :resolved).sole
+          expect(resolved.crossed_thresholds.map { it["value"] }).to eq(%w[20.0])
+          expect(resolved.current_value).to eq(15)
+        end
+      end
+
+      context "when the alert watches one non-recurring billable metric" do
+        let(:billable_metric) { create(:sum_billable_metric, organization:) }
+        let(:charge) { create(:standard_charge, plan: subscription.plan, organization:, billable_metric:) }
+        let(:alert) do
+          create(:billable_metric_current_usage_amount_alert, thresholds: [10, 20], previous_value: 90, code: "roll-bm-amount",
+            last_processed_at: period_start - 1.day, organization:, billable_metric:,
+            subscription_external_id: subscription.external_id)
+        end
+        let(:current_metrics) do
+          instance_double(SubscriptionUsage, from_datetime: period_start.iso8601,
+            fees: [instance_double(Fee, charge_id: charge.id, amount_cents: 15)])
+        end
+
+        it "resets the baseline and fires what the new period crossed" do
+          recorded_before = alert.all_triggered_alerts.pluck(:id)
+          expect(result).to be_success
+
+          triggered = alert.all_triggered_alerts.where.not(id: recorded_before).sole
+          expect(triggered).to be_triggered
+          expect(triggered.crossed_thresholds.map { it["value"] }).to eq(%w[10.0])
+          expect(triggered.previous_value).to eq(0)
+        end
+      end
+
+      context "when the alert watches units of one non-recurring billable metric" do
+        let(:billable_metric) { create(:sum_billable_metric, organization:) }
+        let(:charge) { create(:standard_charge, plan: subscription.plan, organization:, billable_metric:) }
+        let(:alert) do
+          create(:billable_metric_current_usage_units_alert, thresholds: [10, 20], previous_value: 90, code: "roll-bm-units",
+            last_processed_at: period_start - 1.day, organization:, billable_metric:,
+            subscription_external_id: subscription.external_id)
+        end
+        let(:current_metrics) do
+          instance_double(SubscriptionUsage, from_datetime: period_start.iso8601,
+            fees: [instance_double(Fee, charge_id: charge.id, units: 15)])
+        end
+
+        it "resets the baseline and fires what the new period crossed" do
+          recorded_before = alert.all_triggered_alerts.pluck(:id)
+          expect(result).to be_success
+
+          triggered = alert.all_triggered_alerts.where.not(id: recorded_before).sole
+          expect(triggered).to be_triggered
+          expect(triggered.crossed_thresholds.map { it["value"] }).to eq(%w[10.0])
+          expect(triggered.previous_value).to eq(0)
+        end
+      end
+
+      context "when the alert watches one recurring billable metric" do
+        let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+        let(:alert) do
+          create(:billable_metric_current_usage_amount_alert, thresholds: [10, 20], previous_value: 90, code: "roll-bm",
+            last_processed_at: period_start - 1.day, organization:, billable_metric:,
+            subscription_external_id: subscription.external_id)
+        end
+        let(:charge) { create(:standard_charge, plan: subscription.plan, organization:, billable_metric:) }
+        let(:current_metrics) do
+          instance_double(SubscriptionUsage, from_datetime: period_start.iso8601,
+            fees: [instance_double(Fee, charge_id: charge.id, amount_cents: 90)])
+        end
+
+        it "keeps the baseline because a recurring metric never restarts" do
+          expect { result }.not_to change { alert.all_triggered_alerts.count }
+        end
+      end
+
+      context "when the alert counts lifetime usage" do
+        let(:alert) do
+          create(:lifetime_usage_amount_alert, thresholds: [10, 20], previous_value: 90, code: "roll",
+            last_processed_at: period_start - 1.day, organization:,
+            subscription_external_id: subscription.external_id)
+        end
+        let(:current_metrics) { instance_double(LifetimeUsage, total_amount_cents: 90) }
+
+        it "does not re-fire across two consecutive boundaries" do
+          expect do
+            described_class.call(alert:, alertable: subscription, current_metrics:)
+            alert.update!(last_processed_at: period_start - 1.day)
+            described_class.call(alert:, alertable: subscription, current_metrics:)
+          end.not_to change { alert.all_triggered_alerts.count }
+        end
       end
     end
 
@@ -108,10 +392,14 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
 
       it "returns success without triggering alert" do
         expect(result).to be_success
-        expect(alert.reload.last_processed_at).to be_nil
         expect(alert.previous_value).to eq 0
         expect(organization.triggered_alerts.count).to eq 0
         expect(SendWebhookJob).not_to have_been_enqueued
+      end
+
+      it "still records the evaluation time" do
+        expect(result).to be_success
+        expect(alert.reload.last_processed_at).to be_within(5.seconds).of(Time.current)
       end
     end
   end

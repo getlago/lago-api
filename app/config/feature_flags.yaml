@@ -30,6 +30,10 @@ realtime_usage:
   description: "Serve count and sum current usage from the pre-aggregated ClickHouse usage buckets instead of aggregating raw events"
   owners: ["@vincent-pochet"]
 
+charge_filters_single_scan:
+  description: "Aggregate every filter of a count or sum charge in one ClickHouse read instead of one read per filter"
+  owners: ["@jdenquin"]
+
 skip_credit_invoice_auto_payment_delay:
   description: "Trigger the auto-payment of credit invoices (wallet top-ups) immediately instead of delaying it behind a possible hosted checkout payment"
   owners: ["@brunomiguelpinto"]
@@ -37,3 +41,19 @@ skip_credit_invoice_auto_payment_delay:
 account_tree:
   description: "Enable the account tree - hierarchy based attributed usage below the customer"
   owners: ["@lovrocolic"]
+
+x402_payments:
+  description: "Enable x402 agentic payments: Coinbase CDP connections, gate checks, credit purchases and invoice payments settled in USDC"
+  owners: ["@osmarluz"]
+
+x402_reservation_counter_disabled:
+  description: "Switch off the x402 reservation counter for an organization; the gate check then applies the static per-call floor. Operated by Lago"
+  owners: ["@osmarluz"]
+
+usage_prefilter_short_cache:
+  description: "Reuse the ClickHouse pre-filter result of the current usage API for 15 seconds, bounding how often polling clients scan the events of a subscription"
+  owners: ["@jdenquin"]
+
+usage_prefilter_incremental:
+  description: "Keep the current usage pre-filter result of each subscription and only read the events ingested since, instead of every event of the billing period"
+  owners: ["@jdenquin"]

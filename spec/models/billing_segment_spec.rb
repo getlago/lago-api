@@ -32,6 +32,60 @@ RSpec.describe BillingSegment do
     end
   end
 
+  describe "Scopes" do
+    describe ".awaiting_invoicing" do
+      subject(:segments) { described_class.awaiting_invoicing }
+
+      let(:organization) { create(:organization) }
+      let(:product) { create(:product, organization:) }
+      let(:rate_card) { create(:rate_card, :advance, organization:, product:) }
+      let(:contract_rate_card) { create(:contract_rate_card, organization:, rate_card:) }
+      let(:segment) do
+        create(:billing_segment, organization:, contract_rate_card:, contract: contract_rate_card.contract,
+          customer: contract_rate_card.contract.customer, status:)
+      end
+      let(:status) { :pending }
+
+      before { segment }
+
+      it "excludes pending advance-metered segments" do
+        expect(segments).to be_empty
+      end
+
+      context "when the advance-metered segment is processing" do
+        let(:status) { :processing }
+
+        it "selects it for reconciliation" do
+          expect(segments).to eq([segment])
+        end
+      end
+
+      context "when the segment bills in arrears" do
+        let(:rate_card) { create(:rate_card, organization:, product:) }
+
+        it "selects it while pending" do
+          expect(segments).to eq([segment])
+        end
+      end
+
+      context "when the advance product is fixed" do
+        let(:product) { create(:product, :fixed, organization:) }
+
+        it "selects it while pending" do
+          expect(segments).to eq([segment])
+        end
+
+        context "when the segment is processing" do
+          let(:status) { :processing }
+
+          it "excludes it" do
+            expect(segments).to be_empty
+          end
+        end
+      end
+    end
+  end
+
   describe "validations" do
     it do
       expect(subject).to validate_presence_of(:billing_at)
@@ -107,6 +161,32 @@ RSpec.describe BillingSegment do
       it "returns the override" do
         expect(billing_segment.rate).to eq(rate_override)
       end
+    end
+  end
+
+  describe "#target_key" do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+    let(:contract) { create(:contract, organization:, customer:) }
+    let(:product) { create(:product, organization:) }
+    let(:rate_card) { create(:rate_card, organization:, product:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+    let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card:) }
+    let(:billing_segment) do
+      create(
+        :billing_segment,
+        organization:,
+        customer:,
+        contract:,
+        contract_rate_card:,
+        rate_card_rate:
+      )
+    end
+
+    it "includes the contract and product identities" do
+      expect(billing_segment.target_key).to eq(
+        "contract-#{billing_segment.contract_id}-#{billing_segment.contract_rate_card.product.target_key}"
+      )
     end
   end
 

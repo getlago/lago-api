@@ -4,39 +4,28 @@ module UsageMonitoring
   class ProcessAlertService < BaseService
     Result = BaseResult[:alert]
 
-    def initialize(alert:, current_metrics:, alertable:)
+    def initialize(alert:, current_metrics:, alertable:, expected_billable_metric_id: nil)
       @alert = alert
       @alertable = alertable
       @current_metrics = current_metrics
+      @expected_billable_metric_id = expected_billable_metric_id
       super
     end
 
     def call
       now = Time.current
-      current = alert.find_value(current_metrics)
 
-      # NOTE: If the alert is set for a billable metric which is not part of any charges of the plan
-      return result if current.nil?
+      alert.with_lock do
+        # NOTE: the caller measured usage for one metric, so a metric changed since then makes that usage
+        # unrelated to the configuration now held under the lock
+        next if stale_metric?
 
-      crossed_threshold_values = alert.find_thresholds_crossed(current)
+        # NOTE: read inside the lock so the metric selection and the thresholds come from the same configuration
+        current = alert.find_value(current_metrics)
 
-      ActiveRecord::Base.transaction do
-        if crossed_threshold_values.present?
-          triggered_alert = TriggeredAlert.create!(
-            alert:,
-            organization: alert.organization,
-            subscription:,
-            wallet:,
-            current_value: current,
-            previous_value: alert.previous_value,
-            crossed_thresholds: alert.formatted_crossed_thresholds(crossed_threshold_values),
-            triggered_at: now
-          )
+        # NOTE: current is nil if the alert is set for a billable metric which is not part of any charges of the plan
+        evaluate(current, now) unless current.nil?
 
-          after_commit { SendWebhookJob.perform_later("alert.triggered", triggered_alert) }
-        end
-
-        alert.previous_value = current
         alert.last_processed_at = now
         alert.save!
       end
@@ -47,14 +36,72 @@ module UsageMonitoring
 
     private
 
-    attr_reader :alert, :alertable, :current_metrics
+    attr_reader :alert, :alertable, :current_metrics, :expected_billable_metric_id
 
-    def subscription
-      alertable if alertable.is_a?(Subscription)
+    def stale_metric?
+      expected_billable_metric_id.present? && alert.billable_metric_id != expected_billable_metric_id
     end
 
-    def wallet
-      alertable if alertable.is_a?(Wallet)
+    def evaluate(current, now)
+      # Re-baselining discards the evidence a recovery would be measured against, so it replaces the resolution.
+      rebaselined = period_rolled_over? && alert.window_resets_each_period?(alertable)
+      alert.previous_value = 0 if rebaselined
+
+      crossed_threshold_values = alert.find_thresholds_crossed(current)
+
+      if crossed_threshold_values.present?
+        record_trigger(crossed_threshold_values, current, now)
+      elsif !rebaselined
+        record_resolution(current, now)
+      end
+
+      alert.previous_value = current
+    end
+
+    def period_rolled_over?
+      return false unless Alert::CURRENT_USAGE_TYPES.include?(alert.alert_type)
+      return false if alert.last_processed_at.nil?
+
+      # NOTE: from_datetime arrives as an ISO8601 string on the usage path, hence the parse
+      alert.last_processed_at < Time.zone.parse(current_metrics.from_datetime.to_s)
+    end
+
+    def record_trigger(crossed_threshold_values, current, now)
+      triggered_alert = TriggeredAlert.create!(
+        alert:,
+        organization: alert.organization,
+        alertable:,
+        current_value: current,
+        previous_value: alert.previous_value,
+        crossed_thresholds: alert.formatted_crossed_thresholds(crossed_threshold_values),
+        triggered_at: now
+      )
+
+      after_commit { SendWebhookJob.perform_later("alert.triggered", triggered_alert) }
+    end
+
+    def record_resolution(current, now)
+      recovered_values = alert.find_thresholds_recovered(current)
+      return if recovered_values.empty?
+
+      recorded = alert.recorded_alarm_codes
+      announced = alert.opted_in_thresholds.filter { recovered_values.include?(it.value) && recorded.include?(it.code) }
+      return if announced.empty?
+
+      resolved_alert = TriggeredAlert.create!(
+        alert:,
+        organization: alert.organization,
+        alertable:,
+        kind: :resolved,
+        current_value: current,
+        previous_value: alert.previous_value,
+        crossed_thresholds: alert.formatted_crossed_thresholds(announced.map(&:value)),
+        in_alarm_thresholds: alert.in_alarm_threshold_codes(current),
+        fully_resolved: alert.fully_resolved?(current),
+        triggered_at: now
+      )
+
+      SendWebhookJob.perform_after_commit("alert.resolved", resolved_alert)
     end
   end
 end

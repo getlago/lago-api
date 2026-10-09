@@ -48,6 +48,9 @@ Rails.application.routes.draw do
           end
         end
       end
+      # A contract is never destroyed — DELETE ends its lifecycle, the same
+      # idiom subscriptions follow.
+      delete "/contracts/:external_id", to: "contracts#terminate", constraints: {external_id: /[^\/]+/}
     end
 
     namespace :v2, module: :v1 do
@@ -64,11 +67,13 @@ Rails.application.routes.draw do
     post "moneyhash/:organization_id", to: "webhooks#moneyhash", on: :collection, as: :moneyhash
   end
 
-  namespace :admin do
-    resources :memberships, only: %i[create]
-    resources :organizations, only: %i[update create]
-    resources :invoices do
-      post :regenerate, on: :member
+  if Rails.env.local?
+    namespace :admin do
+      resources :memberships, only: %i[create]
+      resources :organizations, only: %i[update create]
+      resources :invoices do
+        post :regenerate, on: :member
+      end
     end
   end
 

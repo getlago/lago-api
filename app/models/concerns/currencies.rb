@@ -123,6 +123,7 @@ module Currencies
     SOS: "Somali Shilling",
     SRD: "Surinamese Dollar",
     STD: "São Tomé and Príncipe Dobra",
+    SYP: "Syrian Pound",
     SZL: "Swazi Lilangeni",
     THB: "Thai Baht",
     TJS: "Tajikistani Somoni",

@@ -18,6 +18,7 @@ RSpec.describe Mutations::Contracts::Create do
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
   let(:catalog_plan) { create(:catalog_plan, organization:) }
+  let(:uuid_pattern) { /\A\h{8}-\h{4}-\h{4}-\h{4}-\h{12}\z/ }
 
   let(:input) do
     {
@@ -32,6 +33,8 @@ RSpec.describe Mutations::Contracts::Create do
       mutation($input: CreateContractInput!) {
         createContract(input: $input) {
           id externalId status billingTime
+          selectedInvoiceCustomSections { id }
+          skipInvoiceCustomSections
           plan { id }
           appliedRateCards { id }
           appliedRateCardsCount
@@ -55,6 +58,18 @@ RSpec.describe Mutations::Contracts::Create do
     expect(result_data["billingTime"]).to eq("calendar")
     expect(result_data["plan"]["id"]).to eq(catalog_plan.id)
     expect(result_data["appliedRateCardsCount"]).to eq(1)
+  end
+
+  context "with invoice custom sections" do
+    let(:section) { create(:invoice_custom_section, organization:) }
+    let(:input) { super().merge(invoiceCustomSection: {invoiceCustomSectionIds: [section.id]}) }
+
+    it "attaches the sections to the contract" do
+      result_data = execution["data"]["createContract"]
+
+      expect(result_data["selectedInvoiceCustomSections"].map { it["id"] }).to eq([section.id])
+      expect(result_data["skipInvoiceCustomSections"]).to be(false)
+    end
   end
 
   context "without a plan" do
@@ -81,6 +96,33 @@ RSpec.describe Mutations::Contracts::Create do
 
     it "returns a validation error" do
       expect_unprocessable_entity(execution)
+    end
+  end
+
+  context "without an external id" do
+    let(:input) { super().except(:externalId) }
+
+    it "generates one server-side and persists it" do
+      result_data = execution["data"]["createContract"]
+
+      expect(result_data["externalId"]).to match(uuid_pattern)
+      expect(Contract.find(result_data["id"]).external_id).to eq(result_data["externalId"])
+    end
+  end
+
+  context "with a blank external id" do
+    let(:input) { super().merge(externalId: "") }
+
+    it "treats it as omitted and generates one" do
+      expect(execution["data"]["createContract"]["externalId"]).to match(uuid_pattern)
+    end
+  end
+
+  context "with a whitespace-only external id" do
+    let(:input) { super().merge(externalId: "  ") }
+
+    it "treats it as omitted and generates one" do
+      expect(execution["data"]["createContract"]["externalId"]).to match(uuid_pattern)
     end
   end
 end

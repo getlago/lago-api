@@ -2,8 +2,8 @@
 
 module Api
   module V2
-    class ContractsController < Api::BaseController
-      include Api::RequiresProductCatalog
+    class ContractsController < Api::V2::BaseController
+      cursor_paginated_index(Contract)
 
       def create
         result = ::Contracts::CreateService.call(
@@ -33,8 +33,22 @@ module Api
         end
       end
 
+      # A contract is never destroyed: DELETE ends its lifecycle. An active
+      # contract is terminated, a pending one canceled — the service decides.
+      def terminate
+        contract = current_organization.contracts.terminatable_by_external_id(params[:external_id])
+
+        result = ::Contracts::TerminateService.call(contract:)
+
+        if result.success?
+          render_contract(result.contract)
+        else
+          render_error_response(result)
+        end
+      end
+
       def index
-        filters = params.permit(:plan_code, :external_customer_id, :external_id)
+        filters = params.permit(:plan_code, :external_customer_id, :external_id, :has_rate_overrides, billing_entity_ids: [])
         # Accept both ?status=pending and ?status[]=pending — strong params
         # would silently drop the scalar form and hand back active contracts
         # to a caller who believes they filtered.
@@ -43,28 +57,26 @@ module Api
 
         result = ::ContractsQuery.call(
           organization: current_organization,
-          pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
-          },
-          filters:
+          pagination: cursor,
+          filters:,
+          search_term: params[:search_term]
         )
 
         if result.success?
-          contracts = result.contracts.includes(:catalog_plan, :customer)
+          page = ::CursorPagination::Page.new(records: result.contracts.includes(:catalog_plan, customer: :billing_entity), cursor:)
 
           # One grouped query instead of one COUNT per row in the serializer.
-          applied_rate_cards_counts = ContractRateCard.current_and_scheduled
-            .where(contract_id: contracts.map(&:id))
+          applied_rate_cards_counts = ContractRateCard
+            .where(contract_id: page.records.map(&:id))
             .group(:contract_id)
             .count
 
           render(
             json: ::CollectionSerializer.new(
-              contracts,
+              page.records,
               ::V2::ContractSerializer,
               collection_name: "contracts",
-              meta: pagination_metadata(contracts),
+              meta: page.meta,
               applied_rate_cards_counts:
             )
           )
@@ -92,7 +104,7 @@ module Api
           json: ::V2::ContractSerializer.new(
             contract,
             root_name: "contract",
-            includes: %i[applied_rate_cards]
+            includes: %i[applied_rate_cards applied_invoice_custom_sections]
           )
         )
       end
@@ -118,12 +130,16 @@ module Api
           :billing_time,
           :billing_anchor_date,
           :started_at,
-          :ended_at
+          :ended_at,
+          :consolidate_invoice,
+          :purchase_order_number,
+          invoice_custom_section: [:skip_invoice_custom_sections, {invoice_custom_section_codes: []}]
         )
       end
 
       # external_customer_id and external_id are set at creation and address the
-      # contract; the rest are the editable authoring fields.
+      # contract. Contracts::UpdateService decides which of the rest may change
+      # for the contract's status.
       def update_params
         params.require(:contract).permit(
           :name,
@@ -131,12 +147,15 @@ module Api
           :billing_time,
           :billing_anchor_date,
           :started_at,
-          :ended_at
+          :ended_at,
+          :consolidate_invoice,
+          :purchase_order_number,
+          invoice_custom_section: [:skip_invoice_custom_sections, {invoice_custom_section_codes: []}]
         )
       end
 
       def render_contract(contract)
-        render(json: ::V2::ContractSerializer.new(contract, root_name: "contract", includes: %i[applied_rate_cards]))
+        render(json: ::V2::ContractSerializer.new(contract, root_name: "contract", includes: %i[applied_rate_cards applied_invoice_custom_sections]))
       end
 
       def resource_name

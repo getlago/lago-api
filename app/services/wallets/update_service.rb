@@ -20,10 +20,12 @@ module Wallets
     def call
       return result.not_found_failure!(resource: "wallet") unless wallet
       return result.single_validation_failure!(field: :wallet_id, error_code: "wallet_is_terminated") if wallet.terminated?
+      return result.forbidden_failure! if connections_requested? && organization_flag_disabled?(:multi_connection)
       return result unless valid_expiration_at?(expiration_at: params[:expiration_at])
       return result unless valid_recurring_transaction_rules?
       return result unless valid_limitations?
       return result unless valid_payment_method?
+      return result unless valid_connections?
 
       if billing_entity_param_sent?
         if billing_entity_value_provided? && billing_entity.nil?
@@ -78,6 +80,8 @@ module Wallets
         end
 
         InvoiceCustomSections::AttachToResourceService.call!(resource: wallet, params:)
+
+        BillingObjectConnections::AttachToResourceService.call!(resource: wallet, params:) if connections_requested?
         SendWebhookJob.perform_after_commit("wallet.updated", wallet)
       end
 
@@ -132,6 +136,15 @@ module Wallets
     def valid_payment_method?
       result.payment_method = payment_method
       PaymentMethods::ValidateService.new(result, **params).valid?
+    end
+
+    def valid_connections?
+      validator = BillingObjectConnections::ValidateService.new(result, **params)
+      return true if validator.valid?
+
+      result.validation_failure!(errors: {connections: validator.error_codes})
+
+      false
     end
 
     def process_billable_metrics
@@ -214,6 +227,16 @@ module Wallets
 
     def organization_flag_enabled?(flag)
       wallet.customer.organization.feature_flag_enabled?(flag)
+    end
+
+    def organization_flag_disabled?(flag)
+      !organization_flag_enabled?(flag)
+    end
+
+    def connections_requested?
+      return true if params[:connections].present?
+
+      Array(params[:recurring_transaction_rules]).any? { |rule| rule[:connections].present? }
     end
 
     def billing_entity_param_sent?

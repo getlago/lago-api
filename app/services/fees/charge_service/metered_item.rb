@@ -2,20 +2,29 @@
 
 module Fees
   class ChargeService
-    MeteredItem = Data.define(:source) do
-      def self.from_charge(charge:, boundaries:, charge_filter: nil, properties: nil)
+    MeteredItem = Data.define(:source, :event) do
+      def initialize(source:, event: nil)
+        if event && !event.is_a?(Events::Common)
+          raise ArgumentError, "event must be wrapped in Events::Common"
+        end
+
+        super
+      end
+
+      def self.from_charge(charge:, boundaries:, charge_filter: nil, properties: nil, event: nil)
         new(
           source: Sources::Charge.new(
             charge:,
             boundaries:,
             charge_filter:,
             properties_override: properties
-          )
+          ),
+          event:
         )
       end
 
-      def self.from_billing_segment(billing_segment)
-        new(source: Sources::BillingSegment.new(billing_segment:))
+      def self.from_billing_segment(billing_segment:, product_filter: nil, event: nil)
+        new(source: Sources::BillingSegment.new(billing_segment:, product_filter:), event:)
       end
 
       delegate :charge,
@@ -38,28 +47,53 @@ module Fees
         :pay_in_advance?,
         :prorated?,
         :invoiceable?,
+        :regroup_paid_fees_invoice?,
+        :display_on_invoice?,
         :applied_pricing_unit,
         to: :source
 
       delegate :filters, to: :invoiceable
+      delegate :charge_model, to: :pricing_structure
 
-      %i[billing_segment charge_filter product_filter contract rate_card_rate rate_override].each do |attribute|
+      %i[billing_segment charge_filter product_filter contract contract_rate_card rate_card_rate rate_override].each do |attribute|
         define_method(attribute) do
           source.public_send(attribute) if source.respond_to?(attribute)
         end
       end
 
       def dynamic?
-        pricing_structure.charge_model == "dynamic"
+        charge_model == "dynamic"
+      end
+
+      def graduated?
+        charge_model == "graduated"
+      end
+
+      def percentage?
+        charge_model == "percentage"
+      end
+
+      def graduated_percentage?
+        charge_model == "graduated_percentage"
       end
 
       def filter_id
         selected_filter&.id
       end
 
-      # The source determines which buckets have pricing, independently of the matching filter set.
+      # Charge sources resolve the event's matching filter before selecting the bucket.
       def pricing_buckets
-        source.pricing_buckets.map { |bucket| with(source: bucket) }
+        source.pricing_buckets(event:).map { |bucket| with(source: bucket) }
+      end
+
+      # The window an aggregation runs on, also the one the event store provider decides from.
+      def aggregation_boundaries
+        {
+          from_datetime: boundaries.charges_from_datetime,
+          to_datetime: boundaries.charges_to_datetime,
+          charges_duration: boundaries.charges_duration,
+          max_timestamp: boundaries.max_timestamp
+        }
       end
 
       def aggregation_options(current_usage:)
@@ -71,6 +105,23 @@ module Fees
         }
       end
 
+      def grouped_by_values
+        return {} unless event
+
+        event_properties = event.properties || {}
+        grouped_by_values = pricing_group_keys.index_with { |key| event_properties[key] }
+
+        if charge&.accepts_target_wallet? && grouped_by_values[::Charge::EVENT_TARGET_WALLET_CODE].blank?
+          grouped_by_values.delete(::Charge::EVENT_TARGET_WALLET_CODE)
+        end
+
+        grouped_by_values
+      end
+
+      def with_event(event:)
+        with(event:)
+      end
+
       def with_filter(filter, **options)
         with(source: source.with_filter(filter, **options))
       end
@@ -80,7 +131,7 @@ module Fees
       end
 
       def filtered_for_charge_boundaries
-        properties = boundaries.to_h
+        properties = billing_segment ? boundaries.to_contract_fee_properties : boundaries.to_h
         properties["fixed_charges_from_datetime"] = nil
         properties["fixed_charges_to_datetime"] = nil
         properties["fixed_charges_duration"] = nil

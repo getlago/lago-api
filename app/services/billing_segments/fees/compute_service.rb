@@ -28,6 +28,8 @@ module BillingSegments
       def fee
         @fee ||= Fee.new(
           organization: billing_segment.organization,
+          contract: billing_segment.contract,
+          contract_rate_card:,
           invoiceable: product,
           fee_type: :product,
           rate_card_rate:,
@@ -41,7 +43,7 @@ module BillingSegments
           precise_amount_cents: amount.precise_amount_cents,
           amount_details: charge_model_result.amount_details,
           pricing_unit_usage: amount.pricing_unit_usage,
-          properties: boundaries.to_h.merge("billing_segment_id" => billing_segment.id)
+          properties: boundaries.to_contract_fee_properties
         )
       end
 

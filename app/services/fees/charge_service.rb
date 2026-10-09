@@ -10,6 +10,7 @@ module Fees
       billing_context:,
       cache_middleware: nil,
       filtered_aggregations: nil,
+      provider: nil,
       options: nil,
       plan: nil,
       customer: nil
@@ -17,6 +18,7 @@ module Fees
       @invoice = invoice
       @metered_item = metered_item
       @billing_context = billing_context
+      @provider = provider
       @options = options || Options.default
       @plan = plan
       @customer = customer
@@ -121,6 +123,8 @@ module Fees
     #       is hydrated in memory instead. Scoped to current usage: on invoicing, adjusted fees
     #       on draft invoices can target filters without any usage.
     #       Recurring metrics always aggregate as usage carries over from previous periods.
+    #       A charge served from the usage buckets is pre-filtered from those same buckets rather
+    #       than from the events store, so the list cannot lag the units it gates.
     def skip_unused_filter?(selected_metered_item)
       return false unless options.current_usage?
       return false if filtered_aggregations.nil?
@@ -131,7 +135,11 @@ module Fees
 
     def compute_fees_with_cache(selected_metered_item:)
       if cache_middleware
-        cache_middleware.call(charge_filter: selected_metered_item.charge_filter) do
+        cache_middleware.call(
+          charge_filter: selected_metered_item.charge_filter,
+          # Precomputed usage is already fresh, caching it would put back the staleness it removes.
+          bypass: precomputed?(selected_metered_item:)
+        ) do
           fees = compute_fees(selected_metered_item:)
           if fees.nil?
             return
@@ -188,8 +196,7 @@ module Fees
       charge_model_result = ChargeModels::Factory.new_instance(
         pricing_structure: selected_metered_item.pricing_structure,
         aggregation_result: zero_aggregation,
-        period_ratio: selected_metered_item.elapsed_period_ratio,
-        calculate_projected_usage: options.calculate_projected_usage
+        period_ratio: selected_metered_item.elapsed_period_ratio
       ).apply
 
       fees_from_charge_model_result(charge_model_result, selected_metered_item:, breakdowns_by_group: {})
@@ -297,6 +304,8 @@ module Fees
         organization_id: billing_context.organization_id,
         billing_entity_id: billing_context.applicable_billing_entity_id,
         subscription:,
+        contract: selected_metered_item.contract,
+        contract_rate_card: selected_metered_item.contract_rate_card,
         # A segment's product can have an optional legacy charge (including discarded charges).
         # TODO: Decide whether to assign that charge here; segment-backed fees currently receive nil.
         charge: selected_metered_item.billing_segment ? nil : selected_metered_item.charge,
@@ -313,8 +322,7 @@ module Fees
         product_filter: selected_metered_item.product_filter,
         units:,
         total_aggregated_units: amount_result.total_aggregated_units || units,
-        # TODO: Review which fee properties billing segments should expose.
-        properties: selected_metered_item.billing_segment ? {} : selected_metered_item.filtered_for_charge_boundaries,
+        properties: selected_metered_item.filtered_for_charge_boundaries,
         events_count: amount_result.count,
         payment_status: :pending,
         taxes_amount_cents: 0,
@@ -407,16 +415,40 @@ module Fees
       ChargeModels::Factory.new_instance(
         pricing_structure: selected_metered_item.pricing_structure,
         aggregation_result:,
-        period_ratio: selected_metered_item.elapsed_period_ratio,
-        calculate_projected_usage: options.calculate_projected_usage
+        period_ratio: selected_metered_item.elapsed_period_ratio
       ).apply
     end
 
     def already_billed?
-      # BillingSegment persistence is the source of truth for billing state.
-      # TODO: Review this fee-level idempotency bypass once segment processing is finalized.
-      return false if metered_item.billing_segment
+      if metered_item.billing_segment
+        already_billed_segment?
+      else
+        already_billed_charge?
+      end
+    end
 
+    def already_billed_segment?
+      return false if options.invoice_preview?
+
+      fees = if invoice
+        invoice.fees
+      else
+        Fee.where(invoice_id: nil, contract_id: metered_item.billing_segment.contract_id)
+      end
+
+      existing_fees = fees.matching_contract_period(
+        contract_rate_card_id: metered_item.billing_segment.contract_rate_card_id,
+        from_datetime: metered_item.boundaries.charges_from_datetime,
+        to_datetime: metered_item.boundaries.charges_to_datetime
+      ).to_a
+
+      return false if existing_fees.empty?
+
+      result.fees = existing_fees
+      true
+    end
+
+    def already_billed_charge?
       existing_fees = if invoice
         invoice.fees.where(charge_id: metered_item.charge.id, subscription_id: billing_context.subscription_id)
       else
@@ -438,7 +470,26 @@ module Fees
       true
     end
 
+    # The provider is asked first, down to the per-charge gates: building the aggregator and its
+    # store is wasted work for a charge the buckets could never answer, and this runs before the
+    # charge cache is even read.
+    def precomputed?(selected_metered_item:)
+      return false unless provider.may_precompute_charge?(
+        metered_item: selected_metered_item,
+        boundaries: selected_metered_item.aggregation_boundaries
+      )
+
+      aggregator(selected_metered_item:).precomputed?
+    end
+
+    # One instance per pricing bucket, shared by the cache bypass, the aggregation and the
+    # zero-units hydration, so the three cannot disagree on where the units come from.
     def aggregator(selected_metered_item:)
+      @aggregators ||= {}
+      @aggregators[selected_metered_item] ||= build_aggregator(selected_metered_item)
+    end
+
+    def build_aggregator(selected_metered_item)
       aggregate = true
       aggregate = filtered_aggregations.include?(selected_metered_item.filter_id) unless filtered_aggregations.nil?
 
@@ -446,14 +497,30 @@ module Fees
         metered_item: selected_metered_item,
         current_usage: options.current_usage?,
         billing_context:,
-        boundaries: {
-          from_datetime: selected_metered_item.boundaries.charges_from_datetime,
-          to_datetime: selected_metered_item.boundaries.charges_to_datetime,
-          charges_duration: selected_metered_item.boundaries.charges_duration,
-          max_timestamp: selected_metered_item.boundaries.max_timestamp
-        },
+        provider:,
+        boundaries: selected_metered_item.aggregation_boundaries,
         filters: aggregation_filters(selected_metered_item:, bypass_aggregation: !aggregate),
-        bypass_aggregation: !aggregate
+        bypass_aggregation: !aggregate,
+        aggregated_filter_ids: aggregated_filter_ids(selected_metered_item)
+      )
+    end
+
+    # The filters whose aggregation is not bypassed, which the events store reads together when it
+    # can. A recurring metric aggregates every filter, its usage carrying over from previous periods.
+    def aggregated_filter_ids(selected_metered_item)
+      return if filtered_aggregations.nil?
+      return if selected_metered_item.billable_metric.recurring?
+
+      filtered_aggregations
+    end
+
+    # Callers that run one provider for the whole computation pass theirs; the others get one
+    # scoped to this single charge.
+    def provider
+      @provider ||= Events::Stores::Provider.new(
+        organization: billing_context.organization,
+        billing_context:,
+        usage_filters: options.usage_filters
       )
     end
 

@@ -51,6 +51,22 @@ RSpec.describe Resolvers::CustomerPortal::WalletsResolver do
     expect(wallet_item["paidTopUpMinCredits"]).to eq("10")
   end
 
+  context "with several wallets" do
+    let(:wallet) { create(:wallet, organization:, customer:, priority: 10, created_at: 1.day.ago) }
+    let!(:wallet_expiring) { create(:wallet, organization:, customer:, priority: 10, expiration_at: 1.month.from_now) }
+    let!(:wallet_top_priority) { create(:wallet, organization:, customer:, priority: 1) }
+
+    it "returns wallets in application order" do
+      result = execute_graphql(
+        customer_portal_user: customer,
+        query:
+      )
+
+      ids = result["data"]["customerPortalWallets"]["collection"].map { |w| w["id"] }
+      expect(ids).to eq([wallet_top_priority.id, wallet_expiring.id, wallet.id])
+    end
+  end
+
   context "without customer portal user" do
     it "returns an error" do
       result = execute_graphql(

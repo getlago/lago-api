@@ -2,6 +2,8 @@
 
 module ChargeModels
   class GraduatedService < ChargeModels::BaseService
+    include AdjacentRanges
+
     protected
 
     def ranges
@@ -11,18 +13,13 @@ module ChargeModels
     def amount_details
       {
         graduated_ranges: ranges.each_with_object([]) do |range, amounts|
-          amounts << ChargeModels::AmountDetails::RangeGraduatedService.call(range:, total_units: units, adjacent_model: adjacent_ranges?)
-          break amounts if range[:to_value].nil? || range[:to_value] >= units
+          amounts << ChargeModels::AmountDetails::RangeGraduatedService.call(
+            range:, total_units: tier_units, adjacent_model: adjacent_ranges?, proration_ratio: tier_proration_ratio
+          )
+
+          break amounts if range[:to_value].nil? || range[:to_value] >= tier_units
         end
       }
-    end
-
-    def adjacent_ranges?
-      return false if ranges.size < 2
-
-      ranges.each_cons(2).all? do |prev, curr|
-        BigDecimal(curr[:from_value].to_s) == BigDecimal((prev[:to_value] || 0).to_s)
-      end
     end
 
     def compute_amount
@@ -34,12 +31,12 @@ module ChargeModels
     end
 
     def compute_projected_amount
-      return BigDecimal("0") if projected_units.zero?
+      return BigDecimal(0) if projected_units.zero?
 
       remaining_units_to_price = projected_units
-      total_amount = BigDecimal("0")
+      total_amount = BigDecimal(0)
 
-      priced_units_count = BigDecimal("0")
+      priced_units_count = BigDecimal(0)
 
       ranges.each do |range|
         range_to = range[:to_value] ? BigDecimal(range[:to_value].to_s) : Float::INFINITY
@@ -65,6 +62,23 @@ module ChargeModels
       return 0 if total_units.zero?
 
       compute_amount / total_units
+    end
+
+    private
+
+    def tier_units
+      @tier_units ||= if pricing_structure.prorated_product_catalog?
+        aggregation_result.full_units_number || units
+      else
+        units
+      end
+    end
+
+    def tier_proration_ratio
+      return 1 unless pricing_structure.prorated_product_catalog?
+      return 1 if tier_units.zero?
+
+      units / tier_units.to_d
     end
   end
 end

@@ -35,7 +35,10 @@ RSpec.describe Contract do
       expect(contract).to belong_to(:payment_method).optional
       expect(contract).to have_many(:applied_rate_cards).class_name("ContractRateCard")
       expect(contract).to have_many(:billing_segments)
+      expect(contract).to have_many(:fees)
       expect(contract).to have_many(:invoices).through(:billing_segments)
+      expect(contract).to have_many(:applied_invoice_custom_sections).class_name("Contract::AppliedInvoiceCustomSection").dependent(:destroy)
+      expect(contract).to have_many(:selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section)
     end
 
     it "resolves a discarded customer and catalog plan" do
@@ -225,14 +228,6 @@ RSpec.describe Contract do
     end
   end
 
-  describe "#edit_error_code" do
-    it "is nil while pending and contract_locked once no longer editable" do
-      expect(build(:contract, :pending).edit_error_code).to be_nil
-      expect(build(:contract, status: :active).edit_error_code).to eq("contract_locked")
-      expect(build(:contract, :terminated).edit_error_code).to eq("contract_locked")
-    end
-  end
-
   describe "#currency" do
     let(:organization) { create(:organization) }
     let(:customer) { create(:customer, organization:, currency: "USD") }
@@ -274,6 +269,43 @@ RSpec.describe Contract do
   end
 
   describe "Scopes" do
+    describe ".due_for_activation" do
+      let(:timestamp) { Time.zone.parse("2026-09-30T00:00:00Z") }
+      let(:due) { create(:contract, :pending, started_at: timestamp) }
+      let(:not_yet) { create(:contract, :pending, started_at: timestamp + 1.second) }
+      let(:active) { create(:contract, started_at: timestamp - 1.day) }
+
+      before do
+        due
+        not_yet
+        active
+      end
+
+      it "returns the pending contracts whose start has arrived" do
+        expect(described_class.due_for_activation(timestamp)).to eq([due])
+      end
+
+      context "with sequential scans disabled" do
+        around do |example|
+          ActiveRecord::Base.connection.execute("SET enable_seqscan = off")
+          example.run
+        ensure
+          ActiveRecord::Base.connection.execute("SET enable_seqscan = on")
+        end
+
+        # Fresh statistics: without them the planner costs every partial index on
+        # status alike and may settle on the live external id one.
+        before { ActiveRecord::Base.connection.execute("ANALYZE contracts") }
+
+        # The relation the activation clock batches over.
+        it "reads the pending start index" do
+          relation = described_class.due_for_activation(timestamp).joins(:customer).where(customers: {deleted_at: nil})
+
+          expect(relation.order(:id).limit(1000).explain.inspect).to include("index_contracts_on_started_at_pending")
+        end
+      end
+    end
+
     describe ".live" do
       it "returns only pending and active contracts" do
         pending = create(:contract, :pending)
@@ -307,6 +339,31 @@ RSpec.describe Contract do
 
         expect(organization.contracts.live_by_external_id("reused")).to eq(pending)
         expect(active.reload.status).to eq("active")
+      end
+    end
+
+    describe ".terminatable_by_external_id" do
+      let(:organization) { create(:organization) }
+
+      it "resolves to the live contract, ignoring terminated siblings" do
+        create(:contract, :terminated, organization:, external_id: "reused", started_at: 2.months.ago)
+        live = create(:contract, :pending, organization:, external_id: "reused")
+
+        expect(organization.contracts.terminatable_by_external_id("reused")).to eq(live)
+      end
+
+      it "returns nil when only historical contracts share the id" do
+        create(:contract, :terminated, organization:, external_id: "gone")
+
+        expect(organization.contracts.terminatable_by_external_id("gone")).to be_nil
+      end
+
+      it "prefers the active contract over its pending replacement" do
+        active = create(:contract, organization:, external_id: "reused", started_at: 1.month.ago)
+        pending = create(:contract, :pending, organization:, external_id: "reused")
+
+        expect(organization.contracts.terminatable_by_external_id("reused")).to eq(active)
+        expect(pending.reload.status).to eq("pending")
       end
     end
   end

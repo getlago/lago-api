@@ -19,7 +19,7 @@ module Billing
       :organization,
       :organization_id,
       :customer,
-      :plan,
+      :purchase_order_number,
       :started_at,
       :terminated_at,
       :terminated?,
@@ -27,6 +27,8 @@ module Billing
       :date_diff_with_timezone,
       :calendar?,
       :anniversary?,
+      :fees,
+      :active?,
       to: :record
 
     def subscription_id
@@ -37,6 +39,24 @@ module Billing
 
     def contract_id
       contract&.id
+    end
+
+    def currency
+      return subscription.plan.amount_currency if subscription?
+
+      contract.currency
+    end
+
+    def applicable_billing_entity
+      return record.applicable_billing_entity if contract?
+
+      record.billing_entity || record.customer.billing_entity
+    end
+
+    def plan_id
+      return record.plan_id if subscription?
+
+      nil
     end
 
     def subscription
@@ -105,18 +125,6 @@ module Billing
       return record.downgraded? if subscription?
 
       raise_contract_context_not_supported(:downgraded?)
-    end
-
-    def charges_duration_at(billing_at)
-      unless subscription?
-        raise_contract_context_not_supported(:charges_duration_at)
-      end
-
-      Subscriptions::DatesService.new_instance(
-        record,
-        billing_at,
-        current_usage: terminated? && upgraded?
-      ).charges_duration_in_days
     end
 
     private

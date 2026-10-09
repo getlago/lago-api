@@ -4,6 +4,8 @@ module Webhooks
   class SendHttpService < ::BaseService
     Result = BaseResult
 
+    MAX_STORED_RESPONSE_BYTES = 64.kilobytes
+
     def initialize(webhook:)
       @webhook = webhook
 
@@ -19,6 +21,7 @@ module Webhooks
 
       result
     rescue LagoHttpClient::HttpError,
+      LagoHttpClient::BlockedAddressError,
       Net::OpenTimeout,
       Net::ReadTimeout,
       Net::HTTPBadResponse,
@@ -46,7 +49,8 @@ module Webhooks
         webhook.webhook_endpoint.webhook_url,
         read_timeout: timeout_seconds,
         write_timeout: timeout_seconds,
-        open_timeout: timeout_seconds
+        open_timeout: timeout_seconds,
+        block_private_addresses: true
       )
     end
 
@@ -60,7 +64,7 @@ module Webhooks
 
     def mark_webhook_as_succeeded(response)
       webhook.http_status = response&.code&.to_i
-      webhook.store_response(response&.body.presence || {})
+      webhook.store_response(sanitize_body(response&.body).presence || {})
       webhook.status = :succeeded
       webhook.save!
     end
@@ -68,14 +72,24 @@ module Webhooks
     def mark_webhook_as_unsuccessful(error:, retrying:)
       if error.is_a?(LagoHttpClient::HttpError)
         webhook.http_status = error.error_code
-        webhook.store_response(error.error_body)
+        webhook.store_response(sanitize_body(error.error_body))
+      elsif error.is_a?(LagoHttpClient::BlockedAddressError)
+        webhook.store_response("Destination address is not allowed")
       else
-        webhook.store_response(error.message)
+        # The raw message would tell a refused port from a timeout, a port-scan oracle.
+        webhook.store_response("Connection failed")
       end
       webhook.retries += 1
       webhook.last_retried_at = Time.zone.now
       webhook.status = retrying ? :retrying : :failed
       webhook.save!
+    end
+
+    # Net::HTTP bodies are binary, so invalid UTF-8 would fail the JSON storage after the endpoint got the webhook.
+    def sanitize_body(body)
+      return body unless body.is_a?(String)
+
+      body.dup.force_encoding(Encoding::UTF_8).scrub("").byteslice(0, MAX_STORED_RESPONSE_BYTES).scrub("")
     end
 
     def wait_value

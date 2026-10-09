@@ -16,7 +16,7 @@ module Invoices
       # if this has already been set to false, we can skip the job
       return unless invoice.ready_to_be_refreshed?
 
-      ::Invoices::RefreshDraftService.call(invoice:)
+      ::Invoices::RefreshDraftService.call!(invoice:)
     end
   end
 end

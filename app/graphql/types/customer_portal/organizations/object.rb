@@ -15,6 +15,10 @@ module Types
         field :name, String, null: false
         field :premium_integrations, [Types::Integrations::PremiumIntegrationTypeEnum], null: false
         field :timezone, Types::TimezoneEnum, null: true
+
+        def logo_url
+          context[:customer_portal_user].billing_entity.logo_url || object.logo_url
+        end
       end
     end
   end

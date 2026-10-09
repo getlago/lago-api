@@ -4,21 +4,27 @@ module Events
   class BillingPeriodFilterService < BaseService
     Result = BaseResult[:filter_targets]
 
-    def self.for_charges!(subscription:, boundaries:, codes: nil, with_last_seen_at: true)
+    # precomputed_filters maps a charge served from the pre-aggregated usage buckets to the charge
+    # filter ids those buckets hold usage for, nil being the default bucket. Such a charge is
+    # resolved from them rather than from the events store.
+    def self.for_charges!(subscription:, boundaries:, codes: nil, with_last_seen_at: true, precomputed_filters: {}, combinations_cache_ttl: nil,
+      incremental_combinations: false)
       call!(
         resolver: BillingPeriodFilters::ChargesResolver.new(
           subscription:,
           boundaries:,
           codes:,
-          with_last_seen_at:
+          with_last_seen_at:,
+          precomputed_filters:,
+          combinations_cache_ttl:,
+          incremental_combinations:
         )
       )
     end
 
-    def self.for_billing_segments!(contract:, billing_segments:, codes: nil, with_last_seen_at: true)
+    def self.for_billing_segments!(billing_segments:, codes: nil, with_last_seen_at: true)
       call!(
         resolver: BillingPeriodFilters::BillingSegmentsResolver.new(
-          contract:,
           billing_segments:,
           codes:,
           with_last_seen_at:

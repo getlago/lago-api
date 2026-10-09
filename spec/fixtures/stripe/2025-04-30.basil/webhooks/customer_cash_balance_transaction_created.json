@@ -1,0 +1,37 @@
+{
+  "id": "evt_1RWGXCQ8iJWBZFaMVlV0UVdh",
+  "object": "event",
+  "api_version": "2025-04-30.basil",
+  "created": 1749040510,
+  "data": {
+    "object": {
+      "id": "ccsbtxn_1RWGXCQ8iJWBZFaMkO5jYqHt",
+      "object": "customer_cash_balance_transaction",
+      "created": 1749040510,
+      "currency": "eur",
+      "customer": "cus_SR8o2vcGRkVb6v",
+      "ending_balance": 10000,
+      "funded": {
+        "bank_transfer": {
+          "eu_bank_transfer": {
+            "bic": "DABAIE2D",
+            "iban_last4": "3000",
+            "sender_name": "Acme Corp"
+          },
+          "reference": "INV-0001",
+          "type": "eu_bank_transfer"
+        }
+      },
+      "livemode": false,
+      "net_amount": 10000,
+      "type": "funded"
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": null
+  },
+  "type": "customer_cash_balance_transaction.created"
+}

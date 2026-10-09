@@ -17,6 +17,7 @@ RSpec.describe Payment do
   it { is_expected.to have_many(:integration_resources) }
   it { is_expected.to have_one(:payment_receipt) }
   it { is_expected.to have_one(:invoice_settlement).with_foreign_key(:source_payment_id) }
+  it { is_expected.to have_one(:x402_settlement).class_name("X402::Settlement").inverse_of(:payment) }
   it { is_expected.to belong_to(:payable) }
   it { is_expected.to belong_to(:organization) }
   it { is_expected.to belong_to(:customer) }
@@ -328,6 +329,24 @@ RSpec.describe Payment do
       context "when payment type is provider" do
         context "when reference is present" do
           let(:reference) { "123" }
+
+          it "adds an error" do
+            expect(errors.where(:reference, :present)).to be_present
+          end
+        end
+
+        context "when reference is not present" do
+          it "does not add an error" do
+            expect(errors.where(:reference, :present)).not_to be_present
+          end
+        end
+      end
+
+      context "when payment type is x402" do
+        let(:payment_type) { "x402" }
+
+        context "when reference is present" do
+          let(:reference) { "0xabc" }
 
           it "adds an error" do
             expect(errors.where(:reference, :present)).to be_present

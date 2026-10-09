@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Api::V1::UsageAttributionTypesController do
   let(:organization) { create(:organization, feature_flags: ["account_tree"]) }
   let(:department) do
-    create(:usage_attribution_type, organization:, code: "department", name: "Department", attribution_key: "department_id")
+    create(:usage_attribution_type, organization:, code: "department", name: "Department", attribution_keys: ["department_id"])
   end
 
   describe "POST /api/v1/usage_attribution_types" do
@@ -16,7 +16,8 @@ RSpec.describe Api::V1::UsageAttributionTypesController do
         usage_attribution_type: {
           code: "user",
           name: "User",
-          attribution_key: "user_id",
+          description: "A person using the product",
+          attribution_keys: ["user_id"],
           role: "hierarchical"
         }
       }
@@ -30,7 +31,8 @@ RSpec.describe Api::V1::UsageAttributionTypesController do
         lago_organization_id: organization.id,
         code: "user",
         name: "User",
-        attribution_key: "user_id",
+        description: "A person using the product",
+        attribution_keys: ["user_id"],
         role: "hierarchical",
         lago_parent_id: nil,
         parent_code: nil
@@ -42,7 +44,7 @@ RSpec.describe Api::V1::UsageAttributionTypesController do
         {
           usage_attribution_type: {
             code: "user",
-            attribution_key: "user_id",
+            attribution_keys: ["user_id"],
             role: "hierarchical",
             parent_code: department.code
           }
@@ -63,7 +65,7 @@ RSpec.describe Api::V1::UsageAttributionTypesController do
         {
           usage_attribution_type: {
             code: "user",
-            attribution_key: "user_id",
+            attribution_keys: ["user_id"],
             role: "hierarchical",
             parent_code: "unknown"
           }
@@ -83,7 +85,7 @@ RSpec.describe Api::V1::UsageAttributionTypesController do
         {
           usage_attribution_type: {
             code: "user",
-            attribution_key: "user_id",
+            attribution_keys: ["user_id"],
             role: "hierarchical",
             parent_code: other_parent.code
           }
@@ -102,7 +104,7 @@ RSpec.describe Api::V1::UsageAttributionTypesController do
         {
           usage_attribution_type: {
             code: department.code,
-            attribution_key: "another_key",
+            attribution_keys: ["another_key"],
             role: "hierarchical"
           }
         }
@@ -121,7 +123,7 @@ RSpec.describe Api::V1::UsageAttributionTypesController do
         {
           usage_attribution_type: {
             code: "user",
-            attribution_key: "user_id",
+            attribution_keys: ["user_id"],
             role: "unknown"
           }
         }
@@ -161,7 +163,7 @@ RSpec.describe Api::V1::UsageAttributionTypesController do
     subject { get_with_token(organization, "/api/v1/usage_attribution_types", params) }
 
     let(:params) { {} }
-    let(:model) { create(:flat_usage_attribution_type, organization:, code: "model", attribution_key: "model_name") }
+    let(:model) { create(:flat_usage_attribution_type, organization:, code: "model", attribution_keys: ["model_name"]) }
 
     before do
       department
@@ -230,6 +232,7 @@ RSpec.describe Api::V1::UsageAttributionTypesController do
       expect(response).to have_http_status(:success)
       expect(json[:usage_attribution_type][:lago_id]).to eq(department.id)
       expect(json[:usage_attribution_type][:code]).to eq("department")
+      expect(json[:usage_attribution_type][:description]).to eq(department.description)
     end
 
     context "when the type does not exist" do
@@ -256,7 +259,7 @@ RSpec.describe Api::V1::UsageAttributionTypesController do
   describe "PUT /api/v1/usage_attribution_types/:code" do
     subject { put_with_token(organization, "/api/v1/usage_attribution_types/#{code}", params) }
 
-    let(:user) { create(:usage_attribution_type, organization:, code: "user", name: "User", attribution_key: "user_id") }
+    let(:user) { create(:usage_attribution_type, organization:, code: "user", name: "User", attribution_keys: ["user_id"]) }
     let(:code) { user.code }
     let(:params) { {usage_attribution_type: {name: "Seat"}} }
 
@@ -276,7 +279,20 @@ RSpec.describe Api::V1::UsageAttributionTypesController do
     it "leaves the untouched attributes alone" do
       subject
 
-      expect(user.reload.attribution_key).to eq("user_id")
+      expect(user.reload.attribution_keys).to eq(["user_id"])
+      expect(user.description).to be_present
+    end
+
+    context "with a description" do
+      let(:params) { {usage_attribution_type: {description: "A seat in the product"}} }
+
+      it "updates the description" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:usage_attribution_type][:description]).to eq("A seat in the product")
+        expect(user.reload.description).to eq("A seat in the product")
+      end
     end
 
     context "with a parent_code" do
@@ -292,7 +308,7 @@ RSpec.describe Api::V1::UsageAttributionTypesController do
 
     context "with a blank parent_code" do
       let(:user) do
-        create(:usage_attribution_type, organization:, code: "user", attribution_key: "user_id", parent: department)
+        create(:usage_attribution_type, organization:, code: "user", attribution_keys: ["user_id"], parent: department)
       end
       let(:params) { {usage_attribution_type: {parent_code: nil}} }
 
@@ -317,13 +333,35 @@ RSpec.describe Api::V1::UsageAttributionTypesController do
     context "when usage was already attributed to the type" do
       before { create(:usage_attribution_value, organization:, usage_attribution_type: user) }
 
-      let(:params) { {usage_attribution_type: {attribution_key: "seat_id"}} }
+      let(:params) { {usage_attribution_type: {attribution_keys: %w[user_id usr_id]}} }
 
-      it "returns a validation error" do
+      it "still updates the attribution keys" do
         subject
 
-        expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details][:attribution_key]).to eq(["usage_already_attributed"])
+        expect(response).to have_http_status(:success)
+        expect(user.reload.attribution_keys).to eq(%w[user_id usr_id])
+      end
+
+      context "when the description is submitted" do
+        let(:params) { {usage_attribution_type: {description: "A seat in the product"}} }
+
+        it "still updates the description" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(user.reload.description).to eq("A seat in the product")
+        end
+      end
+
+      context "when a frozen attribute is submitted" do
+        let(:params) { {usage_attribution_type: {code: "seat"}} }
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details][:code]).to eq(["usage_already_attributed"])
+        end
       end
     end
 

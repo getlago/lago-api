@@ -55,6 +55,7 @@ jobs:
       LAGO_KAFKA_ACTIVITY_LOGS_TOPIC: activity_logs
       LAGO_KAFKA_API_LOGS_TOPIC: api_logs
       LAGO_KAFKA_EVENTS_CHARGED_IN_ADVANCE_TOPIC: events_charged_in_advance
+      LAGO_KAFKA_REALTIME_USAGE_TRIGGERS_TOPIC: realtime_usage_triggers
       LAGO_KAFKA_SECURITY_LOGS_TOPIC: security_logs
       KNAPSACK_PRO_TEST_SUITE_TOKEN_RSPEC: ${{ secrets.KNAPSACK_PRO_TEST_SUITE_TOKEN_RSPEC }}
       KNAPSACK_PRO_CI_NODE_TOTAL: ${{ matrix.ci_node_total }}
@@ -83,6 +84,15 @@ jobs:
         run: bin/rails db:schema:load:primary
       - name: Set up Clickhouse database schema
         run: bin/rails db:migrate:clickhouse
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: false
+      - name: Install pdfcpu
+        run: |
+          go install github.com/pdfcpu/pdfcpu/cmd/pdfcpu@v0.16.1
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
       - name: Run tests
         run: |
           if [[ -z "$KNAPSACK_PRO_TEST_SUITE_TOKEN_RSPEC" ]]; then

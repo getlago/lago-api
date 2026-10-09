@@ -45,11 +45,11 @@ module UsageMonitoring
       billable_metric = find_billable_metric_from_params!
       return result unless result.success?
 
-      if params.key?(:code) && wallet_alert_code_taken?(wallet_id: alert.wallet_id, code: params[:code], alert_type: alert.alert_type, excluding_id: alert.id)
+      if params.key?(:code) && wallet_alert_code_taken?(wallet_id: alert.wallet_id, code: params[:code], excluding_id: alert.id)
         return result.single_validation_failure!(field: :code, error_code: "value_already_exist")
       end
 
-      ActiveRecord::Base.transaction do
+      alert.with_lock do
         alert.name = params[:name] if params.key?(:name)
         alert.code = params[:code] if params.key?(:code)
         alert.billable_metric = billable_metric if billable_metric
@@ -58,6 +58,7 @@ module UsageMonitoring
         if thresholds_params.present?
           alert.thresholds.delete_all
           alert.thresholds.create!(prepare_thresholds(thresholds_params, alert.organization_id))
+          seed_alarms_already_past(alert, alertable)
         end
       end
 
@@ -107,10 +108,20 @@ module UsageMonitoring
       @previous_notify_on ||= alert.thresholds.where.not(code: nil).pluck(:code, :notify_on).to_h
     end
 
+    def alertable
+      if alert.wallet_id?
+        alert.wallet
+      else
+        active_subscription
+      end
+    end
+
+    def active_subscription
+      @active_subscription ||= organization.subscriptions.active.find_by(external_id: alert.subscription_external_id)
+    end
+
     def track_subscription_activity
       return unless alert.subscription_external_id?
-      active_subscription = organization.subscriptions.active
-        .find_by(external_id: alert.subscription_external_id)
       return unless active_subscription
       return unless License.premium?
 

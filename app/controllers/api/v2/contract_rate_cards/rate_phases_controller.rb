@@ -3,9 +3,7 @@
 module Api
   module V2
     module ContractRateCards
-      class RatePhasesController < Api::BaseController
-        include Api::RequiresProductCatalog
-
+      class RatePhasesController < Api::V2::BaseController
         def index
           return not_found_error(resource: "applied_rate_card") unless contract_rate_card
 
@@ -62,7 +60,7 @@ module Api
           return @contract_rate_card if defined?(@contract_rate_card)
 
           contract = current_organization.contracts.live_by_external_id(params[:contract_external_id])
-          @contract_rate_card = contract&.applied_rate_cards&.current_and_scheduled&.joins(:rate_card)&.find_by(rate_cards: {code: params[:applied_rate_card_code]})
+          @contract_rate_card = contract&.applied_rate_cards&.joins(:rate_card)&.find_by(rate_cards: {code: params[:applied_rate_card_code]})
         end
 
         def find_rate_phase
@@ -91,8 +89,6 @@ module Api
           )
         end
 
-        # Positions are not editable on update (ordering goes through insert
-        # and delete), so update does not permit one.
         def update_params
           # Required before any wrapper inspection so a missing rate_phase key
           # stays a parameter-missing 400, not a NoMethodError.
@@ -109,7 +105,7 @@ module Api
 
         def permitted_update_params
           params.require(:rate_phase).permit(
-            :code, :name, :billing_interval_cycle_count,
+            :code, :position, :name, :billing_interval_cycle_count,
             rate_override: [
               :rate_model,
               :min_amount_cents,

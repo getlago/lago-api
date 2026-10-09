@@ -13,6 +13,10 @@ module Types
     field :activity_logs, resolver: Resolvers::ActivityLogsResolver
     field :add_on, resolver: Resolvers::AddOnResolver
     field :add_ons, resolver: Resolvers::AddOnsResolver
+    field :admin_audit_logs, resolver: Resolvers::Admin::AuditLogsResolver
+    field :admin_cs_admins, resolver: Resolvers::Admin::CsAdminsResolver
+    field :admin_organization, resolver: Resolvers::Admin::OrganizationResolver
+    field :admin_organizations, resolver: Resolvers::Admin::OrganizationsResolver
     field :ai_conversation, resolver: Resolvers::AiConversationResolver
     field :ai_conversations, resolver: Resolvers::AiConversationsResolver
     field :alert, resolver: Resolvers::Subscriptions::AlertResolver
@@ -22,6 +26,7 @@ module Types
     field :api_log, resolver: Resolvers::ApiLogResolver
     field :api_logs, resolver: Resolvers::ApiLogsResolver
     field :applied_coupons, resolver: Resolvers::AppliedCouponsResolver
+    field :attributed_usage, resolver: Resolvers::AttributedUsageResolver
     field :billable_metric, resolver: Resolvers::BillableMetricResolver
     field :billable_metrics, resolver: Resolvers::BillableMetricsResolver
     field :billing_entities, resolver: Resolvers::BillingEntitiesResolver
@@ -30,6 +35,7 @@ module Types
     field :catalog_plan, resolver: Resolvers::CatalogPlanResolver
     field :catalog_plans, resolver: Resolvers::CatalogPlansResolver
     field :contract, resolver: Resolvers::ContractResolver
+    field :contract_applied_rate_cards, resolver: Resolvers::ContractAppliedRateCardsResolver
     field :contracts, resolver: Resolvers::ContractsResolver
     field :coupon, resolver: Resolvers::CouponResolver
     field :coupons, resolver: Resolvers::CouponsResolver
@@ -121,6 +127,7 @@ module Types
     field :subscription_alerts, resolver: Resolvers::Subscriptions::AlertsResolver
     field :subscription_entitlement, resolver: Resolvers::Entitlement::SubscriptionEntitlementResolver
     field :subscription_entitlements, resolver: Resolvers::Entitlement::SubscriptionEntitlementsResolver
+    field :subscription_hourly_usage, resolver: Resolvers::Subscriptions::HourlyUsageResolver
     field :subscriptions, resolver: Resolvers::SubscriptionsResolver
     field :tax, resolver: Resolvers::TaxResolver
     field :taxes, resolver: Resolvers::TaxesResolver

@@ -66,8 +66,10 @@ module Contracts
         )
         apply_settings(contract)
         contract.save!
+        InvoiceCustomSections::AttachToResourceService.call!(resource: contract, params:)
 
         Contracts::MaterializeRateCardsService.call!(contract:) if contract.catalog_plan
+        BillingSegments::ScheduleJob.perform_after_commit(customer.id)
 
         result.contract = contract
       end

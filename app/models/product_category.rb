@@ -47,6 +47,7 @@ end
 #
 # Indexes
 #
+#  index_product_categories_by_cursor                    (organization_id,created_at DESC,id DESC) WHERE (deleted_at IS NULL)
 #  index_product_categories_on_deleted_at                (deleted_at)
 #  index_product_categories_on_organization_id           (organization_id)
 #  index_product_categories_on_organization_id_and_code  (organization_id,code) UNIQUE WHERE (deleted_at IS NULL)
