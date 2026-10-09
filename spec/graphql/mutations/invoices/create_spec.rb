@@ -45,6 +45,7 @@ RSpec.describe Mutations::Invoices::Create do
           invoiceType,
           issuingDate,
           purchaseOrderNumber,
+          paymentTerm { termType days dayOfMonth monthOffset },
           appliedTaxes { id taxCode taxRate },
           fees {
             units
@@ -132,6 +133,29 @@ RSpec.describe Mutations::Invoices::Create do
     )
 
     expect(result["data"]["createInvoice"]["purchaseOrderNumber"]).to eq("PO-123")
+  end
+
+  it "creates a one-off invoice with a payment term" do
+    result = execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      permissions: required_permission,
+      query: mutation,
+      variables: {
+        input: {
+          customerId: customer.id,
+          currency:,
+          fees:,
+          paymentTerm: {termType: "net", days: 15}
+        }
+      }
+    )
+
+    expect(result["errors"]).to be_nil
+    expect(result["data"]["createInvoice"]["paymentTerm"]).to eq(
+      "termType" => "net", "days" => 15, "dayOfMonth" => nil, "monthOffset" => nil
+    )
+    expect(Invoice.one_off.order(created_at: :desc).first.payment_term_source).to eq("invoice")
   end
 
   context "when multi_entity_billing feature flag is enabled" do
