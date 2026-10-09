@@ -193,6 +193,10 @@ module UsageMonitoring
       raise NotImplementedError
     end
 
+    def window_resets_each_period?(_alertable)
+      false
+    end
+
     private
 
     def need_billable_metric?
