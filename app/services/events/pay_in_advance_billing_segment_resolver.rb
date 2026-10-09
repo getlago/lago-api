@@ -34,17 +34,12 @@ module Events
           organization_id: organization.id
         )
         .includes(:rate_card, contract: {customer: :billing_entity})
-        .order(:effective_date, :created_at, :id)
         .to_a
 
       return [] if cards.empty?
 
       event_date = event.timestamp.in_time_zone(cards.first.contract.customer.applicable_timezone).to_date
-      selected_cards = cards.group_by { |card| [card.contract_id, card.rate_card.product_id, card.rate_card.product_filter_id] }
-        .filter_map do |_key, versions|
-          first_later_index = versions.bsearch_index { |card| card.effective_date > event_date } || versions.length
-          versions[first_later_index - 1] unless first_later_index.zero?
-        end
+      selected_cards = ContractRateCards::SelectInForceService.call!(contract_rate_cards: cards, date: event_date).contract_rate_cards
 
       # An effective arrears replacement must supersede the older advance card.
       selected_cards.select! { |card| card.rate_card.advance? }
