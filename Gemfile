@@ -10,6 +10,7 @@ gem "aasm"
 gem "activejob-uniqueness", github: "getlago/activejob-uniqueness", branch: "main", require: "active_job/uniqueness/sidekiq_patch"
 gem "redlock", "~> 2.0.6" # Used through `activejob-uniqueness`. It's pinned to 2.0.x because we patched the library to fix a bug.
 gem "active_storage_validations"
+gem "benchmark" # Bundled gem since Ruby 3.5; ActiveSupport 8.1 no longer pulls it in.
 gem "bootsnap", require: false
 gem "clockwork", require: false
 gem "parallel"

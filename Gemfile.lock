@@ -1096,6 +1096,7 @@ DEPENDENCIES
   aws-sdk-kinesis
   aws-sdk-s3
   bcrypt
+  benchmark
   bigdecimal
   bootsnap
   bullet
