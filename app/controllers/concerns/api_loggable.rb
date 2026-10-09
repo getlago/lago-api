@@ -8,6 +8,7 @@ module ApiLoggable
 
     # rubocop:disable ThreadSafety/ClassAndModuleAttributes
     class_attribute :skip_audit_logs, instance_writer: false, default: false
+    class_attribute :audit_log_filtered_params, instance_writer: false, default: [].freeze
     # rubocop:enable ThreadSafety/ClassAndModuleAttributes
   end
 
@@ -18,6 +19,10 @@ module ApiLoggable
 
     def skip_audit_logs?
       skip_audit_logs
+    end
+
+    def filter_audit_log_params!(*keys)
+      self.audit_log_filtered_params = audit_log_filtered_params + keys
     end
   end
 
@@ -31,7 +36,7 @@ module ApiLoggable
     yield
 
     begin
-      Utils::ApiLog.produce(request, response, organization: current_organization)
+      Utils::ApiLog.produce(request, response, organization: current_organization, filtered_params: audit_log_filtered_params)
     rescue => e
       Sentry.capture_exception(e) if ENV["SENTRY_DSN"].present?
       Rails.logger.error("[Audit Logs] Failed to produce API log: #{e.class} - #{e.message}")

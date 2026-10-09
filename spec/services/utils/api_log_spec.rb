@@ -68,6 +68,44 @@ RSpec.describe Utils::ApiLog do
         )
       end
 
+      context "with filtered params" do
+        let(:fake_request) do
+          instance_double(
+            "ActionDispatch::Request",
+            user_agent: "RSpec",
+            params: {x402_connection: {name: "CDP", cdp_api_key_secret: "secret"}},
+            path: "/api/v1/customers",
+            base_url: "https://lago.test",
+            method_symbol: :post,
+            request_id: "1234"
+          )
+        end
+
+        it "masks the filtered params in the request body" do
+          api_log.produce(fake_request, fake_response, organization:, filtered_params: [:cdp_api_key_secret])
+
+          expect(karafka_producer).to have_received(:produce_async).with(
+            topic: "api_logs",
+            key: "#{organization.id}--1234",
+            payload: {
+              request_id: "1234",
+              organization_id: organization.id,
+              api_key_id: api_key.id,
+              api_version: "v1",
+              client: "RSpec",
+              request_body: {x402_connection: {name: "CDP", cdp_api_key_secret: "[FILTERED]"}},
+              request_path: "/api/v1/customers",
+              request_origin: "https://lago.test",
+              http_method: :post,
+              request_response: {"success" => true},
+              http_status: 200,
+              logged_at: Time.current.iso8601[...-1],
+              created_at: Time.current.iso8601[...-1]
+            }.to_json
+          )
+        end
+      end
+
       context "when request_id is empty" do
         let(:fake_request) do
           instance_double(

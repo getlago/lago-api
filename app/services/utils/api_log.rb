@@ -12,11 +12,12 @@ module Utils
         ENV["LAGO_KAFKA_API_LOGS_TOPIC"].present?
     end
 
-    def initialize(request, response, organization:, &block)
+    def initialize(request, response, organization:, filtered_params: [], &block)
       @request = request
       @response = response
       @organization = organization
       @request_id = request.request_id.presence || SecureRandom.uuid
+      @filtered_params = filtered_params
       @block = block
     end
 
@@ -38,7 +39,7 @@ module Utils
 
     private
 
-    attr_reader :request, :response, :organization, :request_id, :block
+    attr_reader :request, :response, :organization, :request_id, :filtered_params, :block
 
     def key
       "#{organization.id}--#{request_id}"
@@ -58,7 +59,8 @@ module Utils
     def request_data
       {
         client: request.user_agent,
-        request_body: request.params.except(:controller, :action, :format),
+        request_body: ActiveSupport::ParameterFilter.new(filtered_params)
+          .filter(request.params.except(:controller, :action, :format)),
         request_path: request.path,
         request_origin: request.base_url,
         http_method: request.method_symbol
