@@ -58,12 +58,12 @@ RSpec.describe Payments::OpenDisputeService do
         expect { open_dispute_service.call }.not_to have_enqueued_job(SendWebhookJob)
       end
 
-      it "keeps the first timestamp when called twice" do
-        open_dispute_service.call
-        invoice.reload
+      context "when refunds are already blocked" do
+        let(:invoice) { create(:invoice, :refund_blocked, status: "finalized", payment_status: "succeeded") }
 
-        expect { described_class.call(payment:, payment_refund_blocked_at: Time.current) && invoice.reload }
-          .not_to change(invoice, :payment_refund_blocked_at).from(payment_refund_blocked_at)
+        it "keeps the original timestamp" do
+          expect { open_dispute_service.call && invoice.reload }.not_to change(invoice, :payment_refund_blocked_at)
+        end
       end
 
       context "when the dispute was already lost" do

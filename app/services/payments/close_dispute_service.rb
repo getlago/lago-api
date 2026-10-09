@@ -17,7 +17,7 @@ module Payments
       result.payment = payment
       invoices = payment.invoices
 
-      ActiveRecord::Base.transaction do
+      Invoice.transaction do
         invoices.each(&:mark_refund_as_unblocked!)
       end
 

@@ -2198,8 +2198,6 @@ RSpec.describe Invoice do
     context "when the invoice is a draft" do
       let(:invoice) { create(:invoice, :draft) }
 
-      # NOTE: unlike payment_dispute_lost_at, no validation blocks this. Recording an inbound
-      #       dispute must never fail.
       it "blocks refunds" do
         expect { invoice.mark_refund_as_blocked! }.to change(invoice, :payment_refund_blocked_at).from(nil)
       end

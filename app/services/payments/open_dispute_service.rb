@@ -18,10 +18,8 @@ module Payments
       result.payment = payment
       invoices = payment.invoices
 
-      ActiveRecord::Base.transaction do
+      Invoice.transaction do
         invoices.each do |invoice|
-          # NOTE: a lost dispute already blocks refunds permanently. Skipping it keeps an
-          #       out-of-order `created` event from reopening a settled dispute.
           next if invoice.payment_dispute_lost_at?
 
           invoice.mark_refund_as_blocked!(payment_refund_blocked_at)

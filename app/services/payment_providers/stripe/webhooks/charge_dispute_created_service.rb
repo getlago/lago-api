@@ -9,9 +9,7 @@ module PaymentProviders
         def call
           return result unless payment
 
-          # NOTE: `charge.dispute.created` also fires for inquiries, where stripe still accepts
-          #       refunds. `is_charge_refundable` is the only reliable signal, and it flips
-          #       through `charge.dispute.updated` when an inquiry escalates to a real dispute.
+          # NOTE: `created` also fires for inquiries, which leave the charge refundable.
           if charge_refundable?
             ::Payments::CloseDisputeService.call(payment:)
           else

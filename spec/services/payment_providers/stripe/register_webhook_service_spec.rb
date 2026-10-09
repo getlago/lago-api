@@ -21,8 +21,7 @@ RSpec.describe PaymentProviders::Stripe::RegisterWebhookService do
       stub_const("ENV", ENV.to_h.merge("LAGO_API_URL" => "https://billing.example.com"))
       stub_request(:post, "https://api.stripe.com/v1/webhook_endpoints")
         .with do |request|
-          # NOTE: webmock normalises a form-encoded array by sorting its keys as strings, so
-          #       enabled_events[10] lands between [1] and [2]. Decode it ourselves instead.
+          # NOTE: webmock sorts form-encoded array keys as strings, so [10] lands before [2].
           params = CGI.parse(request.body)
           params["url"] == [url] &&
             params["api_version"] == [expected_api_version] &&

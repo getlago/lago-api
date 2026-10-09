@@ -13,7 +13,6 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeCreatedService d
   let(:event) { ::Stripe::Event.construct_from(JSON.parse(event_json)) }
   let(:is_charge_refundable) { false }
 
-  # NOTE: by default stripe reports the same state as the event payload
   let(:current_is_charge_refundable) { is_charge_refundable }
   let(:current_disputes) do
     [{id: "dp_123456", object: "dispute", is_charge_refundable: current_is_charge_refundable}]
@@ -60,8 +59,6 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeCreatedService d
         context "when the invoice is draft" do
           let(:status) { "draft" }
 
-          # NOTE: unlike payment_dispute_lost_at, this column carries no validation so that
-          #       recording an inbound dispute can never fail.
           it "still blocks refunds on the invoice" do
             expect { service.call && payable.reload }.to change(payable, :payment_refund_blocked_at).from(nil)
           end
@@ -94,8 +91,6 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeCreatedService d
         end
 
         context "when a stale non-refundable event arrives after the dispute closed" do
-          # NOTE: the replayed payload still says the charge is not refundable, while stripe
-          #       now reports the closed dispute as refundable.
           let(:is_charge_refundable) { false }
           let(:current_is_charge_refundable) { true }
 
@@ -117,8 +112,6 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeCreatedService d
               allow(::Stripe::Dispute).to receive(:list).and_raise(error_class.new("boom"))
             end
 
-            # NOTE: HandleEventJob retries these, so propagating gets us the authoritative
-            #       state instead of acting on a payload that may be stale.
             it "propagates the error instead of using the payload" do
               expect { service.call }.to raise_error(error_class)
             end
@@ -137,7 +130,6 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeCreatedService d
               .and_raise(::Stripe::InvalidRequestError.new("no such dispute", {}))
           end
 
-          # NOTE: retrying never changes the answer, so the payload is the best we have.
           it "falls back to the event payload and blocks refunds" do
             expect { service.call && payable.reload }
               .to change(payable, :payment_refund_blocked_at).from(nil)
@@ -145,7 +137,6 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeCreatedService d
         end
 
         context "when another dispute on the payment intent still blocks refunds" do
-          # NOTE: this dispute went refundable, but a second one on the same charge did not.
           let(:is_charge_refundable) { true }
           let(:current_disputes) do
             [
@@ -196,8 +187,6 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeCreatedService d
       end
 
       context "when the dispute has no payment intent" do
-        # NOTE: the payment stores a null provider_payment_id, as manual payments do, so an
-        #       unguarded lookup would match it.
         let(:intent_id) { nil }
         let(:payable) { create(:invoice, customer:, organization:, status: "finalized") }
 

@@ -553,8 +553,6 @@ class Invoice < ApplicationRecord
     save!
   end
 
-  # NOTE: mirrors stripe's `is_charge_refundable`: set while a dispute prevents a refund,
-  #       cleared as soon as the charge becomes refundable again.
   def mark_refund_as_blocked!(timestamp = Time.current)
     self.payment_refund_blocked_at ||= timestamp
     save!
