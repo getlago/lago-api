@@ -56,6 +56,14 @@ RSpec.describe Events::CreateService do
       expect { create_service.call }.to have_enqueued_job(Events::PostProcessJob)
     end
 
+    it "tracks the usage attribution values of the event" do
+      allow(UsageAttributionValues::TrackEventsService).to receive(:call)
+
+      result = create_service.call
+
+      expect(UsageAttributionValues::TrackEventsService).to have_received(:call).with(organization:, events: result.event)
+    end
+
     context "when the post processing job cannot be enqueued" do
       before do
         allow(ActiveJob::Base.queue_adapter).to receive(:enqueue)
