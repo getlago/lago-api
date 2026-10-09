@@ -97,6 +97,16 @@ class Charge < ApplicationRecord
     applied_pricing_unit.conversion_rate == another_charge.applied_pricing_unit.conversion_rate
   end
 
+  def cascaded_attributes
+    {
+      code:,
+      charge_model:,
+      properties: properties.as_json,
+      accepts_target_wallet:,
+      conversion_rate: applied_pricing_unit&.conversion_rate
+    }
+  end
+
   def target_key
     "charge-#{id}"
   end

@@ -6,9 +6,10 @@ module FixedCharges
 
     private
 
-    def trigger_cascade(old_parent_attrs: nil)
+    def trigger_cascade(old_cascaded_attrs:, old_parent_attrs: nil)
       return unless cascade_updates
       return unless fixed_charge.children.exists?
+      return if fixed_charge.cascaded_attributes == old_cascaded_attrs
 
       FixedCharges::UpdateChildrenJob.perform_later(
         params: build_cascade_params.deep_stringify_keys,

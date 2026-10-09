@@ -51,6 +51,15 @@ class FixedCharge < ApplicationRecord
       units == fixed_charge.units
   end
 
+  def cascaded_attributes
+    {
+      code:,
+      charge_model:,
+      properties: properties.as_json,
+      units:
+    }
+  end
+
   def effective_units_for(subscription)
     return units unless subscription
 
