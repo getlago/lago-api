@@ -4,7 +4,7 @@ module Invoices
   class CustomerUsageService < BaseService
     Result = BaseResult[:invoice, :usage, :fees_taxes]
 
-    PREFILTER_CACHE_TTL = 5.seconds
+    PREFILTER_CACHE_TTL = 15.seconds
 
     def initialize(
       customer:,
