@@ -203,6 +203,62 @@ RSpec.describe Events::BillingPeriodFilters::ChargesResolver do
       end
     end
 
+    context "with incremental combinations", cache: :memory do
+      let(:resolver) { described_class.new(subscription:, boundaries:, incremental_combinations: true) }
+      let(:next_resolver) { described_class.new(subscription:, boundaries:, incremental_combinations: true) }
+      let(:billable_metric) { create(:sum_billable_metric, organization:) }
+      let(:us_charge_filter) { create(:charge_filter, charge:) }
+      let(:combination_queries) { [] }
+
+      before do
+        create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ["eu"])
+        create(:charge_filter_value, charge_filter: us_charge_filter, billable_metric_filter:, values: ["us"])
+        create(
+          :event,
+          organization:,
+          customer:,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: boundaries.charges_from_datetime + 1.day,
+          properties: {"region" => "eu"}
+        )
+
+        allow(Events::Stores::PostgresStore).to receive(:new).and_wrap_original do |build, **args|
+          build.call(**args).tap do |store|
+            allow(store).to receive(:distinct_codes_and_property_combinations).and_wrap_original do |query, **options|
+              combination_queries << options
+              query.call(**options)
+            end
+          end
+        end
+
+        filter_targets
+
+        create(
+          :event,
+          organization:,
+          customer:,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: boundaries.charges_from_datetime + 2.days,
+          properties: {"region" => "us"}
+        )
+      end
+
+      it "keeps the filters found earlier and adds those of the events ingested since" do
+        expect(filter_targets).to match({charge.target_key => {charge_filter.id => be_present}})
+        expect(next_resolver.filter_targets).to match(
+          {charge.target_key => {charge_filter.id => be_present, us_charge_filter.id => be_present}}
+        )
+      end
+
+      it "only reads the events ingested since the previous read" do
+        next_resolver.filter_targets
+
+        expect(combination_queries.map { it[:ingested_after] }).to match([nil, be_present])
+      end
+    end
+
     context "with a charge served from the usage buckets" do
       let(:resolver) { described_class.new(subscription:, boundaries:, precomputed_filters:) }
       let(:precomputed_filters) { {charge => [nil, charge_filter.id]} }

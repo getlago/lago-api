@@ -2966,6 +2966,28 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           expect(result.map { |row| row[0..1] }).to include([code, {"region" => "apac", "provider" => "azure"}])
         end
       end
+
+      context "with an ingestion time to read from" do
+        let(:ingested_after) { Time.current + 1.minute }
+
+        before do
+          create_event(
+            timestamp: subscription_started_at + 1.day,
+            value: 1,
+            properties: {"region" => "apac", "provider" => "azure"},
+            created_at: ingested_after + 1.second
+          )
+        end
+
+        it "only returns the combinations of the events ingested after it" do
+          result = event_store.distinct_codes_and_property_combinations(
+            codes: [code], filter_keys: %w[region provider], ingested_after:
+          )
+
+          expect(result.map { |row| row[0..1] }).to eq([[code, {"region" => "apac", "provider" => "azure"}]])
+          expect(result.map(&:last)).to all(be_present)
+        end
+      end
     end
   end
 end

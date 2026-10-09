@@ -1002,6 +1002,30 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         end
       end
 
+      context "with the incremental pre-filter" do
+        subject(:usage_service) do
+          described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false)
+        end
+
+        it "reads every event of the window without the feature flag" do
+          usage_service.call
+
+          expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
+            .with(hash_including(incremental_combinations: false))
+        end
+
+        context "with the usage_prefilter_incremental feature flag" do
+          before { organization.enable_feature_flag!(:usage_prefilter_incremental) }
+
+          it "only reads the events ingested since the previous answer, even for a caller without cache" do
+            usage_service.call
+
+            expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
+              .with(hash_including(incremental_combinations: true))
+          end
+        end
+      end
+
       context "when the usage is filtered by group" do
         subject(:usage_service) do
           described_class.new(
