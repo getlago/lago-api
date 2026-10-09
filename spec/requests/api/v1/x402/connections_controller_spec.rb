@@ -53,7 +53,7 @@ describe Api::V1::X402::ConnectionsController, :premium do
       it "filters the CDP credentials out of the logged params" do
         subject
         expect(Utils::ApiLog).to have_received(:produce)
-          .with(anything, anything, organization:, filtered_params: [:cdp_api_key_id, :cdp_api_key_secret])
+          .with(anything, anything, organization:, filtered_params: [:secret, :_key])
       end
     end
 
@@ -66,13 +66,15 @@ describe Api::V1::X402::ConnectionsController, :premium do
       end
     end
 
-    context "with a Solana network and no SVM payout address" do
+    context "with a Solana network" do
       let(:params) { super().merge(networks: ["eip155:84532", "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"]) }
 
-      it "returns a validation error" do
-        subject
-        expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details]).to eq(payout_addresses: ["missing_svm_payout_address"])
+      context "without an SVM payout address" do
+        it "returns a validation error" do
+          subject
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq(payout_addresses: ["missing_svm_payout_address"])
+        end
       end
     end
 
@@ -197,6 +199,7 @@ describe Api::V1::X402::ConnectionsController, :premium do
       it "returns a validation error" do
         subject
         expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(networks: ["value_is_invalid"])
       end
     end
 
@@ -232,7 +235,7 @@ describe Api::V1::X402::ConnectionsController, :premium do
       subject
       expect(response).to have_http_status(:ok)
       expect(json[:x402_connection][:lago_id]).to eq(connection.id)
-      expect(X402::Connection.unscoped.find(connection.id)).to be_discarded
+      expect(connection.reload).to be_discarded
     end
 
     context "with an unknown code" do

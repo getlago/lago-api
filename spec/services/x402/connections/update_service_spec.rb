@@ -78,7 +78,7 @@ describe X402::Connections::UpdateService do
       end
     end
 
-    context "when facilitator and asset are sent" do
+    context "when create-only fields are sent" do
       let(:params) { {facilitator: "coinbase_cdp", asset: "eurc"} }
 
       it "ignores them" do

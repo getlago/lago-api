@@ -4,7 +4,7 @@ module Api
   module V1
     module X402
       class ConnectionsController < BaseController
-        filter_audit_log_params! :cdp_api_key_id, :cdp_api_key_secret
+        filter_audit_log_params! :secret, :_key
 
         def create
           result = ::X402::Connections::CreateService.call(
@@ -44,9 +44,12 @@ module Api
 
         def show
           connection = find_connection
-          return not_found_error(resource: "x402_connection") unless connection
 
-          render_connection(connection)
+          if connection
+            render_connection(connection)
+          else
+            not_found_error(resource: "x402_connection")
+          end
         end
 
         def index
