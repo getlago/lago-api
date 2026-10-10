@@ -18,6 +18,8 @@ class Role < ApplicationRecord
   before_validation :normalize_name
 
   validate :code_is_not_reserved, if: -> { organization_id && deleted_at.blank? }
+  # Only checked when the name is set or changed, so existing roles stay valid.
+  validate :name_is_not_reserved, if: -> { organization_id && deleted_at.blank? && (new_record? || name_changed?) }
   validates :code,
     presence: true,
     length: {maximum: 100},
@@ -40,6 +42,7 @@ class Role < ApplicationRecord
   private
 
   RESERVED_CODES = %w[admin finance manager].freeze
+  RESERVED_NAMES = RESERVED_CODES
 
   def normalize_name
     self.name = name&.strip&.gsub(/\s+/, " ")
@@ -47,6 +50,11 @@ class Role < ApplicationRecord
 
   def code_is_not_reserved
     errors.add(:code, :taken) if RESERVED_CODES.include?(code)
+  end
+
+  # A custom role must not look like a predefined one.
+  def name_is_not_reserved
+    errors.add(:name, :taken) if RESERVED_NAMES.include?(name.to_s.downcase)
   end
 end
 
