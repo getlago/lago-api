@@ -40,9 +40,11 @@ class Membership < ApplicationRecord
     end
   end
 
-  # A member can only grant roles whose permissions they already hold. Admins can grant anything.
+  # A member can only grant roles whose permissions they already hold. Admins can grant anything,
+  # and only admins can grant an admin role.
   def can_grant_roles?(roles)
     return true if admin?
+    return false if Array(roles).any?(&:admin?)
 
     held = permissions_hash
     Array(roles).all? do |role|

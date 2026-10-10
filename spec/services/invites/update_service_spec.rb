@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Invites::UpdateService do
+  subject(:result) { described_class.call(user: acting_user, invite:, params:) }
+
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:acting_user) { create(:membership, organization:).user }
@@ -18,8 +20,6 @@ RSpec.describe Invites::UpdateService do
       before { create(:role, :manager) }
 
       it "updates the roles" do
-        result = described_class.call(user: acting_user, invite:, params:)
-
         expect(result).to be_success
         expect(result.invite.reload.roles).to eq(%w[manager])
       end
@@ -32,8 +32,6 @@ RSpec.describe Invites::UpdateService do
       before { create(:role, :admin) }
 
       it "returns an error" do
-        result = described_class.call(user: acting_user, invite:, params:)
-
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
         expect(result.error.code).to eq("cannot_grant_admin")
@@ -50,8 +48,6 @@ RSpec.describe Invites::UpdateService do
       before { create(:membership_role, membership: acting_membership, role: admin_role) }
 
       it "updates the roles" do
-        result = described_class.call(user: acting_user, invite:, params:)
-
         expect(result).to be_success
         expect(result.invite.reload.roles).to eq(%w[admin])
       end
@@ -64,8 +60,6 @@ RSpec.describe Invites::UpdateService do
       let(:params) { {roles: ["finance", custom_role.code]} }
 
       it "returns an error" do
-        result = described_class.call(user: acting_user, invite:, params:)
-
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
         expect(result.error.code).to eq("cannot_grant_permissions")
@@ -80,8 +74,6 @@ RSpec.describe Invites::UpdateService do
       let(:params) { {roles: [custom_role.code]} }
 
       it "updates the roles" do
-        result = described_class.call(user: acting_user, invite:, params:)
-
         expect(result).to be_success
         expect(invite.reload.roles).to eq([custom_role.code])
       end
@@ -91,8 +83,6 @@ RSpec.describe Invites::UpdateService do
       let(:invite) { nil }
 
       it "returns an error" do
-        result = described_class.call(user: acting_user, invite:, params:)
-
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("invite_not_found")
       end
@@ -102,8 +92,6 @@ RSpec.describe Invites::UpdateService do
       let(:invite) { create(:invite, organization:, status: "revoked") }
 
       it "returns an error" do
-        result = described_class.call(user: acting_user, invite:, params:)
-
         expect(result).not_to be_success
         expect(result.error.code).to eq("cannot_update_revoked_invite")
       end
@@ -113,8 +101,6 @@ RSpec.describe Invites::UpdateService do
       let(:invite) { create(:invite, organization:, status: "accepted") }
 
       it "returns an error" do
-        result = described_class.call(user: acting_user, invite:, params:)
-
         expect(result).not_to be_success
         expect(result.error.code).to eq("cannot_update_accepted_invite")
       end
@@ -125,8 +111,6 @@ RSpec.describe Invites::UpdateService do
       let(:params) { {roles: []} }
 
       it "returns an error" do
-        result = described_class.call(user: acting_user, invite:, params:)
-
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages[:roles]).to eq(%w[invalid_role])
@@ -138,8 +122,6 @@ RSpec.describe Invites::UpdateService do
       let(:params) { {roles: %w[nonexistent_role]} }
 
       it "returns an error" do
-        result = described_class.call(user: acting_user, invite:, params:)
-
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages[:roles]).to eq(%w[invalid_role])

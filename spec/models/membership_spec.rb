@@ -175,6 +175,14 @@ RSpec.describe Membership do
       it { is_expected.to be(false) }
     end
 
+    context "when a non-admin member holding every permission grants the admin role" do
+      let(:membership) { create(:membership, organization:, role: all_permissions_role) }
+      let(:all_permissions_role) { create(:role, :custom, organization:, permissions: Permission.permissions_hash.keys) }
+      let(:roles) { [create(:role, :admin)] }
+
+      it { is_expected.to be(false) }
+    end
+
     context "with no roles" do
       let(:roles) { [] }
 

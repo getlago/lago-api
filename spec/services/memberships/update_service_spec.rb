@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Memberships::UpdateService do
+  subject(:result) { described_class.call(user: acting_user, membership:, params:) }
+
   include_context "with mocked security logger"
 
   let(:membership) { create(:membership) }
@@ -23,14 +25,12 @@ RSpec.describe Memberships::UpdateService do
       end
 
       it "updates the role" do
-        result = described_class.call(user: acting_user, membership:, params:)
-
         expect(result).to be_success
         expect(result.membership.roles).to eq([manager_role])
       end
 
       it_behaves_like "produces a security log", "user.role_edited" do
-        before { described_class.call(user: acting_user, membership:, params:) }
+        before { result }
       end
     end
 
@@ -45,14 +45,12 @@ RSpec.describe Memberships::UpdateService do
       end
 
       it "updates the role" do
-        result = described_class.call(user: acting_user, membership:, params:)
-
         expect(result).to be_success
         expect(result.membership.roles).to eq([admin_role])
       end
 
       it_behaves_like "produces a security log", "user.role_edited" do
-        before { described_class.call(user: acting_user, membership:, params:) }
+        before { result }
       end
     end
 
@@ -65,15 +63,13 @@ RSpec.describe Memberships::UpdateService do
       end
 
       it "returns an error" do
-        result = described_class.call(user: acting_user, membership:, params:)
-
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
         expect(result.error.code).to eq("cannot_grant_admin")
       end
 
       it_behaves_like "does not produce a security log" do
-        before { described_class.call(user: acting_user, membership:, params:) }
+        before { result }
       end
     end
 
@@ -86,8 +82,6 @@ RSpec.describe Memberships::UpdateService do
       before { create(:membership_role, membership:, role: manager_role) }
 
       it "returns an error" do
-        result = described_class.call(user: acting_user, membership:, params:)
-
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
         expect(result.error.code).to eq("cannot_grant_permissions")
@@ -95,7 +89,7 @@ RSpec.describe Memberships::UpdateService do
       end
 
       it_behaves_like "does not produce a security log" do
-        before { described_class.call(user: acting_user, membership:, params:) }
+        before { result }
       end
 
       context "when the member assigns the role to themselves" do
@@ -103,8 +97,6 @@ RSpec.describe Memberships::UpdateService do
         let(:membership) { acting_membership }
 
         it "returns an error" do
-          result = described_class.call(user: acting_user, membership:, params:)
-
           expect(result.error.code).to eq("cannot_grant_permissions")
         end
       end
@@ -119,8 +111,6 @@ RSpec.describe Memberships::UpdateService do
       before { create(:membership_role, membership:, role: manager_role) }
 
       it "updates the role" do
-        result = described_class.call(user: acting_user, membership:, params:)
-
         expect(result).to be_success
         expect(result.membership.roles).to eq([custom_role])
       end
@@ -130,14 +120,12 @@ RSpec.describe Memberships::UpdateService do
       before { create(:membership_role, membership:, role: admin_role) }
 
       it "returns an error" do
-        result = described_class.call(user: acting_user, membership:, params:)
-
         expect(result).not_to be_success
         expect(result.error.code).to eq("last_admin")
       end
 
       it_behaves_like "does not produce a security log" do
-        before { described_class.call(user: acting_user, membership:, params:) }
+        before { result }
       end
     end
 
@@ -160,14 +148,12 @@ RSpec.describe Memberships::UpdateService do
       let(:params) { {roles: %w[invalid]} }
 
       it "returns an error" do
-        result = described_class.call(user: acting_user, membership:, params:)
-
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("role_not_found")
       end
 
       it_behaves_like "does not produce a security log" do
-        before { described_class.call(user: acting_user, membership:, params:) }
+        before { result }
       end
     end
   end
