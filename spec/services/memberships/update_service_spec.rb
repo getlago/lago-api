@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Memberships::UpdateService do
+  subject(:result) { described_class.call(user: acting_user, membership:, params:) }
+
   include_context "with mocked security logger"
 
   let(:membership) { create(:membership) }
@@ -14,21 +16,21 @@ RSpec.describe Memberships::UpdateService do
 
   describe "#call" do
     context "when another admin exists" do
+      let(:other_membership) { create(:membership, organization:) }
+      let(:acting_user) { other_membership.user }
+
       before do
         create(:membership_role, membership:, role: admin_role)
-        other_membership = create(:membership, organization:)
         create(:membership_role, membership: other_membership, role: admin_role)
       end
 
       it "updates the role" do
-        result = described_class.call(user: acting_user, membership:, params:)
-
         expect(result).to be_success
         expect(result.membership.roles).to eq([manager_role])
       end
 
       it_behaves_like "produces a security log", "user.role_edited" do
-        before { described_class.call(user: acting_user, membership:, params:) }
+        before { result }
       end
     end
 
@@ -43,14 +45,12 @@ RSpec.describe Memberships::UpdateService do
       end
 
       it "updates the role" do
-        result = described_class.call(user: acting_user, membership:, params:)
-
         expect(result).to be_success
         expect(result.membership.roles).to eq([admin_role])
       end
 
       it_behaves_like "produces a security log", "user.role_edited" do
-        before { described_class.call(user: acting_user, membership:, params:) }
+        before { result }
       end
     end
 
@@ -63,15 +63,56 @@ RSpec.describe Memberships::UpdateService do
       end
 
       it "returns an error" do
-        result = described_class.call(user: acting_user, membership:, params:)
-
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
         expect(result.error.code).to eq("cannot_grant_admin")
       end
 
       it_behaves_like "does not produce a security log" do
-        before { described_class.call(user: acting_user, membership:, params:) }
+        before { result }
+      end
+    end
+
+    context "when non-admin grants a role with permissions they do not hold" do
+      let(:acting_membership) { create(:membership, organization:, roles: %i[finance]) }
+      let(:acting_user) { acting_membership.user }
+      let(:custom_role) { create(:role, :custom, organization:, permissions: %w[developers:keys:manage]) }
+      let(:params) { {roles: [custom_role.code]} }
+
+      before { create(:membership_role, membership:, role: manager_role) }
+
+      it "returns an error" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("cannot_grant_permissions")
+        expect(membership.reload.roles).to eq([manager_role])
+      end
+
+      it_behaves_like "does not produce a security log" do
+        before { result }
+      end
+
+      context "when the member assigns the role to themselves" do
+        let(:organization) { create(:organization) }
+        let(:membership) { acting_membership }
+
+        it "returns an error" do
+          expect(result.error.code).to eq("cannot_grant_permissions")
+        end
+      end
+    end
+
+    context "when non-admin grants a role within their own permissions" do
+      let(:acting_membership) { create(:membership, organization:, roles: %i[finance]) }
+      let(:acting_user) { acting_membership.user }
+      let(:custom_role) { create(:role, :custom, organization:, permissions: %w[organization:view]) }
+      let(:params) { {roles: [custom_role.code]} }
+
+      before { create(:membership_role, membership:, role: manager_role) }
+
+      it "updates the role" do
+        expect(result).to be_success
+        expect(result.membership.roles).to eq([custom_role])
       end
     end
 
@@ -79,14 +120,12 @@ RSpec.describe Memberships::UpdateService do
       before { create(:membership_role, membership:, role: admin_role) }
 
       it "returns an error" do
-        result = described_class.call(user: acting_user, membership:, params:)
-
         expect(result).not_to be_success
         expect(result.error.code).to eq("last_admin")
       end
 
       it_behaves_like "does not produce a security log" do
-        before { described_class.call(user: acting_user, membership:, params:) }
+        before { result }
       end
     end
 
@@ -109,14 +148,12 @@ RSpec.describe Memberships::UpdateService do
       let(:params) { {roles: %w[invalid]} }
 
       it "returns an error" do
-        result = described_class.call(user: acting_user, membership:, params:)
-
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("role_not_found")
       end
 
       it_behaves_like "does not produce a security log" do
-        before { described_class.call(user: acting_user, membership:, params:) }
+        before { result }
       end
     end
   end

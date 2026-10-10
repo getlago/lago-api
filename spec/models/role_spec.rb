@@ -105,6 +105,25 @@ RSpec.describe Role do
         end
       end
 
+      it "is invalid with a reserved name, whatever the case" do
+        %w[admin Admin ADMIN finance Finance manager Manager].each do |name|
+          role.name = name
+          expect(role).not_to be_valid
+          expect(role.errors[:name]).to include("value_already_exist")
+        end
+      end
+
+      context "with an existing role already named like a reserved one" do
+        let(:existing) { create(:role, :custom) }
+
+        before { existing.update_column(:name, "Admin") } # rubocop:disable Rails/SkipsModelValidations
+
+        it "stays valid when updated without renaming" do
+          existing.description = "updated"
+          expect(existing).to be_valid
+        end
+      end
+
       it "is invalid without name" do
         role.name = nil
         expect(role).not_to be_valid

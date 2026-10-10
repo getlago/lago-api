@@ -147,4 +147,46 @@ RSpec.describe Membership do
       end
     end
   end
+
+  describe "#can_grant_roles?" do
+    subject(:can_grant) { membership.can_grant_roles?(roles) }
+
+    let(:organization) { create(:organization) }
+    let(:membership) { create(:membership, organization:, roles: %i[finance]) }
+    let(:weak_role) { create(:role, :custom, organization:, permissions: %w[organization:view]) }
+    let(:strong_role) { create(:role, :custom, organization:, permissions: %w[organization:view developers:keys:manage]) }
+
+    context "when the member is admin" do
+      let(:membership) { create(:membership, organization:, roles: %i[admin]) }
+      let(:roles) { [strong_role] }
+
+      it { is_expected.to be(true) }
+    end
+
+    context "when the member holds every permission of the roles" do
+      let(:roles) { [create(:role, :finance), weak_role] }
+
+      it { is_expected.to be(true) }
+    end
+
+    context "when a role has a permission the member does not hold" do
+      let(:roles) { [weak_role, strong_role] }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when a non-admin member holding every permission grants the admin role" do
+      let(:membership) { create(:membership, organization:, role: all_permissions_role) }
+      let(:all_permissions_role) { create(:role, :custom, organization:, permissions: Permission.permissions_hash.keys) }
+      let(:roles) { [create(:role, :admin)] }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "with no roles" do
+      let(:roles) { [] }
+
+      it { is_expected.to be(true) }
+    end
+  end
 end

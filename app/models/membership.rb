@@ -39,6 +39,18 @@ class Membership < ApplicationRecord
       roles.each { |role| role.permissions_hash.each { |key, val| h[key] ||= val } }
     end
   end
+
+  # A member can only grant roles whose permissions they already hold. Admins can grant anything,
+  # and only admins can grant an admin role.
+  def can_grant_roles?(roles)
+    return true if admin?
+    return false if Array(roles).any?(&:admin?)
+
+    held = permissions_hash
+    Array(roles).all? do |role|
+      role.permissions_hash.all? { |permission, granted| !granted || held[permission] }
+    end
+  end
 end
 
 # == Schema Information

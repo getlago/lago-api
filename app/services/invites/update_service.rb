@@ -17,6 +17,7 @@ module Invites
       return result.forbidden_failure!(code: "cannot_update_accepted_invite") if invite.accepted?
       return result.forbidden_failure!(code: "cannot_update_revoked_invite") if invite.revoked?
       return result.forbidden_failure!(code: "cannot_grant_admin") if granting_admin_without_being_admin?
+      return result.forbidden_failure!(code: "cannot_grant_permissions") if granting_permissions_not_held?
       return result unless valid_roles?
 
       invite.update!(roles: params[:roles])
@@ -36,6 +37,13 @@ module Invites
 
       acting_membership = invite.organization.memberships.active.find_by(user:)
       !acting_membership&.admin?
+    end
+
+    def granting_permissions_not_held?
+      added_codes = Array(params[:roles]) - invite.roles
+      added_roles = Role.with_code(*added_codes).with_organization(invite.organization_id)
+      acting_membership = invite.organization.memberships.active.find_by(user:)
+      !acting_membership&.can_grant_roles?(added_roles)
     end
 
     def valid_roles?

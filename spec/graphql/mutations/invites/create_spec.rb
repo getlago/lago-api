@@ -31,7 +31,7 @@ RSpec.describe Mutations::Invites::Create do
     GQL
   end
 
-  before { create(:role, :finance) }
+  before { create(:membership_role, :finance, membership:) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
