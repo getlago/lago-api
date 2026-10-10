@@ -113,12 +113,15 @@ RSpec.describe Role do
         end
       end
 
-      it "stays valid when an existing role with a reserved name is updated without renaming" do
-        existing = create(:role, :custom)
-        existing.update_column(:name, "Admin") # rubocop:disable Rails/SkipsModelValidations
+      context "with an existing role already named like a reserved one" do
+        let(:existing) { create(:role, :custom) }
 
-        existing.description = "updated"
-        expect(existing).to be_valid
+        before { existing.update_column(:name, "Admin") } # rubocop:disable Rails/SkipsModelValidations
+
+        it "stays valid when updated without renaming" do
+          existing.description = "updated"
+          expect(existing).to be_valid
+        end
       end
 
       it "is invalid without name" do
