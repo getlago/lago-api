@@ -263,6 +263,32 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
           expect(alert.reload.thresholds.sole).to have_attributes(recurring: true, notify_on: %w[triggered])
         end
       end
+
+      context "when the update sends the opted-in code on two thresholds" do
+        let(:params) { {thresholds: [{code: "warn", value: 10}, {code: "warn", value: 20}]} }
+
+        it "keeps the default on both instead of rejecting a field the caller never sent" do
+          expect(result).to be_success
+          expect(alert.reload.thresholds.map(&:notify_on)).to eq([%w[triggered], %w[triggered]])
+        end
+      end
+    end
+
+    context "when a line keeps its opt-in through its code while already past" do
+      let(:alert) { create(:wallet_balance_amount_alert, thresholds: nil, organization:, previous_value: 0) }
+      let(:params) { {thresholds: [{code: "critical", value: 150}]} }
+
+      before do
+        create(:alert_threshold, alert:, organization:, code: "critical", value: 100, notify_on: %w[triggered resolved])
+      end
+
+      it "records a silent alarm for the inherited opt-in" do
+        expect(result).to be_success
+
+        seeded = alert.all_triggered_alerts.sole
+        expect(seeded).to be_seeded
+        expect(seeded.crossed_thresholds.map { it["code"] }).to eq(%w[critical])
+      end
     end
 
     context "with too many thresholds" do
