@@ -3,7 +3,13 @@
 require Rails.root.join("lib/lago_http_client/lago_http_client")
 
 class SendWebhookJob < ApplicationJob
+  # Raised for a webhook type this process does not know, for example on a worker that still runs the previous
+  # release during a rolling deploy. Retrying gives a worker with the new release time to take the job.
+  class UnknownWebhookTypeError < StandardError; end
+
   queue_as { self.class.queue_for(arguments.first) }
+
+  retry_on UnknownWebhookTypeError, wait: :polynomially_longer, attempts: 5
 
   retry_on ActiveJob::DeserializationError, wait: :polynomially_longer, attempts: 6
 
@@ -96,7 +102,7 @@ class SendWebhookJob < ApplicationJob
     "wallet_transaction.payment_failure" => Webhooks::PaymentProviders::WalletTransactionPaymentFailureService
   }.freeze
 
-  HIGH_PRIORITY_WEBHOOK_TYPES = %w[alert.triggered].freeze
+  HIGH_PRIORITY_WEBHOOK_TYPES = %w[alert.triggered alert.resolved].freeze
 
   def self.queue_for(webhook_type = nil)
     if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_WEBHOOK"])
@@ -124,7 +130,7 @@ class SendWebhookJob < ApplicationJob
     # Jobs enqueued by the previous release still use the former names.
     # TODO: Remove after one release.
     webhook_type = WebhookEndpoint::RENAMED_EVENT_TYPES.fetch(webhook_type, webhook_type)
-    raise(NotImplementedError) unless WEBHOOK_SERVICES.include?(webhook_type)
+    raise(UnknownWebhookTypeError, webhook_type.to_s) unless WEBHOOK_SERVICES.include?(webhook_type)
 
     # NOTE: This condition is only temporary to handle enqueued jobs
     # TODO: Remove this condition after queued jobs are processed
