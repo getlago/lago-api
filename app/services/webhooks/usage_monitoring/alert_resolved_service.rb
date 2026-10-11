@@ -17,7 +17,7 @@ module Webhooks
       end
 
       def object_type
-        "triggered_alert"
+        "resolved_alert"
       end
     end
   end

@@ -10,6 +10,6 @@ RSpec.describe Webhooks::UsageMonitoring::AlertResolvedService do
   end
 
   describe ".call" do
-    it_behaves_like "creates webhook", "alert.resolved", "triggered_alert"
+    it_behaves_like "creates webhook", "alert.resolved", "resolved_alert"
   end
 end
