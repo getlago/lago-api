@@ -147,6 +147,39 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
       end
     end
 
+    context "when notify_on is sent as a plain value" do
+      let(:params) do
+        {
+          code: "test",
+          alert_type: "wallet_balance_amount",
+          thresholds: [{code: :notice, value: 1000, notify_on: "resolved"}]
+        }
+      end
+
+      it "rejects it instead of dropping it" do
+        expect { subject }.not_to change(UsageMonitoring::Alert, :count)
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq({"thresholds:notify_on": ["value_is_invalid"]})
+      end
+    end
+
+    context "when notify_on is sent as null" do
+      let(:params) do
+        {
+          code: "test",
+          alert_type: "wallet_balance_amount",
+          thresholds: [{code: :notice, value: 1000, notify_on: nil}]
+        }
+      end
+
+      it "stores the default" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:alert][:thresholds].sole).to include({code: "notice", notify_on: %w[triggered]})
+      end
+    end
+
     context "when alert_type is wallet_credits_balance" do
       let(:params) do
         {
@@ -319,6 +352,39 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
 
         expect(json[:alert][:thresholds].sole).to include({code: "notice", notify_on: %w[triggered resolved]})
         expect(alert.reload.thresholds.sole).to have_attributes(value: 88_00, notify_on: %w[triggered resolved])
+      end
+    end
+
+    context "when an update sends notify_on as a plain value" do
+      let(:alert) { create(:wallet_balance_amount_alert, :processed, code:, wallet:, organization:, thresholds: nil) }
+      let(:params) { {thresholds: [{code: :notice, value: 88_00, notify_on: "resolved"}]} }
+
+      before do
+        create(:alert_threshold, alert:, code: "notice", value: 1000, notify_on: %w[triggered])
+      end
+
+      it "rejects it and keeps the thresholds" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq({"thresholds:notify_on": ["value_is_invalid"]})
+        expect(alert.reload.thresholds.sole).to have_attributes(value: 1000, notify_on: %w[triggered])
+      end
+    end
+
+    context "when an update sends notify_on as null" do
+      let(:alert) { create(:wallet_balance_amount_alert, :processed, code:, wallet:, organization:, thresholds: nil) }
+      let(:params) { {thresholds: [{code: :notice, value: 88_00, notify_on: nil}]} }
+
+      before do
+        create(:alert_threshold, alert:, code: "notice", value: 1000, notify_on: %w[triggered resolved])
+      end
+
+      it "resets the threshold to the default instead of keeping the previous value" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(alert.reload.thresholds.sole).to have_attributes(value: 88_00, notify_on: %w[triggered])
       end
     end
 
