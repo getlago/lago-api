@@ -109,6 +109,11 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
       let(:alert) { create(:wallet_balance_amount_alert, thresholds: [100], organization:, previous_value: 0) }
       let(:params) { {thresholds: [{code: "critical", value: 100, notify_on: %w[triggered resolved]}]} }
 
+      it "sends nothing for the silent alarm" do
+        expect(result).to be_success
+        expect(SendWebhookJob).not_to have_been_enqueued
+      end
+
       it "records a silent alarm so the next recovery can announce" do
         expect(described_class.call(alert:, params:)).to be_success
 
@@ -182,6 +187,13 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
           expect(resolved).to have_attributes(resolution_reason: "threshold_removed", fully_resolved: true)
           expect(resolved.crossed_thresholds.map { it["code"] }).to eq(%w[low])
         end
+      end
+
+      it "sends alert.resolved for the closed alarm" do
+        expect(result).to be_success
+
+        resolved = alert.all_triggered_alerts.find_by(kind: :resolved)
+        expect(SendWebhookJob).to have_been_enqueued.once.with("alert.resolved", resolved)
       end
 
       context "when the edit keeps the line in alarm" do

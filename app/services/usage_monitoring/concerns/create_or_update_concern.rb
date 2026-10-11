@@ -85,7 +85,7 @@ module UsageMonitoring
         {threshold_updated: updated, threshold_removed: removed}.each do |reason, lines|
           next if lines.empty?
 
-          TriggeredAlert.create!(
+          resolved_alert = TriggeredAlert.create!(
             alert:,
             organization: alert.organization,
             alertable:,
@@ -98,6 +98,7 @@ module UsageMonitoring
             fully_resolved: alert.fully_resolved?(alert.previous_value),
             triggered_at: Time.current
           )
+          SendWebhookJob.perform_after_commit("alert.resolved", resolved_alert)
         end
       end
 
