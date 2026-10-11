@@ -6,8 +6,11 @@ module UsageMonitoring
       current_usage.amount_cents
     end
 
+    # NOTE: the plan amount restarts as soon as one charge meters a non-recurring metric, even when other charges
+    # carry recurring usage over, so only a plan whose charges are all recurring keeps its baseline across renewals
     def window_resets_each_period?(subscription)
-      !subscription.plan.charges.joins(:billable_metric).exists?(billable_metrics: {recurring: true})
+      charges = subscription.plan.charges.joins(:billable_metric)
+      !charges.exists?(billable_metrics: {recurring: true}) || charges.exists?(billable_metrics: {recurring: false})
     end
   end
 end

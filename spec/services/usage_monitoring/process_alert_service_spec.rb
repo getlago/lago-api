@@ -330,6 +330,29 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
         end
       end
 
+      context "when the plan mixes recurring and non-recurring charges" do
+        # The non-recurring charges restart each period, so the plan amount falls at renewal although nothing recovered.
+        let(:subscription) { create(:subscription, organization:, plan: mixed_plan) }
+        let(:mixed_plan) { create(:plan, organization:) }
+
+        before do
+          create(:standard_charge, plan: mixed_plan, organization:,
+            billable_metric: create(:sum_billable_metric, :recurring, organization:))
+          create(:standard_charge, plan: mixed_plan, organization:,
+            billable_metric: create(:sum_billable_metric, organization:))
+        end
+
+        it "resets the baseline instead of reporting a recovery" do
+          recorded_before = alert.all_triggered_alerts.pluck(:id)
+          expect(result).to be_success
+
+          expect(alert.all_triggered_alerts.where(kind: :resolved)).to be_empty
+          triggered = alert.all_triggered_alerts.where.not(id: recorded_before).sole
+          expect(triggered.crossed_thresholds.map { it["value"] }).to eq(%w[10.0])
+          expect(triggered.previous_value).to eq(0)
+        end
+      end
+
       context "when the alert watches one non-recurring billable metric" do
         let(:billable_metric) { create(:sum_billable_metric, organization:) }
         let(:charge) { create(:standard_charge, plan: subscription.plan, organization:, billable_metric:) }
