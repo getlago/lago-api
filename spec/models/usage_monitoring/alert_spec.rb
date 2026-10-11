@@ -339,4 +339,13 @@ RSpec.describe UsageMonitoring::Alert do
       expect(alert.one_time_thresholds_values).to eq([40])
     end
   end
+
+  describe "#window_resets_each_period?" do
+    let(:subscription) { create(:subscription) }
+
+    it "is false for alerts whose value never restarts with the billing period" do
+      expect(create(:lifetime_usage_amount_alert).window_resets_each_period?(subscription)).to be false
+      expect(create(:wallet_balance_amount_alert).window_resets_each_period?(nil)).to be false
+    end
+  end
 end
