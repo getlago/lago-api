@@ -150,14 +150,26 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
           expect(resolved.crossed_thresholds.map { it["code"] }).to eq([hard.code])
           expect(resolved.current_value).to eq(8500)
           expect(resolved.previous_value).to eq(10400)
+          expect(resolved.resolution_reason).to eq("recovered")
         end
 
-        it "reports the alert as not fully resolved while a lower line is still crossed" do
+        it "lists the lower line still crossed, opted in or not, and reports the alert as not fully resolved" do
           result
           resolved = alert.all_triggered_alerts.find_by(kind: :resolved)
 
           expect(resolved.fully_resolved).to be false
-          expect(resolved.in_alarm_thresholds).to eq([])
+          expect(resolved.in_alarm_thresholds).to eq([warn.code])
+        end
+
+        context "when the line still crossed has no code" do
+          before { warn.update!(code: nil) }
+
+          it "names it by its value" do
+            result
+            resolved = alert.all_triggered_alerts.find_by(kind: :resolved)
+
+            expect(resolved.in_alarm_thresholds).to eq(["8000.0"])
+          end
         end
 
         it "does not send a webhook yet" do
@@ -199,15 +211,41 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
       end
 
       context "when the line is not opted in" do
-        before { hard.update!(notify_on: %w[triggered]) }
-
-        it "stays silent" do
+        before do
+          hard.update!(notify_on: %w[triggered])
           create(:triggered_alert, alert:, organization:, subscription:,
             crossed_thresholds: [{code: hard.code, value: "10000.0", recurring: false}])
+        end
 
+        it "stays silent" do
           expect(result).to be_success
           expect(alert.all_triggered_alerts.where(kind: :resolved)).to be_empty
         end
+      end
+    end
+
+    context "when a wallet balance comes back above a seeded line" do
+      subject(:result) { described_class.call(alert:, alertable: wallet, current_metrics: wallet) }
+
+      let(:wallet) { create(:wallet, organization:, balance_cents: 5000) }
+      let(:alert) do
+        create(:wallet_balance_amount_alert, thresholds: nil, wallet:, organization:, previous_value: 0)
+      end
+
+      before do
+        create(:alert_threshold, alert:, organization:, code: "low", value: 1000, notify_on: %w[triggered resolved])
+        create(:triggered_alert, alert:, organization:, kind: :seeded, subscription: nil, wallet:,
+          crossed_thresholds: [{code: "low", value: "1000.0", recurring: false}])
+      end
+
+      it "announces the recovery the seeded alarm paired with" do
+        expect(result).to be_success
+
+        resolved = alert.all_triggered_alerts.where(kind: :resolved).sole
+        expect(resolved).to have_attributes(
+          wallet:, subscription: nil, resolution_reason: "recovered", fully_resolved: true, in_alarm_thresholds: []
+        )
+        expect(resolved.crossed_thresholds.map { it["code"] }).to eq(%w[low])
       end
     end
 

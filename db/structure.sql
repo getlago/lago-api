@@ -1471,6 +1471,7 @@ DROP TYPE IF EXISTS public.x402_settlement_settled_by;
 DROP TYPE IF EXISTS public.x402_settlement_kind;
 DROP TYPE IF EXISTS public.x402_facilitator;
 DROP TYPE IF EXISTS public.x402_asset;
+DROP TYPE IF EXISTS public.usage_monitoring_triggered_alert_resolution_reasons;
 DROP TYPE IF EXISTS public.usage_monitoring_triggered_alert_kinds;
 DROP TYPE IF EXISTS public.usage_monitoring_alert_types;
 DROP TYPE IF EXISTS public.usage_monitoring_alert_direction;
@@ -2069,6 +2070,17 @@ CREATE TYPE public.usage_monitoring_triggered_alert_kinds AS ENUM (
     'triggered',
     'resolved',
     'seeded'
+);
+
+
+--
+-- Name: usage_monitoring_triggered_alert_resolution_reasons; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.usage_monitoring_triggered_alert_resolution_reasons AS ENUM (
+    'recovered',
+    'threshold_updated',
+    'threshold_removed'
 );
 
 
@@ -4849,6 +4861,7 @@ CREATE TABLE public.usage_monitoring_triggered_alerts (
     kind public.usage_monitoring_triggered_alert_kinds DEFAULT 'triggered'::public.usage_monitoring_triggered_alert_kinds NOT NULL,
     in_alarm_thresholds jsonb,
     fully_resolved boolean,
+    resolution_reason public.usage_monitoring_triggered_alert_resolution_reasons,
     CONSTRAINT chk_triggered_alerts_subscription_xor_wallet CHECK (((subscription_id IS NOT NULL) <> (wallet_id IS NOT NULL)))
 );
 
@@ -15753,6 +15766,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261011162319'),
 ('20261008135612'),
 ('20261006134840'),
 ('20261005112941'),
