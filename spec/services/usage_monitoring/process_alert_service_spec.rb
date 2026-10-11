@@ -9,6 +9,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
     let_it_be(:organization) { create_default(:organization) }
     let(:alert) { create(:usage_current_amount_alert, recurring_threshold: 35, thresholds: [10, 20], previous_value: 4, code: "test", organization:, subscription_external_id: subscription.external_id) }
     let(:subscription) { create(:subscription, organization:) }
+    let(:period_end) { Time.current.end_of_month.iso8601 }
 
     before_all do
       create_default(:customer)
@@ -16,7 +17,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
     end
 
     context "when locking" do
-      let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 5) }
+      let(:current_metrics) { instance_double(SubscriptionUsage, to_datetime: period_end, amount_cents: 5) }
 
       it "uses with_lock to prevent racing a config change" do
         allow(alert).to receive(:with_lock).and_call_original
@@ -31,7 +32,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
         described_class.call(alert:, alertable: subscription, current_metrics:, expected_billable_metric_id: measured_metric.id)
       end
 
-      let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 50) }
+      let(:current_metrics) { instance_double(SubscriptionUsage, to_datetime: period_end, amount_cents: 50) }
       let(:measured_metric) { create(:billable_metric, organization:) }
 
       it "skips the evaluation rather than measuring it against the new configuration" do
@@ -47,7 +48,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
     end
 
     context "when no thresholds are crossed" do
-      let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 5) }
+      let(:current_metrics) { instance_double(SubscriptionUsage, to_datetime: period_end, amount_cents: 5) }
 
       it "updates alert last_processed_at and previous_value" do
         expect(result).to be_success
@@ -60,7 +61,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
     end
 
     context "when 2 thresholds are crossed" do
-      let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 22) }
+      let(:current_metrics) { instance_double(SubscriptionUsage, to_datetime: period_end, amount_cents: 22) }
 
       it "triggers the alert" do
         expect(result).to be_success
@@ -85,7 +86,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
     end
 
     context "when recurring thresholds are crossed" do
-      let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 161) }
+      let(:current_metrics) { instance_double(SubscriptionUsage, to_datetime: period_end, amount_cents: 161) }
 
       it "triggers the alert" do
         expect(result).to be_success
@@ -133,7 +134,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
       end
       let(:hard) { alert.thresholds.find_by(value: 10000) }
       let(:warn) { alert.thresholds.find_by(value: 8000) }
-      let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 8500) }
+      let(:current_metrics) { instance_double(SubscriptionUsage, to_datetime: period_end, amount_cents: 8500) }
 
       before { hard.update!(notify_on: %w[triggered resolved]) }
 
@@ -255,7 +256,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
         create(:usage_current_amount_alert, thresholds: [10, 20], previous_value: 90, code: "roll",
           last_processed_at: period_start - 1.day, organization:, subscription_external_id: subscription.external_id)
       end
-      let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 15, from_datetime: period_start.iso8601) }
+      let(:current_metrics) { instance_double(SubscriptionUsage, to_datetime: period_end, amount_cents: 15, from_datetime: period_start.iso8601) }
 
       before do
         alert.thresholds.each { it.update!(notify_on: %w[triggered resolved]) }
@@ -279,7 +280,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
       end
 
       context "when the new period opens above the old value" do
-        let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 95, from_datetime: period_start.iso8601) }
+        let(:current_metrics) { instance_double(SubscriptionUsage, to_datetime: period_end, amount_cents: 95, from_datetime: period_start.iso8601) }
 
         it "fires every threshold the new period crossed, not only those above the old value" do
           recorded_before = alert.all_triggered_alerts.pluck(:id)
@@ -295,7 +296,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
         # A recurring billable metric aggregates from subscription start, so the plan total does not reset.
         let(:subscription) { create(:subscription, organization:, plan: recurring_plan) }
         let(:recurring_plan) { create(:plan, organization:) }
-        let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 90, from_datetime: period_start.iso8601) }
+        let(:current_metrics) { instance_double(SubscriptionUsage, to_datetime: period_end, amount_cents: 90, from_datetime: period_start.iso8601) }
 
         before do
           create(:standard_charge, plan: recurring_plan, organization:,
@@ -314,7 +315,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
       context "when a continuous metric recovers across the boundary" do
         let(:subscription) { create(:subscription, organization:, plan: recurring_plan) }
         let(:recurring_plan) { create(:plan, organization:) }
-        let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 15, from_datetime: period_start.iso8601) }
+        let(:current_metrics) { instance_double(SubscriptionUsage, to_datetime: period_end, amount_cents: 15, from_datetime: period_start.iso8601) }
 
         before do
           create(:standard_charge, plan: recurring_plan, organization:,
@@ -362,7 +363,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
             subscription_external_id: subscription.external_id)
         end
         let(:current_metrics) do
-          instance_double(SubscriptionUsage, from_datetime: period_start.iso8601,
+          instance_double(SubscriptionUsage, to_datetime: period_end, from_datetime: period_start.iso8601,
             fees: [instance_double(Fee, charge_id: charge.id, amount_cents: 15)])
         end
 
@@ -386,7 +387,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
             subscription_external_id: subscription.external_id)
         end
         let(:current_metrics) do
-          instance_double(SubscriptionUsage, from_datetime: period_start.iso8601,
+          instance_double(SubscriptionUsage, to_datetime: period_end, from_datetime: period_start.iso8601,
             fees: [instance_double(Fee, charge_id: charge.id, units: 15)])
         end
 
@@ -410,7 +411,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
         end
         let(:charge) { create(:standard_charge, plan: subscription.plan, organization:, billable_metric:) }
         let(:current_metrics) do
-          instance_double(SubscriptionUsage, from_datetime: period_start.iso8601,
+          instance_double(SubscriptionUsage, to_datetime: period_end, from_datetime: period_start.iso8601,
             fees: [instance_double(Fee, charge_id: charge.id, amount_cents: 90)])
         end
 
@@ -437,6 +438,42 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
       end
     end
 
+    context "when the usage was measured before a renewal and processed after it" do
+      let(:period_start) { Time.current.beginning_of_month }
+      let(:alert) do
+        create(:usage_current_amount_alert, thresholds: [10, 20], previous_value: 0, code: "late",
+          organization:, subscription_external_id: subscription.external_id)
+      end
+      let(:old_period_usage) do
+        instance_double(SubscriptionUsage, amount_cents: 90, from_datetime: (period_start - 1.month).iso8601,
+          to_datetime: (period_start - 1.second).iso8601)
+      end
+      let(:new_period_usage) do
+        instance_double(SubscriptionUsage, amount_cents: 15, from_datetime: period_start.iso8601, to_datetime: period_end)
+      end
+
+      before do
+        alert.thresholds.each { it.update!(notify_on: %w[triggered resolved]) }
+      end
+
+      it "dates the evaluation at the end of the measured period" do
+        described_class.call(alert:, alertable: subscription, current_metrics: old_period_usage)
+
+        expect(alert.reload.last_processed_at).to eq(period_start - 1.second)
+      end
+
+      it "treats the next evaluation as the start of a new period" do
+        described_class.call(alert:, alertable: subscription, current_metrics: old_period_usage)
+        recorded_before = alert.all_triggered_alerts.pluck(:id)
+        described_class.call(alert:, alertable: subscription, current_metrics: new_period_usage)
+
+        expect(alert.all_triggered_alerts.where(kind: :resolved)).to be_empty
+        triggered = alert.all_triggered_alerts.where.not(id: recorded_before).sole
+        expect(triggered.crossed_thresholds.map { it["value"] }).to eq(%w[10.0])
+        expect(triggered.previous_value).to eq(0)
+      end
+    end
+
     context "when billable metric is not part of the plan charges" do
       let(:alert) do
         create(
@@ -451,7 +488,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
       let(:other_billable_metric) { create(:billable_metric, organization:) }
       let(:charge) { create(:standard_charge, billable_metric: other_billable_metric) }
       let(:fees) { [create(:charge_fee, charge:, amount_cents: 100)] }
-      let(:current_metrics) { instance_double(SubscriptionUsage, fees:) }
+      let(:current_metrics) { instance_double(SubscriptionUsage, to_datetime: period_end, fees:) }
 
       it "returns success without triggering alert" do
         expect(result).to be_success
