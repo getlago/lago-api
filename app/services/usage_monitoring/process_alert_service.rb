@@ -26,7 +26,7 @@ module UsageMonitoring
         # NOTE: current is nil if the alert is set for a billable metric which is not part of any charges of the plan
         evaluate(current, now) unless current.nil?
 
-        alert.last_processed_at = now
+        alert.last_processed_at = processed_at(now)
         alert.save!
       end
 
@@ -64,6 +64,15 @@ module UsageMonitoring
 
       # NOTE: from_datetime arrives as an ISO8601 string on the usage path, hence the parse
       alert.last_processed_at < Time.zone.parse(current_metrics.from_datetime.to_s)
+    end
+
+    # NOTE: usage measured just before a renewal but processed after it still belongs to the old period. Stamping it
+    # with the clock time would place it in the new period, and the first evaluation there would miss the rollover.
+    def processed_at(now)
+      return now unless Alert::CURRENT_USAGE_TYPES.include?(alert.alert_type)
+      return now if current_metrics.to_datetime.blank?
+
+      [now, Time.zone.parse(current_metrics.to_datetime.to_s)].min
     end
 
     def record_trigger(crossed_threshold_values, current, now)
