@@ -206,11 +206,22 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
       end
 
       context "when the edit opts the line out of resolutions" do
-        let(:params) { {thresholds: [{code: "low", value: 30}]} }
+        let(:params) { {thresholds: [{code: "low", value: 30, notify_on: %w[triggered]}]} }
 
         it "does not announce a resolution" do
           expect(result).to be_success
           expect(alert.all_triggered_alerts.where(kind: :resolved)).to be_empty
+        end
+      end
+
+      context "when the edit leaves notify_on out" do
+        let(:params) { {thresholds: [{code: "low", value: 30}]} }
+
+        it "keeps the opt-in and announces the resolution" do
+          expect(result).to be_success
+
+          resolved = alert.all_triggered_alerts.find_by(kind: :resolved)
+          expect(resolved).to have_attributes(resolution_reason: "threshold_updated")
         end
       end
 
