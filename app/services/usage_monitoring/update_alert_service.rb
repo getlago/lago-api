@@ -100,11 +100,17 @@ module UsageMonitoring
     def keep_previous_notify_on(threshold)
       return threshold if threshold.key?(:notify_on)
       return threshold if recurring_param?(threshold)
+      # A code sent twice cannot tell which threshold the stored opt-in belongs to
+      return threshold if incoming_code_count(threshold[:code]) > 1
 
       previous = previous_notify_on[threshold[:code].to_s]
       return threshold if previous.blank?
 
       threshold.merge(notify_on: previous)
+    end
+
+    def incoming_code_count(code)
+      params[:thresholds].count { it.to_h.with_indifferent_access[:code].to_s == code.to_s }
     end
 
     def previous_notify_on
