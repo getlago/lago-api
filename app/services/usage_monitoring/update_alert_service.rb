@@ -56,9 +56,12 @@ module UsageMonitoring
         alert.save!
 
         if params[:thresholds].present?
+          lines_before = announced_lines_in_alarm(alert)
           alert.thresholds.delete_all
           alert.thresholds.create!(prepare_thresholds(params[:thresholds], alert.organization_id))
+          alert.reload_thresholds
           seed_alarms_already_past(alert, alertable)
+          resolve_alarms_closed_by_edit(alert, alertable, lines_before)
         end
       end
 

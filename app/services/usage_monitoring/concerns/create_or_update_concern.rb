@@ -62,6 +62,45 @@ module UsageMonitoring
         )
       end
 
+      # The opted-in lines in alarm before an edit, as they were announced, so their alarm can be closed afterwards.
+      def announced_lines_in_alarm(alert)
+        alert.thresholds_in_alarm(alert.previous_value).map { {code: it.code, value: it.value, recurring: false} }
+      end
+
+      # An edit can take a line out of alarm without any change in usage. Nothing would ever evaluate it as a
+      # recovery, so the alarm the customer was told about is closed here, with the reason it closed.
+      def resolve_alarms_closed_by_edit(alert, alertable, lines_before)
+        return if alertable.nil? || lines_before.empty?
+
+        recorded = alert.recorded_alarm_codes
+        still_in_alarm = alert.thresholds_in_alarm(alert.previous_value).map(&:code)
+        opted_in_codes = alert.opted_in_thresholds.map(&:code)
+        present_codes = alert.thresholds.filter_map { it.code.presence }
+
+        closed = lines_before.select { recorded.include?(it[:code]) && still_in_alarm.exclude?(it[:code]) }
+        removed, kept = closed.partition { present_codes.exclude?(it[:code]) }
+        # A line still present but opted out of resolutions is not announced.
+        updated = kept.select { opted_in_codes.include?(it[:code]) }
+
+        {threshold_updated: updated, threshold_removed: removed}.each do |reason, lines|
+          next if lines.empty?
+
+          TriggeredAlert.create!(
+            alert:,
+            organization: alert.organization,
+            alertable:,
+            kind: :resolved,
+            resolution_reason: reason,
+            current_value: alert.previous_value,
+            previous_value: alert.previous_value,
+            crossed_thresholds: lines,
+            in_alarm_thresholds: alert.in_alarm_line_labels(alert.previous_value),
+            fully_resolved: alert.fully_resolved?(alert.previous_value),
+            triggered_at: Time.current
+          )
+        end
+      end
+
       def duplicate_threshold_values?(thresholds)
         threshold_keys = thresholds.map { |t| [t[:value], recurring_param?(t)] }
         threshold_keys.size != threshold_keys.uniq.size

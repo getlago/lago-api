@@ -136,8 +136,10 @@ module UsageMonitoring
       opted_in_thresholds.filter { in_alarm?(it.value, observed_value) }
     end
 
-    def in_alarm_threshold_codes(observed_value)
-      thresholds_in_alarm(observed_value).map(&:code)
+    # Every line still in alarm, opted in or not, named by its code or by its value when it has no code,
+    # so the list covers the same lines as fully_resolved?
+    def in_alarm_line_labels(observed_value)
+      alarm_lines.filter { in_alarm?(it, observed_value) }.map { line_label(it) }
     end
 
     def fully_resolved?(observed_value)
@@ -156,6 +158,8 @@ module UsageMonitoring
       end
     end
 
+    # Pairing is by code across the whole history. That is enough: a line only gets back into alarm through
+    # a crossing, which records a new triggered row, or through seeding, which records a seeded one.
     def recorded_alarm_codes
       all_triggered_alerts
         .where(kind: [:triggered, :seeded])
@@ -167,6 +171,13 @@ module UsageMonitoring
 
     def recurring_threshold
       @recurring_threshold ||= thresholds.find { |th| th.recurring }
+    end
+
+    # Thresholds are replaced wholesale on update: drop what was read from the previous set.
+    def reload_thresholds
+      thresholds.reset
+      @recurring_threshold = nil
+      @one_time_thresholds_values = nil
     end
 
     def one_time_thresholds_values
@@ -194,6 +205,16 @@ module UsageMonitoring
     end
 
     private
+
+    def line_label(line_value)
+      threshold = if one_time_thresholds_values.include?(line_value)
+        thresholds.find { !it.recurring && it.value == line_value }
+      else
+        recurring_threshold
+      end
+
+      threshold&.code.presence || line_value.to_s("F")
+    end
 
     def need_billable_metric?
       BILLABLE_METRIC_TYPES.include?(alert_type)
