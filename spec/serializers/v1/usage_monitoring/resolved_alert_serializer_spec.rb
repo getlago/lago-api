@@ -3,57 +3,54 @@
 require "rails_helper"
 
 RSpec.describe ::V1::UsageMonitoring::ResolvedAlertSerializer do
-  subject(:serializer) { described_class.new(resolved_alert, root_name: "triggered_alert") }
+  subject(:serializer) { described_class.new(resolved_alert, root_name: "resolved_alert") }
 
   let(:resolved_alert) do
-    create(:triggered_alert, alert:, subscription:, kind: :resolved,
-      in_alarm_thresholds: ["warn"], fully_resolved: false,
+    create(:triggered_alert, alert:, subscription:, kind: :resolved, resolution_reason: :recovered,
+      crossed_thresholds: [{code: "warn", value: BigDecimal(2000), recurring: false}],
+      in_alarm_thresholds: ["low"], fully_resolved: false,
       triggered_at: DateTime.new(2000, 1, 1, 12, 0, 0))
   end
   let(:subscription) { create(:subscription, external_id: "ext-id", customer: create(:customer, external_id: "cust-ext-id")) }
-  let(:alert) { create(:usage_current_amount_alert, subscription_external_id: "ext-id", code: "first") }
+  let(:alert) { create(:usage_current_amount_alert, subscription_external_id: "ext-id", code: "first", name: "First") }
 
-  before { resolved_alert }
-
-  it "serializes the object" do
-    result = JSON.parse(serializer.to_json)
-
-    payload = result["triggered_alert"]
-    expect(payload["lago_id"]).to eq(resolved_alert.id)
-    expect(payload["lago_alert_id"]).to eq(alert.id)
-    expect(payload["external_subscription_id"]).to eq("ext-id")
-    expect(payload["external_customer_id"]).to eq("cust-ext-id")
-    expect(payload["alert_code"]).to eq("first")
-    expect(payload["current_value"]).to eq("3000.0")
-    expect(payload["previous_value"]).to eq("1000.0")
-    expect(payload["crossed_thresholds"]).to eq([
-      {"code" => "warn", "value" => "2000.0", "recurring" => false},
-      {"code" => "repeat", "value" => "2500.0", "recurring" => true}
-    ])
+  it "serializes the resolution with its own fields" do
+    expect(JSON.parse(serializer.to_json)["resolved_alert"]).to eq(
+      "lago_id" => resolved_alert.id,
+      "lago_organization_id" => resolved_alert.organization_id,
+      "lago_alert_id" => alert.id,
+      "lago_subscription_id" => subscription.id,
+      "external_subscription_id" => "ext-id",
+      "lago_wallet_id" => nil,
+      "external_customer_id" => "cust-ext-id",
+      "billable_metric_code" => nil,
+      "alert_name" => "First",
+      "alert_code" => "first",
+      "alert_type" => "current_usage_amount",
+      "current_value" => "3000.0",
+      "previous_value" => "1000.0",
+      "recovered_thresholds" => [{"code" => "warn", "value" => "2000.0", "recurring" => false}],
+      "in_alarm_thresholds" => ["low"],
+      "fully_resolved" => false,
+      "reason" => "recovered",
+      "resolved_at" => "2000-01-01T12:00:00Z"
+    )
   end
 
-  it "adds the resolution fields" do
-    result = JSON.parse(serializer.to_json)
-
-    payload = result["triggered_alert"]
-    expect(payload["in_alarm_thresholds"]).to eq(["warn"])
-    expect(payload["fully_resolved"]).to be false
-    expect(payload["resolved_at"]).to eq("2000-01-01T12:00:00Z")
-  end
-
-  context "when every watched line is back on the safe side" do
+  context "when a wallet alert is closed by an edit" do
+    let(:wallet) { create(:wallet, customer: create(:customer, external_id: "wallet-cust")) }
+    let(:alert) { create(:wallet_balance_amount_alert, wallet:, organization: wallet.organization, code: "low") }
     let(:resolved_alert) do
-      create(:triggered_alert, alert:, subscription:, kind: :resolved,
-        in_alarm_thresholds: [], fully_resolved: true,
-        triggered_at: DateTime.new(2000, 1, 1, 12, 0, 0))
+      create(:triggered_alert, alert:, organization: wallet.organization, subscription: nil, wallet:,
+        kind: :resolved, resolution_reason: :threshold_removed, in_alarm_thresholds: [], fully_resolved: true)
     end
 
-    it "reports the alert as fully resolved" do
-      result = JSON.parse(serializer.to_json)
+    it "names the wallet, the customer and the reason" do
+      payload = JSON.parse(serializer.to_json)["resolved_alert"]
 
-      payload = result["triggered_alert"]
-      expect(payload["in_alarm_thresholds"]).to eq([])
-      expect(payload["fully_resolved"]).to be true
+      expect(payload.slice("lago_subscription_id", "lago_wallet_id", "external_customer_id", "reason", "fully_resolved"))
+        .to eq("lago_subscription_id" => nil, "lago_wallet_id" => wallet.id, "external_customer_id" => "wallet-cust",
+          "reason" => "threshold_removed", "fully_resolved" => true)
     end
   end
 end
