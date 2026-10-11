@@ -234,48 +234,52 @@ RSpec.describe UsageMonitoring::Alert do
 
   describe "#find_thresholds_recovered" do
     context "when the alert is increasing" do
-      let(:alert) { create(:alert, code: "rec-up", thresholds: [10, 30, 50]) }
+      let(:alert) { create(:alert, code: "rec-up", thresholds: [10, 30, 50], previous_value:) }
+      let(:previous_value) { 55 }
 
       it "returns the lines left behind on the way down" do
-        alert.previous_value = 55
         expect(alert.find_thresholds_recovered(20)).to eq([30, 50])
       end
 
       it "keeps a line in alarm when the value lands exactly on it" do
-        alert.previous_value = 55
         expect(alert.find_thresholds_recovered(30)).to eq([50])
       end
 
-      it "returns nothing when the value did not fall" do
-        alert.previous_value = 20
-        expect(alert.find_thresholds_recovered(25)).to eq([])
+      context "when the value did not fall" do
+        let(:previous_value) { 20 }
+
+        it "returns nothing" do
+          expect(alert.find_thresholds_recovered(25)).to eq([])
+        end
       end
 
-      it "ignores recurring lines" do
-        alert.thresholds.create!(organization: alert.organization, code: "rec", value: 20, recurring: true)
-        alert.reload
-        alert.previous_value = 55
+      context "with a recurring threshold" do
+        let(:alert) { create(:alert, code: "rec-up", thresholds: [10, 30, 50], recurring_threshold: 20, previous_value:) }
 
-        expect(alert.find_thresholds_recovered(5)).to eq([10, 30, 50])
+        it "ignores recurring lines" do
+          expect(alert.find_thresholds_recovered(5)).to eq([10, 30, 50])
+        end
       end
     end
 
     context "when the alert is decreasing" do
-      let(:alert) { create(:wallet_balance_amount_alert, code: "rec-down", thresholds: [100, 500]) }
+      let(:alert) { create(:wallet_balance_amount_alert, code: "rec-down", thresholds: [100, 500], previous_value:) }
+      let(:previous_value) { 0 }
 
       it "returns the lines left behind on the way up" do
-        alert.previous_value = 0
         expect(alert.find_thresholds_recovered(600)).to eq([100, 500])
       end
 
       it "keeps a line in alarm when the balance lands exactly on it" do
-        alert.previous_value = 0
         expect(alert.find_thresholds_recovered(500)).to eq([100])
       end
 
-      it "returns nothing when the balance did not rise" do
-        alert.previous_value = 600
-        expect(alert.find_thresholds_recovered(550)).to eq([])
+      context "when the balance did not rise" do
+        let(:previous_value) { 600 }
+
+        it "returns nothing" do
+          expect(alert.find_thresholds_recovered(550)).to eq([])
+        end
       end
     end
   end
@@ -329,6 +333,42 @@ RSpec.describe UsageMonitoring::Alert do
         expect(alert.fully_resolved?(120)).to be true
         expect(alert.fully_resolved?(70)).to be false
       end
+    end
+  end
+
+  describe "#in_alarm_line_labels" do
+    let(:alert) { create(:alert, code: "labels", thresholds: nil, recurring_threshold: 50) }
+
+    before do
+      create(:alert_threshold, alert:, organization: alert.organization, code: "warn", value: 10)
+      create(:alert_threshold, alert:, organization: alert.organization, code: nil, value: 20)
+      alert.reload_thresholds
+    end
+
+    it "names every line still in alarm by its code, or by its value without one" do
+      expect(alert.in_alarm_line_labels(25)).to eq(["warn", "20.0"])
+    end
+
+    it "includes the first recurring line" do
+      expect(alert.in_alarm_line_labels(75)).to eq(["warn", "20.0", alert.recurring_threshold.code])
+    end
+
+    it "is empty once every line is clear" do
+      expect(alert.in_alarm_line_labels(5)).to eq([])
+    end
+  end
+
+  describe "#reload_thresholds" do
+    let(:alert) { create(:alert, code: "reload", thresholds: [10]) }
+
+    it "forgets the thresholds read before they were replaced" do
+      expect(alert.one_time_thresholds_values).to eq([10])
+
+      alert.thresholds.delete_all
+      alert.thresholds.create!(organization: alert.organization, value: 40)
+      alert.reload_thresholds
+
+      expect(alert.one_time_thresholds_values).to eq([40])
     end
   end
 end

@@ -81,10 +81,11 @@ module UsageMonitoring
         organization: alert.organization,
         alertable:,
         kind: :resolved,
+        resolution_reason: :recovered,
         current_value: current,
         previous_value: alert.previous_value,
         crossed_thresholds: alert.formatted_crossed_thresholds(announced.map(&:value)),
-        in_alarm_thresholds: alert.in_alarm_threshold_codes(current),
+        in_alarm_thresholds: alert.in_alarm_line_labels(current),
         fully_resolved: alert.fully_resolved?(current),
         triggered_at: now
       )
