@@ -61,11 +61,9 @@ module X402
       end
 
       def purchase_credits(wallet)
-        credit_amount = (BigDecimal(settlement.settled_amount_cents) / wallet.currency_for_balance.subunit_to_unit / wallet.rate_amount).floor(5)
-
         wallet_transaction = ::WalletTransactions::CreateService.call!(
           wallet:,
-          wallet_credit: WalletCredit.new(wallet:, credit_amount:, invoiceable: false),
+          wallet_credit: WalletCredit.from_amount_cents(wallet:, amount_cents: settlement.settled_amount_cents),
           transaction_type: :inbound,
           transaction_status: :purchased,
           status: :pending,
