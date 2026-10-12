@@ -3,9 +3,9 @@
 require "rails_helper"
 
 RSpec.describe WalletTransactions::CreateService do
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:, currency:) }
-  let(:currency) { "EUR" }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:currency) { "EUR" }
+  let_it_be(:customer) { create_default(:customer, organization:, currency:) }
   let(:wallet_credit) { WalletCredit.new(wallet:, credit_amount:) }
 
   let(:wallet) do
@@ -186,10 +186,8 @@ RSpec.describe WalletTransactions::CreateService do
 
     context "with billing entity snapshotting" do
       let(:credit_amount) { 100 }
-      let(:wallet_billing_entity) { create(:billing_entity, organization:) }
       let(:explicit_billing_entity) { create(:billing_entity, organization:) }
       let(:wallet) { create(:wallet, customer:, currency:, billing_entity: wallet_billing_entity) }
-
       let(:transaction_params) do
         {
           status: :pending,
@@ -197,6 +195,8 @@ RSpec.describe WalletTransactions::CreateService do
           transaction_status: :purchased
         }
       end
+
+      let_it_be(:wallet_billing_entity) { create(:billing_entity, organization:) }
 
       it "snapshots the wallet's effective billing entity on the transaction" do
         wallet_transaction = result.wallet_transaction

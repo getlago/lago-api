@@ -4,9 +4,6 @@ require "rails_helper"
 
 RSpec.describe Utils::EmailActivityLog, :capture_kafka_messages do
   let(:invoice) { create(:invoice) }
-  let(:organization) { invoice.organization }
-  let(:customer) { invoice.customer }
-
   let(:message) do
     instance_double(
       Mail::Message,
@@ -19,6 +16,9 @@ RSpec.describe Utils::EmailActivityLog, :capture_kafka_messages do
       body: instance_double(Mail::Body, decoded: "")
     )
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
 
   before do
     stub_const("#{described_class}::AVAILABLE", true)
