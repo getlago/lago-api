@@ -31,7 +31,7 @@ RSpec.describe Subscriptions::ActivateAllPendingService, clickhouse: true do
     end
 
     context "when plan is pay in advance has fixed charges" do
-      let_it_be(:plan) { create(:plan, pay_in_advance: true) }
+      let_it_be(:plan, refind: true) { create(:plan, pay_in_advance: true) }
       let(:fixed_charge_1) { create(:fixed_charge, plan:) }
       let(:subscription) { create(:subscription, :pending, subscription_at: timestamp, plan:) }
 
@@ -71,7 +71,7 @@ RSpec.describe Subscriptions::ActivateAllPendingService, clickhouse: true do
     end
 
     context "when plan is not pay in advance has fixed charges" do
-      let_it_be(:plan) { create(:plan) }
+      let_it_be(:plan, refind: true) { create(:plan) }
       let(:fixed_charge_1) { create(:fixed_charge, plan:) }
       let(:subscription) { create(:subscription, :pending, subscription_at: timestamp, plan:) }
 
@@ -136,7 +136,7 @@ RSpec.describe Subscriptions::ActivateAllPendingService, clickhouse: true do
     end
 
     context "with a subscription in trial" do
-      let_it_be(:plan_with_trial) { create(:plan, pay_in_advance: true, trial_period: 10) }
+      let_it_be(:plan_with_trial, refind: true) { create(:plan, pay_in_advance: true, trial_period: 10) }
 
       before do
         create(:subscription, :pending, subscription_at: timestamp, plan: create(:plan, pay_in_advance: true))
