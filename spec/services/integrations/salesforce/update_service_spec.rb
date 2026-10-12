@@ -7,8 +7,8 @@ RSpec.describe Integrations::Salesforce::UpdateService do
 
   let(:integration) { create(:salesforce_integration, organization:) }
 
-  let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:membership) { create(:membership) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:membership, refind: true) { create(:membership) }
 
   describe "#call" do
     subject(:service_call) { described_class.call(integration:, params: update_args) }

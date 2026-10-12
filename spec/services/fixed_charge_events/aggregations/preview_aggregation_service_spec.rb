@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe FixedChargeEvents::Aggregations::PreviewAggregationService do
   subject(:result) { described_class.call(fixed_charge:, subscription:, boundaries:) }
 
-  let_it_be(:organization) { create(:organization) }
+  let_it_be(:organization, refind: true) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:fixed_charge) do
     create(
@@ -37,8 +37,8 @@ RSpec.describe FixedChargeEvents::Aggregations::PreviewAggregationService do
     }
   end
 
-  let_it_be(:plan) { create(:plan, organization:) }
-  let_it_be(:add_on) { create(:add_on, organization:) }
+  let_it_be(:plan, refind: true) { create(:plan, organization:) }
+  let_it_be(:add_on, refind: true) { create(:add_on, organization:) }
 
   it "returns the fixed_charge units" do
     expect(result).to be_success

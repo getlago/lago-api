@@ -9,9 +9,9 @@ RSpec.describe FixedCharges::CreateService do
     create_default(:organization)
   end
 
-  let_it_be(:plan) { create(:plan) }
-  let_it_be(:organization) { plan.organization }
-  let_it_be(:add_on) { create(:add_on, organization:) }
+  let_it_be(:plan, refind: true) { create(:plan) }
+  let_it_be(:organization, refind: true) { plan.organization }
+  let_it_be(:add_on, refind: true) { create(:add_on, organization:) }
 
   describe "#call" do
     subject(:result) { create_service.call }

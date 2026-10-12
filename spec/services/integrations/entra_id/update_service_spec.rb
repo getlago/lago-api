@@ -13,8 +13,8 @@ RSpec.describe Integrations::EntraId::UpdateService do
   let(:tenant_id) { SecureRandom.uuid }
   let(:host) { "login.microsoftonline.us" }
 
-  let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:membership) { create(:membership) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:membership, refind: true) { create(:membership) }
 
   describe "#call" do
     subject(:service_call) { described_class.call(integration:, params: update_args) }

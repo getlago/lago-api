@@ -35,9 +35,9 @@ RSpec.describe FixedCharges::EmitEventsService do
   }
   let(:terminated_subscription) { create(:subscription, :terminated, plan:, customer: customer_1) }
 
-  let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:plan) { create(:plan, organization:, interval: :yearly, bill_fixed_charges_monthly: true) }
-  let_it_be(:add_on) { create(:add_on, organization:) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:plan, refind: true) { create(:plan, organization:, interval: :yearly, bill_fixed_charges_monthly: true) }
+  let_it_be(:add_on, refind: true) { create(:add_on, organization:) }
 
   describe "#call" do
     subject(:result) { service.call }

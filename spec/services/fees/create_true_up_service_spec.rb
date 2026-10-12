@@ -26,9 +26,9 @@ RSpec.describe Fees::CreateTrueUpService do
   let(:used_amount_cents) { 700 }
   let(:used_precise_amount_cents) { 700.0 }
 
-  let_it_be(:organization) { create(:organization) }
-  let_it_be(:customer) { create(:customer, organization:) }
-  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:organization, refind: true) { create(:organization) }
+  let_it_be(:customer, refind: true) { create(:customer, organization:) }
+  let_it_be(:plan, refind: true) { create(:plan, organization:) }
 
   before { tax }
 

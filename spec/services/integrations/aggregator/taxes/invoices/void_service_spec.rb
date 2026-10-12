@@ -6,6 +6,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
   subject(:service_call) { described_class.call(invoice:) }
 
   let(:integration) { create(:anrok_integration, organization:) }
+  let(:fee) { create(:fee, invoice:, amount_cents: 1000) }
   let(:customer) { create(:customer, organization:) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { "https://api.nango.dev/v1/anrok/void_invoices" }
@@ -42,8 +43,6 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
   let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
 
   let_it_be(:organization) { create_default(:organization) }
-
-  let(:fee) { create(:fee, invoice:, amount_cents: 1000) }
 
   before do
     allow(LagoHttpClient::Client).to receive(:new)

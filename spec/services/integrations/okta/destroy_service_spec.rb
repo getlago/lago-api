@@ -7,9 +7,9 @@ RSpec.describe Integrations::Okta::DestroyService do
 
   include_context "with mocked security logger"
 
-  let_it_be(:membership) { create(:membership) }
-  let_it_be(:membership) { create(:membership) }
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership, refind: true) { create(:membership) }
+  let_it_be(:membership, refind: true) { create(:membership) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let(:integration) { create(:okta_integration, organization:) }
 
   describe ".call", :premium do

@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe IntegrationCustomers::UpdateService do
   let(:integration) { create(:netsuite_integration, organization:) }
 
-  let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:membership) { create(:membership) }
-  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:membership, refind: true) { create(:membership) }
+  let_it_be(:customer, refind: true) { create(:customer, organization:) }
 
   describe "#call" do
     subject(:service_call) { described_class.call(params:, integration:, integration_customer:) }

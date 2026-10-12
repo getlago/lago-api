@@ -116,8 +116,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Xero do
     end
 
     context "with a single billable metric charge" do
-      let_it_be(:organization) { create(:organization) }
-      let_it_be(:billing_entity) { create(:billing_entity, organization:) }
+      let_it_be(:organization, refind: true) { create(:organization) }
+      let_it_be(:billing_entity, refind: true) { create(:billing_entity, organization:) }
       let(:integration) { create(:xero_integration, organization:) }
       let(:integration_customer) { create(:xero_customer, customer:, integration:) }
       let(:charge) { create(:standard_charge, plan:, organization:, billable_metric:) }
@@ -149,9 +149,9 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Xero do
         )
       end
 
-      let_it_be(:customer) { create_default(:customer, organization:, billing_entity:) }
-      let_it_be(:billable_metric) { create(:billable_metric, organization:) }
-      let_it_be(:plan) { create(:plan, organization:) }
+      let_it_be(:customer, refind: true) { create_default(:customer, organization:, billing_entity:) }
+      let_it_be(:billable_metric, refind: true) { create(:billable_metric, organization:) }
+      let_it_be(:plan, refind: true) { create(:plan, organization:) }
 
       before { billable_metric_mapping }
 

@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Fees::EstimateInstant::BatchPayInAdvanceService do
   subject { described_class.new(organization:, external_subscription_id:, events:) }
 
-  let_it_be(:organization) { create(:organization) }
+  let_it_be(:organization, refind: true) { create(:organization) }
   let(:billable_metric) { create(:sum_billable_metric, organization:) }
   let(:charge) { create(:percentage_charge, :pay_in_advance, plan:, billable_metric:, properties: {rate: "0.1", fixed_amount: "0"}) }
   let(:customer) { create(:customer, organization:) }
@@ -38,7 +38,7 @@ RSpec.describe Fees::EstimateInstant::BatchPayInAdvanceService do
   let(:timestamp) { Time.current.to_i.to_s }
   let(:currency) { subscription.plan.amount.currency }
 
-  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:plan, refind: true) { create(:plan, organization:) }
 
   before { charge }
 
