@@ -68,9 +68,9 @@ module Credits
     end
 
     # What the wallet paid for charge usage, excluding taxes, per subscription and billable metric,
-    # so usage can later be attributed to the wallets that paid for it. A fee key can span several
-    # subscriptions of the invoice, so what the wallet paid for it is split between them by their
-    # fees.
+    # targeted usage apart, so usage can later be attributed to the wallets that paid for it. A fee
+    # key can span several subscriptions of the invoice, so what the wallet paid for it is split
+    # between them by their fees.
     def charge_amounts_by_subscription(wallet_fee_transactions)
       amounts = Hash.new { |hash, subscription_id| hash[subscription_id] = Hash.new(0) }
 
@@ -82,8 +82,10 @@ module Credits
         shares = fee_shares[fee_key]
         total_cap = shares.values.sum { it[:cap] }
 
+        key = WalletTransaction.billable_metric_amount_key(fee_key.second, fee_key.third)
+
         shares.each do |subscription_id, share|
-          amounts[subscription_id][fee_key.second] += tax_exclusive(share, paid * share[:cap] / total_cap)
+          amounts[subscription_id][key] += tax_exclusive(share, paid * share[:cap] / total_cap)
         end
       end
 

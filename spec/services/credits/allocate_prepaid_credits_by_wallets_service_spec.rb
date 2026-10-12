@@ -224,8 +224,8 @@ RSpec.describe Credits::AllocatePrepaidCreditsByWalletsService do
             taxes_precise_amount_cents: 0, grouped_by: {"target_wallet_code" => "target"})
         end
 
-        it "records it on the targeted wallet, ahead of priority" do
-          expect(result.billable_metric_amounts).to eq({target_wallet => {subscription.id => {billable_metric_id => 100}}})
+        it "records it on the targeted wallet, ahead of priority, apart from untargeted usage" do
+          expect(result.billable_metric_amounts).to eq({target_wallet => {subscription.id => {"#{billable_metric_id}/target" => 100}}})
         end
       end
     end

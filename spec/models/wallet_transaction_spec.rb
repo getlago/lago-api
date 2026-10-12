@@ -128,6 +128,19 @@ RSpec.describe WalletTransaction do
     end
   end
 
+  describe ".billable_metric_amount_key" do
+    let(:billable_metric_id) { "00000000-0000-4000-8000-000000000001" }
+
+    it "is the billable metric for usage that targeted no wallet" do
+      expect(described_class.billable_metric_amount_key(billable_metric_id, nil)).to eq(billable_metric_id)
+    end
+
+    it "adds the target wallet code for usage that targeted one" do
+      expect(described_class.billable_metric_amount_key(billable_metric_id, "wallet-x"))
+        .to eq("00000000-0000-4000-8000-000000000001/wallet-x")
+    end
+  end
+
   describe "#mark_as_failed!" do
     let(:transaction) { create(:wallet_transaction, status: :pending) }
 
