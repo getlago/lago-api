@@ -11,30 +11,28 @@ RSpec.describe V1::Entitlement::SubscriptionEntitlementSerializer do
     )
   end
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:collection) { Entitlement::SubscriptionEntitlement.for_subscription(subscription) }
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, organization:, customer:, plan:) }
   let(:feature) { create(:feature, organization:, code: "seats") }
   let(:privilege1) { create(:privilege, organization:, feature:, code: "max", value_type: "integer") }
   let(:privilege2) { create(:privilege, organization:, feature:, code: "reset", value_type: "string") }
   let(:privilege3) { create(:privilege, organization:, feature:, code: "root?", value_type: "boolean") }
-
   let(:entitlement) { create(:entitlement, plan:, feature:) }
   let(:entitlement_value1) { create(:entitlement_value, entitlement:, privilege: privilege1, value: 30, created_at: 2.days.ago) }
   let(:entitlement_value2) { create(:entitlement_value, entitlement:, privilege: privilege2, value: :email) }
-
   let(:sub_entitlement) { create(:entitlement, subscription:, plan: nil, feature:) }
   let(:entitlement_value3) { create(:entitlement_value, entitlement: sub_entitlement, privilege: privilege3, value: true, created_at: 3.days.ago) }
   let(:entitlement_value25) { create(:entitlement_value, entitlement: sub_entitlement, privilege: privilege2, value: :slack) }
-
   let(:feature2) { create(:feature, organization:, code: "storage", name: nil, description: nil) }
   let(:privilege4) { create(:privilege, organization:, feature: feature2, code: "limit", name: "L", value_type: "integer") }
   let(:entitlement2) { create(:entitlement, plan:, feature: feature2, created_at: 12.years.ago) }
   let(:entitlement_value4) { create(:entitlement_value, entitlement: entitlement2, privilege: privilege4, value: 100) }
   let(:entitlement25) { create(:entitlement, plan: nil, subscription:, feature: feature2, created_at: 1.year.ago) }
   let(:entitlement_value45) { create(:entitlement_value, entitlement: entitlement25, privilege: privilege4, value: 999) }
+
+  let_it_be(:customer) { create_default(:customer, organization:) }
+  let_it_be(:plan) { create_default(:plan, organization:) }
 
   before do
     entitlement_value1

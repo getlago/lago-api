@@ -9,10 +9,10 @@ RSpec.describe EInvoices::Payments::Ubl::Builder do
     end
   end
 
-  let(:organization) { create(:organization, premium_integrations: %w[issue_receipts]) }
-  let(:billing_entity) { create(:billing_entity, tax_identification_number: "MAR1234BR") }
-  let(:customer) { create(:customer, billing_entity:) }
-  let(:invoice) { create(:invoice, total_amount_cents: 1000, number: "INV-24680-OIC-E") }
+  let_it_be(:organization) { create_default(:organization, premium_integrations: %w[issue_receipts]) }
+  let_it_be(:billing_entity) { create_default(:billing_entity, tax_identification_number: "MAR1234BR") }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:invoice) { create_default(:invoice, total_amount_cents: 1000, number: "INV-24680-OIC-E") }
   let(:payment) do
     create(:payment,
       customer:,
