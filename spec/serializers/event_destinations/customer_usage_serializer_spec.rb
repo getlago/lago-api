@@ -174,6 +174,16 @@ RSpec.describe EventDestinations::CustomerUsageSerializer do
 
         expect(totals).to eq({first_wallet_id => [1, 1, 1], second_wallet_id => [1, 1, 1]})
       end
+
+      context "when the charges come in the other order" do
+        let(:reversed_result) do
+          described_class.new(usage.dup.tap { it.fees = usage.fees.reverse }, root_name: "customer_usage", wallets:, wallet_amounts:).serialize
+        end
+
+        it "rounds the same way, so a record does not change while the usage does not" do
+          expect(reversed_result[:charges_usage]).to eq(result[:charges_usage])
+        end
+      end
     end
 
     context "when events targeted wallets" do

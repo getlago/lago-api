@@ -49,14 +49,15 @@ module EventDestinations
     # One entry per charge and wallet, and the entries add up exactly to the charge totals. Each part
     # of a charge's usage is split in proportion to what each wallet absorbed for it: its usage of the
     # billable metric, with usage whose events targeted a wallet kept apart, since only that wallet
-    # pays for it. A wallet whose share rounds to nothing gets no entry.
+    # pays for it. A wallet whose share rounds to nothing gets no entry. Charges are taken in a fixed
+    # order, so rounding lands on the same wallets on every record.
     def charges_usage
       usage_fees = model.fees.select(&:non_zero?)
       amounts_by_key = usage_fees.group_by { amount_key(it) }.transform_values { |fees| fees.sum(&:amount_cents) }
 
       ledgers = Hash.new { |hash, key| hash[key] = Hash.new(0) }
 
-      usage_fees.group_by(&:charge_id).flat_map do |_charge_id, charge_fees|
+      usage_fees.group_by(&:charge_id).sort_by(&:first).flat_map do |_charge_id, charge_fees|
         parts = Hash.new { |hash, wallet_id| hash[wallet_id] = {units: 0, events_count: 0, amount_cents: 0} }
 
         charge_fees.group_by { amount_key(it) }.each do |key, fees|
