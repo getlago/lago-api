@@ -1374,4 +1374,129 @@ RSpec.describe DailyUsages::ComputeDiffService do
       end
     end
   end
+
+  describe "filters edited between snapshots" do
+    def usage_values(amount_cents, units, events_count)
+      {"amount_cents" => amount_cents, "units" => units, "events_count" => events_count}
+    end
+
+    def filter_usage(values, amount_cents, units, events_count)
+      {
+        "values" => values,
+        "invoice_display_name" => nil,
+        "presentation_breakdowns" => [],
+        **usage_values(amount_cents, units, events_count)
+      }
+    end
+
+    def usage_payload(filters, amount_cents, units, events_count)
+      {
+        "amount_cents" => amount_cents,
+        "taxes_amount_cents" => 0,
+        "charges_usage" => [
+          {
+            "charge" => {"lago_id" => "charge-a"},
+            "filters" => filters,
+            "grouped_usage" => [],
+            "presentation_breakdowns" => [],
+            **usage_values(amount_cents, units, events_count)
+          }
+        ]
+      }
+    end
+
+    let(:diff_charge) { diff_service.call.usage_diff.fetch("charges_usage").first }
+    let(:diff_filters) { diff_charge.fetch("filters").map { |f| f.slice("values", "amount_cents", "units", "events_count") } }
+
+    context "when filter values are edited without new usage" do
+      let(:previous_usage) do
+        usage_payload([filter_usage({"model" => %w[a b]}, 1000, "10.0", 10)], 1000, "10.0", 10)
+      end
+
+      let(:usage) do
+        usage_payload([filter_usage({"model" => %w[b]}, 1000, "10.0", 10)], 1000, "10.0", 10)
+      end
+
+      it "does not count the period-to-date usage of the edited filter as a new diff" do
+        expect(diff_charge.slice("amount_cents", "units", "events_count")).to eq(usage_values(0, "0.0", 0))
+        expect(diff_filters).to eq([{"values" => {"model" => %w[b]}, **usage_values(0, "0.0", 0)}])
+      end
+    end
+
+    context "when a filter value is moved into a new filter and usage is received" do
+      let(:previous_usage) do
+        usage_payload([filter_usage({"model" => %w[a b]}, 1000, "10.0", 10)], 1000, "10.0", 10)
+      end
+
+      let(:usage) do
+        usage_payload(
+          [
+            filter_usage({"model" => %w[b]}, 700, "7.0", 7),
+            filter_usage({"model" => %w[a]}, 400, "4.0", 4)
+          ],
+          1100, "11.0", 11
+        )
+      end
+
+      it "allocates the dropped filter usage so that filter diffs add up to the charge diff" do
+        expect(diff_charge.slice("amount_cents", "units", "events_count")).to eq(usage_values(100, "1.0", 1))
+        expect(diff_filters.map { |f| f["amount_cents"] }).to eq([64, 36])
+        expect(diff_filters.sum { |f| f["events_count"] }).to eq(1)
+        expect(diff_filters.sum { |f| BigDecimal(f["units"]) }).to eq(BigDecimal("1.0"))
+      end
+    end
+
+    context "when a filter is removed and its usage falls back into the default bucket" do
+      let(:previous_usage) do
+        usage_payload(
+          [
+            filter_usage({"model" => %w[a]}, 300, "3.0", 3),
+            filter_usage(nil, 700, "7.0", 7)
+          ],
+          1000, "10.0", 10
+        )
+      end
+
+      let(:usage) do
+        usage_payload([filter_usage(nil, 1050, "10.5", 11)], 1050, "10.5", 11)
+      end
+
+      it "deducts the removed filter usage from the remaining filters" do
+        expect(diff_filters).to eq([{"values" => nil, **usage_values(50, "0.5", 1)}])
+      end
+    end
+
+    context "when filters nested in grouped usage are edited" do
+      let(:previous_usage) do
+        payload = usage_payload([], 1000, "10.0", 10)
+        payload["charges_usage"].first["grouped_usage"] = [
+          {
+            "grouped_by" => {"region" => "eu"},
+            "filters" => [filter_usage({"model" => %w[a b]}, 1000, "10.0", 10)],
+            "presentation_breakdowns" => [],
+            **usage_values(1000, "10.0", 10)
+          }
+        ]
+        payload
+      end
+
+      let(:usage) do
+        payload = usage_payload([], 1020, "10.2", 12)
+        payload["charges_usage"].first["grouped_usage"] = [
+          {
+            "grouped_by" => {"region" => "eu"},
+            "filters" => [filter_usage({"model" => %w[b]}, 1020, "10.2", 12)],
+            "presentation_breakdowns" => [],
+            **usage_values(1020, "10.2", 12)
+          }
+        ]
+        payload
+      end
+
+      it "reconciles the grouped filters with the grouped diff" do
+        grouped_filter = diff_charge.fetch("grouped_usage").first.fetch("filters").first
+        expect(grouped_filter.slice("amount_cents", "units", "events_count")).to eq(usage_values(20, "0.2", 2))
+      end
+    end
+  end
 end

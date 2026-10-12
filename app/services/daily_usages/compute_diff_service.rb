@@ -89,15 +89,96 @@ module DailyUsages
       (previous_usage["taxes_amount_cents"] * common_ratio).round
     end
 
+    # Filters have no stable identifier in the serialized usage, so they are matched on their values.
+    # When a charge's filters are edited mid-period, the current snapshot (recomputed over the whole
+    # period with the new filters) holds filters that did not exist in the previous snapshot, and the
+    # previous snapshot holds filters that no longer exist. Without reconciliation, the new filters
+    # keep their full period-to-date amounts as "diff" while the dropped filters' amounts are never
+    # subtracted, so the filter diffs no longer add up to the charge diff.
+    #
+    # The amounts of the dropped filters are therefore deducted from the filters that were not matched
+    # (where the re-bucketed usage landed), or from all current filters when every current filter was
+    # matched (e.g. a filter was removed and its usage fell back into the default bucket).
     def apply_filters_diff(previous_parent, current_parent)
+      current_filters = current_parent["filters"]
+      current_values = current_filters.map { |fu| fu["values"] }.to_set
+      allocation_weights = current_filters.map { |fu| cumulative_values(fu) }
+
       previous_filters_index = previous_parent["filters"].index_by { |fu| fu["values"] }
-      current_parent["filters"].each do |current_filter|
+      unmatched_indexes = []
+
+      current_filters.each_with_index do |current_filter, index|
         previous_filter = previous_filters_index[current_filter["values"]]
-        next unless previous_filter
+        unless previous_filter
+          unmatched_indexes << index
+          next
+        end
 
         apply_diff(previous_filter, current_filter)
         apply_presentation_breakdowns_diff(previous_filter, current_filter)
       end
+
+      dropped_filters = previous_parent["filters"].reject { |fu| current_values.include?(fu["values"]) }
+      return if dropped_filters.empty?
+
+      target_indexes = unmatched_indexes.presence || current_filters.each_index.to_a
+      deduct_dropped_filters(
+        dropped_filters,
+        target_indexes.map { |index| current_filters[index] },
+        target_indexes.map { |index| allocation_weights[index] }
+      )
+    end
+
+    def deduct_dropped_filters(dropped_filters, targets, weights)
+      return if targets.empty?
+
+      dropped = dropped_filters.map { |fu| cumulative_values(fu) }
+      shares = allocation_shares(weights)
+
+      {
+        "amount_cents" => dropped.sum { |values| values[:amount_cents] },
+        "events_count" => dropped.sum { |values| values[:events_count] },
+        "units" => dropped.sum(BigDecimal(0)) { |values| values[:units] }
+      }.each do |field, total|
+        allocate(total, shares).each_with_index do |amount, index|
+          target = targets[index]
+
+          target[field] = if field == "units"
+            (BigDecimal(target[field]) - amount).to_s
+          else
+            target[field] - amount
+          end
+        end
+      end
+    end
+
+    def cumulative_values(usage)
+      {
+        amount_cents: usage["amount_cents"],
+        events_count: usage["events_count"],
+        units: BigDecimal(usage["units"])
+      }
+    end
+
+    # Allocation ratio of each target, based on its period-to-date amount, then units, then events count.
+    def allocation_shares(weights)
+      %i[amount_cents units events_count].each do |field|
+        total = weights.sum { |values| values[field] }
+        return weights.map { |values| Rational(values[field]) / total } if total.positive?
+      end
+
+      Array.new(weights.size, Rational(1, weights.size))
+    end
+
+    # Splits total according to shares. The last target takes the remainder, so the parts always add up
+    # to the total. Integer totals (cents, events) are split into integers.
+    def allocate(total, shares)
+      integer = total.is_a?(Integer)
+      parts = shares[0...-1].map do |share|
+        integer ? (total * share).round : total * BigDecimal(share, 20)
+      end
+
+      parts << (total - parts.sum(integer ? 0 : BigDecimal(0)))
     end
 
     def apply_presentation_breakdowns_diff(previous_parent, current_parent)
