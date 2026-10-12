@@ -53,6 +53,40 @@ RSpec.describe Invoices::UpdateService do
       end
     end
 
+    context "when the invoice settles with a provider payment awaiting funds" do
+      let(:payment) { create(:payment, :awaiting_bank_transfer, payable: invoice, payable_payment_status: :processing) }
+
+      before { payment }
+
+      it "enqueues a job to cancel the provider payment" do
+        expect { result }.to have_enqueued_job_after_commit(PaymentProviders::CancelPaymentJob).with(payment)
+      end
+
+      context "when the invoice was already succeeded" do
+        let(:invoice) { create(:invoice, payment_status: :succeeded) }
+
+        it "does not enqueue the cancel job" do
+          expect { result }.not_to have_enqueued_job(PaymentProviders::CancelPaymentJob)
+        end
+      end
+
+      context "when the payment status is not succeeded" do
+        let(:update_args) { {payment_status: "failed"} }
+
+        it "does not enqueue the cancel job" do
+          expect { result }.not_to have_enqueued_job(PaymentProviders::CancelPaymentJob)
+        end
+      end
+    end
+
+    context "when the invoice settles through its own provider payment" do
+      before { create(:payment, payable: invoice, status: "succeeded", payable_payment_status: :succeeded) }
+
+      it "does not enqueue the cancel job" do
+        expect { result }.not_to have_enqueued_job(PaymentProviders::CancelPaymentJob)
+      end
+    end
+
     context "when invoices is included in a payment request" do
       let(:customer) do
         create(
