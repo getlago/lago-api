@@ -3,6 +3,12 @@
 require "rails_helper"
 
 RSpec.describe BillSubscriptionJob do
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+    create_default(:plan)
+  end
+
   let(:subscriptions) { [create(:subscription)] }
   let(:timestamp) { Time.zone.now.to_i }
 
@@ -39,7 +45,7 @@ RSpec.describe BillSubscriptionJob do
       end
 
       context "with a previously created invoice" do
-        let(:invoice) { create(:invoice, :generating) }
+        let_it_be(:invoice) { create(:invoice, :generating) }
 
         it "raises an error" do
           expect do
@@ -73,7 +79,7 @@ RSpec.describe BillSubscriptionJob do
       end
 
       context "when a not generating invoice is attached to the result" do
-        let(:result_invoice) { create(:invoice, :draft) }
+        let_it_be(:result_invoice) { create(:invoice, :draft) }
 
         before { result.invoice = result_invoice }
 
@@ -98,7 +104,7 @@ RSpec.describe BillSubscriptionJob do
   end
 
   describe "#lock_key_arguments" do
-    let(:customer) { create(:customer, timezone: "Europe/Paris") }
+    let_it_be(:customer) { create(:customer, timezone: "Europe/Paris") }
     let(:subscription) { create(:subscription, customer:) }
     let(:subscriptions) { [subscription] }
 
