@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe UsageAttributionValues::TrackEventsService do
   subject(:track) { described_class.call(organization:, events:) }
 
-  let(:organization) { create(:organization, feature_flags: ["account_tree"]) }
+  let(:organization) { create(:organization, clickhouse_events_store: true, feature_flags: ["account_tree"]) }
   let(:department) { create(:usage_attribution_type, organization:, code: "department", attribution_keys: ["department_id"]) }
   let(:timestamp) { Time.zone.parse("2026-10-09T10:00:00.123456Z") }
   let(:events) { [build_event("sub_1", {"department_id" => "rnd", "tokens" => 10})] }
@@ -106,7 +106,15 @@ RSpec.describe UsageAttributionValues::TrackEventsService do
   end
 
   context "when the account_tree feature flag is disabled" do
-    let(:organization) { create(:organization) }
+    let(:organization) { create(:organization, clickhouse_events_store: true) }
+
+    it "does not enqueue anything" do
+      expect { track }.not_to have_enqueued_job(UsageAttributionValues::TrackJob)
+    end
+  end
+
+  context "when the organization uses the Postgres events store" do
+    let(:organization) { create(:organization, clickhouse_events_store: false, feature_flags: ["account_tree"]) }
 
     it "does not enqueue anything" do
       expect { track }.not_to have_enqueued_job(UsageAttributionValues::TrackJob)
