@@ -27,10 +27,10 @@ module X402
         return refuse("buyer_external_id_taken") if customer.nil? && external_id_taken?
         return refuse("wallet_not_x402_enabled") if wallet && !wallet.x402_enabled
         return refuse("subscription_not_active") if active_subscription.nil? && subscriptions.any?
-        return refuse("amount_above_maximum", field: :payment_requirements) if above_maximum?
+        return result.validation_failure!(errors: {wallet: shape_errors}) if wallet.nil? && shape_errors.any?
 
-        if wallet.nil? && shape_errors.any?
-          result.validation_failure!(errors: {wallet: shape_errors})
+        if above_maximum?
+          refuse("amount_above_maximum", field: :payment_requirements)
         else
           result
         end
@@ -92,7 +92,7 @@ module X402
       end
 
       def above_maximum?
-        max = wallet&.paid_top_up_max_amount_cents
+        max = wallet ? wallet.paid_top_up_max_amount_cents : shape_limits[:paid_top_up_max_amount_cents]
         max.present? && verified_payment.settled_amount_cents > max
       end
 
@@ -117,11 +117,14 @@ module X402
         rated.errors[:rate_amount].empty? && rated.rate_amount <= MAX_RATE_AMOUNT
       end
 
-      def valid_limits?
-        limits = shape.slice(*LIMIT_KEYS).compact.transform_values { |value| X402::UnsignedInteger.parse(value) }
-        return false unless limits.values.all? { |cents| cents&.positive? && cents <= MAX_LIMIT_CENTS }
+      def shape_limits
+        @shape_limits ||= shape.slice(*LIMIT_KEYS).compact.transform_values { |value| X402::UnsignedInteger.parse(value) }
+      end
 
-        min, max = limits.values_at(*LIMIT_KEYS)
+      def valid_limits?
+        return false unless shape_limits.values.all? { |cents| cents&.positive? && cents <= MAX_LIMIT_CENTS }
+
+        min, max = shape_limits.values_at(*LIMIT_KEYS)
         min.nil? || max.nil? || max >= min
       end
 

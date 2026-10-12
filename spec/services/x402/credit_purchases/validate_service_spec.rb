@@ -248,6 +248,22 @@ describe X402::CreditPurchases::ValidateService do
           expect(result).to be_success
         end
 
+        context "with the maximum below the payment" do
+          let(:wallet_shape) { super().merge(paid_top_up_max_amount_cents: "999") }
+
+          it "refuses the amount as amount_above_maximum" do
+            expect(result.error.messages).to eq(payment_requirements: ["amount_above_maximum"])
+          end
+        end
+
+        context "with the maximum equal to the payment" do
+          let(:wallet_shape) { super().merge(paid_top_up_max_amount_cents: 1_000) }
+
+          it "passes" do
+            expect(result).to be_success
+          end
+        end
+
         context "with the maximum below the minimum" do
           let(:wallet_shape) { super().merge(paid_top_up_max_amount_cents: 400) }
 
@@ -331,6 +347,14 @@ describe X402::CreditPurchases::ValidateService do
           expect(result).to be_success
         end
 
+        context "with a shape maximum below the payment" do
+          let(:wallet_shape) { super().merge(paid_top_up_max_amount_cents: 999) }
+
+          it "refuses the amount as amount_above_maximum" do
+            expect(result.error.messages).to eq(payment_requirements: ["amount_above_maximum"])
+          end
+        end
+
         context "without a wallet shape" do
           let(:params) { super().except(:wallet) }
 
@@ -392,6 +416,14 @@ describe X402::CreditPurchases::ValidateService do
 
         context "with a wallet shape in another currency" do
           let(:wallet_shape) { super().merge(currency: "EUR") }
+
+          it "passes, since the shape is ignored" do
+            expect(result).to be_success
+          end
+        end
+
+        context "with a wallet shape maximum below the payment" do
+          let(:wallet_shape) { super().merge(paid_top_up_max_amount_cents: 999) }
 
           it "passes, since the shape is ignored" do
             expect(result).to be_success
