@@ -83,6 +83,44 @@ RSpec.describe Invoices::CreateOneOffService do
       end
     end
 
+    context "when a payment_term is passed" do
+      let(:customer) { create(:customer, organization:, billing_entity:, payment_term: {term_type: "net", days: 30}) }
+      let(:args) { {customer:, timestamp: timestamp.to_i, fees:, currency:, payment_term: {term_type: "end_of_month"}} }
+
+      it "snapshots the given term with source invoice" do
+        result = described_class.call(**args)
+
+        expect(result).to be_success
+        expect(result.invoice.payment_term).to eq("term_type" => "end_of_month")
+        expect(result.invoice.payment_term_source).to eq("invoice")
+        expect(result.invoice.net_payment_term).to be_nil
+        expect(result.invoice.payment_due_date).to eq(result.invoice.issuing_date.end_of_month)
+      end
+
+      context "when the payment_term is invalid" do
+        let(:args) { {customer:, timestamp: timestamp.to_i, fees:, currency:, payment_term: {term_type: "net"}} }
+
+        it "returns a validation failure without creating an invoice" do
+          result = nil
+
+          expect { result = described_class.call(**args) }.not_to change(Invoice, :count)
+          expect(result).not_to be_success
+          expect(result.error.messages[:payment_term]).to eq(["invalid_days"])
+        end
+      end
+    end
+
+    context "when no payment_term is passed" do
+      let(:customer) { create(:customer, organization:, billing_entity:, payment_term: {term_type: "net", days: 30}) }
+
+      it "falls back to the customer term" do
+        result = described_class.call(**args)
+
+        expect(result.invoice.payment_term).to eq("term_type" => "net", "days" => 30)
+        expect(result.invoice.payment_term_source).to eq("customer")
+      end
+    end
+
     context "with custom sections" do
       let(:section_1) { create(:invoice_custom_section, organization:, code: "section_code_1") }
       let(:args) do

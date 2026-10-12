@@ -4,6 +4,7 @@ module Api
   module V1
     class InvoicesController < Api::BaseController
       include InvoiceIndex
+      include RawPaymentTermParams
 
       def create
         result = Invoices::CreateOneOffService.call(
@@ -15,7 +16,8 @@ module Api
           invoice_custom_section: create_params[:invoice_custom_section] || {},
           payment_method_params: create_params[:payment_method],
           billing_entity_code: create_params[:billing_entity_code],
-          purchase_order_number: create_params[:purchase_order_number]
+          purchase_order_number: create_params[:purchase_order_number],
+          payment_term: create_params[:payment_term]
         )
 
         if result.success?
@@ -284,7 +286,7 @@ module Api
       def create_params
         return @create_params if defined? @create_params
 
-        @create_params =
+        permitted =
           params.require(:invoice)
             .permit(
               :external_customer_id,
@@ -310,7 +312,9 @@ module Api
                 :payment_method_type,
                 :payment_method_id
               ]
-            ).to_h.deep_symbolize_keys
+            )
+
+        @create_params = with_raw_payment_term(permitted, params[:invoice]).to_h.deep_symbolize_keys
       end
 
       def update_params
