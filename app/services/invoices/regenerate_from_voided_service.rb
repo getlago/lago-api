@@ -74,7 +74,7 @@ module Invoices
     end
 
     def payment_due_date
-      @payment_due_date ||= issuing_date + customer.applicable_net_payment_term.days
+      @payment_due_date ||= regenerated_invoice.snapshotted_payment_term.due_date_for(issuing_date)
     end
 
     def should_create_credit_note_credit?
@@ -281,7 +281,9 @@ module Invoices
         invoice_type: voided_invoice.invoice_type,
         currency: voided_invoice.currency,
         datetime: voided_invoice.created_at,
-        billing_entity: voided_invoice.billing_entity
+        billing_entity: voided_invoice.billing_entity,
+        payment_term: voided_invoice.snapshotted_payment_term,
+        payment_term_source: voided_invoice.payment_term_source
       ).invoice.tap do |invoice|
         invoice.update!(
           voided_invoice_id: voided_invoice.id,

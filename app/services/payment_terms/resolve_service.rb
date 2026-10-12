@@ -6,8 +6,9 @@ module PaymentTerms
 
     DEFAULT_TERM = {"term_type" => "due_on_receipt"}.freeze
 
-    def initialize(customer:)
+    def initialize(customer:, billing_entity: nil)
       @customer = customer
+      @billing_entity = billing_entity
       super
     end
 
@@ -15,8 +16,8 @@ module PaymentTerms
       if customer.payment_term.present?
         result.payment_term = PaymentTerm.from_h(customer.payment_term)
         result.source = "customer"
-      elsif customer.billing_entity.payment_term.present?
-        result.payment_term = PaymentTerm.from_h(customer.billing_entity.payment_term)
+      elsif issuing_billing_entity.payment_term.present?
+        result.payment_term = PaymentTerm.from_h(issuing_billing_entity.payment_term)
         result.source = "billing_entity"
       else
         result.payment_term = PaymentTerm.from_h(DEFAULT_TERM)
@@ -28,6 +29,10 @@ module PaymentTerms
 
     private
 
-    attr_reader :customer
+    attr_reader :customer, :billing_entity
+
+    def issuing_billing_entity
+      billing_entity || customer.billing_entity
+    end
   end
 end

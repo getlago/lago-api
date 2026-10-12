@@ -38,6 +38,19 @@ RSpec.describe PaymentTerms::ResolveService do
     end
   end
 
+  context "when the issuing billing entity is given" do
+    subject(:result) { described_class.call(customer:, billing_entity: other_billing_entity) }
+
+    let(:other_billing_entity) { create(:billing_entity, organization:, payment_term: {term_type: "end_of_month"}) }
+
+    before { billing_entity.update!(payment_term: {term_type: "net", days: 30}) }
+
+    it "returns the term of the given billing entity" do
+      expect(result.payment_term.term_type).to eq("end_of_month")
+      expect(result.source).to eq("billing_entity")
+    end
+  end
+
   context "when no level has a payment term" do
     it "falls back to due_on_receipt with source default" do
       expect(result).to be_success
