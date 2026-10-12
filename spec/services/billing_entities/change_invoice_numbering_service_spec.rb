@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe BillingEntities::ChangeInvoiceNumberingService do
   subject(:result) { described_class.call(billing_entity:, document_numbering:) }
 
-  let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:billing_entity) { create(:billing_entity, document_numbering: "per_customer") }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:billing_entity, refind: true) { create(:billing_entity, document_numbering: "per_customer") }
   let(:document_numbering) { "per_billing_entity" }
 
   describe "#call" do
@@ -25,10 +25,10 @@ RSpec.describe BillingEntities::ChangeInvoiceNumberingService do
     end
 
     context "when changing from per_customer to per_billing_entity" do
-      let_it_be(:customer) { create(:customer, billing_entity:) }
-      let_it_be(:invoice1) { create(:invoice, customer:, organization:, billing_entity:, status: "finalized", self_billed: false) }
-      let_it_be(:invoice2) { create(:invoice, customer:, organization:, billing_entity:, status: "finalized", self_billed: false) }
-      let_it_be(:invoice3) { create(:invoice, customer:, organization:, billing_entity:, status: "draft", self_billed: false) }
+      let_it_be(:customer, refind: true) { create(:customer, billing_entity:) }
+      let_it_be(:invoice1, refind: true) { create(:invoice, customer:, organization:, billing_entity:, status: "finalized", self_billed: false) }
+      let_it_be(:invoice2, refind: true) { create(:invoice, customer:, organization:, billing_entity:, status: "finalized", self_billed: false) }
+      let_it_be(:invoice3, refind: true) { create(:invoice, customer:, organization:, billing_entity:, status: "draft", self_billed: false) }
       let(:voided_invoice) { create(:invoice, customer:, organization:, billing_entity:, status: "voided", self_billed: false) }
       let(:self_billed_invoice) { create(:invoice, customer:, organization:, billing_entity:, status: "finalized", self_billed: true) }
 

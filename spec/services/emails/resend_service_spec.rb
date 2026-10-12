@@ -11,7 +11,7 @@ RSpec.describe Emails::ResendService do
   let(:cc) { nil }
   let(:bcc) { nil }
 
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
 
   before do
     billing_entity.update!(email: "billing@example.com")

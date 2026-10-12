@@ -3,9 +3,10 @@
 require "rails_helper"
 
 RSpec.describe BillableMetrics::UpdateService do
-  let_it_be(:organization) { create_default(:organization) }
-  let(:billable_metric) { create(:billable_metric, organization:) }
   let(:membership) { create(:membership) }
+  let(:organization) { membership.organization }
+
+  let(:billable_metric) { create(:billable_metric, organization:) }
   let(:params) do
     {
       name: "New Metric",

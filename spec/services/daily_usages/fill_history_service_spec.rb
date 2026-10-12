@@ -8,10 +8,10 @@ RSpec.describe DailyUsages::FillHistoryService do
   describe "#call" do
     subject(:call_service) { service.call }
 
-    let_it_be(:organization) { create_default(:organization) }
-    let_it_be(:billing_entity) { create_default(:billing_entity, organization:) }
-    let_it_be(:customer) { create_default(:customer, organization:, billing_entity:) }
-    let_it_be(:plan) { create_default(:plan, organization:) }
+    let_it_be(:organization, refind: true) { create_default(:organization) }
+    let_it_be(:billing_entity, refind: true) { create_default(:billing_entity, organization:) }
+    let_it_be(:customer, refind: true) { create_default(:customer, organization:, billing_entity:) }
+    let_it_be(:plan, refind: true) { create_default(:plan, organization:) }
     let(:billable_metric) { create(:billable_metric, organization:) }
     let(:subscription_started_at) { Time.zone.parse("2024-10-01 00:00:00") }
     let(:subscription) do

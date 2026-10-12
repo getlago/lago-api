@@ -22,12 +22,12 @@ RSpec.describe Commitments::CalculateProratedCoefficientService do
   let(:timestamp) { DateTime.parse("2024-02-01T10:00:00") }
   let(:commitment) { create(:commitment, plan:) }
 
-  let_it_be(:organization) { create(:organization) }
-  let_it_be(:plan) { create(:plan, organization:) }
-  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:organization, refind: true) { create(:organization) }
+  let_it_be(:plan, refind: true) { create(:plan, organization:) }
+  let_it_be(:customer, refind: true) { create(:customer, organization:) }
 
   let_it_be(:started_at) { DateTime.parse("2024-01-01T00:00:00") }
-  let_it_be(:subscription) { create(:subscription, customer:, plan:, started_at:) }
+  let_it_be(:subscription, refind: true) { create(:subscription, customer:, plan:, started_at:) }
 
   describe "#proration_coefficient" do
     subject(:apply_service) { service.proration_coefficient }
@@ -52,7 +52,7 @@ RSpec.describe Commitments::CalculateProratedCoefficientService do
       let(:days_in_month) { Date.current.end_of_month.day }
 
       let_it_be(:started_at) { DateTime.current }
-      let_it_be(:subscription) { create(:subscription, customer:, plan:, started_at:) }
+      let_it_be(:subscription, refind: true) { create(:subscription, customer:, plan:, started_at:) }
 
       before do
         Subscriptions::TerminateService.call(subscription:, async: false)
@@ -68,7 +68,7 @@ RSpec.describe Commitments::CalculateProratedCoefficientService do
 
     context "when subscription is downgraded right after the period ended" do
       let_it_be(:started_at) { DateTime.parse("2024-01-01T00:00:00") }
-      let_it_be(:subscription) { create(:subscription, customer:, plan:, started_at:) }
+      let_it_be(:subscription, refind: true) { create(:subscription, customer:, plan:, started_at:) }
       let(:from_datetime) { DateTime.parse("2024-07-01T00:00:00") }
       let(:to_datetime) { DateTime.parse("2024-07-31T23:59:59") }
       let(:charges_from_datetime) { from_datetime }

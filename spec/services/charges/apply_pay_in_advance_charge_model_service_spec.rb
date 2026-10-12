@@ -56,9 +56,9 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
     Events::CommonFactory.new_instance(source:)
   end
 
-  let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:plan) { create(:plan, organization:) }
-  let_it_be(:subscription) { create(:subscription, plan:) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:plan, refind: true) { create(:plan, organization:) }
+  let_it_be(:subscription, refind: true) { create(:subscription, plan:) }
 
   describe "#call" do
     context "when charge is not pay_in_advance" do
@@ -502,7 +502,7 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
       end
       let(:charge_model_class) { ChargeModels::DynamicService }
 
-      let_it_be(:subscription) { create(:subscription, organization:, plan:) }
+      let_it_be(:subscription, refind: true) { create(:subscription, organization:, plan:) }
 
       it_behaves_like "a charge model"
     end

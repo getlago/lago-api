@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe Charges::DestroyChildrenService do
   subject(:destroy_service) { described_class.new(charge) }
 
-  let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:billable_metric) { create(:billable_metric) }
-  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:billable_metric, refind: true) { create(:billable_metric) }
+  let_it_be(:plan, refind: true) { create(:plan, organization:) }
 
   before_all do
     create_default(:customer)
@@ -25,9 +25,9 @@ RSpec.describe Charges::DestroyChildrenService do
     )
   end
 
-  let_it_be(:parent_id) { plan.id }
-  let_it_be(:child_plan) { create(:plan, organization:, parent_id:) }
-  let_it_be(:subscription) { create(:subscription, plan: child_plan) }
+  let_it_be(:parent_id, refind: true) { plan.id }
+  let_it_be(:child_plan, refind: true) { create(:plan, organization:, parent_id:) }
+  let_it_be(:subscription, refind: true) { create(:subscription, plan: child_plan) }
 
   before do
     child_charge

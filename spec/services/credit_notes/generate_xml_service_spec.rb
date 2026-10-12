@@ -11,9 +11,9 @@ RSpec.describe CreditNotes::GenerateXmlService, type: :service do
   let(:create_xml_result) { EInvoices::CreditNotes::Ubl::CreateService::Result.new.tap { |result| result.xml = fake_xml } }
   let(:blank_xml_path) { Rails.root.join("spec/fixtures/blank.xml") }
 
-  let_it_be(:organization) { create(:organization, name: "LAGO") }
+  let_it_be(:organization, refind: true) { create(:organization, name: "LAGO") }
   let_it_be(:einvoicing) { true }
-  let_it_be(:billing_entity) { create(:billing_entity, organization:, country: "FR", einvoicing:) }
+  let_it_be(:billing_entity, refind: true) { create(:billing_entity, organization:, country: "FR", einvoicing:) }
 
   before do
     credit_note

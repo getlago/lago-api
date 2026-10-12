@@ -12,21 +12,12 @@ RSpec.describe BillableMetrics::AggregationFactory do
   end
 
   let(:billable_metric) { create(billable_aggregation, recurring:) }
-  let(:billable_aggregation) { :billable_metric }
-  let(:recurring) { false }
-
-  let(:charge) { build(:standard_charge, billable_metric:, pay_in_advance:, prorated:) }
-  let(:pay_in_advance) { false }
-  let(:prorated) { false }
-
-  let_it_be(:subscription) { create(:subscription, started_at: DateTime.parse("2023-03-15")) }
   let(:boundaries) do
     {
       charges_from_datetime: subscription.started_at.beginning_of_day,
       charges_to_datetime: subscription.started_at.end_of_month.end_of_day
     }
   end
-
   let(:current_usage) { false }
   let(:metered_item) do
     Fees::ChargeService::MeteredItem.from_charge(
@@ -41,10 +32,16 @@ RSpec.describe BillableMetrics::AggregationFactory do
       )
     )
   end
-
   let(:billing_context) { Billing::Context.from(subscription:) }
-
   let(:result) { factory.new_instance(metered_item:, current_usage:, billing_context:, boundaries:) }
+  let(:billable_aggregation) { :billable_metric }
+  let(:recurring) { false }
+
+  let(:charge) { build(:standard_charge, billable_metric:, pay_in_advance:, prorated:) }
+  let(:pay_in_advance) { false }
+  let(:prorated) { false }
+
+  let_it_be(:subscription) { create(:subscription, started_at: DateTime.parse("2023-03-15")) }
 
   describe "#new_instance" do
     context "with count_agg aggregation" do

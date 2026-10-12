@@ -24,8 +24,8 @@ RSpec.describe Events::ReEnrichAllService do
     )
   end
 
-  let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:plan, refind: true) { create_default(:plan) }
 
   before do
     event

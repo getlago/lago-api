@@ -10,7 +10,7 @@ RSpec.describe ApiKeys::CreateService do
 
     let(:name) { Faker::Lorem.words.join(" ") }
 
-    let_it_be(:organization) { create(:organization) }
+    let_it_be(:organization, refind: true) { create(:organization) }
 
     context "with premium organization", :premium do
       context "when permissions hash is provided" do

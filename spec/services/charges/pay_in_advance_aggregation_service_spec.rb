@@ -7,26 +7,16 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
     described_class.new(metered_item:, billing_context:)
   end
 
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let_it_be(:aggregation_type) { "count_agg" }
-  let_it_be(:billable_metric) { create(:billable_metric, organization:, aggregation_type:, field_name: "item_id") }
+  let_it_be(:billable_metric, refind: true) { create(:billable_metric, organization:, aggregation_type:, field_name: "item_id") }
 
   before_all do
     create_default(:plan)
   end
 
   let(:charge) { create(:standard_charge, billable_metric:, pay_in_advance: true) }
-  let(:charge_filter) { nil }
-  let(:event) { create(:event, organization:, external_subscription_id: subscription.external_id, timestamp: subscription.started_at + 3.days + 1.hour) }
-  let(:common_event) { Events::CommonFactory.new_instance(source: event) }
-  let(:properties) { {} }
-
-  let_it_be(:customer) { create(:customer, organization:) }
-  let_it_be(:subscription) do
-    create(:subscription, customer:, started_at: DateTime.parse("2023-03-15"))
-  end
   let(:billing_context) { Billing::Context.from(subscription:) }
-
   let(:boundaries) do
     BillingPeriodBoundaries.new(
       from_datetime: subscription.started_at.beginning_of_day,
@@ -51,6 +41,15 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
       charges_duration: metered_item.boundaries.charges_duration,
       max_timestamp: metered_item.event.timestamp
     }
+  end
+  let(:charge_filter) { nil }
+  let(:event) { create(:event, organization:, external_subscription_id: subscription.external_id, timestamp: subscription.started_at + 3.days + 1.hour) }
+  let(:common_event) { Events::CommonFactory.new_instance(source: event) }
+  let(:properties) { {} }
+
+  let_it_be(:customer, refind: true) { create(:customer, organization:) }
+  let_it_be(:subscription, refind: true) do
+    create(:subscription, customer:, started_at: DateTime.parse("2023-03-15"))
   end
 
   describe "#call" do

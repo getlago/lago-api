@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe ChargeFilters::CascadeService do
-  let_it_be(:organization) { create(:organization) }
-  let_it_be(:billable_metric) { create(:billable_metric, organization:) }
+  let_it_be(:organization, refind: true) { create(:organization) }
+  let_it_be(:billable_metric, refind: true) { create(:billable_metric, organization:) }
   let(:bm_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[us eu]) }
   let(:parent_charge) { create(:standard_charge, plan: parent_plan, billable_metric:, properties: {amount: "0"}) }
   let(:child_charge) { create(:standard_charge, plan: child_plan, billable_metric:, parent: parent_charge, properties: {amount: "0"}) }
@@ -16,8 +16,8 @@ RSpec.describe ChargeFilters::CascadeService do
     filter
   end
 
-  let_it_be(:parent_plan) { create(:plan, organization:) }
-  let_it_be(:child_plan) { create(:plan, organization:, parent: parent_plan) }
+  let_it_be(:parent_plan, refind: true) { create(:plan, organization:) }
+  let_it_be(:child_plan, refind: true) { create(:plan, organization:, parent: parent_plan) }
 
   before do
     create(:subscription, plan: child_plan, status: :active)

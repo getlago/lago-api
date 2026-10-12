@@ -13,11 +13,11 @@ RSpec.describe Charges::UpdateChildrenService do
     )
   end
 
-  let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:billable_metric) { create(:billable_metric) }
-  let_it_be(:plan) { create(:plan, organization:) }
-  let_it_be(:parent_id) { plan.id }
-  let_it_be(:child_plan) { create(:plan, organization:, parent_id:) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:billable_metric, refind: true) { create(:billable_metric) }
+  let_it_be(:plan, refind: true) { create(:plan, organization:) }
+  let_it_be(:parent_id, refind: true) { plan.id }
+  let_it_be(:child_plan, refind: true) { create(:plan, organization:, parent_id:) }
   let(:old_parent_attrs) { charge&.attributes }
   let(:charge_parent_id) { charge.id }
   let(:child_ids) { [child_charge&.id] }

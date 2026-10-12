@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe CustomerPortal::CustomerUpdateService do
   subject(:result) { described_class.call(customer:, args: update_args) }
 
-  let_it_be(:customer) { create :customer }
+  let_it_be(:customer, refind: true) { create :customer }
 
   let(:update_args) do
     {
@@ -109,8 +109,8 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
   end
 
   context "when organization has eu tax management" do
-    let_it_be(:organization) { create_default(:organization) }
-    let_it_be(:customer) { create :customer }
+    let_it_be(:organization, refind: true) { create_default(:organization) }
+    let_it_be(:customer, refind: true) { create :customer }
     let(:tax_code) { "lago_eu_fr_standard" }
     let(:eu_tax_result) { Customers::EuAutoTaxesService::Result.new }
 

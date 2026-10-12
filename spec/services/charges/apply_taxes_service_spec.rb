@@ -9,7 +9,7 @@ RSpec.describe Charges::ApplyTaxesService do
     create_default(:organization)
   end
 
-  let_it_be(:plan) { create(:plan) }
+  let_it_be(:plan, refind: true) { create(:plan) }
   let(:charge) { create(:standard_charge, plan:) }
   let(:tax1) { create(:tax, organization: plan.organization, code: "tax1") }
   let(:tax2) { create(:tax, organization: plan.organization, code: "tax2") }

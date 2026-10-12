@@ -5,17 +5,17 @@ require "rails_helper"
 RSpec.describe Charges::CreateChildrenService do
   subject(:create_service) { described_class.new(child_ids:, charge:, payload:) }
 
-  let_it_be(:organization) { create(:organization) }
-  let_it_be(:plan) { create(:plan, organization:) }
-  let_it_be(:billable_metric) { create(:billable_metric, organization:) }
+  let_it_be(:organization, refind: true) { create(:organization) }
+  let_it_be(:plan, refind: true) { create(:plan, organization:) }
+  let_it_be(:billable_metric, refind: true) { create(:billable_metric, organization:) }
   let(:charge) { create(:standard_charge, organization:, plan:, billable_metric:) }
   let(:child_ids) { child_plan.id }
   let(:payload) { {} }
   let(:billable_metric_filters) { create_list(:billable_metric_filter, 2, billable_metric:) }
   let(:billable_metric_filter) { billable_metric_filters.first }
 
-  let_it_be(:parent_id) { plan.id }
-  let_it_be(:child_plan) { create(:plan, organization:, parent_id:) }
+  let_it_be(:parent_id, refind: true) { plan.id }
+  let_it_be(:child_plan, refind: true) { create(:plan, organization:, parent_id:) }
 
   before do
     charge

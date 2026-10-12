@@ -15,12 +15,12 @@ RSpec.describe Customers::RefreshInvoicesSearchTermsService do
     end
 
     context "with a customer" do
-      let_it_be(:organization) { create(:organization) }
-      let_it_be(:customer) { create(:customer, organization:, name: "Acme Inc") }
-      let_it_be(:other_customer) { create(:customer, organization:, name: "Globex") }
+      let_it_be(:organization, refind: true) { create(:organization) }
+      let_it_be(:customer, refind: true) { create(:customer, organization:, name: "Acme Inc") }
+      let_it_be(:other_customer, refind: true) { create(:customer, organization:, name: "Globex") }
 
-      let_it_be(:invoice) { create(:invoice, organization:, customer:, number: "INV-001") }
-      let_it_be(:other_invoice) { create(:invoice, organization:, customer: other_customer, number: "INV-002") }
+      let_it_be(:invoice, refind: true) { create(:invoice, organization:, customer:, number: "INV-001") }
+      let_it_be(:other_invoice, refind: true) { create(:invoice, organization:, customer: other_customer, number: "INV-002") }
 
       before do
         Invoice.where(id: [invoice.id, other_invoice.id]).update_all(search_terms: nil) # rubocop:disable Rails/SkipsModelValidations

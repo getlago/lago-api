@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe DataExports::Csv::InvoiceFees do
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let(:customer) { create(:customer, timezone:) }
   let(:subscription) { create(:subscription, customer:, plan:, organization: customer.organization) }
   let(:invoice) { create(:invoice, customer:, organization: customer.organization) }
@@ -50,7 +50,7 @@ RSpec.describe DataExports::Csv::InvoiceFees do
   let(:fee_serializer_klass) { class_double("V1::FeeSerializer") }
   let(:invoice_serializer_klass) { class_double("V1::InvoiceSerializer") }
 
-  let_it_be(:plan) { create_default(:plan, organization:) }
+  let_it_be(:plan, refind: true) { create_default(:plan, organization:) }
 
   describe ".base_headers" do
     it "uses timezone-agnostic column names" do

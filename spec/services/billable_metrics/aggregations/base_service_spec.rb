@@ -110,7 +110,7 @@ RSpec.describe BillableMetrics::Aggregations::BaseService do
     end
     let(:filters) { {} }
 
-    let_it_be(:subscription) { create(:subscription) }
+    let_it_be(:subscription, refind: true) { create(:subscription) }
 
     context "without grouped_by" do
       it "returns the aggregator's result zeroed out with the aggregator attached" do

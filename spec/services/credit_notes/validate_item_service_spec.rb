@@ -9,8 +9,8 @@ RSpec.describe CreditNotes::ValidateItemService do
     create_default(:organization)
   end
 
-  let_it_be(:customer) { create_default(:customer) }
-  let_it_be(:invoice) { create(:invoice, total_amount_cents: 120) }
+  let_it_be(:customer, refind: true) { create_default(:customer) }
+  let_it_be(:invoice, refind: true) { create(:invoice, total_amount_cents: 120) }
 
   let(:result) { BaseService::Result.new }
   let(:fee) { create(:fee, invoice:, amount_cents: 100, taxes_rate: 20) }

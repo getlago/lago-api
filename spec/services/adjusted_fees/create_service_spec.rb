@@ -5,11 +5,11 @@ require "rails_helper"
 RSpec.describe AdjustedFees::CreateService do
   subject(:create_service) { described_class.new(invoice:, params:) }
 
-  let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:billable_metric) { create(:billable_metric, organization:) }
-  let_it_be(:customer) { create(:customer) }
-  let_it_be(:plan) { create(:plan, organization:) }
-  let_it_be(:subscription) { create(:subscription, plan:, customer:) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:billable_metric, refind: true) { create(:billable_metric, organization:) }
+  let_it_be(:customer, refind: true) { create(:customer) }
+  let_it_be(:plan, refind: true) { create(:plan, organization:) }
+  let_it_be(:subscription, refind: true) { create(:subscription, plan:, customer:) }
   let(:invoice) { create(:invoice, :subscription, :draft, customer:, subscriptions: [subscription], organization:) }
   let(:charge) { create(:standard_charge, billable_metric:, plan: subscription.plan) }
   let(:charge_filter) { create(:charge_filter, charge:) }
@@ -323,7 +323,7 @@ RSpec.describe AdjustedFees::CreateService do
       end
 
       context "when adjusting fixed charge fees" do
-        let_it_be(:add_on) { create(:add_on, organization:) }
+        let_it_be(:add_on, refind: true) { create(:add_on, organization:) }
         let(:fixed_charge) { create(:fixed_charge, plan:, add_on:) }
         let(:fixed_charge_fee) { create(:fixed_charge_fee, invoice:, subscription:, fixed_charge:) }
         let(:params) do

@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Events::PostProcessService do
   subject(:process_service) { described_class.new(event:) }
 
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:) }

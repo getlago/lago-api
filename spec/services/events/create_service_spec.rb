@@ -12,7 +12,7 @@ RSpec.describe Events::CreateService do
     )
   end
 
-  let_it_be(:organization) { create(:organization) }
+  let(:organization) { create(:organization) }
 
   let(:code) { "sum_agg" }
   let(:external_subscription_id) { SecureRandom.uuid }

@@ -5,10 +5,10 @@ require "rails_helper"
 RSpec.describe CreditNotes::ApplyTaxesService do
   subject(:apply_service) { described_class.new(invoice:, items:) }
 
-  let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:customer) { create(:customer) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:customer, refind: true) { create(:customer) }
 
-  let_it_be(:invoice) do
+  let_it_be(:invoice, refind: true) do
     create(
       :invoice,
       customer:,

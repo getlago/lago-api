@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Charges::CreateService do
   let(:create_service) { described_class.new(plan:, params:) }
 
-  let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:plan) { create(:plan) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:plan, refind: true) { create(:plan) }
 
   describe "#call" do
     subject(:result) { create_service.call }
