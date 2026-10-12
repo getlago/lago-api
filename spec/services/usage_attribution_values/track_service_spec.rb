@@ -149,6 +149,19 @@ RSpec.describe UsageAttributionValues::TrackService do
     end
   end
 
+  context "when the types form a cycle" do
+    let(:labels) { {"department" => "rnd", "team" => "eng"} }
+
+    # Bypasses the cycle validation, as two concurrent updates could.
+    before { department.update_column(:parent_id, team.id) } # rubocop:disable Rails/SkipsModelValidations
+
+    it "still tracks the values" do
+      track
+
+      expect(UsageAttributionValue.where(customer:).pluck(:value)).to match_array(%w[rnd eng])
+    end
+  end
+
   context "when no subscription matches" do
     let(:entries) { [entry(labels, external_subscription_id: "unknown")] }
 

@@ -65,10 +65,25 @@ module UsageAttributionValues
       @types_by_id ||= attribution_types.index_by(&:id)
     end
 
+    # The types grouped by tree level, roots first. For department > team > user and a flat model:
+    #   [[department, model], [team], [user]]
     def types_by_level
-      levels = Hash.new { |cache, type| cache[type] = types_by_id[type.parent_id] ? cache[types_by_id[type.parent_id]] + 1 : 0 }
+      types_grouped_by_level = attribution_types.group_by { |attribution_type| level_of(attribution_type) }
+      sorted_levels = types_grouped_by_level.keys.sort
 
-      attribution_types.group_by { levels[it] }.sort.map(&:last)
+      sorted_levels.map { |level| types_grouped_by_level[level] }
+    end
+
+    def level_of(attribution_type)
+      level = 0
+      parent_type = types_by_id[attribution_type.parent_id]
+
+      while parent_type && level < attribution_types.size
+        level += 1
+        parent_type = types_by_id[parent_type.parent_id]
+      end
+
+      level
     end
 
     def level_rows(level_types, value_ids)
