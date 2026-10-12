@@ -1,0 +1,33 @@
+-- case: receipt_hit (count) phase: baseline selective: true
+-- filters: {"receipt_number":"her-1556-335-rcpt-000123"} search_term: nil page: 1
+SELECT COUNT(*) FROM "payments" INNER JOIN "payment_receipts" ON "payment_receipts"."payment_id" = "payments"."id" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND (LOWER(payment_receipts.number) = LOWER('her-1556-335-rcpt-000123'))
+
+Aggregate  (cost=174495.02..174495.03 rows=1 width=8) (actual time=274.477..281.346 rows=1 loops=1)
+  Buffers: shared hit=60825
+  ->  Nested Loop  (cost=1000.43..174478.24 rows=6709 width=0) (actual time=192.060..281.325 rows=2 loops=1)
+        Buffers: shared hit=60825
+        ->  Gather  (cost=1000.00..85615.76 rows=17635 width=16) (actual time=191.993..281.233 rows=2 loops=1)
+              Workers Planned: 2
+              Workers Launched: 2
+              Buffers: shared hit=60809
+              ->  Parallel Seq Scan on payment_receipts  (cost=0.00..82852.26 rows=7348 width=16) (actual time=157.023..263.749 rows=1 loops=3)
+                    Filter: (lower((number)::text) = 'her-1556-335-rcpt-000123'::text)
+                    Rows Removed by Filter: 1175624
+                    Buffers: shared hit=60809
+        ->  Index Scan using payments_pkey on payments  (cost=0.43..5.04 rows=1 width=16) (actual time=0.039..0.039 rows=1 loops=2)
+              Index Cond: (id = payment_receipts.payment_id)
+              Filter: ((customer_id IS NOT NULL) AND (payable_id IS NOT NULL) AND (organization_id = '<org-uuid>'::uuid) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+              Buffers: shared hit=16
+              SubPlan 1
+                ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (actual time=0.013..0.013 rows=1 loops=2)
+                      Index Cond: (id = payments.payable_id)
+                      Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                      Buffers: shared hit=8
+Planning:
+  Buffers: shared hit=24
+Planning Time: 0.450 ms
+JIT:
+  Functions: 28
+  Options: Inlining false, Optimization false, Expressions true, Deforming true
+  Timing: Generation 2.320 ms, Inlining 0.000 ms, Optimization 0.981 ms, Emission 11.655 ms, Total 14.956 ms
+Execution Time: 282.929 ms

@@ -1,0 +1,21 @@
+-- case: combo_status_currency_date (count) phase: baseline selective: true
+-- filters: {"payment_status":["succeeded"],"currency":"EUR","created_at_from":"2026-09-01","created_at_to":"2026-09-08"} search_term: nil page: 1
+SELECT COUNT(*) FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND "payments"."amount_currency" = 'EUR' AND "payments"."payable_payment_status" = 'succeeded' AND "payments"."created_at" >= '2026-09-01 00:00:00' AND "payments"."created_at" <= '2026-09-08 23:59:59.999999'
+
+Aggregate  (cost=21114.90..21114.91 rows=1 width=8) (actual time=4.561..4.561 rows=1 loops=1)
+  Buffers: shared hit=10755
+  ->  Index Scan using index_payments_by_cursor on payments  (cost=0.56..21109.25 rows=2262 width=0) (actual time=0.018..4.494 rows=2116 loops=1)
+        Index Cond: ((organization_id = '<org-uuid>'::uuid) AND (created_at >= '2026-09-01 00:00:00'::timestamp without time zone) AND (created_at <= '2026-09-08 23:59:59.999999'::timestamp without time zone))
+        Filter: ((customer_id IS NOT NULL) AND (payable_id IS NOT NULL) AND ((amount_currency)::text = 'EUR'::text) AND (payable_payment_status = 'succeeded'::payment_payable_payment_status) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+        Rows Removed by Filter: 532
+        Buffers: shared hit=10755
+        SubPlan 1
+          ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (actual time=0.001..0.001 rows=1 loops=2021)
+                Index Cond: (id = payments.payable_id)
+                Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                Rows Removed by Filter: 0
+                Buffers: shared hit=8084
+Planning:
+  Buffers: shared hit=8
+Planning Time: 0.102 ms
+Execution Time: 4.580 ms

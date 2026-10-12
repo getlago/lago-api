@@ -5,6 +5,7 @@ class Payment < ApplicationRecord
   include RansackUuidSearch
 
   PAYABLE_PAYMENT_STATUS = %w[pending processing succeeded failed].freeze
+  PAYABLE_TYPES = %w[Invoice PaymentRequest].freeze
 
   belongs_to :organization
   belongs_to :customer, -> { with_discarded }

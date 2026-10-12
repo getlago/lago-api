@@ -1,0 +1,26 @@
+-- case: status_rare_processing (count) phase: after selective: true
+-- filters: {"payment_status":["processing"]} search_term: nil page: 1
+-- runs_ms: [177.2, 178.9, 172.1]
+SELECT COUNT(*) FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND "payments"."payable_payment_status" = 'processing'
+
+Aggregate  (cost=149631.51..149631.52 rows=1 width=8) (actual time=176.497..176.498 rows=1 loops=1)
+  Buffers: shared hit=216071
+  ->  Index Scan using index_payments_on_org_pending_processing_created_at on payments  (cost=0.42..149579.29 rows=20889 width=0) (actual time=5.316..174.923 rows=44564 loops=1)
+        Index Cond: ((organization_id = '<org-uuid>'::uuid) AND (payable_payment_status = 'processing'::payment_payable_payment_status))
+        Filter: ((customer_id IS NOT NULL) AND (payable_id IS NOT NULL) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+        Rows Removed by Filter: 439
+        Buffers: shared hit=216071
+        SubPlan 1
+          ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (actual time=0.003..0.003 rows=1 loops=42674)
+                Index Cond: (id = payments.payable_id)
+                Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                Rows Removed by Filter: 0
+                Buffers: shared hit=170696
+Planning:
+  Buffers: shared hit=8
+Planning Time: 0.094 ms
+JIT:
+  Functions: 14
+  Options: Inlining false, Optimization false, Expressions true, Deforming true
+  Timing: Generation 0.636 ms, Inlining 0.000 ms, Optimization 0.422 ms, Emission 4.893 ms, Total 5.951 ms
+Execution Time: 177.208 ms

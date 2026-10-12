@@ -1,0 +1,7 @@
+-- case: invoice_miss (count) phase: after selective: true
+-- filters: {"invoice_number":"PERF-NOPE-000000-000000001"} search_term: nil page: 1
+-- runs_ms: [0.0]
+(no query)
+
+Result (no query: ActiveRecord short-circuits an empty IN list)  (actual time=0.000..0.000 rows=0 loops=1)
+Execution Time: 0.000 ms

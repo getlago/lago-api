@@ -1,0 +1,10 @@
+# Command-line scripts: they print their tables and exit on bad arguments, and the
+# load generator spawns its client threads on purpose.
+inherit_from: ../../../.rubocop.yml
+
+Rails/Output:
+  Enabled: false
+Rails/Exit:
+  Enabled: false
+ThreadSafety/NewThread:
+  Enabled: false

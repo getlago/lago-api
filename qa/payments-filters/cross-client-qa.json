@@ -1,0 +1,105 @@
+{
+  "predicate": {
+    "payment_status": [
+      "succeeded"
+    ],
+    "currency": "EUR"
+  },
+  "count": 7,
+  "ids": [
+    "1f4c1581-5478-4a79-b460-04c1fe21a15a",
+    "39fa6b17-12a1-474d-a38e-16c0f83ee9ac",
+    "8d699c6f-6df9-4f22-84db-9c6f87b56406",
+    "c50d097e-c049-433f-895b-9bfe5b1c67e2",
+    "e20e5548-f3a5-43cc-b507-d5e9e57022fc",
+    "e695aabb-9a8c-4f80-98a8-43d2e06e673a",
+    "fc261c0b-d48f-4505-9f5f-6aef77afbbc1"
+  ],
+  "surfaces": [
+    "REST",
+    "GraphQL",
+    "UI",
+    "Go",
+    "Python",
+    "Ruby",
+    "Rust",
+    "JavaScript",
+    "PHP",
+    "CLI"
+  ],
+  "all_ids_match": true,
+  "sdk_customer_count": 2,
+  "sdk_int64_max_count": 2,
+  "cli_checks": [
+    {
+      "command": "lago payments list --payment-status succeeded --currency EUR",
+      "exit_code": 0,
+      "count": 7,
+      "ids": [
+        "1f4c1581-5478-4a79-b460-04c1fe21a15a",
+        "39fa6b17-12a1-474d-a38e-16c0f83ee9ac",
+        "8d699c6f-6df9-4f22-84db-9c6f87b56406",
+        "c50d097e-c049-433f-895b-9bfe5b1c67e2",
+        "e20e5548-f3a5-43cc-b507-d5e9e57022fc",
+        "e695aabb-9a8c-4f80-98a8-43d2e06e673a",
+        "fc261c0b-d48f-4505-9f5f-6aef77afbbc1"
+      ],
+      "ids_match": true
+    },
+    {
+      "command": "lago payments list --payment-status succeeded,failed",
+      "exit_code": 0,
+      "count": 14,
+      "ids": [
+        "12aa4435-c9a2-444b-a8ab-a0a89dcca50b",
+        "1f4c1581-5478-4a79-b460-04c1fe21a15a",
+        "35f92acd-9d6d-4900-a8fd-269abdd33bd1",
+        "39fa6b17-12a1-474d-a38e-16c0f83ee9ac",
+        "4ab08f91-6c21-4cbe-8e5f-e330e9cdc9d4",
+        "6aa4cc9c-d48b-47a1-931b-5b0d82b25541",
+        "73f36220-3f9b-4f8e-a3c7-d5f5bfc236b1",
+        "8d699c6f-6df9-4f22-84db-9c6f87b56406",
+        "c50d097e-c049-433f-895b-9bfe5b1c67e2",
+        "d5b52e4f-4b02-4ce9-ad36-60e7aa7e417d",
+        "e20e5548-f3a5-43cc-b507-d5e9e57022fc",
+        "e695aabb-9a8c-4f80-98a8-43d2e06e673a",
+        "f95089a0-c003-4128-893f-8009fcbc8a33",
+        "fc261c0b-d48f-4505-9f5f-6aef77afbbc1"
+      ],
+      "ids_match": true
+    },
+    {
+      "command": "lago payments list --amount-from 9223372036854775807",
+      "exit_code": 0,
+      "count": 2,
+      "ids": [
+        "5b5c572a-7682-43c7-a2e3-c6a1edbd1c87",
+        "73f36220-3f9b-4f8e-a3c7-d5f5bfc236b1"
+      ],
+      "ids_match": true
+    },
+    {
+      "command": "lago payments list --payment-method-type card,sepa_debit",
+      "exit_code": 0,
+      "count": 5,
+      "ids": [
+        "43d63e21-133b-4092-acf4-8c1a909a2974",
+        "64ff022c-0f53-48a5-bae5-a32294392a4d",
+        "77eac2dd-4475-4239-b562-b9f4b9408aea",
+        "9a6b5689-adbb-4958-a838-d31d5bf0e57d",
+        "9bc38b96-6c5a-4876-930b-8c566df1b344"
+      ],
+      "ids_match": true
+    },
+    {
+      "command": "lago customers payments cust_1 --payment-status succeeded --currency EUR",
+      "exit_code": 0,
+      "count": 2,
+      "ids": [
+        "e20e5548-f3a5-43cc-b507-d5e9e57022fc",
+        "e695aabb-9a8c-4f80-98a8-43d2e06e673a"
+      ],
+      "ids_match": true
+    }
+  ]
+}

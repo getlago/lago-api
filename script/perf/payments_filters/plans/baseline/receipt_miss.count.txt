@@ -1,0 +1,31 @@
+-- case: receipt_miss (count) phase: baseline selective: true
+-- filters: {"receipt_number":"PERF-NOPE-RCPT-000001"} search_term: nil page: 1
+SELECT COUNT(*) FROM "payments" INNER JOIN "payment_receipts" ON "payment_receipts"."payment_id" = "payments"."id" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND (LOWER(payment_receipts.number) = LOWER('PERF-NOPE-RCPT-000001'))
+
+Aggregate  (cost=174495.02..174495.03 rows=1 width=8) (actual time=231.207..238.429 rows=1 loops=1)
+  Buffers: shared hit=60809
+  ->  Nested Loop  (cost=1000.43..174478.24 rows=6709 width=0) (actual time=231.189..238.411 rows=0 loops=1)
+        Buffers: shared hit=60809
+        ->  Gather  (cost=1000.00..85615.76 rows=17635 width=16) (actual time=231.188..238.409 rows=0 loops=1)
+              Workers Planned: 2
+              Workers Launched: 2
+              Buffers: shared hit=60809
+              ->  Parallel Seq Scan on payment_receipts  (cost=0.00..82852.26 rows=7348 width=16) (actual time=224.103..224.103 rows=0 loops=3)
+                    Filter: (lower((number)::text) = 'perf-nope-rcpt-000001'::text)
+                    Rows Removed by Filter: 1175625
+                    Buffers: shared hit=60809
+        ->  Index Scan using payments_pkey on payments  (cost=0.43..5.04 rows=1 width=16) (never executed)
+              Index Cond: (id = payment_receipts.payment_id)
+              Filter: ((customer_id IS NOT NULL) AND (payable_id IS NOT NULL) AND (organization_id = '<org-uuid>'::uuid) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+              SubPlan 1
+                ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (never executed)
+                      Index Cond: (id = payments.payable_id)
+                      Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+Planning:
+  Buffers: shared hit=24
+Planning Time: 0.302 ms
+JIT:
+  Functions: 28
+  Options: Inlining false, Optimization false, Expressions true, Deforming true
+  Timing: Generation 1.280 ms, Inlining 0.000 ms, Optimization 0.875 ms, Emission 7.943 ms, Total 10.097 ms
+Execution Time: 239.285 ms

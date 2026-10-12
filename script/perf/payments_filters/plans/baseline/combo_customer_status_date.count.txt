@@ -1,0 +1,26 @@
+-- case: combo_customer_status_date (count) phase: baseline selective: true
+-- filters: {"external_customer_id":"perf-cust-0-1","payment_status":["succeeded"],"created_at_from":"2024-09-08","created_at_to":"2026-09-08"} search_term: nil page: 1
+SELECT COUNT(*) FROM "payments" INNER JOIN "customers" ON "customers"."id" = "payments"."customer_id" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND (customers.external_id = 'perf-cust-0-1') AND "payments"."payable_payment_status" = 'succeeded' AND "payments"."created_at" >= '2024-09-08 00:00:00' AND "payments"."created_at" <= '2026-09-08 23:59:59.999999'
+
+Aggregate  (cost=1915.22..1915.23 rows=1 width=8) (actual time=311.835..311.836 rows=1 loops=1)
+  Buffers: shared hit=520197
+  ->  Nested Loop  (cost=0.85..1915.16 rows=25 width=0) (actual time=0.226..308.240 rows=111437 loops=1)
+        Buffers: shared hit=520197
+        ->  Index Scan using index_customers_on_external_id on customers  (cost=0.42..1242.05 rows=1 width=16) (actual time=0.216..1.001 rows=1 loops=1)
+              Index Cond: ((external_id)::text = 'perf-cust-0-1'::text)
+              Buffers: shared hit=570
+        ->  Index Scan using index_payments_on_customer_id on payments  (cost=0.43..672.55 rows=56 width=16) (actual time=0.009..300.953 rows=111437 loops=1)
+              Index Cond: ((customer_id = customers.id) AND (customer_id IS NOT NULL))
+              Filter: ((payable_id IS NOT NULL) AND (created_at >= '2024-09-08 00:00:00'::timestamp without time zone) AND (created_at <= '2026-09-08 23:59:59.999999'::timestamp without time zone) AND (organization_id = '<org-uuid>'::uuid) AND (payable_payment_status = 'succeeded'::payment_payable_payment_status) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+              Rows Removed by Filter: 24640
+              Buffers: shared hit=519627
+              SubPlan 1
+                ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (actual time=0.002..0.002 rows=1 loops=106859)
+                      Index Cond: (id = payments.payable_id)
+                      Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                      Rows Removed by Filter: 0
+                      Buffers: shared hit=427436
+Planning:
+  Buffers: shared hit=24
+Planning Time: 0.343 ms
+Execution Time: 311.977 ms

@@ -1,0 +1,97 @@
+-- case: search_term (list) phase: after selective: true
+-- filters: {} search_term: "_0_4031686" page: 1
+-- runs_ms: [54.0, 52.4, 51.8]
+SELECT "payments"."id", "payments"."invoice_id", "payments"."payment_provider_id", "payments"."payment_provider_customer_id", "payments"."amount_cents", "payments"."amount_currency", "payments"."provider_payment_id", "payments"."status", "payments"."created_at", "payments"."updated_at", "payments"."payable_type", "payments"."payable_id", "payments"."provider_payment_data", "payments"."payable_payment_status", "payments"."payment_type", "payments"."reference", "payments"."provider_payment_method_data", "payments"."provider_payment_method_id", "payments"."organization_id", "payments"."customer_id", "payments"."error_code", "payments"."payment_method_id" FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND "payments"."id" IN (SELECT "payments"."id" FROM (SELECT "payments"."id" FROM "payments" WHERE "payments"."organization_id" = '<org-uuid>' AND (payments.provider_payment_id ILIKE '%\_0\_4031686%') UNION SELECT "payments"."id" FROM "payments" WHERE "payments"."organization_id" = '<org-uuid>' AND (payments.reference ILIKE '%\_0\_4031686%') UNION SELECT "payments"."id" FROM "payments" WHERE "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_type" = 'Invoice' AND "payments"."payable_id" IN (SELECT "invoices"."id" FROM "invoices" WHERE "invoices"."organization_id" = '<org-uuid>' AND (invoices.number ILIKE '%\_0\_4031686%')) UNION SELECT "payments"."id" FROM "payments" WHERE "payments"."organization_id" = '<org-uuid>' AND "payments"."customer_id" IN (SELECT "customers"."id" FROM (SELECT "customers"."id" FROM "customers" WHERE "customers"."deleted_at" IS NULL AND "customers"."organization_id" = '<org-uuid>' AND (customers.name ILIKE '%\_0\_4031686%') UNION SELECT "customers"."id" FROM "customers" WHERE "customers"."deleted_at" IS NULL AND "customers"."organization_id" = '<org-uuid>' AND (customers.firstname ILIKE '%\_0\_4031686%') UNION SELECT "customers"."id" FROM "customers" WHERE "customers"."deleted_at" IS NULL AND "customers"."organization_id" = '<org-uuid>' AND (customers.lastname ILIKE '%\_0\_4031686%') UNION SELECT "customers"."id" FROM "customers" WHERE "customers"."deleted_at" IS NULL AND "customers"."organization_id" = '<org-uuid>' AND (customers.external_id ILIKE '%\_0\_4031686%') UNION SELECT "customers"."id" FROM "customers" WHERE "customers"."deleted_at" IS NULL AND "customers"."organization_id" = '<org-uuid>' AND (customers.email ILIKE '%\_0\_4031686%')) AS customers)) AS payments) ORDER BY "payments"."created_at" DESC, "payments"."id" ASC LIMIT 20 OFFSET 0
+
+Limit  (cost=19358.25..19358.30 rows=20 width=330) (actual time=52.256..52.259 rows=1 loops=1)
+  Buffers: shared hit=4565
+  ->  Sort  (cost=19358.25..19360.73 rows=992 width=330) (actual time=52.256..52.258 rows=1 loops=1)
+        Sort Key: payments.created_at DESC, payments.id
+        Sort Method: quicksort  Memory: 25kB
+        Buffers: shared hit=4565
+        ->  Nested Loop  (cost=5515.26..19331.85 rows=992 width=330) (actual time=52.248..52.251 rows=1 loops=1)
+              Buffers: shared hit=4565
+              ->  HashAggregate  (cost=5514.83..5540.97 rows=2614 width=16) (actual time=52.223..52.225 rows=1 loops=1)
+                    Group Key: payments_1.id
+                    Batches: 1  Memory Usage: 121kB
+                    Buffers: shared hit=4557
+                    ->  Append  (cost=181.94..5508.29 rows=2614 width=16) (actual time=50.677..52.214 rows=1 loops=1)
+                          Buffers: shared hit=4557
+                          ->  Bitmap Heap Scan on payments payments_1  (cost=181.94..705.97 rows=472 width=16) (actual time=50.676..50.677 rows=1 loops=1)
+                                Recheck Cond: ((organization_id = '<org-uuid>'::uuid) AND ((provider_payment_id)::text ~~* '%\_0\_4031686%'::text))
+                                Heap Blocks: exact=1
+                                Buffers: shared hit=4278
+                                ->  Bitmap Index Scan on idx_on_organization_id_provider_payment_id_gin_trgm_2bcf073c0b  (cost=0.00..181.82 rows=472 width=0) (actual time=50.669..50.669 rows=1 loops=1)
+                                      Index Cond: ((organization_id = '<org-uuid>'::uuid) AND ((provider_payment_id)::text ~~* '%\_0\_4031686%'::text))
+                                      Buffers: shared hit=4277
+                          ->  Bitmap Heap Scan on payments payments_2  (cost=57.46..85.31 rows=25 width=16) (actual time=0.123..0.123 rows=0 loops=1)
+                                Recheck Cond: ((organization_id = '<org-uuid>'::uuid) AND ((reference)::text ~~* '%\_0\_4031686%'::text))
+                                Buffers: shared hit=31
+                                ->  Bitmap Index Scan on index_payments_on_organization_id_reference_gin_trgm_ops  (cost=0.00..57.45 rows=25 width=0) (actual time=0.122..0.122 rows=0 loops=1)
+                                      Index Cond: ((organization_id = '<org-uuid>'::uuid) AND ((reference)::text ~~* '%\_0\_4031686%'::text))
+                                      Buffers: shared hit=31
+                          ->  Nested Loop  (cost=251.44..1944.03 rows=360 width=16) (actual time=0.195..0.196 rows=0 loops=1)
+                                Buffers: shared hit=40
+                                ->  Bitmap Heap Scan on invoices  (cost=251.01..749.64 rows=449 width=16) (actual time=0.195..0.195 rows=0 loops=1)
+                                      Recheck Cond: ((organization_id = '<org-uuid>'::uuid) AND ((number)::text ~~* '%\_0\_4031686%'::text))
+                                      Buffers: shared hit=40
+                                      ->  Bitmap Index Scan on index_invoices_on_organization_id_number_gin_trgm_ops  (cost=0.00..250.89 rows=449 width=0) (actual time=0.194..0.194 rows=0 loops=1)
+                                            Index Cond: ((organization_id = '<org-uuid>'::uuid) AND ((number)::text ~~* '%\_0\_4031686%'::text))
+                                            Buffers: shared hit=40
+                                ->  Index Scan using index_payments_on_payable_id_and_payable_type_and_error_code on payments payments_3  (cost=0.43..2.65 rows=1 width=32) (never executed)
+                                      Index Cond: ((payable_id = invoices.id) AND ((payable_type)::text = 'Invoice'::text))
+                                      Filter: (organization_id = '<org-uuid>'::uuid)
+                          ->  Nested Loop  (cost=118.62..2733.78 rows=1757 width=16) (actual time=1.216..1.218 rows=0 loops=1)
+                                Buffers: shared hit=208
+                                ->  HashAggregate  (cost=118.19..118.32 rows=13 width=16) (actual time=1.216..1.217 rows=0 loops=1)
+                                      Group Key: customers.id
+                                      Batches: 1  Memory Usage: 24kB
+                                      Buffers: shared hit=208
+                                      ->  Append  (cost=25.35..118.16 rows=13 width=16) (actual time=1.215..1.216 rows=0 loops=1)
+                                            Buffers: shared hit=208
+                                            ->  Bitmap Heap Scan on customers  (cost=25.35..30.91 rows=5 width=16) (actual time=0.533..0.534 rows=0 loops=1)
+                                                  Recheck Cond: ((organization_id = '<org-uuid>'::uuid) AND ((name)::text ~~* '%\_0\_4031686%'::text) AND (deleted_at IS NULL))
+                                                  Buffers: shared hit=68
+                                                  ->  Bitmap Index Scan on index_customers_on_organization_id_name_gin_trgm_ops  (cost=0.00..25.35 rows=5 width=0) (actual time=0.533..0.533 rows=0 loops=1)
+                                                        Index Cond: ((organization_id = '<org-uuid>'::uuid) AND ((name)::text ~~* '%\_0\_4031686%'::text))
+                                                        Buffers: shared hit=68
+                                            ->  Bitmap Heap Scan on customers customers_1  (cost=17.60..18.72 rows=1 width=16) (actual time=0.028..0.028 rows=0 loops=1)
+                                                  Recheck Cond: ((organization_id = '<org-uuid>'::uuid) AND ((firstname)::text ~~* '%\_0\_4031686%'::text) AND (deleted_at IS NULL))
+                                                  Buffers: shared hit=24
+                                                  ->  Bitmap Index Scan on index_customers_on_organization_id_firstname_gin_trgm_ops  (cost=0.00..17.60 rows=1 width=0) (actual time=0.028..0.028 rows=0 loops=1)
+                                                        Index Cond: ((organization_id = '<org-uuid>'::uuid) AND ((firstname)::text ~~* '%\_0\_4031686%'::text))
+                                                        Buffers: shared hit=24
+                                            ->  Bitmap Heap Scan on customers customers_2  (cost=17.60..18.72 rows=1 width=16) (actual time=0.030..0.030 rows=0 loops=1)
+                                                  Recheck Cond: ((organization_id = '<org-uuid>'::uuid) AND ((lastname)::text ~~* '%\_0\_4031686%'::text) AND (deleted_at IS NULL))
+                                                  Buffers: shared hit=24
+                                                  ->  Bitmap Index Scan on index_customers_on_organization_id_lastname_gin_trgm_ops  (cost=0.00..17.60 rows=1 width=0) (actual time=0.030..0.030 rows=0 loops=1)
+                                                        Index Cond: ((organization_id = '<org-uuid>'::uuid) AND ((lastname)::text ~~* '%\_0\_4031686%'::text))
+                                                        Buffers: shared hit=24
+                                            ->  Bitmap Heap Scan on customers customers_3  (cost=25.35..30.91 rows=5 width=16) (actual time=0.595..0.595 rows=0 loops=1)
+                                                  Recheck Cond: ((organization_id = '<org-uuid>'::uuid) AND ((external_id)::text ~~* '%\_0\_4031686%'::text) AND (deleted_at IS NULL))
+                                                  Buffers: shared hit=68
+                                                  ->  Bitmap Index Scan on index_customers_on_organization_id_external_id_gin_trgm_ops  (cost=0.00..25.35 rows=5 width=0) (actual time=0.594..0.594 rows=0 loops=1)
+                                                        Index Cond: ((organization_id = '<org-uuid>'::uuid) AND ((external_id)::text ~~* '%\_0\_4031686%'::text))
+                                                        Buffers: shared hit=68
+                                            ->  Bitmap Heap Scan on customers customers_4  (cost=17.60..18.72 rows=1 width=16) (actual time=0.027..0.028 rows=0 loops=1)
+                                                  Recheck Cond: ((organization_id = '<org-uuid>'::uuid) AND ((email)::text ~~* '%\_0\_4031686%'::text) AND (deleted_at IS NULL))
+                                                  Buffers: shared hit=24
+                                                  ->  Bitmap Index Scan on index_customers_on_organization_id_email_gin_trgm_ops  (cost=0.00..17.60 rows=1 width=0) (actual time=0.027..0.027 rows=0 loops=1)
+                                                        Index Cond: ((organization_id = '<org-uuid>'::uuid) AND ((email)::text ~~* '%\_0\_4031686%'::text))
+                                                        Buffers: shared hit=24
+                                ->  Index Scan using index_payments_on_customer_id on payments payments_4  (cost=0.43..199.83 rows=135 width=32) (never executed)
+                                      Index Cond: (customer_id = customers.id)
+                                      Filter: (organization_id = '<org-uuid>'::uuid)
+              ->  Index Scan using payments_pkey on payments  (cost=0.43..5.27 rows=1 width=330) (actual time=0.023..0.023 rows=1 loops=1)
+                    Index Cond: (id = payments_1.id)
+                    Filter: ((customer_id IS NOT NULL) AND (payable_id IS NOT NULL) AND (organization_id = '<org-uuid>'::uuid) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+                    Buffers: shared hit=8
+                    SubPlan 1
+                      ->  Index Scan using invoices_pkey on invoices invoices_1  (cost=0.43..2.66 rows=1 width=0) (actual time=0.011..0.011 rows=1 loops=1)
+                            Index Cond: (id = payments.payable_id)
+                            Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                            Buffers: shared hit=4
+Planning:
+  Buffers: shared hit=65
+Planning Time: 0.791 ms
+Execution Time: 52.433 ms

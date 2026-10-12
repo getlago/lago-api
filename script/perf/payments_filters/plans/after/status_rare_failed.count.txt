@@ -1,0 +1,30 @@
+-- case: status_rare_failed (count) phase: after selective: false
+-- filters: {"payment_status":["failed"]} search_term: nil page: 1
+-- runs_ms: [9734.0, 11470.9, 10938.7]
+SELECT COUNT(*) FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND "payments"."payable_payment_status" = 'failed'
+
+Aggregate  (cost=13554417.97..13554417.98 rows=1 width=8) (actual time=10934.823..10934.824 rows=1 loops=1)
+  Buffers: shared hit=2687888 read=228988
+  I/O Timings: shared/local read=7706.638
+  ->  Index Scan using index_payments_on_organization_id on payments  (cost=0.43..13553501.19 rows=366710 width=0) (actual time=70.154..10900.385 rows=718336 loops=1)
+        Index Cond: (organization_id = '<org-uuid>'::uuid)
+        Filter: ((customer_id IS NOT NULL) AND (payable_id IS NOT NULL) AND (payable_payment_status = 'failed'::payment_payable_payment_status) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+        Rows Removed by Filter: 4281664
+        Buffers: shared hit=2687888 read=228988
+        I/O Timings: shared/local read=7706.638
+        SubPlan 1
+          ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (actual time=0.014..0.014 rows=1 loops=688716)
+                Index Cond: (id = payments.payable_id)
+                Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                Rows Removed by Filter: 0
+                Buffers: shared hit=2687888 read=66976
+                I/O Timings: shared/local read=7109.931
+Planning:
+  Buffers: shared hit=6 read=2
+  I/O Timings: shared/local read=0.103
+Planning Time: 0.564 ms
+JIT:
+  Functions: 14
+  Options: Inlining true, Optimization true, Expressions true, Deforming true
+  Timing: Generation 3.677 ms, Inlining 7.706 ms, Optimization 33.757 ms, Emission 28.523 ms, Total 73.662 ms
+Execution Time: 10938.703 ms

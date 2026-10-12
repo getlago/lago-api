@@ -1,0 +1,35 @@
+-- case: combo_customer_status_date (count) phase: after selective: true
+-- filters: {"external_customer_id":"perf-cust-0-1","payment_status":["succeeded"],"created_at_from":"2024-09-08","created_at_to":"2026-09-08"} search_term: nil page: 1
+-- runs_ms: [465.2, 467.6, 456.5]
+SELECT COUNT(*) FROM "payments" WHERE "payments"."customer_id" IS NOT NULL AND "payments"."organization_id" = '<org-uuid>' AND "payments"."payable_id" IS NOT NULL AND (CASE payments.payable_type WHEN 'Invoice' THEN EXISTS( SELECT 1 FROM invoices WHERE invoices.id = payments.payable_id AND invoices.status IN (0,1,2,4,7) AND organization_id = '<org-uuid>' ) ELSE TRUE END) AND "payments"."customer_id" = '<uuid>' AND "payments"."payable_payment_status" = 'succeeded' AND "payments"."created_at" >= '2024-09-08 00:00:00' AND "payments"."created_at" <= '2026-09-08 23:59:59.999999'
+
+Aggregate  (cost=403277.24..403277.25 rows=1 width=8) (actual time=463.974..463.976 rows=1 loops=1)
+  Buffers: shared hit=520301
+  ->  Bitmap Heap Scan on payments  (cost=40821.27..403171.07 rows=42468 width=0) (actual time=166.849..460.798 rows=111437 loops=1)
+        Recheck Cond: ((customer_id IS NOT NULL) AND (customer_id = '<uuid>'::uuid) AND (organization_id = '<org-uuid>'::uuid))
+        Filter: ((payable_id IS NOT NULL) AND (created_at >= '2024-09-08 00:00:00'::timestamp without time zone) AND (created_at <= '2026-09-08 23:59:59.999999'::timestamp without time zone) AND (payable_payment_status = 'succeeded'::payment_payable_payment_status) AND CASE payable_type WHEN 'Invoice'::text THEN (SubPlan 1) ELSE true END)
+        Rows Removed by Filter: 24640
+        Heap Blocks: exact=92072
+        Buffers: shared hit=520301
+        ->  BitmapAnd  (cost=40821.27..40821.27 rows=103116 width=0) (actual time=153.087..153.088 rows=0 loops=1)
+              Buffers: shared hit=793
+              ->  Bitmap Index Scan on index_payments_on_customer_id  (cost=0.00..1492.41 rows=135888 width=0) (actual time=5.623..5.623 rows=136077 loops=1)
+                    Index Cond: ((customer_id IS NOT NULL) AND (customer_id = '<uuid>'::uuid))
+                    Buffers: shared hit=119
+              ->  Bitmap Index Scan on idx_on_organization_id_provider_payment_id_gin_trgm_2bcf073c0b  (cost=0.00..39307.37 rows=4973463 width=0) (actual time=145.956..145.957 rows=5000000 loops=1)
+                    Index Cond: (organization_id = '<org-uuid>'::uuid)
+                    Buffers: shared hit=674
+        SubPlan 1
+          ->  Index Scan using invoices_pkey on invoices  (cost=0.43..2.66 rows=1 width=0) (actual time=0.002..0.002 rows=1 loops=106859)
+                Index Cond: (id = payments.payable_id)
+                Filter: ((organization_id = '<org-uuid>'::uuid) AND (status = ANY ('{0,1,2,4,7}'::integer[])))
+                Rows Removed by Filter: 0
+                Buffers: shared hit=427436
+Planning:
+  Buffers: shared hit=8
+Planning Time: 0.113 ms
+JIT:
+  Functions: 15
+  Options: Inlining false, Optimization false, Expressions true, Deforming true
+  Timing: Generation 0.796 ms, Inlining 0.000 ms, Optimization 0.728 ms, Emission 5.516 ms, Total 7.040 ms
+Execution Time: 465.178 ms
