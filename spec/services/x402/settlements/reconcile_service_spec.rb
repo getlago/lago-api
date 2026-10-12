@@ -73,11 +73,46 @@ describe X402::Settlements::ReconcileService do
         expect(holder.reload).to have_attributes(status: "settled", transaction_hash: chain_hash)
       end
 
-      context "when that row is still pending" do
-        let(:holder) { create(:x402_settlement, :pending, transaction_hash: chain_hash) }
+      context "with the hash of a settlement_pending answer" do
+        let(:settlement) do
+          create(
+            :x402_settlement, :pending,
+            reconcile_after: 1.minute.ago, error_reason: "settlement_pending", transaction_hash: "0x#{"cd" * 32}", payload:
+          )
+        end
 
-        it "names the shared transaction as the reason" do
-          expect(result.settlement.reload.error_reason).to eq("transaction_already_recorded")
+        it "clears the unconfirmed transaction" do
+          expect(result.settlement.reload.transaction_hash).to be_nil
+        end
+      end
+
+      context "when that row is still pending" do
+        let(:holder_payload) do
+          {"payment" => x402_evm_payment.deep_merge("payload" => {"authorization" => {"value" => "2000"}}), "payment_requirements" => x402_evm_requirements}
+        end
+        let(:holder) { create(:x402_settlement, :pending, transaction_hash: chain_hash, payload: holder_payload) }
+
+        it "leaves the row pending" do
+          expect(result.settlement.reload).to be_pending
+        end
+
+        context "when the chain refutes that row's claim" do
+          let(:holder_reader) { instance_double(X402::Chain::EvmReader, settled?: false, identifier: nil, final?: true) }
+
+          before do
+            allow(X402::Chain::EvmReader).to receive(:new).with(hash_including(payment: holder_payload["payment"])).and_return(holder_reader)
+            described_class.call(settlement: holder)
+          end
+
+          it "fails that row without the transaction" do
+            result
+
+            expect(holder.reload).to have_attributes(status: "failed", transaction_hash: nil)
+          end
+
+          it "settles the row with the transaction" do
+            expect(result.settlement.reload).to have_attributes(status: "settled", transaction_hash: chain_hash)
+          end
         end
       end
     end
@@ -105,6 +140,19 @@ describe X402::Settlements::ReconcileService do
 
     it "keeps the settle's reason" do
       expect(result.settlement.reload.error_reason).to eq("no_response")
+    end
+
+    context "with the hash of a settlement_pending answer" do
+      let(:settlement) do
+        create(
+          :x402_settlement, :pending,
+          reconcile_after: 1.minute.ago, error_reason: "settlement_pending", transaction_hash: "0x#{"cd" * 32}", payload:
+        )
+      end
+
+      it "clears the unconfirmed transaction" do
+        expect(result.settlement.reload.transaction_hash).to be_nil
+      end
     end
 
     context "when the chain can still change its answer" do

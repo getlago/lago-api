@@ -30,7 +30,7 @@ module X402
         if reader.settled?
           mark_settled(reader.identifier)
         elsif reader.final?
-          transition(status: :failed)
+          transition(status: :failed, transaction_hash: nil)
         end
       rescue X402::Chain::Error => e
         report(e)
@@ -51,7 +51,10 @@ module X402
         raise unless e.message.include?(TRANSACTION_INDEX)
 
         settlement.restore_attributes
-        transition(status: :failed, error_reason: "transaction_already_recorded")
+
+        if X402::Settlement.settled.exists?(network: settlement.network, transaction_hash:)
+          transition(status: :failed, transaction_hash: nil, error_reason: "transaction_already_recorded")
+        end
       end
 
       def transition(**attributes)
