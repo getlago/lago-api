@@ -47,6 +47,8 @@ module Mutations
 
         def charge? = false
 
+        def product? = false
+
         def fixed_charge? = false
 
         def commitment? = false

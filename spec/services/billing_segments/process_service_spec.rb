@@ -11,8 +11,17 @@ RSpec.describe BillingSegments::ProcessService do
       create(:customer, organization:, currency: "USD", finalize_zero_amount_invoice: customer_finalize_zero_amount_invoice)
     end
     let(:customer_finalize_zero_amount_invoice) { "inherit" }
+    let(:catalog_plan) { nil }
     let(:contract) do
-      create(:contract, organization:, customer:, consolidate_invoice:, purchase_order_number: purchase_number, started_at: Time.zone.parse("2026-07-01"))
+      create(
+        :contract,
+        organization:,
+        customer:,
+        catalog_plan:,
+        consolidate_invoice:,
+        purchase_order_number: purchase_number,
+        started_at: Time.zone.parse("2026-07-01")
+      )
     end
     let(:consolidate_invoice) { true }
     let(:purchase_number) { nil }
@@ -390,6 +399,21 @@ RSpec.describe BillingSegments::ProcessService do
             precise_unit_amount: BigDecimal("15.00")
           )
           expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
+        end
+
+        context "when the contract belongs to a catalog plan with taxes" do
+          let(:catalog_plan) { create(:catalog_plan, organization:) }
+          let(:tax) { create(:tax, organization:, rate: 20) }
+
+          before { create(:plan_applied_tax, :catalog_plan, organization:, catalog_plan:, tax:) }
+
+          it "applies the catalog plan taxes to the fee" do
+            expect(result).to be_success
+
+            fee = result.invoices.sole.fees.sole.reload
+            expect(fee).to have_attributes(taxes_amount_cents: 600, taxes_rate: 20)
+            expect(fee.applied_taxes.sole).to have_attributes(tax:, amount_cents: 600)
+          end
         end
 
         context "with a minimum amount" do
@@ -878,6 +902,49 @@ RSpec.describe BillingSegments::ProcessService do
       expect(invoice.subscriptions).to be_empty
       expect(invoice.fees.sole).to have_attributes(invoiceable: product, subscription_id: nil)
       expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
+    end
+
+    context "when the contract belongs to a catalog plan with taxes" do
+      let(:catalog_plan) { create(:catalog_plan, organization:) }
+      let(:tax) { create(:tax, organization:, rate: 20) }
+
+      before { create(:plan_applied_tax, :catalog_plan, organization:, catalog_plan:, tax:) }
+
+      it "applies the catalog plan taxes to the fee" do
+        expect(result).to be_success
+
+        fee = result.invoices.sole.fees.sole.reload
+        expect(fee).to have_attributes(taxes_amount_cents: 1_500, taxes_rate: 20)
+        expect(fee.applied_taxes.sole).to have_attributes(tax:, amount_cents: 1_500)
+      end
+    end
+
+    context "when the customer uses provider taxes" do
+      let(:integration) { create(:anrok_integration, organization:) }
+      let(:local_tax) { create(:tax, organization:, rate: 20) }
+
+      before do
+        create(:anrok_customer, integration:, customer:)
+        create(:rate_card_applied_tax, organization:, rate_card:, tax: local_tax)
+      end
+
+      it "defers tax calculation to the provider" do
+        expect { result }.to have_enqueued_job(Invoices::ProviderTaxes::PullTaxesAndApplyJob)
+
+        invoice = result.invoices.sole.reload
+        expect(Invoices::ProviderTaxes::PullTaxesAndApplyJob).to have_been_enqueued.with(invoice:)
+        expect(invoice).to have_attributes(
+          status: "pending",
+          tax_status: "pending",
+          fees_amount_cents: 7_500,
+          sub_total_excluding_taxes_amount_cents: 7_500
+        )
+
+        fee = invoice.fees.sole.reload
+        expect(fee).to have_attributes(taxes_amount_cents: 0)
+        expect(fee.applied_taxes).to be_empty
+        expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
+      end
     end
 
     it "does not create duplicate invoices or fees on repeated invocation" do

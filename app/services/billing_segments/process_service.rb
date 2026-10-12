@@ -112,7 +112,7 @@ module BillingSegments
 
         invoice.fees.reload
 
-        Invoices::ComputeAmountsFromFees.call!(invoice:)
+        compute_taxes_and_totals(invoice)
         Invoices::ApplyInvoiceCustomSectionsService.call!(
           invoice:,
           resources: segments.map(&:contract).uniq.map { |contract| Invoices::ApplyInvoiceCustomSectionsService::Resource.from(resource: contract) }
@@ -189,6 +189,7 @@ module BillingSegments
           fee.invoice = invoice
           fee.billing_entity = invoice.billing_entity
           fee.save!
+          apply_taxes(fee, segment)
         end
       end
     end
@@ -207,13 +208,42 @@ module BillingSegments
     # NOTE: Fees::ChargeService persists and attaches the product fees itself (within this
     # surrounding transaction), so a failure on any segment rolls back the whole invoice group.
     def compute_metered_fees(segment, invoice, filtered_aggregations)
-      ::Fees::ChargeService.call!(
+      fees_result = ::Fees::ChargeService.call!(
         invoice:,
         metered_item: ::Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: segment),
         billing_context: Billing::Context.from(contract: segment.contract),
         options: ::Fees::ChargeService::Options.new(context: :finalize, skip_adjusted_fees: true),
         filtered_aggregations: filtered_aggregations[segment.target_key]&.keys || []
       )
+
+      fees_result.fees.each { |fee| apply_taxes(fee, segment) }
+    end
+
+    def apply_taxes(fee, segment)
+      return if customer_provider_taxation?
+
+      ::Fees::ApplyTaxesService.call!(
+        fee:,
+        customer:,
+        plan: segment.contract.catalog_plan
+      )
+      fee.save!
+    end
+
+    def compute_taxes_and_totals(invoice)
+      invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
+      invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
+
+      totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice:)
+      if totals_result.failure? && !totals_result.error.is_a?(BaseService::UnknownTaxFailure)
+        totals_result.raise_if_error!
+      end
+    end
+
+    def customer_provider_taxation?
+      return @customer_provider_taxation if defined?(@customer_provider_taxation)
+
+      @customer_provider_taxation = customer.tax_customer.present?
     end
 
     def event_filters(metered_segments)
