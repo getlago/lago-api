@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Api::V1::WalletsController do
   let_it_be(:organization, refind: true) { create_default(:organization) }
   let_it_be(:customer) { create(:customer, organization:, currency: "EUR") }
-  let(:plan) { create_default(:plan) }
+  let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, customer:) }
   let(:expiration_at) { (Time.current + 1.year).iso8601 }
   let(:section_1) { create(:invoice_custom_section, organization:, code: "section_code_1") }

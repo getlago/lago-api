@@ -6,8 +6,8 @@ RSpec.describe Api::V1::PlansController do
   let(:tax) { create(:tax, organization:) }
   let(:plan) { create(:plan, code: "plan_code") }
 
-  let_it_be(:customer) { create_default(:customer) }
   let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
   let_it_be(:billable_metric, refind: true) { create_default(:billable_metric, organization:) }
   let_it_be(:add_on, refind: true) { create_default(:add_on, organization:) }
 
