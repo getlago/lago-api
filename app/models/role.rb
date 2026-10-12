@@ -18,7 +18,8 @@ class Role < ApplicationRecord
   RESERVED_CODES = %w[admin finance manager].freeze
   RESERVED_NAME_FORMAT = /\A(#{RESERVED_CODES.join("|")})\z/i
 
-  before_validation :normalize_name
+  # Only on create or rename, so saving an existing role never rewrites its name.
+  before_validation :normalize_name, if: -> { new_record? || name_changed? }
 
   validate :code_is_not_reserved, if: -> { organization_id && deleted_at.blank? }
   # Only checked when the name is set or changed, so existing roles stay valid.
@@ -46,10 +47,14 @@ class Role < ApplicationRecord
 
   private
 
-  # Unicode spaces and invisible format characters are collapsed too, so a name
-  # like "Admin\u00A0" cannot slip past the reserved name check.
+  # Invisible characters are removed and Unicode spaces collapsed, so a name
+  # like "Admin\u00A0" or "Admin\u034F" cannot slip past the reserved name check.
   def normalize_name
-    self.name = name&.unicode_normalize(:nfkc)&.gsub(/[[:space:]\p{Cf}]+/, " ")&.strip
+    self.name = name
+      &.unicode_normalize(:nfkc)
+      &.gsub(/\p{Default_Ignorable_Code_Point}/, "")
+      &.gsub(/[[:space:]]+/, " ")
+      &.strip
   end
 
   def code_is_not_reserved

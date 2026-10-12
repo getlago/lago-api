@@ -106,7 +106,7 @@ RSpec.describe Role do
       end
 
       it "is invalid with a reserved name, whatever the case" do
-        ["admin", "Admin", "ADMIN", "finance", "Finance", "manager", "Manager", "Admin\u00A0", "Admin\u200B", "\u00A0Finance"].each do |name|
+        ["admin", "Admin", "ADMIN", "finance", "Finance", "manager", "Manager", "Admin\u00A0", "Admin\u200B", "Admin\u034F", "Ad\u200Bmin", "\u00A0Finance"].each do |name|
           role.name = name
           expect(role).not_to be_valid
           expect(role.errors[:name]).to include("value_already_exist")
@@ -121,6 +121,18 @@ RSpec.describe Role do
         it "stays valid when updated without renaming" do
           existing.description = "updated"
           expect(existing).to be_valid
+        end
+      end
+
+      context "with an existing role whose name holds a Unicode space" do
+        let(:existing) { create(:role, :custom) }
+
+        before { existing.update_column(:name, "Admin\u00A0") } # rubocop:disable Rails/SkipsModelValidations
+
+        it "stays valid and keeps its name when updated without renaming" do
+          existing.description = "updated"
+          expect(existing).to be_valid
+          expect(existing.name).to eq("Admin\u00A0")
         end
       end
 
