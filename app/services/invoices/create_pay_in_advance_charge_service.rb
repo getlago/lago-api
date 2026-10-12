@@ -95,7 +95,8 @@ module Invoices
         charge_in_advance: true,
         invoice_id: result.invoice_id,
         billing_entity: billing_context.applicable_billing_entity,
-        purchase_order_number: billing_context.purchase_order_number
+        purchase_order_number: billing_context.purchase_order_number,
+        subscription: billing_context.subscription
       ) do |invoice|
         create_invoice_subscription(invoice:) if billing_context.subscription?
       end

@@ -147,7 +147,7 @@ module Subscriptions
         #       purchase order numbers or payment terms. Split them so each combination
         #       produces its own invoice. BillSubscriptionJob covers any residual term race.
         billable_subscriptions.group_by do |sub|
-          [sub.purchase_order_number, PaymentTerms::ResolveService.call!(customer: sub.customer).payment_term.to_h]
+          [sub.purchase_order_number, PaymentTerms::ResolveService.call!(customer: sub.customer, subscription: sub).payment_term.to_h]
         end.each_value do |subscriptions|
           BillSubscriptionJob.perform_later(subscriptions, billing_at.to_i, invoicing_reason: :upgrading)
         end

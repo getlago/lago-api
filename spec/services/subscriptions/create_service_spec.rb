@@ -207,6 +207,60 @@ RSpec.describe Subscriptions::CreateService do
       end
     end
 
+    context "when payment_term is passed" do
+      let(:params) do
+        {
+          external_customer_id:,
+          plan_code:,
+          name:,
+          external_id:,
+          billing_time:,
+          subscription_at:,
+          subscription_id:,
+          payment_term: {term_type: "day_of_month", day_of_month: 15}
+        }
+      end
+
+      it "creates a subscription with the normalized payment_term" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.subscription.payment_term)
+          .to eq({"term_type" => "day_of_month", "day_of_month" => 15, "month_offset" => 1})
+      end
+
+      context "when the payment_term is invalid" do
+        let(:params) do
+          {
+            external_customer_id:,
+            plan_code:,
+            name:,
+            external_id:,
+            billing_time:,
+            subscription_at:,
+            subscription_id:,
+            payment_term: {term_type: "unknown"}
+          }
+        end
+
+        it "fails with a validation error" do
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages[:payment_term]).to eq(["invalid_term_type"])
+        end
+      end
+    end
+
+    context "when payment_term is not passed" do
+      it "leaves the payment_term nil" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.subscription.payment_term).to be_nil
+      end
+    end
+
     context "when consolidate_invoice is not passed" do
       it "defaults to true on the created subscription" do
         result = create_service.call
