@@ -355,8 +355,16 @@ RSpec.describe Invoice do
     end
 
     context "with invoices on other organization" do
+      let(:other_organization) { create(:organization) }
+
       before do
-        create(:invoice, sequential_id: 1, organization_sequential_id: 0)
+        create(
+          :invoice,
+          organization: other_organization,
+          customer: create(:customer, organization: other_organization),
+          sequential_id: 1,
+          organization_sequential_id: 0
+        )
       end
 
       it "scopes the sequence to the organization" do
