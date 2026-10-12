@@ -76,6 +76,12 @@ require "test_prof/recipes/rspec/sample"
 require "test_prof/recipes/rspec/let_it_be"
 require "test_prof/recipes/rspec/factory_default"
 
+# Records shared through `let_it_be` are frozen, so an example that modifies one raises a `FrozenError`
+# instead of leaking its changes into the next examples. Use `refind: true` when an example must update it.
+TestProf::LetItBe.configure do |config|
+  config.default_modifiers[:freeze] = true
+end
+
 RSpec.configure do |config|
   config.include ActiveJob::TestHelper
   config.include FactoryBot::Syntax::Methods

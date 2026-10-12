@@ -33,7 +33,7 @@ RSpec.describe DunningCampaignsQuery do
 
   let_it_be(:membership) { create(:membership) }
   let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:billing_entity) { create(:billing_entity, organization:) }
+  let_it_be(:billing_entity, refind: true) { create(:billing_entity, organization:) }
 
   before do
     default_billing_entity.update!(applied_dunning_campaign: dunning_campaign_first)

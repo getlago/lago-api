@@ -41,7 +41,7 @@ RSpec.describe PastUsageQuery do
   end
 
   let_it_be(:customer) { create_default(:customer, organization:) }
-  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:plan, refind: true) { create(:plan, organization:) }
 
   before do
     invoice_subscription1
