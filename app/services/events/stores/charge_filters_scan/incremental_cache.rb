@@ -43,8 +43,12 @@ module Events
 
         # Forgets the bases of the subscription's charge, for changes made to its events without
         # ingesting any (events deleted with their metric, duplicates cleaned up).
+        #
+        # The generation only has to outlive the bases built before it, which the full refresh
+        # rejects past FULL_REFRESH_INTERVAL: kept longer, it would stay in the cache for every
+        # subscription of a metric deleted once.
         def self.expire(subscription:, charge:)
-          Rails.cache.write(generation_key(subscription.id, charge.id), SecureRandom.hex(8))
+          Rails.cache.write(generation_key(subscription.id, charge.id), SecureRandom.hex(8), expires_in: FULL_REFRESH_INTERVAL)
         end
 
         def self.generation_key(subscription_id, charge_id)

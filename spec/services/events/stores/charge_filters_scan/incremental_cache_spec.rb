@@ -207,6 +207,14 @@ RSpec.describe Events::Stores::ChargeFiltersScan::IncrementalCache, clickhouse: 
 
       expect(reads.first).to eq({from_datetime: boundaries[:from_datetime], to_datetime: nil, before: cut})
     end
+
+    it "forgets the generation after the full refresh interval" do
+      key = described_class.generation_key(subscription.id, charge.id)
+
+      travel_to(now + described_class::FULL_REFRESH_INTERVAL + 1.second) do
+        expect(Rails.cache.read(key)).to be_nil
+      end
+    end
   end
 
   context "when the base is older than the full refresh interval" do
