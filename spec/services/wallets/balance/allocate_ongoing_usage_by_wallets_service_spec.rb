@@ -165,26 +165,15 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
         end
       end
 
-      context "when an over-billed metric lowers the budget and a targeted wallet runs short" do
-        around { |test| lago_premium! { test.run } }
-
-        let(:organization) { create(:organization, premium_integrations: ["events_targeting_wallets"]) }
-        let(:charge) { create(:standard_charge, organization:, accepts_target_wallet: true) }
+      context "when another billable metric of the period is over-billed" do
         let(:other_charge) { create(:standard_charge, organization:) }
-        let(:wallet_b) { create(:wallet, customer:, organization:, code: "wallet-b", balance_cents: 50, priority: 1) }
-        let(:current_usage_fees) do
-          [
-            create(:charge_fee, charge:, subscription:, organization:, invoice:, amount_cents: 100,
-              taxes_amount_cents: 0, amount_currency: "EUR", grouped_by: {"target_wallet_code" => "wallet-b"}),
-            usage_fee(amount_cents: 60, charge: other_charge)
-          ]
-        end
-        let(:progressive_billing_fees) { [usage_fee(amount_cents: 40)] }
+        let(:current_usage_fees) { [usage_fee(amount_cents: 100, charge:), usage_fee(amount_cents: 50, charge: other_charge)] }
+        let(:progressive_billing_fees) { [usage_fee(amount_cents: 300, charge: other_charge)] }
 
-        it "keeps for the next metric the budget billing would still apply to it" do
+        it "still covers the others in full, since billing gives the excess back instead of taking it from them" do
           expect(result.billable_metric_amounts).to eq({
-            wallet_b => {subscription.id => {period => {"#{billable_metric_id}/wallet-b" => 50}}},
-            wallet_a => {subscription.id => {period => {other_charge.billable_metric_id => 60}}}
+            wallet_b => {subscription.id => {period => {billable_metric_id => 50}}},
+            wallet_a => {subscription.id => {period => {billable_metric_id => 50}}}
           })
         end
       end

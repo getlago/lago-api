@@ -76,17 +76,16 @@ module Wallets
 
       # What billing will take from each wallet, period by period: last period's draft invoice is
       # finalized before this period's usage is billed, so every fee of an older period is covered
-      # before any of a newer one, larger amounts first within a period. Each period is budgeted on
-      # its own, like the invoice it ends up on, and wallets give up to their real balance, cascading
-      # past threshold wallets: the ongoing balance lets a wallet go negative, billing never does.
+      # before any of a newer one, larger amounts first within a period. Wallets give up to their real
+      # balance, cascading past threshold wallets: the ongoing balance lets a wallet go negative,
+      # billing never does. An over-billed key takes nothing from the others: billing credits it
+      # against its own fee only, and gives the excess back as a credit note.
       def cover_by_period(metas, balances)
-        budgets = coverage_budgets
         covered = wallets.index_with(0)
 
         coverage_buckets.each do |bucket, amount|
-          budget_key = [bucket.first, bucket.last.last]
           applicable = metas.select { |meta| applicable_fee?(fee_key: bucket.last, wallet: meta[:wallet], targets: meta[:targets], types: meta[:types]) }
-          budgets[budget_key] -= cover(bucket, [amount, budgets[budget_key]].min, applicable, balances, covered)
+          cover(bucket, amount, applicable, balances, covered)
         end
       end
 
@@ -97,18 +96,6 @@ module Wallets
           .flat_map { |fee_key, by_period| by_period.map { |period, by_subscription| [[period, fee_key], by_subscription.values.sum] } }
           .select { |_bucket, amount| amount.positive? }
           .sort_by { |(period, fee_key), amount| [period.to_s, -amount, fee_key.map(&:to_s)] }
-      end
-
-      # Per billing period and currency, mirroring billing's remaining_invoice_amount on the invoice
-      # the period ends up on: an over-billed key offsets the others of its period.
-      def coverage_budgets
-        budgets = Hash.new(0)
-
-        period_nets.each do |fee_key, by_period|
-          by_period.each { |period, by_subscription| budgets[[period, fee_key.last]] += by_subscription.values.sum }
-        end
-
-        budgets.transform_values! { |amount| [amount, 0].max }
       end
 
       def cover(bucket, amount, applicable, balances, covered)
@@ -126,8 +113,6 @@ module Wallets
           uncovered -= take
           record_coverage(wallet, fee_key, period, take) if fee_key.first == "charge"
         end
-
-        amount - uncovered
       end
 
       # Per subscription, then billing period, then billable metric. The period is kept because the
