@@ -88,8 +88,8 @@ describe X402::CreditPurchases::GrantService do
   context "with $10.00 at rate 0.0007" do
     let(:rate_amount) { "0.0007" }
 
-    it "rounds the credits" do
-      expect(result.settlement.wallet_transaction.reload.credit_amount).to eq(BigDecimal("14285.71429"))
+    it "floors the credits" do
+      expect(result.settlement.wallet_transaction.reload.credit_amount).to eq(BigDecimal("14285.71428"))
     end
 
     it "keeps the settled amount" do
@@ -100,7 +100,7 @@ describe X402::CreditPurchases::GrantService do
   context "with $10.00 at rate 3000" do
     let(:rate_amount) { "3000" }
 
-    it "rounds the credits" do
+    it "floors the credits" do
       expect(result.settlement.wallet_transaction.reload.credit_amount).to eq(BigDecimal("0.00333"))
     end
 
