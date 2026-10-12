@@ -175,4 +175,5 @@ resources :x402_connections, param: :code, code: /.*/, controller: "x402/connect
 
 namespace :x402 do
   resources :gate_checks, only: :create
+  resources :credit_purchases, only: :create
 end
