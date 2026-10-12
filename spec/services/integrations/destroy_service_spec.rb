@@ -7,8 +7,9 @@ RSpec.describe Integrations::DestroyService do
 
   include_context "with mocked security logger"
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:integration) { create(:netsuite_integration, organization:) }
 
   describe ".call" do

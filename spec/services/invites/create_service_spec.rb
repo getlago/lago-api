@@ -8,8 +8,9 @@ RSpec.describe Invites::CreateService do
   include_context "with mocked security logger"
 
   let(:admin_role) { create(:role, :admin) }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
 
   before { create(:membership_role, membership:, role: admin_role) }
 
@@ -33,7 +34,7 @@ RSpec.describe Invites::CreateService do
     end
 
     context "when non-admin invites with admin role" do
-      let(:non_admin_membership) { create(:membership, organization:) }
+      let_it_be(:non_admin_membership) { create(:membership, organization:) }
       let(:create_args) do
         {
           email: Faker::Internet.email,

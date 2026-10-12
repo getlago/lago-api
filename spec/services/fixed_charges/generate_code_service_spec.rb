@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe FixedCharges::GenerateCodeService do
   subject(:result) { described_class.call(plan:, add_on:) }
 
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
-  let(:add_on) { create(:add_on, organization:, code: "setup_fee") }
+  let_it_be(:organization, refind: true) { create(:organization) }
+  let_it_be(:plan, refind: true) { create(:plan, organization:) }
+  let_it_be(:add_on, refind: true) { create(:add_on, organization:, code: "setup_fee") }
 
   describe "#call" do
     context "when no fixed charges exist for the plan" do

@@ -6,8 +6,10 @@ RSpec.describe Integrations::Anrok::CreateService do
   include_context "with mocked security logger"
 
   let(:service) { described_class.new(membership.user) }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:organization) { create_default(:organization) }
 
   describe "#call" do
     subject(:service_call) { service.call(**create_args) }
