@@ -5,6 +5,10 @@ require "rails_helper"
 RSpec.describe PaymentProviders::Gocardless::HandleEventService do
   subject(:event_service) { described_class.new(payment_provider:, event_json:) }
 
+  before_all do
+    create_default(:organization)
+  end
+
   let(:event_json) do
     path = Rails.root.join("spec/fixtures/gocardless/events.json")
     JSON.parse(File.read(path))["events"].first.to_json

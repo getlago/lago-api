@@ -5,8 +5,14 @@ require "rails_helper"
 RSpec.describe PaymentProviders::Adyen::Payments::CreateService do
   subject(:create_service) { described_class.new(payment:, reference:, metadata:) }
 
-  let(:customer) { create(:customer, payment_provider_code: code) }
-  let(:organization) { customer.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:code) { "adyen_1" }
+  let_it_be(:customer) { create(:customer, payment_provider_code: code) }
+
+  before_all do
+    create_default(:plan)
+  end
+
   let(:adyen_payment_provider) { create(:adyen_provider, organization:, code:) }
   let(:adyen_customer) { create(:adyen_customer, customer:, payment_provider: adyen_payment_provider) }
   let(:adyen_client) { instance_double(Adyen::Client) }
@@ -16,7 +22,6 @@ RSpec.describe PaymentProviders::Adyen::Payments::CreateService do
   let(:checkout) { Adyen::Checkout.new(adyen_client, 70) }
   let(:payments_response) { generate(:adyen_payments_response) }
   let(:payment_methods_response) { generate(:adyen_payment_methods_response) }
-  let(:code) { "adyen_1" }
   let(:reference) { "organization.name - Invoice #{invoice.number}" }
   let(:metadata) do
     {
@@ -167,13 +172,14 @@ RSpec.describe PaymentProviders::Adyen::Payments::CreateService do
     end
 
     context "with validation error on adyen" do
-      let(:customer) { create(:customer, organization:, payment_provider_code: code) }
+      let_it_be(:customer) { create(:customer, organization:, payment_provider_code: code) }
 
       let(:subscription) do
         create(:subscription, organization:, customer:)
       end
 
-      let(:organization) do
+      let_it_be(:customer) { create(:customer, organization:, payment_provider_code: code) }
+      let_it_be(:organization) do
         create(:organization, webhook_url: "https://webhook.com")
       end
 

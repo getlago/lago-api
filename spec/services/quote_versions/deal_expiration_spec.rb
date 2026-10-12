@@ -3,7 +3,12 @@
 require "rails_helper"
 
 RSpec.describe QuoteVersions::DealExpiration do
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
+
+  before_all do
+    create_default(:customer)
+  end
+
   let(:quote) { create(:quote, organization:) }
   let(:billing_items) { {"plans" => [{"payload" => {"endDate" => "2026-06-01T00:00:00Z"}}]} }
   let(:quote_version) { build(:quote_version, quote:, organization:, billing_items:) }
