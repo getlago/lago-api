@@ -56,6 +56,14 @@ describe X402::CreditPurchases::ValidateService do
         expect(result.error.error_code).to eq("plan_not_found")
       end
     end
+
+    context "with a wallet shape in another currency" do
+      let(:wallet_shape) { super().merge(currency: "EUR") }
+
+      it "passes, since the payer's wallet is not known yet" do
+        expect(result).to be_success
+      end
+    end
   end
 
   context "with a verified payment" do
@@ -120,6 +128,142 @@ describe X402::CreditPurchases::ValidateService do
           expect(result).to be_success
         end
       end
+
+      context "without a wallet shape" do
+        let(:params) { super().except(:wallet) }
+
+        it "refuses the wallet as mandatory" do
+          expect(result.error.messages).to eq(wallet: ["value_is_mandatory"])
+        end
+      end
+
+      context "with a wallet shape that is not an object" do
+        let(:wallet_shape) { "agent_credits" }
+
+        it "refuses the wallet as mandatory" do
+          expect(result.error.messages).to eq(wallet: ["value_is_mandatory"])
+        end
+      end
+
+      context "with a wallet shape in another currency" do
+        let(:wallet_shape) { super().merge(currency: "EUR") }
+
+        it "refuses the currency" do
+          expect(result.error.messages).to eq(wallet: ["currency_not_supported"])
+        end
+      end
+
+      context "with a lowercase currency" do
+        let(:wallet_shape) { super().merge(currency: "usd") }
+
+        it "refuses the currency" do
+          expect(result.error.messages).to eq(wallet: ["currency_not_supported"])
+        end
+      end
+
+      context "with a numeric rate amount" do
+        let(:wallet_shape) { super().merge(rate_amount: 0.001) }
+
+        it "passes" do
+          expect(result).to be_success
+        end
+      end
+
+      context "with a rate amount of zero" do
+        let(:wallet_shape) { super().merge(rate_amount: "0") }
+
+        it "refuses the rate" do
+          expect(result.error.messages).to eq(wallet: ["invalid_rate_amount"])
+        end
+      end
+
+      context "with a rate amount below the wallet's five decimals" do
+        let(:wallet_shape) { super().merge(rate_amount: "0.000004") }
+
+        it "refuses the rate" do
+          expect(result.error.messages).to eq(wallet: ["invalid_rate_amount"])
+        end
+      end
+
+      context "with a rate amount that is not a number" do
+        let(:wallet_shape) { super().merge(rate_amount: "abc") }
+
+        it "refuses the rate" do
+          expect(result.error.messages).to eq(wallet: ["invalid_rate_amount"])
+        end
+      end
+
+      context "with a boolean rate amount" do
+        let(:wallet_shape) { super().merge(rate_amount: true) }
+
+        it "refuses the rate" do
+          expect(result.error.messages).to eq(wallet: ["invalid_rate_amount"])
+        end
+      end
+
+      context "without a rate amount" do
+        let(:wallet_shape) { super().except(:rate_amount) }
+
+        it "refuses the rate" do
+          expect(result.error.messages).to eq(wallet: ["invalid_rate_amount"])
+        end
+      end
+
+      context "with top-up limits" do
+        let(:wallet_shape) { super().merge(paid_top_up_min_amount_cents: 500, paid_top_up_max_amount_cents: "5000") }
+
+        it "passes" do
+          expect(result).to be_success
+        end
+
+        context "with the maximum below the minimum" do
+          let(:wallet_shape) { super().merge(paid_top_up_max_amount_cents: 400) }
+
+          it "refuses the limits" do
+            expect(result.error.messages).to eq(wallet: ["invalid_paid_top_up_limits"])
+          end
+        end
+
+        context "with a minimum of zero" do
+          let(:wallet_shape) { super().merge(paid_top_up_min_amount_cents: 0) }
+
+          it "refuses the limits" do
+            expect(result.error.messages).to eq(wallet: ["invalid_paid_top_up_limits"])
+          end
+        end
+
+        context "with a fractional maximum" do
+          let(:wallet_shape) { super().merge(paid_top_up_max_amount_cents: "5000.5") }
+
+          it "refuses the limits" do
+            expect(result.error.messages).to eq(wallet: ["invalid_paid_top_up_limits"])
+          end
+        end
+
+        context "with a maximum beyond the column's range" do
+          let(:wallet_shape) { super().merge(paid_top_up_max_amount_cents: 2**63) }
+
+          it "refuses the limits" do
+            expect(result.error.messages).to eq(wallet: ["invalid_paid_top_up_limits"])
+          end
+        end
+
+        context "with an explicit null minimum" do
+          let(:wallet_shape) { super().merge(paid_top_up_min_amount_cents: nil) }
+
+          it "passes" do
+            expect(result).to be_success
+          end
+        end
+      end
+
+      context "with every rule broken" do
+        let(:wallet_shape) { {currency: "EUR", rate_amount: "-1", paid_top_up_max_amount_cents: 0} }
+
+        it "lists each broken rule" do
+          expect(result.error.messages).to eq(wallet: %w[currency_not_supported invalid_rate_amount invalid_paid_top_up_limits])
+        end
+      end
     end
 
     context "with a known payer" do
@@ -137,6 +281,30 @@ describe X402::CreditPurchases::ValidateService do
 
         it "passes" do
           expect(result).to be_success
+        end
+      end
+
+      context "without a wallet shape" do
+        let(:params) { super().except(:wallet) }
+
+        it "refuses the wallet as mandatory" do
+          expect(result.error.messages).to eq(wallet: ["value_is_mandatory"])
+        end
+      end
+
+      context "with the wallet terminated" do
+        before { create(:wallet, :terminated, customer:, code: "agent_credits", currency: "USD", x402_enabled: true) }
+
+        it "passes on the shape it will be recreated from" do
+          expect(result).to be_success
+        end
+
+        context "without a wallet shape" do
+          let(:params) { super().except(:wallet) }
+
+          it "refuses the wallet as mandatory" do
+            expect(result.error.messages).to eq(wallet: ["value_is_mandatory"])
+          end
         end
       end
 
@@ -186,6 +354,22 @@ describe X402::CreditPurchases::ValidateService do
           let(:wallet) { create(:wallet, customer:, code: "agent_credits", currency: "USD", x402_enabled: true, paid_top_up_min_amount_cents: 5_000) }
 
           it "passes, since x402 waives the minimum" do
+            expect(result).to be_success
+          end
+        end
+
+        context "with a wallet shape in another currency" do
+          let(:wallet_shape) { super().merge(currency: "EUR") }
+
+          it "passes, since the shape is ignored" do
+            expect(result).to be_success
+          end
+        end
+
+        context "without a wallet shape" do
+          let(:params) { super().except(:wallet) }
+
+          it "passes" do
             expect(result).to be_success
           end
         end

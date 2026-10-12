@@ -5,6 +5,10 @@ module X402
     class ValidateService < BaseService
       Result = BaseResult
 
+      WALLET_CURRENCY = "USD"
+      LIMIT_KEYS = %i[paid_top_up_min_amount_cents paid_top_up_max_amount_cents].freeze
+      MAX_LIMIT_CENTS = 2**63 - 1
+
       def initialize(connection:, params:, verified_payment: nil)
         @connection = connection
         @params = params
@@ -22,9 +26,10 @@ module X402
         return refuse("buyer_external_id_taken") if customer.nil? && external_id_taken?
         return refuse("wallet_not_x402_enabled") if wallet && !wallet.x402_enabled
         return refuse("subscription_not_active") if active_subscription.nil? && subscriptions.any?
+        return refuse("amount_above_maximum", field: :payment_requirements) if above_maximum?
 
-        if above_maximum?
-          refuse("amount_above_maximum", field: :payment_requirements)
+        if wallet.nil? && shape_errors.any?
+          result.validation_failure!(errors: {wallet: shape_errors})
         else
           result
         end
@@ -88,6 +93,37 @@ module X402
       def above_maximum?
         max = wallet&.paid_top_up_max_amount_cents
         max.present? && verified_payment.settled_amount_cents > max
+      end
+
+      def shape
+        params[:wallet]
+      end
+
+      def shape_errors
+        @shape_errors ||= if shape.is_a?(Hash)
+          [
+            ("currency_not_supported" if shape[:currency] != WALLET_CURRENCY),
+            ("invalid_rate_amount" unless valid_rate_amount?),
+            ("invalid_paid_top_up_limits" unless valid_limits?)
+          ].compact
+        else
+          ["value_is_mandatory"]
+        end
+      end
+
+      def valid_rate_amount?
+        rate_amount = shape[:rate_amount]
+        return false unless rate_amount.is_a?(String) || rate_amount.is_a?(Numeric)
+
+        Wallet.type_for_attribute(:rate_amount).cast(rate_amount)&.positive? || false
+      end
+
+      def valid_limits?
+        limits = shape.slice(*LIMIT_KEYS).compact.transform_values { |value| X402::UnsignedInteger.parse(value) }
+        return false unless limits.values.all? { |cents| cents&.positive? && cents <= MAX_LIMIT_CENTS }
+
+        min, max = limits.values_at(*LIMIT_KEYS)
+        min.nil? || max.nil? || max >= min
       end
 
       def refuse(code, field: :base)
