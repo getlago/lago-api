@@ -8,7 +8,7 @@ RSpec.describe Orders::OneOff::ExecuteService do
   let_it_be(:organization) { create(:organization) }
   let_it_be(:billing_entity) { create(:billing_entity, organization:) }
   let_it_be(:customer) { create(:customer, organization:, billing_entity:, currency: "EUR") }
-  let_it_be(:add_on) { create(:add_on, organization:, amount_cents: 10_000) }
+  let_it_be(:add_on, refind: true) { create(:add_on, organization:, amount_cents: 10_000) }
   let(:add_on_item) do
     {
       "id" => add_on.id,

@@ -13,7 +13,7 @@ RSpec.describe Memberships::RevokeService do
   let(:finance_role) { create(:role, :finance) }
 
   let_it_be(:user) { create(:user) }
-  let_it_be(:membership) { create(:membership, organization:) }
+  let_it_be(:membership, refind: true) { create(:membership, organization:) }
 
   describe "#call" do
     context "when revoking my own membership" do

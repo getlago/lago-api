@@ -14,7 +14,7 @@ RSpec.describe LifetimeUsages::FlagRefreshFromInvoiceService, :premium do
     create_default(:organization)
   end
 
-  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:customer, refind: true) { create_default(:customer) }
   let_it_be(:plan) { create_default(:plan, organization: customer.organization) }
 
   before do

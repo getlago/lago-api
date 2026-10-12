@@ -86,7 +86,7 @@ RSpec.describe Orders::SubscriptionAmendment::ExecuteService, :premium do
   let(:order) { create(:order, organization:, customer:, order_form:, execution_mode:) }
   let(:execution_mode) { :execute_in_lago }
 
-  let_it_be(:plan) { create(:plan, organization:, amount_currency: "EUR", amount_cents: 100_000) }
+  let_it_be(:plan, refind: true) { create(:plan, organization:, amount_currency: "EUR", amount_cents: 100_000) }
   let_it_be(:billable_metric) { create(:billable_metric, organization:, code: "api_calls") }
 
   # Records are resolved by id only outside api context, and CurrentContext leaks across spec
