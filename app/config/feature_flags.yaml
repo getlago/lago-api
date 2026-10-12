@@ -57,3 +57,7 @@ usage_prefilter_short_cache:
 usage_prefilter_incremental:
   description: "Keep the current usage pre-filter result of each subscription and only read the events ingested since, instead of every event of the billing period"
   owners: ["@jdenquin"]
+
+incremental_charge_cache:
+  description: "Keep the single scan rows of past events between current usage computations and only read the events of the last half hour, instead of every event of the billing period"
+  owners: ["@jdenquin"]

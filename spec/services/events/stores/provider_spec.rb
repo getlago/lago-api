@@ -647,7 +647,20 @@ RSpec.describe Events::Stores::Provider do
         provider.store_for(metered_item:, boundaries:, filters:, aggregated_filter_ids: [charge_filter.id, nil])
 
         expect(Events::Stores::ChargeFiltersScan).to have_received(:new)
-          .with(charge: metered_item.charge, filter_ids: [charge_filter.id, nil])
+          .with(charge: metered_item.charge, filter_ids: [charge_filter.id, nil], incremental: nil)
+      end
+    end
+
+    context "with the incremental charge cache" do
+      subject(:provider) { described_class.new(organization:, billing_context:, incremental_charge_cache: true) }
+
+      before { allow(Events::Stores::ChargeFiltersScan).to receive(:new).and_call_original }
+
+      it "gives the scan a cache for the subscription's charge" do
+        store
+
+        expect(Events::Stores::ChargeFiltersScan).to have_received(:new)
+          .with(charge: metered_item.charge, filter_ids: nil, incremental: an_instance_of(Events::Stores::ChargeFiltersScan::IncrementalCache))
       end
     end
 

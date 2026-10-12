@@ -45,9 +45,13 @@ module Events
 
       # `filter_ids` are the filters to aggregate, `nil` standing for the default bucket as in the
       # pre-filter. Without them every filter of the charge is read.
-      def initialize(charge:, filter_ids: nil)
+      #
+      # With an `incremental` cache, the events older than its cut are answered from the rows it
+      # kept and only the most recent ones are read (see IncrementalCache).
+      def initialize(charge:, filter_ids: nil, incremental: nil)
         @charge = charge
         @filter_keys = filter_ids&.to_set { filter_key(it) }
+        @incremental = incremental
         @buckets = {}
         @rows = {}
       end
@@ -103,7 +107,7 @@ module Events
 
       private
 
-      attr_reader :charge, :filter_keys
+      attr_reader :charge, :filter_keys, :incremental
 
       def filter_key(charge_filter_id)
         charge_filter_id || DEFAULT_FILTER_KEY
@@ -168,11 +172,28 @@ module Events
       # read theirs without the lower boundary.
       def scan(store, batch)
         from_datetime = (store.from_datetime if store.use_from_boundary)
-        key = [batch, from_datetime, store.applicable_to_datetime, store.deduplicate]
+        to_datetime = store.applicable_to_datetime
+        key = [batch, from_datetime, to_datetime, store.deduplicate]
 
-        @rows[key] ||= Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+        @rows[key] ||= if incremental
+          incremental.rows(
+            store:,
+            from_datetime:,
+            to_datetime:,
+            batch_keys: batch_keys(batch),
+            group_keys:
+          ) { |**window| read_rows(store, batch, **window) }
+        else
+          read_rows(store, batch, from_datetime:, to_datetime:)
+        end
+      end
+
+      # The rows of the batch's filters for the events of `from_datetime` (included) to
+      # `to_datetime` (included) or `before` (excluded).
+      def read_rows(store, batch, from_datetime:, to_datetime:, before: nil)
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           connection
-            .select_all(scan_sql(store, batch:, from_datetime:))
+            .select_all(scan_sql(store, batch:, from_datetime:, to_datetime:, before:))
             .rows
             .each_with_object({}) do |(position, *groups, value, events_count), acc|
               filter_key = batch_keys(batch).fetch(position.to_i - 1)
@@ -186,16 +207,14 @@ module Events
         end
       end
 
-      def scan_sql(store, batch:, from_datetime:)
-        to_datetime = store.applicable_to_datetime
-
+      def scan_sql(store, batch:, from_datetime:, to_datetime:, before: nil)
         events_sql = if store.deduplicate
-          store.deduplicated_events_sql(from_datetime:, to_datetime:, deduplicated_columns: %w[decimal_value properties])
+          store.deduplicated_events_sql(from_datetime:, to_datetime:, deduplicated_columns: %w[decimal_value properties], before:)
         else
           <<~SQL.squish
             SELECT decimal_value, properties
             FROM events_enriched
-            WHERE #{store.deduplicated_events_where_sql(from_datetime:, to_datetime:)}
+            WHERE #{store.deduplicated_events_where_sql(from_datetime:, to_datetime:, before:)}
           SQL
         end
 

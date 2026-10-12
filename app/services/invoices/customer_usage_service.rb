@@ -190,7 +190,8 @@ module Invoices
         boundaries:,
         serve_current_usage_from_buckets: use_usage_buckets,
         usage_filters:,
-        charges:
+        charges:,
+        incremental_charge_cache: organization.feature_flag_enabled?(:incremental_charge_cache)
       )
     end
 

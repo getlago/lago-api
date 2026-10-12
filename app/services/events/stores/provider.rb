@@ -3,14 +3,18 @@
 module Events
   module Stores
     class Provider
+      # `incremental_charge_cache` lets the single scan keep the rows of past events between
+      # computations (see ChargeFiltersScan::IncrementalCache). Only current usage asks for it:
+      # an invoice reads its events once.
       def initialize(organization:, billing_context:, serve_current_usage_from_buckets: false,
-        boundaries: nil, usage_filters: UsageFilters::NONE, charges: [])
+        boundaries: nil, usage_filters: UsageFilters::NONE, charges: [], incremental_charge_cache: false)
         @organization = organization
         @billing_context = billing_context
         @serve_current_usage_from_buckets = serve_current_usage_from_buckets
         @boundaries = boundaries
         @usage_filters = usage_filters
         @charges = charges
+        @incremental_charge_cache = incremental_charge_cache
       end
 
       attr_reader :billing_context
@@ -95,7 +99,8 @@ module Events
 
       private
 
-      attr_reader :organization, :serve_current_usage_from_buckets, :boundaries, :usage_filters, :charges
+      attr_reader :organization, :serve_current_usage_from_buckets, :boundaries, :usage_filters, :charges,
+        :incremental_charge_cache
 
       # A full usage window opens on `subscription.started_at`, which `same_window_as_prefetch?`
       # cannot tell apart from a first billing period.
@@ -141,8 +146,15 @@ module Events
         return @charge_filters_scans[key] if @charge_filters_scans.key?(key)
 
         @charge_filters_scans[key] = if ChargeFiltersScan.supported_charge?(charge)
-          ChargeFiltersScan.new(charge:, filter_ids: aggregated_filter_ids)
+          ChargeFiltersScan.new(charge:, filter_ids: aggregated_filter_ids, incremental: incremental_cache(charge))
         end
+      end
+
+      def incremental_cache(charge)
+        subscription = billing_context.subscription
+        return if !incremental_charge_cache || subscription.nil?
+
+        ChargeFiltersScan::IncrementalCache.new(subscription:, charge:)
       end
 
       # The override belongs to the ClickHouse migration comparison, which has to keep comparing

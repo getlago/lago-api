@@ -1144,6 +1144,81 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
     end
   end
 
+  describe "with the incremental charge cache", clickhouse: {clean_before: true} do
+    subject(:usage_service) { described_class.new(customer:, subscription:, apply_taxes: false) }
+
+    include_context "with clickhouse availability"
+
+    let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "value") }
+    let(:region) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[us eu]) }
+    let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {"amount" => "2"}) }
+    let(:now) { Time.current.beginning_of_month + 14.days + 12.hours + 7.minutes }
+
+    def ingest(transaction_id, timestamp, region, value)
+      create(
+        :clickhouse_events_enriched,
+        transaction_id:,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        code: billable_metric.code,
+        timestamp:,
+        properties: {"region" => region, "value" => value.to_s},
+        value: value.to_s,
+        decimal_value: value,
+        enriched_at: Time.current
+      )
+    end
+
+    def usage_with_flag(enabled)
+      if enabled
+        organization.enable_feature_flag!(:incremental_charge_cache)
+      else
+        organization.disable_feature_flag!(:incremental_charge_cache)
+      end
+
+      # The fees cache would answer the second call on its own.
+      Rails.cache.delete_matched("charge-usage/*")
+
+      described_class.new(customer: customer.reload, subscription: subscription.reload, apply_taxes: false)
+        .call.usage.fees.map { [it.charge_filter_id, it.units, it.events_count, it.amount_cents] }.sort_by(&:to_s)
+    end
+
+    before do
+      organization.update!(clickhouse_events_store: true)
+      organization.enable_feature_flag!(:charge_filters_single_scan)
+      create(:tax, :applied_to_billing_entity, organization:, rate: 0)
+      %w[us eu].each do |value|
+        charge_filter = create(:charge_filter, charge:, properties: {"amount" => "2"})
+        create(:charge_filter_value, charge_filter:, billable_metric_filter: region, values: [value])
+      end
+
+      travel_to(now - 1.hour) do
+        ingest("tr_1", now.beginning_of_month + 1.day, "us", 3)
+        ingest("tr_2", now - 2.hours, "eu", 5)
+      end
+      travel_to(now)
+    end
+
+    it "bills the usage the events store bills" do
+      expected = usage_with_flag(false)
+
+      expect(usage_with_flag(true)).to eq(expected)
+    end
+
+    context "when events are ingested between two computations" do
+      before do
+        usage_with_flag(true)
+        ingest("tr_3", now - 2.minutes, "us", 7)
+      end
+
+      it "adds them to the usage kept from the previous computation" do
+        expected = usage_with_flag(false)
+
+        expect(usage_with_flag(true)).to eq(expected)
+      end
+    end
+  end
+
   describe "with the usage buckets", clickhouse: {clean_before: true} do
     subject(:usage_service) do
       described_class.new(customer:, subscription:, apply_taxes: false, use_usage_buckets: true)
