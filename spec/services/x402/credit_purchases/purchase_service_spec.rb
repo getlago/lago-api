@@ -270,6 +270,27 @@ describe X402::CreditPurchases::PurchaseService do
       end
     end
 
+    context "with an exception raised inside the grant" do
+      before do
+        allow(Sentry).to receive(:capture_exception)
+        allow(WalletTransactions::CreateService).to receive(:call!).and_raise(ActiveRecord::StatementInvalid)
+      end
+
+      it "fails with credit_grant_failed" do
+        expect(result.error.messages).to eq(base: ["credit_grant_failed"])
+      end
+
+      it "keeps the settled row for a replay" do
+        result
+        expect(X402::Settlement.sole).to have_attributes(status: "settled", wallet_transaction_id: nil)
+      end
+
+      it "reports the exception" do
+        result
+        expect(Sentry).to have_received(:capture_exception).with(instance_of(ActiveRecord::StatementInvalid), extra: hash_including(:settlement_id))
+      end
+    end
+
     context "with the plan deleted after the settle" do
       before do
         stub_request(:post, "#{cdp_facilitator_url}/settle").to_return do

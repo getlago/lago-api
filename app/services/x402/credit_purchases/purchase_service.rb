@@ -153,6 +153,9 @@ module X402
         else
           refuse_grant(grant_result.error, settlement)
         end
+      rescue => e
+        Sentry.capture_exception(e, extra: {organization_id: settlement.organization_id, settlement_id: settlement.id})
+        refuse_grant(e, settlement)
       end
 
       def refuse_grant(error, settlement)
