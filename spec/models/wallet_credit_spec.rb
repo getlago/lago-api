@@ -5,6 +5,9 @@ require "rails_helper"
 RSpec.describe WalletCredit do
   subject { described_class.new(wallet:, credit_amount:, invoiceable:) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+
   let(:wallet) { create(:wallet, rate_amount:, currency:) }
   let(:currency) { "EUR" }
   let(:credit_amount) { 1000 }
