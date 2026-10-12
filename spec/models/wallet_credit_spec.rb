@@ -49,6 +49,24 @@ RSpec.describe WalletCredit do
     end
   end
 
+  context "with an amount in cents" do
+    subject { described_class.new(wallet:, credit_amount: BigDecimal("0.00333"), invoiceable: false, amount_cents: 1000) }
+
+    let(:rate_amount) { 3000 }
+
+    describe "#amount" do
+      it "returns the given amount" do
+        expect(subject.amount).to eq(10)
+      end
+    end
+
+    describe "#credit_amount" do
+      it "keeps the credit_amount" do
+        expect(subject.credit_amount).to eq(BigDecimal("0.00333"))
+      end
+    end
+  end
+
   describe ".from_amount_cents" do
     subject { described_class.from_amount_cents(wallet:, amount_cents:) }
 
@@ -91,6 +109,22 @@ RSpec.describe WalletCredit do
       describe "#amount_cents" do
         it "returns the amount cents" do
           expect(subject.amount_cents).to eq(103)
+        end
+      end
+    end
+
+    context "when amount cents ends in half a cent" do
+      let(:amount_cents) { BigDecimal("1234.5") }
+
+      describe "#credit_amount" do
+        it "returns the rounded credit_amount" do
+          expect(subject.credit_amount).to eq(12.35)
+        end
+      end
+
+      describe "#amount" do
+        it "rounds the amount up" do
+          expect(subject.amount).to eq(12.35)
         end
       end
     end

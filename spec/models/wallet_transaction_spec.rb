@@ -59,7 +59,7 @@ RSpec.describe WalletTransaction do
         "status" => hash_including("pending", "settled", "failed"),
         "transaction_status" => hash_including("purchased", "granted", "voided", "invoiced"),
         "transaction_type" => hash_including("inbound", "outbound"),
-        "source" => hash_including("manual", "interval", "threshold")
+        "source" => {"manual" => 0, "interval" => 1, "threshold" => 2, "x402" => 3}
       )
     end
   end

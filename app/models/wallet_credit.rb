@@ -23,7 +23,11 @@ class WalletCredit
   def initialize(wallet:, credit_amount:, invoiceable: true, amount_cents: nil)
     @wallet = wallet
     currency = wallet.currency_for_balance
-    @amount = (credit_amount * wallet.rate_amount).round(currency.exponent)
+    @amount = if amount_cents
+      (BigDecimal(amount_cents.to_s) / currency.subunit_to_unit).round(currency.exponent)
+    else
+      (credit_amount * wallet.rate_amount).round(currency.exponent)
+    end
     @amount_cents = (amount_cents || @amount * currency.subunit_to_unit).to_i
 
     @credit_amount = if invoiceable
