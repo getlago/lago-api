@@ -89,8 +89,8 @@ module Wallets
         end
       end
 
-      # Positive nets per billing period and fee key, oldest period first, then largest amount, with
-      # ties broken by fee key so the order is stable across refreshes.
+      # Positive nets per billing period and fee key, periods in billing order, then largest amount,
+      # with ties broken by fee key so the order is stable across refreshes.
       def coverage_buckets
         period_nets
           .flat_map { |fee_key, by_period| by_period.map { |period, by_subscription| [[period, fee_key], by_subscription.values.sum] } }
@@ -115,8 +115,9 @@ module Wallets
         end
       end
 
-      # Per subscription, then billing period, then billable metric. The period is kept because the
-      # pool also holds the previous period's draft invoices during their grace period.
+      # Per subscription, then the start of its billing period, then billable metric. The period is
+      # kept because the pool also holds the previous period's draft invoices during their grace
+      # period.
       def empty_billable_metric_amounts
         Hash.new { |by_subscription, subscription_id| by_subscription[subscription_id] = Hash.new { |by_period, period| by_period[period] = Hash.new(0) } }
       end
@@ -129,12 +130,18 @@ module Wallets
         key = WalletTransaction.billable_metric_amount_key(fee_key.second, fee_key.third)
 
         nets.each do |subscription_id, net|
-          result.billable_metric_amounts[wallet][subscription_id][period][key] +=
+          result.billable_metric_amounts[wallet][subscription_id][period_starts[[period, subscription_id]]][key] +=
             tax_exclusive(fee_key, subscription_id, period, take.to_d * net / total)
         end
       end
 
+      # A billing period is known by its end, when it is billed: subscriptions billed on the same
+      # invoice share it even when they started at different dates.
       def period(fee)
+        Time.zone.parse(fee.properties["charges_to_datetime"].to_s)&.utc&.iso8601
+      end
+
+      def period_start(fee)
         Time.zone.parse(fee.properties["charges_from_datetime"].to_s)&.utc&.iso8601
       end
 
@@ -234,13 +241,23 @@ module Wallets
           key = fee_key(fee)
           amount = yield(fee)
           remaining[key] += amount
-          period_nets[key][period(fee)][fee.subscription_id] += amount if with_billable_metric_amounts
+
+          if with_billable_metric_amounts
+            period_nets[key][period(fee)][fee.subscription_id] += amount
+            period_starts[[period(fee), fee.subscription_id]] ||= period_start(fee)
+          end
         end
       end
 
       # Signed nets per fee key, billing period and subscription.
       def period_nets
         @period_nets ||= Hash.new { |by_key, fee_key| by_key[fee_key] = Hash.new { |by_period, period| by_period[period] = Hash.new(0) } }
+      end
+
+      # Per billing period and subscription, the start of that subscription's period, which is how
+      # the split is recorded.
+      def period_starts
+        @period_starts ||= {}
       end
 
       def fee_key(fee)

@@ -240,11 +240,11 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
         let(:wallet_a) { create(:wallet, customer:, organization:, balance_cents: 1000, priority: 2) }
         let(:draft_invoices_fees) do
           [create(:charge_fee, charge:, subscription:, organization:, invoice:, amount_cents: 100, taxes_amount_cents: 0,
-            amount_currency: "EUR", properties: {"charges_from_datetime" => "2026-09-01T00:00:00Z"})]
+            amount_currency: "EUR", properties: {"charges_from_datetime" => "2026-09-01T00:00:00Z", "charges_to_datetime" => "2026-09-30T23:59:59Z"})]
         end
         let(:current_usage_fees) do
           [create(:charge_fee, charge:, subscription:, organization:, invoice:, amount_cents: 50, taxes_amount_cents: 0,
-            amount_currency: "EUR", properties: {"charges_from_datetime" => "2026-10-01T00:00:00Z"})]
+            amount_currency: "EUR", properties: {"charges_from_datetime" => "2026-10-01T00:00:00Z", "charges_to_datetime" => "2026-10-31T23:59:59Z"})]
         end
 
         it "covers the draft first, as billing will, and keeps each period apart" do
@@ -261,11 +261,11 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
         let(:wallet_a) { create(:wallet, customer:, organization:, balance_cents: 1000, priority: 2) }
         let(:draft_invoices_fees) do
           [create(:charge_fee, charge: other_charge, subscription:, organization:, invoice:, amount_cents: 80, taxes_amount_cents: 0,
-            amount_currency: "EUR", properties: {"charges_from_datetime" => "2026-09-01T00:00:00Z"})]
+            amount_currency: "EUR", properties: {"charges_from_datetime" => "2026-09-01T00:00:00Z", "charges_to_datetime" => "2026-09-30T23:59:59Z"})]
         end
         let(:current_usage_fees) do
           [create(:charge_fee, charge:, subscription:, organization:, invoice:, amount_cents: 120, taxes_amount_cents: 0,
-            amount_currency: "EUR", properties: {"charges_from_datetime" => "2026-10-01T00:00:00Z"})]
+            amount_currency: "EUR", properties: {"charges_from_datetime" => "2026-10-01T00:00:00Z", "charges_to_datetime" => "2026-10-31T23:59:59Z"})]
         end
 
         it "still covers the draft first, although this period's metric is larger" do
@@ -285,20 +285,67 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
         let(:wallet_a) { create(:wallet, customer:, organization:, balance_cents: 1000, priority: 2) }
         let(:draft_invoices_fees) do
           [create(:charge_fee, charge:, subscription:, organization:, invoice:, amount_cents: 100, taxes_amount_cents: 0,
-            amount_currency: "EUR", properties: {"charges_from_datetime" => "2026-09-01T00:00:00Z"})]
+            amount_currency: "EUR", properties: {"charges_from_datetime" => "2026-09-01T00:00:00Z", "charges_to_datetime" => "2026-09-30T23:59:59Z"})]
         end
         let(:current_usage_fees) do
           [create(:charge_fee, charge: other_charge, subscription:, organization:, invoice:, amount_cents: 10, taxes_amount_cents: 0,
-            amount_currency: "EUR", properties: {"charges_from_datetime" => "2026-10-01T00:00:00Z"})]
+            amount_currency: "EUR", properties: {"charges_from_datetime" => "2026-10-01T00:00:00Z", "charges_to_datetime" => "2026-10-31T23:59:59Z"})]
         end
         let(:progressive_billing_fees) do
           [create(:charge_fee, charge: other_charge, subscription:, organization:, invoice:, amount_cents: 60, taxes_amount_cents: 0,
-            amount_currency: "EUR", properties: {"charges_from_datetime" => "2026-10-01T00:00:00Z"})]
+            amount_currency: "EUR", properties: {"charges_from_datetime" => "2026-10-01T00:00:00Z", "charges_to_datetime" => "2026-10-31T23:59:59Z"})]
         end
 
         it "still covers the draft in full, since it lands on its own invoice" do
           expect(result.billable_metric_amounts).to eq({
             wallet_a => {subscription.id => {"2026-09-01T00:00:00Z" => {billable_metric_id => 100}}}
+          })
+        end
+      end
+
+      context "when subscriptions on different intervals are billed at different dates" do
+        let(:wallet_a) { create(:wallet, customer:, organization:, balance_cents: 100, priority: 2) }
+        let(:wallets) { [wallet_a] }
+        let(:yearly_subscription) { create(:subscription, customer:, organization:) }
+        let(:other_charge) { create(:standard_charge, organization:) }
+        let(:current_usage_fees) do
+          [
+            create(:charge_fee, charge: other_charge, subscription: yearly_subscription, organization:, invoice:, amount_cents: 500, taxes_amount_cents: 0,
+              amount_currency: "EUR", properties: {"charges_from_datetime" => "2026-01-01T00:00:00Z", "charges_to_datetime" => "2026-12-31T23:59:59Z"}),
+            create(:charge_fee, charge:, subscription:, organization:, invoice:, amount_cents: 30, taxes_amount_cents: 0,
+              amount_currency: "EUR", properties: {"charges_from_datetime" => "2026-10-01T00:00:00Z", "charges_to_datetime" => "2026-10-31T23:59:59Z"})
+          ]
+        end
+
+        it "covers first the period billed first, although the other one started earlier" do
+          expect(result.billable_metric_amounts).to eq({
+            wallet_a => {
+              subscription.id => {"2026-10-01T00:00:00Z" => {billable_metric_id => 30}},
+              yearly_subscription.id => {"2026-01-01T00:00:00Z" => {other_charge.billable_metric_id => 70}}
+            }
+          })
+        end
+      end
+
+      context "when subscriptions billed on the same invoice started at different dates" do
+        let(:wallet_a) { create(:wallet, customer:, organization:, balance_cents: 100, priority: 2) }
+        let(:wallets) { [wallet_a] }
+        let(:other_subscription) { create(:subscription, customer:, organization:) }
+        let(:current_usage_fees) do
+          [
+            create(:charge_fee, charge:, subscription:, organization:, invoice:, amount_cents: 100, taxes_amount_cents: 0,
+              amount_currency: "EUR", properties: {"charges_from_datetime" => "2026-10-01T00:00:00Z", "charges_to_datetime" => "2026-10-31T23:59:59Z"}),
+            create(:charge_fee, charge:, subscription: other_subscription, organization:, invoice:, amount_cents: 100, taxes_amount_cents: 0,
+              amount_currency: "EUR", properties: {"charges_from_datetime" => "2026-10-15T10:00:00Z", "charges_to_datetime" => "2026-10-31T23:59:59Z"})
+          ]
+        end
+
+        it "shares the wallet between them as their invoice will, each under its own period start" do
+          expect(result.billable_metric_amounts).to eq({
+            wallet_a => {
+              subscription.id => {"2026-10-01T00:00:00Z" => {billable_metric_id => 50}},
+              other_subscription.id => {"2026-10-15T10:00:00Z" => {billable_metric_id => 50}}
+            }
           })
         end
       end
