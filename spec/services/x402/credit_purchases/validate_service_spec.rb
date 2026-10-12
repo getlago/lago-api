@@ -185,6 +185,30 @@ describe X402::CreditPurchases::ValidateService do
         end
       end
 
+      context "with the largest rate amount the wallet stores" do
+        let(:wallet_shape) { super().merge(rate_amount: "9999999999999999999999999.99999") }
+
+        it "passes" do
+          expect(result).to be_success
+        end
+      end
+
+      context "with a rate amount above what the wallet stores" do
+        let(:wallet_shape) { super().merge(rate_amount: "1e25") }
+
+        it "refuses the rate" do
+          expect(result.error.messages).to eq(wallet: ["invalid_rate_amount"])
+        end
+      end
+
+      context "with an infinite rate amount" do
+        let(:wallet_shape) { super().merge(rate_amount: Float::INFINITY) }
+
+        it "refuses the rate" do
+          expect(result.error.messages).to eq(wallet: ["invalid_rate_amount"])
+        end
+      end
+
       context "with a rate amount that is not a number" do
         let(:wallet_shape) { super().merge(rate_amount: "abc") }
 

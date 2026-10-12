@@ -8,6 +8,7 @@ module X402
       WALLET_CURRENCY = "USD"
       LIMIT_KEYS = %i[paid_top_up_min_amount_cents paid_top_up_max_amount_cents].freeze
       MAX_LIMIT_CENTS = 2**63 - 1
+      MAX_RATE_AMOUNT = BigDecimal("9999999999999999999999999.99999")
 
       def initialize(connection:, params:, verified_payment: nil)
         @connection = connection
@@ -112,7 +113,8 @@ module X402
       end
 
       def valid_rate_amount?
-        Wallet.new(rate_amount: shape[:rate_amount]).tap(&:validate).errors[:rate_amount].empty?
+        rated = Wallet.new(rate_amount: shape[:rate_amount]).tap(&:validate)
+        rated.errors[:rate_amount].empty? && rated.rate_amount <= MAX_RATE_AMOUNT
       end
 
       def valid_limits?
