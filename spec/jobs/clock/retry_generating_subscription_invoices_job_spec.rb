@@ -29,7 +29,7 @@ describe Clock::RetryGeneratingSubscriptionInvoicesJob, job: true do
     end
 
     context "with an actual invoice that should be retried" do
-      let_it_be(:old_generating_invoice) { create(:invoice, :subscription, created_at: 5.days.ago) }
+      let_it_be(:old_generating_invoice, refind: true) { create(:invoice, :subscription, created_at: 5.days.ago) }
 
       before do
         old_generating_invoice.update(status: :generating)

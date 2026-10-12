@@ -8,7 +8,7 @@ RSpec.describe Invoices::RefreshDraftJob do
     create_default(:customer)
   end
 
-  let_it_be(:invoice) { create(:invoice, ready_to_be_refreshed: true) }
+  let_it_be(:invoice, refind: true) { create(:invoice, ready_to_be_refreshed: true) }
   let(:result) { Invoices::RefreshDraftService::Result.new }
 
   it "delegates to the RefreshDraft service" do

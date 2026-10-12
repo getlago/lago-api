@@ -11,7 +11,7 @@ describe Invoices::Payments::MarkOverdueJob, job: true do
   subject { described_class.new }
 
   describe ".perform" do
-    let_it_be(:overdue_invoice) { create(:invoice, payment_due_date: 1.day.ago) }
+    let_it_be(:overdue_invoice, refind: true) { create(:invoice, payment_due_date: 1.day.ago) }
 
     before do
       overdue_invoice

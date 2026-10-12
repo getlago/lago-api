@@ -6,16 +6,16 @@ RSpec.describe DatabaseMigrations::BackfillChildChargeFilterCodesJob do
   subject(:perform) { described_class.perform_now(parent_charge.id) }
 
   let_it_be(:organization) { create(:organization) }
-  let_it_be(:billable_metric) { create(:billable_metric, organization:) }
+  let_it_be(:billable_metric, refind: true) { create(:billable_metric, organization:) }
   let(:bm_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[us eu]) }
   let(:parent_charge) { create(:standard_charge, plan:, billable_metric:) }
   let(:child_charge) { create(:standard_charge, plan: child_plan, billable_metric:, parent: parent_charge) }
   let(:us_code) { ChargeFilter.generate_code({"region" => ["us"]}) }
   let(:eu_code) { ChargeFilter.generate_code({"region" => ["eu"]}) }
 
-  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:plan, refind: true) { create(:plan, organization:) }
 
-  let_it_be(:child_plan) { create(:plan, organization:, parent: plan) }
+  let_it_be(:child_plan, refind: true) { create(:plan, organization:, parent: plan) }
 
   def build_filter(on, values, code: nil, **attrs)
     filter = create(:charge_filter, charge: on, **attrs)

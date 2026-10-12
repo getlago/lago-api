@@ -6,7 +6,7 @@ RSpec.describe Customers::RefreshInvoicesSearchTermsJob do
   subject(:perform_job) { described_class.perform_now(customer_id) }
 
   let_it_be(:organization) { create(:organization) }
-  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:customer, refind: true) { create(:customer, organization:) }
   let(:customer_id) { customer.id }
 
   before do

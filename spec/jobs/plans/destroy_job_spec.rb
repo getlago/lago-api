@@ -9,8 +9,8 @@ RSpec.describe Plans::DestroyJob do
 
   include ActiveJob::TestHelper
 
-  let_it_be(:plan) { create(:plan) }
-  let_it_be(:child_plan) { create(:plan, parent: plan) }
+  let_it_be(:plan, refind: true) { create(:plan) }
+  let_it_be(:child_plan, refind: true) { create(:plan, parent: plan) }
   let(:service_result) { Plans::DestroyService::Result.new }
 
   before do

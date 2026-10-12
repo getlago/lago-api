@@ -10,7 +10,7 @@ RSpec.describe Invoices::CreateAllPayInAdvanceFixedChargesJob do
   subject(:perform_now) { described_class.perform_now(plan, timestamp, fixed_charge) }
 
   let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:plan, refind: true) { create(:plan, organization:) }
   let(:timestamp) { Time.current.to_i }
   let(:fixed_charge) { nil }
 
