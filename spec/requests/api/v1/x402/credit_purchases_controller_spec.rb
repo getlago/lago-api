@@ -81,6 +81,15 @@ describe Api::V1::X402::CreditPurchasesController, :premium do
       end
     end
 
+    context "with the root key only in the query string" do
+      subject { post_with_token(organization, "/api/v1/x402/credit_purchases?credit_purchase[connection_code]=#{x402_connection.code}", {}) }
+
+      it "answers 422 without a payment" do
+        subject
+        expect(json[:error_details]).to eq(payment: ["invalid_payment"])
+      end
+    end
+
     context "with an unknown connection" do
       let(:params) { super().merge(connection_code: "unknown") }
 
