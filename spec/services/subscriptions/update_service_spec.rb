@@ -12,7 +12,7 @@ RSpec.describe Subscriptions::UpdateService do
     create_default(:add_on)
   end
 
-  let_it_be(:membership) { create(:membership) }
+  let_it_be(:membership, refind: true) { create(:membership) }
   let(:subscription) { create(:subscription) }
 
   describe "#call" do
@@ -244,7 +244,7 @@ RSpec.describe Subscriptions::UpdateService do
         let(:params) { {on_termination_credit_note: "credit"} }
 
         context "with pay_in_advance plan" do
-          let_it_be(:plan) { create(:plan, :pay_in_advance) }
+          let_it_be(:plan, refind: true) { create(:plan, :pay_in_advance) }
           let(:subscription) { create(:subscription, plan:) }
 
           %w[credit skip].each do |value|
@@ -440,7 +440,7 @@ RSpec.describe Subscriptions::UpdateService do
       end
 
       context "when subscription is pay_in_advance" do
-        let_it_be(:plan) { create(:plan, :pay_in_advance) }
+        let_it_be(:plan, refind: true) { create(:plan, :pay_in_advance) }
         let(:subscription) { create(:subscription, :pending, plan:) }
 
         context "when subscription_at is set to past date" do
@@ -726,7 +726,7 @@ RSpec.describe Subscriptions::UpdateService do
     end
 
     context "when plan_overrides" do
-      let_it_be(:plan) { create(:plan, organization: membership.organization) }
+      let_it_be(:plan, refind: true) { create(:plan, organization: membership.organization) }
       let(:subscription) { create(:subscription, plan:) }
       let(:params) do
         {
@@ -766,8 +766,8 @@ RSpec.describe Subscriptions::UpdateService do
         end
 
         context "with overriden plan" do
-          let_it_be(:parent_plan) { create(:plan, organization: membership.organization) }
-          let_it_be(:plan) { create(:plan, organization: membership.organization, parent_id: parent_plan.id) }
+          let_it_be(:parent_plan, refind: true) { create(:plan, organization: membership.organization) }
+          let_it_be(:plan, refind: true) { create(:plan, organization: membership.organization, parent_id: parent_plan.id) }
 
           it "updates the plan accordingly" do
             update_service.call
@@ -907,8 +907,8 @@ RSpec.describe Subscriptions::UpdateService do
       end
 
       context "with fixed charge overrides and apply_units_immediately true", :premium do
-        let_it_be(:organization) { membership.organization }
-        let_it_be(:plan) { create(:plan, organization:, interval: :weekly) }
+        let_it_be(:organization, refind: true) { membership.organization }
+        let_it_be(:plan, refind: true) { create(:plan, organization:, interval: :weekly) }
         let(:fixed_charge1) { create(:fixed_charge, plan:, units: 5) }
         let(:subscription) do
           create(
@@ -937,7 +937,7 @@ RSpec.describe Subscriptions::UpdateService do
         end
         let(:fixed_charge2) { create(:fixed_charge, plan:, units: 10) }
 
-        let_it_be(:customer) { create(:customer, organization:) }
+        let_it_be(:customer, refind: true) { create(:customer, organization:) }
 
         before do
           fixed_charge1
@@ -986,8 +986,8 @@ RSpec.describe Subscriptions::UpdateService do
       end
 
       context "with fixed charge overrides and apply_units_immediately false", :premium do
-        let_it_be(:organization) { membership.organization }
-        let_it_be(:plan) { create(:plan, organization:, interval: :weekly) }
+        let_it_be(:organization, refind: true) { membership.organization }
+        let_it_be(:plan, refind: true) { create(:plan, organization:, interval: :weekly) }
         let(:fixed_charge1) { create(:fixed_charge, plan:, units: 5) }
         let(:subscription) do
           create(
@@ -1019,7 +1019,7 @@ RSpec.describe Subscriptions::UpdateService do
         end
         let(:fixed_charge2) { create(:fixed_charge, plan:, units: 10) }
 
-        let_it_be(:customer) { create(:customer, organization:) }
+        let_it_be(:customer, refind: true) { create(:customer, organization:) }
 
         before do
           fixed_charge1
@@ -1070,8 +1070,8 @@ RSpec.describe Subscriptions::UpdateService do
       end
 
       context "with pending subscription, fixed charge overrides and mixed apply_units_immediately", :premium do
-        let_it_be(:organization) { membership.organization }
-        let_it_be(:plan) { create(:plan, organization:, interval: :weekly) }
+        let_it_be(:organization, refind: true) { membership.organization }
+        let_it_be(:plan, refind: true) { create(:plan, organization:, interval: :weekly) }
         let(:fixed_charge1) { create(:fixed_charge, plan:, units: 5) }
         let(:subscription_at) { 7.days.from_now }
         let(:subscription) do
@@ -1104,7 +1104,7 @@ RSpec.describe Subscriptions::UpdateService do
         end
         let(:fixed_charge2) { create(:fixed_charge, plan:, units: 10) }
 
-        let_it_be(:customer) { create(:customer, organization:) }
+        let_it_be(:customer, refind: true) { create(:customer, organization:) }
 
         before do
           fixed_charge1
@@ -1162,15 +1162,15 @@ RSpec.describe Subscriptions::UpdateService do
       end
 
       context "when apply_units_immediately is true on a pay-in-advance fixed charge", :premium do
-        let_it_be(:organization) { membership.organization }
-        let_it_be(:plan) { create(:plan, organization:) }
+        let_it_be(:organization, refind: true) { membership.organization }
+        let_it_be(:plan, refind: true) { create(:plan, organization:) }
         let(:fixed_charge) { create(:fixed_charge, plan:, units: 5, pay_in_advance: true) }
         let(:subscription) { create(:subscription, plan:, customer:) }
         let(:params) do
           {plan_overrides: {fixed_charges: [{id: fixed_charge.id, units: 25, apply_units_immediately: true}]}}
         end
 
-        let_it_be(:customer) { create(:customer, organization:) }
+        let_it_be(:customer, refind: true) { create(:customer, organization:) }
 
         before do
           fixed_charge
@@ -1503,12 +1503,12 @@ RSpec.describe Subscriptions::UpdateService do
     end
 
     context "when updating billing_entity" do
-      let_it_be(:organization) { create(:organization) }
-      let_it_be(:customer) { create(:customer, organization:) }
-      let_it_be(:plan) { create(:plan, organization:) }
+      let_it_be(:organization, refind: true) { create(:organization) }
+      let_it_be(:customer, refind: true) { create(:customer, organization:) }
+      let_it_be(:plan, refind: true) { create(:plan, organization:) }
       let(:subscription) { create(:subscription, customer:, plan:, organization:) }
 
-      let_it_be(:new_billing_entity) { create(:billing_entity, organization:) }
+      let_it_be(:new_billing_entity, refind: true) { create(:billing_entity, organization:) }
 
       context "with multi_entity_billing feature flag enabled" do
         context "with billing_entity_id" do
@@ -1593,8 +1593,8 @@ RSpec.describe Subscriptions::UpdateService do
         end
 
         context "when the subscription already has a billing_entity attached" do
-          let_it_be(:current_entity) { create(:billing_entity, organization:) }
-          let_it_be(:other_entity) { create(:billing_entity, organization:) }
+          let_it_be(:current_entity, refind: true) { create(:billing_entity, organization:) }
+          let_it_be(:other_entity, refind: true) { create(:billing_entity, organization:) }
           let(:subscription) { create(:subscription, customer:, plan:, organization:, billing_entity: current_entity) }
 
           context "when billing_entity_id is nil" do

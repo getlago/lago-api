@@ -12,9 +12,9 @@ RSpec.describe Subscriptions::EmitFixedChargeEventsService do
   let(:subscription_2) { create(:subscription, :active, plan:) }
   let(:subscriptions) { [subscription_1, subscription_2] }
 
-  let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:plan) { create(:plan, organization:) }
-  let_it_be(:add_on) { create(:add_on, organization:) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:plan, refind: true) { create(:plan, organization:) }
+  let_it_be(:add_on, refind: true) { create(:add_on, organization:) }
 
   before_all do
     create_default(:customer)

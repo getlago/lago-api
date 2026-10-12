@@ -12,7 +12,7 @@ RSpec.describe Subscriptions::FreeTrialBillingService do
   let(:timestamp) { Time.zone.now }
 
   describe "#call" do
-    let_it_be(:plan) { create(:plan, trial_period: 10, pay_in_advance: true) }
+    let_it_be(:plan, refind: true) { create(:plan, trial_period: 10, pay_in_advance: true) }
 
     context "with a plan witout trial period" do
       it "does not set trial_ended_at" do
@@ -78,7 +78,7 @@ RSpec.describe Subscriptions::FreeTrialBillingService do
     end
 
     context "with plan pay in arrears" do
-      let_it_be(:plan) { create(:plan, trial_period: 10, pay_in_advance: false) }
+      let_it_be(:plan, refind: true) { create(:plan, trial_period: 10, pay_in_advance: false) }
 
       context "when plan has fixed charges" do
         context "when fixed_charges are not pay in advance" do

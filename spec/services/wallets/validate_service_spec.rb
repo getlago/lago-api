@@ -6,6 +6,7 @@ RSpec.describe Wallets::ValidateService do
   subject(:validate_service) { described_class.new(result, **args) }
 
   let(:result) { Wallets::CreateService::Result.new }
+  let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:) }
   let(:customer_id) { customer.external_id }
   let(:paid_credits) { "1.00" }
@@ -21,9 +22,8 @@ RSpec.describe Wallets::ValidateService do
     }
   end
 
-  let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:membership) { create(:membership) }
-  let_it_be(:customer) { create_default(:customer, organization:) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:membership, refind: true) { create(:membership) }
 
   before_all do
     create_default(:plan)

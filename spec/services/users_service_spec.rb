@@ -173,7 +173,7 @@ RSpec.describe UsersService do
         let(:password) { user.password }
 
         context "when user has active membership" do
-          let_it_be(:active_membership) { create(:membership, user:, organization: membership.organization) }
+          let_it_be(:active_membership, refind: true) { create(:membership, user:, organization: membership.organization) }
 
           before { allow(UserDevices::RegisterService).to receive(:call!) }
 

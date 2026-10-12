@@ -5,10 +5,10 @@ require "rails_helper"
 RSpec.describe Subscriptions::ChargeFilters::DestroyService do
   subject(:service) { described_class.new(subscription:, charge:, charge_filter:) }
 
-  let_it_be(:organization) { create(:organization) }
-  let_it_be(:customer) { create(:customer, organization:) }
-  let_it_be(:plan) { create(:plan, organization:) }
-  let_it_be(:billable_metric) { create(:billable_metric, organization:) }
+  let_it_be(:organization, refind: true) { create(:organization) }
+  let_it_be(:customer, refind: true) { create(:customer, organization:) }
+  let_it_be(:plan, refind: true) { create(:plan, organization:) }
+  let_it_be(:billable_metric, refind: true) { create(:billable_metric, organization:) }
   let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:) }
   let(:subscription) { create(:subscription, customer:, plan:) }
   let(:charge) { create(:standard_charge, plan:, organization:, billable_metric:) }

@@ -13,8 +13,8 @@ RSpec.describe Subscriptions::FixedChargeUnitsOverrides::WriteService do
     )
   end
 
-  let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:plan, refind: true) { create(:plan, organization:) }
 
   before_all do
     create_default(:customer)
