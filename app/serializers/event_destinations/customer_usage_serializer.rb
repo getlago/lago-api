@@ -61,7 +61,7 @@ module EventDestinations
 
         charge_fees.group_by { amount_key(it) }.each do |key, fees|
           weights = wallet_weights(key, amounts_by_key[key])
-          units = split_units(fees.sum { BigDecimal(it.units) }, weights, ledgers[[key, :units]])
+          units = split_units(fees, weights, ledgers[[key, :units]])
           events_count = split_integer(fees.sum { it.events_count.to_i }, weights, ledgers[[key, :events_count]])
           amount_cents = split_integer(fees.sum(&:amount_cents), weights, ledgers[[key, :amount_cents]])
 
@@ -151,11 +151,13 @@ module EventDestinations
       parts
     end
 
-    # Split like the integers, at the precision of the total, so no part can go negative.
-    def split_units(units, weights, ledger)
-      factor = 10**units.scale
+    # Split like the integers, so no part can go negative, at the finest precision of the fees' units:
+    # decimals that add up to a whole number are still split in decimals.
+    def split_units(fees, weights, ledger)
+      units = fees.map { BigDecimal(it.units) }
+      factor = 10**units.map(&:scale).max
 
-      split_integer((units * factor).to_i, weights, ledger, factor).transform_values { BigDecimal(it) / factor }
+      split_integer((units.sum * factor).to_i, weights, ledger, factor).transform_values { BigDecimal(it) / factor }
     end
   end
 end

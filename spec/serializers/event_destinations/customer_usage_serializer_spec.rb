@@ -238,6 +238,29 @@ RSpec.describe EventDestinations::CustomerUsageSerializer do
         expect(entries.map { it[:units] }).to eq(["10.02", "5.73"])
       end
     end
+
+    context "when decimal units add up to a whole number" do
+      let(:wallet_amounts) { {billable_metric.id => {first_wallet_id => 750, second_wallet_id => 750}} }
+      let(:usage) do
+        SubscriptionUsage.new(
+          from_datetime: "2026-09-01T00:00:00Z",
+          to_datetime: "2026-09-30T23:59:59Z",
+          issuing_date: "2026-09-30",
+          currency: "EUR",
+          amount_cents: 1500,
+          total_amount_cents: 1500,
+          taxes_amount_cents: 0,
+          fees: [
+            build(:charge_fee, charge:, subscription:, units: "7.5", events_count: 1, amount_cents: 750, amount_currency: "EUR", charge_filter: nil, grouped_by: {}),
+            build(:charge_fee, charge:, subscription:, units: "7.5", events_count: 1, amount_cents: 750, amount_currency: "EUR", charge_filter: nil, grouped_by: {})
+          ]
+        )
+      end
+
+      it "still splits them in decimals" do
+        expect(entries.map { it[:units] }).to eq(["7.5", "7.5"])
+      end
+    end
   end
 
   describe "charges with no usage" do
