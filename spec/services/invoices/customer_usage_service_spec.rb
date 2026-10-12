@@ -1153,6 +1153,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
     let(:region) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[us eu]) }
     let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {"amount" => "2"}) }
     let(:now) { Time.current.beginning_of_month + 14.days + 12.hours + 7.minutes }
+    let(:filter_values) { %w[us eu] }
 
     def ingest(transaction_id, timestamp, region, value)
       create(
@@ -1185,9 +1186,9 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
 
     before do
       organization.update!(clickhouse_events_store: true)
-      organization.enable_feature_flag!(:charge_filters_single_scan)
       create(:tax, :applied_to_billing_entity, organization:, rate: 0)
-      %w[us eu].each do |value|
+      charge
+      filter_values.each do |value|
         charge_filter = create(:charge_filter, charge:, properties: {"amount" => "2"})
         create(:charge_filter_value, charge_filter:, billable_metric_filter: region, values: [value])
       end
@@ -1215,6 +1216,22 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         expected = usage_with_flag(false)
 
         expect(usage_with_flag(true)).to eq(expected)
+      end
+    end
+
+    context "with a charge without filters" do
+      let(:filter_values) { [] }
+
+      before do
+        usage_with_flag(true)
+        ingest("tr_3", now - 2.minutes, "us", 7)
+      end
+
+      it "adds the new events to the usage kept from the previous computation" do
+        expected = usage_with_flag(false)
+
+        expect(usage_with_flag(true)).to eq(expected)
+        expect(expected.first[1]).to eq(15)
       end
     end
   end

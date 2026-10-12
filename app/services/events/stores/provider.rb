@@ -130,22 +130,26 @@ module Events
       end
 
       # One scan per charge, shared by the stores of all its filters so that the first one to
-      # aggregate reads the events for every other.
+      # aggregate reads the events for every other. The incremental charge cache lives in the scan,
+      # so it takes every count and sum charge, with or without filters.
       def charge_filters_scan(metered_item:, filters:, aggregated_filter_ids:)
-        return unless charge_filters_scan_enabled?
+        return unless scan_available?
+        return unless incremental_charge_cache || charge_filters_single_scan?
         return if metered_item.billing_segment
         # A pay-in-advance event and its group narrow the store to themselves.
-        return unless filters[:charge_filter] && filters[:event].blank? && filters[:grouped_by_values].blank?
+        return unless filters[:event].blank? && filters[:grouped_by_values].blank?
 
         charge = metered_item.charge
         return if charge.nil?
+        # The stores of a charge with filters always name theirs, the default bucket included.
+        return if filters[:charge_filter].nil? && charge.filters.any?
 
         # A charge the scan cannot answer is remembered too: telling costs a count of its filters.
         @charge_filters_scans ||= {}
         key = [charge.id, aggregated_filter_ids]
         return @charge_filters_scans[key] if @charge_filters_scans.key?(key)
 
-        @charge_filters_scans[key] = if ChargeFiltersScan.supported_charge?(charge)
+        @charge_filters_scans[key] = if ChargeFiltersScan.supported_charge?(charge, without_filters: incremental_charge_cache)
           ChargeFiltersScan.new(charge:, filter_ids: aggregated_filter_ids, incremental: incremental_cache(charge))
         end
       end
@@ -159,12 +163,17 @@ module Events
 
       # The override belongs to the ClickHouse migration comparison, which has to keep comparing
       # the stores themselves.
-      def charge_filters_scan_enabled?
-        return @charge_filters_scan_enabled if defined?(@charge_filters_scan_enabled)
+      def scan_available?
+        return @scan_available if defined?(@scan_available)
 
-        @charge_filters_scan_enabled = Events::Stores::StoreFactory.override.nil? &&
-          store_class == Events::Stores::ClickhouseStore &&
-          organization.feature_flag_enabled?(:charge_filters_single_scan)
+        @scan_available = Events::Stores::StoreFactory.override.nil? &&
+          store_class == Events::Stores::ClickhouseStore
+      end
+
+      def charge_filters_single_scan?
+        return @charge_filters_single_scan if defined?(@charge_filters_single_scan)
+
+        @charge_filters_single_scan = organization.feature_flag_enabled?(:charge_filters_single_scan)
       end
 
       def same_window_as_prefetch?(window)

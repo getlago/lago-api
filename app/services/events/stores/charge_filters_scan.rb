@@ -35,12 +35,15 @@ module Events
       Bucket = Data.define(:key, :matching_filters, :ignored_filters)
       Row = Data.define(:groups, :value, :events_count)
 
-      def self.supported_charge?(charge)
+      # A charge without filters only has the default bucket, which its own store reads as cheaply.
+      # The scan only takes one `without_filters` to keep its rows between computations (see
+      # IncrementalCache).
+      def self.supported_charge?(charge, without_filters: false)
         return false if charge.nil?
 
         SUPPORTED_AGGREGATION_TYPES.include?(charge.billable_metric.aggregation_type) &&
           !charge.prorated? &&
-          charge.filters.size.positive?
+          (without_filters || charge.filters.size.positive?)
       end
 
       # `filter_ids` are the filters to aggregate, `nil` standing for the default bucket as in the
@@ -138,8 +141,12 @@ module Events
 
       # The conditions Fees::ChargeService gives the filter's store. Resolved per filter, as a
       # charge holding thousands of filters only reads the batches of those it aggregates.
+      #
+      # A charge without filters has no conditions, as its store has none.
       def bucket(key)
-        @buckets[key] ||= begin
+        @buckets[key] ||= if charge.filters.empty?
+          Bucket.new(key:, matching_filters: {}, ignored_filters: [])
+        else
           matching_and_ignored = pricing_buckets.fetch(key).matching_and_ignored_filters
 
           Bucket.new(

@@ -27,6 +27,7 @@ RSpec.describe Events::Stores::ChargeFiltersScan::IncrementalCache, clickhouse: 
   let(:loaded_charge) { Charge.includes(filters: {values: :billable_metric_filter}).find(charge.id) }
   let(:pricing_buckets) { Fees::ChargeService::Sources::Charge.new(charge: loaded_charge, boundaries: nil).pricing_buckets }
 
+  let(:filter_values) { %w[us eu] }
   let(:cache_store) { ActiveSupport::Cache::MemoryStore.new }
   let(:reads) { [] }
 
@@ -54,20 +55,28 @@ RSpec.describe Events::Stores::ChargeFiltersScan::IncrementalCache, clickhouse: 
     )
   end
 
-  def filter_store(item)
+  # The filters Fees::ChargeService gives the store, which names neither a filter nor conditions
+  # for a charge without filters.
+  def store_filters(item)
+    return {charge_id: charge.id, grouped_by: item.pricing_group_keys.presence} if item.charge_filter.nil?
+
     matching_and_ignored = item.matching_and_ignored_filters
 
+    {
+      charge_id: charge.id,
+      charge_filter: item.charge_filter,
+      grouped_by: item.pricing_group_keys.presence,
+      matching_filters: matching_and_ignored.matching_filters,
+      ignored_filters: matching_and_ignored.ignored_filters
+    }
+  end
+
+  def filter_store(item)
     Events::Stores::ClickhouseStore.new(
       code: billable_metric.code,
       billing_context:,
       boundaries:,
-      filters: {
-        charge_id: charge.id,
-        charge_filter: item.charge_filter,
-        grouped_by: item.pricing_group_keys.presence,
-        matching_filters: matching_and_ignored.matching_filters,
-        ignored_filters: matching_and_ignored.ignored_filters
-      },
+      filters: store_filters(item),
       deduplicate:
     ).tap do |store|
       store.numeric_property = true
@@ -91,7 +100,7 @@ RSpec.describe Events::Stores::ChargeFiltersScan::IncrementalCache, clickhouse: 
   end
 
   before do
-    %w[us eu].each do |value|
+    filter_values.each do |value|
       charge_filter = create(:charge_filter, charge:, properties: {"amount" => "1"})
       create(:charge_filter_value, charge_filter:, billable_metric_filter: region, values: [value])
     end
@@ -202,6 +211,21 @@ RSpec.describe Events::Stores::ChargeFiltersScan::IncrementalCache, clickhouse: 
       computation
 
       expect(reads.first).to eq({from_datetime: boundaries[:from_datetime], to_datetime: nil, before: Time.zone.parse("2026-09-15 17:45")})
+    end
+  end
+
+  context "with a charge without filters" do
+    let(:filter_values) { [] }
+
+    before do
+      computation
+      ingest("tr_6", Time.zone.parse("2026-09-15 12:05"), "eu", 32)
+    end
+
+    it "keeps the totals of its default bucket" do
+      expect(computation).to eq(totals(incremental: false))
+      expect(computation).to eq({nil => {value: 63, events_count: 6}})
+      expect(reads).to eq([{from_datetime: cut, to_datetime: boundaries[:to_datetime], before: nil}])
     end
   end
 
