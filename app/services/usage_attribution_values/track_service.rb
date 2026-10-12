@@ -8,14 +8,24 @@ module UsageAttributionValues
   # parent is the value of its parent type in the same entry. Values are upserted one tree level at
   # a time, roots first, so that a child can reference its parent row.
   #
-  # Upserting is idempotent: on an existing value, last_seen_at never goes back, the first parent
-  # is kept (re-parenting is out of scope), and a discarded value is restored since it is in use.
+  # Upserting is idempotent: on an existing value, last_seen_at never goes back and a discarded
+  # value is restored since it is in use.
+  #
+  # Placement is forward-only: a value takes the parent of its most recent event (a user moving to
+  # another team moves with it), an older event never moves it back, and an event without the
+  # parent level keeps the current parent. Usage is unaffected: each event's own labels are stamped
+  # in ClickHouse.
   class TrackService < BaseService
     UNIQUE_INDEX = :index_usage_attribution_values_on_customer_type_and_value
 
+    # In ON CONFLICT DO UPDATE, every expression reads the stored row as it was before the update.
     ON_DUPLICATE = Arel.sql(<<~SQL.squish)
       last_seen_at = GREATEST(usage_attribution_values.last_seen_at, EXCLUDED.last_seen_at),
-      parent_id = COALESCE(usage_attribution_values.parent_id, EXCLUDED.parent_id),
+      parent_id = CASE
+        WHEN EXCLUDED.last_seen_at >= usage_attribution_values.last_seen_at
+          THEN COALESCE(EXCLUDED.parent_id, usage_attribution_values.parent_id)
+        ELSE usage_attribution_values.parent_id
+      END,
       deleted_at = NULL,
       updated_at = EXCLUDED.updated_at
     SQL
@@ -95,17 +105,25 @@ module UsageAttributionValues
           next if value.nil?
 
           key = [customer_id, attribution_type.id, value]
-          row = rows[key] ||= {
-            organization_id: organization.id,
-            customer_id:,
-            usage_attribution_type_id: attribution_type.id,
-            value:,
-            parent_id: parent_value_id(customer_id, attribution_type, labels, value_ids),
-            last_seen_at: seen_at,
-            created_at: now,
-            updated_at: now
-          }
-          row[:last_seen_at] = [row[:last_seen_at], seen_at].max
+          parent_id = parent_value_id(customer_id, attribution_type, labels, value_ids)
+          row = rows[key]
+
+          if row.nil?
+            rows[key] = {
+              organization_id: organization.id,
+              customer_id:,
+              usage_attribution_type_id: attribution_type.id,
+              value:,
+              parent_id:,
+              last_seen_at: seen_at,
+              created_at: now,
+              updated_at: now
+            }
+          elsif seen_at >= row[:last_seen_at]
+            # Several entries of the job hold this value: the most recent one places it, as in the upsert.
+            row[:last_seen_at] = seen_at
+            row[:parent_id] = parent_id || row[:parent_id]
+          end
         end
       end.values
     end

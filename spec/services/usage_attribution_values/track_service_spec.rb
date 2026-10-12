@@ -84,15 +84,49 @@ RSpec.describe UsageAttributionValues::TrackService do
     end
   end
 
-  context "when a value moves under another parent" do
-    let(:entries) { [entry(labels.merge("team" => "data"))] }
+  context "when a more recent event places a value under another parent" do
+    let(:entries) { [entry(labels.merge("team" => "data"), at: seen_at + 1.hour)] }
 
     before { described_class.call!(organization:, entries: [entry(labels)]) }
 
-    it "keeps its first parent" do
+    it "moves it under the new parent" do
+      track
+
+      expect(value_of(user, "alice").parent_id).to eq(value_of(team, "data").id)
+    end
+  end
+
+  context "when an older event places a value under another parent" do
+    let(:entries) { [entry(labels.merge("team" => "data"), at: seen_at - 1.hour)] }
+
+    before { described_class.call!(organization:, entries: [entry(labels)]) }
+
+    it "keeps its current parent" do
       track
 
       expect(value_of(user, "alice").parent_id).to eq(value_of(team, "eng").id)
+    end
+  end
+
+  context "when a more recent event does not carry the parent level" do
+    let(:entries) { [entry({"department" => "rnd", "user" => "alice"}, at: seen_at + 1.hour)] }
+
+    before { described_class.call!(organization:, entries: [entry(labels)]) }
+
+    it "keeps its current parent" do
+      track
+
+      expect(value_of(user, "alice").parent_id).to eq(value_of(team, "eng").id)
+    end
+  end
+
+  context "with several entries placing a value under different parents" do
+    let(:entries) { [entry(labels.merge("team" => "data"), at: seen_at + 1.hour), entry(labels)] }
+
+    it "places it under the parent of the most recent entry" do
+      track
+
+      expect(value_of(user, "alice").parent_id).to eq(value_of(team, "data").id)
     end
   end
 
