@@ -17,12 +17,35 @@ class BillSubscriptionJob < ApplicationJob
   def perform(subscriptions, timestamp, invoicing_reason:, invoice: nil, skip_charges: false)
     Rails.logger.info("BillSubscriptionJob[Invoice ID: #{invoice&.id}] - Started")
 
+    # NOTE: A payment term can change between job enqueue and execution, making the group mixed.
+    #       Re-resolve here: mixed groups are split into one job per term instead of failing.
+    #       Retries always carry `invoice:` whose snapshot is frozen, so they never split.
+    resolutions = invoice.nil? ? resolve_payment_terms(subscriptions) : []
+
+    if mixed_payment_terms?(resolutions)
+      term_groups = subscriptions.zip(resolutions).group_by { |_, resolution| resolution.payment_term.to_h }.values
+      Rails.logger.info("BillSubscriptionJob - Mixed payment terms, splitting into #{term_groups.size} groups")
+
+      Yabeda.payment_terms.splits_total.increment({invoicing_reason: invoicing_reason.to_s})
+
+      # Same kwargs as this job so a child's lock key matches the one its caller would compute
+      term_groups.each do |pairs|
+        self.class.perform_later(pairs.map(&:first), timestamp, **arguments.last)
+      end
+
+      return
+    end
+
+    sources = resolutions.map(&:source).uniq
+
     result = Invoices::SubscriptionService.call(
       subscriptions:,
       timestamp:,
       invoicing_reason:,
       invoice:,
-      skip_charges:
+      skip_charges:,
+      payment_term: resolutions.first&.payment_term,
+      payment_term_source: sources.many? ? "mixed" : sources.first
     )
 
     if result.success?
@@ -78,5 +101,15 @@ class BillSubscriptionJob < ApplicationJob
     date = Time.zone.at(timestamp).in_time_zone(customer.applicable_timezone).to_date
     arguments[1] = date
     arguments
+  end
+
+  private
+
+  def resolve_payment_terms(subscriptions)
+    subscriptions.map { |sub| PaymentTerms::ResolveService.call!(customer: sub.customer) }
+  end
+
+  def mixed_payment_terms?(resolutions)
+    resolutions.map { |resolution| resolution.payment_term.to_h }.uniq.many?
   end
 end

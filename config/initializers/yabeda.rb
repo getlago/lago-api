@@ -64,4 +64,16 @@ Yabeda.configure do
       comment: "Rejected pagination parameters, by error code",
       tags: %i[code]
   end
+
+  # A split means a payment term changed between the hourly grouping and the job run, so the
+  # rate should stay near zero. Invoices per customer catches a grouping that splits too eagerly.
+  group :payment_terms do
+    counter :splits_total,
+      comment: "BillSubscriptionJob runs that found mixed payment terms and split into one job per term",
+      tags: %i[invoicing_reason]
+
+    histogram :invoices_per_customer,
+      comment: "Subscription invoices a customer gets from one periodic billing run",
+      buckets: [1, 2, 3, 5, 10]
+  end
 end

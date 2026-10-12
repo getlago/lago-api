@@ -400,6 +400,33 @@ RSpec.describe Invoices::AdvanceChargesService do
         expect(invoices.find_by!(purchase_order_number: "PO-1").fees.pluck(:subscription_id)).to eq([subscription.id])
         expect(invoices.find_by!(purchase_order_number: "PO-2").fees.pluck(:subscription_id)).to eq([subscription_2.id])
       end
+
+      context "when the subscriptions resolve to different payment terms instead" do
+        let(:net_resolution) do
+          PaymentTerms::ResolveService::Result.new.tap do |resolution|
+            resolution.payment_term = PaymentTerm.from_h({"term_type" => "net", "days" => 30})
+            resolution.source = "customer"
+          end
+        end
+
+        let(:eom_resolution) do
+          PaymentTerms::ResolveService::Result.new.tap do |resolution|
+            resolution.payment_term = PaymentTerm.from_h({"term_type" => "end_of_month"})
+            resolution.source = "customer"
+          end
+        end
+
+        before do
+          subscription.update!(purchase_order_number: nil)
+          subscription_2.update!(purchase_order_number: nil)
+          allow(PaymentTerms::ResolveService).to receive(:call!).and_return(net_resolution, eom_resolution)
+        end
+
+        it "creates a separate advance-charges invoice per payment term" do
+          expect { invoice_service.call }
+            .to change { Invoice.where(invoice_type: :advance_charges).count }.by(2)
+        end
+      end
     end
 
     context "when re-expanded subscriptions share the same purchase order number" do
