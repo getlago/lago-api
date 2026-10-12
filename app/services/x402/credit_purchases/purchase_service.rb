@@ -5,6 +5,8 @@ module X402
     class PurchaseService < BaseService
       Result = BaseResult[:settlement, :replayed]
 
+      RACE_CODES = %w[payment_already_recorded credit_purchase_pending].freeze
+
       def initialize(organization:, params:)
         @organization = organization
         @params = params
@@ -18,6 +20,9 @@ module X402
 
         digest_result = X402::Payments::ComputeDigestService.call(payment:, network: payment_payload.network, asset: payment_payload.asset)
         return result.validation_failure!(errors: digest_result.error.messages) if digest_result.failure?
+
+        replay = find_replay(digest_result.digest)
+        return answer_replay(replay) if replay
         return result.not_found_failure!(resource: "connection") unless connection
 
         checks = ValidateService.call(connection:, params:)
@@ -87,7 +92,7 @@ module X402
 
       def settle(verified_payment)
         settle_result = X402::Settlements::SettleService.call(verified_payment:, kind: :credit_purchase, purchase_settings:)
-        return result.fail_with_error!(settle_result.error) if settle_result.failure?
+        return answer_lost_race(settle_result.error, verified_payment.payment_digest) if settle_result.failure?
 
         settlement = settle_result.settlement
         if settle_result.outcome == :settled && flip(settlement, settle_result.transaction_hash)
@@ -95,6 +100,41 @@ module X402
         else
           answer(settlement, replayed: false)
         end
+      end
+
+      def find_replay(digest)
+        organization.x402_settlements.where(status: %i[pending settled]).find_by(payment_digest: digest)
+      end
+
+      def answer_replay(settlement)
+        return refuse_invoice_payment(settlement) if settlement.invoice_payment?
+
+        Rails.logger.info("#{self.class.name} replay status=#{settlement.status} settings_changed=#{settlement.purchase_settings != purchase_settings}")
+
+        if settlement.settled? && settlement.wallet_transaction_id.nil?
+          grant(settlement, replayed: true)
+        else
+          answer(settlement, replayed: true)
+        end
+      end
+
+      def refuse_invoice_payment(settlement)
+        Rails.logger.warn("#{self.class.name} call failed reason=recorded_as_invoice_payment network=#{settlement.network}")
+        refuse(:payment, "recorded_as_invoice_payment")
+      end
+
+      def answer_lost_race(error, digest)
+        replay = lost_race?(error) && find_replay(digest)
+
+        if replay
+          answer_replay(replay)
+        else
+          result.fail_with_error!(error)
+        end
+      end
+
+      def lost_race?(error)
+        error.is_a?(BaseService::ValidationFailure) && RACE_CODES.include?(error.messages[:base]&.first)
       end
 
       def flip(settlement, transaction_hash)

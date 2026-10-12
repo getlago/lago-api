@@ -287,5 +287,243 @@ describe X402::CreditPurchases::PurchaseService do
         expect(Rails.logger).to have_received(:warn).with(a_string_including("reason=grant_failed error=BaseService::NotFoundFailure message=plan_not_found"))
       end
     end
+
+    context "with a granted settlement holding the payment" do
+      let(:customer) { create(:customer, organization:, x402_agent_address: payer_address) }
+      let(:subscription) { create(:subscription, customer:, plan:, external_id: "x402_#{payer_address}_agent_api") }
+      let(:wallet) { create(:wallet, customer:, code: "agent_credits", currency: "USD", x402_enabled: true) }
+      let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
+      let!(:settlement) do
+        create(
+          :x402_settlement, organization:, x402_connection:, payee_address:, payer_address:, payment_digest: digest,
+          purchase_settings: stored_settings, customer:, subscription:, wallet_transaction:
+        )
+      end
+
+      it "answers from the row" do
+        expect(result.settlement).to eq(settlement)
+      end
+
+      it "is a replay" do
+        expect(result.replayed).to be(true)
+      end
+
+      it "calls no facilitator" do
+        result
+        expect(verify_request).not_to have_been_made
+      end
+
+      it "grants nothing" do
+        expect { result }.not_to change(WalletTransaction, :count)
+      end
+
+      it "logs the replay" do
+        result
+        expect(Rails.logger).to have_received(:info).with("X402::CreditPurchases::PurchaseService replay status=settled settings_changed=false")
+      end
+
+      context "with other settings" do
+        let(:params) { super().merge(plan_code: "other_plan", wallet_code: "other_wallet", connection_code: "unknown") }
+
+        it "answers from the row" do
+          expect(result.settlement).to eq(settlement)
+        end
+
+        it "logs the changed settings" do
+          result
+          expect(Rails.logger).to have_received(:info).with("X402::CreditPurchases::PurchaseService replay status=settled settings_changed=true")
+        end
+      end
+
+      context "with its subscription terminated" do
+        let(:subscription) { create(:subscription, :terminated, customer:, plan:, external_id: "x402_#{payer_address}_agent_api") }
+
+        it "answers the grant's subscription" do
+          expect(result.settlement.subscription.external_id).to eq("x402_#{payer_address}_agent_api")
+        end
+      end
+
+      context "with a rebuilt envelope" do
+        let(:payment) do
+          authorization = x402_evm_payment.dig("payload", "authorization")
+          {
+            "extensions" => {"bazaar" => {}},
+            "payload" => {
+              "authorization" => authorization.merge("from" => authorization["from"].downcase, "to" => authorization["to"].downcase).to_a.reverse.to_h,
+              "signature" => "0x#{"ef" * 65}"
+            },
+            "accepted" => x402_evm_requirements.to_a.reverse.to_h,
+            "resource" => {"url" => "https://api.example.com/other"},
+            "x402Version" => 2
+          }
+        end
+        let(:payment_requirements) { x402_evm_requirements.merge("asset" => x402_evm_requirements["asset"].downcase).to_a.reverse.to_h }
+
+        it "answers from the row" do
+          expect(result.settlement).to eq(settlement)
+        end
+      end
+    end
+
+    context "with a settled settlement without a grant" do
+      before do
+        create(
+          :x402_settlement, organization:, x402_connection:, payee_address:, payer_address:, payment_digest: digest,
+          settled_amount_atomic: 10_000_000, settled_amount_cents: 1000, purchase_settings: stored_settings
+        )
+      end
+
+      it "grants from the row" do
+        expect(result.settlement.reload.wallet_transaction).to be_present
+      end
+
+      it "is a replay" do
+        expect(result.replayed).to be(true)
+      end
+
+      it "grants once" do
+        expect { result }.to change(WalletTransaction, :count).by(1)
+      end
+
+      it "calls no facilitator" do
+        result
+        expect(settle_request).not_to have_been_made
+      end
+
+      context "with another plan in the request" do
+        let(:params) { super().merge(plan_code: "other_plan") }
+
+        it "grants on the stored plan" do
+          expect(result.settlement.subscription.plan).to eq(plan)
+        end
+      end
+    end
+
+    context "with a pending settlement holding the payment" do
+      let!(:settlement) do
+        create(:x402_settlement, :pending, organization:, x402_connection:, payee_address:, payer_address:, payment_digest: digest, purchase_settings: stored_settings)
+      end
+
+      it "answers the pending row" do
+        expect(result.settlement).to have_attributes(id: settlement.id, status: "pending")
+      end
+
+      it "is a replay" do
+        expect(result.replayed).to be(true)
+      end
+
+      it "calls no facilitator" do
+        result
+        expect(verify_request).not_to have_been_made
+      end
+    end
+
+    context "with an invoice payment holding the payment" do
+      before { create(:x402_settlement, :invoice_payment, organization:, x402_connection:, payee_address:, payer_address:, payment_digest: digest) }
+
+      it_behaves_like "a refusal before settle", {payment: ["recorded_as_invoice_payment"]}
+
+      it "calls no facilitator" do
+        result
+        expect(verify_request).not_to have_been_made
+      end
+
+      it "logs the refusal" do
+        result
+        expect(Rails.logger).to have_received(:warn).with(a_string_including("reason=recorded_as_invoice_payment"))
+      end
+    end
+
+    context "with a pending invoice payment holding the payment" do
+      before { create(:x402_settlement, :pending, :invoice_payment, organization:, x402_connection:, payee_address:, payer_address:, payment_digest: digest) }
+
+      it_behaves_like "a refusal before settle", {payment: ["recorded_as_invoice_payment"]}
+    end
+
+    context "with a failed settlement holding the payment" do
+      let!(:settlement) do
+        create(:x402_settlement, :failed, organization:, x402_connection:, payee_address:, payer_address:, payment_digest: digest, purchase_settings: stored_settings)
+      end
+
+      it "settles the payment again" do
+        expect(result.settlement).to have_attributes(status: "settled", payment_digest: digest)
+      end
+
+      it "keeps the failed row" do
+        expect(result.settlement.id).not_to eq(settlement.id)
+      end
+    end
+
+    context "with another organization's settlement holding the payment" do
+      before { create(:x402_settlement, payer_address:, payment_digest: digest) }
+
+      it_behaves_like "a refusal before settle", {base: ["payment_already_recorded"]}
+    end
+
+    context "with the same payment inserted during /verify" do
+      before do
+        stub_request(:post, "#{cdp_facilitator_url}/verify").to_return do
+          create(:x402_settlement, :pending, organization:, x402_connection:, payee_address:, payer_address:, payment_digest: digest, purchase_settings: stored_settings)
+          {status: 200, body: cdp_fixture("verify_valid")}
+        end
+      end
+
+      it "answers the winner's row" do
+        expect(result.settlement).to have_attributes(payment_digest: digest, status: "pending")
+      end
+
+      it "is a replay" do
+        expect(result.replayed).to be(true)
+      end
+
+      it "does not request /settle" do
+        result
+        expect(settle_request).not_to have_been_made
+      end
+    end
+
+    context "with an invoice payment inserted during /verify" do
+      before do
+        stub_request(:post, "#{cdp_facilitator_url}/verify").to_return do
+          create(:x402_settlement, :pending, :invoice_payment, organization:, x402_connection:, payee_address:, payer_address:, payment_digest: digest)
+          {status: 200, body: cdp_fixture("verify_valid")}
+        end
+      end
+
+      it "fails with recorded_as_invoice_payment" do
+        expect(result.error.messages).to eq(payment: ["recorded_as_invoice_payment"])
+      end
+
+      it "does not request /settle" do
+        result
+        expect(settle_request).not_to have_been_made
+      end
+    end
+
+    context "with a second first purchase while the first settles" do
+      let(:second_payment) { x402_evm_payment.deep_merge("payload" => {"authorization" => {"nonce" => "0x#{"11" * 32}"}}) }
+      let(:second_results) { [] }
+
+      before do
+        stub_request(:post, "#{cdp_facilitator_url}/settle").to_return do
+          second_results << described_class.call(organization:, params: params.merge(payment: second_payment))
+          {status: 200, body: cdp_fixture("settle_success")}
+        end
+      end
+
+      it "refuses the second as pending" do
+        result
+        expect(second_results.sole.error.messages).to eq(base: ["credit_purchase_pending"])
+      end
+
+      it "settles the first" do
+        expect(result.settlement.reload.status).to eq("settled")
+      end
+
+      it "requests /settle once" do
+        result
+        expect(settle_request).to have_been_made.once
+      end
+    end
   end
 end
