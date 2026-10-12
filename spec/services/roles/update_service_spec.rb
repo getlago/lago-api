@@ -57,7 +57,7 @@ RSpec.describe Roles::UpdateService do
 
     context "when the acting member is not an admin" do
       let(:acting_membership) { create(:membership, organization:, role: acting_role) }
-      let(:acting_role) { create(:role, :custom, organization:, permissions: %w[roles:update customers:view customers:create]) }
+      let(:acting_role) { create(:role, :custom, organization:, permissions: %w[roles:update customers:view customers:create addons:view]) }
 
       context "when adding a permission the member holds" do
         let(:params) { {permissions: %w[customers:view addons:view customers:create]} }
@@ -85,19 +85,36 @@ RSpec.describe Roles::UpdateService do
         end
       end
 
-      context "when removing a permission the member does not hold" do
-        let(:params) { {permissions: %w[customers:view]} }
-
-        it "updates the permissions" do
-          expect { result }.to change { role.reload.permissions }.to(%w[customers:view])
-        end
-      end
-
       context "when only renaming the role" do
         let(:params) { {name: "New Name"} }
 
         it "updates the role" do
           expect { result }.to change { role.reload.name }.to("New Name")
+        end
+      end
+
+      context "when the role has a permission the member does not hold" do
+        let(:acting_role) { create(:role, :custom, organization:, permissions: %w[roles:update customers:view]) }
+
+        context "when removing that permission" do
+          let(:params) { {permissions: %w[customers:view]} }
+
+          it "does not update the role" do
+            expect { result }.not_to change { role.reload.permissions }
+          end
+
+          it "returns a forbidden error" do
+            expect(result).not_to be_success
+            expect(result.error.code).to eq("cannot_grant_permissions")
+          end
+        end
+
+        context "when renaming the role" do
+          let(:params) { {name: "New Name"} }
+
+          it "does not update the role" do
+            expect { result }.not_to change { role.reload.name }
+          end
         end
       end
     end

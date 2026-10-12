@@ -40,15 +40,22 @@ class Membership < ApplicationRecord
     end
   end
 
-  # A member can only grant roles whose permissions they already hold. Admins can grant anything,
-  # and only admins can grant an admin role.
+  # A member can only grant permissions they hold themselves. Admins can grant anything.
+  # Takes permission keys, e.g. ["customers:view"].
+  def can_grant_permissions?(permissions)
+    return true if admin?
+
+    held = permissions_hash
+    Array(permissions).all? { |permission| held[permission] }
+  end
+
+  # Takes Role records (not role codes). Only admins can grant an admin role.
   def can_grant_roles?(roles)
     return true if admin?
     return false if Array(roles).any?(&:admin?)
 
-    held = permissions_hash
     Array(roles).all? do |role|
-      role.permissions_hash.all? { |permission, granted| !granted || held[permission] }
+      can_grant_permissions?(role.permissions_hash.filter_map { |permission, granted| permission if granted })
     end
   end
 end

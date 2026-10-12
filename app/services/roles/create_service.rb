@@ -40,10 +40,7 @@ module Roles
 
     # A member can only create a role with permissions they hold themselves.
     def granting_permissions_not_held?
-      return false if acting_membership.admin?
-
-      held = acting_membership.permissions_hash
-      Array(permissions).any? { |permission| !held[permission] }
+      !acting_membership.can_grant_permissions?(Array(permissions))
     end
 
     def register_security_log(role)

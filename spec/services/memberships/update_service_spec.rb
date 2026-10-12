@@ -102,6 +102,21 @@ RSpec.describe Memberships::UpdateService do
       end
     end
 
+    context "when non-admin keeps a role they do not hold and adds one they hold" do
+      let(:acting_membership) { create(:membership, organization:, roles: %i[finance]) }
+      let(:acting_user) { acting_membership.user }
+      let(:custom_role) { create(:role, :custom, organization:, permissions: %w[developers:keys:manage]) }
+      let(:finance_role) { Role.find_by!(code: "finance", organization_id: nil) }
+      let(:params) { {roles: [custom_role.code, "finance"]} }
+
+      before { create(:membership_role, membership:, role: custom_role) }
+
+      it "updates the roles" do
+        expect(result).to be_success
+        expect(result.membership.roles).to match_array([custom_role, finance_role])
+      end
+    end
+
     context "when non-admin grants a role within their own permissions" do
       let(:acting_membership) { create(:membership, organization:, roles: %i[finance]) }
       let(:acting_user) { acting_membership.user }

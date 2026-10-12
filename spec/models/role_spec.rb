@@ -106,7 +106,7 @@ RSpec.describe Role do
       end
 
       it "is invalid with a reserved name, whatever the case" do
-        %w[admin Admin ADMIN finance Finance manager Manager].each do |name|
+        ["admin", "Admin", "ADMIN", "finance", "Finance", "manager", "Manager", "Admin\u00A0", "Admin\u200B", "\u00A0Finance"].each do |name|
           role.name = name
           expect(role).not_to be_valid
           expect(role.errors[:name]).to include("value_already_exist")

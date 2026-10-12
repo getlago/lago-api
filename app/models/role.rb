@@ -15,11 +15,16 @@ class Role < ApplicationRecord
   scope :with_code, ->(*codes) { where(code: codes) }
   scope :with_organization, ->(organization_id) { where(organization_id: [nil, organization_id]) }
 
+  RESERVED_CODES = %w[admin finance manager].freeze
+  RESERVED_NAME_FORMAT = /\A(#{RESERVED_CODES.join("|")})\z/i
+
   before_validation :normalize_name
 
   validate :code_is_not_reserved, if: -> { organization_id && deleted_at.blank? }
   # Only checked when the name is set or changed, so existing roles stay valid.
-  validate :name_is_not_reserved, if: -> { organization_id && deleted_at.blank? && (new_record? || name_changed?) }
+  validates :name,
+    format: {without: RESERVED_NAME_FORMAT, message: :taken},
+    if: -> { organization_id && deleted_at.blank? && (new_record? || name_changed?) }
   validates :code,
     presence: true,
     length: {maximum: 100},
@@ -41,20 +46,14 @@ class Role < ApplicationRecord
 
   private
 
-  RESERVED_CODES = %w[admin finance manager].freeze
-  RESERVED_NAMES = RESERVED_CODES
-
+  # Unicode spaces and invisible format characters are collapsed too, so a name
+  # like "Admin\u00A0" cannot slip past the reserved name check.
   def normalize_name
-    self.name = name&.strip&.gsub(/\s+/, " ")
+    self.name = name&.unicode_normalize(:nfkc)&.gsub(/[[:space:]\p{Cf}]+/, " ")&.strip
   end
 
   def code_is_not_reserved
     errors.add(:code, :taken) if RESERVED_CODES.include?(code)
-  end
-
-  # A custom role must not look like a predefined one.
-  def name_is_not_reserved
-    errors.add(:name, :taken) if RESERVED_NAMES.include?(name.to_s.downcase)
   end
 end
 

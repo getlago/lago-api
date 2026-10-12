@@ -150,6 +150,31 @@ RSpec.describe Membership do
     end
   end
 
+  describe "#can_grant_permissions?" do
+    subject(:can_grant) { membership.can_grant_permissions?(permissions) }
+
+    let(:membership) { create(:membership, roles: %i[finance]) }
+
+    context "when the member holds every permission" do
+      let(:permissions) { %w[organization:view] }
+
+      it { is_expected.to be(true) }
+    end
+
+    context "when a permission is not held" do
+      let(:permissions) { %w[organization:view developers:keys:manage] }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when the member is admin" do
+      let(:membership) { create(:membership, roles: %i[admin]) }
+      let(:permissions) { %w[developers:keys:manage] }
+
+      it { is_expected.to be(true) }
+    end
+  end
+
   describe "#can_grant_roles?" do
     subject(:can_grant) { membership.can_grant_roles?(roles) }
 
