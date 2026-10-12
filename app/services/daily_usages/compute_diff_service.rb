@@ -4,6 +4,9 @@ module DailyUsages
   class ComputeDiffService < BaseService
     Result = BaseResult[:usage_diff]
 
+    # Above this number of value combinations, a dropped filter is routed by overlap only
+    MAX_VALUE_COMBINATIONS = 1_000
+
     def initialize(daily_usage:, previous_daily_usage: nil)
       @daily_usage = daily_usage
       @previous_daily_usage = previous_daily_usage
@@ -93,92 +96,215 @@ module DailyUsages
     # When a charge's filters are edited mid-period, the current snapshot (recomputed over the whole
     # period with the new filters) holds filters that did not exist in the previous snapshot, and the
     # previous snapshot holds filters that no longer exist. Without reconciliation, the new filters
-    # keep their full period-to-date amounts as "diff" while the dropped filters' amounts are never
-    # subtracted, so the filter diffs no longer add up to the charge diff.
+    # keep their full period-to-date values as "diff" while the dropped filters' values are never
+    # subtracted, so the filter diffs no longer add up to the parent diff.
     #
-    # The amounts of the dropped filters are therefore deducted from the filters that were not matched
-    # (where the re-bucketed usage landed), or from all current filters when every current filter was
-    # matched (e.g. a filter was removed and its usage fell back into the default bucket).
+    # The values of each dropped filter are therefore deducted from the buckets its usage moved to (see
+    # #receiving_filters). After diffing, each current filter holds what it gained since the previous
+    # snapshot (its whole period-to-date value when it is new):
+    # - presentation breakdowns are split among the receivers having the same breakdown, in proportion
+    #   to their gains,
+    # - units follow the breakdowns when those cover all the dropped units, and are otherwise split in
+    #   proportion to the receivers' unit gains,
+    # - the amount follows the units, as it was billed at the dropped filter's price,
+    # - the events count is split in proportion to the receivers' event gains.
+    #
+    # Filter diffs then always add up to the parent diff. Each filter diff is exact when the usage of a
+    # dropped filter moved to a single bucket, when no new usage was received, or when breakdowns tell
+    # where the units went. Otherwise the split of the day's usage between the receivers is an estimate:
+    # the snapshots do not tell which part of a bucket's gain was moved and which part is new.
     def apply_filters_diff(previous_parent, current_parent)
       current_filters = current_parent["filters"]
       current_values = current_filters.map { |fu| fu["values"] }.to_set
-      allocation_weights = current_filters.map { |fu| cumulative_values(fu) }
-
       previous_filters_index = previous_parent["filters"].index_by { |fu| fu["values"] }
-      unmatched_indexes = []
 
-      current_filters.each_with_index do |current_filter, index|
+      current_filters.each do |current_filter|
         previous_filter = previous_filters_index[current_filter["values"]]
-        unless previous_filter
-          unmatched_indexes << index
-          next
-        end
+        next unless previous_filter
 
         apply_diff(previous_filter, current_filter)
         apply_presentation_breakdowns_diff(previous_filter, current_filter)
       end
 
-      dropped_filters = previous_parent["filters"].reject { |fu| current_values.include?(fu["values"]) }
-      return if dropped_filters.empty?
+      previous_parent["filters"].each do |previous_filter|
+        next if current_values.include?(previous_filter["values"])
 
-      target_indexes = unmatched_indexes.presence || current_filters.each_index.to_a
-      deduct_dropped_filters(
-        dropped_filters,
-        target_indexes.map { |index| current_filters[index] },
-        target_indexes.map { |index| allocation_weights[index] }
-      )
+        deduct_dropped_filter(previous_filter, receiving_filters(previous_filter["values"], current_filters))
+      end
     end
 
-    def deduct_dropped_filters(dropped_filters, targets, weights)
-      return if targets.empty?
+    def deduct_dropped_filter(dropped_filter, receivers)
+      unit_parts = deduct_breakdowns(dropped_filter, receivers)
+      unit_parts ||= split(slot_value([dropped_filter, "units"]), receivers.map { |fu| [fu, "units"] })
+      subtract(receivers.map { |fu| [fu, "units"] }, unit_parts)
 
-      dropped = dropped_filters.map { |fu| cumulative_values(fu) }
-      shares = allocation_shares(weights)
+      amount_slots = receivers.map { |fu| [fu, "amount_cents"] }
+      dropped_units = slot_value([dropped_filter, "units"])
+      amount_parts = if dropped_units.positive?
+        allocate(slot_value([dropped_filter, "amount_cents"]), unit_parts.map { |part| part / dropped_units }, integer: integer_slots?(amount_slots))
+      else
+        split(slot_value([dropped_filter, "amount_cents"]), amount_slots)
+      end
+      subtract(amount_slots, amount_parts)
 
-      {
-        "amount_cents" => dropped.sum { |values| values[:amount_cents] },
-        "events_count" => dropped.sum { |values| values[:events_count] },
-        "units" => dropped.sum(BigDecimal(0)) { |values| values[:units] }
-      }.each do |field, total|
-        allocate(total, shares).each_with_index do |amount, index|
-          target = targets[index]
+      events_slots = receivers.map { |fu| [fu, "events_count"] }
+      subtract(events_slots, split(slot_value([dropped_filter, "events_count"]), events_slots))
+    end
 
-          target[field] = if field == "units"
-            (BigDecimal(target[field]) - amount).to_s
-          else
-            target[field] - amount
-          end
+    # Deducts the dropped filter's presentation breakdowns from the receivers' matching breakdowns.
+    # Returns the units deducted from each receiver when the breakdowns cover all the dropped units,
+    # nil otherwise.
+    def deduct_breakdowns(dropped_filter, receivers)
+      dropped_breakdowns = Array(dropped_filter["presentation_breakdowns"])
+      unit_parts = Array.new(receivers.size, BigDecimal(0))
+      covered = dropped_breakdowns.any?
+
+      dropped_breakdowns.each do |dropped_breakdown|
+        indexed_slots = receivers.each_with_index.filter_map do |fu, index|
+          breakdown = Array(fu["presentation_breakdowns"])
+            .find { |pb| pb["presentation_by"] == dropped_breakdown["presentation_by"] }
+          [[breakdown, "units"], index] if breakdown
+        end
+
+        if indexed_slots.empty?
+          covered = false
+          next
+        end
+
+        slots = indexed_slots.map(&:first)
+        parts = split(slot_value([dropped_breakdown, "units"]), slots)
+        subtract(slots, parts)
+        indexed_slots.each_with_index { |(_slot, index), position| unit_parts[index] += parts[position] }
+      end
+
+      covered &&= unit_parts.sum == slot_value([dropped_filter, "units"])
+      unit_parts if covered
+    end
+
+    # The current filters billing the events a dropped filter used to bill. Each combination of the
+    # dropped filter's values is billed by the most specific current filter matching it (most keys, then
+    # fewest values, as ChargeFilter#precedence), or by the default bucket when none matches. When a
+    # combination cannot be resolved from the values alone (a key the dropped filter does not constrain,
+    # or a precedence tie), every candidate is kept.
+    def receiving_filters(dropped_values, current_filters)
+      default_bucket = current_filters.find { |fu| fu["values"].nil? }
+      filters = current_filters.reject { |fu| fu["values"].nil? }
+      combinations = value_combinations(dropped_values)
+
+      receivers = if combinations.nil?
+        filters.select { |fu| overlapping_values?(dropped_values, fu["values"]) } + [default_bucket]
+      else
+        combinations.flat_map { |combination| combination_receivers(combination, filters, default_bucket) }
+      end
+
+      receivers = receivers.compact.uniq(&:object_id)
+      receivers.presence || current_filters
+    end
+
+    # Every key/value combination allowed by a filter, without the keys allowing all values. Returns nil
+    # for the default bucket or when there are too many combinations to enumerate.
+    def value_combinations(values)
+      return if values.nil?
+
+      constrained = values.reject { |_key, allowed| Array(allowed).include?(ChargeFilterValue::ALL_FILTER_VALUES) }
+      return [{}] if constrained.empty?
+      return if constrained.values.map { |allowed| Array(allowed).size }.reduce(:*) > MAX_VALUE_COMBINATIONS
+
+      keys = constrained.keys
+      first, *rest = keys.map { |key| Array(constrained[key]) }
+      first.product(*rest).map { |combination| keys.zip(combination).to_h }
+    end
+
+    def combination_receivers(combination, filters, default_bucket)
+      matching = []
+      ambiguous = []
+
+      filters.each do |fu|
+        values = fu["values"]
+        next unless values.all? { |key, allowed| !combination.key?(key) || allows?(allowed, combination[key]) }
+
+        if values.keys.all? { |key| combination.key?(key) }
+          matching << fu
+        else
+          ambiguous << fu
+        end
+      end
+
+      precedence = ->(fu) { [-fu["values"].size, fu["values"].sum { |_key, allowed| Array(allowed).size }] }
+      best = matching.map(&precedence).min
+      billed_by = best ? matching.select { |fu| precedence.call(fu) == best } : [default_bucket]
+
+      billed_by + ambiguous + (ambiguous.any? ? [default_bucket] : [])
+    end
+
+    def allows?(allowed, value)
+      allowed = Array(allowed)
+      allowed.include?(ChargeFilterValue::ALL_FILTER_VALUES) || allowed.include?(value)
+    end
+
+    # Whether events billed on one filter could be billed on the other: two filters overlap unless a key
+    # they share has no value in common.
+    def overlapping_values?(values, other_values)
+      return true if values.nil? || other_values.nil?
+
+      (values.keys & other_values.keys).all? do |key|
+        allowed = Array(values[key])
+        other_allowed = Array(other_values[key])
+
+        [allowed, other_allowed].any? { |list| list.include?(ChargeFilterValue::ALL_FILTER_VALUES) } ||
+          allowed.intersect?(other_allowed)
+      end
+    end
+
+    # Splits total among the slots in proportion to what each one gained (equally when none gained
+    # anything). A slot is a [hash, key] pair whose value is an integer (cents, events) or a decimal
+    # string (units).
+    def split(total, slots)
+      return Array.new(slots.size, BigDecimal(0)) if total.zero? || slots.empty?
+
+      gains = slots.map { |slot| [slot_value(slot), BigDecimal(0)].max }
+      gains_total = gains.sum
+      shares = if gains_total.positive?
+        gains.map { |gain| gain / gains_total }
+      else
+        Array.new(slots.size, BigDecimal(1) / slots.size)
+      end
+
+      allocate(total, shares, integer: integer_slots?(slots))
+    end
+
+    def subtract(slots, parts)
+      slots.zip(parts).each do |(hash, key), part|
+        remaining = slot_value([hash, key]) - part
+        hash[key] = if key == "units" || hash[key].is_a?(String)
+          remaining.to_s
+        elsif hash[key].is_a?(Integer)
+          remaining.to_i
+        else
+          remaining.to_f
         end
       end
     end
 
-    def cumulative_values(usage)
-      {
-        amount_cents: usage["amount_cents"],
-        events_count: usage["events_count"],
-        units: BigDecimal(usage["units"])
-      }
+    def integer_slots?(slots)
+      slots.all? { |(hash, key)| hash[key].is_a?(Integer) }
     end
 
-    # Allocation ratio of each target, based on its period-to-date amount, then units, then events count.
-    def allocation_shares(weights)
-      %i[amount_cents units events_count].each do |field|
-        total = weights.sum { |values| values[field] }
-        return weights.map { |values| Rational(values[field]) / total } if total.positive?
-      end
-
-      Array.new(weights.size, Rational(1, weights.size))
+    def slot_value((hash, key))
+      BigDecimal((hash[key] || 0).to_s)
     end
 
     # Splits total according to shares. The last target takes the remainder, so the parts always add up
-    # to the total. Integer totals (cents, events) are split into integers.
-    def allocate(total, shares)
-      integer = total.is_a?(Integer)
+    # to the total. Integer values (cents, events) are split into integers.
+    def allocate(total, shares, integer:)
+      return [] if shares.empty?
+
       parts = shares[0...-1].map do |share|
-        integer ? (total * share).round : total * BigDecimal(share, 20)
+        part = total * share
+        integer ? part.round : part.round(20)
       end
 
-      parts << (total - parts.sum(integer ? 0 : BigDecimal(0)))
+      parts << (total - parts.sum(BigDecimal(0)))
     end
 
     def apply_presentation_breakdowns_diff(previous_parent, current_parent)

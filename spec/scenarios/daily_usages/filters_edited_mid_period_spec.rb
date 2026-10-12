@@ -5,9 +5,12 @@ require "rails_helper"
 # A charge's filters are edited during an open billing period. Current usage is recomputed over the whole
 # period with the new filters, so the daily usage written after the edit holds filters that did not exist
 # the day before. Filter-level diffs must still add up to the charge-level diff, and summing the daily
-# diffs of the period must give the period's usage, for the charge and for its filters.
+# diffs of the period must give the period's usage, for the charge, its filters and their presentation
+# breakdowns.
 describe "Daily Usages: charge filters edited mid-period", :premium do
   let(:organization) { create(:organization, webhook_url: nil, email_settings: [], premium_integrations: ["revenue_analytics"]) }
+  let(:presentation_group_keys) { [{value: "provider"}] }
+  let(:providers) { {"a" => "aws", "b" => "gcp", "c" => "aws"} }
   let(:customer) { create(:customer, organization:) }
   let(:billable_metric) { create(:sum_billable_metric, organization:, code: "characters", field_name: "count") }
   let(:metric_filter) { create(:billable_metric_filter, billable_metric:, key: "model", values: %w[a b c]) }
@@ -46,8 +49,8 @@ describe "Daily Usages: charge filters edited mid-period", :premium do
       charge_model: "standard",
       code: "characters_charge",
       pay_in_advance: false,
-      properties: {amount: "2"},
-      filters:
+      properties: {amount: "2", presentation_group_keys:},
+      filters: filters.map { |filter| filter.deep_merge(properties: {presentation_group_keys:}) }
     }
   end
 
@@ -68,7 +71,7 @@ describe "Daily Usages: charge filters edited mid-period", :premium do
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
           external_subscription_id: subscription.external_id,
-          properties: {model:, count:}
+          properties: {model:, count:, provider: providers.fetch(model)}
         })
       end
     end
@@ -90,12 +93,34 @@ describe "Daily Usages: charge filters edited mid-period", :premium do
     charge_usage.fetch("filters").sum { |filter| BigDecimal(filter[field].to_s) }
   end
 
+  def breakdown_units(usage)
+    Array(usage["presentation_breakdowns"]).to_h { |pb| [pb["presentation_by"], BigDecimal(pb["units"])] }
+  end
+
+  def filters_breakdown_units(charge_usage)
+    charge_usage.fetch("filters").map { |filter| breakdown_units(filter) }.reduce({}) { |sum, units| sum.merge(units) { |_, a, b| a + b } }
+  end
+
   def expect_filters_to_add_up(daily_usage)
     charge = charge_diff(daily_usage)
 
     %w[amount_cents units events_count].each do |field|
       expect(filters_total(charge, field)).to eq(BigDecimal(charge[field].to_s)), "#{field} on #{daily_usage.usage_date}"
     end
+
+    charge.fetch("filters").each do |filter|
+      expect(breakdown_units(filter).values.sum(BigDecimal(0))).to eq(BigDecimal(filter["units"])),
+        "breakdowns of #{filter["values"]} on #{daily_usage.usage_date}"
+    end
+  end
+
+  def expect_breakdowns_to_sum_to_period_usage
+    period_breakdowns = filters_breakdown_units(daily_usage(5).usage.fetch("charges_usage").sole)
+    summed = (2..5).map { |day| filters_breakdown_units(charge_diff(daily_usage(day))) }
+      .reduce { |sum, units| sum.merge(units) { |_, a, b| a + b } }
+
+    expect(period_breakdowns).not_to be_empty
+    expect(summed).to eq(period_breakdowns)
   end
 
   def run_period(edit_day:, new_filters:)
@@ -122,6 +147,10 @@ describe "Daily Usages: charge filters edited mid-period", :premium do
 
       expect(summed_filters).to eq(period_usage["amount_cents"])
       expect(summed_filters).to eq(4 * daily_amount_cents)
+    end
+
+    it "sums the daily presentation breakdowns of the filters to the period's breakdowns" do
+      expect_breakdowns_to_sum_to_period_usage
     end
 
     context "when the daily usage was diffed before the fix" do
@@ -189,6 +218,17 @@ describe "Daily Usages: charge filters edited mid-period", :premium do
       (2..5).each { |day| expect_filters_to_add_up(daily_usage(day)) }
     end
 
+    # On the day of the edit, b keeps its own usage, and the default bucket gets the day's a and c
+    # usage plus the re-pricing of the earlier a usage from 1 to 2 EUR (2 days x 10 units x 1 EUR).
+    it "routes the removed value to the default bucket on the day of the edit" do
+      filters = charge_diff(daily_usage(4)).fetch("filters").map { |f| f.slice("values", "amount_cents", "units", "events_count") }
+
+      expect(filters).to contain_exactly(
+        {"values" => {"model" => %w[b]}, "amount_cents" => 500, "units" => "5.0", "events_count" => 1},
+        {"values" => nil, "amount_cents" => (10 + 1) * 200 + 2 * 10 * 100, "units" => "11.0", "events_count" => 2}
+      )
+    end
+
     it "sums the daily diffs of the period to the period's usage" do
       period_usage = daily_usage(5).usage.fetch("charges_usage").sole
       summed_charge = (2..5).sum { |day| charge_diff(daily_usage(day))["amount_cents"] }
@@ -196,6 +236,7 @@ describe "Daily Usages: charge filters edited mid-period", :premium do
 
       expect(summed_charge).to eq(period_usage["amount_cents"])
       expect(summed_filters).to eq(period_usage["amount_cents"])
+      expect_breakdowns_to_sum_to_period_usage
     end
   end
 
