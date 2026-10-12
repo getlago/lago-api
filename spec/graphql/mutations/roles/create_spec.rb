@@ -34,8 +34,8 @@ RSpec.describe Mutations::Roles::Create do
 
   let(:required_permission) { "roles:create" }
 
-  let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:membership) { create_default(:membership, organization:) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:membership, refind: true) { create_default(:membership, organization:) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
@@ -102,7 +102,7 @@ RSpec.describe Mutations::Roles::Create do
       )
     end
 
-    let_it_be(:membership) { create_default(:membership, organization:, roles: [:admin]) }
+    let_it_be(:membership, refind: true) { create_default(:membership, organization:, roles: [:admin]) }
 
     context "with premium organization and custom_roles integration", :premium do
       before { organization.update!(premium_integrations: ["custom_roles"]) }

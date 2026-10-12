@@ -26,7 +26,7 @@ RSpec.describe Mutations::ApiKeys::Update, :premium do
 
   let(:required_permission) { "developers:keys:manage" }
 
-  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
 
   include_context "with mocked security logger"
 

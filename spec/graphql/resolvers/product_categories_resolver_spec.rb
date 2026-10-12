@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::ProductCategoriesResolver do
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let_it_be(:user) { create_default(:user) }
   subject(:execution) do
     execute_graphql(
@@ -30,7 +30,7 @@ RSpec.describe Resolvers::ProductCategoriesResolver do
   end
   let!(:product_category) { create(:product_category, organization:, name: "Cards", code: "cards") }
 
-  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

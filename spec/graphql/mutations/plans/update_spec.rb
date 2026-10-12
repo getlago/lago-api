@@ -229,9 +229,9 @@ RSpec.describe Mutations::Plans::Update do
     }
   end
 
-  let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:membership) { create_default(:membership) }
-  let_it_be(:plan) { create_default(:plan, organization:) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
+  let_it_be(:plan, refind: true) { create_default(:plan, organization:) }
 
   let_it_be(:billable_metrics) do
     create_list(:billable_metric, 5, organization:)
@@ -620,7 +620,7 @@ RSpec.describe Mutations::Plans::Update do
   end
 
   context "when fixed charges are provided" do
-    let_it_be(:add_ons) { create_list(:add_on, 5, organization:) }
+    let_it_be(:add_ons, refind: true) { create_list(:add_on, 5, organization:) }
     let(:add_on_1) { add_ons[0] }
     let(:add_on_2) { add_ons[1] }
     let(:add_on_3) { add_ons[2] }

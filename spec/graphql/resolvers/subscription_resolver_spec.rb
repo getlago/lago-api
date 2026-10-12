@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::SubscriptionResolver do
-  let_it_be(:plan) { create_default(:plan) }
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan, refind: true) { create_default(:plan) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "subscriptions:view" }
   let(:organization) { membership.organization }
@@ -40,8 +40,8 @@ RSpec.describe Resolvers::SubscriptionResolver do
     GQL
   end
 
-  let_it_be(:membership) { create_default(:membership) }
-  let_it_be(:customer) { create_default(:customer, organization:) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
+  let_it_be(:customer, refind: true) { create_default(:customer, organization:) }
 
   before do
     customer
@@ -133,7 +133,7 @@ RSpec.describe Resolvers::SubscriptionResolver do
   end
 
   context "when subscription has a pending downgrade" do
-    let_it_be(:plan) { create_default(:plan, organization:, amount_cents: 500_00) }
+    let_it_be(:plan, refind: true) { create_default(:plan, organization:, amount_cents: 500_00) }
     let_it_be(:lower_plan) { create_default(:plan, organization:, amount_cents: 100_00) }
     let(:subscription) do
       create(:subscription, :anniversary, customer:, plan:, subscription_at: Time.zone.parse("2026-04-22 00:00:00"), started_at: Time.zone.parse("2026-04-22 00:00:00"))
@@ -234,8 +234,8 @@ RSpec.describe Resolvers::SubscriptionResolver do
     let(:subscription) { create(:subscription, customer:, plan:) }
     let(:fixed_charge) { create(:fixed_charge, plan:, organization:, add_on:, units: 10) }
 
-    let_it_be(:plan) { create_default(:plan, organization:) }
-    let_it_be(:add_on) { create_default(:add_on, organization:) }
+    let_it_be(:plan, refind: true) { create_default(:plan, organization:) }
+    let_it_be(:add_on, refind: true) { create_default(:add_on, organization:) }
 
     context "without a per-subscription override" do
       before { fixed_charge }

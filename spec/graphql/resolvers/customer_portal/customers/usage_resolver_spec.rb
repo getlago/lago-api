@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver do
   let_it_be(:user) { create_default(:user) }
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let(:now) { Time.zone.parse("2025-06-15").in_time_zone }
   let(:organization) { membership.organization }
   let(:tax) { create(:tax, organization:, rate: 20) }
@@ -86,10 +86,10 @@ RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver do
     GQL
   end
 
-  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
 
-  let_it_be(:customer) { create_default(:customer, organization:) }
-  let_it_be(:plan) { create_default(:plan, interval: "monthly") }
+  let_it_be(:customer, refind: true) { create_default(:customer, organization:) }
+  let_it_be(:plan, refind: true) { create_default(:plan, interval: "monthly") }
 
   let_it_be(:metric) { create_default(:billable_metric, aggregation_type: "count_agg") }
 

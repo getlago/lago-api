@@ -57,9 +57,9 @@ RSpec.describe Mutations::Wallets::Create, :premium do
     GQL
   end
 
-  let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:membership) { create_default(:membership) }
-  let_it_be(:customer) { create_default(:customer, organization: membership.organization, currency: "EUR") }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
+  let_it_be(:customer, refind: true) { create_default(:customer, organization: membership.organization, currency: "EUR") }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

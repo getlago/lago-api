@@ -33,11 +33,11 @@ RSpec.describe Mutations::Subscriptions::UpdateCharge, :premium do
     }
   end
 
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let_it_be(:billable_metric) { create_default(:billable_metric, organization:) }
-  let_it_be(:customer) { create_default(:customer) }
-  let_it_be(:membership) { create_default(:membership) }
-  let_it_be(:plan) { create_default(:plan, organization:) }
+  let_it_be(:customer, refind: true) { create_default(:customer) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
+  let_it_be(:plan, refind: true) { create_default(:plan, organization:) }
 
   before do
     charge

@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Resolvers::RateCardsResolver do
   let_it_be(:billable_metric) { create_default(:billable_metric) }
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let_it_be(:user) { create_default(:user) }
   subject(:execution) do
     execute_graphql(
@@ -35,7 +35,7 @@ RSpec.describe Resolvers::RateCardsResolver do
   let!(:card_one) { create(:rate_card, organization:, product:, name: "Growth USD", code: "growth_usd") }
   let!(:card_two) { create(:rate_card, organization:, name: "Standard EUR", code: "standard_eur") }
 
-  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

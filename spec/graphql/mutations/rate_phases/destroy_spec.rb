@@ -29,10 +29,10 @@ RSpec.describe Mutations::RatePhases::Destroy do
     GQL
   end
 
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let_it_be(:billable_metric) { create_default(:billable_metric) }
-  let_it_be(:membership) { create_default(:membership) }
-  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
+  let_it_be(:plan, refind: true) { create_default(:plan) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

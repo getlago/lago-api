@@ -104,8 +104,8 @@ RSpec.describe Mutations::Plans::Create, :premium do
   let(:tax) { create(:tax, organization:) }
   let(:pricing_unit) { create(:pricing_unit, organization:) }
 
-  let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
 
   let_it_be(:billable_metrics) do
     create_list(:billable_metric, 6, organization:)

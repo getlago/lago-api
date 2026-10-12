@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Resolvers::Customers::ProjectedUsageResolver do
   let_it_be(:user) { create_default(:user) }
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let(:required_permission) { "customers:view" }
   let(:organization) { membership.organization }
   let(:tax) { create(:tax, organization:, rate: 20) }
@@ -92,10 +92,10 @@ RSpec.describe Resolvers::Customers::ProjectedUsageResolver do
     GQL
   end
 
-  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
 
-  let_it_be(:customer) { create_default(:customer, organization:) }
-  let_it_be(:plan) { create_default(:plan, interval: "monthly") }
+  let_it_be(:customer, refind: true) { create_default(:customer, organization:) }
+  let_it_be(:plan, refind: true) { create_default(:plan, interval: "monthly") }
 
   let_it_be(:metric) { create_default(:billable_metric, name: "count_metric", aggregation_type: "count_agg") }
 

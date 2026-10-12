@@ -6,7 +6,7 @@ RSpec.describe Types::QuoteVersions::Object do
   subject { described_class }
 
   let_it_be(:user) { create_default(:user) }
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
 
   it do
     expect(subject).to have_field(:id).of_type("ID!")
@@ -40,8 +40,8 @@ RSpec.describe Types::QuoteVersions::Object do
       GQL
     end
 
-    let_it_be(:membership) { create_default(:membership) }
-    let_it_be(:customer) do
+    let_it_be(:membership, refind: true) { create_default(:membership) }
+    let_it_be(:customer, refind: true) do
       create_default(:customer, organization:, name: "Hooli", legal_name: "Hooli Inc", firstname: "Gavin", lastname: "Belson")
     end
 
@@ -76,7 +76,7 @@ RSpec.describe Types::QuoteVersions::Object do
     end
 
     context "when the approved snapshot holds locale-sensitive variables" do
-      let_it_be(:customer) { create_default(:customer, organization:, name: "Hooli", document_locale: "en") }
+      let_it_be(:customer, refind: true) { create_default(:customer, organization:, name: "Hooli", document_locale: "en") }
 
       before do
         create(

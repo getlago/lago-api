@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Resolvers::ProductsResolver do
   let_it_be(:billable_metric) { create_default(:billable_metric) }
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let_it_be(:user) { create_default(:user) }
   subject(:execution) do
     execute_graphql(
@@ -33,7 +33,7 @@ RSpec.describe Resolvers::ProductsResolver do
   let!(:usage_item) { create(:product, organization:, product_category:, name: "Storage", code: "storage") }
   let!(:fixed_item) { create(:product, :fixed, :standalone, organization:, name: "Seats", code: "seats") }
 
-  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

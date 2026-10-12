@@ -23,9 +23,9 @@ RSpec.describe Mutations::Quotes::Update do
     GQL
   end
 
-  let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:customer) { create_default(:customer) }
-  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:customer, refind: true) { create_default(:customer) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
 
   before do
     membership.organization.enable_feature_flag!(:order_forms)

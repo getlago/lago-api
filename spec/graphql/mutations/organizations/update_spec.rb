@@ -3,9 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Organizations::Update do
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let_it_be(:user) { create_default(:user) }
-  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
   let(:mutation) do
     <<~GQL
       mutation($input: UpdateOrganizationInput!) {

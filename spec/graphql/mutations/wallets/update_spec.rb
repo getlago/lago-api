@@ -62,10 +62,10 @@ RSpec.describe Mutations::Wallets::Update, :premium do
     GQL
   end
 
-  let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:plan) { create_default(:plan) }
-  let_it_be(:membership) { create_default(:membership) }
-  let_it_be(:customer) { create_default(:customer, organization:) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:plan, refind: true) { create_default(:plan) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
+  let_it_be(:customer, refind: true) { create_default(:customer, organization:) }
 
   before do
     subscription
