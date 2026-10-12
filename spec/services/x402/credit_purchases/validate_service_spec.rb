@@ -57,4 +57,206 @@ describe X402::CreditPurchases::ValidateService do
       end
     end
   end
+
+  context "with a verified payment" do
+    let(:verified_payment) do
+      X402::Settlements::VerifiedPayment.new(
+        connection: x402_connection,
+        payment_payload: X402::PaymentPayload.new(payment:, payment_requirements:),
+        payer_address:,
+        payment_digest: "digest",
+        verify_response: {"isValid" => true}
+      )
+    end
+    let(:payment) { x402_evm_payment }
+    let(:payment_requirements) { x402_evm_requirements }
+    let(:payer_address) { "0xf4a43B9cc729c9E4E139CB86808f48e3eD09Dcb2" }
+    let(:x402_evm_requirements) { super().merge("amount" => "10000000") }
+    let(:x402_evm_payment) { super().deep_merge("payload" => {"authorization" => {"value" => "10000000"}}) }
+
+    it "passes" do
+      expect(result).to be_success
+    end
+
+    context "with an unknown plan code" do
+      let(:params) { super().merge(plan_code: "unknown") }
+
+      it "fails with plan_not_found" do
+        expect(result.error.error_code).to eq("plan_not_found")
+      end
+    end
+
+    context "with an unknown payer" do
+      context "when the connection refuses strangers" do
+        let(:x402_connection) { create(:x402_connection, organization:, auto_create_customers: false) }
+
+        it "refuses with buyer_not_recognized" do
+          expect(result.error.messages).to eq(base: ["buyer_not_recognized"])
+        end
+      end
+
+      context "when a merchant's customer holds the derived external id" do
+        let(:merchant_customer) { create(:customer, organization:, external_id: "x402_#{payer_address}") }
+
+        before { merchant_customer }
+
+        it "refuses with buyer_external_id_taken" do
+          expect(result.error.messages).to eq(base: ["buyer_external_id_taken"])
+        end
+
+        context "with that customer discarded" do
+          let(:merchant_customer) { create(:customer, organization:, external_id: "x402_#{payer_address}", deleted_at: Time.current) }
+
+          it "passes" do
+            expect(result).to be_success
+          end
+        end
+      end
+
+      context "when another organization's customer holds the derived external id" do
+        before { create(:customer, external_id: "x402_#{payer_address}") }
+
+        it "passes" do
+          expect(result).to be_success
+        end
+      end
+    end
+
+    context "with a known payer" do
+      let(:customer) { create(:customer, organization:, x402_agent_address: payer_address, external_id: "x402_#{payer_address}") }
+      let(:external_subscription_id) { "x402_#{payer_address}_#{plan.code}" }
+
+      before { customer }
+
+      it "passes" do
+        expect(result).to be_success
+      end
+
+      context "when the connection refuses strangers" do
+        let(:x402_connection) { create(:x402_connection, organization:, auto_create_customers: false) }
+
+        it "passes" do
+          expect(result).to be_success
+        end
+      end
+
+      context "with an x402 wallet" do
+        let(:wallet) { create(:wallet, customer:, code: "agent_credits", currency: "USD", x402_enabled: true) }
+
+        before { wallet }
+
+        it "passes" do
+          expect(result).to be_success
+        end
+
+        context "with x402 turned off on the wallet" do
+          let(:wallet) { create(:wallet, customer:, code: "agent_credits", currency: "USD", x402_enabled: false) }
+
+          it "refuses with wallet_not_x402_enabled" do
+            expect(result.error.messages).to eq(base: ["wallet_not_x402_enabled"])
+          end
+        end
+
+        context "with a maximum top-up below the payment" do
+          let(:wallet) { create(:wallet, customer:, code: "agent_credits", currency: "USD", x402_enabled: true, paid_top_up_max_amount_cents: 999) }
+
+          it "refuses the amount as amount_above_maximum" do
+            expect(result.error.messages).to eq(payment_requirements: ["amount_above_maximum"])
+          end
+        end
+
+        context "with a maximum top-up equal to the payment" do
+          let(:wallet) { create(:wallet, customer:, code: "agent_credits", currency: "USD", x402_enabled: true, paid_top_up_max_amount_cents: 1_000) }
+
+          it "passes" do
+            expect(result).to be_success
+          end
+
+          context "with sub-cent dust above it" do
+            let(:x402_evm_requirements) { super().merge("amount" => "10000005") }
+            let(:x402_evm_payment) { super().deep_merge("payload" => {"authorization" => {"value" => "10000005"}}) }
+
+            it "passes on the floored cents" do
+              expect(result).to be_success
+            end
+          end
+        end
+
+        context "with a minimum top-up above the payment" do
+          let(:wallet) { create(:wallet, customer:, code: "agent_credits", currency: "USD", x402_enabled: true, paid_top_up_min_amount_cents: 5_000) }
+
+          it "passes, since x402 waives the minimum" do
+            expect(result).to be_success
+          end
+        end
+      end
+
+      context "with a pending subscription for the plan" do
+        before { create(:subscription, :pending, customer:, plan:, external_id: external_subscription_id) }
+
+        it "refuses with subscription_not_active" do
+          expect(result.error.messages).to eq(base: ["subscription_not_active"])
+        end
+      end
+
+      context "with an incomplete subscription for the plan" do
+        before { create(:subscription, :incomplete, customer:, plan:, external_id: external_subscription_id) }
+
+        it "refuses with subscription_not_active" do
+          expect(result.error.messages).to eq(base: ["subscription_not_active"])
+        end
+      end
+
+      context "with an active subscription beside a pending one" do
+        before do
+          create(:subscription, customer:, plan:, external_id: external_subscription_id)
+          create(:subscription, :pending, customer:, plan:, external_id: external_subscription_id)
+        end
+
+        it "passes" do
+          expect(result).to be_success
+        end
+      end
+
+      context "with a terminated subscription for the plan" do
+        before { create(:subscription, :terminated, customer:, plan:, external_id: external_subscription_id) }
+
+        it "passes, since the grant opens a new one" do
+          expect(result).to be_success
+        end
+      end
+
+      context "with a pending subscription for another plan" do
+        before { create(:subscription, :pending, customer:, external_id: "x402_#{payer_address}_other_plan") }
+
+        it "passes" do
+          expect(result).to be_success
+        end
+      end
+    end
+
+    context "with a Solana payer" do
+      let(:payment) { x402_svm_payment }
+      let(:payment_requirements) { x402_svm_requirements }
+      let(:payer_address) { x402_svm_payer }
+
+      context "when a merchant's customer holds the derived external id" do
+        before { create(:customer, organization:, external_id: "x402_#{x402_svm_payer}") }
+
+        it "refuses with buyer_external_id_taken" do
+          expect(result.error.messages).to eq(base: ["buyer_external_id_taken"])
+        end
+      end
+
+      context "with a pending subscription for the plan" do
+        let(:customer) { create(:customer, organization:, x402_agent_address: x402_svm_payer, external_id: "x402_#{x402_svm_payer}") }
+
+        before { create(:subscription, :pending, customer:, plan:, external_id: "x402_#{x402_svm_payer}_#{plan.code}") }
+
+        it "refuses with subscription_not_active" do
+          expect(result.error.messages).to eq(base: ["subscription_not_active"])
+        end
+      end
+    end
+  end
 end
