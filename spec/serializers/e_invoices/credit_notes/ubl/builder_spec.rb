@@ -14,7 +14,7 @@ RSpec.describe EInvoices::CreditNotes::Ubl::Builder do
   let_it_be(:organization) { create_default(:organization) }
   let_it_be(:customer) { create_default(:customer) }
   let_it_be(:plan) { create_default(:plan) }
-  let_it_be(:invoice) { create_default(:invoice, number: "LAGO-TEST-123") }
+  let_it_be(:invoice, refind: true) { create_default(:invoice, number: "LAGO-TEST-123") }
 
   before do
     credit_note.reload

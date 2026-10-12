@@ -17,7 +17,7 @@ RSpec.describe EInvoices::Cii::TradeAgreement do
 
   let_it_be(:organization) { create_default(:organization) }
 
-  let_it_be(:customer) do
+  let_it_be(:customer, refind: true) do
     create_default(:customer,
       organization:,
       name: "Its Mii",

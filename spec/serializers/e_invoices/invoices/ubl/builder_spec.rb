@@ -241,6 +241,8 @@ RSpec.describe EInvoices::Invoices::Ubl::Builder do
 
     context "when AllowanceCharge tag" do
       let(:root) { "//cac:AllowanceCharge" }
+
+      let(:invoice) { create(:invoice, coupons_amount_cents: 100, invoice_type:) }
       let(:invoice_fee1) { create(:fee, invoice:, taxes_rate: 0.0, precise_amount_cents: 1000, taxes_precise_amount_cents: 0) }
       let(:invoice_fee2) { create(:fee, invoice:, taxes_rate: 5.0, precise_amount_cents: 100, taxes_precise_amount_cents: 4.75) }
       let(:invoice_fee3) { create(:fee, invoice:, taxes_rate: 5.0, precise_amount_cents: 300, taxes_precise_amount_cents: 14.25) }

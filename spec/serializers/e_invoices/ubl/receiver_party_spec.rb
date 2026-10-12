@@ -14,7 +14,7 @@ RSpec.describe EInvoices::Ubl::ReceiverParty do
 
   let_it_be(:organization) { create_default(:organization) }
   let_it_be(:invoice) { create_default(:invoice) }
-  let_it_be(:customer) do
+  let_it_be(:customer, refind: true) do
     create(
       :customer,
       name: "Customer Jr",

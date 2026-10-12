@@ -15,7 +15,7 @@ RSpec.describe EInvoices::Ubl::SenderParty do
 
   let_it_be(:organization) { create_default(:organization) }
   let_it_be(:invoice) { create_default(:invoice) }
-  let_it_be(:billing_entity) do
+  let_it_be(:billing_entity, refind: true) do
     create(
       :billing_entity,
       code: "test_be",

@@ -12,7 +12,7 @@ RSpec.describe ::V1::InvoiceSerializer do
 
   let_it_be(:organization) { create_default(:organization) }
   let_it_be(:customer) { create_default(:customer) }
-  let_it_be(:invoice) { create_default(:invoice) }
+  let_it_be(:invoice, refind: true) { create_default(:invoice) }
 
   before do
     metadata

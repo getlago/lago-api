@@ -196,7 +196,7 @@ RSpec.describe ::V1::FeeSerializer do
   context "when fee is fixed_charge" do
     let_it_be(:organization) { create_default(:organization) }
     let_it_be(:customer) { create_default(:customer, organization:) }
-    let_it_be(:plan) { create_default(:plan, organization:) }
+    let_it_be(:plan, refind: true) { create_default(:plan, organization:) }
     let(:subscription) { create(:subscription, customer:, plan:) }
     let(:add_on) { create(:add_on, organization:) }
     let(:fixed_charge) { create(:fixed_charge, plan:, add_on:) }
