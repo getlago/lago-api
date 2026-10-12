@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe RateCardRates::CreateService do
   subject(:result) { described_class.call(rate_card:, params:) }
 
-  let_it_be(:organization) { create(:organization) }
+  let_it_be(:organization, refind: true) { create(:organization) }
   let(:rate_card) { create(:rate_card, organization:) }
   let(:params) do
     {

@@ -50,7 +50,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
   end
   let(:country) { "CA" }
 
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
 
   describe ".call" do
     let(:provider_customer_service_result) do

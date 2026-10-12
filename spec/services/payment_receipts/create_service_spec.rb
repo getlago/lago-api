@@ -7,7 +7,7 @@ RSpec.describe PaymentReceipts::CreateService do
   let(:billing_entity) { organization.default_billing_entity }
   let(:payment) { create(:payment, payable: invoice) }
 
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let_it_be(:customer) { create_default(:customer, organization:) }
 
   describe "#call" do

@@ -28,7 +28,7 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
 
   let_it_be(:organization) { create(:organization) }
   let_it_be(:customer) { create(:customer, organization:) }
-  let_it_be(:add_on) { create(:add_on, organization:) }
+  let_it_be(:add_on, refind: true) { create(:add_on, organization:) }
 
   describe "#valid?" do
     context "with a valid quote version" do

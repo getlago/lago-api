@@ -11,7 +11,7 @@ RSpec.describe Payments::ManualCreateService do
   let(:amount_cents) { 10000 }
   let(:invoice_id) { invoice.id }
 
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
 
   before_all do
     create_default(:billing_entity)

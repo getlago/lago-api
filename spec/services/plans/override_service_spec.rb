@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Plans::OverrideService do
   subject(:override_service) { described_class.new(plan: parent_plan, params:, subscription:) }
 
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let_it_be(:membership) { create(:membership) }
   let(:subscription) { nil }
 
@@ -22,9 +22,9 @@ RSpec.describe Plans::OverrideService do
   end
 
   describe "#call", :premium do
-    let_it_be(:parent_plan) { create(:plan, organization:) }
-    let_it_be(:billable_metric) { create(:billable_metric, organization:) }
-    let_it_be(:add_on) { create(:add_on, organization:) }
+    let_it_be(:parent_plan, refind: true) { create(:plan, organization:) }
+    let_it_be(:billable_metric, refind: true) { create(:billable_metric, organization:) }
+    let_it_be(:add_on, refind: true) { create(:add_on, organization:) }
     let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:) }
     let(:tax) { create(:tax, organization:) }
 

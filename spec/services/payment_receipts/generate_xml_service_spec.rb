@@ -22,9 +22,9 @@ RSpec.describe PaymentReceipts::GenerateXmlService do
   let(:create_xml_result) { EInvoices::Invoices::Ubl::CreateService::Result.new.tap { |result| result.xml = fake_xml } }
   let(:xml_service) { EInvoices::Invoices::Ubl::CreateService }
 
-  let_it_be(:organization) { create_default(:organization, name: "LAGO") }
+  let_it_be(:organization, refind: true) { create_default(:organization, name: "LAGO") }
   let_it_be(:einvoicing) { true }
-  let_it_be(:billing_entity) { create(:billing_entity, organization:, country: "FR", einvoicing:) }
+  let_it_be(:billing_entity, refind: true) { create(:billing_entity, organization:, country: "FR", einvoicing:) }
   let_it_be(:customer) { create_default(:customer, organization:) }
 
   before do

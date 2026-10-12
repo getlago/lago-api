@@ -7,15 +7,13 @@ RSpec.describe RatePhases::CreateService do
 
   let_it_be(:organization) { create(:organization) }
   let(:plan_rate_card) { create(:plan_rate_card, organization:) }
+  let(:terminal_position) { 1 }
+  let!(:terminal) { create(:rate_phase, plan_rate_card:, organization:, position: terminal_position, billing_interval_cycle_count: nil) }
+  let(:params) { {code: "trial", position: 1, billing_interval_cycle_count: 6, name: "Trial period"} }
 
   before_all do
     create_default(:billable_metric)
   end
-
-  let(:terminal_position) { 1 }
-  let!(:terminal) { create(:rate_phase, plan_rate_card:, organization:, position: terminal_position, billing_interval_cycle_count: nil) }
-
-  let(:params) { {code: "trial", position: 1, billing_interval_cycle_count: 6, name: "Trial period"} }
 
   it "creates a rate phase" do
     expect { result }.to change(RatePhase, :count).by(1)

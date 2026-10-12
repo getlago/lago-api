@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Plans::UpdateService do
   subject(:plans_service) { described_class.new(plan:, params: update_args) }
 
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let(:membership) { create_default(:membership) }
   let(:plan) { create_default(:plan, organization:) }
   let(:plan_name) { "Updated plan name" }
@@ -245,7 +245,8 @@ RSpec.describe Plans::UpdateService do
       end
 
       context "when an invoice from another organization is linked to the subscription" do
-        let(:invoice) { create(:invoice, :draft) }
+        let(:other_organization) { create(:organization) }
+        let(:invoice) { create(:invoice, :draft, organization: other_organization, customer: create(:customer, organization: other_organization)) }
 
         it "does not mark the other organization's invoice for refresh" do
           expect(plans_service.call).to be_success
