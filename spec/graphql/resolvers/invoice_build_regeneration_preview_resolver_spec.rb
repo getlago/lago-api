@@ -4,8 +4,6 @@ require "rails_helper"
 
 RSpec.describe Resolvers::InvoiceBuildRegenerationPreviewResolver do
   let_it_be(:plan) { create_default(:plan) }
-  let_it_be(:add_on) { create_default(:add_on) }
-  let_it_be(:billable_metric) { create_default(:billable_metric) }
   let_it_be(:organization) { create_default(:organization) }
   let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "invoices:view" }

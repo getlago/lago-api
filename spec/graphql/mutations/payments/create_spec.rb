@@ -14,7 +14,6 @@ RSpec.describe Mutations::Payments::Create do
   end
 
   let(:required_permission) { "payments:create" }
-  let(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, organization:, total_amount_cents: 100) }
   let(:input) do
     {
