@@ -18,6 +18,7 @@ module Memberships
         return result.not_found_failure!(resource: "role") if new_roles.blank?
         return result.forbidden_failure!(code: "cannot_grant_admin") if granting_admin_without_being_admin?
         return result.not_allowed_failure!(code: "last_admin") if last_admin_demotion?
+        return result.forbidden_failure!(code: "cannot_grant_permissions") if granting_permissions_not_held?
 
         roles_to_remove = old_roles - new_roles
         (new_roles - old_roles).each { |role| MembershipRole.create!(organization:, membership:, role:) }
@@ -74,6 +75,10 @@ module Memberships
 
     def granting_admin_without_being_admin?
       new_roles.any?(&:admin?) && !acting_membership&.admin?
+    end
+
+    def granting_permissions_not_held?
+      !acting_membership&.can_grant_roles?(new_roles.to_a - old_roles.to_a)
     end
 
     def last_admin_demotion?

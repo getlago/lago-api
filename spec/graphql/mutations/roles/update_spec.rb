@@ -33,7 +33,7 @@ RSpec.describe Mutations::Roles::Update do
   let(:required_permission) { "roles:update" }
 
   let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:membership) { create_default(:membership, organization:) }
+  let_it_be(:membership) { create_default(:membership, organization:, roles: %i[admin]) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
