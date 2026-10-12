@@ -62,7 +62,12 @@ module Events
 
         # The rows of the window, keyed by filter. The block reads the rows of a part of the window,
         # yielded `from_datetime:`, `to_datetime:` and `before:`.
-        def rows(store:, from_datetime:, to_datetime:, batch_keys:, group_keys:, &)
+        #
+        # The rows are kept per batch of filters, under the conditions the batch was read with:
+        # they come from the charge filter values and, for a filter taking all values, from the
+        # metric filter values, which are edited in bulk without touching the charge or its filters.
+        # A change of conditions, however it was made, reads the base again.
+        def rows(store:, from_datetime:, to_datetime:, conditions:, group_keys:, &)
           now = Time.current
           cut = cut_at(now)
 
@@ -71,7 +76,7 @@ module Events
           end
 
           key = cache_key(from_datetime:, to_datetime:, deduplicate: store.deduplicate)
-          batch = Digest::SHA256.hexdigest([batch_keys, group_keys].to_json)
+          batch = Digest::SHA256.hexdigest([conditions, group_keys].to_json)
 
           base = base_rows(store:, key:, batch:, now:, cut:, from_datetime:, &)
           tail = yield(from_datetime: cut, to_datetime:, before: nil)
@@ -151,8 +156,9 @@ module Events
           end
         end
 
-        # The charge, its filters and its metric decide which events each filter keeps, so editing
-        # any of them starts a new base.
+        # The metric decides which value of an event is aggregated and how, so editing it, or the
+        # charge or its filters, starts a new base. Which events each filter keeps is not bound to
+        # these timestamps: the batch's conditions are compared on every computation (see #rows).
         def cache_key(from_datetime:, to_datetime:, deduplicate:)
           [
             "charge-scan-incremental",

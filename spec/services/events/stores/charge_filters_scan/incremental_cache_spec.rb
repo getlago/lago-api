@@ -24,8 +24,6 @@ RSpec.describe Events::Stores::ChargeFiltersScan::IncrementalCache, clickhouse: 
 
   let(:charge) { create(:standard_charge, organization:, plan:, billable_metric:, properties: {"amount" => "1"}) }
   let(:region) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[us eu]) }
-  let(:loaded_charge) { Charge.includes(filters: {values: :billable_metric_filter}).find(charge.id) }
-  let(:pricing_buckets) { Fees::ChargeService::Sources::Charge.new(charge: loaded_charge, boundaries: nil).pricing_buckets }
 
   let(:filter_values) { %w[us eu] }
   let(:cache_store) { ActiveSupport::Cache::MemoryStore.new }
@@ -84,10 +82,13 @@ RSpec.describe Events::Stores::ChargeFiltersScan::IncrementalCache, clickhouse: 
     end
   end
 
-  # One current usage computation: a new scan, as Fees::ChargeService builds one per call.
+  # One current usage computation: the charge read again with its filters and a new scan, as
+  # Fees::ChargeService does on each call.
   def totals(incremental: true)
+    loaded_charge = Charge.includes(filters: {values: :billable_metric_filter}).find(charge.id)
     cache = (described_class.new(subscription:, charge: loaded_charge) if incremental)
     scan = Events::Stores::ChargeFiltersScan.new(charge: loaded_charge, incremental: cache)
+    pricing_buckets = Fees::ChargeService::Sources::Charge.new(charge: loaded_charge, boundaries: nil).pricing_buckets
 
     pricing_buckets.to_h do |item|
       [item.charge_filter&.id, aggregate(Events::Stores::ChargeFiltersScanStore.new(filter_store(item), scan:)).to_h]
@@ -214,6 +215,43 @@ RSpec.describe Events::Stores::ChargeFiltersScan::IncrementalCache, clickhouse: 
       travel_to(now + described_class::FULL_REFRESH_INTERVAL + 1.second) do
         expect(Rails.cache.read(key)).to be_nil
       end
+    end
+  end
+
+  context "when the metric filter values are edited" do
+    # A filter taking every region besides the us one: its conditions follow the metric filter.
+    let(:region) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[us eu apac]) }
+    let(:filter_values) { ["us", ChargeFilterValue::ALL_FILTER_VALUES] }
+    let(:events) { super() + [["tr_apac", Time.zone.parse("2026-09-05 10:00"), "apac", 64]] }
+
+    before do
+      computation
+
+      # Trims the values of the metric filter, which touches neither the charge, its filters nor
+      # the metric: the filter taking all values now ignores the apac events.
+      BillableMetricFilters::CreateOrUpdateBatchService.call!(
+        billable_metric:,
+        filters_params: [{key: "region", values: %w[us eu]}]
+      )
+    end
+
+    it "reads the base again under the new conditions" do
+      expect(computation).to eq(totals(incremental: false))
+      expect(reads.first).to eq({from_datetime: boundaries[:from_datetime], to_datetime: nil, before: cut})
+    end
+  end
+
+  context "when a charge filter value is edited without touching the charge" do
+    before do
+      computation
+
+      # As the bulk edits of filter values do (update_all), leaving every timestamp of the cache key.
+      ChargeFilterValue.where(values: ["eu"]).update_all(values: %w[eu us]) # rubocop:disable Rails/SkipsModelValidations
+    end
+
+    it "reads the base again under the new conditions" do
+      expect(computation).to eq(totals(incremental: false))
+      expect(reads.first).to eq({from_datetime: boundaries[:from_datetime], to_datetime: nil, before: cut})
     end
   end
 

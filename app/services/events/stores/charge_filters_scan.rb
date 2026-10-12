@@ -217,6 +217,15 @@ module Events
         pricing_buckets.keys.slice(index * FILTERS_PER_SCAN, FILTERS_PER_SCAN)
       end
 
+      # What decides which events each filter of the batch keeps, as the scan reads it.
+      def batch_conditions(index)
+        batch_keys(index).map do |key|
+          bucket = bucket(key)
+
+          [key, bucket.matching_filters, bucket.ignored_filters]
+        end
+      end
+
       # The conditions Fees::ChargeService gives the filter's store. Resolved per filter, as a
       # charge holding thousands of filters only reads the batches of those it aggregates.
       #
@@ -265,7 +274,7 @@ module Events
             store:,
             from_datetime:,
             to_datetime:,
-            batch_keys: batch_keys(batch),
+            conditions: batch_conditions(batch),
             group_keys:
           ) { |**window| read_rows(store, batch, **window) }
         else
