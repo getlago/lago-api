@@ -31,7 +31,7 @@ module UsageAttributionValues
     end
 
     def call
-      return result unless organization.account_tree_enabled?
+      return result unless organization.account_tree_enabled? && organization.clickhouse_events_store?
 
       attribution_types = cached_attribution_types
       return result if attribution_types.empty?
