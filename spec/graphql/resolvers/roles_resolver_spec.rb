@@ -110,7 +110,7 @@ RSpec.describe Resolvers::RolesResolver do
     end
 
     context "when the current member is admin" do
-      let(:membership) { create(:membership, roles: %i[admin]) }
+      let(:membership) { create(:membership, user: create(:user), roles: %i[admin]) }
 
       it "marks every role as grantable" do
         expect(roles_response.values).to all(be(true))
@@ -118,7 +118,7 @@ RSpec.describe Resolvers::RolesResolver do
     end
 
     context "when the current member is not admin" do
-      let(:membership) { create(:membership, roles: %i[finance]) }
+      let(:membership) { create(:membership, user: create(:user), roles: %i[finance]) }
 
       it "marks only roles within the member permissions as grantable" do
         expect(roles_response).to include(

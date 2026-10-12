@@ -8,7 +8,7 @@ RSpec.describe Memberships::UpdateService do
   include_context "with mocked security logger"
 
   let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:membership) { create(:membership) }
+  let_it_be(:membership, refind: true) { create(:membership) }
   let_it_be(:acting_user) { create(:membership, organization:).user }
   let(:admin_role) { create(:role, :admin) }
   let!(:manager_role) { create(:role, :manager) }
