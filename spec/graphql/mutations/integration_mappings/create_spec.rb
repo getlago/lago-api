@@ -11,6 +11,7 @@ RSpec.describe Mutations::IntegrationMappings::Create do
   let(:external_account_code) { Faker::Barcode.ean }
   let(:external_id) { SecureRandom.uuid }
   let(:external_name) { Faker::Commerce.department }
+  let(:mappable_type) { "AddOn" }
   let(:mutation) do
     <<-GQL
       mutation($input: CreateIntegrationMappingInput!) {
@@ -31,7 +32,7 @@ RSpec.describe Mutations::IntegrationMappings::Create do
     {
       integrationId: integration.id,
       mappableId: mappable.id,
-      mappableType: "AddOn",
+      mappableType: mappable_type,
       externalAccountCode: external_account_code,
       externalId: external_id,
       externalName: external_name,
@@ -56,12 +57,33 @@ RSpec.describe Mutations::IntegrationMappings::Create do
       "id" => be_present,
       "integrationId" => integration.id,
       "mappableId" => mappable.id,
-      "mappableType" => "AddOn",
+      "mappableType" => mappable_type,
       "billingEntityId" => nil,
       "externalAccountCode" => external_account_code,
       "externalId" => external_id,
       "externalName" => external_name
     )
+  end
+
+  context "when the mappable is a tax" do
+    let(:integration) { create(:xero_integration, organization:) }
+    let(:mappable) { create(:tax, organization:) }
+    let(:mappable_type) { "Tax" }
+
+    it "creates a tax integration mapping" do
+      result = create_integration_mapping(input:)
+
+      expect(result).to match(
+        "id" => be_present,
+        "integrationId" => integration.id,
+        "mappableId" => mappable.id,
+        "mappableType" => "Tax",
+        "billingEntityId" => nil,
+        "externalAccountCode" => external_account_code,
+        "externalId" => external_id,
+        "externalName" => external_name
+      )
+    end
   end
 
   context "with billing entity" do
@@ -75,7 +97,7 @@ RSpec.describe Mutations::IntegrationMappings::Create do
         "id" => be_present,
         "integrationId" => integration.id,
         "mappableId" => mappable.id,
-        "mappableType" => "AddOn",
+        "mappableType" => mappable_type,
         "billingEntityId" => billing_entity.id,
         "externalAccountCode" => external_account_code,
         "externalId" => external_id,

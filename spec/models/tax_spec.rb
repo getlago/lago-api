@@ -8,11 +8,23 @@ RSpec.describe Tax do
   let(:organization) { tax.organization }
   let(:applied_to_organization) { false }
 
-  it { is_expected.to belong_to(:organization) }
-
-  it { is_expected.to have_many(:billing_entities_taxes).dependent(:destroy) }
-  it { is_expected.to have_many(:billing_entities).through(:billing_entities_taxes) }
-  it { is_expected.to have_many(:catalog_plans).through(:plans_taxes) }
+  describe "associations" do
+    it do
+      expect(tax).to belong_to(:organization)
+      expect(tax).to have_many(:billing_entities_taxes).dependent(:destroy)
+      expect(tax).to have_many(:billing_entities).through(:billing_entities_taxes)
+      expect(tax).to have_many(:catalog_plans).through(:plans_taxes)
+      expect(tax).to have_many(:integration_mappings)
+        .class_name("IntegrationMappings::BaseMapping")
+        .dependent(:destroy)
+      expect(tax).to have_many(:netsuite_mappings)
+        .class_name("IntegrationMappings::NetsuiteMapping")
+        .dependent(:destroy)
+      expect(tax).to have_many(:xero_mappings)
+        .class_name("IntegrationMappings::XeroMapping")
+        .dependent(:destroy)
+    end
+  end
 
   it { expect(described_class).to be_soft_deletable }
 

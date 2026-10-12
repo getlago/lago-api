@@ -5,6 +5,18 @@ require "rails_helper"
 RSpec.describe IntegrationMappings::XeroMapping do
   subject(:mapping) { build(:xero_mapping) }
 
+  describe "validations" do
+    context "when the mappable is a tax" do
+      subject(:mapping) { build(:xero_mapping, integration:, mappable: tax, organization:) }
+
+      let(:organization) { create(:organization) }
+      let(:integration) { create(:xero_integration, organization:) }
+      let(:tax) { create(:tax, organization:) }
+
+      it { is_expected.to be_valid }
+    end
+  end
+
   describe "#external_id" do
     let(:external_id) { SecureRandom.uuid }
 
