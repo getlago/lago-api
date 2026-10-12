@@ -27,6 +27,7 @@ module Invoices
       Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
       Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
       Utils::SegmentTrack.invoice_created(result.invoice)
+      PaymentProviders::UpdatePaymentReferenceJob.perform_later(succeeded_payment)
 
       result
     end
@@ -42,6 +43,13 @@ module Invoices
     def should_deliver_email?
       License.premium? &&
         invoice.billing_entity.email_settings.include?("invoice.finalized")
+    end
+
+    def succeeded_payment
+      @succeeded_payment ||= invoice.payments
+        .where(payable_payment_status: :succeeded)
+        .order(created_at: :desc)
+        .first
     end
   end
 end
