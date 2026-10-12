@@ -4,15 +4,9 @@ require "rails_helper"
 
 RSpec.describe Mutations::IntegrationMappings::Update do
   let(:required_permission) { "organization:integrations:update" }
-  let(:integration_mapping) { create(:netsuite_mapping, integration:) }
-  let(:integration) { create(:netsuite_integration, organization:) }
-  let(:mappable) { integration_mapping.mappable }
-  let(:organization) { membership.organization }
-  let(:membership) { create(:membership) }
   let(:external_account_code) { Faker::Barcode.ean }
   let(:external_id) { SecureRandom.uuid }
   let(:external_name) { Faker::Commerce.department }
-
   let(:mutation) do
     <<-GQL
       mutation($input: UpdateIntegrationMappingInput!) {
@@ -28,6 +22,12 @@ RSpec.describe Mutations::IntegrationMappings::Update do
       }
     GQL
   end
+  let(:integration_mapping) { create(:netsuite_mapping, integration:) }
+  let(:integration) { create(:netsuite_integration, organization:) }
+  let(:mappable) { integration_mapping.mappable }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

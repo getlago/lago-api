@@ -3,6 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Mutations::BillingEntities::Create, :premium do
+  let_it_be(:user) { create_default(:user) }
   include_context "with mocked security logger"
 
   let(:required_permission) { "billing_entities:create" }
@@ -108,7 +109,7 @@ RSpec.describe Mutations::BillingEntities::Create, :premium do
   end
 
   context "when the organization can create billing entities" do
-    let(:organization) { create(:organization, premium_integrations: %w[multi_entities_enterprise]) }
+    let_it_be(:organization) { create_default(:organization, premium_integrations: %w[multi_entities_enterprise]) }
 
     let!(:result) do
       execute_graphql(

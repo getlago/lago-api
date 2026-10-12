@@ -3,12 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Mutations::DataExports::Invoices::Create do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   include_context "with mocked security logger"
 
   let(:required_permission) { "invoices:export" }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-
   let(:mutation) do
     <<-GQL
       mutation($input: CreateDataExportsInvoicesInput!) {
@@ -19,6 +19,8 @@ RSpec.describe Mutations::DataExports::Invoices::Create do
       }
     GQL
   end
+
+  let_it_be(:membership) { create_default(:membership) }
 
   before { membership }
 

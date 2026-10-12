@@ -3,7 +3,14 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::ActivityLogResolver, clickhouse: true do
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "audit_logs:view" }
+  let(:organization) { membership.organization }
+  let(:clickhouse_activity_log) { create(:clickhouse_activity_log, membership:) }
   let(:query) do
     <<~GQL
       query($activityLogId: ID!) {
@@ -15,9 +22,7 @@ RSpec.describe Resolvers::ActivityLogResolver, clickhouse: true do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:clickhouse_activity_log) { create(:clickhouse_activity_log, membership:) }
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

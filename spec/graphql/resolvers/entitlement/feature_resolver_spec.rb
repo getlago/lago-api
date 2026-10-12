@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Resolvers::Entitlement::FeatureResolver, :premium do
   subject { execute_query(query:, variables:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:required_permission) { "features:view" }
   let(:query) do
     <<~GQL

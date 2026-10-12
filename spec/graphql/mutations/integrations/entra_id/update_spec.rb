@@ -6,10 +6,6 @@ RSpec.describe Mutations::Integrations::EntraId::Update, :premium do
   include_context "with mocked security logger"
 
   let(:required_permission) { "organization:integrations:update" }
-  let(:integration) { create(:entra_id_integration, organization:) }
-  let(:organization) { membership.organization }
-  let(:membership) { create(:membership) }
-
   let(:mutation) do
     <<-GQL
       mutation($input: UpdateEntraIdIntegrationInput!) {
@@ -26,6 +22,11 @@ RSpec.describe Mutations::Integrations::EntraId::Update, :premium do
       }
     GQL
   end
+  let(:integration) { create(:entra_id_integration, organization:) }
+
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
 
   before do
     integration

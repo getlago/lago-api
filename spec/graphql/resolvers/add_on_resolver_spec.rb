@@ -3,7 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::AddOnResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "addons:view" }
+  let(:organization) { membership.organization }
+  let(:applied_add_on_list) { create_list(:applied_add_on, 3, add_on:, customer:) }
+  let(:applied_add_on) { create(:applied_add_on, add_on:, customer: customer2) }
   let(:query) do
     <<~GQL
       query($addOnId: ID!) {
@@ -14,13 +19,10 @@ RSpec.describe Resolvers::AddOnResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:add_on) { create(:add_on, organization:) }
-  let(:customer) { create(:customer, organization:) }
-  let(:customer2) { create(:customer, organization:) }
-  let(:applied_add_on_list) { create_list(:applied_add_on, 3, add_on:, customer:) }
-  let(:applied_add_on) { create(:applied_add_on, add_on:, customer: customer2) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:add_on) { create_default(:add_on, organization:) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
+  let_it_be(:customer2) { create_default(:customer, organization:) }
 
   before do
     customer

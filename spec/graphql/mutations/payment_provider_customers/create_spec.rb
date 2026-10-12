@@ -4,11 +4,7 @@ require "rails_helper"
 
 RSpec.describe Mutations::PaymentProviderCustomers::Create do
   let(:required_permission) { "customers:update" }
-  let(:membership) { create(:membership, organization:) }
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
   let(:stripe_provider) { create(:stripe_provider, organization:, code: "stripe_eu") }
-
   let(:mutation) do
     <<-GQL
       mutation($input: CreatePaymentProviderCustomerInput!) {
@@ -23,6 +19,10 @@ RSpec.describe Mutations::PaymentProviderCustomers::Create do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership, organization:) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before { stripe_provider }
 

@@ -16,6 +16,19 @@ RSpec.describe Mutations::Wallets::Alerts::Create do
   end
 
   let(:required_permission) { "wallets:update" }
+  let(:wallet) { create(:wallet, customer:) }
+  let(:input) do
+    {
+      walletId: wallet.id,
+      code: "wallet_balance_alert",
+      alertType: "wallet_balance_amount",
+      thresholds: [
+        {code: "warn", value: "5000"},
+        {code: "alert", value: "2500"},
+        {value: "1000", recurring: true}
+      ]
+    }
+  end
   let(:mutation) do
     <<-GQL
     mutation ($input: CreateCustomerWalletAlertInput!) {
@@ -32,22 +45,10 @@ RSpec.describe Mutations::Wallets::Alerts::Create do
     }
     GQL
   end
-  let(:membership) { create(:membership) }
-  let(:customer) { create(:customer, organization: membership.organization) }
-  let(:wallet) { create(:wallet, customer:) }
 
-  let(:input) do
-    {
-      walletId: wallet.id,
-      code: "wallet_balance_alert",
-      alertType: "wallet_balance_amount",
-      thresholds: [
-        {code: "warn", value: "5000"},
-        {code: "alert", value: "2500"},
-        {value: "1000", recurring: true}
-      ]
-    }
-  end
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization: membership.organization) }
 
   before do
     wallet

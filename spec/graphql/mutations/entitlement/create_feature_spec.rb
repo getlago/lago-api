@@ -6,8 +6,6 @@ RSpec.describe Mutations::Entitlement::CreateFeature, :premium do
   subject { execute_query(query:, input:) }
 
   let(:required_permission) { "features:create" }
-
-  let(:organization) { create(:organization) }
   let(:query) do
     <<-GQL
       mutation($input: CreateFeatureInput!) {
@@ -25,7 +23,6 @@ RSpec.describe Mutations::Entitlement::CreateFeature, :premium do
       }
     GQL
   end
-
   let(:input) do
     {
       code: "test_feature",
@@ -34,6 +31,8 @@ RSpec.describe Mutations::Entitlement::CreateFeature, :premium do
       privileges: []
     }
   end
+
+  let_it_be(:organization) { create_default(:organization) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
