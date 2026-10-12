@@ -8,7 +8,7 @@ RSpec.describe Subscription::FixedChargePresenter do
   let_it_be(:organization) { create_default(:organization) }
   let_it_be(:add_on) { create_default(:add_on) }
   let_it_be(:customer) { create_default(:customer, organization:) }
-  let_it_be(:plan) { create_default(:plan, organization:) }
+  let_it_be(:plan, refind: true) { create_default(:plan, organization:) }
   let(:fixed_charge) { create(:fixed_charge, plan:, organization:, units: 10) }
   let(:subscription) { create(:subscription, plan:, customer:) }
 

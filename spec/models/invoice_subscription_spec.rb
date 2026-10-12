@@ -38,7 +38,7 @@ RSpec.describe InvoiceSubscription do
     let(:subscription_custom) { create(:subscription, customer:, plan: plan_beta, name: "AAA Custom Name") }
 
     let_it_be(:plan_zebra) { create(:plan, organization:, name: "Zebra Plan", invoice_display_name: nil) }
-    let_it_be(:plan_alpha) { create(:plan, organization:, name: "Alpha Plan", invoice_display_name: nil) }
+    let_it_be(:plan_alpha, refind: true) { create(:plan, organization:, name: "Alpha Plan", invoice_display_name: nil) }
     let_it_be(:plan_beta) { create(:plan, organization:, name: "Beta Plan", invoice_display_name: "Custom Beta") }
 
     before do

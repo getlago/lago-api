@@ -100,7 +100,7 @@ RSpec.describe IntegrationMappings::BaseMapping do
       let_it_be(:different_organization) { create_default(:organization) }
       let(:integration) { create(:netsuite_integration, organization: organization) }
 
-      let_it_be(:billing_entity) { create_default(:billing_entity, organization: different_organization) }
+      let_it_be(:billing_entity, refind: true) { create_default(:billing_entity, organization: different_organization) }
       let_it_be(:add_on) { create_default(:add_on, organization: organization) }
 
       it "validates billing entity belongs to same organization" do

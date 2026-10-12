@@ -6,7 +6,7 @@ RSpec.describe Subscription::ActivationRule::Payment do
   subject(:rule) { build(:subscription_activation_rule, subscription:, timeout_hours:) }
 
   let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:plan) { create_default(:plan, organization:) }
+  let_it_be(:plan, refind: true) { create_default(:plan, organization:) }
   let_it_be(:customer) { create_default(:customer, :with_stripe_payment_provider, organization:) }
   let(:subscription) { create(:subscription, customer:, plan:, organization:) }
   let(:timeout_hours) { 48 }

@@ -148,7 +148,7 @@ RSpec.describe BillableMetric do
     subject(:billable_metric) { create(:billable_metric, organization:) }
 
     let_it_be(:organization) { create_default(:organization) }
-    let_it_be(:plan) { create_default(:plan, organization:) }
+    let_it_be(:plan, refind: true) { create_default(:plan, organization:) }
     let(:other_plan) { create(:plan, organization:) }
 
     it "returns subscriptions of plans that have a charge for this billable metric" do

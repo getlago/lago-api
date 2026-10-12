@@ -159,13 +159,13 @@ RSpec.describe Invoice do
       it { expect(invoice.errors.messages[:x402_connection]).to be_empty }
 
       context "with a connection of another organization" do
-        let(:connection) { create(:x402_connection) }
+        let(:connection) { create(:x402_connection, organization: create(:organization)) }
 
         it { expect(invoice.errors.messages[:x402_connection]).to eq(["must_belong_to_same_organization"]) }
       end
 
       context "with a discarded connection of another organization" do
-        let(:connection) { create(:x402_connection, :discarded) }
+        let(:connection) { create(:x402_connection, :discarded, organization: create(:organization)) }
 
         it { expect(invoice.errors.messages[:x402_connection]).to eq(["must_belong_to_same_organization"]) }
       end

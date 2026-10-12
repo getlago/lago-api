@@ -72,7 +72,7 @@ RSpec.describe Plan do
   end
 
   describe "#applicable_usage_thresholds" do
-    let_it_be(:plan) { create_default(:plan) }
+    let_it_be(:plan, refind: true) { create_default(:plan) }
 
     it "returns usage thresholds plan is a parent" do
       threshold = create(:usage_threshold, plan: plan)
@@ -587,7 +587,7 @@ RSpec.describe Plan do
     end
 
     it "excludes invoices belonging to another organization" do
-      invoice = create(:invoice, :draft)
+      invoice = create(:invoice, :draft, organization: create(:organization))
       [plan, overridden_plan].each do |invoice_plan|
         subscription = create(:subscription, plan: invoice_plan, customer:)
         create(:invoice_subscription, invoice:, subscription:)
