@@ -13,7 +13,6 @@ RSpec.describe EInvoices::Cii::TradeAgreement do
   let(:resource) { create(:invoice, customer:, organization:, billing_entity:, invoice_type:) }
   let(:invoice_type) { :subscription }
   let(:root) { "//ram:ApplicableHeaderTradeAgreement" }
-  let(:membership) { create(:membership) }
 
   let_it_be(:organization) { create_default(:organization) }
 
