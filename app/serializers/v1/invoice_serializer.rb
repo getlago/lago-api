@@ -12,6 +12,7 @@ module V1
         issuing_date: model.issuing_date&.iso8601,
         payment_due_date: model.payment_due_date&.iso8601,
         net_payment_term: model.net_payment_term,
+        payment_term: model.snapshotted_payment_term&.to_h,
         invoice_type: model.invoice_type,
         status: model.status,
         payment_status: model.payment_status,
