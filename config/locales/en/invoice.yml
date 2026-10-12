@@ -68,7 +68,22 @@ en:
     paid_tax_invoice: Paid tax invoice
     pay_with_bank_transfer: Pay with a bank transfer
     payment_term: Payment term
-    payment_term_days: "%{net_payment_term} days"
+    payment_terms:
+      day_of_month:
+        following_month: Due on the %{day} of the following month
+        months_after: Due on the %{day}, %{months} months after invoice
+        same_month: Due on the %{day} of this month
+      days_end_of_month:
+        one: Due %{days} day, end of month
+        other: Due %{days} days, end of month
+      due_on_receipt: Due on receipt
+      end_of_month: Due at end of month
+      net:
+        one: Payment due within %{days} day
+        other: Payment due within %{days} days
+      net_end_of_month:
+        one: Due %{days} day after end of month
+        other: Due %{days} days after end of month
     percentage:
       adjustment_per_transaction: Adjustment for min/max per transaction
       fee_per_transaction: Fixed fee per transaction

@@ -101,6 +101,62 @@ RSpec.describe PaymentTerm do
     end
   end
 
+  describe "#label" do
+    it "renders a localized sentence for each term type" do
+      expect(described_class.from_h(term_type: "due_on_receipt").label).to eq("Due on receipt")
+      expect(described_class.from_h(term_type: "net", days: 1).label).to eq("Payment due within 1 day")
+      expect(described_class.from_h(term_type: "net", days: 30).label).to eq("Payment due within 30 days")
+      expect(described_class.from_h(term_type: "end_of_month").label).to eq("Due at end of month")
+      expect(described_class.from_h(term_type: "net_end_of_month", days: 1).label).to eq("Due 1 day after end of month")
+      expect(described_class.from_h(term_type: "net_end_of_month", days: 30).label).to eq("Due 30 days after end of month")
+      expect(described_class.from_h(term_type: "days_end_of_month", days: 1).label).to eq("Due 1 day, end of month")
+      expect(described_class.from_h(term_type: "days_end_of_month", days: 30).label).to eq("Due 30 days, end of month")
+    end
+
+    it "renders a net-0 term as a zero-day net sentence, not due on receipt" do
+      expect(described_class.from_h(term_type: "net", days: 0).label).to eq("Payment due within 0 days")
+    end
+
+    it "renders the month_offset variants for day_of_month" do
+      expect(described_class.from_h(term_type: "day_of_month", day_of_month: 15, month_offset: 0).label)
+        .to eq("Due on the 15 of this month")
+      expect(described_class.from_h(term_type: "day_of_month", day_of_month: 15).label)
+        .to eq("Due on the 15 of the following month")
+      expect(described_class.from_h(term_type: "day_of_month", day_of_month: 15, month_offset: 2).label)
+        .to eq("Due on the 15, 2 months after invoice")
+    end
+
+    context "when an issuing date is given" do
+      it "names the month the day_of_month due date falls in" do
+        term = described_class.from_h(term_type: "day_of_month", day_of_month: 10, month_offset: 0)
+
+        expect(term.label(issuing_date: Date.new(2026, 7, 15))).to eq("Due on the 10 of the following month")
+        expect(term.label(issuing_date: Date.new(2026, 7, 5))).to eq("Due on the 10 of this month")
+      end
+
+      it "names the day the due date is clamped to in a short month" do
+        term = described_class.from_h(term_type: "day_of_month", day_of_month: 31)
+
+        expect(term.label(issuing_date: Date.new(2026, 1, 15))).to eq("Due on the 28 of the following month")
+        expect(term.label(issuing_date: Date.new(2028, 1, 15))).to eq("Due on the 29 of the following month")
+        expect(term.label(issuing_date: Date.new(2026, 7, 15))).to eq("Due on the 31 of the following month")
+      end
+
+      it "re-clamps the day when an offset-0 term rolls into a shorter month" do
+        term = described_class.from_h(term_type: "day_of_month", day_of_month: 30, month_offset: 0)
+
+        expect(term.due_date_for(Date.new(2027, 1, 31))).to eq(Date.new(2027, 2, 28))
+        expect(term.label(issuing_date: Date.new(2027, 1, 31))).to eq("Due on the 28 of the following month")
+      end
+    end
+
+    it "renders in the current locale" do
+      I18n.with_locale(:fr) do
+        expect(described_class.from_h(term_type: "end_of_month").label).to eq("Payable fin de mois")
+      end
+    end
+  end
+
   describe "#due_date_for" do
     context "when due_on_receipt" do
       it "returns the issuing date" do
