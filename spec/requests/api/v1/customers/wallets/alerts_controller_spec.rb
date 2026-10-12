@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::Customers::Wallets::AlertsController do
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let(:customer_external_id) { customer.external_id }
   let(:wallet) { create(:wallet, customer:, organization:) }
   let(:code) { "my-wallet-alert" }

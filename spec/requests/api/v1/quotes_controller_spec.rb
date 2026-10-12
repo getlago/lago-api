@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::QuotesController do
-  let_it_be(:organization) { create_default(:organization, feature_flags: ["order_forms"]) }
+  let_it_be(:organization, refind: true) { create_default(:organization, feature_flags: ["order_forms"]) }
   let_it_be(:customer) { create_default(:customer, organization:) }
 
   describe "GET /api/v1/quotes" do

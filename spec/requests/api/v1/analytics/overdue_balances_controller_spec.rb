@@ -10,7 +10,7 @@ RSpec.describe Api::V1::Analytics::OverdueBalancesController do
     let(:billing_entity) { create(:billing_entity, organization: organization) }
     let(:params) { {} }
 
-    let_it_be(:organization) { create_default(:organization, created_at: DateTime.new(2023, 11, 1)) }
+    let_it_be(:organization, refind: true) { create_default(:organization, created_at: DateTime.new(2023, 11, 1)) }
 
     before do
       allow(Analytics::OverdueBalancesService).to receive(:call).and_call_original

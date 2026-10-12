@@ -10,7 +10,7 @@ RSpec.describe Api::V1::Analytics::InvoiceCollectionsController do # rubocop:dis
     let(:billing_entity) { create(:billing_entity, organization: organization) }
     let(:params) { {} }
 
-    let_it_be(:organization) { create_default(:organization) }
+    let_it_be(:organization, refind: true) { create_default(:organization) }
 
     before do
       allow(Analytics::InvoiceCollectionsService).to receive(:call).and_call_original

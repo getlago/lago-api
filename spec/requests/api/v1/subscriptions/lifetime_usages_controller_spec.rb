@@ -7,10 +7,10 @@ RSpec.describe Api::V1::Subscriptions::LifetimeUsagesController do
   let(:subscription) { create(:subscription, plan:, organization:, subscription_at:, customer:) }
   let(:subscription_at) { Date.new(2022, 8, 22) }
 
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let_it_be(:customer) { create_default(:customer, organization:) }
 
-  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:plan, refind: true) { create_default(:plan) }
 
   before { create(:usage_threshold, plan:, amount_cents: 100) }
 

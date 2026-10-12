@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::AppliedCouponsController, :bullet do
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let(:customer) { create(:customer, organization:) }
 
   describe "POST /api/v1/applied_coupons" do

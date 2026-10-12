@@ -7,9 +7,9 @@ RSpec.describe Api::V1::PlansController do
   let(:plan) { create(:plan, code: "plan_code") }
 
   let_it_be(:customer) { create_default(:customer) }
-  let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:billable_metric) { create_default(:billable_metric, organization:) }
-  let_it_be(:add_on) { create_default(:add_on, organization:) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:billable_metric, refind: true) { create_default(:billable_metric, organization:) }
+  let_it_be(:add_on, refind: true) { create_default(:add_on, organization:) }
 
   describe "POST /api/v1/plans" do
     subject { post_with_token(organization, "/api/v1/plans", {plan: create_params}) }
@@ -464,7 +464,7 @@ RSpec.describe Api::V1::PlansController do
       }
     end
 
-    let_it_be(:plan) { create_default(:plan, organization:) }
+    let_it_be(:plan, refind: true) { create_default(:plan, organization:) }
 
     include_examples "requires API permission", "plan", "write"
 
@@ -760,7 +760,7 @@ RSpec.describe Api::V1::PlansController do
     end
 
     context "when adding a fixed charge" do
-      let_it_be(:plan) { create_default(:plan, organization:, interval: :weekly) }
+      let_it_be(:plan, refind: true) { create_default(:plan, organization:, interval: :weekly) }
       let(:subscription) { create(:subscription, :active, :anniversary, plan:, started_at:, subscription_at: started_at) }
       let(:started_at) { 3.days.ago }
 
@@ -846,7 +846,7 @@ RSpec.describe Api::V1::PlansController do
     end
 
     context "when editing a fixed charge" do
-      let_it_be(:plan) { create_default(:plan, organization:, interval: :weekly) }
+      let_it_be(:plan, refind: true) { create_default(:plan, organization:, interval: :weekly) }
       let(:subscription) { create(:subscription, :active, :anniversary, plan:, started_at:, subscription_at: started_at) }
       let(:fixed_charge) { create(:fixed_charge, plan:, add_on:, units: 1) }
       let(:started_at) { 3.days.ago }
@@ -945,7 +945,7 @@ RSpec.describe Api::V1::PlansController do
   describe "GET /api/v1/plans/:code" do
     subject { get_with_token(organization, "/api/v1/plans/#{plan_code}") }
 
-    let_it_be(:plan) { create_default(:plan, organization:) }
+    let_it_be(:plan, refind: true) { create_default(:plan, organization:) }
     let(:plan_code) { plan.code }
 
     include_examples "requires API permission", "plan", "read"
@@ -1031,7 +1031,7 @@ RSpec.describe Api::V1::PlansController do
   describe "DELETE /api/v1/plans/:code" do
     subject { delete_with_token(organization, "/api/v1/plans/#{plan_code}") }
 
-    let_it_be(:plan) { create_default(:plan, organization:) }
+    let_it_be(:plan, refind: true) { create_default(:plan, organization:) }
     let(:plan_code) { plan.code }
 
     include_examples "requires API permission", "plan", "write"
@@ -1072,7 +1072,7 @@ RSpec.describe Api::V1::PlansController do
   describe "GET /api/v1/plans" do
     subject { get_with_token(organization, "/api/v1/plans?page=1&per_page=1") }
 
-    let_it_be(:plan) { create_default(:plan, organization:) }
+    let_it_be(:plan, refind: true) { create_default(:plan, organization:) }
 
     before { create(:usage_threshold, plan:) }
 

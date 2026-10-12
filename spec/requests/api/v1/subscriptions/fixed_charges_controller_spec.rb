@@ -9,10 +9,10 @@ RSpec.describe Api::V1::Subscriptions::FixedChargesController do
   let(:deleted_fixed_charge) { create(:fixed_charge, :deleted, plan:, organization:) }
   let(:external_id_query_param) { external_id }
 
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let_it_be(:customer) { create_default(:customer, organization:) }
-  let_it_be(:plan) { create_default(:plan, organization:) }
-  let_it_be(:add_on) { create_default(:add_on, organization:) }
+  let_it_be(:plan, refind: true) { create_default(:plan, organization:) }
+  let_it_be(:add_on, refind: true) { create_default(:add_on, organization:) }
 
   before do
     subscription
@@ -238,7 +238,7 @@ RSpec.describe Api::V1::Subscriptions::FixedChargesController do
       end
 
       context "when subscription already has plan override" do
-        let_it_be(:overridden_plan) { create_default(:plan, organization:, parent: plan) }
+        let_it_be(:overridden_plan, refind: true) { create_default(:plan, organization:, parent: plan) }
         let(:subscription) { create(:subscription, customer:, plan: overridden_plan, external_id:) }
         let(:overridden_fixed_charge) { create(:fixed_charge, plan: overridden_plan, organization:, add_on:, parent: fixed_charge, code: fixed_charge.code) }
 

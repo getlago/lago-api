@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::CreditNotes::MetadataController do
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let_it_be(:customer) { create_default(:customer, organization:) }
   let(:credit_note) { create(:credit_note, customer:) }
 

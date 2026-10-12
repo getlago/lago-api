@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Api::V2::PlansController do
-  let_it_be(:organization) { create_default(:organization, feature_flags: ["product_catalog"]) }
+  let_it_be(:organization, refind: true) { create_default(:organization, feature_flags: ["product_catalog"]) }
 
   describe "POST /api/v2/plans" do
     subject { post_with_token(organization, "/api/v2/plans", {plan: create_params}) }

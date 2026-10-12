@@ -14,7 +14,7 @@ RSpec.describe Api::V1::DataApi::UsagesController do # rubocop:disable Rails/Fil
       end
     end
 
-    let_it_be(:organization) { create_default(:organization) }
+    let_it_be(:organization, refind: true) { create_default(:organization) }
 
     before do
       allow(DataApi::UsagesService).to receive(:call).and_return(result)

@@ -10,7 +10,7 @@ RSpec.describe Api::V1::Analytics::MrrsController do # rubocop:disable Rails/Fil
     let(:billing_entity) { create(:billing_entity, organization: organization) }
     let(:params) { {} }
 
-    let_it_be(:organization) { create_default(:organization) }
+    let_it_be(:organization, refind: true) { create_default(:organization) }
 
     before do
       allow(Analytics::MrrsService).to receive(:call).and_call_original

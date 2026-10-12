@@ -3,9 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::Plans::Charges::FiltersController do
-  let_it_be(:organization) { create_default(:organization) }
-  let_it_be(:plan) { create_default(:plan, organization:) }
-  let_it_be(:billable_metric) { create_default(:billable_metric, organization:) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:plan, refind: true) { create_default(:plan, organization:) }
+  let_it_be(:billable_metric, refind: true) { create_default(:billable_metric, organization:) }
   let(:charge) { create(:standard_charge, plan:, organization:, billable_metric:) }
   let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[us eu]) }
 
