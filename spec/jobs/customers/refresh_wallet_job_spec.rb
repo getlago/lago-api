@@ -51,8 +51,7 @@ RSpec.describe Customers::RefreshWalletJob do
     end
 
     context "when customer is not awaiting wallet refresh" do
-      let_it_be(:awaiting_wallet_refresh) { false }
-      let_it_be(:customer) { create(:customer, awaiting_wallet_refresh:) }
+      let_it_be(:customer) { create(:customer, awaiting_wallet_refresh: false) }
 
       it "does not call the Customers::RefreshWalletsService service" do
         subject
@@ -70,8 +69,7 @@ RSpec.describe Customers::RefreshWalletJob do
     end
 
     context "when customer is awaiting wallet refresh" do
-      let_it_be(:awaiting_wallet_refresh) { true }
-      let_it_be(:customer) { create(:customer, awaiting_wallet_refresh:) }
+      let_it_be(:customer) { create(:customer, awaiting_wallet_refresh: true) }
 
       context "when refresh customer's wallets succeeds" do
         it "calls the Customers::RefreshWalletsService service" do
