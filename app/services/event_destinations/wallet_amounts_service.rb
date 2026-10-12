@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 module EventDestinations
-  # What each wallet absorbed per billable metric for a subscription's usage since from_datetime:
-  # what the latest refresh allocates to it now, plus what billing charged to it on the invoices of
-  # that period. Both are recorded per subscription, so only this subscription's share is read.
-  # Usage is attributed to wallets in proportion to these amounts.
+  # What each wallet absorbed per billable metric, targeted usage apart, for a subscription's usage
+  # since from_datetime: what the latest refresh allocates to it now, plus what billing charged to it
+  # on the invoices of that period. Both are recorded per subscription, so only this subscription's
+  # share is read. Usage is attributed to wallets in proportion to these amounts.
   class WalletAmountsService < BaseService
     Result = BaseResult[:amounts]
 
@@ -17,17 +17,17 @@ module EventDestinations
     end
 
     def call
-      amounts = Hash.new { |hash, billable_metric_id| hash[billable_metric_id] = Hash.new(0) }
+      amounts = Hash.new { |hash, metric_key| hash[metric_key] = Hash.new(0) }
 
       active_wallets.each do |wallet|
         wallet.ongoing_billable_metric_amounts.fetch(subscription.id, {}).each do |period, by_metric|
           next unless in_window?(period)
 
-          by_metric.each { |billable_metric_id, cents| amounts[billable_metric_id][wallet.id] += cents }
+          by_metric.each { |metric_key, cents| amounts[metric_key][wallet.id] += cents }
         end
       end
 
-      billed_amounts.each { |(billable_metric_id, wallet_id), cents| amounts[billable_metric_id][wallet_id] += cents }
+      billed_amounts.each { |(metric_key, wallet_id), cents| amounts[metric_key][wallet_id] += cents }
 
       result.amounts = amounts
       result
@@ -50,10 +50,10 @@ module EventDestinations
         .merge(invoiced_in_period)
         .merge(Invoice.where.not(status: :voided))
         .joins(ActiveRecord::Base.sanitize_sql_array([
-          "CROSS JOIN LATERAL jsonb_each_text(wallet_transactions.billable_metric_amounts -> ?) AS amounts(billable_metric_id, cents)",
+          "CROSS JOIN LATERAL jsonb_each_text(wallet_transactions.billable_metric_amounts -> ?) AS amounts(metric_key, cents)",
           subscription.id
         ]))
-        .group("amounts.billable_metric_id", "wallet_transactions.wallet_id")
+        .group("amounts.metric_key", "wallet_transactions.wallet_id")
         .sum("amounts.cents::bigint")
     end
 

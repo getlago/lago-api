@@ -46,27 +46,39 @@ module EventDestinations
     # ship a long tail of zeroes on every record. Dropping them keeps headroom under the 1MB cap.
     # Fee#non_zero? is the trim daily usage already applies, so both payloads agree on what counts.
     #
-    # One entry per charge and wallet: the charge's usage is split in proportion to what each wallet
-    # absorbed for its billable metric, and the entries add up exactly to the charge totals.
+    # One entry per charge and wallet, and the entries add up exactly to the charge totals. Each part
+    # of a charge's usage is split in proportion to what each wallet absorbed for it: its usage of the
+    # billable metric, with usage whose events targeted a wallet kept apart, since only that wallet
+    # pays for it.
     def charges_usage
       usage_fees = model.fees.select(&:non_zero?)
-      metric_amounts = usage_fees.group_by { it.charge.billable_metric_id }.transform_values { |fees| fees.sum(&:amount_cents) }
+      amounts_by_key = usage_fees.group_by { amount_key(it) }.transform_values { |fees| fees.sum(&:amount_cents) }
 
       ledgers = Hash.new { |hash, key| hash[key] = Hash.new(0) }
 
-      usage_fees.group_by(&:charge_id).flat_map do |_charge_id, fees|
-        fee = fees.first
-        billable_metric_id = fee.charge.billable_metric_id
-        weights = wallet_weights(billable_metric_id, metric_amounts[billable_metric_id])
-        units = split_units(fees.sum { BigDecimal(it.units) }, weights, ledgers[[billable_metric_id, :units]])
-        events_count = split_integer(fees.sum { it.events_count.to_i }, weights, ledgers[[billable_metric_id, :events_count]])
-        amount_cents = split_integer(fees.sum(&:amount_cents), weights, ledgers[[billable_metric_id, :amount_cents]])
+      usage_fees.group_by(&:charge_id).flat_map do |_charge_id, charge_fees|
+        parts = Hash.new { |hash, wallet_id| hash[wallet_id] = {units: 0, events_count: 0, amount_cents: 0} }
 
-        weights.keys.map do |wallet_id|
+        charge_fees.group_by { amount_key(it) }.each do |key, fees|
+          weights = wallet_weights(key, amounts_by_key[key])
+          units = split_units(fees.sum { BigDecimal(it.units) }, weights, ledgers[[key, :units]])
+          events_count = split_integer(fees.sum { it.events_count.to_i }, weights, ledgers[[key, :events_count]])
+          amount_cents = split_integer(fees.sum(&:amount_cents), weights, ledgers[[key, :amount_cents]])
+
+          weights.each_key do |wallet_id|
+            parts[wallet_id][:units] += units[wallet_id]
+            parts[wallet_id][:events_count] += events_count[wallet_id]
+            parts[wallet_id][:amount_cents] += amount_cents[wallet_id]
+          end
+        end
+
+        fee = charge_fees.first
+
+        parts.sort_by { |wallet_id, part| [wallet_id.nil? ? 1 : 0, -part[:amount_cents], wallet_id.to_s] }.map do |wallet_id, part|
           {
-            units: units[wallet_id].to_s,
-            events_count: events_count[wallet_id],
-            amount_cents: amount_cents[wallet_id],
+            units: part[:units].to_s,
+            events_count: part[:events_count],
+            amount_cents: part[:amount_cents],
             amount_currency: fee.amount_currency,
             charge: {
               lago_id: fee.charge_id,
@@ -82,11 +94,30 @@ module EventDestinations
       end
     end
 
-    # The money each wallet absorbed for the billable metric, largest first. Wallets are recorded per
-    # billable metric, so they are weighed against the metric's amount across all its charges. What
-    # no wallet absorbed goes to a nil wallet, and so does the whole charge when no wallet did.
-    def wallet_weights(billable_metric_id, amount_cents)
-      weights = wallet_amounts.fetch(billable_metric_id, {})
+    def amount_key(fee)
+      WalletTransaction.billable_metric_amount_key(fee.charge.billable_metric_id, target_wallet_code(fee))
+    end
+
+    # Like the wallet allocations, which only keep targeted usage apart when the organization lets
+    # events target wallets.
+    def target_wallet_code(fee)
+      if fee.charge.accepts_target_wallet && events_targeting_wallets_enabled?(fee)
+        fee.grouped_by&.dig(::Charge::EVENT_TARGET_WALLET_CODE)
+      end
+    end
+
+    def events_targeting_wallets_enabled?(fee)
+      return @events_targeting_wallets_enabled if defined?(@events_targeting_wallets_enabled)
+
+      @events_targeting_wallets_enabled = fee.organization.events_targeting_wallets_enabled?
+    end
+
+    # The money each wallet absorbed for this part of the usage, largest first. Wallets are recorded
+    # per part, not per charge, so they are weighed against the part's amount across all the charges
+    # of its billable metric. What no wallet absorbed goes to a nil wallet, and so does the whole
+    # part when no wallet did.
+    def wallet_weights(key, amount_cents)
+      weights = wallet_amounts.fetch(key, {})
         .select { |_wallet_id, cents| cents.positive? }
         .sort_by { |wallet_id, cents| [-cents, wallet_id] }
         .to_h

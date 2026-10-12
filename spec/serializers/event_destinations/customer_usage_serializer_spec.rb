@@ -156,6 +156,46 @@ RSpec.describe EventDestinations::CustomerUsageSerializer do
       end
     end
 
+    context "when events targeted wallets" do
+      around { |test| lago_premium! { test.run } }
+
+      let(:organization) { create(:organization, premium_integrations: ["events_targeting_wallets"]) }
+      let(:charge) { create(:standard_charge, plan:, billable_metric:, accepts_target_wallet: true) }
+      let(:wallet_amounts) do
+        {
+          "#{billable_metric.id}/wallet-x" => {first_wallet_id => 100},
+          "#{billable_metric.id}/wallet-y" => {second_wallet_id => 700},
+          billable_metric.id => {first_wallet_id => 50}
+        }
+      end
+      let(:usage) do
+        SubscriptionUsage.new(
+          from_datetime: "2026-09-01T00:00:00Z",
+          to_datetime: "2026-09-30T23:59:59Z",
+          issuing_date: "2026-09-30",
+          currency: "EUR",
+          amount_cents: 850,
+          total_amount_cents: 850,
+          taxes_amount_cents: 0,
+          fees: [
+            build(:charge_fee, charge:, subscription:, organization:, units: "10", events_count: 1, amount_cents: 100, amount_currency: "EUR",
+              charge_filter: nil, grouped_by: {"target_wallet_code" => "wallet-x"}),
+            build(:charge_fee, charge:, subscription:, organization:, units: "90", events_count: 50, amount_cents: 700, amount_currency: "EUR",
+              charge_filter: nil, grouped_by: {"target_wallet_code" => "wallet-y"}),
+            build(:charge_fee, charge:, subscription:, organization:, units: "5", events_count: 5, amount_cents: 50, amount_currency: "EUR",
+              charge_filter: nil, grouped_by: {})
+          ]
+        )
+      end
+
+      it "gives each wallet the usage of the events it paid for, rather than a share of the charge by money" do
+        expect(entries).to eq([
+          {wallet_id: second_wallet_id, units: "90.0", events_count: 50, amount_cents: 700},
+          {wallet_id: first_wallet_id, units: "15.0", events_count: 6, amount_cents: 150}
+        ])
+      end
+    end
+
     context "when the units carry decimals" do
       let(:wallet_amounts) { {billable_metric.id => {second_wallet_id => 600, first_wallet_id => 1050}} }
       let(:usage) do
