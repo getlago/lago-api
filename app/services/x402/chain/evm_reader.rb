@@ -11,7 +11,7 @@ module X402
       SECONDS_PER_BLOCK = 2
       MARGIN_BLOCKS = 150
       LOOKBACK = 10.minutes
-      LOG_CHUNK_BLOCKS = 1_000
+      LOG_CHUNK_BLOCKS = 200
       MAX_LOG_CHUNKS = 50
       MAX_BOUND_ATTEMPTS = 3
 
