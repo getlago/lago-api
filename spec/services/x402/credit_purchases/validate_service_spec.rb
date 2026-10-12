@@ -373,8 +373,8 @@ describe X402::CreditPurchases::ValidateService do
           end
 
           context "with sub-cent dust above it" do
-            let(:x402_evm_requirements) { super().merge("amount" => "10000005") }
-            let(:x402_evm_payment) { super().deep_merge("payload" => {"authorization" => {"value" => "10000005"}}) }
+            let(:x402_evm_requirements) { super().merge("amount" => "10005000") }
+            let(:x402_evm_payment) { super().deep_merge("payload" => {"authorization" => {"value" => "10005000"}}) }
 
             it "passes on the floored cents" do
               expect(result).to be_success
