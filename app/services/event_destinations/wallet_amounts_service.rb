@@ -20,11 +20,9 @@ module EventDestinations
       amounts = Hash.new { |hash, metric_key| hash[metric_key] = Hash.new(0) }
 
       active_wallets.each do |wallet|
-        wallet.ongoing_billable_metric_amounts.fetch(subscription.id, {}).each do |period, by_metric|
-          next unless in_window?(period)
-
-          by_metric.each { |metric_key, cents| amounts[metric_key][wallet.id] += cents }
-        end
+        wallet.ongoing_billable_metric_amounts.fetch(subscription.id, {})
+          .select { |period, _by_metric| in_window?(period) }
+          .each_value { |by_metric| by_metric.each { |metric_key, cents| amounts[metric_key][wallet.id] += cents } }
       end
 
       billed_amounts.each { |(metric_key, wallet_id), cents| amounts[metric_key][wallet_id] += cents }

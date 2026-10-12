@@ -101,15 +101,9 @@ RSpec.describe EventDestinations::CustomerFullUsage::RefreshedService do
     # records the next wallet taking over, and the lifetime record attributes each part.
     context "with an invoice paid by one wallet and ongoing usage on the next" do
       let!(:charge) { create(:standard_charge, plan:, billable_metric:, organization:, properties: {amount: "10"}) }
-      let(:first_wallet) do
-        create(:wallet, :with_inbound_transaction, customer:, organization:, priority: 1, balance_cents: 1000, credits_balance: 10.0)
-      end
-      let(:second_wallet) do
-        create(:wallet, :with_inbound_transaction, customer:, organization:, priority: 2, balance_cents: 5000, credits_balance: 50.0)
-      end
-      let(:past_invoice) do
-        create(:invoice, customer:, organization:, status: :finalized, currency: "EUR", total_amount_cents: 1000, taxes_amount_cents: 0)
-      end
+      let(:first_wallet) { create(:wallet, :with_inbound_transaction, customer:, organization:, priority: 1, balance_cents: 1000, credits_balance: 10.0) }
+      let(:second_wallet) { create(:wallet, :with_inbound_transaction, customer:, organization:, priority: 2, balance_cents: 5000, credits_balance: 50.0) }
+      let(:past_invoice) { create(:invoice, customer:, organization:, status: :finalized, currency: "EUR", total_amount_cents: 1000, taxes_amount_cents: 0) }
 
       before do
         first_wallet

@@ -34,9 +34,7 @@ RSpec.describe EventDestinations::WalletAmountsService do
   end
 
   context "with a terminated wallet that paid in the period" do
-    let(:terminated_wallet) do
-      create(:wallet, :terminated, customer:, organization:, ongoing_billable_metric_amounts: {subscription.id => {period => {billable_metric_id => 999}}})
-    end
+    let(:terminated_wallet) { create(:wallet, :terminated, customer:, organization:, ongoing_billable_metric_amounts: {subscription.id => {period => {billable_metric_id => 999}}}) }
 
     before { bill(wallet: terminated_wallet, amounts: {billable_metric_id => 100}) }
 
