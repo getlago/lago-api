@@ -271,3 +271,14 @@ To create a webhook:
   - To create Entitlement::Feature model, use `:feature`
   - To create Entitlement::Privilege model, use `:privilege`
   - To create Entitlement::Entitlement model, use `:entitlement`
+
+## TestProf
+
+Specs use [TestProf](https://test-prof.evilmartians.io) helpers to create shared records once per example group instead of once per example.
+
+- Use `let_it_be` for records that several examples read and do not change (organization, customer, plan, billable metric). Keep `let` for records an example builds differently or that depend on a `let`: a `let_it_be` block cannot read a `let`.
+- `let_it_be` records are frozen by default (`default_modifiers[:freeze] = true` in `spec/spec_helper.rb`). When an example or the code under test updates a shared record, add `refind: true` (`let_it_be(:plan, refind: true)`); `reload: true` fails on a frozen record. Add `refind: true` only to the records that are updated, since each refind reloads the record before every example.
+- Use `before_all` for setup that only needs to exist (for example `before_all { create_default(:billable_metric) }`).
+- `create_default(:organization)` makes factories reuse that record for their association. A record that must belong to another organization then needs it passed explicitly (`create(:invoice, organization: create(:organization))`), otherwise an "other organization" example silently uses the default one.
+- Declare a `let_it_be` after the records it depends on, so a record created through `create_default` does not end up in an extra organization.
+- Specs with `transaction: false` truncate tables, which removes records created by `let_it_be` and `before_all`. Keep `let` in those groups.
