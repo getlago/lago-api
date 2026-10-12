@@ -165,6 +165,26 @@ RSpec.describe Wallets::CreateService do
       end
     end
 
+    context "with a payment_term" do
+      let(:params) { super().merge(payment_term: {term_type: "day_of_month", day_of_month: 5}) }
+
+      it "stores the normalized term" do
+        expect(service_result).to be_success
+        expect(service_result.wallet.payment_term).to eq("term_type" => "day_of_month", "day_of_month" => 5, "month_offset" => 1)
+      end
+
+      context "when the payment_term is invalid" do
+        let(:params) { super().merge(payment_term: {term_type: "unknown"}) }
+
+        it "returns a validation error without creating the wallet" do
+          expect { service_result }.not_to change(Wallet, :count)
+
+          expect(service_result).not_to be_success
+          expect(service_result.error.messages[:payment_term]).to eq(["invalid_term_type"])
+        end
+      end
+    end
+
     context "when purchase_order_number is too long" do
       let(:params) do
         super().merge(purchase_order_number: "a" * 256)

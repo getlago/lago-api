@@ -552,4 +552,44 @@ RSpec.describe Mutations::Wallets::Create, :premium do
       expect(result["errors"].first["extensions"]["code"]).to eq("feature_unavailable")
     end
   end
+
+  context "with payment_term" do
+    let(:payment_term_mutation) do
+      <<~GQL
+        mutation($input: CreateCustomerWalletInput!) {
+          createCustomerWallet(input: $input) {
+            id
+            paymentTerm { termType days dayOfMonth monthOffset }
+          }
+        }
+      GQL
+    end
+
+    def create_wallet(payment_term)
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: payment_term_mutation,
+        variables: {
+          input: {customerId: customer.id, rateAmount: "1", paidCredits: "0", grantedCredits: "0", priority: 50, currency: "EUR", paymentTerm: payment_term}
+        }
+      )
+    end
+
+    it "persists and returns the normalized term" do
+      response = create_wallet({termType: "day_of_month", dayOfMonth: 20})
+      data = response.dig("data", "createCustomerWallet")
+
+      expect(response["errors"]).to be_nil
+      expect(data["paymentTerm"]).to eq("termType" => "day_of_month", "days" => nil, "dayOfMonth" => 20, "monthOffset" => 1)
+      expect(Wallet.find(data["id"]).payment_term).to eq("term_type" => "day_of_month", "day_of_month" => 20, "month_offset" => 1)
+    end
+
+    it "rejects a term missing required days" do
+      response = create_wallet({termType: "net"})
+
+      expect_unprocessable_entity(response)
+    end
+  end
 end

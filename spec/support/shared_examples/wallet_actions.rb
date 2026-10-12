@@ -69,6 +69,28 @@ RSpec.shared_examples "a wallet create endpoint" do
     )
   end
 
+  context "with a payment_term" do
+    before { create_params[:payment_term] = {term_type: "net_end_of_month", days: 15} }
+
+    it "stores and returns the payment_term" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:wallet][:payment_term]).to eq(term_type: "net_end_of_month", days: 15)
+    end
+
+    context "when the payment_term is not an object" do
+      before { create_params[:payment_term] = "net 15" }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details][:payment_term]).to eq(["invalid_format"])
+      end
+    end
+  end
+
   context "when paid_credit is below the minimum" do
     let(:create_params) do
       {
@@ -941,6 +963,32 @@ RSpec.shared_examples "a wallet update endpoint" do
       subject
       expect(response).to have_http_status(:not_found)
       expect(SendWebhookJob).not_to have_been_enqueued.with("wallet.updated", Wallet)
+    end
+  end
+
+  context "with a payment_term" do
+    before { update_params[:payment_term] = {term_type: "end_of_month"} }
+
+    it "updates and returns the payment_term" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:wallet][:payment_term]).to eq(term_type: "end_of_month")
+      expect(wallet.reload.payment_term).to eq("term_type" => "end_of_month")
+    end
+
+    context "when the payment_term is null" do
+      let(:wallet) { create(:wallet, customer:, payment_term: {"term_type" => "net", "days" => 30}) }
+
+      before { update_params[:payment_term] = nil }
+
+      it "clears the payment_term" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet][:payment_term]).to be_nil
+        expect(wallet.reload.payment_term).to be_nil
+      end
     end
   end
 

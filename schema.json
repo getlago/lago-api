@@ -16215,6 +16215,18 @@
               "deprecationReason": null
             },
             {
+              "name": "paymentTerm",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "PaymentTermInput",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "priority",
               "description": null,
               "type": {
@@ -85303,6 +85315,18 @@
               "deprecationReason": null
             },
             {
+              "name": "paymentTerm",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "PaymentTermInput",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "priority",
               "description": null,
               "type": {
@@ -91931,6 +91955,18 @@
               "type": {
                 "kind": "ENUM",
                 "name": "PaymentMethodTypeEnum",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "paymentTerm",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "OBJECT",
+                "name": "PaymentTerm",
                 "ofType": null
               },
               "isDeprecated": false,

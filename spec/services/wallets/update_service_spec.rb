@@ -55,6 +55,35 @@ RSpec.describe Wallets::UpdateService do
       end
     end
 
+    context "when a payment_term is sent" do
+      let(:params) { super().merge(payment_term: {term_type: "end_of_month"}) }
+
+      it "updates the wallet payment term" do
+        expect(result).to be_success
+        expect(result.wallet.reload.payment_term).to eq("term_type" => "end_of_month")
+      end
+
+      context "when the payment_term is null" do
+        let(:params) { super().merge(payment_term: nil) }
+
+        before { wallet.update!(payment_term: {"term_type" => "net", "days" => 30}) }
+
+        it "clears the wallet payment term" do
+          expect(result).to be_success
+          expect(result.wallet.reload.payment_term).to be_nil
+        end
+      end
+
+      context "when the payment_term is invalid" do
+        let(:params) { super().merge(payment_term: {term_type: "net", days: -1}) }
+
+        it "returns a validation error" do
+          expect(result).to be_failure
+          expect(result.error.messages[:payment_term]).to eq(["invalid_days"])
+        end
+      end
+    end
+
     context "when purchase_order_number is too long" do
       let(:params) do
         super().merge(purchase_order_number: "a" * 256)

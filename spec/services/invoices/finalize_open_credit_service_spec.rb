@@ -33,6 +33,31 @@ RSpec.describe Invoices::FinalizeOpenCreditService do
       expect(Utils::ActivityLog).to have_produced("invoice.paid_credit_added").with(invoice)
     end
 
+    context "when the invoice carries a wallet payment term" do
+      let(:invoice) do
+        create(
+          :invoice,
+          organization:,
+          invoice_type: "credit",
+          status: :open,
+          issuing_date: 3.days.ago.to_date,
+          payment_due_date: 7.days.from_now.to_date,
+          payment_term: {"term_type" => "net", "days" => 10},
+          payment_term_source: "wallet",
+          net_payment_term: 10
+        )
+      end
+
+      it "moves both dates to the payment day and keeps the term snapshot" do
+        result = described_class.call(invoice:)
+
+        expect(result.invoice.issuing_date).to be_today
+        expect(result.invoice.payment_due_date).to be_today
+        expect(result.invoice.payment_term).to eq("term_type" => "net", "days" => 10)
+        expect(result.invoice.payment_term_source).to eq("wallet")
+      end
+    end
+
     context "when invoice is already finalized" do
       let(:invoice) { create(:invoice, organization:, invoice_type: "credit", status: :finalized) }
 

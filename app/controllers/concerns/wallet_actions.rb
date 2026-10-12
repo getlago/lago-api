@@ -2,6 +2,7 @@
 
 module WalletActions
   include Pagination
+  include RawPaymentTermParams
   extend ActiveSupport::Concern
 
   def wallet_create(customer)
@@ -95,51 +96,71 @@ module WalletActions
   private
 
   def input_params
-    params.require(:wallet).permit(
-      :rate_amount,
-      :name,
-      :code,
-      :priority,
-      :currency,
-      :paid_credits,
-      :granted_credits,
-      :expiration_at,
-      :invoice_requires_successful_payment,
-      :paid_top_up_min_amount_cents,
-      :paid_top_up_max_amount_cents,
-      :ignore_paid_top_up_limits_on_creation,
-      :purchase_order_number,
-      :transaction_name,
-      :transaction_priority,
-      :billing_entity_code,
-      :billing_entity_id,
-      metadata: {},
-      transaction_metadata: [
-        :key,
-        :value
-      ],
-      recurring_transaction_rules: [
-        :granted_credits,
-        :grants_target_top_up,
-        :interval,
-        :method,
+    permitted =
+      params.require(:wallet).permit(
+        :rate_amount,
+        :name,
+        :code,
+        :priority,
+        :currency,
         :paid_credits,
-        :started_at,
+        :granted_credits,
         :expiration_at,
-        :target_ongoing_balance,
-        :threshold_credits,
-        :trigger,
         :invoice_requires_successful_payment,
-        :ignore_paid_top_up_limits,
+        :paid_top_up_min_amount_cents,
+        :paid_top_up_max_amount_cents,
+        :ignore_paid_top_up_limits_on_creation,
         :purchase_order_number,
         :transaction_name,
-        invoice_custom_section: [
-          :skip_invoice_custom_sections,
-          {invoice_custom_section_codes: []}
-        ],
+        :transaction_priority,
+        :billing_entity_code,
+        :billing_entity_id,
+        metadata: {},
         transaction_metadata: [
           :key,
           :value
+        ],
+        recurring_transaction_rules: [
+          :granted_credits,
+          :grants_target_top_up,
+          :interval,
+          :method,
+          :paid_credits,
+          :started_at,
+          :expiration_at,
+          :target_ongoing_balance,
+          :threshold_credits,
+          :trigger,
+          :invoice_requires_successful_payment,
+          :ignore_paid_top_up_limits,
+          :purchase_order_number,
+          :transaction_name,
+          invoice_custom_section: [
+            :skip_invoice_custom_sections,
+            {invoice_custom_section_codes: []}
+          ],
+          transaction_metadata: [
+            :key,
+            :value
+          ],
+          payment_method: [
+            :payment_method_type,
+            :payment_method_id
+          ],
+          connections: [
+            payment: [:behavior, :code],
+            tax: [:behavior, :code],
+            accounting: [:behavior, :code],
+            crm: [:behavior, :code]
+          ]
+        ],
+        applies_to: [
+          fee_types: [],
+          billable_metric_codes: []
+        ],
+        invoice_custom_section: [
+          :skip_invoice_custom_sections,
+          {invoice_custom_section_codes: []}
         ],
         payment_method: [
           :payment_method_type,
@@ -151,63 +172,66 @@ module WalletActions
           accounting: [:behavior, :code],
           crm: [:behavior, :code]
         ]
-      ],
-      applies_to: [
-        fee_types: [],
-        billable_metric_codes: []
-      ],
-      invoice_custom_section: [
-        :skip_invoice_custom_sections,
-        {invoice_custom_section_codes: []}
-      ],
-      payment_method: [
-        :payment_method_type,
-        :payment_method_id
-      ],
-      connections: [
-        payment: [:behavior, :code],
-        tax: [:behavior, :code],
-        accounting: [:behavior, :code],
-        crm: [:behavior, :code]
-      ]
-    )
+      )
+
+    with_raw_payment_term(permitted, params[:wallet])
   end
 
   def update_params
-    params.require(:wallet).permit(
-      :name,
-      :code,
-      :priority,
-      :expiration_at,
-      :invoice_requires_successful_payment,
-      :paid_top_up_min_amount_cents,
-      :paid_top_up_max_amount_cents,
-      :billing_entity_code,
-      :purchase_order_number,
-      metadata: {},
-      recurring_transaction_rules: [
-        :lago_id,
-        :interval,
-        :method,
-        :started_at,
+    permitted =
+      params.require(:wallet).permit(
+        :name,
+        :code,
+        :priority,
         :expiration_at,
-        :target_ongoing_balance,
-        :threshold_credits,
-        :trigger,
-        :paid_credits,
-        :granted_credits,
-        :grants_target_top_up,
         :invoice_requires_successful_payment,
-        :ignore_paid_top_up_limits,
+        :paid_top_up_min_amount_cents,
+        :paid_top_up_max_amount_cents,
+        :billing_entity_code,
         :purchase_order_number,
-        :transaction_name,
+        metadata: {},
+        recurring_transaction_rules: [
+          :lago_id,
+          :interval,
+          :method,
+          :started_at,
+          :expiration_at,
+          :target_ongoing_balance,
+          :threshold_credits,
+          :trigger,
+          :paid_credits,
+          :granted_credits,
+          :grants_target_top_up,
+          :invoice_requires_successful_payment,
+          :ignore_paid_top_up_limits,
+          :purchase_order_number,
+          :transaction_name,
+          invoice_custom_section: [
+            :skip_invoice_custom_sections,
+            {invoice_custom_section_codes: []}
+          ],
+          transaction_metadata: [
+            :key,
+            :value
+          ],
+          payment_method: [
+            :payment_method_type,
+            :payment_method_id
+          ],
+          connections: [
+            payment: [:behavior, :code],
+            tax: [:behavior, :code],
+            accounting: [:behavior, :code],
+            crm: [:behavior, :code]
+          ]
+        ],
+        applies_to: [
+          fee_types: [],
+          billable_metric_codes: []
+        ],
         invoice_custom_section: [
           :skip_invoice_custom_sections,
           {invoice_custom_section_codes: []}
-        ],
-        transaction_metadata: [
-          :key,
-          :value
         ],
         payment_method: [
           :payment_method_type,
@@ -219,26 +243,9 @@ module WalletActions
           accounting: [:behavior, :code],
           crm: [:behavior, :code]
         ]
-      ],
-      applies_to: [
-        fee_types: [],
-        billable_metric_codes: []
-      ],
-      invoice_custom_section: [
-        :skip_invoice_custom_sections,
-        {invoice_custom_section_codes: []}
-      ],
-      payment_method: [
-        :payment_method_type,
-        :payment_method_id
-      ],
-      connections: [
-        payment: [:behavior, :code],
-        tax: [:behavior, :code],
-        accounting: [:behavior, :code],
-        crm: [:behavior, :code]
-      ]
-    )
+      )
+
+    with_raw_payment_term(permitted, params[:wallet])
   end
 
   def render_wallet(wallet)
