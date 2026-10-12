@@ -5,9 +5,10 @@ require "rails_helper"
 RSpec.describe BillableMetrics::DestroyService do
   subject(:destroy_service) { described_class.new(metric: billable_metric) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create_default(:organization) }
   let(:billable_metric) { create(:billable_metric, organization:) }
+  let(:membership) { create(:membership) }
+
   let(:subscription) { create(:subscription) }
   let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:) }
 

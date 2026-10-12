@@ -7,9 +7,8 @@ RSpec.describe AppliedCoupons::CreateService do
     described_class.new(customer:, coupon:, params:)
   end
 
+  let(:organization) { create_default(:organization) }
   let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-
   let(:customer) { create(:customer, organization:) }
   let(:coupon) { create(:coupon, status: "active", organization:) }
 

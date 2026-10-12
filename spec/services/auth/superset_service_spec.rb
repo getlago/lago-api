@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Auth::SupersetService do
   subject(:service) { described_class.new(organization:, user:) }
 
-  let(:organization) { create(:organization, name: "Test Org") }
+  let_it_be(:organization) { create(:organization, name: "Test Org") }
   let(:user) { nil }
 
   let(:superset_url) { "http://localhost:8089" }

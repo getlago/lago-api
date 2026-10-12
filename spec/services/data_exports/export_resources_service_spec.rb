@@ -5,13 +5,17 @@ require "rails_helper"
 RSpec.describe DataExports::ExportResourcesService do
   subject(:result) { described_class.call(data_export:, batch_size:) }
 
-  let(:organization) { data_export.organization }
-  let(:batch_size) { 100 }
   let(:data_export) { create :data_export, resource_type: "invoices", format: "csv" }
+  let(:batch_size) { 100 }
 
-  let(:issuing_date) { Date.new(2023, 12, 1) }
+  let_it_be(:organization) { create_default(:organization) }
 
-  let(:invoice) { create(:invoice, organization:, issuing_date:) }
+  before_all do
+    create_default(:customer)
+  end
+
+  let_it_be(:issuing_date) { Date.new(2023, 12, 1) }
+  let_it_be(:invoice) { create(:invoice, organization:, issuing_date:) }
 
   before do
     invoice

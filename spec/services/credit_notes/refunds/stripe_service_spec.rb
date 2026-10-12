@@ -5,12 +5,11 @@ require "rails_helper"
 RSpec.describe CreditNotes::Refunds::StripeService do
   subject(:stripe_service) { described_class.new(credit_note) }
 
-  let(:customer) { create(:customer, payment_provider_code: code) }
-  let(:organization) { customer.organization }
-  let(:invoice) { create(:invoice, customer:, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:code) { "stripe_1" }
+  let_it_be(:customer) { create(:customer, payment_provider_code: code) }
+  let_it_be(:invoice) { create(:invoice, customer:, organization:) }
   let(:stripe_payment_provider) { create(:stripe_provider, organization:, code:) }
-  let(:stripe_customer) { create(:stripe_customer, customer:) }
-  let(:code) { "stripe_1" }
   let(:payment) do
     create(
       :payment,
@@ -22,7 +21,6 @@ RSpec.describe CreditNotes::Refunds::StripeService do
       payable: credit_note.invoice
     )
   end
-
   let(:credit_note) do
     create(
       :credit_note,
@@ -33,6 +31,7 @@ RSpec.describe CreditNotes::Refunds::StripeService do
       refund_status: :pending
     )
   end
+  let(:stripe_customer) { create(:stripe_customer, customer:) }
 
   describe "#create" do
     before do
