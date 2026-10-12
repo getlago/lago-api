@@ -112,10 +112,7 @@ module X402
       end
 
       def valid_rate_amount?
-        rate_amount = shape[:rate_amount]
-        return false unless rate_amount.is_a?(String) || rate_amount.is_a?(Numeric)
-
-        Wallet.type_for_attribute(:rate_amount).cast(rate_amount)&.positive? || false
+        Wallet.new(rate_amount: shape[:rate_amount]).tap(&:validate).errors[:rate_amount].empty?
       end
 
       def valid_limits?

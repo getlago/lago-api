@@ -193,6 +193,14 @@ describe X402::CreditPurchases::ValidateService do
         end
       end
 
+      context "with a rate amount the wallet does not parse" do
+        let(:wallet_shape) { super().merge(rate_amount: "1,5") }
+
+        it "refuses the rate" do
+          expect(result.error.messages).to eq(wallet: ["invalid_rate_amount"])
+        end
+      end
+
       context "with a boolean rate amount" do
         let(:wallet_shape) { super().merge(rate_amount: true) }
 
