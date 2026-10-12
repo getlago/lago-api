@@ -91,6 +91,11 @@ RSpec.describe BillingEntity do
     it { is_expected.to allow_value(nil).for(:document_number_prefix).on(:create) }
     it { is_expected.to validate_length_of(:document_number_prefix).is_at_least(1).is_at_most(10).on(:create) }
 
+    it "validates net_payment_term as a non-negative integer" do
+      expect(billing_entity).to allow_values(0, 30).for(:net_payment_term)
+      expect(billing_entity).not_to allow_values(1.5, -1).for(:net_payment_term)
+    end
+
     it "is not valid without name" do
       billing_entity.name = nil
       expect(billing_entity).not_to be_valid
