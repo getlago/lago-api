@@ -197,13 +197,17 @@ module Events
       # The pricing buckets Fees::ChargeService computes the charge fees for, keyed by filter, down
       # to the ones to aggregate. The conditions of those still ignore the events of every filter
       # they rank behind, aggregated or not.
+      #
+      # They keep the charge's order whatever order the filters to aggregate come in: the
+      # pre-filter answers them in no set order, and the batches, which the incremental cache keeps
+      # rows for, have to be the same from one computation to the next.
       def pricing_buckets
         @pricing_buckets ||= begin
           buckets = Fees::ChargeService::Sources::Charge.new(charge:, boundaries: nil)
             .pricing_buckets
             .index_by { filter_key(it.charge_filter&.id) }
 
-          filter_keys ? buckets.slice(*filter_keys) : buckets
+          filter_keys ? buckets.select { |key, _| filter_keys.include?(key) } : buckets # rubocop:disable Style/HashSlice -- slice would take the order of filter_keys
         end
       end
 

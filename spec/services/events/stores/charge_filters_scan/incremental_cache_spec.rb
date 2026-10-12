@@ -84,10 +84,10 @@ RSpec.describe Events::Stores::ChargeFiltersScan::IncrementalCache, clickhouse: 
 
   # One current usage computation: the charge read again with its filters and a new scan, as
   # Fees::ChargeService does on each call.
-  def totals(incremental: true)
+  def totals(incremental: true, filter_ids: nil)
     loaded_charge = Charge.includes(filters: {values: :billable_metric_filter}).find(charge.id)
     cache = (described_class.new(subscription:, charge: loaded_charge) if incremental)
-    scan = Events::Stores::ChargeFiltersScan.new(charge: loaded_charge, incremental: cache)
+    scan = Events::Stores::ChargeFiltersScan.new(charge: loaded_charge, filter_ids:, incremental: cache)
     pricing_buckets = Fees::ChargeService::Sources::Charge.new(charge: loaded_charge, boundaries: nil).pricing_buckets
 
     pricing_buckets.to_h do |item|
@@ -238,6 +238,22 @@ RSpec.describe Events::Stores::ChargeFiltersScan::IncrementalCache, clickhouse: 
     it "reads the base again under the new conditions" do
       expect(computation).to eq(totals(incremental: false))
       expect(reads.first).to eq({from_datetime: boundaries[:from_datetime], to_datetime: nil, before: cut})
+    end
+  end
+
+  context "when the pre-filter answers the filters to aggregate in another order" do
+    let(:filter_ids) { charge.filters.map(&:id) + [nil] }
+
+    before do
+      reads.clear
+      totals(filter_ids:)
+    end
+
+    it "keeps the base" do
+      reads.clear
+
+      expect(totals(filter_ids: filter_ids.reverse)).to eq(totals(incremental: false))
+      expect(reads).to eq([{from_datetime: cut, to_datetime: boundaries[:to_datetime], before: nil}])
     end
   end
 
