@@ -3,6 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Api::BaseController, type: :controller do
+  let_it_be(:organization) { create_default(:organization) }
   controller do
     def index
       render nothing: true
