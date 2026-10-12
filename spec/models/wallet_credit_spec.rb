@@ -112,6 +112,22 @@ RSpec.describe WalletCredit do
         end
       end
     end
+
+    context "when amount cents ends in half a cent" do
+      let(:amount_cents) { BigDecimal("1234.5") }
+
+      describe "#credit_amount" do
+        it "returns the rounded credit_amount" do
+          expect(subject.credit_amount).to eq(12.35)
+        end
+      end
+
+      describe "#amount" do
+        it "rounds the amount up" do
+          expect(subject.amount).to eq(12.35)
+        end
+      end
+    end
   end
 
   describe ".rounds_to_zero?" do
