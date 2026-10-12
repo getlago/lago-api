@@ -128,6 +128,29 @@ describe X402::Cdp::AccountsClient do
     end
   end
 
+  ["{}", "[]", "null", "", {address: "0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359", name: "other"}.to_json].each do |answer|
+    context "when CDP answers 200 with #{answer.inspect}" do
+      let(:body) { answer }
+
+      it "is unavailable" do
+        expect(lookup).to have_attributes(outcome: :unavailable, http_status: 200)
+      end
+
+      it "logs the malformed answer" do
+        lookup
+        expect(Rails.logger).to have_received(:warn).with(include("family=evm", "reason=malformed_response", "status=200"))
+      end
+    end
+  end
+
+  context "when CDP echoes the address in lowercase" do
+    let(:body) { {address: address.downcase, name: "payout"}.to_json }
+
+    it "finds the account" do
+      expect(lookup).to have_attributes(outcome: :found)
+    end
+  end
+
   context "when CDP does not answer" do
     before { stub_request(:get, cdp_account_url(family, address)).to_raise(Net::ReadTimeout) }
 

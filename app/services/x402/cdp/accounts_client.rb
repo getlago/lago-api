@@ -19,16 +19,21 @@ module X402
         path = "#{PATHS.fetch(family)}/#{address}"
         token = Jwt.generate(api_key_id:, api_key_secret:, request_method: "GET", request_host: HOST, request_path: path)
 
-        request(family, path, {"Authorization" => "Bearer #{token}"})
+        request(family, path, address, {"Authorization" => "Bearer #{token}"})
       end
 
       private
 
       attr_reader :api_key_id, :api_key_secret
 
-      def request(family, path, headers)
-        LagoHttpClient::Client.new("https://#{HOST}#{path}", open_timeout: OPEN_TIMEOUT, read_timeout: READ_TIMEOUT, max_retries: 0).get(headers:)
-        Lookup.new(family:, outcome: :found, http_status: 200, error_type: nil, correlation_id: nil)
+      def request(family, path, address, headers)
+        answer = LagoHttpClient::Client.new("https://#{HOST}#{path}", open_timeout: OPEN_TIMEOUT, read_timeout: READ_TIMEOUT, max_retries: 0).get(headers:)
+
+        if answer.is_a?(Hash) && X402::Network.normalize_address(answer["address"], family:) == address
+          Lookup.new(family:, outcome: :found, http_status: 200, error_type: nil, correlation_id: nil)
+        else
+          unavailable(family, reason: "malformed_response", status: 200)
+        end
       rescue LagoHttpClient::HttpError => e
         refused(family, e.error_code.to_i, e.error_body)
       rescue JSON::ParserError
