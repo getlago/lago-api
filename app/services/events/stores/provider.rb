@@ -131,7 +131,7 @@ module Events
 
       # One scan per charge, shared by the stores of all its filters so that the first one to
       # aggregate reads the events for every other. The incremental charge cache lives in the scan,
-      # so it takes every count and sum charge, with or without filters.
+      # so it takes every count, sum, max and latest charge, with or without filters.
       def charge_filters_scan(metered_item:, filters:, aggregated_filter_ids:)
         return unless scan_available?
         return unless incremental_charge_cache || charge_filters_single_scan?
@@ -149,7 +149,7 @@ module Events
         key = [charge.id, aggregated_filter_ids]
         return @charge_filters_scans[key] if @charge_filters_scans.key?(key)
 
-        @charge_filters_scans[key] = if ChargeFiltersScan.supported_charge?(charge, without_filters: incremental_charge_cache)
+        @charge_filters_scans[key] = if ChargeFiltersScan.supported_charge?(charge, incremental: incremental_charge_cache)
           ChargeFiltersScan.new(charge:, filter_ids: aggregated_filter_ids, incremental: incremental_cache(charge))
         end
       end

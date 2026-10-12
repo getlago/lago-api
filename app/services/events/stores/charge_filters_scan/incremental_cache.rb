@@ -12,6 +12,10 @@ module Events
       # - the base, `timestamp < cut`, kept here and moved forward one slice at a time;
       # - the tail, `timestamp >= cut`, read on every computation.
       #
+      # The rows of the base and the tail combine as the rows of two batches do: a sum of sums, a max
+      # of maxes, and the latest value of the tail if it has one, since its events are all more
+      # recent than those of the base.
+      #
       # Duplicates share their timestamp (it is part of the deduplication key), so an event and
       # the copies replacing it always fall on the same side of the cut, and each read deduplicates
       # its own side with FINAL.
@@ -21,7 +25,7 @@ module Events
       # full read. Checking it reads the `enriched_at` of the base's events, which the
       # `idx_enriched_at` skip index narrows to the granules ingested since.
       class IncrementalCache
-        CACHE_KEY_VERSION = "1"
+        CACHE_KEY_VERSION = "2"
 
         # Events arrive within seconds of their timestamp, so a cut a quarter of an hour behind
         # is rarely crossed by a late event, and the tail stays under half an hour of events.
@@ -134,16 +138,12 @@ module Events
         end
 
         def merge(left, right)
+          aggregation_type = charge.billable_metric.aggregation_type
+
           (left.keys | right.keys).index_with do |filter_key|
             (left.fetch(filter_key, []) + right.fetch(filter_key, []))
               .group_by(&:groups)
-              .map do |groups, rows|
-                ChargeFiltersScan::Row.new(
-                  groups:,
-                  value: rows.sum(BigDecimal(0), &:value),
-                  events_count: rows.sum(0, &:events_count)
-                )
-              end
+              .map { |groups, rows| ChargeFiltersScan.combine(aggregation_type, groups, rows) }
           end
         end
 
@@ -171,7 +171,7 @@ module Events
             "watermark" => entry.watermark.iso8601(6),
             "built_at" => entry.built_at.iso8601(6),
             "rows" => entry.rows.transform_values do |rows|
-              rows.map { [it.groups, it.value.to_s, it.events_count] }
+              rows.map { [it.groups, it.value&.to_s, it.events_count, it.timestamp] }
             end
           }
         end
@@ -182,8 +182,8 @@ module Events
             watermark: Time.zone.parse(payload["watermark"]),
             built_at: Time.zone.parse(payload["built_at"]),
             rows: payload["rows"].transform_values do |rows|
-              rows.map do |groups, value, events_count|
-                ChargeFiltersScan::Row.new(groups:, value: BigDecimal(value), events_count:)
+              rows.map do |groups, value, events_count, timestamp|
+                ChargeFiltersScan::Row.new(groups:, value: value && BigDecimal(value), events_count:, timestamp:)
               end
             end
           )

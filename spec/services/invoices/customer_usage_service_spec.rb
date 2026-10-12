@@ -1234,6 +1234,38 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         expect(expected.first[1]).to eq(15)
       end
     end
+
+    context "with a max charge" do
+      let(:billable_metric) { create(:max_billable_metric, organization:, field_name: "value") }
+
+      before do
+        usage_with_flag(true)
+        ingest("tr_3", now - 2.minutes, "us", 1)
+      end
+
+      it "keeps the max of the previous computation" do
+        expected = usage_with_flag(false)
+
+        expect(usage_with_flag(true)).to eq(expected)
+        expect(expected.map { it[1] }).to match_array([0, 3, 5])
+      end
+    end
+
+    context "with a latest charge" do
+      let(:billable_metric) { create(:latest_billable_metric, organization:, field_name: "value") }
+
+      before do
+        usage_with_flag(true)
+        ingest("tr_3", now - 2.minutes, "us", 1)
+      end
+
+      it "answers the value of the new latest event" do
+        expected = usage_with_flag(false)
+
+        expect(usage_with_flag(true)).to eq(expected)
+        expect(expected.map { it[1] }).to match_array([0, 1, 5])
+      end
+    end
   end
 
   describe "with the usage buckets", clickhouse: {clean_before: true} do

@@ -20,9 +20,23 @@ module Events
     # never run.
     #
     # The groups are the union of the pricing group keys of every filter, and each filter's store
-    # sums the rows back to its own keys, which count and sum allow.
+    # combines the rows back to its own keys, which count, sum, max and latest allow: a sum of
+    # sums, a max of maxes, the latest of the latest values.
     class ChargeFiltersScan
       SUPPORTED_AGGREGATION_TYPES = %w[count_agg sum_agg].freeze
+
+      # Only read with the incremental cache, so that the organizations reading the charges with
+      # filters in one scan keep their max and latest charges on the filter stores.
+      INCREMENTAL_AGGREGATION_TYPES = %w[count_agg sum_agg max_agg latest_agg].freeze
+
+      # The store calls each aggregation type is answered for. The rows of a charge hold the value
+      # its aggregation needs, a max for a max charge, so they answer no other.
+      OPERATIONS = {
+        "count_agg" => %i[count sum],
+        "sum_agg" => %i[count sum],
+        "max_agg" => %i[count max],
+        "latest_agg" => %i[count last]
+      }.freeze
 
       # Every filter adds its condition to the query and to the work done on each event, so
       # filters are read in batches: a query stays the size of the filter stores' ones, however
@@ -33,17 +47,41 @@ module Events
       DEFAULT_FILTER_KEY = "default"
 
       Bucket = Data.define(:key, :matching_filters, :ignored_filters)
-      Row = Data.define(:groups, :value, :events_count)
+
+      # The aggregates of a filter's events sharing the same groups. `value` is the sum of their
+      # values, or their max, or the value of the latest of them, which `timestamp` (epoch
+      # milliseconds) dates. A max or a latest value is nil when the events have none.
+      Row = Data.define(:groups, :value, :events_count, :timestamp) do
+        def initialize(groups:, value:, events_count:, timestamp: nil)
+          super
+        end
+      end
 
       # A charge without filters only has the default bucket, which its own store reads as cheaply.
-      # The scan only takes one `without_filters` to keep its rows between computations (see
-      # IncrementalCache).
-      def self.supported_charge?(charge, without_filters: false)
+      # The scan only takes one when it keeps its rows between computations (see IncrementalCache).
+      def self.supported_charge?(charge, incremental: false)
         return false if charge.nil?
 
-        SUPPORTED_AGGREGATION_TYPES.include?(charge.billable_metric.aggregation_type) &&
+        types = incremental ? INCREMENTAL_AGGREGATION_TYPES : SUPPORTED_AGGREGATION_TYPES
+
+        types.include?(charge.billable_metric.aggregation_type) &&
           !charge.prorated? &&
-          (without_filters || charge.filters.size.positive?)
+          (incremental || charge.filters.size.positive?)
+      end
+
+      # The rows of the same groups read apart (in batches or windows) as one.
+      def self.combine(aggregation_type, groups, rows)
+        events_count = rows.sum(0, &:events_count)
+
+        case aggregation_type
+        when "max_agg"
+          Row.new(groups:, value: rows.filter_map(&:value).max, events_count:)
+        when "latest_agg"
+          latest = rows.max_by(&:timestamp)
+          Row.new(groups:, value: latest&.value, events_count:, timestamp: latest&.timestamp)
+        else
+          Row.new(groups:, value: rows.sum(BigDecimal(0), &:value), events_count:)
+        end
       end
 
       # `filter_ids` are the filters to aggregate, `nil` standing for the default bucket as in the
@@ -62,7 +100,9 @@ module Events
       # Only the calls the filter's own store would answer the same way: the scan is built from
       # the charge, so a store whose conditions were changed by its caller (a group filter on the
       # usage for instance) or which groups by a key the scan does not read keeps its own query.
-      def covers?(store)
+      def covers?(store, operation = :count)
+        return false unless OPERATIONS.fetch(aggregation_type, []).include?(operation)
+
         key = filter_key(store.charge_filter_id)
         return false unless batch_index.key?(key)
 
@@ -108,9 +148,47 @@ module Events
         end
       end
 
+      # Mirrors ClickhouseStore#max, which answers 0 without a value.
+      def max(store, with_count: true)
+        row = self.class.combine(aggregation_type, {}, rows_for(store))
+
+        BaseStore::AggregationResult.new(value: row.value || 0, events_count: (row.events_count if with_count))
+      end
+
+      def grouped_max(store, with_count: true)
+        grouped_rows(store, with_count:)
+      end
+
+      # Mirrors ClickhouseStore#last, which keeps a missing value nil.
+      def last(store, with_count: true)
+        row = self.class.combine(aggregation_type, {}, rows_for(store))
+
+        BaseStore::AggregationResult.new(value: row.value, events_count: (row.events_count if with_count))
+      end
+
+      def grouped_last(store, with_count: true)
+        grouped_rows(store, with_count:)
+      end
+
       private
 
       attr_reader :charge, :filter_keys, :incremental
+
+      def aggregation_type
+        charge.billable_metric.aggregation_type
+      end
+
+      def grouped_rows(store, with_count: true)
+        grouped_rows_for(store).map do |groups, rows|
+          row = self.class.combine(aggregation_type, groups, rows)
+
+          BaseStore::GroupedAggregationResult.new(
+            groups:,
+            value: row.value,
+            events_count: (row.events_count if with_count)
+          )
+        end
+      end
 
       def filter_key(charge_filter_id)
         charge_filter_id || DEFAULT_FILTER_KEY
@@ -202,15 +280,27 @@ module Events
           connection
             .select_all(scan_sql(store, batch:, from_datetime:, to_datetime:, before:))
             .rows
-            .each_with_object({}) do |(position, *groups, value, events_count), acc|
+            .each_with_object({}) do |(position, *columns), acc|
               filter_key = batch_keys(batch).fetch(position.to_i - 1)
+              groups = columns.first(group_keys.size)
+              value, events_count, timestamp = columns.drop(group_keys.size)
 
               (acc[filter_key] ||= []) << Row.new(
                 groups: group_keys.zip(groups).to_h,
-                value: BigDecimal((value || 0).to_s),
-                events_count: events_count.to_i
+                value: row_value(value),
+                events_count: events_count.to_i,
+                timestamp: timestamp&.to_i
               )
             end
+        end
+      end
+
+      # A sum without values is 0, as in the filter stores, while a max or a latest value stays nil.
+      def row_value(value)
+        if value.nil?
+          (aggregation_type == "max_agg" || aggregation_type == "latest_agg") ? nil : BigDecimal(0)
+        else
+          BigDecimal(value.to_s)
         end
       end
 
@@ -219,7 +309,7 @@ module Events
           store.deduplicated_events_sql(from_datetime:, to_datetime:, deduplicated_columns: %w[decimal_value properties], before:)
         else
           <<~SQL.squish
-            SELECT decimal_value, properties
+            SELECT #{(aggregation_type == "latest_agg") ? "decimal_value, properties, timestamp" : "decimal_value, properties"}
             FROM events_enriched
             WHERE #{store.deduplicated_events_where_sql(from_datetime:, to_datetime:, before:)}
           SQL
@@ -233,12 +323,29 @@ module Events
         <<~SQL.squish
           SELECT
             #{["filter_position", *group_columns].join(", ")},
-            sum(events_enriched.decimal_value),
-            count()
+            #{aggregates_sql}
           FROM (#{events_sql}) AS events_enriched
           ARRAY JOIN #{filter_positions_sql(store, batch)} AS filter_position
           GROUP BY #{["filter_position", *group_names].join(", ")}
         SQL
+      end
+
+      # The value, the events count and, for the latest value, its timestamp. The value is wrapped
+      # in a tuple for argMax, which would otherwise skip the events without one rather than
+      # answer nil for a latest event without a value, as ClickhouseStore#last does.
+      def aggregates_sql
+        case aggregation_type
+        when "max_agg"
+          "max(events_enriched.decimal_value), count()"
+        when "latest_agg"
+          <<~SQL.squish
+            tupleElement(argMax(tuple(events_enriched.decimal_value), events_enriched.timestamp), 1),
+            count(),
+            toUnixTimestamp64Milli(max(events_enriched.timestamp))
+          SQL
+        else
+          "sum(events_enriched.decimal_value), count()"
+        end
       end
 
       # The positions in the batch of the filters an event counts in. An event none of them keeps

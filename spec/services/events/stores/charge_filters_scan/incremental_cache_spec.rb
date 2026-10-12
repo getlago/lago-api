@@ -90,7 +90,15 @@ RSpec.describe Events::Stores::ChargeFiltersScan::IncrementalCache, clickhouse: 
     scan = Events::Stores::ChargeFiltersScan.new(charge: loaded_charge, incremental: cache)
 
     pricing_buckets.to_h do |item|
-      [item.charge_filter&.id, Events::Stores::ChargeFiltersScanStore.new(filter_store(item), scan:).sum.to_h]
+      [item.charge_filter&.id, aggregate(Events::Stores::ChargeFiltersScanStore.new(filter_store(item), scan:)).to_h]
+    end
+  end
+
+  def aggregate(store)
+    case billable_metric.aggregation_type
+    when "max_agg" then store.max
+    when "latest_agg" then store.last
+    else store.sum
     end
   end
 
@@ -225,6 +233,57 @@ RSpec.describe Events::Stores::ChargeFiltersScan::IncrementalCache, clickhouse: 
     it "keeps the totals of its default bucket" do
       expect(computation).to eq(totals(incremental: false))
       expect(computation).to eq({nil => {value: 63, events_count: 6}})
+      expect(reads).to eq([{from_datetime: cut, to_datetime: boundaries[:to_datetime], before: nil}])
+    end
+  end
+
+  context "with a max charge" do
+    let(:billable_metric) { create(:max_billable_metric, organization:, field_name: "value") }
+
+    # The largest events of each filter are in the base.
+    let(:events) do
+      [
+        ["tr_1", Time.zone.parse("2026-09-02 10:00"), "us", 16],
+        ["tr_2", Time.zone.parse("2026-09-10 10:00"), "eu", 8],
+        ["tr_3", Time.zone.parse("2026-09-15 11:30"), "us", 4],
+        ["tr_4", Time.zone.parse("2026-09-15 11:50"), "eu", 2],
+        ["tr_5", Time.zone.parse("2026-09-15 12:00"), "us", 1]
+      ]
+    end
+
+    before do
+      computation
+      ingest("tr_6", Time.zone.parse("2026-09-15 12:05"), "eu", 32)
+    end
+
+    it "keeps the max of the base and adds the tail's" do
+      expect(computation).to eq(totals(incremental: false))
+      expect(computation.values).to match_array([{value: 16, events_count: 3}, {value: 32, events_count: 3}, {value: 0, events_count: 0}])
+      expect(reads).to eq([{from_datetime: cut, to_datetime: boundaries[:to_datetime], before: nil}])
+    end
+  end
+
+  context "with a latest charge" do
+    let(:billable_metric) { create(:latest_billable_metric, organization:, field_name: "value") }
+
+    # Every event of the eu filter is in the base.
+    let(:events) do
+      [
+        ["tr_1", Time.zone.parse("2026-09-02 10:00"), "us", 1],
+        ["tr_2", Time.zone.parse("2026-09-10 10:00"), "eu", 2],
+        ["tr_3", Time.zone.parse("2026-09-15 11:30"), "us", 4],
+        ["tr_5", Time.zone.parse("2026-09-15 12:00"), "us", 16]
+      ]
+    end
+
+    before do
+      computation
+      ingest("tr_6", Time.zone.parse("2026-09-15 12:05"), "us", 3)
+    end
+
+    it "answers the latest value of the tail, or of the base without one" do
+      expect(computation).to eq(totals(incremental: false))
+      expect(computation.values).to match_array([{value: 3, events_count: 4}, {value: 2, events_count: 1}, {value: nil, events_count: 0}])
       expect(reads).to eq([{from_datetime: cut, to_datetime: boundaries[:to_datetime], before: nil}])
     end
   end
