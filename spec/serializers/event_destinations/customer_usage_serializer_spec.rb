@@ -111,6 +111,26 @@ RSpec.describe EventDestinations::CustomerUsageSerializer do
       end
     end
 
+    context "when a wallet's share rounds to nothing" do
+      let(:wallet_amounts) { {billable_metric.id => {first_wallet_id => 1000, second_wallet_id => 1}} }
+      let(:usage) do
+        SubscriptionUsage.new(
+          from_datetime: "2026-09-01T00:00:00Z",
+          to_datetime: "2026-09-30T23:59:59Z",
+          issuing_date: "2026-09-30",
+          currency: "EUR",
+          amount_cents: 100,
+          total_amount_cents: 100,
+          taxes_amount_cents: 0,
+          fees: [build(:charge_fee, charge:, subscription:, units: "1", events_count: 1, amount_cents: 100, amount_currency: "EUR", charge_filter: nil, grouped_by: {})]
+        )
+      end
+
+      it "sends no entry for it, rather than one with nothing in it" do
+        expect(entries).to eq([{wallet_id: first_wallet_id, units: "1.0", events_count: 1, amount_cents: 100}])
+      end
+    end
+
     context "when two charges share the billable metric" do
       let(:other_charge) { create(:standard_charge, plan:, billable_metric:) }
       let(:wallet_amounts) { {billable_metric.id => {first_wallet_id => 1500}} }

@@ -49,7 +49,7 @@ module EventDestinations
     # One entry per charge and wallet, and the entries add up exactly to the charge totals. Each part
     # of a charge's usage is split in proportion to what each wallet absorbed for it: its usage of the
     # billable metric, with usage whose events targeted a wallet kept apart, since only that wallet
-    # pays for it.
+    # pays for it. A wallet whose share rounds to nothing gets no entry.
     def charges_usage
       usage_fees = model.fees.select(&:non_zero?)
       amounts_by_key = usage_fees.group_by { amount_key(it) }.transform_values { |fees| fees.sum(&:amount_cents) }
@@ -74,23 +74,26 @@ module EventDestinations
 
         fee = charge_fees.first
 
-        parts.sort_by { |wallet_id, part| [wallet_id.nil? ? 1 : 0, -part[:amount_cents], wallet_id.to_s] }.map do |wallet_id, part|
-          {
-            units: part[:units].to_s,
-            events_count: part[:events_count],
-            amount_cents: part[:amount_cents],
-            amount_currency: fee.amount_currency,
-            charge: {
-              lago_id: fee.charge_id,
-              code: fee.charge.code
-            },
-            billable_metric: {
-              lago_id: fee.charge.billable_metric_id,
-              code: fee.charge.billable_metric.code
-            },
-            wallet_id:
-          }
-        end
+        parts
+          .reject { |_wallet_id, part| part.values.all?(&:zero?) }
+          .sort_by { |wallet_id, part| [wallet_id.nil? ? 1 : 0, -part[:amount_cents], wallet_id.to_s] }
+          .map do |wallet_id, part|
+            {
+              units: part[:units].to_s,
+              events_count: part[:events_count],
+              amount_cents: part[:amount_cents],
+              amount_currency: fee.amount_currency,
+              charge: {
+                lago_id: fee.charge_id,
+                code: fee.charge.code
+              },
+              billable_metric: {
+                lago_id: fee.charge.billable_metric_id,
+                code: fee.charge.billable_metric.code
+              },
+              wallet_id:
+            }
+          end
       end
     end
 
