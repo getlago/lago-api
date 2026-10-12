@@ -137,13 +137,14 @@ module Wallets
       end
 
       # Within a period, what a wallet covers for a fee key is split between subscriptions by what each
-      # still has to cover.
+      # still has to cover. Targeted usage is recorded apart from the rest of its billable metric.
       def record_coverage(wallet, fee_key, period, take)
         nets = period_nets[fee_key][period].select { |_subscription_id, net| net.positive? }
         total = nets.values.sum
+        key = WalletTransaction.billable_metric_amount_key(fee_key.second, fee_key.third)
 
         nets.each do |subscription_id, net|
-          result.billable_metric_amounts[wallet][subscription_id][period][fee_key.second] +=
+          result.billable_metric_amounts[wallet][subscription_id][period][key] +=
             tax_exclusive(fee_key, subscription_id, period, take.to_d * net / total)
         end
       end

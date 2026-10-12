@@ -183,7 +183,7 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
 
         it "keeps for the next metric the budget billing would still apply to it" do
           expect(result.billable_metric_amounts).to eq({
-            wallet_b => {subscription.id => {period => {billable_metric_id => 50}}},
+            wallet_b => {subscription.id => {period => {"#{billable_metric_id}/wallet-b" => 50}}},
             wallet_a => {subscription.id => {period => {other_charge.billable_metric_id => 60}}}
           })
         end
@@ -325,8 +325,30 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
             taxes_amount_cents: 0, amount_currency: "EUR", grouped_by: {"target_wallet_code" => "wallet-a"})]
         end
 
-        it "records it on the targeted wallet, ahead of priority" do
-          expect(result.billable_metric_amounts).to eq({wallet_b => {}, wallet_a => {subscription.id => {period => {billable_metric_id => 80}}}})
+        it "records it on the targeted wallet, ahead of priority, apart from untargeted usage" do
+          expect(result.billable_metric_amounts).to eq({wallet_b => {}, wallet_a => {subscription.id => {period => {"#{billable_metric_id}/wallet-a" => 80}}}})
+        end
+      end
+
+      context "when the targeted wallet also covers untargeted usage of the metric" do
+        around { |test| lago_premium! { test.run } }
+
+        let(:organization) { create(:organization, premium_integrations: ["events_targeting_wallets"]) }
+        let(:charge) { create(:standard_charge, organization:, accepts_target_wallet: true) }
+        let(:wallet_a) { create(:wallet, customer:, organization:, code: "wallet-a", balance_cents: 150, priority: 2) }
+        let(:wallets) { [wallet_a] }
+        let(:current_usage_fees) do
+          [
+            create(:charge_fee, charge:, subscription:, organization:, invoice:, amount_cents: 80,
+              taxes_amount_cents: 0, amount_currency: "EUR", grouped_by: {"target_wallet_code" => "wallet-a"}),
+            usage_fee(amount_cents: 30, charge:)
+          ]
+        end
+
+        it "records the two apart, so each can be attributed to its own usage" do
+          expect(result.billable_metric_amounts).to eq({
+            wallet_a => {subscription.id => {period => {"#{billable_metric_id}/wallet-a" => 80, billable_metric_id => 30}}}
+          })
         end
       end
     end
