@@ -89,6 +89,58 @@ RSpec.describe Utils::ApiLog do
       end
     end
 
+    context "when the payload is over the Kafka size limit" do
+      before do
+        ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = "kafka"
+        ENV["LAGO_KAFKA_API_LOGS_TOPIC"] = "api_logs"
+        stub_const("#{described_class}::MAX_PAYLOAD_BYTESIZE", 1_000)
+      end
+
+      after do
+        ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = nil
+        ENV["LAGO_KAFKA_API_LOGS_TOPIC"] = nil
+      end
+
+      let(:produced_payload) do
+        api_log.produce(fake_request, fake_response, organization:)
+        JSON.parse(kafka_messages.sole[:payload])
+      end
+
+      context "when the response is too large" do
+        let(:fake_response) do
+          instance_double("ActionDispatch::Response", status: 200, body: {"plan" => "a" * 2_000}.to_json)
+        end
+
+        it "replaces the response with a marker and keeps the request body" do
+          expect(produced_payload["request_body"]).to eq({"parameters" => [1, 2, 3, 4]})
+          expect(produced_payload["request_response"]["truncated"]).to eq("true")
+          expect(produced_payload["request_response"]["original_bytesize"].to_i).to be > 1_000
+          expect(produced_payload["http_status"]).to eq(200)
+          expect(produced_payload["request_path"]).to eq("/api/v1/customers")
+        end
+      end
+
+      context "when the request body is too large" do
+        let(:fake_request) do
+          instance_double(
+            "ActionDispatch::Request",
+            user_agent: "RSpec",
+            params: {plan: "a" * 2_000},
+            path: "/api/v1/plans/code",
+            base_url: "https://lago.test",
+            method_symbol: :put,
+            request_id: "1234"
+          )
+        end
+
+        it "replaces both the request body and the response with a marker" do
+          expect(produced_payload["request_body"]["truncated"]).to eq("true")
+          expect(produced_payload["request_response"]["truncated"]).to eq("true")
+          expect(produced_payload["request_path"]).to eq("/api/v1/plans/code")
+        end
+      end
+    end
+
     context "when kafka is not configured" do
       before do
         ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = nil
