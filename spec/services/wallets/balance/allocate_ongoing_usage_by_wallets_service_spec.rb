@@ -354,6 +354,7 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
         around { |test| lago_premium! { test.run } }
 
         let(:organization) { create(:organization, premium_integrations: ["events_targeting_wallets"]) }
+        let(:customer) { create(:customer, organization:) }
         let(:charge) { create(:standard_charge, organization:, accepts_target_wallet: true) }
         let(:wallet_a) { create(:wallet, customer:, organization:, code: "wallet-a", balance_cents: 150, priority: 2) }
         let(:current_usage_fees) do
@@ -370,6 +371,7 @@ RSpec.describe Wallets::Balance::AllocateOngoingUsageByWalletsService do
         around { |test| lago_premium! { test.run } }
 
         let(:organization) { create(:organization, premium_integrations: ["events_targeting_wallets"]) }
+        let(:customer) { create(:customer, organization:) }
         let(:charge) { create(:standard_charge, organization:, accepts_target_wallet: true) }
         let(:wallet_a) { create(:wallet, customer:, organization:, code: "wallet-a", balance_cents: 150, priority: 2) }
         let(:wallets) { [wallet_a] }
