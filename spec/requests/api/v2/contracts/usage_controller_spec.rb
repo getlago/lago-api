@@ -87,6 +87,37 @@ RSpec.describe Api::V2::Contracts::UsageController do
       end
     end
 
+    context "with a card scoped to a product filter" do
+      let(:eu_filter) do
+        create(:product_filter, organization:, product: metered_product, name: "EU region", invoice_display_name: "API calls (EU)")
+      end
+      let(:eu_rate_card) do
+        create(:rate_card, organization:, product: metered_product, product_filter: eu_filter, currency: "EUR")
+      end
+      let(:params) { {product_filter_code: eu_filter.code} }
+
+      before do
+        region = create(:billable_metric_filter, organization:, billable_metric:, key: "region", values: %w[eu us])
+        create(:product_filter_value, organization:, product_filter: eu_filter, billable_metric_filter: region, value: "eu")
+        create(:contract_rate_card, organization:, contract:, rate_card: eu_rate_card,
+          effective_date: Date.new(2027, 1, 1), billing_anchor_date: Date.new(2027, 1, 1))
+        create(:rate_card_rate, organization:, rate_card: eu_rate_card, effective_from: Time.zone.parse("2027-01-01"),
+          rate_properties: {"amount" => "2"})
+        create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+          code: billable_metric.code, timestamp: Time.zone.parse("2027-02-06"), properties: {region: "eu"})
+      end
+
+      it "returns the filter's card with the filter's names" do
+        subject
+
+        expect(json[:current_usage][:rate_cards].sole).to include(
+          rate_card_code: eu_rate_card.code, product_code: metered_product.code,
+          product_filter_code: eu_filter.code, product_filter_name: "EU region", invoice_display_name: "API calls (EU)",
+          units: "1.0", amount_cents: 200
+        )
+      end
+    end
+
     context "with an unknown product type" do
       let(:params) { {product_type: "usage"} }
 

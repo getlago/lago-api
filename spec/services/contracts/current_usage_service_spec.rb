@@ -160,6 +160,56 @@ RSpec.describe Contracts::CurrentUsageService do
     end
   end
 
+  context "with a card scoped to a product filter and a card on another product" do
+    let(:eu_filter) { create(:product_filter, organization:, product:) }
+    let(:eu_rate_card) { create(:rate_card, organization:, product:, product_filter: eu_filter, currency: "EUR") }
+    let(:other_product) { create(:product, :metered, organization:, billable_metric:) }
+    let(:other_rate_card) { create(:rate_card, organization:, product: other_product, currency: "EUR") }
+    let(:priced_cards) do
+      result.rate_card_usages.to_h { |usage| [usage.contract_rate_card.rate_card, usage.units] }
+    end
+
+    before do
+      region = create(:billable_metric_filter, organization:, billable_metric:, key: "region", values: %w[eu us])
+      create(:product_filter_value, organization:, product_filter: eu_filter, billable_metric_filter: region, value: "eu")
+      [eu_rate_card, other_rate_card].each do |scoped_rate_card|
+        create(:contract_rate_card, organization:, contract:, rate_card: scoped_rate_card,
+          effective_date: Date.new(2027, 1, 1), billing_anchor_date: Date.new(2027, 1, 1))
+        create(:rate_card_rate, organization:, rate_card: scoped_rate_card, effective_from: Time.zone.parse("2027-01-01"))
+      end
+      create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+        code: billable_metric.code, timestamp: Time.zone.parse("2027-02-06"), properties: {region: "eu"})
+    end
+
+    it "prices each card on the events it targets" do
+      expect(priced_cards).to eq(rate_card => 1, eu_rate_card => 1, other_rate_card => 2)
+    end
+
+    context "with a product code filter" do
+      let(:filters) { {product_code: product.code} }
+
+      it "prices the cards of that product only" do
+        expect(priced_cards.keys).to contain_exactly(rate_card, eu_rate_card)
+      end
+    end
+
+    context "with a product filter code filter" do
+      let(:filters) { {product_filter_code: eu_filter.code} }
+
+      it "prices the card scoped to that filter only" do
+        expect(priced_cards.keys).to eq([eu_rate_card])
+      end
+    end
+
+    context "with filters no card matches together" do
+      let(:filters) { {product_code: other_product.code, product_filter_code: eu_filter.code} }
+
+      it "returns no usage" do
+        expect(result.rate_card_usages).to eq([])
+      end
+    end
+  end
+
   context "with an unknown product type" do
     subject(:result) { described_class.call(contract:, timestamp:, apply_taxes:, filters:) }
 
