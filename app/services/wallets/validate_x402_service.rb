@@ -42,27 +42,35 @@ module Wallets
     end
 
     def valid_currency?
-      return true if wallet.currency == CURRENCY
-
-      add_error(field: :x402_enabled, error_code: "currency_not_supported")
+      if wallet.currency == CURRENCY
+        true
+      else
+        add_error(field: :x402_enabled, error_code: "currency_not_supported")
+      end
     end
 
     def valid_wallet_refresh?
-      return true if ENV["LAGO_REDIS_CACHE_URL"].present? && ENV["LAGO_DISABLE_WALLET_REFRESH"] != "true"
-
-      add_error(field: :x402_enabled, error_code: "wallet_refresh_unavailable")
+      if ENV["LAGO_REDIS_CACHE_URL"].present? && ENV["LAGO_DISABLE_WALLET_REFRESH"] != "true"
+        true
+      else
+        add_error(field: :x402_enabled, error_code: "wallet_refresh_unavailable")
+      end
     end
 
     def valid_recurring_transaction_rules_on_enable?
-      return true unless recurring_transaction_rules_after_update?
-
-      add_error(field: :x402_enabled, error_code: "recurring_transaction_rules_not_supported")
+      if recurring_transaction_rules_after_update?
+        add_error(field: :x402_enabled, error_code: "recurring_transaction_rules_not_supported")
+      else
+        true
+      end
     end
 
     def valid_recurring_transaction_rules_on_x402_wallet?
-      return true if args[:recurring_transaction_rules].blank?
-
-      add_error(field: :recurring_transaction_rules, error_code: "not_supported_for_x402_wallet")
+      if args[:recurring_transaction_rules].present?
+        add_error(field: :recurring_transaction_rules, error_code: "not_supported_for_x402_wallet")
+      else
+        true
+      end
     end
 
     def recurring_transaction_rules_after_update?
