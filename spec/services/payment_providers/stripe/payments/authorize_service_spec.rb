@@ -5,14 +5,11 @@ require "rails_helper"
 RSpec.describe PaymentProviders::Stripe::Payments::AuthorizeService do
   subject(:authorize_service) { described_class.new(amount:, currency:, provider_customer:, payment_method:, unique_id:, metadata:) }
 
-  let(:amount) { 0.20 }
-  let(:currency) { "USD" }
-  let(:provider_customer) { create(:stripe_customer, payment_provider: create(:stripe_provider), customer:, payment_method_id:) }
-  let(:payment_method) { create(:payment_method, payment_provider_customer: provider_customer, provider_method_id:) }
-  let(:unique_id) { SecureRandom.uuid }
-  let(:metadata) { {} }
+  before_all do
+    create_default(:organization)
+  end
 
-  let(:customer) { create(:customer) }
+  let(:amount) { 0.20 }
   let(:provider_method_id) { "pm_from_payment_method" }
   let(:payment_method_id) { "pm_from_provider_customer" }
   let(:stripe_result) do
@@ -20,6 +17,13 @@ RSpec.describe PaymentProviders::Stripe::Payments::AuthorizeService do
     result.payment_method_id = "pm_from_stripe"
     result
   end
+  let(:currency) { "USD" }
+  let(:provider_customer) { create(:stripe_customer, payment_provider: create(:stripe_provider), customer:, payment_method_id:) }
+  let(:payment_method) { create(:payment_method, payment_provider_customer: provider_customer, provider_method_id:) }
+  let(:unique_id) { SecureRandom.uuid }
+  let(:metadata) { {} }
+
+  let_it_be(:customer) { create(:customer) }
 
   before do
     allow(PaymentProviderCustomers::Stripe::RetrieveLatestPaymentMethodService).to receive(:call!).and_return(stripe_result)

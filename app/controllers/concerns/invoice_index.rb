@@ -71,6 +71,7 @@ module InvoiceIndex
             :applied_usage_thresholds,
             customer: [
               :billing_entity,
+              :organization,
               :metadata,
               :stripe_customer,
               :gocardless_customer,

@@ -34,16 +34,21 @@ module Types
     field :create_rate_phase, mutation: Mutations::RatePhases::Create
     field :destroy_plan_applied_rate_card, mutation: Mutations::PlanAppliedRateCards::Destroy
     field :destroy_rate_phase, mutation: Mutations::RatePhases::Destroy
+    field :update_plan_applied_rate_card, mutation: Mutations::PlanAppliedRateCards::Update
     field :update_rate_phase, mutation: Mutations::RatePhases::Update
 
     field :create_charge, mutation: Mutations::Charges::Create
     field :create_contract, mutation: Mutations::Contracts::Create
     field :create_contract_applied_rate_card, mutation: Mutations::ContractAppliedRateCards::Create
+    field :create_contract_rate_phase, mutation: Mutations::ContractRatePhases::Create
     field :destroy_charge, mutation: Mutations::Charges::Destroy
     field :destroy_contract_applied_rate_card, mutation: Mutations::ContractAppliedRateCards::Destroy
+    field :destroy_contract_rate_phase, mutation: Mutations::ContractRatePhases::Destroy
     field :terminate_contract, mutation: Mutations::Contracts::Terminate
     field :update_charge, mutation: Mutations::Charges::Update
     field :update_contract, mutation: Mutations::Contracts::Update
+    field :update_contract_applied_rate_card, mutation: Mutations::ContractAppliedRateCards::Update
+    field :update_contract_rate_phase, mutation: Mutations::ContractRatePhases::Update
 
     field :create_charge_filter, mutation: Mutations::ChargeFilters::Create
     field :destroy_charge_filter, mutation: Mutations::ChargeFilters::Destroy

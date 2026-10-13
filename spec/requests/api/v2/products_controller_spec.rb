@@ -215,7 +215,34 @@ RSpec.describe Api::V2::ProductsController do
 
       expect(response).to have_http_status(:success)
       expect(json[:products].map { it[:lago_id] }).to match_array([usage_item.id, fixed_item.id])
-      expect(json[:meta][:total_count]).to eq(2)
+      expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
+    end
+
+    it_behaves_like "a cursor paginated v2 endpoint", collection: :products, model: Product do
+      let(:paginated_path) { "/api/v2/products" }
+      let(:create_paginated_record) { ->(created_at) { create(:product, organization:, created_at:) } }
+    end
+
+    context "with an invalid limit and an unknown product category" do
+      let(:query_params) { "?limit=0&product_category_code=unknown" }
+
+      it "rejects the pagination parameters first" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:code]).to eq("invalid_pagination_limit")
+      end
+    end
+
+    context "with a filter and a cursor" do
+      let(:query_params) { "?product_type=fixed&limit=1&after=#{CursorPagination::Token.encode(table: "products", record: newer_fixed_item)}" }
+      let(:newer_fixed_item) { create(:product, :fixed, :standalone, organization:, created_at: fixed_item.created_at + 1.second) }
+
+      it "keeps applying the filter" do
+        subject
+
+        expect(json[:products].map { it[:lago_id] }).to eq([fixed_item.id])
+      end
     end
 
     it "returns the batched filters counts" do

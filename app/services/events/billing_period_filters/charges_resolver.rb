@@ -3,17 +3,29 @@
 module Events
   module BillingPeriodFilters
     class ChargesResolver < BaseResolver
-      def initialize(subscription:, boundaries:, codes: nil, with_last_seen_at: true, precomputed_filters: {})
+      COMBINATIONS_CACHE_KEY_VERSION = "1"
+
+      # combinations_cache_ttl reuses the events store answer for that long, so a client polling the
+      # same usage does not scan the events at every call. Any event ingested meanwhile is missed
+      # until the entry expires, so it is only passed where that delay is acceptable.
+      #
+      # incremental_combinations keeps the events store answer and only reads the events ingested
+      # since, which misses no event (see IncrementalCombinations).
+      def initialize(subscription:, boundaries:, codes: nil, with_last_seen_at: true, precomputed_filters: {}, combinations_cache_ttl: nil,
+        incremental_combinations: false)
         @subscription = subscription
         @boundaries = boundaries
         @codes = codes
         @with_last_seen_at = with_last_seen_at
         @precomputed_filters = precomputed_filters
+        @combinations_cache_ttl = combinations_cache_ttl
+        @incremental_combinations = incremental_combinations
       end
 
       private
 
-      attr_reader :subscription, :boundaries, :codes, :with_last_seen_at, :precomputed_filters
+      attr_reader :subscription, :boundaries, :codes, :with_last_seen_at, :precomputed_filters, :combinations_cache_ttl,
+        :incremental_combinations
 
       delegate :organization, :plan, to: :subscription
 
@@ -30,6 +42,62 @@ module Events
             to_datetime: boundaries.charges_to_datetime
           }
         )
+      end
+
+      # A polled entry is read many times per second, so when it expires the first reader refills it
+      # while the others keep the expired answer (race_condition_ttl) instead of each running the
+      # same scan. The expired answer is not capped in age: a refill still running after another TTL
+      # lets the next reader extend it again and start one more refill. It is served until a refill
+      # succeeds, so its age is bounded by how long the events store takes to answer, not by twice
+      # the TTL. This is deliberate: refusing it while the store is slow or down would send every
+      # reader back to scanning when the store can least absorb it, and only the current usage API
+      # reads this cache.
+      def fetch_combinations(**options)
+        return read_combinations(**options) if combinations_cache_ttl.blank?
+
+        Rails.cache.fetch(
+          combinations_cache_key(**options),
+          expires_in: combinations_cache_ttl,
+          race_condition_ttl: combinations_cache_ttl
+        ) { read_combinations(**options) }
+      end
+
+      def read_combinations(**options)
+        if incremental_combinations
+          IncrementalCombinations.new(cache_key: incremental_combinations_cache_key(**options)).fetch do |ingested_after:|
+            event_store.distinct_codes_and_property_combinations(**options, ingested_after:)
+          end
+        else
+          event_store.distinct_codes_and_property_combinations(**options)
+        end
+      end
+
+      # The query depends on the codes and filter keys (order aside), the window and whether
+      # last_seen_at is computed; the store reads the window from the charges boundaries.
+      # Codes and filter keys accept any character, commas included, so they are encoded as JSON
+      # rather than joined: ["a,b"] and ["a", "b"] must not share an entry.
+      def combinations_cache_key(**options)
+        ["billing-period-filter-combinations", COMBINATIONS_CACHE_KEY_VERSION, *query_cache_key_parts(**options)].join("/")
+      end
+
+      # The ingestion times an incremental read compares belong to one events store.
+      def incremental_combinations_cache_key(**options)
+        [
+          "billing-period-filter-incremental-combinations",
+          IncrementalCombinations::CACHE_KEY_VERSION,
+          event_store.class.name.demodulize,
+          *query_cache_key_parts(**options)
+        ].join("/")
+      end
+
+      def query_cache_key_parts(codes:, filter_keys:, include_all_history: false, with_last_seen_at: true)
+        [
+          subscription.id,
+          Digest::SHA256.hexdigest([codes.sort, filter_keys.sort].to_json),
+          include_all_history ? "all" : boundaries.charges_from_datetime.iso8601(6),
+          boundaries.charges_to_datetime.iso8601(6),
+          with_last_seen_at
+        ]
       end
 
       def record_precomputed_targets(result)
@@ -105,7 +173,7 @@ module Events
         @current_recurring_targets ||= plan.charges
           .joins(:billable_metric)
           .where(billable_metrics: {recurring: true})
-          .includes(:filters)
+          .includes(filters: {values: :billable_metric_filter})
           .to_a
       end
     end

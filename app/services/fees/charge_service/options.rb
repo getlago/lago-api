@@ -9,7 +9,6 @@ module Fees
     Options = Data.define(
       :context,
       :apply_taxes,
-      :calculate_projected_usage,
       :with_zero_units_filters,
       :usage_filters,
       :skip_adjusted_fees
@@ -21,7 +20,6 @@ module Fees
       def initialize(
         context: nil,
         apply_taxes: false,
-        calculate_projected_usage: false,
         with_zero_units_filters: true,
         usage_filters: UsageFilters::NONE,
         skip_adjusted_fees: false
@@ -29,7 +27,6 @@ module Fees
         validate_context!(context)
         validate_usage_filters!(usage_filters)
         validate_boolean!(:apply_taxes, apply_taxes)
-        validate_boolean!(:calculate_projected_usage, calculate_projected_usage)
         validate_boolean!(:with_zero_units_filters, with_zero_units_filters)
         validate_boolean!(:skip_adjusted_fees, skip_adjusted_fees)
 

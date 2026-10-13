@@ -5,9 +5,19 @@
 module RealtimeUsage
   SUPPORTED_AGGREGATION_TYPES = %w[count_agg sum_agg max_agg latest_agg].freeze
 
-  # percentage and custom walk individual events; dynamic needs precise amounts the buckets
-  # do not carry.
-  SUPPORTED_CHARGE_MODELS = %w[standard graduated package volume graduated_percentage].freeze
+  BUCKET_DURATION = 15.minutes
+
+  # What the ClickHouse driver raises on a connection it cannot use, plus the two errors the
+  # retry helper and the row mapping raise on their own.
+  READ_ERRORS = [
+    *Events::Stores::Utils::ClickhouseConnection::RETRYABLE_ERRORS,
+    Events::Stores::Clickhouse::MemoryLimitError,
+    JSON::ParserError
+  ].freeze
+
+  # percentage and custom walk individual events. dynamic reads the precise amounts the buckets
+  # sum on sum rows, the only aggregation type a dynamic charge accepts.
+  SUPPORTED_CHARGE_MODELS = %w[standard graduated package volume graduated_percentage dynamic].freeze
 
   FORCED_GATE_KEY = :lago_realtime_usage_forced_gate
 
@@ -58,9 +68,6 @@ module RealtimeUsage
 
       # `target_wallet_code` will be handled later.
       return "target_wallet" if charge.accepts_target_wallet
-
-      # The pipeline does not evaluate custom expressions yet.
-      return "expression" if billable_metric.expression.present?
 
       nil
     end

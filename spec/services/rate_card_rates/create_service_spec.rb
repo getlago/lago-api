@@ -5,9 +5,8 @@ require "rails_helper"
 RSpec.describe RateCardRates::CreateService do
   subject(:result) { described_class.call(rate_card:, params:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization, refind: true) { create(:organization) }
   let(:rate_card) { create(:rate_card, organization:) }
-
   let(:params) do
     {
       code: "standard_price",
@@ -19,6 +18,10 @@ RSpec.describe RateCardRates::CreateService do
     }
   end
 
+  before_all do
+    create_default(:billable_metric)
+  end
+
   it "creates an active rate when effective now" do
     expect { result }.to change(RateCardRate, :count).by(1)
 
@@ -26,6 +29,37 @@ RSpec.describe RateCardRates::CreateService do
     expect(rate.rate_model).to eq("standard")
     expect(rate.status).to eq("active")
     expect(rate.code).to eq("standard_price")
+  end
+
+  context "with graduated tiers" do
+    let(:params) do
+      super().merge(
+        rate_model: "graduated",
+        rate_properties: {
+          graduated_ranges: [
+            {to_value: "10", flat_amount: "0", per_unit_amount: "1"},
+            {to_value: nil, flat_amount: "0", per_unit_amount: "0.5"}
+          ]
+        }
+      )
+    end
+
+    it "stores each tier starting where the previous one ends" do
+      expect(result).to be_success
+      expect(result.rate_card_rate.rate_properties["graduated_ranges"].map { it.values_at("from_value", "to_value") })
+        .to eq([[0, 10], [10, nil]])
+    end
+
+    context "when a tier names its lower bound" do
+      let(:params) do
+        super().merge(rate_properties: {graduated_ranges: [{from_value: 0, to_value: nil, flat_amount: "0", per_unit_amount: "1"}]})
+      end
+
+      it "returns a validation failure" do
+        expect { result }.not_to change(RateCardRate, :count)
+        expect(result.error.messages[:graduated_ranges]).to eq(["from_value_not_allowed"])
+      end
+    end
   end
 
   context "when the code is missing" do

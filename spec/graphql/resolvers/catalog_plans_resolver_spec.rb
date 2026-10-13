@@ -46,6 +46,27 @@ RSpec.describe Resolvers::CatalogPlansResolver do
     expect(result["data"]["catalogPlans"]["metadata"]["totalCount"]).to eq(1)
   end
 
+  context "with scoping arguments" do
+    let(:rate_card) { create(:rate_card, organization:) }
+    let(:variables) { {productIds: [rate_card.product_id]} }
+    let(:query) do
+      <<~GQL
+        query($productIds: [ID!]) {
+          catalogPlans(productIds: $productIds) { collection { id } }
+        }
+      GQL
+    end
+
+    before do
+      create(:catalog_plan, organization:, code: "scale")
+      create(:plan_rate_card, organization:, catalog_plan:, rate_card:)
+    end
+
+    it "returns the plans pricing those products" do
+      expect(result["data"]["catalogPlans"]["collection"].map { it["id"] }).to eq([catalog_plan.id])
+    end
+  end
+
   it "resolves the per-plan counts across the list" do
     create(:catalog_plan, organization:, code: "scale")
     create(:plan_rate_card, organization:, catalog_plan:, rate_card: create(:rate_card, organization:))

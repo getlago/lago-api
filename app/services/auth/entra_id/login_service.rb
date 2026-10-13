@@ -48,11 +48,16 @@ module Auth
         result.service_failure!(code: "token_encoding_error", message: e.message)
       end
 
+      # NOTE: Entra ID compares the typed email case-insensitively (see #check_userinfo), so
+      #       the Lago user must be found the same way. Otherwise a casing that differs from the
+      #       invited address creates a second user with no role. An exact match wins, then the
+      #       oldest case-insensitive match.
       def find_or_create_user
-        user = User.find_or_initialize_by(email: result.email)
+        user = User.find_by(email: result.email) ||
+          User.where("LOWER(email) = ?", result.email.downcase).order(:created_at).first
 
-        if user.new_record?
-          user.password = SecureRandom.hex(16)
+        if user.nil?
+          user = User.new(email: result.email, password: SecureRandom.hex(16))
           user.save!
         end
 

@@ -92,6 +92,41 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         .with(hash_including(options: have_attributes(skip_adjusted_fees: true)))
     end
 
+    it "does not project the usage" do
+      expect(usage_service.call.usage.projections).to be_nil
+    end
+
+    context "with projection" do
+      subject(:usage_service) do
+        described_class.with_ids(organization_id: organization.id, customer_id:, subscription_id:, apply_taxes:, with_projection: true)
+      end
+
+      let(:current_date) { DateTime.parse("2025-06-15") } # 15 of 30 days, ratio 0.5
+      let(:timestamp) { current_date }
+
+      around { |example| travel_to(current_date) { example.run } }
+
+      it "projects every fee" do
+        usage = usage_service.call.usage
+
+        expect(usage.projections.for(usage.fees)).to have_attributes(units: BigDecimal(4), amount_cents: 5064)
+      end
+
+      context "when the fees are served from the charge cache" do
+        before do
+          described_class.with_ids(organization_id: organization.id, customer_id:, subscription_id:, apply_taxes:).call
+          allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_call_original
+        end
+
+        it "projects the cached fees without aggregating" do
+          usage = usage_service.call.usage
+
+          expect(usage.projections.for(usage.fees)).to have_attributes(units: BigDecimal(4), amount_cents: 5064)
+          expect(BillableMetrics::AggregationFactory).not_to have_received(:new_instance)
+        end
+      end
+    end
+
     context "when initializes an invoice" do
       let(:current_date) { DateTime.parse("2025-06-15") }
       let(:timestamp) { current_date }
@@ -182,6 +217,8 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             response["succeededInvoices"].first["fees"].last["item_key"] = key
             response["succeededInvoices"].first["fees"].last["item_id"] = charge.billable_metric.id
             response["succeededInvoices"].first["fees"].last["amount_cents"] = 2532
+            response["succeededInvoices"].first["fees"].last["tax_amount_cents"] = 253
+            response["succeededInvoices"].first["fees"].last["tax_breakdown"].first["tax_amount"] = 253
 
             {body: response.to_json}
           end
@@ -205,6 +242,62 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             )
             expect(result.usage.fees.size).to eq(1)
             expect(result.usage.fees.first.charge.invoice_display_name).to eq(charge.invoice_display_name)
+          end
+        end
+      end
+
+      context "when a charge is split by grouped_by" do
+        let(:current_date) { DateTime.parse("2025-06-15") }
+        let(:timestamp) { current_date }
+        let(:requested_line_items) { [] }
+        let(:charge) do
+          create(:standard_charge, plan:, billable_metric:, properties: {amount: "12.66", grouped_by: ["region"]})
+        end
+        let(:events) do
+          %w[us eu].map do |region|
+            create(
+              :event,
+              organization:,
+              subscription:,
+              customer:,
+              code: billable_metric.code,
+              timestamp:,
+              properties: {region:}
+            )
+          end
+        end
+
+        before do
+          stub_request(:post, endpoint).to_return do |request|
+            line_item = JSON.parse(request.body).first["fees"].sole
+            requested_line_items << line_item
+
+            taxed = line_item.merge(
+              "tax_amount_cents" => 253,
+              "tax_breakdown" => [{"name" => "GST", "rate" => "0.10", "tax_amount" => 253, "type" => "tax"}]
+            )
+
+            {body: {succeededInvoices: [{id: "inv_123", fees: [taxed]}], failedInvoices: []}.to_json}
+          end
+        end
+
+        it "sends the charge as a single line item" do
+          travel_to(current_date) do
+            usage_service.call
+
+            expect(requested_line_items.sole)
+              .to include("item_key" => charge.id, "amount_cents" => 2532)
+          end
+        end
+
+        it "taxes every fee of the charge and adds up to what the provider returned" do
+          travel_to(current_date) do
+            result = usage_service.call
+
+            expect(result.usage.fees.map(&:amount_cents)).to eq([1266, 1266])
+            expect(result.usage.fees.map(&:taxes_rate)).to eq([10, 10])
+            expect(result.usage.fees.sum(&:taxes_amount_cents)).to eq(253)
+            expect(result.usage.taxes_amount_cents).to eq(253)
           end
         end
       end
@@ -233,6 +326,8 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             response["succeededInvoices"].first["fees"].last["item_key"] = key
             response["succeededInvoices"].first["fees"].last["item_id"] = charge.billable_metric.id
             response["succeededInvoices"].first["fees"].last["amount_cents"] = 2532
+            response["succeededInvoices"].first["fees"].last["tax_amount_cents"] = 253
+            response["succeededInvoices"].first["fees"].last["tax_breakdown"].first["tax_amount"] = 253
 
             {body: response.to_json}
           end
@@ -843,6 +938,58 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         end
       end
 
+      context "when the caller asks for the pre-filter cache" do
+        subject(:usage_service) do
+          described_class.new(customer:, subscription:, apply_taxes: false, with_cache:, cache_prefilter: true)
+        end
+
+        let(:with_cache) { true }
+
+        it "keeps the pre-filter uncached without the feature flag" do
+          usage_service.call
+
+          expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
+            .with(hash_including(combinations_cache_ttl: nil))
+        end
+
+        context "with the usage_prefilter_short_cache feature flag" do
+          before { organization.enable_feature_flag!(:usage_prefilter_short_cache) }
+
+          it "caches the pre-filter for five seconds" do
+            usage_service.call
+
+            expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
+              .with(hash_including(combinations_cache_ttl: 15.seconds))
+          end
+
+          context "when the cache is disabled by the caller" do
+            let(:with_cache) { false }
+
+            it "keeps the pre-filter uncached" do
+              usage_service.call
+
+              expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
+                .with(hash_including(combinations_cache_ttl: nil))
+            end
+          end
+        end
+      end
+
+      context "when the feature flag is on but the caller does not ask for the pre-filter cache" do
+        subject(:usage_service) do
+          described_class.new(customer:, subscription:, apply_taxes: false, with_cache: true)
+        end
+
+        before { organization.enable_feature_flag!(:usage_prefilter_short_cache) }
+
+        it "keeps the pre-filter uncached" do
+          usage_service.call
+
+          expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
+            .with(hash_including(combinations_cache_ttl: nil))
+        end
+      end
+
       context "when the cache is disabled by the caller" do
         subject(:usage_service) do
           described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false)
@@ -852,6 +999,30 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           expect { usage_service.call }.not_to change { Rails.cache.exist?(charge_cache_key) }.from(false)
           expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
             .with(hash_including(with_last_seen_at: false))
+        end
+      end
+
+      context "with the incremental pre-filter" do
+        subject(:usage_service) do
+          described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false)
+        end
+
+        it "reads every event of the window without the feature flag" do
+          usage_service.call
+
+          expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
+            .with(hash_including(incremental_combinations: false))
+        end
+
+        context "with the usage_prefilter_incremental feature flag" do
+          before { organization.enable_feature_flag!(:usage_prefilter_incremental) }
+
+          it "only reads the events ingested since the previous answer, even for a caller without cache" do
+            usage_service.call
+
+            expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
+              .with(hash_including(incremental_combinations: true))
+          end
         end
       end
 
@@ -973,6 +1144,144 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
     end
   end
 
+  describe "with the incremental charge cache", clickhouse: {clean_before: true} do
+    subject(:usage_service) { described_class.new(customer:, subscription:, apply_taxes: false) }
+
+    include_context "with clickhouse availability"
+
+    let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "value") }
+    let(:region) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[us eu]) }
+    let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {"amount" => "2"}) }
+    let(:now) { Time.current.beginning_of_month + 14.days + 12.hours + 7.minutes }
+    let(:filter_values) { %w[us eu] }
+
+    def ingest(transaction_id, timestamp, region, value)
+      create(
+        :clickhouse_events_enriched,
+        transaction_id:,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        code: billable_metric.code,
+        timestamp:,
+        properties: {"region" => region, "value" => value.to_s},
+        value: value.to_s,
+        decimal_value: value,
+        enriched_at: Time.current
+      )
+    end
+
+    def usage_with_flag(enabled)
+      if enabled
+        organization.enable_feature_flag!(:incremental_charge_cache)
+      else
+        organization.disable_feature_flag!(:incremental_charge_cache)
+      end
+
+      # The fees cache would answer the second call on its own.
+      Rails.cache.delete_matched("charge-usage/*")
+
+      described_class.new(customer: customer.reload, subscription: subscription.reload, apply_taxes: false)
+        .call.usage.fees.map { [it.charge_filter_id, it.units, it.events_count, it.amount_cents] }.sort_by(&:to_s)
+    end
+
+    before do
+      organization.update!(clickhouse_events_store: true)
+      create(:tax, :applied_to_billing_entity, organization:, rate: 0)
+      charge
+      filter_values.each do |value|
+        charge_filter = create(:charge_filter, charge:, properties: {"amount" => "2"})
+        create(:charge_filter_value, charge_filter:, billable_metric_filter: region, values: [value])
+      end
+
+      travel_to(now - 1.hour) do
+        ingest("tr_1", now.beginning_of_month + 1.day, "us", 3)
+        ingest("tr_2", now - 2.hours, "eu", 5)
+      end
+      travel_to(now)
+    end
+
+    it "bills the usage the events store bills" do
+      expected = usage_with_flag(false)
+
+      expect(usage_with_flag(true)).to eq(expected)
+    end
+
+    context "when events are ingested between two computations" do
+      before do
+        usage_with_flag(true)
+        ingest("tr_3", now - 2.minutes, "us", 7)
+      end
+
+      it "adds them to the usage kept from the previous computation" do
+        expected = usage_with_flag(false)
+
+        expect(usage_with_flag(true)).to eq(expected)
+      end
+    end
+
+    context "with a charge without filters" do
+      let(:filter_values) { [] }
+
+      before do
+        usage_with_flag(true)
+        ingest("tr_3", now - 2.minutes, "us", 7)
+      end
+
+      it "adds the new events to the usage kept from the previous computation" do
+        expected = usage_with_flag(false)
+
+        expect(usage_with_flag(true)).to eq(expected)
+        expect(expected.first[1]).to eq(15)
+      end
+    end
+
+    context "without the cache" do
+      before do
+        organization.enable_feature_flag!(:incremental_charge_cache)
+        allow(Events::Stores::ChargeFiltersScan::IncrementalCache).to receive(:new).and_call_original
+      end
+
+      it "reads every event without keeping totals" do
+        usage = described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false).call.usage
+
+        expect(Events::Stores::ChargeFiltersScan::IncrementalCache).not_to have_received(:new)
+        expect(usage.fees.map { [it.charge_filter_id, it.units, it.events_count, it.amount_cents] }.sort_by(&:to_s)).to eq(usage_with_flag(false))
+      end
+    end
+
+    context "with a max charge" do
+      let(:billable_metric) { create(:max_billable_metric, organization:, field_name: "value") }
+
+      before do
+        usage_with_flag(true)
+        ingest("tr_3", now - 2.minutes, "us", 1)
+      end
+
+      it "keeps the max of the previous computation" do
+        expected = usage_with_flag(false)
+
+        expect(usage_with_flag(true)).to eq(expected)
+        expect(expected.map { it[1] }).to match_array([0, 3, 5])
+      end
+    end
+
+    context "with a latest charge" do
+      let(:billable_metric) { create(:latest_billable_metric, organization:, field_name: "value") }
+
+      before do
+        usage_with_flag(true)
+        ingest("tr_3", now - 2.minutes, "us", 1)
+      end
+
+      it "answers the value of the new latest event" do
+        expected = usage_with_flag(false)
+
+        expect(usage_with_flag(true)).to eq(expected)
+        expect(expected.map { it[1] }).to match_array([0, 1, 5])
+      end
+    end
+  end
+
   describe "with the usage buckets", clickhouse: {clean_before: true} do
     subject(:usage_service) do
       described_class.new(customer:, subscription:, apply_taxes: false, use_usage_buckets: true)
@@ -1009,7 +1318,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
         bucket: window_start,
         units: "5.0",
         events_count: 5,
-        aggregation_type: "count_agg"
+        aggregation_type: "count"
       )
     end
 
@@ -1078,18 +1387,21 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           customer:,
           subscription:,
           apply_taxes: false,
-          calculate_projected_usage: true,
+          with_projection: true,
           use_usage_buckets: true
         )
       end
 
-      before { allow(RealtimeUsage::FetchBucketsService).to receive(:call).and_call_original }
+      around { |example| travel_to(DateTime.parse("2025-06-15")) { example.run } } # 15 of 30 days, ratio 0.5
 
-      it "counts the events, which the projection re-aggregates from at presentation time" do
+      before { allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_call_original }
+
+      it "projects the units served by the buckets without aggregating again" do
         usage = usage_service.call.usage
 
-        expect(usage.fees.first).to have_attributes(units: 2)
-        expect(RealtimeUsage::FetchBucketsService).not_to have_received(:call)
+        expect(usage.fees.sole).to have_attributes(units: 5)
+        expect(usage.projections.for(usage.fees)).to have_attributes(units: BigDecimal(10), amount_cents: 12660)
+        expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).once
       end
     end
 
@@ -1314,7 +1626,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           bucket: window_start,
           units: "3.0",
           events_count: 3,
-          aggregation_type: "count_agg"
+          aggregation_type: "count"
         )
 
         # The events store holds usage for the filter the buckets do not, which the pre-filtering
@@ -1381,7 +1693,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           bucket:,
           units: values.sum { |_, value| value.to_d }.to_s,
           events_count: values.size,
-          aggregation_type: "sum_agg"
+          aggregation_type: "sum"
         )
       end
     end
@@ -1459,7 +1771,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           bucket:,
           units: bucket_units(values),
           events_count: values.size,
-          aggregation_type: billable_metric.aggregation_type,
+          aggregation_type: billable_metric.aggregation_type.delete_suffix("_agg"),
           last_event_at: values.map(&:first).max
         )
       end
@@ -1495,6 +1807,77 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       it "serves the last event of the window, counting every event of it alongside" do
         expect(served.fees.first).to have_attributes(units: 2, events_count: 4, amount_cents: 400)
       end
+    end
+  end
+
+  describe "the buckets and the events store agree on a dynamic charge", clickhouse: {clean_before: true} do
+    include_context "with realtime usage availability"
+
+    let(:billable_metric) { create(:sum_billable_metric, organization:) }
+    let(:charge) { create(:dynamic_charge, plan:, billable_metric:) }
+    let(:window_start) { Time.current.beginning_of_month }
+
+    # [value, precise_total_amount_cents]: the amount is not proportional to the units, so a fee
+    # priced from the units instead of the summed amounts shows.
+    let(:events) do
+      {
+        window_start => ["5.5", "1000.25"],
+        window_start + 20.minutes => ["4.25", "300.5"],
+        window_start + 23.minutes => ["1.25", "0.25"],
+        window_start + 3.hours => ["10.0", "199"]
+      }
+    end
+
+    let(:served) do
+      described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false, use_usage_buckets: true).call.usage
+    end
+    let(:delegated) do
+      described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false).call.usage
+    end
+
+    before do
+      organization.update!(clickhouse_events_store: true)
+      organization.enable_feature_flag!(:realtime_usage)
+      charge
+
+      events.each do |at, (value, precise_total_amount_cents)|
+        create(
+          :clickhouse_events_enriched,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: at,
+          value:,
+          decimal_value: value.to_f,
+          precise_total_amount_cents:
+        )
+      end
+
+      # The rows the pipeline would have written for those very events, so any difference
+      # between the two answers comes from the read path rather than from the fixtures.
+      events.group_by { |at, _| Time.zone.at(at.to_i - (at.to_i % 15.minutes.to_i)) }.each do |bucket, rows|
+        create(
+          :clickhouse_usage_bucket,
+          organization:, customer:, subscription:, charge:, billable_metric:,
+          bucket:,
+          units: rows.sum { |_, (value, _)| value.to_d }.to_s,
+          precise_total_amount_cents: rows.sum { |_, (_, amount)| amount.to_d }.to_s,
+          events_count: rows.size,
+          aggregation_type: "sum"
+        )
+      end
+    end
+
+    it "returns the same units, event count and amount either way" do
+      expect(served.fees.first).to have_attributes(
+        units: delegated.fees.first.units,
+        events_count: delegated.fees.first.events_count,
+        amount_cents: delegated.fees.first.amount_cents
+      )
+    end
+
+    it "prices the fee from the summed precise amounts of the window" do
+      expect(served.fees.first).to have_attributes(units: 21, events_count: 4, amount_cents: 1500)
     end
   end
 
@@ -1553,7 +1936,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
           grouped_by: {"region" => group_event[:region]}.to_json,
           units: group_event[:value],
           events_count: 1,
-          aggregation_type: "latest_agg",
+          aggregation_type: "latest",
           last_event_at: group_event[:at]
         )
       end

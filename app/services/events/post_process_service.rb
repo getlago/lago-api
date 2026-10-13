@@ -117,9 +117,15 @@ module Events
 
     def handle_pay_in_advance
       return unless billable_metric
-      return unless charges.any?
+      return unless charges.any? || pay_in_advance_billing_segments.any?
 
       Events::PayInAdvanceJob.perform_later(Events::CommonFactory.new_instance(source: event).as_json)
+    end
+
+    def pay_in_advance_billing_segments
+      @pay_in_advance_billing_segments ||= Events::PayInAdvanceBillingSegmentResolver
+        .call!(event:)
+        .billing_segments
     end
 
     def charges

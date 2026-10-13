@@ -38,6 +38,11 @@ module ContractRateCards
       end
 
       contract.with_lock do
+        # Re-checked under lock: the clock may have activated the contract since.
+        unless contract.editable?
+          return result.single_validation_failure!(field: :contract, error_code: "contract_locked")
+        end
+
         # One card per pricing slice: a contract may hold several cards of the
         # same item only when they cover different filter slices (default + EU).
         if slice_already_priced?(rate_card)
@@ -61,6 +66,10 @@ module ContractRateCards
         else
           RatePhases::CreateService.call!(contract_rate_card:, params: {code: "default", position: 1})
         end
+        ContractRateCards::SeedLifecycleService.call!(
+          contract_rate_card:,
+          billing_anchor_date: params[:billing_anchor_date].presence
+        )
 
         result.contract_rate_card = contract_rate_card
       end
@@ -85,7 +94,7 @@ module ContractRateCards
     end
 
     def slice_already_priced?(rate_card)
-      contract.applied_rate_cards.current_and_scheduled.joins(:rate_card).exists?(
+      contract.applied_rate_cards.joins(:rate_card).exists?(
         rate_cards: {
           product_id: rate_card.product_id,
           product_filter_id: rate_card.product_filter_id

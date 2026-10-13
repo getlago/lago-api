@@ -48,8 +48,9 @@ module Fees
             return [self]
           end
 
+          # A filter without values matches no event: billing it would duplicate the default bucket.
           if charge.filters.any?
-            charge.filters.map { |filter| with_filter(filter) } + [with_default_filter]
+            charge.filters.reject { it.to_h.empty? }.map { |filter| with_filter(filter) } + [with_default_filter]
           else
             [self]
           end

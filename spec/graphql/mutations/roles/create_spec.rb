@@ -27,14 +27,18 @@ RSpec.describe Mutations::Roles::Create do
       }
     GQL
   end
-
-  let(:required_permission) { "roles:create" }
-  let(:organization) { create(:organization) }
-  let(:membership) { create(:membership, organization:) }
   let(:code) { "custom_role" }
   let(:name) { "Custom Role" }
   let(:description) { "A custom role" }
   let(:role_permissions) { %w[customers_view customers_create] }
+
+  let(:required_permission) { "roles:create" }
+
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:membership, refind: true) { create_default(:membership, organization:, roles: %i[admin]) }
+
+  # Create the member and its roles outside the Role.count expectations
+  before { membership }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
@@ -75,6 +79,17 @@ RSpec.describe Mutations::Roles::Create do
     end
   end
 
+  context "when the member does not hold the requested permissions", :premium do
+    let(:membership) { create(:membership, organization:, role: member_role) }
+    let(:member_role) { create(:role, :custom, organization:, permissions: %w[roles:create customers:view]) }
+
+    before { organization.update!(premium_integrations: ["custom_roles"]) }
+
+    it "returns an error" do
+      expect_graphql_error(result:, message: "cannot_grant_permissions")
+    end
+  end
+
   context "with premium organization but without custom_roles integration", :premium do
     before { organization.update!(premium_integrations: []) }
 
@@ -101,7 +116,7 @@ RSpec.describe Mutations::Roles::Create do
       )
     end
 
-    let!(:membership) { create(:membership, organization:, roles: [:admin]) }
+    let_it_be(:membership, refind: true) { create_default(:membership, organization:, roles: [:admin]) }
 
     context "with premium organization and custom_roles integration", :premium do
       before { organization.update!(premium_integrations: ["custom_roles"]) }

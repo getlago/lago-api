@@ -6,14 +6,9 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
   subject(:service_call) { described_class.call(invoice:) }
 
   let(:integration) { create(:anrok_integration, organization:) }
-  let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
   let(:customer) { create(:customer, :with_shipping_address, organization:) }
-  let(:organization) { create(:organization) }
   let(:endpoint) { "https://api.nango.dev/v1/anrok/draft_invoices" }
-  let(:add_on) { create(:add_on, organization:) }
-  let(:add_on_two) { create(:add_on, organization:) }
   let(:current_time) { Time.current }
-
   let(:integration_collection_mapping1) do
     create(
       :netsuite_collection_mapping,
@@ -31,7 +26,6 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
       settings: {external_id: "m1", external_account_code: "m11", external_name: ""}
     )
   end
-
   let(:invoice) do
     create(
       :invoice,
@@ -55,7 +49,6 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
       created_at: current_time - 2.seconds
     )
   end
-
   let(:headers) do
     {
       "Connection-Id" => integration.connection_id,
@@ -64,7 +57,6 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
     }
   end
   let(:response_status) { 200 }
-
   let(:params) do
     [
       {
@@ -98,6 +90,16 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
       }
     ]
   end
+  let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+
+  let_it_be(:organization) { create_default(:organization) }
+
+  before_all do
+    create_default(:plan)
+  end
+
+  let_it_be(:add_on) { create(:add_on, organization:) }
+  let_it_be(:add_on_two) { create(:add_on, organization:) }
 
   before do
     integration_customer
@@ -254,6 +256,19 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
             )
           end
         end
+
+        context "with the draft taxes cache" do
+          before { allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new) }
+
+          it "asks Anrok once for identical requests" do
+            described_class.call(invoice:)
+            result = service_call
+
+            expect(result).to be_success
+            expect(result.fees.first.tax_breakdown.first.name).to eq("GST/HST")
+            expect(WebMock).to have_requested(:post, endpoint).once
+          end
+        end
       end
 
       context "when taxes are not successfully fetched" do
@@ -283,6 +298,17 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
                 error_code: "taxDateTooFarInFuture"
               }
             )
+        end
+
+        context "with the draft taxes cache" do
+          before { allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new) }
+
+          it "asks Anrok again on the next call" do
+            described_class.call(invoice:)
+            service_call
+
+            expect(WebMock).to have_requested(:post, endpoint).twice
+          end
         end
 
         context "when no integration mapping is defined" do

@@ -28,14 +28,16 @@ module Mutations
       private
 
       # One-off invoices previewed from the UI are not persisted yet, so we build lightweight
-      # stand-ins exposing only the subset of the Invoice / Fee interface the tax payloads read.
-      # They fail loudly if a payload starts reading an attribute we did not anticipate.
+      # stand-ins exposing only the subset of the Invoice / Fee interface used by tax reporting.
+      # They fail loudly if tax reporting starts reading an attribute we did not anticipate.
       DraftInvoice = Data.define(:issuing_date, :currency, :customer) do
         def voided? = false
       end
 
       DraftFee = Data.define(:add_on_id, :item_id, :sub_total_excluding_taxes_amount_cents) do
         def id = nil
+
+        def created_at = nil
 
         def item_key = nil
 

@@ -29,6 +29,18 @@ RSpec.describe ContractRateCards::DestroyService do
     end
   end
 
+  context "when the clock activated the contract since it was loaded" do
+    before do
+      contract_rate_card
+      Contract.where(id: contract.id).update_all(status: :active) # rubocop:disable Rails/SkipsModelValidations
+    end
+
+    it "fails with a contract_locked error and keeps the card" do
+      expect(result.error.messages[:contract]).to eq(["contract_locked"])
+      expect(contract_rate_card.reload).not_to be_discarded
+    end
+  end
+
   context "when the card is missing" do
     let(:contract_rate_card) { nil }
 

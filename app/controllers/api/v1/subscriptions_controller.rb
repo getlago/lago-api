@@ -180,6 +180,12 @@ module Api
               :payment_method_type,
               :payment_method_id
             ],
+            connections: [
+              payment: [:behavior, :code],
+              tax: [:behavior, :code],
+              accounting: [:behavior, :code],
+              crm: [:behavior, :code]
+            ],
             usage_thresholds: usage_thresholds_params,
             plan_overrides:
           )
@@ -205,6 +211,12 @@ module Api
           payment_method: [
             :payment_method_type,
             :payment_method_id
+          ],
+          connections: [
+            payment: [:behavior, :code],
+            tax: [:behavior, :code],
+            accounting: [:behavior, :code],
+            crm: [:behavior, :code]
           ],
           usage_thresholds: usage_thresholds_params,
           plan_overrides:
@@ -284,7 +296,12 @@ module Api
       def preload_subscription(subscription)
         ActiveRecord::Associations::Preloader.new(
           records: [subscription],
-          associations: [:plan, :customer, {previous_subscription: :plan, next_subscriptions: :plan}]
+          associations: [
+            :plan,
+            :billing_object_connections,
+            {customer: [:payment_provider_customers, :integration_customers]},
+            {previous_subscription: :plan, next_subscriptions: :plan}
+          ]
         ).call
       end
 

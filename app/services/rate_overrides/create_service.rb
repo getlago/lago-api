@@ -42,10 +42,13 @@ module RateOverrides
         return result.single_validation_failure!(field: :min_amount_cents, error_code: "not_allowed_for_billing_timing")
       end
 
+      normalized = ::RateProperties::NormalizeRangesService.call(rate_properties: params[:rate_properties])
+      return result.fail_with_error!(normalized.error) if normalized.failure?
+
       rate_override = RateOverride.new(
         organization: rate_card.organization,
         rate_model: params[:rate_model],
-        rate_properties: params[:rate_properties] || {},
+        rate_properties: normalized.rate_properties,
         min_amount_cents: params[:min_amount_cents] || 0,
         billing_interval_count: params[:billing_interval_count],
         billing_interval_unit: params[:billing_interval_unit],

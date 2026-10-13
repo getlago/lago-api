@@ -5,9 +5,10 @@ module Wallets
     class RefreshOngoingUsageService < BaseService
       Result = BaseResult[:wallet]
 
-      def initialize(wallet:, ongoing_usage_amount_cents:, skip_single_wallet_update: false)
+      def initialize(wallet:, ongoing_usage_amount_cents:, ongoing_billable_metric_amounts:, skip_single_wallet_update: false)
         @wallet = wallet
         @ongoing_usage_amount_cents = ongoing_usage_amount_cents
+        @ongoing_billable_metric_amounts = ongoing_billable_metric_amounts
         @skip_single_wallet_update = skip_single_wallet_update
 
         super
@@ -28,11 +29,12 @@ module Wallets
 
       private
 
-      attr_reader :wallet, :ongoing_usage_amount_cents, :skip_single_wallet_update
+      attr_reader :wallet, :ongoing_usage_amount_cents, :ongoing_billable_metric_amounts, :skip_single_wallet_update
 
       def wallet_update_params
         params = {
           ongoing_usage_balance_cents:,
+          ongoing_billable_metric_amounts:,
           credits_ongoing_usage_balance:,
           ongoing_balance_cents:,
           credits_ongoing_balance:

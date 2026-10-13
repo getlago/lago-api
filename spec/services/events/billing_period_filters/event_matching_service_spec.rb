@@ -34,6 +34,54 @@ RSpec.describe Events::BillingPeriodFilters::EventMatchingService do
     expect(service_result.filter).to eq(specific_filter)
   end
 
+  context "with filters on as many keys" do
+    let(:event) do
+      create(:event, organization_id: organization.id, code: billable_metric.code, properties: {"payment_method" => "card"})
+    end
+
+    let(:older_filter) { create(:charge_filter, charge:, created_at: 2.days.ago) }
+    let(:newer_filter) { create(:charge_filter, charge:, created_at: 1.day.ago) }
+
+    before do
+      broad_filter.values.destroy_all
+      specific_filter.values.destroy_all
+      broad_filter.discard!
+      specific_filter.discard!
+    end
+
+    context "when the older filter allows all values" do
+      before do
+        create(:charge_filter_value, values: [ChargeFilterValue::ALL_FILTER_VALUES], billable_metric_filter: payment_method, charge_filter: older_filter)
+        create(:charge_filter_value, values: ["card"], billable_metric_filter: payment_method, charge_filter: newer_filter)
+      end
+
+      it "selects the filter allowing fewer values" do
+        expect(service_result.matching_filters).to match_array([older_filter, newer_filter])
+        expect(service_result.filter).to eq(newer_filter)
+      end
+    end
+
+    context "when both filters allow as many values" do
+      before do
+        create(:charge_filter_value, values: ["card"], billable_metric_filter: payment_method, charge_filter: newer_filter)
+        create(:charge_filter_value, values: ["card"], billable_metric_filter: payment_method, charge_filter: older_filter)
+      end
+
+      it "selects the oldest filter" do
+        expect(service_result.filter).to eq(older_filter)
+      end
+    end
+
+    context "when a filter has no values" do
+      before { older_filter }
+
+      it "does not match it" do
+        expect(service_result.matching_filters).to be_empty
+        expect(service_result.filter).to be_nil
+      end
+    end
+  end
+
   context "with a BillingSegment target" do
     let(:contract) { create(:contract, organization:, external_id: "contract_external_id") }
     let(:product) { create(:product, organization:, billable_metric:) }
@@ -68,6 +116,19 @@ RSpec.describe Events::BillingPeriodFilters::EventMatchingService do
     it "expands a nil product filter value to the configured values" do
       expect(service_result.matching_filters).to eq([product_filter])
       expect(service_result.filter).to eq(product_filter)
+    end
+
+    context "with a newer filter allowing fewer values" do
+      let(:card_filter) { create(:product_filter, organization:, product:, created_at: 1.day.from_now) }
+
+      before do
+        create(:product_filter_value, value: "card", billable_metric_filter: payment_method, product_filter: card_filter)
+      end
+
+      it "keeps the first loaded filter" do
+        expect(service_result.matching_filters).to eq([product_filter, card_filter])
+        expect(service_result.filter).to eq(product_filter)
+      end
     end
 
     ["virtual_card", nil, ""].each do |value|

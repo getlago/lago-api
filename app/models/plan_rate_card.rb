@@ -40,6 +40,7 @@ end
 #
 # Indexes
 #
+#  index_plan_rate_cards_by_cursor                            (catalog_plan_id,created_at DESC,id DESC) WHERE (deleted_at IS NULL)
 #  index_plan_rate_cards_on_catalog_plan_id_and_rate_card_id  (catalog_plan_id,rate_card_id) UNIQUE WHERE (deleted_at IS NULL)
 #  index_plan_rate_cards_on_deleted_at                        (deleted_at)
 #  index_plan_rate_cards_on_organization_id                   (organization_id)

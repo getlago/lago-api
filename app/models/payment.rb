@@ -17,17 +17,18 @@ class Payment < ApplicationRecord
   has_many :integration_resources, as: :syncable
   has_one :invoice_settlement, foreign_key: :source_payment_id
   has_one :payment_receipt, dependent: :destroy
+  has_one :x402_settlement, class_name: "X402::Settlement", inverse_of: :payment
 
   alias_attribute :currency, :amount_currency
 
   monetize :amount_cents
 
-  PAYMENT_TYPES = {provider: "provider", manual: "manual"}.freeze
+  PAYMENT_TYPES = {provider: "provider", manual: "manual", x402: "x402"}.freeze
   attribute :payment_type, :string
   enum :payment_type, PAYMENT_TYPES, default: :provider, prefix: :payment_type
   validates :payment_type, presence: true
   validates :reference, presence: true, length: {maximum: 40}, if: -> { payment_type_manual? }
-  validates :reference, absence: true, if: -> { payment_type_provider? }
+  validates :reference, absence: true, if: -> { payment_type_provider? || payment_type_x402? }
   validate :manual_payment_credit_invoice_amount_cents
   validate :max_invoice_paid_amount_cents, on: :create
   validate :payment_request_succeeded, on: :create

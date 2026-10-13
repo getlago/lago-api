@@ -8,7 +8,6 @@ RSpec.describe Fees::ChargeService::Options do
       expect(described_class.default).to have_attributes(
         context: nil,
         apply_taxes: false,
-        calculate_projected_usage: false,
         with_zero_units_filters: true,
         usage_filters: UsageFilters::NONE,
         skip_adjusted_fees: false
@@ -34,8 +33,6 @@ RSpec.describe Fees::ChargeService::Options do
     it "validates booleans" do
       expect { described_class.new(apply_taxes: nil) }
         .to raise_error(ArgumentError, "apply_taxes must be a boolean")
-      expect { described_class.new(calculate_projected_usage: nil) }
-        .to raise_error(ArgumentError, "calculate_projected_usage must be a boolean")
       expect { described_class.new(with_zero_units_filters: nil) }
         .to raise_error(ArgumentError, "with_zero_units_filters must be a boolean")
       expect { described_class.new(skip_adjusted_fees: nil) }

@@ -24,8 +24,9 @@ module Events
           filter.to_h
         end
 
-        def filter_specificity(filter)
-          filter.to_h.keys.size
+        # Ties keep the loading order.
+        def filter_precedence(filter)
+          -filter.to_h.keys.size
         end
 
         def all_filter_values?(filter, key)

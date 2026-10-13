@@ -2,25 +2,31 @@
 
 module Api
   module V2
-    class PlansController < Api::BaseController
-      include Api::RequiresProductCatalog
+    class PlansController < Api::V2::BaseController
+      cursor_paginated_index(CatalogPlan)
 
       def index
-        result = CatalogPlansQuery.call(
+        result = ::CatalogPlansQuery.call(
           organization: current_organization,
-          pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
+          search_term: params[:search_term],
+          pagination: cursor,
+          filters: {
+            product_ids: Array(params[:product_id]).presence,
+            product_filter_ids: Array(params[:product_filter_id]).presence,
+            product_category_ids: Array(params[:product_category_id]).presence,
+            rate_card_ids: Array(params[:rate_card_id]).presence
           }
         )
 
         if result.success?
+          page = ::CursorPagination::Page.new(records: result.catalog_plans, cursor:)
+
           render(
             json: ::CollectionSerializer.new(
-              result.catalog_plans,
+              page.records,
               ::V2::CatalogPlanSerializer,
               collection_name: "plans",
-              meta: pagination_metadata(result.catalog_plans)
+              meta: page.meta
             )
           )
         else

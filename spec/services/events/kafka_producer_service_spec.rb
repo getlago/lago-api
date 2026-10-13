@@ -4,7 +4,8 @@ RSpec.describe Events::KafkaProducerService, :capture_kafka_messages do
   subject(:producer_service) { described_class.new(events:, organization:) }
 
   let(:events) { create_list(:event, 2, organization:) }
-  let(:organization) { create(:organization) }
+
+  let_it_be(:organization) { create(:organization) }
 
   describe "#call" do
     context "with Kafka config" do

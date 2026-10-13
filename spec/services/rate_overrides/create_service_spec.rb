@@ -5,9 +5,8 @@ require "rails_helper"
 RSpec.describe RateOverrides::CreateService do
   subject(:result) { described_class.call(rate_card:, params:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:rate_card) { create(:rate_card, organization:) }
-
   let(:params) do
     {
       rate_model: "standard",
@@ -18,6 +17,10 @@ RSpec.describe RateOverrides::CreateService do
     }
   end
 
+  before_all do
+    create_default(:billable_metric)
+  end
+
   it "creates a rate override" do
     expect { result }.to change(RateOverride, :count).by(1)
 
@@ -26,6 +29,32 @@ RSpec.describe RateOverrides::CreateService do
     expect(rate_override.rate_model).to eq("standard")
     expect(rate_override.rate_properties).to eq({"amount" => "5"})
     expect(rate_override.min_amount_cents).to eq(100)
+  end
+
+  context "with volume tiers" do
+    let(:params) do
+      super().merge(
+        rate_model: "volume",
+        rate_properties: {volume_ranges: [{to_value: "100", flat_amount: "0", per_unit_amount: "1"}, {to_value: nil, flat_amount: "0", per_unit_amount: "0.8"}]}
+      )
+    end
+
+    it "accepts tiers starting where the previous one ends" do
+      expect(result).to be_success
+      expect(result.rate_override.rate_properties["volume_ranges"].map { it.values_at("from_value", "to_value") })
+        .to eq([[0, 100], [100, nil]])
+    end
+
+    context "when the upper bounds do not rise" do
+      let(:params) do
+        super().merge(rate_properties: {volume_ranges: [{to_value: "100", flat_amount: "0", per_unit_amount: "1"}, {to_value: "50", flat_amount: "0", per_unit_amount: "1"}, {to_value: nil, flat_amount: "0", per_unit_amount: "1"}]})
+      end
+
+      it "returns a validation failure" do
+        expect { result }.not_to change(RateOverride, :count)
+        expect(result.error.messages[:volume_ranges]).to eq(["invalid_volume_ranges"])
+      end
+    end
   end
 
   context "with a spend floor on an advance card" do

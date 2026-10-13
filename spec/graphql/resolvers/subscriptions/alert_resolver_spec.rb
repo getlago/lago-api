@@ -3,7 +3,13 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::Subscriptions::AlertResolver do
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "subscriptions:view" }
+  let(:organization) { membership.organization }
+  let(:alert) { create(:alert, organization:, recurring_threshold: 33, thresholds: [10, 20]) }
   let(:query) do
     <<~GQL
       query($alertId: ID!) {
@@ -14,9 +20,7 @@ RSpec.describe Resolvers::Subscriptions::AlertResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:alert) { create(:alert, organization:, recurring_threshold: 33, thresholds: [10, 20]) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     alert

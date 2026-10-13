@@ -46,18 +46,18 @@ RSpec.describe BillingSegments::Fees::ComputeService do
         expect(result.fee.unit_amount_cents).to eq(3_000)
         expect(result.fee.precise_unit_amount).to eq(30)
         expect(result.fee.invoiceable).to eq(fixed_product)
+        expect(result.fee).to have_attributes(contract:, contract_rate_card:)
         expect(result.fee.amount_currency).to eq("USD")
         expect(result.fee.properties).to eq(
-          "from_datetime" => billing_segment.started_at.iso8601(3),
-          "to_datetime" => billing_segment.ended_at.iso8601(3),
-          "charges_from_datetime" => billing_segment.started_at.iso8601(3),
-          "charges_to_datetime" => billing_segment.ended_at.iso8601(3),
+          "from_datetime" => billing_segment.started_at.iso8601(6),
+          "to_datetime" => billing_segment.ended_at.iso8601(6),
+          "charges_from_datetime" => billing_segment.started_at.iso8601(6),
+          "charges_to_datetime" => billing_segment.ended_at.iso8601(6),
           "charges_duration" => billing_segment.duration_in_days,
           "timestamp" => billing_segment.billing_at.iso8601(3),
           "fixed_charges_from_datetime" => nil,
           "fixed_charges_to_datetime" => nil,
-          "fixed_charges_duration" => nil,
-          "billing_segment_id" => billing_segment.id
+          "fixed_charges_duration" => nil
         )
         expect(result.fee.subscription).to be_nil
         expect(result.true_up_fee).to be_nil
@@ -79,6 +79,8 @@ RSpec.describe BillingSegments::Fees::ComputeService do
             true_up_parent_fee: result.fee,
             pricing_unit_usage: nil
           )
+          expect(result.true_up_fee.properties).to eq(result.fee.properties)
+          expect(result.true_up_fee.properties).not_to have_key("billing_segment_id")
         end
       end
 
@@ -248,6 +250,49 @@ RSpec.describe BillingSegments::Fees::ComputeService do
           expect(result.fee.unit_amount_cents).to eq(840)
           expect(result.fee.precise_unit_amount).to eq(8.4)
           expect(result.fee.amount_details["graduated_ranges"]).not_to eq([])
+        end
+
+        context "when prorated over a partial period" do
+          let(:rate_card) { create(:rate_card, organization:, product: fixed_product, currency: "USD", proration: true) }
+          let(:proration_ratio) { BigDecimal("30") / 31 }
+          let(:flat_amounts) { %w[0.00 0.00] }
+          let(:rate_properties) do
+            {"graduated_ranges" => [
+              {"from_value" => 0, "to_value" => 3, "per_unit_amount" => "10.00", "flat_amount" => flat_amounts[0]},
+              {"from_value" => 4, "to_value" => nil, "per_unit_amount" => "6.00", "flat_amount" => flat_amounts[1]}
+            ]}
+          end
+
+          it "allocates full units to tiers before prorating each tier" do
+            expect(result).to be_success
+            expect(result.fee.amount_cents).to eq(4_065)
+            expect(result.fee.precise_amount_cents).to be_within(0.000001).of(BigDecimal("4200") * billing_segment.proration_ratio)
+            expect(result.fee.amount_details["graduated_ranges"].map { |tier| tier["units"].to_d }).to eq(
+              [3, 2].map { |tier_units| tier_units * billing_segment.proration_ratio }
+            )
+          end
+
+          context "with flat fees in both tiers" do
+            let(:flat_amounts) { %w[5.00 2.00] }
+
+            it "keeps reached-tier flat fees whole" do
+              expect(result).to be_success
+              expect(result.fee.amount_cents).to eq(4_765)
+              expect(result.fee.precise_amount_cents).to be_within(0.000001).of(
+                BigDecimal("4200") * billing_segment.proration_ratio + 700
+              )
+              expect(result.fee.amount_details["graduated_ranges"].map { |tier| tier["flat_unit_amount"] }).to eq(%w[5.0 2.0])
+            end
+
+            context "when weighted units would not reach the second tier" do
+              let(:proration_ratio) { BigDecimal("0.5") }
+
+              it "still charges the second tier's prorated units and whole flat fee" do
+                expect(result.fee.amount_cents).to eq(2_800)
+                expect(result.fee.amount_details["graduated_ranges"].map { |tier| tier["units"].to_d }).to eq([1.5, 1])
+              end
+            end
+          end
         end
       end
     end

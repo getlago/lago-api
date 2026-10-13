@@ -136,6 +136,36 @@ RSpec.describe LagoHttpClient::Client do
         end
       end
     end
+
+    context "with max_retries set to zero" do
+      let(:server) { TCPServer.new("127.0.0.1", 0) }
+      let(:url) { "http://127.0.0.1:#{server.addr[1]}/stalled" }
+      let(:client_options) { {read_timeout: 0.1, max_retries: 0} }
+
+      before { WebMock.disable_net_connect!(allow_localhost: true) }
+
+      after do
+        WebMock.disable_net_connect!
+        server.close
+      end
+
+      def connections_made
+        count = 0
+        loop do
+          server.accept_nonblock.close
+          count += 1
+        end
+      rescue IO::WaitReadable
+        count
+      end
+
+      context "when the server never answers a GET" do
+        it "sends the request once" do
+          expect { client.get }.to raise_error(Net::ReadTimeout)
+          expect(connections_made).to eq(1)
+        end
+      end
+    end
   end
 
   describe "#post" do
@@ -685,6 +715,101 @@ RSpec.describe LagoHttpClient::Client do
 
         expect { client.post({}, []) }.to raise_error(LagoHttpClient::HttpError)
         expect(stub).to have_been_requested.once
+      end
+    end
+  end
+
+  describe "private address protection" do
+    let(:url) { "https://hooks.example.com/lago" }
+    let(:client_options) { {block_private_addresses: true} }
+    let(:allow_private) { "false" }
+    let(:public_address) { Addrinfo.tcp("93.184.215.14", 0) }
+    let(:private_address) { Addrinfo.tcp("169.254.169.254", 0) }
+
+    before do
+      stub_const("ENV", ENV.to_h.merge("LAGO_WEBHOOK_ALLOW_PRIVATE_URLS" => allow_private))
+      allow(Addrinfo).to receive(:getaddrinfo).and_return([public_address])
+      stub_request(:post, url).to_return(body: "{}", status: 200)
+    end
+
+    context "when the host resolves to a public address" do
+      it "connects to the resolved address" do
+        client.post_with_response({}, {})
+
+        expect(client.send(:http_client).ipaddr).to eq("93.184.215.14")
+        expect(WebMock).to have_requested(:post, url)
+      end
+    end
+
+    context "when a plain HTTP URL goes through a proxy" do
+      let(:url) { "http://hooks.example.com:8080/lago" }
+      let(:pinned_url) { "http://93.184.215.14:8080/lago" }
+
+      before do
+        stub_const("ENV", ENV.to_h.merge("LAGO_WEBHOOK_ALLOW_PRIVATE_URLS" => allow_private, "http_proxy" => "http://proxy.test:3128"))
+        stub_request(:post, pinned_url).to_return(body: "{}", status: 200)
+      end
+
+      it "sends the request to the resolved address with the original Host header" do
+        client.post_with_response({}, {})
+
+        expect(client.send(:http_client).proxy_address).to eq("proxy.test")
+        expect(WebMock).to have_requested(:post, pinned_url).with(headers: {"Host" => "hooks.example.com:8080"})
+        expect(WebMock).not_to have_requested(:post, url)
+      end
+    end
+
+    context "when the host resolves to a private address" do
+      before { allow(Addrinfo).to receive(:getaddrinfo).and_return([private_address]) }
+
+      it "raises without sending the request" do
+        expect { client.post_with_response({}, {}) }.to raise_error(LagoHttpClient::BlockedAddressError)
+        expect(WebMock).not_to have_requested(:post, url)
+      end
+    end
+
+    context "when the host is an IPv6 loopback literal" do
+      let(:url) { "http://[::1]:8080/lago" }
+
+      before { allow(Addrinfo).to receive(:getaddrinfo).and_call_original }
+
+      it "raises without sending the request" do
+        expect { client.post_with_response({}, {}) }.to raise_error(LagoHttpClient::BlockedAddressError)
+        expect(Addrinfo).to have_received(:getaddrinfo).with("::1", nil, nil, :STREAM)
+      end
+    end
+
+    context "when the host rebinds to a private address after a first request" do
+      before do
+        allow(Addrinfo).to receive(:getaddrinfo).and_return([public_address], [private_address])
+      end
+
+      it "blocks the next request" do
+        client.post_with_response({}, {})
+
+        expect { client.post_with_response({}, {}) }.to raise_error(LagoHttpClient::BlockedAddressError)
+        expect(WebMock).to have_requested(:post, url).once
+      end
+    end
+
+    context "when private addresses are allowed" do
+      let(:allow_private) { "true" }
+
+      it "does not resolve the host" do
+        client.post_with_response({}, {})
+
+        expect(Addrinfo).not_to have_received(:getaddrinfo)
+        expect(WebMock).to have_requested(:post, url)
+      end
+    end
+
+    context "when the protection is not requested" do
+      let(:client_options) { {} }
+
+      it "does not resolve the host" do
+        client.post_with_response({}, {})
+
+        expect(Addrinfo).not_to have_received(:getaddrinfo)
       end
     end
   end

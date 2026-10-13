@@ -866,6 +866,88 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
         end
       end
     end
+
+    context "with connections" do
+      let(:stripe_connection) { create(:stripe_customer, customer:, code: "stripe_us") }
+      let(:netsuite_connection) { create(:netsuite_customer, customer:, code: "netsuite_main") }
+      let(:params) do
+        {
+          external_customer_id: customer.external_id,
+          plan_code: plan.code,
+          external_id: SecureRandom.uuid,
+          connections: {
+            payment: {code: "stripe_us"},
+            tax: {behavior: "skip"},
+            accounting: {code: "netsuite_main"},
+            crm: {behavior: "skip"}
+          }
+        }
+      end
+
+      before do
+        organization.enable_feature_flag!(:multi_connection)
+        stripe_connection
+        netsuite_connection
+      end
+
+      it "persists one connection per category" do
+        expect { subject }.to change(BillingObjectConnection, :count).by(4)
+
+        expect(response).to have_http_status(:success)
+
+        subscription = Subscription.find(json[:subscription][:lago_id])
+        expect(subscription.billing_object_connections.pluck(:category)).to match_array(%w[payment tax accounting crm])
+        expect(subscription.effective_payment_connection).to eq(stripe_connection)
+        expect(subscription.effective_accounting_connection).to eq(netsuite_connection)
+        expect(subscription.effective_tax_connection).to be_nil
+      end
+
+      context "when a code does not resolve" do
+        let(:params) do
+          {
+            external_customer_id: customer.external_id,
+            plan_code: plan.code,
+            external_id: SecureRandom.uuid,
+            connections: {payment: {code: "unknown_connection"}}
+          }
+        end
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details][:connections]).to include("connection_not_found")
+        end
+      end
+
+      context "when the behavior is invalid" do
+        let(:params) do
+          {
+            external_customer_id: customer.external_id,
+            plan_code: plan.code,
+            external_id: SecureRandom.uuid,
+            connections: {payment: {behavior: "nonsense"}}
+          }
+        end
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details][:connections]).to include("invalid_connection_behavior")
+        end
+      end
+
+      context "when the multi_connection flag is disabled" do
+        before { organization.disable_feature_flag!(:multi_connection) }
+
+        it "returns a forbidden error" do
+          subject
+
+          expect(response).to have_http_status(:forbidden)
+        end
+      end
+    end
   end
 
   describe "DELETE /api/v1/subscriptions/:external_id" do
@@ -1910,6 +1992,48 @@ RSpec.describe Api::V1::SubscriptionsController, :premium do
               expect(response).to be_not_found_error("billing_entity")
             end
           end
+        end
+      end
+    end
+
+    context "with connections" do
+      let(:stripe_connection) { create(:stripe_customer, customer:, code: "stripe_us") }
+      let(:update_params) { {connections: {payment: {code: "stripe_us"}}} }
+
+      before do
+        organization.enable_feature_flag!(:multi_connection)
+        stripe_connection
+      end
+
+      it "pins the connection on the subscription" do
+        expect { subject }.to change(BillingObjectConnection, :count).by(1)
+
+        expect(response).to have_http_status(:success)
+        expect(subscription.reload.effective_payment_connection).to eq(stripe_connection)
+      end
+
+      context "when inherit is sent for a category that has an override" do
+        let(:update_params) { {connections: {payment: {behavior: "inherit"}}} }
+
+        before do
+          create(:billing_object_connection, owner: subscription, organization:, category: "payment", behavior: "skip")
+        end
+
+        it "clears the override so resolution falls back to the customer" do
+          expect { subject }.to change(BillingObjectConnection, :count).by(-1)
+
+          expect(response).to have_http_status(:success)
+          expect(subscription.reload.billing_object_connections).to be_empty
+        end
+      end
+
+      context "when the multi_connection flag is disabled" do
+        before { organization.disable_feature_flag!(:multi_connection) }
+
+        it "returns a forbidden error" do
+          subject
+
+          expect(response).to have_http_status(:forbidden)
         end
       end
     end

@@ -6,10 +6,15 @@ module Events
       Charge = Data.define(:charge, :filter) do
         delegate :billable_metric, to: :charge
 
+        # A filter without values matches no event.
         def filters
-          return charge.filters if charge.association_cached?(:filters)
+          filters = if charge.association_cached?(:filters)
+            charge.filters
+          else
+            charge.filters.includes(values: :billable_metric_filter)
+          end
 
-          charge.filters.includes(values: :billable_metric_filter)
+          filters.reject { filter_values(it).empty? }
         end
 
         def selected_filter
@@ -24,12 +29,8 @@ module Events
           filter.to_h
         end
 
-        def filter_specificity(filter)
-          filter.to_h.keys.size
-        end
-
-        def all_filter_values?(filter, key)
-          filter.to_h[key] == [ChargeFilterValue::ALL_FILTER_VALUES]
+        def filter_precedence(filter)
+          filter.precedence
         end
 
         delegate :target_key, to: :charge

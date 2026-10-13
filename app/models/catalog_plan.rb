@@ -58,6 +58,7 @@ end
 #
 # Indexes
 #
+#  index_catalog_plans_by_cursor                             (organization_id,created_at DESC,id DESC) WHERE (deleted_at IS NULL)
 #  index_catalog_plans_on_deleted_at                         (deleted_at)
 #  index_catalog_plans_on_organization_id                    (organization_id)
 #  index_catalog_plans_on_organization_id_and_code           (organization_id,code) UNIQUE WHERE (deleted_at IS NULL)

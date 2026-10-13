@@ -105,7 +105,11 @@ module Fees
         boundaries:,
         event:
       )
-      Fees::CreatePayInAdvanceService.call!(metered_item:, estimate: true).fees
+      Fees::CreatePayInAdvanceService.call!(
+        metered_item:,
+        billing_context: Billing::Context.from(subscription: subscriptions.first),
+        estimate: true
+      ).fees
     end
 
     def boundaries

@@ -32,7 +32,7 @@ class CacheService < BaseService
     value = yield
 
     # NOTE: It seems that passing expires_in: 0 is not a NO-OP, so bypass manually
-    if (expires_in.nil? || expires_in > 0) && settled?(computed_at)
+    if (expires_in.nil? || expires_in > 0) && settled?(computed_at) && cacheable?(value)
       Rails.cache.write(cache_key, wrap(value, computed_at), expires_in:)
     end
 
@@ -52,6 +52,12 @@ class CacheService < BaseService
   # most recent event timestamp instead of relying on an external expiration.
   def track_created_at?
     false
+  end
+
+  # Subclasses override this to keep some computed values out of the cache, for instance an
+  # error answer that must be retried on the next call.
+  def cacheable?(_value)
+    true
   end
 
   def wrap(value, computed_at)

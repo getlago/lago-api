@@ -6,10 +6,6 @@ RSpec.describe Mutations::Integrations::EntraId::Update, :premium do
   include_context "with mocked security logger"
 
   let(:required_permission) { "organization:integrations:update" }
-  let(:integration) { create(:entra_id_integration, organization:) }
-  let(:organization) { membership.organization }
-  let(:membership) { create(:membership) }
-
   let(:mutation) do
     <<-GQL
       mutation($input: UpdateEntraIdIntegrationInput!) {
@@ -20,11 +16,17 @@ RSpec.describe Mutations::Integrations::EntraId::Update, :premium do
           clientId,
           clientSecret,
           domain,
+          additionalDomains,
           tenantId,
         }
       }
     GQL
   end
+  let(:integration) { create(:entra_id_integration, organization:) }
+
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
 
   before do
     integration
@@ -46,6 +48,7 @@ RSpec.describe Mutations::Integrations::EntraId::Update, :premium do
           input: {
             id: integration.id,
             domain: "foo.bar",
+            additionalDomains: ["de.foo.bar"],
             tenantId: "tenant-456"
           }
         }
@@ -56,6 +59,7 @@ RSpec.describe Mutations::Integrations::EntraId::Update, :premium do
       result_data = result["data"]["updateEntraIdIntegration"]
 
       expect(result_data["domain"]).to eq("foo.bar")
+      expect(result_data["additionalDomains"]).to eq(["de.foo.bar"])
       expect(result_data["tenantId"]).to eq("tenant-456")
     end
 

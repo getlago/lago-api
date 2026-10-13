@@ -16,6 +16,8 @@ require:
   - ./dev/cops/service_call_cop.rb
   - ./dev/cops/discard_all_cop.rb
   - ./dev/cops/no_drop_column_or_table_cop.rb
+  - ./dev/cops/migrations_concurrent_index_cop.rb
+  - ./dev/cops/migrations_if_not_exists_cop.rb
   - ./dev/cops/lago_premium_around_cop.rb
   - ./dev/cops/active_job_perform_all_later_cop.rb
   - ./dev/cops/stub_perform_all_later_cop.rb
@@ -70,6 +72,24 @@ Lago/NoDropColumnOrTable:
     - "db/migrate/20260910095513_drop_wallet_targetable_from_rate_cards.rb"
     - "db/migrate/20260910151708_drop_enriched_store_migration_tables.rb"
     - "db/migrate/20260921154906_replace_attribution_key_with_attribution_keys.rb"
+    - "db/migrate/20260925110807_drop_ended_date_from_contract_rate_cards.rb"
+
+# Existing migrations are immutable; enforce these requirements on migrations dated September 30, 2026 or later.
+Lago/MigrationsConcurrentIndex:
+  Include:
+    - "db/migrate/**/*.rb"
+  Exclude:
+    - "db/migrate/202[0-5]*.rb"
+    - "db/migrate/20260[0-8]*.rb"
+    - "db/migrate/202609[0-2]*.rb"
+
+Lago/MigrationsIfNotExists:
+  Include:
+    - "db/migrate/**/*.rb"
+  Exclude:
+    - "db/migrate/202[0-5]*.rb"
+    - "db/migrate/20260[0-8]*.rb"
+    - "db/migrate/202609[0-2]*.rb"
 
 # TODO: Fix these services
 Lago/ServiceCall:

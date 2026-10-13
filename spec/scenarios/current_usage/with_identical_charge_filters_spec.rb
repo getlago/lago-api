@@ -3,8 +3,8 @@
 require "rails_helper"
 
 # Regression tests for overlapping charge filters on the same charge:
-# - ISSUE-1799: filters with no values produce empty hashes in ignored_filters;
-#   the store-level defensive guards prevent them from rendering invalid SQL.
+# - ISSUE-1799: filters with no values used to produce empty hashes in
+#   ignored_filters and invalid SQL. They match no event and get no bucket.
 # - Subset and identical duplicate filters used to be double-counted: events
 #   matching both a filter and a more specific sibling were counted in both
 #   buckets. Each event must only be counted in its most specific bucket, and
@@ -12,17 +12,18 @@ require "rails_helper"
 #   bucket (tie-break on [created_at, id]).
 describe "Current Usage - Overlapping charge filters", transaction: false do
   [
-    :postgres,
-    :clickhouse
-  ].each do |store|
-    context "with #{store} store", clickhouse: store == :clickhouse do
-      let(:organization) { create(:organization, webhook_url: nil, clickhouse_events_store: store == :clickhouse) }
+    [:postgres, []],
+    [:clickhouse, []],
+    [:clickhouse, ["charge_filters_single_scan"]]
+  ].each do |store, feature_flags|
+    context "with #{store} store#{" and #{feature_flags.join(", ")}" if feature_flags.any?}", clickhouse: store == :clickhouse do
+      let(:organization) { create(:organization, webhook_url: nil, clickhouse_events_store: store == :clickhouse, feature_flags:) }
       let(:customer) { create(:customer, organization:) }
       let(:plan) { create(:plan, organization:, amount_cents: 0, pay_in_advance: false, interval: "monthly") }
       let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "value") }
 
       # Filters with no ChargeFilterValue records should not exist but can due
-      # to missing validations. They produce {} in ignored_filters.
+      # to missing validations.
       context "when charge filters have no values" do
         before do
           cloud_filter = create(:billable_metric_filter, billable_metric:, key: "cloud", values: %w[aws gcp])
@@ -35,7 +36,7 @@ describe "Current Usage - Overlapping charge filters", transaction: false do
             .tap { |cf| create(:charge_filter_value, charge_filter: cf, billable_metric_filter: cloud_filter, values: ["aws"]) }
         end
 
-        it "returns current usage without SQL errors" do
+        it "bills the usage without a bucket for the empty filters" do
           travel_to(DateTime.new(2024, 3, 5)) do
             create_subscription(
               {
@@ -58,7 +59,11 @@ describe "Current Usage - Overlapping charge filters", transaction: false do
 
             fetch_current_usage(customer:)
 
-            expect(json[:customer_usage][:charges_usage].first[:filters].count).to eq(4)
+            filters = json[:customer_usage][:charges_usage].first[:filters]
+            expect(filters.map { it.slice(:invoice_display_name, :events_count, :units) }).to match_array([
+              {invoice_display_name: "AWS", events_count: 1, units: "10.0"},
+              {invoice_display_name: nil, events_count: 0, units: "0.0"}
+            ])
           end
         end
       end

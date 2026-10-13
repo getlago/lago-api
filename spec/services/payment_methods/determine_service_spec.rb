@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe PaymentMethods::DetermineService do
   subject(:service) { described_class.new(invoice:, customer:, payment_method_params:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:default_payment_method) { create(:payment_method, customer:, is_default: true) }
   let(:payment_method_params) { {} }

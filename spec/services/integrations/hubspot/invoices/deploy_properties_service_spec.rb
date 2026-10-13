@@ -3,6 +3,10 @@
 require "rails_helper"
 
 RSpec.describe Integrations::Hubspot::Invoices::DeployPropertiesService do
+  before_all do
+    create_default(:organization)
+  end
+
   subject(:deploy_properties_service) { described_class.new(integration:) }
 
   let(:integration) { create(:hubspot_integration) }

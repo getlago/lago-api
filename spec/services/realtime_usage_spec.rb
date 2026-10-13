@@ -195,8 +195,8 @@ RSpec.describe RealtimeUsage do
     context "with an expression metric" do
       let(:billable_metric) { create(:sum_billable_metric, organization:, expression: "event.properties.value * 2") }
 
-      it "is not served, because the pipeline does not evaluate expressions yet" do
-        expect(supported).to be(false)
+      it "is served, because the pipeline evaluates the expression before bucketing" do
+        expect(supported).to be(true)
       end
     end
 
@@ -231,7 +231,7 @@ RSpec.describe RealtimeUsage do
     it "excludes exactly these charge models" do
       excluded = Charge::CHARGE_MODELS.map(&:to_s) - described_class::SUPPORTED_CHARGE_MODELS
 
-      expect(excluded).to match_array(%w[percentage dynamic custom])
+      expect(excluded).to match_array(%w[percentage custom])
     end
 
     it "excludes exactly these aggregation types" do

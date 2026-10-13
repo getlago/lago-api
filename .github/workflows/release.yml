@@ -88,10 +88,93 @@ jobs:
           [ -e ./_tmp/${{ github.run_id }}/${{ github.run_attempt }}/digests ] && \
           rm -rf ./_tmp/${{ github.run_id }}/${{ github.run_attempt }}/digests
 
+  boot-contract:
+    # Gates the released artifact on the same boot contract that PRs run.
+    #
+    # The PR workflow is not enough on its own: both bases are consumed as
+    # floating `:latest`, so a base rebuild — lago-packages republishes daily to
+    # pick up Wolfi CVE fixes — can change the published image with no commit
+    # here at all, and no path filter would fire. That is exactly how v1.54.0
+    # shipped an image with an inherited ENTRYPOINT and no curl.
+    #
+    # This runs against the amd64 digest `build-images` just pushed, so it tests
+    # the exact bytes that get tagged rather than a rebuild of them. Those
+    # pushes are by-digest and untagged, and `merge` below is what creates the
+    # public `v*` tag — so failing here means nothing consumable was ever
+    # published.
+    name: Boot Contract
+    runs-on: ubuntu-latest
+    needs: [build-images]
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: getlago/postgres-partman:15.0-alpine
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_DB: lago
+          POSTGRES_USER: lago
+          POSTGRES_PASSWORD: lago
+        options: >-
+          --health-cmd "pg_isready -U lago -d lago"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - "6379:6379"
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download amd64 Digest
+        uses: actions/download-artifact@v4
+        with:
+          path: ./_digests
+          pattern: digests-linux-amd64
+          merge-multiple: true
+
+      - name: Log In to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Pull the Image Just Pushed
+        id: pull
+        run: |
+          set -euo pipefail
+          # build-images writes one empty file per digest, named by the digest
+          # with the sha256: prefix stripped.
+          digest="$(basename "$(ls ./_digests/* | head -1)")"
+          ref="${{ env.REGISTRY_IMAGE }}@sha256:${digest}"
+          echo "Testing $ref"
+          docker pull "$ref"
+          docker tag "$ref" lago-api:release-candidate
+
+      - name: Generate RSA Key
+        run: echo "LAGO_RSA_PRIVATE_KEY=$(openssl genrsa 2048 | openssl base64 -A)" >> "$GITHUB_ENV"
+
+      - name: Assert Boot Contract
+        run: ci/docker-boot-contract.sh lago-api:release-candidate
+        env:
+          DATABASE_URL: postgresql://lago:lago@127.0.0.1:5432/lago
+          REDIS_URL: redis://127.0.0.1:6379
+
+      - name: Container Logs on Failure
+        if: failure()
+        run: tail -n 200 /tmp/*.log || true
+
   merge:
     name: Merge Images
     runs-on: ubuntu-latest
-    needs: [build-images]
+    needs: [build-images, boot-contract]
     steps:
       - name: Download Digests
         uses: actions/download-artifact@v4

@@ -13,7 +13,6 @@ class ContractsQuery < BaseQuery
 
   def call
     contracts = base_scope
-    contracts = paginate(contracts)
     contracts = apply_consistent_ordering(contracts)
 
     contracts = with_external_customer(contracts) if filters.external_customer_id.present?
@@ -23,7 +22,7 @@ class ContractsQuery < BaseQuery
     contracts = with_billing_entity_ids(contracts) if filters.billing_entity_ids.present?
     contracts = with_rate_overrides(contracts) unless has_rate_overrides_filter.nil?
 
-    result.contracts = contracts
+    result.contracts = paginate(contracts)
     result
   end
 
@@ -115,14 +114,13 @@ class ContractsQuery < BaseQuery
     )
   end
 
-  # A contract has rate overrides when a current or scheduled card carries an
-  # override on one of its own phases. Own phases only: a plan-level override
-  # is the plan's shared pricing, not a per-contract one, so an inherited phase
-  # does not count. Live cards only: an ended card is history, dropped from the
-  # applied-card count, so an override on it must not flip the flag. The id
-  # subquery lets the boolean invert without a row-duplicating join.
+  # A contract has rate overrides when one of its cards carries an override on
+  # one of its own phases. Own phases only: a plan-level override is the plan's
+  # shared pricing, not a per-contract one, so an inherited phase does not
+  # count. The id subquery lets the boolean invert without a row-duplicating
+  # join.
   def with_rate_overrides(scope)
-    overriding_ids = ContractRateCard.current_and_scheduled
+    overriding_ids = ContractRateCard
       .where(organization:)
       .joins(:rate_phases)
       .where.not(rate_phases: {rate_override_id: nil})

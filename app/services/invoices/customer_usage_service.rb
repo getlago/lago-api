@@ -4,6 +4,8 @@ module Invoices
   class CustomerUsageService < BaseService
     Result = BaseResult[:invoice, :usage, :fees_taxes]
 
+    PREFILTER_CACHE_TTL = 15.seconds
+
     def initialize(
       customer:,
       subscription:,
@@ -11,10 +13,11 @@ module Invoices
       apply_taxes: true,
       with_cache: true,
       max_timestamp: nil,
-      calculate_projected_usage: false,
+      with_projection: false,
       with_zero_units_filters: true,
       usage_filters: UsageFilters::NONE,
-      use_usage_buckets: false
+      use_usage_buckets: false,
+      cache_prefilter: false
     )
       super
 
@@ -23,28 +26,29 @@ module Invoices
       @subscription = subscription
       @timestamp = timestamp # To not set this value if without disabling the cache
       @with_cache = with_cache
-      @calculate_projected_usage = calculate_projected_usage
+      @with_projection = with_projection
       @with_zero_units_filters = with_zero_units_filters
       @usage_filters = usage_filters
       @use_usage_buckets = use_usage_buckets
+      @cache_prefilter = cache_prefilter
 
       # NOTE: used to force charges_to_datetime boundary
       @max_timestamp = max_timestamp
     end
 
     def self.with_external_ids(customer_external_id:, external_subscription_id:, organization_id:, apply_taxes: true,
-      calculate_projected_usage: false, usage_filters: UsageFilters::NONE, use_usage_buckets: false)
+      with_projection: false, usage_filters: UsageFilters::NONE, use_usage_buckets: false, cache_prefilter: false)
       customer = Customer.find_by!(external_id: customer_external_id, organization_id:)
       subscription = customer&.active_subscriptions&.find_by(external_id: external_subscription_id)
-      new(customer:, subscription:, apply_taxes:, calculate_projected_usage:, usage_filters:, use_usage_buckets:)
+      new(customer:, subscription:, apply_taxes:, with_projection:, usage_filters:, use_usage_buckets:, cache_prefilter:)
     rescue ActiveRecord::RecordNotFound
       result.not_found_failure!(resource: "customer")
     end
 
-    def self.with_ids(organization_id:, customer_id:, subscription_id:, apply_taxes: true, calculate_projected_usage: false, use_usage_buckets: false)
+    def self.with_ids(organization_id:, customer_id:, subscription_id:, apply_taxes: true, with_projection: false, use_usage_buckets: false)
       customer = Customer.find_by(id: customer_id, organization_id:)
       subscription = customer&.active_subscriptions&.find_by(id: subscription_id)
-      new(customer:, subscription:, apply_taxes:, calculate_projected_usage:, use_usage_buckets:)
+      new(customer:, subscription:, apply_taxes:, with_projection:, use_usage_buckets:)
     rescue ActiveRecord::RecordNotFound
       result.not_found_failure!(resource: "customer")
     end
@@ -64,8 +68,8 @@ module Invoices
 
     private
 
-    attr_reader :customer, :invoice, :subscription, :timestamp, :apply_taxes, :with_cache, :max_timestamp, :calculate_projected_usage, :with_zero_units_filters
-    attr_reader :usage_filters, :use_usage_buckets
+    attr_reader :customer, :invoice, :subscription, :timestamp, :apply_taxes, :with_cache, :max_timestamp, :with_projection, :with_zero_units_filters
+    attr_reader :usage_filters, :use_usage_buckets, :cache_prefilter
 
     delegate :plan, to: :subscription
     delegate :billing_entity, to: :customer
@@ -170,7 +174,6 @@ module Invoices
           provider:,
           options: Fees::ChargeService::Options.new(
             context: :current_usage,
-            calculate_projected_usage:,
             with_zero_units_filters:,
             usage_filters:,
             # NOTE: current usage is computed on a non-persisted invoice, so adjusted fees never apply
@@ -185,17 +188,13 @@ module Invoices
         organization:,
         billing_context: Billing::Context.from(subscription:),
         boundaries:,
-        serve_current_usage_from_buckets: serve_from_buckets?,
+        serve_current_usage_from_buckets: use_usage_buckets,
         usage_filters:,
-        charges:
+        charges:,
+        # Its stored totals are a cache like the fees one: a caller asking for none, such as the
+        # usage buckets comparison or the daily usage backfill run at a frozen time, reads every event.
+        incremental_charge_cache: with_cache && organization.feature_flag_enabled?(:incremental_charge_cache)
       )
-    end
-
-    # A projected read keeps counting events: Fees::ProjectionService re-aggregates the charge
-    # from the events at presentation time, so serving the units from the buckets would render
-    # a projection below the usage it projects.
-    def serve_from_buckets?
-      use_usage_buckets && !calculate_projected_usage
     end
 
     def boundaries
@@ -290,8 +289,32 @@ module Invoices
         amount_cents: invoice.fees_amount_cents,
         total_amount_cents: invoice.total_amount_cents,
         taxes_amount_cents: invoice.taxes_amount_cents,
-        fees: invoice.fees
+        fees: invoice.fees,
+        projections:
       )
+    end
+
+    def projections
+      return unless with_projection
+
+      timezone = customer.applicable_timezone
+      projections_by_fee = invoice.fees.each_with_object({}.compare_by_identity) do |fee, by_fee|
+        by_fee[fee] = Fees::ProjectionService.call!(fee:, metered_item: metered_item_for(fee), timezone:).projection
+      end
+
+      UsageProjections.new(projections_by_fee)
+    end
+
+    # Default-filter fees carry no charge filter and are priced with the charge properties.
+    def metered_item_for(fee)
+      @metered_items_by_charge_id ||= metered_items.index_by(&:charge_id)
+      metered_item = @metered_items_by_charge_id.fetch(fee.charge_id)
+
+      if fee.charge_filter
+        metered_item.with_filter(fee.charge_filter)
+      else
+        metered_item
+      end
     end
 
     def customer_provider_taxation?
@@ -307,8 +330,17 @@ module Invoices
         boundaries:,
         codes: filtered_metric_codes,
         with_last_seen_at: charge_cache_enabled?,
-        precomputed_filters:
+        precomputed_filters:,
+        combinations_cache_ttl: (PREFILTER_CACHE_TTL if prefilter_cache_enabled?),
+        incremental_combinations: organization.feature_flag_enabled?(:usage_prefilter_incremental)
       )
+    end
+
+    # Opt-in per caller and per organization: the pre-filter result is reused for a few seconds, so
+    # events ingested meanwhile are missed until it expires. Callers reacting to new events (alerts,
+    # wallets) must not pass cache_prefilter.
+    def prefilter_cache_enabled?
+      cache_prefilter && with_cache && organization.feature_flag_enabled?(:usage_prefilter_short_cache)
     end
 
     def precomputed_filters

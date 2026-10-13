@@ -62,12 +62,24 @@ rescue ActiveRecord::PendingMigrationError
 end
 
 ENV["STRIPE_API_VERSION"] ||= "2020-08-27"
+# Factories use Faker URLs, which would otherwise be resolved over DNS.
+ENV["LAGO_WEBHOOK_ALLOW_PRIVATE_URLS"] ||= "true"
 
 Sentry.init do |config|
   config.dsn = "https://fake@sentry.io/123"
   config.enabled_environments = ["production"]
   config.environment = :test
   config.transport.transport_class = Sentry::DummyTransport
+end
+
+require "test_prof/recipes/rspec/sample"
+require "test_prof/recipes/rspec/let_it_be"
+require "test_prof/recipes/rspec/factory_default"
+
+# Records shared through `let_it_be` are frozen, so an example that modifies one raises a `FrozenError`
+# instead of leaking its changes into the next examples. Use `refind: true` when an example must update it.
+TestProf::LetItBe.configure do |config|
+  config.default_modifiers[:freeze] = true
 end
 
 RSpec.configure do |config|

@@ -3,7 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Invoices::FinalizePendingViesInvoiceJob do
-  let(:invoice) { create(:invoice, :pending, tax_status: "pending") }
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
+
+  let_it_be(:invoice) { create(:invoice, :pending, tax_status: "pending") }
   let(:result) { Invoices::FinalizePendingViesInvoiceService::Result.new }
 
   describe "#perform" do

@@ -18,6 +18,17 @@ RSpec.describe Contracts::TerminateService do
     end
   end
 
+  context "when the clock activated the contract since it was loaded" do
+    let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:) }
+
+    before { Contract.where(id: contract.id).update_all(status: :active) } # rubocop:disable Rails/SkipsModelValidations
+
+    it "terminates it instead of canceling it" do
+      expect(result).to be_success
+      expect(contract.reload.status).to eq("terminated")
+    end
+  end
+
   context "when the contract is pending" do
     let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:) }
 

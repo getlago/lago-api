@@ -108,4 +108,23 @@ RSpec.describe InvoiceMailer do
       end
     end
   end
+
+  describe "translations" do
+    let(:invoice) { create(:invoice, organization:, billing_entity:, customer:, fees_amount_cents: 100) }
+
+    after { I18n.locale = I18n.default_locale }
+
+    I18n.available_locales.each do |locale|
+      context "with the #{locale} document locale" do
+        let(:customer) { create(:customer, organization:, billing_entity:, document_locale: locale.to_s) }
+
+        it "renders no missing translation" do
+          mailer = invoice_mailer.with(invoice:).created
+
+          expect(mailer.subject).not_to include("Translation missing")
+          expect(mailer.body.encoded).not_to include("Translation missing")
+        end
+      end
+    end
+  end
 end

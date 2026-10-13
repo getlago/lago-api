@@ -12,6 +12,9 @@ RSpec.describe Resolvers::RolesResolver do
     )
   end
 
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:organization) { create_default(:organization) }
+
   let(:query) do
     <<~GQL
       query {
@@ -27,10 +30,10 @@ RSpec.describe Resolvers::RolesResolver do
   end
 
   let(:required_permission) { "roles:view" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:other_user) { create(:user, email: "other@example.com") }
-  let!(:other_membership) { create(:membership, organization:, user: other_user) }
+
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:other_user) { create(:user, email: "other@example.com") }
+  let_it_be(:other_membership) { create(:membership, organization:, user: other_user) }
 
   before do
     create(:role, :admin)
@@ -88,5 +91,43 @@ RSpec.describe Resolvers::RolesResolver do
     admin = roles_response.find { |r| r["name"] == "Admin" }
 
     expect(admin["memberships"]).to be_empty
+  end
+
+  describe "grantable" do
+    subject(:roles_response) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        current_membership: membership,
+        permissions: required_permission,
+        query: "query { roles { name grantable } }"
+      )["data"]["roles"].to_h { |role| [role["name"], role["grantable"]] }
+    end
+
+    before do
+      create(:role, :custom, organization:, name: "Viewer", permissions: %w[organization:view])
+      create(:role, :custom, organization:, name: "KeyManager", permissions: %w[developers:keys:manage])
+    end
+
+    context "when the current member is admin" do
+      let(:membership) { create(:membership, user: create(:user), roles: %i[admin]) }
+
+      it "marks every role as grantable" do
+        expect(roles_response.values).to all(be(true))
+      end
+    end
+
+    context "when the current member is not admin" do
+      let(:membership) { create(:membership, user: create(:user), roles: %i[finance]) }
+
+      it "marks only roles within the member permissions as grantable" do
+        expect(roles_response).to include(
+          "Admin" => false,
+          "Finance" => true,
+          "Viewer" => true,
+          "KeyManager" => false
+        )
+      end
+    end
   end
 end

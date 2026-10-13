@@ -14,13 +14,17 @@ module Events
       delegate :all_filter_values?,
         :billable_metric,
         :filter_match_values,
-        :filter_specificity,
+        :filter_precedence,
         :filter_values,
         :filters,
         :selected_filter,
         :target_key,
         :with_filter,
         to: :source
+
+      def charge?
+        source.is_a?(Sources::Charge)
+      end
     end
   end
 end

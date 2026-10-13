@@ -145,12 +145,4 @@ RSpec.describe PlanRateCardsQuery, type: :query do
       expect(result.plan_rate_cards).to eq([plan_rate_card])
     end
   end
-
-  context "when filtering by plan_code" do
-    let(:filters) { {plan_code: catalog_plan.code} }
-
-    it "returns only the plan's products" do
-      expect(result.plan_rate_cards).to eq([plan_rate_card])
-    end
-  end
 end

@@ -14,8 +14,8 @@ describe Clock::ProcessBillingSegmentsJob, job: true do
   end
 
   describe ".perform" do
-    def segment(customer, status, product: create(:product, :fixed, organization:))
-      rate_card = create(:rate_card, organization:, product:)
+    def segment(customer, status, product: create(:product, :fixed, organization:), billing_timing: :arrears)
+      rate_card = create(:rate_card, organization:, product:, billing_timing:)
       contract = create(:contract, organization:, customer:, started_at: 1.month.ago)
       contract_rate_card = create(:contract_rate_card, organization:, contract:, rate_card:)
 
@@ -55,8 +55,9 @@ describe Clock::ProcessBillingSegmentsJob, job: true do
     # scope, so a customer offered here is always a customer it has work for.
     context "when a customer's segments are processing" do
       let(:claimed_customer) { create(:customer, organization:) }
+      let(:advance_product) { create(:product, organization:) }
 
-      before { segment(claimed_customer, :processing) }
+      before { segment(claimed_customer, :processing, product: advance_product, billing_timing: :advance) }
 
       it "enqueues that customer" do
         described_class.perform_now
@@ -65,27 +66,7 @@ describe Clock::ProcessBillingSegmentsJob, job: true do
       end
     end
 
-    # Deleting a customer leaves their segments pending, so without this the scan keeps
-    # enqueueing them and the job raises RecordNotFound loading the customer back:
-    # BillingSegment#customer is with_discarded, Customer's own default scope is not.
-    context "when the customer has been deleted" do
-      let(:deleted_customer) { create(:customer, organization:) }
-
-      before do
-        segment(deleted_customer, :pending)
-        deleted_customer.discard!
-      end
-
-      it "leaves them out" do
-        described_class.perform_now
-
-        expect(BillingSegments::ProcessJob).not_to have_been_enqueued.with(deleted_customer.id)
-      end
-    end
-
-    # Metered usage billed in advance is priced per event, so the consumer skips those
-    # segments and they never leave their state. Offering the customer anyway would enqueue
-    # a run with nothing to do, every hour, for good.
+    # Pending advance-metered usage is priced per event, not by the billing clock.
     context "when the only pending segment is metered and billed in advance" do
       let(:streaming_customer) { create(:customer, organization:) }
       let(:metered_product) { create(:product, organization:, billable_metric: create(:billable_metric, organization:)) }
@@ -109,6 +90,24 @@ describe Clock::ProcessBillingSegmentsJob, job: true do
         described_class.perform_now
 
         expect(BillingSegments::ProcessJob).not_to have_been_enqueued.with(streaming_customer.id)
+      end
+    end
+
+    # Deleting a customer leaves their segments pending, so without this the scan keeps
+    # enqueueing them and the job raises RecordNotFound loading the customer back:
+    # BillingSegment#customer is with_discarded, Customer's own default scope is not.
+    context "when the customer has been deleted" do
+      let(:deleted_customer) { create(:customer, organization:) }
+
+      before do
+        segment(deleted_customer, :pending)
+        deleted_customer.discard!
+      end
+
+      it "leaves them out" do
+        described_class.perform_now
+
+        expect(BillingSegments::ProcessJob).not_to have_been_enqueued.with(deleted_customer.id)
       end
     end
   end

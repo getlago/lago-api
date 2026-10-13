@@ -16,7 +16,7 @@ module Events
         matching_filters = target_filter.filters.select { |filter| matches?(filter) }
 
         result.matching_filters = matching_filters
-        result.filter = matching_filters.max_by { |filter| target_filter.filter_specificity(filter) }
+        result.filter = matching_filters.min_by { |filter| target_filter.filter_precedence(filter) }
         result
       end
 

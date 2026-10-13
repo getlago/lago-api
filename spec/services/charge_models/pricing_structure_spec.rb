@@ -15,6 +15,7 @@ RSpec.describe ChargeModels::PricingStructure do
       expect(structure.prorated).to eq(true)
       expect(structure.accepts_target_wallet).to eq(false)
       expect(structure.currency).to eq(Money::Currency.new(charge.plan.amount_currency))
+      expect(structure.product_catalog).to eq(false)
     end
 
     context "when chargeable is not a charge" do
@@ -68,6 +69,34 @@ RSpec.describe ChargeModels::PricingStructure do
       expect do
         structure.with(currency: nil)
       end.to raise_error(ArgumentError, "currency is mandatory")
+    end
+  end
+
+  describe "#prorated_product_catalog?" do
+    subject(:prorated_product_catalog) { structure.prorated_product_catalog? }
+
+    let(:structure) { described_class.from_charge(build(:standard_charge)).with(product_catalog:, prorated:) }
+    let(:product_catalog) { true }
+    let(:prorated) { true }
+
+    it "is true for a prorated product catalog rate" do
+      expect(prorated_product_catalog).to be(true)
+    end
+
+    context "without product catalog pricing" do
+      let(:product_catalog) { false }
+
+      it "is false" do
+        expect(prorated_product_catalog).to be(false)
+      end
+    end
+
+    context "without proration" do
+      let(:prorated) { false }
+
+      it "is false" do
+        expect(prorated_product_catalog).to be(false)
+      end
     end
   end
 end

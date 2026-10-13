@@ -19,7 +19,7 @@ FactoryBot.define do
     charge_id { charge.id }
     charge_filter_id { "" }
     grouped_by { "{}" }
-    aggregation_type { "sum_agg" }
+    aggregation_type { "sum" }
     bucket { Time.current.beginning_of_hour }
     events_count { 1 }
     units { "21.0" }

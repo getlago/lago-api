@@ -6,14 +6,14 @@ RSpec.describe Clock::RefreshDedicatedOrgWalletsOngoingBalanceJob, job: true do
   describe "#perform" do
     subject { described_class.perform_now }
 
-    let(:target_organization) { create(:organization) }
-    let(:other_organization) { create(:organization) }
-    let(:target_customer) { create(:customer, organization: target_organization, awaiting_wallet_refresh: true) }
-    let(:other_customer) { create(:customer, organization: other_organization, awaiting_wallet_refresh: true) }
-    let(:customer_without_wallet) do
+    let_it_be(:target_organization) { create(:organization) }
+    let_it_be(:other_organization) { create(:organization) }
+    let_it_be(:target_customer) { create(:customer, organization: target_organization, awaiting_wallet_refresh: true) }
+    let_it_be(:other_customer) { create(:customer, organization: other_organization, awaiting_wallet_refresh: true) }
+    let_it_be(:customer_without_wallet) do
       create(:customer, organization: target_organization, awaiting_wallet_refresh: true)
     end
-    let(:customer_with_terminated_wallet) do
+    let_it_be(:customer_with_terminated_wallet) do
       create(:customer, organization: target_organization, awaiting_wallet_refresh: true) do |customer|
         create(:wallet, customer:, status: :terminated)
       end

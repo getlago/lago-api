@@ -26,6 +26,7 @@ module Types
     field :api_log, resolver: Resolvers::ApiLogResolver
     field :api_logs, resolver: Resolvers::ApiLogsResolver
     field :applied_coupons, resolver: Resolvers::AppliedCouponsResolver
+    field :attributed_usage, resolver: Resolvers::AttributedUsageResolver
     field :billable_metric, resolver: Resolvers::BillableMetricResolver
     field :billable_metrics, resolver: Resolvers::BillableMetricsResolver
     field :billing_entities, resolver: Resolvers::BillingEntitiesResolver
@@ -126,6 +127,7 @@ module Types
     field :subscription_alerts, resolver: Resolvers::Subscriptions::AlertsResolver
     field :subscription_entitlement, resolver: Resolvers::Entitlement::SubscriptionEntitlementResolver
     field :subscription_entitlements, resolver: Resolvers::Entitlement::SubscriptionEntitlementsResolver
+    field :subscription_hourly_usage, resolver: Resolvers::Subscriptions::HourlyUsageResolver
     field :subscriptions, resolver: Resolvers::SubscriptionsResolver
     field :tax, resolver: Resolvers::TaxResolver
     field :taxes, resolver: Resolvers::TaxesResolver

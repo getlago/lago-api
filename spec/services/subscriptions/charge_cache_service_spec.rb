@@ -5,6 +5,13 @@ require "rails_helper"
 RSpec.describe Subscriptions::ChargeCacheService do
   subject(:cache_service) { described_class.new(subscription:, charge:, charge_filter:) }
 
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+    create_default(:plan)
+    create_default(:billable_metric)
+  end
+
   let(:subscription) { create(:subscription) }
   let(:charge) { create(:standard_charge, plan: subscription.plan) }
   let(:charge_filter) { nil }

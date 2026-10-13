@@ -5,12 +5,16 @@ require "rails_helper"
 RSpec.describe RatePhases::DestroyService do
   subject(:result) { described_class.call(rate_phase:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:plan_rate_card) { create(:plan_rate_card, organization:) }
-
   let!(:launch) { create(:rate_phase, plan_rate_card:, organization:, position: 1, billing_interval_cycle_count: 3) }
   let!(:ramp) { create(:rate_phase, plan_rate_card:, organization:, position: 2, billing_interval_cycle_count: 6) }
   let!(:terminal) { create(:rate_phase, plan_rate_card:, organization:, position: 3, billing_interval_cycle_count: nil) }
+
+  before_all do
+    create_default(:plan)
+    create_default(:billable_metric)
+  end
 
   context "when deleting a middle phase" do
     let(:rate_phase) { ramp }

@@ -20,11 +20,12 @@ RSpec.describe Mutations::ApiKeys::Rotate do
       }
     GQL
   end
-
-  let(:required_permission) { "developers:keys:manage" }
-  let!(:membership) { create(:membership) }
   let(:expires_at) { generate(:future_date).iso8601 }
   let(:name) { Faker::Lorem.words.join(" ") }
+
+  let(:required_permission) { "developers:keys:manage" }
+
+  let_it_be(:membership) { create_default(:membership) }
 
   include_context "with mocked security logger"
 

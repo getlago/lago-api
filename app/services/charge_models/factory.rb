@@ -39,7 +39,9 @@ module ChargeModels
       when :standard
         ChargeModels::StandardService
       when :graduated
-        if pricing_structure.prorated && has_aggregator
+        if pricing_structure.prorated && has_aggregator && pricing_structure.product_catalog
+          ChargeModels::ProratedAdjacentGraduatedService
+        elsif pricing_structure.prorated && has_aggregator
           ChargeModels::ProratedGraduatedService
         else
           ChargeModels::GraduatedService

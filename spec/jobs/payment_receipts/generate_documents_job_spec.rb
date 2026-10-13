@@ -3,6 +3,12 @@
 require "rails_helper"
 
 RSpec.describe PaymentReceipts::GenerateDocumentsJob do
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+    create_default(:invoice)
+  end
+
   subject { described_class.perform_now(payment_receipt:, notify:) }
 
   let(:payment_receipt) { create(:payment_receipt) }

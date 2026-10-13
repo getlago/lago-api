@@ -8,6 +8,7 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       :invoice,
       customer:,
       currency: "EUR",
+      taxes_amount_cents:,
       total_amount_cents: amount_cents
     )
   end
@@ -17,6 +18,7 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       taxes_precise_amount_cents: 0)
   }
   let(:amount_cents) { 100 }
+  let(:taxes_amount_cents) { 0 }
   let(:fee_amount_cents) { 100 }
 
   let(:normal_wallet) do
@@ -91,6 +93,11 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       expect(invoice.prepaid_credit_amount_cents).to eq(100)
     end
 
+    it "records on the wallet transaction what it paid per billable metric" do
+      expect(result.wallet_transactions.first.reload.billable_metric_amounts)
+        .to eq({subscription.id => {fee.charge.billable_metric_id => 100}})
+    end
+
     it "updates wallet balance" do
       subject
       wallet = priority_wallet.reload
@@ -138,6 +145,15 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
         expect(invoice.prepaid_credit_amount_cents).to eq(1500)
       end
 
+      it "records each wallet transaction's part of the billable metric" do
+        amounts = result.wallet_transactions.to_h { [it.wallet_id, it.reload.billable_metric_amounts] }
+
+        expect(amounts).to eq({
+          priority_wallet.id => {subscription.id => {fee.charge.billable_metric_id => 1000}},
+          priority_limited_charge_wallet.id => {subscription.id => {fee.charge.billable_metric_id => 500}}
+        })
+      end
+
       it "updates wallets balance" do
         subject
         wallet_priority = priority_wallet.reload
@@ -171,6 +187,7 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
     context "with fee type limitations" do
       let(:subscription_fees) { [fee, fee2] }
       let(:amount_cents) { 110 }
+      let(:taxes_amount_cents) { 10 }
       let(:fee) { create(:fee, invoice:, subscription:, amount_cents: 60, precise_amount_cents: 60, taxes_precise_amount_cents: 6) }
       let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 40, precise_amount_cents: 40, taxes_precise_amount_cents: 4) }
 
@@ -202,6 +219,7 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
 
       context "when wallet credits are less than invoice amount" do
         let(:amount_cents) { 5150 }
+        let(:taxes_amount_cents) { 150 }
         let(:fee) { create(:fee, invoice:, subscription:, amount_cents: 3500, precise_amount_cents: 3500, taxes_precise_amount_cents: 100) }
         let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 1500, precise_amount_cents: 1500, taxes_precise_amount_cents: 50) }
 
@@ -259,6 +277,7 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       end
       let(:subscription_fees) { [fee, fee2] }
       let(:amount_cents) { 110 }
+      let(:taxes_amount_cents) { 10 }
       let(:fee) { create(:fee, invoice:, subscription:, amount_cents: 60, precise_amount_cents: 60, taxes_precise_amount_cents: 6) }
       let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 40, precise_amount_cents: 40, taxes_precise_amount_cents: 4, charge:) }
       let(:charge) { create(:standard_charge, organization: wallets.first.organization, billable_metric:) }
@@ -333,6 +352,7 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       context "when wallet credits are less than invoice amount" do
         let(:subscription_fees) { [fee, fee2] }
         let(:amount_cents) { 10_000 }
+        let(:taxes_amount_cents) { 300 }
         let(:fee) { create(:fee, invoice:, subscription:, amount_cents: 2_000, precise_amount_cents: 2_000, taxes_precise_amount_cents: 200) }
         let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 1_000, precise_amount_cents: 1_000, taxes_precise_amount_cents: 100, charge:) }
 
@@ -373,6 +393,7 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
     context "when wallet is limited to a fee processed last" do
       let(:fee) { nil }
       let(:amount_cents) { 680 }
+      let(:taxes_amount_cents) { 80 }
 
       let(:wallet_limited_billable_metric) { create(:billable_metric, organization: customer.organization) }
       let(:wallet) do
@@ -624,6 +645,7 @@ RSpec.describe Credits::AppliedPrepaidCreditsService do
       end
       let(:wallets) { [normal_wallet] }
       let(:amount_cents) { 106_826 }
+      let(:taxes_amount_cents) { 6826 }
       let(:fee) { nil }
 
       before do

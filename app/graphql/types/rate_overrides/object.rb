@@ -12,10 +12,14 @@ module Types
       field :min_amount_cents, GraphQL::Types::BigInt, null: false
       field :pricing_unit_conversion_rate, GraphQL::Types::Float, null: true
       field :rate_model, Types::RateCardRates::RateModelEnum, null: false
-      field :rate_properties, Types::Charges::Properties, null: false
+      field :rate_properties, Types::RateProperties::Properties, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+
+      def rate_properties
+        ::RateProperties.present(object.rate_properties)
+      end
     end
   end
 end

@@ -5,6 +5,9 @@ require "rails_helper"
 RSpec.describe ::V1::SubscriptionSerializer do
   subject(:serializer) { described_class.new(subscription, root_name: "subscription", includes:) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:customer) { create_default(:customer) }
   let(:started_at) { Time.zone.parse("2024-04-23 10:02:03") }
   let(:ending_at) { Time.zone.parse("2024-06-30") }
   let(:subscription) do
@@ -174,6 +177,18 @@ RSpec.describe ::V1::SubscriptionSerializer do
 
       expect(result["subscription"]["applied_invoice_custom_sections"]).to be_present
     end
+
+    context "with a link to a deleted section" do
+      let(:deleted_section) { create(:invoice_custom_section, organization: subscription.organization, deleted_at: Time.current) }
+
+      before { create(:subscription_applied_invoice_custom_section, subscription:, invoice_custom_section: deleted_section) }
+
+      it "skips the deleted section" do
+        result = JSON.parse(serializer.to_json)
+
+        expect(result["subscription"]["applied_invoice_custom_sections"].size).to eq(1)
+      end
+    end
   end
 
   context "when terminated with credit note" do
@@ -284,6 +299,26 @@ RSpec.describe ::V1::SubscriptionSerializer do
           "status" => activation_rule.status
         )
       )
+    end
+  end
+
+  context "with connections" do
+    let(:customer) { subscription.customer }
+
+    before do
+      create(:stripe_customer, customer:, organization: customer.organization,
+        code: "stripe_default", is_default: true)
+      create(:billing_object_connection, owner: subscription,
+        organization: subscription.organization, category: "tax", behavior: "skip")
+    end
+
+    it "reports every category with its behaviour and effective code" do
+      result = JSON.parse(serializer.to_json)
+      connections = result["subscription"]["connections"]
+
+      expect(connections.keys).to match_array(%w[payment tax accounting crm])
+      expect(connections["payment"]).to eq({"behavior" => "inherit", "code" => "stripe_default"})
+      expect(connections["tax"]).to eq({"behavior" => "skip", "code" => nil})
     end
   end
 end

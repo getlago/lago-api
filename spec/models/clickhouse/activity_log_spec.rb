@@ -5,6 +5,11 @@ require "rails_helper"
 RSpec.describe Clickhouse::ActivityLog, clickhouse: true do
   subject(:activity_log) { create(:clickhouse_activity_log) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:customer) { create_default(:customer) }
+
   it { is_expected.to belong_to(:organization) }
   it { is_expected.to belong_to(:resource) }
   it { is_expected.to belong_to(:customer).optional }

@@ -10,9 +10,11 @@ RSpec.describe Lago::RedisConfigBuilder do
     env_keys = %w[
       REDIS_URL REDIS_PASSWORD
       LAGO_REDIS_SIDEKIQ_SENTINELS LAGO_REDIS_SIDEKIQ_MASTER_NAME
+      LAGO_REDIS_SIDEKIQ_SENTINEL_USERNAME LAGO_REDIS_SIDEKIQ_SENTINEL_PASSWORD
       LAGO_REDIS_SIDEKIQ_RETRY_WINDOW_SECONDS
       LAGO_REDIS_CACHE_URL LAGO_REDIS_CACHE_PASSWORD
       LAGO_REDIS_CACHE_SENTINELS LAGO_REDIS_CACHE_MASTER_NAME
+      LAGO_REDIS_CACHE_SENTINEL_USERNAME LAGO_REDIS_CACHE_SENTINEL_PASSWORD
     ]
     original_env = ENV.to_h.slice(*env_keys)
     env_keys.each { |key| ENV.delete(key) }
@@ -21,8 +23,110 @@ RSpec.describe Lago::RedisConfigBuilder do
     ENV.delete_if { |k, _| env_keys.include?(k) && !original_env.key?(k) }
   end
 
+  shared_examples "Sentinel authentication" do |prefix, password_key, other_prefix|
+    context "with Sentinel credentials configured" do
+      let(:sentinels) { "sentinel1:26379" }
+      let(:sentinel_username) { "sentinel-user" }
+      let(:sentinel_password) { "sentinel-password" }
+
+      before do
+        ENV["#{prefix}_SENTINELS"] = sentinels if sentinels
+        ENV["#{prefix}_SENTINEL_USERNAME"] = sentinel_username if sentinel_username
+        ENV["#{prefix}_SENTINEL_PASSWORD"] = sentinel_password if sentinel_password
+        ENV[password_key] = "data-password"
+      end
+
+      it "keeps Sentinel credentials separate from the data Redis password" do
+        expect(result).to include(
+          sentinel_username: "sentinel-user",
+          sentinel_password: "sentinel-password",
+          password: "data-password"
+        )
+      end
+
+      context "with password-only authentication" do
+        let(:sentinel_username) { nil }
+
+        it "includes the Sentinel password without a username" do
+          expect(result).to include(sentinel_password: "sentinel-password", password: "data-password")
+          expect(result).not_to have_key(:sentinel_username)
+        end
+      end
+
+      context "with only a Sentinel username" do
+        let(:sentinel_password) { nil }
+
+        it "includes the username without reusing the data Redis password" do
+          expect(result).to include(sentinel_username: "sentinel-user", password: "data-password")
+          expect(result).not_to have_key(:sentinel_password)
+        end
+      end
+
+      context "without Sentinel credentials" do
+        let(:sentinel_username) { nil }
+        let(:sentinel_password) { nil }
+
+        it "omits authentication options" do
+          expect(result.keys & %i[sentinel_username sentinel_password]).to eq([])
+          expect(result).to include(password: "data-password")
+        end
+
+        context "with credentials for the other Redis consumer" do
+          before do
+            ENV["#{other_prefix}_SENTINEL_USERNAME"] = "other-user"
+            ENV["#{other_prefix}_SENTINEL_PASSWORD"] = "other-password"
+          end
+
+          it "does not reuse the other consumer's credentials" do
+            expect(result.keys & %i[sentinel_username sentinel_password]).to eq([])
+          end
+        end
+      end
+
+      context "with empty Sentinel credentials" do
+        let(:sentinel_username) { "" }
+        let(:sentinel_password) { "" }
+
+        it "omits authentication options" do
+          expect(result.keys & %i[sentinel_username sentinel_password]).to eq([])
+        end
+
+        context "with whitespace-only Sentinel credentials" do
+          let(:sentinel_username) { " " }
+          let(:sentinel_password) { " " }
+
+          it "omits authentication options" do
+            expect(result.keys & %i[sentinel_username sentinel_password]).to eq([])
+          end
+        end
+      end
+
+      context "without sentinels" do
+        let(:sentinels) { nil }
+
+        it "ignores Sentinel credentials" do
+          expect(result.keys & %i[sentinels sentinel_username sentinel_password]).to eq([])
+          expect(result).to include(password: "data-password")
+        end
+      end
+
+      context "with credentials for the other Redis consumer" do
+        before do
+          ENV["#{other_prefix}_SENTINEL_USERNAME"] = "other-user"
+          ENV["#{other_prefix}_SENTINEL_PASSWORD"] = "other-password"
+        end
+
+        it "uses only this consumer's credentials" do
+          expect(result).to include(sentinel_username: "sentinel-user", sentinel_password: "sentinel-password")
+        end
+      end
+    end
+  end
+
   describe "#sidekiq" do
     subject(:result) { builder.sidekiq }
+
+    it_behaves_like "Sentinel authentication", "LAGO_REDIS_SIDEKIQ", "REDIS_PASSWORD", "LAGO_REDIS_CACHE"
 
     context "with no environment variables set" do
       before do
@@ -261,6 +365,8 @@ RSpec.describe Lago::RedisConfigBuilder do
 
   describe "#cache" do
     subject(:result) { builder.cache }
+
+    it_behaves_like "Sentinel authentication", "LAGO_REDIS_CACHE", "LAGO_REDIS_CACHE_PASSWORD", "LAGO_REDIS_SIDEKIQ"
 
     context "with no environment variables set" do
       before do

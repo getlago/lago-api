@@ -5,6 +5,9 @@ require "rails_helper"
 RSpec.describe FixedCharge do
   subject { build(:fixed_charge) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:add_on) { create_default(:add_on) }
+
   it_behaves_like "paper_trail traceable"
 
   it { expect(described_class).to be_soft_deletable }

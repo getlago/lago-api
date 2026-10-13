@@ -6,6 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
+      REQUIRED_PERMISSION = "organization:update"
+
       graphql_name "UpdateOrganization"
       description "Updates an Organization"
 

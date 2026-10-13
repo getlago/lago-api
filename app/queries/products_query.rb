@@ -6,7 +6,6 @@ class ProductsQuery < BaseQuery
 
   def call
     products = base_scope.result.includes(:product_category, :billable_metric)
-    products = paginate(products)
     products = apply_consistent_ordering(products)
 
     if filters.product_category_ids.present? || filters.without_product_category.present?
@@ -14,7 +13,7 @@ class ProductsQuery < BaseQuery
     end
     products = with_product_type(products) if filters.product_type.present?
 
-    result.products = products
+    result.products = paginate(products)
     result
   end
 

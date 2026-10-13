@@ -21,6 +21,7 @@ it:
     breakdown: Ripartizione
     breakdown_for_days: Utilizzati %{breakdown_duration} su %{breakdown_total_duration} giorni
     breakdown_of: Ripartizione di %{fee_filter_display_name}
+    charges_paid_in_advance: Addebiti pagati in anticipo
     clabe: CLABE
     conversion_rate: Tasso di conversione
     country: Paese
@@ -58,7 +59,7 @@ it:
     month: mese
     monthly: Mensile
     notice_full: Indipendentemente da quando un evento viene ricevuto, l'unità non è prorata, addebitiamo il prezzo intero.
-    notice_prorated: Se un'unità viene aggiunta o rimossa durante il piano mensile, calcoliamo il prezzo proporzionato in base al rapporto tra i giorni rimanenti o utilizzati e il numero totale di giorni nel piano. Ad esempio, se restano 15 giorni nel piano, moltiplichiamo il prezzo per 15/%{days_in_month}, e se un'unità è stata utilizzata per 10 giorni, moltiplichiamo il prezzo per 10/%{days_in_month}.
+    notice_prorated: Se un'unità viene aggiunta o rimossa durante il piano mensile, calcoliamo il prezzo proporzionato in base al rapporto tra i giorni rimanenti o utilizzati e il numero totale di giorni nel piano. Ad esempio, se restano 15 giorni in un periodo di %{days_in_month} giorni, moltiplichiamo il prezzo per 15/%{days_in_month}, e se un'unità è stata utilizzata per 10 giorni, moltiplichiamo il prezzo per 10/%{days_in_month}.
     package:
       fee_per_package: Tassa per pacchetto
       fee_per_package_unit_price: "%{amount} per %{package_size}"

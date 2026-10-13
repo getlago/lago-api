@@ -12,26 +12,32 @@ module Customers
     end
 
     def call
-      wallet_allocations = Wallets::Balance::AllocateOngoingUsageByWalletsService.call!(
+      reservations = capture_reservations
+
+      allocation = Wallets::Balance::AllocateOngoingUsageByWalletsService.call!(
         customer:,
         wallets: all_wallets,
         current_usage_fees:,
         draft_invoices_fees:,
         progressive_billing_fees:,
-        pay_in_advance_fees:
-      ).wallet_allocations
+        pay_in_advance_fees:,
+        with_billable_metric_amounts: streamed_event_types.any?
+      )
 
       # The cascade makes every wallet's allocation depend on the others' balances, so all
       # wallets must be persisted together; refreshing a subset would leave the rest stale.
       all_wallets.each do |wallet|
         Wallets::Balance::RefreshOngoingUsageService.call!(
           wallet:,
-          ongoing_usage_amount_cents: wallet_allocations[wallet],
+          ongoing_usage_amount_cents: allocation.wallet_allocations[wallet],
+          ongoing_billable_metric_amounts: allocation.billable_metric_amounts.fetch(wallet, {}),
           skip_single_wallet_update: true
         )
       end
 
       Wallet.where(id: all_wallets.map(&:id)).touch_all(:last_ongoing_balance_sync_at) # rubocop:disable Rails/SkipsModelValidations
+
+      hand_off_reservations(reservations)
 
       customer.update!(awaiting_wallet_refresh: false)
 
@@ -41,11 +47,44 @@ module Customers
       result
     rescue BaseService::FailedResult => e
       e.result
+    ensure
+      drop_unreleased_claim
     end
 
     private
 
-    attr_reader :customer, :include_generating_invoices
+    attr_reader :customer, :include_generating_invoices, :refresh_claim
+
+    def capture_reservations
+      x402_wallets = all_wallets.select(&:x402_enabled)
+
+      if x402_wallets.any? && X402::ReservationCounter.enabled?(customer.organization)
+        @refresh_claim = X402::RefreshClaim.acquire(customer)
+      end
+
+      if refresh_claim
+        x402_wallets.index_with { X402::ReservationCounter.new(it).capture }.reject { |_, cents| cents.zero? }
+      else
+        {}
+      end
+    end
+
+    def hand_off_reservations(reservations)
+      if refresh_claim
+        claim = refresh_claim
+        @refresh_claim = nil
+
+        after_commit { claim.release(reservations) }
+
+        if in_transaction?
+          after_rollback { claim.drop }
+        end
+      end
+    end
+
+    def drop_unreleased_claim
+      refresh_claim&.drop
+    end
 
     def deliver_streaming_events
       streamed_event_types.each do |event_type|

@@ -8,7 +8,7 @@ module Contracts
   # canceled contract is history and cannot be terminated again.
   #
   # Lifecycle state only. This does not itself stop billing: the schedule
-  # bounds on contract.ended_at and each card's ended_date, not on status, so
+  # bounds on contract.ended_at, not on status, so
   # the billing cutoff (bringing those dates in, prorating the open period) is
   # owned by the billing engine and applied there, not from this service.
   class TerminateService < BaseService
@@ -22,14 +22,18 @@ module Contracts
     def call
       return result.not_found_failure!(resource: "contract") unless contract
 
-      unless contract.pending? || contract.active?
-        return result.single_validation_failure!(field: :contract, error_code: "cannot_terminate")
-      end
+      # Re-read under lock: a pending contract the clock just activated has
+      # taken effect, so it is terminated rather than canceled.
+      contract.with_lock do
+        unless contract.pending? || contract.active?
+          return result.single_validation_failure!(field: :contract, error_code: "cannot_terminate")
+        end
 
-      if contract.active?
-        contract.update!(status: :terminated, terminated_at: Time.current)
-      else
-        contract.update!(status: :canceled, canceled_at: Time.current)
+        if contract.active?
+          contract.update!(status: :terminated, terminated_at: Time.current)
+        else
+          contract.update!(status: :canceled, canceled_at: Time.current)
+        end
       end
 
       result.contract = contract

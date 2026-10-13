@@ -71,8 +71,11 @@ class BaseQuery < BaseService
     result
   end
 
+  # A `CursorPagination::Cursor` selects keyset pagination, a hash the offset one, and a
+  # blank value none.
   def pagination
     return if pagination_params.blank?
+    return pagination_params if pagination_params.is_a?(CursorPagination::Cursor)
 
     @pagination ||= Pagination.new(
       page: pagination_params[:page],
@@ -80,10 +83,17 @@ class BaseQuery < BaseService
     )
   end
 
+  # Must be the last scope operation of a query supporting cursor pagination: the
+  # keyset strategy replaces the ordering with its own tuple.
   def paginate(scope)
-    return scope unless pagination
-
-    scope.page(pagination.page).per(pagination.limit)
+    case pagination
+    when nil
+      scope
+    when CursorPagination::Cursor
+      CursorPagination::Keyset.apply(scope, pagination)
+    else
+      scope.page(pagination.page).per(pagination.limit)
+    end
   end
 
   def parse_datetime_filter(field_name)

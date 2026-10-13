@@ -304,6 +304,43 @@ RSpec.describe Api::V1::InvoicesController do
       expect(json[:invoice][:fees].first).to include(lago_charge_filter_id: charge_filter.id)
     end
 
+    context "when the invoice has a product fee" do
+      subject { get_with_token(organization, "/api/v2/invoices/#{invoice_id}") }
+
+      let(:product) do
+        create(:product, organization:, code: "compute", name: "Compute", description: "Compute usage")
+      end
+      let(:rate_card) { create(:rate_card, organization:, product:) }
+      let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card:) }
+
+      before do
+        create(
+          :fee,
+          fee_type: "product",
+          invoice:,
+          invoiceable: product,
+          rate_card_rate:,
+          subscription: nil,
+          invoice_display_name: nil
+        )
+      end
+
+      it "returns the product fee" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoice][:fees].sole[:item]).to include(
+          type: "product",
+          code: "compute",
+          name: "Compute",
+          description: "Compute usage",
+          invoice_display_name: "Compute",
+          lago_item_id: product.id,
+          item_type: "Product"
+        )
+      end
+    end
+
     context "when customer has an integration customer" do
       let!(:netsuite_customer) { create(:netsuite_customer, customer:) }
 

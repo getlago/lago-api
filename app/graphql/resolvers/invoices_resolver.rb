@@ -93,6 +93,7 @@ module Resolvers
         records: invoices.to_a,
         associations: [
           :fees,
+          :applied_taxes,
           :regenerated_invoice,
           :error_details,
           :billing_entity,

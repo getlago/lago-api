@@ -5,6 +5,10 @@ require "rails_helper"
 RSpec.describe Coupons::PreviewService do
   subject(:preview_service) { described_class.new(invoice:, applied_coupons:) }
 
+  before_all do
+    create_default(:organization)
+  end
+
   let(:invoice) do
     build(
       :invoice,
@@ -56,7 +60,7 @@ RSpec.describe Coupons::PreviewService do
       ]
     end
 
-    let(:plan) { create(:plan, interval: "monthly") }
+    let_it_be(:plan) { create(:plan, interval: "monthly") }
 
     before do
       invoice.subscriptions = [subscription]

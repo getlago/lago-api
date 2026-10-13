@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::WalletTransactionResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   subject(:result) do
     execute_graphql(
       current_user: membership.user,
@@ -34,14 +36,15 @@ RSpec.describe Resolvers::WalletTransactionResolver do
       }
     GQL
   end
-
-  let(:wallet_transaction_id) { wallet_transaction.id }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
   let(:wallet) { create(:wallet, customer:) }
   let!(:wallet_transaction) { create(:wallet_transaction, :failed, wallet:, invoice:) }
   let(:invoice) { create(:invoice, customer:) }
+
+  let(:wallet_transaction_id) { wallet_transaction.id }
+
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   context "with valid authorization" do
     let(:current_organization) { organization }

@@ -20,10 +20,6 @@ RSpec.describe Mutations::PricingUnits::Create do
       }
     GQL
   end
-
-  let(:required_permission) { "pricing_units:create" }
-  let(:membership) { create(:membership) }
-
   let(:input_params) do
     {
       name: "Cloud token",
@@ -32,6 +28,11 @@ RSpec.describe Mutations::PricingUnits::Create do
       description: ""
     }
   end
+
+  let(:required_permission) { "pricing_units:create" }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

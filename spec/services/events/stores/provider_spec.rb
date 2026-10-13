@@ -165,7 +165,7 @@ RSpec.describe Events::Stores::Provider do
     end
     let(:billable_metric) { create(:sum_billable_metric, organization:) }
     let(:billing_boundaries) { metered_item.boundaries }
-    let(:totals) { Events::Stores::UsageBucketSet::Totals.new(aggregation_type: "sum_agg", units: BigDecimal("42.5"), events_count: 7, last_event_at: Time.current) }
+    let(:totals) { Events::Stores::UsageBucketSet::Totals.new(aggregation_type: "sum", units: BigDecimal("42.5"), events_count: 7, last_event_at: Time.current) }
     let(:bucket_set) { Events::Stores::UsageBucketSet.new(totals: {[charge.id, ""] => totals}) }
     let(:store) { provider.store_for(metered_item:, boundaries:, filters:) }
     let(:filters) { {} }
@@ -226,7 +226,7 @@ RSpec.describe Events::Stores::Provider do
 
     context "with a count_agg charge" do
       let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
-      let(:totals) { Events::Stores::UsageBucketSet::Totals.new(aggregation_type: "count_agg", units: BigDecimal(7), events_count: 7, last_event_at: Time.current) }
+      let(:totals) { Events::Stores::UsageBucketSet::Totals.new(aggregation_type: "count", units: BigDecimal(7), events_count: 7, last_event_at: Time.current) }
 
       it "serves the units, which the pipeline already counts one per event" do
         expect(store.count.value).to eq(7)
@@ -262,7 +262,7 @@ RSpec.describe Events::Stores::Provider do
       let(:billable_metric) { create(:max_billable_metric, organization:) }
       let(:totals) do
         Events::Stores::UsageBucketSet::Totals.new(
-          aggregation_type: "max_agg", units: BigDecimal(12), events_count: 3, last_event_at: Time.current
+          aggregation_type: "max", units: BigDecimal(12), events_count: 3, last_event_at: Time.current
         )
       end
 
@@ -276,7 +276,7 @@ RSpec.describe Events::Stores::Provider do
       let(:billable_metric) { create(:latest_billable_metric, organization:) }
       let(:totals) do
         Events::Stores::UsageBucketSet::Totals.new(
-          aggregation_type: "latest_agg", units: BigDecimal(12), events_count: 3, last_event_at: Time.current
+          aggregation_type: "latest", units: BigDecimal(12), events_count: 3, last_event_at: Time.current
         )
       end
 
@@ -455,7 +455,7 @@ RSpec.describe Events::Stores::Provider do
     end
 
     context "with a billing segment" do
-      let(:metered_item) { Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment) }
+      let(:metered_item) { Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: billing_segment) }
       let(:billing_segment) { create(:billing_segment) }
 
       it "reads events, because the buckets are keyed by charge" do
@@ -608,6 +608,134 @@ RSpec.describe Events::Stores::Provider do
         Events::Stores::StoreFactory.with_override(store_class: Events::Stores::PostgresStore, deduplicate: true) do
           expect(provider.deduplicate).to be(true)
         end
+      end
+    end
+  end
+
+  describe "#store_for, with the charge filters scan" do
+    include_context "with clickhouse availability"
+
+    let(:organization) do
+      create(:organization, clickhouse_events_store: true, feature_flags: ["charge_filters_single_scan"])
+    end
+    let(:billable_metric) { create(:sum_billable_metric, organization:) }
+    let(:charge_filter) { create(:charge_filter, charge:) }
+    let(:filters) { {charge_id: charge.id, charge_filter:} }
+    let(:store) { provider.store_for(metered_item:, boundaries:, filters:) }
+
+    it "wraps the store of a charge filter" do
+      expect(store).to be_a(Events::Stores::ChargeFiltersScanStore)
+      expect(store.__getobj__).to be_a(Events::Stores::ClickhouseStore)
+      expect(store.precomputed?).to be(false)
+    end
+
+    context "with several filters of one charge" do
+      before { allow(Events::Stores::ChargeFiltersScan).to receive(:new).and_call_original }
+
+      it "shares one scan between them" do
+        store
+        provider.store_for(metered_item:, boundaries:, filters: {charge_id: charge.id, charge_filter: ChargeFilter.new(charge:)})
+
+        expect(Events::Stores::ChargeFiltersScan).to have_received(:new).once
+      end
+    end
+
+    context "with the filters the caller aggregates" do
+      before { allow(Events::Stores::ChargeFiltersScan).to receive(:new).and_call_original }
+
+      it "restricts the scan to them" do
+        provider.store_for(metered_item:, boundaries:, filters:, aggregated_filter_ids: [charge_filter.id, nil])
+
+        expect(Events::Stores::ChargeFiltersScan).to have_received(:new)
+          .with(charge: metered_item.charge, filter_ids: [charge_filter.id, nil], incremental: nil)
+      end
+    end
+
+    context "with the incremental charge cache" do
+      subject(:provider) { described_class.new(organization:, billing_context:, incremental_charge_cache: true) }
+
+      before { allow(Events::Stores::ChargeFiltersScan).to receive(:new).and_call_original }
+
+      it "gives the scan a cache for the subscription's charge" do
+        store
+
+        expect(Events::Stores::ChargeFiltersScan).to have_received(:new)
+          .with(charge: metered_item.charge, filter_ids: nil, incremental: an_instance_of(Events::Stores::ChargeFiltersScan::IncrementalCache))
+      end
+
+      context "without the single scan feature flag" do
+        let(:organization) { create(:organization, clickhouse_events_store: true) }
+
+        it "wraps the store of a charge filter" do
+          expect(store).to be_a(Events::Stores::ChargeFiltersScanStore)
+        end
+      end
+
+      context "with a charge without filters" do
+        let(:organization) { create(:organization, clickhouse_events_store: true) }
+        let(:filters) { {charge_id: charge.id} }
+
+        it "wraps its store" do
+          expect(store).to be_a(Events::Stores::ChargeFiltersScanStore)
+        end
+      end
+
+      context "with a charge whose store does not name its filter" do
+        let(:filters) { {charge_id: charge.id} }
+
+        before { charge_filter }
+
+        it "returns the store" do
+          expect(store).to be_a(Events::Stores::ClickhouseStore)
+        end
+      end
+    end
+
+    context "without the feature flag" do
+      let(:organization) { create(:organization, clickhouse_events_store: true) }
+
+      it "returns the store" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+      end
+    end
+
+    context "when the organization reads the postgres events store" do
+      let(:organization) { create(:organization, feature_flags: ["charge_filters_single_scan"]) }
+
+      it "returns the store" do
+        expect(store).to be_a(Events::Stores::PostgresStore)
+      end
+    end
+
+    context "without a charge filter" do
+      let(:filters) { {charge_id: charge.id} }
+
+      it "returns the store" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+      end
+    end
+
+    context "with a pay-in-advance event" do
+      let(:filters) { {charge_id: charge.id, charge_filter:, event: build(:common_event)} }
+
+      it "returns the store" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+      end
+    end
+
+    context "when the store is scoped to one group" do
+      let(:filters) { {charge_id: charge.id, charge_filter:, grouped_by_values: {"region" => "us"}} }
+
+      it "returns the store" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
+      end
+    end
+
+    context "with an aggregation the scan does not support" do
+      let(:billable_metric) { create(:unique_count_billable_metric, organization:) }
+
+      it "returns the store" do
+        expect(store).to be_a(Events::Stores::ClickhouseStore)
       end
     end
   end

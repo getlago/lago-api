@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Webhooks::BaseService do
   subject(:webhook_service) { WebhooksSpec::DummyClass.new(object:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, organization:) }
   let(:invoice) { create(:invoice, customer:, organization:) }
   let(:object) { invoice }
@@ -46,6 +46,17 @@ RSpec.describe Webhooks::BaseService do
       end
     end
 
+    context "when SIDEKIQ_WEBHOOK is true" do
+      before { ENV["SIDEKIQ_WEBHOOK"] = "true" }
+      after { ENV.delete("SIDEKIQ_WEBHOOK") }
+
+      it "enqueues the http job on the webhook_worker queue" do
+        webhook_service.call
+
+        expect(SendHttpWebhookJob).to have_been_enqueued.on_queue("webhook_worker")
+      end
+    end
+
     context "when organization has 2 webhook endpoints" do
       it "calls 2 webhooks" do
         create(:webhook_endpoint, organization:)
@@ -57,6 +68,7 @@ RSpec.describe Webhooks::BaseService do
     end
 
     context "without webhook endpoint" do
+      let(:customer) { create(:customer, organization:) }
       let(:organization) { create(:organization) }
 
       before do

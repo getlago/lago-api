@@ -4,12 +4,7 @@ require "rails_helper"
 
 RSpec.describe Fees::CreateTrueUpService do
   let(:create_service) { described_class.new(fee:, used_amount_cents:, used_precise_amount_cents:) }
-
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
   let(:tax) { create(:tax, organization:, rate: 20) }
-  let(:plan) { create(:plan, organization:) }
-
   let(:charge) { create(:standard_charge, plan:, min_amount_cents: 1000) }
   let(:invoice) { create(:invoice, customer:, organization:) }
   let(:fee) do
@@ -30,6 +25,10 @@ RSpec.describe Fees::CreateTrueUpService do
   end
   let(:used_amount_cents) { 700 }
   let(:used_precise_amount_cents) { 700.0 }
+
+  let_it_be(:organization, refind: true) { create(:organization) }
+  let_it_be(:customer, refind: true) { create(:customer, organization:) }
+  let_it_be(:plan, refind: true) { create(:plan, organization:) }
 
   before { tax }
 
@@ -106,6 +105,7 @@ RSpec.describe Fees::CreateTrueUpService do
       let(:fee) do
         create(
           :fee, organization:, customer:, invoice:, subscription: nil, charge: nil,
+          contract:, contract_rate_card:,
           fee_type: :product, invoiceable: rate_card.product, rate_card_rate:, product_filter:,
           amount_currency: currency, amount_cents: used_amount_cents,
           precise_amount_cents: used_precise_amount_cents, properties: {},
@@ -120,6 +120,7 @@ RSpec.describe Fees::CreateTrueUpService do
         expect(result).to be_success
         expect(result.true_up_fee).to be_new_record.and have_attributes(
           organization:, invoice:, subscription: nil, charge: nil,
+          contract:, contract_rate_card:,
           fee_type: "product", invoiceable: rate_card.product, rate_card_rate:,
           amount_currency: currency, properties: {}, true_up_parent_fee: fee,
           product_filter_id: nil, charge_filter_id: nil,

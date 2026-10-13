@@ -36,11 +36,11 @@ module Invoices
     def generate_pdf
       I18n.with_locale(invoice.customer.preferred_document_locale) do
         pdf_file = build_pdf_file
-        xml_file = attach_cii(pdf_file) if should_generate_cii_einvoice_xml?
+        attach_cii(pdf_file) if should_generate_cii_einvoice_xml?
         attach_pdf_to_invoice(pdf_file)
         invoice.save!
       ensure
-        cleanup_tempfiles(pdf_file, xml_file)
+        cleanup_tempfile(pdf_file)
       end
     end
 
@@ -56,12 +56,13 @@ module Invoices
     end
 
     def attach_cii(pdf_file)
-      xml_file = Tempfile.new([invoice.number, ".xml"])
-      xml_file.write(EInvoices::Invoices::Cii::CreateService.call(invoice:).xml)
-      xml_file.flush
+      xml = EInvoices::Invoices::Cii::CreateService.call(invoice:).xml
 
-      Utils::PdfAttachmentService.call(file: pdf_file, attachment: xml_file)
-      xml_file
+      Utils::PdfAttachmentService.call!(
+        file: pdf_file,
+        attachment_content: xml,
+        attachment_name: "factur-x.xml"
+      )
     end
 
     def attach_pdf_to_invoice(pdf_file)
@@ -72,9 +73,8 @@ module Invoices
       )
     end
 
-    def cleanup_tempfiles(pdf_file, xml_file)
+    def cleanup_tempfile(pdf_file)
       pdf_file&.unlink
-      xml_file&.unlink
     end
 
     def template

@@ -112,9 +112,14 @@ search:
 #   # deepl_version: "v2"
 
 ## Do not consider these keys missing:
-# ignore_missing:
-# - 'errors.messages.{accepted,blank,invalid,too_short,too_long}'
-# - '{devise,simple_form}.*'
+## Admin emails are always sent in English, and the activerecord error messages are
+## the error codes returned by the API, so they only exist in the base locale.
+## The English date names come from Rails.
+ignore_missing:
+  - 'date.{abbr_day_names,abbr_month_names,day_names,month_names,order}'
+  - 'activerecord.errors.*'
+  - 'email.{api_key,data_export,organization,password_reset}.*'
+  - 'password_reset.*'
 
 ## Consider these keys used:
 # ignore_unused:

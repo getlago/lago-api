@@ -341,6 +341,11 @@ RSpec.describe Api::V2::RateCardsController do
       expect(json[:rate_cards].map { it[:lago_id] }).to match_array([rate_card.id, other.id])
     end
 
+    it_behaves_like "a cursor paginated v2 endpoint", collection: :rate_cards, model: RateCard do
+      let(:paginated_path) { "/api/v2/rate_cards" }
+      let(:create_paginated_record) { ->(created_at) { create(:rate_card, organization:, created_at:) } }
+    end
+
     context "with a product_id filter" do
       let(:query_params) { "?product_id=#{product.id}" }
 

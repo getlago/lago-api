@@ -5,10 +5,10 @@ require "rails_helper"
 RSpec.describe CreditNotes::EstimateService, :premium do
   subject(:estimate_service) { described_class.new(invoice: invoice&.reload, items:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
 
-  let(:invoice) do
+  let_it_be(:invoice) do
     create(
       :invoice,
       organization:,
@@ -17,6 +17,7 @@ RSpec.describe CreditNotes::EstimateService, :premium do
       fees_amount_cents: 20,
       coupons_amount_cents: 10,
       taxes_amount_cents: 2,
+      sub_total_including_taxes_amount_cents: 12,
       total_amount_cents: 12,
       payment_status: :succeeded,
       taxes_rate: 20,
@@ -182,6 +183,7 @@ RSpec.describe CreditNotes::EstimateService, :premium do
           :invoice,
           total_amount_cents: 25000,
           taxes_amount_cents: 5000,
+          sub_total_including_taxes_amount_cents: 25000,
           fees_amount_cents: 20000,
           total_paid_amount_cents: 25000,
           taxes_rate: 25,
@@ -194,7 +196,9 @@ RSpec.describe CreditNotes::EstimateService, :premium do
           :fee,
           invoice:,
           amount_cents: 20000,
-          taxes_rate: 25
+          taxes_rate: 25,
+          taxes_amount_cents: 5000,
+          taxes_precise_amount_cents: 5000
         )
       end
 
@@ -245,7 +249,7 @@ RSpec.describe CreditNotes::EstimateService, :premium do
   end
 
   context "when invoice is a prepaid credit invoice" do
-    let(:invoice) do
+    let_it_be(:invoice) do
       create(
         :invoice,
         invoice_type: :credit,

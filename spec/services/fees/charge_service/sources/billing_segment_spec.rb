@@ -52,12 +52,220 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
     end
   end
 
+  describe "#boundaries" do
+    subject(:boundaries) { source.boundaries }
+
+    let(:billable_metric) do
+      build(:billable_metric, organization:, aggregation_type: :sum_agg, field_name: "amount", recurring: false)
+    end
+    let(:rate_model) { "standard" }
+    let(:rate_card_rate) do
+      build(:rate_card_rate, organization:, rate_card:, rate_model:, rate_properties: {"amount" => "2"})
+    end
+    let(:rate_override) { nil }
+    let(:billing_segment) do
+      build(
+        :billing_segment,
+        organization:,
+        contract_rate_card:,
+        rate_card_rate:,
+        rate_override:,
+        cycle_started_at: Time.zone.parse("2027-01-01"),
+        started_at: Time.zone.parse("2027-01-15"),
+        ended_at: Time.zone.parse("2027-01-31 23:59:59.999999")
+      )
+    end
+
+    it "uses the segment period for arrears" do
+      expect(boundaries).to have_attributes(
+        from_datetime: billing_segment.started_at,
+        charges_from_datetime: billing_segment.started_at,
+        charges_to_datetime: billing_segment.ended_at
+      )
+    end
+
+    context "with an advance card" do
+      let(:rate_card) { build(:rate_card, :advance, organization:, product:, currency: "USD", proration: false) }
+
+      it "keeps the segment start for standard pricing" do
+        expect(boundaries).to have_attributes(
+          from_datetime: billing_segment.started_at,
+          charges_from_datetime: billing_segment.started_at,
+          charges_to_datetime: billing_segment.ended_at
+        )
+      end
+
+      context "with graduated pricing" do
+        let(:rate_model) { "graduated" }
+
+        it "resets aggregation at the rate segment while retaining its service period and duration" do
+          expect(boundaries).to have_attributes(
+            from_datetime: billing_segment.started_at,
+            to_datetime: billing_segment.ended_at,
+            charges_from_datetime: billing_segment.started_at,
+            charges_to_datetime: billing_segment.ended_at,
+            charges_duration: billing_segment.duration_in_days,
+            timestamp: billing_segment.billing_at
+          )
+        end
+
+        context "with a recurring metric" do
+          let(:billable_metric) do
+            build(:billable_metric, organization:, aggregation_type: :sum_agg, field_name: "amount", recurring: true)
+          end
+
+          it "keeps the segment start" do
+            expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
+          end
+        end
+      end
+
+      context "with graduated percentage pricing" do
+        let(:rate_model) { "graduated_percentage" }
+
+        it "keeps aggregation within the rate segment" do
+          expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
+        end
+      end
+
+      %w[package percentage custom dynamic].each do |model|
+        context "with #{model} pricing" do
+          let(:rate_model) { model }
+
+          it "keeps aggregation within the rate segment" do
+            expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
+          end
+        end
+      end
+
+      context "with a graduated rate override on a standard rate" do
+        let(:rate_override) { build(:rate_override, organization:, rate_model: "graduated") }
+
+        it "keeps the segment start with a graduated override" do
+          expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
+        end
+      end
+
+      context "with a standard rate override on a graduated rate" do
+        let(:rate_model) { "graduated" }
+        let(:rate_override) { build(:rate_override, organization:, rate_model: "standard") }
+
+        it "keeps the segment start for the effective standard model" do
+          expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
+        end
+      end
+    end
+
+    context "with graduated arrears pricing" do
+      let(:rate_model) { "graduated" }
+
+      it "keeps the full-segment aggregation window" do
+        expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
+      end
+    end
+  end
+
   describe "fee identity" do
     it "exposes product fee attributes individually" do
       expect(source).to have_attributes(
         fee_type: :product, invoiceable: product, contract: billing_segment.contract,
-        rate_card_rate:, rate_override: nil
+        contract_rate_card:, rate_card_rate:, rate_override: nil
       )
+    end
+  end
+
+  describe "invoice policy" do
+    let(:rate_card) do
+      build(
+        :rate_card,
+        :advance,
+        organization:,
+        product:,
+        currency: "USD",
+        display_on_invoice: false,
+        regroup_paid_fees: :invoice
+      )
+    end
+
+    it "reads visibility and regrouping from the segment rate card" do
+      expect(source.display_on_invoice?).to be(false)
+      expect(source.regroup_paid_fees_invoice?).to be(true)
+    end
+  end
+
+  describe "#pricing_buckets" do
+    subject(:pricing_buckets) { source.pricing_buckets(event:) }
+
+    let(:billable_metric) { create(:billable_metric, organization:) }
+    let(:product) { create(:product, organization:, billable_metric:) }
+    let(:product_filter) { create(:product_filter, organization:, product:) }
+    let(:rate_card) { create(:rate_card, organization:, product:, product_filter:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, rate_card:) }
+    let(:region_filter) do
+      create(:billable_metric_filter, organization:, billable_metric:, key: "region", values: %w[eu us])
+    end
+    let(:event) do
+      build(
+        :common_event,
+        organization_id: organization.id,
+        code: billable_metric.code,
+        properties: {"region" => "eu"}
+      )
+    end
+
+    before do
+      create(
+        :product_filter_value,
+        organization:,
+        product_filter:,
+        billable_metric_filter: region_filter,
+        value: "eu"
+      )
+    end
+
+    context "without an event" do
+      let(:event) { nil }
+
+      it "returns the rate card product filter" do
+        expect(pricing_buckets.sole).to have_attributes(product_filter:)
+      end
+    end
+
+    context "when the event matches the rate card product filter" do
+      it "returns the matching product filter" do
+        expect(pricing_buckets.sole).to have_attributes(product_filter:)
+      end
+    end
+
+    context "when the event does not match the rate card product filter" do
+      let(:event) do
+        build(
+          :common_event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          properties: {"region" => "us"}
+        )
+      end
+
+      it "returns no pricing buckets" do
+        expect(pricing_buckets).to be_empty
+      end
+    end
+
+    context "when the event belongs to the default bucket" do
+      let(:rate_card) { create(:rate_card, organization:, product:) }
+      let(:event) do
+        build(
+          :common_event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          properties: {"region" => "us"}
+        )
+      end
+
+      it "returns the default bucket" do
+        expect(pricing_buckets.sole).to have_attributes(product_filter: nil)
+      end
     end
   end
 

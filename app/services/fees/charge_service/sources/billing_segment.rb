@@ -21,6 +21,7 @@ module Fees
           :elapsed_period_ratio,
           :rate,
           :contract,
+          :contract_rate_card,
           :rate_card_rate,
           :rate_override,
           :pricing_unit,
@@ -28,6 +29,7 @@ module Fees
 
         delegate :charge, :charge_id, to: :product
         delegate :billable_metric, to: :product
+        delegate :display_on_invoice?, :regroup_paid_fees_invoice?, to: :rate_card
 
         def fee_type
           :product
@@ -46,7 +48,16 @@ module Fees
         end
 
         def pricing_buckets(event: nil)
-          [with_filter(rate_card.product_filter)]
+          return [with_filter(rate_card.product_filter)] unless event
+
+          matching_filter = Events::BillingPeriodFilters::EventMatchingService.call(
+            target_filter: Events::BillingPeriodFilters::FilterTarget.from_billing_segment(billing_segment:),
+            event:
+          ).filter
+
+          return [] unless matching_filter == rate_card.product_filter
+
+          [with_filter(matching_filter)]
         end
 
         def true_up_filter_id
@@ -62,6 +73,7 @@ module Fees
         end
 
         def boundaries
+          # Each rate segment starts a fresh aggregation window, even within the same cycle.
           BillingPeriodBoundaries.new(
             from_datetime: billing_segment.started_at,
             to_datetime: billing_segment.ended_at,
@@ -112,7 +124,7 @@ module Fees
         end
 
         def invoiceable?
-          rate_card.display_on_invoice?
+          display_on_invoice?
         end
 
         def applied_pricing_unit

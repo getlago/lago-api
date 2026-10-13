@@ -237,10 +237,16 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
         )
       end
 
-      it "returns a bad request error" do
+      it "returns a bad request error keyed by the missing parameter" do
         subject
 
         expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(
+          status: 400,
+          error: "Bad Request",
+          code: "missing_parameter",
+          error_details: {rate_phase: {reason: "missing"}}
+        )
       end
     end
 

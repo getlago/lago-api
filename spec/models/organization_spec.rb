@@ -63,6 +63,8 @@ RSpec.describe Organization do
 
       expect(subject).to have_many(:usage_attribution_types)
       expect(subject).to have_many(:usage_attribution_values)
+      expect(subject).to have_many(:x402_connections).class_name("X402::Connection")
+      expect(subject).to have_many(:x402_settlements).class_name("X402::Settlement")
 
       expect(subject).to have_one(:applied_dunning_campaign).conditions(applied_to_organization: true)
       expect(subject).to have_many(:pending_vies_checks)
@@ -629,6 +631,26 @@ RSpec.describe Organization do
           expect(subject).to eq(nil)
         end
       end
+    end
+  end
+
+  describe "#x402_payments_enabled?" do
+    subject(:organization) { build(:organization, feature_flags:) }
+
+    let(:feature_flags) { ["x402_payments"] }
+
+    context "with a premium license", :premium do
+      it { expect(organization.x402_payments_enabled?).to be(true) }
+
+      context "without the x402_payments flag" do
+        let(:feature_flags) { [] }
+
+        it { expect(organization.x402_payments_enabled?).to be(false) }
+      end
+    end
+
+    context "without a premium license" do
+      it { expect(organization.x402_payments_enabled?).to be(false) }
     end
   end
 end

@@ -3,6 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Invoices::CreatePayInAdvanceFixedChargesJob do
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+    create_default(:plan)
+  end
+
   subject(:perform_now) { described_class.perform_now(subscription, timestamp) }
 
   let(:subscription) { create(:subscription) }

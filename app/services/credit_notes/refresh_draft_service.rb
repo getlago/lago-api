@@ -28,24 +28,13 @@ module CreditNotes
         item.save!
       end
 
-      taxes_result = CreditNotes::ApplyTaxesService.call(
-        invoice: fee.invoice,
-        items: credit_note.items
-      )
+      taxes_result = CreditNotes::ComputeTaxesService.call(credit_note:)
       return result.fail_with_error!(taxes_result.error) unless taxes_result.success?
-
-      credit_note.precise_coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents
-      credit_note.coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents.round
-      credit_note.precise_taxes_amount_cents = taxes_result.taxes_amount_cents
-      credit_note.taxes_amount_cents = taxes_result.taxes_amount_cents.round
-      credit_note.taxes_rate = taxes_result.taxes_rate
-
-      taxes_result.applied_taxes.each { |applied_tax| credit_note.applied_taxes << applied_tax }
 
       credit_note.credit_amount_cents = (
         credit_note.items.sum(:precise_amount_cents).truncate(CreditNote::DB_PRECISION_SCALE) -
         taxes_result.coupons_adjustment_amount_cents +
-        taxes_result.taxes_amount_cents
+        credit_note.taxes_amount_cents
       ).round
 
       credit_note.balance_amount_cents = credit_note.credit_amount_cents

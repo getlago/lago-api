@@ -70,6 +70,19 @@ RSpec.describe "templates/invoices/v4.slim" do
 
   let(:wallet_name) { "Premium Wallet" }
 
+  shared_examples "an invoice translated in every locale" do
+    I18n.available_locales.each do |locale|
+      context "with the #{locale} locale" do
+        before { I18n.locale = locale }
+        after { I18n.locale = I18n.default_locale }
+
+        it "renders no missing translation" do
+          expect(rendered_template).not_to include("Translation missing")
+        end
+      end
+    end
+  end
+
   before do
     I18n.locale = :en
   end
@@ -212,6 +225,8 @@ RSpec.describe "templates/invoices/v4.slim" do
       it "renders correctly" do
         expect(rendered_template).to match_html_snapshot
       end
+
+      it_behaves_like "an invoice translated in every locale"
     end
 
     context "without breakdown (legacy behavior)" do
@@ -636,6 +651,8 @@ RSpec.describe "templates/invoices/v4.slim" do
     it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
+
+    it_behaves_like "an invoice translated in every locale"
 
     context "when a fixed charge fee has zero units and a positive amount" do
       before do
@@ -1220,6 +1237,8 @@ RSpec.describe "templates/invoices/v4.slim" do
     it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
+
+    it_behaves_like "an invoice translated in every locale"
   end
 
   context "when invoice_type is progressive_billing with prepaid credits" do
@@ -1330,6 +1349,8 @@ RSpec.describe "templates/invoices/v4.slim" do
     it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
+
+    it_behaves_like "an invoice translated in every locale"
 
     context "when invoice does not have any applied usage threshold" do
       let(:applied_usage_threshold) { nil }
@@ -1747,6 +1768,8 @@ RSpec.describe "templates/invoices/v4.slim" do
     it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
+
+    it_behaves_like "an invoice translated in every locale"
   end
 
   context "when invoice has multiple subscriptions with prepaid credits" do
@@ -1882,5 +1905,7 @@ RSpec.describe "templates/invoices/v4.slim" do
     it "renders correctly" do
       expect(rendered_template).to match_html_snapshot
     end
+
+    it_behaves_like "an invoice translated in every locale"
   end
 end

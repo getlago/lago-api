@@ -5,7 +5,11 @@ require "rails_helper"
 RSpec.describe Customers::Metadata::UpdateService do
   subject(:update_service) { described_class.new(customer:, params:) }
 
-  let(:customer) { create(:customer) }
+  before_all do
+    create_default(:organization)
+  end
+
+  let_it_be(:customer) { create(:customer) }
   let(:customer_metadata) { create(:customer_metadata, customer:) }
   let(:another_customer_metadata) { create(:customer_metadata, customer:, key: "test", value: "1") }
   let(:params) do
