@@ -95,6 +95,25 @@ RSpec.describe Mutations::LoginUser do
       expect(result["errors"].first.dig("extensions", "status")).to eq(429)
     end
 
+    context "when failed attempts use invisible characters or dash lookalikes" do
+      let(:user) { create(:membership, user: create(:user, email: "jane-doe@example.com")).user }
+
+      it "locks the email" do
+        variants = [
+          "jane-d\u200Boe@example.com",
+          "\u200Djane-doe@example.com",
+          "jane-doe@example.com\uFEFF",
+          "jane\u2013doe@example.com",
+          "jane\u2212doe@example.com"
+        ]
+        10.times { |i| login("badpassword", email: variants[i % variants.size]) }
+
+        result = login("ILoveLago")
+
+        expect(result["errors"].first.dig("extensions", "code")).to eq("too_many_requests")
+      end
+    end
+
     it "resets the failure count after a successful login" do
       9.times { login("badpassword") }
       login("ILoveLago")

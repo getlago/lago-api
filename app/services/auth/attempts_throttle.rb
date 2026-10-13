@@ -6,14 +6,14 @@ module Auth
   # Identifiers (client IP, email) are hashed before being used in cache keys.
   # When the cache is unavailable, attempts are not counted and nothing is blocked.
   module AttemptsThrottle
-    Rule = Data.define(:limit, :period)
+    Rule = Data.define(:limit, :period, :identifier)
 
     RULES = {
-      login_per_ip: Rule.new(limit: 30, period: 1.minute),
-      login_failures_per_email: Rule.new(limit: 10, period: 15.minutes),
-      password_reset_per_ip: Rule.new(limit: 10, period: 1.hour),
-      password_reset_per_email: Rule.new(limit: 3, period: 1.hour),
-      credentials_per_ip: Rule.new(limit: 20, period: 10.minutes)
+      login_per_ip: Rule.new(limit: 30, period: 1.minute, identifier: :ip),
+      login_failures_per_email: Rule.new(limit: 10, period: 15.minutes, identifier: :email),
+      password_reset_per_ip: Rule.new(limit: 10, period: 1.hour, identifier: :ip),
+      password_reset_per_email: Rule.new(limit: 3, period: 1.hour, identifier: :email),
+      credentials_per_ip: Rule.new(limit: 20, period: 10.minutes, identifier: :ip)
     }.freeze
 
     module_function
@@ -42,8 +42,15 @@ module Auth
     end
 
     def cache_key(rule_name, identifier)
-      RULES.fetch(rule_name)
-      "auth_attempts:#{rule_name}:#{Digest::SHA256.hexdigest(identifier.to_s.strip.downcase)}"
+      rule = RULES.fetch(rule_name)
+      "auth_attempts:#{rule_name}:#{Digest::SHA256.hexdigest(normalize(rule, identifier))}"
+    end
+
+    # Emails go through the same normalization as the User lookup (invisible characters removed,
+    # dash lookalikes replaced), so spelling variants of one address share a counter.
+    def normalize(rule, identifier)
+      value = (rule.identifier == :email) ? User.normalize_value_for(:email, identifier.to_s) : identifier.to_s
+      value.to_s.strip.downcase
     end
   end
 end

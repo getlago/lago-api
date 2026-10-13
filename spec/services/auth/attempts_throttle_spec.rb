@@ -20,6 +20,16 @@ RSpec.describe Auth::AttemptsThrottle do
       expect(described_class.hit!(:password_reset_per_email, "user@example.com")).to be(true)
     end
 
+    it "counts email spelling variants that resolve to the same user together" do
+      variants = ["jane\u2013doe@example.com", "jane-d\u200Boe@example.com", "\uFEFFjane\u2212doe@example.com"]
+
+      expect(variants.map { User.normalize_value_for(:email, it) }.uniq).to eq(["jane-doe@example.com"])
+
+      variants.each { described_class.hit!(:password_reset_per_email, it) }
+
+      expect(described_class.hit!(:password_reset_per_email, "jane-doe@example.com")).to be(true)
+    end
+
     it "keeps rules and identifiers separate" do
       3.times { described_class.hit!(:password_reset_per_email, "user@example.com") }
 
