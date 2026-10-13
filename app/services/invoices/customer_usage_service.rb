@@ -191,7 +191,9 @@ module Invoices
         serve_current_usage_from_buckets: use_usage_buckets,
         usage_filters:,
         charges:,
-        incremental_charge_cache: organization.feature_flag_enabled?(:incremental_charge_cache)
+        # Its stored totals are a cache like the fees one: a caller asking for none, such as the
+        # usage buckets comparison or the daily usage backfill run at a frozen time, reads every event.
+        incremental_charge_cache: with_cache && organization.feature_flag_enabled?(:incremental_charge_cache)
       )
     end
 

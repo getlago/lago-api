@@ -1235,6 +1235,20 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
       end
     end
 
+    context "without the cache" do
+      before do
+        organization.enable_feature_flag!(:incremental_charge_cache)
+        allow(Events::Stores::ChargeFiltersScan::IncrementalCache).to receive(:new).and_call_original
+      end
+
+      it "reads every event without keeping totals" do
+        usage = described_class.new(customer:, subscription:, apply_taxes: false, with_cache: false).call.usage
+
+        expect(Events::Stores::ChargeFiltersScan::IncrementalCache).not_to have_received(:new)
+        expect(usage.fees.map { [it.charge_filter_id, it.units, it.events_count, it.amount_cents] }.sort_by(&:to_s)).to eq(usage_with_flag(false))
+      end
+    end
+
     context "with a max charge" do
       let(:billable_metric) { create(:max_billable_metric, organization:, field_name: "value") }
 
