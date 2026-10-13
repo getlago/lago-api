@@ -69,4 +69,16 @@ RSpec.describe Auth::AttemptsThrottle do
       expect(described_class.hit!(:login_attempts_per_email, "user@example.com")).to be(false)
     end
   end
+
+  describe ".store" do
+    it "uses Rails.cache when it is shared" do
+      expect(described_class.store).to be(cache)
+    end
+
+    it "falls back to the Sidekiq Redis when Rails.cache is a per-process file store" do
+      allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::FileStore.new(Dir.mktmpdir))
+
+      expect(described_class.store).to be_a(ActiveSupport::Cache::RedisCacheStore)
+    end
+  end
 end

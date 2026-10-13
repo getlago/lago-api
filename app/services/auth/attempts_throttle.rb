@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Auth
-  # Counts authentication attempts in fixed time windows, stored in Rails.cache, to slow down
+  # Counts authentication attempts in fixed time windows, in a store shared by all API processes, to slow down
   # credential stuffing, password guessing and password reset abuse on the public auth mutations.
   # Identifiers (client IP, email) are hashed before being used in cache keys.
   # When the cache is unavailable, attempts are not counted and nothing is blocked.
@@ -16,6 +16,14 @@ module Auth
       credentials_per_ip: Rule.new(limit: 20, period: 10.minutes, identifier: :ip)
     }.freeze
 
+    # Built on first use only, and once per process.
+    FALLBACK_STORE = Concurrent::Delay.new do
+      ActiveSupport::Cache::RedisCacheStore.new(
+        **Lago::RedisConfigBuilder.new.sidekiq.except(:reconnect_attempts, :middlewares, :custom),
+        namespace: "auth_attempts"
+      )
+    end
+
     module_function
 
     # Records an attempt and returns true when it goes over the limit.
@@ -23,14 +31,23 @@ module Auth
       return false if identifier.blank?
 
       rule = RULES.fetch(rule_name)
-      count = Rails.cache.increment(cache_key(rule_name, identifier), 1, expires_in: rule.period)
+      count = store.increment(cache_key(rule_name, identifier), 1, expires_in: rule.period)
       count.to_i > rule.limit
     end
 
     def reset!(rule_name, identifier)
       return if identifier.blank?
 
-      Rails.cache.delete(cache_key(rule_name, identifier))
+      store.delete(cache_key(rule_name, identifier))
+    end
+
+    # Counters must be shared by every API process. Rails.cache is used when it is shared (Redis or
+    # Memcache). Without a configured cache, production falls back to a per-process file store, so the
+    # counters then go to the Redis instance Sidekiq already requires.
+    def store
+      return Rails.cache unless Rails.cache.is_a?(ActiveSupport::Cache::FileStore)
+
+      FALLBACK_STORE.value
     end
 
     def cache_key(rule_name, identifier)
