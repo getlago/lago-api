@@ -34,6 +34,7 @@ module Events
           organization_id: organization.id
         )
         .includes(:rate_card, contract: {customer: :billing_entity})
+        .order(:effective_date, :created_at, :id)
         .to_a
 
       return [] if cards.empty?
