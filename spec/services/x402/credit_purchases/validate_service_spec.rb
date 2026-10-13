@@ -57,6 +57,30 @@ describe X402::CreditPurchases::ValidateService do
       end
     end
 
+    context "with a EUR plan" do
+      let(:plan) { create(:plan, organization:, amount_cents: 0, amount_currency: "EUR") }
+
+      it "refuses with plan_currency_not_supported" do
+        expect(result.error.messages).to eq(base: ["plan_currency_not_supported"])
+      end
+    end
+
+    context "with a base fee" do
+      let(:plan) { create(:plan, organization:, amount_cents: 1_000, amount_currency: "USD") }
+
+      it "refuses with plan_not_usage_only" do
+        expect(result.error.messages).to eq(base: ["plan_not_usage_only"])
+      end
+    end
+
+    context "with a fixed charge" do
+      before { create(:fixed_charge, plan:) }
+
+      it "refuses with plan_not_usage_only" do
+        expect(result.error.messages).to eq(base: ["plan_not_usage_only"])
+      end
+    end
+
     context "with a wallet shape in another currency" do
       let(:wallet_shape) { super().merge(currency: "EUR") }
 

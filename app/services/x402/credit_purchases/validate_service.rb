@@ -20,7 +20,8 @@ module X402
 
       def call
         return result.validation_failure!(errors: input_errors) if input_errors.any?
-        return result.not_found_failure!(resource: "plan") unless plan_exists?
+        return result.not_found_failure!(resource: "plan") unless plan
+        return refuse(plan_refusal) if plan_refusal
         return result unless verified_payment
 
         return refuse("buyer_not_recognized") if customer.nil? && !connection.auto_create_customers
@@ -56,8 +57,12 @@ module X402
         ["value_is_mandatory"] if params[field].blank?
       end
 
-      def plan_exists?
-        organization.plans.parents.exists?(code: params[:plan_code])
+      def plan
+        @plan ||= organization.plans.parents.find_by(code: params[:plan_code])
+      end
+
+      def plan_refusal
+        @plan_refusal ||= X402::PlanEligibility.refusal(plan)
       end
 
       def customer
