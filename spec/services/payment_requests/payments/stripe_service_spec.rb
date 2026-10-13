@@ -64,7 +64,7 @@ RSpec.describe PaymentRequests::Payments::StripeService do
         .to have_received(:create)
         .with(
           {
-            line_items: [
+            line_items: contain_exactly(
               {
                 quantity: 1,
                 price_data: {
@@ -81,7 +81,7 @@ RSpec.describe PaymentRequests::Payments::StripeService do
                   product_data: {name: invoice_2.number}
                 }
               }
-            ],
+            ),
             mode: "payment",
             success_url: stripe_payment_provider.success_redirect_url,
             customer: customer.stripe_customer.provider_customer_id,
