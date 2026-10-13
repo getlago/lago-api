@@ -14,6 +14,10 @@ module Events
       # Ranking and level totals are window functions over every group, computed before paging. The
       # unattributed usage (empty value) is ranked in its own partition, and the query returns it
       # along with the page and the first ranked row, which always carries the level totals.
+      #
+      # The scan may be split across replicas (ClickHouse Cloud): one replica per 50M rows estimated
+      # to be read, up to 8, so a small subscription stays on one replica, where coordination would
+      # cost more than it saves. A server without replicas ignores these settings.
       class AttributedUsageQuery
         include Events::Stores::Utils::ClickhouseSqlHelpers
 
@@ -99,7 +103,10 @@ module Events
               max_rows_to_group_by = #{Integer(max_groups)},
               group_by_overflow_mode = 'throw',
               max_execution_time = #{Integer(max_execution_time)},
-              timeout_overflow_mode = 'throw'
+              timeout_overflow_mode = 'throw',
+              enable_parallel_replicas = 1,
+              max_parallel_replicas = 8,
+              parallel_replicas_min_number_of_rows_per_replica = 50000000
           SQL
         end
 

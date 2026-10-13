@@ -263,6 +263,10 @@ module UsageAttributions
         search:,
         limit:,
         offset:,
+        # Attributed usage is a breakdown, not a bill: it reads without FINAL even when the
+        # organization deduplicates, as FINAL makes the scan several times slower. An event sent
+        # twice counts twice here until ClickHouse merges the copies; invoices keep FINAL.
+        deduplicate: false,
         max_groups: MAX_GROUPS,
         max_execution_time: MAX_EXECUTION_TIME
       )
