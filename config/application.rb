@@ -64,4 +64,7 @@ require_relative "../lib/active_job/logging"
 require_relative "../lib/active_job/json_log_subscriber"
 require_relative "../app/serializers/active_job/metered_item_serializer"
 
-ActiveJob::Serializers.add_serializers(ActiveJob::MeteredItemSerializer)
+# Deferred because the serializer's `klass` references an autoloaded constant.
+Rails.application.config.after_initialize do
+  ActiveJob::Serializers.add_serializers(ActiveJob::MeteredItemSerializer)
+end
