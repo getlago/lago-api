@@ -114,6 +114,19 @@ RSpec.describe Mutations::LoginUser do
       end
     end
 
+    it "counts the attempt before checking the password" do
+      email_attempts = -> { cache.read(Auth::AttemptsThrottle.cache_key(:login_attempts_per_email, user.email), raw: true).to_i }
+      attempts_seen_during_check = nil
+      allow(UsersService).to receive(:call).and_wrap_original do |original, *args|
+        attempts_seen_during_check = email_attempts.call
+        original.call(*args)
+      end
+
+      login("badpassword")
+
+      expect(attempts_seen_during_check).to eq(1)
+    end
+
     it "resets the failure count after a successful login" do
       9.times { login("badpassword") }
       login("ILoveLago")

@@ -34,7 +34,7 @@ RSpec.describe Auth::AttemptsThrottle do
       3.times { described_class.hit!(:password_reset_per_email, "user@example.com") }
 
       expect(described_class.hit!(:password_reset_per_email, "other@example.com")).to be(false)
-      expect(described_class.hit!(:login_failures_per_email, "user@example.com")).to be(false)
+      expect(described_class.hit!(:login_attempts_per_email, "user@example.com")).to be(false)
     end
 
     it "resets after the period" do
@@ -60,23 +60,13 @@ RSpec.describe Auth::AttemptsThrottle do
     end
   end
 
-  describe ".exceeded?" do
-    it "returns true once the limit is reached, without counting" do
-      9.times { described_class.hit!(:login_failures_per_email, "user@example.com") }
-      expect(described_class.exceeded?(:login_failures_per_email, "user@example.com")).to be(false)
-
-      described_class.hit!(:login_failures_per_email, "user@example.com")
-      expect(described_class.exceeded?(:login_failures_per_email, "user@example.com")).to be(true)
-    end
-  end
-
   describe ".reset!" do
     it "clears the counter" do
-      10.times { described_class.hit!(:login_failures_per_email, "user@example.com") }
+      10.times { described_class.hit!(:login_attempts_per_email, "user@example.com") }
 
-      described_class.reset!(:login_failures_per_email, "user@example.com")
+      described_class.reset!(:login_attempts_per_email, "user@example.com")
 
-      expect(described_class.exceeded?(:login_failures_per_email, "user@example.com")).to be(false)
+      expect(described_class.hit!(:login_attempts_per_email, "user@example.com")).to be(false)
     end
   end
 end

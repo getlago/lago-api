@@ -10,7 +10,7 @@ module Auth
 
     RULES = {
       login_per_ip: Rule.new(limit: 30, period: 1.minute, identifier: :ip),
-      login_failures_per_email: Rule.new(limit: 10, period: 15.minutes, identifier: :email),
+      login_attempts_per_email: Rule.new(limit: 10, period: 15.minutes, identifier: :email),
       password_reset_per_ip: Rule.new(limit: 10, period: 1.hour, identifier: :ip),
       password_reset_per_email: Rule.new(limit: 3, period: 1.hour, identifier: :email),
       credentials_per_ip: Rule.new(limit: 20, period: 10.minutes, identifier: :ip)
@@ -25,14 +25,6 @@ module Auth
       rule = RULES.fetch(rule_name)
       count = Rails.cache.increment(cache_key(rule_name, identifier), 1, expires_in: rule.period)
       count.to_i > rule.limit
-    end
-
-    # Returns true when the limit is already reached, without recording an attempt.
-    def exceeded?(rule_name, identifier)
-      return false if identifier.blank?
-
-      rule = RULES.fetch(rule_name)
-      Rails.cache.read(cache_key(rule_name, identifier), raw: true).to_i >= rule.limit
     end
 
     def reset!(rule_name, identifier)
