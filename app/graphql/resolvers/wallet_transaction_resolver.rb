@@ -5,7 +5,7 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    REQUIRED_PERMISSION = "customers:view"
+    REQUIRED_PERMISSION = %w[customers:view wallets:create wallets:update wallets:top_up wallets:terminate]
 
     description "Query a single wallet transaction"
 

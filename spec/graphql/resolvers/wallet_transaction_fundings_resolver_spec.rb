@@ -46,7 +46,7 @@ RSpec.describe Resolvers::WalletTransactionFundingsResolver do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "customers:view"
+  it_behaves_like "requires permission", %w[customers:view wallets:create wallets:update wallets:top_up wallets:terminate]
 
   it "returns a list of fundings for an outbound transaction" do
     result = execute_graphql(

@@ -5,7 +5,7 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    REQUIRED_PERMISSION = %w[billing_entities:view invoices:create]
+    REQUIRED_PERMISSION = %w[billing_entities:view billing_entities:update invoices:create]
 
     description "Query taxes of a billing entity"
     argument :billing_entity_id, ID, required: true, description: "Uniq ID of the billing entity"

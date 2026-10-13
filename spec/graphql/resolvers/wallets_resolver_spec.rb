@@ -36,7 +36,7 @@ RSpec.describe Resolvers::WalletsResolver do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "customers:view"
+  it_behaves_like "requires permission", %w[customers:view wallets:create wallets:update wallets:top_up wallets:terminate]
 
   it "returns a list of wallets" do
     result = execute_graphql(

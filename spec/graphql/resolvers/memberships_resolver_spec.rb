@@ -19,7 +19,7 @@ RSpec.describe Resolvers::MembershipsResolver do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", %w[organization:members:view quotes:view quotes:create quotes:update order_forms:view orders:view security_logs:view]
+  it_behaves_like "requires permission", %w[organization:members:view organization:members:update quotes:view quotes:create quotes:update order_forms:view orders:view security_logs:view]
 
   it "returns a list of memberships" do
     create(:membership, organization: organization, roles: %i[admin])
@@ -56,7 +56,7 @@ RSpec.describe Resolvers::MembershipsResolver do
     expect(result["data"]["memberships"]["metadata"]["adminCount"]).to eq(1)
   end
 
-  %w[quotes:view quotes:create].each do |permission|
+  %w[organization:members:update quotes:view quotes:create].each do |permission|
     it "returns the memberships with #{permission} only" do
       result = execute_graphql(
         current_user: membership.user,
