@@ -6,6 +6,8 @@ module DailyUsages
 
     # Above this number of value combinations, a dropped filter is routed by overlap only
     MAX_VALUE_COMBINATIONS = 1_000
+    # Precision of the decimal parts (units) when splitting a dropped filter
+    DECIMAL_SCALE = 10**20
 
     def initialize(daily_usage:, previous_daily_usage: nil)
       @daily_usage = daily_usage
@@ -141,7 +143,8 @@ module DailyUsages
       amount_slots = receivers.map { |fu| [fu, "amount_cents"] }
       dropped_units = slot_value([dropped_filter, "units"])
       amount_parts = if dropped_units.positive?
-        allocate(slot_value([dropped_filter, "amount_cents"]), unit_parts.map { |part| part / dropped_units }, integer: integer_slots?(amount_slots))
+        shares = unit_parts.map { |part| part.to_r / dropped_units.to_r }
+        allocate(slot_value([dropped_filter, "amount_cents"]), shares, integer: integer_slots?(amount_slots))
       else
         split(slot_value([dropped_filter, "amount_cents"]), amount_slots)
       end
@@ -262,12 +265,12 @@ module DailyUsages
     def split(total, slots)
       return Array.new(slots.size, BigDecimal(0)) if total.zero? || slots.empty?
 
-      gains = slots.map { |slot| [slot_value(slot), BigDecimal(0)].max }
+      gains = slots.map { |slot| [slot_value(slot), BigDecimal(0)].max.to_r }
       gains_total = gains.sum
       shares = if gains_total.positive?
         gains.map { |gain| gain / gains_total }
       else
-        Array.new(slots.size, BigDecimal(1) / slots.size)
+        Array.new(slots.size, Rational(1, slots.size))
       end
 
       allocate(total, shares, integer: integer_slots?(slots))
@@ -294,17 +297,27 @@ module DailyUsages
       BigDecimal((hash[key] || 0).to_s)
     end
 
-    # Splits total according to shares. The last target takes the remainder, so the parts always add up
-    # to the total. Integer values (cents, events) are split into integers.
+    # Splits total according to shares (exact fractions adding up to 1) with the largest remainder method:
+    # each part gets the floor of its exact share, and the units left go one by one to the parts with the
+    # largest fractions. Parts always add up to the total, have the sign of the total, and a zero share
+    # gets nothing. Integer values (cents, events) are split into integers, decimals (units) at
+    # DECIMAL_SCALE precision.
     def allocate(total, shares, integer:)
       return [] if shares.empty?
 
-      parts = shares[0...-1].map do |share|
-        part = total * share
-        integer ? part.round : part.round(20)
-      end
+      scale = integer ? 1 : DECIMAL_SCALE
+      scaled_total = (BigDecimal(total.to_s) * scale).round
+      sign = scaled_total.negative? ? -1 : 1
 
-      parts << (total - parts.sum(BigDecimal(0)))
+      exact = shares.map { |share| scaled_total.abs * share }
+      parts = exact.map(&:floor)
+      leftover = scaled_total.abs - parts.sum
+      exact.each_with_index.sort_by { |value, index| [-(value - value.floor), index] }
+        .first(leftover).each { |_value, index| parts[index] += 1 }
+
+      parts.map do |part|
+        integer ? sign * part : BigDecimal(sign * part) / scale
+      end
     end
 
     def apply_presentation_breakdowns_diff(previous_parent, current_parent)

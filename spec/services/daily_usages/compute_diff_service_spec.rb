@@ -1679,6 +1679,55 @@ RSpec.describe DailyUsages::ComputeDiffService do
       end
     end
 
+    context "when a single cent and event are split across receivers with half shares and a zero share" do
+      let(:previous_usage) do
+        usage_payload([filter_usage({"model" => %w[a b c]}, 1, "1.0", 1)], 1, "1.0", 1)
+      end
+
+      # The dropped filter's unit and event go to a and b in halves (equal gains), none to c
+      let(:usage) do
+        usage_payload(
+          [
+            filter_usage({"model" => %w[a]}, 1, "1.0", 1),
+            filter_usage({"model" => %w[b]}, 1, "1.0", 1),
+            filter_usage({"model" => %w[c]}, 0, "0.0", 0)
+          ],
+          2, "2.0", 2
+        )
+      end
+
+      it "never deducts more than the total nor gives anything to the receiver without share" do
+        expect(diff_filters.sum { |f| f["amount_cents"] }).to eq(1)
+        expect(diff_filters.sum { |f| f["events_count"] }).to eq(1)
+        expect(diff_filters.map { |f| f["amount_cents"] }).to all(be >= 0)
+        expect(diff_filters.map { |f| f["events_count"] }).to all(be >= 0)
+        expect(diff_filters.last).to eq({"values" => {"model" => %w[c]}, **usage_values(0, "0.0", 0)})
+      end
+    end
+
+    context "when units are split across receivers in thirds" do
+      let(:previous_usage) do
+        usage_payload([filter_usage({"model" => %w[a b c]}, 0, "1.0", 0)], 0, "1.0", 0)
+      end
+
+      let(:usage) do
+        usage_payload(
+          [
+            filter_usage({"model" => %w[a]}, 0, "1.0", 0),
+            filter_usage({"model" => %w[b]}, 0, "1.0", 0),
+            filter_usage({"model" => %w[c]}, 0, "1.0", 0)
+          ],
+          0, "3.0", 0
+        )
+      end
+
+      it "keeps the units exact and non-negative" do
+        units = diff_filters.map { |f| BigDecimal(f["units"]) }
+        expect(units.sum).to eq(BigDecimal("2.0"))
+        expect(units).to all(be >= 0)
+      end
+    end
+
     context "when filters nested in grouped usage are edited" do
       let(:previous_usage) do
         payload = usage_payload([], 1000, "10.0", 10)
