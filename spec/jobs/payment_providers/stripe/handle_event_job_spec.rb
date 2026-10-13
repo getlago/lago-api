@@ -25,6 +25,20 @@ RSpec.describe PaymentProviders::Stripe::HandleEventJob do
     expect(PaymentProviders::Stripe::HandleEventService).to have_received(:call)
   end
 
+  PaymentProviders::StripeProvider::TRANSIENT_ERRORS.each do |error_class|
+    context "when the service raises #{error_class}" do
+      before do
+        allow(PaymentProviders::Stripe::HandleEventService).to receive(:call).and_raise(error_class.new("boom"))
+      end
+
+      it "retries the job instead of dying" do
+        expect do
+          described_class.perform_now(organization:, event: stripe_event)
+        end.to have_enqueued_job(described_class)
+      end
+    end
+  end
+
   context "when the service raises BaseService::LockAcquisitionFailure" do
     before do
       allow(PaymentProviders::Stripe::HandleEventService).to receive(:call)
