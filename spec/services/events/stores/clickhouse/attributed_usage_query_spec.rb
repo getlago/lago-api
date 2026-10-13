@@ -16,7 +16,6 @@ RSpec.describe Events::Stores::Clickhouse::AttributedUsageQuery, clickhouse: {cl
       search:,
       limit:,
       offset: 0,
-      deduplicate:,
       max_groups: 1_000,
       max_execution_time: 10
     )
@@ -28,7 +27,6 @@ RSpec.describe Events::Stores::Clickhouse::AttributedUsageQuery, clickhouse: {cl
   let(:order_by) { "amount" }
   let(:search) { nil }
   let(:limit) { 50 }
-  let(:deduplicate) { false }
   let(:tokens_charge_id) { SecureRandom.uuid }
   let(:requests_charge_id) { SecureRandom.uuid }
   let(:opus_eu_filter_id) { SecureRandom.uuid }
@@ -116,16 +114,8 @@ RSpec.describe Events::Stores::Clickhouse::AttributedUsageQuery, clickhouse: {cl
       expect(attributed_usage_query.query).to include("GROUP BY node )")
     end
 
-    it "reads the events without FINAL" do
-      expect(attributed_usage_query.query).not_to include("FINAL")
-    end
-
-    context "with deduplication" do
-      let(:deduplicate) { true }
-
-      it "reads the events with FINAL" do
-        expect(attributed_usage_query.query).to include("FROM events_enriched FINAL")
-      end
+    it "reads the events with FINAL" do
+      expect(attributed_usage_query.query).to include("FROM events_enriched FINAL")
     end
   end
 

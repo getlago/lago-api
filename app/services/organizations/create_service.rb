@@ -16,7 +16,6 @@ module Organizations
 
       if ActiveModel::Type::Boolean.new.cast(ENV["LAGO_CLICKHOUSE_ENABLED"]) && ENV["LAGO_DEFAULT_EVENT_STORE"] == "clickhouse"
         organization.clickhouse_events_store = true
-        organization.clickhouse_deduplication_enabled = true
       end
 
       ActiveRecord::Base.transaction do
