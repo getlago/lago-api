@@ -421,7 +421,7 @@ describe X402::Settlements::ReconcileService do
   end
 
   context "with a settled purchase awaiting its grant" do
-    let(:settlement) { create(:x402_settlement, x402_connection:, purchase_settings:, transaction_hash: chain_hash) }
+    let(:settlement) { create(:x402_settlement, x402_connection:, purchase_settings:, transaction_hash: chain_hash, updated_at: 3.minutes.ago) }
 
     it "grants the credits" do
       expect(result.settlement.reload.wallet_transaction).to have_attributes(source: "x402", status: "settled")
@@ -468,6 +468,44 @@ describe X402::Settlements::ReconcileService do
         result
 
         expect(granted.reload.wallet_transaction).to eq(wallet_transaction)
+      end
+    end
+
+    context "when the grant fails" do
+      let(:purchase_settings) do
+        {
+          "plan_code" => "unknown_plan",
+          "wallet_code" => "agent_credits",
+          "wallet" => {"name" => "Agent credits", "rate_amount" => "1", "currency" => "USD"}
+        }
+      end
+
+      it "succeeds" do
+        expect(result).to be_success
+      end
+
+      it "keeps the row due for another attempt" do
+        result
+
+        expect(X402::Settlement.grant_retry_due).to eq([settlement])
+      end
+    end
+
+    context "when the grant raises" do
+      before { allow(X402::CreditPurchases::GrantService).to receive(:call).and_raise(RuntimeError, "boom") }
+
+      it "keeps the row due for another attempt" do
+        result
+
+        expect(X402::Settlement.grant_retry_due).to eq([settlement])
+      end
+    end
+
+    context "when saving the grant raises" do
+      before { allow(settlement).to receive(:save!).and_raise(ActiveRecord::RecordInvalid) }
+
+      it "returns the row as stored" do
+        expect(result.settlement).to have_attributes(customer_id: nil, subscription_id: nil, wallet_transaction_id: nil)
       end
     end
   end
