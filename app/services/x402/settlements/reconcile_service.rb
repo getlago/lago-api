@@ -51,9 +51,15 @@ module X402
         raise unless e.message.include?(TRANSACTION_INDEX)
 
         settlement.restore_attributes
+        resolve_conflict(X402::Settlement.find_by(network: settlement.network, transaction_hash:))
+      end
 
-        if X402::Settlement.settled.exists?(network: settlement.network, transaction_hash:)
+      def resolve_conflict(holder)
+        if holder&.settled?
+          Rails.logger.warn("[x402] transaction already recorded settlement_id=#{settlement.id} holder_id=#{holder.id} network=#{settlement.network}")
           transition(status: :failed, transaction_hash: nil, error_reason: "transaction_already_recorded")
+        elsif holder&.failed?
+          report_held_transaction(holder)
         end
       end
 
@@ -66,6 +72,13 @@ module X402
       def report(error)
         Rails.logger.warn("[x402] chain read failed settlement_id=#{settlement.id} network=#{settlement.network}: #{error.class} #{error.message}")
         Sentry.capture_exception(error, extra: {organization_id: settlement.organization_id, settlement_id: settlement.id, network: settlement.network})
+      end
+
+      def report_held_transaction(holder)
+        message = "[x402] transaction held by a failed settlement"
+
+        Rails.logger.warn("#{message} settlement_id=#{settlement.id} holder_id=#{holder.id} network=#{settlement.network}")
+        Sentry.capture_message(message, extra: {organization_id: settlement.organization_id, settlement_id: settlement.id, holder_id: holder.id, network: settlement.network})
       end
     end
   end

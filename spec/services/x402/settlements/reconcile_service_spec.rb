@@ -15,6 +15,8 @@ describe X402::Settlements::ReconcileService do
   before do
     allow(X402::Chain::EvmReader).to receive(:new).and_return(reader)
     allow(Sentry).to receive(:capture_exception)
+    allow(Sentry).to receive(:capture_message)
+    allow(Rails.logger).to receive(:warn)
   end
 
   context "when the payment landed" do
@@ -73,6 +75,14 @@ describe X402::Settlements::ReconcileService do
         expect(holder.reload).to have_attributes(status: "settled", transaction_hash: chain_hash)
       end
 
+      it "logs the shared transaction" do
+        result
+
+        expect(Rails.logger).to have_received(:warn).with(
+          "[x402] transaction already recorded settlement_id=#{settlement.id} holder_id=#{holder.id} network=eip155:84532"
+        )
+      end
+
       context "with the hash of a settlement_pending answer" do
         let(:settlement) do
           create(
@@ -92,8 +102,15 @@ describe X402::Settlements::ReconcileService do
         end
         let(:holder) { create(:x402_settlement, :pending, transaction_hash: chain_hash, payload: holder_payload) }
 
-        it "leaves the row pending" do
-          expect(result.settlement.reload).to be_pending
+        it "leaves the row as it was" do
+          expect(result.settlement.reload).to have_attributes(status: "pending", transaction_hash: nil, error_reason: "no_response")
+        end
+
+        it "does not report" do
+          result
+
+          expect(Sentry).not_to have_received(:capture_message)
+          expect(Sentry).not_to have_received(:capture_exception)
         end
 
         context "when the chain refutes that row's claim" do
@@ -105,8 +122,6 @@ describe X402::Settlements::ReconcileService do
           end
 
           it "fails that row without the transaction" do
-            result
-
             expect(holder.reload).to have_attributes(status: "failed", transaction_hash: nil)
           end
 
@@ -114,6 +129,35 @@ describe X402::Settlements::ReconcileService do
             expect(result.settlement.reload).to have_attributes(status: "settled", transaction_hash: chain_hash)
           end
         end
+      end
+
+      context "when that row failed" do
+        let(:holder) { create(:x402_settlement, :failed, transaction_hash: chain_hash) }
+
+        it "leaves the row as it was" do
+          expect(result.settlement.reload).to have_attributes(status: "pending", transaction_hash: nil, error_reason: "no_response")
+        end
+
+        it "reports the held transaction" do
+          result
+
+          expect(Sentry).to have_received(:capture_message).with(
+            "[x402] transaction held by a failed settlement",
+            extra: {organization_id: settlement.organization_id, settlement_id: settlement.id, holder_id: holder.id, network: "eip155:84532"}
+          )
+        end
+      end
+    end
+
+    context "when another unique index refuses the write" do
+      before do
+        allow(settlement).to receive(:update!).and_raise(
+          ActiveRecord::RecordNotUnique, 'PG::UniqueViolation: ERROR:  duplicate key value violates unique constraint "index_x402_settlements_on_payment_digest"'
+        )
+      end
+
+      it "raises the error" do
+        expect { result }.to raise_error(ActiveRecord::RecordNotUnique, /index_x402_settlements_on_payment_digest/)
       end
     end
 
@@ -198,6 +242,14 @@ describe X402::Settlements::ReconcileService do
         expect(Sentry).to have_received(:capture_exception).with(
           an_instance_of(error_class),
           extra: {organization_id: settlement.organization_id, settlement_id: settlement.id, network: "eip155:84532"}
+        )
+      end
+
+      it "logs the failure" do
+        result
+
+        expect(Rails.logger).to have_received(:warn).with(
+          "[x402] chain read failed settlement_id=#{settlement.id} network=eip155:84532: #{error_class.name} eth_call: HTTP 503"
         )
       end
     end
