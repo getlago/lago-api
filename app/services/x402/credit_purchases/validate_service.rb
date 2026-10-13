@@ -27,6 +27,7 @@ module X402
         return refuse("buyer_external_id_taken") if customer.nil? && external_id_taken?
         return refuse("wallet_not_x402_enabled") if wallet && !wallet.x402_enabled
         return refuse("subscription_not_active") if active_subscription.nil? && subscriptions.any?
+        return refuse("subscription_external_id_taken") if subscription_external_id_taken?
         return refuse("wallet_limit_reached") if wallet_limit_reached?
         return result.validation_failure!(errors: {wallet: shape_errors}) if wallet.nil? && shape_errors.any?
 
@@ -79,10 +80,13 @@ module X402
         end
       end
 
+      def subscription_external_id
+        @subscription_external_id ||= X402::ExternalIds.subscription(payer_address, params[:plan_code], family:)
+      end
+
       def subscriptions
         @subscriptions ||= if customer
-          external_id = X402::ExternalIds.subscription(payer_address, params[:plan_code], family:)
-          customer.subscriptions.where(external_id:, status: %i[active pending incomplete]).to_a
+          customer.subscriptions.where(external_id: subscription_external_id, status: %i[active pending incomplete]).to_a
         else
           []
         end
@@ -90,6 +94,11 @@ module X402
 
       def active_subscription
         subscriptions.find(&:active?)
+      end
+
+      def subscription_external_id_taken?
+        active_subscription.nil? &&
+          organization.subscriptions.active.where(external_id: subscription_external_id).where.not(customer_id: customer&.id).exists?
       end
 
       def wallet_limit_reached?

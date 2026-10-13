@@ -129,6 +129,42 @@ describe X402::CreditPurchases::ValidateService do
         end
       end
 
+      context "when a merchant's customer holds the derived subscription id" do
+        let(:merchant_subscription) { create(:subscription, customer: create(:customer, organization:), plan:, external_id: "x402_#{payer_address}_#{plan.code}") }
+
+        before { merchant_subscription }
+
+        it "refuses with subscription_external_id_taken" do
+          expect(result.error.messages).to eq(base: ["subscription_external_id_taken"])
+        end
+
+        context "with that subscription terminated" do
+          let(:merchant_subscription) { create(:subscription, :terminated, customer: create(:customer, organization:), plan:, external_id: "x402_#{payer_address}_#{plan.code}") }
+
+          it "passes" do
+            expect(result).to be_success
+          end
+        end
+      end
+
+      context "when a deleted agent customer still holds the derived subscription id" do
+        let(:deleted_customer) { create(:customer, organization:, x402_agent_address: payer_address, external_id: "x402_#{payer_address}", deleted_at: Time.current) }
+
+        before { create(:subscription, customer: deleted_customer, plan:, external_id: "x402_#{payer_address}_#{plan.code}") }
+
+        it "refuses with subscription_external_id_taken" do
+          expect(result.error.messages).to eq(base: ["subscription_external_id_taken"])
+        end
+      end
+
+      context "when another organization holds the derived subscription id" do
+        before { create(:subscription, external_id: "x402_#{payer_address}_#{plan.code}") }
+
+        it "passes" do
+          expect(result).to be_success
+        end
+      end
+
       context "without a wallet shape" do
         let(:params) { super().except(:wallet) }
 
@@ -516,6 +552,14 @@ describe X402::CreditPurchases::ValidateService do
 
         it "passes" do
           expect(result).to be_success
+        end
+      end
+
+      context "when another customer holds the derived subscription id" do
+        before { create(:subscription, customer: create(:customer, organization:), plan:, external_id: external_subscription_id) }
+
+        it "refuses with subscription_external_id_taken" do
+          expect(result.error.messages).to eq(base: ["subscription_external_id_taken"])
         end
       end
     end
