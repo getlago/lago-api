@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Contracts::CurrentUsageService do
   subject(:result) { described_class.call!(contract:, timestamp:, apply_taxes:, filters:) }
 
-  let(:filters) { described_class::Filters.new }
+  let(:filters) { {} }
   let(:organization) { create(:organization, feature_flags: [:product_catalog]) }
   let(:customer) { create(:customer, organization:, timezone: "UTC", currency: "EUR") }
   let(:contract) { create(:contract, organization:, customer:, started_at: Time.zone.parse("2027-01-01")) }
@@ -95,7 +95,7 @@ RSpec.describe Contracts::CurrentUsageService do
     end
 
     context "when filtering on the superseded version" do
-      let(:filters) { described_class::Filters.new(rate_card_code: rate_card.code) }
+      let(:filters) { {rate_card_code: rate_card.code} }
 
       it "returns no window" do
         expect(result.card_windows).to eq([])
@@ -142,7 +142,7 @@ RSpec.describe Contracts::CurrentUsageService do
   end
 
   context "with a product type filter" do
-    let(:filters) { described_class::Filters.new(product_type: "fixed") }
+    let(:filters) { {product_type: "fixed"} }
     let(:fixed_rate_card) do
       create(:rate_card, organization:, product: create(:product, :fixed, organization:), currency: "EUR")
     end
@@ -163,7 +163,7 @@ RSpec.describe Contracts::CurrentUsageService do
   context "with an unknown product type" do
     subject(:result) { described_class.call(contract:, timestamp:, apply_taxes:, filters:) }
 
-    let(:filters) { described_class::Filters.new(product_type: "usage") }
+    let(:filters) { {product_type: "usage"} }
 
     it "returns a validation failure" do
       expect(result).not_to be_success

@@ -9,11 +9,11 @@ module Contracts
 
     Result = BaseResult[:card_windows, :amount_cents, :taxes_amount_cents, :total_amount_cents]
 
-    def initialize(contract:, timestamp: Time.current, apply_taxes: true, filters: Filters.new)
+    def initialize(contract:, timestamp: Time.current, apply_taxes: true, filters: {})
       @contract = contract
       @timestamp = timestamp
       @apply_taxes = apply_taxes
-      @filters = filters
+      @filters = Filters.new(**(filters || {}))
       super
     end
 

@@ -11,7 +11,7 @@ module Api
           result = ::Contracts::CurrentUsageService.call(
             contract:,
             apply_taxes: ActiveModel::Type::Boolean.new.cast(params.fetch(:apply_taxes, true)),
-            filters: ::Contracts::CurrentUsageService::Filters.new(**filter_params)
+            filters: filter_params
           )
 
           if result.success?
@@ -23,8 +23,7 @@ module Api
 
         private
 
-        # Usage accrues on the active contract, even while a replacement is pending. A contract that
-        # is only pending exists but has no usage yet, so it answers an empty list, not a 404.
+        # A pending contract has no usage yet, so it answers an empty list.
         def active_or_pending_contract
           contracts = current_organization.contracts.where(external_id: params[:external_id])
 
@@ -32,7 +31,7 @@ module Api
         end
 
         def filter_params
-          params.permit(:rate_card_code, :product_code, :product_filter_code, :product_type).to_h.symbolize_keys
+          params.permit(:rate_card_code, :product_code, :product_filter_code, :product_type)
         end
 
         def resource_name
