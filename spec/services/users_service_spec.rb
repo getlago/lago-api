@@ -128,6 +128,17 @@ RSpec.describe UsersService do
         end
       end
 
+      context "when the invite email differs from the user email by case" do
+        let(:invite) { create(:invite, email: email.upcase) }
+
+        it "reuses the existing user" do
+          result = described_class.call(:register_from_invite, invite, password)
+
+          expect(result.user).to eq user
+          expect(User.where("lower(email) = ?", email.downcase).count).to eq(1)
+        end
+      end
+
       context "with active memberships" do
         before { create(:membership, user:, status: :active) }
 

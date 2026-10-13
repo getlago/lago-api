@@ -88,7 +88,9 @@ class UsersService < BaseService
 
   def register_from_invite(invite, password)
     ActiveRecord::Base.transaction do
-      user = User.find_or_initialize_by(email: invite.email)
+      # NOTE: Same case insensitive lookup as Invite#existing_user, so an invitation never creates
+      #       a second user for an email that only differs by case.
+      user = invite.existing_user || User.new(email: invite.email)
 
       # NOTE: The password is only set when the user is created. The password of an existing user
       #       is never reset by an invitation.
