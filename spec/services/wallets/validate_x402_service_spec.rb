@@ -147,8 +147,10 @@ describe Wallets::ValidateX402Service do
     context "with an x402 wallet" do
       let(:wallet) { create(:wallet, currency: "EUR", x402_enabled: true) }
 
-      it "checks nothing when x402_enabled is sent again" do
-        expect(validate_service).to be_valid
+      context "when x402_enabled is sent again" do
+        it "checks nothing" do
+          expect(validate_service).to be_valid
+        end
       end
 
       context "with recurring transaction rules sent" do

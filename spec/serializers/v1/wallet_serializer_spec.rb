@@ -82,15 +82,19 @@ RSpec.describe ::V1::WalletSerializer do
   context "with an x402 wallet" do
     let(:wallet) { create(:wallet, customer:, x402_enabled: true) }
 
-    it "omits x402_enabled" do
-      expect(JSON.parse(serializer.to_json)["wallet"]).not_to have_key("x402_enabled")
+    context "without x402 payments" do
+      it "omits x402_enabled" do
+        expect(JSON.parse(serializer.to_json)["wallet"]).not_to have_key("x402_enabled")
+      end
     end
 
     context "with x402 payments enabled" do
       let(:customer) { create(:customer, organization: create(:organization, feature_flags: ["x402_payments"])) }
 
-      it "omits x402_enabled without premium" do
-        expect(JSON.parse(serializer.to_json)["wallet"]).not_to have_key("x402_enabled")
+      context "without premium" do
+        it "omits x402_enabled" do
+          expect(JSON.parse(serializer.to_json)["wallet"]).not_to have_key("x402_enabled")
+        end
       end
 
       context "with premium", :premium do

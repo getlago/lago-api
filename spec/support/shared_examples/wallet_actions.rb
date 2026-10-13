@@ -1447,11 +1447,13 @@ RSpec.shared_examples "a wallet update endpoint" do
     let(:wallet) { create(:wallet, customer:, currency: "USD") }
     let(:update_params) { {x402_enabled: true} }
 
-    it "returns a forbidden error" do
-      subject
+    context "without x402 payments" do
+      it "returns a forbidden error" do
+        subject
 
-      expect(response).to have_http_status(:forbidden)
-      expect(json[:code]).to eq("feature_unavailable")
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:code]).to eq("feature_unavailable")
+      end
     end
 
     context "with x402 payments enabled", :premium do
@@ -1502,6 +1504,33 @@ RSpec.shared_examples "a wallet update endpoint" do
 
           expect(response).to have_http_status(:unprocessable_content)
           expect(json[:error_details]).to eq(x402_enabled: ["recurring_transaction_rules_not_supported"])
+        end
+      end
+
+      context "with an x402 wallet" do
+        let(:wallet) { create(:wallet, customer:, currency: "USD", x402_enabled: true) }
+
+        context "when x402_enabled is false" do
+          let(:update_params) { {x402_enabled: false} }
+
+          it "disables x402 on the wallet" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:wallet][:x402_enabled]).to eq(false)
+            expect(wallet.reload).not_to be_x402_enabled
+          end
+        end
+
+        context "with recurring transaction rules" do
+          let(:update_params) { {recurring_transaction_rules: [{trigger: "interval", interval: "monthly", paid_credits: "10.0", granted_credits: "0.0"}]} }
+
+          it "refuses the rules" do
+            subject
+
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json[:error_details]).to eq(recurring_transaction_rules: ["not_supported_for_x402_wallet"])
+          end
         end
       end
     end

@@ -239,31 +239,33 @@ RSpec.describe Wallets::UpdateService do
       let(:wallet) { create(:wallet, customer:, currency: "EUR", allowed_fee_types: []) }
       let(:params) { {id: wallet.id, x402_enabled: true} }
 
-      it "returns a forbidden failure" do
-        expect(result).to be_failure
-        expect(result.error).to be_a(BaseService::ForbiddenFailure)
-      end
-
-      it "leaves the wallet unchanged" do
-        result
-
-        expect(wallet.reload).not_to be_x402_enabled
-      end
-
-      context "with a terminated wallet" do
-        let(:wallet) { create(:wallet, :terminated, customer:, allowed_fee_types: []) }
-
+      context "without x402 payments" do
         it "returns a forbidden failure" do
+          expect(result).to be_failure
           expect(result.error).to be_a(BaseService::ForbiddenFailure)
         end
-      end
 
-      context "when x402_enabled is null" do
-        let(:params) { {id: wallet.id, name: "new name", x402_enabled: nil} }
+        it "leaves the wallet unchanged" do
+          result
 
-        it "updates the wallet" do
-          expect(result).to be_success
-          expect(wallet.reload.name).to eq("new name")
+          expect(wallet.reload).not_to be_x402_enabled
+        end
+
+        context "with a terminated wallet" do
+          let(:wallet) { create(:wallet, :terminated, customer:, allowed_fee_types: []) }
+
+          it "returns a forbidden failure" do
+            expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          end
+        end
+
+        context "when x402_enabled is null" do
+          let(:params) { {id: wallet.id, name: "new name", x402_enabled: nil} }
+
+          it "updates the wallet" do
+            expect(result).to be_success
+            expect(wallet.reload.name).to eq("new name")
+          end
         end
       end
 
