@@ -46,7 +46,12 @@ module X402
         report("credit grant failed", grant_result.error) if grant_result.failure?
       rescue => e
         settlement.reload
-        report("credit grant failed", e)
+
+        if settlement.wallet_transaction_id.nil?
+          report("credit grant failed", e)
+        else
+          report("credit grant follow-up failed", e)
+        end
       end
 
       def reader

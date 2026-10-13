@@ -499,6 +499,30 @@ describe X402::Settlements::ReconcileService do
 
         expect(X402::Settlement.grant_retry_due).to eq([settlement])
       end
+
+      it "logs the failure" do
+        result
+
+        expect(Rails.logger).to have_received(:warn).with(
+          "[x402] credit grant failed settlement_id=#{settlement.id} network=eip155:84532: RuntimeError boom"
+        )
+      end
+    end
+
+    context "when jobs cannot be enqueued" do
+      before { allow(ActiveJob::Base.queue_adapter).to receive(:enqueue).and_raise(RedisClient::CannotConnectError, "unreachable") }
+
+      it "keeps the grant" do
+        expect(result.settlement.reload.wallet_transaction).to be_present
+      end
+
+      it "logs a follow-up failure" do
+        result
+
+        expect(Rails.logger).to have_received(:warn).with(
+          "[x402] credit grant follow-up failed settlement_id=#{settlement.id} network=eip155:84532: RedisClient::CannotConnectError unreachable"
+        )
+      end
     end
 
     context "when saving the grant raises" do
