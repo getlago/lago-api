@@ -6,7 +6,7 @@ This repository is public. Code, comments, specs, commits and PRs must not conta
 
 ## Commands
 
-The app runs with Docker Compose from [getlago/lago](https://github.com/getlago/lago), where `lago` is an alias for `docker compose -f docker-compose.dev.yml` (see its `docs/dev_environment.md`). Run commands in the `api` service. The worker containers have no `DATABASE_TEST_URL`, so specs run there use the development database and wipe it.
+The app runs with Docker Compose from [getlago/lago](https://github.com/getlago/lago), where `lago` is an alias for `docker compose -f docker-compose.dev.yml` (see its `docs/dev_environment.md`). Run commands in the `api` service. Specs use the `lago_test` database through `DATABASE_TEST_URL`, which only the `api` service sets. In a worker container the test environment falls back to `DATABASE_URL`, the development database `lago`, and the suite empties it.
 
 | Task | Command |
 |---|---|
@@ -20,7 +20,7 @@ The app runs with Docker Compose from [getlago/lago](https://github.com/getlago/
 
 - Run the specs that cover the change before finishing, and only those. CI runs the full suite, lints the changed `.rb` files and runs `bin/rails zeitwerk:check`.
 - The container mounts the main checkout at `/app`. For a git worktree inside it, add `-w /app/<worktree path>` after `exec`. The worktree also needs the gitignored `.env`, `config/master.key` and `config/keys` of the main checkout: link them with relative symlinks so they resolve inside the container. Worktrees share the databases of the main checkout, so check `bin/rails db:migrate:status` before migrating: migrations applied from other branches end up in the `db/structure.sql` dump.
-- Without Docker, the same commands run without the `lago exec api` prefix, as long as PostgreSQL and Redis are reachable (ClickHouse too for `clickhouse: true` specs). `.github/workflows/spec.yml` shows the variables and RSA keys the test suite needs.
+- Without Docker, the same commands run without the `lago exec api` prefix. `config/environments/test.rb` loads `.env`, whose template `.env.dist` points `DATABASE_URL` at a local `lago_test` database. Redis must be reachable too, and ClickHouse for `clickhouse: true` specs; `.github/workflows/spec.yml` shows the other variables and the RSA keys the suite needs.
 
 ### Generated files
 
