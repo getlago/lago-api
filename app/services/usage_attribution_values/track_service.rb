@@ -3,10 +3,11 @@
 module UsageAttributionValues
   # Creates the attribution values carried by ingested events, or refreshes their last_seen_at.
   #
-  # Each entry holds the labels of an event ({type code => value}) and the subscription it was
-  # ingested for, which gives the customer. Events carry their full ancestor chain, so a value's
-  # parent is the value of its parent type in the same entry. Values are upserted one tree level at
-  # a time, roots first, so that a child can reference its parent row.
+  # Each entry is reported by the events-processor for an enriched event:
+  #   {"subscription_id" => ..., "attribution_labels" => {type code => value}, "timestamp" => epoch seconds}
+  # The subscription, resolved by the events-processor, gives the customer. Events carry their full
+  # ancestor chain, so a value's parent is the value of its parent type in the same entry. Values
+  # are upserted one tree level at a time, roots first, so that a child can reference its parent row.
   #
   # Upserting is idempotent: on an existing value, last_seen_at never goes back and a discarded
   # value is restored since it is in use.
@@ -136,24 +137,23 @@ module UsageAttributionValues
       end
     end
 
+    # [customer_id, labels, seen_at] for the entries whose subscription belongs to the organization.
     def resolved_entries
       @resolved_entries ||= entries.filter_map do |entry|
-        seen_at = Time.zone.parse(entry["seen_at"])
-        customer_id = subscription_customer_id(entry["external_subscription_id"], seen_at)
+        customer_id = customer_ids_by_subscription[entry["subscription_id"]]
+        labels = entry["attribution_labels"]
 
-        if customer_id
-          [customer_id, entry["labels"], seen_at]
+        if customer_id && labels.is_a?(Hash)
+          [customer_id, labels, Time.zone.at(entry["timestamp"].to_f)]
         end
       end
     end
 
-    def subscription_customer_id(external_subscription_id, timestamp)
-      organization.subscriptions
-        .where(external_id: external_subscription_id)
-        .where("date_trunc('millisecond', started_at::timestamp) <= ?::timestamp", timestamp)
-        .where("terminated_at IS NULL OR date_trunc('millisecond', terminated_at::timestamp) >= ?", timestamp)
-        .order("terminated_at DESC NULLS FIRST, started_at DESC")
-        .pick(:customer_id)
+    def customer_ids_by_subscription
+      @customer_ids_by_subscription ||= organization.subscriptions
+        .where(id: entries.pluck("subscription_id").compact.uniq)
+        .pluck(:id, :customer_id)
+        .to_h
     end
   end
 end
