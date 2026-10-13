@@ -160,6 +160,18 @@ RSpec.describe Contracts::CurrentUsageService do
     end
   end
 
+  context "with an unknown product type" do
+    subject(:result) { described_class.call(contract:, timestamp:, apply_taxes:, filters:) }
+
+    let(:filters) { described_class::Filters.new(product_type: "usage") }
+
+    it "returns a validation failure" do
+      expect(result).not_to be_success
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+      expect(result.error.messages).to eq(product_type: ["value_is_invalid"])
+    end
+  end
+
   context "with several cards" do
     let(:rate_card) { create(:rate_card, organization:, product:, currency: "EUR", code: "a_monthly") }
     let(:codes) { result.card_windows.map { |window| window.contract_rate_card.rate_card.code } }

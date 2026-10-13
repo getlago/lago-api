@@ -18,6 +18,11 @@ module Contracts
     end
 
     def call
+      # An unknown type is rejected rather than read as a filter that matches nothing.
+      if filters[:product_type].present? && !Product::PRODUCT_TYPES.value?(filters[:product_type])
+        return result.single_validation_failure!(field: :product_type, error_code: "value_is_invalid")
+      end
+
       # A pending contract has not started billing, so it has no usage yet.
       result.card_windows = if contract.pending?
         []

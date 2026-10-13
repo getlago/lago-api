@@ -8,12 +8,6 @@ module Api
           contract = active_or_pending_contract
           return not_found_error(resource: "contract") unless contract
 
-          # The column is a PG enum, as on the products index: an unknown type is rejected
-          # rather than read as a filter that matches nothing.
-          if params[:product_type].present? && !Product::PRODUCT_TYPES.value?(params[:product_type])
-            return validation_errors(errors: {product_type: ["value_is_invalid"]})
-          end
-
           result = ::Contracts::CurrentUsageService.call(
             contract:,
             apply_taxes: ActiveModel::Type::Boolean.new.cast(params.fetch(:apply_taxes, true)),
@@ -29,7 +23,8 @@ module Api
 
         private
 
-        # A pending replacement does not hide the active contract: usage accrues on the active one.
+        # Usage accrues on the active contract, even while a replacement is pending. A contract that
+        # is only pending exists but has no usage yet, so it answers an empty list, not a 404.
         def active_or_pending_contract
           contracts = current_organization.contracts.where(external_id: params[:external_id])
 
