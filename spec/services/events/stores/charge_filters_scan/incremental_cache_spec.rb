@@ -269,6 +269,11 @@ RSpec.describe Events::Stores::ChargeFiltersScan::IncrementalCache, clickhouse: 
 
     before do
       stub_const("Events::Stores::ChargeFiltersScan::FILTERS_PER_SCAN", 1)
+
+      # The clock moves between the reads of the batches, as it does outside a frozen test.
+      tick = 0
+      allow(Time).to receive(:current).and_wrap_original { |current| current.call + ((tick += 1) / 1000.0) }
+
       computation
       ingest("tr_6", Time.zone.parse("2026-09-15 12:05"), "eu", 32)
     end

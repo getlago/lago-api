@@ -88,8 +88,11 @@ module Events
         # they come from the charge filter values and, for a filter taking all values, from the
         # metric filter values, which are edited in bulk without touching the charge or its filters.
         # A change of conditions, however it was made, reads the base again.
+        #
+        # The clock is read once for all the batches of the computation, so that they share their
+        # cut and watermark, and with them a single late event check.
         def rows(store:, from_datetime:, to_datetime:, conditions:, group_keys:, &)
-          now = Time.current
+          now = (@now ||= Time.current)
           cut = cut_at(now)
 
           unless cut_within?(cut, from_datetime:, to_datetime:)
