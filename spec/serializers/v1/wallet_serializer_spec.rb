@@ -78,4 +78,26 @@ RSpec.describe ::V1::WalletSerializer do
       expect(ids).to match_array([recurring_transaction_rule.id, active_rule.id, active_future_expiration_rule.id])
     end
   end
+
+  context "with an x402 wallet" do
+    let(:wallet) { create(:wallet, customer:, x402_enabled: true) }
+
+    it "omits x402_enabled" do
+      expect(JSON.parse(serializer.to_json)["wallet"]).not_to have_key("x402_enabled")
+    end
+
+    context "with x402 payments enabled" do
+      let(:customer) { create(:customer, organization: create(:organization, feature_flags: ["x402_payments"])) }
+
+      it "omits x402_enabled without premium" do
+        expect(JSON.parse(serializer.to_json)["wallet"]).not_to have_key("x402_enabled")
+      end
+
+      context "with premium", :premium do
+        it "serializes x402_enabled" do
+          expect(JSON.parse(serializer.to_json)["wallet"]["x402_enabled"]).to eq(true)
+        end
+      end
+    end
+  end
 end
