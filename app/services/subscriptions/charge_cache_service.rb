@@ -31,6 +31,7 @@ module Subscriptions
       end
 
       expire_cache(subscription:, charge:)
+      Events::Stores::ChargeFiltersScan::IncrementalCache.expire(subscription:, charge:)
     end
 
     # NOTE: Both entries are cleared. Deleting a billable metric or de-duplicating events removes

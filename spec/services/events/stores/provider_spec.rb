@@ -647,7 +647,47 @@ RSpec.describe Events::Stores::Provider do
         provider.store_for(metered_item:, boundaries:, filters:, aggregated_filter_ids: [charge_filter.id, nil])
 
         expect(Events::Stores::ChargeFiltersScan).to have_received(:new)
-          .with(charge: metered_item.charge, filter_ids: [charge_filter.id, nil])
+          .with(charge: metered_item.charge, filter_ids: [charge_filter.id, nil], incremental: nil)
+      end
+    end
+
+    context "with the incremental charge cache" do
+      subject(:provider) { described_class.new(organization:, billing_context:, incremental_charge_cache: true) }
+
+      before { allow(Events::Stores::ChargeFiltersScan).to receive(:new).and_call_original }
+
+      it "gives the scan a cache for the subscription's charge" do
+        store
+
+        expect(Events::Stores::ChargeFiltersScan).to have_received(:new)
+          .with(charge: metered_item.charge, filter_ids: nil, incremental: an_instance_of(Events::Stores::ChargeFiltersScan::IncrementalCache))
+      end
+
+      context "without the single scan feature flag" do
+        let(:organization) { create(:organization, clickhouse_events_store: true) }
+
+        it "wraps the store of a charge filter" do
+          expect(store).to be_a(Events::Stores::ChargeFiltersScanStore)
+        end
+      end
+
+      context "with a charge without filters" do
+        let(:organization) { create(:organization, clickhouse_events_store: true) }
+        let(:filters) { {charge_id: charge.id} }
+
+        it "wraps its store" do
+          expect(store).to be_a(Events::Stores::ChargeFiltersScanStore)
+        end
+      end
+
+      context "with a charge whose store does not name its filter" do
+        let(:filters) { {charge_id: charge.id} }
+
+        before { charge_filter }
+
+        it "returns the store" do
+          expect(store).to be_a(Events::Stores::ClickhouseStore)
+        end
       end
     end
 

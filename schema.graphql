@@ -7055,6 +7055,7 @@ enum FeatureFlagEnum {
   account_tree
   charge_filters_single_scan
   fixed_charge_usage_delta_migration
+  incremental_charge_cache
   multi_connection
   order_forms
   postgres_enriched_events
