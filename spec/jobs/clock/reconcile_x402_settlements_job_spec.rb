@@ -44,9 +44,33 @@ describe Clock::ReconcileX402SettlementsJob, job: true do
   end
 
   context "with a resolved row" do
-    let(:settlement) { create(:x402_settlement, x402_connection:, reconcile_after: 1.minute.ago) }
+    let(:settlement) { create(:x402_settlement, :failed, x402_connection:, reconcile_after: 1.minute.ago) }
 
     it "leaves it alone" do
+      expect { job.perform_now }.not_to have_enqueued_job(X402::Settlements::ReconcileJob)
+    end
+  end
+
+  context "with a settled purchase left without a grant for two minutes" do
+    let(:settlement) { create(:x402_settlement, x402_connection:, updated_at: 3.minutes.ago) }
+
+    it "enqueues the row" do
+      expect { job.perform_now }.to have_enqueued_job(X402::Settlements::ReconcileJob).with(settlement)
+    end
+
+    context "without the x402 feature flag" do
+      let(:organization) { create(:organization, feature_flags: []) }
+
+      it "still enqueues the row" do
+        expect { job.perform_now }.to have_enqueued_job(X402::Settlements::ReconcileJob).with(settlement)
+      end
+    end
+  end
+
+  context "with a settled purchase younger than two minutes" do
+    let(:settlement) { create(:x402_settlement, x402_connection:, updated_at: 1.minute.ago) }
+
+    it "leaves it to the request that settled it" do
       expect { job.perform_now }.not_to have_enqueued_job(X402::Settlements::ReconcileJob)
     end
   end

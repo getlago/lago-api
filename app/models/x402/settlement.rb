@@ -5,6 +5,7 @@ module X402
     KINDS = {credit_purchase: "credit_purchase", invoice_payment: "invoice_payment"}.freeze
     STATUSES = {pending: "pending", settled: "settled", failed: "failed"}.freeze
     SETTLED_BY = {lago: "lago", merchant: "merchant"}.freeze
+    GRANT_RETRY_DELAY = 2.minutes
 
     belongs_to :organization
     belongs_to :x402_connection, -> { with_discarded }, class_name: "X402::Connection", inverse_of: :settlements
@@ -33,6 +34,7 @@ module X402
     validate :validate_invoice, on: :create
 
     scope :pending_reconciliation, -> { pending.where(reconcile_after: ..Time.current) }
+    scope :grant_retry_due, -> { credit_purchase.settled.where(wallet_transaction_id: nil, updated_at: ..GRANT_RETRY_DELAY.ago) }
 
     private
 
