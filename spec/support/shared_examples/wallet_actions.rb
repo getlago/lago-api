@@ -1442,6 +1442,70 @@ RSpec.shared_examples "a wallet update endpoint" do
       end
     end
   end
+
+  context "with x402_enabled" do
+    let(:wallet) { create(:wallet, customer:, currency: "USD") }
+    let(:update_params) { {x402_enabled: true} }
+
+    it "returns a forbidden error" do
+      subject
+
+      expect(response).to have_http_status(:forbidden)
+      expect(json[:code]).to eq("feature_unavailable")
+    end
+
+    context "with x402 payments enabled", :premium do
+      let(:organization) { create(:organization, feature_flags: ["x402_payments"]) }
+      let(:customer) { create(:customer, organization:, currency: "EUR") }
+      let(:disable_wallet_refresh) { nil }
+
+      before do
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with("LAGO_REDIS_CACHE_URL").and_return("redis://cache:6379")
+        allow(ENV).to receive(:[]).with("LAGO_DISABLE_WALLET_REFRESH").and_return(disable_wallet_refresh)
+      end
+
+      it "enables x402 on the wallet" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet][:x402_enabled]).to eq(true)
+      end
+
+      context "with a EUR wallet" do
+        let(:wallet) { create(:wallet, customer:, currency: "EUR") }
+
+        it "returns the currency rule" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq(x402_enabled: ["currency_not_supported"])
+        end
+      end
+
+      context "when the wallet refresh is disabled" do
+        let(:disable_wallet_refresh) { "true" }
+
+        it "returns the refresh rule" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq(x402_enabled: ["wallet_refresh_unavailable"])
+        end
+      end
+
+      context "with an active recurring transaction rule" do
+        before { create(:recurring_transaction_rule, wallet:) }
+
+        it "returns the recurring rules rule" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq(x402_enabled: ["recurring_transaction_rules_not_supported"])
+        end
+      end
+    end
+  end
 end
 
 RSpec.shared_examples "a wallet show endpoint" do
