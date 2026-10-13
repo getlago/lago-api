@@ -132,6 +132,7 @@ end
 #  index_x402_settlements_on_pending_credit_purchase_payer  (organization_id,payer_address) UNIQUE WHERE ((kind = 'credit_purchase'::x402_settlement_kind) AND (status = 'pending'::x402_settlement_status))
 #  index_x402_settlements_on_pending_invoice_id             (invoice_id) UNIQUE WHERE (status = 'pending'::x402_settlement_status)
 #  index_x402_settlements_on_pending_reconcile_after        (reconcile_after) WHERE (status = 'pending'::x402_settlement_status)
+#  index_x402_settlements_on_ungranted_updated_at           (updated_at) WHERE ((kind = 'credit_purchase'::x402_settlement_kind) AND (status = 'settled'::x402_settlement_status) AND (wallet_transaction_id IS NULL))
 #  index_x402_settlements_on_x402_connection_id             (x402_connection_id)
 #
 # Foreign Keys
