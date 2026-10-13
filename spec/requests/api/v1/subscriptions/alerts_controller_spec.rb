@@ -114,6 +114,23 @@ RSpec.describe Api::V1::Subscriptions::AlertsController do
       end
     end
 
+    context "when notify_on repeats a value in another order" do
+      let(:params) do
+        {
+          code: "test",
+          alert_type: "current_usage_amount",
+          thresholds: [{code: :notice, value: 1000, notify_on: %w[resolved triggered resolved]}]
+        }
+      end
+
+      it "stores each value once, in one order" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:alert][:thresholds].sole).to include({code: "notice", notify_on: %w[triggered resolved]})
+      end
+    end
+
     context "when notify_on holds an unknown value" do
       let(:params) do
         {
@@ -520,10 +537,11 @@ RSpec.describe Api::V1::Subscriptions::AlertsController do
         }
       end
 
-      it "creates no alert" do
+      it "creates no alert and returns the errors as an object, as a single create does" do
         expect { subject }.not_to change(UsageMonitoring::Alert, :count)
         expect(response).to have_http_status(:unprocessable_entity)
         expect(json[:code]).to eq "validation_errors"
+        expect(json[:error_details][:"0"][:errors]).to eq({"thresholds:notify_on": ["value_is_invalid"]})
       end
     end
 
