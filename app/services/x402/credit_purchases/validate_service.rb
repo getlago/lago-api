@@ -27,6 +27,7 @@ module X402
         return refuse("buyer_external_id_taken") if customer.nil? && external_id_taken?
         return refuse("wallet_not_x402_enabled") if wallet && !wallet.x402_enabled
         return refuse("subscription_not_active") if active_subscription.nil? && subscriptions.any?
+        return refuse("wallet_limit_reached") if wallet_limit_reached?
         return result.validation_failure!(errors: {wallet: shape_errors}) if wallet.nil? && shape_errors.any?
 
         if above_maximum?
@@ -89,6 +90,13 @@ module X402
 
       def active_subscription
         subscriptions.find(&:active?)
+      end
+
+      def wallet_limit_reached?
+        return false if customer.nil? || wallet
+
+        maximum = organization.maximum_wallets_per_customer || ::Wallets::ValidateService::MAXIMUM_WALLETS_PER_CUSTOMER
+        customer.wallets.active.count >= maximum
       end
 
       def above_maximum?

@@ -364,6 +364,43 @@ describe X402::CreditPurchases::ValidateService do
         end
       end
 
+      context "with the customer at the wallet cap" do
+        before { 6.times { |index| create(:wallet, customer:, code: "other_credits_#{index}", currency: "USD") } }
+
+        it "refuses with wallet_limit_reached" do
+          expect(result.error.messages).to eq(base: ["wallet_limit_reached"])
+        end
+      end
+
+      context "with the requested wallet among the capped ones" do
+        before do
+          5.times { |index| create(:wallet, customer:, code: "other_credits_#{index}", currency: "USD") }
+          create(:wallet, customer:, code: "agent_credits", currency: "USD", x402_enabled: true)
+        end
+
+        it "passes" do
+          expect(result).to be_success
+        end
+      end
+
+      context "with the customer one wallet below the cap" do
+        before { 5.times { |index| create(:wallet, customer:, code: "other_credits_#{index}", currency: "USD") } }
+
+        it "passes" do
+          expect(result).to be_success
+        end
+      end
+
+      context "with an organization capping wallets at one", :premium do
+        let(:organization) { create(:organization, premium_integrations: ["events_targeting_wallets"], max_wallets: 1) }
+
+        before { create(:wallet, customer:, code: "older_credits", currency: "USD") }
+
+        it "refuses with wallet_limit_reached" do
+          expect(result.error.messages).to eq(base: ["wallet_limit_reached"])
+        end
+      end
+
       context "with an x402 wallet" do
         let(:wallet) { create(:wallet, customer:, code: "agent_credits", currency: "USD", x402_enabled: true) }
 
