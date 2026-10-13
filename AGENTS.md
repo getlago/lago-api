@@ -164,9 +164,15 @@ Business logic, and every create, update or delete of a model, lives in a servic
 
 - PRs are squash-merged, so the PR title becomes the commit on `main`. It follows Conventional Commits, `type(scope): summary`, in 72 characters or less. Types: `feat`, `fix`, `perf`, `refactor`, `chore`, `misc`, `docs`, `test`, `ci`, `build`, `revert`, `style`.
 - The PR body follows `PULL_REQUEST_TEMPLATE.md` (`## Context`, `## Description`). It says why the change is needed and what it changes, without a tour of the diff, and it is updated when the approach changes.
-- One concern per PR.
+- One concern per PR. An `AGENTS.md` rule that comes from the PR's own review is part of it.
 
 ## Environment variables
 
 - A new environment variable is read with a safe default, and the PR description names it with its default and purpose, so the self-hosting docs and the deployment configs can follow.
 - `lago:diagnostics` prints every environment variable for support tickets and masks values by name (`Lago::Diagnostics::SECRET_PATTERN`). A variable that holds a secret has a name the pattern matches (`_KEY`, `_SECRET`, `_TOKEN`, `_PASSWORD`). If it cannot, for example a URL with a key in its path, the PR extends the masking.
+
+## Keeping this file current
+
+- When a review comment points out a mistake that no rule here prevents, and the lesson applies beyond this PR, the same PR adds or fixes the rule in this file. One-off choices and personal preferences stay out.
+- A rule that a cop (`dev/cops`) or a spec can check goes there instead. Keep this file short: tighten or replace an existing rule rather than stacking a new one, and remove rules that no longer match the code.
+- Edit `AGENTS.md`. `CLAUDE.md` only imports it.
