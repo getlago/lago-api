@@ -18,10 +18,12 @@ module Lago
     SEP = "=" * 72
     LINE = "-" * 72
 
+    # `rpc` covers node provider endpoints, which carry their API key in the
+    # host or the path where `mask_value` cannot see it.
     SECRET_PATTERN = /
       key|secret|password|passwd|passphrase|token|dsn|salt|private|credential|
       auth|api_key|access_key|signing|signature|webhook|client_secret|client_id|
-      license|cert|master\.key
+      license|cert|master\.key|rpc
     /xi
 
     # Matches URL userinfo credentials (`scheme://user:pass@` or `scheme://user@`).
