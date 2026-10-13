@@ -64,7 +64,7 @@ Business logic, and every create, update or delete of a model, lives in a servic
 
 - A job that runs one service has its name with `Job` (`Contracts::ActivateService` runs in `Contracts::ActivateJob`), takes positional arguments (records or ids) and calls `Service.call!`. See `app/jobs/contracts/activate_job.rb`.
 - `ApplicationJob` sets Sidekiq `retry: 0`. Retries only come from `retry_on` (lock errors, `LagoHttpClient::HttpError`, `BaseService::ThrottlingError`) or an explicit `sidekiq_options retry:`; any other error sends the job to the dead set.
-- Use an existing queue. Dedicated queues are enabled by a `SIDEKIQ_<NAME>` flag and fall back to a queue the default worker reads (`config/sidekiq/*.yml`). A new queue needs a Sidekiq config, a start script in `scripts/` and a documented env var.
+- Use an existing queue. Dedicated queues are enabled by a `SIDEKIQ_<NAME>` flag and fall back to a queue the default worker reads (`config/sidekiq/*.yml`). A new queue needs a Sidekiq config, a start script in `scripts/` and its own `SIDEKIQ_<NAME>` flag.
 - Jobs must be idempotent. Add `unique` (usually `:until_executed, on_conflict: :log`) when the same job can be enqueued twice. Enqueue many jobs with `ApplicationJob.perform_all_later`, which raises for unique jobs.
 - A new webhook `resource.action` needs a `Webhooks::<Resources>::<Action>Service` (see `app/services/webhooks/customers/created_service.rb`), an entry in `SendWebhookJob::WEBHOOK_SERVICES` and one in `config/webhook_event_types.yml`, then a GraphQL schema dump. It is sent with `SendWebhookJob.perform_after_commit("resource.action", record)`.
 
@@ -168,4 +168,5 @@ Business logic, and every create, update or delete of a model, lives in a servic
 
 ## Environment variables
 
-A new environment variable is documented in `docs/environment_variables.md` in the same PR: name, purpose, default and an example. Examples mask secrets (`LAGO_SMTP_PASSWORD=***`).
+- A new environment variable is read with a safe default, and the PR description names it with its default and purpose, so the self-hosting docs and the deployment configs can follow.
+- `lago:diagnostics` prints every environment variable for support tickets and masks values by name (`Lago::Diagnostics::SECRET_PATTERN`). A variable that holds a secret has a name the pattern matches (`_KEY`, `_SECRET`, `_TOKEN`, `_PASSWORD`). If it cannot, for example a URL with a key in its path, the PR extends the masking.
