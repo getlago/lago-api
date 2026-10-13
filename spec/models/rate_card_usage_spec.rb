@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Contracts::CurrentUsageService::RateCardUsage do
+RSpec.describe RateCardUsage do
   subject(:usage) do
     described_class.new(contract_rate_card:, billing_segment:, rate_phase: nil, fees:, invoice_id: nil)
   end

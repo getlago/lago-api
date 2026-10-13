@@ -4,29 +4,6 @@ module Contracts
   # Prices, for each card effective at the timestamp, the billing window open at that instant,
   # through the code that invoices it.
   class CurrentUsageService < BaseService
-    # One card's usage on its open window. A card with pricing groups has one fee per group.
-    RateCardUsage = Data.define(:contract_rate_card, :billing_segment, :rate_phase, :fees, :invoice_id) do
-      def units
-        fees.sum(BigDecimal(0), &:units)
-      end
-
-      def events_count
-        fees.sum { |fee| fee.events_count.to_i }
-      end
-
-      def amount_cents
-        fees.sum(&:amount_cents)
-      end
-
-      def taxes_amount_cents
-        fees.sum(&:taxes_amount_cents)
-      end
-
-      def rate_source
-        billing_segment.rate_override ? "phase_override" : "rate"
-      end
-    end
-
     Filters = BaseFilters[:rate_card_code, :product_code, :product_filter_code, :product_type]
 
     Result = BaseResult[:rate_card_usages, :amount_cents, :taxes_amount_cents, :total_amount_cents]
