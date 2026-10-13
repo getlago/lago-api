@@ -39,16 +39,36 @@ module Events
         # The base is read again in full this often, bounding how long a mistake can last.
         FULL_REFRESH_INTERVAL = 6.hours
 
+        # How long a generation is kept. Losing it only costs a full read, as a missing generation is
+        # replaced by a new one, so this bounds how many of them the cache holds against how often a
+        # subscription's charge is read in full for that reason alone.
+        GENERATION_TTL = 7.days
+
         Entry = Data.define(:cut, :watermark, :built_at, :rows)
 
         # Forgets the bases of the subscription's charge, for changes made to its events without
         # ingesting any (events deleted with their metric, duplicates cleaned up).
-        #
-        # The generation only has to outlive the bases built before it, which the full refresh
-        # rejects past FULL_REFRESH_INTERVAL: kept longer, it would stay in the cache for every
-        # subscription of a metric deleted once.
         def self.expire(subscription:, charge:)
-          Rails.cache.write(generation_key(subscription.id, charge.id), SecureRandom.hex(8), expires_in: FULL_REFRESH_INTERVAL)
+          Rails.cache.write(generation_key(subscription.id, charge.id), new_generation, expires_in: GENERATION_TTL)
+        end
+
+        # The bases are kept under the generation of their subscription's charge, which an
+        # invalidation replaces. A missing generation, expired or evicted, may have been an
+        # invalidation the bases still under an older one predate, so it is never read as a default:
+        # a new one is started, and only written when no other process wrote one meanwhile, so that
+        # it never overwrites an invalidation. When the cache keeps none, this computation reads
+        # every event.
+        def self.generation(subscription_id, charge_id)
+          key = generation_key(subscription_id, charge_id)
+
+          Rails.cache.read(key) || begin
+            Rails.cache.write(key, new_generation, unless_exist: true, expires_in: GENERATION_TTL)
+            Rails.cache.read(key) || new_generation
+          end
+        end
+
+        def self.new_generation
+          SecureRandom.hex(8)
         end
 
         def self.generation_key(subscription_id, charge_id)
@@ -163,7 +183,7 @@ module Events
           [
             "charge-scan-incremental",
             CACHE_KEY_VERSION,
-            Rails.cache.read(self.class.generation_key(subscription.id, charge.id)) || "0",
+            self.class.generation(subscription.id, charge.id),
             subscription.id,
             charge.id,
             charge.updated_at.iso8601(6),

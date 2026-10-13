@@ -209,12 +209,35 @@ RSpec.describe Events::Stores::ChargeFiltersScan::IncrementalCache, clickhouse: 
       expect(reads.first).to eq({from_datetime: boundaries[:from_datetime], to_datetime: nil, before: cut})
     end
 
-    it "forgets the generation after the full refresh interval" do
+    it "forgets the generation after its lifetime" do
       key = described_class.generation_key(subscription.id, charge.id)
 
-      travel_to(now + described_class::FULL_REFRESH_INTERVAL + 1.second) do
+      travel_to(now + described_class::GENERATION_TTL + 1.second) do
         expect(Rails.cache.read(key)).to be_nil
       end
+    end
+  end
+
+  context "when the generation is evicted after an invalidation" do
+    before do
+      computation
+      Subscriptions::ChargeCacheService.expire_for_subscription_charge(subscription:, charge:)
+
+      # The invalidation is lost while the base built before it is still in the cache.
+      Rails.cache.delete(described_class.generation_key(subscription.id, charge.id))
+    end
+
+    it "reads the base again" do
+      computation
+
+      expect(reads.first).to eq({from_datetime: boundaries[:from_datetime], to_datetime: nil, before: cut})
+    end
+
+    it "keeps the base under the new generation" do
+      computation
+      computation
+
+      expect(reads).to eq([{from_datetime: cut, to_datetime: boundaries[:to_datetime], before: nil}])
     end
   end
 
