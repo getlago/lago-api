@@ -543,6 +543,33 @@ RSpec.describe Invoices::Payments::CreateService do
       end
     end
 
+    context "when the stripe customer only uses a shared payment token" do
+      let(:default_payment_method) { nil }
+      let(:provider_customer) { create(:stripe_customer, payment_provider:, customer:, provider_payment_methods: %w[shared_payment_token], default_shared_payment_token: "spt_abc123") }
+
+      it "creates a payment without a payment method record" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.payment).to be_present
+        expect(result.payment.payment_method_id).to be_nil
+        expect(provider_class).to have_received(:new)
+      end
+
+      context "when no token is stored" do
+        let(:provider_customer) { create(:stripe_customer, payment_provider:, customer:, provider_payment_methods: %w[shared_payment_token]) }
+
+        it "does not create a payment" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment).to be_nil
+          expect(invoice.reload.payment_attempts).to eq(0)
+          expect(provider_class).not_to have_received(:new)
+        end
+      end
+    end
+
     context "when a non-stripe provider customer has no payment method" do
       let(:provider) { "adyen" }
       let(:provider_class) { PaymentProviders::Adyen::Payments::CreateService }

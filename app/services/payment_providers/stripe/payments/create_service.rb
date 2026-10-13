@@ -116,21 +116,18 @@ module PaymentProviders
         end
 
         def create_payment_intent
-          update_payment_method_id
+          update_payment_method_id unless provider_customer.shared_payment_token_only?
           payload = payment_intent_payload
 
           # payable have been settled by another payment path
           raise Invoices::Payments::AlreadyPaidError if invoice.reload.payment_succeeded?
 
-          options = {
-            api_key: payment_provider.secret_key,
-            idempotency_key: "payment-#{payment.id}"
-          }
-          options[:stripe_version] = "2026-04-22.preview" if provider_customer.shared_payment_token?
-
           ::Stripe::PaymentIntent.create(
             payload,
-            options
+            {
+              api_key: payment_provider.secret_key,
+              idempotency_key: "payment-#{payment.id}"
+            }
           )
         end
 
@@ -148,9 +145,6 @@ module PaymentProviders
         end
 
         def shared_payment_token
-          # Locally configured tokens take priority, including when Stripe has a saved card.
-          return provider_customer.default_shared_payment_token if provider_customer.shared_payment_token?
-
           # NOTE: Only use the shared payment token if no other payment method exist (no default, nothing in the list)
           return nil unless invoice.organization.feature_flag_enabled?(:stripe_shared_payment_token)
           return nil if stripe_customer.deleted?
@@ -177,9 +171,13 @@ module PaymentProviders
 
           if provider_customer.provider_payment_methods == ["customer_balance"]
             payload.merge!(customer_balance_fields)
+          elsif provider_customer.shared_payment_token_only?
+            fail_without_shared_payment_token if provider_customer.default_shared_payment_token.blank?
+            payload.merge!(lago_shared_payment_token_fields)
+            payload.delete(:return_url)
+            payload.delete(:off_session)
           elsif shared_payment_token
             payload[:payment_method_data] = {shared_payment_granted_token: shared_payment_token}
-            payload[:payment_method_types] = ["card"] if provider_customer.shared_payment_token?
             payload.delete(:return_url)
             payload.delete(:off_session)
           else
@@ -194,6 +192,26 @@ module PaymentProviders
           end
 
           payload
+        end
+
+        def lago_shared_payment_token_fields
+          {
+            payment_method_data: {shared_payment_granted_token: provider_customer.default_shared_payment_token},
+            payment_method_types: ["card"]
+          }
+        end
+
+        def fail_without_shared_payment_token
+          result.error_message = "No shared payment token is stored for this Stripe customer"
+          result.error_code = "missing_shared_payment_token"
+
+          payment.update!(
+            status: :failed,
+            payable_payment_status: :failed,
+            error_code: result.error_code
+          )
+
+          result.service_failure!(code: result.error_code, message: result.error_message).raise_if_error!
         end
 
         def customer_balance_fields

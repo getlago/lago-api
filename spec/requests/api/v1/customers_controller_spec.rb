@@ -154,6 +154,45 @@ RSpec.describe Api::V1::CustomersController do
         subject
       end
 
+      context "when the connection pays with a shared payment token" do
+        let(:provider_payment_methods) { %w[shared_payment_token] }
+        let(:create_params) do
+          super().deep_merge(billing_configuration: {default_shared_payment_token: "spt_abc123"})
+        end
+
+        it "stores the token without exposing it" do
+          expect(response).to have_http_status(:success)
+
+          stripe_customer = organization.customers.find_by!(external_id: create_params[:external_id]).stripe_customer
+          expect(stripe_customer.provider_payment_methods).to eq(%w[shared_payment_token])
+          expect(stripe_customer.default_shared_payment_token).to eq("spt_abc123")
+
+          billing = json[:customer][:billing_configuration]
+          expect(billing[:provider_payment_methods]).to eq(%w[shared_payment_token])
+          expect(billing).not_to have_key(:default_shared_payment_token)
+          expect(response.body).not_to include("spt_abc123")
+        end
+
+        context "when a new token is sent for the existing customer" do
+          let(:stripe_customer) { organization.customers.find_by!(external_id: create_params[:external_id]).stripe_customer }
+
+          before do
+            stub_request(:post, "https://api.stripe.com/v1/customers/stripe_id").to_return(status: 200, body: "{}")
+
+            post_with_token(organization, "/api/v1/customers", {customer: {
+              external_id: create_params[:external_id],
+              billing_configuration: {payment_provider: "stripe", payment_provider_code: stripe_provider.code, provider_customer_id: "stripe_id", default_shared_payment_token: "spt_rotated"}
+            }})
+          end
+
+          it "replaces the stored token without exposing it" do
+            expect(response).to have_http_status(:success)
+            expect(stripe_customer.default_shared_payment_token).to eq("spt_rotated")
+            expect(response.body).not_to include("spt_rotated")
+          end
+        end
+      end
+
       context "when provider payment methods are not present" do
         let(:provider_payment_methods) { nil }
 

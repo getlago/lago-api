@@ -254,6 +254,67 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
       end
     end
 
+    context "when the stripe customer only uses a shared payment token stored in Lago" do
+      let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: stripe_payment_provider, provider_payment_methods: %w[shared_payment_token], default_shared_payment_token: "spt_lago_123") }
+      let(:payment_method) { nil }
+
+      before do
+        allow(Stripe::Customer).to receive(:retrieve).and_call_original
+        allow(Stripe::Customer).to receive(:list_payment_methods).and_call_original
+      end
+
+      it "charges the stored token without looking the Stripe customer up" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.payment.status).to eq("succeeded")
+        expect(Stripe::PaymentIntent).to have_received(:create)
+          .with(hash_including(payment_method_data: {shared_payment_granted_token: "spt_lago_123"}), anything)
+        expect(Stripe::Customer).not_to have_received(:retrieve)
+        expect(Stripe::Customer).not_to have_received(:list_payment_methods)
+        expect(PaymentProviderCustomers::Stripe::CheckPaymentMethodService).not_to have_received(:call)
+      end
+
+      context "when Stripe rejects the token" do
+        let(:payment_response) do
+          get_stripe_fixtures("payment_intent_card_declined_response.json") do |h|
+            h["error"]["payment_intent"]["id"] = "pi_declined"
+          end
+        end
+
+        before do
+          stub_request(:post, "https://api.stripe.com/v1/payment_intents")
+            .to_return(status: 402, body: payment_response, headers: {})
+        end
+
+        it "fails the payment without falling back to another payment method" do
+          result = create_service.call
+
+          expect(result.error).to be_a(BaseService::ServiceFailure)
+          expect(result.payment.status).to eq("failed")
+          expect(result.payment.payable_payment_status).to eq("failed")
+          expect(Stripe::PaymentIntent).to have_received(:create).once
+          expect(Stripe::Customer).not_to have_received(:list_payment_methods)
+        end
+      end
+
+      context "when no token is stored" do
+        let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: stripe_payment_provider, provider_payment_methods: %w[shared_payment_token]) }
+
+        it "fails before calling Stripe and marks the payment failed" do
+          expect { create_service.call }.to raise_error(BaseService::ServiceFailure) do |error|
+            expect(error.code).to eq("missing_shared_payment_token")
+            expect(error.result.should_retry).to be_falsey
+          end
+
+          expect(payment.reload.status).to eq("failed")
+          expect(payment.payable_payment_status).to eq("failed")
+          expect(payment.error_code).to eq("missing_shared_payment_token")
+          expect(Stripe::PaymentIntent).not_to have_received(:create)
+        end
+      end
+    end
+
     context "with card error on stripe" do
       let(:payment_response) do
         get_stripe_fixtures("payment_intent_card_declined_response.json") do |h|
@@ -666,6 +727,59 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
 
         it "returns the payload" do
           expect(payment_intent_payload).to eq(payload)
+        end
+      end
+
+      context "when the shared payment token is stored in Lago as the only payment method" do
+        let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: stripe_payment_provider, provider_payment_methods: %w[shared_payment_token], default_shared_payment_token: "spt_lago_123") }
+        let(:payment_method) { nil }
+
+        it "returns the payload" do
+          expect(payment_intent_payload).to eq(
+            amount: invoice.total_amount_cents,
+            currency: invoice.currency.downcase,
+            customer: stripe_customer.provider_customer_id,
+            payment_method_types: ["card"],
+            payment_method_data: {shared_payment_granted_token: "spt_lago_123"},
+            confirm: true,
+            error_on_requires_action: true,
+            description: reference,
+            metadata:
+          )
+        end
+      end
+
+      context "when the shared payment token lives on the Stripe customer (legacy path)" do
+        let(:stripe_customer) do
+          create(:stripe_customer, customer:, payment_provider: stripe_payment_provider, provider_payment_methods: %w[card])
+        end
+        let(:payment_method) { nil }
+
+        before do
+          organization.enable_feature_flag!("stripe_shared_payment_token")
+
+          allow(Stripe::Customer).to receive(:retrieve).and_return(
+            Stripe::StripeObject.construct_from(
+              invoice_settings: {default_payment_method: nil, default_shared_payment_token: "spt_stripe_side"},
+              default_source: nil
+            )
+          )
+          allow(Stripe::Customer).to receive(:list_payment_methods)
+            .and_return(Stripe::ListObject.construct_from(data: []))
+        end
+
+        it "sends the same payload as before this change" do
+          expect(payment_intent_payload).to eq(
+            amount: invoice.total_amount_cents,
+            currency: invoice.currency.downcase,
+            customer: stripe_customer.provider_customer_id,
+            payment_method_types: %w[card],
+            payment_method_data: {shared_payment_granted_token: "spt_stripe_side"},
+            confirm: true,
+            error_on_requires_action: true,
+            description: reference,
+            metadata:
+          )
         end
       end
 

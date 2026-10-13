@@ -17,6 +17,7 @@ end
 #  code                 :string
 #  deleted_at           :datetime
 #  is_default           :boolean          default(FALSE), not null
+#  secrets              :string
 #  settings             :jsonb            not null
 #  type                 :string           not null
 #  created_at           :datetime         not null

@@ -84,6 +84,24 @@ RSpec.describe PaymentProviderCustomers::StripeCustomer do
           end
         end
 
+        context "when provider_payment_methods contains 'shared_payment_token'" do
+          context "with other payment methods" do
+            let(:provider_payment_methods) { %w[shared_payment_token card] }
+
+            it "adds an error" do
+              expect(errors[:provider_payment_methods]).to include("shared_payment_token cannot be combined with other payment methods")
+            end
+          end
+
+          context "without other methods" do
+            let(:provider_payment_methods) { %w[shared_payment_token] }
+
+            it "does not add an error" do
+              expect(errors[:provider_payment_methods]).to be_empty
+            end
+          end
+        end
+
         context "when provider_payment_methods contains 'customer_balance'" do
           context "with other payment methods" do
             let(:provider_payment_methods) { %w[customer_balance card] }
@@ -101,6 +119,36 @@ RSpec.describe PaymentProviderCustomers::StripeCustomer do
             end
           end
         end
+      end
+    end
+  end
+
+  describe "#default_shared_payment_token" do
+    let(:stripe_customer) { create(:stripe_customer, provider_payment_methods: %w[shared_payment_token]) }
+
+    it "stores the token encrypted, outside settings" do
+      stripe_customer.update!(default_shared_payment_token: "spt_abc123")
+
+      expect(stripe_customer.reload.default_shared_payment_token).to eq("spt_abc123")
+      expect(stripe_customer.settings).not_to have_key("default_shared_payment_token")
+      expect(stripe_customer.ciphertext_for(:secrets)).not_to include("spt_abc123")
+    end
+
+    it "rejects a value that is not a shared payment token" do
+      stripe_customer.default_shared_payment_token = "pm_123"
+
+      expect(stripe_customer).not_to be_valid
+      expect(stripe_customer.errors[:default_shared_payment_token]).to be_present
+    end
+
+    context "when the connection uses another payment method" do
+      let(:stripe_customer) { create(:stripe_customer, provider_payment_methods: %w[card]) }
+
+      it "rejects the token" do
+        stripe_customer.default_shared_payment_token = "spt_abc123"
+
+        expect(stripe_customer).not_to be_valid
+        expect(stripe_customer.errors[:default_shared_payment_token]).to include("requires shared_payment_token as the only payment method")
       end
     end
   end

@@ -27,6 +27,18 @@ RSpec.describe PaymentRequests::Payments::GeneratePaymentUrlService do
       expect(result.payment_url).to eq("https://example55.com")
     end
 
+    context "when the stripe customer only uses a shared payment token" do
+      let(:provider_customer) { create(:stripe_customer, payment_provider:, customer:, provider_payment_methods: %w[shared_payment_token], default_shared_payment_token: "spt_abc123") }
+
+      it "refuses before calling Stripe" do
+        result = generate_payment_url_service.call
+
+        expect(result).not_to be_success
+        expect(result.error.messages[:base]).to eq(["payment_url_not_available_for_shared_payment_token"])
+        expect(::Stripe::Checkout::Session).not_to have_received(:create)
+      end
+    end
+
     context "when payment provider is blank" do
       let(:provider) { nil }
 

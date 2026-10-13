@@ -29,6 +29,21 @@ RSpec.describe Invoices::Payments::GeneratePaymentUrlService do
       end
     end
 
+    context "when the stripe customer only uses a shared payment token" do
+      let!(:provider_customer) { create(:stripe_customer, payment_provider:, customer:, provider_payment_methods: %w[shared_payment_token], default_shared_payment_token: "spt_abc123") }
+
+      before { allow(::Stripe::Checkout::Session).to receive(:create) }
+
+      it "refuses before creating a payment intent or calling Stripe" do
+        result = generate_payment_url_service.call
+
+        expect(result).not_to be_success
+        expect(result.error.messages[:base]).to eq(["payment_url_not_available_for_shared_payment_token"])
+        expect(PaymentIntent.where(invoice:)).to be_empty
+        expect(::Stripe::Checkout::Session).not_to have_received(:create)
+      end
+    end
+
     context "when invoice is blank" do
       it "returns an error" do
         result = described_class.new(invoice: nil).call

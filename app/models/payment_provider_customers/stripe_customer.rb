@@ -3,26 +3,33 @@
 module PaymentProviderCustomers
   class StripeCustomer < BaseCustomer
     PAYMENT_METHODS_WITH_SETUP = %w[card sepa_debit us_bank_account bacs_debit link boleto].freeze
-    PAYMENT_METHODS_WITHOUT_SETUP = %w[crypto customer_balance].freeze
+    PAYMENT_METHODS_WITHOUT_SETUP = %w[crypto customer_balance shared_payment_token].freeze
     PAYMENT_METHODS = (PAYMENT_METHODS_WITH_SETUP + PAYMENT_METHODS_WITHOUT_SETUP).freeze
+
+    EXCLUSIVE_PAYMENT_METHODS = %w[customer_balance shared_payment_token].freeze
+
+    SHARED_PAYMENT_TOKEN_FORMAT = /\Aspt_[A-Za-z0-9_]+\z/
 
     validates :provider_payment_methods, presence: true
     validate :allowed_provider_payment_methods
     validate :link_payment_method_can_exist_only_with_card
-    validate :customer_balance_must_be_exclusive
-
-    settings_accessors :payment_method_id, :default_shared_payment_token
-
+    validate :exclusive_payment_methods_cannot_be_combined
+    validate :shared_payment_token_requires_its_method
     validates :default_shared_payment_token,
-      format: {with: /\Aspt_[a-zA-Z0-9]+\z/}, length: {maximum: 255}, allow_nil: true
-    validate :shared_payment_token_requires_card
+      format: {with: SHARED_PAYMENT_TOKEN_FORMAT},
+      length: {maximum: 255},
+      allow_nil: true
 
-    def shared_payment_token?
-      default_shared_payment_token.present?
-    end
+    settings_accessors :payment_method_id
+
+    secrets_accessors :default_shared_payment_token
 
     def provider_payment_methods
       get_from_settings("provider_payment_methods")
+    end
+
+    def shared_payment_token_only?
+      provider_payment_methods == ["shared_payment_token"]
     end
 
     def provider_payment_methods_with_setup
@@ -39,13 +46,6 @@ module PaymentProviderCustomers
 
     private
 
-    def shared_payment_token_requires_card
-      return unless shared_payment_token?
-      return if provider_payment_methods&.include?("card")
-
-      errors.add(:default_shared_payment_token, "requires card in provider_payment_methods")
-    end
-
     def allowed_provider_payment_methods
       return if (provider_payment_methods - PAYMENT_METHODS).blank?
 
@@ -58,11 +58,19 @@ module PaymentProviderCustomers
       errors.add(:provider_payment_methods, :invalid)
     end
 
-    def customer_balance_must_be_exclusive
-      return unless provider_payment_methods.include?("customer_balance")
-      return if provider_payment_methods == ["customer_balance"]
+    def exclusive_payment_methods_cannot_be_combined
+      EXCLUSIVE_PAYMENT_METHODS.each do |method|
+        next unless provider_payment_methods.include?(method)
+        next if provider_payment_methods == [method]
 
-      errors.add(:provider_payment_methods, "customer_balance cannot be combined with other payment methods")
+        errors.add(:provider_payment_methods, "#{method} cannot be combined with other payment methods")
+      end
+    end
+
+    def shared_payment_token_requires_its_method
+      return if default_shared_payment_token.blank? || shared_payment_token_only?
+
+      errors.add(:default_shared_payment_token, "requires shared_payment_token as the only payment method")
     end
   end
 end
@@ -76,6 +84,7 @@ end
 #  code                 :string
 #  deleted_at           :datetime
 #  is_default           :boolean          default(FALSE), not null
+#  secrets              :string
 #  settings             :jsonb            not null
 #  type                 :string           not null
 #  created_at           :datetime         not null
