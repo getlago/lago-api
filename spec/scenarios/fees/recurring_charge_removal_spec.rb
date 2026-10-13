@@ -10,6 +10,7 @@ describe "Recurring charges stopped with an event" do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
   let(:prorated) { false }
+  let(:pricing_group_keys) { nil }
   let(:subscription) { customer.subscriptions.sole }
 
   def send_number_event(number_id, number_type, extra_properties)
@@ -25,6 +26,11 @@ describe "Recurring charges stopped with an event" do
   def charge_amounts(issuing_date)
     invoice = subscription.invoices.find_by!(issuing_date:)
     invoice.fees.charge.to_h { [it.charge_filter&.invoice_display_name, it.amount_cents] }
+  end
+
+  def grouped_charge_amounts(issuing_date)
+    invoice = subscription.invoices.find_by!(issuing_date:)
+    invoice.fees.charge.map { [it.charge_filter&.invoice_display_name, it.grouped_by["number_id"], it.amount_cents] }
   end
 
   before do
@@ -55,8 +61,8 @@ describe "Recurring charges stopped with an event" do
               prorated:,
               properties: {amount: "0"},
               filters: [
-                {invoice_display_name: "Local", properties: {amount: "1.15"}, values: {number_type: %w[local]}},
-                {invoice_display_name: "Toll-free", properties: {amount: "2"}, values: {number_type: %w[toll_free]}}
+                {invoice_display_name: "Local", properties: {amount: "1.15", pricing_group_keys:}.compact, values: {number_type: %w[local]}},
+                {invoice_display_name: "Toll-free", properties: {amount: "2", pricing_group_keys:}.compact, values: {number_type: %w[toll_free]}}
               ]
             }
           ]
@@ -114,6 +120,29 @@ describe "Recurring charges stopped with an event" do
         expect(charge_amounts(Date.new(2025, 4, 1))).to eq("Local" => 115, "Toll-free" => 200)
       end
     end
+
+    context "with pricing group keys" do
+      let(:pricing_group_keys) { %w[number_id] }
+
+      it "bills one fee per number and keeps a zero fee for the removed number" do
+        expect(grouped_charge_amounts(Date.new(2025, 2, 1))).to match_array([
+          ["Local", "+33100000001", 115],
+          ["Local", "+33100000003", 115],
+          ["Toll-free", "+18000000002", 200]
+        ])
+        # NOTE: the removed number still has events, so its group keeps a zero fee in the next periods
+        expect(grouped_charge_amounts(Date.new(2025, 3, 1))).to match_array([
+          ["Local", "+33100000001", 115],
+          ["Local", "+33100000003", 0],
+          ["Toll-free", "+18000000002", 200]
+        ])
+        expect(grouped_charge_amounts(Date.new(2025, 4, 1))).to match_array([
+          ["Local", "+33100000001", 115],
+          ["Local", "+33100000003", 0],
+          ["Toll-free", "+18000000002", 200]
+        ])
+      end
+    end
   end
 
   context "with a recurring unique count metric and a remove operation" do
@@ -137,6 +166,26 @@ describe "Recurring charges stopped with an event" do
         # NOTE: February: (1 + 10/28) units at 1.15 (the removed number is billed from Feb 1 to Feb 10)
         expect(charge_amounts(Date.new(2025, 3, 1))).to eq("Local" => 156, "Toll-free" => 200)
         expect(charge_amounts(Date.new(2025, 4, 1))).to eq("Local" => 115, "Toll-free" => 200)
+      end
+    end
+
+    context "with pricing group keys" do
+      let(:pricing_group_keys) { %w[number_id] }
+
+      it "bills one fee per number until the number is removed" do
+        expect(grouped_charge_amounts(Date.new(2025, 2, 1))).to match_array([
+          ["Local", "+33100000001", 115],
+          ["Local", "+33100000003", 115],
+          ["Toll-free", "+18000000002", 200]
+        ])
+        expect(grouped_charge_amounts(Date.new(2025, 3, 1))).to match_array([
+          ["Local", "+33100000001", 115],
+          ["Toll-free", "+18000000002", 200]
+        ])
+        expect(grouped_charge_amounts(Date.new(2025, 4, 1))).to match_array([
+          ["Local", "+33100000001", 115],
+          ["Toll-free", "+18000000002", 200]
+        ])
       end
     end
   end
