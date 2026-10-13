@@ -162,7 +162,11 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeClosedService do
       end
 
       context "when the payment belongs to another organization" do
-        let(:payable) { create(:invoice, status: "finalized", payment_status: "succeeded") }
+        let(:other_organization) { create(:organization) }
+        let(:other_customer) { create(:customer, organization: other_organization) }
+        let(:payable) do
+          create(:invoice, organization: other_organization, customer: other_customer, status: "finalized", payment_status: "succeeded")
+        end
         let(:event_json) do
           get_stripe_fixtures("webhooks/charge_dispute_closed.json", version:) do |h|
             h[:data][:object][:payment_intent] = intent_id
