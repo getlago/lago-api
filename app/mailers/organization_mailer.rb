@@ -10,15 +10,15 @@ class OrganizationMailer < ApplicationMailer
     return if @organization.nil? || @user.nil?
     return if @additions.empty? && @deletions.empty?
 
-    I18n.locale = @organization.document_locale
-
-    mail(
-      bcc: @organization.admins.map(&:email),
-      from: ENV["LAGO_FROM_EMAIL"],
-      reply_to: email_address_with_name(@organization.from_email_address, @organization.name),
-      subject: I18n.t(
-        "email.organization.authentication_methods_updated.subject"
+    I18n.with_locale(:en) do
+      mail(
+        bcc: @organization.admins.map(&:email),
+        from: ENV["LAGO_FROM_EMAIL"],
+        reply_to: email_address_with_name(@organization.from_email_address, @organization.name),
+        subject: I18n.t(
+          "email.organization.authentication_methods_updated.subject"
+        )
       )
-    )
+    end
   end
 end

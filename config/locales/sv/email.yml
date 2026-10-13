@@ -40,5 +40,5 @@ sv:
         subject: Din förfallna saldo från %{billing_entity_name}
         thank_you: Tack.
         total_amount_due: Det totala förfallna beloppet är %{amount}.
-    powered_by_lago: Powered by
+    powered_by: Drivs av
     questions: Frågor? Kontakta oss på
