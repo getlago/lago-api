@@ -95,6 +95,34 @@ RSpec.describe Customers::RefreshWalletsService do
       expect(wallet.credits_ongoing_balance).to eq 1.0
     end
 
+    it "keeps the per-metric split empty when the organization streams nothing, so its wallets get no extra write" do
+      expect(result.wallets.first.ongoing_billable_metric_amounts).to eq({})
+    end
+
+    context "when the organization streams nothing" do
+      before { allow(Wallets::Balance::AllocateOngoingUsageByWalletsService).to receive(:call!).and_call_original }
+
+      it "does not ask for the per-metric split, keeping the refresh as cheap as before" do
+        result
+
+        expect(Wallets::Balance::AllocateOngoingUsageByWalletsService)
+          .to have_received(:call!).with(hash_including(with_billable_metric_amounts: false))
+      end
+    end
+
+    context "when the organization streams usage" do
+      before { create(:kinesis_destination, organization:) }
+
+      it "records what the wallet absorbs per subscription, period and billable metric, net of what pay in advance already billed" do
+        period = Time.current.beginning_of_month.utc.iso8601
+
+        expect(result.wallets.first.ongoing_billable_metric_amounts).to eq({
+          subscriptions.first.id => {period => {billable_metric.id => 600}},
+          subscriptions.second.id => {period => {billable_metric.id => 300}}
+        })
+      end
+    end
+
     it "marks customer as not awaiting wallet refresh" do
       expect { subject }.to change(customer, :awaiting_wallet_refresh).from(true).to(false)
     end
