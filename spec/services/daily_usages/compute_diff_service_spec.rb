@@ -1555,6 +1555,70 @@ RSpec.describe DailyUsages::ComputeDiffService do
       end
     end
 
+    context "when a filter is replaced by fully specified filters and a more specific one" do
+      let(:previous_usage) do
+        usage_payload(
+          [
+            filter_usage({"model" => %w[a b]}, 1000, "10.0", 10),
+            filter_usage(nil, 50, "1.0", 1)
+          ],
+          1050, "11.0", 11
+        )
+      end
+
+      # Every a or b event is billed by a configured filter, so the default bucket only keeps its own gain
+      let(:usage) do
+        usage_payload(
+          [
+            filter_usage({"model" => %w[a]}, 600, "6.0", 6),
+            filter_usage({"model" => %w[b]}, 300, "3.0", 3),
+            filter_usage({"model" => %w[a], "region" => %w[eu]}, 100, "1.0", 1),
+            filter_usage(nil, 70, "1.4", 2)
+          ],
+          1070, "11.4", 12
+        )
+      end
+
+      it "does not deduct the dropped filter from the default bucket" do
+        expect(diff_filters).to eq(
+          [
+            {"values" => {"model" => %w[a]}, **usage_values(0, "0.0", 0)},
+            {"values" => {"model" => %w[b]}, **usage_values(0, "0.0", 0)},
+            {"values" => {"model" => %w[a], "region" => %w[eu]}, **usage_values(0, "0.0", 0)},
+            {"values" => nil, **usage_values(20, "0.4", 1)}
+          ]
+        )
+      end
+    end
+
+    context "when a dropped filter's values are matched by a filter with more keys only" do
+      let(:previous_usage) do
+        usage_payload(
+          [
+            filter_usage({"model" => %w[a]}, 100, "1.0", 1),
+            filter_usage(nil, 50, "1.0", 1)
+          ],
+          150, "2.0", 2
+        )
+      end
+
+      # Events of model a outside eu fall back to the default bucket
+      let(:usage) do
+        usage_payload(
+          [
+            filter_usage({"model" => %w[a], "region" => %w[eu]}, 40, "0.4", 1),
+            filter_usage(nil, 110, "1.6", 1)
+          ],
+          150, "2.0", 2
+        )
+      end
+
+      it "keeps the default bucket as a receiver" do
+        expect(diff_filters.sum { |f| f["amount_cents"] }).to eq(0)
+        expect(diff_filters.map { |f| f["amount_cents"] }).to eq([0, 0])
+      end
+    end
+
     context "when a filter allowing all values is replaced" do
       let(:previous_usage) do
         usage_payload([filter_usage({"model" => %w[__ALL_FILTER_VALUES__]}, 1000, "10.0", 10)], 1000, "10.0", 10)

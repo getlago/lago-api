@@ -187,8 +187,8 @@ module DailyUsages
     # The current filters billing the events a dropped filter used to bill. Each combination of the
     # dropped filter's values is billed by the most specific current filter matching it (most keys, then
     # fewest values, as ChargeFilter#precedence), or by the default bucket when none matches. When a
-    # combination cannot be resolved from the values alone (a key the dropped filter does not constrain,
-    # or a precedence tie), every candidate is kept.
+    # combination cannot be resolved from the values alone (a filter constraining a key the dropped
+    # filter does not, or a precedence tie), every candidate that could bill it is kept.
     def receiving_filters(dropped_values, current_filters)
       default_bucket = current_filters.find { |fu| fu["values"].nil? }
       filters = current_filters.reject { |fu| fu["values"].nil? }
@@ -235,9 +235,16 @@ module DailyUsages
 
       precedence = ->(fu) { [-fu["values"].size, fu["values"].sum { |_key, allowed| Array(allowed).size }] }
       best = matching.map(&precedence).min
-      billed_by = best ? matching.select { |fu| precedence.call(fu) == best } : [default_bucket]
 
-      billed_by + ambiguous + (ambiguous.any? ? [default_bucket] : [])
+      # Without a full match, the events fall back to the default bucket unless a filter constraining
+      # another key bills them. With one, they never reach the default bucket, and only the filters
+      # that would take precedence over it can bill part of them.
+      if best
+        matching.select { |fu| precedence.call(fu) == best } +
+          ambiguous.select { |fu| (precedence.call(fu) <=> best) <= 0 }
+      else
+        [default_bucket] + ambiguous
+      end
     end
 
     def allows?(allowed, value)
