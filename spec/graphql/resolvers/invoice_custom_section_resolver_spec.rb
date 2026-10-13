@@ -23,7 +23,7 @@ RSpec.describe Resolvers::InvoiceCustomSectionResolver do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "invoice_custom_sections:view"
+  it_behaves_like "requires permission", %w[invoice_custom_sections:view invoice_custom_sections:update]
 
   it "returns a single invoice_custom_section" do
     result = execute_graphql(
@@ -42,6 +42,30 @@ RSpec.describe Resolvers::InvoiceCustomSectionResolver do
       "details" => invoice_custom_section.details,
       "displayName" => invoice_custom_section.display_name
     )
+  end
+
+  it "returns the invoice_custom_section with the update permission only" do
+    result = execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      permissions: "invoice_custom_sections:update",
+      query:,
+      variables: {invoiceCustomSectionId: invoice_custom_section.id}
+    )
+
+    expect(result["data"]["invoiceCustomSection"]["id"]).to eq(invoice_custom_section.id)
+  end
+
+  it "returns a forbidden error without the view or update permission" do
+    result = execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      permissions: "invoices:view",
+      query:,
+      variables: {invoiceCustomSectionId: invoice_custom_section.id}
+    )
+
+    expect(result["errors"].first["extensions"]["code"]).to eq("forbidden")
   end
 
   context "without current organization" do

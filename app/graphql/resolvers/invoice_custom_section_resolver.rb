@@ -5,7 +5,7 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    REQUIRED_PERMISSION = "invoice_custom_sections:view"
+    REQUIRED_PERMISSION = %w[invoice_custom_sections:view invoice_custom_sections:update]
 
     description "Query a single invoice_custom_section of an organization"
 
