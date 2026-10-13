@@ -267,6 +267,19 @@ RSpec.describe Wallets::UpdateService do
             expect(wallet.reload.name).to eq("new name")
           end
         end
+
+        context "with an x402 wallet" do
+          let(:wallet) { create(:wallet, customer:, currency: "USD", allowed_fee_types: [], x402_enabled: true) }
+
+          context "when x402_enabled is false" do
+            let(:params) { {id: wallet.id, x402_enabled: false} }
+
+            it "disables x402 on the wallet" do
+              expect(result).to be_success
+              expect(wallet.reload).not_to be_x402_enabled
+            end
+          end
+        end
       end
 
       context "with x402 payments enabled", :premium do

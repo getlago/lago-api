@@ -19,7 +19,7 @@ module Wallets
 
     def call
       return result.not_found_failure!(resource: "wallet") unless wallet
-      return result.forbidden_failure! if x402_toggle_forbidden?
+      return result.forbidden_failure! if x402_enable_forbidden?
       return result.single_validation_failure!(field: :wallet_id, error_code: "wallet_is_terminated") if wallet.terminated?
       return result.forbidden_failure! if connections_requested? && organization_flag_disabled?(:multi_connection)
       return result unless valid_expiration_at?(expiration_at: params[:expiration_at])
@@ -127,8 +127,8 @@ module Wallets
       Wallets::ValidateX402Service.new(result, wallet:, **params).valid?
     end
 
-    def x402_toggle_forbidden?
-      !x402_enabled_param.nil? && !wallet.organization.x402_payments_enabled?
+    def x402_enable_forbidden?
+      x402_enabled_param == true && !wallet.organization.x402_payments_enabled?
     end
 
     def x402_enabled_param

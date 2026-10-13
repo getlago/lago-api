@@ -1454,6 +1454,18 @@ RSpec.shared_examples "a wallet update endpoint" do
         expect(response).to have_http_status(:forbidden)
         expect(json[:code]).to eq("feature_unavailable")
       end
+
+      context "with an x402 wallet" do
+        let(:wallet) { create(:wallet, customer:, currency: "USD", x402_enabled: true) }
+        let(:update_params) { {x402_enabled: false} }
+
+        it "disables x402 on the wallet" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(wallet.reload).not_to be_x402_enabled
+        end
+      end
     end
 
     context "with x402 payments enabled", :premium do
