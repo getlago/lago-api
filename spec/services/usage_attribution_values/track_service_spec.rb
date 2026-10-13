@@ -18,8 +18,9 @@ RSpec.describe UsageAttributionValues::TrackService do
   let(:labels) { {"department" => "rnd", "team" => "eng", "user" => "alice", "model" => "opus"} }
   let(:entries) { [entry(labels)] }
 
-  def entry(labels, at: seen_at, external_subscription_id: "sub_1")
-    {"external_subscription_id" => external_subscription_id, "labels" => labels, "seen_at" => at.iso8601(6)}
+  # An entry as reported by the events-processor.
+  def entry(labels, at: seen_at, subscription_id: subscription.id)
+    {"subscription_id" => subscription_id, "attribution_labels" => labels, "timestamp" => at.to_f}
   end
 
   def value_of(attribution_type, value)
@@ -196,8 +197,8 @@ RSpec.describe UsageAttributionValues::TrackService do
     end
   end
 
-  context "when no subscription matches" do
-    let(:entries) { [entry(labels, external_subscription_id: "unknown")] }
+  context "when the subscription is unknown" do
+    let(:entries) { [entry(labels, subscription_id: SecureRandom.uuid)] }
 
     it "skips the entry" do
       expect { track }.not_to change(UsageAttributionValue, :count)
@@ -205,17 +206,27 @@ RSpec.describe UsageAttributionValues::TrackService do
   end
 
   context "when the subscription belongs to another organization" do
-    before { create(:subscription, external_id: "sub_other", started_at: 1.month.ago) }
-
-    let(:entries) { [entry(labels, external_subscription_id: "sub_other")] }
+    let(:other_subscription) { create(:subscription) }
+    let(:entries) { [entry(labels, subscription_id: other_subscription.id)] }
 
     it "skips the entry" do
       expect { track }.not_to change(UsageAttributionValue, :count)
     end
   end
 
-  context "when the subscription started after the event" do
-    let(:entries) { [entry(labels, at: 2.months.ago)] }
+  context "when the subscription is terminated" do
+    let(:subscription) { create(:subscription, :terminated, customer:, organization:) }
+
+    # The events-processor resolved it for this event, e.g. within a grace period.
+    it "still tracks the values" do
+      track
+
+      expect(value_of(user, "alice").parent_id).to eq(value_of(team, "eng").id)
+    end
+  end
+
+  context "when the entry has no labels" do
+    let(:entries) { [{"subscription_id" => subscription.id, "attribution_labels" => nil, "timestamp" => seen_at.to_f}] }
 
     it "skips the entry" do
       expect { track }.not_to change(UsageAttributionValue, :count)
