@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "lago/database/schema_rewriter"
-
 class InitialMigration < ActiveRecord::Migration[7.1]
   def up
     safety_assured do
@@ -3008,10 +3006,14 @@ class InitialMigration < ActiveRecord::Migration[7.1]
       SQL
 
       # The SQL above is a dump of the `public` schema: move it to the schema
-      # configured with `POSTGRES_SCHEMA` when it is another one.
-      schema = Lago::Database::SchemaRewriter.target_schema(connection.current_schema)
-      unless schema.nil?
-        sql = Lago::Database::SchemaRewriter.new(sql, schema:).call
+      # configured with `POSTGRES_SCHEMA` when it is another one. The
+      # extensions stay in `public`, which remains in the search path.
+      schema = connection.current_schema
+      if schema != "public"
+        quoted_schema = connection.quote_table_name(schema)
+        sql = sql
+          .gsub(/\bpublic\./, "#{quoted_schema}.")
+          .sub('SET search_path TO "$user", public;', "SET search_path TO #{quoted_schema}, public;")
       end
 
       execute sql

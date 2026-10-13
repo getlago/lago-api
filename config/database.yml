@@ -112,6 +112,8 @@ staging:
 
 # `POSTGRES_SCHEMA` holds the Lago tables. `public` is kept at the end of the
 # search path because the extensions (pg_trgm, pgcrypto, ...) live there.
+# `db/structure.sql` creates everything in `public`, so it is not loaded into a
+# custom schema: a fresh database runs every migration instead.
 <% postgres_search_path = (ENV.fetch('POSTGRES_SCHEMA', 'public').split(',').map(&:strip) | ['public']).join(',') %>
 production:
   primary:
@@ -124,6 +126,7 @@ production:
     # DATABASE_PREPARED_STATEMENTS knob (default true).
     prepared_statements: <%= ENV['DATABASE_PROXY_URL'].present? ? false : ENV.fetch('DATABASE_PREPARED_STATEMENTS', true) %>
     schema_search_path: <%= postgres_search_path %>
+    schema_dump: <%= postgres_search_path == 'public' ? 'structure.sql' : false %>
   direct:
     <<: *default
     url: <%= ENV['DATABASE_URL'] %>
