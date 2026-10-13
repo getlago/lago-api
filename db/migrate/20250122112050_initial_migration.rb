@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "lago/database/schema_rewriter"
+
 class InitialMigration < ActiveRecord::Migration[7.1]
   def up
     safety_assured do
@@ -3004,6 +3006,13 @@ class InitialMigration < ActiveRecord::Migration[7.1]
       ('20220526101535'),
       ('20220525122759');
       SQL
+
+      # The SQL above is a dump of the `public` schema: move it to the schema
+      # configured with `POSTGRES_SCHEMA` when it is another one.
+      schema = Lago::Database::SchemaRewriter.target_schema(connection.current_schema)
+      unless schema.nil?
+        sql = Lago::Database::SchemaRewriter.new(sql, schema:).call
+      end
 
       execute sql
     end
