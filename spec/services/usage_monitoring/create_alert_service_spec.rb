@@ -489,6 +489,49 @@ RSpec.describe UsageMonitoring::CreateAlertService do
           expect(result.alert.previous_value).to eq(0)
         end
       end
+
+      context "when the license is not premium" do
+        before { allow(License).to receive(:premium?).and_return(false) }
+
+        it "does not build the usage, since the alert is never evaluated" do
+          expect(result).to be_success
+          expect(::Invoices::CustomerUsageService).not_to have_received(:call)
+          expect(result.alert.previous_value).to eq(0)
+        end
+      end
+    end
+
+    context "when a billable metric lifetime usage alert is created past a line", :premium do
+      let(:premium_integrations) { ["granular_lifetime_usage"] }
+      let(:billable_metric) { create(:billable_metric, organization:) }
+      let(:charge) { create(:standard_charge, organization:, plan: subscription.plan, billable_metric:) }
+      let(:params) { {alert_type: "billable_metric_lifetime_usage_units", billable_metric_id: billable_metric.id, thresholds:, code: "units"} }
+      let(:thresholds) { [{code: "warning", value: 80, notify_on: %w[triggered resolved]}] }
+      let(:usage) { Struct.new(:fees).new([Struct.new(:charge_id, :units).new(charge.id, 90)]) }
+
+      before do
+        allow(::Invoices::CustomerUsageService).to receive(:call).and_return(::Invoices::CustomerUsageService::Result.new.tap { it.usage = usage })
+      end
+
+      it "takes the usage of the metric since the start of the subscription as baseline" do
+        expect(result).to be_success
+        expect(result.alert.previous_value).to eq(90)
+        expect(result.alert.all_triggered_alerts.sole).to be_seeded
+        expect(::Invoices::CustomerUsageService).to have_received(:call)
+          .with(hash_including(usage_filters: have_attributes(full_usage: true, filter_by_charge_id: [charge.id])))
+      end
+
+      context "when the metric is not charged by the plan" do
+        let(:usage) { nil }
+
+        before { charge.discard }
+
+        it "does not build the usage" do
+          expect(result).to be_success
+          expect(::Invoices::CustomerUsageService).not_to have_received(:call)
+          expect(result.alert.previous_value).to eq(0)
+        end
+      end
     end
 
     context "when a lifetime usage alert is created past a line", :premium do
