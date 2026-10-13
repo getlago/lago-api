@@ -7,13 +7,26 @@ describe X402::Settlements::ReconcileService do
 
   include_context "with an x402 payment"
 
+  let(:x402_connection) { create(:x402_connection, organization: create(:organization, feature_flags: ["x402_payments"])) }
+  let(:plan) { create(:plan, organization: x402_connection.organization, code: "agent_api", amount_cents: 0, amount_currency: "USD") }
+  let(:purchase_settings) do
+    {
+      "plan_code" => "agent_api",
+      "wallet_code" => "agent_credits",
+      "wallet" => {"name" => "Agent credits", "rate_amount" => "1", "currency" => "USD"}
+    }
+  end
   let(:payload) { {"payment" => x402_evm_payment, "payment_requirements" => x402_evm_requirements} }
-  let(:settlement) { create(:x402_settlement, :pending, reconcile_after: 1.minute.ago, error_reason: "no_response", payload:) }
+  let(:settlement) do
+    create(:x402_settlement, :pending, x402_connection:, reconcile_after: 1.minute.ago, error_reason: "no_response", payload:, purchase_settings:)
+  end
   let(:chain_hash) { "0x#{"ef" * 32}" }
   let(:reader) { instance_double(X402::Chain::EvmReader, settled?: true, identifier: chain_hash, final?: true) }
 
   before do
+    plan
     allow(X402::Chain::EvmReader).to receive(:new).and_return(reader)
+    allow(X402::CreditPurchases::GrantService).to receive(:call).and_call_original
     allow(Sentry).to receive(:capture_exception)
     allow(Sentry).to receive(:capture_message)
     allow(Rails.logger).to receive(:warn)
@@ -39,11 +52,103 @@ describe X402::Settlements::ReconcileService do
       )
     end
 
+    it "grants the credits" do
+      expect(result.settlement.reload.wallet_transaction).to have_attributes(
+        source: "x402", transaction_status: "purchased", status: "settled", credit_amount: BigDecimal("1"), amount: BigDecimal("1")
+      )
+    end
+
+    it "links the agent onto the row" do
+      expect(result.settlement.reload).to have_attributes(customer: be_present, subscription: be_present)
+    end
+
+    it "bills the purchase" do
+      expect { result }.to have_enqueued_job(BillPaidCreditJob).with(instance_of(WalletTransaction), instance_of(Integer))
+    end
+
+    it "does not report" do
+      result
+
+      expect(Sentry).not_to have_received(:capture_exception)
+    end
+
+    context "without the x402 feature flag" do
+      let(:x402_connection) { create(:x402_connection, organization: create(:organization, feature_flags: [])) }
+
+      it "grants the credits" do
+        expect(result.settlement.reload.wallet_transaction).to be_present
+      end
+    end
+
+    context "with an invoice payment" do
+      let(:settlement) { create(:x402_settlement, :pending, :invoice_payment, x402_connection:, reconcile_after: 1.minute.ago, payload:) }
+
+      it "marks the row settled" do
+        expect(result.settlement.reload).to be_settled
+      end
+
+      it "grants nothing" do
+        result
+
+        expect(X402::CreditPurchases::GrantService).not_to have_received(:call)
+      end
+    end
+
+    context "when the grant fails" do
+      let(:purchase_settings) do
+        {
+          "plan_code" => "unknown_plan",
+          "wallet_code" => "agent_credits",
+          "wallet" => {"name" => "Agent credits", "rate_amount" => "1", "currency" => "USD"}
+        }
+      end
+
+      it "keeps the row settled without a grant" do
+        expect(result.settlement.reload).to have_attributes(status: "settled", transaction_hash: chain_hash, wallet_transaction_id: nil)
+      end
+
+      it "succeeds" do
+        expect(result).to be_success
+      end
+
+      it "reports the failure" do
+        result
+
+        expect(Sentry).to have_received(:capture_exception).with(
+          an_instance_of(BaseService::NotFoundFailure),
+          extra: {organization_id: settlement.organization_id, settlement_id: settlement.id, network: "eip155:84532"}
+        )
+      end
+
+      it "logs the failure" do
+        result
+
+        expect(Rails.logger).to have_received(:warn).with(
+          "[x402] credit grant failed settlement_id=#{settlement.id} network=eip155:84532: BaseService::NotFoundFailure plan_not_found"
+        )
+      end
+    end
+
+    context "when the grant raises" do
+      before { allow(X402::CreditPurchases::GrantService).to receive(:call).and_raise(RuntimeError, "boom") }
+
+      it "keeps the row settled without a grant" do
+        expect(result.settlement.reload).to have_attributes(status: "settled", wallet_transaction_id: nil)
+      end
+
+      it "reports the error" do
+        result
+
+        expect(Sentry).to have_received(:capture_exception).with(an_instance_of(RuntimeError), extra: hash_including(settlement_id: settlement.id))
+      end
+    end
+
     context "with the hash of a settlement_pending answer" do
       let(:settlement) do
         create(
           :x402_settlement, :pending,
-          reconcile_after: 1.minute.ago, error_reason: "settlement_pending", transaction_hash: "0x#{"cd" * 32}", payload:
+          x402_connection:, reconcile_after: 1.minute.ago, error_reason: "settlement_pending", transaction_hash: "0x#{"cd" * 32}",
+          payload:, purchase_settings:
         )
       end
 
@@ -73,6 +178,12 @@ describe X402::Settlements::ReconcileService do
         result
 
         expect(holder.reload).to have_attributes(status: "settled", transaction_hash: chain_hash)
+      end
+
+      it "grants nothing" do
+        result
+
+        expect(X402::CreditPurchases::GrantService).not_to have_received(:call)
       end
 
       it "logs the shared transaction" do
@@ -128,6 +239,11 @@ describe X402::Settlements::ReconcileService do
           it "settles the row with the transaction" do
             expect(result.settlement.reload).to have_attributes(status: "settled", transaction_hash: chain_hash)
           end
+
+          it "grants the row once" do
+            expect(result.settlement.reload.wallet_transaction).to be_present
+            expect(X402::CreditPurchases::GrantService).to have_received(:call).once
+          end
         end
       end
 
@@ -165,12 +281,17 @@ describe X402::Settlements::ReconcileService do
       let(:settlement) do
         create(
           :x402_settlement, :pending,
-          x402_connection: create(:x402_connection, :discarded), reconcile_after: 1.minute.ago, payload:
+          x402_connection: create(:x402_connection, :discarded, organization: x402_connection.organization),
+          reconcile_after: 1.minute.ago, payload:, purchase_settings:
         )
       end
 
       it "marks the row settled" do
         expect(result.settlement.reload).to be_settled
+      end
+
+      it "grants the credits" do
+        expect(result.settlement.reload.wallet_transaction).to be_present
       end
     end
   end
@@ -258,7 +379,13 @@ describe X402::Settlements::ReconcileService do
   context "with a Solana row" do
     let(:signature) { X402::Base58.encode("\x01".b * 64) }
     let(:payload) { {"payment" => x402_svm_payment, "payment_requirements" => x402_svm_requirements} }
-    let(:settlement) { create(:x402_settlement, :solana, :pending, reconcile_after: 1.minute.ago, payload:) }
+    let(:settlement) do
+      create(
+        :x402_settlement, :solana, :pending,
+        x402_connection: create(:x402_connection, :solana, organization: x402_connection.organization),
+        reconcile_after: 1.minute.ago, payload:, purchase_settings:
+      )
+    end
     let(:svm_reader) { instance_double(X402::Chain::SvmReader, settled?: true, identifier: signature, final?: true) }
 
     before { allow(X402::Chain::SvmReader).to receive(:new).and_return(svm_reader) }
@@ -277,10 +404,14 @@ describe X402::Settlements::ReconcileService do
     it "records the matched signature" do
       expect(result.settlement.reload.transaction_hash).to eq(signature)
     end
+
+    it "grants the credits" do
+      expect(result.settlement.reload.wallet_transaction).to be_present
+    end
   end
 
   context "with a resolved row" do
-    let(:settlement) { create(:x402_settlement, reconcile_after: 1.minute.ago) }
+    let(:settlement) { create(:x402_settlement, :failed, reconcile_after: 1.minute.ago) }
 
     it "does not read the chain" do
       result
@@ -289,16 +420,120 @@ describe X402::Settlements::ReconcileService do
     end
   end
 
+  context "with a settled purchase awaiting its grant" do
+    let(:settlement) { create(:x402_settlement, x402_connection:, purchase_settings:, transaction_hash: chain_hash) }
+
+    it "grants the credits" do
+      expect(result.settlement.reload.wallet_transaction).to have_attributes(source: "x402", status: "settled")
+    end
+
+    it "does not read the chain" do
+      result
+
+      expect(X402::Chain::EvmReader).not_to have_received(:new)
+    end
+
+    context "with a purchase recorded by the merchant" do
+      let(:settlement) { create(:x402_settlement, :merchant, x402_connection:, purchase_settings:) }
+
+      it "grants the credits" do
+        expect(result.settlement.reload.wallet_transaction).to be_present
+      end
+    end
+
+    context "when another caller granted it after it was loaded" do
+      let(:customer) { create(:customer, organization: x402_connection.organization) }
+      let(:wallet_transaction) { create(:wallet_transaction, wallet: create(:wallet, customer:)) }
+      let(:granted) do
+        create(
+          :x402_settlement,
+          x402_connection:, purchase_settings:, customer:, wallet_transaction:, subscription: create(:subscription, customer:, plan:)
+        )
+      end
+      let(:settlement) do
+        X402::Settlement.instantiate(X402::Settlement.find(granted.id).attributes_before_type_cast.merge("wallet_transaction_id" => nil))
+      end
+
+      before { settlement }
+
+      it "grants nothing more" do
+        expect { result }.not_to change(WalletTransaction, :count)
+      end
+
+      it "does not bill again" do
+        expect { result }.not_to have_enqueued_job(BillPaidCreditJob)
+      end
+
+      it "keeps the first grant" do
+        result
+
+        expect(granted.reload.wallet_transaction).to eq(wallet_transaction)
+      end
+    end
+  end
+
+  context "with a granted purchase" do
+    let(:customer) { create(:customer, organization: x402_connection.organization) }
+    let(:settlement) do
+      create(
+        :x402_settlement,
+        x402_connection:, purchase_settings:, customer:,
+        wallet_transaction: create(:wallet_transaction, wallet: create(:wallet, customer:)),
+        subscription: create(:subscription, customer:, plan:)
+      )
+    end
+
+    it "does not grant again" do
+      result
+
+      expect(X402::CreditPurchases::GrantService).not_to have_received(:call)
+    end
+  end
+
+  context "with a settled invoice payment" do
+    let(:settlement) { create(:x402_settlement, :invoice_payment, x402_connection:) }
+
+    it "grants nothing" do
+      result
+
+      expect(X402::CreditPurchases::GrantService).not_to have_received(:call)
+    end
+  end
+
+  context "with a failed purchase" do
+    let(:settlement) { create(:x402_settlement, :failed, x402_connection:, purchase_settings:) }
+
+    it "grants nothing" do
+      result
+
+      expect(X402::CreditPurchases::GrantService).not_to have_received(:call)
+    end
+  end
+
   context "when the row was resolved after it was loaded" do
-    let(:resolved) { create(:x402_settlement, transaction_hash: "0x#{"aa" * 32}") }
+    let(:customer) { create(:customer, organization: x402_connection.organization) }
+    let(:wallet_transaction) { create(:wallet_transaction, wallet: create(:wallet, customer:)) }
+    let(:resolved) do
+      create(
+        :x402_settlement,
+        x402_connection:, purchase_settings:, customer:, wallet_transaction:,
+        subscription: create(:subscription, customer:, plan:), transaction_hash: "0x#{"aa" * 32}"
+      )
+    end
     let(:settlement) do
       X402::Settlement.instantiate(X402::Settlement.find(resolved.id).attributes_before_type_cast.merge("status" => "pending"))
     end
+
+    before { settlement }
 
     it "leaves the row as the other caller wrote it" do
       result
 
       expect(resolved.reload).to have_attributes(status: "settled", transaction_hash: "0x#{"aa" * 32}")
+    end
+
+    it "grants nothing more" do
+      expect { result }.not_to change(WalletTransaction, :count)
     end
   end
 
