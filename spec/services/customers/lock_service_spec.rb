@@ -52,6 +52,22 @@ RSpec.describe Customers::LockService do
       end
     end
 
+    context "when no transaction is open", transaction: false do
+      let(:held_advisory_locks) do
+        "SELECT count(*) FROM pg_locks WHERE locktype = 'advisory' AND granted AND pid = pg_backend_pid()"
+      end
+
+      it "holds the lock until the block returns" do
+        expect(ApplicationRecord.connection).not_to be_transaction_open
+
+        lock_service.call do
+          expect(ApplicationRecord.connection.select_value(held_advisory_locks)).to eq(1)
+        end
+
+        expect(ApplicationRecord.connection.select_value(held_advisory_locks)).to eq(0)
+      end
+    end
+
     context "when lock cannot be acquired", transaction: false do
       let(:timeout_seconds) { 0.seconds }
 

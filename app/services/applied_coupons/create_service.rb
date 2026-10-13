@@ -32,6 +32,8 @@ module AppliedCoupons
       result.record_validation_failure!(record: e.record)
     rescue BaseService::FailedResult => e
       e.result
+    rescue BaseLockService::FailedToAcquireLock
+      result.single_validation_failure!(field: :base, error_code: "concurrency_conflict")
     end
 
     private
