@@ -74,4 +74,21 @@ describe Clock::ReconcileX402SettlementsJob, job: true do
       expect { job.perform_now }.not_to have_enqueued_job(X402::Settlements::ReconcileJob)
     end
   end
+
+  describe "index usage" do
+    around do |example|
+      ActiveRecord::Base.connection.execute("SET enable_seqscan = off")
+      example.run
+    ensure
+      ActiveRecord::Base.connection.execute("SET enable_seqscan = on")
+    end
+
+    let(:settlement) { create(:x402_settlement, x402_connection:, updated_at: 3.minutes.ago) }
+
+    it "reads the purchases left without a grant through their partial index" do
+      plan = X402::Settlement.grant_retry_due.order(:id).limit(1000).explain.inspect
+
+      expect(plan).to include("index_x402_settlements_on_ungranted_id")
+    end
+  end
 end
