@@ -28,6 +28,20 @@ RSpec.describe I18n do
     expect(non_normalized).to be_empty, error_message
   end
 
+  it "uses each interpolation as many times as the base locale" do
+    interpolations = ->(value) { value.is_a?(String) ? value.scan(/%\{(\w+)\}/).flatten.tally : {} }
+    base = i18n.data[i18n.base_locale].leaves.to_h { |node| [node.full_key(root: false), interpolations.call(node.value)] }
+
+    mismatches = (i18n.locales - [i18n.base_locale]).flat_map do |locale|
+      i18n.data[locale].leaves.filter_map do |node|
+        key = node.full_key(root: false)
+        "#{locale}.#{key}" if base.key?(key) && base[key] != interpolations.call(node.value)
+      end
+    end
+
+    expect(mismatches).to be_empty
+  end
+
   it "does not have inconsistent interpolations" do
     error_message = "#{inconsistent_interpolations.leaves.count} i18n keys have inconsistent interpolations.\n" \
                     "Run `i18n-tasks check-consistent-interpolations' to show them"
