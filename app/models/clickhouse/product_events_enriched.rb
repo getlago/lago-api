@@ -1,15 +1,15 @@
 # frozen_string_literal: true
 
 module Clickhouse
-  class CatalogEventsEnriched < BaseRecord
-    self.table_name = "catalog_events_enriched"
+  class ProductEventsEnriched < BaseRecord
+    self.table_name = "product_events_enriched"
     self.primary_key = [:organization_id, :code, :external_contract_id, :timestamp]
   end
 end
 
 # == Schema Information
 #
-# Table name: catalog_events_enriched
+# Table name: product_events_enriched
 # Database name: clickhouse
 #
 #  attribution_labels         :string           not null
