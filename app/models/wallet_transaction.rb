@@ -94,6 +94,16 @@ class WalletTransaction < ApplicationRecord
       .order(:created_at)
   end
 
+  # Key of billable_metric_amounts, and of the wallets' ongoing split. Usage whose events targeted a
+  # wallet is kept apart from the rest of its billable metric, so it can be attributed to that wallet.
+  def self.billable_metric_amount_key(billable_metric_id, target_wallet_code)
+    if target_wallet_code.present?
+      "#{billable_metric_id}/#{target_wallet_code}"
+    else
+      billable_metric_id
+    end
+  end
+
   def amount_cents
     amount * wallet.currency_for_balance.subunit_to_unit
   end
@@ -136,6 +146,7 @@ end
 #
 #  id                                  :uuid             not null, primary key
 #  amount                              :decimal(30, 5)   default(0.0), not null
+#  billable_metric_amounts             :jsonb
 #  credit_amount                       :decimal(30, 5)   default(0.0), not null
 #  failed_at                           :datetime
 #  invoice_requires_successful_payment :boolean          default(FALSE), not null
