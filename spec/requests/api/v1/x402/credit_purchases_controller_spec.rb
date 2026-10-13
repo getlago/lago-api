@@ -90,6 +90,30 @@ describe Api::V1::X402::CreditPurchasesController, :premium do
       end
     end
 
+    context "with a form-encoded body" do
+      subject do
+        post(
+          "/api/v1/x402/credit_purchases",
+          params: {credit_purchase: {connection_code: x402_connection.code}},
+          headers: {"Authorization" => "Bearer #{organization.api_keys.first.value}"}
+        )
+      end
+
+      it "answers 422 without a payment" do
+        subject
+        expect(json[:error_details]).to eq(payment: ["invalid_payment"])
+      end
+    end
+
+    context "with a scalar root" do
+      let(:params) { "x" }
+
+      it "answers 400" do
+        subject
+        expect(response).to have_http_status(:bad_request)
+      end
+    end
+
     context "with an unknown connection" do
       let(:params) { super().merge(connection_code: "unknown") }
 

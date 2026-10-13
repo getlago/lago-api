@@ -20,7 +20,7 @@ module Api
         private
 
         def create_params
-          params.require(:credit_purchase).permit(:connection_code, :plan_code, :wallet_code, wallet: {})
+          params.expect(credit_purchase: [:connection_code, :plan_code, :wallet_code, wallet: {}])
         end
 
         def signed_payment_params
