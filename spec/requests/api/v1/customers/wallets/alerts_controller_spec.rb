@@ -519,8 +519,8 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
         expect(json[:code]).to eq "validation_errors"
 
         expect(json[:error_details]).to match(
-          "1": match(params: params[:alerts][1], errors: include("invalid_type")),
-          "2": match(params: params[:alerts][2], errors: include("alert_already_exists"))
+          "1": match(params: params[:alerts][1], errors: {alert_type: ["invalid_type"]}),
+          "2": match(params: params[:alerts][2], errors: {base: ["alert_already_exists"]})
         )
       end
     end
@@ -540,7 +540,7 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
 
         expect(response).to have_http_status(:unprocessable_entity)
         expect(json[:error_details]).to match(
-          "1": match(params: params[:alerts][1], errors: include("value_already_exist"))
+          "1": match(params: params[:alerts][1], errors: {code: ["value_already_exist"]})
         )
       end
     end

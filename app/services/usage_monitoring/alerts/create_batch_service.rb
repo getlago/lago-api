@@ -37,7 +37,12 @@ module UsageMonitoring
               else
                 error_details = {}
                 error_details[:params] = alert_params
-                error_details[:errors] = create_result.error&.message
+                # NOTE: validation errors keep the shape of a single create, an object keyed by field
+                error_details[:errors] = if create_result.error.is_a?(BaseService::ValidationFailure)
+                  create_result.error.messages
+                else
+                  create_result.error&.message
+                end
                 result.errors[index] = error_details
                 raise ActiveRecord::Rollback
               end
