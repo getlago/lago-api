@@ -213,6 +213,21 @@ describe X402::CreditPurchases::PurchaseService do
       it_behaves_like "a refusal before settle", {base: ["buyer_external_id_taken"]}
     end
 
+    context "with the payer's subscription id held by another customer" do
+      before { create(:subscription, customer: create(:customer, organization:), plan:, external_id: "x402_#{payer_address}_agent_api") }
+
+      it_behaves_like "a refusal before settle", {base: ["subscription_external_id_taken"]}
+    end
+
+    context "with the payer at the wallet cap" do
+      before do
+        customer = create(:customer, organization:, x402_agent_address: payer_address, external_id: "x402_#{payer_address}")
+        6.times { |index| create(:wallet, customer:, code: "other_credits_#{index}", currency: "USD") }
+      end
+
+      it_behaves_like "a refusal before settle", {base: ["wallet_limit_reached"]}
+    end
+
     context "with a wallet shape outside USD" do
       let(:wallet_shape) { super().merge("currency" => "EUR") }
 
@@ -416,6 +431,14 @@ describe X402::CreditPurchases::PurchaseService do
 
         it "grants on the stored plan" do
           expect(result.settlement.subscription.plan).to eq(plan)
+        end
+      end
+
+      context "with a grant failing" do
+        before { allow(X402::Subscriptions::ResolveService).to receive(:call!).and_raise(ActiveRecord::LockWaitTimeout) }
+
+        it "fails with credit_grant_failed" do
+          expect(result.error.messages).to eq(base: ["credit_grant_failed"])
         end
       end
     end
