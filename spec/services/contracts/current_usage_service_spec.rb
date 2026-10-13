@@ -36,17 +36,17 @@ RSpec.describe Contracts::CurrentUsageService do
   end
 
   it "prices the window open at the timestamp" do
-    window = result.card_windows.sole
+    usage = result.rate_card_usages.sole
 
-    expect(window.contract_rate_card).to eq(contract_rate_card)
-    expect(window.billing_segment).to be_new_record
-    expect(window.billing_segment).to have_attributes(
+    expect(usage.contract_rate_card).to eq(contract_rate_card)
+    expect(usage.billing_segment).to be_new_record
+    expect(usage.billing_segment).to have_attributes(
       rate_card_rate: rate, started_at: Time.zone.parse("2027-02-01"),
       ended_at: BillingSegment.inclusive_end(Time.zone.parse("2027-03-01"))
     )
-    expect(window.fees.sole).to be_new_record
-    expect(window.fees.sole).to have_attributes(fee_type: "product", contract_rate_card:, units: 1, amount_cents: 200)
-    expect(window.invoice_id).to be_nil
+    expect(usage.fees.sole).to be_new_record
+    expect(usage.fees.sole).to have_attributes(fee_type: "product", contract_rate_card:, units: 1, amount_cents: 200)
+    expect(usage.invoice_id).to be_nil
     expect(result).to have_attributes(amount_cents: 200, taxes_amount_cents: 0, total_amount_cents: 200)
   end
 
@@ -58,10 +58,10 @@ RSpec.describe Contracts::CurrentUsageService do
     let(:timestamp) { Time.zone.parse("2027-01-20 12:00:00") }
 
     it "prices the window open at that timestamp" do
-      window = result.card_windows.sole
+      usage = result.rate_card_usages.sole
 
-      expect(window.billing_segment.started_at).to eq(Time.zone.parse("2027-01-01"))
-      expect(window.fees.sole).to have_attributes(units: 1, amount_cents: 200)
+      expect(usage.billing_segment.started_at).to eq(Time.zone.parse("2027-01-01"))
+      expect(usage.fees.sole).to have_attributes(units: 1, amount_cents: 200)
     end
   end
 
@@ -69,7 +69,7 @@ RSpec.describe Contracts::CurrentUsageService do
     let(:effective_date) { Date.new(2027, 2, 15) }
 
     it "returns no window" do
-      expect(result.card_windows).to eq([])
+      expect(result.rate_card_usages).to eq([])
       expect(result).to have_attributes(amount_cents: 0, taxes_amount_cents: 0, total_amount_cents: 0)
     end
   end
@@ -88,17 +88,17 @@ RSpec.describe Contracts::CurrentUsageService do
     end
 
     it "prices the version effective at the timestamp only" do
-      window = result.card_windows.sole
+      usage = result.rate_card_usages.sole
 
-      expect(window.contract_rate_card).to eq(new_contract_rate_card)
-      expect(window.fees.sole).to have_attributes(units: 1, amount_cents: 500)
+      expect(usage.contract_rate_card).to eq(new_contract_rate_card)
+      expect(usage.fees.sole).to have_attributes(units: 1, amount_cents: 500)
     end
 
     context "when filtering on the superseded version" do
       let(:filters) { {rate_card_code: rate_card.code} }
 
       it "returns no window" do
-        expect(result.card_windows).to eq([])
+        expect(result.rate_card_usages).to eq([])
       end
     end
   end
@@ -113,21 +113,21 @@ RSpec.describe Contracts::CurrentUsageService do
     before { intro_phase }
 
     it "prices the window with the phase override" do
-      window = result.card_windows.sole
+      usage = result.rate_card_usages.sole
 
-      expect(window.rate_phase).to eq(intro_phase)
-      expect(window.billing_segment.rate_override).to eq(intro_phase.rate_override)
-      expect(window.fees.sole).to have_attributes(units: 1, amount_cents: 100)
+      expect(usage.rate_phase).to eq(intro_phase)
+      expect(usage.billing_segment.rate_override).to eq(intro_phase.rate_override)
+      expect(usage.fees.sole).to have_attributes(units: 1, amount_cents: 100)
     end
 
     context "when the phase is over" do
       let(:timestamp) { Time.zone.parse("2027-03-10 12:00:00") }
 
       it "prices the window with the card's rate" do
-        window = result.card_windows.sole
+        usage = result.rate_card_usages.sole
 
-        expect(window.rate_phase).to be_nil
-        expect(window.billing_segment.rate_override).to be_nil
+        expect(usage.rate_phase).to be_nil
+        expect(usage.billing_segment.rate_override).to be_nil
       end
     end
   end
@@ -136,7 +136,7 @@ RSpec.describe Contracts::CurrentUsageService do
     let(:contract) { create(:contract, :pending, organization:, customer:, started_at: Time.zone.parse("2027-01-01")) }
 
     it "returns no window" do
-      expect(result.card_windows).to eq([])
+      expect(result.rate_card_usages).to eq([])
       expect(result).to have_attributes(amount_cents: 0, taxes_amount_cents: 0, total_amount_cents: 0)
     end
   end
@@ -155,7 +155,7 @@ RSpec.describe Contracts::CurrentUsageService do
     end
 
     it "prices the matching cards only" do
-      expect(result.card_windows.map { |window| window.contract_rate_card.rate_card }).to eq([fixed_rate_card])
+      expect(result.rate_card_usages.map { |usage| usage.contract_rate_card.rate_card }).to eq([fixed_rate_card])
       expect(result.amount_cents).to eq(1000)
     end
   end
@@ -174,7 +174,7 @@ RSpec.describe Contracts::CurrentUsageService do
 
   context "with several cards" do
     let(:rate_card) { create(:rate_card, organization:, product:, currency: "EUR", code: "a_monthly") }
-    let(:codes) { result.card_windows.map { |window| window.contract_rate_card.rate_card.code } }
+    let(:codes) { result.rate_card_usages.map { |usage| usage.contract_rate_card.rate_card.code } }
 
     before do
       [
@@ -212,7 +212,7 @@ RSpec.describe Contracts::CurrentUsageService do
     end
 
     it "returns no invoice, as each event is billed on its own" do
-      expect(result.card_windows.sole.invoice_id).to be_nil
+      expect(result.rate_card_usages.sole.invoice_id).to be_nil
     end
   end
 
@@ -220,7 +220,7 @@ RSpec.describe Contracts::CurrentUsageService do
     let(:rate) { nil }
 
     it "returns no window" do
-      expect(result.card_windows).to eq([])
+      expect(result.rate_card_usages).to eq([])
     end
   end
 
@@ -231,7 +231,7 @@ RSpec.describe Contracts::CurrentUsageService do
     end
 
     it "returns no window" do
-      expect(result.card_windows).to eq([])
+      expect(result.rate_card_usages).to eq([])
     end
   end
 
@@ -243,7 +243,7 @@ RSpec.describe Contracts::CurrentUsageService do
     end
 
     it "applies the customer taxes" do
-      expect(result.card_windows.sole.fees.sole).to have_attributes(taxes_amount_cents: 40)
+      expect(result.rate_card_usages.sole.fees.sole).to have_attributes(taxes_amount_cents: 40)
       expect(result).to have_attributes(amount_cents: 200, taxes_amount_cents: 40, total_amount_cents: 240)
     end
   end
@@ -257,10 +257,10 @@ RSpec.describe Contracts::CurrentUsageService do
     end
 
     it "prices the card's units for the window" do
-      window = result.card_windows.sole
+      usage = result.rate_card_usages.sole
 
-      expect(window.fees.sole).to have_attributes(fee_type: "product", units: 3, amount_cents: 3000)
-      expect(window.invoice_id).to be_nil
+      expect(usage.fees.sole).to have_attributes(fee_type: "product", units: 3, amount_cents: 3000)
+      expect(usage.invoice_id).to be_nil
     end
 
     context "when billed in advance" do
@@ -278,14 +278,14 @@ RSpec.describe Contracts::CurrentUsageService do
       end
 
       it "returns the invoice that billed the open window" do
-        expect(result.card_windows.sole.invoice_id).to eq(february_invoice.id)
+        expect(result.rate_card_usages.sole.invoice_id).to eq(february_invoice.id)
       end
 
       context "with an earlier timestamp" do
         let(:timestamp) { Time.zone.parse("2027-01-20 12:00:00") }
 
         it "returns the invoice that billed the window open at that timestamp" do
-          expect(result.card_windows.sole.invoice_id).to eq(january_invoice.id)
+          expect(result.rate_card_usages.sole.invoice_id).to eq(january_invoice.id)
         end
       end
     end

@@ -4,10 +4,32 @@ module Contracts
   # Prices, for each card effective at the timestamp, the billing window open at that instant,
   # through the code that invoices it.
   class CurrentUsageService < BaseService
-    CardWindow = Data.define(:contract_rate_card, :billing_segment, :rate_phase, :fees, :invoice_id)
+    # One card's usage on its open window. A card with pricing groups has one fee per group.
+    RateCardUsage = Data.define(:contract_rate_card, :billing_segment, :rate_phase, :fees, :invoice_id) do
+      def units
+        fees.sum(BigDecimal(0), &:units)
+      end
+
+      def events_count
+        fees.sum { |fee| fee.events_count.to_i }
+      end
+
+      def amount_cents
+        fees.sum(&:amount_cents)
+      end
+
+      def taxes_amount_cents
+        fees.sum(&:taxes_amount_cents)
+      end
+
+      def rate_source
+        billing_segment.rate_override ? "phase_override" : "rate"
+      end
+    end
+
     Filters = BaseFilters[:rate_card_code, :product_code, :product_filter_code, :product_type]
 
-    Result = BaseResult[:card_windows, :amount_cents, :taxes_amount_cents, :total_amount_cents]
+    Result = BaseResult[:rate_card_usages, :amount_cents, :taxes_amount_cents, :total_amount_cents]
 
     def initialize(contract:, timestamp: Time.current, apply_taxes: true, filters: {})
       @contract = contract
@@ -18,23 +40,21 @@ module Contracts
     end
 
     def call
-      # An unknown type is rejected rather than read as a filter that matches nothing.
       if filters[:product_type].present? && !Product::PRODUCT_TYPES.value?(filters[:product_type])
         return result.single_validation_failure!(field: :product_type, error_code: "value_is_invalid")
       end
 
       # A pending contract has not started billing, so it has no usage yet.
-      result.card_windows = if contract.pending?
+      result.rate_card_usages = if contract.pending?
         []
       else
         selected_cards
-          .filter_map { |card| card_window(card) }
-          .sort_by { |window| window_order(window) }
+          .filter_map { |card| rate_card_usage(card) }
+          .sort_by { |usage| usage_order(usage) }
       end
 
-      fees = result.card_windows.flat_map(&:fees)
-      result.amount_cents = fees.sum(&:amount_cents)
-      result.taxes_amount_cents = fees.sum(&:taxes_amount_cents)
+      result.amount_cents = result.rate_card_usages.sum(&:amount_cents)
+      result.taxes_amount_cents = result.rate_card_usages.sum(&:taxes_amount_cents)
       result.total_amount_cents = result.amount_cents + result.taxes_amount_cents
       result
     end
@@ -76,7 +96,7 @@ module Contracts
       values.all? { |name, value| filters[name].blank? || filters[name] == value }
     end
 
-    def card_window(card)
+    def rate_card_usage(card)
       return if card.rate_card.rates.empty?
 
       schedule = Billing::RateCards::BuildScheduleService.call!(
@@ -89,7 +109,7 @@ module Contracts
         contract_rate_card: card, billable_segment:
       ).billing_segment
 
-      CardWindow.new(
+      RateCardUsage.new(
         contract_rate_card: card,
         billing_segment:,
         rate_phase: card.rate_phases.find { |phase| phase.code == billable_segment.rate_phase_code },
@@ -99,8 +119,8 @@ module Contracts
     end
 
     # Oldest window first; on the same start, the one closing first.
-    def window_order(window)
-      [window.billing_segment.started_at, window.billing_segment.ended_at, window.contract_rate_card.rate_card.code]
+    def usage_order(usage)
+      [usage.billing_segment.started_at, usage.billing_segment.ended_at, usage.contract_rate_card.rate_card.code]
     end
 
     def compute_fees(billing_segment)
