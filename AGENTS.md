@@ -1,284 +1,171 @@
----
-description: General Rails rules
-globs: app/**/*.rb
-alwaysApply: true
----
+# AGENTS.md
 
-This projects runs in docker container, managed with docker-compose.
-You must run `rspec` in the api container, use `lago exec api bundle exec rspec <args>`.
-You must use the `rails` cli in the container too, for example: `lago exec api bin/rails db:migrate`.
+Lago API is the Rails backend of [Lago](https://github.com/getlago/lago), an open-source usage-based billing platform. It serves the public REST API (`/api/v1`, `/api/v2`) and the GraphQL API of [lago-front](https://github.com/getlago/lago-front), and runs billing in Sidekiq jobs. PostgreSQL and Redis are required. ClickHouse, Kafka and a premium license are optional, so code must also work without them.
 
+This repository is public. Code, comments, specs, commits and PRs must not contain customer data, secrets or internal URLs, and ticket IDs stay out of code and comments.
 
-# General style
+## Commands
 
-- Never use `OpenStruct`
-- avoid `if/unless` modifier right before the last line.
-  USE
-    ```
-    if something
-        this
-    else
-        that
-    end
-    ```
-  AVOID
-    ```
-    return than unless something
-    this
-    ```
+The app runs with Docker Compose from [getlago/lago](https://github.com/getlago/lago), where `lago` is an alias for `docker compose -f docker-compose.dev.yml` (see its `docs/dev_environment.md`). Run commands in the `api` service. The worker containers have no `DATABASE_TEST_URL`, so specs run there use the development database and wipe it.
 
-# Commit Messages
+| Task | Command |
+|---|---|
+| Run specs | `lago exec api bundle exec rspec spec/path/to_spec.rb:42` |
+| Lint | `lago exec api bundle exec rubocop -a <changed files>` |
+| Create a migration | `lago exec api bin/rails g migration AddStatusToContracts` |
+| Migrate PostgreSQL and ClickHouse | `lago exec api bin/rails db:migrate` |
+| Dump `schema.graphql` and `schema.json` | `lago exec api bin/rails graphql:schema:dump` |
+| Refresh model annotations | `lago exec api bundle exec annotaterb models` |
+| Normalize locale files | `lago exec api bundle exec i18n-tasks normalize` |
 
-All commit messages must follow the Conventional Commits specification:
+- Run the specs that cover the change before finishing, and only those. CI runs the full suite, lints the changed `.rb` files and runs `bin/rails zeitwerk:check`.
+- The container mounts the main checkout at `/app`. For a git worktree inside it, add `-w /app/<worktree path>` after `exec`. The worktree also needs the gitignored `.env`, `config/master.key` and `config/keys` of the main checkout: link them with relative symlinks so they resolve inside the container. Worktrees share the databases of the main checkout, so check `bin/rails db:migrate:status` before migrating: migrations applied from other branches end up in the `db/structure.sql` dump.
+- Without Docker, the same commands run without the `lago exec api` prefix, as long as PostgreSQL and Redis are reachable (ClickHouse too for `clickhouse: true` specs). `.github/workflows/spec.yml` shows the variables and RSA keys the test suite needs.
 
-```
-<type>[optional scope]: <description>
+### Generated files
 
-## Context
+CI fails when these files are stale, so regenerate and commit them with the change that causes them:
 
-...
+- `db/structure.sql` and the schema annotations at the bottom of models, after a migration (`db:migrate` updates both in development). CI also runs every migration on an empty database.
+- `schema.graphql` and `schema.json`, after any GraphQL change. This includes a new permission, enum value or webhook type.
+- `config/locales/**/*.yml`, edited by hand, then normalized with `i18n-tasks normalize`.
 
-## Description
+Never edit the schema files or annotations by hand. Revert changes that do not come from your change, such as annotation churn or a `db/structure.sql` dumped from a local or test database. Running specs with pending migrations migrates the test database and rewrites both.
 
-...
-```
+## Ground rules
 
-Where:
-- `<type>` is one of: feat, fix, docs, style, refactor, test, chore, perf, ci, build, revert, misc
-- `[optional scope]` is optional and describes the area of change (e.g., auth, billing, api)
-- `<description>` is a short description of the change in imperative mood
+- **Tenancy.** Load tenant data through its organization: `current_organization.customers.find_by(...)` or `Model.where(organization:)`. Every new table has a `NOT NULL` `organization_id` with a foreign key, not an organization reached `through:` another table. `spec/organization_id_column_spec.rb` fails when the column is missing (it does not check `NOT NULL` or the foreign key); never add a table to its skip list.
+- **Money.** Amounts are integer `*_amount_cents` columns next to a currency. Keep unrounded values as `BigDecimal` (`precise_*_amount_cents`) and round once, at the end. Never use `Float` for money.
+- **Dates.** Billing dates follow the customer timezone (`customer.applicable_timezone`, `*_in_customer_timezone` helpers), not `Time.zone`, UTC or a bare `.to_date`. Billing periods come from `Subscriptions::DatesService`.
+- **Compatibility.** SDKs, lago-front and customers rely on the REST API, the webhook payloads and the GraphQL schema. Add optional fields and parameters; do not rename or remove existing ones. A REST change also needs an update of [lago-openapi](https://github.com/getlago/lago-openapi), which the PR mentions.
+- **Rolling deploys.** Jobs enqueued by the previous version run on the new one, so a renamed job class or a changed `perform` signature must keep accepting old jobs for one release. A new validation must accept existing rows (`validates :email, ..., if: :email_changed?`).
+- **Input.** Cast and validate input before using it (`ActiveModel::Type::Boolean.new.cast`, enum values). Bad input returns a validation error, never a 500. Never interpolate input into SQL: use bind parameters or `connection.quote`.
+- **Soft deletion.** Never hard delete a model that includes `Discard::Model`.
+- **Feature gating.** Premium features check `License.premium?`. Premium integrations check `organization.<integration>_enabled?` (`Organization::PREMIUM_INTEGRATIONS`), which includes the license check. A rollout flag is declared in `app/config/feature_flags.yaml`, with a description and owners, and read with `organization.feature_flag_enabled?(:name)`.
+- **Scope.** Keep the diff to the task, and look for an existing helper before writing a new one. A bug fix also covers its sibling paths: REST and GraphQL, create and update services, the PostgreSQL and ClickHouse event stores.
 
-**When generating or amending commit messages:**
-- The first line must be 50 characters or less
-- Use the imperative mood ("Add feature" not "Added feature")
-- The body should
-  - Explain the context and rationale for the change
-  - Explain the "why" and "what" at a conceptual level, not the "how" at a code level
-  - Be simple and direct using complete sentences without being verbose while keeping as much information as possible
-- Check the whole diff at once using `PAGER=cat git diff ...` to see all changes together
-- Generate the commit message based on the actual changes, not assumptions
-- Do not check previous commits or commit history
-- Only describe what was actually added or changed, not what already existed in the files
+## Services
 
-**When creating new commits:**
-- Only analyze the current staged changes (`PAGER=cat git diff --staged`)
+Business logic, and every create, update or delete of a model, lives in a service in `app/services`. Model a new one on `app/services/x402/connections/create_service.rb`.
 
-**When amending commits:**
-- Always check the actual commit content first using `PAGER=cat git show HEAD` to see all changes and `PAGER=cat git diff --staged` to see staged changes
-- Use `git commit --amend -m "message"` to update the commit message
+- Name it `<Namespace>::<Action>Service`, such as `Customers::CreateService`.
+- It inherits `BaseService`, stores its keyword arguments in instance variables with private `attr_reader`s, then calls `super`. Its only public method is `call`, without arguments (cop `Lago/ServiceCall`), and it returns `result`.
+- Declare the result: `Result = BaseResult[:customer, :subscription]`, or `Result = BaseResult` when nothing is returned.
+- Callers use `Service.call(...)`, or `Service.call!(...)` to raise `BaseService::FailedResult` on failure. Never `Service.new(...).call`: it skips the middlewares (activity log, tracing).
+- Fail early with `return result.not_found_failure!(resource: "customer")`. User errors use `single_validation_failure!(field:, error_code:)`, `validation_failure!(errors:)`, `record_validation_failure!(record:)`, `forbidden_failure!` (code `feature_unavailable`) or `not_allowed_failure!(code:)`. Error codes are snake_case tokens (`value_is_invalid`) that the front-end translates, not sentences.
+- `service_failure!` and unknown failures become a 500 in REST and GraphQL. Keep them for real server errors.
+- Never drop the failure of an inner service: check `success?` and pass it on with `result.fail_with_error!(inner_result.error)`, or use `call!`.
+- Inside a transaction, enqueue jobs with `SomeJob.perform_after_commit(...)` or an `after_commit {}` block. A plain `perform_later` can run before the commit and miss the data.
+- Roll back by raising. `ActiveRecord::Rollback` is ignored when an outer transaction exists.
+- Serialize concurrent work on a customer with `Customers::LockService`, inside a transaction.
+- `Webhooks::*` services, `CacheService` subclasses and the payment provider services built on `TypedResults` follow their own base classes. Do not use them as a model for other services.
 
-# Services
+## Jobs
 
-- Creating, updating an deleting model must be done using a dedicated service, unless instructed otherwise.
-For instance, to create an Alert model, you should create a `CreateAlertService` class.
-- Before deleting a model, inspect it to determine if it's soft deletable (it includes `Discard::Model`). If soft deletable, use `model.discard`. Never hard delete a soft deletable model.
+- A job that runs one service has its name with `Job` (`Contracts::ActivateService` runs in `Contracts::ActivateJob`), takes positional arguments (records or ids) and calls `Service.call!`. See `app/jobs/contracts/activate_job.rb`.
+- `ApplicationJob` sets Sidekiq `retry: 0`. Retries only come from `retry_on` (lock errors, `LagoHttpClient::HttpError`, `BaseService::ThrottlingError`) or an explicit `sidekiq_options retry:`; any other error sends the job to the dead set.
+- Use an existing queue. Dedicated queues are enabled by a `SIDEKIQ_<NAME>` flag and fall back to a queue the default worker reads (`config/sidekiq/*.yml`). A new queue needs a Sidekiq config, a start script in `scripts/` and a documented env var.
+- Jobs must be idempotent. Add `unique` (usually `:until_executed, on_conflict: :log`) when the same job can be enqueued twice. Enqueue many jobs with `ApplicationJob.perform_all_later`, which raises for unique jobs.
+- A new webhook `resource.action` needs a `Webhooks::<Resources>::<Action>Service` (see `app/services/webhooks/customers/created_service.rb`), an entry in `SendWebhookJob::WEBHOOK_SERVICES` and one in `config/webhook_event_types.yml`, then a GraphQL schema dump. It is sent with `SendWebhookJob.perform_after_commit("resource.action", record)`.
 
+## REST API
 
-When creating a service class:
-- the class always extend BaseService using `<`
-- the class name should always end with `Service`
-- the class should always be placed in `app/services/**/*.rb`
-- Service class takes named arguments via the constructor and arguments are stored in instance variables.
-- Each instance variable should have a private attr_reader declared
-- Service class have one and only one public method named `call` and it never accepts arguments
-- Service `call` method should always return `result`
-- Service class must define a custom Result class following these rules:
-  - By default, `Result = BaseResult`
-  - If the service must return values, define them using `BaseResult[]`. Example of result returning a customer and a subcription: `Result = BaseResult[:customer, :subscription]`
+- Controllers inherit `Api::BaseController`, load records through `current_organization` and call a service. See `app/controllers/api/v1/usage_attribution_types_controller.rb`.
+- Every controller has a `resource_name`, an entry of `ApiKey::RESOURCES`. Without it, every API key of an organization with the `api_permissions` premium integration gets a 403, and only the `"requires API permission"` shared example catches it.
+- Look records up with `find_by` and answer `not_found_error(resource: "alert")`. `find` gives a generic error code.
+- Render failures with `render_error_response(result)`, records with `::V1::<Model>Serializer`, and lists with `::CollectionSerializer` and `pagination_metadata`. `create` returns 200, not 201.
+- Routes go in `config/routes/shared_api.rb`, which is also served under `/api/v2` as beta. Native v2 controllers (`app/controllers/api/v2`) only cover the product catalog and contracts: cursor pagination, `app/serializers/v2`, no nested resources in lists. See `app/controllers/api/v2/product_categories_controller.rb`.
+- Mask secret parameters in API logs with `filter_audit_log_params!`.
 
+## GraphQL
 
+- Mutations are `Mutations::<Resources>::<Action>`, resolvers `Resolvers::<Resource>Resolver` or `<Resources>Resolver`, types `Types::<Resources>::Object`, `CreateInput` and `UpdateInput`. Register them in `app/graphql/types/mutation_type.rb` or `query_type.rb`. See `app/graphql/mutations/usage_attribution_types/create.rb` and `app/graphql/resolvers/usage_attribution_types_resolver.rb`.
+- Mutations and resolvers of the app include `AuthenticableApiUser` and `RequiredOrganization` and declare `REQUIRED_PERMISSION`, defined in `config/permissions.yml`. Some older resolvers have no permission: do not copy them. The customer portal and admin ones use their own modules.
+- Return `result.success? ? result.record : result_error(result)`. Keep query logic in a query object, not in the resolver.
+- Avoid N+1 queries with `dataload_association` in types. Give new enums an explicit `graphql_name`, and match field nullability to the model.
 
-# Jobs
-To call the class service class asynchronously, create job:
-- jobs should have the exact same fully qualified class name except it ends with `Job` instead of `Service`.
-- the perform method of the job typically calls the matching service and forwards all it's arguments
-- the service is called using the class method `call!`
-- avoid using named parameters for jobs
+## Models and queries
 
-Example of job calling a service:
+- Model schema annotations are generated. Read them and `db/structure.sql` before adding an index or writing a query: avoid duplicate indexes, and remember that a composite index only serves its leftmost columns.
+- Declare enum values in a constant, then `enum :status, STATUSES, validate: true` (`validate: {allow_nil: true}` for a nullable column). New enums are PostgreSQL enums with string values: `STATUSES = {draft: "draft", active: "active"}.freeze`. Older enums use arrays on integer columns.
+- Soft-deletable models use `include Discard::Model`, `self.discard_column = :deleted_at` and `default_scope -> { kept }`. Bulk deletion is `update_all(deleted_at: Time.current, updated_at: Time.current)` (cop `Lago/DiscardAll`). Discarding a record does not discard its children (`dependent:` does not apply), so the service discards them explicitly. Associations to a parent that can be discarded use `-> { with_discarded }`.
+- `update_all` skips callbacks and `updated_at`: set `updated_at` yourself.
+- Give every list query a deterministic order. `.first` and `.last` order by the UUID `id`, not by creation, and `find_by` and `take` have no order: add an explicit order whenever the record picked matters. `find_each` iterates by id, and raises in tests when the relation has an order.
+- Query objects live in `app/queries` (`< BaseQuery`, `Filters = BaseFilters[...]`, `paginate` last). See `app/queries/contracts_query.rb`. Ransack attributes must be listed in `ransackable_attributes`.
 
-```ruby
-# frozen_string_literal: true
+## Migrations
 
-module SomeModuleName
-  class MyGeneratedJob < ApplicationJob
-    queue_as "default"
+- Create migrations with the generator. It sets the current `ActiveRecord::Migration[x.y]` version and a real timestamp. Never edit a merged migration.
+- [strong_migrations](https://github.com/ankane/strong_migrations) checks every migration. Wrap an operation in `safety_assured` only when you know it is safe.
+- An index on an existing table gets its own migration: `disable_ddl_transaction!`, `algorithm: :concurrently`, `if_not_exists: true`, explicit `up` and `down`, and removal of an invalid index left by a failed run. Copy `db/migrate/20261002142357_add_contracts_status_cursor_index.rb`. Columns and indexes never share a migration, except indexes declared inside `create_table`.
+- `add_column`, `add_foreign_key` and `add_check_constraint` take `if_not_exists: true`, so a failed migration can be retried. Prefer `add_column` over `change_table`.
+- PostgreSQL enum types are created with `create_enum`, named after the table and column (`subscription_on_termination_credit_note`).
+- A constraint added with `validate: false` is validated by a second migration in the same PR. If existing rows must be fixed first, register it in `db/not_valid_constraints.yml` with a `validate_by` date, and remove the entry once the constraint is validated (`spec/db/not_valid_constraints_spec.rb` checks both). Pass `column:` to `validate_foreign_key` when a table has several foreign keys to the same table.
+- Dropping a column or a table takes two releases: follow `docs/dropping_columns_and_tables.md` (cop `Lago/NoDropColumnOrTable`). Always `self.ignored_columns += [...]`, never `=`.
+- Small backfills run in the migration (`Model.unscoped.in_batches.update_all`, as the default scope hides discarded rows). Large ones are a `DatabaseMigrations::*Job` started by a rake task in `lib/tasks/migrations/`, not a job enqueued by a migration. See `app/jobs/database_migrations/backfill_invoices_search_terms_job.rb`.
+- SQL views use scenic: `db/views/<name>_v01.sql` with `create_view`, then a new numbered file and `update_view` for each change.
 
-    def perform(organization, subscription)
-      SomeModuleName::MyGeneratedService.call!(organization:, subscription:)
-    end
-  end
-end
+### ClickHouse
 
-```
+- Self-hosted migrations live in `db/clickhouse_migrate/`. ClickHouse Cloud DDL lives in `db/clickhouse_migrate/cloud/NN_*.sql`, run by hand in order when a cluster is created, so a change to an existing Cloud table is a new numbered `ALTER` script, not an edit.
+- ClickHouse DDL is not transactional: one DDL change per migration, explicit `up` and `down`, `IF NOT EXISTS` and `IF EXISTS` guards.
+- Kafka engine tables cannot be altered: drop and recreate the queue table and its materialized view.
 
-# Controllers
+## Specs
 
-- Under `V1` namespace the resource retrieved should always be scoped to the current_organization. Typically, to retrieve Alerts, use `current_organization.alerts.where(...)`
-- In controller `create` method, return regular 200 status, avoid `status: :created`
-- When testing controller, access the response via `json` method, which parsed json and symbolized keys.
+- `spec/` mirrors `app/`. Endpoint specs live in `spec/requests/api/v1` and `v2`. Billing scenarios in `spec/scenarios` go through API calls and jobs with `spec/support/scenarios_helper.rb`, rather than calling services.
+- A bug fix comes with a spec that fails without the fix. Cover the negative case (a record that must not be returned) and the error paths.
+- Helpers:
+  - REST: `get_with_token(organization, path, params)` (also `post_`, `put_`, `delete_`), `json` for the parsed body, `expect(response).to be_not_found_error("alert")`, `include_examples "requires API permission", "alert", "write"`.
+  - GraphQL: `execute_graphql(current_user:, current_organization:, permissions:, query:, variables:)`, `it_behaves_like "requires current user"`, `"requires current organization"` and `"requires permission", "alerts:create"`.
+  - Jobs: `have_enqueued_job`, `have_been_enqueued`, `have_enqueued_job_after_commit`. Never stub or spy on job classes (cop `Lago/NoExpectReceiveOnJob`).
+  - Metadata: `:premium`, `clickhouse: true`, `transaction: false`, `cache: :memory`, `:sentry`, `:bullet` (fails on N+1 queries).
+- WebMock blocks real HTTP calls: stub them with `stub_request`.
+- `aggregate_failures` is on by default, so several expectations in one example are fine.
+- Name the subject: `subject(:result) { described_class.call(...) }`. Do not test `#initialize`.
+- Declare fixtures with `let`, `let_it_be` or `before`, never inside `it`, and prefer `let` with `before` over `let!`. Stub with `allow` in `before`. Vary a scenario by overriding a `let` in a nested context, not by updating records in the example, unless that update is what the spec tests.
+- Prefer `build` or `build_stubbed` when the test does not need the database. Build the target factory and let its associations create the rest. Entitlement factories are `:feature`, `:privilege` and `:entitlement`.
+- Freeze time with `freeze_time` or `travel_to` instead of comparing with `be_within`. Compare lists with `eq`, or `match_array` when the order does not matter, instead of several `include` checks.
+- Model specs use these blocks, in this order: `describe "enums"` and `"associations"` (one `it` each, with every association option), `"Clickhouse associations"` (`clickhouse: true`), `"Scopes"` (one `describe ".scope_name"` per scope), `"validations"` (one `it`, plus a nested `describe "<attribute> validation"` for a custom validation). PostgreSQL enums use `define_enum_for(:status).backed_by_column_of_type(:enum).validating.with_values(...)`. See `spec/models/x402/settlement_spec.rb`.
 
+### TestProf
 
-# Models
+[TestProf](https://test-prof.evilmartians.io) helpers create shared records once per example group.
 
-- New models must directly belong to an organization. Store the `organization_id` in the table, don't use `through:`
-- Before adding an index, inspect the model's annotated indexes and the actual schema in `db/structure.sql`. Avoid duplicate indexes and account for the column order of existing composite indexes (their leftmost prefixes).
-- Before building or changing a query, inspect the relevant models' indexes and consider whether the query's filters, joins, and ordering can use them. For composite indexes, the order of indexed columns matters; reordering `where` conditions does not change the index's column order.
+- Use `let_it_be` for records that examples read and do not change (organization, customer, plan, billable metric). A `let_it_be` block cannot read a `let`.
+- `let_it_be` records are frozen (`spec/spec_helper.rb`). When an example or the code under test updates one, add `refind: true` to that record only. It loads a fresh copy before each example, while `reload: true` reloads the shared instance in place.
+- Use `before_all` for setup that only needs to exist, such as `before_all { create_default(:billable_metric) }`.
+- `create_default(:organization)` makes factories reuse that organization. A record of another organization needs it passed explicitly (`create(:invoice, organization: create(:organization))`), and a `let_it_be` is declared after the records it depends on.
+- `transaction: false` groups delete all rows after each example, which removes `let_it_be` and `before_all` records: use `let` there.
 
-Soft deletion
-- not all models are soft deletable
-- soft deletable models must `include Discard::Model`
-- the soft deletion column is called `deleted_at`
-- soft deletable models must use `default_scope -> { kept }`
-- soft deletable models should be deletable
-- You cannot rely on `dependent: :destroy` if the model is soft deleted, you must call `discard_all!` on relationship manually
+## Code style
 
-## Enums
-
-- Define enum constants as arrays before using them in enum declarations
-- For PostgreSQL enums, define constants as hashes with string values, not arrays. Use the format: `ENUM_NAME = { value1: "value1", value2: "value2" }.freeze`.
-- New model enums should always use `validate: true`
-
-Example:
+- RuboCop (Standard, plugins and the custom cops in `dev/cops`) defines the style. Fix offenses in the files you change, and do not reformat other files.
+- No `OpenStruct`: use `Struct`, `Data.define` or a hash.
+- No guard clause right before the last line of a method:
 
   ```ruby
-  FEE_TYPES = %i[charge add_on subscription credit commitment].freeze
-  enum :fee_type, FEE_TYPES
+  # Bad
+  return other unless condition
+  value
 
-  ON_TERMINATION_CREDIT_NOTES = { credit: "credit", omit: "omit" }.freeze
-  enum :on_termination_credit_note, ON_TERMINATION_CREDIT_NOTES
+  # Good
+  if condition
+    value
+  else
+    other
+  end
   ```
 
-# Webhooks
+- A method name says what the method does, side effects included. `?` methods return booleans, and datetime columns end with `_at`.
+- Comments explain why, in one or two lines. No ticket IDs, internal links or narration of the change.
 
-To create a webhook:
-- A webhook name is typically `resource.action`, for example: `customer.updated` or `alert.triggered`. Use other webhooks as example to follow.
-- Create a service in `app/services/webhooks/`, typically named `Webhooks::ResourceActionService` like `Webhooks::CustomerUpdatedService`
-- A service must define at least the following methods:
-    - `current_organization` - how to get the organization from the model
-    - `object_serializer` which typically calls a serializer class
-    - `webhook_type` always the name like `resource.action`
-    - `object_type` which is the object serialized. Reuse this method in the serializer `root_name` param
-- Add the mapping `name` => Service class to the `SendWebhookJob::WEBHOOK_SERVICES` hash
-- Write a test for the webhook class
+## Commits and pull requests
 
-# Migrations
+- PRs are squash-merged, so the PR title becomes the commit on `main`. It follows Conventional Commits, `type(scope): summary`, in 72 characters or less. Types: `feat`, `fix`, `perf`, `refactor`, `chore`, `misc`, `docs`, `test`, `ci`, `build`, `revert`, `style`.
+- The PR body follows `PULL_REQUEST_TEMPLATE.md` (`## Context`, `## Description`). It says why the change is needed and what it changes, without a tour of the diff, and it is updated when the approach changes.
+- One concern per PR.
 
-- Make sure to specify the latest available `ActiveRecord::Migration` version. For example, if the latest version is `8.0`, use `ActiveRecord::Migration[8.0]`.
-- Prefer `add_column` over `change_table` when adding single columns
-- In every new PostgreSQL migration, use `algorithm: :concurrently` for `add_index`. Put concurrent index additions in a migration with `disable_ddl_transaction!`; do not add columns or other schema objects in that migration. If a change needs both columns and indexes, create two migrations in order: one to add the columns, then one to add the indexes concurrently.
-- Use `if_not_exists: true` for every `add_index`, `add_column`, `add_foreign_key`, and `add_check_constraint` so an interrupted migration can be retried.
-- Before adding a concurrent index, check for an invalid index with `index_exists?(:table, nil, name: :index_name, valid: false)` and remove it with `remove_index :table, name: :index_name, algorithm: :concurrently` if present. `if_not_exists` checks the name alone and would otherwise skip an invalid index left by an interrupted build. Use explicit `up` and `down` methods for these migrations, with `down` removing the index concurrently using `if_exists: true`.
-- Use `safety_assured` wrapper when required for complex operations
-- Never use hardcoded or fake timestamps in migration filenames. Migration timestamps should be generated using `date +"%Y%m%d%H%M%S"` command to ensure proper chronological ordering.
-- For enums, use `create_enum` to define the PostgreSQL enum type before adding the column
-  - Enum type names should be descriptive and include the table/model context (e.g., `subscription_on_termination_credit_note`)
-- When adding a constraint with `validate: false` (`NOT VALID`), add a second migration right after it that validates the constraint (`validate_foreign_key` or `validate_check_constraint`), within the same PR. If validation is not possible yet (e.g. existing rows must be backfilled or fixed first), register the constraint in `db/not_valid_constraints.yml` with a `validate_by` deadline, and remove the entry once the constraint is validated. `spec/db/not_valid_constraints_spec.rb` enforces this.
-- When validating a foreign key on a table that has several foreign keys to the same target table, pass the `column:` option to `validate_foreign_key`, otherwise the wrong constraint may be validated silently.
+## Environment variables
 
-## Clickhouse migrations
-
-- Clickhouse migrations live in `db/clickhouse_migrate/` (self-hosted). The DDL for ClickHouse Cloud is kept separately in `db/clickhouse_migrate/cloud/*.sql`; those files are executed manually, in filename order, when creating a new cluster.
-- Changing the schema of a Clickhouse Cloud table that already exists in production requires a new numbered `db/clickhouse_migrate/cloud/*.sql` script holding the `ALTER`, not an edit to the original creation script: creation scripts only ever run on new clusters, so an in-place edit never reaches an existing one. Edit a creation script in place only when it does not change a deployed table (e.g. fixing invalid DDL).
-- Clickhouse DDL is not transactional. Keep one DDL concern per migration (e.g. one index): if a migration runs several statements and a later one fails, the earlier ones are already applied while the migration is marked as failed.
-- Define explicit `up` and `down` methods (not `change`), and make `down` revert the DDL (e.g. `DROP INDEX IF EXISTS`). Use `IF NOT EXISTS` / `IF EXISTS` guards so retries are idempotent.
-
-# Backward Compatibility
-
-- New optional parameters must not break existing functionality
-
-# Environment variables
-
-- When a change introduces a new environment variable, document it in this file (name, purpose, example value)
-- `LAGO_REDIS_SIDEKIQ_SENTINEL_USERNAME` — optional ACL username for Sidekiq Redis Sentinel authentication. Used only when `LAGO_REDIS_SIDEKIQ_SENTINELS` is configured; blank leaves the username unset. Omit for password-only authentication. Example: `LAGO_REDIS_SIDEKIQ_SENTINEL_USERNAME=sentinel`
-- `LAGO_REDIS_SIDEKIQ_SENTINEL_PASSWORD` — optional password for Sidekiq Redis Sentinel authentication, separate from the data Redis password (`REDIS_PASSWORD`). Used only when `LAGO_REDIS_SIDEKIQ_SENTINELS` is configured; blank leaves the password unset. Example: `LAGO_REDIS_SIDEKIQ_SENTINEL_PASSWORD=***`
-- `LAGO_REDIS_CACHE_SENTINEL_USERNAME` — optional ACL username for cache Redis Sentinel authentication. Used only when `LAGO_REDIS_CACHE_SENTINELS` is configured; blank leaves the username unset. Omit for password-only authentication. Example: `LAGO_REDIS_CACHE_SENTINEL_USERNAME=sentinel`
-- `LAGO_REDIS_CACHE_SENTINEL_PASSWORD` — optional password for cache Redis Sentinel authentication, separate from the data Redis password (`LAGO_REDIS_CACHE_PASSWORD`). Used only when `LAGO_REDIS_CACHE_SENTINELS` is configured; blank leaves the password unset. Example: `LAGO_REDIS_CACHE_SENTINEL_PASSWORD=***`
-- `LAGO_ENABLE_YJIT` — when true, enables YJIT (`config.yjit`). Disabled by default. Example: `LAGO_ENABLE_YJIT=true`
-- `SIDEKIQ_WALLETS` — when true, wallet jobs (e.g. `Customers::RefreshWalletJob`) are routed to the `wallets` queue, processed by the dedicated wallet worker (`scripts/start.wallets.worker.sh`). Example: `SIDEKIQ_WALLETS=true`
-- `SIDEKIQ_AI_AGENT` — when true, AI conversation jobs (`AiConversations::StreamJob`) are routed to the `ai_agent` queue. Example: `SIDEKIQ_AI_AGENT=true`
-- The `streaming` queue (`config/sidekiq/sidekiq_streaming.yml`, `scripts/start.streaming.worker.sh`) has no `SIDEKIQ_*` flag on purpose. `DeliverEventJob` is pinned to it unconditionally, because its worker needs an AWS identity the general workers do not have, and a wallet-refresh burst arrives as one job per customer and must not compete with billing work. Nothing is enqueued unless the organization has a `streaming_destinations` row, so a deployment that runs no streaming worker never fills the queue.
-- `LAGO_REALTIME_USAGE_ENABLED` — when true, allows current usage to be served from the pre-aggregated ClickHouse usage buckets. The value is cast as a boolean, so `false` or `0` disables serving. Deployment-wide kill switch: serving also requires a premium license, `LAGO_CLICKHOUSE_ENABLED`, the organization reading the ClickHouse events store, and the per-organization `realtime_usage` feature flag. Example: `LAGO_REALTIME_USAGE_ENABLED=true`
-- `LAGO_KAFKA_REALTIME_USAGE_TRIGGERS_TOPIC` — Kafka topic carrying one trigger per enriched count/sum event, keyed by `(organization_id, customer_id)`. Shared by every reaction to freshly ingested usage, each of which consumes it under its own consumer group; wallet refresh (`WalletRefreshTriggersConsumer`) is the only one today. When blank the topic is not routed and no reaction runs, leaving wallet refresh entirely to the five-minute `Clock::RefreshWalletsOngoingBalanceJob` sweep. Example: `LAGO_KAFKA_REALTIME_USAGE_TRIGGERS_TOPIC=realtime_usage_triggers`
-- `LAGO_KARAFKA_METRICS_PORT` — when set, the Karafka process serves its Prometheus metrics on that port, on all interfaces. A consumer process serves no Rack app, so without it nothing the consumers measure is scrapable, while the Rails `/metrics` route keeps covering the web processes. Blank leaves the exporter off. Example: `LAGO_KARAFKA_METRICS_PORT=9394`
-- `LAGO_API_TOTAL_COUNT_TIMEOUT_MS`: statement timeout, in milliseconds, of the count behind `include_total_count` on cursor-paginated v2 lists. When the count times out, the total falls back to the planner's row estimate, flagged with `total_count_estimated`. Defaults to 2000. Example: `LAGO_API_TOTAL_COUNT_TIMEOUT_MS=2000`
-- `LAGO_ANROK_DRAFT_TAXES_CACHE_TTL_SECONDS` — how long, in seconds, an Anrok answer to a draft tax request is reused for an identical request (`Integrations::Aggregator::Taxes::Invoices::DraftTaxesCacheService`). It bounds how long a draft can lag behind a change made on the Anrok side (registration, exemption certificate, rate). Finalized invoices are never cached. Defaults to 86400 (1 day); 0 disables the cache, reads included, so entries already stored stop being served. Example: `LAGO_ANROK_DRAFT_TAXES_CACHE_TTL_SECONDS=86400`
-- `LAGO_FINANCE_ASSISTANT_URL` — base URL of the finance assistant service that answers `askFinanceAssistant`. When blank the feature is unavailable and the mutation returns a forbidden failure. Example: `LAGO_FINANCE_ASSISTANT_URL=http://lago-data-agent:8000`
-- `LAGO_FINANCE_ASSISTANT_OPEN_TIMEOUT` — connection timeout, in seconds, for the finance assistant call. Defaults to 5. Example: `LAGO_FINANCE_ASSISTANT_OPEN_TIMEOUT=5`
-- `LAGO_FINANCE_ASSISTANT_READ_TIMEOUT` — response timeout, in seconds, for the finance assistant call. Defaults to 60. Must stay above the assistant's own run deadline (`ASK_DEADLINE_SECS`, 55s today) so that a slow answer is received instead of being cut off. Example: `LAGO_FINANCE_ASSISTANT_READ_TIMEOUT=60`
-- `LAGO_SMTP_AUTHENTICATION` — SMTP authentication method, one of `login` (default), `plain`, `cram_md5` or `xoauth2`. `none` or `disabled` turn authentication off and drop `LAGO_SMTP_USERNAME`/`LAGO_SMTP_PASSWORD` from the mailer settings, which is required because net-smtp authenticates with PLAIN as soon as a username is present; use it only for a trusted self-hosted relay. A blank value keeps the default, so a variable left empty by a compose file or a Helm chart cannot silently change authentication. Any other value makes every delivery fail — `rails lago:diagnostics` flags it. Example: `LAGO_SMTP_AUTHENTICATION=none`
-- `LAGO_SMTP_ENABLE_STARTTLS_AUTO` — whether SMTP automatically uses STARTTLS. Defaults to true; set it to false only for a trusted self-hosted relay without TLS. Example: `LAGO_SMTP_ENABLE_STARTTLS_AUTO=false`
-- `LAGO_STREAMING_INTERMEDIATE_ROLE_ARN` — IAM role that a streaming worker assumes before it assumes the destination role of a `streaming_destinations` row. Set it when the worker's own Pod Identity role is not the principal the destination trusts: the destination then sees this role as the caller, so the trust policy of the stream owner needs no change. Blank keeps the single-hop path, where the worker assumes the destination role directly from its ambient credentials. The value is read at class load, so a worker must restart before a change takes effect. Example: `LAGO_STREAMING_INTERMEDIATE_ROLE_ARN=arn:aws:iam::123456789012:role/SharedKinesis`
-- `LAGO_WEBHOOK_ALLOW_PRIVATE_URLS` — when true, webhook endpoints and the Okta/Entra ID hosts may point at private, loopback, link-local or other reserved addresses. Blocked by default: the host is resolved when the webhook URL is saved and again on every request, and the connection is pinned to the checked IP. Self-hosted deployments delivering webhooks to internal hosts must set it. Example: `LAGO_WEBHOOK_ALLOW_PRIVATE_URLS=true`
-- `CS_ADMIN_SLACK_WEBHOOK_URL` — Slack incoming webhook the CS admin panel posts audit log notifications to (`Admin::SlackNotificationService`). When blank, no notification is sent. Example: `CS_ADMIN_SLACK_WEBHOOK_URL=https://hooks.slack.com/services/***`
-- `LAGO_X402_RPC_URLS` — JSON object mapping a CAIP-2 network to the JSON-RPC endpoint the x402 chain readers (`X402::Chain::EvmReader`, `X402::Chain::SvmReader`) use to learn whether a settlement whose answer was lost moved the money. Networks it omits keep the public endpoints: `eip155:8453` https://mainnet.base.org, `eip155:84532` https://sepolia.base.org, `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp` https://api.mainnet-beta.solana.com and `solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1` https://api.devnet.solana.com. Those are rate limited, so production should set a provider URL per network. It is read on every call; invalid JSON raises. Example: `LAGO_X402_RPC_URLS={"eip155:8453":"https://base-mainnet.g.alchemy.com/v2/***"}`
-- Sensitive values (keys, secrets, passwords, tokens, credentials embedded in URLs) must always be masked in examples, e.g. `LAGO_SMTP_PASSWORD=***` or `DATABASE_URL=postgresql://***@db:5432/lago`
-
-# Service
-
-## Validation
-
-- Use descriptive error messages that explain why validation failed
-- Always validate enum values in a service validation class to prevent invalid API input
-
-# Query object
-
-- When using ransack with search_params, make sure the attributes are defined in the model class method `self.ransackable_attributes(_auth_object = nil)`
-
-# Testing
-
-- Do not test `#initialize` method.
-- In controller specs, use `get_with_token` and similar method, don't try to mock the token manually
-- to test a "resource not found error" from an `Api::V1` controller, use the custom match `be_not_found_error` like this:
-  `expect(response).to be_not_found_error("alert")`
-- Prefer `expect(...).to have_received()` instead of `expect(...).to receive()`
-- Configure mocks and stubs with `allow` in `before` blocks, never directly in an `it` block. When setup applies to only one example, wrap it in a dedicated context with its own `before` block.
-- never use `aggregate_failure` in new test. Do not edit existing tests to remove it.
-- After making changes to the tests, always run the tests to ensure they pass.
-- When doing array comparison in tests, use `eq` or `match_array` instead of multiple `include`/`not_to include` assertions when the expected array is small enough to be readable
-- Use single-line `let` statements when they fit on one line without breaking Rubocop rules
-- Start RSpec `context` descriptions with `when`, `with`, or `without` to satisfy `RSpec/ContextWording` (e.g. `context "when the segment starts after the rate change"`).
-- Define the object under test with a named `subject` instead of constructing `described_class` inside `it` blocks. Keep examples focused on exercising behavior and asserting results.
-- Define shared setup objects with `let` instead of repeating factory calls across examples. Extract inputs that vary between scenarios (e.g. `timezone`, `started_at`, and `ended_at`) into `let` declarations, and override only those inputs in nested `context` blocks while reusing the same subject.
-- Declare test fixtures with `let` or `before`; do not call `build` or `create` inside an `it` block.
-- Define scenario state through factory arguments in nested contexts instead of using `assign_attributes`, `update!`, or direct attribute assignment inside examples.
-- Mutate records inside examples only when the mutation itself is the behavior under test.
-- Run as minimum number of tests as possible. Narrow down run tests for specific describe or file.
-
-## Models
-
-- When testing models, test all enums and group them all in a `describe "enums"` block with a single `it` block (not multiple `it` blocks)
-  - When testing PostgreSQL enums, use the `.backed_by_column_of_type(:enum)` matcher:
-    ```ruby
-    expect(subject).to define_enum_for(:on_termination_credit_note)
-      .backed_by_column_of_type(:enum)
-      .validating
-      .with_values(credit: "credit", omit: "omit")
-    ```
-- When testing models, test ALL associations (belongs_to, has_one, has_many, etc.) and group them all in a `describe "associations"` block with a single `it` block (not multiple `it` blocks)
-  - Include ALL association parameters and options (class_name, foreign_key, through, dependent, autosave, optional, etc.)
-  - Clickhouse associations should have their own `describe "Clickhouse associations"` block with `clickhouse: true` metadata after the associations block
-- When testing models, test all scopes and group them all in a `describe "Scopes"` block with individual `describe ".scope_name"` blocks for each scope
-- When testing models, test all validations and group them all in a `describe "validations"` block with a single `it` block
-  - For complex custom validations, use a nested `describe "attribute_name validation"` block instead of using the method name
-- Test sections should appear in this order: enums, associations, Clickhouse associations, scopes, validations
-
-## Factories
-
-- Prefer `build` or `build_stubbed` over `create` when the test does not require database persistence. Prefer `build_stubbed` when identity assertions need IDs.
-- Build the target factory directly and rely on its associations instead of manually creating the full associated object graph.
-- Some factories have been renamed for clarity.
-  - To create Entitlement::Feature model, use `:feature`
-  - To create Entitlement::Privilege model, use `:privilege`
-  - To create Entitlement::Entitlement model, use `:entitlement`
-
-## TestProf
-
-Specs use [TestProf](https://test-prof.evilmartians.io) helpers to create shared records once per example group instead of once per example.
-
-- Use `let_it_be` for records that several examples read and do not change (organization, customer, plan, billable metric). Keep `let` for records an example builds differently or that depend on a `let`: a `let_it_be` block cannot read a `let`.
-- `let_it_be` records are frozen by default (`default_modifiers[:freeze] = true` in `spec/spec_helper.rb`). When an example or the code under test updates a shared record, add `refind: true` (`let_it_be(:plan, refind: true)`); `reload: true` fails on a frozen record. Add `refind: true` only to the records that are updated, since each refind reloads the record before every example.
-- Use `before_all` for setup that only needs to exist (for example `before_all { create_default(:billable_metric) }`).
-- `create_default(:organization)` makes factories reuse that record for their association. A record that must belong to another organization then needs it passed explicitly (`create(:invoice, organization: create(:organization))`), otherwise an "other organization" example silently uses the default one.
-- Declare a `let_it_be` after the records it depends on, so a record created through `create_default` does not end up in an extra organization.
-- Specs with `transaction: false` truncate tables, which removes records created by `let_it_be` and `before_all`. Keep `let` in those groups.
+A new environment variable is documented in `docs/environment_variables.md` in the same PR: name, purpose, default and an example. Examples mask secrets (`LAGO_SMTP_PASSWORD=***`).
