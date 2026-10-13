@@ -447,6 +447,64 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       end
     end
 
+    context "when the usage is already past a line at creation", :premium do
+      let(:thresholds) { [{code: "warning", value: 80, notify_on: %w[triggered resolved]}, {code: "critical", value: 120}] }
+      let(:usage) { Struct.new(:amount_cents).new(100) }
+
+      before do
+        allow(::Invoices::CustomerUsageService).to receive(:call).and_return(::Invoices::CustomerUsageService::Result.new.tap { it.usage = usage })
+      end
+
+      it "takes the usage as baseline and records the opted-in line silently" do
+        freeze_time do
+          expect(result).to be_success
+          expect(result.alert).to have_attributes(previous_value: 100, last_processed_at: Time.current)
+
+          seeded = result.alert.all_triggered_alerts.sole
+          expect(seeded).to be_seeded
+          expect(seeded.crossed_thresholds.map { it["code"] }).to eq(%w[warning])
+          expect(SendWebhookJob).not_to have_been_enqueued
+        end
+      end
+
+      context "when the usage cannot be built" do
+        before do
+          allow(::Invoices::CustomerUsageService).to receive(:call)
+            .and_return(::Invoices::CustomerUsageService::Result.new.tap { it.not_found_failure!(resource: "customer") })
+        end
+
+        it "creates the alert without a baseline" do
+          expect(result).to be_success
+          expect(result.alert).to have_attributes(previous_value: 0, last_processed_at: nil)
+          expect(result.alert.all_triggered_alerts).to be_empty
+        end
+      end
+
+      context "when the subscription is pending" do
+        let(:subscription) { create(:subscription, :pending, organization:) }
+
+        it "does not build the usage" do
+          expect(result).to be_success
+          expect(::Invoices::CustomerUsageService).not_to have_received(:call)
+          expect(result.alert.previous_value).to eq(0)
+        end
+      end
+    end
+
+    context "when a lifetime usage alert is created past a line", :premium do
+      let(:premium_integrations) { ["lifetime_usage"] }
+      let(:params) { {alert_type: "lifetime_usage_amount", thresholds:, code: "lifetime"} }
+      let(:thresholds) { [{code: "warning", value: 80, notify_on: %w[triggered resolved]}] }
+
+      before { create(:lifetime_usage, organization:, subscription:, historical_usage_amount_cents: 90) }
+
+      it "takes the lifetime usage as baseline" do
+        expect(result).to be_success
+        expect(result.alert.previous_value).to eq(90)
+        expect(result.alert.all_triggered_alerts.sole).to be_seeded
+      end
+    end
+
     context "when direction is :decreasing" do
       subject(:result) { described_class.call(organization:, alertable: wallet, params:) }
 
