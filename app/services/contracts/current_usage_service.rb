@@ -52,7 +52,9 @@ module Contracts
       cards = contract.applied_rate_cards
         .includes(
           {rate_card: [:rates, :product_filter, {product: [:billable_metric, :product_category]}]},
-          {rate_phases: :rate_override}
+          {rate_phases: :rate_override},
+          :organization,
+          :product
         )
         .order(:effective_date, :created_at, :id)
         .to_a

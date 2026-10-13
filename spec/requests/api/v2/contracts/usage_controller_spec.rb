@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Api::V2::Contracts::UsageController do
-  describe "GET /api/v2/contracts/:external_id/current_usage" do
+  describe "GET /api/v2/contracts/:external_id/current_usage", :bullet do
     subject { get_with_token(organization, "/api/v2/contracts/#{external_id}/current_usage", params) }
 
     let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
