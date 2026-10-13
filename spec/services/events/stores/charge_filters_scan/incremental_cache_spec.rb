@@ -264,6 +264,29 @@ RSpec.describe Events::Stores::ChargeFiltersScan::IncrementalCache, clickhouse: 
     end
   end
 
+  context "with the filters read in several batches" do
+    let(:late_checks) { [] }
+
+    before do
+      stub_const("Events::Stores::ChargeFiltersScan::FILTERS_PER_SCAN", 1)
+      computation
+      ingest("tr_6", Time.zone.parse("2026-09-15 12:05"), "eu", 32)
+    end
+
+    def count_late_checks(&)
+      callback = ->(*, payload) { late_checks << payload[:sql] if payload[:sql].start_with?("SELECT 1 FROM events_enriched") }
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record", &)
+    end
+
+    it "checks the late events once for all the batches" do
+      usage = count_late_checks { computation }
+
+      expect(usage).to eq(totals(incremental: false))
+      expect(reads.size).to eq(3)
+      expect(late_checks.size).to eq(1)
+    end
+  end
+
   context "when the pre-filter answers the filters to aggregate in another order" do
     let(:filter_ids) { charge.filters.map(&:id) + [nil] }
 

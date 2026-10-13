@@ -78,6 +78,7 @@ module Events
         def initialize(subscription:, charge:)
           @subscription = subscription
           @charge = charge
+          @late_events = {}
         end
 
         # The rows of the window, keyed by filter. The block reads the rows of a part of the window,
@@ -154,6 +155,8 @@ module Events
             !late_events?(store:, from_datetime:, entry:)
         end
 
+        # The check depends on the window, the cut and the watermark, not on the filters, and the
+        # batches of a charge are kept together: it is run once for all of them.
         def late_events?(store:, from_datetime:, entry:)
           where = [
             store.deduplicated_events_where_sql(from_datetime:, to_datetime: nil, before: entry.cut),
@@ -161,8 +164,10 @@ module Events
           ].join(" AND ")
           sql = "SELECT 1 FROM events_enriched WHERE #{where} LIMIT 1"
 
-          Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-            connection.select_value(sql).present?
+          @late_events.fetch(sql) do
+            @late_events[sql] = Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+              connection.select_value(sql).present?
+            end
           end
         end
 
