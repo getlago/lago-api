@@ -5,6 +5,8 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
+    REQUIRED_PERMISSION = "customers:view"
+
     description "Query a single wallet transaction"
 
     argument :id, ID, required: true, description: "Unique ID of the wallet transaction"

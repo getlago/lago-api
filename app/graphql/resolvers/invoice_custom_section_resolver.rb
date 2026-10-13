@@ -5,6 +5,8 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
+    REQUIRED_PERMISSION = "invoice_custom_sections:view"
+
     description "Query a single invoice_custom_section of an organization"
 
     argument :id, ID, required: true, description: "Uniq ID of the invoice_custom_section"

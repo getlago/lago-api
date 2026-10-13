@@ -5,6 +5,8 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
+    REQUIRED_PERMISSION = "customers:view"
+
     description "Query wallet transactions"
 
     argument :limit, Integer, required: false

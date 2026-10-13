@@ -32,6 +32,10 @@ RSpec.describe Resolvers::BillingEntityTaxesResolver do
     create(:billing_entity_applied_tax, billing_entity:, tax: tax2, organization:)
   end
 
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", %w[billing_entities:view invoices:create]
+
   it "returns billing entity taxes" do
     result = execute_graphql(
       current_user: membership.user,

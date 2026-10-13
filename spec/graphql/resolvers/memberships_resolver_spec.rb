@@ -19,6 +19,7 @@ RSpec.describe Resolvers::MembershipsResolver do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", %w[organization:members:view quotes:view order_forms:view orders:view security_logs:view]
 
   it "returns a list of memberships" do
     create(:membership, organization: organization, roles: %i[admin])
@@ -27,6 +28,7 @@ RSpec.describe Resolvers::MembershipsResolver do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: "organization:members:view",
       query:
     )
 
@@ -47,10 +49,33 @@ RSpec.describe Resolvers::MembershipsResolver do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: "organization:members:view",
       query:
     )
 
     expect(result["data"]["memberships"]["metadata"]["adminCount"]).to eq(1)
+  end
+
+  it "returns the memberships with a quote permission only" do
+    result = execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      permissions: "quotes:view",
+      query:
+    )
+
+    expect(result["data"]["memberships"]["collection"].map { it["id"] }).to include(membership.id)
+  end
+
+  it "returns a forbidden error without any of the required permissions" do
+    result = execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      permissions: "invoices:view",
+      query:
+    )
+
+    expect(result["errors"].first["extensions"]["code"]).to eq("forbidden")
   end
 
   describe "filters" do
@@ -84,6 +109,7 @@ RSpec.describe Resolvers::MembershipsResolver do
       execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: "organization:members:view",
         query:,
         variables:
       )
@@ -155,6 +181,7 @@ RSpec.describe Resolvers::MembershipsResolver do
       execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: "organization:members:view",
         query:
       )
     end

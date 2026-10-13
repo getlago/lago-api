@@ -46,11 +46,13 @@ RSpec.describe Resolvers::WalletTransactionFundingsResolver do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "customers:view"
 
   it "returns a list of fundings for an outbound transaction" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: "customers:view",
       query:,
       variables: {walletTransactionId: outbound_transaction.id, limit: 5}
     )
@@ -82,6 +84,7 @@ RSpec.describe Resolvers::WalletTransactionFundingsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: "customers:view",
         query:,
         variables: {walletTransactionId: outbound_transaction.id, page: 1, limit: 2}
       )
@@ -97,6 +100,7 @@ RSpec.describe Resolvers::WalletTransactionFundingsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: "customers:view",
         query:,
         variables: {walletTransactionId: outbound_transaction.id, page: 2, limit: 2}
       )
@@ -114,6 +118,7 @@ RSpec.describe Resolvers::WalletTransactionFundingsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: "customers:view",
         query:,
         variables: {walletTransactionId: inbound_transaction.id}
       )
@@ -129,6 +134,7 @@ RSpec.describe Resolvers::WalletTransactionFundingsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: "customers:view",
         query:,
         variables: {walletTransactionId: outbound_transaction.id}
       )
@@ -142,6 +148,7 @@ RSpec.describe Resolvers::WalletTransactionFundingsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: "customers:view",
         query:,
         variables: {walletTransactionId: "non-existent-id"}
       )
@@ -165,6 +172,7 @@ RSpec.describe Resolvers::WalletTransactionFundingsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: "customers:view",
         query:,
         variables: {walletTransactionId: other_transaction.id}
       )

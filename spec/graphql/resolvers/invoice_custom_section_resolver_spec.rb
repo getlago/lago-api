@@ -21,10 +21,15 @@ RSpec.describe Resolvers::InvoiceCustomSectionResolver do
 
   before { invoice_custom_section }
 
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "invoice_custom_sections:view"
+
   it "returns a single invoice_custom_section" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: "invoice_custom_sections:view",
       query:,
       variables: {invoiceCustomSectionId: invoice_custom_section.id}
     )
@@ -56,6 +61,7 @@ RSpec.describe Resolvers::InvoiceCustomSectionResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: "invoice_custom_sections:view",
         query:,
         variables: {invoiceCustomSectionId: "unknown"}
       )

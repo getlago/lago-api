@@ -33,6 +33,7 @@ RSpec.describe Resolvers::WalletsResolver do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: "customers:view",
       query:,
       variables: {
         walletId: wallet.id
@@ -70,6 +71,7 @@ RSpec.describe Resolvers::WalletsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: create(:organization),
+        permissions: "customers:view",
         query:,
         variables: {
           walletId: wallet.id
@@ -88,6 +90,7 @@ RSpec.describe Resolvers::WalletsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: "customers:view",
         query:,
         variables: {
           walletId: "123456"

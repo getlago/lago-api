@@ -5,6 +5,8 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
+    REQUIRED_PERMISSION = %w[organization:members:view quotes:view order_forms:view orders:view security_logs:view]
+
     description "Query memberships of an organization"
 
     argument :limit, Integer, required: false
