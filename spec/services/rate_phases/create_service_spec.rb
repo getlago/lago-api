@@ -35,6 +35,24 @@ RSpec.describe RatePhases::CreateService do
     expect(plan_rate_card).to have_received(:with_lock)
   end
 
+  context "with a priced metered advance contract rate card" do
+    subject(:result) { described_class.call(contract_rate_card:, params:) }
+
+    let(:customer) { create(:customer, organization:) }
+    let(:contract) { create(:contract, :pending, organization:, customer:) }
+    let(:rate_card) { create(:rate_card, :advance, organization:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: contract.started_at.beginning_of_day)
+    end
+
+    it "creates the phase without persisting an event-pricing segment" do
+      expect { result }.not_to change(BillingSegment, :count)
+      expect(contract_rate_card.billing_segments).to be_empty
+    end
+  end
+
   context "when the code is missing" do
     before { params.delete(:code) }
 
