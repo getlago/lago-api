@@ -64,6 +64,7 @@ module X402
         Invoices::UpdateService.call!(invoice:, params: invoice_params, webhook_notification: true)
 
         after_commit do
+          SendWebhookJob.perform_later("payment.succeeded", payment)
           PaymentReceipts::CreateJob.perform_later(payment) if settlement.organization.issue_receipts_enabled?
           Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if payment.should_sync_payment?
         end

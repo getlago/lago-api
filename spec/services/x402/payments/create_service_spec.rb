@@ -45,6 +45,10 @@ describe X402::Payments::CreateService, :premium do
     expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("invoice.payment_status_updated", invoice)
   end
 
+  it "notifies the payment after commit" do
+    expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("payment.succeeded", instance_of(Payment))
+  end
+
   it "settles the prepaid credits after commit" do
     expect { result }.to have_enqueued_job_after_commit(Invoices::PrepaidCreditJob).with(invoice, :succeeded)
   end
