@@ -353,14 +353,56 @@ RSpec.describe Contracts::CurrentUsageService do
       let(:billing_timing) { :advance }
       let(:january_invoice) { create(:invoice, organization:, customer:) }
       let(:february_invoice) { create(:invoice, organization:, customer:) }
+      let(:february_billed) { true }
 
       before do
         create(:billing_segment, organization:, customer:, contract:, contract_rate_card:, rate_card_rate: rate,
           status: :done, invoice: january_invoice,
           cycle_started_at: Time.zone.parse("2027-01-01"), billing_at: Time.zone.parse("2027-01-01"))
         create(:billing_segment, organization:, customer:, contract:, contract_rate_card:, rate_card_rate: rate,
-          status: :done, invoice: february_invoice,
+          status: february_billed ? :done : :pending, invoice: (february_invoice if february_billed),
           cycle_started_at: Time.zone.parse("2027-02-01"), billing_at: Time.zone.parse("2027-02-01"))
+      end
+
+      context "with a rate appended mid-cycle" do
+        let(:timestamp) { Time.zone.parse("2027-02-20 12:00:00") }
+
+        before do
+          create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2027-02-15"),
+            rate_properties: {"amount" => "20"})
+        end
+
+        it "reports the invoice that billed the whole cycle for the new rate's window" do
+          usage = result.rate_card_usages.sole
+
+          expect(usage.billing_segment.started_at).to eq(Time.zone.parse("2027-02-15"))
+          expect(usage.invoice_id).to eq(february_invoice.id)
+        end
+
+        context "with a timestamp before the new rate" do
+          let(:timestamp) { Time.zone.parse("2027-02-10 12:00:00") }
+
+          it "reports the same invoice for the old rate's window" do
+            usage = result.rate_card_usages.sole
+
+            expect(usage.billing_segment).to have_attributes(
+              started_at: Time.zone.parse("2027-02-01"), ended_at: BillingSegment.inclusive_end(Time.zone.parse("2027-02-15"))
+            )
+            expect(usage.invoice_id).to eq(february_invoice.id)
+          end
+        end
+      end
+
+      context "with a timestamp on the window boundary, before the new window is billed" do
+        let(:timestamp) { Time.zone.parse("2027-02-01 00:00:00") }
+        let(:february_billed) { false }
+
+        it "does not report the previous window's invoice" do
+          usage = result.rate_card_usages.sole
+
+          expect(usage.billing_segment.started_at).to eq(Time.zone.parse("2027-02-01"))
+          expect(usage.invoice_id).to be_nil
+        end
       end
 
       it "returns the invoice that billed the open window" do
