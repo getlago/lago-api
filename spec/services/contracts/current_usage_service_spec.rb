@@ -393,6 +393,17 @@ RSpec.describe Contracts::CurrentUsageService do
         end
       end
 
+      context "with a timestamp on the last microsecond of the window" do
+        let(:timestamp) { BillingSegment.inclusive_end(Time.zone.parse("2027-03-01")) }
+
+        it "still reports the window's invoice" do
+          usage = result.rate_card_usages.sole
+
+          expect(usage.billing_segment.started_at).to eq(Time.zone.parse("2027-02-01"))
+          expect(usage.invoice_id).to eq(february_invoice.id)
+        end
+      end
+
       context "with a timestamp on the window boundary, before the new window is billed" do
         let(:timestamp) { Time.zone.parse("2027-02-01 00:00:00") }
         let(:february_billed) { false }
