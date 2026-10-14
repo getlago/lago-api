@@ -116,12 +116,72 @@ module UsageMonitoring
       crossed.uniq.sort
     end
 
+    def find_thresholds_recovered(current)
+      one_time_thresholds_values.filter { in_alarm?(it, previous_value) && !in_alarm?(it, current) }
+    end
+
+    def in_alarm?(threshold_value, observed_value)
+      if increasing?
+        threshold_value <= observed_value
+      else
+        threshold_value >= observed_value
+      end
+    end
+
+    def opted_in_thresholds
+      thresholds.filter { !it.recurring && it.notify_on_resolved? && it.code.present? }
+    end
+
+    def thresholds_in_alarm(observed_value)
+      opted_in_thresholds.filter { in_alarm?(it.value, observed_value) }
+    end
+
+    # Every line still in alarm, opted in or not, named by its code or by its value when it has no code,
+    # so the list covers the same lines as fully_resolved?
+    def in_alarm_line_labels(observed_value)
+      alarm_lines.filter { in_alarm?(it, observed_value) }.map { line_label(it) }
+    end
+
+    def fully_resolved?(observed_value)
+      alarm_lines.none? { in_alarm?(it, observed_value) }
+    end
+
+    # A recurring threshold holds a step, not a line: its first line sits one step past the last one-time threshold.
+    def alarm_lines
+      return one_time_thresholds_values unless recurring_threshold
+
+      step = recurring_threshold.value
+      if increasing?
+        one_time_thresholds_values + [(one_time_thresholds_values.last || 0) + step]
+      else
+        one_time_thresholds_values + [(one_time_thresholds_values.first || 0) - step]
+      end
+    end
+
+    # Pairing is by code across the whole history. That is enough: a line only gets back into alarm through
+    # a crossing, which records a new triggered row, or through seeding, which records a seeded one.
+    def recorded_alarm_codes
+      all_triggered_alerts
+        .where(kind: [:triggered, :seeded])
+        .pluck(:crossed_thresholds)
+        .flatten
+        .filter_map { it["code"].presence }
+        .to_set
+    end
+
     def recurring_threshold
       @recurring_threshold ||= thresholds.find { |th| th.recurring }
     end
 
+    # Thresholds are replaced wholesale on update: drop what was read from the previous set.
+    def reload_thresholds
+      thresholds.reset
+      @recurring_threshold = nil
+      @one_time_thresholds_values = nil
+    end
+
     def one_time_thresholds_values
-      @one_time_thresholds_values ||= thresholds.all.filter_map { |th| th.value unless th.recurring }.uniq.sort
+      @one_time_thresholds_values ||= thresholds.filter_map { |th| th.value unless th.recurring }.uniq.sort
     end
 
     def formatted_crossed_thresholds(crossed_threshold_values)
@@ -145,6 +205,16 @@ module UsageMonitoring
     end
 
     private
+
+    def line_label(line_value)
+      threshold = if one_time_thresholds_values.include?(line_value)
+        thresholds.find { !it.recurring && it.value == line_value }
+      else
+        recurring_threshold
+      end
+
+      threshold&.code.presence || line_value.to_s("F")
+    end
 
     def need_billable_metric?
       BILLABLE_METRIC_TYPES.include?(alert_type)
