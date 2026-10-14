@@ -204,6 +204,10 @@ module UsageMonitoring
       raise NotImplementedError
     end
 
+    def window_resets_each_period?(_alertable)
+      false
+    end
+
     private
 
     def line_label(line_value)
