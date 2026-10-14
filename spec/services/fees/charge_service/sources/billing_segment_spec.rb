@@ -219,6 +219,62 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
         expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
       end
     end
+
+    context "with prorated recurring arrears billing" do
+      let(:rate_card) { build(:rate_card, organization:, product:, currency: "USD", proration: true) }
+      let(:billable_metric) do
+        build(:billable_metric, organization:, aggregation_type: :unique_count_agg, field_name: "user_id", recurring: true)
+      end
+      let(:proration_ratio) { 25.fdiv(31) }
+      let(:billing_segment) do
+        build(
+          :billing_segment,
+          organization:,
+          contract_rate_card:,
+          rate_card_rate:,
+          cycle_started_at: Time.zone.parse("2026-10-01"),
+          started_at: Time.zone.parse("2026-10-07"),
+          ended_at: Time.zone.parse("2026-10-31 23:59:59.999999"),
+          proration_ratio:
+        )
+      end
+
+      it "uses the full anchored cycle duration without changing the segment window" do
+        expect(boundaries).to have_attributes(
+          from_datetime: billing_segment.started_at,
+          to_datetime: billing_segment.ended_at,
+          charges_from_datetime: billing_segment.started_at,
+          charges_to_datetime: billing_segment.ended_at,
+          charges_duration: 31
+        )
+      end
+
+      context "with a nonrecurring metric" do
+        let(:billable_metric) do
+          build(:billable_metric, organization:, aggregation_type: :unique_count_agg, field_name: "user_id", recurring: false)
+        end
+
+        it "keeps the segment duration" do
+          expect(boundaries.charges_duration).to eq(billing_segment.duration_in_days)
+        end
+      end
+
+      context "without proration" do
+        let(:rate_card) { build(:rate_card, organization:, product:, currency: "USD", proration: false) }
+
+        it "keeps the segment duration" do
+          expect(boundaries.charges_duration).to eq(billing_segment.duration_in_days)
+        end
+      end
+
+      context "with a zero proration ratio" do
+        let(:proration_ratio) { 0 }
+
+        it "safely keeps the segment duration" do
+          expect(boundaries.charges_duration).to eq(billing_segment.duration_in_days)
+        end
+      end
+    end
   end
 
   describe "fee identity" do
