@@ -100,5 +100,19 @@ RSpec.describe BillableMetrics::EvaluateExpressionService do
         end
       end
     end
+
+    %w[1/0 ceil(-1/0) event.properties.value/0].each do |division_by_zero|
+      context "when the expression divides by zero (#{division_by_zero})" do
+        let(:expression) { division_by_zero }
+
+        it "returns a validation error instead of raising" do
+          result = evaluate_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:event]).to include("invalid_event")
+        end
+      end
+    end
   end
 end

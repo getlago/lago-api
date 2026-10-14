@@ -122,7 +122,7 @@ gem "valvat"
 # Data Export
 gem "csv", "~> 3.0"
 
-gem "lago-expression", github: "getlago/lago-expression", glob: "expression-ruby/lago-expression.gemspec", ref: "2abd2b3"
+gem "lago-expression", github: "getlago/lago-expression", glob: "expression-ruby/lago-expression.gemspec", ref: "6a70c6d"
 
 group :development, :test, :staging do
   gem "factory_bot_rails"
