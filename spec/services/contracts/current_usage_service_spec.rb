@@ -338,6 +338,33 @@ RSpec.describe Contracts::CurrentUsageService do
           expect(result.rate_card_usages.sole.invoice_id).to eq(january_invoice.id)
         end
       end
+
+      context "with another fixed card billed in advance" do
+        let(:other_rate_card) do
+          create(:rate_card, organization:, product: create(:product, :fixed, organization:), billing_timing: :advance,
+            currency: "EUR")
+        end
+        let(:other_invoice) { create(:invoice, organization:, customer:) }
+
+        before do
+          other_contract_rate_card = create(:contract_rate_card, organization:, contract:, rate_card: other_rate_card,
+            units: 1, effective_date: Date.new(2027, 1, 1), billing_anchor_date: Date.new(2027, 1, 1))
+          other_rate = create(:rate_card_rate, organization:, rate_card: other_rate_card,
+            effective_from: Time.zone.parse("2027-01-01"))
+          create(:billing_segment, organization:, customer:, contract:, contract_rate_card: other_contract_rate_card,
+            rate_card_rate: other_rate, status: :done, invoice: other_invoice,
+            cycle_started_at: Time.zone.parse("2027-02-01"), billing_at: Time.zone.parse("2027-02-01"))
+        end
+
+        it "finds both invoices in a single query" do
+          usages = nil
+          statements = capture_sql { usages = result.rate_card_usages }
+
+          expect(usages.to_h { |usage| [usage.contract_rate_card.rate_card, usage.invoice_id] })
+            .to eq(rate_card => february_invoice.id, other_rate_card => other_invoice.id)
+          expect(statements.grep(/FROM "billing_segments"/).size).to eq(1)
+        end
+      end
     end
   end
 end
