@@ -11,7 +11,7 @@ module Invoices
 
     def call
       result.invoice = invoice
-      return result unless invoice.contract? && (invoice.generating? || invoice.draft?)
+      return result unless finalizable?
 
       ActiveRecord::Base.transaction do
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
@@ -27,6 +27,10 @@ module Invoices
     private
 
     attr_reader :invoice
+
+    def finalizable?
+      invoice.contract? && (invoice.generating? || invoice.draft?)
+    end
 
     def publish
       SendWebhookJob.perform_later("invoice.created", invoice)
