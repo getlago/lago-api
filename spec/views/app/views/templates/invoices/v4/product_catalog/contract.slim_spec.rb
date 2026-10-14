@@ -12,7 +12,7 @@ RSpec.describe "templates/invoices/v4/product_catalog/contract.slim" do
 
   let(:organization) { create(:organization) }
   let(:billing_entity) { organization.default_billing_entity }
-  let(:customer) { create(:customer, organization:, name: "Pied Piper") }
+  let(:customer) { create(:customer, organization:, name: "Pied Piper", legal_name: nil) }
   let(:invoice) do
     create(:invoice, organization:, billing_entity:, customer:, invoice_type: :contract, number: "INV-001", self_billed:)
   end
