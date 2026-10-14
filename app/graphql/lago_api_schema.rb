@@ -17,7 +17,7 @@ class LagoApiSchema < GraphQL::Schema
   rescue_from(ActiveModel::RangeError, ActiveRecord::RangeError) do
     raise GraphQL::ExecutionError.new(
       "Unprocessable Entity",
-      extensions: {status: 422, code: "unprocessable_entity", details: {base: ["value_is_out_of_range"]}}
+      extensions: {status: 422, code: "unprocessable_entity", details: {"base" => ["value_is_out_of_range"]}}
     )
   end
 
