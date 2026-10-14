@@ -30,7 +30,8 @@ module V1
           {
             code: threshold.code,
             value: threshold.value,
-            recurring: threshold.recurring
+            recurring: threshold.recurring,
+            notify_on: threshold.notify_on
           }
         end
       end
