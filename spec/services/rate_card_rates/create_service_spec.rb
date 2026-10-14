@@ -150,12 +150,11 @@ RSpec.describe RateCardRates::CreateService do
     let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
 
     before do
+      contract_rate_card
       create(:rate_phase, :contract_level, organization:, contract_rate_card:, position: 1)
     end
 
     it "adds the rate without persisting an event-pricing segment" do
-      contract_rate_card
-
       expect { result }.not_to change(BillingSegment, :count)
       expect(contract_rate_card.billing_segments).to be_empty
     end

@@ -13,8 +13,6 @@ RSpec.describe "Advance standard pricing across rate changes" do
           started_at: cycle_started_at.iso8601
         }})
       end
-
-      # Event pricing does not require contract creation to persist an advance-metered row.
     end
 
     rate_changes.each do |change|
