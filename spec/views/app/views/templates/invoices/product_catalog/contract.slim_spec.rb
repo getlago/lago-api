@@ -74,6 +74,14 @@ RSpec.describe "templates/invoices/product_catalog/contract.slim" do
     end
   end
 
+  context "when the invoice is partly paid with prepaid credits" do
+    before { invoice.update!(prepaid_credit_amount_cents: 500) }
+
+    it "shows the deduction in the totals" do
+      expect(rendered_text).to match(/Prepaid credits -\S+5\.00/)
+    end
+  end
+
   context "when the invoice is self billed" do
     let(:self_billed) { true }
 
