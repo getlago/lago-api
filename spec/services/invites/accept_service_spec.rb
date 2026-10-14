@@ -47,6 +47,74 @@ RSpec.describe Invites::AcceptService do
       expect(result.token).to be_present
     end
 
+    context "when an account is created before invitation registration" do
+      subject(:accept_result) { accept_service.call(**accept_args) }
+
+      let(:registered_password) { "ExistingPassword!" }
+      let(:registered_user) { create(:user, email: invite.email.downcase, password: registered_password) }
+      let(:registered_password_digest) { registered_user.password_digest }
+      let(:user_authentication_methods) { %w[email_password google_oauth] }
+      let(:user_organization) { create(:organization, authentication_methods: user_authentication_methods) }
+      let(:registered_membership) { create(:membership, user: registered_user, organization: user_organization, roles: %w[admin]) }
+      let(:invite) { create(:invite, organization:, email: "Invited@example.com") }
+
+      before do
+        allow(UsersService).to receive(:call).and_wrap_original do |original, *args, **kwargs|
+          registered_membership
+          registered_password_digest
+          original.call(*args, **kwargs)
+        end
+      end
+
+      it "rejects the wrong password without granting access" do
+        expect(accept_result).not_to be_success
+        expect(accept_result.error.messages[:base]).to eq(["incorrect_login_or_password"])
+        expect(accept_result.token).to be_nil
+        expect(invite.reload.status).to eq("pending")
+        expect(organization.memberships.active.where(user: registered_user)).to be_empty
+        expect(registered_user.reload.password_digest).to eq(registered_password_digest)
+        expect(registered_membership.reload).to be_active
+        expect(User.where("lower(email) = ?", invite.email.downcase).count).to eq(1)
+        expect(UserDevices::RegisterService).not_to have_received(:call!)
+      end
+
+      context "with the existing password" do
+        let(:accept_args) { super().merge(password: registered_password) }
+
+        it "accepts the invitation for the existing account" do
+          expect(accept_result).to be_success
+          expect(accept_result.user).to eq(registered_user)
+          expect(Utils::AuthToken.decode(token: accept_result.token)["sub"]).to eq(registered_user.id)
+          expect(invite.reload.status).to eq("accepted")
+          expect(registered_user.reload.password_digest).to eq(registered_password_digest)
+          expect(registered_membership.reload).to be_active
+        end
+
+        context "when the user's organization requires SSO" do
+          let(:user_authentication_methods) { %w[google_oauth] }
+
+          it "rejects a password session without accepting the invitation" do
+            expect(accept_result).not_to be_success
+            expect(accept_result.error.messages[:email_password]).to eq(["login_method_not_authorized"])
+            expect(accept_result.token).to be_nil
+            expect(invite.reload.status).to eq("pending")
+            expect(organization.memberships.active.where(user: registered_user)).to be_empty
+          end
+        end
+      end
+
+      context "with an identity verified by SSO" do
+        let(:accept_args) { super().merge(login_method: Organizations::AuthenticationMethods::GOOGLE_OAUTH) }
+
+        it "accepts the invitation without replacing the existing password" do
+          expect(accept_result).to be_success
+          expect(accept_result.user).to eq(registered_user)
+          expect(Utils::AuthToken.decode(token: accept_result.token)["login_method"]).to eq("google_oauth")
+          expect(registered_user.reload.password_digest).to eq(registered_password_digest)
+        end
+      end
+    end
+
     context "when the invited email belongs to an existing user" do
       let!(:user) { create(:user, email: invite.email, password: "ILoveLago") }
 

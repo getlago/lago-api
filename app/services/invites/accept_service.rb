@@ -24,8 +24,18 @@ module Invites
     private
 
     def register_new_user(invite, args)
-      result = ActiveRecord::Base.transaction do
-        result = UsersService.call(:register_from_invite, invite, args[:password])
+      ActiveRecord::Base.transaction do
+        registration_result = UsersService.call(
+          :register_from_invite,
+          invite,
+          args[:password],
+          login_method: args[:login_method]
+        )
+        return result.fail_with_error!(registration_result.error) unless registration_result.success?
+
+        result.user = registration_result.user
+        result.organization = registration_result.organization
+        result.membership = registration_result.membership
         result.token = generate_token(result.user, login_method: args[:login_method])
         invite.recipient = result.membership
         invite.mark_as_accepted!
@@ -37,23 +47,9 @@ module Invites
       result
     end
 
-    # NOTE: The password is only checked here, never changed. An invitation must not change the
-    #       password of an account. A user with no active membership cannot log in, so we ask for
-    #       their password instead of an existing session.
     def join_as_existing_user(invite, user, args)
-      # NOTE: Whoever created the invitation picks the authentication methods of the inviting
-      #       organization. They must not decide how the invited user logs in. A user with no
-      #       active membership belongs to no organization, so nothing restricts them.
-      if user.memberships.active.any? && !user.login_method_allowed?(args[:login_method])
-        return result.single_validation_failure!(
-          error_code: "login_method_not_authorized",
-          field: args[:login_method]
-        )
-      end
-
-      unless authenticated?(user, args[:password])
-        return result.single_validation_failure!(error_code: "incorrect_login_or_password")
-      end
+      authentication_result = AuthenticateUserService.call(user:, password: args[:password])
+      return result.fail_with_error!(authentication_result.error) unless authentication_result.success?
 
       join_result = JoinService.call(invite:, user:, login_method: args[:login_method])
       return result.fail_with_error!(join_result.error) unless join_result.success?
@@ -66,14 +62,6 @@ module Invites
 
       UserDevices::RegisterService.call!(user:, skip_log: false)
       result
-    end
-
-    def authenticated?(user, password)
-      password = password.to_s
-      # NOTE: Null byte injection. Prevent 500 errors.
-      return false if password.include?("\u0000")
-
-      user.authenticate(password).present?
     end
 
     def generate_token(user, **extra_auth)

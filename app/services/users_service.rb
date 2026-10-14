@@ -86,11 +86,17 @@ class UsersService < BaseService
     result
   end
 
-  def register_from_invite(invite, password)
+  def register_from_invite(invite, password, login_method:)
     ActiveRecord::Base.transaction do
       # NOTE: Same case insensitive lookup as Invite#existing_user, so an invitation never creates
       #       a second user for an email that only differs by case.
       user = invite.existing_user || User.new(email: invite.email)
+
+      # The caller's earlier lookup can become stale, so authenticate the account found here.
+      if user.persisted? && login_method == Organizations::AuthenticationMethods::EMAIL_PASSWORD
+        authentication_result = Invites::AuthenticateUserService.call(user:, password:)
+        return result.fail_with_error!(authentication_result.error) unless authentication_result.success?
+      end
 
       # NOTE: The password is only set when the user is created. The password of an existing user
       #       is never reset by an invitation.
