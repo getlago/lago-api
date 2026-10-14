@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe RatePhases::ReplaceService do
+RSpec.describe RatePhases::ReplaceService, :capture_kafka_messages do
   subject(:result) { described_class.call(plan_rate_card:, phases_params:) }
 
   let(:organization) { create(:organization) }
@@ -17,6 +17,8 @@ RSpec.describe RatePhases::ReplaceService do
     ]
   end
 
+  before { allow(Utils::ActivityLog).to receive(:produce_after_commit) }
+
   it "replaces the phase sequence and discards the superseded overrides" do
     previous_override = create(:rate_override, organization:)
     create(:rate_phase, organization:, plan_rate_card:, position: 1, rate_override_id: previous_override.id)
@@ -29,6 +31,42 @@ RSpec.describe RatePhases::ReplaceService do
     expect(result).to be_success
     expect(result.rate_phases.map(&:position)).to eq([1, 2])
     expect(result.rate_phases.map(&:billing_interval_cycle_count)).to eq([3, nil])
+  end
+
+  it "publishes one owning plan_rate_card.updated pair for the replacement" do
+    expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan_rate_card.updated", plan_rate_card)
+
+    expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(
+      plan_rate_card,
+      "plan_rate_card.updated"
+    )
+  end
+
+  it "suppresses the owner pair when invoked as part of a larger write" do
+    expect do
+      described_class.call(plan_rate_card:, phases_params:, emit_events: false)
+    end.not_to have_enqueued_job(SendWebhookJob)
+    expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "plan_rate_card.updated", any_args)
+  end
+
+  context "when an outer transaction rolls back" do
+    before do
+      allow(Utils::ActivityLog).to receive(:produce_after_commit).and_call_original
+      allow(Utils::ActivityLog).to receive(:produce).and_call_original
+      allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+    end
+
+    it "does not deliver either owner event", transaction: false do
+      plan_rate_card
+      expect do
+        ActiveRecord::Base.transaction do
+          result
+          raise ActiveRecord::Rollback
+        end
+      end.not_to have_enqueued_job(SendWebhookJob)
+
+      expect(kafka_messages).to be_empty
+    end
   end
 
   it "locks the entry while replacing the sequence" do
@@ -88,9 +126,12 @@ RSpec.describe RatePhases::ReplaceService do
       let(:rate_card) { create(:rate_card, organization:, applied_pricing_unit_code: "credits") }
 
       it "propagates the override validation failure and rolls back" do
-        expect { result }.not_to change(RatePhase, :count)
+        existing_count = RatePhase.count
+        expect { result }.not_to have_enqueued_job(SendWebhookJob)
+        expect(RatePhase.count).to eq(existing_count)
         expect(result).not_to be_success
         expect(result.error.messages[:pricing_unit_conversion_rate]).to include("value_is_mandatory")
+        expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "plan_rate_card.updated", any_args)
       end
     end
   end

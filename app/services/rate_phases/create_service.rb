@@ -6,10 +6,11 @@ module RatePhases
   class CreateService < BaseService
     Result = BaseResult[:rate_phase]
 
-    def initialize(plan_rate_card: nil, contract_rate_card: nil, params: {})
+    def initialize(plan_rate_card: nil, contract_rate_card: nil, params: {}, emit_events: true)
       @plan_rate_card = plan_rate_card
       @contract_rate_card = contract_rate_card
       @params = params.to_h.with_indifferent_access
+      @emit_events = emit_events
       super
     end
 
@@ -32,6 +33,7 @@ module RatePhases
           return result.single_validation_failure!(field: :rate_phase, error_code: blocked)
         end
 
+        applied_rate_card.association(:rate_phases).reset
         existing = applied_rate_card.rate_phases.order(:position).to_a
         position = if params[:position].present?
           RatePhase.parse_position(params[:position])
@@ -70,6 +72,10 @@ module RatePhases
           name: params[:name],
           rate_override: build_override
         )
+
+        if emit_events
+          publish_owner_update
+        end
       end
 
       result
@@ -81,10 +87,16 @@ module RatePhases
 
     private
 
-    attr_reader :plan_rate_card, :contract_rate_card, :params
+    attr_reader :plan_rate_card, :contract_rate_card, :params, :emit_events
 
     def applied_rate_card
       plan_rate_card || contract_rate_card
+    end
+
+    def publish_owner_update
+      event_type = plan_rate_card ? "plan_rate_card.updated" : "contract_rate_card.updated"
+      SendWebhookJob.perform_after_commit(event_type, applied_rate_card)
+      Utils::ActivityLog.produce_after_commit(applied_rate_card, event_type)
     end
 
     def build_override

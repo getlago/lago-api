@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Products::CreateService do
   subject(:result) { described_class.call(organization:, params:) }
 
-  let(:organization) { create(:organization) }
+  let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:product_category) { create(:product_category, organization:) }
 
@@ -21,6 +21,8 @@ RSpec.describe Products::CreateService do
     }
   end
 
+  before { allow(Utils::ActivityLog).to receive(:produce).and_call_original }
+
   it "creates a metered product" do
     expect { result }.to change(Product, :count).by(1)
 
@@ -34,7 +36,27 @@ RSpec.describe Products::CreateService do
 
   it "produces an activity log" do
     item = result.product
-    expect(Utils::ActivityLog).to have_produced("product.created").after_commit.with(item)
+    expect(Utils::ActivityLog).to have_received(:produce).with(
+      item,
+      "product.created",
+      after_commit: true
+    )
+  end
+
+  it "enqueues a product.created webhook with the record after commit" do
+    expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with do |*args|
+      expect(args).to eq(["product.created", result.product])
+    end
+  end
+
+  context "when the catalog flag is disabled" do
+    let(:organization) { create(:organization) }
+
+    it "creates and publishes the product event" do
+      expect { result }.to have_enqueued_job(SendWebhookJob)
+      expect(result).to be_success
+      expect(Utils::ActivityLog).to have_received(:produce).with(anything, "product.created", any_args)
+    end
   end
 
   context "with a fixed item" do

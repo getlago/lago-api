@@ -6,8 +6,9 @@ module RatePhases
   class DestroyService < BaseService
     Result = BaseResult[:rate_phase]
 
-    def initialize(rate_phase:)
+    def initialize(rate_phase:, emit_events: true)
       @rate_phase = rate_phase
+      @emit_events = emit_events
       super
     end
 
@@ -39,6 +40,10 @@ module RatePhases
         siblings.select { |phase| phase.position > rate_phase.position }.each do |phase|
           phase.update!(position: phase.position - 1)
         end
+
+        if emit_events
+          publish_owner_update
+        end
       end
 
       result.rate_phase = rate_phase
@@ -47,10 +52,16 @@ module RatePhases
 
     private
 
-    attr_reader :rate_phase
+    attr_reader :rate_phase, :emit_events
 
     def applied_rate_card
       rate_phase.plan_rate_card || rate_phase.contract_rate_card
+    end
+
+    def publish_owner_update
+      event_type = rate_phase.plan_rate_card_id ? "plan_rate_card.updated" : "contract_rate_card.updated"
+      SendWebhookJob.perform_after_commit(event_type, applied_rate_card)
+      Utils::ActivityLog.produce_after_commit(applied_rate_card, event_type)
     end
   end
 end

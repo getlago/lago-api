@@ -11,6 +11,11 @@ module Contracts
 
     Result = BaseResult[:contract, :payment_method]
 
+    activity_loggable(
+      action: "contract.created",
+      record: -> { result.contract }
+    )
+
     def initialize(organization:, params:)
       @organization = organization
       @params = params.to_h.with_indifferent_access
@@ -72,6 +77,11 @@ module Contracts
         BillingSegments::ScheduleJob.perform_after_commit(customer.id)
 
         result.contract = contract
+        SendWebhookJob.perform_after_commit("contract.created", contract)
+        if contract.active?
+          SendWebhookJob.perform_after_commit("contract.started", contract)
+          Utils::ActivityLog.produce_after_commit(contract, "contract.started")
+        end
       end
 
       result

@@ -5,8 +5,8 @@ module V2
     def serialize
       {
         lago_id: model.id,
-        external_contract_id: model.contract.external_id,
-        rate_card_code: model.rate_card.code,
+        external_contract_id: model.contract&.external_id,
+        rate_card_code: model.rate_card&.code,
         units: model.units,
         effective_date: model.effective_date.iso8601,
         billing_anchor_date: model.billing_anchor_date.iso8601,

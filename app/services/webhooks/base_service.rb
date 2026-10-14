@@ -7,10 +7,11 @@ module Webhooks
   class BaseService
     def initialize(object:, options: {})
       @object = object
-      @options = options&.with_indifferent_access
+      @options = (options || {}).with_indifferent_access
     end
 
     def call
+      return if product_catalog_only_event? && !current_organization.product_catalog_enabled?
       return if current_organization.webhook_endpoints.none?
 
       payload = {
@@ -45,6 +46,14 @@ module Webhooks
 
     def object_serializer
       # Empty
+    end
+
+    def product_catalog_only_event?
+      event_config = WebhookEndpoint::WEBHOOK_EVENT_TYPE_CONFIG.values.find do |config|
+        config[:name] == webhook_type
+      end
+
+      event_config&.fetch(:product_catalog_only, false)
     end
 
     def current_organization

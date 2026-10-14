@@ -11,17 +11,43 @@ RSpec.describe PlanRateCards::UpdateService do
 
   let(:params) { {units: "12"} }
 
+  before { allow(Utils::ActivityLog).to receive(:produce).and_call_original }
+
   it "updates the entry" do
     expect(result).to be_success
     expect(result.plan_rate_card.units).to eq(12)
   end
 
-  context "when the plan has contracts" do
-    before { create(:contract, catalog_plan:, organization:) }
+  it "publishes plan_rate_card.updated with the post-write hierarchy" do
+    expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan_rate_card.updated", plan_rate_card)
 
-    it "forbids the update" do
+    expect(Utils::ActivityLog).to have_received(:produce).with(
+      plan_rate_card,
+      "plan_rate_card.updated",
+      after_commit: true
+    )
+  end
+
+  context "when the submitted units are unchanged" do
+    let(:params) { {units: "5"} }
+
+    it "publishes the update even when its serialized state is unchanged" do
+      expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan_rate_card.updated", plan_rate_card)
+      expect(Utils::ActivityLog).to have_received(:produce).with(plan_rate_card, "plan_rate_card.updated", after_commit: true)
+    end
+  end
+
+  context "when the plan has contracts" do
+    before do
+      create(:contract, catalog_plan:, organization:)
+      allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+    end
+
+    it "forbids the update without delivering either event", :capture_kafka_messages do
+      expect { result }.not_to have_enqueued_job(SendWebhookJob)
       expect(result).not_to be_success
       expect(result.error.messages[:plan]).to eq(["plan_locked"])
+      expect(kafka_messages).to be_empty
     end
   end
 

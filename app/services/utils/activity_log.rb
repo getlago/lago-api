@@ -3,7 +3,7 @@
 module Utils
   class ActivityLog
     IGNORED_FIELDS = %i[updated_at].freeze
-    IGNORED_EXTERNAL_CUSTOMER_ID_CLASSES = %w[BillableMetric Coupon Plan CatalogPlan BillingEntity Entitlement::Feature ProductCategory Product ProductFilter RateCard].freeze
+    IGNORED_EXTERNAL_CUSTOMER_ID_CLASSES = %w[BillableMetric Coupon Plan CatalogPlan BillingEntity Entitlement::Feature ProductCategory Product ProductFilter RateCard RateCardRate PlanRateCard].freeze
     MAX_SERIALIZED_FEES = 25
     MAX_SERIALIZED_CHARGES = 50
     MAX_SERIALIZED_CHARGE_FILTERS = 100
@@ -128,9 +128,14 @@ module Utils
 
     def object_serialized
       name = "#{object.class.name}Serializer"
-      # V1-first so legacy records (Plan, Subscription, …) keep today's shape;
-      # catalog-only classes, whose serializers live under V2, fall through.
-      serializer = "V1::#{name}".safe_constantize || "V2::#{name}".constantize
+      # Applied-card model names differ from their public V2 serializer names.
+      serializer = case object
+      when PlanRateCard then V2::PlanRateCardSerializer
+      when ContractRateCard then V2::ContractAppliedRateCardSerializer
+      else
+        # V1-first keeps legacy records' existing shapes.
+        "V1::#{name}".safe_constantize || "V2::#{name}".constantize
+      end
       root_name = object.class.name.underscore.to_sym
 
       serializer.new(object, root_name:, includes: serializer_includes(root_name)).serialize
@@ -164,7 +169,7 @@ module Utils
     def object_changes(changes)
       return {} unless activity_type.include?("updated")
 
-      changes.except(*IGNORED_FIELDS)
+      changes.except(*IGNORED_FIELDS, *IGNORED_FIELDS.map(&:to_s))
     end
 
     def organization_id
@@ -196,6 +201,7 @@ module Utils
     def external_customer_id
       return nil if IGNORED_EXTERNAL_CUSTOMER_ID_CLASSES.include?(object.class.name)
       return object.external_id if object.is_a?(Customer)
+      return object.contract.customer&.external_id if object.is_a?(ContractRateCard)
 
       object.customer&.external_id
     end

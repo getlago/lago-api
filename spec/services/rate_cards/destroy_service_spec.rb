@@ -2,13 +2,14 @@
 
 require "rails_helper"
 
-RSpec.describe RateCards::DestroyService do
+RSpec.describe RateCards::DestroyService, :capture_kafka_messages do
   subject(:result) { described_class.call(rate_card:) }
 
-  let(:organization) { create(:organization) }
+  let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
   let(:rate_card) { create(:rate_card, organization:) }
 
   before do
+    allow(Utils::ActivityLog).to receive(:produce).and_call_original
     create(:rate_card_rate, organization:, rate_card:) if rate_card
   end
 
@@ -20,9 +21,45 @@ RSpec.describe RateCards::DestroyService do
     expect(RateCardRate.with_discarded.where(id: rate_ids).map(&:discarded?)).to all(be(true))
   end
 
-  it "produces an activity log" do
-    result
-    expect(Utils::ActivityLog).to have_produced("rate_card.deleted").after_commit.with(rate_card)
+  it "publishes rate_card.deleted on the discarded card without a snapshot" do
+    expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("rate_card.deleted", rate_card)
+    expect(Utils::ActivityLog).to have_received(:produce).with(
+      rate_card,
+      "rate_card.deleted",
+      after_commit: true
+    )
+    expect(rate_card.reload.rates).to be_empty
+    expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "rate_card_rate.deleted", any_args)
+  end
+
+  context "when the catalog flag is disabled" do
+    let(:organization) { create(:organization) }
+
+    it "still schedules the pair for an unguarded direct service call" do
+      expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("rate_card.deleted", rate_card)
+      expect(result).to be_success
+      expect(Utils::ActivityLog).to have_received(:produce).with(
+        rate_card,
+        "rate_card.deleted",
+        after_commit: true
+      )
+    end
+  end
+
+  context "when the surrounding transaction rolls back" do
+    before { allow(Utils::ActivityLog).to receive(:available?).and_return(true) }
+
+    it "rolls back the deletion and suppresses both event channels" do
+      expect do
+        ActiveRecord::Base.transaction do
+          result
+          raise ActiveRecord::Rollback
+        end
+      end.not_to have_enqueued_job(SendWebhookJob)
+
+      expect(rate_card.reload).not_to be_discarded
+      expect(kafka_messages).to be_empty
+    end
   end
 
   context "when rate_card is nil" do

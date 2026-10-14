@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe ProductFilters::UpdateService do
   subject(:result) { described_class.call(product_filter:, params:) }
 
-  let(:organization) { create(:organization) }
+  let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:product) { create(:product, organization:, billable_metric:) }
   let(:region_filter) { create(:billable_metric_filter, organization:, billable_metric:, key: "region", values: %w[us eu]) }
@@ -17,6 +17,8 @@ RSpec.describe ProductFilters::UpdateService do
   end
 
   let(:params) { {name: "After", description: "new", invoice_display_name: "Display"} }
+
+  before { allow(Utils::ActivityLog).to receive(:produce).and_call_original }
 
   it "updates the filter attributes" do
     expect(result).to be_success
@@ -141,8 +143,34 @@ RSpec.describe ProductFilters::UpdateService do
   end
 
   it "produces an activity log" do
-    result
-    expect(Utils::ActivityLog).to have_produced("product_filter.updated").after_commit.with(product_filter)
+    update_result = described_class.call(product_filter:, params: {name: "After"})
+
+    expect(update_result).to be_success
+    expect(Utils::ActivityLog).to have_received(:produce).with(product_filter, "product_filter.updated", after_commit: true)
+  end
+
+  it "enqueues a product_filter.updated webhook with the saved filter snapshot" do
+    expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("product_filter.updated", product_filter)
+  end
+
+  context "when no persisted attributes change" do
+    let(:params) { {name: "Before"} }
+
+    it "publishes both event channels" do
+      expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("product_filter.updated", product_filter)
+      expect(result).to be_success
+      expect(Utils::ActivityLog).to have_received(:produce).with(product_filter, "product_filter.updated", after_commit: true)
+    end
+  end
+
+  context "when the catalog flag is disabled" do
+    let(:organization) { create(:organization) }
+
+    it "updates and publishes the filter event" do
+      expect { result }.to have_enqueued_job(SendWebhookJob).with("product_filter.updated", product_filter)
+      expect(result).to be_success
+      expect(Utils::ActivityLog).to have_received(:produce).with(product_filter, "product_filter.updated", after_commit: true)
+    end
   end
 
   context "when product_filter is nil" do
@@ -151,6 +179,37 @@ RSpec.describe ProductFilters::UpdateService do
     it "returns a not found failure" do
       expect(result).not_to be_success
       expect(result.error.resource).to eq("product_filter")
+    end
+  end
+
+  context "when the update fails validation" do
+    let(:params) { {values: [{key: "unknown", value: "eu"}]} }
+
+    before { allow(Utils::ActivityLog).to receive(:available?).and_return(true) }
+
+    it "delivers neither event channel", :capture_kafka_messages do
+      expect { result }.not_to have_enqueued_job(SendWebhookJob)
+      expect(result).not_to be_success
+      expect(kafka_messages).to be_empty
+    end
+  end
+
+  context "when the surrounding transaction rolls back" do
+    before do
+      product_filter
+      allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+    end
+
+    it "suppresses both event channels", :capture_kafka_messages, transaction: false do
+      expect do
+        ActiveRecord::Base.transaction do
+          expect(result).to be_success
+          raise ActiveRecord::Rollback
+        end
+      end.not_to have_enqueued_job(SendWebhookJob)
+
+      expect(product_filter.reload.name).to eq("Before")
+      expect(kafka_messages).to be_empty
     end
   end
 

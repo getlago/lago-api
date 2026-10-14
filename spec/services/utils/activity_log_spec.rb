@@ -183,6 +183,41 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
         end
       end
 
+      context "with catalog applied cards and rates" do
+        let(:rate_card_rate) { create(:rate_card_rate, organization:) }
+        let(:plan_rate_card) { create(:plan_rate_card, organization:) }
+        let(:contract_rate_card) { create(:contract_rate_card, organization:) }
+
+        it "serializes a rate without assuming a customer association" do
+          activity_log.produce(rate_card_rate, "rate_card_rate.created")
+
+          expect(karafka_producer).to have_received(:produce_async) do |args|
+            payload = JSON.parse(args[:payload])
+            expect(payload).to include("resource_type" => "RateCardRate", "external_customer_id" => nil)
+          end
+        end
+
+        it "uses the applied plan card serializer without a customer association" do
+          activity_log.produce(plan_rate_card, "plan_rate_card.created")
+
+          expect(karafka_producer).to have_received(:produce_async) do |args|
+            payload = JSON.parse(args[:payload])
+            expect(payload).to include("resource_type" => "PlanRateCard", "external_customer_id" => nil)
+            expect(payload.fetch("activity_object")).to include("lago_id" => plan_rate_card.id)
+          end
+        end
+
+        it "uses the applied contract card serializer and its customer" do
+          activity_log.produce(contract_rate_card, "contract_rate_card.created")
+
+          expect(karafka_producer).to have_received(:produce_async) do |args|
+            payload = JSON.parse(args[:payload])
+            expect(payload).to include("resource_type" => "ContractRateCard", "external_customer_id" => contract_rate_card.contract.customer.external_id)
+            expect(payload.fetch("activity_object")).to include("lago_id" => contract_rate_card.id)
+          end
+        end
+      end
+
       context "when the object is deleted" do
         it "does not set activity_object_changes" do
           allow(CurrentContext).to receive(:source).and_return(nil)

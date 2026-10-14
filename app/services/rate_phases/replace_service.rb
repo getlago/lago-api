@@ -4,10 +4,11 @@ module RatePhases
   class ReplaceService < BaseService
     Result = BaseResult[:rate_phases]
 
-    def initialize(plan_rate_card: nil, contract_rate_card: nil, phases_params: [])
+    def initialize(plan_rate_card: nil, contract_rate_card: nil, phases_params: [], emit_events: true)
       @plan_rate_card = plan_rate_card
       @contract_rate_card = contract_rate_card
       @phases_params = Array.wrap(phases_params).map { |phase| phase.to_h.with_indifferent_access }
+      @emit_events = emit_events
       super
     end
 
@@ -25,6 +26,7 @@ module RatePhases
           return result.single_validation_failure!(field: :rate_phases, error_code: blocked)
         end
 
+        applied_rate_card.association(:rate_phases).reset
         discard_existing_phases
 
         result.rate_phases = ordered_params.map do |phase|
@@ -39,6 +41,10 @@ module RatePhases
             rate_override: build_override(phase)
           )
         end
+
+        if emit_events
+          publish_owner_update
+        end
       end
 
       result
@@ -50,10 +56,16 @@ module RatePhases
 
     private
 
-    attr_reader :plan_rate_card, :contract_rate_card, :phases_params
+    attr_reader :plan_rate_card, :contract_rate_card, :phases_params, :emit_events
 
     def applied_rate_card
       plan_rate_card || contract_rate_card
+    end
+
+    def publish_owner_update
+      event_type = plan_rate_card ? "plan_rate_card.updated" : "contract_rate_card.updated"
+      SendWebhookJob.perform_after_commit(event_type, applied_rate_card)
+      Utils::ActivityLog.produce_after_commit(applied_rate_card, event_type)
     end
 
     def organization

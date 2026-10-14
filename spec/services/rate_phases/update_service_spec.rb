@@ -14,10 +14,21 @@ RSpec.describe RatePhases::UpdateService do
 
   let(:params) { {name: "After", billing_interval_cycle_count: 6} }
 
+  before { allow(Utils::ActivityLog).to receive(:produce_after_commit) }
+
   it "updates the phase" do
     expect(result).to be_success
     expect(rate_phase.reload.name).to eq("After")
     expect(rate_phase.billing_interval_cycle_count).to eq(6)
+  end
+
+  it "publishes one owning plan_rate_card.updated pair with the hierarchy diff" do
+    expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan_rate_card.updated", plan_rate_card)
+
+    expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(
+      plan_rate_card,
+      "plan_rate_card.updated"
+    )
   end
 
   it "locks the parent entry like the other sequence mutations" do
@@ -145,9 +156,11 @@ RSpec.describe RatePhases::UpdateService do
     context "when the position does not change" do
       let(:params) { {position: 1} }
 
-      it "leaves the sequence as it is" do
+      it "publishes the successful operation even though the serialized state is unchanged" do
+        expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan_rate_card.updated", plan_rate_card)
         expect(result).to be_success
         expect(positions).to eq(%w[launch ramp forever])
+        expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(plan_rate_card, "plan_rate_card.updated")
       end
     end
 
@@ -277,6 +290,26 @@ RSpec.describe RatePhases::UpdateService do
     it "returns a not found failure" do
       expect(result).not_to be_success
       expect(result.error).to be_a(BaseService::NotFoundFailure)
+    end
+  end
+
+  context "when the phase belongs to a contract rate card" do
+    let(:customer) { create(:customer, organization:) }
+    let(:contract) { create(:contract, :pending, organization:, customer:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
+    let(:rate_phase) do
+      create(:rate_phase, :contract_level, organization:, contract_rate_card:, position: 1, billing_interval_cycle_count: nil)
+    end
+    let(:params) { {name: "Contract phase"} }
+
+    it "publishes one contract_rate_card.updated pair" do
+      rate_phase
+      expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("contract_rate_card.updated", contract_rate_card)
+
+      expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(
+        contract_rate_card,
+        "contract_rate_card.updated"
+      )
     end
   end
 end

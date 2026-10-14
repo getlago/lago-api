@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe ProductFilters::CreateService do
   subject(:result) { described_class.call(product:, params:) }
 
-  let(:organization) { create(:organization) }
+  let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:product) { create(:product, organization:, billable_metric:) }
   let(:region_filter) { create(:billable_metric_filter, organization:, billable_metric:, key: "region", values: %w[us eu]) }
@@ -23,6 +23,8 @@ RSpec.describe ProductFilters::CreateService do
       ]
     }
   end
+
+  before { allow(Utils::ActivityLog).to receive(:produce).and_call_original }
 
   it "creates a product filter with its values" do
     expect { result }.to change(ProductFilter, :count).by(1)
@@ -230,7 +232,27 @@ RSpec.describe ProductFilters::CreateService do
 
   it "produces an activity log" do
     filter = result.product_filter
-    expect(Utils::ActivityLog).to have_produced("product_filter.created").after_commit.with(filter)
+    expect(Utils::ActivityLog).to have_received(:produce).with(
+      filter,
+      "product_filter.created",
+      after_commit: true
+    )
+  end
+
+  it "enqueues a product_filter.created webhook with the record" do
+    expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with do |*args|
+      expect(args).to eq(["product_filter.created", result.product_filter])
+    end
+  end
+
+  context "when the catalog flag is disabled" do
+    let(:organization) { create(:organization) }
+
+    it "creates and publishes the filter event" do
+      expect { result }.to have_enqueued_job(SendWebhookJob)
+      expect(result).to be_success
+      expect(Utils::ActivityLog).to have_received(:produce).with(anything, "product_filter.created", any_args)
+    end
   end
 
   # Deleting a metric discards its filters asynchronously; a create landing in

@@ -11,10 +11,39 @@ RSpec.describe Contracts::UpdateService do
   let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:) }
 
   let(:params) { {name: "Renamed", billing_time: "anniversary"} }
+  let(:activity_log_results) { [] }
+
+  before do
+    # Updated activity logging wraps the service call and must return its result.
+    allow(Utils::ActivityLog).to receive(:produce) do |&block|
+      activity_log_results << block.call
+      activity_log_results.last
+    end
+    allow(Utils::ActivityLog).to receive(:produce_after_commit)
+  end
 
   it "updates the editable authoring fields" do
     expect(result).to be_success
     expect(contract.reload).to have_attributes(name: "Renamed", billing_time: "anniversary")
+  end
+
+  it "publishes contract.updated after a successful update" do
+    expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("contract.updated", contract)
+
+    expect(Utils::ActivityLog).to have_received(:produce).with(
+      contract,
+      "contract.updated",
+      after_commit: true
+    )
+  end
+
+  context "when no serialized fields change" do
+    let(:params) { {} }
+
+    it "publishes contract.updated after a no-op update" do
+      expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("contract.updated", contract)
+      expect(Utils::ActivityLog).to have_received(:produce).with(contract, "contract.updated", after_commit: true)
+    end
   end
 
   it "sets the window dates in the customer timezone" do
@@ -293,6 +322,18 @@ RSpec.describe Contracts::UpdateService do
       expect(old_card.reload).to be_discarded
       expect(old_phase.reload).to be_discarded
     end
+
+    it "publishes one contract.updated pair with the old and new card hierarchy" do
+      old_card
+      old_phase
+      new_plan_rate_card
+      expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).exactly(1).times
+
+      expect(SendWebhookJob).to have_been_enqueued.with("contract.updated", contract)
+      expect(Utils::ActivityLog).to have_received(:produce).with(contract, "contract.updated", after_commit: true)
+      expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "contract_rate_card.deleted", any_args)
+      expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "contract_rate_card.created", any_args)
+    end
   end
 
   context "when moving the start of a pending contract" do
@@ -424,13 +465,26 @@ RSpec.describe Contracts::UpdateService do
         expect(BillingSegments::ScheduleJob).to have_been_enqueued.with(customer.id)
       end
 
+      it "publishes contract.updated and exactly one contract.started pair" do
+        expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).exactly(2).times
+
+        expect(SendWebhookJob).to have_been_enqueued.with("contract.updated", contract)
+        expect(SendWebhookJob).to have_been_enqueued.with("contract.started", contract)
+        expect(Utils::ActivityLog).to have_received(:produce).with(contract, "contract.updated", after_commit: true)
+        expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(contract, "contract.started")
+      end
+
       context "when an active contract shares its external id" do
         before { create(:contract, organization:, customer:, external_id: contract.external_id) }
 
         it "fails and keeps the previous start" do
+          expect { result }.not_to have_enqueued_job(SendWebhookJob)
           expect(result.error.messages[:external_id]).to eq(["active_contract_exists"])
           expect(contract.reload).to have_attributes(status: "pending", started_at: Time.zone.parse("2026-10-15"))
           expect(inherited_card.reload.effective_date).to eq(Date.new(2026, 10, 15))
+          expect(Utils::ActivityLog).to have_received(:produce).with(contract, "contract.updated", after_commit: true)
+          expect(activity_log_results).to eq([result])
+          expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "contract.started", any_args)
         end
       end
     end

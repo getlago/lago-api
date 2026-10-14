@@ -5,14 +5,15 @@ require "rails_helper"
 RSpec.describe RateCardRates::UpdateService do
   subject(:result) { described_class.call(rate_card_rate:, params:) }
 
-  let(:organization) { create(:organization) }
+  let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
   let(:rate_card) { create(:rate_card, organization:) }
+
+  before { allow(Utils::ActivityLog).to receive(:produce).and_call_original }
 
   context "with a pending rate" do
     let(:rate_card_rate) do
       create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.from_now.beginning_of_day)
     end
-
     let(:params) { {rate_model: "standard", rate_properties: {"amount" => "25"}, billing_interval_count: 3} }
 
     it "updates all fields" do
@@ -21,9 +22,12 @@ RSpec.describe RateCardRates::UpdateService do
       expect(result.rate_card_rate.billing_interval_count).to eq(3)
     end
 
-    it "produces a rate_card.updated activity log" do
-      result
-      expect(Utils::ActivityLog).to have_produced("rate_card.updated").after_commit.with(rate_card)
+    it "publishes rate_card_rate.updated to both channels" do
+      expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("rate_card_rate.updated", rate_card_rate)
+
+      rate = result.rate_card_rate
+      expect(Utils::ActivityLog).to have_received(:produce).with(rate, "rate_card_rate.updated", after_commit: true)
+      expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "rate_card.updated", any_args)
     end
 
     context "with graduated tiers" do
@@ -62,10 +66,21 @@ RSpec.describe RateCardRates::UpdateService do
     context "when the effective_from is moved before today" do
       let(:params) { {effective_from: 1.day.ago.beginning_of_day.iso8601} }
 
+      before { allow(Utils::ActivityLog).to receive(:available?).and_return(true) }
+
       it "returns a validation failure and leaves the rate pending" do
         expect(result).not_to be_success
         expect(result.error.messages[:effective_from]).to eq(["must_not_be_before_today"])
         expect(rate_card_rate.reload.status).to eq("pending")
+      end
+
+      it "does not enqueue a webhook" do
+        expect { result }.not_to have_enqueued_job(SendWebhookJob)
+      end
+
+      it "does not deliver an activity event", :capture_kafka_messages do
+        expect(result).not_to be_success
+        expect(kafka_messages).to be_empty
       end
     end
 
@@ -75,6 +90,56 @@ RSpec.describe RateCardRates::UpdateService do
       it "canonicalizes the value to its day's midnight" do
         expect(result).to be_success
         expect(result.rate_card_rate.effective_from).to eq(2.months.from_now.beginning_of_day)
+      end
+    end
+
+    context "when the catalog flag is disabled" do
+      let(:organization) { create(:organization) }
+
+      it "still schedules the pair for an unguarded direct service call" do
+        expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("rate_card_rate.updated", rate_card_rate)
+        rate = result.rate_card_rate
+        expect(Utils::ActivityLog).to have_received(:produce).with(rate, "rate_card_rate.updated", after_commit: true)
+      end
+    end
+
+    context "when no attributes change" do
+      let(:params) { {} }
+
+      it "publishes both event channels" do
+        expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("rate_card_rate.updated", rate_card_rate)
+        expect(result).to be_success
+        expect(Utils::ActivityLog).to have_received(:produce).with(rate_card_rate, "rate_card_rate.updated", after_commit: true)
+      end
+    end
+
+    context "when resending the same arrears day with a non-midnight time" do
+      let(:params) { {effective_from: rate_card_rate.effective_from.change(hour: 17).iso8601} }
+
+      it "publishes both event channels after date normalization" do
+        expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("rate_card_rate.updated", rate_card_rate)
+        expect(result).to be_success
+        expect(rate_card_rate.reload.effective_from).to eq(params[:effective_from].to_time.beginning_of_day)
+        expect(Utils::ActivityLog).to have_received(:produce).with(rate_card_rate, "rate_card_rate.updated", after_commit: true)
+      end
+    end
+
+    context "when the surrounding transaction rolls back" do
+      before do
+        rate_card_rate
+        allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+      end
+
+      it "suppresses both event channels", :capture_kafka_messages, transaction: false do
+        expect do
+          ActiveRecord::Base.transaction do
+            expect(result).to be_success
+            raise ActiveRecord::Rollback
+          end
+        end.not_to have_enqueued_job(SendWebhookJob)
+
+        expect(rate_card_rate.reload.rate_properties).to eq("amount" => "10")
+        expect(kafka_messages).to be_empty
       end
     end
   end

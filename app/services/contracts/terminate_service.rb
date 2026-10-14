@@ -29,11 +29,15 @@ module Contracts
           return result.single_validation_failure!(field: :contract, error_code: "cannot_terminate")
         end
 
+        event_type = contract.active? ? "contract.terminated" : "contract.canceled"
         if contract.active?
           contract.update!(status: :terminated, terminated_at: Time.current)
         else
           contract.update!(status: :canceled, canceled_at: Time.current)
         end
+
+        SendWebhookJob.perform_after_commit(event_type, contract)
+        Utils::ActivityLog.produce_after_commit(contract, event_type)
       end
 
       result.contract = contract

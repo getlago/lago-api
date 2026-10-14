@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe ProductCategories::CreateService do
   subject(:result) { described_class.call(organization:, params:) }
 
-  let(:organization) { create(:organization) }
+  let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
   let(:params) do
     {
       name: "Cards",
@@ -14,6 +14,8 @@ RSpec.describe ProductCategories::CreateService do
       invoice_display_name: "Cards"
     }
   end
+
+  before { allow(Utils::ActivityLog).to receive(:produce).and_call_original }
 
   it "creates a product_category" do
     expect { result }.to change(ProductCategory, :count).by(1)
@@ -28,7 +30,27 @@ RSpec.describe ProductCategories::CreateService do
 
   it "produces an activity log" do
     product_category = result.product_category
-    expect(Utils::ActivityLog).to have_produced("product_category.created").after_commit.with(product_category)
+    expect(Utils::ActivityLog).to have_received(:produce).with(
+      product_category,
+      "product_category.created",
+      after_commit: true
+    )
+  end
+
+  it "enqueues a product_category.created webhook with the record after commit" do
+    expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with do |*args|
+      expect(args).to eq(["product_category.created", result.product_category])
+    end
+  end
+
+  context "when the catalog flag is disabled" do
+    let(:organization) { create(:organization) }
+
+    it "creates and publishes the category event" do
+      expect { result }.to have_enqueued_job(SendWebhookJob)
+      expect(result).to be_success
+      expect(Utils::ActivityLog).to have_received(:produce).with(anything, "product_category.created", any_args)
+    end
   end
 
   context "when organization is nil" do
@@ -55,6 +77,10 @@ RSpec.describe ProductCategories::CreateService do
     it "returns a validation failure" do
       expect(result).not_to be_success
       expect(result.error.messages[:name]).to be_present
+    end
+
+    it "does not enqueue a webhook" do
+      expect { result }.not_to have_enqueued_job(SendWebhookJob)
     end
   end
 end
