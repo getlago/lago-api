@@ -109,7 +109,7 @@ module BillingSegments
           invoice = Invoices::CreateGeneratingService.call!(
             customer:,
             billing_entity: contract.billing_entity || customer.billing_entity,
-            invoice_type: :subscription,
+            invoice_type: :contract,
             invoicing_reason: :subscription_periodic,
             currency: segments.first.currency,
             datetime: segments.first.billing_at,

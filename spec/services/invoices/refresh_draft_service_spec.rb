@@ -67,6 +67,17 @@ RSpec.describe Invoices::RefreshDraftService do
       end
     end
 
+    context "when invoice is a contract invoice" do
+      let(:invoice) { create(:invoice, status: :finalized, organization:, customer:, invoice_type: :contract) }
+
+      it "is not rejected as forbidden" do
+        result = refresh_service.call
+
+        expect(result).to be_success
+        expect(result.invoice).to eq(invoice)
+      end
+    end
+
     context "when invoice is ready to be finalized" do
       let(:invoice) do
         create(:invoice, status:, organization:, customer:, ready_to_be_refreshed: true)

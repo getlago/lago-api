@@ -93,7 +93,7 @@ class Invoice < ApplicationRecord
     allow_nil: true,
     with_model_currency: :currency
 
-  INVOICE_TYPES = %i[subscription add_on credit one_off advance_charges progressive_billing].freeze
+  INVOICE_TYPES = %i[subscription add_on credit one_off advance_charges progressive_billing contract].freeze
   PAYMENT_STATUS = %i[pending succeeded failed].freeze
   TAX_STATUSES = {
     pending: "pending",
@@ -165,6 +165,11 @@ class Invoice < ApplicationRecord
     joins(:contracts)
       .where(contracts: {status: Contract::BILLABLE_STATUSES})
       .distinct
+  }
+
+  scope :product_catalog, -> {
+    where(invoice_type: :contract)
+      .or(where(id: Fee.where.not(contract_id: nil).select(:invoice_id)))
   }
 
   scope :self_billed, -> { where(self_billed: true) }
@@ -494,6 +499,10 @@ class Invoice < ApplicationRecord
 
   def payment_dispute_losable?
     finalized? || voided?
+  end
+
+  def product_catalog?
+    contract? || fees.where.not(contract_id: nil).exists?
   end
 
   def subscription_gated?

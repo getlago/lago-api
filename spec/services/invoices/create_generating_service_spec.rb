@@ -187,6 +187,29 @@ RSpec.describe Invoices::CreateGeneratingService do
       end
     end
 
+    context "when invoice type is contract" do
+      let(:invoice_type) { :contract }
+      let(:customer) { create(:customer, invoice_grace_period: 3) }
+
+      it "creates an invoice with grace period" do
+        result = create_service.call
+
+        expect(result.invoice).to be_contract
+        expect(result.invoice.issuing_date.to_s).to eq((datetime + 3.days).to_date.to_s)
+        expect(result.invoice.expected_finalization_date.to_s).to eq((datetime + 3.days).to_date.to_s)
+      end
+
+      context "when charge pay in advance invoice is generated" do
+        let(:charge_in_advance) { true }
+
+        it "creates an invoice with correct issuing date" do
+          result = create_service.call
+
+          expect(result.invoice.issuing_date.to_s).to eq(datetime.to_date.to_s)
+        end
+      end
+    end
+
     context "when customer is a partner account", :premium do
       let(:customer) { create(:customer, account_type: "partner") }
 
