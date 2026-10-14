@@ -1,0 +1,7 @@
+.body-2 = customer.display_name
+- if customer.legal_number.present?
+  .body-2 = customer.legal_number
+== SlimHelper.render('templates/invoices/v4/_customer_address', self)
+.body-2 = customer.email&.gsub(/,\s*/, ', ')
+- if customer.tax_identification_number.present?
+  .body-2 = I18n.t('invoice.tax_identification_number', tax_identification_number: customer.tax_identification_number)
