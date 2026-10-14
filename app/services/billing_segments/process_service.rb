@@ -14,15 +14,14 @@ module BillingSegments
 
       acquired = customer.with_advisory_lock("billing_segment_process_customer_#{customer.id}", timeout_seconds: 0) do
         pending_segments.group_by { |segment| pending_invoice_key(segment) }.each_value do |invoice_segments|
-          result.invoices << build_invoice(invoice_segments)
+          build_invoice(invoice_segments)
         end
 
         processing_advance_segments.group_by { |segment| invoice_key(segment) }.each_value do |invoice_segments|
-          invoice = process_advance_segments(invoice_segments)
-          result.invoices << invoice if invoice
+          process_advance_segments(invoice_segments)
         end
 
-        finalize_generating_invoices
+        result.invoices = finalize_generating_invoices
         true
       end
 
@@ -216,14 +215,17 @@ module BillingSegments
         .where(invoices: {status: :generating})
         .select(:invoice_id)
 
-      Invoice.where(id: invoice_ids).order(:issuing_date, :id).each do |invoice|
+      invoices = Invoice.where(id: invoice_ids).order(:issuing_date, :id).to_a
+
+      invoices.each do |invoice|
         if invoice.advance_charges?
           Invoices::FinalizeAndPublishAdvanceChargesService.call!(invoice:)
         else
-          Invoices::TransitionToFinalStatusService.call!(invoice:)
-          invoice.save! if invoice.changed?
+          Invoices::FinalizeContractInvoiceService.call!(invoice:)
         end
       end
+
+      invoices
     end
   end
 end

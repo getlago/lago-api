@@ -65,10 +65,19 @@ RSpec.describe BillingSegments::ProcessService do
 
     before do
       billing_segment
+      allow(Invoices::FinalizeContractInvoiceService).to receive(:call!).and_call_original
     end
 
     it "builds the arrears invoice with the contract type" do
       expect(result.invoices.sole.reload).to have_attributes(invoice_type: "contract", status: "finalized")
+    end
+
+    it "publishes the contract invoice through the contract finalization service" do
+      invoice = result.invoices.sole
+
+      expect(Invoices::FinalizeContractInvoiceService).to have_received(:call!).once.with(invoice:)
+      expect(SendWebhookJob).to have_been_enqueued.once.with("invoice.created", invoice)
+      expect(Invoices::GenerateDocumentsJob).to have_been_enqueued.once.with(invoice:, notify: false)
     end
 
     context "when a contract selects invoice custom sections" do
@@ -449,6 +458,7 @@ RSpec.describe BillingSegments::ProcessService do
             expect(Invoices::CreateGeneratingService).to have_received(:call!).once
             expect(Fees::AdvanceChargesService).to have_received(:call!).once
             expect(Invoices::FinalizeAndPublishAdvanceChargesService).to have_received(:call!).once.with(invoice:)
+            expect(Invoices::FinalizeContractInvoiceService).not_to have_received(:call!)
           end
 
           it "does not publish or record another payment on a repeated run" do
@@ -590,7 +600,7 @@ RSpec.describe BillingSegments::ProcessService do
               expect(invoice).to be_generating
               expect(Payments::ManualCreateJob).not_to have_been_enqueued
 
-              expect(described_class.call!(customer:).invoices).to eq([])
+              expect(described_class.call!(customer:).invoices).to eq([invoice])
 
               expect(invoice.reload).to be_finalized
               expect(Payments::ManualCreateJob).to have_been_enqueued.once.with(
@@ -1288,8 +1298,11 @@ RSpec.describe BillingSegments::ProcessService do
       expect(invoice.status).to eq("generating")
 
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
-      expect { described_class.call!(customer:) }.to not_change(Invoice, :count).and not_change(Fee, :count)
-      expect(invoice.reload.status).to eq("finalized")
+      retry_result = nil
+      expect { retry_result = described_class.call!(customer:) }.to not_change(Invoice, :count).and not_change(Fee, :count)
+      expect(retry_result.invoices).to eq([invoice])
+      expect(retry_result.invoices.sole).to be_finalized
+      expect(Invoices::FinalizeContractInvoiceService).to have_received(:call!).with(invoice:).twice
     end
 
     it "does not process another customer's pending segments or generating invoices" do
