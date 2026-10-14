@@ -279,6 +279,16 @@ RSpec.describe Events::CreateBatchService do
       end
     end
 
+    %w[Infinity NaN].each do |value|
+      context "when a timestamp is #{value}" do
+        let(:events_params) { build_params(count: 2) { |event, i| event[:timestamp] = value if i == 1 } }
+
+        it "returns an error for that event instead of raising" do
+          test_validation_failure({1 => {timestamp: ["invalid_format"]}})
+        end
+      end
+    end
+
     context "when timestamp is in a wrong format" do
       let(:timestamp) { Time.current.to_s }
       let(:events_params) { build_params(count: 1) { |event| event[:timestamp] = timestamp } }

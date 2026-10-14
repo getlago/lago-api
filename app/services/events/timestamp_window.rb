@@ -16,6 +16,18 @@ module Events
 
     module_function
 
+    # Returns nil when the value is not a finite number of seconds: BigDecimal accepts "Infinity"
+    # and "NaN", which Time.zone.at then rejects with a FloatDomainError.
+    def parse(value, default:)
+      seconds = value ? BigDecimal(value.to_s) : default
+      return nil if seconds.nil?
+      return nil if seconds.respond_to?(:finite?) && !seconds.finite?
+
+      Time.zone.at(seconds)
+    rescue ArgumentError, RangeError
+      nil
+    end
+
     def within?(timestamp, now: Time.current)
       return false if timestamp < EARLIEST || timestamp >= LATEST
 

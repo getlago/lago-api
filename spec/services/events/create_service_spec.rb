@@ -226,6 +226,19 @@ RSpec.describe Events::CreateService do
       end
     end
 
+    %w[Infinity -Infinity NaN].each do |value|
+      context "when timestamp is #{value}" do
+        let(:timestamp) { value }
+
+        it "returns an error instead of raising" do
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages).to include({timestamp: ["invalid_format"]})
+        end
+      end
+    end
+
     context "when kafka is configured", :capture_kafka_messages do
       before do
         ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = "kafka"

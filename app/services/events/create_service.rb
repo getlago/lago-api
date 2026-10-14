@@ -55,9 +55,7 @@ module Events
     attr_reader :organization, :params, :timestamp, :metadata
 
     def parse_timestamp
-      Time.zone.at(params[:timestamp] ? BigDecimal(params[:timestamp].to_s) : timestamp)
-    rescue ArgumentError
-      nil
+      TimestampWindow.parse(params[:timestamp], default: timestamp)
     end
 
     def produce_kafka_event(event)

@@ -58,5 +58,26 @@ RSpec.describe NullByteGuard do
       expect(params[:events].first[:code]).to eq("ef")
       expect(params[:events].first[:properties][:value]).to eq(1)
     end
+
+    it "removes null bytes from parameter keys" do
+      params = ActionController::Parameters.new(properties: {"bad\u0000key" => "x", "ok" => "y"})
+
+      described_class.strip_params!(params)
+
+      expect(params[:properties].to_unsafe_h).to eq({"badkey" => "x", "ok" => "y"})
+    end
+  end
+
+  describe ".strip_graphql_escapes" do
+    it "removes null byte escapes from string literals" do
+      expect(described_class.strip_graphql_escapes('{ customers(searchTerm: "a\\u0000b\\u{0}c") { id } }'))
+        .to eq('{ customers(searchTerm: "abc") { id } }')
+    end
+
+    it "keeps other escapes" do
+      query = '{ customers(searchTerm: "caf\\u00e9") { id } }'
+
+      expect(described_class.strip_graphql_escapes(query)).to eq(query)
+    end
   end
 end

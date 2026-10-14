@@ -34,6 +34,7 @@ class GraphqlController < ApplicationController
 
     CurrentContext.device_info = Utils::DeviceInfo.parse(request)
 
+    query = NullByteGuard.strip_graphql_escapes(query)
     if NullByteGuard.contains_null_byte?(request)
       query = NullByteGuard.strip(query)
       variables = NullByteGuard.strip(variables)

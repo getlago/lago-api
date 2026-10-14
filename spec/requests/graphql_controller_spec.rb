@@ -236,6 +236,31 @@ RSpec.describe GraphqlController do
       end
     end
 
+    context "with a null byte escape in an inline string literal" do
+      let(:membership) { create(:membership, roles: [:admin]) }
+      let(:token) { Utils::AuthToken.encode(user: membership.user) }
+
+      before { create(:customer, organization: membership.organization, name: "ab") }
+
+      ['\\u0000', '\\u{0}'].each do |escape|
+        it "strips #{escape} instead of returning a 500" do
+          query = "query { customers(searchTerm: \"a#{escape}b\") { collection { id } } }"
+
+          post "/graphql",
+            headers: {
+              "Authorization" => "Bearer #{token}",
+              "x-lago-organization" => membership.organization_id,
+              "Content-Type" => "application/json"
+            },
+            params: {query:}.to_json
+
+          expect(response.status).to be(200)
+          expect(json[:errors]).to be_nil
+          expect(json[:data][:customers][:collection].count).to eq(1)
+        end
+      end
+    end
+
     context "with query length validation" do
       let(:user) { create(:user) }
       let(:token) do
