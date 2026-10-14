@@ -229,8 +229,7 @@ module BillingSegments
         if invoice.advance_charges?
           Invoices::FinalizeAndPublishAdvanceChargesService.call!(invoice:)
         else
-          Invoices::TransitionToFinalStatusService.call!(invoice:)
-          invoice.save! if invoice.changed?
+          Invoices::FinalizeContractInvoiceService.call!(invoice:)
         end
       end
     end
