@@ -341,6 +341,33 @@ RSpec.describe PaymentMethods::DetermineService do
           expect(result).to be_success
           expect(result.payment_method).to eq(contract_payment_method)
         end
+
+        context "when fees belong to several contracts" do
+          let(:later_payment_method) { create(:payment_method, customer:, is_default: false) }
+          let(:later_contract) do
+            create(:contract, organization:, customer:, payment_method: later_payment_method, created_at: contract.created_at + 1.day)
+          end
+          let(:later_contract_rate_card) { create(:contract_rate_card, organization:, contract: later_contract) }
+
+          before do
+            create(
+              :fee,
+              invoice:,
+              organization:,
+              subscription: nil,
+              fee_type: :product,
+              invoiceable: later_contract_rate_card.rate_card.product,
+              contract: later_contract,
+              contract_rate_card: later_contract_rate_card
+            )
+          end
+
+          it "returns the payment method of the earliest contract" do
+            result = service.call
+
+            expect(result.payment_method).to eq(contract_payment_method)
+          end
+        end
       end
 
       context "with a one_off invoice" do
