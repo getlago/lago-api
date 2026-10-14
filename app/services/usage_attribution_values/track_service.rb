@@ -89,17 +89,10 @@ module UsageAttributionValues
       @types_by_id ||= attribution_types.index_by(&:id)
     end
 
-    # Roots first, so that a value's parent is saved before it.
     def types_in_tree_order
       @types_in_tree_order ||= attribution_types.sort_by { |attribution_type| level_of(attribution_type) }
     end
 
-    # The number of ancestors of a type: 0 for a root. A type whose parent was deleted is a root,
-    # since a deleted type is not in types_by_id.
-    #
-    # UsageAttributionType validates against cycles, but two concurrent updates could still create
-    # one. A tree cannot be deeper than its number of types, so the walk stops there rather than
-    # looping forever and blocking the consumer.
     def level_of(attribution_type)
       level = 0
       parent_type = types_by_id[attribution_type.parent_id]
@@ -112,7 +105,6 @@ module UsageAttributionValues
       level
     end
 
-    # [customer_id, labels, seen_at] for the entries whose subscription belongs to the organization.
     def resolved_entries
       @resolved_entries ||= entries.filter_map do |entry|
         customer_id = customer_ids_by_subscription[entry["subscription_id"]]
