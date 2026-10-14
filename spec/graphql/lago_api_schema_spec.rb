@@ -42,6 +42,7 @@ RSpec.describe LagoApiSchema do
     let(:schema) do
       Class.new(described_class) do
         disable_introspection_entry_points
+        did_you_mean nil
       end
     end
 
@@ -51,6 +52,13 @@ RSpec.describe LagoApiSchema do
 
       expect(schema_errors.first["message"]).to include("__schema")
       expect(type_errors.first["message"]).to include("__type")
+    end
+
+    it "does not suggest field names" do
+      query = "{ organizatio { id } }"
+
+      expect(described_class.execute(query)["errors"].first["message"]).to include("Did you mean")
+      expect(schema.execute(query)["errors"].first["message"]).not_to include("Did you mean")
     end
 
     it "still resolves __typename" do

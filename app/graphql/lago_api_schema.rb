@@ -20,7 +20,11 @@ class LagoApiSchema < GraphQL::Schema
     env.development? || env.test? || ActiveModel::Type::Boolean.new.cast(flag) == true
   end
 
-  disable_introspection_entry_points unless introspection_enabled?
+  unless introspection_enabled?
+    disable_introspection_entry_points
+    # Field name suggestions ("Did you mean ...?") would let a client rebuild the schema anyway.
+    did_you_mean nil
+  end
 
   # GraphQL-Ruby calls this when something goes wrong while running a query:
 
