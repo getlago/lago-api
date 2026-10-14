@@ -6,8 +6,8 @@ module UsageAttributionValues
   # Each entry is reported by the events-processor for an enriched event:
   #   {"subscription_id" => ..., "attribution_labels" => {type code => value}, "timestamp" => epoch seconds}
   # The subscription, resolved by the events-processor, gives the customer. Events carry their full
-  # ancestor chain, so a value's parent is the value of its parent type in the same entry. Values
-  # are upserted one tree level at a time, roots first, so that a child can reference its parent row.
+  # ancestor chain, so each entry's values are saved from the root down, and a value's parent is
+  # the value of its parent type saved just before it.
   #
   # Upserting is idempotent: on an existing value, last_seen_at never goes back and a discarded
   # value is restored since it is in use.
@@ -41,23 +41,15 @@ module UsageAttributionValues
     end
 
     def call
-      return result if attribution_types.empty?
+      resolved_entries.each do |customer_id, labels, seen_at|
+        value_ids_by_type = {}
 
-      value_ids = {}
+        types_in_tree_order.each do |attribution_type|
+          value = labels[attribution_type.code]
+          next if value.nil?
 
-      types_by_level.each do |level_types|
-        rows = level_rows(level_types, value_ids)
-        next if rows.empty?
-
-        upserted = UsageAttributionValue.upsert_all( # rubocop:disable Rails/SkipsModelValidations
-          rows,
-          unique_by: UNIQUE_INDEX,
-          on_duplicate: ON_DUPLICATE,
-          returning: %w[id customer_id usage_attribution_type_id value]
-        )
-
-        upserted.each do |row|
-          value_ids[row.values_at("customer_id", "usage_attribution_type_id", "value")] = row["id"]
+          parent_id = value_ids_by_type[attribution_type.parent_id]
+          value_ids_by_type[attribution_type.id] = upsert_value(customer_id, attribution_type, value, parent_id, seen_at)
         end
       end
 
@@ -68,6 +60,27 @@ module UsageAttributionValues
 
     attr_reader :organization, :entries
 
+    # One atomic statement per value, so consumers writing the same value at once cannot conflict.
+    # Returns the id of the value, inserted or updated.
+    def upsert_value(customer_id, attribution_type, value, parent_id, seen_at)
+      now = Time.current
+
+      row = {
+        organization_id: organization.id,
+        customer_id:,
+        usage_attribution_type_id: attribution_type.id,
+        value:,
+        parent_id:,
+        last_seen_at: seen_at,
+        created_at: now,
+        updated_at: now
+      }
+
+      UsageAttributionValue
+        .upsert(row, unique_by: UNIQUE_INDEX, on_duplicate: ON_DUPLICATE, returning: :id) # rubocop:disable Rails/SkipsModelValidations
+        .first["id"]
+    end
+
     def attribution_types
       @attribution_types ||= organization.usage_attribution_types.to_a
     end
@@ -76,15 +89,17 @@ module UsageAttributionValues
       @types_by_id ||= attribution_types.index_by(&:id)
     end
 
-    # The types grouped by tree level, roots first. For department > team > user and a flat model:
-    #   [[department, model], [team], [user]]
-    def types_by_level
-      types_grouped_by_level = attribution_types.group_by { |attribution_type| level_of(attribution_type) }
-      sorted_levels = types_grouped_by_level.keys.sort
-
-      sorted_levels.map { |level| types_grouped_by_level[level] }
+    # Roots first, so that a value's parent is saved before it.
+    def types_in_tree_order
+      @types_in_tree_order ||= attribution_types.sort_by { |attribution_type| level_of(attribution_type) }
     end
 
+    # The number of ancestors of a type: 0 for a root. A type whose parent was deleted is a root,
+    # since a deleted type is not in types_by_id.
+    #
+    # UsageAttributionType validates against cycles, but two concurrent updates could still create
+    # one. A tree cannot be deeper than its number of types, so the walk stops there rather than
+    # looping forever and blocking the consumer.
     def level_of(attribution_type)
       level = 0
       parent_type = types_by_id[attribution_type.parent_id]
@@ -95,46 +110,6 @@ module UsageAttributionValues
       end
 
       level
-    end
-
-    def level_rows(level_types, value_ids)
-      now = Time.current
-
-      resolved_entries.each_with_object({}) do |(customer_id, labels, seen_at), rows|
-        level_types.each do |attribution_type|
-          value = labels[attribution_type.code]
-          next if value.nil?
-
-          key = [customer_id, attribution_type.id, value]
-          parent_id = parent_value_id(customer_id, attribution_type, labels, value_ids)
-          row = rows[key]
-
-          if row.nil?
-            rows[key] = {
-              organization_id: organization.id,
-              customer_id:,
-              usage_attribution_type_id: attribution_type.id,
-              value:,
-              parent_id:,
-              last_seen_at: seen_at,
-              created_at: now,
-              updated_at: now
-            }
-          elsif seen_at >= row[:last_seen_at]
-            # Several entries of the job hold this value: the most recent one places it, as in the upsert.
-            row[:last_seen_at] = seen_at
-            row[:parent_id] = parent_id || row[:parent_id]
-          end
-        end
-      end.values
-    end
-
-    def parent_value_id(customer_id, attribution_type, labels, value_ids)
-      parent_type = types_by_id[attribution_type.parent_id]
-
-      if parent_type
-        value_ids[[customer_id, parent_type.id, labels[parent_type.code]]]
-      end
     end
 
     # [customer_id, labels, seen_at] for the entries whose subscription belongs to the organization.
