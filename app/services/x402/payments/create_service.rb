@@ -13,9 +13,11 @@ module X402
       end
 
       def call
-        settlement.with_lock do
+        settlement.with_lock(requires_new: true) do
           if !settlement.settled?
             result.single_validation_failure!(error_code: "settlement_not_settled")
+          elsif settlement.invoice_payment? && settlement.invoice_id != invoice.id
+            result.single_validation_failure!(error_code: "settlement_invoice_mismatch")
           elsif settlement.payment
             result.payment = settlement.payment
           else

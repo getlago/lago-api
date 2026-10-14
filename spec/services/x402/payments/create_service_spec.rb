@@ -149,6 +149,15 @@ describe X402::Payments::CreateService, :premium do
       expect(result.payment).to be_nil
       expect(settlement.payment_id).to be_nil
     end
+
+    context "when the caller holds a transaction" do
+      it "rolls the payment back" do
+        ActiveRecord::Base.transaction do
+          expect { result }.not_to change(Payment, :count)
+          expect(settlement.reload.payment_id).to be_nil
+        end
+      end
+    end
   end
 
   context "with an invoice payment" do
@@ -163,6 +172,20 @@ describe X402::Payments::CreateService, :premium do
 
     it "leaves prepaid credits alone" do
       expect { result }.not_to have_enqueued_job(Invoices::PrepaidCreditJob)
+    end
+
+    context "when the settlement pays another invoice" do
+      let(:settlement) do
+        create(:x402_settlement, :invoice_payment, x402_connection:, settled_amount_atomic: 10_000_000, settled_amount_cents: 1000)
+      end
+
+      it "refuses the invoice" do
+        expect(result.error.messages).to eq(base: ["settlement_invoice_mismatch"])
+      end
+
+      it "records no payment" do
+        expect { result }.not_to change(Payment, :count)
+      end
     end
   end
 end
