@@ -28,6 +28,13 @@ RSpec.describe Invoice do
     end
   end
 
+  describe "enums" do
+    it do
+      expect(invoice).to define_enum_for(:invoice_type)
+        .with_values(subscription: 0, add_on: 1, credit: 2, one_off: 3, advance_charges: 4, progressive_billing: 5, contract: 6)
+    end
+  end
+
   it { is_expected.to have_many(:integration_resources) }
   it { is_expected.to have_many(:error_details) }
 
@@ -548,6 +555,84 @@ RSpec.describe Invoice do
         expect(invoice.billing_entity_sequential_id).to eq(3)
         # expect(invoice.organization_sequential_id).to eq(3)
       end
+    end
+  end
+
+  def create_contract_fee(invoice)
+    contract = create(:contract, organization:, customer: invoice.customer)
+    contract_rate_card = create(:contract_rate_card, organization:, contract:)
+
+    create(
+      :fee,
+      invoice:,
+      subscription: nil,
+      fee_type: :product,
+      invoiceable: contract_rate_card.rate_card.product,
+      contract:,
+      contract_rate_card:,
+      organization:
+    )
+  end
+
+  describe ".product_catalog" do
+    let(:customer) { create(:customer, organization:) }
+
+    it "returns contract invoices, including those without fees" do
+      invoice = create(:invoice, customer:, organization:, invoice_type: :contract)
+
+      expect(described_class.product_catalog).to eq([invoice])
+    end
+
+    it "returns invoices of another type holding a fee attached to a contract" do
+      invoice = create(:invoice, customer:, organization:, invoice_type: :advance_charges)
+      create_contract_fee(invoice)
+
+      expect(described_class.product_catalog).to eq([invoice])
+    end
+
+    it "returns an invoice once when several fees are attached to a contract" do
+      invoice = create(:invoice, customer:, organization:, invoice_type: :contract)
+      2.times { create_contract_fee(invoice) }
+
+      expect(described_class.product_catalog).to eq([invoice])
+    end
+
+    it "excludes invoices without a contract fee" do
+      create(:invoice, customer:, organization:, invoice_type: :advance_charges)
+      create(:invoice, customer:, organization:, invoice_type: :subscription)
+
+      expect(described_class.product_catalog).to be_empty
+    end
+
+    it "ignores discarded contract fees" do
+      invoice = create(:invoice, customer:, organization:, invoice_type: :subscription)
+      create_contract_fee(invoice).discard!
+
+      expect(described_class.product_catalog).to be_empty
+    end
+  end
+
+  describe "#product_catalog?" do
+    let(:customer) { create(:customer, organization:) }
+    let(:invoice) { create(:invoice, customer:, organization:, invoice_type:) }
+    let(:invoice_type) { :advance_charges }
+
+    context "when the invoice is a contract invoice" do
+      let(:invoice_type) { :contract }
+
+      it { expect(invoice).to be_product_catalog }
+    end
+
+    context "when the invoice has a fee attached to a contract" do
+      before { create_contract_fee(invoice) }
+
+      it { expect(invoice).to be_product_catalog }
+    end
+
+    context "when the invoice has no contract fee" do
+      before { create(:fee, invoice:, organization:) }
+
+      it { expect(invoice).not_to be_product_catalog }
     end
   end
 

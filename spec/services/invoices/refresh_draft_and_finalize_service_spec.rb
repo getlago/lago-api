@@ -82,6 +82,17 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
       end
     end
 
+    context "when invoice is a contract invoice" do
+      let(:invoice) { create(:invoice, status: :finalized, organization:, customer:, invoice_type: :contract) }
+
+      it "is not rejected as forbidden" do
+        result = finalize_service.call
+
+        expect(result).to be_success
+        expect(result.invoice).to eq(invoice)
+      end
+    end
+
     it "marks the invoice as finalized" do
       expect { finalize_service.call }
         .to change(invoice, :status).from("draft").to("finalized")

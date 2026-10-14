@@ -89,7 +89,7 @@ module Invoices
     def create_generating_invoice
       invoice_result = Invoices::CreateGeneratingService.call(
         customer: billing_context.customer,
-        invoice_type: :subscription,
+        invoice_type: billing_context.contract? ? :contract : :subscription,
         currency: metered_item.currency.iso_code,
         datetime: Time.zone.at(timestamp),
         charge_in_advance: true,
