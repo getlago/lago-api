@@ -23,6 +23,17 @@ RSpec.describe Api::V1::AddOnsController do
 
     include_examples "requires API permission", "add_on", "write"
 
+    context "when amount_cents is larger than a bigint" do
+      let(:create_params) { super().merge(amount_cents: 10**20) }
+
+      it "returns a validation error instead of a 500" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq({base: ["value_is_out_of_range"]})
+      end
+    end
+
     it "creates a add-on" do
       subject
 

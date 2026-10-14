@@ -34,6 +34,11 @@ class GraphqlController < ApplicationController
 
     CurrentContext.device_info = Utils::DeviceInfo.parse(request)
 
+    if NullByteGuard.contains_null_byte?(request)
+      query = NullByteGuard.strip(query)
+      variables = NullByteGuard.strip(variables)
+    end
+
     if query.present? && query.length > MAX_QUERY_LENGTH
       return render_graphql_error(
         code: "query_is_too_large",

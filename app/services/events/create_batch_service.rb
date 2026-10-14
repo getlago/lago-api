@@ -52,6 +52,10 @@ module Events
         event.properties = event_params[:properties] || {}
         event.metadata = metadata || {}
         event.timestamp = Time.zone.at(event_params[:timestamp] ? BigDecimal(event_params[:timestamp].to_s) : timestamp)
+        unless TimestampWindow.within?(event.timestamp)
+          result.errors[index] = {timestamp: ["value_is_out_of_range"]}
+          next
+        end
         event.precise_total_amount_cents = event_params[:precise_total_amount_cents]
 
         expression_result = CalculateExpressionService.call(organization:, event:)

@@ -208,6 +208,34 @@ RSpec.describe GraphqlController do
       end
     end
 
+    context "with null bytes in the variables" do
+      let(:membership) { create(:membership, roles: [:admin]) }
+      let(:token) { Utils::AuthToken.encode(user: membership.user) }
+      let(:query) do
+        <<~GRAPHQL
+          query($searchTerm: String) {
+            customers(searchTerm: $searchTerm) { collection { id } }
+          }
+        GRAPHQL
+      end
+
+      before { create(:customer, organization: membership.organization, name: "ab") }
+
+      it "strips them instead of returning a 500" do
+        post "/graphql",
+          headers: {
+            "Authorization" => "Bearer #{token}",
+            "x-lago-organization" => membership.organization_id,
+            "Content-Type" => "application/json"
+          },
+          params: {query:, variables: {searchTerm: "a\u0000b"}}.to_json
+
+        expect(response.status).to be(200)
+        expect(json[:errors]).to be_nil
+        expect(json[:data][:customers][:collection].count).to eq(1)
+      end
+    end
+
     context "with query length validation" do
       let(:user) { create(:user) }
       let(:token) do

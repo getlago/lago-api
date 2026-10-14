@@ -271,6 +271,14 @@ RSpec.describe Events::CreateBatchService do
       end
     end
 
+    context "when a timestamp is outside what the event stores can hold" do
+      let(:events_params) { build_params(count: 2) { |event, i| event[:timestamp] = 99_999_999_999 if i == 1 } }
+
+      it "returns an error for that event" do
+        test_validation_failure({1 => {timestamp: ["value_is_out_of_range"]}})
+      end
+    end
+
     context "when timestamp is in a wrong format" do
       let(:timestamp) { Time.current.to_s }
       let(:events_params) { build_params(count: 1) { |event| event[:timestamp] = timestamp } }
