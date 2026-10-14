@@ -528,7 +528,7 @@ RSpec.describe Api::V1::CustomersController do
     let(:organization) { create(:organization) }
     let(:external_id) { customer.external_id }
 
-    include_examples "requires API permission", "customer", "read"
+    include_examples "requires API permission", "customer", "write"
 
     it "returns the portal url" do
       subject
