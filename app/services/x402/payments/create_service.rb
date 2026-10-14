@@ -28,9 +28,11 @@ module X402
         result
       rescue ActiveRecord::RecordInvalid => e
         settlement.reload
+        invoice.reload
         result.record_validation_failure!(record: e.record)
       rescue BaseService::FailedResult => e
         settlement.reload
+        invoice.reload
         result.fail_with_error!(e)
       end
 

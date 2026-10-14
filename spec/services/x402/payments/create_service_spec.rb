@@ -210,6 +210,13 @@ describe X402::Payments::CreateService, :premium do
       expect(settlement.payment_id).to be_nil
     end
 
+    it "leaves nothing to save on the invoice" do
+      result
+
+      expect(invoice).not_to be_changed
+      expect(invoice.payments).to be_empty
+    end
+
     context "when the caller holds a transaction" do
       it "rolls the payment back" do
         ActiveRecord::Base.transaction do
