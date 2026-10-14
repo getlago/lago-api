@@ -149,7 +149,13 @@ module Fees
         end
 
         def duration_in_days
-          billing_segment.duration_in_days
+          segment_duration = billing_segment.duration_in_days
+          return segment_duration unless rate_card.advance? && rate_card.proration? && billable_metric.recurring?
+
+          proration_ratio = billing_segment.proration_ratio.to_f
+          return segment_duration unless proration_ratio.positive?
+
+          (segment_duration / proration_ratio).round
         end
       end
     end
