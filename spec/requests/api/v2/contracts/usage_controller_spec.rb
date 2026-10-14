@@ -65,6 +65,8 @@ RSpec.describe Api::V2::Contracts::UsageController do
         rate_phase_code: nil,
         rate_phase_name: nil,
         rate_source: "rate",
+        rate_model: "standard",
+        rate_properties: {amount: "2"},
         units: "1.0",
         events_count: 1,
         amount_cents: 200,
@@ -72,8 +74,27 @@ RSpec.describe Api::V2::Contracts::UsageController do
       )
       expect(rate_card_entries[fixed_rate_card.code]).to include(
         product_type: "fixed", product_category_code: nil, billable_metric_code: nil,
-        units: "3.0", amount_cents: 3000
+        rate_model: "standard", rate_properties: {amount: "10"}, units: "3.0", amount_cents: 3000
       )
+    end
+
+    context "with an intro phase overriding the rate" do
+      before do
+        contract_rate_card = contract.applied_rate_cards.find_by!(rate_card: metered_rate_card)
+        create(:rate_phase, :contract_level, organization:, contract_rate_card:, plan_rate_card: nil, code: "intro",
+          name: "Intro", position: 1, billing_interval_cycle_count: 2,
+          rate_override: create(:rate_override, organization:, rate_model: "package",
+            rate_properties: {"amount" => "1", "package_size" => 1, "free_units" => 0}))
+      end
+
+      it "returns the phase's rate" do
+        subject
+
+        expect(rate_card_entries[metered_rate_card.code]).to include(
+          rate_phase_code: "intro", rate_phase_name: "Intro", rate_source: "phase_override",
+          rate_model: "package", rate_properties: {amount: "1", package_size: 1, free_units: 0}, amount_cents: 100
+        )
+      end
     end
 
     context "with a product type filter" do

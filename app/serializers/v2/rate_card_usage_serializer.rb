@@ -21,6 +21,8 @@ module V2
         rate_phase_code: model.rate_phase&.code,
         rate_phase_name: model.rate_phase&.name,
         rate_source: model.rate_source,
+        rate_model: model.billing_segment.rate.rate_model,
+        rate_properties: model.billing_segment.rate_properties,
         units: model.units.to_s,
         events_count: model.events_count,
         amount_cents: model.amount_cents,
