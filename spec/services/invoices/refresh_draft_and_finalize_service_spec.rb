@@ -68,7 +68,8 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
       :add_on,
       :credit,
       :advance_charges,
-      :progressive_billing
+      :progressive_billing,
+      :contract
     ].each do |invoice_type|
       context "when invoice is #{invoice_type}" do
         let(:invoice) { create(:invoice, :draft, organization:, customer:, invoice_type:) }
@@ -79,17 +80,6 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ForbiddenFailure)
         end
-      end
-    end
-
-    context "when invoice is a contract invoice" do
-      let(:invoice) { create(:invoice, status: :finalized, organization:, customer:, invoice_type: :contract) }
-
-      it "is not rejected as forbidden" do
-        result = finalize_service.call
-
-        expect(result).to be_success
-        expect(result.invoice).to eq(invoice)
       end
     end
 

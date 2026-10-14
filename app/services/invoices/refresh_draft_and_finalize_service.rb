@@ -11,7 +11,7 @@ module Invoices
 
     def call
       return result.not_found_failure!(resource: "invoice") if invoice.nil?
-      return result.forbidden_failure! unless invoice.subscription? || invoice.contract?
+      return result.forbidden_failure! unless invoice.subscription?
 
       invoice.with_lock do
         result.invoice = invoice
