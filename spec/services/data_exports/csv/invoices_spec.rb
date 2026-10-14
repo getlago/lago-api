@@ -103,7 +103,7 @@ RSpec.describe DataExports::Csv::Invoices, :premium do
 
     it "generates the correct CSV output" do
       expected_csv = <<~CSV
-        invoice-lago-id-123,SEQ123,false,2023-01-01,customer-lago-id-456,CUST123,customer name,customer@eamil.com,US,123456789,INV123,PO-12345,credit,pending,finalized,http://api.lago.com/invoice.pdf,USD,70000,1655,10500,334,1000,77511,2023-02-01,2023-12-22,false,27511,50000,334,999
+        "invoice-lago-id-123","SEQ123","false","2023-01-01","customer-lago-id-456","CUST123","customer name","customer@eamil.com","US","123456789","INV123","PO-12345","credit","pending","finalized","http://api.lago.com/invoice.pdf","USD","70000","1655","10500","334","1000","77511","2023-02-01","2023-12-22","false","27511","50000","334","999"
       CSV
 
       expect(result).to be_success
@@ -142,6 +142,35 @@ RSpec.describe DataExports::Csv::Invoices, :premium do
       end
     end
 
+    context "when values contain separators and quotes" do
+      let(:serialized_invoice) do
+        super().deep_merge(
+          customer: {
+            name: "safe;=1+1;safe",
+            email: "a\",\"=1+1",
+            tax_identification_number: "x\t=1+1|@SUM(1)"
+          }
+        )
+      end
+
+      it "keeps every value in a single quoted field" do
+        file = result.csv_file
+        line = file.read
+        file.close
+        File.unlink(file.path)
+
+        # Every field is quoted, so a spreadsheet splitting on ";" or another separator cannot cut a value
+        expect(line).to match(/\A"(?:[^"]|"")*"(?:,"(?:[^"]|"")*")*\n\z/)
+        expect(line).to include(%("safe;=1+1;safe"))
+        expect(line).to include(%("a"",""=1+1"))
+
+        row = CSV.parse_line(line)
+        expect(row[6]).to eq("safe;=1+1;safe")
+        expect(row[7]).to eq("a\",\"=1+1")
+        expect(row[9]).to eq("x\t=1+1|@SUM(1)")
+      end
+    end
+
     context "when organization has multiple billing_entities" do
       let(:billing_entity) { create(:billing_entity, organization:) }
 
@@ -149,7 +178,7 @@ RSpec.describe DataExports::Csv::Invoices, :premium do
 
       it "adds billing_entity_code to the csv" do
         expected_csv = <<~CSV
-          invoice-lago-id-123,SEQ123,false,2023-01-01,customer-lago-id-456,CUST123,customer name,customer@eamil.com,US,123456789,INV123,PO-12345,credit,pending,finalized,http://api.lago.com/invoice.pdf,USD,70000,1655,10500,334,1000,77511,2023-02-01,2023-12-22,false,27511,50000,334,999,the-test-bil-ent
+          "invoice-lago-id-123","SEQ123","false","2023-01-01","customer-lago-id-456","CUST123","customer name","customer@eamil.com","US","123456789","INV123","PO-12345","credit","pending","finalized","http://api.lago.com/invoice.pdf","USD","70000","1655","10500","334","1000","77511","2023-02-01","2023-12-22","false","27511","50000","334","999","the-test-bil-ent"
         CSV
 
         expect(result).to be_success

@@ -24,7 +24,14 @@ module DataExports
 
       def with_csv
         tempfile = Tempfile.create([data_export_part.id, ".csv"])
-        yield CSV.new(tempfile, headers: false, write_converters: [FormulaEscaper::CONVERTER])
+        yield CSV.new(
+          tempfile,
+          headers: false,
+          # Quoting every field keeps each value in one cell when a spreadsheet splits rows on another
+          # separator than the comma (Excel uses the locale list separator, often ";").
+          force_quotes: true,
+          write_converters: [FormulaEscaper::CONVERTER]
+        )
 
         tempfile.rewind
         tempfile
