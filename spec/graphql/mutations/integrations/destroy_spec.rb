@@ -43,6 +43,18 @@ RSpec.describe Mutations::Integrations::Destroy do
     before { result }
   end
 
+  context "when agent storefront integration" do
+    let(:integration) { create(:agent_storefront_integration, organization:) }
+
+    it "deletes the integration" do
+      expect { result }.to change(::Integrations::BaseIntegration, :count).by(-1)
+    end
+
+    it_behaves_like "produces a security log", "integration.deleted" do
+      before { result }
+    end
+  end
+
   context "when okta integration", :premium do
     let(:integration) { create(:okta_integration, organization:) }
 
