@@ -13,6 +13,15 @@ class LagoApiSchema < GraphQL::Schema
   max_depth 15
   max_complexity 350
 
+  # The schema is only described to clients (__schema, __type) in development and test, where
+  # the front codegen and the schema dump specs need it. Elsewhere it stays hidden unless
+  # LAGO_GRAPHQL_INTROSPECTION_ENABLED is set, for example on an API booted only to run codegen.
+  def self.introspection_enabled?(env: Rails.env, flag: ENV["LAGO_GRAPHQL_INTROSPECTION_ENABLED"])
+    env.development? || env.test? || ActiveModel::Type::Boolean.new.cast(flag) == true
+  end
+
+  disable_introspection_entry_points unless introspection_enabled?
+
   # GraphQL-Ruby calls this when something goes wrong while running a query:
 
   # Union and Interface Resolution
