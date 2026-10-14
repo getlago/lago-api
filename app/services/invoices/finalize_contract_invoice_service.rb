@@ -33,9 +33,9 @@ module Invoices
     end
 
     def publish
-      SendWebhookJob.perform_later("invoice.created", invoice)
-      Utils::ActivityLog.produce(invoice, "invoice.created")
-      Invoices::GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?)
+      SendWebhookJob.perform_after_commit("invoice.created", invoice)
+      Utils::ActivityLog.produce_after_commit(invoice, "invoice.created")
+      Invoices::GenerateDocumentsJob.perform_after_commit(invoice:, notify: should_deliver_email?)
       Invoices::Payments::CreateService.call_async(invoice:)
       Utils::SegmentTrack.invoice_created(invoice)
     end
