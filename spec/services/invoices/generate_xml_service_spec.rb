@@ -119,6 +119,12 @@ RSpec.describe Invoices::GenerateXmlService do
 
         it_behaves_like "dont generate"
       end
+
+      context "when the invoice is a contract invoice" do
+        let(:invoice) { create(:invoice, customer:, billing_entity:, organization:, status:, invoice_type: :contract) }
+
+        it_behaves_like "dont generate"
+      end
     end
   end
 end
