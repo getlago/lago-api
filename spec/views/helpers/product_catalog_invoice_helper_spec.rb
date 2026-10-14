@@ -28,15 +28,10 @@ RSpec.describe ProductCatalogInvoiceHelper do
     product_fee(compute, amount_cents: 500, product_filter: eu)
     product_fee(analytics, amount_cents: 300)
     product_fee(transfer, amount_cents: 700, amount_details: graduated_percentage_details)
-    product_fee(transfer, amount_cents: 9_999, hidden: true)
   end
 
-  def product_fee(product, amount_cents:, product_filter: nil, hidden: false, amount_details: {})
-    rate_card = if hidden
-      create(:rate_card, :advance, organization:, product:, product_filter:, display_on_invoice: false)
-    else
-      create(:rate_card, organization:, product:, product_filter:)
-    end
+  def product_fee(product, amount_cents:, product_filter: nil, amount_details: {}, true_up_parent_fee: nil)
+    rate_card = create(:rate_card, organization:, product:, product_filter:)
     contract_rate_card = create(:contract_rate_card, organization:, contract:, rate_card:)
 
     create(
@@ -52,6 +47,7 @@ RSpec.describe ProductCatalogInvoiceHelper do
       product_filter:,
       amount_cents:,
       amount_details:,
+      true_up_parent_fee:,
       properties: {"from_datetime" => "2026-10-01T00:00:00Z", "to_datetime" => "2026-10-31T23:59:59Z"}
     )
   end
@@ -59,7 +55,7 @@ RSpec.describe ProductCatalogInvoiceHelper do
   describe ".summary_lines" do
     subject(:lines) { described_class.summary_lines(invoice) }
 
-    it "lists categories first, then standalone products, without hidden fees" do
+    it "lists categories first, then standalone products" do
       expect(lines.map { [it.name, it.amount_cents] }).to eq([["Infrastructure", 1_800], ["Data transfer", 700]])
     end
   end
@@ -108,7 +104,17 @@ RSpec.describe ProductCatalogInvoiceHelper do
     subject(:label) { described_class.period_label(invoice.fees.find_by(amount_cents: 300)) }
 
     it "uses the fee boundaries in the customer timezone" do
-      expect(label).to eq("From Oct 01, 2026 to Oct 31, 2026")
+      expect(label).to eq("From 1 Oct to 31 Oct 2026")
+    end
+
+    context "with a true-up fee" do
+      subject(:label) { described_class.period_label(true_up_fee) }
+
+      let(:true_up_fee) { product_fee(analytics, amount_cents: 50, true_up_parent_fee: invoice.fees.find_by(amount_cents: 300)) }
+
+      it "names the true-up after its parent" do
+        expect(label).to eq("Analytics - True-up")
+      end
     end
   end
 end
