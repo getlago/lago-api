@@ -17,14 +17,24 @@ class ProductCatalogInvoiceHelper
   end
 
   def self.period_label(fee)
-    timezone = fee.invoice.customer.applicable_timezone
-    from_date = Time.zone.parse(fee.properties["from_datetime"]).in_time_zone(timezone).to_date
-    to_date = Time.zone.parse(fee.properties["to_datetime"]).in_time_zone(timezone).to_date
+    from_datetime, to_datetime = fee.properties.values_at("from_datetime", "to_datetime")
 
-    I18n.t("invoice.from_to_date", from_date: I18n.l(from_date, format: :default), to_date: I18n.l(to_date, format: :default))
+    if fee.true_up_parent_fee_id
+      I18n.t("invoice.true_up_metric", metric: fee.true_up_parent_fee.invoice_name)
+    elsif from_datetime.blank? || to_datetime.blank?
+      ""
+    else
+      timezone = fee.invoice.customer.applicable_timezone
+      from_date = Time.zone.parse(from_datetime).in_time_zone(timezone).to_date
+      to_date = Time.zone.parse(to_datetime).in_time_zone(timezone).to_date
+
+      I18n.t("invoice.from_to_date", from_date: I18n.l(from_date, format: "%-d %b"), to_date: I18n.l(to_date, format: "%-d %b %Y"))
+    end
   end
 
   def self.tiers(fee)
+    return [] if fee.true_up_parent_fee_id
+
     percentage = fee.amount_details.key?("graduated_percentage_ranges")
     ranges = fee.amount_details["graduated_ranges"] || fee.amount_details["graduated_percentage_ranges"] || []
 
@@ -68,7 +78,7 @@ class ProductCatalogInvoiceHelper
   end
 
   def summary_lines
-    by_category = visible_fees.group_by { category_for(it) }
+    by_category = product_fees.group_by { category_for(it) }
     standalone_fees = by_category.delete(nil) || []
 
     category_lines = by_category.map { |category, fees| Line.new(name: category.invoice_name, amount_cents: fees.sum(&:amount_cents)) }
@@ -80,7 +90,7 @@ class ProductCatalogInvoiceHelper
   end
 
   def contract_blocks
-    visible_fees.group_by(&:contract).sort_by { |contract, _| contract_name(contract).to_s.downcase }.map do |contract, fees|
+    product_fees.group_by(&:contract).sort_by { |contract, _| contract_name(contract).to_s.downcase }.map do |contract, fees|
       ContractBlock.new(title: contract_title(contract), sections: sections(fees))
     end
   end
@@ -89,14 +99,12 @@ class ProductCatalogInvoiceHelper
 
   attr_reader :invoice
 
-  def visible_fees
-    @visible_fees ||= invoice.fees.product
-      .includes(:product_filter, :contract, contract_rate_card: :rate_card)
-      .select { it.contract_rate_card.rate_card.display_on_invoice? }
+  def product_fees
+    @product_fees ||= invoice.fees.product.includes(:product_filter, :contract, :pricing_unit_usage, :true_up_parent_fee).to_a
   end
 
   def products
-    @products ||= Product.with_discarded.where(id: visible_fees.map(&:invoiceable_id)).index_by(&:id)
+    @products ||= Product.with_discarded.where(id: product_fees.map(&:invoiceable_id)).index_by(&:id)
   end
 
   def categories
@@ -135,7 +143,7 @@ class ProductCatalogInvoiceHelper
   end
 
   def by_period(fees)
-    fees.sort_by { it.properties["from_datetime"].to_s }
+    fees.sort_by { [it.properties["from_datetime"].to_s, it.true_up_parent_fee_id ? 1 : 0] }
   end
 
   def sort_by_name(items)
