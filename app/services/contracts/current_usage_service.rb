@@ -45,7 +45,7 @@ module Contracts
     # Filtered after the version selection, so that a superseded version never stands in for
     # the card that replaced it.
     def selected_cards
-      @selected_cards ||= effective_cards.select { |card| matches_filters?(card) }
+      effective_cards.select { |card| matches_filters?(card) }
     end
 
     def effective_cards
@@ -92,8 +92,7 @@ module Contracts
         contract_rate_card: card,
         billing_segment:,
         rate_phase: card.rate_phases.find { |phase| phase.code == billable_segment.rate_phase_code },
-        fees: taxed(compute_fees(billing_segment)),
-        invoice_id: billed_invoice_ids[card.id]
+        fees: taxed(compute_fees(billing_segment))
       )
     end
 
@@ -121,20 +120,6 @@ module Contracts
       end
 
       fees
-    end
-
-    # Only a fixed advance card has billed its open window already, when the window opened.
-    # Segments of a card never overlap, so at most one covers the timestamp.
-    def billed_invoice_ids
-      @billed_invoice_ids ||= BillingSegment.status_done
-        .where(contract_rate_card_id: selected_cards.select { |card| fixed_advance?(card) }.map(&:id))
-        .where(started_at: ..timestamp, ended_at: timestamp..)
-        .pluck(:contract_rate_card_id, :invoice_id)
-        .to_h
-    end
-
-    def fixed_advance?(card)
-      card.rate_card.advance? && card.rate_card.product.fixed?
     end
 
     def billing_context

@@ -25,8 +25,7 @@ module V2
         rate_properties: model.billing_segment.rate_properties,
         units: model.units.to_s,
         events_count: model.events_count,
-        amount_cents: model.amount_cents,
-        lago_invoice_id: model.invoice_id
+        amount_cents: model.amount_cents
       }
     end
 

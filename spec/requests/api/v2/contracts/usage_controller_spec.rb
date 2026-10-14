@@ -69,8 +69,7 @@ RSpec.describe Api::V2::Contracts::UsageController do
         rate_properties: {amount: "2"},
         units: "1.0",
         events_count: 1,
-        amount_cents: 200,
-        lago_invoice_id: nil
+        amount_cents: 200
       )
       expect(rate_card_entries[fixed_rate_card.code]).to include(
         product_type: "fixed", product_category_code: nil, billable_metric_code: nil,

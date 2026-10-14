@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe RateCardUsage do
   subject(:usage) do
-    described_class.new(contract_rate_card:, billing_segment:, rate_phase: nil, fees:, invoice_id: nil)
+    described_class.new(contract_rate_card:, billing_segment:, rate_phase: nil, fees:)
   end
 
   let(:contract_rate_card) { build_stubbed(:contract_rate_card) }

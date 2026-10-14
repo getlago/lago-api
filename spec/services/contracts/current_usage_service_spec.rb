@@ -46,7 +46,6 @@ RSpec.describe Contracts::CurrentUsageService do
     )
     expect(usage.fees.sole).to be_new_record
     expect(usage.fees.sole).to have_attributes(fee_type: "product", contract_rate_card:, units: 1, amount_cents: 200)
-    expect(usage.invoice_id).to be_nil
     expect(result).to have_attributes(amount_cents: 200, taxes_amount_cents: 0, total_amount_cents: 200)
   end
 
@@ -288,20 +287,6 @@ RSpec.describe Contracts::CurrentUsageService do
     end
   end
 
-  context "with a metered card billed in advance" do
-    let(:billing_timing) { :advance }
-
-    before do
-      create(:billing_segment, organization:, customer:, contract:, contract_rate_card:, rate_card_rate: rate,
-        status: :done, invoice: create(:invoice, organization:, customer:),
-        cycle_started_at: Time.zone.parse("2027-02-01"), billing_at: Time.zone.parse("2027-02-01"))
-    end
-
-    it "returns no invoice, as each event is billed on its own" do
-      expect(result.rate_card_usages.sole.invoice_id).to be_nil
-    end
-  end
-
   context "without a rate" do
     let(:rate) { nil }
 
@@ -346,114 +331,6 @@ RSpec.describe Contracts::CurrentUsageService do
       usage = result.rate_card_usages.sole
 
       expect(usage.fees.sole).to have_attributes(fee_type: "product", units: 3, amount_cents: 3000)
-      expect(usage.invoice_id).to be_nil
-    end
-
-    context "when billed in advance" do
-      let(:billing_timing) { :advance }
-      let(:january_invoice) { create(:invoice, organization:, customer:) }
-      let(:february_invoice) { create(:invoice, organization:, customer:) }
-      let(:february_billed) { true }
-
-      before do
-        create(:billing_segment, organization:, customer:, contract:, contract_rate_card:, rate_card_rate: rate,
-          status: :done, invoice: january_invoice,
-          cycle_started_at: Time.zone.parse("2027-01-01"), billing_at: Time.zone.parse("2027-01-01"))
-        create(:billing_segment, organization:, customer:, contract:, contract_rate_card:, rate_card_rate: rate,
-          status: february_billed ? :done : :pending, invoice: (february_invoice if february_billed),
-          cycle_started_at: Time.zone.parse("2027-02-01"), billing_at: Time.zone.parse("2027-02-01"))
-      end
-
-      context "with a rate appended mid-cycle" do
-        let(:timestamp) { Time.zone.parse("2027-02-20 12:00:00") }
-
-        before do
-          create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2027-02-15"),
-            rate_properties: {"amount" => "20"})
-        end
-
-        it "reports the invoice that billed the whole cycle for the new rate's window" do
-          usage = result.rate_card_usages.sole
-
-          expect(usage.billing_segment.started_at).to eq(Time.zone.parse("2027-02-15"))
-          expect(usage.invoice_id).to eq(february_invoice.id)
-        end
-
-        context "with a timestamp before the new rate" do
-          let(:timestamp) { Time.zone.parse("2027-02-10 12:00:00") }
-
-          it "reports the same invoice for the old rate's window" do
-            usage = result.rate_card_usages.sole
-
-            expect(usage.billing_segment).to have_attributes(
-              started_at: Time.zone.parse("2027-02-01"), ended_at: BillingSegment.inclusive_end(Time.zone.parse("2027-02-15"))
-            )
-            expect(usage.invoice_id).to eq(february_invoice.id)
-          end
-        end
-      end
-
-      context "with a timestamp on the last microsecond of the window" do
-        let(:timestamp) { BillingSegment.inclusive_end(Time.zone.parse("2027-03-01")) }
-
-        it "still reports the window's invoice" do
-          usage = result.rate_card_usages.sole
-
-          expect(usage.billing_segment.started_at).to eq(Time.zone.parse("2027-02-01"))
-          expect(usage.invoice_id).to eq(february_invoice.id)
-        end
-      end
-
-      context "with a timestamp on the window boundary, before the new window is billed" do
-        let(:timestamp) { Time.zone.parse("2027-02-01 00:00:00") }
-        let(:february_billed) { false }
-
-        it "does not report the previous window's invoice" do
-          usage = result.rate_card_usages.sole
-
-          expect(usage.billing_segment.started_at).to eq(Time.zone.parse("2027-02-01"))
-          expect(usage.invoice_id).to be_nil
-        end
-      end
-
-      it "returns the invoice that billed the open window" do
-        expect(result.rate_card_usages.sole.invoice_id).to eq(february_invoice.id)
-      end
-
-      context "with an earlier timestamp" do
-        let(:timestamp) { Time.zone.parse("2027-01-20 12:00:00") }
-
-        it "returns the invoice that billed the window open at that timestamp" do
-          expect(result.rate_card_usages.sole.invoice_id).to eq(january_invoice.id)
-        end
-      end
-
-      context "with another fixed card billed in advance" do
-        let(:other_rate_card) do
-          create(:rate_card, organization:, product: create(:product, :fixed, organization:), billing_timing: :advance,
-            currency: "EUR")
-        end
-        let(:other_invoice) { create(:invoice, organization:, customer:) }
-
-        before do
-          other_contract_rate_card = create(:contract_rate_card, organization:, contract:, rate_card: other_rate_card,
-            units: 1, effective_date: Date.new(2027, 1, 1), billing_anchor_date: Date.new(2027, 1, 1))
-          other_rate = create(:rate_card_rate, organization:, rate_card: other_rate_card,
-            effective_from: Time.zone.parse("2027-01-01"))
-          create(:billing_segment, organization:, customer:, contract:, contract_rate_card: other_contract_rate_card,
-            rate_card_rate: other_rate, status: :done, invoice: other_invoice,
-            cycle_started_at: Time.zone.parse("2027-02-01"), billing_at: Time.zone.parse("2027-02-01"))
-        end
-
-        it "finds both invoices in a single query" do
-          usages = nil
-          statements = capture_sql { usages = result.rate_card_usages }
-
-          expect(usages.to_h { |usage| [usage.contract_rate_card.rate_card, usage.invoice_id] })
-            .to eq(rate_card => february_invoice.id, other_rate_card => other_invoice.id)
-          expect(statements.grep(/FROM "billing_segments"/).size).to eq(1)
-        end
-      end
     end
   end
 end
