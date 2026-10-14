@@ -220,8 +220,11 @@ module BillingSegments
       invoices.each do |invoice|
         if invoice.advance_charges?
           Invoices::FinalizeAndPublishAdvanceChargesService.call!(invoice:)
-        else
+        elsif invoice.contract?
           Invoices::FinalizeContractInvoiceService.call!(invoice:)
+        else
+          Invoices::TransitionToFinalStatusService.call!(invoice:)
+          invoice.save! if invoice.changed?
         end
       end
 

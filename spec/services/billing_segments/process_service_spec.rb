@@ -1305,6 +1305,25 @@ RSpec.describe BillingSegments::ProcessService do
       expect(Invoices::FinalizeContractInvoiceService).to have_received(:call!).with(invoice:).twice
     end
 
+    context "with a generating subscription invoice left by a previous run" do
+      let(:legacy_invoice) do
+        create(:invoice, :generating, organization:, customer:, invoice_type: :subscription, total_amount_cents: 100, fees_amount_cents: 100)
+      end
+
+      before do
+        create(:billing_segment, organization:, customer:, status: :done, invoice: legacy_invoice)
+      end
+
+      it "finalizes it without the contract finalization service" do
+        invoices = result.invoices
+
+        expect(invoices).to include(legacy_invoice)
+        expect(legacy_invoice.reload).to be_finalized
+        expect(Invoices::FinalizeContractInvoiceService).to have_received(:call!).once
+        expect(Invoices::FinalizeContractInvoiceService).not_to have_received(:call!).with(invoice: legacy_invoice)
+      end
+    end
+
     it "does not process another customer's pending segments or generating invoices" do
       other_segment = create(:billing_segment, organization:)
       other_invoice = create(:invoice, :generating, organization:, customer: other_segment.customer)
