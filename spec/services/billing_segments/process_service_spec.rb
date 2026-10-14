@@ -78,7 +78,7 @@ RSpec.describe BillingSegments::ProcessService do
     end
 
     it "builds the arrears invoice with the contract type" do
-      expect(result.invoices.sole).to have_attributes(invoice_type: "contract", status: "finalized")
+      expect(result.invoices.sole.reload).to have_attributes(invoice_type: "contract", status: "finalized")
     end
 
     context "when a contract selects invoice custom sections" do
