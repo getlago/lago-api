@@ -240,6 +240,33 @@ describe "Daily Usages: charge filters edited mid-period", :premium do
     end
   end
 
+  context "when a charge without filters gets its first filter" do
+    let(:initial_filters) { [] }
+
+    before do
+      run_period(
+        edit_day: 4,
+        new_filters: [{invoice_display_name: "Model a", properties: {amount: "1"}, values: {model: %w[a]}}]
+      )
+    end
+
+    it "keeps filter diffs consistent with the charge diff from the edit on" do
+      (4..5).each { |day| expect_filters_to_add_up(daily_usage(day)) }
+    end
+
+    it "sums the filter diffs since the edit to the period's usage minus what was diffed before" do
+      before_edit = (2..3).sum { |day| charge_diff(daily_usage(day))["amount_cents"] }
+      since_edit = (4..5).sum { |day| filters_total(charge_diff(daily_usage(day)), "amount_cents") }
+
+      expect(before_edit + since_edit).to eq(daily_usage(5).usage.fetch("charges_usage").sole["amount_cents"])
+    end
+
+    it "flags the day after the edit for recompute" do
+      result = DailyUsages::RecomputeDiffsService.call!(subscription:, from_date: Date.new(2025, 3, 1), dry_run: true)
+      expect(result.daily_usages).to eq([daily_usage(4)])
+    end
+  end
+
   context "when filters are not edited" do
     let(:daily_amount_cents) { (10 + 5) * 100 + 1 * 200 }
 

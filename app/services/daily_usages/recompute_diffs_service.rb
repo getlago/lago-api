@@ -1,14 +1,8 @@
 # frozen_string_literal: true
 
 module DailyUsages
-  # Recomputes the stored usage_diff of the daily usages written right after a charge's filters were
-  # edited mid-period. Those rows were diffed while filters were matched on their values only, so the
-  # filters created by the edit kept their whole period-to-date amounts as diff.
-  #
-  # A row is affected when, for a charge (or a grouped usage of a charge) present in both the row and
-  # the previous row of the same billing period, the previous row holds filter values that the row no
-  # longer has. Other rows are left untouched: DailyUsages::ComputeDiffService returns the same diff
-  # for them as when they were written.
+  # Recomputes the usage_diff of the daily usages written right after a charge's filters were edited,
+  # the only rows whose diff depends on how filters are matched between snapshots.
   class RecomputeDiffsService < BaseService
     Result = BaseResult[:daily_usages]
 
@@ -38,26 +32,26 @@ module DailyUsages
     attr_reader :subscription, :from_date, :dry_run
 
     def affected_daily_usages
-      # Rows of periods ending before from_date are not needed, but the row preceding from_date in the
-      # same period is, as it is the reference of the first row in range.
+      # The row preceding from_date in the same period is the reference of the first row in range
       daily_usages = subscription.daily_usages
         .where("to_datetime >= ?", from_date)
         .order(:from_datetime, :usage_date)
 
       daily_usages.group_by { |du| [du.from_datetime, du.to_datetime] }.values.flat_map do |period_usages|
         period_usages.each_cons(2).filter_map do |previous, current|
-          current if current.usage_date >= from_date && dropped_filters?(previous.usage, current.usage)
+          current if current.usage_date >= from_date && filters_changed?(previous.usage, current.usage)
         end
       end
     end
 
-    def dropped_filters?(previous_usage, current_usage)
+    # Includes a charge getting its first filters, as its previous usage was all in the default bucket
+    def filters_changed?(previous_usage, current_usage)
       previous_index = filter_values_index(previous_usage)
       current_index = filter_values_index(current_usage)
 
-      previous_index.any? do |key, previous_values|
-        current_values = current_index[key]
-        current_values && !previous_values.subset?(current_values)
+      current_index.any? do |key, current_values|
+        previous_values = previous_index[key]
+        previous_values && current_values.any? && previous_values != current_values
       end
     end
 

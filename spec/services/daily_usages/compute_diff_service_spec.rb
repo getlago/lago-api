@@ -1619,6 +1619,189 @@ RSpec.describe DailyUsages::ComputeDiffService do
       end
     end
 
+    context "when a charge without filters gets its first filters" do
+      let(:previous_usage) { usage_payload([], 1000, "10.0", 10) }
+
+      let(:usage) do
+        usage_payload(
+          [filter_usage({"model" => %w[a]}, 700, "7.0", 7), filter_usage(nil, 400, "4.0", 4)],
+          1100, "11.0", 11
+        )
+      end
+
+      it "deducts the previous charge usage from the new buckets" do
+        expect(diff_filters.sum { |f| f["amount_cents"] }).to eq(100)
+        expect(diff_filters.sum { |f| BigDecimal(f["units"]) }).to eq(BigDecimal("1.0"))
+        expect(diff_filters.sum { |f| f["events_count"] }).to eq(1)
+      end
+    end
+
+    context "when a value moves from the default bucket into an existing filter" do
+      # The default bucket is priced 200 per unit and holds b (5 units) and c (1 unit), a is priced 100
+      let(:previous_usage) do
+        usage_payload(
+          [filter_usage({"model" => %w[a]}, 1000, "10.0", 10), filter_usage(nil, 1200, "6.0", 6)],
+          2200, "16.0", 16
+        )
+      end
+
+      let(:usage) do
+        usage_payload(
+          [filter_usage({"model" => %w[a b]}, 1500, "15.0", 15), filter_usage(nil, 200, "1.0", 1)],
+          1700, "16.0", 16
+        )
+      end
+
+      it "moves the value's usage out of the default bucket and keeps its repricing" do
+        expect(diff_filters).to eq(
+          [
+            {"values" => {"model" => %w[a b]}, **usage_values(-500, "0.0", 0)},
+            {"values" => nil, **usage_values(0, "0.0", 0)}
+          ]
+        )
+      end
+    end
+
+    context "when a value moves between two edited filters" do
+      let(:previous_filters) do
+        [filter_usage({"model" => %w[a b]}, 1000, "10.0", 10), filter_usage({"model" => %w[c]}, 500, "5.0", 5)]
+      end
+      let(:previous_usage) { usage_payload(previous_filters, 1500, "15.0", 15) }
+
+      let(:usage) do
+        usage_payload(
+          [filter_usage({"model" => %w[b]}, 400, "4.0", 4), filter_usage({"model" => %w[a c]}, 1100, "11.0", 11)],
+          1500, "15.0", 15
+        )
+      end
+
+      let(:expected_filters) do
+        [
+          {"values" => {"model" => %w[b]}, **usage_values(0, "0.0", 0)},
+          {"values" => {"model" => %w[a c]}, **usage_values(0, "0.0", 0)}
+        ]
+      end
+
+      it "gives no diff when no usage was received" do
+        expect(diff_filters).to eq(expected_filters)
+      end
+
+      context "with the previous filters in the reverse order" do
+        let(:previous_filters) do
+          [filter_usage({"model" => %w[c]}, 500, "5.0", 5), filter_usage({"model" => %w[a b]}, 1000, "10.0", 10)]
+        end
+
+        it "gives the same diff" do
+          expect(diff_filters).to eq(expected_filters)
+        end
+      end
+    end
+
+    context "when a filter is removed next to a filter that already took precedence over it" do
+      let(:gold) { {"model" => %w[a], "tier" => %w[gold]} }
+
+      let(:previous_usage) do
+        usage_payload(
+          [
+            filter_usage(gold, 500, "5.0", 5),
+            filter_usage({"model" => %w[a]}, 1000, "10.0", 10),
+            filter_usage(nil, 200, "2.0", 2)
+          ],
+          1700, "17.0", 17
+        )
+      end
+
+      let(:usage) do
+        usage_payload([filter_usage(gold, 1000, "10.0", 10), filter_usage(nil, 1300, "13.0", 13)], 2300, "23.0", 23)
+      end
+
+      it "keeps the untouched filter's own diff" do
+        expect(diff_filters).to eq(
+          [
+            {"values" => gold, **usage_values(500, "5.0", 5)},
+            {"values" => nil, **usage_values(100, "1.0", 1)}
+          ]
+        )
+      end
+    end
+
+    context "when a new filter takes every event of the default bucket" do
+      let(:previous_usage) do
+        usage_payload(
+          [filter_usage({"model" => %w[a]}, 1000, "10.0", 10), filter_usage(nil, 500, "5.0", 5)],
+          1500, "15.0", 15
+        )
+      end
+
+      let(:usage) do
+        usage_payload(
+          [filter_usage({"model" => %w[a]}, 2000, "20.0", 20), filter_usage({"model" => %w[b]}, 1000, "10.0", 10)],
+          3000, "30.0", 30
+        )
+      end
+
+      it "deducts the default bucket from the new filter only" do
+        expect(diff_filters).to eq(
+          [
+            {"values" => {"model" => %w[a]}, **usage_values(1000, "10.0", 10)},
+            {"values" => {"model" => %w[b]}, **usage_values(500, "5.0", 5)}
+          ]
+        )
+      end
+    end
+
+    context "when a filter next to a filter allowing all values is edited" do
+      let(:all_values) { {"model" => [ChargeFilterValue::ALL_FILTER_VALUES]} }
+
+      let(:previous_usage) do
+        usage_payload(
+          [filter_usage({"model" => %w[a]}, 1000, "10.0", 10), filter_usage(all_values, 200, "2.0", 2)],
+          1200, "12.0", 12
+        )
+      end
+
+      let(:usage) do
+        usage_payload(
+          [filter_usage({"model" => %w[a b]}, 1000, "10.0", 10), filter_usage(all_values, 200, "2.0", 2)],
+          1200, "12.0", 12
+        )
+      end
+
+      it "ranks the filter allowing all values below explicit lists" do
+        expect(diff_filters).to eq(
+          [
+            {"values" => {"model" => %w[a b]}, **usage_values(0, "0.0", 0)},
+            {"values" => all_values, **usage_values(0, "0.0", 0)}
+          ]
+        )
+      end
+    end
+
+    context "when filters with the same precedence overlap and are not edited" do
+      let(:previous_usage) do
+        usage_payload(
+          [filter_usage({"model" => %w[a]}, 300, "3.0", 3), filter_usage({"region" => %w[eu]}, 200, "2.0", 2)],
+          500, "5.0", 5
+        )
+      end
+
+      let(:usage) do
+        usage_payload(
+          [filter_usage({"model" => %w[a]}, 400, "4.0", 4), filter_usage({"region" => %w[eu]}, 250, "2.5", 3)],
+          650, "6.5", 7
+        )
+      end
+
+      it "diffs each filter against itself" do
+        expect(diff_filters).to eq(
+          [
+            {"values" => {"model" => %w[a]}, **usage_values(100, "1.0", 1)},
+            {"values" => {"region" => %w[eu]}, **usage_values(50, "0.5", 1)}
+          ]
+        )
+      end
+    end
+
     context "when a filter allowing all values is replaced" do
       let(:previous_usage) do
         usage_payload([filter_usage({"model" => %w[__ALL_FILTER_VALUES__]}, 1000, "10.0", 10)], 1000, "10.0", 10)
