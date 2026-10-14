@@ -58,6 +58,7 @@ module Invoices
     end
 
     def should_generate_xml?
+      return false if invoice.product_catalog?
       return true if context == "admin"
 
       invoice.xml_file.blank? && e_invoicing_enabled?
