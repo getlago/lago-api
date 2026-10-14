@@ -558,64 +558,71 @@ RSpec.describe Invoice do
     end
   end
 
-  def create_contract_fee(invoice)
-    contract = create(:contract, organization:, customer: invoice.customer)
-    contract_rate_card = create(:contract_rate_card, organization:, contract:)
-
-    create(
-      :fee,
-      invoice:,
-      subscription: nil,
-      fee_type: :product,
-      invoiceable: contract_rate_card.rate_card.product,
-      contract:,
-      contract_rate_card:,
-      organization:
-    )
+  shared_context "with a contract fee" do
+    let(:customer) { create(:customer, organization:) }
+    let(:invoice) { create(:invoice, customer:, organization:, invoice_type:) }
+    let(:invoice_type) { :advance_charges }
+    let(:contract) { create(:contract, organization:, customer:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
+    let(:contract_fee) do
+      create(
+        :fee,
+        invoice:,
+        subscription: nil,
+        fee_type: :product,
+        invoiceable: contract_rate_card.rate_card.product,
+        contract:,
+        contract_rate_card:,
+        organization:
+      )
+    end
   end
 
   describe ".product_catalog" do
-    let(:customer) { create(:customer, organization:) }
+    include_context "with a contract fee"
 
-    it "returns contract invoices, including those without fees" do
-      invoice = create(:invoice, customer:, organization:, invoice_type: :contract)
+    context "when the invoice is a contract invoice without fees" do
+      let(:invoice_type) { :contract }
 
-      expect(described_class.product_catalog).to eq([invoice])
+      before { invoice }
+
+      it { expect(described_class.product_catalog).to eq([invoice]) }
     end
 
-    it "returns invoices of another type holding a fee attached to a contract" do
-      invoice = create(:invoice, customer:, organization:, invoice_type: :advance_charges)
-      create_contract_fee(invoice)
+    context "when a contract invoice also holds a contract fee" do
+      let(:invoice_type) { :contract }
 
-      expect(described_class.product_catalog).to eq([invoice])
+      before { contract_fee }
+
+      it "returns the invoice once" do
+        expect(described_class.product_catalog).to eq([invoice])
+      end
     end
 
-    it "returns an invoice once when several fees are attached to a contract" do
-      invoice = create(:invoice, customer:, organization:, invoice_type: :contract)
-      2.times { create_contract_fee(invoice) }
+    context "when an invoice of another type holds a contract fee" do
+      before { contract_fee }
 
-      expect(described_class.product_catalog).to eq([invoice])
+      it { expect(described_class.product_catalog).to eq([invoice]) }
     end
 
-    it "excludes invoices without a contract fee" do
-      create(:invoice, customer:, organization:, invoice_type: :advance_charges)
-      create(:invoice, customer:, organization:, invoice_type: :subscription)
+    context "when invoices have no contract fee" do
+      before do
+        invoice
+        create(:invoice, customer:, organization:, invoice_type: :subscription)
+      end
 
-      expect(described_class.product_catalog).to be_empty
+      it { expect(described_class.product_catalog).to be_empty }
     end
 
-    it "ignores discarded contract fees" do
-      invoice = create(:invoice, customer:, organization:, invoice_type: :subscription)
-      create_contract_fee(invoice).discard!
+    context "when the contract fee is discarded" do
+      before { contract_fee.discard! }
 
-      expect(described_class.product_catalog).to be_empty
+      it { expect(described_class.product_catalog).to be_empty }
     end
   end
 
   describe "#product_catalog?" do
-    let(:customer) { create(:customer, organization:) }
-    let(:invoice) { create(:invoice, customer:, organization:, invoice_type:) }
-    let(:invoice_type) { :advance_charges }
+    include_context "with a contract fee"
 
     context "when the invoice is a contract invoice" do
       let(:invoice_type) { :contract }
@@ -624,7 +631,7 @@ RSpec.describe Invoice do
     end
 
     context "when the invoice has a fee attached to a contract" do
-      before { create_contract_fee(invoice) }
+      before { contract_fee }
 
       it { expect(invoice).to be_product_catalog }
     end
