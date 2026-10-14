@@ -242,22 +242,29 @@ RSpec.describe GraphqlController do
 
       before { create(:customer, organization: membership.organization, name: "ab") }
 
-      ['\\u0000', '\\u{0}'].each do |escape|
-        it "strips #{escape} instead of returning a 500" do
-          query = "query { customers(searchTerm: \"a#{escape}b\") { collection { id } } }"
+      def search(term_literal)
+        post "/graphql",
+          headers: {
+            "Authorization" => "Bearer #{token}",
+            "x-lago-organization" => membership.organization_id,
+            "Content-Type" => "application/json"
+          },
+          params: {query: "query { customers(searchTerm: \"#{term_literal}\") { collection { id } } }"}.to_json
+      end
 
-          post "/graphql",
-            headers: {
-              "Authorization" => "Bearer #{token}",
-              "x-lago-organization" => membership.organization_id,
-              "Content-Type" => "application/json"
-            },
-            params: {query:}.to_json
+      it "strips the decoded null byte instead of returning a 500" do
+        search('a\\u0000b')
 
-          expect(response.status).to be(200)
-          expect(json[:errors]).to be_nil
-          expect(json[:data][:customers][:collection].count).to eq(1)
-        end
+        expect(response.status).to be(200)
+        expect(json[:errors]).to be_nil
+        expect(json[:data][:customers][:collection].count).to eq(1)
+      end
+
+      it "keeps an escaped backslash followed by u0000 as text" do
+        search('a\\\\u0000')
+
+        expect(response.status).to be(200)
+        expect(json[:errors]).to be_nil
       end
     end
 

@@ -34,11 +34,9 @@ class GraphqlController < ApplicationController
 
     CurrentContext.device_info = Utils::DeviceInfo.parse(request)
 
-    query = NullByteGuard.strip_graphql_escapes(query)
-    if NullByteGuard.contains_null_byte?(request)
-      query = NullByteGuard.strip(query)
-      variables = NullByteGuard.strip(variables)
-    end
+    # String and ID arguments are cleaned when GraphQL coerces them (see the graphql_null_bytes
+    # initializer), which covers inline literals. Variables of other types (JSON) are cleaned here.
+    variables = NullByteGuard.strip(variables) if NullByteGuard.contains_null_byte?(request)
 
     if query.present? && query.length > MAX_QUERY_LENGTH
       return render_graphql_error(

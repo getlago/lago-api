@@ -12,7 +12,6 @@ module NullByteGuard
   # Percent-encoded in a URL or a form body, escaped in a JSON body.
   ENCODED_NULL_BYTE = "%00"
   JSON_NULL_BYTE = "\\u0000"
-  GRAPHQL_NULL_BYTE_ESCAPE = /\\u(?:0000|\{0+\})/
 
   module_function
 
@@ -48,14 +47,6 @@ module NullByteGuard
     end
 
     params
-  end
-
-  # GraphQL decodes `\u0000` (and `\u{0}`) escapes in string literals into a null byte after the
-  # controller has read the query, so they are removed from the query text itself.
-  def strip_graphql_escapes(query)
-    return query unless query.is_a?(String) && query.include?("\\u")
-
-    query.gsub(GRAPHQL_NULL_BYTE_ESCAPE, "")
   end
 
   def strip_param(value)
