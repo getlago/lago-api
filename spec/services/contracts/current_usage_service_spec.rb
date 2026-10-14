@@ -132,6 +132,42 @@ RSpec.describe Contracts::CurrentUsageService do
     end
   end
 
+  context "with a customer timezone behind UTC" do
+    let(:customer) { create(:customer, organization:, timezone: "America/Argentina/Buenos_Aires", currency: "EUR") }
+    # Jan 31, 23:00 in the customer timezone.
+    let(:timestamp) { Time.utc(2027, 2, 1, 2) }
+    let(:new_rate_card) { create(:rate_card, organization:, product:, currency: "EUR") }
+
+    before do
+      create(:contract_rate_card, organization:, contract:, rate_card: new_rate_card,
+        effective_date: Date.new(2027, 2, 1), billing_anchor_date: Date.new(2027, 2, 1))
+      create(:rate_card_rate, organization:, rate_card: new_rate_card, effective_from: Time.utc(2027, 2, 1, 3))
+      create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+        code: billable_metric.code, timestamp: Time.utc(2027, 2, 1, 1))
+    end
+
+    it "prices the customer's local window with the version effective on the customer's date" do
+      usage = result.rate_card_usages.sole
+
+      expect(usage.contract_rate_card).to eq(contract_rate_card)
+      expect(usage.billing_segment).to have_attributes(
+        started_at: Time.utc(2027, 1, 1, 3), ended_at: BillingSegment.inclusive_end(Time.utc(2027, 2, 1, 3))
+      )
+      expect(usage.units).to eq(2)
+    end
+
+    context "when the customer's day has turned" do
+      let(:timestamp) { Time.utc(2027, 2, 1, 3, 30) }
+
+      it "prices the next local window with the new version" do
+        usage = result.rate_card_usages.sole
+
+        expect(usage.contract_rate_card.rate_card).to eq(new_rate_card)
+        expect(usage.billing_segment.started_at).to eq(Time.utc(2027, 2, 1, 3))
+      end
+    end
+  end
+
   context "when the contract is pending" do
     let(:contract) { create(:contract, :pending, organization:, customer:, started_at: Time.zone.parse("2027-01-01")) }
 
