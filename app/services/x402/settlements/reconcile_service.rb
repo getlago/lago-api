@@ -17,6 +17,7 @@ module X402
         raise "#{self.class.name} must run outside a database transaction" if in_transaction?
 
         reconcile if settlement.pending?
+        grant if ungranted?
 
         result.settlement = settlement
         result
@@ -33,7 +34,24 @@ module X402
           transition(status: :failed, transaction_hash: nil)
         end
       rescue X402::Chain::Error => e
-        report(e)
+        report("chain read failed", e)
+      end
+
+      def ungranted?
+        settlement.credit_purchase? && settlement.settled? && settlement.wallet_transaction_id.nil?
+      end
+
+      def grant
+        grant_result = X402::CreditPurchases::GrantService.call(settlement:)
+        report("credit grant failed", grant_result.error) if grant_result.failure?
+      rescue => e
+        settlement.reload
+
+        if settlement.wallet_transaction_id.nil?
+          report("credit grant failed", e)
+        else
+          report("credit grant follow-up failed", e)
+        end
       end
 
       def reader
@@ -69,8 +87,8 @@ module X402
         end
       end
 
-      def report(error)
-        Rails.logger.warn("[x402] chain read failed settlement_id=#{settlement.id} network=#{settlement.network}: #{error.class} #{error.message}")
+      def report(failure, error)
+        Rails.logger.warn("[x402] #{failure} settlement_id=#{settlement.id} network=#{settlement.network}: #{error.class} #{error.message}")
         Sentry.capture_exception(error, extra: {organization_id: settlement.organization_id, settlement_id: settlement.id, network: settlement.network})
       end
 
