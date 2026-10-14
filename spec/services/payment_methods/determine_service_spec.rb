@@ -279,12 +279,67 @@ RSpec.describe PaymentMethods::DetermineService do
 
       context "with a contract invoice" do
         let(:invoice) { create(:invoice, customer:, organization:, invoice_type: :contract) }
+        let(:contract) { create(:contract, organization:, customer:) }
 
-        it "returns no payment method" do
+        before { create(:billing_segment, organization:, customer:, contract:, invoice:) }
+
+        context "when contract has no payment method configured" do
+          it "returns the customer default payment method" do
+            result = service.call
+
+            expect(result).to be_success
+            expect(result.payment_method).to eq(default_payment_method)
+          end
+        end
+
+        context "when contract has a payment method" do
+          let(:contract_payment_method) { create(:payment_method, customer:, is_default: false) }
+          let(:contract) { create(:contract, organization:, customer:, payment_method: contract_payment_method) }
+
+          it "returns the contract payment method" do
+            result = service.call
+
+            expect(result).to be_success
+            expect(result.payment_method).to eq(contract_payment_method)
+          end
+        end
+
+        context "when contract has manual payment method type" do
+          let(:contract) { create(:contract, organization:, customer:, payment_method_type: "manual") }
+
+          it "returns nil" do
+            result = service.call
+
+            expect(result).to be_success
+            expect(result.payment_method).to be_nil
+          end
+        end
+      end
+
+      context "with an advance_charges invoice holding a contract fee without billing segment" do
+        let(:invoice) { create(:invoice, customer:, organization:, invoice_type: :advance_charges) }
+        let(:contract_payment_method) { create(:payment_method, customer:, is_default: false) }
+        let(:contract) { create(:contract, organization:, customer:, payment_method: contract_payment_method) }
+        let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
+
+        before do
+          create(
+            :fee,
+            invoice:,
+            organization:,
+            subscription: nil,
+            fee_type: :product,
+            invoiceable: contract_rate_card.rate_card.product,
+            contract:,
+            contract_rate_card:
+          )
+        end
+
+        it "returns the payment method of the fee contract" do
           result = service.call
 
           expect(result).to be_success
-          expect(result.payment_method).to be_nil
+          expect(result.payment_method).to eq(contract_payment_method)
         end
       end
 
