@@ -268,6 +268,47 @@ RSpec.describe GraphqlController do
       end
     end
 
+    context "with a null byte escape inside an inline JSON argument", :premium do
+      let(:membership) { create(:membership, roles: [:admin]) }
+      let(:token) { Utils::AuthToken.encode(user: membership.user) }
+      let(:customer) { create(:customer, organization: membership.organization) }
+      let(:add_on) { create(:add_on, organization: membership.organization) }
+
+      before { membership.organization.enable_feature_flag!(:order_forms) }
+
+      it "strips it instead of returning a 500" do
+        mutation = <<~GQL
+          mutation {
+            createQuote(input: {
+              customerId: "#{customer.id}",
+              orderType: one_off,
+              content: "Test content",
+              billingItems: {addOns: [{
+                id: "#{add_on.id}",
+                localId: "a\\u0000b",
+                type: "add_on",
+                payload: {code: "#{add_on.code}", units: 1, unitAmountCents: 10000, totalAmountCents: 10000}
+              }]}
+            }) {
+              currentVersion { billingItems }
+            }
+          }
+        GQL
+
+        post "/graphql",
+          headers: {
+            "Authorization" => "Bearer #{token}",
+            "x-lago-organization" => membership.organization_id,
+            "Content-Type" => "application/json"
+          },
+          params: {query: mutation}.to_json
+
+        expect(response.status).to be(200)
+        expect(json[:errors]).to be_nil
+        expect(json[:data][:createQuote][:currentVersion][:billingItems][:addOns].first[:localId]).to eq("ab")
+      end
+    end
+
     context "with query length validation" do
       let(:user) { create(:user) }
       let(:token) do

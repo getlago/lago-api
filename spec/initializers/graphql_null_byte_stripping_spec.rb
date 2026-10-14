@@ -15,6 +15,14 @@ RSpec.describe GraphqlNullByteStripping do
     end
   end
 
+  describe "JSON.coerce_input" do
+    it "removes null bytes from nested keys and values" do
+      value = {"addOns" => [{"localId" => "a\u0000b", "payload" => {"k\u0000" => 1}}]}
+
+      expect(GraphQL::Types::JSON.coerce_input(value, nil)).to eq({"addOns" => [{"localId" => "ab", "payload" => {"k" => 1}}]})
+    end
+  end
+
   it "removes null bytes decoded from an inline literal" do
     query = GraphQL.parse('{ customers(searchTerm: "a\\u0000b") { collection { id } } }')
     literal = query.definitions.first.selections.first.arguments.first.value
