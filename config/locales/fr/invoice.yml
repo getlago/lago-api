@@ -29,7 +29,9 @@ fr:
     credit_notes: Avoir(s)
     date_from: Du
     date_to: au
+    description: Description
     details: Détails de %{resource}
+    details_title: Détails
     document_name: Facture
     document_tax_name: Facture fiscale
     due_date: Date d'échéance le %{date}
@@ -82,6 +84,7 @@ fr:
     prepaid_credits_with_value: Crédit(s) prépayé(s) - %{wallet_name}
     progressive_billing_credit: Usage déjà facturé
     purchase_order_number: Nº de bon de commande
+    quantity: Quantité
     quarter: trimestre
     quarterly: trimestriellement
     reached_usage_threshold: Cette facturation progressive est générée car votre usage cumulé a atteint %{usage_amount}, dépassant le seuil de %{threshold_amount}.
