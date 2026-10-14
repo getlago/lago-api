@@ -5,7 +5,8 @@ module Api
     module Contracts
       class UsageController < Api::V2::BaseController
         def current
-          contract = active_or_pending_contract
+          # The active contract first; a pending one has no usage yet, so it answers an empty list.
+          contract = current_organization.contracts.terminatable_by_external_id(params[:external_id])
           return not_found_error(resource: "contract") unless contract
 
           result = ::Contracts::CurrentUsageService.call(
@@ -22,13 +23,6 @@ module Api
         end
 
         private
-
-        # A pending contract has no usage yet, so it answers an empty list.
-        def active_or_pending_contract
-          contracts = current_organization.contracts.where(external_id: params[:external_id])
-
-          contracts.active.first || contracts.pending.first
-        end
 
         def filter_params
           params.permit(:rate_card_code, :product_code, :product_filter_code, :product_type)
