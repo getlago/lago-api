@@ -5,6 +5,9 @@ require "rails_helper"
 RSpec.describe CreditNote::AppliedTax do
   subject(:applied_tax) { create(:credit_note_applied_tax) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+
   describe "associations" do
     it { is_expected.to belong_to(:credit_note) }
     it { is_expected.to belong_to(:tax).optional }

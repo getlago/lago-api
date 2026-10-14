@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe PaymentProviders::Stripe::Customers::FetchDefaultPaymentMethodService do
   subject(:service) { described_class.new(provider_customer:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:stripe_provider) { create(:stripe_provider, organization:) }
   let(:provider_customer_id) { "cus_123456" }
   let(:provider_customer) do

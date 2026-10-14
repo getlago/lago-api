@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe PaymentProviders::Cashfree::Webhooks::PaymentLinkEventService do
   subject(:webhook_service) { described_class.new(organization_id: organization.id, event_json:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:event_json) { File.read("spec/fixtures/cashfree/payment_link_event_payment.json") }
 
   let(:payment_service) { instance_double(Invoices::Payments::CashfreeService) }

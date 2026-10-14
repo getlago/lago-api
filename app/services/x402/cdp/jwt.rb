@@ -3,7 +3,10 @@
 module X402
   module Cdp
     class Jwt
+      class InvalidKeyError < StandardError; end
+
       TTL = 120
+      KEY_ERRORS = [OpenSSL::PKey::PKeyError, ::JWT::EncodeError, ::JWT::IncorrectAlgorithm].freeze
 
       def self.generate(**)
         new(**).generate
@@ -18,7 +21,9 @@ module X402
       end
 
       def generate
-        ed25519? ? encode_ed25519 : ::JWT.encode(claims, OpenSSL::PKey.read(api_key_secret), "ES256", header_fields)
+        ed25519? ? encode_ed25519 : ::JWT.encode(claims, OpenSSL::PKey.read(api_key_secret, ""), "ES256", header_fields)
+      rescue *KEY_ERRORS => e
+        raise InvalidKeyError, "unusable CDP API key secret: #{e.class.name}"
       end
 
       private

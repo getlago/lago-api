@@ -3,6 +3,12 @@
 require "rails_helper"
 
 RSpec.describe DailyUsages::FillHistoryJob do
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+    create_default(:plan)
+  end
+
   let(:subscription) { create(:subscription) }
   let(:from_date) { Time.current.beginning_of_month }
   let(:to_date) { from_date.end_of_month }

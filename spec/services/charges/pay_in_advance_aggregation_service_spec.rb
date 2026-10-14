@@ -7,22 +7,16 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
     described_class.new(metered_item:, billing_context:)
   end
 
-  let(:organization) { create(:organization) }
-  let(:billable_metric) { create(:billable_metric, organization:, aggregation_type:, field_name: "item_id") }
-  let(:charge) { create(:standard_charge, billable_metric:, pay_in_advance: true) }
-  let(:charge_filter) { nil }
-  let(:aggregation_type) { "count_agg" }
-  let(:event) { create(:event, organization:, external_subscription_id: subscription.external_id, timestamp: subscription.started_at + 3.days + 1.hour) }
-  let(:common_event) { Events::CommonFactory.new_instance(source: event) }
-  let(:properties) { {} }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:aggregation_type) { "count_agg" }
+  let_it_be(:billable_metric, refind: true) { create(:billable_metric, organization:, aggregation_type:, field_name: "item_id") }
 
-  let(:customer) { create(:customer, organization:) }
-
-  let(:subscription) do
-    create(:subscription, customer:, started_at: DateTime.parse("2023-03-15"))
+  before_all do
+    create_default(:plan)
   end
-  let(:billing_context) { Billing::Context.from(subscription:) }
 
+  let(:charge) { create(:standard_charge, billable_metric:, pay_in_advance: true) }
+  let(:billing_context) { Billing::Context.from(subscription:) }
   let(:boundaries) do
     BillingPeriodBoundaries.new(
       from_datetime: subscription.started_at.beginning_of_day,
@@ -33,7 +27,6 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
       timestamp: subscription.started_at.end_of_month.to_i
     )
   end
-
   let(:agg_result) { BaseService::Result.new }
   let(:subscription_context) { an_instance_of(Billing::Context) }
   let(:metered_item) do
@@ -48,6 +41,15 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
       charges_duration: metered_item.boundaries.charges_duration,
       max_timestamp: metered_item.event.timestamp
     }
+  end
+  let(:charge_filter) { nil }
+  let(:event) { create(:event, organization:, external_subscription_id: subscription.external_id, timestamp: subscription.started_at + 3.days + 1.hour) }
+  let(:common_event) { Events::CommonFactory.new_instance(source: event) }
+  let(:properties) { {} }
+
+  let_it_be(:customer, refind: true) { create(:customer, organization:) }
+  let_it_be(:subscription, refind: true) do
+    create(:subscription, customer:, started_at: DateTime.parse("2023-03-15"))
   end
 
   describe "#call" do
@@ -408,6 +410,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
     end
 
     describe "when sum aggregation" do
+      let(:billable_metric) { create(:billable_metric, organization:, aggregation_type:, field_name: "item_id") }
       let(:aggregation_type) { "sum_agg" }
       let(:sum_service) { instance_double(BillableMetrics::Aggregations::SumService, aggregate: agg_result) }
       let(:properties) do
@@ -438,6 +441,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
     end
 
     describe "when unique_count aggregation" do
+      let(:billable_metric) { create(:billable_metric, organization:, aggregation_type:, field_name: "item_id") }
       let(:aggregation_type) { "unique_count_agg" }
       let(:unique_count_service) do
         instance_double(BillableMetrics::Aggregations::UniqueCountService, aggregate: agg_result)

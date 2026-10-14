@@ -3,15 +3,15 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::Wallets::AlertsResolver do
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "wallets:update" }
-
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:wallet) { create(:wallet, organization:) }
   let(:balance_alert) { create(:wallet_balance_amount_alert, organization:, wallet:, recurring_threshold: 10, thresholds: [75, 50, 25]) }
   let(:credits_alert) { create(:wallet_credits_balance_alert, organization:, wallet:, recurring_threshold: 10, thresholds: [75, 50, 25]) }
   let(:another_alert) { create(:alert, organization:) }
-
   let(:query) do
     <<~GQL
       query($walletId: String!) {
@@ -22,6 +22,8 @@ RSpec.describe Resolvers::Wallets::AlertsResolver do
       }
     GQL
   end
+
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     balance_alert

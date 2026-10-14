@@ -5,8 +5,12 @@ require "rails_helper"
 RSpec.describe RateCardRates::UpdateService do
   subject(:result) { described_class.call(rate_card_rate:, params:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:rate_card) { create(:rate_card, organization:) }
+
+  before_all do
+    create_default(:billable_metric)
+  end
 
   context "with a pending rate" do
     let(:rate_card_rate) do

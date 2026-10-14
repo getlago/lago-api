@@ -4,7 +4,7 @@ module Invoices
   class CustomerUsageService < BaseService
     Result = BaseResult[:invoice, :usage, :fees_taxes]
 
-    PREFILTER_CACHE_TTL = 5.seconds
+    PREFILTER_CACHE_TTL = 15.seconds
 
     def initialize(
       customer:,
@@ -190,7 +190,10 @@ module Invoices
         boundaries:,
         serve_current_usage_from_buckets: use_usage_buckets,
         usage_filters:,
-        charges:
+        charges:,
+        # Its stored totals are a cache like the fees one: a caller asking for none, such as the
+        # usage buckets comparison or the daily usage backfill run at a frozen time, reads every event.
+        incremental_charge_cache: with_cache && organization.feature_flag_enabled?(:incremental_charge_cache)
       )
     end
 
@@ -328,7 +331,8 @@ module Invoices
         codes: filtered_metric_codes,
         with_last_seen_at: charge_cache_enabled?,
         precomputed_filters:,
-        combinations_cache_ttl: (PREFILTER_CACHE_TTL if prefilter_cache_enabled?)
+        combinations_cache_ttl: (PREFILTER_CACHE_TTL if prefilter_cache_enabled?),
+        incremental_combinations: organization.feature_flag_enabled?(:usage_prefilter_incremental)
       )
     end
 

@@ -32,8 +32,8 @@ RSpec.describe Wallet do
   end
 
   describe "#billing_entity" do
-    let(:organization) { create(:organization) }
-    let(:customer) { create(:customer, organization:) }
+    let_it_be(:organization) { create_default(:organization) }
+    let_it_be(:customer) { create_default(:customer, organization:) }
 
     context "when wallet has a billing_entity" do
       let(:billing_entity) { create(:billing_entity, organization:) }
@@ -286,6 +286,7 @@ RSpec.describe Wallet do
       lock_version
       name
       ongoing_balance_cents
+      ongoing_billable_metric_amounts
       ongoing_usage_balance_cents
       paid_top_up_max_amount_cents
       paid_top_up_min_amount_cents

@@ -6,7 +6,8 @@ RSpec.describe Memberships::CreateService do
   subject(:create_service) { described_class.new(user:, organization:) }
 
   let(:user) { create(:user) }
-  let(:organization) { create(:organization) }
+
+  let_it_be(:organization) { create(:organization) }
 
   describe "#call" do
     it "creates a membership" do

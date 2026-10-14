@@ -5,12 +5,9 @@ require "rails_helper"
 RSpec.describe DatabaseMigrations::BackfillStripePaymentMethodCardDetailsJob do
   subject(:perform_job) { described_class.perform_now }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:stripe_provider) { create(:stripe_provider, organization:) }
-  let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: stripe_provider) }
-  let(:invoice) { create(:invoice, customer:, organization:) }
-
   let(:migration_payment_method) do
     create(
       :payment_method,
@@ -21,7 +18,6 @@ RSpec.describe DatabaseMigrations::BackfillStripePaymentMethodCardDetailsJob do
       details: {"from_migration" => true}
     )
   end
-
   let(:payment_with_card_details) do
     create(
       :payment,
@@ -39,6 +35,9 @@ RSpec.describe DatabaseMigrations::BackfillStripePaymentMethodCardDetailsJob do
       }
     )
   end
+  let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: stripe_provider) }
+
+  let_it_be(:invoice) { create(:invoice, customer:, organization:) }
 
   context "when payment method has from_migration marker and matching payment data" do
     it "updates the card details on the payment method" do

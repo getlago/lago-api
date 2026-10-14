@@ -4,13 +4,8 @@ require "rails_helper"
 
 RSpec.describe Mutations::PaymentProviders::Gocardless::Update do
   let(:required_permission) { "organization:integrations:update" }
-  let(:oauth_client) { instance_double(OAuth2::Client) }
-  let(:auth_code_strategy) { instance_double(OAuth2::Strategy::AuthCode) }
-  let(:access_token) { instance_double(OAuth2::AccessToken) }
-  let(:membership) { create(:membership) }
   let(:gocardless_provider) { create(:gocardless_provider, organization: membership.organization) }
   let(:success_redirect_url) { Faker::Internet.url }
-
   let(:mutation) do
     <<-GQL
       mutation($input: UpdateGocardlessPaymentProviderInput!) {
@@ -21,6 +16,12 @@ RSpec.describe Mutations::PaymentProviders::Gocardless::Update do
       }
     GQL
   end
+  let(:oauth_client) { instance_double(OAuth2::Client) }
+  let(:auth_code_strategy) { instance_double(OAuth2::Strategy::AuthCode) }
+  let(:access_token) { instance_double(OAuth2::AccessToken) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     allow(OAuth2::Client).to receive(:new)

@@ -33,6 +33,7 @@ module Invoices
 
         invoice.void!
         flag_lifetime_usage_for_refresh
+        cancel_open_provider_payment
 
         invoice.credits.each do |credit|
           AppliedCoupons::RecreditService.call!(credit:) if credit.applied_coupon_id.present?
@@ -74,6 +75,16 @@ module Invoices
 
     def flag_lifetime_usage_for_refresh
       LifetimeUsages::FlagRefreshFromInvoiceService.call(invoice:).raise_if_error!
+    end
+
+    # an open provider payment keeps collecting after the void, e.g. a Stripe bank transfer intent
+    # still receives the customer's next wire
+    def cancel_open_provider_payment
+      payment = invoice.payments.where(payable_payment_status: %w[pending processing]).first
+
+      if payment
+        PaymentProviders::CancelPaymentJob.perform_after_commit(payment)
+      end
     end
 
     def valid_credit_note_amounts?

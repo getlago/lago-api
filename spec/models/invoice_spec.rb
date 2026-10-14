@@ -5,7 +5,9 @@ require "rails_helper"
 RSpec.describe Invoice do
   subject(:invoice) { create(:invoice, organization:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:add_on) { create_default(:add_on) }
 
   it_behaves_like "paper_trail traceable"
   it_behaves_like "a model with a purchase order number"
@@ -157,13 +159,13 @@ RSpec.describe Invoice do
       it { expect(invoice.errors.messages[:x402_connection]).to be_empty }
 
       context "with a connection of another organization" do
-        let(:connection) { create(:x402_connection) }
+        let(:connection) { create(:x402_connection, organization: create(:organization)) }
 
         it { expect(invoice.errors.messages[:x402_connection]).to eq(["must_belong_to_same_organization"]) }
       end
 
       context "with a discarded connection of another organization" do
-        let(:connection) { create(:x402_connection, :discarded) }
+        let(:connection) { create(:x402_connection, :discarded, organization: create(:organization)) }
 
         it { expect(invoice.errors.messages[:x402_connection]).to eq(["must_belong_to_same_organization"]) }
       end
@@ -353,8 +355,16 @@ RSpec.describe Invoice do
     end
 
     context "with invoices on other organization" do
+      let(:other_organization) { create(:organization) }
+
       before do
-        create(:invoice, sequential_id: 1, organization_sequential_id: 0)
+        create(
+          :invoice,
+          organization: other_organization,
+          customer: create(:customer, organization: other_organization),
+          sequential_id: 1,
+          organization_sequential_id: 0
+        )
       end
 
       it "scopes the sequence to the organization" do

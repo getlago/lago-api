@@ -37,10 +37,20 @@ describe X402::Chain::EvmReader do
     log_time + (2 * (number - log_block))
   end
 
+  def log_range(rpc)
+    rpc["params"].first.values_at("toBlock", "fromBlock").map { |block| block.to_i(16) }.reduce(:-)
+  end
+
+  def log_range_refusal
+    {status: 413, body: {jsonrpc: "2.0", id: 1, error: {code: -32614, message: "eth_getLogs is limited to a 200 range"}}.to_json}
+  end
+
   before do
     stub_request(:post, "https://sepolia.base.org").to_return do |request|
       rpc = JSON.parse(request.body)
       rpc_calls << rpc
+      next log_range_refusal if rpc["method"] == "eth_getLogs" && log_range(rpc) > 200
+
       result = case rpc["method"]
       when "eth_chainId"
         chain_id
@@ -382,17 +392,17 @@ describe X402::Chain::EvmReader do
   context "when the row is read a day later" do
     let(:safe_block) { log_block + 43_200 }
 
-    it "scans inclusive chunks of at most 1,000 blocks" do
+    it "scans inclusive chunks of at most 200 blocks" do
       reader.settled?
 
       expect(calls("eth_getLogs").map { |call| call["params"].first.values_at("fromBlock", "toBlock").map { |block| block.to_i(16) } })
-        .to all(satisfy { |from, to| to - from < 1_000 })
+        .to all(satisfy { |from, to| to - from < 200 })
     end
 
     it "only scans the authorization's window" do
       reader.settled?
 
-      expect(calls("eth_getLogs").size).to eq(1)
+      expect(calls("eth_getLogs").size).to eq(3)
     end
 
     it "still finds the transaction" do

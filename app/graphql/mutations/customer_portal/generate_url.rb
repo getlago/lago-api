@@ -6,6 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
+      REQUIRED_PERMISSION = "customers:view"
+
       graphql_name "GenerateCustomerPortalUrl"
       description "Generate customer portal URL"
 

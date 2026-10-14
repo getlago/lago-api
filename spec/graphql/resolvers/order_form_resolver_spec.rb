@@ -3,7 +3,11 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::OrderFormResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "order_forms:view" }
+  let(:organization) { membership.organization }
+  let(:order_form) { create(:order_form, organization:, customer:) }
 
   let(:query) do
     <<~GQL
@@ -25,10 +29,8 @@ RSpec.describe Resolvers::OrderFormResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
-  let(:order_form) { create(:order_form, organization:, customer:) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before { order_form }
 

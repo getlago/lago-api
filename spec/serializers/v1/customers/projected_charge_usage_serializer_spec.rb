@@ -5,6 +5,10 @@ require "rails_helper"
 RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
   subject(:serializer) { described_class.new(usage, root_name: "charges", projections:) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:customer) { create_default(:customer) }
   let(:charge) { create(:standard_charge) }
   let(:billable_metric) { charge.billable_metric }
   let(:subscription) { create(:subscription, plan: charge.plan) }

@@ -5,6 +5,10 @@ require "rails_helper"
 RSpec.describe Subscriptions::Dates::WeeklyService do
   subject(:date_service) { described_class.new(subscription, billing_at, false) }
 
+  before_all do
+    create_default(:organization)
+  end
+
   let(:subscription) do
     create(
       :subscription,
@@ -16,8 +20,8 @@ RSpec.describe Subscriptions::Dates::WeeklyService do
     )
   end
 
-  let(:customer) { create(:customer, timezone:) }
-  let(:plan) { create(:plan, interval: :weekly, pay_in_advance:) }
+  let(:customer) { create_default(:customer, timezone:) }
+  let(:plan) { create_default(:plan, interval: :weekly, pay_in_advance:) }
   let(:pay_in_advance) { false }
 
   let(:subscription_at) { Time.zone.parse("02 Feb 2021") }

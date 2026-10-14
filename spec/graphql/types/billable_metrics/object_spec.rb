@@ -5,6 +5,10 @@ require "rails_helper"
 RSpec.describe Types::BillableMetrics::Object do
   subject { described_class }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric, organization:) }
+  let_it_be(:membership) { create_default(:membership) }
+
   it do
     expect(subject).to have_field(:id).of_type("ID!")
     expect(subject).to have_field(:organization).of_type("Organization")
@@ -33,9 +37,6 @@ RSpec.describe Types::BillableMetrics::Object do
 
   describe "#has_subscriptions" do
     let(:required_permission) { "billable_metrics:view" }
-    let(:membership) { create(:membership) }
-    let(:organization) { membership.organization }
-    let(:billable_metric) { create(:billable_metric, organization:) }
 
     let(:query) do
       <<~GQL
@@ -76,9 +77,6 @@ RSpec.describe Types::BillableMetrics::Object do
 
   describe "#has_active_subscriptions" do
     let(:required_permission) { "billable_metrics:view" }
-    let(:membership) { create(:membership) }
-    let(:organization) { membership.organization }
-    let(:billable_metric) { create(:billable_metric, organization:) }
 
     let(:query) do
       <<~GQL
@@ -129,9 +127,6 @@ RSpec.describe Types::BillableMetrics::Object do
 
   describe "#has_draft_invoices" do
     let(:required_permission) { "billable_metrics:view" }
-    let(:membership) { create(:membership) }
-    let(:organization) { membership.organization }
-    let(:billable_metric) { create(:billable_metric, organization:) }
 
     let(:query) do
       <<~GQL
@@ -199,9 +194,6 @@ RSpec.describe Types::BillableMetrics::Object do
 
   describe "#has_plans" do
     let(:required_permission) { "billable_metrics:view" }
-    let(:membership) { create(:membership) }
-    let(:organization) { membership.organization }
-    let(:billable_metric) { create(:billable_metric, organization:) }
 
     let(:query) do
       <<~GQL
@@ -245,9 +237,6 @@ RSpec.describe Types::BillableMetrics::Object do
 
   describe "#integration_mappings" do
     let(:required_permission) { "billable_metrics:view" }
-    let(:membership) { create(:membership) }
-    let(:organization) { membership.organization }
-    let(:billable_metric) { create(:billable_metric, organization:) }
     let(:netsuite_integration) { create(:netsuite_integration, organization:) }
     let(:xero_integration) { create(:xero_integration, organization:) }
     let(:netsuite_mapping) { create(:netsuite_mapping, integration: netsuite_integration, mappable: billable_metric, organization:) }

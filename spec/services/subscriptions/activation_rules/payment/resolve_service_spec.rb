@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe Subscriptions::ActivationRules::Payment::ResolveService do
   subject(:result) { described_class.call(subscription:, invoice:, payment_status:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:, pay_in_advance: true) }
+  let_it_be(:organization) { create(:organization) }
+  let(:customer) { create_default(:customer, organization:) }
+  let(:plan) { create_default(:plan, organization:, pay_in_advance: true) }
   let(:subscription) { create(:subscription, :incomplete, organization:, customer:, plan:) }
   let(:rule) { create(:subscription_activation_rule, subscription:, status: "pending") }
   let(:invoice) do

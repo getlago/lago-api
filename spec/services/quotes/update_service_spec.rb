@@ -3,10 +3,14 @@
 require "rails_helper"
 
 RSpec.describe Quotes::UpdateService do
+  before_all do
+    create_default(:customer)
+  end
+
   subject(:update_service) { described_class.new(quote:, params: update_params) }
 
-  let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
-  let(:membership) { create(:membership, organization:) }
+  let_it_be(:organization) { create_default(:organization, feature_flags: ["order_forms"]) }
+  let_it_be(:membership) { create(:membership, organization:) }
   let(:owner) { membership.user }
   let(:quote) { create(:quote, organization:) }
   let(:update_params) { {owners: [owner.id]} }

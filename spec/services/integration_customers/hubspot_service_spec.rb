@@ -4,10 +4,11 @@ require "rails_helper"
 
 RSpec.describe IntegrationCustomers::HubspotService do
   let(:integration) { create(:hubspot_integration, organization:) }
-  let(:organization) { membership.organization }
-  let(:membership) { create(:membership) }
-  let(:customer) { create(:customer, organization:, customer_type: "individual") }
   let(:targeted_object) { "contacts" }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:customer) { create(:customer, organization:, customer_type: "individual") }
 
   describe "#create" do
     subject(:service_call) { described_class.new(integration:, customer:, subsidiary_id: nil, targeted_object:).create }
@@ -42,8 +43,8 @@ RSpec.describe IntegrationCustomers::HubspotService do
     end
 
     context "with targeted_object" do
-      let(:customer) { create(:customer, organization:, customer_type:) }
-      let(:customer_type) { "individual" }
+      let_it_be(:customer_type) { "individual" }
+      let_it_be(:customer) { create(:customer, organization:, customer_type:) }
 
       context 'when params[:targeted_object] is specified as "contacts"' do
         let(:targeted_object) { "contacts" }

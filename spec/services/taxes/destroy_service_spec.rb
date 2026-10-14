@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Taxes::DestroyService do
   subject(:destroy_service) { described_class.new(tax:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:billing_entity) { organization.default_billing_entity }
   let(:tax) { create(:tax, :applied_to_billing_entity, organization:) }
   let(:customer) { create(:customer, organization:) }

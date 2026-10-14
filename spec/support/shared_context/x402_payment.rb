@@ -1,6 +1,41 @@
 # frozen_string_literal: true
 
+RSpec.shared_context "with CDP credentials" do
+  let(:cdp_host) { "https://api.cdp.coinbase.com" }
+  let(:cdp_api_key_id) { "organizations/lago-test/apiKeys/x402" }
+  let(:cdp_signing_key) { OpenSSL::PKey.generate_key("ED25519") }
+  let(:cdp_api_key_secret) { Base64.strict_encode64(cdp_signing_key.raw_private_key + cdp_signing_key.raw_public_key) }
+
+  def cdp_fixture(name)
+    File.read(Rails.root.join("spec/fixtures/x402/cdp/#{name}.json"))
+  end
+
+  def cdp_account_url(family, address)
+    "#{cdp_host}/platform/v2/#{(family == :svm) ? "solana" : "evm"}/accounts/#{address}"
+  end
+
+  def stub_cdp_supported(status: 200, body: cdp_fixture("supported"))
+    stub_request(:get, "#{cdp_host}/platform/v2/x402/supported").to_return(status:, body:)
+  end
+
+  def stub_cdp_account(family, address, status: 200, body: cdp_account_body(address, status))
+    stub_request(:get, cdp_account_url(family, address)).to_return(status:, body:)
+  end
+
+  def cdp_account_body(address, status)
+    case status
+    when 200 then {address:, name: "payout"}.to_json
+    when 401 then "Unauthorized\n"
+    when 404 then {errorType: "not_found", errorMessage: "Account with given address not found.", correlationId: "corr-404"}.to_json
+    when 400 then {errorType: "invalid_request", correlationId: "corr-400"}.to_json
+    else {errorType: "internal_server_error", correlationId: "corr-#{status}"}.to_json
+    end
+  end
+end
+
 RSpec.shared_context "with an x402 payment" do
+  include_context "with CDP credentials"
+
   let(:organization) { create(:organization) }
   let(:x402_connection) do
     create(
@@ -13,11 +48,7 @@ RSpec.shared_context "with an x402 payment" do
     )
   end
   let(:x402_svm_payer) { "BprZ3eTVMHAcqC2wcE4XY71tvjdxJ6C6pSYjVmD75ujf" }
-  let(:cdp_host) { "https://api.cdp.coinbase.com" }
   let(:cdp_facilitator_url) { "#{cdp_host}/platform/v2/x402" }
-  let(:cdp_api_key_id) { "organizations/lago-test/apiKeys/x402" }
-  let(:cdp_signing_key) { OpenSSL::PKey.generate_key("ED25519") }
-  let(:cdp_api_key_secret) { Base64.strict_encode64(cdp_signing_key.raw_private_key + cdp_signing_key.raw_public_key) }
 
   let(:x402_evm_requirements) do
     {
@@ -73,10 +104,6 @@ RSpec.shared_context "with an x402 payment" do
     stub_request(:post, "#{cdp_facilitator_url}#{path}").to_return(status:, body: body.is_a?(String) ? body : body.to_json)
   end
 
-  def cdp_fixture(name)
-    File.read(Rails.root.join("spec/fixtures/x402/cdp/#{name}.json"))
-  end
-
   def stub_cdp_facilitator(fault: nil)
     verify = {status: 200, body: cdp_fixture("verify_valid")}
     settle = {status: 200, body: cdp_fixture("settle_success")}
@@ -109,6 +136,6 @@ RSpec.shared_context "with an x402 payment" do
     else
       stub_request(:post, "#{cdp_facilitator_url}/settle").to_return(settle)
     end
-    stub_request(:get, "#{cdp_facilitator_url}/supported").to_return(status: 200, body: cdp_fixture("supported"))
+    stub_cdp_supported
   end
 end

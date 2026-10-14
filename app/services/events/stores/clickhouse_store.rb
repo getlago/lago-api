@@ -96,7 +96,9 @@ module Events
       # This replaces a previous two-pass implementation (`GROUP BY` the dedup key +
       # `INNER ANY JOIN`) which was dominating the ClickHouse cluster CPU, and an even
       # earlier `argMax` version which caused ClickHouse OOM on large subscriptions.
-      def deduplicated_events_sql(from_datetime:, to_datetime:, deduplicated_columns: [])
+      # `before` excludes its own timestamp, unlike `to_datetime`: a window cut in two at the same
+      # instant counts each event once (see ChargeFiltersScan::IncrementalCache).
+      def deduplicated_events_sql(from_datetime:, to_datetime:, deduplicated_columns: [], before: nil)
         columns = deduplicated_columns.dup
 
         # Grouping and filtering is made based on the properties
@@ -109,11 +111,11 @@ module Events
         <<~SQL.squish
           SELECT #{selected_columns}
           FROM events_enriched FINAL
-          WHERE #{deduplicated_events_where_sql(from_datetime:, to_datetime:)}
+          WHERE #{deduplicated_events_where_sql(from_datetime:, to_datetime:, before:)}
         SQL
       end
 
-      def deduplicated_events_where_sql(from_datetime:, to_datetime:)
+      def deduplicated_events_where_sql(from_datetime:, to_datetime:, before: nil)
         conditions = [
           ActiveRecord::Base.sanitize_sql_for_conditions(
             [
@@ -127,6 +129,7 @@ module Events
 
         conditions << ActiveRecord::Base.sanitize_sql_for_conditions(["timestamp >= ?", from_datetime]) if from_datetime
         conditions << upper_timestamp_boundary_sql(to_datetime) if to_datetime
+        conditions << ActiveRecord::Base.sanitize_sql_for_conditions(["timestamp < ?", before]) if before
         conditions.join(" AND ")
       end
 
@@ -140,7 +143,7 @@ module Events
       #
       # ClickHouse stores properties as a Map(String, String); a missing key reads back as an
       # empty string, so blank values are dropped to mirror the Postgres jsonb behaviour.
-      def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false, with_last_seen_at: true)
+      def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false, with_last_seen_at: true, ingested_after: nil)
         return [] if codes.empty?
 
         Events::Stores::Utils::ClickhouseConnection.with_retry do
@@ -150,6 +153,9 @@ module Events
             .where(code: codes)
             .where("events_enriched.timestamp <= ?", applicable_to_datetime)
           scope = scope.where("events_enriched.timestamp >= ?", from_datetime) unless include_all_history
+          # Only the properties of the rows passing this condition are read, which is what makes an
+          # incremental read cheap: the properties map is most of the bytes of a row.
+          scope = scope.where("events_enriched.enriched_at > ?", ingested_after) if ingested_after
 
           selects = ["code AS code"]
           group_columns = ["code"]

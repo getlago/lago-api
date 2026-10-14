@@ -3,11 +3,15 @@
 require "rails_helper"
 
 RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService do
+  before_all do
+    create_default(:customer)
+  end
+
   subject(:result) { described_class.call(subscription:, plan:, feature: seats, plan_entitlement:, sub_entitlement:, privilege_params:, partial:) }
 
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
-  let(:subscription) { create(:subscription, organization:, plan:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create(:plan, organization:) }
+  let_it_be(:subscription) { create(:subscription, organization:, plan:) }
 
   let(:plan_entitlement) { plan.entitlements.includes(values: :privilege).find_by(feature: seats) }
   let(:sub_entitlement) { subscription.entitlements.includes(values: :privilege).find_by(feature: seats) }
@@ -17,7 +21,7 @@ RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService do
   let(:seats_reset) { create(:privilege, feature: seats, code: "reset", name: "Password Reset", value_type: "boolean") }
   let(:seats_signin) { create(:privilege, feature: seats, code: "signin", name: "Sign In", value_type: "select", config: {select_options: ["password", "okta"]}) }
 
-  let(:same_code_feature) { create(:feature, organization: create(:organization), code: "seats", name: "Nb users") }
+  let_it_be(:same_code_feature) { create(:feature, organization: create(:organization), code: "seats", name: "Nb users") }
 
   before do
     seats_reset

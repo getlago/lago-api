@@ -29,12 +29,13 @@ module Events
       # last_seen_at is the created_at of the most recent event in the combination. With
       # with_last_seen_at disabled the aggregate is not computed and last_seen_at is nil, which
       # callers that never read it use to avoid scanning the column (see BillingPeriodFilterService).
-      def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false, with_last_seen_at: true)
+      def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false, with_last_seen_at: true, ingested_after: nil)
         scope = Event.where(external_subscription_id: billing_context.external_id)
           .where(organization_id: billing_context.organization_id)
           .where(code: codes)
           .to_datetime(applicable_to_datetime)
         scope = scope.from_datetime(from_datetime) unless include_all_history
+        scope = scope.where("events.created_at > ?", ingested_after) if ingested_after
 
         selects = [<<~SQL.squish]
           events.code AS code,

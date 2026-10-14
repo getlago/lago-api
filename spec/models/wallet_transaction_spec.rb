@@ -3,6 +3,9 @@
 require "rails_helper"
 
 RSpec.describe WalletTransaction do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+
   it_behaves_like "a model with a purchase order number"
 
   describe "validations" do
@@ -59,7 +62,7 @@ RSpec.describe WalletTransaction do
         "status" => hash_including("pending", "settled", "failed"),
         "transaction_status" => hash_including("purchased", "granted", "voided", "invoiced"),
         "transaction_type" => hash_including("inbound", "outbound"),
-        "source" => hash_including("manual", "interval", "threshold")
+        "source" => {"manual" => 0, "interval" => 1, "threshold" => 2, "x402" => 3}
       )
     end
   end
@@ -122,6 +125,19 @@ RSpec.describe WalletTransaction do
         purchased_10,
         invoiced_15
       ])
+    end
+  end
+
+  describe ".billable_metric_amount_key" do
+    let(:billable_metric_id) { "00000000-0000-4000-8000-000000000001" }
+
+    it "is the billable metric for usage that targeted no wallet" do
+      expect(described_class.billable_metric_amount_key(billable_metric_id, nil)).to eq(billable_metric_id)
+    end
+
+    it "adds the target wallet code for usage that targeted one" do
+      expect(described_class.billable_metric_amount_key(billable_metric_id, "wallet-x"))
+        .to eq("00000000-0000-4000-8000-000000000001/wallet-x")
     end
   end
 

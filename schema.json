@@ -35067,6 +35067,18 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "usage_prefilter_incremental",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "incremental_charge_cache",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ],
           "possibleTypes": null
@@ -77485,6 +77497,22 @@
               "deprecationReason": null
             },
             {
+              "name": "grantable",
+              "description": "Whether the current member can assign this role",
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "id",
               "description": null,
               "args": [],
@@ -81608,6 +81636,12 @@
             {
               "name": "TZ_AMERICA_ARGENTINA_BUENOS_AIRES",
               "description": "America/Argentina/Buenos_Aires",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "TZ_AMERICA_ASUNCION",
+              "description": "America/Asuncion",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -93087,6 +93121,12 @@
             },
             {
               "name": "threshold",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "x402",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

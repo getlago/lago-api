@@ -426,6 +426,7 @@ SELECT
     NULL::jsonb AS filters_grouped_by;
 DROP INDEX IF EXISTS public.unique_default_payment_method_per_customer;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_x402_connection_id;
+DROP INDEX IF EXISTS public.index_x402_settlements_on_ungranted_id;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_pending_reconcile_after;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_pending_invoice_id;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_pending_credit_purchase_payer;
@@ -4971,6 +4972,7 @@ CREATE TABLE public.wallet_transactions (
     voided_invoice_id uuid,
     billing_entity_id uuid,
     purchase_order_number character varying,
+    billable_metric_amounts jsonb,
     CONSTRAINT remaining_amount_cents_non_negative CHECK (((remaining_amount_cents >= 0) OR (remaining_amount_cents IS NULL)))
 );
 
@@ -4993,6 +4995,7 @@ CREATE VIEW public.exports_wallet_transactions AS
             WHEN 0 THEN 'manual'::text
             WHEN 1 THEN 'interval'::text
             WHEN 2 THEN 'threshold'::text
+            WHEN 3 THEN 'x402'::text
             ELSE NULL::text
         END AS source,
         CASE wt.transaction_status
@@ -5062,7 +5065,8 @@ CREATE TABLE public.wallets (
     code character varying,
     billing_entity_id uuid,
     purchase_order_number character varying,
-    x402_enabled boolean DEFAULT false NOT NULL
+    x402_enabled boolean DEFAULT false NOT NULL,
+    ongoing_billable_metric_amounts jsonb DEFAULT '{}'::jsonb NOT NULL
 );
 
 
@@ -12536,6 +12540,13 @@ CREATE INDEX index_x402_settlements_on_pending_reconcile_after ON public.x402_se
 
 
 --
+-- Name: index_x402_settlements_on_ungranted_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_x402_settlements_on_ungranted_id ON public.x402_settlements USING btree (id) WHERE ((kind = 'credit_purchase'::public.x402_settlement_kind) AND (status = 'settled'::public.x402_settlement_status) AND (wallet_transaction_id IS NULL));
+
+
+--
 -- Name: index_x402_settlements_on_x402_connection_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -15752,7 +15763,11 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261013124033'),
+('20261008135612'),
 ('20261006134840'),
+('20261005134744'),
+('20261005133729'),
 ('20261005112941'),
 ('20261005105630'),
 ('20261005094159'),

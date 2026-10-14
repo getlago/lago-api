@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Mutations::QuoteVersions::Update do
   let(:required_permission) { "quotes:update" }
   let(:membership) { create(:membership) }
+  let(:customer) { create(:customer) }
   let(:quote_version) { create(:quote_version, organization: membership.organization) }
-
   let(:input) do
     {
       id: quote_version.id,
@@ -15,7 +15,6 @@ RSpec.describe Mutations::QuoteVersions::Update do
       currency: "EUR"
     }
   end
-
   let(:mutation) do
     <<-GQL
       mutation($input: UpdateQuoteVersionInput!) {
@@ -31,6 +30,8 @@ RSpec.describe Mutations::QuoteVersions::Update do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
 
   before do
     membership.organization.enable_feature_flag!(:order_forms)
@@ -69,8 +70,6 @@ RSpec.describe Mutations::QuoteVersions::Update do
   # a currency change is asserted here rather than only at the service.
   context "when the currency change realigns the billing items", :premium do
     let(:organization) { membership.organization }
-    let(:quote) { create(:quote, organization:) }
-    let(:plan) { create(:plan, organization:, amount_currency: "EUR") }
     let(:overrides) { {"amountCurrency" => "USD"} }
     let(:quote_version) do
       create(
@@ -92,7 +91,6 @@ RSpec.describe Mutations::QuoteVersions::Update do
       )
     end
     let(:input) { {id: quote_version.id, currency: "EUR"} }
-
     let(:returned_overrides) do
       execute_graphql(
         current_user: membership.user,
@@ -102,6 +100,9 @@ RSpec.describe Mutations::QuoteVersions::Update do
         variables: {input:}
       ).dig("data", "updateQuoteVersion", "billingItems", "plans", 0, "overrides")
     end
+    let(:quote) { create(:quote, organization:) }
+
+    let(:plan) { create(:plan, organization:, amount_currency: "EUR") }
 
     it "returns an empty overrides object rather than dropping the key" do
       expect(returned_overrides).to eq({})
