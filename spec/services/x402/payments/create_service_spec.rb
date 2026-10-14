@@ -9,8 +9,10 @@ describe X402::Payments::CreateService, :premium do
   let(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, :credit, organization:, customer:, currency: "USD", total_amount_cents: 1000) }
   let(:x402_connection) { create(:x402_connection, organization:) }
+  let(:subscription) { create(:subscription, customer:) }
+  let(:wallet_transaction) { create(:wallet_transaction, wallet: create(:wallet, customer:), source: :x402, invoice:) }
   let(:settlement) do
-    create(:x402_settlement, x402_connection:, customer:, settled_amount_atomic: 10_000_000, settled_amount_cents: 1000)
+    create(:x402_settlement, x402_connection:, customer:, subscription:, wallet_transaction:, settled_amount_atomic: 10_000_000, settled_amount_cents: 1000)
   end
 
   it "records a succeeded x402 payment for the settled amount" do
@@ -102,6 +104,64 @@ describe X402::Payments::CreateService, :premium do
     end
   end
 
+  context "when the settlement paid another invoice" do
+    let(:paid_invoice) { create(:invoice, :credit, organization:, customer:, currency: "USD", total_amount_cents: 1000) }
+    let(:payment) do
+      create(
+        :payment,
+        payable: paid_invoice,
+        payment_type: :x402,
+        payment_provider: nil,
+        payment_provider_customer: nil,
+        provider_payment_id: nil,
+        amount_cents: 1000,
+        amount_currency: "USD",
+        status: "succeeded",
+        payable_payment_status: "succeeded"
+      )
+    end
+    let(:settlement) do
+      create(
+        :x402_settlement,
+        x402_connection:,
+        customer:,
+        subscription:,
+        wallet_transaction:,
+        payment:,
+        settled_amount_atomic: 10_000_000,
+        settled_amount_cents: 1000
+      )
+    end
+
+    it "refuses the invoice" do
+      expect(result.error.messages).to eq(base: ["settlement_invoice_mismatch"])
+    end
+  end
+
+  context "when the purchase is billed on another invoice" do
+    let(:wallet_transaction) do
+      create(:wallet_transaction, wallet: create(:wallet, customer:), source: :x402, invoice: create(:invoice, :credit, organization:, customer:))
+    end
+
+    it "refuses the invoice" do
+      expect(result.error.messages).to eq(base: ["settlement_invoice_mismatch"])
+    end
+
+    it "records no payment" do
+      expect { result }.not_to change(Payment, :count)
+    end
+  end
+
+  context "when the purchase is not granted" do
+    let(:settlement) do
+      create(:x402_settlement, x402_connection:, customer:, settled_amount_atomic: 10_000_000, settled_amount_cents: 1000)
+    end
+
+    it "refuses the invoice" do
+      expect(result.error.messages).to eq(base: ["settlement_invoice_mismatch"])
+    end
+  end
+
   context "when the settlement is still pending" do
     let(:settlement) do
       create(:x402_settlement, :pending, x402_connection:, customer:, settled_amount_atomic: 10_000_000, settled_amount_cents: 1000)
@@ -118,7 +178,7 @@ describe X402::Payments::CreateService, :premium do
 
   context "when the settled amount differs from the invoice total" do
     let(:settlement) do
-      create(:x402_settlement, x402_connection:, customer:, settled_amount_atomic: 9_990_000, settled_amount_cents: 999)
+      create(:x402_settlement, x402_connection:, customer:, subscription:, wallet_transaction:, settled_amount_atomic: 9_990_000, settled_amount_cents: 999)
     end
 
     it "refuses the amount" do
