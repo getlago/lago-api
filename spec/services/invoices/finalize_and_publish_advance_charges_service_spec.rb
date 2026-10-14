@@ -49,6 +49,51 @@ RSpec.describe Invoices::FinalizeAndPublishAdvanceChargesService do
       end
     end
 
+    context "when the customer syncs invoices to integrations" do
+      let(:invoice_status) { :finalized }
+      let(:accounting_integration) { create(:netsuite_integration, organization:, sync_invoices: true) }
+      let(:hubspot_integration) { create(:hubspot_integration, organization:, sync_invoices: true) }
+
+      before do
+        allow(invoice).to receive(:should_sync_invoice?).and_call_original
+        allow(invoice).to receive(:should_sync_hubspot_invoice?).and_call_original
+        create(:netsuite_customer, integration: accounting_integration, customer:)
+        create(:hubspot_customer, integration: hubspot_integration, customer:)
+      end
+
+      context "when the invoice has no contract fee" do
+        it "enqueues the invoice integrations" do
+          expect(result).to be_success
+          expect(Integrations::Aggregator::Invoices::CreateJob).to have_been_enqueued.with(invoice:)
+          expect(Integrations::Aggregator::Invoices::Hubspot::CreateJob).to have_been_enqueued.with(invoice:)
+        end
+      end
+
+      context "when the invoice holds a contract fee" do
+        let(:contract) { create(:contract, organization:, customer:) }
+        let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
+
+        before do
+          create(
+            :fee,
+            invoice:,
+            subscription: nil,
+            fee_type: :product,
+            invoiceable: contract_rate_card.rate_card.product,
+            contract:,
+            contract_rate_card:,
+            organization:
+          )
+        end
+
+        it "does not enqueue the invoice integrations" do
+          expect(result).to be_success
+          expect(Integrations::Aggregator::Invoices::CreateJob).not_to have_been_enqueued
+          expect(Integrations::Aggregator::Invoices::Hubspot::CreateJob).not_to have_been_enqueued
+        end
+      end
+    end
+
     context "when the invoice closes during finalization" do
       let(:customer) { create(:customer, organization:, finalize_zero_amount_invoice: "skip") }
       let(:invoice) do
