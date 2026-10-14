@@ -118,4 +118,19 @@ FactoryBot.define do
       {instance_id: SecureRandom.uuid}
     end
   end
+
+  factory :agent_storefront_integration, class: "Integrations::AgentStorefrontIntegration" do
+    organization
+    type { "Integrations::AgentStorefrontIntegration" }
+    code { "agent_storefront" }
+    name { "Agent Storefront" }
+
+    transient do
+      stripe_provider { association(:stripe_provider, organization:, strategy: :create) }
+    end
+
+    settings do
+      {payment_provider_code: stripe_provider.code, scope: "#{code}:use"}
+    end
+  end
 end
