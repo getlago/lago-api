@@ -7,6 +7,7 @@ html
   body
     == SlimHelper.render('templates/invoices/v4/product_catalog/_styles', self)
 
+    - catalog = ProductCatalogInvoiceHelper.new(self)
     .wrapper
       == SlimHelper.render('templates/invoices/v4/product_catalog/_header', self)
 
@@ -17,7 +18,7 @@ html
               th = I18n.t('invoice.description')
               th = I18n.t('invoice.amount')
           tbody
-            - ProductCatalogInvoiceHelper.summary_lines(self).each do |line|
+            - catalog.summary_lines.each do |line|
               tr
                 td.body-2 = line.name
                 td.body-2 = MoneyHelper.format(Money.new(line.amount_cents, currency))
@@ -43,7 +44,7 @@ html
 
       == SlimHelper.render('templates/invoices/v4/_powered_by_logo', self)
 
-      - ProductCatalogInvoiceHelper.contract_blocks(self).each do |block|
+      - catalog.contract_blocks.each do |block|
         .details-page
           .mb-24
             h1 = I18n.t('invoice.details_title')
