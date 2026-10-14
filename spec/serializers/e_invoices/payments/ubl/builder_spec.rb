@@ -61,6 +61,14 @@ RSpec.describe EInvoices::Payments::Ubl::Builder do
       it "has Note tag" do
         expect(subject).to contains_xml_node("//cbc:Note")
       end
+
+      context "with an x402 payment" do
+        let(:payment) { create(:payment, :x402_payment, customer:, payable: invoice, currency: "BRL", amount_cents: 1000) }
+
+        it "names x402 as the payment mode" do
+          expect(subject.xpath("//cbc:Note").text).to include("received via x402 for invoice INV-24680-OIC-E")
+        end
+      end
     end
 
     context "when SenderParty tag" do
