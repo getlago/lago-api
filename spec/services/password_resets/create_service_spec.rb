@@ -34,15 +34,12 @@ RSpec.describe PasswordResets::CreateService do
       end
     end
 
-    context "without user" do
-      it "succeeds without creating a password reset or sending an email" do
-        result = nil
+    context "without arguments" do
+      it "raises an error" do
+        result = create_service.call(user: nil)
 
-        expect { result = create_service.call(user: nil) }
-          .to not_change(PasswordReset, :count)
-          .and not_have_enqueued_job(SendEmailJob)
-
-        expect(result).to be_success
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("user_not_found")
       end
 
       it_behaves_like "does not produce a security log" do
