@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Auth::AttemptsThrottle do
   let(:cache) { ActiveSupport::Cache::MemoryStore.new }
 
-  before { allow(Rails).to receive(:cache).and_return(cache) }
+  before { described_class.store = cache }
 
   describe ".hit!" do
     it "returns true once the limit is exceeded" do
@@ -34,7 +34,7 @@ RSpec.describe Auth::AttemptsThrottle do
       3.times { described_class.hit!(:password_reset_per_email, "user@example.com") }
 
       expect(described_class.hit!(:password_reset_per_email, "other@example.com")).to be(false)
-      expect(described_class.hit!(:login_attempts_per_email, "user@example.com")).to be(false)
+      expect(described_class.hit!(:login_per_email, "user@example.com")).to be(false)
     end
 
     it "resets after the period" do
@@ -49,10 +49,29 @@ RSpec.describe Auth::AttemptsThrottle do
       expect(Array.new(5) { described_class.hit!(:password_reset_per_email, nil) }).to all(be(false))
     end
 
-    it "does not block when the cache is unavailable" do
-      allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::NullStore.new)
+    it "counts a rule keyed on the email and IP pair per pair" do
+      10.times { described_class.hit!(:login_per_email_and_ip, "User@Example.com", "203.0.113.10") }
 
-      expect(Array.new(5) { described_class.hit!(:password_reset_per_email, "user@example.com") }).to all(be(false))
+      expect(described_class.hit!(:login_per_email_and_ip, "user@example.com", "203.0.113.11")).to be(false)
+      expect(described_class.hit!(:login_per_email_and_ip, "user@example.com", "203.0.113.10")).to be(true)
+    end
+
+    it "ignores a pair with a blank part" do
+      results = Array.new(11) { described_class.hit!(:login_per_email_and_ip, "user@example.com", nil) }
+
+      expect(results).to all(be(false))
+    end
+
+    it "raises when the identifiers do not match the rule" do
+      expect { described_class.hit!(:login_per_email_and_ip, "user@example.com") }.to raise_error(ArgumentError)
+    end
+
+    context "when the cache is unavailable" do
+      let(:cache) { ActiveSupport::Cache::NullStore.new }
+
+      it "does not block" do
+        expect(Array.new(5) { described_class.hit!(:password_reset_per_email, "user@example.com") }).to all(be(false))
+      end
     end
 
     it "does not store the identifier in clear" do
@@ -62,23 +81,19 @@ RSpec.describe Auth::AttemptsThrottle do
 
   describe ".reset!" do
     it "clears the counter" do
-      10.times { described_class.hit!(:login_attempts_per_email, "user@example.com") }
+      10.times { described_class.hit!(:login_per_email, "user@example.com") }
 
-      described_class.reset!(:login_attempts_per_email, "user@example.com")
+      described_class.reset!(:login_per_email, "user@example.com")
 
-      expect(described_class.hit!(:login_attempts_per_email, "user@example.com")).to be(false)
+      expect(described_class.hit!(:login_per_email, "user@example.com")).to be(false)
     end
   end
 
   describe ".store" do
-    it "uses Rails.cache when it is shared" do
-      expect(described_class.store).to be(cache)
-    end
+    before { described_class.store = nil }
 
-    it "falls back to the Sidekiq Redis when Rails.cache is a per-process file store" do
-      allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::FileStore.new(Dir.mktmpdir))
-
-      expect(described_class.store).to be_a(ActiveSupport::Cache::RedisCacheStore)
+    it "defaults to the throttling Redis" do
+      expect(described_class.store).to be(described_class::DEFAULT_STORE.value)
     end
   end
 end

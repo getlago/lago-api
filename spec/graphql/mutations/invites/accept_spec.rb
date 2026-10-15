@@ -151,5 +151,23 @@ RSpec.describe Mutations::Invites::Accept do
         expect(result["errors"].first["extensions"]["details"]["invite"]).to eq(["not_found"])
       end
     end
+
+    context "with attempts throttling" do
+      let(:cache) { ActiveSupport::Cache::MemoryStore.new }
+      let(:request) { instance_double(ActionDispatch::Request, remote_ip: "203.0.113.10") }
+      let(:invite) { create(:invite, organization:) }
+
+      before { Auth::AttemptsThrottle.store = cache }
+
+      it "limits attempts per client IP" do
+        20.times do
+          execute_graphql(query: mutation, request:, variables: {input: {email: invite.email, password:, token: "invalid"}})
+        end
+
+        result = execute_graphql(query: mutation, request:, variables: {input: {email: invite.email, password:, token: invite.token}})
+
+        expect(result["errors"].first.dig("extensions", "code")).to eq("too_many_requests")
+      end
+    end
   end
 end
