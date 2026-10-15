@@ -17,14 +17,17 @@ module X402
         return result.single_validation_failure!(field: :connection_code, error_code: "value_is_mandatory") if connection_code.blank?
         return result.not_found_failure!(resource: "connection") unless connection
 
-        refusal = invoice.x402_payment_refusal
-        return result.single_validation_failure!(error_code: refusal) if refusal
-
         invoice.with_lock do
-          invoice.update!(x402_payment_token: SecureRandom.hex(32), x402_connection: connection) unless bound_to_connection?
+          refusal = invoice.x402_payment_refusal
+
+          if refusal
+            result.single_validation_failure!(error_code: refusal)
+          elsif !bound_to_connection?
+            invoice.update!(x402_payment_token: SecureRandom.hex(32), x402_connection: connection)
+          end
         end
 
-        result.invoice = invoice
+        result.invoice = invoice if result.success?
         result
       end
 

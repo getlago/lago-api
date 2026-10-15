@@ -154,4 +154,24 @@ describe X402::Invoices::MintPaymentLinkService, :premium do
 
     it { expect(result).to be_success }
   end
+
+  context "when the invoice was voided after it was loaded" do
+    subject(:result) { described_class.call(invoice: loaded_invoice, connection_code:) }
+
+    let(:invoice) { create(:invoice, :voided, organization:, customer:, currency: "USD", total_amount_cents: 1_000) }
+    let(:loaded_invoice) do
+      Invoice.find(invoice.id).tap do |loaded|
+        loaded.status = "finalized"
+        loaded.clear_changes_information
+      end
+    end
+
+    it "fails with invalid_invoice_status_or_payment_status" do
+      expect(result.error.messages).to eq(base: ["invalid_invoice_status_or_payment_status"])
+    end
+
+    it "mints nothing" do
+      expect { result }.not_to change { invoice.reload.x402_payment_token }.from(nil)
+    end
+  end
 end
