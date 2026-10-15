@@ -20,8 +20,18 @@ module Auth
     }.freeze
 
     # Built on first use only, and once per process.
-    STORE = Concurrent::Delay.new do
+    DEFAULT_STORE = Concurrent::Delay.new do
       ActiveSupport::Cache::RedisCacheStore.new(**Lago::RedisConfigBuilder.new.throttling)
+    end
+
+    # Counters must be shared by every API process, so they live in the throttling Redis by default.
+    # Only specs set another store, so the shared module state is safe across threads.
+    class << self
+      attr_writer :store # rubocop:disable ThreadSafety/ClassAndModuleAttributes
+
+      def store
+        @store || DEFAULT_STORE.value # rubocop:disable ThreadSafety/ClassInstanceVariable
+      end
     end
 
     module_function
@@ -39,12 +49,6 @@ module Auth
       return if identifiers.any?(&:blank?)
 
       store.delete(cache_key(rule_name, *identifiers))
-    end
-
-    # Counters must be shared by every API process, so they live in Redis: the dedicated instance when
-    # LAGO_REDIS_THROTTLING_URL is set, else the Sidekiq Redis that every install already runs.
-    def store
-      STORE.value
     end
 
     def cache_key(rule_name, *identifiers)

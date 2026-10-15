@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Auth::AttemptsThrottle do
   let(:cache) { ActiveSupport::Cache::MemoryStore.new }
 
-  before { allow(described_class).to receive(:store).and_return(cache) }
+  before { described_class.store = cache }
 
   describe ".hit!" do
     it "returns true once the limit is exceeded" do
@@ -90,10 +90,10 @@ RSpec.describe Auth::AttemptsThrottle do
   end
 
   describe ".store" do
-    before { allow(described_class).to receive(:store).and_call_original }
+    before { described_class.store = nil }
 
-    it "is a Redis store" do
-      expect(described_class.store).to be_a(ActiveSupport::Cache::RedisCacheStore)
+    it "defaults to the throttling Redis" do
+      expect(described_class.store).to be(described_class::DEFAULT_STORE.value)
     end
   end
 end

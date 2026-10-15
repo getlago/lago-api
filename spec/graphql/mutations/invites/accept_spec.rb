@@ -100,7 +100,7 @@ RSpec.describe Mutations::Invites::Accept do
       let(:request) { instance_double(ActionDispatch::Request, remote_ip: "203.0.113.10") }
       let(:invite) { create(:invite, organization:) }
 
-      before { allow(Auth::AttemptsThrottle).to receive(:store).and_return(cache) }
+      before { Auth::AttemptsThrottle.store = cache }
 
       it "limits attempts per client IP" do
         20.times do

@@ -82,7 +82,7 @@ RSpec.describe Mutations::RegisterUser do
     let(:request) { instance_double(ActionDispatch::Request, remote_ip: "203.0.113.10") }
     let(:user) { create(:user) }
 
-    before { allow(Auth::AttemptsThrottle).to receive(:store).and_return(cache) }
+    before { Auth::AttemptsThrottle.store = cache }
 
     def register(email)
       execute_graphql(query: mutation, request:, variables: {input: {email:, password: "ILoveLago", organizationName: "FooBar"}})

@@ -22,7 +22,7 @@ RSpec.describe Mutations::PasswordResets::Create do
     GQL
   end
 
-  before { allow(Auth::AttemptsThrottle).to receive(:store).and_return(cache) }
+  before { Auth::AttemptsThrottle.store = cache }
 
   def request_reset(email)
     execute_graphql(query: mutation, variables: {input: {email:}})

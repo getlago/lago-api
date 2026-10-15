@@ -79,7 +79,7 @@ RSpec.describe Mutations::LoginUser do
     let(:cache) { ActiveSupport::Cache::MemoryStore.new }
     let(:request) { request_from("203.0.113.10") }
 
-    before { allow(Auth::AttemptsThrottle).to receive(:store).and_return(cache) }
+    before { Auth::AttemptsThrottle.store = cache }
 
     def request_from(ip)
       instance_double(ActionDispatch::Request, remote_ip: ip)
