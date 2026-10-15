@@ -3750,8 +3750,7 @@ CREATE TABLE public.payment_provider_customers (
     deleted_at timestamp(6) without time zone,
     organization_id uuid NOT NULL,
     code character varying,
-    is_default boolean DEFAULT false NOT NULL,
-    secrets character varying
+    is_default boolean DEFAULT false NOT NULL
 );
 
 
@@ -15756,7 +15755,6 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
-('20261013153856'),
 ('20261008135612'),
 ('20261006134840'),
 ('20261005134744'),

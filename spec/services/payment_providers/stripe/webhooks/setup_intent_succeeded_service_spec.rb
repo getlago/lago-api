@@ -46,7 +46,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService d
           end
         end
         let(:stripe_customer) do
-          create(:stripe_customer, payment_provider: stripe_provider, customer:, provider_customer_id:, provider_payment_methods: %w[shared_payment_token], default_shared_payment_token: "spt_abc123")
+          create(:stripe_customer, payment_provider: stripe_provider, customer:, provider_customer_id:, provider_payment_methods: %w[shared_payment_token])
         end
 
         it "touches neither Stripe nor the customer" do

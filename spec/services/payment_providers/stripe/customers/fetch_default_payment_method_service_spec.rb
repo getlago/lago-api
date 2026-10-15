@@ -46,7 +46,7 @@ RSpec.describe PaymentProviders::Stripe::Customers::FetchDefaultPaymentMethodSer
     end
 
     context "when the provider customer only uses a shared payment token" do
-      let(:provider_customer) { create(:stripe_customer, customer:, provider_customer_id:, payment_provider: stripe_provider, provider_payment_methods: %w[shared_payment_token], default_shared_payment_token: "spt_abc123") }
+      let(:provider_customer) { create(:stripe_customer, customer:, provider_customer_id:, payment_provider: stripe_provider, provider_payment_methods: %w[shared_payment_token]) }
 
       it "returns without looking Stripe up or creating a payment method" do
         result = service.call

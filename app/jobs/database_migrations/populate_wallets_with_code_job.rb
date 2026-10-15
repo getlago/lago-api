@@ -14,7 +14,7 @@ module DatabaseMigrations
 
       # Process in batches by customer_id to maintain uniqueness logic
       # (all wallets for a customer must be processed together)
-      result = ActiveRecord::Base.connection.execute(<<-SQL.squish)
+      result = ActiveRecord::Base.connection.execute(<<~SQL.squish)
         WITH customer_batch AS (
           SELECT DISTINCT customer_id
           FROM wallets

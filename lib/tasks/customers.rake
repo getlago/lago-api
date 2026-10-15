@@ -199,4 +199,3 @@ namespace :customers do
     end
   end
 end
-

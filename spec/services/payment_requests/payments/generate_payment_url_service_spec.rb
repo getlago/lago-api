@@ -28,7 +28,7 @@ RSpec.describe PaymentRequests::Payments::GeneratePaymentUrlService do
     end
 
     context "when the stripe customer only uses a shared payment token" do
-      let(:provider_customer) { create(:stripe_customer, payment_provider:, customer:, provider_payment_methods: %w[shared_payment_token], default_shared_payment_token: "spt_abc123") }
+      let(:provider_customer) { create(:stripe_customer, payment_provider:, customer:, provider_payment_methods: %w[shared_payment_token]) }
 
       it "refuses before calling Stripe" do
         result = generate_payment_url_service.call

@@ -834,6 +834,15 @@ RSpec.describe Wallets::UpdateService do
 
       before { payment_method }
 
+      context "when the payment method is a shared payment token row" do
+        let(:payment_method) { create(:payment_method, organization:, customer:, is_default: false, provider_method_type: "shared_payment_token", provider_method_id: "spt_123", details: {}) }
+
+        it "refuses" do
+          expect(result).not_to be_success
+          expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+        end
+      end
+
       it "attaches payment_method" do
         expect(result).to be_success
         expect(result.wallet.reload.name).to eq(params[:name])

@@ -254,16 +254,19 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
       end
     end
 
-    context "when the stripe customer only uses a shared payment token stored in Lago" do
-      let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: stripe_payment_provider, provider_payment_methods: %w[shared_payment_token], default_shared_payment_token: "spt_lago_123") }
-      let(:payment_method) { nil }
+    context "when the payment carries a shared payment token row" do
+      let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: stripe_payment_provider, provider_payment_methods: %w[shared_payment_token]) }
+      let(:payment_method) do
+        create(:payment_method, customer:, payment_provider_customer: stripe_customer, is_default: false,
+          provider_method_type: "shared_payment_token", provider_method_id: "spt_lago_123", details: {})
+      end
 
       before do
         allow(Stripe::Customer).to receive(:retrieve).and_call_original
         allow(Stripe::Customer).to receive(:list_payment_methods).and_call_original
       end
 
-      it "charges the stored token without looking the Stripe customer up" do
+      it "charges the row's token without looking the Stripe customer up" do
         result = create_service.call
 
         expect(result).to be_success
@@ -298,8 +301,8 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
         end
       end
 
-      context "when no token is stored" do
-        let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: stripe_payment_provider, provider_payment_methods: %w[shared_payment_token]) }
+      context "when the payment has no token row" do
+        let(:payment_method) { nil }
 
         it "fails before calling Stripe and marks the payment failed" do
           expect { create_service.call }.to raise_error(BaseService::ServiceFailure) do |error|
@@ -730,17 +733,19 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
         end
       end
 
-      context "when the shared payment token is stored in Lago as the only payment method" do
-        let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: stripe_payment_provider, provider_payment_methods: %w[shared_payment_token], default_shared_payment_token: "spt_lago_123") }
-        let(:payment_method) { nil }
+      context "when the payment carries a shared payment token row" do
+        let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: stripe_payment_provider, provider_payment_methods: %w[shared_payment_token]) }
+        let(:payment_method) do
+          create(:payment_method, customer:, payment_provider_customer: stripe_customer, is_default: false,
+            provider_method_type: "shared_payment_token", provider_method_id: "spt_row_123", details: {})
+        end
 
-        it "returns the payload" do
+        it "reads the token from the row and lets Stripe pick the payment method type" do
           expect(payment_intent_payload).to eq(
             amount: invoice.total_amount_cents,
             currency: invoice.currency.downcase,
             customer: stripe_customer.provider_customer_id,
-            payment_method_types: ["card"],
-            payment_method_data: {shared_payment_granted_token: "spt_lago_123"},
+            payment_method_data: {shared_payment_granted_token: "spt_row_123"},
             confirm: true,
             error_on_requires_action: true,
             description: reference,

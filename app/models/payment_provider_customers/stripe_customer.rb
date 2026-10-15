@@ -8,21 +8,12 @@ module PaymentProviderCustomers
 
     EXCLUSIVE_PAYMENT_METHODS = %w[customer_balance shared_payment_token].freeze
 
-    SHARED_PAYMENT_TOKEN_FORMAT = /\Aspt_[A-Za-z0-9_]+\z/
-
     validates :provider_payment_methods, presence: true
     validate :allowed_provider_payment_methods
     validate :link_payment_method_can_exist_only_with_card
     validate :exclusive_payment_methods_cannot_be_combined
-    validate :shared_payment_token_requires_its_method
-    validates :default_shared_payment_token,
-      format: {with: SHARED_PAYMENT_TOKEN_FORMAT},
-      length: {maximum: 255},
-      allow_nil: true
 
     settings_accessors :payment_method_id
-
-    secrets_accessors :default_shared_payment_token
 
     def provider_payment_methods
       get_from_settings("provider_payment_methods")
@@ -66,12 +57,6 @@ module PaymentProviderCustomers
         errors.add(:provider_payment_methods, "#{method} cannot be combined with other payment methods")
       end
     end
-
-    def shared_payment_token_requires_its_method
-      return if default_shared_payment_token.blank? || shared_payment_token_only?
-
-      errors.add(:default_shared_payment_token, "requires shared_payment_token as the only payment method")
-    end
   end
 end
 
@@ -84,7 +69,6 @@ end
 #  code                 :string
 #  deleted_at           :datetime
 #  is_default           :boolean          default(FALSE), not null
-#  secrets              :string
 #  settings             :jsonb            not null
 #  type                 :string           not null
 #  created_at           :datetime         not null

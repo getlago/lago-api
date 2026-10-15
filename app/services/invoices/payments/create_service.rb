@@ -154,14 +154,7 @@ module Invoices
         current_payment_provider_customer&.provider_customer_id &&
           (determine_payment_method.present? ||
             provider_payment_method_pending_backfill? ||
-            stripe_customer_balance_only? ||
-            stripe_shared_payment_token_only?)
-      end
-
-      def stripe_shared_payment_token_only?
-        current_payment_provider_customer.is_a?(PaymentProviderCustomers::StripeCustomer) &&
-          current_payment_provider_customer.shared_payment_token_only? &&
-          current_payment_provider_customer.default_shared_payment_token.present?
+            stripe_customer_balance_only?)
       end
 
       # NOTE: A Stripe customer_balance (V-BAN) customer has no instrument to pull from, so no

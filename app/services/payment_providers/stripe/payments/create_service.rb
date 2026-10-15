@@ -116,7 +116,7 @@ module PaymentProviders
         end
 
         def create_payment_intent
-          update_payment_method_id unless provider_customer.shared_payment_token_only?
+          update_payment_method_id unless provider_customer.shared_payment_token_only? || shared_payment_token_row
           payload = payment_intent_payload
 
           # payable have been settled by another payment path
@@ -169,13 +169,15 @@ module PaymentProviders
             metadata: enriched_metadata
           }
 
-          if provider_customer.provider_payment_methods == ["customer_balance"]
-            payload.merge!(customer_balance_fields)
-          elsif provider_customer.shared_payment_token_only?
-            fail_without_shared_payment_token if provider_customer.default_shared_payment_token.blank?
-            payload.merge!(lago_shared_payment_token_fields)
+          if shared_payment_token_row
+            payload[:payment_method_data] = {shared_payment_granted_token: shared_payment_token_row.provider_method_id}
+            payload.delete(:payment_method_types)
             payload.delete(:return_url)
             payload.delete(:off_session)
+          elsif provider_customer.provider_payment_methods == ["customer_balance"]
+            payload.merge!(customer_balance_fields)
+          elsif provider_customer.shared_payment_token_only?
+            fail_without_shared_payment_token
           elsif shared_payment_token
             payload[:payment_method_data] = {shared_payment_granted_token: shared_payment_token}
             payload.delete(:return_url)
@@ -194,15 +196,14 @@ module PaymentProviders
           payload
         end
 
-        def lago_shared_payment_token_fields
-          {
-            payment_method_data: {shared_payment_granted_token: provider_customer.default_shared_payment_token},
-            payment_method_types: ["card"]
-          }
+        def shared_payment_token_row
+          return @shared_payment_token_row if defined?(@shared_payment_token_row)
+
+          @shared_payment_token_row = payment.payment_method&.shared_payment_token? ? payment.payment_method : nil
         end
 
         def fail_without_shared_payment_token
-          result.error_message = "No shared payment token is stored for this Stripe customer"
+          result.error_message = "No shared payment token is attached to this payment"
           result.error_code = "missing_shared_payment_token"
 
           payment.update!(

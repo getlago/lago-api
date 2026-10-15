@@ -10,7 +10,7 @@ module DatabaseMigrations
     def perform(batch_number = 1)
       return Rails.logger.info("Finished populating charge codes") unless Charge.unscoped.where(code: nil).exists?
 
-      result = ActiveRecord::Base.connection.execute(<<-SQL.squish)
+      result = ActiveRecord::Base.connection.execute(<<~SQL.squish)
         WITH plan_batch AS (
           SELECT DISTINCT plan_id
           FROM charges

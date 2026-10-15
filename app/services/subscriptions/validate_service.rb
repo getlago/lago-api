@@ -95,7 +95,7 @@ module Subscriptions
 
     def valid_payment_method?
       return true if args[:payment_method].blank?
-      return true if PaymentMethods::ValidateService.new(result, **args).valid?
+      return true if PaymentMethods::ValidateService.new(result, **args).valid? && !result.payment_method&.shared_payment_token?
 
       add_error(field: :payment_method, error_code: "invalid_payment_method")
 

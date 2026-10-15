@@ -152,6 +152,13 @@ module Invoices
     end
 
     def valid_payment_method?
+      token_result = PaymentMethods::CreateFromSharedPaymentTokenService.call(customer:, params: payment_method_params)
+      unless token_result.success?
+        result.fail_with_error!(token_result.error)
+        return false
+      end
+
+      @payment_method_params = token_result.params
       result.payment_method = payment_method
 
       PaymentMethods::ValidateService.new(result, payment_method: payment_method_params).valid?

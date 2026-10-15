@@ -46,7 +46,8 @@ module Api
           lago_invoice_ids: [],
           payment_method: [
             :payment_method_type,
-            :payment_method_id
+            :payment_method_id,
+            :shared_payment_token
           ]
         )
       end

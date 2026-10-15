@@ -64,6 +64,34 @@ RSpec.describe Api::V1::WalletTransactionsController do
       ))
     end
 
+    context "with a shared payment token" do
+      let(:customer) { create(:customer, organization:, payment_provider: "stripe", payment_provider_code: "stripe_1") }
+      let(:stripe_provider) { create(:stripe_provider, organization:, code: "stripe_1") }
+      let(:params) { {wallet_id:, paid_credits: "10", payment_method: {payment_method_type: "provider", shared_payment_token: "spt_abc_123"}} }
+
+      before { create(:stripe_customer, customer:, payment_provider: stripe_provider, provider_payment_methods: %w[shared_payment_token]) }
+
+      it "pays the top-up with a payment method row holding the token" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        row = customer.payment_methods.sole
+        expect(row).to have_attributes(provider_method_type: "shared_payment_token", provider_method_id: "spt_abc_123", is_default: false)
+        expect(json[:wallet_transactions].first[:payment_method]).to eq(payment_method_type: "provider", payment_method_id: row.id)
+      end
+
+      context "with a payment method id as well" do
+        let(:params) { {wallet_id:, paid_credits: "10", payment_method: {payment_method_type: "provider", payment_method_id: SecureRandom.uuid, shared_payment_token: "spt_abc_123"}} }
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json[:error_details][:payment_method]).to eq(["invalid_payment_method"])
+        end
+      end
+    end
+
     context "when paid credits is below the wallet minimum" do
       it "returns an error" do
         wallet.update!(paid_top_up_min_amount_cents: 20_00)

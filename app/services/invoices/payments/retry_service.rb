@@ -3,7 +3,7 @@
 module Invoices
   module Payments
     class RetryService < BaseService
-      Result = BaseResult[:invoice]
+      Result = BaseResult[:invoice, :payment_method]
 
       def initialize(invoice:, payment_method_params: {})
         @invoice = invoice
@@ -23,7 +23,11 @@ module Invoices
           return result.not_allowed_failure!(code: "payment_processor_is_currently_handling_payment")
         end
 
-        create_result = Invoices::Payments::CreateService.call_async(invoice:, payment_method_params:)
+        token_result = PaymentMethods::CreateFromSharedPaymentTokenService.call(customer:, params: payment_method_params)
+        return result.fail_with_error!(token_result.error) unless token_result.success?
+
+        result.payment_method = token_result.payment_method
+        create_result = Invoices::Payments::CreateService.call_async(invoice:, payment_method_params: token_result.params)
         deliver_webhook if create_result.payment_provider.nil?
 
         result.invoice = invoice

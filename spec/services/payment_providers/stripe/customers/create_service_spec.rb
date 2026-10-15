@@ -196,41 +196,11 @@ RSpec.describe PaymentProviders::Stripe::Customers::CreateService do
     end
 
     context "when the connection pays with a shared payment token" do
-      let(:params) { {provider_customer_id: "id", provider_payment_methods: %w[shared_payment_token], default_shared_payment_token: "spt_abc123"} }
-
-      it "stores the token" do
-        result = create_service.call
-
-        expect(result).to be_success
-        expect(result.provider_customer.provider_payment_methods).to eq(%w[shared_payment_token])
-        expect(result.provider_customer.default_shared_payment_token).to eq("spt_abc123")
-      end
+      let(:params) { {provider_customer_id: "id", provider_payment_methods: %w[shared_payment_token]} }
 
       it "does not fetch a payment method from Stripe" do
         expect { create_service.call }
           .not_to have_enqueued_job(PaymentProviders::Stripe::Customers::FetchDefaultPaymentMethodJob)
-      end
-
-      context "when the provider customer already holds a token" do
-        before do
-          create(:stripe_customer, customer:, payment_provider: stripe_provider, provider_customer_id: "id", provider_payment_methods: %w[shared_payment_token], default_shared_payment_token: "spt_stored")
-        end
-
-        context "when the token is omitted" do
-          let(:params) { {provider_customer_id: "id"} }
-
-          it "keeps the stored token" do
-            expect(create_service.call.provider_customer.default_shared_payment_token).to eq("spt_stored")
-          end
-        end
-
-        context "when the token is null" do
-          let(:params) { {provider_customer_id: "id", default_shared_payment_token: nil} }
-
-          it "clears the stored token" do
-            expect(create_service.call.provider_customer.default_shared_payment_token).to be_nil
-          end
-        end
       end
     end
   end
