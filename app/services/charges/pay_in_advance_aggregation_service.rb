@@ -21,7 +21,8 @@ module Charges
           charges_duration: metered_item.boundaries.charges_duration,
           max_timestamp: metered_item.event.timestamp
         },
-        filters: aggregation_filters
+        filters: aggregation_filters,
+        initial_value: recurring_initial_value
       )
 
       aggregation_result = aggregator.aggregate(options: aggregation_options)
@@ -38,6 +39,37 @@ module Charges
         free_units_per_events: metered_item.properties["free_units_per_events"].to_i,
         free_units_per_total_aggregation: BigDecimal(metered_item.properties["free_units_per_total_aggregation"] || 0)
       }
+    end
+
+    def recurring_initial_value
+      return unless snapshot_readable?
+
+      snapshots = RecurringAggregationSnapshots::FetchService.call!(
+        subscription: billing_context.subscription,
+        charge: metered_item.charge,
+        charge_filter: metered_item.charge_filter,
+        grouped_by_keys: metered_item.pricing_group_keys,
+        from_datetime: metered_item.boundaries.charges_from_datetime
+      ).snapshots
+
+      event_group_snapshots(snapshots) if snapshots
+    end
+
+    def snapshot_readable?
+      return false unless metered_item.billable_metric.recurring? && metered_item.billable_metric.sum_agg?
+      return false if metered_item.billing_segment
+      return false unless billing_context.subscription?
+
+      billing_context.organization.feature_flag_enabled?(:persisted_recurring_values)
+    end
+
+    # The aggregation only reads the group of the event. A group without a snapshot reads its
+    # full history rather than assume it had no event before the period.
+    def event_group_snapshots(snapshots)
+      grouped_by = metered_item.grouped_by_values.transform_values { it&.to_s }
+      snapshot = snapshots.find { it.grouped_by.transform_values { |value| value&.to_s } == grouped_by }
+
+      [snapshot] if snapshot
     end
 
     def aggregation_filters
