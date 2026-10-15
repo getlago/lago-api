@@ -114,14 +114,11 @@ module DataExports
       end
 
       def fee_period_dates(fee, billing_period, timezone)
-        datetimes = [billing_period&.from_datetime, billing_period&.to_datetime]
-
-        # Add-on periods use the UTC date of each timestamp.
-        # Unlike other fees, do not convert them to the customer timezone.
         if fee.add_on?
-          return datetimes.map { |datetime| datetime&.to_date }
+          return fee.properties.values_at("from_datetime", "to_datetime").map { |datetime| datetime&.to_date }
         end
 
+        datetimes = [billing_period&.from_datetime, billing_period&.to_datetime]
         datetimes.map { |datetime| period_date(datetime, timezone) }
       end
 

@@ -6,12 +6,6 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateService d
   subject(:service_call) { service.call }
 
   let(:service) { described_class.new(subscription:) }
-  let(:subscription) { create(:subscription, customer:, plan:) }
-  let(:plan) { create(:plan, organization:) }
-  let(:integration) { create(:hubspot_integration, organization:) }
-  let(:integration_customer) { create(:hubspot_customer, integration:, customer:) }
-  let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:lago_properties_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { "https://api.nango.dev/v1/hubspot/records" }
@@ -20,7 +14,6 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateService d
   let(:file_url) { Faker::Internet.url }
   let(:due_date) { subscription.payment_due_date.strftime("%Y-%m-%d") }
   let(:params) { service.__send__(:payload).create_body }
-
   let(:headers) do
     {
       "Connection-Id" => integration.connection_id,
@@ -28,6 +21,13 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateService d
       "Provider-Config-Key" => "hubspot"
     }
   end
+  let(:subscription) { create(:subscription, customer:, plan:) }
+  let(:integration) { create(:hubspot_integration, organization:) }
+  let(:integration_customer) { create(:hubspot_customer, integration:, customer:) }
+
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:plan) { create(:plan, organization:) }
 
   before do
     allow(LagoHttpClient::Client).to receive(:new)

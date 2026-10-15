@@ -5,6 +5,10 @@ require "rails_helper"
 RSpec.describe Subscriptions::Dates::MonthlyService do
   subject(:date_service) { described_class.new(subscription, billing_at, false) }
 
+  before_all do
+    create_default(:organization)
+  end
+
   let(:subscription) do
     create(
       :subscription,
@@ -17,9 +21,9 @@ RSpec.describe Subscriptions::Dates::MonthlyService do
     )
   end
 
-  let(:billing_entity) { create(:billing_entity) }
-  let(:customer) { create(:customer, timezone:, billing_entity:) }
-  let(:plan) { create(:plan, interval: :monthly, pay_in_advance:) }
+  let(:billing_entity) { create_default(:billing_entity) }
+  let(:customer) { create_default(:customer, timezone:, billing_entity:) }
+  let(:plan) { create_default(:plan, interval: :monthly, pay_in_advance:) }
   let(:pay_in_advance) { false }
 
   let(:subscription_at) { Time.zone.parse("02 Feb 2021") }
@@ -915,6 +919,21 @@ RSpec.describe Subscriptions::Dates::MonthlyService do
 
         it "returns the price of single day" do
           expect(result).to eq(plan.amount_cents.fdiv(29))
+        end
+      end
+
+      # NOTE: a subscription created by an upgrade inherits the anniversary of the one it replaces, so it
+      #       starts in the middle of its first period. The termination and trial fees pass the boundary
+      #       start, which is clamped to `started_at`, and must still be prorated on the whole period.
+      context "when subscription started in the middle of a period" do
+        let(:result) { date_service.single_day_price(optional_from_date: started_at.to_date) }
+
+        let(:subscription_at) { Time.zone.parse("10 Jan 2024") }
+        let(:started_at) { Time.zone.parse("20 Mar 2024") }
+        let(:billing_at) { Time.zone.parse("01 Apr 2024") }
+
+        it "returns the price of single day of the whole period" do
+          expect(result).to eq(plan.amount_cents.fdiv(31))
         end
       end
     end

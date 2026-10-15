@@ -4,14 +4,16 @@ require "rails_helper"
 
 RSpec.describe Resolvers::PaymentsResolver do
   let(:required_permission) { "payments:view" }
-  let(:query) {}
-
   let!(:payment) { create(:payment, payable: invoice1) }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
   let(:invoice1) { create(:invoice, customer:, organization:) }
   let(:invoice2) { create(:invoice, customer:, organization:) }
+  let(:query) {}
+
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:organization) { create_default(:organization) }
+
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     create(:payment, payable: invoice2)

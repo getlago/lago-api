@@ -4,11 +4,6 @@ require "rails_helper"
 
 RSpec.describe Mutations::IntegrationMappings::Destroy do
   let(:required_permission) { "organization:integrations:update" }
-  let(:integration_mapping) { create(:netsuite_mapping, integration:) }
-  let(:integration) { create(:netsuite_integration, organization:) }
-  let(:organization) { membership.organization }
-  let(:membership) { create(:membership) }
-
   let(:mutation) do
     <<-GQL
       mutation($input: DestroyIntegrationMappingInput!) {
@@ -16,6 +11,13 @@ RSpec.describe Mutations::IntegrationMappings::Destroy do
       }
     GQL
   end
+  let(:integration_mapping) { create(:netsuite_mapping, integration:) }
+  let(:integration) { create(:netsuite_integration, organization:) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:add_on) { create_default(:add_on) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before { integration_mapping }
 

@@ -21,13 +21,7 @@ module QuoteVersions
 
       quote_version = quote.versions.new(
         organization: quote.organization,
-        **params.slice(
-          :billing_items,
-          :content,
-          :currency,
-          :start_date,
-          :end_date
-        )
+        **params.slice(:billing_items, :content, :currency, :billing_entity_id)
       )
 
       validator = QuoteVersions::Validators.for(result, quote_version:, scope: :update)
@@ -35,9 +29,6 @@ module QuoteVersions
 
       quote_version.save!
       result.quote_version = quote_version
-
-      # TODO: SendWebhookJob.perform_after_commit("quote_version.created", quote_version)
-
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)

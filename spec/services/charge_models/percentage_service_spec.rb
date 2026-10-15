@@ -5,9 +5,8 @@ require "rails_helper"
 RSpec.describe ChargeModels::PercentageService do
   subject(:apply_percentage_service) do
     described_class.apply(
-      charge:,
+      pricing_structure: ChargeModels::PricingStructure.from_charge(charge),
       aggregation_result:,
-      properties: charge.properties,
       period_ratio: 1.0
     )
   end
@@ -19,19 +18,6 @@ RSpec.describe ChargeModels::PercentageService do
   end
 
   let(:running_total) { [50, 150, 400] }
-  let(:aggregation_result) { BillableMetrics::Aggregations::BaseService::Result.new }
-  let(:fixed_amount) { "2.0" }
-  let(:aggregation) { 800 }
-  let(:free_units_per_events) { 3 }
-  let(:free_units_per_total_aggregation) { "250.0" }
-  let(:per_transaction_max_amount) { nil }
-  let(:per_transaction_min_amount) { nil }
-
-  let(:rate) { "1.3" }
-
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
-
   let(:charge) do
     create(
       :percentage_charge,
@@ -46,6 +32,22 @@ RSpec.describe ChargeModels::PercentageService do
         per_transaction_min_amount:
       }
     )
+  end
+  let(:aggregation_result) { BillableMetrics::Aggregations::BaseService::Result.new }
+  let(:fixed_amount) { "2.0" }
+  let(:aggregation) { 800 }
+  let(:free_units_per_events) { 3 }
+  let(:free_units_per_total_aggregation) { "250.0" }
+  let(:per_transaction_max_amount) { nil }
+  let(:per_transaction_min_amount) { nil }
+
+  let(:rate) { "1.3" }
+
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:plan, refind: true) { create(:plan, organization:) }
+
+  before_all do
+    create_default(:customer)
   end
 
   context "when aggregation value is 0" do
@@ -250,30 +252,39 @@ RSpec.describe ChargeModels::PercentageService do
 
   context "when applying min / max amount per transaction" do
     let(:per_transaction_max_amount) { "12" }
-    let(:per_transaction_min_amount) { "1.75" }
-
-    let(:subscription) { create(:subscription, organization:, plan:) }
-
+    let(:metered_item) do
+      Fees::ChargeService::MeteredItem.from_charge(
+        charge:,
+        boundaries: BillingPeriodBoundaries.new(
+          from_datetime: subscription.started_at,
+          to_datetime: subscription.started_at.end_of_month,
+          charges_from_datetime: subscription.started_at,
+          charges_to_datetime: subscription.started_at.end_of_month,
+          charges_duration: subscription.started_at.end_of_month.day - subscription.started_at.day + 1,
+          timestamp: subscription.started_at.end_of_month
+        )
+      )
+    end
     let(:aggregator) do
       BillableMetrics::Aggregations::SumService.new(
-        event_store_class:,
-        charge:,
-        subscription:,
+        event_store: event_store_class.new(billing_context:, boundaries: nil),
+        metered_item:,
+        billing_context:,
         boundaries: nil
       )
     end
-
+    let(:billing_context) { Billing::Context.from(subscription:) }
     let(:event_store_class) { Events::Stores::PostgresStore }
-
     let(:aggregation) { 10_090 }
-
     let(:fixed_amount) { "0" }
     let(:free_units_per_events) { nil }
     let(:free_units_per_total_aggregation) { "0" }
     let(:rate) { "2.99" }
-
     let(:per_event_aggregation) { BillableMetrics::Aggregations::BaseService::PerEventAggregationResult.new.tap { |r| r.event_aggregation = [10, 80, 10_000] } }
     let(:running_total) { [] }
+    let(:per_transaction_min_amount) { "1.75" }
+
+    let_it_be(:subscription, refind: true) { create(:subscription, organization:, plan:) }
 
     before do
       aggregation_result.aggregator = aggregator

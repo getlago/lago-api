@@ -20,133 +20,105 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
     )
   end
 
-  def create_enriched_event(timestamp:, value:, properties: {}, transaction_id: SecureRandom.uuid, code: billable_metric.code, charge_filter: nil, enriched_at: nil)
-    Clickhouse::EventsEnrichedExpanded.create!(
-      transaction_id:,
-      organization_id: organization.id,
-      external_subscription_id: subscription.external_id,
-      subscription_id: subscription.id,
-      plan_id: subscription.plan_id,
-      code:,
-      aggregation_type: billable_metric.aggregation_type,
-      charge_id: charge.id,
-      charge_version: charge.updated_at,
-      charge_filter_id: charge_filter&.id,
-      charge_filter_version: charge_filter&.updated_at,
-      timestamp:,
-      properties:,
-      value:,
-      decimal_value: value&.to_i&.to_d,
-      precise_total_amount_cents: nil
-    )
-  end
-
   def format_timestamp(timestamp, precision: 3)
     Time.zone.parse(timestamp).strftime("%Y-%m-%d %H:%M:%S.%#{precision}L")
   end
 
-  context "without deduplication" do
-    it_behaves_like "an event store", with_event_duplication: false
-  end
+  it_behaves_like "an event store"
 
-  context "with deduplication" do
-    it_behaves_like "an event store"
-
-    # Regression test for https://github.com/getlago/lago-api/pull/5359
-    #
-    # Two rows share the same (transaction_id, timestamp) but carry different
-    # filterable properties. Deduplication via argMax(enriched_at) must resolve
-    # to a single row FIRST — otherwise the same logical event could be counted
-    # in multiple filter/group buckets (once per property value it ever had).
-    describe "filters applied after deduplication" do
-      subject(:event_store) do
-        described_class.new(
-          code: billable_metric.code,
-          subscription:,
-          boundaries:,
-          filters: {
-            grouped_by: nil,
-            grouped_by_values: nil,
-            matching_filters: matching_filters,
-            ignored_filters: [],
-            charge_id: charge.id,
-            charge_filter: nil
-          },
-          deduplicate: true
-        )
-      end
-
-      let(:billable_metric) { create(:sum_billable_metric, field_name: "value", code: "bm:code") }
-      let(:organization) { billable_metric.organization }
-      let(:charge) { create(:standard_charge, organization:, billable_metric:) }
-      let(:customer) { create(:customer, organization:) }
-      let(:subscription) { create(:subscription, customer:, started_at: DateTime.parse("2023-03-15")) }
-      let(:subscription_started_at) { subscription.started_at.beginning_of_day }
-      let(:boundaries) do
-        {
-          from_datetime: subscription_started_at,
-          to_datetime: subscription.started_at.end_of_month.end_of_day,
-          charges_duration: 31
+  # Regression test for https://github.com/getlago/lago-api/pull/5359
+  #
+  # Two rows share the same (transaction_id, timestamp) but carry different
+  # filterable properties. Deduplication must resolve to a single row (the
+  # latest enrichment) FIRST — otherwise the same logical event could be
+  # counted in multiple filter/group buckets (once per property value it ever
+  # had).
+  describe "filters applied after deduplication" do
+    subject(:event_store) do
+      described_class.new(
+        code: billable_metric.code,
+        billing_context: Billing::Context.from(subscription:),
+        boundaries:,
+        filters: {
+          grouped_by: nil,
+          grouped_by_values: nil,
+          matching_filters: matching_filters,
+          ignored_filters: [],
+          charge_id: charge.id,
+          charge_filter: nil
         }
+      )
+    end
+
+    let(:billable_metric) { create(:sum_billable_metric, field_name: "value", code: "bm:code") }
+    let(:organization) { billable_metric.organization }
+    let(:charge) { create(:standard_charge, organization:, billable_metric:) }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:, started_at: DateTime.parse("2023-03-15")) }
+    let(:subscription_started_at) { subscription.started_at.beginning_of_day }
+    let(:boundaries) do
+      {
+        from_datetime: subscription_started_at,
+        to_datetime: subscription.started_at.end_of_month.end_of_day,
+        charges_duration: 31
+      }
+    end
+
+    let(:transaction_id) { SecureRandom.uuid }
+    let(:timestamp) { subscription_started_at + 1.day }
+
+    before do
+      Clickhouse::EventsEnriched.create!(
+        transaction_id:,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        code: billable_metric.code,
+        timestamp:,
+        properties: {"value" => 1, "region" => "europe"},
+        value: 1,
+        decimal_value: 1.to_d,
+        precise_total_amount_cents: 1,
+        enriched_at: 1.minute.ago
+      )
+
+      Clickhouse::EventsEnriched.create!(
+        transaction_id:,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        code: billable_metric.code,
+        timestamp:,
+        properties: {"value" => 1, "region" => "asia"},
+        value: 1,
+        decimal_value: 1.to_d,
+        precise_total_amount_cents: 1,
+        enriched_at: Time.current
+      )
+    end
+
+    context "when the filter matches only the earlier (superseded) property value" do
+      let(:matching_filters) { {"region" => ["europe"]} }
+
+      it "does not count the event (latest enrichment is asia, filter excludes it)" do
+        expect(event_store.count).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 0, events_count: 0))
       end
+    end
 
-      let(:transaction_id) { SecureRandom.uuid }
-      let(:timestamp) { subscription_started_at + 1.day }
+    context "when the filter matches only the latest property value" do
+      let(:matching_filters) { {"region" => ["asia"]} }
 
-      before do
-        Clickhouse::EventsEnriched.create!(
-          transaction_id:,
-          organization_id: organization.id,
-          external_subscription_id: subscription.external_id,
-          code: billable_metric.code,
-          timestamp:,
-          properties: {"value" => 1, "region" => "europe"},
-          value: 1,
-          decimal_value: 1.to_d,
-          precise_total_amount_cents: 1,
-          enriched_at: 1.minute.ago
-        )
-
-        Clickhouse::EventsEnriched.create!(
-          transaction_id:,
-          organization_id: organization.id,
-          external_subscription_id: subscription.external_id,
-          code: billable_metric.code,
-          timestamp:,
-          properties: {"value" => 1, "region" => "asia"},
-          value: 1,
-          decimal_value: 1.to_d,
-          precise_total_amount_cents: 1,
-          enriched_at: Time.current
-        )
-      end
-
-      context "when the filter matches only the earlier (superseded) property value" do
-        let(:matching_filters) { {"region" => ["europe"]} }
-
-        it "does not count the event (latest enrichment is asia, filter excludes it)" do
-          expect(event_store.count).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 0, events_count: 0))
-        end
-      end
-
-      context "when the filter matches only the latest property value" do
-        let(:matching_filters) { {"region" => ["asia"]} }
-
-        it "counts the deduplicated event exactly once" do
-          expect(event_store.count).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 1, events_count: 1))
-        end
+      it "counts the deduplicated event exactly once" do
+        expect(event_store.count).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 1, events_count: 1))
       end
     end
   end
 
-  # Pins the query shape behind #count. The deduplicated + unfiltered count must
-  # avoid the INNER ANY JOIN (which only fetches the value column and caused
-  # ClickHouse OOM on large subscriptions); filtered and non-deduplicated counts
-  # must keep using the JOIN-based path so the filter is applied to the latest
-  # enriched row per dedup key.
+  # Pins the query shape behind #count. Deduplication relies on the `FINAL`
+  # modifier (ReplacingMergeTree collapses duplicated sorting keys at read time).
+  # The unfiltered count queries the table directly; filtered counts go through
+  # the events CTE so the filter is applied to the deduplicated rows.
   describe "#count_query" do
     subject(:event_store) do
-      described_class.new(code: billable_metric.code, subscription:, boundaries:, filters:, deduplicate:)
+      described_class.new(code: billable_metric.code, billing_context: Billing::Context.from(subscription:), boundaries:, filters:)
     end
 
     let(:billable_metric) { create(:sum_billable_metric, field_name: "value", code: "bm:code") }
@@ -161,58 +133,55 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
         charges_duration: 31
       }
     end
-    let(:deduplicate) { true }
     let(:filters) { {} }
 
-    context "when deduplicated and unfiltered" do
-      it "counts distinct dedup keys without a JOIN" do
+    context "when unfiltered" do
+      it "counts directly on the deduplicated table without a CTE" do
         sql = event_store.count_query
 
-        expect(sql).not_to include("JOIN")
-        expect(sql).to include("GROUP BY #{described_class::DEDUP_KEY_COLUMNS.join(", ")}")
+        expect(sql).not_to include("WITH")
+        expect(sql).to include("FROM events_enriched FINAL")
       end
     end
 
     context "when grouped_by_values is set" do
       let(:filters) { {grouped_by_values: {"region" => "europe"}} }
 
-      it "uses the JOIN-based deduplication path" do
-        expect(event_store.count_query).to include("INNER ANY JOIN")
+      it "uses the CTE-based deduplication path" do
+        sql = event_store.count_query
+
+        expect(sql).to include("WITH")
+        expect(sql).to include("FROM events_enriched FINAL")
       end
     end
 
     context "when matching_filters are set" do
       let(:filters) { {matching_filters: {"region" => ["europe"]}} }
 
-      it "uses the JOIN-based deduplication path" do
-        expect(event_store.count_query).to include("INNER ANY JOIN")
+      it "uses the CTE-based deduplication path" do
+        sql = event_store.count_query
+
+        expect(sql).to include("WITH")
+        expect(sql).to include("FROM events_enriched FINAL")
       end
     end
 
     context "when ignored_filters are set" do
       let(:filters) { {ignored_filters: [{"region" => ["europe"]}]} }
 
-      it "uses the JOIN-based deduplication path" do
-        expect(event_store.count_query).to include("INNER ANY JOIN")
-      end
-    end
-
-    context "when deduplication is disabled" do
-      let(:deduplicate) { false }
-
-      it "does not build the deduplication CTEs" do
+      it "uses the CTE-based deduplication path" do
         sql = event_store.count_query
 
-        expect(sql).not_to include("JOIN")
-        expect(sql).not_to include("latest_enriched")
+        expect(sql).to include("WITH")
+        expect(sql).to include("FROM events_enriched FINAL")
       end
     end
 
     context "when grouped_by is set without grouped_by_values or filters" do
       let(:filters) { {grouped_by: ["region"]} }
 
-      it "still uses the JOIN-free fast path (grouped_by alone does not filter a count)" do
-        expect(event_store.count_query).not_to include("JOIN")
+      it "still uses the CTE-free fast path (grouped_by alone does not filter a count)" do
+        expect(event_store.count_query).not_to include("WITH")
       end
     end
 
@@ -221,7 +190,7 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
         event_store.use_from_boundary = false
         sql = event_store.count_query
 
-        expect(sql).not_to include("JOIN")
+        expect(sql).not_to include("WITH")
         expect(sql.upcase).not_to include("NULL")
         expect(sql).not_to include("timestamp >=")
         expect(sql).to include("timestamp <=")
@@ -229,12 +198,12 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
     end
   end
 
-  # Real-data equivalence: the deduplicated + unfiltered #count uses the JOIN-free
-  # fast path. These assert it returns the SAME number as the original JOIN-based
-  # query on identical data, across re-enrichment duplicates and boundary edges.
-  describe "#count fast-path equivalence with the JOIN-based query" do
+  # Real-data equivalence: the deduplicated + unfiltered #count uses the CTE-free
+  # fast path. These assert it returns the SAME number as the CTE-based query on
+  # identical data, across re-enrichment duplicates and boundary edges.
+  describe "#count fast-path equivalence with the CTE-based query" do
     subject(:event_store) do
-      described_class.new(code: billable_metric.code, subscription:, boundaries:, filters: {}, deduplicate: true)
+      described_class.new(code: billable_metric.code, billing_context: Billing::Context.from(subscription:), boundaries:, filters: {})
     end
 
     let(:billable_metric) { create(:sum_billable_metric, field_name: "value", code: "bm:code") }
@@ -266,7 +235,7 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       )
     end
 
-    def join_based_count
+    def cte_based_count
       sql = event_store.send(
         :with_ctes,
         event_store.events_cte_queries(deduplicated_columns: %w[value]),
@@ -283,7 +252,7 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       insert_event(transaction_id: SecureRandom.uuid, timestamp: ts + 1.day, enriched_at: Time.current)
 
       expect(event_store.count.value).to eq(2)
-      expect(event_store.count.value).to eq(join_based_count)
+      expect(event_store.count.value).to eq(cte_based_count)
     end
 
     it "treats the same transaction_id at different timestamps as distinct events" do
@@ -292,7 +261,7 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       insert_event(transaction_id: txn, timestamp: ts + 1.hour, enriched_at: Time.current)
 
       expect(event_store.count.value).to eq(2)
-      expect(event_store.count.value).to eq(join_based_count)
+      expect(event_store.count.value).to eq(cte_based_count)
     end
 
     it "excludes events outside the boundaries" do
@@ -300,12 +269,12 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       insert_event(transaction_id: SecureRandom.uuid, timestamp: boundaries[:to_datetime] + 2.days, enriched_at: Time.current)
 
       expect(event_store.count.value).to eq(1)
-      expect(event_store.count.value).to eq(join_based_count)
+      expect(event_store.count.value).to eq(cte_based_count)
     end
 
     it "returns zero when there are no events" do
       expect(event_store.count.value).to eq(0)
-      expect(event_store.count.value).to eq(join_based_count)
+      expect(event_store.count.value).to eq(cte_based_count)
     end
   end
 
@@ -319,10 +288,10 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
     let(:subscription) { create(:subscription, customer:, started_at: DateTime.parse("2023-03-15")) }
     let(:boundary_timestamp) { subscription.started_at.beginning_of_day + 1.day }
 
-    def event_store_for(boundary_transaction_id, deduplicate:)
+    def event_store_for(boundary_transaction_id)
       described_class.new(
         code: billable_metric.code,
-        subscription:,
+        billing_context: Billing::Context.from(subscription:),
         boundaries: {
           from_datetime: subscription.started_at.beginning_of_day,
           to_datetime: subscription.started_at.end_of_month.end_of_day,
@@ -337,8 +306,7 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
             code: billable_metric.code,
             timestamp: boundary_timestamp
           )
-        },
-        deduplicate:
+        }
       )
     end
 
@@ -363,14 +331,56 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       %w[tx-1 tx-2 tx-3].each { |tx| insert_event(transaction_id: tx, timestamp: boundary_timestamp) }
     end
 
-    [true, false].each do |dedup|
-      context "with deduplicate: #{dedup}" do
-        it "assigns each event sharing the boundary timestamp a distinct position" do
-          counts = %w[tx-1 tx-2 tx-3].map { |tx| event_store_for(tx, deduplicate: dedup).count.value }
+    it "assigns each event sharing the boundary timestamp a distinct position" do
+      counts = %w[tx-1 tx-2 tx-3].map { |tx| event_store_for(tx).count.value }
 
-          expect(counts).to eq([3, 4, 5])
-        end
+      expect(counts).to eq([3, 4, 5])
+    end
+  end
+
+  # ClickHouse rejects a query before running it when the statement is larger than
+  # `max_query_size` (256 kB) or expands to more than `max_ast_elements` (50 000) nodes.
+  # A charge carrying thousands of filters serializes into a predicate past both limits,
+  # so the rejected query is replayed with them raised.
+  describe "filters larger than the ClickHouse parser defaults" do
+    subject(:event_store) do
+      described_class.new(
+        code: billable_metric.code,
+        billing_context: Billing::Context.from(subscription:),
+        boundaries:,
+        filters: {ignored_filters:}
+      )
+    end
+
+    let(:billable_metric) { create(:sum_billable_metric, field_name: "value", code: "bm:code") }
+    let(:organization) { billable_metric.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:, started_at: DateTime.parse("2023-03-15")) }
+    let(:boundaries) do
+      {
+        from_datetime: subscription.started_at.beginning_of_day,
+        to_datetime: subscription.started_at.end_of_month.end_of_day,
+        charges_duration: 31
+      }
+    end
+    let(:ignored_filters) do
+      Array.new(2_000) do |index|
+        {"model" => ["model-#{index}"], "type" => ["type-#{index}"], "zone" => ["zone-#{index}"]}
       end
+    end
+
+    before do
+      create_event(timestamp: DateTime.parse("2023-03-16"), value: 10, properties: {"model" => "kept"})
+    end
+
+    it "exceeds both parser defaults" do
+      sql = event_store.count_query
+
+      expect(sql.size).to be > 262_144
+    end
+
+    it "aggregates instead of failing to parse" do
+      expect(event_store.count).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 1, events_count: 1))
     end
   end
 end

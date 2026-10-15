@@ -11,6 +11,11 @@ module UsageMonitoring
     end
 
     def call
+      unless subscription.active?
+        subscription_activity.delete
+        return result
+      end
+
       exception_to_raise = nil
       lifetime_usage = find_or_create_lifetime_usage
 
@@ -32,7 +37,7 @@ module UsageMonitoring
       alerts = Alert.where(
         subscription_external_id: subscription.external_id,
         organization_id: subscription_activity.organization_id
-      ).includes(:thresholds).load
+      ).load
 
       alerts.each do |alert|
         case alert.alert_type
@@ -71,7 +76,8 @@ module UsageMonitoring
         customer: subscription.customer,
         subscription:,
         apply_taxes: false, # Never use taxes for alerting
-        with_cache: true
+        with_cache: true,
+        use_usage_buckets: true
       ).usage
     end
 

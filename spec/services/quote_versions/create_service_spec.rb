@@ -7,20 +7,16 @@ RSpec.describe QuoteVersions::CreateService do
     described_class.new(quote:, params: create_params)
   end
 
-  let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization, feature_flags: ["order_forms"]) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:) }
   let(:create_params) do
     {
       billing_items: {},
       content: "Test content",
-      currency: "USD",
-      start_date:,
-      end_date:
+      currency: "USD"
     }
   end
-  let(:start_date) { Date.new(2025, 2, 11) }
-  let(:end_date) { Date.new(2025, 3, 12) }
 
   describe ".call" do
     let(:result) { create_service.call }
@@ -35,8 +31,6 @@ RSpec.describe QuoteVersions::CreateService do
         expect(result.quote_version.content).to eq("Test content")
         expect(result.quote_version.billing_items).to eq({})
         expect(result.quote_version.currency).to eq("USD")
-        expect(result.quote_version.start_date).to eq(start_date)
-        expect(result.quote_version.end_date).to eq(end_date)
       end
     end
 
@@ -139,6 +133,7 @@ RSpec.describe QuoteVersions::CreateService do
     end
 
     context "when feature flag is disabled", :premium do
+      let(:customer) { create(:customer, organization:) }
       let(:organization) { create(:organization) }
 
       it "returns forbidden status" do

@@ -6,10 +6,6 @@ RSpec.describe Mutations::Subscriptions::UpdateChargeFilter, :premium do
   subject { execute_query(query:, input:) }
 
   let(:required_permission) { "subscriptions:update" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:plan) { create(:plan, organization:) }
-  let(:billable_metric) { create(:billable_metric, organization:) }
   let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:) }
   let(:charge) { create(:standard_charge, plan:, organization:, billable_metric:) }
   let(:charge_filter) do
@@ -18,7 +14,6 @@ RSpec.describe Mutations::Subscriptions::UpdateChargeFilter, :premium do
     end
   end
   let(:subscription) { create(:subscription, organization:, plan:) }
-
   let(:query) do
     <<~GQL
       mutation($input: UpdateSubscriptionChargeFilterInput!) {
@@ -33,7 +28,6 @@ RSpec.describe Mutations::Subscriptions::UpdateChargeFilter, :premium do
       }
     GQL
   end
-
   let(:input) do
     {
       subscriptionId: subscription.id,
@@ -44,12 +38,19 @@ RSpec.describe Mutations::Subscriptions::UpdateChargeFilter, :premium do
     }
   end
 
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric, organization:) }
+  let_it_be(:customer, refind: true) { create_default(:customer) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
+  let_it_be(:plan, refind: true) { create_default(:plan, organization:) }
+
   before do
     charge_filter
     subscription
   end
 
   it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "subscriptions:update"
 
   it "creates a plan override, charge override and charge filter override" do

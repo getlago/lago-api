@@ -19,6 +19,8 @@ authentication_methods:
 analytics:
   view:
     - finance
+attributed_usage:
+  view:
 billable_metrics:
   view:
   create:
@@ -38,6 +40,11 @@ charges:
   create:
   update:
   delete:
+contracts:
+  view:
+  create:
+  update:
+  terminate:
 coupons:
   view:
     - finance
@@ -75,6 +82,7 @@ customers:
   create:
     - manager
   update:
+    - finance
     - manager
   delete:
     - manager
@@ -235,6 +243,11 @@ product_categories:
   create:
   update:
   delete:
+rate_cards:
+  view:
+  create:
+  update:
+  delete:
 roles:
   view:
   create:
@@ -250,6 +263,11 @@ subscriptions:
     - manager
   update:
     - manager
+usage_attribution_types:
+  view:
+  create:
+  update:
+  delete:
 wallets:
   create:
     - manager

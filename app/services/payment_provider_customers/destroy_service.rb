@@ -21,6 +21,8 @@ module PaymentProviderCustomers
           PaymentMethods::DestroyService.call!(payment_method:)
         end
 
+        payment_provider_customer.billing_object_connections.destroy_all
+
         clear_customer_payment_provider
       end
 

@@ -18,7 +18,7 @@ RSpec.describe Customers::LockService do
   end
 
   describe "lock scoping" do
-    %i[prepaid_credit payment_method credit_note coupon].each do |scope|
+    described_class::VALID_SCOPES.each do |scope|
       context "with the #{scope} scope", transaction: false do
         subject(:lock_service) { described_class.new(customer:, scope:, timeout_seconds: 0.seconds) }
 
@@ -49,6 +49,22 @@ RSpec.describe Customers::LockService do
         end
 
         expect(lock_service).not_to be_locked
+      end
+    end
+
+    context "when no transaction is open", transaction: false do
+      let(:held_advisory_locks) do
+        "SELECT count(*) FROM pg_locks WHERE locktype = 'advisory' AND granted AND pid = pg_backend_pid()"
+      end
+
+      it "holds the lock until the block returns" do
+        expect(ApplicationRecord.connection).not_to be_transaction_open
+
+        lock_service.call do
+          expect(ApplicationRecord.connection.select_value(held_advisory_locks)).to eq(1)
+        end
+
+        expect(ApplicationRecord.connection.select_value(held_advisory_locks)).to eq(0)
       end
     end
 

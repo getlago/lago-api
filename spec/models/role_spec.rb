@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe Role do
   subject(:role) { build(:role) }
 
+  let_it_be(:organization) { create(:organization) }
+
   it { expect(described_class).to be_soft_deletable }
 
   describe "associations" do
@@ -23,7 +25,6 @@ RSpec.describe Role do
 
   describe "scopes" do
     describe ".with_code" do
-      let(:organization) { create(:organization) }
       let!(:developer) { create(:role, code: :developer, organization:) }
 
       before { create(:role, code: :designer, organization:) }
@@ -38,8 +39,7 @@ RSpec.describe Role do
     end
 
     describe ".with_organization" do
-      let(:organization) { create(:organization) }
-      let(:other_organization) { create(:organization) }
+      let_it_be(:other_organization) { create(:organization) }
       let!(:system_role) { create(:role, :admin) }
       let!(:org_role) { create(:role, organization:) }
 
@@ -105,6 +105,37 @@ RSpec.describe Role do
         end
       end
 
+      it "is invalid with a reserved name, whatever the case" do
+        ["admin", "Admin", "ADMIN", "finance", "Finance", "manager", "Manager", "Admin\u00A0", "Admin\u200B", "Admin\u034F", "Ad\u200Bmin", "\u00A0Finance"].each do |name|
+          role.name = name
+          expect(role).not_to be_valid
+          expect(role.errors[:name]).to include("value_already_exist")
+        end
+      end
+
+      context "with an existing role already named like a reserved one" do
+        let(:existing) { create(:role, :custom) }
+
+        before { existing.update_column(:name, "Admin") } # rubocop:disable Rails/SkipsModelValidations
+
+        it "stays valid when updated without renaming" do
+          existing.description = "updated"
+          expect(existing).to be_valid
+        end
+      end
+
+      context "with an existing role whose name holds a Unicode space" do
+        let(:existing) { create(:role, :custom) }
+
+        before { existing.update_column(:name, "Admin\u00A0") } # rubocop:disable Rails/SkipsModelValidations
+
+        it "stays valid and keeps its name when updated without renaming" do
+          existing.description = "updated"
+          expect(existing).to be_valid
+          expect(existing.name).to eq("Admin\u00A0")
+        end
+      end
+
       it "is invalid without name" do
         role.name = nil
         expect(role).not_to be_valid
@@ -133,8 +164,6 @@ RSpec.describe Role do
   end
 
   describe "database constraints" do
-    let!(:organization) { create(:organization) }
-
     it "rejects empty name" do
       expect {
         described_class.connection.execute(<<~SQL)
@@ -266,6 +295,43 @@ RSpec.describe Role do
 
       role.reload
       expect(role.permissions).to eq(%w[a:action z:action])
+    end
+  end
+
+  describe "#permissions_hash" do
+    subject(:permissions_hash) { role.permissions_hash }
+
+    let(:role) { build(:role, :custom, name:, permissions: %w[addons:view]) }
+    let(:name) { "admin" }
+
+    context "when a custom role is named after the admin role" do
+      it "grants only the role's explicit permissions" do
+        expect(permissions_hash.select { |_, granted| granted }.keys).to eq(%w[addons:view])
+      end
+    end
+
+    context "when a custom role is named after the finance role" do
+      let(:name) { "finance" }
+
+      it "does not inherit the finance permissions" do
+        expect(permissions_hash["billing_entities:create"]).to be(false)
+      end
+    end
+
+    context "with the predefined admin role" do
+      let(:role) { create(:role, :admin) }
+
+      it "grants every permission" do
+        expect(permissions_hash.values).to all(be(true))
+      end
+    end
+
+    context "with the predefined finance role" do
+      let(:role) { create(:role, :finance) }
+
+      it "resolves the permissions from the role code" do
+        expect(permissions_hash["addons:view"]).to be(true)
+      end
     end
   end
 end

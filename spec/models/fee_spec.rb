@@ -5,19 +5,110 @@ require "rails_helper"
 RSpec.describe Fee do
   subject { build(:fee) }
 
-  it { is_expected.to belong_to(:add_on).optional }
-  it { is_expected.to belong_to(:charge).optional }
-  it { is_expected.to belong_to(:fixed_charge).optional }
-  it { is_expected.to belong_to(:rate_card_rate).optional }
-  it { is_expected.to belong_to(:rate_override).optional }
-  it { is_expected.to have_many(:presentation_breakdowns) }
-  it { is_expected.to have_one(:fixed_charge_add_on).through(:fixed_charge) }
-  it { is_expected.to have_one(:adjusted_fee).dependent(:nullify) }
-  it { is_expected.to have_one(:billable_metric).through(:charge) }
-  it { is_expected.to have_one(:customer).through(:subscription) }
-  it { is_expected.to have_one(:pricing_unit_usage).dependent(:destroy) }
-  it { is_expected.to have_one(:true_up_fee).with_foreign_key(:true_up_parent_fee_id).class_name("Fee").dependent(:destroy) }
-  it { is_expected.to belong_to(:original_fee).class_name("Fee").optional }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:add_on) { create_default(:add_on) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:customer) { create_default(:customer) }
+
+  describe "associations" do
+    it do
+      expect(subject).to belong_to(:invoice).optional
+      expect(subject).to belong_to(:charge).optional
+      expect(subject).to belong_to(:add_on).optional
+      expect(subject).to belong_to(:applied_add_on).optional
+      expect(subject).to belong_to(:subscription).optional
+      expect(subject).to belong_to(:contract).optional
+      expect(subject).to belong_to(:contract_rate_card).optional
+      expect(subject).to belong_to(:charge_filter).optional
+      expect(subject).to belong_to(:product_filter).optional
+      expect(subject).to belong_to(:group).optional
+      expect(subject).to belong_to(:invoiceable).optional
+      expect(subject).to belong_to(:true_up_parent_fee).class_name("Fee").optional
+      expect(subject).to belong_to(:original_fee).class_name("Fee").optional
+      expect(subject).to belong_to(:organization)
+      expect(subject).to belong_to(:billing_entity)
+      expect(subject).to belong_to(:fixed_charge).optional
+      expect(subject).to belong_to(:rate_card_rate).optional
+      expect(subject).to belong_to(:rate_override).optional
+      expect(subject).to have_one(:adjusted_fee).dependent(:nullify)
+      expect(subject).to have_one(:billable_metric).through(:charge)
+      expect(subject).to have_one(:fixed_charge_add_on).class_name("AddOn").through(:fixed_charge).source(:add_on)
+      expect(subject).to have_one(:customer).through(:subscription)
+      expect(subject).to have_one(:pricing_unit_usage).dependent(:destroy)
+      expect(subject).to have_one(:true_up_fee).with_foreign_key(:true_up_parent_fee_id).class_name("Fee").dependent(:destroy)
+      expect(subject).to have_many(:credit_note_items).dependent(:destroy)
+      expect(subject).to have_many(:credit_notes).through(:credit_note_items)
+      expect(subject).to have_many(:applied_taxes).class_name("Fee::AppliedTax").dependent(:destroy)
+      expect(subject).to have_many(:taxes).through(:applied_taxes)
+      expect(subject).to have_many(:presentation_breakdowns).dependent(:destroy)
+    end
+  end
+
+  describe "contract provenance validation" do
+    subject(:fee) { build(:fee, contract:, contract_rate_card:) }
+
+    let(:contract_rate_card) { build_stubbed(:contract_rate_card) }
+    let(:contract) { contract_rate_card.contract }
+
+    it "accepts a card belonging to the fee contract" do
+      expect(fee).to be_valid
+    end
+
+    context "with a card belonging to another contract" do
+      let(:contract) { build_stubbed(:contract) }
+
+      it "rejects the mismatched contract" do
+        expect(fee).not_to be_valid
+        expect(fee.errors[:contract_rate_card]).to eq(["must belong to the fee contract"])
+      end
+    end
+
+    context "without a contract" do
+      let(:contract) { nil }
+
+      it "requires both provenance references" do
+        expect(fee).not_to be_valid
+        expect(fee.errors[:base]).to eq(["contract and contract rate card must both be present"])
+      end
+    end
+
+    context "without a card" do
+      let(:contract_rate_card) { nil }
+      let(:contract) { build_stubbed(:contract) }
+
+      it "requires both provenance references" do
+        expect(fee).not_to be_valid
+        expect(fee.errors[:base]).to eq(["contract and contract rate card must both be present"])
+      end
+    end
+
+    context "without contract provenance" do
+      let(:contract_rate_card) { nil }
+      let(:contract) { nil }
+
+      it "accepts legacy fees" do
+        expect(fee).to be_valid
+      end
+    end
+  end
+
+  describe "contract rate card history" do
+    subject(:fee) do
+      create(:fee, contract: contract_rate_card.contract, contract_rate_card:, organization: contract_rate_card.organization)
+    end
+
+    let(:contract_rate_card) { create(:contract_rate_card) }
+
+    before do
+      fee
+      contract_rate_card.discard!
+    end
+
+    it "resolves a discarded pricing attachment" do
+      expect(fee.reload.contract_rate_card).to eq(contract_rate_card)
+    end
+  end
 
   describe "#ordered_by_period" do
     let(:fee1) do
@@ -106,6 +197,14 @@ RSpec.describe Fee do
 
       it "returns related fixed charge add on code" do
         expect(fee.item_code).to eq(fee.fixed_charge.add_on.code)
+      end
+    end
+
+    context "when it is a product fee" do
+      let(:product) { create(:product, code: "compute") }
+
+      it "returns the product code" do
+        expect(described_class.new(invoiceable: product, fee_type: "product").item_code).to eq("compute")
       end
     end
   end
@@ -316,6 +415,14 @@ RSpec.describe Fee do
           .to eq(charge.billable_metric.name)
       end
     end
+
+    context "when it is a product fee" do
+      let(:product) { create(:product, name: "Compute") }
+
+      it "returns the product name" do
+        expect(described_class.new(invoiceable: product, fee_type: "product").item_name).to eq("Compute")
+      end
+    end
   end
 
   describe "#item_description" do
@@ -366,6 +473,14 @@ RSpec.describe Fee do
       it "returns related billable metric description" do
         expect(described_class.new(charge:, fee_type: "charge").item_description)
           .to eq(charge.billable_metric.description)
+      end
+    end
+
+    context "when it is a product fee" do
+      let(:product) { create(:product, description: "Compute usage") }
+
+      it "returns the product description" do
+        expect(described_class.new(invoiceable: product, fee_type: "product").item_description).to eq("Compute usage")
       end
     end
   end
@@ -420,6 +535,12 @@ RSpec.describe Fee do
           .to eq("BillableMetric")
       end
     end
+
+    context "when it is a product fee" do
+      it "returns product" do
+        expect(described_class.new(fee_type: "product").item_type).to eq("Product")
+      end
+    end
   end
 
   describe "#item_source" do
@@ -470,6 +591,14 @@ RSpec.describe Fee do
       it "returns billable metric" do
         expect(described_class.new(charge:, fee_type: "charge").item_source)
           .to eq(charge.billable_metric.code)
+      end
+    end
+
+    context "when it is a product fee" do
+      let(:product) { create(:product, code: "compute") }
+
+      it "returns the product code" do
+        expect(described_class.new(invoiceable: product, fee_type: "product").item_source).to eq("compute")
       end
     end
   end
@@ -525,6 +654,14 @@ RSpec.describe Fee do
       it "returns the billable metric id" do
         expect(described_class.new(charge:, fee_type: "charge").item_id)
           .to eq(charge.billable_metric.id)
+      end
+    end
+
+    context "when it is a product fee" do
+      let(:product) { create(:product) }
+
+      it "returns the product id" do
+        expect(described_class.new(invoiceable: product, fee_type: "product").item_id).to eq(product.id)
       end
     end
   end
@@ -596,6 +733,48 @@ RSpec.describe Fee do
 
       it "returns valid response" do
         expect(fee.invoice_sorting_clause).to eq("#{fee.invoice_name} #{fee.grouped_by.values.join} #{fee.filter_display_name}".downcase)
+      end
+    end
+  end
+
+  describe "#filter_display_name" do
+    let(:charge) { create(:standard_charge) }
+    let(:charge_filter) { create(:charge_filter, charge:, invoice_display_name: "EU Premium") }
+    let(:product) { create(:product) }
+    let(:product_filter) { create(:product_filter, product:, invoice_display_name: "EU Premium") }
+
+    context "when the fee is charge-backed" do
+      let(:fee) { build(:charge_fee, charge:, charge_filter:) }
+
+      it "uses the charge filter display name" do
+        expect(fee.filter_display_name).to eq("EU Premium")
+      end
+    end
+
+    context "when the fee is product-backed" do
+      let(:fee) { build(:fee, fee_type: :product, product_filter:) }
+
+      it "uses the product filter invoice name" do
+        expect(fee.filter_display_name).to eq("EU Premium")
+      end
+
+      context "when sorting the invoice fees" do
+        let(:product) { create(:product, name: "Compute") }
+        let(:fee) do
+          build(
+            :fee,
+            fee_type: :product,
+            product_filter:,
+            invoiceable: product,
+            subscription: nil,
+            invoice_display_name: nil,
+            grouped_by: {}
+          )
+        end
+
+        it "includes the product filter" do
+          expect(fee.invoice_sorting_clause).to eq("compute eu premium")
+        end
       end
     end
   end
@@ -706,10 +885,11 @@ RSpec.describe Fee do
   describe "#taxable?" do
     subject { fee.taxable? }
 
-    let(:fee) { build(:fee, units:, amount_cents:, events_count:) }
+    let(:fee) { build(:fee, units:, amount_cents:, events_count:, precise_coupons_amount_cents:) }
     let(:units) { 0 }
     let(:amount_cents) { 0 }
     let(:events_count) { 0 }
+    let(:precise_coupons_amount_cents) { 0 }
 
     context "when amount_cents is positive" do
       let(:amount_cents) { 100 }
@@ -724,6 +904,19 @@ RSpec.describe Fee do
     context "when amount_cents is zero but units and events_count are positive" do
       let(:units) { 5 }
       let(:events_count) { 3 }
+
+      it { is_expected.to be false }
+    end
+
+    context "when amount_cents is negative" do
+      let(:amount_cents) { -100 }
+
+      it { is_expected.to be true }
+    end
+
+    context "when coupons cover the whole amount" do
+      let(:amount_cents) { 100 }
+      let(:precise_coupons_amount_cents) { 100 }
 
       it { is_expected.to be false }
     end
@@ -977,6 +1170,11 @@ RSpec.describe Fee do
       fee = build(:charge_fee, grouped_by: {}, charge_filter_id: SecureRandom.uuid)
       expect(fee).to be_grouped_or_filtered
     end
+
+    it "returns true when product_filter_id is present" do
+      fee = build(:fee, fee_type: :product, grouped_by: {}, product_filter_id: SecureRandom.uuid)
+      expect(fee).to be_grouped_or_filtered
+    end
   end
 
   describe "#ungrouped_or_filtered?" do
@@ -993,6 +1191,35 @@ RSpec.describe Fee do
     it "returns true when charge_filter_id is present" do
       fee = build(:charge_fee, grouped_by: {"cloud" => "aws"}, charge_filter_id: SecureRandom.uuid)
       expect(fee).to be_ungrouped_or_filtered
+    end
+
+    it "returns true when product_filter_id is present" do
+      fee = build(:fee, fee_type: :product, grouped_by: {"cloud" => "aws"}, product_filter_id: SecureRandom.uuid)
+      expect(fee).to be_ungrouped_or_filtered
+    end
+  end
+
+  describe "#filtered?" do
+    let(:fee) { build(:fee) }
+
+    it "returns false when neither filter is present" do
+      expect(fee).not_to be_filtered
+    end
+
+    context "when the charge filter is present" do
+      let(:fee) { build(:charge_fee, charge_filter_id: SecureRandom.uuid) }
+
+      it "returns true" do
+        expect(fee).to be_filtered
+      end
+    end
+
+    context "when the product filter is present" do
+      let(:fee) { build(:fee, fee_type: :product, product_filter_id: SecureRandom.uuid) }
+
+      it "returns true" do
+        expect(fee).to be_filtered
+      end
     end
   end
 

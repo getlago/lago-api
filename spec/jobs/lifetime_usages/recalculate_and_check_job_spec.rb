@@ -3,8 +3,13 @@
 require "rails_helper"
 
 RSpec.describe LifetimeUsages::RecalculateAndCheckJob do
-  let(:organization) { create(:organization, :premium, premium_integrations:) }
+  before_all do
+    create_default(:customer)
+    create_default(:plan)
+  end
+
   let(:lifetime_usage) { create(:lifetime_usage, organization:) }
+  let(:organization) { create(:organization, :premium, premium_integrations:) }
 
   let(:premium_integrations) { ["progressive_billing"] }
 
@@ -31,6 +36,7 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckJob do
 
     context "when progressive billing is disabled" do
       let(:premium_integrations) { [] }
+      let(:organization) { create(:organization, :premium, premium_integrations:) }
 
       it "delegates to the RecalculateAndCheck service" do
         allow(LifetimeUsages::CalculateService).to receive(:call!)

@@ -41,7 +41,6 @@ module Invoices
       end
 
       def effective_billing_entity
-        return nil unless organization.feature_flag_enabled?(:multi_entity_billing)
         return nil if billing_entity.nil? || billing_entity == customer.billing_entity
 
         billing_entity

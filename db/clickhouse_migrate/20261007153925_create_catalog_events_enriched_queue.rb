@@ -1,0 +1,36 @@
+# frozen_string_literal: true
+
+class CreateCatalogEventsEnrichedQueue < ActiveRecord::Migration[8.0]
+  # Without a topic the Kafka table would subscribe to nothing. Skip it, and run
+  # this migration again once LAGO_KAFKA_CATALOG_ENRICHED_EVENTS_TOPIC is set.
+  def up
+    return if ENV["LAGO_KAFKA_CATALOG_ENRICHED_EVENTS_TOPIC"].blank?
+
+    safety_assured do
+      execute <<~SQL
+        CREATE TABLE IF NOT EXISTS catalog_events_enriched_queue (
+          organization_id String,
+          external_contract_id String,
+          code String,
+          timestamp String,
+          transaction_id String,
+          properties String,
+          value Nullable(String),
+          precise_total_amount_cents Nullable(Decimal(40, 15)),
+          attribution_labels String
+        ) ENGINE = Kafka
+        SETTINGS
+          kafka_broker_list = '#{ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"]}',
+          kafka_topic_list = '#{ENV["LAGO_KAFKA_CATALOG_ENRICHED_EVENTS_TOPIC"]}',
+          kafka_group_name = '#{ENV["LAGO_KAFKA_CLICKHOUSE_CONSUMER_GROUP"]}',
+          kafka_format = 'JSONEachRow'
+      SQL
+    end
+  end
+
+  def down
+    safety_assured do
+      execute "DROP TABLE IF EXISTS catalog_events_enriched_queue"
+    end
+  end
+end

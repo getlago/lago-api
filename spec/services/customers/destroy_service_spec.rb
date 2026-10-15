@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Customers::DestroyService do
   subject(:destroy_service) { described_class.new(customer:) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
   let(:customer) { create(:customer, organization:) }
 
   before do
@@ -32,18 +32,6 @@ RSpec.describe Customers::DestroyService do
       described_class.call(customer:)
 
       expect(Utils::ActivityLog).to have_produced("customer.deleted").after_commit.with(customer)
-    end
-
-    context "when Meilisearch is enabled" do
-      before do
-        customer
-        stub_const("ENV", ENV.to_h.merge("LAGO_MEILISEARCH_URL" => "http://meilisearch:7700"))
-      end
-
-      it "reindexes the customer's invoices to drop the discarded customer fields" do
-        expect { destroy_service.call }
-          .to have_enqueued_job_after_commit(Customers::ReindexInvoicesJob).with(customer.id)
-      end
     end
 
     context "when customer is not found" do

@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe PaymentProviders::Adyen::HandleEventService do
   subject(:event_service) { described_class.new(organization:, event_json:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
 
   describe "#call" do
     let(:payment_service) { instance_double(Invoices::Payments::AdyenService) }
@@ -58,6 +58,14 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
 
         expect(Invoices::Payments::AdyenService).to have_received(:call).with(
           :update_payment_status, hash_including(amount_cents: 71)
+        )
+      end
+
+      it "passes the organization of the event so the payable lookup is scoped" do
+        event_service.call
+
+        expect(Invoices::Payments::AdyenService).to have_received(:call).with(
+          :update_payment_status, hash_including(organization_id: organization.id)
         )
       end
     end
@@ -155,6 +163,7 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
 
         expect(Invoices::Payments::AdyenService).to have_received(:call).with(
           :update_payment_status,
+          organization_id: organization.id,
           provider_payment_id: "PSPREF123",
           status: "Cancelled",
           metadata: {lago_payable_type: "Invoice"}

@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Wallets::Balance::UpdateOngoingService do
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:, awaiting_wallet_refresh: true) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:, awaiting_wallet_refresh: true) }
 
   let(:wallet) do
     create(
@@ -60,7 +60,7 @@ RSpec.describe Wallets::Balance::UpdateOngoingService do
 
       it "calls Wallets::ThresholdTopUpService" do
         subject
-        expect(Wallets::ThresholdTopUpService).to have_received(:call).with(wallet:)
+        expect(Wallets::ThresholdTopUpService).to have_received(:call).with(wallet:, state_changed: true)
       end
 
       it "enqueues a ProcessWalletAlertsJob" do
@@ -93,7 +93,26 @@ RSpec.describe Wallets::Balance::UpdateOngoingService do
 
       it "calls Wallets::ThresholdTopUpService" do
         subject
-        expect(Wallets::ThresholdTopUpService).to have_received(:call).with(wallet:)
+        expect(Wallets::ThresholdTopUpService).to have_received(:call).with(wallet:, state_changed: true)
+      end
+    end
+
+    context "when the update changes neither usage nor ongoing balance" do
+      let(:depleted_ongoing_balance) { false }
+
+      let(:update_params) do
+        {
+          ongoing_usage_balance_cents: wallet.ongoing_usage_balance_cents,
+          credits_ongoing_usage_balance: wallet.credits_ongoing_usage_balance,
+          ongoing_balance_cents: wallet.ongoing_balance_cents,
+          credits_ongoing_balance: wallet.credits_ongoing_balance
+        }
+      end
+
+      it "tells the threshold rule that nothing moved" do
+        subject
+
+        expect(Wallets::ThresholdTopUpService).to have_received(:call).with(wallet:, state_changed: false)
       end
     end
 

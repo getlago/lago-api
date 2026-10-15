@@ -17,6 +17,7 @@ module Integrations
           client_id: args[:client_id],
           client_secret: args[:client_secret],
           domain: args[:domain],
+          additional_domains: args[:additional_domains] || [],
           tenant_id: args[:tenant_id],
           host: args[:host]
         )

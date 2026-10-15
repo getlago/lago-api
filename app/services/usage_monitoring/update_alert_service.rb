@@ -35,6 +35,9 @@ module UsageMonitoring
         if !all_recurring_threshold_values_positive?(params[:thresholds])
           return result.single_validation_failure!(field: "thresholds:value", error_code: "recurring_value_is_negative")
         end
+
+        validate_notify_on!(params[:thresholds])
+        return result unless result.success?
       end
 
       result.alert = alert
@@ -42,7 +45,11 @@ module UsageMonitoring
       billable_metric = find_billable_metric_from_params!
       return result unless result.success?
 
-      ActiveRecord::Base.transaction do
+      if params.key?(:code) && wallet_alert_code_taken?(wallet_id: alert.wallet_id, code: params[:code], excluding_id: alert.id)
+        return result.single_validation_failure!(field: :code, error_code: "value_already_exist")
+      end
+
+      alert.with_lock do
         alert.name = params[:name] if params.key?(:name)
         alert.code = params[:code] if params.key?(:code)
         alert.billable_metric = billable_metric if billable_metric
@@ -61,7 +68,7 @@ module UsageMonitoring
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     rescue ActiveRecord::RecordNotUnique => e
-      if e.message.include?("idx_alerts_code_unique_per_subscription")
+      if duplicate_code_error?(e)
         result.single_validation_failure!(field: :code, error_code: "value_already_exist")
       else
         # Only one alert per [alert_type, billable_metric] pair is allowed.

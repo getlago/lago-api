@@ -5,6 +5,8 @@ module Api
     module Subscriptions
       module Charges
         class FiltersController < Api::V1::Subscriptions::BaseController
+          include Api::ForbidsLegacyBilling
+
           before_action :find_charge
           before_action :find_charge_filter, only: %i[show update destroy]
 

@@ -16,5 +16,17 @@ RSpec.describe Webhooks::Plans::CreatedService do
       "taxes" => Array,
       "entitlements" => Array
     }
+
+    context "when the object is a catalog plan" do
+      subject(:webhook_service) { described_class.new(object: catalog_plan) }
+
+      let(:catalog_plan) { create(:catalog_plan, organization:) }
+
+      it_behaves_like "creates webhook", "plan.created", "plan", {
+        "code" => String,
+        "name" => String,
+        "currency" => String
+      }
+    end
   end
 end

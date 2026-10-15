@@ -27,7 +27,7 @@ module ChargeFilters
         result.charge_filter = charge_filter
       end
 
-      trigger_filter_cascade(action: "destroy", filter_values:)
+      trigger_filter_cascade(action: "destroy", filter_values:, code: charge_filter.code)
 
       result
     rescue ActiveRecord::RecordInvalid => e

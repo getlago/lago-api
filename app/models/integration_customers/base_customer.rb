@@ -11,6 +11,8 @@ module IntegrationCustomers
     belongs_to :integration, class_name: "Integrations::BaseIntegration"
     belongs_to :organization
 
+    has_many :billing_object_connections, foreign_key: :integration_customer_id, dependent: :destroy
+
     TAX_INTEGRATION_TYPES = %w[
       IntegrationCustomers::AnrokCustomer
       IntegrationCustomers::AvalaraCustomer
@@ -33,6 +35,9 @@ module IntegrationCustomers
     }.freeze
 
     enum :category, CATEGORIES, validate: {allow_nil: true}
+
+    before_validation :set_category
+    before_validation :set_code
 
     validates :customer_id, uniqueness: {scope: :type}
     validates :code, uniqueness: {scope: %i[customer_id category]}, allow_nil: true
@@ -86,6 +91,14 @@ module IntegrationCustomers
     end
 
     private
+
+    def set_category
+      self.category ||= self.class.category_for(type)
+    end
+
+    def set_code
+      self.code ||= integration&.code
+    end
 
     def only_one_tax_integration_per_customer
       conflict = IntegrationCustomers::BaseCustomer.tax_kind.where(customer_id:)

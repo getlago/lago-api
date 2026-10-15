@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe CustomerPortal::CustomerUpdateService do
   subject(:result) { described_class.call(customer:, args: update_args) }
 
-  let(:customer) { create :customer }
+  let_it_be(:customer, refind: true) { create :customer }
 
   let(:update_args) do
     {
@@ -64,6 +64,19 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
     expect(updated_customer.shipping_country).to eq(shipping_address[:country].upcase)
   end
 
+  it "refreshes the invoices search terms when a searchable field changes" do
+    expect { result }
+      .to have_enqueued_job_after_commit(Customers::RefreshInvoicesSearchTermsJob).with(customer.id)
+  end
+
+  context "when no searchable field changes" do
+    let(:update_args) { {city: "Updated customer city"} }
+
+    it "does not refresh the invoices search terms" do
+      expect { result }.not_to have_enqueued_job(Customers::RefreshInvoicesSearchTermsJob)
+    end
+  end
+
   context "when partialy updating" do
     let(:update_args) do
       {
@@ -96,7 +109,8 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
   end
 
   context "when organization has eu tax management" do
-    let(:organization) { customer.organization }
+    let_it_be(:organization, refind: true) { create_default(:organization) }
+    let_it_be(:customer, refind: true) { create :customer }
     let(:tax_code) { "lago_eu_fr_standard" }
     let(:eu_tax_result) { Customers::EuAutoTaxesService::Result.new }
 

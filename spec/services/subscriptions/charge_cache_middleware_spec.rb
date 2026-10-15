@@ -7,6 +7,13 @@ RSpec.describe Subscriptions::ChargeCacheMiddleware do
     described_class.new(subscription:, charge:, to_datetime:, cache: cache_enabled, last_seen_at:)
   end
 
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+    create_default(:plan)
+    create_default(:billable_metric)
+  end
+
   let(:subscription) { create(:subscription) }
   let(:charge) { create(:standard_charge, plan: subscription.plan) }
   let(:to_datetime) { Time.current + 1.day }
@@ -19,7 +26,6 @@ RSpec.describe Subscriptions::ChargeCacheMiddleware do
   end
 
   before do
-    subscription.organization.enable_feature_flag!(:lazy_charge_usage_cache)
     Rails.cache.clear
   end
 
@@ -35,6 +41,17 @@ RSpec.describe Subscriptions::ChargeCacheMiddleware do
 
         expect(result).to eq(fees)
         expect(Rails.cache).not_to have_received(:read)
+      end
+    end
+
+    context "when the filter is bypassed" do
+      it "yields and returns the block result without touching the cache" do
+        fees = [build(:charge_fee, subscription:, charge:)]
+
+        result = middleware.call(charge_filter:, bypass: true) { fees }
+
+        expect(result).to eq(fees)
+        expect(Rails.cache.exist?(cache_key)).to be(false)
       end
     end
 

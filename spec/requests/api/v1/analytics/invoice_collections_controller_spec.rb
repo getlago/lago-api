@@ -7,9 +7,10 @@ RSpec.describe Api::V1::Analytics::InvoiceCollectionsController do # rubocop:dis
     subject { get_with_token(organization, "/api/v1/analytics/invoice_collection", params) }
 
     let(:customer) { create(:customer, organization:) }
-    let(:organization) { create(:organization) }
     let(:billing_entity) { create(:billing_entity, organization: organization) }
     let(:params) { {} }
+
+    let_it_be(:organization, refind: true) { create_default(:organization) }
 
     before do
       allow(Analytics::InvoiceCollectionsService).to receive(:call).and_call_original
@@ -28,7 +29,7 @@ RSpec.describe Api::V1::Analytics::InvoiceCollectionsController do # rubocop:dis
         expect(month).to eq(DateTime.current.beginning_of_month)
         expect(json[:invoice_collections].first[:payment_status]).to eq(nil)
         expect(json[:invoice_collections].first[:invoices_count]).to eq(0)
-        expect(json[:invoice_collections].first[:amount_cents]).to eq(0.0)
+        expect(json[:invoice_collections].first[:amount_cents]).to eq(0)
         expect(json[:invoice_collections].first[:currency]).to eq(nil)
         expect(Analytics::InvoiceCollectionsService).to have_received(:call).with(organization, billing_entity_id: nil, currency: nil, months: nil)
       end

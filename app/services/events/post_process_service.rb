@@ -11,7 +11,6 @@ module Events
     end
 
     def call
-      expire_cached_charges
       create_enriched_events
       track_subscription_activity
       customer&.flag_wallets_for_refresh
@@ -81,16 +80,6 @@ module Events
       @billable_metric ||= organization.billable_metrics.find_by(code: event.code)
     end
 
-    def expire_cached_charges
-      return if organization.feature_flag_enabled?(:lazy_charge_usage_cache)
-      return if active_subscription.nil?
-      return unless billable_metric
-
-      charges_and_filters.each do |charge, filter|
-        Subscriptions::ChargeCacheService.expire_cache(subscription: active_subscription, charge:, charge_filter: filter)
-      end
-    end
-
     def create_enriched_events
       return unless organization.feature_flag_enabled?(:postgres_enriched_events)
       return if active_subscription.nil?
@@ -128,9 +117,15 @@ module Events
 
     def handle_pay_in_advance
       return unless billable_metric
-      return unless charges.any?
+      return unless charges.any? || pay_in_advance_billing_segments.any?
 
       Events::PayInAdvanceJob.perform_later(Events::CommonFactory.new_instance(source: event).as_json)
+    end
+
+    def pay_in_advance_billing_segments
+      @pay_in_advance_billing_segments ||= Events::PayInAdvanceBillingSegmentResolver
+        .call!(event:)
+        .billing_segments
     end
 
     def charges

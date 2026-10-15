@@ -27,6 +27,8 @@ module Types
       field :current_billing_period_ending_at, GraphQL::Types::ISO8601DateTime
       field :current_billing_period_started_at, GraphQL::Types::ISO8601DateTime
 
+      field :connections, [Types::Connections::Object], null: false, method: :connection_routing
+
       field :selected_invoice_custom_sections, [Types::InvoiceCustomSections::Object], null: true
       field :skip_invoice_custom_sections, Boolean
 
@@ -97,11 +99,11 @@ module Types
       end
 
       def current_billing_period_started_at
-        dates_service.charges_from_datetime
+        dates_service&.charges_from_datetime
       end
 
       def current_billing_period_ending_at
-        dates_service.charges_to_datetime
+        dates_service&.charges_to_datetime
       end
 
       def charges

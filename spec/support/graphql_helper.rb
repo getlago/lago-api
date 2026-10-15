@@ -24,7 +24,7 @@ module GraphQLHelper
     )
   end
 
-  def execute_graphql(current_user: nil, query: nil, current_organization: nil, current_membership: nil, customer_portal_user: nil, request: nil, permissions: nil, **kwargs) # rubocop:disable Metrics/ParameterLists
+  def execute_graphql(current_user: nil, query: nil, current_organization: nil, current_membership: nil, customer_portal_user: nil, request: nil, permissions: nil, login_method: nil, **kwargs) # rubocop:disable Metrics/ParameterLists
     previous_source = CurrentContext.source
     CurrentContext.source = "graphql"
 
@@ -50,7 +50,8 @@ module GraphQLHelper
         current_membership:,
         customer_portal_user:,
         request:,
-        permissions:
+        permissions:,
+        login_method:
       }
     )
 

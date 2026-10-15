@@ -3,6 +3,10 @@
 require "rails_helper"
 
 describe SegmentIdentifyJob, job: true do
+  before_all do
+    create_default(:organization)
+  end
+
   subject { described_class }
 
   describe ".perform" do

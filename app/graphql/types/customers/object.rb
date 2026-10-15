@@ -45,15 +45,31 @@ module Types
 
       field :billing_configuration, Types::Customers::BillingConfiguration, null: true
 
-      field :provider_customer, Types::PaymentProviderCustomers::Provider, null: true
+      field :connection_status,
+        Types::PaymentProviderCustomers::ConnectionStatusEnum,
+        null: false,
+        method: :payment_connection_status,
+        description: "Payment connection status derived from the customer's default payment connection"
+      field :payment_provider_customers, [Types::PaymentProviderCustomers::Provider], null: false
       field :subscriptions, [Types::Subscriptions::Object], resolver: Resolvers::Customers::SubscriptionsResolver
 
-      field :anrok_customer, Types::IntegrationCustomers::Anrok, null: true
-      field :avalara_customer, Types::IntegrationCustomers::Avalara, null: true
-      field :hubspot_customer, Types::IntegrationCustomers::Hubspot, null: true
-      field :netsuite_customer, Types::IntegrationCustomers::Netsuite, null: true
-      field :salesforce_customer, Types::IntegrationCustomers::Salesforce, null: true
-      field :xero_customer, Types::IntegrationCustomers::Xero, null: true
+      field :integration_customers, [Types::IntegrationCustomers::Object], null: false
+
+      field :provider_customer, Types::PaymentProviderCustomers::Provider, null: true,
+        deprecation_reason: "Use paymentProviderCustomers instead"
+
+      field :anrok_customer, Types::IntegrationCustomers::Anrok, null: true,
+        deprecation_reason: "Use integrationCustomers instead"
+      field :avalara_customer, Types::IntegrationCustomers::Avalara, null: true,
+        deprecation_reason: "Use integrationCustomers instead"
+      field :hubspot_customer, Types::IntegrationCustomers::Hubspot, null: true,
+        deprecation_reason: "Use integrationCustomers instead"
+      field :netsuite_customer, Types::IntegrationCustomers::Netsuite, null: true,
+        deprecation_reason: "Use integrationCustomers instead"
+      field :salesforce_customer, Types::IntegrationCustomers::Salesforce, null: true,
+        deprecation_reason: "Use integrationCustomers instead"
+      field :xero_customer, Types::IntegrationCustomers::Xero, null: true,
+        deprecation_reason: "Use integrationCustomers instead"
 
       field :billing_entity, Types::BillingEntities::Object, null: false
       field :invoices, [Types::Invoices::Object]

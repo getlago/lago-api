@@ -6,13 +6,6 @@ RSpec.describe LifetimeUsages::CalculateService do
   subject(:service) { described_class.new(lifetime_usage: lifetime_usage) }
 
   let(:lifetime_usage) { create(:lifetime_usage, organization:, subscription:, recalculate_current_usage:, recalculate_invoiced_usage:) }
-  let(:recalculate_current_usage) { false }
-  let(:recalculate_invoiced_usage) { false }
-  let(:subscription) { create(:subscription, customer:, subscription_at:) }
-  let(:organization) { customer.organization }
-  let(:customer) { create(:customer) }
-
-  let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
   let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:, properties: {amount: "10"}) }
   let(:timestamp) { Time.current }
   let(:subscription_at) { timestamp - 6.months }
@@ -22,13 +15,12 @@ RSpec.describe LifetimeUsages::CalculateService do
       2,
       invoice:,
       charge:,
-      customer:,
+      subscription:,
       organization:,
       amount_cents: 100,
       precise_coupons_amount_cents: 50
     )
   end
-
   let(:events) do
     create_list(
       :event,
@@ -39,6 +31,17 @@ RSpec.describe LifetimeUsages::CalculateService do
       code: billable_metric.code,
       timestamp:
     )
+  end
+  let(:recalculate_current_usage) { false }
+  let(:recalculate_invoiced_usage) { false }
+  let(:subscription) { create(:subscription, customer:, subscription_at:) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+  let_it_be(:customer) { create_default(:customer) }
+
+  before_all do
+    create_default(:plan)
   end
 
   describe "#recalculate_invoiced_usage" do
@@ -141,6 +144,31 @@ RSpec.describe LifetimeUsages::CalculateService do
         expect(result.lifetime_usage.invoiced_usage_amount_cents).to eq(200)
         expect(lifetime_usage.reload.invoiced_usage_amount_cents).to eq(200)
         expect(lifetime_usage.recalculate_invoiced_usage).to be false
+      end
+    end
+
+    context "with an invoice shared with another subscription of the same customer" do
+      let(:other_subscription) { create(:subscription, customer:, subscription_at:) }
+      let(:invoice) do
+        create(
+          :invoice,
+          :finalized,
+          :with_subscriptions,
+          customer:,
+          organization:,
+          subscriptions: [subscription, other_subscription]
+        )
+      end
+
+      before do
+        create(:charge_fee, invoice:, charge:, subscription:, organization:, amount_cents: 100)
+        create(:charge_fee, invoice:, charge:, subscription: other_subscription, organization:, amount_cents: 900)
+      end
+
+      it "ignores the charge fees of the sibling subscription" do
+        result = service.call
+        expect(result.lifetime_usage.invoiced_usage_amount_cents).to eq(100)
+        expect(lifetime_usage.reload.invoiced_usage_amount_cents).to eq(100)
       end
     end
   end

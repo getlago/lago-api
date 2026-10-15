@@ -13,19 +13,18 @@ RSpec.describe Events::Stores::Clickhouse::ReEnrichSubscriptionEventsService, :c
     )
   end
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
+  let_it_be(:plan) { create_default(:plan, organization:) }
   let(:subscription) { create(:subscription, status:, organization:, customer:, plan:, started_at: 1.month.ago, terminated_at:) }
-  let(:billable_metric) { create(:billable_metric, organization:) }
   let(:codes) { [] }
   let(:reprocess) { true }
   let(:batch_size) { 1000 }
-
   let(:kafka_producer) { instance_double(WaterDrop::Producer) }
-
   let(:status) { :active }
   let(:terminated_at) { nil }
+
+  let_it_be(:billable_metric) { create_default(:billable_metric, organization:) }
 
   before do
     allow(Karafka).to receive(:producer).and_return(kafka_producer)
@@ -61,7 +60,7 @@ RSpec.describe Events::Stores::Clickhouse::ReEnrichSubscriptionEventsService, :c
 
         message = messages.first
         expect(message[:topic]).to eq("test-topic")
-        expect(message[:key]).to eq("#{organization.id}-#{subscription.external_id}")
+        expect(message).not_to have_key(:key)
 
         payload = JSON.parse(message[:payload])
         expect(payload).to include(
@@ -253,7 +252,7 @@ RSpec.describe Events::Stores::Clickhouse::ReEnrichSubscriptionEventsService, :c
 
           message = messages.first
           expect(message[:topic]).to eq("test-topic")
-          expect(message[:key]).to eq("#{organization.id}-#{subscription.external_id}")
+          expect(message).not_to have_key(:key)
 
           payload = JSON.parse(message[:payload])
           expect(payload).to include(

@@ -4,13 +4,10 @@ require "rails_helper"
 
 RSpec.describe Mutations::PaymentMethods::GenerateCheckoutUrl do
   let(:required_permission) { "payment_methods:create" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
   let(:stripe_provider) { create(:stripe_provider, organization:) }
   let(:user) { membership.user }
   let(:payment_method) { create(:payment_method, customer:, organization:, is_default: true) }
-
   let(:mutation) do
     <<-GQL
       mutation($input: GenerateCheckoutUrlInput!) {
@@ -20,6 +17,9 @@ RSpec.describe Mutations::PaymentMethods::GenerateCheckoutUrl do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     payment_method

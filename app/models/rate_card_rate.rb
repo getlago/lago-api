@@ -4,6 +4,7 @@ class RateCardRate < ApplicationRecord
   include PaperTrailTraceable
   include ChargePropertiesValidation
   include Discard::Model
+  include CatalogCodeFormat
 
   self.discard_column = :deleted_at
 
@@ -75,10 +76,14 @@ class RateCardRate < ApplicationRecord
   def status
     return STATUSES[:pending] if effective_from > Time.current
 
-    superseded = rate_card.rates
-      .where("effective_from > ?", effective_from)
-      .where(effective_from: ..Time.current)
-      .exists?
+    now = Time.current
+    siblings = rate_card.rates
+    superseded =
+      if siblings.loaded?
+        siblings.any? { it.effective_from > effective_from && it.effective_from <= now }
+      else
+        siblings.where("effective_from > ?", effective_from).where(effective_from: ..now).exists?
+      end
 
     superseded ? STATUSES[:terminated] : STATUSES[:active]
   end
@@ -165,7 +170,7 @@ class RateCardRate < ApplicationRecord
     return unless rate_model
     return if errors[:rate_model].any?
 
-    validator = ChargePropertiesValidation::PROPERTIES_VALIDATORS[rate_model.to_sym]
+    validator = ChargePropertiesValidation::RATE_PROPERTIES_VALIDATORS[rate_model.to_sym]
     validator ||= Charges::Validators::BaseService
 
     instance = validator.new(charge: self)

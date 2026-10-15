@@ -3,14 +3,20 @@
 require "rails_helper"
 
 RSpec.describe SendWebhookJob do
+  before_all do
+    create_default(:customer)
+  end
+
   subject(:send_webhook_job) { described_class }
 
-  let(:organization) { create(:organization, webhook_url: "http://foo.bar") }
-  let(:invoice) { create(:invoice, organization:) }
+  let_it_be(:organization) { create_default(:organization, webhook_url: "http://foo.bar") }
+  let_it_be(:invoice) { create(:invoice, organization:) }
+  let(:triggered_alert) { create(:triggered_alert, alert: create(:alert, organization:)) }
 
   describe ".perform_later" do
     context "when no webhook endpoints is present" do
-      let(:organization) { create(:organization, webhook_url: nil) }
+      let_it_be(:organization) { create_default(:organization, webhook_url: nil) }
+      let_it_be(:invoice) { create(:invoice, organization:) }
 
       it "does not enqueue a job" do
         expect do
@@ -47,6 +53,40 @@ RSpec.describe SendWebhookJob do
         expect do
           described_class.perform_later("invoice.created", invoice, {key: "value"})
         end.to have_enqueued_job(described_class).with("invoice.created", invoice, {key: "value"})
+      end
+    end
+  end
+
+  describe ".queue_for" do
+    context "when SIDEKIQ_WEBHOOK is not set" do
+      before { ENV.delete("SIDEKIQ_WEBHOOK") }
+
+      it "uses the webhook queue for every webhook type" do
+        expect([described_class.queue_for("alert.triggered"), described_class.queue_for("invoice.created")])
+          .to eq(%i[webhook webhook])
+      end
+    end
+
+    context "when SIDEKIQ_WEBHOOK is true" do
+      before { ENV["SIDEKIQ_WEBHOOK"] = "true" }
+      after { ENV.delete("SIDEKIQ_WEBHOOK") }
+
+      it "uses the high priority queue for alerts" do
+        expect(described_class.queue_for("alert.triggered")).to eq(:webhook_worker_high_priority)
+      end
+
+      it "uses the webhook_worker queue for other webhook types" do
+        expect(described_class.queue_for("invoice.created")).to eq(:webhook_worker)
+      end
+
+      it "enqueues alert webhooks on the high priority queue" do
+        expect { described_class.perform_later("alert.triggered", triggered_alert) }
+          .to have_enqueued_job(described_class).on_queue("webhook_worker_high_priority")
+      end
+
+      it "enqueues other webhooks on the webhook_worker queue" do
+        expect { described_class.perform_later("invoice.created", invoice) }
+          .to have_enqueued_job(described_class).on_queue("webhook_worker")
       end
     end
   end
@@ -739,6 +779,54 @@ RSpec.describe SendWebhookJob do
       it_behaves_like "a webhook service",
         "billable_metric.deleted",
         Webhooks::BillableMetrics::DeletedService
+    end
+
+    context "with quote webhooks" do
+      let(:object) { create(:quote_version, organization:) }
+
+      it_behaves_like "a webhook service",
+        "quote.created",
+        Webhooks::Quotes::CreatedService
+
+      it_behaves_like "a webhook service",
+        "quote.approved",
+        Webhooks::Quotes::ApprovedService
+
+      it_behaves_like "a webhook service",
+        "quote.voided",
+        Webhooks::Quotes::VoidedService
+    end
+
+    context "with order form webhooks" do
+      let(:object) { create(:order_form, organization:) }
+
+      it_behaves_like "a webhook service",
+        "order_form.created",
+        Webhooks::OrderForms::CreatedService
+
+      it_behaves_like "a webhook service",
+        "order_form.signed",
+        Webhooks::OrderForms::SignedService
+
+      it_behaves_like "a webhook service",
+        "order_form.expired",
+        Webhooks::OrderForms::ExpiredService
+
+      it_behaves_like "a webhook service",
+        "order_form.voided",
+        Webhooks::OrderForms::VoidedService
+    end
+
+    context "with order webhooks" do
+      let(:object) { create(:order, organization:) }
+
+      it_behaves_like "a webhook service",
+        "order.created",
+        Webhooks::Orders::CreatedService
+
+      it_behaves_like "a webhook service",
+        "order.executed",
+        Webhooks::Orders::ExecutedService
     end
 
     context "when webhook_type is dunning_campaign.finished" do

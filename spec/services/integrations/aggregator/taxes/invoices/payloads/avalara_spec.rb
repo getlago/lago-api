@@ -3,6 +3,10 @@
 require "rails_helper"
 
 RSpec.describe Integrations::Aggregator::Taxes::Invoices::Payloads::Avalara do
+  before_all do
+    create_default(:organization)
+  end
+
   describe "#body" do
     subject(:payload) { described_class.new(integration:, customer:, invoice:, integration_customer:, fees:).body }
 

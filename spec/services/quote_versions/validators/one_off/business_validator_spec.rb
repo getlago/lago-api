@@ -6,11 +6,8 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
   subject(:validator) { described_class.new(result, quote_version:, billing_items:, scope:) }
 
   let(:result) { BaseService::Result.new }
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:, order_type: :one_off) }
   let(:quote_version) { create(:quote_version, quote:, organization:, currency: "EUR") }
-  let(:add_on) { create(:add_on, organization:) }
   let(:scope) { :update }
   let(:add_on_item) do
     {
@@ -28,6 +25,10 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
     }
   end
   let(:billing_items) { {"addOns" => [add_on_item]} }
+
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:add_on, refind: true) { create(:add_on, organization:) }
 
   describe "#valid?" do
     context "with a valid quote version" do
@@ -62,11 +63,40 @@ RSpec.describe QuoteVersions::Validators::OneOff::BusinessValidator do
     end
 
     context "when the currency is not ISO 4217" do
-      let(:quote_version) { create(:quote_version, quote:, organization:, currency: "DOUBLOON") }
+      let(:quote_version) { build(:quote_version, quote:, organization:, currency: "DOUBLOON") }
 
       it "returns an invalid_currency error" do
         expect(validator).not_to be_valid
         expect(result.error.messages).to eq({currency: ["invalid_currency"]})
+      end
+    end
+
+    context "when the quote version names a billing entity" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:quote_version) { create(:quote_version, quote:, organization:, currency: "EUR", billing_entity:) }
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
+    context "when the billing entity belongs to another organization" do
+      let(:billing_entity) { create(:billing_entity) }
+      let(:quote_version) { build(:quote_version, quote:, organization:, currency: "EUR", billing_entity:) }
+
+      it "returns a billing_entity_not_found error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({billing_entity_id: ["billing_entity_not_found"]})
+      end
+    end
+
+    context "when the billing entity is archived" do
+      let(:billing_entity) { create(:billing_entity, organization:, archived_at: Time.current) }
+      let(:quote_version) { build(:quote_version, quote:, organization:, currency: "EUR", billing_entity:) }
+
+      it "returns a billing_entity_not_found error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq({billing_entity_id: ["billing_entity_not_found"]})
       end
     end
 

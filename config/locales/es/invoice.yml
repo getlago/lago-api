@@ -21,9 +21,11 @@ es:
     breakdown: Desglose
     breakdown_for_days: Utilizados %{breakdown_duration} de %{breakdown_total_duration} días
     breakdown_of: Desglose de %{fee_filter_display_name}
+    charges_paid_in_advance: Cargos pagados por adelantado
     clabe: CLABE
     conversion_rate: Tipo de cambio
     country: País
+    coupons: Cupones
     credit_notes: Notas de crédito
     date_from: Tarifas desde
     date_to: hasta
@@ -57,7 +59,7 @@ es:
     month: mes
     monthly: Mensual
     notice_full: Independientemente de cuándo se reciba un evento, la unidad no se prorratea, cobramos el precio completo.
-    notice_prorated: Si se agrega o se elimina una unidad durante el plan mensual, calculamos el precio prorrateado en función de la proporción de días restantes o utilizados con respecto al número total de días en el plan. Por ejemplo, si quedan 15 días en el plan, multiplicamos el precio por 15/%{days_in_month}, y si una unidad se usó durante 10 días, multiplicamos el precio por 10/%{days_in_month}.
+    notice_prorated: Si se agrega o se elimina una unidad durante el plan mensual, calculamos el precio prorrateado en función de la proporción de días restantes o utilizados con respecto al número total de días en el plan. Por ejemplo, si quedan 15 días en un período de %{days_in_month} días, multiplicamos el precio por 15/%{days_in_month}, y si una unidad se usó durante 10 días, multiplicamos el precio por 10/%{days_in_month}.
     package:
       fee_per_package: Tarifa por paquete
       fee_per_package_unit_price: "%{amount} por %{package_size}"
@@ -114,6 +116,7 @@ es:
       reverse_charge: Responsabilidad fiscal transferida al cliente.
       tax_exempt: El cliente está exento de impuestos.
     total: Total
+    total_credits: Total de créditos
     total_credits_with_value: 'Total de créditos con valor: %{credit_amount} créditos'
     total_due: Total debido
     total_due_amount: Importe debido

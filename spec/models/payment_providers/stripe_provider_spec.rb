@@ -5,10 +5,24 @@ require "rails_helper"
 RSpec.describe PaymentProviders::StripeProvider do
   subject(:stripe_provider) { build(:stripe_provider, attributes) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
   let(:attributes) {}
 
   it { is_expected.to validate_length_of(:success_redirect_url).is_at_most(1024).allow_nil }
   it { is_expected.to validate_presence_of(:name) }
+
+  describe "stripe error classification" do
+    it "splits stripe errors into transient and permanent, with no overlap" do
+      transient = described_class::TRANSIENT_ERRORS
+      permanent = described_class::PERMANENT_ERRORS
+
+      expect(transient).to match_array([::Stripe::APIConnectionError, ::Stripe::APIError, ::Stripe::RateLimitError])
+      expect(permanent).to match_array([::Stripe::AuthenticationError, ::Stripe::InvalidRequestError, ::Stripe::PermissionError])
+      expect(transient & permanent).to be_empty
+      expect(transient + permanent).to all(be < ::Stripe::StripeError)
+    end
+  end
 
   describe "validations" do
     it "validates uniqueness of the code" do
@@ -44,6 +58,45 @@ RSpec.describe PaymentProviders::StripeProvider do
 
     it "returns the url" do
       expect(stripe_provider.success_redirect_url).to eq success_redirect_url
+    end
+  end
+
+  describe "#retriable_authentication_failure?" do
+    subject(:method_call) { stripe_provider.retriable_authentication_failure?(error_code, payment:) }
+
+    let(:error_code) { described_class::NEED_3DS_ERROR_CODE }
+    let(:payment) { create(:payment, payable: create(:invoice)) }
+
+    context "when the error is not an authentication failure" do
+      let(:error_code) { "card_declined" }
+
+      before { stripe_provider.supports_3ds = true }
+
+      it "returns false" do
+        expect(method_call).to eq(false)
+      end
+    end
+
+    context "when the connection supports 3DS" do
+      before { stripe_provider.supports_3ds = true }
+
+      it "returns true" do
+        expect(method_call).to eq(true)
+      end
+    end
+
+    context "when the connection does not support 3DS" do
+      it "returns false" do
+        expect(method_call).to eq(false)
+      end
+
+      context "when the payment activates a payment-gated subscription" do
+        before { allow(payment).to receive(:gated_subscription_activation?).and_return(true) }
+
+        it "returns true" do
+          expect(method_call).to eq(true)
+        end
+      end
     end
   end
 

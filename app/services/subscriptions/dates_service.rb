@@ -101,6 +101,9 @@ module Subscriptions
       # NOTE: If customer applicable timezone changes during a billing period, there is a risk to double count events
       #       or to miss some. To prevent it, we have to ensure that invoice bounds does not overlap or that there is no
       #       hole between a charges_from_datetime and the charges_to_datetime of the previous period
+      # TODO: the previous boundary is an end of day (`23:59:59.999999`), so adding a second opens
+      #       the period at `00:00:00.999999` and leaves the one-second hole this is meant to
+      #       close. Same in `fixed_charges_from_datetime`.
       if timezone_has_changed? && previous_charge_to_datetime
         new_datetime = previous_charge_to_datetime + 1.second
 
@@ -300,6 +303,12 @@ module Subscriptions
 
     def last_day_of_month?(date)
       date.day == date.end_of_month.day
+    end
+
+    # NOTE: the anniversary day of a month that is shorter than the subscription day, clamped to that
+    #       month. Resolved from the subscription, so a short month never drags the following periods.
+    def anniversary_day_in(year, month)
+      [subscription_at.day, Time.days_in_month(month, year)].min
     end
 
     def compute_base_date

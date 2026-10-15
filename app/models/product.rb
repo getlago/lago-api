@@ -4,11 +4,12 @@ class Product < ApplicationRecord
   include PaperTrailTraceable
   include Discard::Model
   include CatalogAttachable
+  include CatalogCodeFormat
 
   self.discard_column = :deleted_at
 
   PRODUCT_TYPES = {
-    usage: "usage",
+    metered: "metered",
     fixed: "fixed"
   }.freeze
 
@@ -21,7 +22,7 @@ class Product < ApplicationRecord
   has_many :filters, class_name: "ProductFilter"
   has_many :rate_cards
   has_many :plan_applied_rate_cards, through: :rate_cards
-  has_many :subscription_applied_rate_cards, through: :rate_cards
+  has_many :contract_applied_rate_cards, through: :rate_cards
 
   enum :product_type, PRODUCT_TYPES, validate: true
 
@@ -35,6 +36,19 @@ class Product < ApplicationRecord
 
   default_scope -> { kept }
 
+  # Filters by product_category, treating "no category" as a selectable value:
+  # with both, the chosen categories OR uncategorized; with only the flag,
+  # uncategorized only; otherwise the chosen categories.
+  scope :in_categories, ->(category_ids, include_uncategorized: false) {
+    if category_ids.present? && include_uncategorized
+      where(product_category_id: category_ids).or(where(product_category_id: nil))
+    elsif include_uncategorized
+      where(product_category_id: nil)
+    else
+      where(product_category_id: category_ids)
+    end
+  }
+
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]
   end
@@ -43,12 +57,16 @@ class Product < ApplicationRecord
     invoice_display_name.presence || name
   end
 
+  def target_key
+    "product-#{id}"
+  end
+
   private
 
   def validate_billable_metric_presence
     has_billable_metric = billable_metric_id.present? || billable_metric.present?
 
-    if usage? && !has_billable_metric
+    if metered? && !has_billable_metric
       errors.add(:billable_metric, :blank)
     elsif fixed? && has_billable_metric
       errors.add(:billable_metric, :present)
@@ -84,6 +102,7 @@ end
 #
 # Indexes
 #
+#  index_products_by_cursor                    (organization_id,created_at DESC,id DESC) WHERE (deleted_at IS NULL)
 #  index_products_on_add_on_id                 (add_on_id)
 #  index_products_on_billable_metric_id        (billable_metric_id)
 #  index_products_on_charge_id                 (charge_id)

@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::QuotesController do
-  let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization, refind: true) { create_default(:organization, feature_flags: ["order_forms"]) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   describe "GET /api/v1/quotes" do
     subject { get_with_token(organization, "/api/v1/quotes", params) }
@@ -28,6 +28,50 @@ RSpec.describe Api::V1::QuotesController do
       subject
 
       expect(json[:quotes].first[:current_version].keys).not_to include(:share_token, :content, :billing_items)
+    end
+
+    # Every embedded version resolves a billing entity, and an amendment resolves it through the
+    # target subscription, which resolves its own fallback in turn. Comparing one row against five is
+    # the invariant that matters: the count has to stay flat rather than grow per row.
+    it "resolves every embedded billing entity without a query per row" do
+      count_lookups = lambda do
+        seen = []
+        counter = ->(_name, _start, _finish, _id, payload) do
+          seen << payload[:sql] if payload[:sql]&.match?(/billing_entities|subscriptions/)
+        end
+
+        ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
+          get_with_token(organization, "/api/v1/quotes", params)
+        end
+
+        seen.count
+      end
+
+      # One amendment on a pinned subscription, one on an inheriting subscription, one plain quote:
+      # every fallback branch the serializer can take. Adding a constant number of preload queries
+      # for a branch is fine, so the comparison holds the mix of rows fixed and only grows how many
+      # there are.
+      seed_every_branch = lambda do
+        pinned = create(:billing_entity, organization:)
+
+        [create(:subscription, organization:, customer:, billing_entity: pinned),
+          create(:subscription, organization:, customer:)].each do |subscription|
+          amendment = create(:quote, organization:, customer:, subscription:, order_type: :subscription_amendment)
+          create(:quote_version, quote: amendment, organization:)
+        end
+
+        plain = create(:quote, organization:, customer:)
+        create(:quote_version, quote: plain, organization:)
+      end
+
+      seed_every_branch.call
+      one_of_each = count_lookups.call
+
+      2.times { seed_every_branch.call }
+
+      expect(count_lookups.call).to eq(one_of_each)
+      expect(json[:quotes].count).to eq(10)
+      expect(json[:quotes].last[:current_version][:billing_entity_code]).to eq(customer.billing_entity.code)
     end
 
     it "does not embed owners on the index" do
@@ -194,6 +238,8 @@ RSpec.describe Api::V1::QuotesController do
 
     context "when the quote belongs to another organization" do
       let(:quote) { create(:quote) }
+      let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
+      let(:customer) { create(:customer, organization:) }
 
       it "returns not found" do
         subject

@@ -169,6 +169,11 @@ module Api
 
       private
 
+      # external_contract_id is the v2 alias for external_subscription_id, folded
+      # into external_subscription_id when the event is stored (Events::Create*
+      # services). It is permitted here so it reaches those services, but not on
+      # the estimate/index surfaces, which resolve the id against subscriptions
+      # and are not contract-aware yet.
       def create_params
         params
           .require(:event)
@@ -177,6 +182,7 @@ module Api
             :code,
             :timestamp,
             :external_subscription_id,
+            :external_contract_id,
             :precise_total_amount_cents,
             properties: {}
           )
@@ -190,6 +196,7 @@ module Api
               :code,
               :timestamp,
               :external_subscription_id,
+              :external_contract_id,
               :precise_total_amount_cents,
               properties: {} # rubocop:disable Style/HashAsLastArrayItem
             ]

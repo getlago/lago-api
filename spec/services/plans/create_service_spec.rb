@@ -959,4 +959,19 @@ RSpec.describe Plans::CreateService do
       end
     end
   end
+
+  context "when the organization uses the product catalog and sends legacy pricing" do
+    let(:create_args) do
+      {organization_id: organization.id, name: "Catalog plan", code: "catalog_plan", amount_currency: "USD", interval: "monthly"}
+    end
+
+    before { organization.enable_feature_flag!(:product_catalog) }
+
+    it "rejects the legacy field" do
+      result = plans_service.call
+
+      expect(result).to be_failure
+      expect(result.error.messages[:interval]).to eq(["legacy_billing_disabled"])
+    end
+  end
 end

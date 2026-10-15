@@ -9,6 +9,8 @@ module Lago
   # Base config for `#sidekiq` includes URL (REDIS_URL), SSL params, password
   # (REDIS_PASSWORD), and optional Sentinel support
   # (LAGO_REDIS_SIDEKIQ_SENTINELS, LAGO_REDIS_SIDEKIQ_MASTER_NAME).
+  # Optional Sentinel authentication uses LAGO_REDIS_SIDEKIQ_SENTINEL_USERNAME
+  # and LAGO_REDIS_SIDEKIQ_SENTINEL_PASSWORD, independently of REDIS_PASSWORD.
   #
   # LAGO_REDIS_SIDEKIQ_RETRY_WINDOW_SECONDS (default: 5) defines a retry window (in seconds).
   # The window is turned into a series of quadratically increasing retry intervals
@@ -22,6 +24,18 @@ module Lago
   # Base config for `#cache` includes URL (LAGO_REDIS_CACHE_URL), SSL params,
   # password (LAGO_REDIS_CACHE_PASSWORD), and optional Sentinel support
   # (LAGO_REDIS_CACHE_SENTINELS, LAGO_REDIS_CACHE_MASTER_NAME).
+  # Optional Sentinel authentication uses LAGO_REDIS_CACHE_SENTINEL_USERNAME
+  # and LAGO_REDIS_CACHE_SENTINEL_PASSWORD, independently of LAGO_REDIS_CACHE_PASSWORD.
+  #
+  # Base config for `#throttling` includes URL (LAGO_REDIS_THROTTLING_URL), SSL
+  # params and password (LAGO_REDIS_THROTTLING_PASSWORD). It holds the
+  # authentication attempt counters of Auth::AttemptsThrottle. Without
+  # LAGO_REDIS_THROTTLING_URL, the URL and password default to REDIS_URL and
+  # REDIS_PASSWORD.
+  #
+  # Sentinel credentials are only applied when the corresponding sentinels are
+  # configured. Blank credentials are omitted; leave the username unset for
+  # password-only authentication.
   #
   # Use `with_options` to merge consumer-specific options before calling
   # either method.
@@ -61,7 +75,9 @@ module Lago
       add_sentinels(
         redis_config,
         sentinels: ENV["LAGO_REDIS_SIDEKIQ_SENTINELS"].presence,
-        master_name: ENV.fetch("LAGO_REDIS_SIDEKIQ_MASTER_NAME", "master").presence
+        master_name: ENV.fetch("LAGO_REDIS_SIDEKIQ_MASTER_NAME", "master").presence,
+        sentinel_username: ENV["LAGO_REDIS_SIDEKIQ_SENTINEL_USERNAME"].presence,
+        sentinel_password: ENV["LAGO_REDIS_SIDEKIQ_SENTINEL_PASSWORD"].presence
       )
       add_password(redis_config, password: ENV["REDIS_PASSWORD"].presence)
       add_retries(redis_config, window: sidekiq_retry_window_seconds)
@@ -81,12 +97,32 @@ module Lago
       add_sentinels(
         redis_config,
         sentinels: ENV["LAGO_REDIS_CACHE_SENTINELS"].presence,
-        master_name: ENV.fetch("LAGO_REDIS_CACHE_MASTER_NAME", "master").presence
+        master_name: ENV.fetch("LAGO_REDIS_CACHE_MASTER_NAME", "master").presence,
+        sentinel_username: ENV["LAGO_REDIS_CACHE_SENTINEL_USERNAME"].presence,
+        sentinel_password: ENV["LAGO_REDIS_CACHE_SENTINEL_PASSWORD"].presence
       )
       add_password(redis_config, password: ENV["LAGO_REDIS_CACHE_PASSWORD"].presence)
       # The cache deliberately skips retry wiring (no `reconnect_attempts` or
       # `RedisLoadingRetryMiddleware`): cache reads/writes fail fast so callers degrade
       # gracefully, rather than blocking on retries while a node fails over or reloads.
+
+      redis_config.merge(extra_options)
+    end
+
+    def throttling
+      dedicated = ENV["LAGO_REDIS_THROTTLING_URL"].present?
+      redis_config = {
+        url: dedicated ? ENV["LAGO_REDIS_THROTTLING_URL"] : ENV["REDIS_URL"].presence,
+        ssl_params: {
+          verify_mode: OpenSSL::SSL::VERIFY_NONE
+        },
+        timeout: 1
+      }.compact
+
+      # The password goes with the URL, so a dedicated instance never receives the Sidekiq password.
+      password = dedicated ? ENV["LAGO_REDIS_THROTTLING_PASSWORD"] : ENV["REDIS_PASSWORD"]
+      add_password(redis_config, password: password.presence)
+      # No retry wiring, as for the cache: a failing store must not hold up the login requests.
 
       redis_config.merge(extra_options)
     end
@@ -106,10 +142,12 @@ module Lago
       ENV["LAGO_REDIS_SIDEKIQ_RETRY_WINDOW_SECONDS"].presence || DEFAULT_SIDEKIQ_RETRY_WINDOW_SECONDS
     end
 
-    def add_sentinels(config, sentinels:, master_name:)
+    def add_sentinels(config, sentinels:, master_name:, sentinel_username:, sentinel_password:)
       return unless sentinels
 
       config[:sentinels] = parse_sentinels(sentinels)
+      config[:sentinel_username] = sentinel_username if sentinel_username
+      config[:sentinel_password] = sentinel_password if sentinel_password
       config[:role] = :master
       config[:name] = master_name.presence || "master"
     end

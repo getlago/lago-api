@@ -5,17 +5,17 @@ RSpec.describe Customers::RefreshWalletsService do
     subject(:result) { described_class.call(customer:, include_generating_invoices:) }
 
     let(:include_generating_invoices) { false }
-    let(:customer) { create(:customer, awaiting_wallet_refresh: true) }
-    let(:organization) { customer.organization }
-    let(:billable_metric) { create(:billable_metric, aggregation_type: "count_agg") }
-    let(:pay_in_advance_billable_metric) { create(:billable_metric, aggregation_type: "count_agg") }
-
     let(:subscriptions) do
       [
         create(:subscription, organization:, customer:, started_at: Time.zone.now - 2.years),
         create(:subscription, organization:, customer:, started_at: Time.zone.now - 1.year)
       ]
     end
+    let(:customer) { create(:customer, awaiting_wallet_refresh: true) }
+
+    let_it_be(:organization) { create_default(:organization) }
+    let_it_be(:billable_metric) { create_default(:billable_metric, aggregation_type: "count_agg") }
+    let_it_be(:pay_in_advance_billable_metric) { create_default(:billable_metric, aggregation_type: "count_agg") }
 
     before do
       create(
@@ -95,8 +95,188 @@ RSpec.describe Customers::RefreshWalletsService do
       expect(wallet.credits_ongoing_balance).to eq 1.0
     end
 
+    it "keeps the per-metric split empty when the organization streams nothing, so its wallets get no extra write" do
+      expect(result.wallets.first.ongoing_billable_metric_amounts).to eq({})
+    end
+
+    context "when the organization streams nothing" do
+      before { allow(Wallets::Balance::AllocateOngoingUsageByWalletsService).to receive(:call!).and_call_original }
+
+      it "does not ask for the per-metric split, keeping the refresh as cheap as before" do
+        result
+
+        expect(Wallets::Balance::AllocateOngoingUsageByWalletsService)
+          .to have_received(:call!).with(hash_including(with_billable_metric_amounts: false))
+      end
+    end
+
+    context "when the organization streams usage" do
+      before { create(:kinesis_destination, organization:) }
+
+      it "records what the wallet absorbs per subscription, period and billable metric, net of what pay in advance already billed" do
+        period = Time.current.beginning_of_month.utc.iso8601
+
+        expect(result.wallets.first.ongoing_billable_metric_amounts).to eq({
+          subscriptions.first.id => {period => {billable_metric.id => 600}},
+          subscriptions.second.id => {period => {billable_metric.id => 300}}
+        })
+      end
+    end
+
     it "marks customer as not awaiting wallet refresh" do
       expect { subject }.to change(customer, :awaiting_wallet_refresh).from(true).to(false)
+    end
+
+    describe "streaming the refreshed usage" do
+      it "does not enqueue when the organization has no destination" do
+        expect { result }.not_to have_enqueued_job(DeliverEventJob)
+      end
+
+      context "when the organization has a destination for the event" do
+        before { create(:kinesis_destination, organization:) }
+
+        it "enqueues the delivery" do
+          expect { result }.to have_enqueued_job(DeliverEventJob)
+            .with("customer_usage.refreshed.v1", customer)
+        end
+
+        it "enqueues one job per event type the destination subscribes to" do
+          expect { result }.to have_enqueued_job(DeliverEventJob)
+            .with("customer_full_usage.refreshed.v1", customer)
+        end
+
+        it "enqueues nothing when the wrapping transaction rolls back" do
+          expect do
+            ActiveRecord::Base.transaction do
+              described_class.call(customer:, include_generating_invoices:)
+              raise ActiveRecord::Rollback
+            end
+          end.not_to have_enqueued_job(DeliverEventJob)
+        end
+      end
+
+      context "when running on a worker, where the producer has an AWS identity" do
+        let(:delivery) { instance_double(BaseResult) }
+
+        before do
+          create(:kinesis_destination, organization:)
+          allow(Sidekiq).to receive(:server?).and_return(true)
+          allow(EventDestinations::CustomerUsage::RefreshedService).to receive(:call).and_return(delivery)
+        end
+
+        it "produces the current usage inline, reusing the usage it already computed" do
+          allow(Invoices::CustomerUsageService).to receive(:call!).and_call_original
+
+          result
+
+          expect(EventDestinations::CustomerUsage::RefreshedService).to have_received(:call) do |object:, usages:|
+            expect(object).to eq(customer)
+            expect(usages.keys).to match_array(customer.active_subscriptions)
+            expect(usages.values).to all(be_a(SubscriptionUsage))
+          end
+        end
+
+        it "computes the usage once per subscription rather than twice" do
+          allow(Invoices::CustomerUsageService).to receive(:call!).and_call_original
+
+          result
+
+          expect(Invoices::CustomerUsageService).to have_received(:call!).exactly(customer.active_subscriptions.count).times
+        end
+
+        it "still enqueues the full usage delivery, which cannot reuse this computation" do
+          expect { result }.to have_enqueued_job(DeliverEventJob)
+            .with("customer_full_usage.refreshed.v1", customer)
+        end
+
+        it "does not enqueue the current usage delivery" do
+          expect { result }.not_to have_enqueued_job(DeliverEventJob)
+            .with("customer_usage.refreshed.v1", customer)
+        end
+
+        it "produces nothing when the wrapping transaction rolls back" do
+          ActiveRecord::Base.transaction do
+            described_class.call(customer:, include_generating_invoices:)
+            raise ActiveRecord::Rollback
+          end
+
+          expect(EventDestinations::CustomerUsage::RefreshedService).not_to have_received(:call)
+        end
+
+        # The refresh asks the same rows which types are streamed and whether it may produce them
+        # here. It runs on every customer of every cycle, so those answers come from one read.
+        it "reads the destinations once, however many questions it asks of them" do
+          queries = 0
+          subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+            queries += 1 if payload[:sql].include?("streaming_destinations")
+          end
+
+          begin
+            result
+          ensure
+            ActiveSupport::Notifications.unsubscribe(subscriber)
+          end
+
+          expect(queries).to eq(1)
+        end
+      end
+
+      context "when the worker cannot obtain credentials for the destination" do
+        before do
+          create(:kinesis_destination, organization:)
+          allow(Sidekiq).to receive(:server?).and_return(true)
+          allow(EventDestinations::CustomerUsage::RefreshedService).to receive(:call)
+          allow(Lago::Kinesis::Producer).to receive(:credentials_available?).and_return(false)
+        end
+
+        it "hands the delivery to the streaming worker rather than losing it" do
+          expect { result }.to have_enqueued_job(DeliverEventJob)
+            .with("customer_usage.refreshed.v1", customer)
+        end
+
+        it "does not attempt the inline produce again, so the timeout is paid once" do
+          result
+
+          expect(EventDestinations::CustomerUsage::RefreshedService).not_to have_received(:call)
+        end
+      end
+
+      context "when the inline delivery raises" do
+        before do
+          create(:kinesis_destination, organization:)
+          allow(Sidekiq).to receive(:server?).and_return(true)
+          allow(EventDestinations::CustomerUsage::RefreshedService).to receive(:call).and_raise("stream is gone")
+          allow(EventDestinations::DeliveryLogger).to receive(:emit)
+        end
+
+        it "logs and lets the refresh succeed, because streaming must never fail a wallet refresh" do
+          expect(result).to be_success
+          expect(customer.reload.awaiting_wallet_refresh).to be(false)
+          expect(EventDestinations::DeliveryLogger).to have_received(:emit)
+            .with(:failed, hash_including(customer_id: customer.id))
+        end
+
+        it "still hands the delivery to the streaming worker" do
+          expect { result }.to have_enqueued_job(DeliverEventJob)
+            .with("customer_usage.refreshed.v1", customer)
+        end
+      end
+
+      context "when the destination is inactive" do
+        before { create(:kinesis_destination, organization:, active: false) }
+
+        it "enqueues nothing, so switching it off stops the work at the source" do
+          expect { result }.not_to have_enqueued_job(DeliverEventJob)
+        end
+      end
+
+      context "when the destination asks for another event type" do
+        before { create(:kinesis_destination, organization:).update_column(:event_types, ["wallet.updated"]) } # rubocop:disable Rails/SkipsModelValidations
+
+        it "enqueues nothing" do
+          expect { result }.not_to have_enqueued_job(DeliverEventJob)
+        end
+      end
     end
 
     context "when charges have presentation_group_keys" do
@@ -112,7 +292,8 @@ RSpec.describe Customers::RefreshWalletsService do
           expect(Invoices::CustomerUsageService).to have_received(:call!).with(
             customer:,
             subscription:,
-            usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER
+            usage_filters: UsageFilters::WITHOUT_PRESENTATION_FILTER,
+            use_usage_buckets: true
           )
         end
       end
@@ -492,6 +673,271 @@ RSpec.describe Customers::RefreshWalletsService do
           expect(wallet_a.reload.ongoing_balance_cents).to eq(150)
           expect(wallet_a.ongoing_usage_balance_cents).to eq(0)
         end
+      end
+    end
+  end
+
+  describe "reservation counter", cache: :redis do
+    subject(:result) { described_class.call(customer:) }
+
+    let(:customer) { create(:customer) }
+    let(:wallet) { create(:wallet, customer:, x402_enabled: true) }
+    let(:key) { "x402:reserved:#{wallet.id}" }
+    let(:claim_key) { "x402:refreshing:#{customer.id}" }
+
+    before do
+      wallet
+      allow(X402::RefreshClaim).to receive(:acquire).and_call_original
+    end
+
+    context "with a reservation" do
+      before { Rails.cache.redis.then { it.set(key, 30, ex: 3600) } }
+
+      it "releases the captured amount" do
+        result
+
+        expect(Rails.cache.read(key, raw: true)).to eq("0")
+      end
+
+      it "drops the claim after the refresh" do
+        result
+
+        expect(Rails.cache.redis.then { it.exists?(claim_key) }).to be(false)
+      end
+
+      context "when another refresh holds the claim" do
+        before { Rails.cache.redis.then { it.set(claim_key, "other", ex: 300) } }
+
+        it "leaves the counter untouched" do
+          result
+
+          expect(Rails.cache.read(key, raw: true)).to eq("30")
+        end
+
+        it "leaves the claim untouched" do
+          result
+
+          expect(Rails.cache.redis.then { it.get(claim_key) }).to eq("other")
+        end
+      end
+
+      context "with an overlapping refresh" do
+        before do
+          overlapped = false
+
+          allow(Wallets::Balance::AllocateOngoingUsageByWalletsService).to receive(:call!).and_wrap_original do |original, **args|
+            unless overlapped
+              overlapped = true
+              described_class.call(customer:)
+            end
+
+            original.call(**args)
+          end
+        end
+
+        it "releases the captured amount once" do
+          result
+
+          expect(Rails.cache.read(key, raw: true)).to eq("0")
+        end
+      end
+
+      context "with a reservation made during the refresh" do
+        before do
+          allow(Wallets::Balance::AllocateOngoingUsageByWalletsService).to receive(:call!).and_wrap_original do |original, **args|
+            Rails.cache.redis.then { it.incrby(key, 7) }
+            original.call(**args)
+          end
+        end
+
+        it "keeps the reservation made after the capture" do
+          result
+
+          expect(Rails.cache.read(key, raw: true)).to eq("7")
+        end
+      end
+
+      context "with a wallet not enabled for x402" do
+        let(:wallet) { create(:wallet, customer:, x402_enabled: false) }
+
+        it "leaves the key untouched" do
+          result
+
+          expect(Rails.cache.read(key, raw: true)).to eq("30")
+        end
+
+        it "takes no claim" do
+          result
+
+          expect(X402::RefreshClaim).not_to have_received(:acquire)
+        end
+      end
+
+      context "when the counter is switched off" do
+        let(:customer) { create(:customer, organization: create(:organization, feature_flags: ["x402_reservation_counter_disabled"])) }
+
+        it "leaves the key untouched" do
+          result
+
+          expect(Rails.cache.read(key, raw: true)).to eq("30")
+        end
+
+        it "takes no claim" do
+          result
+
+          expect(X402::RefreshClaim).not_to have_received(:acquire)
+        end
+      end
+
+      context "when the wrapping transaction rolls back" do
+        it "leaves the key untouched" do
+          ActiveRecord::Base.transaction do
+            described_class.call(customer:)
+            raise ActiveRecord::Rollback
+          end
+
+          expect(Rails.cache.read(key, raw: true)).to eq("30")
+        end
+
+        it "drops the claim" do
+          ActiveRecord::Base.transaction do
+            described_class.call(customer:)
+            raise ActiveRecord::Rollback
+          end
+
+          expect(Rails.cache.redis.then { it.exists?(claim_key) }).to be(false)
+        end
+      end
+
+      context "when a wrapping transaction commits" do
+        subject(:key_inside_transaction) do
+          ActiveRecord::Base.transaction do
+            described_class.call(customer:)
+            Rails.cache.read(key, raw: true)
+          end
+        end
+
+        it "defers the release until the commit" do
+          expect(key_inside_transaction).to eq("30")
+        end
+
+        it "releases the captured amount after the commit" do
+          key_inside_transaction
+
+          expect(Rails.cache.read(key, raw: true)).to eq("0")
+        end
+
+        it "holds the claim until the commit" do
+          ActiveRecord::Base.transaction do
+            described_class.call(customer:)
+
+            expect(Rails.cache.redis.then { it.exists?(claim_key) }).to be(true)
+          end
+        end
+
+        it "drops the claim after the commit" do
+          key_inside_transaction
+
+          expect(Rails.cache.redis.then { it.exists?(claim_key) }).to be(false)
+        end
+      end
+
+      context "when the refresh fails" do
+        let(:failed_result) { BaseResult.new }
+        let(:failure) { BaseService::ServiceFailure.new(failed_result, code: "failed", error_message: "failed") }
+
+        before do
+          allow(Wallets::Balance::RefreshOngoingUsageService).to receive(:call!).and_raise(failure)
+        end
+
+        it "returns the failed result" do
+          expect(result).to eq(failed_result)
+        end
+
+        it "leaves the key untouched" do
+          result
+
+          expect(Rails.cache.read(key, raw: true)).to eq("30")
+        end
+
+        it "drops the claim" do
+          result
+
+          expect(Rails.cache.redis.then { it.exists?(claim_key) }).to be(false)
+        end
+      end
+
+      context "when the refresh raises an unexpected error" do
+        before do
+          allow(Wallets::Balance::RefreshOngoingUsageService).to receive(:call!).and_raise(StandardError)
+        end
+
+        it "raises the error" do
+          expect { result }.to raise_error(StandardError)
+        end
+
+        it "leaves the counter untouched" do
+          begin
+            result
+          rescue
+            nil
+          end
+
+          expect(Rails.cache.read(key, raw: true)).to eq("30")
+        end
+
+        it "drops the claim" do
+          begin
+            result
+          rescue
+            nil
+          end
+
+          expect(Rails.cache.redis.then { it.exists?(claim_key) }).to be(false)
+        end
+      end
+
+      context "when the refresh fails inside a committing transaction" do
+        subject(:result_in_transaction) do
+          ActiveRecord::Base.transaction { described_class.call(customer:) }
+        end
+
+        let(:failed_result) { BaseResult.new }
+        let(:failure) { BaseService::ServiceFailure.new(failed_result, code: "failed", error_message: "failed") }
+
+        before do
+          allow(Wallets::Balance::RefreshOngoingUsageService).to receive(:call!).and_raise(failure)
+        end
+
+        it "leaves the counter untouched" do
+          result_in_transaction
+
+          expect(Rails.cache.read(key, raw: true)).to eq("30")
+        end
+
+        it "drops the claim" do
+          result_in_transaction
+
+          expect(Rails.cache.redis.then { it.exists?(claim_key) }).to be(false)
+        end
+      end
+    end
+
+    context "with a negative reservation" do
+      before { Rails.cache.redis.then { it.set(key, -5, ex: 3600) } }
+
+      it "releases it" do
+        result
+
+        expect(Rails.cache.read(key, raw: true)).to eq("0")
+      end
+    end
+
+    context "without reservations" do
+      it "does not create the key" do
+        result
+
+        expect(Rails.cache.redis.then { it.exists?(key) }).to be(false)
       end
     end
   end

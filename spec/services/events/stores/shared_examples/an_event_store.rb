@@ -4,7 +4,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
   subject(:event_store) do
     described_class.new(
       code:,
-      subscription:,
+      billing_context: Billing::Context.from(subscription:),
       boundaries:,
       filters: {
         grouped_by:,
@@ -13,17 +13,16 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         ignored_filters:,
         charge_id: charge&.id,
         charge_filter: charge_filter
-      },
-      deduplicate: with_event_duplication
+      }
     )
   end
 
-  let(:billable_metric) { create(:sum_billable_metric, field_name: "value", code: "bm:code") }
-  let(:organization) { billable_metric.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:sum_billable_metric, field_name: "value", code: "bm:code") }
   let(:charge) { create(:standard_charge, organization:, billable_metric:) }
   let(:charge_filter) { nil }
 
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:, started_at:) }
 
   let(:started_at) { DateTime.parse("2023-03-15") }
@@ -271,6 +270,61 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     end
   end
 
+  describe "#for_window" do
+    it "mints a sibling store for another window" do
+      sibling = event_store.for_window(to_datetime: boundaries[:from_datetime] - 1.second)
+
+      expect(sibling).to be_an_instance_of(described_class)
+      expect(sibling).not_to be(event_store)
+      expect(sibling.code).to eq(event_store.code)
+      expect(sibling.billing_context).to eq(event_store.billing_context)
+      expect(sibling.filters).to eq(event_store.filters)
+      expect(sibling.boundaries).to eq({to_datetime: boundaries[:from_datetime] - 1.second})
+    end
+
+    it "aggregates the same property as the store it was minted from" do
+      event_store.aggregation_property = "value"
+      event_store.numeric_property = true
+
+      sibling = event_store.for_window(to_datetime: boundaries[:to_datetime])
+
+      expect(sibling.aggregation_property).to eq("value")
+      expect(sibling.numeric_property).to be(true)
+    end
+
+    it "leaves use_from_boundary to the caller, which declares what the window means" do
+      event_store.use_from_boundary = false
+
+      expect(event_store.for_window(to_datetime: boundaries[:to_datetime]).use_from_boundary).to be(true)
+    end
+
+    it "forwards the boundaries it was given, whatever keys they carry" do
+      sibling = event_store.for_window(**boundaries)
+
+      expect(sibling.boundaries).to eq(boundaries)
+    end
+
+    it "narrows the filters when asked to" do
+      sibling = event_store.for_window(**boundaries, filters: event_store.filters.merge(grouped_by_values: {"region" => "europe"}))
+
+      expect(sibling.boundaries).to eq(boundaries)
+      expect(sibling.grouped_by_values).to eq({"region" => "europe"})
+    end
+
+    # NOTE: the sibling must actually query, on a window carrying no lower bound, and
+    #       deduplicate exactly as the store it was minted from. Asserting only that the
+    #       attributes were copied would pass on a sibling that returns nothing.
+    it "aggregates over its own window, deduplicating like the store it was minted from" do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+
+      sibling = event_store.for_window(to_datetime: boundaries[:to_datetime])
+      sibling.use_from_boundary = false
+
+      expect(sibling.sum(with_count: false).value).to eq(event_store.sum(with_count: false).value)
+    end
+  end
+
   if include_feature?(:count)
     describe "#count" do
       it "returns the number of unique events" do
@@ -454,7 +508,10 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
   if include_feature?(:sum_precise_total_amount_cents)
     describe "#sum_precise_total_amount_cents" do
       it "returns the sum of precise_total_amount_cent values" do
-        expect(event_store.sum_precise_total_amount_cents).to eq(15)
+        result = event_store.sum_precise_total_amount_cents
+
+        expect(result).to eq(15)
+        expect(result).to be_a(BigDecimal)
       end
 
       context "without events" do
@@ -475,6 +532,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         result = event_store.grouped_sum_precise_total_amount_cents
 
         expect(result).to match_array([{groups: {"region" => nil}, value: 6}, {groups: {"region" => "europe"}, value: 9}])
+        expect(result.map { it[:value] }).to all(be_a(BigDecimal))
       end
 
       context "with multiple groups" do
@@ -533,6 +591,91 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     describe "#active_unique_property?" do
       before { event_store.aggregation_property = billable_metric.field_name }
 
+      context "with events sharing a timestamp" do
+        let(:started_at) { Time.zone.parse("2026-09-07T00:00:00Z") }
+        let(:same_timestamp) { Time.zone.parse("2026-09-07T00:00:00Z") }
+        let(:event_one) do
+          create_event(
+            timestamp: same_timestamp,
+            value: 1,
+            properties: {user_id: "A"},
+            transaction_id: "qa_rm11_full_adv_5935be3d_amx_k4_e1",
+            created_at: Time.zone.parse("2026-10-06T15:18:14.156149Z")
+          )
+        end
+        let(:event_two) do
+          create_event(
+            timestamp: same_timestamp,
+            value: 1,
+            properties: {user_id: "A"},
+            transaction_id: "qa_rm11_full_adv_5935be3d_amx_k4_e2",
+            created_at: Time.zone.parse("2026-10-06T15:18:14.444518Z")
+          )
+        end
+        let(:event_three) do
+          create_event(
+            timestamp: same_timestamp,
+            value: 2,
+            properties: {user_id: "B"},
+            transaction_id: "qa_rm11_full_adv_5935be3d_amx_k4_e3",
+            created_at: Time.zone.parse("2026-10-06T15:18:14.690127Z")
+          )
+        end
+
+        before do
+          event_store.aggregation_property = "user_id"
+          [event_one, event_two, event_three]
+        end
+
+        it "considers only earlier receipts at the same event timestamp" do
+          expect(event_store).not_to be_active_unique_property(event_one)
+          expect(event_store).to be_active_unique_property(event_two)
+          expect(event_store).not_to be_active_unique_property(event_three)
+        end
+
+        it "does not let a future tied receipt affect an earlier lookup" do
+          expect(event_store).not_to be_active_unique_property(event_one)
+        end
+
+        context "when the latest tied event removes the property" do
+          let(:tied_add) do
+            create_event(
+              timestamp: same_timestamp,
+              value: 1,
+              properties: {user_id: "A"},
+              transaction_id: "qa_rm11_full_adv_5935be3d_amx_k4_tied_add",
+              created_at: Time.zone.parse("2026-10-06T15:18:14.156149Z")
+            )
+          end
+          let(:tied_remove) do
+            create_event(
+              timestamp: same_timestamp,
+              value: 1,
+              properties: {user_id: "A", operation_type: "remove"},
+              transaction_id: "qa_rm11_full_adv_5935be3d_amx_k4_tied_remove",
+              created_at: Time.zone.parse("2026-10-06T15:18:14.600000Z")
+            )
+          end
+          let(:later_event) do
+            create_event(
+              timestamp: same_timestamp,
+              value: 1,
+              properties: {user_id: "A"},
+              transaction_id: "qa_rm11_full_adv_5935be3d_amx_k4_z_after_remove",
+              created_at: Time.zone.parse("2026-10-06T15:18:14.800000Z")
+            )
+          end
+
+          before do
+            [tied_add, tied_remove, later_event]
+          end
+
+          it "treats the property as inactive" do
+            expect(event_store).not_to be_active_unique_property(later_event)
+          end
+        end
+      end
+
       it "returns false when no previous events exist" do
         event = create_event(timestamp: subscription_started_at + 2.days, value: 999)
         expect(event_store).not_to be_active_unique_property(event)
@@ -571,6 +714,29 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
         expect(result.value).to eq(4) # 5 events added / 1 removed
         expect(result.events_count).to eq(4)
+      end
+
+      context "with colons in the quoted values" do
+        let(:subscription) { create(:subscription, customer:, started_at:, external_id: "workspace:main") }
+        let(:code) { "bm:1" }
+        let(:matching_filters) { {"region" => ["eu:west"]} }
+        let(:events) do
+          [
+            create_event(timestamp: subscription_started_at + 1.day, value: 1, code:, properties: {"region" => "eu:west"}),
+            create_event(timestamp: subscription_started_at + 2.days, value: 2, code:, properties: {"region" => "eu:west"}),
+            create_event(timestamp: subscription_started_at + 3.days, value: 3, code:, properties: {"region" => "us:east"}),
+            create_event(timestamp: subscription_started_at + 4.days, value: 4, properties: {"region" => "eu:west"})
+          ]
+        end
+
+        it "matches the values as written" do
+          event_store.aggregation_property = billable_metric.field_name
+
+          result = event_store.unique_count
+
+          expect(result.value).to eq(2)
+          expect(result.events_count).to eq(2)
+        end
       end
     end
   end
@@ -636,6 +802,14 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           # 4 => added on 3 day, never removed => 13/31
           # 5 => added on 4 day, never removed => 12/31
           expect(event_store.prorated_unique_count.value.round(3)).to eq(1.871) # 16/31 + 3/31 + 14/31 + 13/31 + 12/31
+        end
+      end
+
+      context "with a colon in the subscription external id" do
+        let(:subscription) { create(:subscription, customer:, started_at:, external_id: "workspace:main") }
+
+        it "returns the number of unique active event properties" do
+          expect(event_store.prorated_unique_count.value.round(3)).to eq(2.258) # 16/31 + 15/31 + 14/31 + 13/31 + 12/31
         end
       end
     end
@@ -824,7 +998,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         subject(:event_store) do
           described_class.new(
             code:,
-            subscription:,
+            billing_context: Billing::Context.from(subscription:),
             boundaries:,
             filters: {
               grouped_by:,
@@ -834,8 +1008,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
               event:,
               charge_id: charge&.id,
               charge_filter: charge_filter
-            },
-            deduplicate: with_event_duplication
+            }
           )
         end
 
@@ -1580,7 +1753,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          subscription:,
+          billing_context: Billing::Context.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -1590,8 +1763,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
             ignored_filters:,
             charge_id: charge&.id,
             charge_filter: charge_filter
-          },
-          deduplicate: with_event_duplication
+          }
         )
       end
 
@@ -1645,7 +1817,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          subscription:,
+          billing_context: Billing::Context.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -1655,8 +1827,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
             ignored_filters:,
             charge_id: charge&.id,
             charge_filter: charge_filter
-          },
-          deduplicate: with_event_duplication
+          }
         )
       end
 
@@ -1705,7 +1876,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          subscription:,
+          billing_context: Billing::Context.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -1715,8 +1886,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
             ignored_filters:,
             charge_id: charge&.id,
             charge_filter: charge_filter
-          },
-          deduplicate: with_event_duplication
+          }
         )
       end
 
@@ -1768,7 +1938,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          subscription:,
+          billing_context: Billing::Context.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -1778,8 +1948,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
             ignored_filters:,
             charge_id: charge&.id,
             charge_filter: charge_filter
-          },
-          deduplicate: with_event_duplication
+          }
         )
       end
 
@@ -1833,7 +2002,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          subscription:,
+          billing_context: Billing::Context.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -1843,8 +2012,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
             ignored_filters:,
             charge_id: charge&.id,
             charge_filter: charge_filter
-          },
-          deduplicate: with_event_duplication
+          }
         )
       end
 
@@ -1900,7 +2068,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       subject(:event_store) do
         described_class.new(
           code:,
-          subscription:,
+          billing_context: Billing::Context.from(subscription:),
           boundaries:,
           filters: {
             grouped_by:,
@@ -1910,8 +2078,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
             ignored_filters:,
             charge_id: charge&.id,
             charge_filter: charge_filter
-          },
-          deduplicate: with_event_duplication
+          }
         )
       end
 
@@ -2222,6 +2389,17 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         expect(result.value.round(5)).to eq(0.02218)
         expect(result.variation).to eq(0)
         expect(result.events_count).to eq(7)
+      end
+
+      context "with a colon in the subscription external id" do
+        let(:subscription) { create(:subscription, customer:, started_at:, external_id: "workspace:main") }
+
+        it "returns the weighted sum of event properties" do
+          result = event_store.weighted_sum
+
+          expect(result.value.round(5)).to eq(0.02218)
+          expect(result.events_count).to eq(7)
+        end
       end
 
       context "with a single event" do
@@ -2712,46 +2890,6 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     end
   end
 
-  if include_feature?(:distinct_charges_and_filters)
-    describe "#distinct_charges_and_filters" do
-      let(:charge_filter) { create(:charge_filter, charge:) }
-
-      let(:events) { nil }
-
-      before do
-        create_enriched_event(
-          timestamp: boundaries[:from_datetime] + 12.days,
-          value: 12,
-          properties: {billable_metric.field_name => 12},
-          charge_filter:
-        )
-      end
-
-      it "returns distinct charges and filters with the last seen timestamp" do
-        result = event_store.distinct_charges_and_filters
-
-        expect(result.map { |row| row[0..1] }).to match_array([[charge.id, charge_filter.id]])
-        expect(result.map(&:last)).to all(be_present)
-      end
-
-      context "when charge_filter is nil" do
-        let(:charge_filter) { nil }
-
-        it "returns the distinct event codes" do
-          expect(event_store.distinct_charges_and_filters.map { |row| row[0..1] }).to match_array([[charge.id, nil]])
-        end
-      end
-
-      context "when codes are provided" do
-        it "returns only the charges and filters matching the provided codes" do
-          matching = event_store.distinct_charges_and_filters(codes: [code])
-          expect(matching.map { |row| row[0..1] }).to match_array([[charge.id, charge_filter.id]])
-          expect(event_store.distinct_charges_and_filters(codes: ["unknown_code"])).to eq([])
-        end
-      end
-    end
-  end
-
   if include_feature?(:distinct_codes_and_property_combinations)
     describe "#distinct_codes_and_property_combinations" do
       let(:events) { nil }
@@ -2799,6 +2937,23 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         end
       end
 
+      context "when the last seen timestamp is not requested" do
+        it "returns the same combinations without the timestamp" do
+          result = event_store.distinct_codes_and_property_combinations(
+            codes: [code],
+            filter_keys: %w[region provider],
+            with_last_seen_at: false
+          )
+
+          expect(result.map { |row| row[0..1] }).to match_array(
+            event_store
+              .distinct_codes_and_property_combinations(codes: [code], filter_keys: %w[region provider])
+              .map { |row| row[0..1] }
+          )
+          expect(result.map(&:last)).to all(be_nil)
+        end
+      end
+
       context "with events outside the boundaries" do
         before do
           create_event(
@@ -2836,6 +2991,28 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           )
 
           expect(result.map { |row| row[0..1] }).to include([code, {"region" => "apac", "provider" => "azure"}])
+        end
+      end
+
+      context "with an ingestion time to read from" do
+        let(:ingested_after) { Time.current + 1.minute }
+
+        before do
+          create_event(
+            timestamp: subscription_started_at + 1.day,
+            value: 1,
+            properties: {"region" => "apac", "provider" => "azure"},
+            created_at: ingested_after + 1.second
+          )
+        end
+
+        it "only returns the combinations of the events ingested after it" do
+          result = event_store.distinct_codes_and_property_combinations(
+            codes: [code], filter_keys: %w[region provider], ingested_after:
+          )
+
+          expect(result.map { |row| row[0..1] }).to eq([[code, {"region" => "apac", "provider" => "azure"}]])
+          expect(result.map(&:last)).to all(be_present)
         end
       end
     end

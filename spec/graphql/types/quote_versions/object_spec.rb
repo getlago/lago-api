@@ -5,34 +5,31 @@ require "rails_helper"
 RSpec.describe Types::QuoteVersions::Object do
   subject { described_class }
 
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+
   it do
     expect(subject).to have_field(:id).of_type("ID!")
     expect(subject).to have_field(:organization).of_type("Organization!")
     expect(subject).to have_field(:quote).of_type("Quote!")
     expect(subject).to have_field(:approved_at).of_type("ISO8601DateTime")
+    expect(subject).to have_field(:billing_entity_id).of_type("ID")
     expect(subject).to have_field(:billing_items).of_type("JSON")
     expect(subject).to have_field(:content).of_type("String")
     expect(subject).to have_field(:mention_variables).of_type("JSON!")
+    expect(subject).to have_field(:order_form).of_type("OrderForm")
     expect(subject).to have_field(:status).of_type("StatusEnum!")
     expect(subject).to have_field(:version).of_type("Int!")
     expect(subject).to have_field(:void_reason).of_type("VoidReasonEnum")
     expect(subject).to have_field(:voided_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:created_at).of_type("ISO8601DateTime!")
     expect(subject).to have_field(:updated_at).of_type("ISO8601DateTime!")
-    expect(subject).to have_field(:currency).of_type("String")
-    expect(subject).to have_field(:start_date).of_type("ISO8601Date")
-    expect(subject).to have_field(:end_date).of_type("ISO8601Date")
+    expect(subject).to have_field(:currency).of_type("CurrencyEnum")
   end
 
   describe "#mention_variables" do
     let(:required_permission) { "quotes:view" }
-    let(:membership) { create(:membership) }
-    let(:organization) { membership.organization }
-    let(:customer) do
-      create(:customer, organization:, name: "Hooli", legal_name: "Hooli Inc", firstname: "Gavin", lastname: "Belson")
-    end
     let(:quote) { create(:quote, organization:, customer:) }
-
     let(:query) do
       <<~GQL
         query($quoteId: ID!) {
@@ -41,6 +38,11 @@ RSpec.describe Types::QuoteVersions::Object do
           }
         }
       GQL
+    end
+
+    let_it_be(:membership, refind: true) { create_default(:membership) }
+    let_it_be(:customer, refind: true) do
+      create_default(:customer, organization:, name: "Hooli", legal_name: "Hooli Inc", firstname: "Gavin", lastname: "Belson")
     end
 
     def execute
@@ -74,7 +76,7 @@ RSpec.describe Types::QuoteVersions::Object do
     end
 
     context "when the approved snapshot holds locale-sensitive variables" do
-      let(:customer) { create(:customer, organization:, name: "Hooli", document_locale: "en") }
+      let_it_be(:customer, refind: true) { create_default(:customer, organization:, name: "Hooli", document_locale: "en") }
 
       before do
         create(

@@ -10,7 +10,7 @@ module Commitments
           ds = Subscriptions::DatesService.new_instance(
             subscription,
             invoice_subscription.timestamp,
-            current_usage: subscription.terminated?
+            current_usage: subscription.terminated? && !subscription.downgraded?
           )
 
           return ds unless subscription.terminated?

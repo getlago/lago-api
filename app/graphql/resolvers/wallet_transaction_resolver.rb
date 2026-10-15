@@ -5,6 +5,8 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
+    REQUIRED_PERMISSION = %w[customers:view wallets:create wallets:update wallets:top_up wallets:terminate]
+
     description "Query a single wallet transaction"
 
     argument :id, ID, required: true, description: "Unique ID of the wallet transaction"

@@ -14,6 +14,20 @@ class Order < ApplicationRecord
     order_only: "order_only"
   }.freeze
 
+  # Every order type writes the same keys, whether or not it can create such a record, so a reader
+  # never has to tell a missing key from an empty one. Records written before a key existed are
+  # merged onto these defaults when read, see V1::OrderSerializer.
+  EXECUTION_RECORD_DEFAULTS = {
+    "executed_at" => nil,
+    "execution_mode" => nil,
+    "invoice_id" => nil,
+    "subscription_ids" => [],
+    "terminated_subscription_ids" => [],
+    "applied_coupon_ids" => [],
+    "wallet_ids" => [],
+    "errors" => []
+  }.freeze
+
   before_save :ensure_number
 
   belongs_to :organization
@@ -21,6 +35,11 @@ class Order < ApplicationRecord
   belongs_to :order_form
   has_one :quote_version, through: :order_form
   has_one :quote, through: :quote_version
+
+  has_many :activity_logs,
+    -> { order(logged_at: :desc) },
+    class_name: "Clickhouse::ActivityLog",
+    as: :resource
 
   enum :status, STATUSES,
     default: :created,

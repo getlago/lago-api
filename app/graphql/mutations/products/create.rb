@@ -3,6 +3,7 @@
 module Mutations
   module Products
     class Create < BaseMutation
+      include RequiresProductCatalog
       include AuthenticableApiUser
       include RequiredOrganization
 

@@ -5,10 +5,10 @@ require "rails_helper"
 RSpec.describe AddOns::ApplyTaxesService do
   subject(:apply_service) { described_class.new(add_on:, tax_codes:) }
 
-  let(:organization) { create(:organization) }
-  let(:add_on) { create(:add_on, organization:) }
-  let(:tax1) { create(:tax, organization:, code: "tax1") }
-  let(:tax2) { create(:tax, organization:, code: "tax2") }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:add_on) { create(:add_on, organization:) }
+  let_it_be(:tax1) { create(:tax, organization:, code: "tax1") }
+  let_it_be(:tax2) { create(:tax, organization:, code: "tax2") }
   let(:tax_codes) { [tax1.code, tax2.code] }
 
   describe "call" do

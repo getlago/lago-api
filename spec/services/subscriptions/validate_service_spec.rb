@@ -6,13 +6,8 @@ RSpec.describe Subscriptions::ValidateService do
   subject(:validate_service) { described_class.new(result, **args) }
 
   let(:result) { Subscriptions::CreateService::Result.new }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:) }
   let(:subscription_at) { Time.current.iso8601 }
   let(:ending_at) { (Time.current + 1.year).iso8601 }
-
   let(:args) do
     {
       customer:,
@@ -22,14 +17,22 @@ RSpec.describe Subscriptions::ValidateService do
       on_termination_credit_note:,
       on_termination_invoice:,
       subscription:,
-      subscription_type:
+      subscription_type:,
+      consolidate_invoice:,
+      consolidate_invoice_provided:
     }
   end
-
   let(:on_termination_credit_note) { nil }
   let(:on_termination_invoice) { nil }
   let(:subscription) { nil }
   let(:subscription_type) { "create" }
+  let(:consolidate_invoice) { nil }
+  let(:consolidate_invoice_provided) { false }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
+  let_it_be(:plan) { create(:plan, organization:) }
 
   describe "#ending_at" do
     subject(:method_call) { validate_service.__send__(:ending_at) }
@@ -254,6 +257,25 @@ RSpec.describe Subscriptions::ValidateService do
       end
     end
 
+    context "with invalid consolidate_invoice" do
+      let(:consolidate_invoice) { "null" }
+      let(:consolidate_invoice_provided) { true }
+
+      it "returns false and result has errors" do
+        expect(validate_service).not_to be_valid
+        expect(result.error.messages[:consolidate_invoice]).to eq(["invalid_value"])
+      end
+    end
+
+    context "with valid consolidate_invoice" do
+      let(:consolidate_invoice) { "false" }
+      let(:consolidate_invoice_provided) { true }
+
+      it "returns true" do
+        expect(validate_service).to be_valid
+      end
+    end
+
     context "with payment method" do
       let(:payment_method) { create(:payment_method, customer:, organization:) }
       let(:payment_method_params) do
@@ -342,7 +364,7 @@ RSpec.describe Subscriptions::ValidateService do
         }
       end
 
-      let(:customer) { create(:customer, organization:, payment_provider: "stripe") }
+      let_it_be(:customer) { create(:customer, organization:, payment_provider: "stripe") }
 
       context "when activation_rules contains valid payment rule" do
         let(:activation_rules) { [{type: "payment", timeout_hours: 48}] }

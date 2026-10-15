@@ -4,15 +4,11 @@ require "rails_helper"
 
 RSpec.describe Mutations::Customers::Update do
   let(:required_permission) { "customers:update" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:billing_entity) { create(:billing_entity, organization:) }
   let(:customer) { create(:customer, organization:, legal_name: nil) }
   let(:stripe_provider) { create(:stripe_provider, organization:) }
   let(:tax) { create(:tax, organization:) }
   let(:external_id) { SecureRandom.uuid }
   let(:invoice_custom_sections) { create_list(:invoice_custom_section, 2, organization:) }
-
   let(:mutation) do
     <<~GQL
       mutation($input: UpdateCustomerInput!) {
@@ -47,14 +43,12 @@ RSpec.describe Mutations::Customers::Update do
       }
     GQL
   end
-
   let(:body) do
     {
       object: "event",
       data: {}
     }
   end
-
   let(:input) do
     {
       id: customer.id,
@@ -89,6 +83,10 @@ RSpec.describe Mutations::Customers::Update do
       configurableInvoiceCustomSectionIds: invoice_custom_sections.map(&:id)
     }
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:billing_entity) { create_default(:billing_entity, organization:) }
 
   before do
     stub_request(:post, "https://api.stripe.com/v1/checkout/sessions")
@@ -205,6 +203,40 @@ RSpec.describe Mutations::Customers::Update do
       expect(result_data["timezone"]).to eq("TZ_EUROPE_PARIS")
       expect(result_data["providerCustomer"]).to be_present
       expect(result_data["metadata"]).to be_present
+    end
+  end
+
+  context "with the payment_provider_customers array" do
+    let(:array_mutation) do
+      <<~GQL
+        mutation($input: UpdateCustomerInput!) {
+          updateCustomer(input: $input) {
+            id
+            connectionStatus
+            paymentProviderCustomers { id code isDefault }
+          }
+        }
+      GQL
+    end
+
+    let!(:existing_connection) { create(:stripe_customer, customer:, code: "stripe_eu", is_default: true) }
+
+    it "reconciles the connections declaratively and discards the omitted one" do
+      result = execute_query(
+        query: array_mutation,
+        input: {
+          id: customer.id,
+          externalId: customer.external_id,
+          paymentProviderCustomers: [
+            {code: "lago_manual"}
+          ]
+        }
+      )
+
+      result_data = result["data"]["updateCustomer"]
+
+      expect(result_data["paymentProviderCustomers"].map { |c| c["code"] }).to eq(["lago_manual"])
+      expect(existing_connection.reload).to be_discarded
     end
   end
 end

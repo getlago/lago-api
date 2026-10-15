@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Fees::CreatePayInAdvanceService do
-  subject(:fee_service) { described_class.new(charge:, event:, billing_at: event.timestamp, estimate:) }
+  subject(:fee_service) { described_class.new(metered_item:, billing_context:, billing_at:, estimate:) }
 
   let(:billing_entity) { create(:billing_entity) }
   let(:organization) { billing_entity.organization }
@@ -11,6 +11,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, customer:, plan:) }
+  let(:billing_context) { Billing::Context.from(subscription:) }
   let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
   let(:estimate) { false }
 
@@ -30,6 +31,32 @@ RSpec.describe Fees::CreatePayInAdvanceService do
   end
 
   let(:event_properties) { {} }
+  let(:billing_at) { event.timestamp }
+  let(:date_service) do
+    Subscriptions::DatesService.new_instance(
+      subscription,
+      billing_at,
+      current_usage: true
+    )
+  end
+  let(:boundaries) do
+    BillingPeriodBoundaries.new(
+      from_datetime: date_service.from_datetime,
+      to_datetime: date_service.to_datetime,
+      charges_from_datetime: date_service.charges_from_datetime,
+      charges_to_datetime: date_service.charges_to_datetime,
+      charges_duration: date_service.charges_duration_in_days,
+      timestamp: billing_at
+    )
+  end
+  let(:metered_item) do
+    Fees::ChargeService::MeteredItem.from_charge(
+      charge:,
+      boundaries:,
+      charge_filter: charge_filter,
+      event:
+    )
+  end
 
   before { tax }
 
@@ -54,35 +81,175 @@ RSpec.describe Fees::CreatePayInAdvanceService do
 
     before do
       allow(Charges::PayInAdvanceAggregationService).to receive(:call)
-        .with(charge:, boundaries: BillingPeriodBoundaries, properties: Hash, event:, charge_filter:)
+        .with(
+          metered_item: have_attributes(charge:, event:),
+          billing_context: instance_of(Billing::Context)
+        )
         .and_return(aggregation_result)
 
       allow(Charges::ApplyPayInAdvanceChargeModelService).to receive(:call)
-        .with(charge:, aggregation_result:, properties: Hash)
+        .with(metered_item: have_attributes(charge:, event:), aggregation_result:, properties: Hash)
         .and_return(charge_result)
     end
 
-    context "when the event has no matching subscription" do
+    context "when the metered item is backed by a billing segment" do
+      let(:contract) { create(:contract, organization:, customer:) }
+      let(:product) { create(:product, :metered, organization:, billable_metric:) }
+      let(:rate_card) { create(:rate_card, :advance, organization:, product:, display_on_invoice: false) }
+      let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+      let(:billing_segment) do
+        create(
+          :billing_segment,
+          organization:,
+          customer:,
+          contract:,
+          contract_rate_card:,
+          currency: "EUR",
+          rate_properties: {"amount" => "10"}
+        )
+      end
       let(:event) do
         source = create(
           :event,
-          external_subscription_id: "unknown-#{SecureRandom.uuid}",
+          external_subscription_id: contract.external_id,
           external_customer_id: customer.external_id,
           organization_id: organization.id,
+          code: billable_metric.code,
           properties: event_properties
         )
         Events::CommonFactory.new_instance(source:)
       end
+      let(:metered_item) do
+        Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment:, event:)
+      end
+      let(:billing_context) { Billing::Context.from(contract:) }
 
-      it "skips without creating a fee and logs a warning" do
-        allow(Rails.logger).to receive(:warn)
+      before do
+        allow(Charges::PayInAdvanceAggregationService).to receive(:call).and_return(aggregation_result)
+        allow(Charges::ApplyPayInAdvanceChargeModelService).to receive(:call).and_return(charge_result)
+        allow(Fees::ApplyTaxesService).to receive(:call!).and_call_original
+      end
 
+      it "creates a product fee without a subscription or legacy charge" do
         result = fee_service.call
 
         expect(result).to be_success
-        expect(result.fees).to eq([])
-        expect(Fee.count).to eq(0)
-        expect(Rails.logger).to have_received(:warn).with(/no active subscription for event/)
+        expect(Fees::ApplyTaxesService).to have_received(:call!).with(fee: an_instance_of(Fee), customer:)
+        expect(result.fees.sole).to have_attributes(
+          subscription: nil,
+          charge: nil,
+          organization_id: organization.id,
+          billing_entity_id: billing_entity.id,
+          amount_currency: "EUR",
+          fee_type: "product",
+          invoiceable: product,
+          contract:,
+          contract_rate_card:,
+          rate_card_rate: billing_segment.rate_card_rate,
+          rate_override: billing_segment.rate_override
+        )
+        expect(result.fees.sole.properties).to include(
+          "from_datetime" => billing_segment.started_at.iso8601(6),
+          "to_datetime" => billing_segment.ended_at.iso8601(6),
+          "charges_from_datetime" => billing_segment.started_at.iso8601(6),
+          "charges_to_datetime" => billing_segment.ended_at.iso8601(6)
+        )
+      end
+
+      context "with a legacy charge linked to the product" do
+        let(:product) { create(:product, :metered, organization:, billable_metric:, charge:) }
+
+        it "persists the product fee without its legacy charge" do
+          expect(fee_service.call.fees.sole.reload).to have_attributes(
+            fee_type: "product", charge_id: nil, contract_rate_card:
+          )
+        end
+      end
+
+      context "with a legacy add-on linked to the product" do
+        let(:add_on) { create(:add_on, organization:) }
+        let(:product) { create(:product, :metered, organization:, billable_metric:, add_on:) }
+
+        it "keeps the product fee distinct from a one-off add-on fee" do
+          expect(fee_service.call.fees.sole.reload).to have_attributes(
+            fee_type: "product", add_on_id: nil, charge_id: nil, contract_rate_card:
+          )
+        end
+      end
+
+      it "does not persist another product fee on retry" do
+        fee_service.call
+        result = nil
+
+        expect { result = fee_service.call }.not_to change(Fee, :count)
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq(pay_in_advance_event_transaction_id: ["pay_in_advance_fee_already_exists"])
+      end
+
+      context "when the card uses a product filter" do
+        let(:metric_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
+        let(:product_filter) { create(:product_filter, organization:, product:) }
+        let(:rate_card) { create(:rate_card, :advance, organization:, product:, product_filter:, display_on_invoice: false) }
+        let(:event_properties) { {"region" => "eu"} }
+
+        before do
+          create(:product_filter_value, organization:, product_filter:, billable_metric_filter: metric_filter, value: "eu")
+        end
+
+        it "returns a validation failure on retry for a filtered fee" do
+          fee = fee_service.call.fees.sole
+          retry_result = fee_service.call
+
+          expect(fee.product_filter).to eq(product_filter)
+          expect(retry_result).not_to be_success
+          expect(retry_result.error.messages).to eq(pay_in_advance_event_transaction_id: ["pay_in_advance_fee_already_exists"])
+          expect(Fee.where(pay_in_advance_event_transaction_id: event.transaction_id).count).to eq(1)
+        end
+      end
+
+      context "when two products share the metric" do
+        let(:other_product) { create(:product, :metered, organization:, billable_metric:) }
+        let(:other_rate_card) { create(:rate_card, :advance, organization:, product: other_product, display_on_invoice: false) }
+        let(:other_contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card: other_rate_card) }
+        let(:other_billing_segment) do
+          create(:billing_segment, organization:, customer:, contract:, contract_rate_card: other_contract_rate_card)
+        end
+        let(:other_metered_item) do
+          Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: other_billing_segment, event:)
+        end
+        let(:other_fee_service) { described_class.new(metered_item: other_metered_item, billing_context:) }
+
+        it "persists one fee for each contract rate card" do
+          first = fee_service.call.fees.sole
+          second = other_fee_service.call.fees.sole
+
+          expect([first.contract_rate_card_id, second.contract_rate_card_id])
+            .to eq([contract_rate_card.id, other_contract_rate_card.id])
+          expect(Fee.where(pay_in_advance_event_transaction_id: event.transaction_id).count).to eq(2)
+        end
+      end
+
+      context "when a different transaction uses the same card" do
+        let(:other_event) do
+          Events::CommonFactory.new_instance(source: create(
+            :event,
+            external_subscription_id: contract.external_id,
+            external_customer_id: customer.external_id,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            properties: event_properties
+          ))
+        end
+        let(:other_metered_item) { metered_item.with_event(event: other_event) }
+        let(:other_fee_service) { described_class.new(metered_item: other_metered_item, billing_context:) }
+
+        it "persists a separate fee for each transaction" do
+          first = fee_service.call.fees.sole
+          second = other_fee_service.call.fees.sole
+
+          expect([first, second].map(&:pay_in_advance_event_transaction_id))
+            .to eq([event.transaction_id, other_event.transaction_id])
+        end
       end
     end
 
@@ -118,6 +285,15 @@ RSpec.describe Fees::CreatePayInAdvanceService do
         taxes_precise_amount_cents: 0.0
       )
       expect(result.fees.first.applied_taxes.count).to eq(0)
+    end
+
+    it "returns a validation failure when the charge fee already exists" do
+      fee_service.call
+
+      retry_result = fee_service.call
+
+      expect(retry_result.error.messages).to eq(pay_in_advance_event_transaction_id: ["pay_in_advance_fee_already_exists"])
+      expect(Fee.where(pay_in_advance_event_transaction_id: event.transaction_id).count).to eq(1)
     end
 
     it "does not create pricing unit usage" do
@@ -241,6 +417,8 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           }
         end
 
+        before { create(:charge_filter_value, values: ["visa"], billable_metric_filter: scheme, charge_filter:) }
+
         it "creates a fee" do
           result = fee_service.call
 
@@ -286,6 +464,8 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           }
         end
 
+        before { create(:charge_filter_value, values: ["visa"], billable_metric_filter: scheme, charge_filter:) }
+
         it "creates a fee" do
           result = fee_service.call
 
@@ -320,7 +500,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
       end
 
       context "when event does not match the charge filter" do
-        let(:charge_filter) { ChargeFilter }
+        let(:charge_filter) { nil }
 
         let(:event_properties) do
           {
@@ -331,7 +511,14 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           }
         end
 
-        it "creates a fee" do
+        it "creates a fee using the default filter" do
+          expect(metered_item.pricing_buckets).to match([
+            have_attributes(
+              charge_filter: have_attributes(charge:, id: nil),
+              properties: charge.properties
+            )
+          ])
+
           result = fee_service.call
 
           expect(result).to be_success
@@ -817,15 +1004,20 @@ RSpec.describe Fees::CreatePayInAdvanceService do
     context "when charge is non-invoiceable" do
       let(:charge) { create(:standard_charge, :pay_in_advance, billable_metric:, plan:, invoiceable: false) }
 
-      it "applies local taxes eagerly" do
-        result = fee_service.call
+      context "when customer does not have a tax provider integration" do
+        before { allow(Fees::ApplyTaxesService).to receive(:call!).and_call_original }
 
-        expect(result).to be_success
+        it "applies local taxes eagerly" do
+          result = fee_service.call
 
-        fee = result.fees.first
-        expect(fee.applied_taxes.count).to eq(1)
-        expect(fee.taxes_rate).to eq(20.0)
-        expect(fee.taxes_amount_cents).to eq(2)
+          expect(result).to be_success
+          expect(Fees::ApplyTaxesService).to have_received(:call!).with(fee: an_instance_of(Fee), customer:)
+
+          fee = result.fees.first
+          expect(fee.applied_taxes.count).to eq(1)
+          expect(fee.taxes_rate).to eq(20.0)
+          expect(fee.taxes_amount_cents).to eq(2)
+        end
       end
 
       context "when customer has tax provider integration" do
@@ -842,6 +1034,7 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           response_data["succeededInvoices"].first["fees"].first["item_id"] = fee_id
           response_data["succeededInvoices"].first["fees"].first["tax_breakdown"].first["rate"] = "0.10"
           response_data["succeededInvoices"].first["fees"].first["tax_breakdown"].first["tax_amount"] = 1
+          response_data["succeededInvoices"].first["fees"].first["tax_amount_cents"] = 1
 
           response_data.to_json
         end
@@ -868,12 +1061,18 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           allow_any_instance_of(Fee).to receive(:id).and_wrap_original do |m, *_args| # rubocop:disable RSpec/AnyInstance
             fee_id
           end
+          allow(Fees::ApplyProviderTaxesToStandaloneFeesService).to receive(:call!).and_call_original
         end
 
         it "applies provider taxes instead of local taxes" do
           result = fee_service.call
 
           expect(result).to be_success
+          expect(Fees::ApplyProviderTaxesToStandaloneFeesService).to have_received(:call!).with(
+            customer:,
+            fees: [an_instance_of(Fee)],
+            currency: "EUR"
+          )
 
           fee = result.fees.first
           # Provider returns 2 tax breakdown entries (tax_exempt + exempt)

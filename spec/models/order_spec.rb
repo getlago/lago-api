@@ -31,6 +31,10 @@ RSpec.describe Order do
     end
   end
 
+  describe "Clickhouse associations", clickhouse: true do
+    it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }
+  end
+
   describe "Scopes" do
     describe ".executable" do
       let(:organization) { create(:organization) }

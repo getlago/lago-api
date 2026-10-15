@@ -2,12 +2,20 @@
 
 class PlansQuery < BaseQuery
   Result = BaseResult[:plans]
-  Filters = BaseFilters[:with_deleted, :include_pending_deletion, :product_category_id]
+  Filters = BaseFilters[:with_deleted, :include_pending_deletion]
+
+  # Deleted plans are kept for history but should not clutter the top of the list, so they are
+  # grouped after the active ones. Both groups stay sorted by name to remain easy to scan.
+  DEFAULT_ORDER = {
+    Arel.sql("plans.deleted_at IS NOT NULL") => :asc,
+    :name => :asc,
+    :created_at => :desc
+  }.freeze
 
   def call
     plans = base_scope.result
     plans = paginate(plans)
-    plans = apply_consistent_ordering(plans)
+    plans = apply_consistent_ordering(plans, default_order: DEFAULT_ORDER)
 
     plans = exclude_pending_deletion(plans) unless filters.include_pending_deletion
     plans = plans.with_discarded if filters.with_deleted
@@ -20,19 +28,7 @@ class PlansQuery < BaseQuery
 
   def base_scope
     scope = Plan.parents.where(organization:)
-    scope = with_product_category(scope)
     scope.ransack(search_params)
-  end
-
-  def with_product_category(scope)
-    return scope if filters.product_category_id.blank?
-
-    scope.where(
-      id: PlanRateCard
-        .joins(rate_card: :product)
-        .where(products: {product_category_id: filters.product_category_id})
-        .select(:plan_id)
-    )
   end
 
   def search_params

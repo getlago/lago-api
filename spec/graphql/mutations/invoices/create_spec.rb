@@ -4,13 +4,8 @@ require "rails_helper"
 
 RSpec.describe Mutations::Invoices::Create do
   let(:required_permission) { "invoices:create" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:currency) { "EUR" }
-  let(:customer) { create(:customer, organization:) }
   let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
-  let(:add_on_first) { create(:add_on, organization:) }
-  let(:add_on_second) { create(:add_on, amount_cents: 400, organization:) }
   let(:current_time) { DateTime.new(2023, 7, 19, 12, 12) }
   let(:section_1) { create(:invoice_custom_section, organization:, code: "section_code_1") }
   let(:fees) do
@@ -58,6 +53,13 @@ RSpec.describe Mutations::Invoices::Create do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
+  let_it_be(:add_on_first) { create_default(:add_on, organization:) }
+  let_it_be(:add_on_second) { create_default(:add_on, amount_cents: 400, organization:) }
 
   before { tax }
 
@@ -135,7 +137,7 @@ RSpec.describe Mutations::Invoices::Create do
   end
 
   context "when multi_entity_billing feature flag is enabled" do
-    let(:other_billing_entity) { create(:billing_entity, organization:) }
+    let_it_be(:other_billing_entity) { create_default(:billing_entity, organization:) }
     let(:mutation) do
       <<-GQL
         mutation($input: CreateInvoiceInput!) {
@@ -148,7 +150,6 @@ RSpec.describe Mutations::Invoices::Create do
     end
 
     before do
-      organization.enable_feature_flag!(:multi_entity_billing)
       create(:tax, :applied_to_billing_entity, billing_entity: other_billing_entity, organization:, rate: 20)
     end
 
@@ -192,39 +193,6 @@ RSpec.describe Mutations::Invoices::Create do
 
       expect(result["errors"].first["extensions"]["code"]).to eq("not_found")
       expect(result["errors"].first["extensions"]["details"]).to include("billingEntity" => ["not_found"])
-    end
-  end
-
-  context "when multi_entity_billing feature flag is disabled" do
-    let(:other_billing_entity) { create(:billing_entity, organization:) }
-    let(:mutation) do
-      <<-GQL
-        mutation($input: CreateInvoiceInput!) {
-          createInvoice(input: $input) {
-            id
-            billingEntity { id code }
-          }
-        }
-      GQL
-    end
-
-    it "ignores billingEntityId and falls back to the customer's billing entity" do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: organization,
-        permissions: required_permission,
-        query: mutation,
-        variables: {
-          input: {
-            customerId: customer.id,
-            currency:,
-            fees:,
-            billingEntityId: other_billing_entity.id
-          }
-        }
-      )
-
-      expect(result["data"]["createInvoice"]["billingEntity"]["id"]).to eq(customer.billing_entity.id)
     end
   end
 end

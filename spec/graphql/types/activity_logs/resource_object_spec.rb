@@ -13,6 +13,7 @@ RSpec.describe Types::ActivityLogs::ResourceObject do
     expect(subject.possible_types).to contain_exactly(
       Types::BillableMetrics::Object,
       Types::Plans::Object,
+      Types::CatalogPlans::Object,
       Types::Customers::Object,
       Types::Invoices::Object,
       Types::CreditNotes::Object,
@@ -25,13 +26,22 @@ RSpec.describe Types::ActivityLogs::ResourceObject do
       Types::PaymentReceipts::Object,
       Types::ProductCategories::Object,
       Types::Products::Object,
-      Types::ProductFilters::Object
+      Types::ProductFilters::Object,
+      Types::RateCards::Object,
+      Types::RateCardRates::Object,
+      Types::PlanAppliedRateCards::Object,
+      Types::ContractAppliedRateCards::Object,
+      Types::Contracts::Object,
+      Types::Quotes::Object,
+      Types::OrderForms::Object,
+      Types::Orders::Object
     )
   end
 
   describe ".resolve_type" do
     let(:billable_metric) { create(:billable_metric) }
     let(:plan) { create(:plan) }
+    let(:catalog_plan) { create(:catalog_plan) }
     let(:customer) { create(:customer) }
     let(:invoice) { create(:invoice) }
     let(:credit_note) { create(:credit_note) }
@@ -44,6 +54,14 @@ RSpec.describe Types::ActivityLogs::ResourceObject do
     let(:product_category) { create(:product_category) }
     let(:product) { create(:product) }
     let(:product_filter) { create(:product_filter) }
+    let(:rate_card) { create(:rate_card) }
+    let(:rate_card_rate) { create(:rate_card_rate) }
+    let(:plan_rate_card) { create(:plan_rate_card) }
+    let(:contract_rate_card) { create(:contract_rate_card) }
+    let(:contract) { create(:contract) }
+    let(:quote) { create(:quote) }
+    let(:order_form) { create(:order_form) }
+    let(:order) { create(:order) }
 
     it "returns Types::BillableMetrics::Object for BillableMetric objects" do
       expect(subject.resolve_type(billable_metric, {})).to eq(Types::BillableMetrics::Object)
@@ -51,6 +69,10 @@ RSpec.describe Types::ActivityLogs::ResourceObject do
 
     it "returns Types::Plans::Object for Plan objects" do
       expect(subject.resolve_type(plan, {})).to eq(Types::Plans::Object)
+    end
+
+    it "returns Types::CatalogPlans::Object for CatalogPlan objects" do
+      expect(subject.resolve_type(catalog_plan, {})).to eq(Types::CatalogPlans::Object)
     end
 
     it "returns Types::Customers::Object for Customer objects" do
@@ -103,6 +125,29 @@ RSpec.describe Types::ActivityLogs::ResourceObject do
 
     it "returns Types::ProductFilters::Object for ProductFilter objects" do
       expect(subject.resolve_type(product_filter, {})).to eq(Types::ProductFilters::Object)
+    end
+
+    it "returns Types::RateCards::Object for RateCard objects" do
+      expect(subject.resolve_type(rate_card, {})).to eq(Types::RateCards::Object)
+    end
+
+    it "returns the corresponding GraphQL object types for rate card rates and contracts" do
+      expect(subject.resolve_type(rate_card_rate, {})).to eq(Types::RateCardRates::Object)
+      expect(subject.resolve_type(plan_rate_card, {})).to eq(Types::PlanAppliedRateCards::Object)
+      expect(subject.resolve_type(contract_rate_card, {})).to eq(Types::ContractAppliedRateCards::Object)
+      expect(subject.resolve_type(contract, {})).to eq(Types::Contracts::Object)
+    end
+
+    it "returns Types::Quotes::Object for Quote objects" do
+      expect(subject.resolve_type(quote, {})).to eq(Types::Quotes::Object)
+    end
+
+    it "returns Types::OrderForms::Object for OrderForm objects" do
+      expect(subject.resolve_type(order_form, {})).to eq(Types::OrderForms::Object)
+    end
+
+    it "returns Types::Orders::Object for Order objects" do
+      expect(subject.resolve_type(order, {})).to eq(Types::Orders::Object)
     end
   end
 end

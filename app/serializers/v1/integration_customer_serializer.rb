@@ -7,7 +7,10 @@ module V1
         lago_id: model.id,
         external_customer_id: model.external_customer_id,
         type:,
-        integration_code: model&.integration&.code
+        integration_code: model&.integration&.code,
+        code: model.code,
+        is_default: model.is_default,
+        category: model.category
       }
 
       base_response.merge!(model&.settings || {})
@@ -21,6 +24,8 @@ module V1
         "netsuite"
       when "IntegrationCustomers::AnrokCustomer"
         "anrok"
+      when "IntegrationCustomers::AvalaraCustomer"
+        "avalara"
       when "IntegrationCustomers::XeroCustomer"
         "xero"
       when "IntegrationCustomers::HubspotCustomer"

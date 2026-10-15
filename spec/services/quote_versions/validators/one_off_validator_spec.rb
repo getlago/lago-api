@@ -6,11 +6,8 @@ RSpec.describe QuoteVersions::Validators::OneOffValidator do
   subject(:validator) { described_class.new(result, quote_version:, scope:) }
 
   let(:result) { BaseService::Result.new }
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:, order_type: :one_off) }
   let(:quote_version) { create(:quote_version, quote:, organization:, currency: "EUR", billing_items:) }
-  let(:add_on) { create(:add_on, organization:) }
   let(:scope) { :approve }
   let(:add_on_item) do
     {
@@ -30,6 +27,10 @@ RSpec.describe QuoteVersions::Validators::OneOffValidator do
   end
   let(:billing_items) { {"addOns" => [add_on_item]} }
 
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:add_on) { create(:add_on, organization:) }
+
   describe "#valid?" do
     context "with a complete valid quote version" do
       it "is valid and leaves the result untouched" do
@@ -40,7 +41,7 @@ RSpec.describe QuoteVersions::Validators::OneOffValidator do
 
     context "with both structural and business errors" do
       let(:payload) { super().merge("units" => 0) }
-      let(:quote_version) { create(:quote_version, quote:, organization:, currency: "DOUBLOON", billing_items:) }
+      let(:quote_version) { build(:quote_version, quote:, organization:, currency: "DOUBLOON", billing_items:) }
 
       it "returns the structural errors first" do
         expect(validator).not_to be_valid

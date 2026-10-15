@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe PaymentProviderCustomers::Stripe::SyncFundingInstructionsService do
   subject(:sync_funding_service) { described_class.new(stripe_customer) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:, currency: "USD") }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:, currency: "USD") }
   let(:provider_customer_id) { "cus_Rw5Qso78STEap3" }
   let(:stripe_customer) {
     create(:stripe_customer, customer:, provider_payment_methods:,

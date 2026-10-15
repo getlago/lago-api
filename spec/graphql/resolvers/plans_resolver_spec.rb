@@ -3,7 +3,10 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::PlansResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "plans:view" }
+  let(:plan) { create(:plan, organization:) }
   let(:query) do
     <<~GQL
       query($withDeleted: Boolean) {
@@ -15,10 +18,10 @@ RSpec.describe Resolvers::PlansResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:plan) { create(:plan, organization:) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:membership) { create_default(:membership) }
+
+  let_it_be(:organization) { membership.organization }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before do
     plan
@@ -75,42 +78,6 @@ RSpec.describe Resolvers::PlansResolver do
 
       expect(plans_response["metadata"]["currentPage"]).to eq(1)
       expect(plans_response["metadata"]["totalCount"]).to eq(2)
-    end
-  end
-
-  context "when filtering by product_category_id" do
-    let(:product_category) { create(:product_category, organization:) }
-    let(:other_plan) { create(:plan, organization:) }
-    let(:query) do
-      <<~GQL
-        query($productCategoryId: ID!) {
-          plans(limit: 5, productCategoryId: $productCategoryId) {
-            collection { id }
-            metadata { totalCount }
-          }
-        }
-      GQL
-    end
-
-    before do
-      other_plan
-      item = create(:product, organization:, product_category:)
-      rate_card = create(:rate_card, organization:, product: item)
-      create(:plan_rate_card, organization:, plan:, rate_card:)
-    end
-
-    it "returns only the plans linked to the product_category" do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: organization,
-        permissions: required_permission,
-        query:,
-        variables: {productCategoryId: product_category.id}
-      )
-
-      plans_response = result["data"]["plans"]
-      expect(plans_response["collection"].map { |p| p["id"] }).to eq([plan.id])
-      expect(plans_response["metadata"]["totalCount"]).to eq(1)
     end
   end
 end

@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe ::V1::QuoteVersionSerializer do
   subject(:serializer) { described_class.new(quote_version, root_name: "quote_version", includes:) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
   let(:quote_version) { create(:quote_version, :approved) }
   let(:includes) { [] }
   let(:result) { JSON.parse(serializer.to_json) }
@@ -20,6 +22,21 @@ RSpec.describe ::V1::QuoteVersionSerializer do
       "void_reason" => nil,
       "approved_at" => quote_version.approved_at.iso8601
     )
+  end
+
+  it "exposes the customer's billing entity code when the deal names none" do
+    expect(quote_version.billing_entity_id).to eq(nil)
+    expect(result["quote_version"]["billing_entity_code"]).to eq(quote_version.customer.billing_entity.code)
+  end
+
+  context "when the deal names its own billing entity" do
+    let(:billing_entity) { create(:billing_entity, organization: quote_version.organization) }
+
+    before { quote_version.update!(billing_entity:) }
+
+    it "exposes that entity's code" do
+      expect(result["quote_version"]["billing_entity_code"]).to eq(billing_entity.code)
+    end
   end
 
   it "does not expose content or billing_items by default" do

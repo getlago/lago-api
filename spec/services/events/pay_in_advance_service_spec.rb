@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Events::PayInAdvanceService do
-  let(:in_advance_service) { described_class.new(event:) }
+  subject(:in_advance_service) { described_class.new(event:) }
 
   let(:organization) { create(:organization) }
   let(:billable_metric) { create(:billable_metric, organization:) }
@@ -38,7 +38,36 @@ RSpec.describe Events::PayInAdvanceService do
     before { charge }
 
     it "enqueues a job to perform the pay_in_advance aggregation" do
-      expect { in_advance_service.call }.to have_enqueued_job(Fees::CreatePayInAdvanceJob)
+      expect { in_advance_service.call }
+        .to have_enqueued_job(Fees::CreatePayInAdvanceJob)
+        .with(metered_item: have_attributes(charge:, event: have_attributes(id: event.id)))
+    end
+
+    context "when the product catalog is enabled after resolving legacy charges" do
+      let(:resolved_items) { Events::PayInAdvanceMeteredItemsResolver.call!(event:) }
+
+      before do
+        resolved_items
+        allow(event.organization).to receive(:product_catalog_enabled?).and_return(true)
+        allow(Events::PayInAdvanceMeteredItemsResolver).to receive(:call!).with(event:).and_return(resolved_items)
+      end
+
+      it "enqueues the legacy charge without requiring a contract rate card" do
+        expect { in_advance_service.call }
+          .to have_enqueued_job(Fees::CreatePayInAdvanceJob)
+          .with(metered_item: have_attributes(charge:, contract_rate_card: nil))
+          .once
+      end
+
+      context "when the legacy event already has a fee" do
+        before do
+          create(:fee, subscription:, invoice: nil, pay_in_advance_event_transaction_id: event.transaction_id)
+        end
+
+        it "does not enqueue the charge again" do
+          expect { in_advance_service.call }.not_to have_enqueued_job(Fees::CreatePayInAdvanceJob)
+        end
+      end
     end
 
     context "when charge is invoiceable" do
@@ -68,7 +97,12 @@ RSpec.describe Events::PayInAdvanceService do
       before { charge }
 
       it "enqueues a job to create the pay_in_advance charge invoice" do
-        expect { in_advance_service.call }.to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
+        expect { in_advance_service.call }
+          .to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
+          .with(
+            metered_item: have_attributes(charge:, event: have_attributes(id: event.id)),
+            timestamp: event.timestamp
+          )
       end
 
       context "when charge is not invoiceable" do
@@ -104,6 +138,208 @@ RSpec.describe Events::PayInAdvanceService do
         it "does not enqueue a job" do
           expect { in_advance_service.call }
             .not_to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
+        end
+      end
+    end
+
+    context "when the event matches a product catalog billing segment" do
+      let(:organization) { create(:organization, feature_flags: [:product_catalog]) }
+      let(:charge) { nil }
+      let(:contract) { create(:contract, organization:, customer:, external_id: external_subscription_id) }
+      let(:product) { create(:product, :metered, organization:, billable_metric:) }
+      let(:rate_card) { create(:rate_card, :advance, organization:, product:, display_on_invoice:) }
+      let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+      let(:display_on_invoice) { false }
+
+      before do
+        create(
+          :billing_segment,
+          organization:,
+          customer:,
+          contract:,
+          contract_rate_card:,
+          started_at: timestamp.beginning_of_day,
+          ended_at: timestamp.end_of_day,
+          status: :processing
+        )
+      end
+
+      it "enqueues a job to create the standalone pay in advance fee" do
+        expect do
+          expect { in_advance_service.call }.to have_enqueued_job(Fees::CreatePayInAdvanceJob)
+        end.not_to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
+      end
+
+      context "when another product shares the billable metric" do
+        let(:other_product) { create(:product, :metered, organization:, billable_metric:) }
+        let(:other_card) { create(:rate_card, :advance, organization:, product: other_product, display_on_invoice: false) }
+        let(:other_attachment) { create(:contract_rate_card, organization:, contract:, rate_card: other_card) }
+        let(:other_rate) { create(:rate_card_rate, organization:, rate_card: other_card) }
+
+        before do
+          other_attachment
+          other_rate
+        end
+
+        it "enqueues one fee job for each product" do
+          expect { in_advance_service.call }.to have_enqueued_job(Fees::CreatePayInAdvanceJob).twice
+        end
+      end
+
+      context "when a newer arrears attachment replaces the advance attachment" do
+        let(:contract_rate_card) do
+          create(:contract_rate_card, organization:, contract:, rate_card:,
+            effective_date: Date.current - 2.days, billing_anchor_date: Date.current - 2.days)
+        end
+        let(:replacement_card) { create(:rate_card, organization:, product:, billing_timing: :arrears) }
+        let(:replacement_attachment) do
+          create(:contract_rate_card, organization:, contract:, rate_card: replacement_card,
+            effective_date: Date.current - 1.day, billing_anchor_date: Date.current - 1.day)
+        end
+        let(:replacement_rate) do
+          create(:rate_card_rate, organization:, rate_card: replacement_card,
+            effective_from: replacement_attachment.effective_date.in_time_zone)
+        end
+
+        before do
+          replacement_attachment
+          replacement_rate
+        end
+
+        it "does not enqueue a pay-in-advance fee or invoice job" do
+          expect do
+            expect { in_advance_service.call }.not_to have_enqueued_job(Fees::CreatePayInAdvanceJob)
+          end.not_to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
+        end
+
+        context "when the superseded advance card is displayed on the invoice" do
+          let(:display_on_invoice) { true }
+
+          it "does not enqueue a pay-in-advance fee or invoice job" do
+            expect do
+              expect { in_advance_service.call }.not_to have_enqueued_job(Fees::CreatePayInAdvanceJob)
+            end.not_to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
+          end
+        end
+      end
+
+      context "when the rate card is displayed on the invoice" do
+        let(:display_on_invoice) { true }
+
+        it "enqueues a job to create the pay in advance charge invoice" do
+          expect do
+            expect { in_advance_service.call }.to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
+          end.not_to have_enqueued_job(Fees::CreatePayInAdvanceJob)
+        end
+      end
+
+      context "when the same card already has a fee" do
+        let(:processed_transaction_id) { event.transaction_id }
+        let(:fee_invoice) { nil }
+
+        before do
+          create(
+            :fee,
+            organization:,
+            subscription: nil,
+            invoice: fee_invoice,
+            contract:,
+            contract_rate_card:,
+            invoiceable: product,
+            fee_type: :product,
+            pay_in_advance: true,
+            pay_in_advance_event_transaction_id: processed_transaction_id
+          )
+        end
+
+        it "does not enqueue another fee job for that card" do
+          expect { in_advance_service.call }.not_to have_enqueued_job(Fees::CreatePayInAdvanceJob)
+        end
+
+        context "when the existing fee belongs to a different event" do
+          let(:processed_transaction_id) { "another-transaction" }
+
+          it "enqueues the fee for the new transaction" do
+            expect { in_advance_service.call }.to have_enqueued_job(Fees::CreatePayInAdvanceJob).once
+          end
+        end
+
+        context "when the existing fee is attached to an invoice" do
+          let(:fee_invoice) { create(:invoice, organization:, customer:) }
+
+          it "does not enqueue another fee job" do
+            expect { in_advance_service.call }.not_to have_enqueued_job(Fees::CreatePayInAdvanceJob)
+          end
+        end
+      end
+
+      context "when two products share the metric" do
+        let(:other_product) { create(:product, :metered, organization:, billable_metric:) }
+        let(:other_rate_card) { create(:rate_card, :advance, organization:, product: other_product, display_on_invoice: false) }
+        let(:other_contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card: other_rate_card) }
+        let(:other_segment) do
+          create(
+            :billing_segment,
+            organization:,
+            customer:,
+            contract:,
+            contract_rate_card: other_contract_rate_card,
+            started_at: timestamp.beginning_of_day,
+            ended_at: timestamp.end_of_day,
+            status: :processing
+          )
+        end
+
+        before do
+          other_segment
+          allow(Fee).to receive(:from_organization).and_call_original
+        end
+
+        it "enqueues one fee job for each card" do
+          expect { in_advance_service.call }.to have_enqueued_job(Fees::CreatePayInAdvanceJob).twice
+          expect(Fee).to have_received(:from_organization).with(organization).once
+        end
+
+        context "when one card already has a fee for the transaction" do
+          before do
+            create(
+              :fee,
+              organization:,
+              subscription: nil,
+              invoice: nil,
+              contract:,
+              contract_rate_card: other_contract_rate_card,
+              invoiceable: other_product,
+              fee_type: :product,
+              pay_in_advance: true,
+              pay_in_advance_event_transaction_id: event.transaction_id
+            )
+          end
+
+          it "still enqueues the missing card" do
+            expect { in_advance_service.call }.to have_enqueued_job(Fees::CreatePayInAdvanceJob).once
+          end
+
+          context "when both cards already have fees" do
+            before do
+              create(
+                :fee,
+                organization:,
+                subscription: nil,
+                invoice: nil,
+                contract:,
+                contract_rate_card:,
+                invoiceable: product,
+                fee_type: :product,
+                pay_in_advance: true,
+                pay_in_advance_event_transaction_id: event.transaction_id
+              )
+            end
+
+            it "does not enqueue either card" do
+              expect { in_advance_service.call }.not_to have_enqueued_job(Fees::CreatePayInAdvanceJob)
+            end
+          end
         end
       end
     end

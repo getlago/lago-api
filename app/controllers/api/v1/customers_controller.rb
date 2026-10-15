@@ -151,6 +151,7 @@ module Api
           integration_customers: [
             [
               :id,
+              :code,
               :external_customer_id,
               :integration_type,
               :integration_code,
@@ -204,6 +205,11 @@ module Api
 
       def resource_name
         "customer"
+      end
+
+      # The portal token lets its holder update the customer and top up wallets.
+      def mode
+        (action_name == "portal_url") ? "write" : super
       end
     end
   end

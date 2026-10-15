@@ -6,7 +6,7 @@ module ChargeFilters
 
     private
 
-    def trigger_filter_cascade(action:, filter_values:, old_properties: nil, new_properties: nil, invoice_display_name: nil)
+    def trigger_filter_cascade(action:, filter_values:, code:, old_properties: nil, new_properties: nil, invoice_display_name: nil)
       return unless cascade_updates
       return unless charge.children.exists?
 
@@ -16,7 +16,8 @@ module ChargeFilters
         filter_values.deep_stringify_keys,
         old_properties&.deep_stringify_keys,
         new_properties&.deep_stringify_keys,
-        invoice_display_name
+        invoice_display_name,
+        code
       )
     end
   end

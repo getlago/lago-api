@@ -93,7 +93,7 @@ module CreditNotes
       end
 
       def payment
-        @payment ||= credit_note.invoice.payments.order(created_at: :desc).first
+        @payment ||= invoice.refundable_payment
       end
 
       def client

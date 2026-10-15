@@ -6,14 +6,9 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
   subject(:service_call) { described_class.call(invoice:) }
 
   let(:integration) { create(:anrok_integration, organization:) }
-  let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
   let(:customer) { create(:customer, :with_shipping_address, organization:) }
-  let(:organization) { create(:organization) }
   let(:endpoint) { "https://api.nango.dev/v1/anrok/draft_invoices" }
-  let(:add_on) { create(:add_on, organization:) }
-  let(:add_on_two) { create(:add_on, organization:) }
   let(:current_time) { Time.current }
-
   let(:integration_collection_mapping1) do
     create(
       :netsuite_collection_mapping,
@@ -31,7 +26,6 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
       settings: {external_id: "m1", external_account_code: "m11", external_name: ""}
     )
   end
-
   let(:invoice) do
     create(
       :invoice,
@@ -55,7 +49,6 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
       created_at: current_time - 2.seconds
     )
   end
-
   let(:headers) do
     {
       "Connection-Id" => integration.connection_id,
@@ -64,7 +57,6 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
     }
   end
   let(:response_status) { 200 }
-
   let(:params) do
     [
       {
@@ -98,6 +90,16 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
       }
     ]
   end
+  let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+
+  let_it_be(:organization) { create_default(:organization) }
+
+  before_all do
+    create_default(:plan)
+  end
+
+  let_it_be(:add_on) { create(:add_on, organization:) }
+  let_it_be(:add_on_two) { create(:add_on, organization:) }
 
   before do
     integration_customer
@@ -128,6 +130,54 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
           expect(result.fees.first.tax_breakdown.last.name).to eq("Reverse charge")
           expect(result.fees.first.tax_breakdown.last.type).to eq("exempt")
           expect(result.fees.first.tax_breakdown.last.rate).to eq("0.00")
+        end
+
+        context "when a fee has no amount" do
+          let(:fee_add_on_two) do
+            create(
+              :fee,
+              invoice:,
+              add_on: add_on_two,
+              amount_cents: 0,
+              created_at: current_time - 2.seconds
+            )
+          end
+          let(:params) { super().tap { |request_body| request_body.first["fees"] = [request_body.first["fees"].first] } }
+
+          it "excludes it from the request" do
+            service_call
+
+            expect(WebMock).to have_requested(:post, endpoint).with(body: params.to_json)
+          end
+        end
+
+        context "when no fee has an amount" do
+          let(:fee_add_on) do
+            create(
+              :fee,
+              invoice:,
+              add_on:,
+              amount_cents: 0,
+              created_at: current_time - 3.seconds
+            )
+          end
+          let(:fee_add_on_two) do
+            create(
+              :fee,
+              invoice:,
+              add_on: add_on_two,
+              amount_cents: 0,
+              created_at: current_time - 2.seconds
+            )
+          end
+
+          let(:params) { super().tap { |body| body.first["fees"] = [body.first["fees"].first.merge("amount_cents" => 0)] } }
+
+          it "still reports the invoice, standing it on a single fee" do
+            service_call
+
+            expect(WebMock).to have_requested(:post, endpoint).with(body: params.to_json)
+          end
         end
 
         context "when special rules applied" do
@@ -185,6 +235,40 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
             expect(result.fees.first.tax_breakdown.last.tax_amount).to eq(0)
           end
         end
+
+        context "when taxes are rounded down to zero" do
+          let(:body) do
+            parsed_body = JSON.parse(base_body)
+            parsed_body["succeededInvoices"].first["fees"].first["tax_amount_cents"] = 0
+            parsed_body["succeededInvoices"].first["fees"].first["tax_breakdown"].first["tax_amount"] = 0.422
+            parsed_body.to_json
+          end
+
+          it "preserves the provider tax breakdown" do
+            result = service_call
+
+            expect(result).to be_success
+            expect(result.fees.first.tax_breakdown.first).to have_attributes(
+              name: "GST/HST",
+              type: "tax_exempt",
+              rate: "0.10",
+              tax_amount: 0.422
+            )
+          end
+        end
+
+        context "with the draft taxes cache" do
+          before { allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new) }
+
+          it "asks Anrok once for identical requests" do
+            described_class.call(invoice:)
+            result = service_call
+
+            expect(result).to be_success
+            expect(result.fees.first.tax_breakdown.first.name).to eq("GST/HST")
+            expect(WebMock).to have_requested(:post, endpoint).once
+          end
+        end
       end
 
       context "when taxes are not successfully fetched" do
@@ -214,6 +298,17 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
                 error_code: "taxDateTooFarInFuture"
               }
             )
+        end
+
+        context "with the draft taxes cache" do
+          before { allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new) }
+
+          it "asks Anrok again on the next call" do
+            described_class.call(invoice:)
+            service_call
+
+            expect(WebMock).to have_requested(:post, endpoint).twice
+          end
         end
 
         context "when no integration mapping is defined" do

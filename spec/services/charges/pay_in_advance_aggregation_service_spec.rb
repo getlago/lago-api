@@ -4,23 +4,19 @@ require "rails_helper"
 
 RSpec.describe Charges::PayInAdvanceAggregationService do
   subject(:agg_service) do
-    described_class.new(charge:, boundaries:, properties:, event:, charge_filter:)
+    described_class.new(metered_item:, billing_context:)
   end
 
-  let(:organization) { create(:organization) }
-  let(:billable_metric) { create(:billable_metric, organization:, aggregation_type:, field_name: "item_id") }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:aggregation_type) { "count_agg" }
+  let_it_be(:billable_metric, refind: true) { create(:billable_metric, organization:, aggregation_type:, field_name: "item_id") }
+
+  before_all do
+    create_default(:plan)
+  end
+
   let(:charge) { create(:standard_charge, billable_metric:, pay_in_advance: true) }
-  let(:charge_filter) { nil }
-  let(:aggregation_type) { "count_agg" }
-  let(:event) { create(:event, organization:, external_subscription_id: subscription.external_id, timestamp: subscription.started_at + 3.days + 1.hour) }
-  let(:properties) { {} }
-
-  let(:customer) { create(:customer, organization:) }
-
-  let(:subscription) do
-    create(:subscription, customer:, started_at: DateTime.parse("2023-03-15"))
-  end
-
+  let(:billing_context) { Billing::Context.from(subscription:) }
   let(:boundaries) do
     BillingPeriodBoundaries.new(
       from_datetime: subscription.started_at.beginning_of_day,
@@ -31,10 +27,104 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
       timestamp: subscription.started_at.end_of_month.to_i
     )
   end
-
   let(:agg_result) { BaseService::Result.new }
+  let(:subscription_context) { an_instance_of(Billing::Context) }
+  let(:metered_item) do
+    Fees::ChargeService::MeteredItem.from_charge(
+      charge:, boundaries:, charge_filter:, properties:, event: common_event
+    )
+  end
+  let(:aggregation_boundaries) do
+    {
+      from_datetime: metered_item.boundaries.charges_from_datetime,
+      to_datetime: metered_item.boundaries.charges_to_datetime,
+      charges_duration: metered_item.boundaries.charges_duration,
+      max_timestamp: metered_item.event.timestamp
+    }
+  end
+  let(:charge_filter) { nil }
+  let(:event) { create(:event, organization:, external_subscription_id: subscription.external_id, timestamp: subscription.started_at + 3.days + 1.hour) }
+  let(:common_event) { Events::CommonFactory.new_instance(source: event) }
+  let(:properties) { {} }
+
+  let_it_be(:customer, refind: true) { create(:customer, organization:) }
+  let_it_be(:subscription, refind: true) do
+    create(:subscription, customer:, started_at: DateTime.parse("2023-03-15"))
+  end
 
   describe "#call" do
+    context "with custom aggregation and an unsaved default filter" do
+      let(:billable_metric) { create(:custom_billable_metric, organization:) }
+      let(:charge_filter) { ChargeFilter.new(charge:) }
+      let(:properties) { charge.properties }
+      let(:charge) do
+        create(:standard_charge, billable_metric:, pay_in_advance: true,
+          properties: {"amount" => "100", "custom_properties" => {"multiplier" => "2"}})
+      end
+      let(:custom_service) { instance_double(BillableMetrics::Aggregations::CustomService, aggregate: agg_result) }
+
+      it "passes the resolved charge properties to the custom aggregation service" do
+        create(:charge_filter, charge:)
+        allow(BillableMetrics::Aggregations::CustomService).to receive(:new).and_return(custom_service)
+
+        agg_service.call
+
+        expect(BillableMetrics::Aggregations::CustomService).to have_received(:new).with(
+          event_store: instance_of(Events::Stores::PostgresStore),
+          metered_item:,
+          billing_context: subscription_context,
+          boundaries: aggregation_boundaries,
+          filters: anything
+        )
+      end
+    end
+
+    context "when the metered item is backed by a billing segment" do
+      let(:contract) { create(:contract, organization:, customer:) }
+      let(:product) { create(:product, :metered, organization:, billable_metric:) }
+      let(:rate_card) { create(:rate_card, :advance, organization:, product:) }
+      let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+      let(:billing_segment) do
+        create(
+          :billing_segment,
+          organization:,
+          customer:,
+          contract:,
+          contract_rate_card:,
+          currency: "EUR",
+          rate_properties: {"amount" => "10"}
+        )
+      end
+      let(:event) do
+        create(
+          :event,
+          organization:,
+          external_subscription_id: contract.external_id,
+          external_customer_id: customer.external_id,
+          code: billable_metric.code
+        )
+      end
+      let(:common_event) { Events::CommonFactory.new_instance(source: event) }
+      let(:metered_item) { Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment:, event: common_event) }
+      let(:billing_context) { Billing::Context.from(contract:) }
+      let(:aggregator) { instance_double(BillableMetrics::Aggregations::BaseService, aggregate: agg_result) }
+
+      before do
+        allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_return(aggregator)
+      end
+
+      it "uses the contract billing context" do
+        agg_service.call
+
+        expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(
+          metered_item:,
+          billing_context: have_attributes(contract:),
+          boundaries: aggregation_boundaries,
+          filters: anything
+        )
+      end
+    end
+
     describe "when count aggregation" do
       let(:count_service) { instance_double(BillableMetrics::Aggregations::CountService, aggregate: agg_result) }
 
@@ -45,17 +135,12 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
 
         expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
           .with(
-            event_store_class: Events::Stores::PostgresStore,
-            charge:,
-            subscription:,
-            boundaries: {
-              from_datetime: boundaries.charges_from_datetime,
-              to_datetime: boundaries.charges_to_datetime,
-              charges_duration: boundaries.charges_duration,
-              max_timestamp: event.timestamp
-            },
+            event_store: an_instance_of(Events::Stores::PostgresStore),
+            metered_item:,
+            billing_context: subscription_context,
+            boundaries: aggregation_boundaries,
             filters: {
-              event:,
+              event: common_event,
               charge_id: charge.id
             }
           )
@@ -92,17 +177,12 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
 
           expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
             .with(
-              event_store_class: Events::Stores::PostgresStore,
-              charge:,
-              subscription:,
-              boundaries: {
-                from_datetime: boundaries.charges_from_datetime,
-                to_datetime: boundaries.charges_to_datetime,
-                charges_duration: boundaries.charges_duration,
-                max_timestamp: event.timestamp
-              },
+              event_store: an_instance_of(Events::Stores::PostgresStore),
+              metered_item:,
+              billing_context: subscription_context,
+              boundaries: aggregation_boundaries,
               filters: {
-                event:,
+                event: common_event,
                 charge_id: charge.id,
                 grouped_by_values: {"operator" => "foo"}
               }
@@ -140,17 +220,12 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
 
           expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
             .with(
-              event_store_class: Events::Stores::PostgresStore,
-              charge:,
-              subscription:,
-              boundaries: {
-                from_datetime: boundaries.charges_from_datetime,
-                to_datetime: boundaries.charges_to_datetime,
-                charges_duration: boundaries.charges_duration,
-                max_timestamp: event.timestamp
-              },
+              event_store: an_instance_of(Events::Stores::PostgresStore),
+              metered_item:,
+              billing_context: subscription_context,
+              boundaries: aggregation_boundaries,
               filters: {
-                event:,
+                event: common_event,
                 charge_id: charge.id,
                 grouped_by_values: {"operator" => "foo"}
               }
@@ -191,17 +266,12 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
 
             expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
               .with(
-                event_store_class: Events::Stores::PostgresStore,
-                charge:,
-                subscription:,
-                boundaries: {
-                  from_datetime: boundaries.charges_from_datetime,
-                  to_datetime: boundaries.charges_to_datetime,
-                  charges_duration: boundaries.charges_duration,
-                  max_timestamp: event.timestamp
-                },
+                event_store: an_instance_of(Events::Stores::PostgresStore),
+                metered_item:,
+                billing_context: subscription_context,
+                boundaries: aggregation_boundaries,
                 filters: {
-                  event:,
+                  event: common_event,
                   charge_id: charge.id,
                   grouped_by_values: {"cloud" => "aws"},
                   presentation_by: ["region"]
@@ -237,17 +307,12 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
 
           expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
             .with(
-              event_store_class: Events::Stores::PostgresStore,
-              charge:,
-              subscription:,
-              boundaries: {
-                from_datetime: boundaries.charges_from_datetime,
-                to_datetime: boundaries.charges_to_datetime,
-                charges_duration: boundaries.charges_duration,
-                max_timestamp: event.timestamp
-              },
+              event_store: an_instance_of(Events::Stores::PostgresStore),
+              metered_item:,
+              billing_context: subscription_context,
+              boundaries: aggregation_boundaries,
               filters: {
-                event:,
+                event: common_event,
                 charge_id: charge.id,
                 presentation_by: ["region"]
               }
@@ -285,17 +350,12 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
 
           expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
             .with(
-              event_store_class: Events::Stores::PostgresStore,
-              charge:,
-              subscription:,
-              boundaries: {
-                from_datetime: boundaries.charges_from_datetime,
-                to_datetime: boundaries.charges_to_datetime,
-                charges_duration: boundaries.charges_duration,
-                max_timestamp: event.timestamp
-              },
+              event_store: an_instance_of(Events::Stores::PostgresStore),
+              metered_item:,
+              billing_context: subscription_context,
+              boundaries: aggregation_boundaries,
               filters: {
-                event:,
+                event: common_event,
                 charge_id: charge.id,
                 grouped_by_values: {"target_wallet_code" => "my_wallet"}
               }
@@ -329,17 +389,12 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
 
           expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
             .with(
-              event_store_class: Events::Stores::PostgresStore,
-              charge:,
-              subscription:,
-              boundaries: {
-                from_datetime: boundaries.charges_from_datetime,
-                to_datetime: boundaries.charges_to_datetime,
-                charges_duration: boundaries.charges_duration,
-                max_timestamp: event.timestamp
-              },
+              event_store: an_instance_of(Events::Stores::PostgresStore),
+              metered_item:,
+              billing_context: subscription_context,
+              boundaries: aggregation_boundaries,
               filters: {
-                event:,
+                event: common_event,
                 charge_id: charge.id,
                 charge_filter:,
                 matching_filters: charge_filter.to_h,
@@ -355,6 +410,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
     end
 
     describe "when sum aggregation" do
+      let(:billable_metric) { create(:billable_metric, organization:, aggregation_type:, field_name: "item_id") }
       let(:aggregation_type) { "sum_agg" }
       let(:sum_service) { instance_double(BillableMetrics::Aggregations::SumService, aggregate: agg_result) }
       let(:properties) do
@@ -368,17 +424,12 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
 
         expect(BillableMetrics::Aggregations::SumService).to have_received(:new)
           .with(
-            event_store_class: Events::Stores::PostgresStore,
-            charge:,
-            subscription:,
-            boundaries: {
-              from_datetime: boundaries.charges_from_datetime,
-              to_datetime: boundaries.charges_to_datetime,
-              charges_duration: boundaries.charges_duration,
-              max_timestamp: event.timestamp
-            },
+            event_store: an_instance_of(Events::Stores::PostgresStore),
+            metered_item:,
+            billing_context: subscription_context,
+            boundaries: aggregation_boundaries,
             filters: {
-              event:,
+              event: common_event,
               charge_id: charge.id
             }
           )
@@ -390,6 +441,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
     end
 
     describe "when unique_count aggregation" do
+      let(:billable_metric) { create(:billable_metric, organization:, aggregation_type:, field_name: "item_id") }
       let(:aggregation_type) { "unique_count_agg" }
       let(:unique_count_service) do
         instance_double(BillableMetrics::Aggregations::UniqueCountService, aggregate: agg_result)
@@ -402,17 +454,12 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
 
         expect(BillableMetrics::Aggregations::UniqueCountService).to have_received(:new)
           .with(
-            event_store_class: Events::Stores::PostgresStore,
-            charge:,
-            subscription:,
-            boundaries: {
-              from_datetime: boundaries.charges_from_datetime,
-              to_datetime: boundaries.charges_to_datetime,
-              charges_duration: boundaries.charges_duration,
-              max_timestamp: event.timestamp
-            },
+            event_store: an_instance_of(Events::Stores::PostgresStore),
+            metered_item:,
+            billing_context: subscription_context,
+            boundaries: aggregation_boundaries,
             filters: {
-              event:,
+              event: common_event,
               charge_id: charge.id
             }
           )

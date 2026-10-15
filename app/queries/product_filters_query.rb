@@ -6,7 +6,6 @@ class ProductFiltersQuery < BaseQuery
 
   def call
     product_filters = base_scope.result.includes(values: :billable_metric_filter)
-    product_filters = paginate(product_filters)
     product_filters = apply_consistent_ordering(product_filters)
 
     product_filters = with_product(product_filters) if filters.product_id.present?
@@ -14,7 +13,7 @@ class ProductFiltersQuery < BaseQuery
       product_filters = with_product_category(product_filters)
     end
 
-    result.product_filters = product_filters
+    result.product_filters = paginate(product_filters)
     result
   end
 

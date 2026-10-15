@@ -24,8 +24,8 @@ module V1
         previous_plan_code: model.previous_subscription&.plan&.code,
         next_plan_code: model.next_subscription&.plan&.code,
         downgrade_plan_date: model.downgrade_plan_date&.iso8601,
-        current_billing_period_started_at: dates_service.charges_from_datetime&.iso8601,
-        current_billing_period_ending_at: dates_service.charges_to_datetime&.iso8601,
+        current_billing_period_started_at: dates_service&.charges_from_datetime&.iso8601,
+        current_billing_period_ending_at: dates_service&.charges_to_datetime&.iso8601,
         on_termination_credit_note: model.on_termination_credit_note,
         on_termination_invoice: model.on_termination_invoice,
         progressive_billing_disabled: model.progressive_billing_disabled,
@@ -42,10 +42,19 @@ module V1
       payload = payload.merge(usage_threshold:) if include?(:usage_threshold)
       payload = payload.merge(applicable_usage_thresholds) if include?(:applicable_usage_thresholds)
       payload = payload.merge(applied_invoice_custom_sections) if include?(:applied_invoice_custom_sections)
-      payload.merge(activation_rules)
+      payload = payload.merge(activation_rules)
+      payload.merge(connections)
     end
 
     private
+
+    def connections
+      {
+        connections: model.connection_routing.index_by { it.category }.transform_values do |routing|
+          {behavior: routing.behavior, code: routing.code}
+        end
+      }
+    end
 
     def organization
       options[:organization] || model.organization
@@ -99,9 +108,10 @@ module V1
       ).serialize
     end
 
+    # A section deleted before its links were cleaned up is skipped, not served as nil.
     def applied_invoice_custom_sections
       ::CollectionSerializer.new(
-        model.applied_invoice_custom_sections,
+        model.applied_invoice_custom_sections.joins(:invoice_custom_section).includes(:invoice_custom_section),
         ::V1::AppliedInvoiceCustomSectionSerializer,
         collection_name: "applied_invoice_custom_sections"
       ).serialize

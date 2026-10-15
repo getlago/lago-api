@@ -4,6 +4,7 @@ module Mutations
   module Invoices
     class Update < BaseMutation
       include AuthenticableApiUser
+      include RequiredOrganization
 
       REQUIRED_PERMISSION = "invoices:update"
 
@@ -16,6 +17,9 @@ module Mutations
 
       def resolve(**args)
         invoice = context[:current_organization].invoices.visible.find_by(id: args[:id])
+
+        return not_allowed_error(code: "update_on_voided_invoice") if invoice&.voided?
+
         result = ::Invoices::UpdateService.new(invoice:, params: args, webhook_notification: true).call
 
         result.success? ? result.invoice : result_error(result)

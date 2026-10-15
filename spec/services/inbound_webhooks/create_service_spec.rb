@@ -14,7 +14,7 @@ RSpec.describe InboundWebhooks::CreateService do
     )
   end
 
-  let(:organization) { create :organization }
+  let_it_be(:organization) { create :organization }
   let(:code) { "stripe_1" }
   let(:webhook_source) { "stripe" }
   let(:signature) { "signature" }

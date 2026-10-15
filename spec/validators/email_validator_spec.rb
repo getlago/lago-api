@@ -23,6 +23,12 @@ RSpec.describe EmailValidator do
     "example@s.example",
     "1234567890@example.com",
     "_______@example.com",
+
+    # Unicode local-part (RFC 6531 / EAI)
+    "with.uniçode@example.com",
+    "joão.silva@example.com",
+    "用户@example.com",
+
     "first.user@example.com, second+user@example.com, third_user@example.com"
   ].each do |email|
     context "when the email is #{email}" do
@@ -42,9 +48,6 @@ RSpec.describe EmailValidator do
     ",user@domain.com,,",
     "user@domain.com,,",
     "user@domain.com,,",
-
-    # Unicode
-    "with.uniçode@example.com",
 
     # Missing @
     "userdomain.com",

@@ -3,12 +3,20 @@
 require "rails_helper"
 
 RSpec.describe Subscription do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:customer) { create_default(:customer) }
+
   subject(:subscription) { create(:subscription, plan:) }
 
   let(:plan) { create(:plan) }
 
   it_behaves_like "paper_trail traceable"
   it_behaves_like "a model with a purchase order number"
+
+  it_behaves_like "a connection-resolvable billing object" do
+    let(:resolvable) { create(:subscription) }
+  end
 
   describe "enums" do
     it do
@@ -33,7 +41,7 @@ RSpec.describe Subscription do
         .with_prefix(:on_termination_invoice)
       expect(subject).to define_enum_for(:cancellation_reason)
         .backed_by_column_of_type(:enum)
-        .with_values(payment_failed: "payment_failed", timeout: "timeout")
+        .with_values(payment_failed: "payment_failed", timeout: "timeout", manual: "manual")
     end
   end
 
@@ -71,6 +79,7 @@ RSpec.describe Subscription do
       expect(subject).to have_many(:invoice_subscriptions)
       expect(subject).to have_many(:invoices).through(:invoice_subscriptions)
       expect(subject).to have_many(:integration_resources)
+      expect(subject).to have_many(:billing_object_connections).dependent(:destroy)
       expect(subject).to have_many(:fees)
       expect(subject).to have_many(:daily_usages)
       expect(subject).to have_many(:usage_thresholds)

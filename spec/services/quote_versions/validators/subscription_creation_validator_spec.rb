@@ -6,8 +6,6 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreationValidator do
   subject(:validator) { described_class.new(result, quote_version:, scope:) }
 
   let(:result) { BaseService::Result.new }
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:, order_type: :subscription_creation) }
   let(:quote_version) do
     create(
@@ -15,21 +13,17 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreationValidator do
       quote:,
       organization:,
       currency: "EUR",
-      start_date: Date.parse("2026-01-01"),
-      end_date: Date.parse("2026-12-31"),
       billing_items:
     )
   end
-  let(:plan) { create(:plan, organization:) }
   let(:coupon) { create(:coupon, organization:) }
   let(:scope) { :approve }
-
   let(:plan_item) do
     {
       "id" => plan.id,
       "localId" => "3d08b2df-4e4c-4d58-b415-a525c1663735",
       "type" => "plan",
-      "payload" => {"code" => plan.code}
+      "payload" => {"code" => plan.code, "startDate" => "2026-01-01", "endDate" => "2026-12-31"}
     }
   end
   let(:coupon_item) do
@@ -55,6 +49,10 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreationValidator do
     }
   end
 
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:plan) { create(:plan, organization:) }
+
   describe "#valid?" do
     context "with a complete valid quote version" do
       it "is valid and leaves the result untouched" do
@@ -66,13 +64,11 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreationValidator do
     context "with both structural and business errors" do
       let(:plan_item) { super().merge("overrides" => {"amountCents" => -1}) }
       let(:quote_version) do
-        create(
+        build(
           :quote_version,
           quote:,
           organization:,
           currency: "DOUBLOON",
-          start_date: Date.parse("2026-01-01"),
-          end_date: Date.parse("2026-12-31"),
           billing_items:
         )
       end
@@ -114,7 +110,7 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreationValidator do
               id: plan.id,
               localId: "3d08b2df-4e4c-4d58-b415-a525c1663735",
               type: "plan",
-              payload: {code: plan.code}
+              payload: {code: plan.code, startDate: "2026-01-01", endDate: "2026-12-31"}
             }
           ]
         }

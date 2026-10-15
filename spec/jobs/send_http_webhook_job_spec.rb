@@ -4,9 +4,21 @@ require "rails_helper"
 require "aws-sdk-s3"
 
 RSpec.describe SendHttpWebhookJob do
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+    create_default(:invoice)
+  end
+
   subject(:send_http_webhook_job) { described_class }
 
   let(:webhook) { create(:webhook) }
+
+  describe "queue" do
+    it_behaves_like "a configurable queue", "webhook_worker", "SIDEKIQ_WEBHOOK", "webhook" do
+      let(:arguments) { create(:webhook, webhook_type: "alert.triggered") }
+    end
+  end
 
   describe "#perform" do
     before { allow(Webhooks::SendHttpService).to receive(:call) }

@@ -15,9 +15,17 @@ class Role < ApplicationRecord
   scope :with_code, ->(*codes) { where(code: codes) }
   scope :with_organization, ->(organization_id) { where(organization_id: [nil, organization_id]) }
 
-  before_validation :normalize_name
+  RESERVED_CODES = %w[admin finance manager].freeze
+  RESERVED_NAME_FORMAT = /\A(#{RESERVED_CODES.join("|")})\z/i
+
+  # Only on create or rename, so saving an existing role never rewrites its name.
+  before_validation :normalize_name, if: -> { new_record? || name_changed? }
 
   validate :code_is_not_reserved, if: -> { organization_id && deleted_at.blank? }
+  # Only checked when the name is set or changed, so existing roles stay valid.
+  validates :name,
+    format: {without: RESERVED_NAME_FORMAT, message: :taken},
+    if: -> { organization_id && deleted_at.blank? && (new_record? || name_changed?) }
   validates :code,
     presence: true,
     length: {maximum: 100},
@@ -32,17 +40,21 @@ class Role < ApplicationRecord
   validates :permissions, presence: true, if: :organization_id
 
   def permissions_hash
-    Permission.permissions_hash(name).dup.tap do |h|
+    Permission.permissions_hash(code).dup.tap do |h|
       permissions.each { |key| h[key] = true if h.key?(key) }
     end
   end
 
   private
 
-  RESERVED_CODES = %w[admin finance manager].freeze
-
+  # Invisible characters are removed and Unicode spaces collapsed, so a name
+  # like "Admin\u00A0" or "Admin\u034F" cannot slip past the reserved name check.
   def normalize_name
-    self.name = name&.strip&.gsub(/\s+/, " ")
+    self.name = name
+      &.unicode_normalize(:nfkc)
+      &.gsub(/\p{Default_Ignorable_Code_Point}/, "")
+      &.gsub(/[[:space:]]+/, " ")
+      &.strip
   end
 
   def code_is_not_reserved

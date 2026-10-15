@@ -16,6 +16,7 @@ module Clickhouse
       billing_entity
       export
       integration
+      organization
       role
       user
       webhook_endpoint
@@ -32,6 +33,7 @@ module Clickhouse
       integration.created
       integration.deleted
       integration.updated
+      organization.authentication_methods_updated
       role.created
       role.deleted
       role.updated

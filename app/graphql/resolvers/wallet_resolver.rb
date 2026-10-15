@@ -5,6 +5,8 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
+    REQUIRED_PERMISSION = %w[customers:view wallets:create wallets:update wallets:top_up wallets:terminate]
+
     description "Query a single wallet of an organization"
 
     argument :id, ID, required: true, description: "Uniq ID of the wallet"

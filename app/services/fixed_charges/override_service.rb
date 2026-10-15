@@ -2,7 +2,7 @@
 
 module FixedCharges
   class OverrideService < BaseService
-    Result = BaseResult[:fixed_charge]
+    Result = BaseResult[:fixed_charge, :fixed_charge_events]
 
     def initialize(fixed_charge:, params:, subscription: nil)
       @fixed_charge = fixed_charge
@@ -32,11 +32,11 @@ module FixedCharges
         end
         new_fixed_charge.save!
 
-        FixedCharges::EmitEventsService.call!(
+        result.fixed_charge_events = FixedCharges::EmitEventsService.call!(
           fixed_charge: new_fixed_charge,
           subscription:,
           apply_units_immediately: !!params[:apply_units_immediately]
-        )
+        ).fixed_charge_events
 
         if params.key?(:tax_codes)
           taxes_result = FixedCharges::ApplyTaxesService.call(fixed_charge: new_fixed_charge, tax_codes: params[:tax_codes])

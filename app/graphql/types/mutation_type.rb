@@ -22,13 +22,33 @@ module Types
     field :destroy_adjusted_fee, mutation: Mutations::AdjustedFees::Destroy
     field :preview_adjusted_fee, mutation: Mutations::AdjustedFees::Preview
 
+    field :create_catalog_plan, mutation: Mutations::CatalogPlans::Create
+    field :destroy_catalog_plan, mutation: Mutations::CatalogPlans::Destroy
+    field :update_catalog_plan, mutation: Mutations::CatalogPlans::Update
+
     field :create_plan, mutation: Mutations::Plans::Create
     field :destroy_plan, mutation: Mutations::Plans::Destroy
     field :update_plan, mutation: Mutations::Plans::Update
 
+    field :create_plan_applied_rate_card, mutation: Mutations::PlanAppliedRateCards::Create
+    field :create_rate_phase, mutation: Mutations::RatePhases::Create
+    field :destroy_plan_applied_rate_card, mutation: Mutations::PlanAppliedRateCards::Destroy
+    field :destroy_rate_phase, mutation: Mutations::RatePhases::Destroy
+    field :update_plan_applied_rate_card, mutation: Mutations::PlanAppliedRateCards::Update
+    field :update_rate_phase, mutation: Mutations::RatePhases::Update
+
     field :create_charge, mutation: Mutations::Charges::Create
+    field :create_contract, mutation: Mutations::Contracts::Create
+    field :create_contract_applied_rate_card, mutation: Mutations::ContractAppliedRateCards::Create
+    field :create_contract_rate_phase, mutation: Mutations::ContractRatePhases::Create
     field :destroy_charge, mutation: Mutations::Charges::Destroy
+    field :destroy_contract_applied_rate_card, mutation: Mutations::ContractAppliedRateCards::Destroy
+    field :destroy_contract_rate_phase, mutation: Mutations::ContractRatePhases::Destroy
+    field :terminate_contract, mutation: Mutations::Contracts::Terminate
     field :update_charge, mutation: Mutations::Charges::Update
+    field :update_contract, mutation: Mutations::Contracts::Update
+    field :update_contract_applied_rate_card, mutation: Mutations::ContractAppliedRateCards::Update
+    field :update_contract_rate_phase, mutation: Mutations::ContractRatePhases::Update
 
     field :create_charge_filter, mutation: Mutations::ChargeFilters::Create
     field :destroy_charge_filter, mutation: Mutations::ChargeFilters::Destroy
@@ -182,6 +202,7 @@ module Types
 
     field :accept_invite, mutation: Mutations::Invites::Accept
     field :create_invite, mutation: Mutations::Invites::Create
+    field :join_organization, mutation: Mutations::Invites::JoinOrganization
     field :revoke_invite, mutation: Mutations::Invites::Revoke
     field :update_invite, mutation: Mutations::Invites::Update
 
@@ -264,6 +285,14 @@ module Types
     field :destroy_product_filter, mutation: Mutations::ProductFilters::Destroy
     field :update_product_filter, mutation: Mutations::ProductFilters::Update
 
+    field :create_rate_card, mutation: Mutations::RateCards::Create
+    field :destroy_rate_card, mutation: Mutations::RateCards::Destroy
+    field :update_rate_card, mutation: Mutations::RateCards::Update
+
+    field :create_rate_card_rate, mutation: Mutations::RateCardRates::Create
+    field :destroy_rate_card_rate, mutation: Mutations::RateCardRates::Destroy
+    field :update_rate_card_rate, mutation: Mutations::RateCardRates::Update
+
     field :create_role, mutation: Mutations::Roles::Create
     field :destroy_role, mutation: Mutations::Roles::Destroy
     field :update_role, mutation: Mutations::Roles::Update
@@ -285,6 +314,17 @@ module Types
 
     field :ask_finance_assistant, mutation: Mutations::FinanceAssistant::Ask
     field :create_ai_conversation, mutation: Mutations::AiConversations::Create
+
+    field :create_superset_guest_token, mutation: Mutations::Superset::CreateGuestToken
+
     field :export_finance_assistant_result, mutation: Mutations::FinanceAssistant::Export
+
+    field :create_usage_attribution_type, mutation: Mutations::UsageAttributionTypes::Create
+    field :destroy_usage_attribution_type, mutation: Mutations::UsageAttributionTypes::Destroy
+    field :update_usage_attribution_type, mutation: Mutations::UsageAttributionTypes::Update
+
+    field :admin_create_organization, mutation: Mutations::Admin::CreateOrganization
+    field :admin_rollback_change, mutation: Mutations::Admin::RollbackChange
+    field :admin_toggle_feature, mutation: Mutations::Admin::ToggleFeature
   end
 end

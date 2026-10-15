@@ -6,14 +6,15 @@ RSpec.describe DailyUsages::ComputeAllService do
   subject(:compute_service) { described_class.new(timestamp:) }
 
   let(:timestamp) { Time.zone.parse("2024-10-22 00:05:00") }
-
-  let(:organization) { create(:organization, premium_integrations:) }
-  let(:billing_entity) { create(:billing_entity, organization:) }
   let(:customer) { create(:customer, organization:, billing_entity:) }
   let(:subscriptions) { create_list(:subscription, 5, customer:, last_received_event_on: timestamp.to_date - 1.day) }
 
-  let(:premium_integrations) do
-    ["revenue_analytics"]
+  let_it_be(:premium_integrations) { ["revenue_analytics"] }
+  let_it_be(:organization) { create_default(:organization, premium_integrations:) }
+  let_it_be(:billing_entity) { create_default(:billing_entity, organization:) }
+
+  before_all do
+    create_default(:plan)
   end
 
   before { subscriptions }
@@ -95,6 +96,7 @@ RSpec.describe DailyUsages::ComputeAllService do
 
     context "when the organization has a timezone" do
       let(:organization) { create(:organization, timezone: "America/Sao_Paulo", premium_integrations:) }
+      let(:billing_entity) { create_default(:billing_entity, organization:) }
 
       before do
         billing_entity.update(timezone: "America/Sao_Paulo")
@@ -285,7 +287,7 @@ RSpec.describe DailyUsages::ComputeAllService do
     end
 
     context "when revenue_analytics premium integration flag is not present" do
-      let(:premium_integrations) { [] }
+      let(:organization) { create_default(:organization, premium_integrations: []) }
 
       it "does not enqueue any job" do
         expect(compute_service.call).to be_success
@@ -299,6 +301,49 @@ RSpec.describe DailyUsages::ComputeAllService do
       it "does not enqueue any job" do
         expect(compute_service.call).to be_success
         expect(DailyUsages::ComputeJob).not_to have_been_enqueued
+      end
+    end
+
+    context "when the selection fails for one organization" do
+      let(:other_organization) { create(:organization, premium_integrations:) }
+      let(:other_customer) { create(:customer, organization: other_organization) }
+      let(:error) { ActiveRecord::StatementTimeout.new("canceling statement due to statement timeout") }
+
+      let(:other_subscription) do
+        create(:subscription, customer: other_customer, last_received_event_on: timestamp.to_date - 1.day)
+      end
+
+      before do
+        other_subscription
+        allow(Sentry).to receive(:capture_exception)
+        # rubocop:disable RSpec/SubjectStub -- simulate a statement timeout on one organization's selection query
+        allow(compute_service).to receive(:event_subscriptions).and_wrap_original do |original, selected|
+          if selected.id == organization.id
+            raise error
+          else
+            original.call(selected)
+          end
+        end
+        # rubocop:enable RSpec/SubjectStub
+      end
+
+      it "still enqueues the jobs of the other organizations" do
+        expect(compute_service.call).to be_success
+        expect(DailyUsages::ComputeJob).to have_been_enqueued.with(other_subscription, timestamp:)
+      end
+
+      it "does not enqueue the jobs of the failing organization" do
+        expect(compute_service.call).to be_success
+        subscriptions.each do |subscription|
+          expect(DailyUsages::ComputeJob).not_to have_been_enqueued.with(subscription, timestamp:)
+        end
+      end
+
+      it "reports the error" do
+        compute_service.call
+
+        expect(Sentry).to have_received(:capture_exception)
+          .with(error, extra: {organization_id: organization.id, timestamp: timestamp.iso8601})
       end
     end
   end

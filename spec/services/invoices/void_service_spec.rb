@@ -59,17 +59,6 @@ RSpec.describe Invoices::VoidService do
           expect(result.invoice).to be_voided
           expect(result.invoice.voided_at).to be_present
         end
-
-        context "when Meilisearch is enabled" do
-          before do
-            invoice
-            stub_const("ENV", ENV.to_h.merge("LAGO_MEILISEARCH_URL" => "http://meilisearch:7700"))
-          end
-
-          it "enqueues a search reindex for the invoice" do
-            expect { void_service.call }.to have_enqueued_job_after_commit(Invoices::SearchIndexJob).with(invoice.id)
-          end
-        end
       end
 
       context "when the payment status is not succeeded" do
@@ -106,6 +95,24 @@ RSpec.describe Invoices::VoidService do
           invoice = described_class.call(invoice:).invoice
 
           expect(Utils::ActivityLog).to have_produced("invoice.voided").after_commit.with(invoice)
+        end
+
+        context "with a provider payment awaiting funds" do
+          let(:payment) { create(:payment, :awaiting_bank_transfer, payable: invoice, payable_payment_status: :processing) }
+
+          before { payment }
+
+          it "enqueues a job to cancel the provider payment" do
+            expect { void_service.call }.to have_enqueued_job_after_commit(PaymentProviders::CancelPaymentJob).with(payment)
+          end
+        end
+
+        context "without an open provider payment" do
+          before { create(:payment, payable: invoice, status: "failed", payable_payment_status: :failed) }
+
+          it "does not enqueue a cancel job" do
+            expect { void_service.call }.not_to have_enqueued_job(PaymentProviders::CancelPaymentJob)
+          end
         end
 
         context "when the invoice has applied credits from the wallet" do

@@ -1,0 +1,20 @@
+# Documented Trivy exceptions. Every entry here must have a clear reason
+# and a re-check trigger (usually "will clear when Wolfi bumps <package>").
+
+# --- Ruby default gems bundled with the Ruby runtime in the Wolfi base ---
+# These ship as *default* gems under /usr/lib/ruby/gems/4.0.0/specifications/
+# default/ and are always present regardless of what Gemfile.lock pins. The
+# app uses newer bundler-managed versions at runtime (they win on $LOAD_PATH),
+# but Trivy scans every gemspec on disk and flags the older default. The fix
+# lands upstream when Ruby ships a patch release with updated bundled gems;
+# picked up automatically by the daily Wolfi base rebuild once ruby-4.0 is
+# bumped past 4.0.7.
+CVE-2026-33210  # json (default 2.18.0; app uses bundler-managed 2.21.2)
+CVE-2026-80212  # resolv (default 0.7.0)
+
+# --- Go modules bundled inside the pdfcpu binary from the Wolfi base ---
+# Trivy extracts embedded Go module info from the pdfcpu ELF and flags these.
+# Fix requires Wolfi to rebuild the pdfcpu package with updated deps; picked
+# up automatically by the daily base rebuild once upstream lands the fix.
+CVE-2026-56854  # golang.org/x/crypto v0.54.0
+CVE-2026-46603  # golang.org/x/image v0.44.0

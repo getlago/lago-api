@@ -97,11 +97,7 @@ module Api
       # NOTE: We can't destroy a subscription, it will terminate it
       def terminate
         query = current_organization.subscriptions.where(external_id: params[:external_id])
-        subscription = if params[:status] == "pending"
-          query.pending
-        else
-          query.active
-        end.first
+        subscription = subscriptions_matching_status(query).first
 
         kwargs = params.permit(:on_termination_credit_note, :on_termination_invoice).to_h.symbolize_keys
 
@@ -118,17 +114,7 @@ module Api
         query = current_organization.subscriptions
           .where(external_id: params[:external_id])
           .order(subscription_at: :desc)
-        subscription = if query.count > 1
-          if params[:status] == "pending"
-            query.pending
-          elsif params[:status] == "incomplete"
-            query.incomplete
-          else
-            query.active
-          end
-        else
-          query
-        end.first
+        subscription = ((query.count > 1) ? subscriptions_matching_status(query) : query).first
 
         result = ::Subscriptions::UpdateService.call(
           subscription:,
@@ -162,6 +148,14 @@ module Api
 
       private
 
+      def subscriptions_matching_status(query)
+        case params[:status]
+        when "pending" then query.pending
+        when "incomplete" then query.incomplete
+        else query.active
+        end
+      end
+
       def create_params
         params.require(:subscription)
           .permit(
@@ -185,6 +179,12 @@ module Api
             payment_method: [
               :payment_method_type,
               :payment_method_id
+            ],
+            connections: [
+              payment: [:behavior, :code],
+              tax: [:behavior, :code],
+              accounting: [:behavior, :code],
+              crm: [:behavior, :code]
             ],
             usage_thresholds: usage_thresholds_params,
             plan_overrides:
@@ -211,6 +211,12 @@ module Api
           payment_method: [
             :payment_method_type,
             :payment_method_id
+          ],
+          connections: [
+            payment: [:behavior, :code],
+            tax: [:behavior, :code],
+            accounting: [:behavior, :code],
+            crm: [:behavior, :code]
           ],
           usage_thresholds: usage_thresholds_params,
           plan_overrides:
@@ -290,7 +296,12 @@ module Api
       def preload_subscription(subscription)
         ActiveRecord::Associations::Preloader.new(
           records: [subscription],
-          associations: [:plan, :customer, {previous_subscription: :plan, next_subscriptions: :plan}]
+          associations: [
+            :plan,
+            :billing_object_connections,
+            {customer: [:payment_provider_customers, :integration_customers]},
+            {previous_subscription: :plan, next_subscriptions: :plan}
+          ]
         ).call
       end
 

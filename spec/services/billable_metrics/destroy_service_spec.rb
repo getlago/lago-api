@@ -5,9 +5,10 @@ require "rails_helper"
 RSpec.describe BillableMetrics::DestroyService do
   subject(:destroy_service) { described_class.new(metric: billable_metric) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create_default(:organization) }
   let(:billable_metric) { create(:billable_metric, organization:) }
+  let(:membership) { create(:membership) }
+
   let(:subscription) { create(:subscription) }
   let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:) }
 
@@ -62,6 +63,27 @@ RSpec.describe BillableMetrics::DestroyService do
 
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("billable_metric_not_found")
+      end
+    end
+
+    context "when a product filter value references the metric's filters" do
+      let(:filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[us eu]) }
+      let(:product_filter) { create(:product_filter, organization:) }
+
+      before do
+        create(:product_filter_value, organization:, product_filter:, billable_metric_filter: filter, value: "eu")
+      end
+
+      it "blocks the deletion without discarding the metric" do
+        result = destroy_service.call
+
+        expect(result).not_to be_success
+        expect(result.error.messages[:billable_metric]).to eq(["referenced_by_product_filter"])
+        expect(billable_metric.reload).not_to be_discarded
+      end
+
+      it "does not enqueue the filters destroy job" do
+        expect { destroy_service.call }.not_to have_enqueued_job(BillableMetricFilters::DestroyAllJob)
       end
     end
   end

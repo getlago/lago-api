@@ -56,9 +56,9 @@ module Events
         :events_count
       )
 
-      def initialize(subscription:, boundaries:, code: nil, filters: {}, deduplicate: false)
+      def initialize(billing_context:, boundaries:, code: nil, filters: {})
         @code = code
-        @subscription = subscription
+        @billing_context = billing_context
         @boundaries = boundaries
 
         @filters = filters
@@ -74,11 +74,14 @@ module Events
         @aggregation_property = nil
         @numeric_property = false
         @use_from_boundary = true
-        @deduplicate = deduplicate
       end
 
       def grouped_by_values?
         grouped_by_values.present?
+      end
+
+      def precomputed?
+        false
       end
 
       def with_grouped_by_values(grouped_by_values, &block)
@@ -89,6 +92,17 @@ module Events
         yield block
       ensure
         @grouped_by_values = previous_grouped_by_values
+      end
+
+      # NOTE: mints a sibling store for another window, aggregating the same property.
+      #       `use_from_boundary` is left to the caller: a window with no lower bound must
+      #       not apply one.
+      def for_window(filters: nil, **boundaries)
+        store = self.class.new(code:, billing_context:, boundaries:, filters: filters || self.filters)
+
+        store.aggregation_property = aggregation_property
+        store.numeric_property = numeric_property
+        store
       end
 
       def events(force_from: false)
@@ -103,7 +117,9 @@ module Events
         raise NotImplementedError
       end
 
-      def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false)
+      # `ingested_after` narrows the read to the events ingested after that time, for callers
+      # keeping an earlier answer up to date (see BillingPeriodFilters::IncrementalCombinations).
+      def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false, with_last_seen_at: true, ingested_after: nil)
         []
       end
 
@@ -190,9 +206,13 @@ module Events
         boundaries[:max_timestamp] || to_datetime
       end
 
+      # Values are quoted into the SQL before the named binds are replaced:
+      # escape ":word" inside string literals so Rails does not read it as a bind.
+      # SQL comments are matched too so an apostrophe in them does not open a literal.
       def sanitize_colon(query)
-        # NOTE: escape ':' to avoid ActiveRecord::PreparedStatementInvalid,
-        query.gsub("'#{code}'", "'#{code.gsub(":", "\\:")}'")
+        query.gsub(/--[^\n]*|#{self.class::SQL_STRING_LITERAL}/) do |token|
+          token.start_with?("'") ? token.gsub(/:(?=[a-zA-Z])/, "\\:") : token
+        end
       end
 
       def timezone
@@ -211,19 +231,11 @@ module Events
 
       attr_accessor :numeric_property, :aggregation_property, :use_from_boundary, :grouped_by, :charge_id, :charge_filter_id
 
+      attr_reader :code, :billing_context, :boundaries, :grouped_by_values, :filters, :matching_filters, :ignored_filters
+
       protected
 
-      attr_accessor :code, :subscription, :boundaries, :grouped_by_values, :filters, :matching_filters, :ignored_filters, :deduplicate
-
-      delegate :customer, to: :subscription
-
-      def period_duration
-        @period_duration ||= Subscriptions::DatesService.new_instance(
-          subscription,
-          to_datetime + 1.day,
-          current_usage: subscription.terminated? && subscription.upgraded?
-        ).charges_duration_in_days
-      end
+      delegate :customer, to: :billing_context
 
       def build_aggregation_result(row)
         AggregationResult.new(

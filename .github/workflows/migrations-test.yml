@@ -47,22 +47,24 @@ jobs:
       LAGO_CLICKHOUSE_PASSWORD: "password"
       LAGO_DISABLE_SCHEMA_DUMP: true
       LAGO_KAFKA_EVENTS_CHARGED_IN_ADVANCE_TOPIC: events_charged_in_advance
-      ANNOTATE_SKIP_ON_DB_MIGRATE: 1
+      LAGO_KAFKA_REALTIME_USAGE_TRIGGERS_TOPIC: realtime_usage_triggers
+      # Keep migrations from updating annotations before the frozen check below.
+      ANNOTATERB_SKIP_ON_DB_TASKS: 1
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Install Ruby and gems
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "4.0.2"
+          ruby-version: "4.0.6"
           bundler-cache: true
-      - name: Install pg 14
+      - name: Install pg 15
         uses: tj-actions/install-postgresql@v3
         with:
           postgresql-version: "15"
       - name: Start Clickhouse database
         run: |
-          docker run -d --rm -p 8123:8123 -p 9000:9000 --ulimit nofile=262144:262144 -v ./clickhouse-s3:/var/lib/clickhouse-s3 -v ./ci/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml -e CLICKHOUSE_PASSWORD=password clickhouse/clickhouse-server:25.12-alpine
+          docker run -d --rm -p 8123:8123 -p 9000:9000 --ulimit nofile=262144:262144 -v ./clickhouse-s3:/var/lib/clickhouse-s3 -v ./ci/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml -e CLICKHOUSE_PASSWORD=password clickhouse/clickhouse-server:26.4-alpine
         shell: bash
       - name: Generate RSA keys
         run: ./scripts/generate.rsa.sh

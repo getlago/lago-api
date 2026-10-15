@@ -4,10 +4,11 @@ require "rails_helper"
 
 RSpec.describe IntegrationCustomers::CreateService do
   let(:integration) { create(:netsuite_integration, organization:) }
-  let(:organization) { membership.organization }
-  let(:membership) { create(:membership) }
-  let(:customer) { create(:customer, organization:) }
   let(:integration_type) { "netsuite" }
+
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:membership, refind: true) { create(:membership) }
+  let_it_be(:customer, refind: true) { create(:customer, organization:) }
 
   describe "#call" do
     subject(:service_call) { described_class.call(params:, integration:, customer:) }
@@ -62,6 +63,40 @@ RSpec.describe IntegrationCustomers::CreateService do
 
           it "creates integration customer" do
             expect { service_call }.to change(IntegrationCustomers::BaseCustomer, :count).by(1)
+          end
+
+          context "when a code is provided" do
+            let(:params) do
+              {
+                integration_type:,
+                integration_code:,
+                sync_with_provider:,
+                external_customer_id:,
+                subsidiary_id:,
+                code: "ns_custom"
+              }
+            end
+
+            it "persists the explicit code and defaults the first connection of the category" do
+              result = service_call
+
+              expect(result).to be_success
+              expect(result.integration_customer.code).to eq("ns_custom")
+              expect(result.integration_customer.is_default).to be(true)
+            end
+          end
+
+          context "when the customer already has a default connection in the category" do
+            before do
+              create(:xero_customer, customer:, organization:, category: :accounting, is_default: true)
+            end
+
+            it "does not mark the new connection as default" do
+              result = service_call
+
+              expect(result).to be_success
+              expect(result.integration_customer.is_default).to be(false)
+            end
           end
 
           context "when the integration type is salesforce" do

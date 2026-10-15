@@ -2,7 +2,9 @@
 
 module Api
   module V2
-    class ProductCategoriesController < Api::BaseController
+    class ProductCategoriesController < Api::V2::BaseController
+      cursor_paginated_index(ProductCategory)
+
       def create
         result = ::ProductCategories::CreateService.call(
           organization: current_organization,
@@ -50,20 +52,19 @@ module Api
         result = ::ProductCategoriesQuery.call(
           organization: current_organization,
           search_term: params[:search_term],
-          pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
-          }
+          pagination: cursor
         )
 
         if result.success?
+          # Preloaded so products_count reads the loaded association.
+          page = ::CursorPagination::Page.new(records: result.product_categories.includes(:products), cursor:)
+
           render(
             json: ::CollectionSerializer.new(
-              # Preloaded so products_count reads the loaded association.
-              result.product_categories.includes(:products),
-              ::V1::ProductCategorySerializer,
+              page.records,
+              ::V2::ProductCategorySerializer,
               collection_name: "product_categories",
-              meta: pagination_metadata(result.product_categories)
+              meta: page.meta
             )
           )
         else
@@ -92,7 +93,7 @@ module Api
       end
 
       def render_product_category(product_category)
-        render(json: ::V1::ProductCategorySerializer.new(product_category, root_name: "product_category"))
+        render(json: ::V2::ProductCategorySerializer.new(product_category, root_name: "product_category"))
       end
 
       def resource_name

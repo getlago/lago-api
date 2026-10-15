@@ -5,8 +5,13 @@ require "rails_helper"
 RSpec.describe IntegrationMappings::UpdateService do
   let(:integration_mapping) { create(:netsuite_mapping, integration:) }
   let(:integration) { create(:netsuite_integration, organization:) }
-  let(:organization) { membership.organization }
-  let(:membership) { create(:membership) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
+
+  before_all do
+    create_default(:add_on)
+  end
 
   describe "#call" do
     subject(:service_call) { described_class.call(integration_mapping:, params: update_args) }

@@ -5,8 +5,13 @@ require "rails_helper"
 RSpec.describe Orders::ExecuteService do
   subject(:execute_service) { described_class.new(order:) }
 
-  let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create_default(:organization, feature_flags: ["order_forms"]) }
+  let_it_be(:customer) { create(:customer, organization:) }
+
+  before_all do
+    create_default(:plan)
+  end
+
   let(:quote) { create(:quote, organization:, customer:, order_type:) }
   let(:quote_version) { create(:quote_version, :approved, quote:, organization:) }
   let(:order_form) { create(:order_form, :signed, organization:, customer:, quote_version:) }
@@ -38,6 +43,7 @@ RSpec.describe Orders::ExecuteService do
       end
 
       context "when the order_forms feature flag is disabled" do
+        let(:customer) { create(:customer, organization:) }
         let(:organization) { create(:organization) }
 
         it "returns a forbidden failure" do
@@ -58,8 +64,41 @@ RSpec.describe Orders::ExecuteService do
         end
       end
 
-      context "when the order type is not supported yet" do
+      context "when the order is a subscription_creation" do
         let(:order_type) { :subscription_creation }
+
+        it "delegates to the subscription_creation execute service" do
+          allow(Orders::SubscriptionCreation::ExecuteService).to receive(:call).and_call_original
+
+          execute_service.call
+
+          expect(Orders::SubscriptionCreation::ExecuteService).to have_received(:call).with(order:)
+        end
+      end
+
+      context "when the order is a subscription_amendment" do
+        let(:order_type) { :subscription_amendment }
+        let(:quote) do
+          create(
+            :quote,
+            organization:,
+            customer:,
+            order_type:,
+            subscription: create(:subscription, organization:, customer:)
+          )
+        end
+
+        it "delegates to the subscription_amendment execute service" do
+          allow(Orders::SubscriptionAmendment::ExecuteService).to receive(:call).and_call_original
+
+          execute_service.call
+
+          expect(Orders::SubscriptionAmendment::ExecuteService).to have_received(:call).with(order:)
+        end
+      end
+
+      context "when the order type has no execute service" do
+        before { allow(order).to receive(:order_type).and_return("scheduled_amendment") }
 
         it "returns a validation failure" do
           result = execute_service.call

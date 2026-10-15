@@ -13,8 +13,8 @@ RSpec.describe PaymentRequest do
     )
   end
 
-  let(:customer) { create(:customer) }
-  let(:organization) { customer.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
   let(:payment) { create(:payment) }
 
   it_behaves_like "paper_trail traceable"
@@ -77,6 +77,12 @@ RSpec.describe PaymentRequest do
 
     it "returns a list with the applied invoice ids" do
       expect(payment_request.invoice_ids).to eq(invoices.map(&:id))
+    end
+  end
+
+  describe "#subscription_payment_gated?" do
+    it "returns false because a payment request settles finalized invoices" do
+      expect(payment_request.subscription_payment_gated?).to eq(false)
     end
   end
 

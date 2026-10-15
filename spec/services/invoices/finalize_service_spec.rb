@@ -20,6 +20,12 @@ RSpec.describe Invoices::FinalizeService do
         expect(result.invoice.finalized_at).to be_within(1.second).of(Time.current)
       end
 
+      it "refreshes the search terms with the generated number" do
+        result = service.call
+
+        expect(result.invoice.reload.search_terms).to include(result.invoice.number)
+      end
+
       context "when the subscription has a different purchase order number" do
         let(:invoice) do
           create(:invoice, :draft, customer:, organization:, purchase_order_number: "PO-ORIGINAL")
@@ -36,17 +42,6 @@ RSpec.describe Invoices::FinalizeService do
 
           expect(result).to be_success
           expect(result.invoice.reload.purchase_order_number).to eq("PO-ORIGINAL")
-        end
-      end
-
-      context "when Meilisearch is enabled" do
-        before do
-          invoice
-          stub_const("ENV", ENV.to_h.merge("LAGO_MEILISEARCH_URL" => "http://meilisearch:7700"))
-        end
-
-        it "enqueues a search reindex for the invoice" do
-          expect { service.call }.to have_enqueued_job_after_commit(Invoices::SearchIndexJob).with(invoice.id)
         end
       end
     end

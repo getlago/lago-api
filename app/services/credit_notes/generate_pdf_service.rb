@@ -31,12 +31,12 @@ module CreditNotes
     def generate_pdf(credit_note)
       I18n.with_locale(credit_note.customer.preferred_document_locale) do
         pdf_file = build_pdf_file
-        xml_file = attach_cii(pdf_file) if should_generate_cii_einvoice_xml?
+        attach_cii(pdf_file) if should_generate_cii_einvoice_xml?
         attach_pdf_to_credit_note(pdf_file)
 
         credit_note.save!
       ensure
-        cleanup_tempfiles(pdf_file, xml_file)
+        cleanup_tempfile(pdf_file)
       end
     end
 
@@ -52,12 +52,13 @@ module CreditNotes
     end
 
     def attach_cii(pdf_file)
-      xml_file = Tempfile.new([credit_note.number, ".xml"])
-      xml_file.write(EInvoices::CreditNotes::Cii::CreateService.call(credit_note:).xml)
-      xml_file.flush
+      xml = EInvoices::CreditNotes::Cii::CreateService.call(credit_note:).xml
 
-      Utils::PdfAttachmentService.call(file: pdf_file, attachment: xml_file)
-      xml_file
+      Utils::PdfAttachmentService.call!(
+        file: pdf_file,
+        attachment_content: xml,
+        attachment_name: "factur-x.xml"
+      )
     end
 
     def attach_pdf_to_credit_note(pdf_file)
@@ -68,9 +69,8 @@ module CreditNotes
       )
     end
 
-    def cleanup_tempfiles(pdf_file, xml_file)
+    def cleanup_tempfile(pdf_file)
       pdf_file&.unlink
-      xml_file&.unlink
     end
 
     def should_generate_cii_einvoice_xml?

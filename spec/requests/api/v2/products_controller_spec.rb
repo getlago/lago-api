@@ -15,7 +15,7 @@ RSpec.describe Api::V2::ProductsController do
       {
         name: "Storage",
         code: "storage",
-        product_type: "usage",
+        product_type: "metered",
         product_category_code: product_category.code,
         billable_metric_code: billable_metric.code
       }
@@ -30,7 +30,7 @@ RSpec.describe Api::V2::ProductsController do
       expect(json[:product][:lago_id]).to be_present
       expect(json[:product][:name]).to eq("Storage")
       expect(json[:product][:code]).to eq("storage")
-      expect(json[:product][:product_type]).to eq("usage")
+      expect(json[:product][:product_type]).to eq("metered")
       expect(json[:product][:product_category_code]).to eq(product_category.code)
       expect(json[:product][:billable_metric_code]).to eq(billable_metric.code)
     end
@@ -58,8 +58,8 @@ RSpec.describe Api::V2::ProductsController do
       end
     end
 
-    context "when a usage item has no billable metric" do
-      let(:create_params) { {name: "Orphan", code: "orphan", product_type: "usage"} }
+    context "when a metered item has no billable metric" do
+      let(:create_params) { {name: "Orphan", code: "orphan", product_type: "metered"} }
 
       it "returns a validation error naming billable_metric_code" do
         subject
@@ -215,7 +215,34 @@ RSpec.describe Api::V2::ProductsController do
 
       expect(response).to have_http_status(:success)
       expect(json[:products].map { it[:lago_id] }).to match_array([usage_item.id, fixed_item.id])
-      expect(json[:meta][:total_count]).to eq(2)
+      expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
+    end
+
+    it_behaves_like "a cursor paginated v2 endpoint", collection: :products, model: Product do
+      let(:paginated_path) { "/api/v2/products" }
+      let(:create_paginated_record) { ->(created_at) { create(:product, organization:, created_at:) } }
+    end
+
+    context "with an invalid limit and an unknown product category" do
+      let(:query_params) { "?limit=0&product_category_code=unknown" }
+
+      it "rejects the pagination parameters first" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:code]).to eq("invalid_pagination_limit")
+      end
+    end
+
+    context "with a filter and a cursor" do
+      let(:query_params) { "?product_type=fixed&limit=1&after=#{CursorPagination::Token.encode(table: "products", record: newer_fixed_item)}" }
+      let(:newer_fixed_item) { create(:product, :fixed, :standalone, organization:, created_at: fixed_item.created_at + 1.second) }
+
+      it "keeps applying the filter" do
+        subject
+
+        expect(json[:products].map { it[:lago_id] }).to eq([fixed_item.id])
+      end
     end
 
     it "returns the batched filters counts" do

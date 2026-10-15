@@ -22,29 +22,6 @@ RSpec.describe Events::Stores::PostgresStore do
       create(:event, **attributes)
     end
 
-    def create_enriched_event(timestamp:, value:, properties: {}, transaction_id: SecureRandom.uuid, code: billable_metric.code, charge_filter: nil, enriched_at: nil)
-      event = create(
-        :event,
-        transaction_id:,
-        organization_id: organization.id,
-        external_subscription_id: subscription.external_id,
-        external_customer_id: customer.external_id,
-        code:,
-        timestamp:,
-        properties:
-      )
-
-      create(
-        :enriched_event,
-        subscription:,
-        event:,
-        charge:,
-        charge_filter_id: charge_filter&.id,
-        value:,
-        decimal_value: value&.to_i&.to_d
-      )
-    end
-
     def format_timestamp(timestamp, precision: nil)
       Time.zone.parse(timestamp)
     end
@@ -59,7 +36,7 @@ RSpec.describe Events::Stores::PostgresStore do
     let(:event_store) do
       described_class.new(
         code: billable_metric.code,
-        subscription:,
+        billing_context: Billing::Context.from(subscription:),
         boundaries: {
           from_datetime: subscription.started_at.beginning_of_day,
           to_datetime: Time.current.end_of_day
@@ -109,7 +86,7 @@ RSpec.describe Events::Stores::PostgresStore do
       def store_for(event)
         described_class.new(
           code: billable_metric.code,
-          subscription:,
+          billing_context: Billing::Context.from(subscription:),
           boundaries: {
             from_datetime: subscription.started_at.beginning_of_day,
             to_datetime: subscription.started_at.end_of_month.end_of_day,
@@ -142,7 +119,7 @@ RSpec.describe Events::Stores::PostgresStore do
 
         event_store = described_class.new(
           code: billable_metric.code,
-          subscription:,
+          billing_context: Billing::Context.from(subscription:),
           boundaries: {
             from_datetime: subscription.started_at.beginning_of_day,
             to_datetime: subscription.started_at.end_of_month.end_of_day,
@@ -153,6 +130,65 @@ RSpec.describe Events::Stores::PostgresStore do
 
         expect(event_store.count).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 3, events_count: 3))
       end
+    end
+  end
+
+  describe "#active_unique_property?" do
+    let(:billable_metric) { create(:billable_metric) }
+    let(:organization) { billable_metric.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:, started_at: timestamp - 1.day) }
+    let(:timestamp) { Time.zone.parse("2026-10-06T15:18:14.156149Z") }
+    let(:event_store) do
+      described_class.new(
+        code: billable_metric.code,
+        billing_context: Billing::Context.from(subscription:),
+        boundaries: {from_datetime: subscription.started_at, to_datetime: timestamp + 1.day}
+      ).tap { |store| store.aggregation_property = "user_id" }
+    end
+    let(:previous_event) do
+      create(
+        :event,
+        id: "00000000-0000-4000-8000-000000000001",
+        organization:,
+        external_subscription_id: subscription.external_id,
+        code: billable_metric.code,
+        timestamp:,
+        created_at: timestamp,
+        properties: {user_id: "A"}
+      )
+    end
+    let(:current_event) do
+      create(
+        :event,
+        id: "00000000-0000-4000-8000-000000000002",
+        organization:,
+        external_subscription_id: subscription.external_id,
+        code: billable_metric.code,
+        timestamp:,
+        created_at: timestamp,
+        properties: {user_id: "A"}
+      )
+    end
+    let(:legacy_event) do
+      Events::Common.new(
+        id: current_event.id,
+        transaction_id: current_event.transaction_id,
+        timestamp: current_event.timestamp,
+        properties: current_event.properties
+      )
+    end
+
+    it "uses created_at and id to order persisted events tied on timestamp" do
+      previous_event
+
+      expect(event_store).to be_active_unique_property(current_event)
+    end
+
+    it "uses the legacy scoped subquery when a persisted event has no created_at" do
+      previous_event
+
+      expect(event_store).to be_active_unique_property(legacy_event)
     end
   end
 
@@ -167,7 +203,7 @@ RSpec.describe Events::Stores::PostgresStore do
       let(:event_store) do
         described_class.new(
           code: billable_metric.code,
-          subscription:,
+          billing_context: Billing::Context.from(subscription:),
           boundaries: {
             from_datetime: datetime,
             to_datetime: datetime,
@@ -196,7 +232,7 @@ RSpec.describe Events::Stores::PostgresStore do
     let(:event_store) do
       described_class.new(
         code: billable_metric.code,
-        subscription:,
+        billing_context: Billing::Context.from(subscription:),
         boundaries: {
           from_datetime: started_at,
           to_datetime: started_at.end_of_month.end_of_day,

@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe DatabaseMigrations::BackfillPrepaidCreditBreakdownJob do
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
 
   # Builds an invoice that consumed prepaid credit, with consumption rows linking
   # its outbound transaction to granted/purchased inbound transactions.

@@ -3,9 +3,13 @@
 require "rails_helper"
 
 RSpec.describe Invoices::PrepaidCreditJob do
+  before_all do
+    create_default(:organization)
+    create_default(:plan)
+  end
+
+  let_it_be(:customer) { create_default(:customer) }
   let(:invoice) { create(:invoice, customer:, organization: customer.organization) }
-  let(:customer) { create(:customer) }
-  let(:subscription) { create(:subscription, customer:) }
   let(:wallet) { create(:wallet, customer:, balance_cents: 1000, credits_balance: 10.0) }
   let(:wallet_transaction) do
     create(:wallet_transaction, wallet:, amount: 15.0, credit_amount: 15.0, status: "pending")
@@ -19,6 +23,8 @@ RSpec.describe Invoices::PrepaidCreditJob do
       invoice:
     )
   end
+
+  let_it_be(:subscription) { create(:subscription, customer:) }
 
   before do
     wallet_transaction

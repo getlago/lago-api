@@ -22,11 +22,15 @@ module Clickhouse
     belongs_to :user, optional: true
     belongs_to :api_key, optional: true
 
-    RESOURCE_TYPES_WITH_DISCARDED = %w[BillableMetric Plan Customer BillingEntity Coupon ProductCategory Product ProductFilter].freeze
+    RESOURCE_TYPES_WITH_DISCARDED = %w[
+      BillableMetric Plan CatalogPlan Customer BillingEntity Coupon ProductCategory Product ProductFilter RateCard
+      RateCardRate PlanRateCard ContractRateCard
+    ].freeze
 
     RESOURCE_TYPES = {
       billable_metric: "BillableMetric",
       plan: "Plan",
+      catalog_plan: "CatalogPlan",
       customer: "Customer",
       invoice: "Invoice",
       credit_note: "CreditNote",
@@ -39,7 +43,15 @@ module Clickhouse
       feature: "Entitlement::Feature",
       product_category: "ProductCategory",
       product: "Product",
-      product_filter: "ProductFilter"
+      product_filter: "ProductFilter",
+      rate_card: "RateCard",
+      rate_card_rate: "RateCardRate",
+      plan_rate_card: "PlanRateCard",
+      contract_rate_card: "ContractRateCard",
+      contract: "Contract",
+      quote: "Quote",
+      order_form: "OrderForm",
+      order: "Order"
     }.freeze
 
     ACTIVITY_TYPES = {
@@ -102,7 +114,36 @@ module Clickhouse
       product_deleted: "product.deleted",
       product_filter_created: "product_filter.created",
       product_filter_updated: "product_filter.updated",
-      product_filter_deleted: "product_filter.deleted"
+      product_filter_deleted: "product_filter.deleted",
+      rate_card_created: "rate_card.created",
+      rate_card_updated: "rate_card.updated",
+      rate_card_deleted: "rate_card.deleted",
+      rate_card_rate_created: "rate_card_rate.created",
+      rate_card_rate_updated: "rate_card_rate.updated",
+      rate_card_rate_deleted: "rate_card_rate.deleted",
+      plan_rate_card_created: "plan_rate_card.created",
+      plan_rate_card_updated: "plan_rate_card.updated",
+      plan_rate_card_deleted: "plan_rate_card.deleted",
+      contract_rate_card_created: "contract_rate_card.created",
+      contract_rate_card_updated: "contract_rate_card.updated",
+      contract_rate_card_deleted: "contract_rate_card.deleted",
+      contract_created: "contract.created",
+      contract_updated: "contract.updated",
+      contract_started: "contract.started",
+      contract_terminated: "contract.terminated",
+      contract_canceled: "contract.canceled",
+      quote_created: "quote.created",
+      quote_updated: "quote.updated",
+      quote_approved: "quote.approved",
+      quote_voided: "quote.voided",
+      quote_version_created: "quote.version_created",
+      order_form_created: "order_form.created",
+      order_form_signed: "order_form.signed",
+      order_form_file_uploaded: "order_form.file_uploaded",
+      order_form_expired: "order_form.expired",
+      order_form_voided: "order_form.voided",
+      order_created: "order.created",
+      order_executed: "order.executed"
     }
 
     before_save :ensure_activity_id

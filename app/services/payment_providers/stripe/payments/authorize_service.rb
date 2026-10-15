@@ -60,11 +60,7 @@ module PaymentProviders
               amount:,
               currency: currency.downcase,
               confirm: true,
-              payment_method_options: {
-                card: {
-                  capture_method: "manual"
-                }
-              },
+              capture_method: "manual",
               customer: provider_customer.provider_customer_id,
               payment_method: payment_method_id,
               description: "Pre-authorization for subscription",

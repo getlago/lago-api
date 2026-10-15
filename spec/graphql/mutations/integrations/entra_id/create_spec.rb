@@ -18,6 +18,7 @@ RSpec.describe Mutations::Integrations::EntraId::Create, :premium do
           clientId,
           clientSecret,
           domain,
+          additionalDomains,
           tenantId,
         }
       }
@@ -42,6 +43,7 @@ RSpec.describe Mutations::Integrations::EntraId::Create, :premium do
             clientId: "123",
             clientSecret: "456",
             domain: "foo.bar",
+            additionalDomains: ["de.foo.bar"],
             tenantId: "tenant-123"
           }
         }
@@ -55,6 +57,7 @@ RSpec.describe Mutations::Integrations::EntraId::Create, :premium do
       expect(result_data["code"]).to eq("entra_id")
       expect(result_data["name"]).to eq("Entra ID Integration")
       expect(result_data["tenantId"]).to eq("tenant-123")
+      expect(result_data["additionalDomains"]).to eq(["de.foo.bar"])
     end
 
     it_behaves_like "produces a security log", "integration.created"

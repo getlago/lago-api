@@ -16,6 +16,12 @@ RSpec.describe Invoices::CreateGeneratingService do
   let(:recurring) { false }
 
   describe "call" do
+    it "populates the search terms" do
+      result = create_service.call
+
+      expect(result.invoice.reload.search_terms).to include(result.invoice.number, customer.name)
+    end
+
     it "creates an invoice" do
       result = create_service.call
 

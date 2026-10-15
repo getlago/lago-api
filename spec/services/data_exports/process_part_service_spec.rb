@@ -3,11 +3,14 @@
 require "rails_helper"
 
 RSpec.describe DataExports::ProcessPartService do
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
+
   subject(:result) { described_class.call(data_export_part:) }
 
   let(:data_export) { create :data_export, resource_type: "invoices", format: "csv" }
-  let(:data_export_part) { create :data_export_part, data_export:, object_ids: [invoice.id] }
-  let(:invoice) { create :invoice }
   let(:serialized_invoice) do
     {
       lago_id: "invoice-lago-id-123",
@@ -46,6 +49,9 @@ RSpec.describe DataExports::ProcessPartService do
   let(:invoice_serializer) do
     instance_double("V1::InvoiceSerializer", serialize: serialized_invoice)
   end
+  let(:data_export_part) { create :data_export_part, data_export:, object_ids: [invoice.id] }
+
+  let_it_be(:invoice) { create :invoice }
 
   before do
     create(:credit_note, offset_amount_cents: 334, invoice:)
@@ -57,7 +63,7 @@ RSpec.describe DataExports::ProcessPartService do
   describe "#call" do
     it "processes the part" do
       expected_csv = <<~CSV
-        invoice-lago-id-123,SEQ123,false,2023-01-01,customer-lago-id-456,CUST123,customer name,customer@eamil.com,US,123456789,INV123,PO-12345,credit,pending,finalized,http://api.lago.com/invoice.pdf,USD,70000,1655,10500,334,1000,77511,2023-02-01,2023-12-22,false,27511,50000,334
+        "invoice-lago-id-123","SEQ123","false","2023-01-01","customer-lago-id-456","CUST123","customer name","customer@eamil.com","US","123456789","INV123","PO-12345","credit","pending","finalized","http://api.lago.com/invoice.pdf","USD","70000","1655","10500","334","1000","77511","2023-02-01","2023-12-22","false","27511","50000","334"
       CSV
       expect(result).to be_success
       expect(result.data_export_part.csv_lines).to eq(expected_csv)

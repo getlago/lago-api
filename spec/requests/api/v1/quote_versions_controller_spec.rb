@@ -3,10 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::QuoteVersionsController do
-  let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
-  let(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:) }
   let(:quote_version) { create(:quote_version, quote:, organization:) }
+
+  let_it_be(:organization, refind: true) { create_default(:organization, feature_flags: ["order_forms"]) }
+  let_it_be(:plan, refind: true) { create_default(:plan) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   describe "GET /api/v1/quote_versions/:id" do
     subject { get_with_token(organization, "/api/v1/quote_versions/#{quote_version_id}") }
@@ -42,6 +44,9 @@ RSpec.describe Api::V1::QuoteVersionsController do
     context "when the quote version belongs to another organization" do
       let(:quote_version) { create(:quote_version) }
 
+      let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
+      let(:customer) { create(:customer, organization:) }
+
       it "returns not found" do
         subject
 
@@ -69,9 +74,7 @@ RSpec.describe Api::V1::QuoteVersionsController do
         :quote_version,
         :with_subscription_creation_billing_items,
         quote:,
-        organization:,
-        start_date: Date.new(2026, 1, 1),
-        end_date: Date.new(2027, 1, 1)
+        organization:
       )
     end
     let(:quote_version_id) { quote_version.id }
@@ -86,6 +89,19 @@ RSpec.describe Api::V1::QuoteVersionsController do
       expect(response).to have_http_status(:ok)
       expect(json[:quote_version][:lago_id]).to eq(quote_version.id)
       expect(json[:quote_version][:status]).to eq("approved")
+    end
+
+    # The service turns lock contention into a validation failure, so every transport reports it
+    # rather than only the mutations.
+    context "when the quote lock cannot be acquired", :premium do
+      before { allow(Quotes::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock) }
+
+      it "returns a concurrency conflict" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq({base: ["concurrency_conflict"]})
+      end
     end
 
     context "with an expires_at in the future", :premium do

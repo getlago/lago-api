@@ -5,13 +5,17 @@ require "rails_helper"
 RSpec.describe Wallets::UpdateService do
   subject(:result) { described_class.call(wallet:, params:) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
-  let(:subscription) { create(:subscription, customer:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
+  let(:customer) { create_default(:customer, organization:) }
+  let(:subscription) { create_default(:subscription, customer:) }
   let(:wallet) { create(:wallet, customer:, allowed_fee_types: []) }
   let(:expiration_at) { (Time.current + 1.year).iso8601 }
   let(:priority) { 5 }
+
+  before_all do
+    create_default(:plan)
+  end
 
   describe "#call" do
     before do
@@ -215,6 +219,139 @@ RSpec.describe Wallets::UpdateService do
         expect(result.error.error_code).to eq("wallet_not_found")
 
         expect(SendWebhookJob).not_to have_been_enqueued.with("wallet.updated", Wallet)
+      end
+    end
+
+    context "when wallet is terminated" do
+      let(:wallet) { create(:wallet, :terminated, customer:, allowed_fee_types: []) }
+
+      it "returns a validation failure and does not update the wallet" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:wallet_id]).to eq(["wallet_is_terminated"])
+
+        expect(wallet.reload.name).not_to eq("new name")
+        expect(SendWebhookJob).not_to have_been_enqueued.with("wallet.updated", Wallet)
+      end
+    end
+
+    context "with x402_enabled" do
+      let(:wallet) { create(:wallet, customer:, currency: "EUR", allowed_fee_types: []) }
+      let(:params) { {id: wallet.id, x402_enabled: true} }
+
+      context "without x402 payments" do
+        it "returns a forbidden failure" do
+          expect(result).to be_failure
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        end
+
+        it "leaves the wallet unchanged" do
+          result
+
+          expect(wallet.reload).not_to be_x402_enabled
+        end
+
+        context "with a terminated wallet" do
+          let(:wallet) { create(:wallet, :terminated, customer:, allowed_fee_types: []) }
+
+          it "returns a forbidden failure" do
+            expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          end
+        end
+
+        context "when x402_enabled is null" do
+          let(:params) { {id: wallet.id, name: "new name", x402_enabled: nil} }
+
+          it "updates the wallet" do
+            expect(result).to be_success
+            expect(wallet.reload.name).to eq("new name")
+          end
+        end
+
+        context "with an x402 wallet" do
+          let(:wallet) { create(:wallet, customer:, currency: "USD", allowed_fee_types: [], x402_enabled: true) }
+
+          context "when x402_enabled is false" do
+            let(:params) { {id: wallet.id, x402_enabled: false} }
+
+            it "disables x402 on the wallet" do
+              expect(result).to be_success
+              expect(wallet.reload).not_to be_x402_enabled
+            end
+          end
+        end
+      end
+
+      context "with x402 payments enabled", :premium do
+        let(:organization) { create(:organization, feature_flags: ["x402_payments"]) }
+        let(:wallet) { create(:wallet, customer:, currency: "USD", allowed_fee_types: []) }
+
+        before do
+          allow(ENV).to receive(:[]).and_call_original
+          allow(ENV).to receive(:[]).with("LAGO_REDIS_CACHE_URL").and_return("redis://cache:6379")
+          allow(ENV).to receive(:[]).with("LAGO_DISABLE_WALLET_REFRESH").and_return(nil)
+        end
+
+        it "enables x402 on the wallet" do
+          expect(result).to be_success
+          expect(wallet.reload).to be_x402_enabled
+        end
+
+        it "sends a wallet.updated webhook" do
+          result
+
+          expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
+        end
+
+        context "with a non-USD wallet" do
+          let(:wallet) { create(:wallet, customer:, currency: "EUR", allowed_fee_types: []) }
+
+          it "refuses with the currency rule" do
+            expect(result).to be_failure
+            expect(result.error.messages).to eq(x402_enabled: ["currency_not_supported"])
+          end
+
+          it "leaves the wallet unchanged" do
+            result
+
+            expect(wallet.reload).not_to be_x402_enabled
+          end
+        end
+
+        context "when x402_enabled is blank" do
+          let(:params) { {id: wallet.id, x402_enabled: ""} }
+
+          it "leaves the wallet unchanged" do
+            expect(result).to be_success
+            expect(wallet.reload).not_to be_x402_enabled
+          end
+        end
+
+        context "with an x402 wallet" do
+          let(:wallet) { create(:wallet, customer:, currency: "USD", allowed_fee_types: [], x402_enabled: true) }
+
+          context "when x402_enabled is false" do
+            let(:params) { {id: wallet.id, x402_enabled: false} }
+
+            it "disables x402 on the wallet" do
+              expect(result).to be_success
+              expect(wallet.reload).not_to be_x402_enabled
+            end
+          end
+
+          context "with recurring transaction rules" do
+            let(:params) { {id: wallet.id, recurring_transaction_rules: [{trigger: "interval", interval: "monthly", paid_credits: "10.0", granted_credits: "0.0"}]} }
+
+            it "refuses the rules" do
+              expect(result).to be_failure
+              expect(result.error.messages).to eq(recurring_transaction_rules: ["not_supported_for_x402_wallet"])
+            end
+
+            it "creates no rule" do
+              expect { result }.not_to change(RecurringTransactionRule, :count)
+            end
+          end
+        end
       end
     end
 
@@ -768,6 +905,37 @@ RSpec.describe Wallets::UpdateService do
       end
     end
 
+    context "when the billable metric limitations are not sent" do
+      let(:billable_metric) { create(:billable_metric, organization:) }
+
+      before do
+        CurrentContext.source = "api"
+
+        create(:wallet_target, wallet:, billable_metric:)
+      end
+
+      context "when applies_to is omitted" do
+        let(:params) { {id: wallet.id, name: "new name"} }
+
+        it "keeps the existing wallet targets" do
+          expect { subject }.not_to change(WalletTarget, :count)
+          expect(result).to be_success
+          expect(wallet.reload.billable_metrics).to eq([billable_metric])
+        end
+      end
+
+      context "when applies_to is sent without the billable metric codes" do
+        let(:params) { {id: wallet.id, applies_to: {fee_types: %w[charge]}} }
+
+        it "keeps the existing wallet targets" do
+          expect { subject }.not_to change(WalletTarget, :count)
+          expect(result).to be_success
+          expect(wallet.reload.allowed_fee_types).to eq(%w[charge])
+          expect(wallet.reload.billable_metrics).to eq([billable_metric])
+        end
+      end
+    end
+
     context "with payment method" do
       let(:payment_method) { create(:payment_method, organization:, customer:) }
       let(:payment_method_params) do
@@ -984,10 +1152,6 @@ RSpec.describe Wallets::UpdateService do
     context "when multi_entity_billing is enabled" do
       let!(:billing_entity) { create(:billing_entity, organization:, code: "be_code") }
 
-      before do
-        organization.update!(feature_flags: ["multi_entity_billing"])
-      end
-
       context "when billing_entity_code is provided" do
         let(:params) do
           {
@@ -1197,22 +1361,6 @@ RSpec.describe Wallets::UpdateService do
             expect(wallet.reload.billing_entity_id).to eq(current_entity.id)
           end
         end
-      end
-    end
-
-    context "when multi_entity_billing is not enabled" do
-      let(:params) do
-        {
-          id: wallet&.id,
-          billing_entity_code: "be_code"
-        }
-      end
-
-      before { create(:billing_entity, organization:, code: "be_code") }
-
-      it "does not assign the billing entity even if code is provided" do
-        expect(result).to be_success
-        expect(result.wallet.billing_entity_id).to be_nil
       end
     end
   end

@@ -24,14 +24,14 @@ module Subscriptions
           units_override.units = units
           units_override.save!
 
-          FixedCharges::EmitEventsService.call!(
+          emitted_events = FixedCharges::EmitEventsService.call!(
             fixed_charge:,
             subscription:,
             apply_units_immediately:,
             timestamp:
-          )
+          ).fixed_charge_events
 
-          if apply_units_immediately && fixed_charge.pay_in_advance? && subscription.active?
+          if emitted_events.any? && apply_units_immediately && fixed_charge.pay_in_advance? && subscription.active?
             after_commit do
               Invoices::CreatePayInAdvanceFixedChargesJob.perform_later(subscription, timestamp)
             end

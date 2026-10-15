@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe OrderForms::ExpireService do
   subject(:service) { described_class.new(order_form:) }
 
-  let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization, feature_flags: ["order_forms"]) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:) }
   let(:quote_version) { create(:quote_version, :approved, organization:, quote:) }
   let(:order_form) { create(:order_form, :expired_yesterday, customer:, organization:, quote_version:) }
@@ -23,6 +23,7 @@ RSpec.describe OrderForms::ExpireService do
     end
 
     context "when the order_forms feature flag is disabled", :premium do
+      let(:customer) { create(:customer, organization:) }
       let(:organization) { create(:organization) }
 
       it "returns a forbidden failure" do
@@ -77,6 +78,18 @@ RSpec.describe OrderForms::ExpireService do
           expect(result).to be_success
           expect(result.order_form).to be_expired
         end
+
+        it "does not enqueue a webhook" do
+          expect do
+            ApplicationRecord.transaction { service.call }
+          end.not_to have_enqueued_job(SendWebhookJob)
+        end
+
+        it "does not produce an activity log" do
+          service.call
+
+          expect(Utils::ActivityLog).not_to have_produced("order_form.expired")
+        end
       end
 
       context "when order_form is already voided" do
@@ -118,6 +131,30 @@ RSpec.describe OrderForms::ExpireService do
 
           expect(quote_version.reload).to be_voided
           expect(quote_version.void_reason).to eq("cascade_of_expired")
+        end
+
+        it "enqueues an order_form.expired webhook" do
+          expect { service.call }
+            .to have_enqueued_job_after_commit(SendWebhookJob)
+            .with("order_form.expired", order_form)
+        end
+
+        it "enqueues a cascaded quote.voided webhook" do
+          expect { service.call }
+            .to have_enqueued_job_after_commit(SendWebhookJob)
+            .with("quote.voided", quote_version)
+        end
+
+        it "produces an order_form.expired activity log" do
+          service.call
+
+          expect(Utils::ActivityLog).to have_produced("order_form.expired").after_commit.with(order_form)
+        end
+
+        it "produces a cascaded quote.voided activity log" do
+          service.call
+
+          expect(Utils::ActivityLog).to have_produced("quote.voided").after_commit.with(quote_version)
         end
       end
     end

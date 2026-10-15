@@ -6,11 +6,7 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
   subject { execute_query(query:, input:) }
 
   let(:required_permission) { "subscriptions:update" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:plan) { create(:plan, organization:) }
   let(:fixed_charge) { create(:fixed_charge, plan:) }
-
   let(:subscription) do
     create(
       :subscription,
@@ -19,7 +15,6 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
       subscription_at: Time.current + 3.days
     )
   end
-
   let(:query) do
     <<~GQL
       mutation($input: UpdateSubscriptionInput!) {
@@ -58,6 +53,12 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
     }
   end
 
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:customer, refind: true) { create_default(:customer) }
+  let_it_be(:add_on) { create_default(:add_on) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
+  let_it_be(:plan, refind: true) { create_default(:plan, organization:) }
+
   before do
     plan
     fixed_charge
@@ -65,6 +66,7 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
   end
 
   it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "subscriptions:update"
 
   it "updates an subscription" do
@@ -279,8 +281,6 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
 
     let(:input) { {id: subscription.id, billingEntityId: new_billing_entity.id} }
 
-    before { organization.update!(feature_flags: ["multi_entity_billing"]) }
-
     it "rebinds the subscription to the new billing entity" do
       result = subject
 
@@ -302,6 +302,98 @@ RSpec.describe Mutations::Subscriptions::Update, :premium do
           "details" => {"billingEntity" => ["not_found"]}
         )
       end
+    end
+  end
+
+  context "with connections" do
+    let(:customer) { subscription.customer }
+    let(:stripe_connection) { create(:stripe_customer, customer:, organization:, code: "stripe_us") }
+
+    let(:connections_query) do
+      <<~GQL
+        mutation($input: UpdateSubscriptionInput!) {
+          updateSubscription(input: $input) { id }
+        }
+      GQL
+    end
+
+    def update_subscription(connections:)
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: connections_query,
+        variables: {input: {id: subscription.id, connections:}}
+      )
+    end
+
+    before do
+      organization.enable_feature_flag!(:multi_connection)
+      stripe_connection
+    end
+
+    it "pins the connection on the subscription" do
+      expect { update_subscription(connections: {payment: {code: "stripe_us"}}) }
+        .to change(BillingObjectConnection, :count).by(1)
+
+      expect(subscription.reload.effective_payment_connection).to eq(stripe_connection)
+    end
+
+    it "clears the override when inherit is sent" do
+      create(:billing_object_connection, owner: subscription, organization:,
+        category: "payment", behavior: "skip")
+
+      expect { update_subscription(connections: {payment: {behavior: "inherit"}}) }
+        .to change(BillingObjectConnection, :count).by(-1)
+
+      expect(subscription.reload.billing_object_connections).to be_empty
+    end
+
+    it "returns a forbidden error when the multi_connection flag is disabled" do
+      organization.disable_feature_flag!(:multi_connection)
+
+      result = update_subscription(connections: {payment: {code: "stripe_us"}})
+
+      expect(result["errors"].first["extensions"]["code"]).to eq("feature_unavailable")
+    end
+  end
+
+  context "with connections on the response" do
+    let(:customer) { subscription.customer }
+
+    let(:connections_query) do
+      <<~GQL
+        mutation($input: UpdateSubscriptionInput!) {
+          updateSubscription(input: $input) {
+            id
+            connections { category behavior code }
+          }
+        }
+      GQL
+    end
+
+    before do
+      create(:stripe_customer, customer:, organization:, code: "stripe_default", is_default: true)
+      create(:billing_object_connection, owner: subscription, organization:, category: "payment",
+        behavior: "specific",
+        payment_provider_customer: customer.payment_provider_customers.sole)
+    end
+
+    it "returns the routing so the client can refresh its cache after saving" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: connections_query,
+        variables: {input: {id: subscription.id, name: "renamed"}}
+      )
+
+      routing = result["data"]["updateSubscription"]["connections"].index_by { it["category"] }
+
+      expect(routing.keys).to match_array(%w[payment tax accounting crm])
+      expect(routing["payment"]).to eq(
+        {"category" => "payment", "behavior" => "specific", "code" => "stripe_default"}
+      )
     end
   end
 end

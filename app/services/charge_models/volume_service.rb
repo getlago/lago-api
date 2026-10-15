@@ -41,16 +41,18 @@ module ChargeModels
       }
     end
 
+    # A negative total (a sum of refunds, for instance) falls below the first range, which starts at 0:
+    # no range applies, so nothing is charged.
     def flat_unit_amount
-      @flat_unit_amount ||= BigDecimal(matching_range[:flat_amount])
+      @flat_unit_amount ||= matching_range ? BigDecimal(matching_range[:flat_amount]) : BigDecimal(0)
     end
 
     def per_unit_amount
-      @per_unit_amount ||= per_unit_total_amount.fdiv(number_of_units)
+      @per_unit_amount ||= matching_range ? per_unit_total_amount.fdiv(number_of_units) : BigDecimal(0)
     end
 
     def per_unit_total_amount
-      @per_unit_total_amount ||= units * BigDecimal(matching_range[:per_unit_amount])
+      @per_unit_total_amount ||= matching_range ? units * BigDecimal(matching_range[:per_unit_amount]) : BigDecimal(0)
     end
 
     def matching_range
@@ -60,7 +62,7 @@ module ChargeModels
     end
 
     def number_of_units
-      @number_of_units ||= (charge.prorated? && result.full_units_number) ? result.full_units_number : units
+      @number_of_units ||= (pricing_structure.prorated && result.full_units_number) ? result.full_units_number : units
     end
   end
 end

@@ -3,11 +3,15 @@
 require "rails_helper"
 
 describe Clock::FinalizeInvoicesJob, job: true do
+  before_all do
+    create_default(:organization)
+  end
+
   subject { described_class }
 
   describe ".perform" do
-    let(:customer) { create(:customer, invoice_grace_period: 3) }
-    let(:draft_invoice) do
+    let_it_be(:customer) { create(:customer, invoice_grace_period: 3) }
+    let_it_be(:draft_invoice) do
       create(
         :invoice,
         status: :draft,
@@ -17,7 +21,7 @@ describe Clock::FinalizeInvoicesJob, job: true do
         organization: customer.organization
       )
     end
-    let(:finalized_invoice) do
+    let_it_be(:finalized_invoice) do
       create(
         :invoice,
         status: :finalized,

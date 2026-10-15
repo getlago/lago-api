@@ -3,9 +3,9 @@
 require "rails_helper"
 
 describe Clock::ExpireIncompleteSubscriptionsJob, job: true do
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:, pay_in_advance: true) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:plan) { create(:plan, organization:, pay_in_advance: true) }
 
   it_behaves_like "a unique job" do
     let(:job_args) { [] }

@@ -6,6 +6,8 @@ module Resolvers
       include AuthenticableApiUser
       include RequiredOrganization
 
+      REQUIRED_PERMISSION = "credit_notes:create"
+
       description "Fetch amounts for credit note creation"
 
       argument :invoice_id, ID, required: true

@@ -16,10 +16,7 @@ RSpec.describe Mutations::Integrations::Destroy do
   include_context "with mocked security logger"
 
   let(:required_permission) { "organization:integrations:delete" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:integration) { create(:netsuite_integration, organization:) }
-
   let(:mutation) do
     <<-GQL
       mutation($input: DestroyIntegrationInput!) {
@@ -27,6 +24,10 @@ RSpec.describe Mutations::Integrations::Destroy do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before { integration }
 

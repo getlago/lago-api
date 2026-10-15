@@ -25,6 +25,10 @@ class User < ApplicationRecord
   def can?(permission, organization:)
     memberships.find { |m| m.organization_id == organization.id }&.can?(permission)
   end
+
+  def login_method_allowed?(login_method)
+    active_organizations.pluck(:authentication_methods).flatten.uniq.include?(login_method)
+  end
 end
 
 # == Schema Information
@@ -33,6 +37,7 @@ end
 # Database name: primary
 #
 #  id              :uuid             not null, primary key
+#  cs_admin        :boolean          default(FALSE), not null
 #  email           :string
 #  password_digest :string
 #  created_at      :datetime         not null

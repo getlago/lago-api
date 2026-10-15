@@ -18,6 +18,7 @@ module Mutations
       def resolve(**args)
         result = ::Roles::CreateService.call(
           organization: current_organization,
+          acting_membership: current_membership,
           code: args[:code],
           name: args[:name],
           description: args[:description],

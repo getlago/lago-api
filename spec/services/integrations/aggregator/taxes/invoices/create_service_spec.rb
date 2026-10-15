@@ -6,14 +6,9 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
   subject(:service_call) { described_class.call(invoice:) }
 
   let(:integration) { create(:anrok_integration, organization:) }
-  let(:integration_customer) { create(:anrok_customer, integration:, customer:, external_customer_id: nil) }
   let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
   let(:endpoint) { "https://api.nango.dev/v1/anrok/finalized_invoices" }
-  let(:add_on) { create(:add_on, organization:) }
-  let(:add_on_two) { create(:add_on, organization:) }
   let(:current_time) { Time.current }
-
   let(:integration_collection_mapping1) do
     create(
       :netsuite_collection_mapping,
@@ -31,7 +26,6 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
       settings: {external_id: "m1", external_account_code: "m11", external_name: ""}
     )
   end
-
   let(:invoice) do
     create(
       :invoice,
@@ -55,7 +49,6 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
       created_at: current_time - 2.seconds
     )
   end
-
   let(:headers) do
     {
       "Connection-Id" => integration.connection_id,
@@ -64,7 +57,6 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
     }
   end
   let(:response_status) { 200 }
-
   let(:params) do
     [
       {
@@ -99,6 +91,16 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
       }
     ]
   end
+  let(:integration_customer) { create(:anrok_customer, integration:, customer:, external_customer_id: nil) }
+
+  let_it_be(:organization) { create_default(:organization) }
+
+  before_all do
+    create_default(:plan)
+  end
+
+  let_it_be(:add_on) { create(:add_on, organization:) }
+  let_it_be(:add_on_two) { create(:add_on, organization:) }
 
   before do
     integration_customer
@@ -138,6 +140,54 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
 
         it "does not create integration resource" do
           expect { service_call }.not_to change { invoice.reload.integration_resources.count }
+        end
+
+        context "when a fee has no amount" do
+          let(:fee_add_on_two) do
+            create(
+              :fee,
+              invoice:,
+              add_on: add_on_two,
+              amount_cents: 0,
+              created_at: current_time - 2.seconds
+            )
+          end
+          let(:params) { super().tap { |body| body.first["fees"] = [body.first["fees"].first] } }
+
+          it "excludes it from the request" do
+            service_call
+
+            expect(WebMock).to have_requested(:post, endpoint).with(body: params.to_json)
+          end
+        end
+
+        context "when no fee has an amount" do
+          let(:fee_add_on) do
+            create(
+              :fee,
+              invoice:,
+              add_on:,
+              amount_cents: 0,
+              created_at: current_time - 3.seconds
+            )
+          end
+          let(:fee_add_on_two) do
+            create(
+              :fee,
+              invoice:,
+              add_on: add_on_two,
+              amount_cents: 0,
+              created_at: current_time - 2.seconds
+            )
+          end
+
+          let(:params) { super().tap { |body| body.first["fees"] = [body.first["fees"].first.merge("amount_cents" => 0)] } }
+
+          it "still reports the invoice, standing it on a single fee" do
+            service_call
+
+            expect(WebMock).to have_requested(:post, endpoint).with(body: params.to_json)
+          end
         end
       end
 
@@ -214,6 +264,25 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
 
         it "creates integration resource" do
           expect { service_call }.to change { invoice.reload.integration_resources.count }.by(1)
+        end
+
+        context "when a fee has no amount" do
+          let(:fee_add_on_two) do
+            create(
+              :fee,
+              invoice:,
+              add_on: add_on_two,
+              amount_cents: 0,
+              created_at: current_time - 2.seconds
+            )
+          end
+          let(:params) { super().tap { |body| body.first["fees"] = [body.first["fees"].first] } }
+
+          it "excludes it from the request" do
+            service_call
+
+            expect(WebMock).to have_requested(:post, endpoint).with(body: params.to_json)
+          end
         end
 
         context "when invoice is voided" do

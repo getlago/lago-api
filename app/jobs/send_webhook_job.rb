@@ -3,13 +3,7 @@
 require Rails.root.join("lib/lago_http_client/lago_http_client")
 
 class SendWebhookJob < ApplicationJob
-  queue_as do
-    if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_WEBHOOK"])
-      :webhook_worker
-    else
-      :webhook
-    end
-  end
+  queue_as { self.class.queue_for(arguments.first) }
 
   retry_on ActiveJob::DeserializationError, wait: :polynomially_longer, attempts: 6
 
@@ -54,6 +48,12 @@ class SendWebhookJob < ApplicationJob
     "credit_note.generated" => Webhooks::CreditNotes::GeneratedService,
     "credit_note.provider_refund_failure" => Webhooks::CreditNotes::PaymentProviderRefundFailureService,
     "integration.provider_error" => Webhooks::Integrations::ProviderErrorService,
+    "order.created" => Webhooks::Orders::CreatedService,
+    "order.executed" => Webhooks::Orders::ExecutedService,
+    "order_form.created" => Webhooks::OrderForms::CreatedService,
+    "order_form.signed" => Webhooks::OrderForms::SignedService,
+    "order_form.expired" => Webhooks::OrderForms::ExpiredService,
+    "order_form.voided" => Webhooks::OrderForms::VoidedService,
     "payment.requires_action" => Webhooks::Payments::RequiresActionService,
     "payment.succeeded" => Webhooks::Payments::SucceededService,
     "payment_provider.error" => Webhooks::PaymentProviders::ErrorService,
@@ -68,6 +68,9 @@ class SendWebhookJob < ApplicationJob
     "feature.created" => Webhooks::Features::CreatedService,
     "feature.updated" => Webhooks::Features::UpdatedService,
     "feature.deleted" => Webhooks::Features::DeletedService,
+    "quote.created" => Webhooks::Quotes::CreatedService,
+    "quote.approved" => Webhooks::Quotes::ApprovedService,
+    "quote.voided" => Webhooks::Quotes::VoidedService,
     "subscription.canceled" => Webhooks::Subscriptions::CanceledService,
     "subscription.incomplete" => Webhooks::Subscriptions::IncompleteService,
     "subscription.terminated" => Webhooks::Subscriptions::TerminatedService,
@@ -84,6 +87,16 @@ class SendWebhookJob < ApplicationJob
     "wallet_transaction.updated" => Webhooks::WalletTransactions::UpdatedService,
     "wallet_transaction.payment_failure" => Webhooks::PaymentProviders::WalletTransactionPaymentFailureService
   }.freeze
+
+  HIGH_PRIORITY_WEBHOOK_TYPES = %w[alert.triggered].freeze
+
+  def self.queue_for(webhook_type = nil)
+    if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_WEBHOOK"])
+      HIGH_PRIORITY_WEBHOOK_TYPES.include?(webhook_type) ? :webhook_worker_high_priority : :webhook_worker
+    else
+      :webhook
+    end
+  end
 
   # This is a placeholder object to know which arguments were provided.
   UNDEFINED = Object.new.freeze

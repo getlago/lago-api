@@ -6,12 +6,8 @@ RSpec.describe Mutations::WalletTransactions::Create do
   subject(:result) { execute_query(query:, input:) }
 
   let(:required_permission) { "wallets:top_up" }
-  let(:organization) { create(:organization) }
-  let(:membership) { create(:membership, organization:) }
-  let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:) }
   let(:wallet) { create(:wallet, customer:, balance: 10.0, credits_balance: 10.0) }
-
   let(:query) do
     <<-GQL
     mutation ($input: CreateCustomerWalletTransactionInput!) {
@@ -37,7 +33,6 @@ RSpec.describe Mutations::WalletTransactions::Create do
     }
     GQL
   end
-
   let(:input) do
     {
       walletId: wallet.id,
@@ -59,6 +54,11 @@ RSpec.describe Mutations::WalletTransactions::Create do
       ]
     }
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:membership) { create_default(:membership, organization:) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before do
     subscription

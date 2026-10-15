@@ -5,10 +5,10 @@ require "rails_helper"
 RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
   subject(:service) { described_class.new(subscription_activity:) }
 
-  let(:organization) { create(:organization, premium_integrations:) }
+  let(:organization) { create_default(:organization, premium_integrations:) }
   let(:mocked_current_usage) { double("current_usage") } # rubocop:disable RSpec/VerifiedDoubles
-  let(:customer) { create(:customer, organization:) }
-  let(:subscription) { create(:subscription, customer:) }
+  let(:customer) { create_default(:customer, organization:) }
+  let(:subscription) { create_default(:subscription, customer:) }
   let(:subscription_activity) { create(:subscription_activity, subscription:, organization:) }
 
   before do
@@ -220,6 +220,25 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, :premium do
         expect { service.call }.to raise_error(StandardError, "enqueue failed")
         expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)
       end
+    end
+  end
+
+  context "when the subscription is no longer active" do
+    let(:premium_integrations) { ["lifetime_usage"] }
+    let(:alert) { create(:alert, organization:, subscription_external_id: subscription.external_id, thresholds: [10]) }
+
+    before do
+      alert
+      allow(UsageMonitoring::ProcessAlertService).to receive(:call)
+      subscription.mark_as_terminated!
+    end
+
+    it "does not evaluate alerts and drops the stale activity" do
+      service.call
+
+      expect(UsageMonitoring::ProcessAlertService).not_to have_received(:call)
+      expect(::Invoices::CustomerUsageService).not_to have_received(:call)
+      expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)
     end
   end
 end

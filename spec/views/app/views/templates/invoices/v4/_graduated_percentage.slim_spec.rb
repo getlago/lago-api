@@ -14,6 +14,9 @@ RSpec.describe "templates/invoices/v4/_graduated_percentage.slim", :premium do
   let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, plan:) }
   let(:charge) { create(:graduated_percentage_charge, plan:, billable_metric:) }
+  let(:first_rate) { "1.0" }
+  let(:next_rate) { "1.0" }
+  let(:last_rate) { "1.0" }
 
   let(:fee) do
     create(
@@ -30,7 +33,7 @@ RSpec.describe "templates/invoices/v4/_graduated_percentage.slim", :premium do
             "from_value" => 0,
             "to_value" => 2,
             "units" => "2.0",
-            "rate" => "1.0",
+            "rate" => first_rate,
             "per_unit_total_amount" => "0.02",
             "flat_unit_amount" => "0.0"
           },
@@ -38,7 +41,7 @@ RSpec.describe "templates/invoices/v4/_graduated_percentage.slim", :premium do
             "from_value" => 2,
             "to_value" => 10,
             "units" => "4.77001111111111111111107306",
-            "rate" => "1.0",
+            "rate" => next_rate,
             "per_unit_total_amount" => "0.05",
             "flat_unit_amount" => "0.0"
           },
@@ -46,7 +49,7 @@ RSpec.describe "templates/invoices/v4/_graduated_percentage.slim", :premium do
             "from_value" => 10,
             "to_value" => nil,
             "units" => "5.123456789123",
-            "rate" => "1.0",
+            "rate" => last_rate,
             "per_unit_total_amount" => "0.05",
             "flat_unit_amount" => "0.0"
           }
@@ -55,10 +58,30 @@ RSpec.describe "templates/invoices/v4/_graduated_percentage.slim", :premium do
     )
   end
 
+  let(:rate_cells) do
+    Nokogiri::HTML.fragment(rendered_template)
+      .css("tr.details:not(.subtotal) td:nth-child(3)")
+      .map { |cell| cell.text.strip }
+  end
+
   it "rounds the units column to six decimals for display" do
     expect(rendered_template).to match(/\s4\.770011\s/)
     expect(rendered_template).to match(/\s5\.123457\s/)
     expect(rendered_template).not_to match(/\s4\.77001111111111111111107306\s/)
     expect(rendered_template).not_to match(/\s5\.123456789123\s/)
+  end
+
+  it "formats percentage rates for display" do
+    expect(rate_cells).to eq(["1%", "1%", "1%"])
+  end
+
+  context "with irregular stored rates" do
+    let(:first_rate) { "0.8999999999999999" }
+    let(:next_rate) { "" }
+    let(:last_rate) { "0.555e1" }
+
+    it "formats percentage rates for display" do
+      expect(rate_cells).to eq(["0.9%", "", "5.55%"])
+    end
   end
 end

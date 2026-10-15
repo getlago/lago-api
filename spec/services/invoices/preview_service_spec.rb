@@ -62,26 +62,15 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
         end
       end
 
-      context "when currencies do not match" do
+      context "when the customer currency differs from the subscription" do
         let(:customer) { build(:customer, organization:, billing_entity:, currency: "USD") }
 
-        it "returns an error" do
-          result = preview_service.call
+        it "allows the preview" do
+          travel_to(timestamp) do
+            result = preview_service.call
 
-          expect(result).not_to be_success
-          expect(result.error.messages[:base]).to include("customer_currency_does_not_match")
-        end
-
-        context "when multi_currency flag is enabled" do
-          before { organization.enable_feature_flag!(:multi_currency) }
-
-          it "allows the preview" do
-            travel_to(timestamp) do
-              result = preview_service.call
-
-              expect(result).to be_success
-              expect(result.invoice).to be_present
-            end
+            expect(result).to be_success
+            expect(result.invoice).to be_present
           end
         end
       end
@@ -89,33 +78,7 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
       context "with multi-entity billing" do
         let(:other_billing_entity) { create(:billing_entity, organization:) }
 
-        context "when multi_entity_billing flag is disabled" do
-          let(:subscription) do
-            build(
-              :subscription,
-              customer:,
-              plan:,
-              billing_entity: other_billing_entity,
-              billing_time:,
-              subscription_at: timestamp,
-              started_at: timestamp,
-              created_at: timestamp
-            )
-          end
-
-          it "ignores the subscription's billing entity and uses the customer's entity" do
-            travel_to(timestamp) do
-              result = preview_service.call
-
-              expect(result).to be_success
-              expect(result.invoice.billing_entity).to eq(billing_entity)
-            end
-          end
-        end
-
-        context "when multi_entity_billing flag is enabled" do
-          before { organization.enable_feature_flag!(:multi_entity_billing) }
-
+        context "with a subscription-specific billing entity" do
           context "when the subscription has its own billing entity" do
             let(:subscription) do
               build(
@@ -514,25 +477,129 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
               end.to change { Rails.cache.exist?(key) }.from(false).to(true)
             end
 
-            context "when the lazy charge usage cache flag is enabled", transaction: false do
-              before { organization.enable_feature_flag!(:lazy_charge_usage_cache) }
+            it "resolves the charges and filters that received usage", transaction: false do
+              allow(Events::BillingPeriodFilterService).to receive(:for_charges!).and_call_original
 
-              it "resolves the last-seen timestamps to feed the lazy cache" do
-                allow(Events::BillingPeriodFilterService).to receive(:call!).and_call_original
+              travel_to(timestamp) { preview_service.call }
 
-                travel_to(timestamp) { preview_service.call }
+              expect(Events::BillingPeriodFilterService).to have_received(:for_charges!)
+            end
 
-                expect(Events::BillingPeriodFilterService).to have_received(:call!)
+            context "with provider taxes on a charge split by grouped_by" do
+              let(:integration) { create(:anrok_integration, organization:) }
+              let(:endpoint) { "https://api.nango.dev/v1/anrok/draft_invoices" }
+              let(:requested_line_items) { [] }
+              let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+              let(:charge) do
+                create(
+                  :standard_charge,
+                  plan:,
+                  billable_metric:,
+                  properties: {amount: "12.66", grouped_by: ["region"]}
+                )
+              end
+              let(:events) do
+                %w[us eu].map do |region|
+                  create(
+                    :event,
+                    organization:,
+                    subscription:,
+                    customer:,
+                    code: billable_metric.code,
+                    timestamp: timestamp + 10.hours,
+                    properties: {region:}
+                  )
+                end
+              end
+
+              before do
+                create(
+                  :netsuite_collection_mapping,
+                  integration:,
+                  mapping_type: :fallback_item,
+                  settings: {external_id: "1", external_account_code: "11", external_name: ""}
+                )
+                create(:anrok_customer, integration:, customer:)
+                customer.reload
+
+                stub_request(:post, endpoint).to_return do |request|
+                  line_items = JSON.parse(request.body).first["fees"]
+                  requested_line_items.concat(line_items)
+
+                  taxed = line_items.map do |item|
+                    tax_amount = (item["amount_cents"] * 0.1).round
+
+                    item.merge(
+                      "tax_amount_cents" => tax_amount,
+                      "tax_breakdown" => [
+                        {"name" => "GST", "rate" => "0.10", "tax_amount" => tax_amount, "type" => "tax"}
+                      ]
+                    )
+                  end
+
+                  {body: {succeededInvoices: [{id: "inv_123", fees: taxed}], failedInvoices: []}.to_json}
+                end
+              end
+
+              it "sends the charge as one line item and taxes each of its fees", transaction: false do
+                travel_to(timestamp) do
+                  result = preview_service.call
+
+                  expect(result).to be_success
+
+                  charge_line_items = requested_line_items.select { |item| item["amount_cents"] == 2532 }
+                  expect(charge_line_items.map { |item| item["item_key"] }).to eq([charge.id])
+
+                  charge_fees = result.invoice.fees.select { |fee| fee.charge_id == charge.id }
+                  expect(charge_fees.size).to eq(2)
+                  expect(charge_fees.sum(&:taxes_amount_cents)).to eq(253)
+                end
               end
             end
 
-            context "when the lazy charge usage cache flag is disabled", transaction: false do
-              it "does not resolve the last-seen timestamps" do
-                allow(Events::BillingPeriodFilterService).to receive(:call!).and_call_original
+            context "with charge filters" do
+              let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
 
-                travel_to(timestamp) { preview_service.call }
+              let(:region_filter) do
+                create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us])
+              end
 
-                expect(Events::BillingPeriodFilterService).not_to have_received(:call!)
+              let(:eu_charge_filter) { create(:charge_filter, charge:, properties: {amount: "10"}) }
+              let(:us_charge_filter) { create(:charge_filter, charge:, properties: {amount: "20"}) }
+
+              let(:events) do
+                create(
+                  :event,
+                  organization:,
+                  subscription:,
+                  customer:,
+                  code: billable_metric.code,
+                  timestamp: timestamp + 10.hours,
+                  properties: {region: "eu"}
+                )
+              end
+
+              before do
+                create(:charge_filter_value, charge_filter: eu_charge_filter, billable_metric_filter: region_filter, values: ["eu"])
+                create(:charge_filter_value, charge_filter: us_charge_filter, billable_metric_filter: region_filter, values: ["us"])
+              end
+
+              it "only aggregates the filters that received usage", transaction: false do
+                allow(Events::BillingPeriodFilters::MatchingAndIgnoredService).to receive(:call).and_call_original
+
+                result = travel_to(timestamp) { preview_service.call }
+
+                expect(result).to be_success
+
+                # The filters without usage and the default bucket are not aggregated, so their
+                # exclusions are never serialized into the store query.
+                expect(Events::BillingPeriodFilters::MatchingAndIgnoredService).to have_received(:call)
+                  .with(target_filter: Events::BillingPeriodFilters::FilterTarget.from_charge(charge:, filter: eu_charge_filter)).once
+                expect(Events::BillingPeriodFilters::MatchingAndIgnoredService).to have_received(:call).once
+
+                charge_fees = result.invoice.fees.select { |fee| fee.charge_id == charge.id }
+                expect(charge_fees.map(&:charge_filter_id)).to eq([eu_charge_filter.id])
+                expect(charge_fees.first.units).to eq(1)
               end
             end
           end
@@ -1730,6 +1797,9 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
                 # setting item_id based on the test example
                 key = JSON.parse(request.body).first["fees"].last["item_key"]
                 response["succeededInvoices"].first["fees"].last["item_key"] = key
+                response["succeededInvoices"].first["fees"].last["amount_cents"] = 6
+                response["succeededInvoices"].first["fees"].last["tax_amount_cents"] = 1
+                response["succeededInvoices"].first["fees"].last["tax_breakdown"].first["tax_amount"] = 1
 
                 {body: response.to_json}
               end

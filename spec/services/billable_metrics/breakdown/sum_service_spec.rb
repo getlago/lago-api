@@ -5,22 +5,34 @@ require "rails_helper"
 RSpec.describe BillableMetrics::Breakdown::SumService, transaction: false do
   subject(:service) do
     described_class.new(
-      event_store_class:,
-      charge:,
-      subscription:,
-      boundaries: {
-        from_datetime:,
-        to_datetime:,
-        charges_duration: 31
-      },
-      filters: {
-        matching_filters:,
-        ignored_filters:
-      }
+      event_store:,
+      metered_item:,
+      billing_context:,
+      boundaries:,
+      filters:
     )
   end
 
   let(:event_store_class) { Events::Stores::PostgresStore }
+  let(:metered_item) do
+    Fees::ChargeService::MeteredItem.from_charge(
+      charge:,
+      boundaries: BillingPeriodBoundaries.new(
+        from_datetime:,
+        to_datetime:,
+        charges_from_datetime: from_datetime,
+        charges_to_datetime: to_datetime,
+        charges_duration: 31,
+        timestamp: to_datetime
+      )
+    )
+  end
+  let(:filters) { {matching_filters:, ignored_filters:} }
+  let(:boundaries) { {from_datetime:, to_datetime:, charges_duration: 31} }
+  let(:billing_context) { Billing::Context.from(subscription:) }
+  let(:event_store) do
+    event_store_class.new(code: billable_metric.code, billing_context:, boundaries:, filters:)
+  end
 
   let(:subscription) do
     create(

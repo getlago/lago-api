@@ -6,13 +6,11 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
   subject(:service_call) { described_class.call(invoice:) }
 
   let(:integration) { create(:anrok_integration, organization:) }
-  let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+  let(:fee) { create(:fee, invoice:, amount_cents: 1000) }
   let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { "https://api.nango.dev/v1/anrok/void_invoices" }
   let(:current_time) { Time.current }
-
   let(:integration_collection_mapping1) do
     create(
       :netsuite_collection_mapping,
@@ -21,7 +19,6 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
       settings: {external_id: "1", external_account_code: "11", external_name: ""}
     )
   end
-
   let(:invoice) do
     create(
       :invoice,
@@ -29,7 +26,6 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
       organization:
     )
   end
-
   let(:headers) do
     {
       "Connection-Id" => integration.connection_id,
@@ -37,7 +33,6 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
       "Provider-Config-Key" => "anrok"
     }
   end
-
   let(:params) do
     [
       {
@@ -45,6 +40,9 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
       }
     ]
   end
+  let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+
+  let_it_be(:organization) { create_default(:organization) }
 
   before do
     allow(LagoHttpClient::Client).to receive(:new)
@@ -53,9 +51,67 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
 
     integration_customer
     integration_collection_mapping1
+    fee
   end
 
   describe "#call" do
+    context "when the invoice carries no fee" do
+      let(:fee) { nil }
+
+      before { allow(lago_client).to receive(:post_with_response) }
+
+      it "reports nothing to void" do
+        result = service_call
+
+        expect(result).to be_success
+        expect(lago_client).not_to have_received(:post_with_response)
+      end
+    end
+
+    context "when the invoice carries no fee but reached the provider before" do
+      let(:fee) { nil }
+      let(:response) { instance_double(Net::HTTPOK) }
+      let(:body) do
+        path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response_void.json")
+        File.read(path)
+      end
+
+      before do
+        create(:integration_resource, syncable: invoice, integration:, resource_type: :invoice)
+
+        allow(lago_client).to receive(:post_with_response).with(params, headers).and_return(response)
+        allow(response).to receive(:body).and_return(body)
+      end
+
+      it "voids the transaction it was reported as" do
+        result = service_call
+
+        expect(result).to be_success
+        expect(lago_client).to have_received(:post_with_response).with(params, headers)
+      end
+    end
+
+    context "when the invoice has a zero-amount fee" do
+      let(:fee) { create(:fee, invoice:, amount_cents: 0) }
+      let(:response) { instance_double(Net::HTTPOK) }
+      let(:body) do
+        path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response_void.json")
+        File.read(path)
+      end
+
+      before do
+        allow(lago_client).to receive(:post_with_response).with(params, headers).and_return(response)
+        allow(response).to receive(:body).and_return(body)
+      end
+
+      it "voids the transaction the invoice was reported as" do
+        result = service_call
+
+        expect(result).to be_success
+        expect(lago_client).to have_received(:post_with_response).with(params, headers)
+      end
+    end
+
     context "when service call is successful" do
       let(:response) { instance_double(Net::HTTPOK) }
 

@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::CustomerPortal::SubscriptionsResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:query) do
     <<~GQL
       query {
@@ -13,13 +15,13 @@ RSpec.describe Resolvers::CustomerPortal::SubscriptionsResolver do
       }
     GQL
   end
-
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:) }
   let(:active_subscription) { create(:subscription, customer:, plan:) }
   let(:terminated_subscription) { create(:subscription, :terminated, customer:, plan:) }
+
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
+  let_it_be(:plan) { create_default(:plan, organization:) }
 
   before do
     active_subscription

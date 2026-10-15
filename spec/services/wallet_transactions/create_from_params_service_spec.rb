@@ -3,8 +3,7 @@
 require "rails_helper"
 
 RSpec.describe WalletTransactions::CreateFromParamsService do
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:, currency:) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:currency) { "EUR" }
   let(:subscription) { create(:subscription, customer:) }
   let(:wallet) do
@@ -22,6 +21,11 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
   end
   let(:wallet_invoice_requires_successful_payment) { false }
   let(:rate_amount) { 1 }
+  let(:customer) { create_default(:customer, organization:, currency:) }
+
+  before_all do
+    create_default(:plan)
+  end
 
   before do
     subscription
@@ -324,6 +328,33 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
         expect(result.error.messages[:paid_credits]).to eq(["invalid_paid_credits", "invalid_amount"])
       end
 
+      context "when paid_credits is above the wallet maximum" do
+        let(:paid_credits) { "500.00" }
+
+        before { wallet.update! paid_top_up_max_amount_cents: 100_00 }
+
+        it "returns an error and creates nothing" do
+          expect { result }.not_to change(WalletTransaction, :count)
+          expect(result).not_to be_success
+          expect(result.error.messages[:paid_credits]).to eq(["amount_above_maximum"])
+        end
+
+        context "when ignore_paid_top_up_limits is true" do
+          let(:params) do
+            {
+              wallet_id: wallet.id,
+              paid_credits:,
+              ignore_paid_top_up_limits: true
+            }
+          end
+
+          it "creates wallet transaction" do
+            expect(result).to be_success
+            expect(result.wallet_transactions.first.credit_amount).to eq(500)
+          end
+        end
+      end
+
       context "when paid_credits is below the wallet minimum" do
         let(:paid_credits) { "5.00" }
 
@@ -445,7 +476,9 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
 
     context "with decimal value and currency without digits" do
       let(:paid_credits) { "4.39999" }
-      let(:currency) { "JPY" }
+
+      let_it_be(:currency) { "JPY" }
+      let_it_be(:customer) { create_default(:customer, organization:, currency:) }
 
       it "creates wallet transaction with rounded value" do
         expect(result.wallet_transactions.first.credit_amount).to eq(4)

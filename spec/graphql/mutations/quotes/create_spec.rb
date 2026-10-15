@@ -4,8 +4,6 @@ require "rails_helper"
 
 RSpec.describe Mutations::Quotes::Create do
   let(:required_permission) { "quotes:create" }
-  let(:membership) { create(:membership) }
-  let(:customer) { create(:customer, organization: membership.organization) }
   let(:input) do
     {
       customerId: customer.id,
@@ -23,12 +21,16 @@ RSpec.describe Mutations::Quotes::Create do
           organization { id },
           number,
           orderType
-          currentVersion { id version status content billingItems }
-          versions { id version status content billingItems }
+          currentVersion { id version status content billingItems currency }
+          versions { id version status content billingItems currency }
         }
       }
     GQL
   end
+
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
+  let_it_be(:customer, refind: true) { create_default(:customer, organization: membership.organization) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
@@ -60,7 +62,8 @@ RSpec.describe Mutations::Quotes::Create do
           "status" => "draft",
           "version" => 1,
           "content" => "Test content",
-          "billingItems" => {}
+          "billingItems" => {},
+          "currency" => customer.currency
         }
       )
       expect(quote["versions"].size).to eq(1)

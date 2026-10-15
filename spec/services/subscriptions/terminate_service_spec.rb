@@ -52,6 +52,50 @@ RSpec.describe Subscriptions::TerminateService do
       expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with("subscription.terminated", subscription)
     end
 
+    context "with concurrent termination requests", transaction: false do
+      subject(:concurrent_terminations) do
+        errors = Concurrent::Array.new
+        results = Concurrent::Array.new
+
+        threads = subscriptions.map do |current_subscription|
+          Thread.new do
+            ActiveRecord::Base.connection_pool.with_connection do
+              results << described_class.call(subscription: current_subscription, async: false)
+            end
+          rescue => e
+            errors << e
+          end
+        end
+
+        threads.each(&:join)
+
+        {errors:, results:}
+      end
+
+      let(:subscriptions) { Array.new(2) { Subscription.find(subscription.id) } }
+
+      before do
+        subscriptions
+        allow(Invoices::SubscriptionService).to receive(:call).and_wrap_original do |original, **arguments|
+          sleep 0.2
+          original.call(**arguments)
+        end
+        allow(Utils::ActivityLog).to receive(:produce_after_commit)
+      end
+
+      it "serializes termination and bills the subscription once" do
+        execution = concurrent_terminations
+
+        expect(execution[:errors]).to be_empty
+        expect(execution[:results].count(&:success?)).to eq(2)
+        expect(subscription.reload).to be_terminated
+        expect(subscription.invoice_subscriptions.subscription_terminating.count).to eq(1)
+        expect(Invoices::SubscriptionService).to have_received(:call).once
+        expect(SendWebhookJob).to have_been_enqueued.with("subscription.terminated", subscription).once
+        expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(subscription, "subscription.terminated").once
+      end
+    end
+
     context "when subscription is starting in the future" do
       let(:subscription) { create(:subscription, :pending) }
 
@@ -94,12 +138,132 @@ RSpec.describe Subscriptions::TerminateService do
       end
     end
 
-    context "when subscription is incomplete" do
-      let(:subscription) { create(:subscription, :incomplete) }
+    context "when subscription is canceled" do
+      let(:subscription) { create(:subscription, :canceled) }
 
       it "returns a validation error" do
         expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages).to eq({base: ["subscription_incomplete"]})
+        expect(result.error.messages).to eq({base: ["subscription_canceled"]})
+      end
+
+      it "does not terminate it" do
+        result
+
+        expect(subscription.reload).to be_canceled
+        expect(subscription.terminated_at).to be_nil
+      end
+    end
+
+    context "when subscription is incomplete" do
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:) }
+      let(:plan) { create(:plan, organization:, pay_in_advance: true) }
+      let(:subscription) { create(:subscription, :incomplete, customer:, organization:, plan:) }
+      let(:invoice) { create(:invoice, :open, customer:, organization:, invoice_type: :subscription) }
+
+      before do
+        create(:subscription_activation_rule, subscription:, organization:, status: "pending", timeout_hours: 48)
+        create(:invoice_subscription, invoice:, subscription:)
+      end
+
+      it "cancels the subscription" do
+        expect(result).to be_success
+        expect(result.subscription).to be_canceled
+        expect(result.subscription.cancellation_reason).to eq("manual")
+        expect(result.subscription.terminated_at).to be_nil
+      end
+
+      it "declines the payment activation rule and closes the gating invoice" do
+        result
+
+        expect(subscription.activation_rules.payment.sole).to be_declined
+        expect(invoice.reload).to be_closed
+      end
+
+      it "enqueues a subscription.canceled webhook" do
+        expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("subscription.canceled", subscription)
+      end
+
+      it "does not enqueue a subscription.terminated webhook" do
+        result
+
+        expect(SendWebhookJob).not_to have_been_enqueued.with("subscription.terminated", subscription)
+      end
+
+      context "when the subscription becomes incomplete before it is locked" do
+        subject(:result) { described_class.call(subscription: stale_subscription) }
+
+        let(:subscription) { create(:subscription, :pending, customer:, organization:, plan:) }
+        let(:stale_subscription) { Subscription.find(subscription.id) }
+
+        before do
+          stale_subscription
+          subscription.mark_as_incomplete!
+        end
+
+        it "uses the incomplete subscription cancellation path" do
+          expect(result).to be_success
+          expect(result.subscription).to be_canceled
+          expect(subscription.activation_rules.payment.sole).to be_declined
+          expect(invoice.reload).to be_closed
+          expect(BillSubscriptionJob).not_to have_been_enqueued
+        end
+      end
+
+      context "when activation cancellation loses a concurrent resolution" do
+        let(:cancel_result) do
+          Subscriptions::ActivationRules::CancelService::Result.new.tap do |result|
+            result.single_validation_failure!(
+              field: :subscription,
+              error_code: "subscription_already_resolved"
+            )
+          end
+        end
+
+        before do
+          allow(Subscriptions::ActivationRules::CancelService)
+            .to receive(:call!)
+            .and_raise(cancel_result.error)
+        end
+
+        it "returns the cancellation failure" do
+          result
+
+          expect(result).to be_failure
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq({subscription: ["subscription_already_resolved"]})
+        end
+      end
+
+      context "when on_termination_credit_note and on_termination_invoice are given" do
+        subject(:result) do
+          described_class.call(subscription:, on_termination_credit_note: "refund", on_termination_invoice: "generate")
+        end
+
+        it "ignores them because nothing was ever billed" do
+          expect { result }.not_to have_enqueued_job(BillSubscriptionJob)
+          expect(subscription.reload.on_termination_credit_note).to be_nil
+          expect(CreditNote.count).to eq(0)
+        end
+      end
+    end
+
+    context "when a stale incomplete subscription becomes active before it is locked" do
+      subject(:result) { described_class.call(subscription: stale_subscription) }
+
+      let(:subscription) { create(:subscription, :incomplete) }
+      let(:stale_subscription) { Subscription.find(subscription.id) }
+
+      before do
+        stale_subscription
+        subscription.mark_as_active!
+      end
+
+      it "uses the active subscription termination path" do
+        expect(result).to be_success
+        expect(result.subscription).to be_terminated
+        expect(BillSubscriptionJob).to have_been_enqueued.once
+        expect(SendWebhookJob).to have_been_enqueued.with("subscription.terminated", subscription).once
       end
     end
 

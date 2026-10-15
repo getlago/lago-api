@@ -45,6 +45,45 @@ RSpec.describe Invoices::ApplyProviderTaxesService do
           .and_return(result)
       end
 
+      context "when the invoice has no taxable base" do
+        let(:fees_amount_cents) { 1000 }
+        let(:coupons_amount_cents) { 1000 }
+        let(:fee_taxes) do
+          [
+            build(:tax_result,
+              tax_breakdown: [
+                build(:tax_breakdown_item, name: "tax 1", type: "type1", rate: "0.10", tax_amount: 0)
+              ])
+          ]
+        end
+        let(:reported_fee) { create(:fee, invoice:, amount_cents: 1000, precise_coupons_amount_cents: 1000) }
+        let(:untaxed_fee) { create(:fee, invoice:, amount_cents: 0, precise_coupons_amount_cents: 0) }
+        let(:reported_fee_applied_tax) do
+          create(
+            :fee_applied_tax,
+            fee: reported_fee,
+            amount_cents: 0,
+            tax_name: "tax 1",
+            tax_code: "tax_1",
+            tax_rate: 10.0,
+            tax_description: "type1"
+          )
+        end
+
+        before do
+          reported_fee
+          reported_fee_applied_tax
+          untaxed_fee
+        end
+
+        it "prorates the rate over the fees that carry a tax, not every fee" do
+          result = apply_service.call
+
+          expect(result).to be_success
+          expect(invoice.taxes_rate).to eq(10.0)
+        end
+      end
+
       context "with non zero fees amount" do
         context "with non-zero taxes" do
           let(:fee1) do

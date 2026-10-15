@@ -3,6 +3,7 @@
 module Mutations
   module ProductFilters
     class Destroy < BaseMutation
+      include RequiresProductCatalog
       include AuthenticableApiUser
       include RequiredOrganization
 

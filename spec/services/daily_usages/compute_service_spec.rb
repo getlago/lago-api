@@ -5,10 +5,10 @@ require "rails_helper"
 RSpec.describe DailyUsages::ComputeService do
   subject(:compute_service) { described_class.new(subscription:, timestamp:) }
 
-  let(:organization) { create(:organization) }
-  let(:billing_entity) { create(:billing_entity, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billing_entity) { create_default(:billing_entity, organization:) }
+  let_it_be(:billable_metric) { create_default(:billable_metric, organization:) }
   let(:customer) { create(:customer, organization:, billing_entity:) }
-  let(:billable_metric) { create(:billable_metric, organization:) }
   let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: properties) }
   let(:plan) { create(:plan, organization:) }
   let(:subscription) do
@@ -50,6 +50,16 @@ RSpec.describe DailyUsages::ComputeService do
 
     context "when there is usage" do
       before { event }
+
+      context "with the usage service spied on" do
+        before { allow(Invoices::CustomerUsageService).to receive(:call).and_call_original }
+
+        it "computes the usage from the events, not the buckets" do
+          travel_to(timestamp) { compute_service.call }
+
+          expect(Invoices::CustomerUsageService).to have_received(:call).with(hash_excluding(use_usage_buckets: true))
+        end
+      end
 
       context "when usage contains charges with no consumption due to filters" do
         it "does not include fees with no consumption" do
@@ -201,6 +211,19 @@ RSpec.describe DailyUsages::ComputeService do
             expect(daily_usage.refreshed_at).to match_datetime(timestamp)
             expect(daily_usage.from_datetime).to match_datetime(timestamp.beginning_of_month)
             expect(daily_usage.to_datetime).to match_datetime(subscription.terminated_at)
+          end
+        end
+      end
+
+      context "when the daily usage cannot be persisted" do
+        before do
+          allow_any_instance_of(DailyUsage).to receive(:save!) # rubocop:disable RSpec/AnyInstance
+            .and_raise(ActiveRecord::RecordInvalid.new(DailyUsage.new))
+        end
+
+        it "does not swallow the error into a failed result" do
+          travel_to(timestamp) do
+            expect { compute_service.call }.to raise_error(ActiveRecord::RecordInvalid)
           end
         end
       end

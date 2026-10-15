@@ -18,6 +18,10 @@ module Charges
         # skip touching to avoid deadlocks
         Plan.no_touching do
           plan.children.where(id: child_ids).find_each do |child|
+            # NOTE: Cascade jobs are delivered at-least-once; a parent charge must
+            #       materialize at most once per child plan or usage is billed twice.
+            next if child.charges.exists?(parent_id: charge.id)
+
             create_params = if payload[:code].present?
               payload
             else

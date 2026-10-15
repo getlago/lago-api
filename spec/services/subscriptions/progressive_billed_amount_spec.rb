@@ -5,19 +5,26 @@ require "rails_helper"
 RSpec.describe Subscriptions::ProgressiveBilledAmount do
   subject(:service) { described_class.new(subscription:, timestamp:) }
 
-  let(:timestamp) { Time.current }
-  let(:subscription) { create(:subscription, customer_id: customer.id) }
-  let(:organization) { subscription.organization }
-  let(:customer) { create(:customer) }
+  before_all do
+    create_default(:organization)
+    create_default(:plan)
+    create_default(:billable_metric)
+  end
 
+  let(:timestamp) { Time.current }
   let(:charges_to_datetime) { timestamp + 1.week }
   let(:charges_from_datetime) { timestamp - 1.week }
   let(:invoice_type) { :progressive_billing }
+  let(:subscription) { create(:subscription, customer_id: customer.id) }
+  let(:organization) { subscription.organization }
+
+  let_it_be(:customer) { create_default(:customer) }
 
   context "without previous progressive billing invoices" do
     it "returns 0" do
       result = service.call
       expect(result.progressive_billed_amount).to be_zero
+      expect(result.to_invoice_amount).to be_zero
       expect(result.total_billed_amount_cents).to be_zero
       expect(result.progressive_billing_invoice).to be_nil
       expect(result.to_credit_amount).to be_zero
@@ -37,6 +44,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
     it "returns 0" do
       result = service.call
       expect(result.progressive_billed_amount).to be_zero
+      expect(result.to_invoice_amount).to be_zero
       expect(result.total_billed_amount_cents).to be_zero
       expect(result.progressive_billing_invoice).to be_nil
       expect(result.to_credit_amount).to be_zero
@@ -97,6 +105,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
     it "returns 0" do
       result = service.call
       expect(result.progressive_billed_amount).to be_zero
+      expect(result.to_invoice_amount).to be_zero
       expect(result.total_billed_amount_cents).to be_zero
       expect(result.progressive_billing_invoice).to be_nil
       expect(result.to_credit_amount).to be_zero
@@ -130,6 +139,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
     it "returns 0" do
       result = service.call
       expect(result.progressive_billed_amount).to be_zero
+      expect(result.to_invoice_amount).to be_zero
       expect(result.total_billed_amount_cents).to be_zero
       expect(result.progressive_billing_invoice).to be_nil
       expect(result.to_credit_amount).to be_zero
@@ -261,6 +271,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
         expect(result.progressive_billed_amount).to eq(20)
         expect(result.progressive_billing_invoice).to eq(progressive_billing_invoice)
         expect(result.to_credit_amount).to eq(0)
+        expect(result.to_invoice_amount).to be_zero
         expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
       end
     end
@@ -273,6 +284,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
         expect(result.progressive_billed_amount).to eq(20)
         expect(result.progressive_billing_invoice).to eq(progressive_billing_invoice)
         expect(result.to_credit_amount).to eq(10)
+        expect(result.to_invoice_amount).to eq(10)
         expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
       end
     end
@@ -287,6 +299,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
         expect(result.progressive_billed_amount).to eq(20)
         expect(result.progressive_billing_invoice).to eq(progressive_billing_invoice)
         expect(result.to_credit_amount).to eq(20)
+        expect(result.to_invoice_amount).to eq(20)
         expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
       end
     end
@@ -303,11 +316,12 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       invoice.update!(invoice_type:, fees_amount_cents: 100, coupons_amount_cents: 100, sub_total_excluding_taxes_amount_cents: 0, total_amount_cents: 0)
     end
 
-    it "returns to_credit_amount of 0 when fees are fully discounted" do
+    it "returns gross usage to invoice and no net amount to credit" do
       result = service.call
       expect(result.progressive_billing_invoice).to eq(invoice)
       expect(result.progressive_billed_amount).to eq(100)
       expect(result.to_credit_amount).to be_zero
+      expect(result.to_invoice_amount).to eq(100)
       expect(result.total_billed_amount_cents).to be_zero
       expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
     end
@@ -329,6 +343,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       expect(result.progressive_billing_invoice).to eq(invoice)
       expect(result.progressive_billed_amount).to eq(100)
       expect(result.to_credit_amount).to eq(70)
+      expect(result.to_invoice_amount).to eq(100)
       expect(result.total_billed_amount_cents).to eq(84)
       expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
     end
@@ -378,6 +393,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       expect(result.progressive_billing_invoice).to eq(invoice)
       expect(result.progressive_billed_amount).to eq(100)
       expect(result.to_credit_amount).to eq(50)
+      expect(result.to_invoice_amount).to eq(70)
       expect(result.total_billed_amount_cents).to eq(80)
       expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
     end
@@ -393,7 +409,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
     before do
       fee
       invoice.update!(invoice_type:, fees_amount_cents: 100, coupons_amount_cents: 20, sub_total_excluding_taxes_amount_cents: 80)
-      existing_credit_note
+      create(:credit_note_item, credit_note: existing_credit_note, fee:, amount_cents: 25, precise_amount_cents: 25)
     end
 
     it "subtracts existing credit notes from net amount" do
@@ -401,6 +417,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount do
       expect(result.progressive_billing_invoice).to eq(invoice)
       expect(result.progressive_billed_amount).to eq(100)
       expect(result.to_credit_amount).to eq(60)
+      expect(result.to_invoice_amount).to eq(75)
       expect(result.total_billed_amount_cents).to eq(80)
       expect(result.invoice_subscriptions).to contain_exactly(invoice_subscription)
     end

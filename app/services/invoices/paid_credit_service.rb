@@ -26,7 +26,10 @@ module Invoices
       ActiveRecord::Base.transaction do
         create_credit_fee(invoice)
         compute_amounts(invoice)
-        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:, resources: [wallet_transaction.invoice_custom_section_resource])
+        Invoices::ApplyInvoiceCustomSectionsService.call(
+          invoice:,
+          resources: [Invoices::ApplyInvoiceCustomSectionsService::Resource.from(resource: wallet_transaction.invoice_custom_section_resource)]
+        )
 
         if License.premium? && wallet_transaction.invoice_requires_successful_payment?
           invoice.open!
@@ -98,7 +101,11 @@ module Invoices
     end
 
     def create_payment(invoice)
-      Invoices::Payments::CreateService.call_async(invoice:)
+      if wallet_transaction.x402?
+        X402::CreditPurchases::CreatePaymentJob.perform_later(invoice, wallet_transaction)
+      else
+        Invoices::Payments::CreateService.call_async(invoice:)
+      end
     end
 
     def should_deliver_email?

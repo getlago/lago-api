@@ -3,9 +3,9 @@
 require "rails_helper"
 
 RSpec.describe WalletTransactions::CreateService do
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:, currency:) }
-  let(:currency) { "EUR" }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:currency) { "EUR" }
+  let_it_be(:customer) { create_default(:customer, organization:, currency:) }
   let(:wallet_credit) { WalletCredit.new(wallet:, credit_amount:) }
 
   let(:wallet) do
@@ -47,6 +47,7 @@ RSpec.describe WalletTransactions::CreateService do
           .to be_a(WalletTransaction)
           .and be_persisted
           .and have_attributes(
+            billable_metric_amounts: nil,
             invoice_requires_successful_payment: false,
             metadata: [],
             priority: 50,
@@ -81,7 +82,8 @@ RSpec.describe WalletTransactions::CreateService do
           priority: 25,
           name: "Custom Transaction Name",
           purchase_order_number: "PO-123",
-          payment_method: payment_method_params
+          payment_method: payment_method_params,
+          billable_metric_amounts: {"00000000-0000-4000-8000-000000000002" => {"00000000-0000-4000-8000-000000000001" => 1000}}
         }
       end
 
@@ -107,6 +109,7 @@ RSpec.describe WalletTransactions::CreateService do
         expect(wallet_transaction.purchase_order_number).to eq("PO-123")
         expect(wallet_transaction.payment_method_id).to eq(payment_method.id)
         expect(wallet_transaction.payment_method_type).to eq("provider")
+        expect(wallet_transaction.billable_metric_amounts).to eq({"00000000-0000-4000-8000-000000000002" => {"00000000-0000-4000-8000-000000000001" => 1000}})
       end
     end
 
@@ -186,10 +189,8 @@ RSpec.describe WalletTransactions::CreateService do
 
     context "with billing entity snapshotting" do
       let(:credit_amount) { 100 }
-      let(:wallet_billing_entity) { create(:billing_entity, organization:) }
       let(:explicit_billing_entity) { create(:billing_entity, organization:) }
       let(:wallet) { create(:wallet, customer:, currency:, billing_entity: wallet_billing_entity) }
-
       let(:transaction_params) do
         {
           status: :pending,
@@ -197,6 +198,8 @@ RSpec.describe WalletTransactions::CreateService do
           transaction_status: :purchased
         }
       end
+
+      let_it_be(:wallet_billing_entity) { create(:billing_entity, organization:) }
 
       it "snapshots the wallet's effective billing entity on the transaction" do
         wallet_transaction = result.wallet_transaction

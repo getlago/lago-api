@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::CreditNotesResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   subject(:result) do
     execute_graphql(
       current_user: membership.user,
@@ -13,6 +15,9 @@ RSpec.describe Resolvers::CreditNotesResolver do
   end
 
   let(:required_permission) { "credit_notes:view" }
+  let(:organization) { membership.organization }
+  let(:arguments) { "" }
+  let(:response_collection) { result["data"]["creditNotes"]["collection"] }
   let(:query) do
     <<~GQL
       query {
@@ -24,12 +29,8 @@ RSpec.describe Resolvers::CreditNotesResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
-  let(:arguments) { "" }
-
-  let(:response_collection) { result["data"]["creditNotes"]["collection"] }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before { create(:credit_note, :draft, customer:) }
 
@@ -262,6 +263,15 @@ RSpec.describe Resolvers::CreditNotesResolver do
 
     it "returns finalized credit notes total cents amount in provided range" do
       expect(response_collection.pluck("id")).to match_array credit_notes[1..3].pluck(:id)
+    end
+  end
+
+  context "with an amount range wider than the 32-bit integer limit" do
+    let(:arguments) { "amountFrom: 0, amountTo: 30000000000" }
+    let!(:big_credit_note) { create(:credit_note, total_amount_cents: 3_000_000_000, customer:) }
+
+    it "returns the credit notes in range, including amounts above 2^31" do
+      expect(response_collection.pluck("id")).to contain_exactly big_credit_note.id
     end
   end
 

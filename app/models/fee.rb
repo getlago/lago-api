@@ -13,7 +13,10 @@ class Fee < ApplicationRecord
   belongs_to :add_on, -> { with_discarded }, optional: true
   belongs_to :applied_add_on, optional: true
   belongs_to :subscription, optional: true
+  belongs_to :contract, optional: true
+  belongs_to :contract_rate_card, -> { with_discarded }, optional: true
   belongs_to :charge_filter, -> { with_discarded }, optional: true
+  belongs_to :product_filter, -> { with_discarded }, optional: true
   belongs_to :group, -> { with_discarded }, optional: true
   belongs_to :invoiceable, polymorphic: true, optional: true
   belongs_to :true_up_parent_fee, class_name: "Fee", optional: true
@@ -60,8 +63,15 @@ class Fee < ApplicationRecord
   validates :events_count, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
   validates :true_up_fee_id, presence: false, unless: :charge?
   validates :total_aggregated_units, presence: true, if: :charge?
+  validate :validate_contract_provenance
 
   scope :positive_units, -> { where("fees.units > ?", 0) }
+
+  scope :matching_contract_period, ->(contract_rate_card_id:, from_datetime:, to_datetime:) do
+    where(contract_rate_card_id:, fee_type: :product, pay_in_advance_event_id: nil, pay_in_advance_event_transaction_id: nil)
+      .where("(properties->>'charges_from_datetime')::timestamptz = ?", from_datetime.iso8601(6))
+      .where("(properties->>'charges_to_datetime')::timestamptz = ?", to_datetime.iso8601(6))
+  end
 
   # NOTE: pay_in_advance fees are not be linked to any invoice, but add_on fees does not have any subscriptions
   #       so we need a bit of logic to find the fee in the right organization scope
@@ -101,6 +111,7 @@ class Fee < ApplicationRecord
     return add_on.id if add_on?
     return invoiceable_id if credit?
     return fixed_charge_add_on.id if fixed_charge?
+    return invoiceable_id if product?
 
     subscription_id
   end
@@ -110,6 +121,7 @@ class Fee < ApplicationRecord
     return AddOn.name if add_on?
     return WalletTransaction.name if credit?
     return AddOn.name if fixed_charge?
+    return Product.name if product?
 
     Subscription.name
   end
@@ -119,6 +131,7 @@ class Fee < ApplicationRecord
     return add_on.code if add_on?
     return fee_type if credit?
     return fixed_charge_add_on.code if fixed_charge?
+    return invoiceable.code if product?
 
     subscription.plan.code
   end
@@ -128,6 +141,7 @@ class Fee < ApplicationRecord
     return add_on.name if add_on?
     return invoiceable&.name.presence || fee_type if credit?
     return fixed_charge_add_on.name if fixed_charge?
+    return invoiceable.name if product?
 
     subscription.plan.name
   end
@@ -136,6 +150,7 @@ class Fee < ApplicationRecord
     return fixed_charge_add_on.code if fixed_charge?
     return add_on.code if add_on?
     return "consumed_credits" if credit?
+    return invoiceable.code if product?
 
     subscription&.plan&.code.presence || billable_metric&.code
   end
@@ -145,6 +160,7 @@ class Fee < ApplicationRecord
     return add_on.description if add_on?
     return fee_type if credit?
     return fixed_charge_add_on.description if fixed_charge?
+    return invoiceable.description if product?
 
     subscription.plan.description
   end
@@ -152,6 +168,7 @@ class Fee < ApplicationRecord
   def invoice_name
     return invoice_display_name if invoice_display_name.present?
     return charge.invoice_display_name.presence || billable_metric.name if charge?
+    return invoiceable.invoice_name if product?
     return add_on.invoice_name if add_on?
     return invoiceable&.name.presence || fee_type if credit?
     return fixed_charge.invoice_display_name.presence || fixed_charge_add_on.invoice_name if fixed_charge?
@@ -160,7 +177,11 @@ class Fee < ApplicationRecord
   end
 
   def filter_display_name(separator: ", ")
-    charge_filter&.display_name(separator:)
+    if product?
+      product_filter&.invoice_name
+    else
+      charge_filter&.display_name(separator:)
+    end
   end
 
   def grouped_by_display
@@ -172,7 +193,7 @@ class Fee < ApplicationRecord
   def invoice_sorting_clause
     base_clause = "#{invoice_name} #{filter_display_name}".downcase
 
-    return base_clause unless charge?
+    return base_clause unless charge? || product?
     return base_clause if grouped_by.blank?
 
     "#{invoice_name} #{grouped_by.values.join} #{filter_display_name}".downcase
@@ -183,11 +204,15 @@ class Fee < ApplicationRecord
   end
 
   def grouped_or_filtered?
-    grouped_by.present? || charge_filter_id.present?
+    grouped_by.present? || filtered?
   end
 
   def ungrouped_or_filtered?
-    grouped_by.blank? || charge_filter_id.present?
+    grouped_by.blank? || filtered?
+  end
+
+  def filtered?
+    charge_filter_id.present? || product_filter_id.present?
   end
 
   def presentation_group_keys_values_displayed_in_invoice
@@ -311,12 +336,16 @@ class Fee < ApplicationRecord
   end
 
   def taxable?
-    amount_cents.positive?
+    !sub_total_excluding_taxes_amount_cents.zero?
   end
 
   def date_boundaries
     if charge? && !pay_in_advance? && charge.pay_in_advance?
-      timestamp = invoice.invoice_subscription(subscription.id).timestamp
+      timestamp = if invoice.new_record?
+        Time.parse(properties["timestamp"]).to_i
+      else
+        invoice.invoice_subscription(subscription.id).timestamp
+      end
       interval = ::Subscriptions::DatesService.charge_pay_in_advance_interval(timestamp, subscription)
 
       return {
@@ -342,6 +371,18 @@ class Fee < ApplicationRecord
   end
 
   private
+
+  def validate_contract_provenance
+    if contract_id.blank? && contract_rate_card_id.blank?
+      return
+    end
+
+    if contract_id.blank? || contract_rate_card_id.blank?
+      errors.add(:base, "contract and contract rate card must both be present")
+    elsif contract_rate_card&.contract_id != contract_id
+      errors.add(:contract_rate_card, "must belong to the fee contract")
+    end
+  end
 
   def active_prepaid_credit_fee_wallet?
     prepaid_credit_fee_wallet&.active?
@@ -410,6 +451,8 @@ end
 #  billing_entity_id                   :uuid             not null
 #  charge_filter_id                    :uuid
 #  charge_id                           :uuid
+#  contract_id                         :uuid
+#  contract_rate_card_id               :uuid
 #  fixed_charge_id                     :uuid
 #  group_id                            :uuid
 #  invoice_id                          :uuid
@@ -418,6 +461,7 @@ end
 #  original_fee_id                     :uuid
 #  pay_in_advance_event_id             :uuid
 #  pay_in_advance_event_transaction_id :string
+#  product_filter_id                   :uuid
 #  rate_card_rate_id                   :uuid
 #  rate_override_id                    :uuid
 #  subscription_id                     :uuid
@@ -427,12 +471,15 @@ end
 #
 #  idx_pay_in_advance_duplication_guard_charge          (pay_in_advance_event_transaction_id,charge_id) UNIQUE WHERE ((deleted_at IS NULL) AND (charge_filter_id IS NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false) AND (original_fee_id IS NULL))
 #  idx_pay_in_advance_duplication_guard_charge_filter   (pay_in_advance_event_transaction_id,charge_id,charge_filter_id) UNIQUE WHERE ((deleted_at IS NULL) AND (charge_filter_id IS NOT NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false) AND (original_fee_id IS NULL))
+#  idx_pay_in_advance_product_card_event                (pay_in_advance_event_transaction_id,contract_rate_card_id) UNIQUE WHERE ((deleted_at IS NULL) AND (charge_id IS NULL) AND (contract_rate_card_id IS NOT NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false) AND (original_fee_id IS NULL))
 #  index_fees_on_add_on_id                              (add_on_id)
 #  index_fees_on_applied_add_on_id                      (applied_add_on_id)
 #  index_fees_on_billing_entity_id                      (billing_entity_id)
 #  index_fees_on_charge_filter_id                       (charge_filter_id)
 #  index_fees_on_charge_id                              (charge_id)
 #  index_fees_on_charge_id_and_invoice_id               (charge_id,invoice_id) WHERE (deleted_at IS NULL)
+#  index_fees_on_contract_id                            (contract_id)
+#  index_fees_on_contract_rate_card_id                  (contract_rate_card_id)
 #  index_fees_on_deleted_at                             (deleted_at)
 #  index_fees_on_fixed_charge_id                        (fixed_charge_id)
 #  index_fees_on_group_id                               (group_id)
@@ -442,6 +489,7 @@ end
 #  index_fees_on_organization_id_and_created_at_and_id  (organization_id,created_at,id) WHERE (deleted_at IS NULL)
 #  index_fees_on_original_fee_id                        (original_fee_id)
 #  index_fees_on_pay_in_advance_event_transaction_id    (pay_in_advance_event_transaction_id) WHERE (deleted_at IS NULL)
+#  index_fees_on_product_filter_id                      (product_filter_id)
 #  index_fees_on_rate_card_rate_id                      (rate_card_rate_id)
 #  index_fees_on_rate_override_id                       (rate_override_id)
 #  index_fees_on_subscription_id                        (subscription_id)
@@ -449,17 +497,21 @@ end
 #
 # Foreign Keys
 #
-#  fk_rails_...  (add_on_id => add_ons.id)
-#  fk_rails_...  (applied_add_on_id => applied_add_ons.id)
-#  fk_rails_...  (billing_entity_id => billing_entities.id)
-#  fk_rails_...  (charge_id => charges.id)
-#  fk_rails_...  (fixed_charge_id => fixed_charges.id)
-#  fk_rails_...  (group_id => groups.id)
-#  fk_rails_...  (invoice_id => invoices.id)
-#  fk_rails_...  (organization_id => organizations.id)
-#  fk_rails_...  (original_fee_id => fees.id)
-#  fk_rails_...  (rate_card_rate_id => rate_card_rates.id)
-#  fk_rails_...  (rate_override_id => rate_overrides.id)
-#  fk_rails_...  (subscription_id => subscriptions.id)
-#  fk_rails_...  (true_up_parent_fee_id => fees.id)
+#  fk_fees_contract_rate_card_contract  ([contract_rate_card_id, contract_id] => contract_rate_cards[id, contract_id])
+#  fk_rails_...                         (add_on_id => add_ons.id)
+#  fk_rails_...                         (applied_add_on_id => applied_add_ons.id)
+#  fk_rails_...                         (billing_entity_id => billing_entities.id)
+#  fk_rails_...                         (charge_id => charges.id)
+#  fk_rails_...                         (contract_id => contracts.id)
+#  fk_rails_...                         (contract_rate_card_id => contract_rate_cards.id)
+#  fk_rails_...                         (fixed_charge_id => fixed_charges.id)
+#  fk_rails_...                         (group_id => groups.id)
+#  fk_rails_...                         (invoice_id => invoices.id)
+#  fk_rails_...                         (organization_id => organizations.id)
+#  fk_rails_...                         (original_fee_id => fees.id)
+#  fk_rails_...                         (product_filter_id => product_filters.id)
+#  fk_rails_...                         (rate_card_rate_id => rate_card_rates.id)
+#  fk_rails_...                         (rate_override_id => rate_overrides.id)
+#  fk_rails_...                         (subscription_id => subscriptions.id)
+#  fk_rails_...                         (true_up_parent_fee_id => fees.id)
 #

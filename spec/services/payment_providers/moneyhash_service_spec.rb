@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe PaymentProviders::MoneyhashService do
   include_context "with mocked security logger"
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:moneyhash_provider) { create(:moneyhash_provider, organization:) }
   let(:customer) { create(:customer, organization:) }
   let(:moneyhash_customer) { create(:moneyhash_customer, customer:) }

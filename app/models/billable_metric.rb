@@ -19,6 +19,7 @@ class BillableMetric < ApplicationRecord
   has_many :coupons, through: :coupon_targets
   has_many :groups, dependent: :delete_all
   has_many :filters, -> { order(:key) }, dependent: :delete_all, class_name: "BillableMetricFilter"
+  has_many :product_filter_values, through: :filters
 
   has_many :activity_logs,
     -> { order(logged_at: :desc) },
@@ -33,6 +34,7 @@ class BillableMetric < ApplicationRecord
     # NOTE: deleted aggregation type, recurring_count_agg: 4,
     weighted_sum_agg: 5,
     latest_agg: 6,
+    # NOTE: deprecated aggregation type, only kept for legacy metrics. It must not be documented in the public API.
     custom_agg: 7
   }.freeze
   AGGREGATION_TYPES_PAYABLE_IN_ADVANCE = %i[count_agg sum_agg unique_count_agg custom_agg].freeze

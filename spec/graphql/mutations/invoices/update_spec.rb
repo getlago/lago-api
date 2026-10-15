@@ -4,8 +4,6 @@ require "rails_helper"
 
 RSpec.describe Mutations::Invoices::Update do
   let(:required_permission) { "invoices:update" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:invoice) { create(:invoice, organization:) }
   let(:mutation) do
     <<~GQL
@@ -19,7 +17,11 @@ RSpec.describe Mutations::Invoices::Update do
     GQL
   end
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
+
   it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "invoices:update"
 
   it "updates a invoice" do
@@ -68,6 +70,32 @@ RSpec.describe Mutations::Invoices::Update do
         result:,
         message: "Resource not found"
       )
+    end
+  end
+
+  context "when invoice is voided" do
+    let(:invoice) { create(:invoice, :voided, organization:) }
+
+    it "returns a method not allowed error and does not update the invoice" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: invoice.id,
+            paymentStatus: "succeeded"
+          }
+        }
+      )
+
+      expect_graphql_error(
+        result:,
+        message: "Method Not Allowed"
+      )
+      expect(result["errors"].first["extensions"]["code"]).to eq("update_on_voided_invoice")
+      expect(invoice.reload.payment_status).not_to eq("succeeded")
     end
   end
 end

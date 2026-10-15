@@ -65,7 +65,36 @@ RSpec.describe Types::ActivityLogs::ActivityTypeEnum do
         product_filter_created
         product_filter_updated
         product_filter_deleted
+        rate_card_created
+        rate_card_updated
+        rate_card_deleted
+        rate_card_rate_created
+        rate_card_rate_updated
+        rate_card_rate_deleted
+        plan_rate_card_created
+        plan_rate_card_updated
+        plan_rate_card_deleted
+        contract_rate_card_created
+        contract_rate_card_updated
+        contract_rate_card_deleted
+        contract_created
+        contract_updated
+        contract_started
+        contract_terminated
+        contract_canceled
         email_sent
+        quote_created
+        quote_updated
+        quote_approved
+        quote_voided
+        quote_version_created
+        order_form_created
+        order_form_signed
+        order_form_file_uploaded
+        order_form_expired
+        order_form_voided
+        order_created
+        order_executed
       ]
     )
   end

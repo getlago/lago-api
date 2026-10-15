@@ -5,19 +5,17 @@ require "rails_helper"
 RSpec.describe Charges::CreateChildrenService do
   subject(:create_service) { described_class.new(child_ids:, charge:, payload:) }
 
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
-  let(:billable_metric) { create(:billable_metric, organization:) }
+  let_it_be(:organization, refind: true) { create(:organization) }
+  let_it_be(:plan, refind: true) { create(:plan, organization:) }
+  let_it_be(:billable_metric, refind: true) { create(:billable_metric, organization:) }
   let(:charge) { create(:standard_charge, organization:, plan:, billable_metric:) }
-
-  let(:child_plan) { create(:plan, organization:, parent_id:) }
-  let(:parent_id) { plan.id }
   let(:child_ids) { child_plan.id }
-
   let(:payload) { {} }
-
   let(:billable_metric_filters) { create_list(:billable_metric_filter, 2, billable_metric:) }
   let(:billable_metric_filter) { billable_metric_filters.first }
+
+  let_it_be(:parent_id, refind: true) { plan.id }
+  let_it_be(:child_plan, refind: true) { create(:plan, organization:, parent_id:) }
 
   before do
     charge
@@ -87,6 +85,27 @@ RSpec.describe Charges::CreateChildrenService do
           billable_metric_filter_id: billable_metric_filter.id,
           values: [billable_metric_filter.values.first]
         )
+      end
+    end
+
+    context "when the child plan already has a charge for this parent" do
+      let(:payload) { {billable_metric_id: billable_metric.id, charge_model: "standard"} }
+
+      before do
+        create(:standard_charge, organization:, plan: child_plan, billable_metric:, parent_id: charge.id)
+      end
+
+      it "does not create a second copy" do
+        result = nil
+
+        expect { result = create_service.call }.not_to change(Charge, :count)
+        expect(result).to be_success
+      end
+
+      it "creates the charge again when the existing copy is discarded" do
+        child_plan.charges.find_by(parent_id: charge.id).discard!
+
+        expect { create_service.call }.to change(Charge, :count).by(1)
       end
     end
   end

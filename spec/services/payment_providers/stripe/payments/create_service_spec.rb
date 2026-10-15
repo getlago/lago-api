@@ -6,8 +6,6 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
   subject(:create_service) { described_class.new(payment:, reference:, metadata:) }
 
   let(:customer) { create(:customer, payment_provider_code: code, country:) }
-  let(:country) { "CA" }
-  let(:organization) { customer.organization }
   let(:stripe_payment_provider) { create(:stripe_provider, organization:, code:) }
   let(:stripe_customer) { create(:stripe_customer, customer:, payment_method_id: "pm_123456", payment_provider: stripe_payment_provider) }
   let(:code) { "stripe_1" }
@@ -26,7 +24,6 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
       lago_billing_entity_id: payment.payable.billing_entity.id
     }
   end
-
   let(:invoice) do
     create(
       :invoice,
@@ -37,9 +34,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
       ready_for_payment_processing: true
     )
   end
-
   let(:payment_method) { create(:payment_method, customer:, provider_method_id: "pm_123456") }
-
   let(:payment) do
     create(
       :payment,
@@ -53,6 +48,9 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
       provider_payment_id: nil
     )
   end
+  let(:country) { "CA" }
+
+  let_it_be(:organization, refind: true) { create_default(:organization) }
 
   describe ".call" do
     let(:provider_customer_service_result) do
@@ -494,6 +492,39 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
               expect(invoice.reload.payment_status).to eq "pending"
             end
           end
+        end
+      end
+
+      context "when the payment activates a payment-gated subscription without 3ds support" do
+        let(:subscription) { create(:subscription, :incomplete, organization:, customer:) }
+        let(:invoice) do
+          create(
+            :invoice,
+            :open,
+            :with_subscriptions,
+            subscriptions: [subscription],
+            organization:,
+            customer:,
+            total_amount_cents: 200,
+            currency:,
+            ready_for_payment_processing: true
+          )
+        end
+
+        before { create(:subscription_activation_rule, subscription:, status: "pending") }
+
+        it "retries the payment to offer the authentication challenge" do
+          WebMock.stub_request(:post, "https://api.stripe.com/v1/payment_intents")
+            .to_return(
+              status: 400,
+              body: get_stripe_fixtures("payment_intent_authentication_required_response.json", version: "2025-04-30.basil")
+            )
+
+          result = create_service.call
+
+          expect(result).to be_failure
+          expect(result.error_code).to eq "authentication_required"
+          expect(result.should_retry).to eq true
         end
       end
     end

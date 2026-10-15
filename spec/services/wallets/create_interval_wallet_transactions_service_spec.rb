@@ -5,11 +5,13 @@ require "rails_helper"
 RSpec.describe Wallets::CreateIntervalWalletTransactionsService do
   subject(:create_interval_transactions_service) { described_class.new }
 
+  before_all do
+    create_default(:organization)
+  end
+
   describe ".call" do
     let(:created_at) { DateTime.parse("20 Feb 2021") }
-    let(:customer) { create(:customer) }
     let(:started_at) { nil }
-
     let(:wallet) do
       create(
         :wallet,
@@ -19,7 +21,6 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService do
         paid_top_up_min_amount_cents: 200_00
       )
     end
-
     let(:recurring_transaction_rule) do
       create(
         :recurring_transaction_rule,
@@ -30,6 +31,8 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService do
         started_at:
       )
     end
+
+    let_it_be(:customer) { create(:customer) }
 
     before { recurring_transaction_rule }
 
@@ -45,6 +48,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService do
             invoice_requires_successful_payment: false,
             metadata: [],
             name: "Recurring Transaction Rule",
+            ignore_paid_top_up_limits: false,
             purchase_order_number: nil
           }.merge(attrs)
         )
@@ -142,7 +146,8 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService do
             create_interval_transactions_service.call
             expect_to_have_scheduled_wallet_transaction(
               paid_credits: "200.0", # the gap is 150 but wallet has min amount set to 200
-              granted_credits: "0.0"
+              granted_credits: "0.0",
+              ignore_paid_top_up_limits: true
             )
           end
         end
@@ -166,7 +171,8 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService do
               create_interval_transactions_service.call
               expect_to_have_scheduled_wallet_transaction(
                 paid_credits: "0.0",
-                granted_credits: "150.0"
+                granted_credits: "150.0",
+                ignore_paid_top_up_limits: true
               )
             end
           end
@@ -351,7 +357,6 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService do
       end
 
       context "with customer timezone" do
-        let(:customer) { create(:customer, timezone:) }
         let(:timezone) { "Pacific/Noumea" }
 
         it "does not enqueue a job" do
@@ -693,7 +698,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService do
           travel_to(current_date) do
             create_interval_transactions_service.call
 
-            expect_to_have_scheduled_wallet_transaction(paid_credits: "500.0", granted_credits: "0.0")
+            expect_to_have_scheduled_wallet_transaction(paid_credits: "500.0", granted_credits: "0.0", ignore_paid_top_up_limits: true)
           end
         end
       end
@@ -717,7 +722,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService do
           travel_to(current_date) do
             create_interval_transactions_service.call
 
-            expect_to_have_scheduled_wallet_transaction(paid_credits: "500.0", granted_credits: "0.0")
+            expect_to_have_scheduled_wallet_transaction(paid_credits: "500.0", granted_credits: "0.0", ignore_paid_top_up_limits: true)
           end
         end
       end
