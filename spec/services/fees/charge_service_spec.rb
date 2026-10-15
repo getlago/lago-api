@@ -4925,6 +4925,23 @@ RSpec.describe Fees::ChargeService, :premium do
             .with(hash_including(initial_value: be_present)).twice
         end
       end
+
+      context "with a weighted sum billable metric" do
+        let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
+
+        it "carries the active units over from the snapshots" do
+          bill(march)
+
+          # Dated in a closed period: a weighted sum never counts it
+          create_event("2022-03-25", 7, "eu", created_at: Time.zone.parse("2022-04-01T05:00:00"))
+
+          expect(bill(april)).to eq([[{}, 18 + 20 * 21/30r, 1]])
+          expect(bill(may).sole.second.round(10)).to eq((38 + 4 * 22/31r).round(10))
+          expect(snapshots.order(:to_datetime).pluck(:units)).to eq([18, 38, 42])
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
+            .with(hash_including(initial_value: [have_attributes(grouped_by: {})])).twice
+        end
+      end
     end
   end
 

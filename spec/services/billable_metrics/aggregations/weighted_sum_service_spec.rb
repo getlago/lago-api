@@ -10,7 +10,8 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
       billing_context:,
       boundaries:,
       filters:,
-      bypass_aggregation:
+      bypass_aggregation:,
+      initial_value:
     )
   end
 
@@ -56,6 +57,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
   let(:from_datetime) { Time.zone.parse("2023-08-01 00:00:00.000") }
   let(:to_datetime) { Time.zone.parse("2023-08-31 23:59:59.999") }
   let(:charges_duration) { 31 }
+  let(:initial_value) { nil }
 
   let(:events_values) do
     [
@@ -67,6 +69,12 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
       {timestamp: Time.zone.parse("2023-08-01 05:00:00"), value: 10},
       {timestamp: Time.zone.parse("2023-08-01 05:30:00"), value: -10}
     ]
+  end
+
+  def snapshot(units:, grouped_by: {}, presentation_breakdowns: [], to_datetime: from_datetime - 1.second)
+    RecurringAggregationSnapshots::FetchService::Snapshot.new(
+      grouped_by:, units:, events_count: 0, presentation_breakdowns:, to_datetime:, watermark: to_datetime
+    )
   end
 
   before do
@@ -198,6 +206,37 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
       expect(result.variation).to eq(0)
       expect(result.total_aggregated_units).to eq(1000)
       expect(result.recurring_updated_at).to eq(from_datetime)
+    end
+
+    context "with a snapshot of the previous period" do
+      let(:initial_value) { [snapshot(units: 400)] }
+
+      it "uses the snapshot as initial value" do
+        result = aggregator.aggregate
+
+        expect(result.aggregation).to eq(400)
+        expect(result.total_aggregated_units).to eq(400)
+        expect(result.recurring_units).to eq(400)
+      end
+
+      context "when using presentation_by" do
+        let(:presentation_by) { ["region"] }
+        let(:initial_value) do
+          [snapshot(units: 400, presentation_breakdowns: [{groups: {"region" => "eu"}, value: "400.0"}])]
+        end
+
+        it "uses the snapshot presentation breakdowns as initial values" do
+          expect(aggregator.aggregate.breakdowns).to eq([{groups: {"region" => "eu"}, value: 400.to_d}])
+        end
+      end
+
+      context "when the snapshot closes an older period" do
+        let(:initial_value) { [snapshot(units: 400, to_datetime: from_datetime - 1.month)] }
+
+        it "uses the persisted recurring value as initial value" do
+          expect(aggregator.aggregate.total_aggregated_units).to eq(1000)
+        end
+      end
     end
 
     context "when using presentation_by with no current events and zero initial value" do
@@ -542,6 +581,62 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
                 {groups: {"agent_name" => "frodo", "region" => "us"}, value: "2.99597"}
               ]
             )
+          end
+        end
+      end
+
+      context "with snapshots of the previous period" do
+        let(:initial_value) do
+          [snapshot(units: 400, grouped_by: {"agent_name" => "aragorn"}), snapshot(units: 600, grouped_by: {"agent_name" => "frodo"})]
+        end
+
+        it "uses the snapshots as initial values" do
+          result = aggregator.aggregate
+
+          expect(result.aggregations.map { [it.grouped_by, it.aggregation, it.total_aggregated_units, it.recurring_units] }).to match_array(
+            [
+              [{"agent_name" => "aragorn"}, 400, 400, 400],
+              [{"agent_name" => "frodo"}, 600, 600, 600]
+            ]
+          )
+        end
+
+        context "when using presentation_by" do
+          let(:presentation_by) { ["region"] }
+          let(:initial_value) do
+            [
+              snapshot(
+                units: 400,
+                grouped_by: {"agent_name" => "aragorn"},
+                presentation_breakdowns: [{groups: {"agent_name" => "aragorn", "region" => "eu"}, value: "400.0"}]
+              ),
+              snapshot(
+                units: 600,
+                grouped_by: {"agent_name" => "frodo"},
+                presentation_breakdowns: [{groups: {"agent_name" => "frodo", "region" => "us"}, value: "600.0"}]
+              )
+            ]
+          end
+
+          it "uses the snapshot presentation breakdowns as initial values" do
+            result = aggregator.aggregate
+
+            expect(result.breakdowns.map { |breakdown| {groups: breakdown[:groups], value: breakdown[:value].round(5).to_s} }).to match_array(
+              [
+                {groups: {"agent_name" => "aragorn", "region" => "eu"}, value: "400.0"},
+                {groups: {"agent_name" => "frodo", "region" => "us"}, value: "600.0"}
+              ]
+            )
+          end
+        end
+
+        context "when the snapshots close an older period" do
+          let(:initial_value) do
+            [snapshot(units: 400, grouped_by: {"agent_name" => "aragorn"}, to_datetime: from_datetime - 1.month)]
+          end
+
+          it "uses the persisted recurring values as initial values" do
+            expect(aggregator.aggregate.aggregations.map(&:total_aggregated_units)).to eq([1000, 1000])
           end
         end
       end
