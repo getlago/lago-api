@@ -541,6 +541,7 @@ DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_payment_method_
 DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_organization_id;
 DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_expiration_at;
 DROP INDEX IF EXISTS public.index_recurring_aggregation_snapshots_on_organization_id;
+DROP INDEX IF EXISTS public.index_recurring_aggregation_snapshots_on_charge_id;
 DROP INDEX IF EXISTS public.index_recurring_aggregation_snapshots_on_charge_filter_id;
 DROP INDEX IF EXISTS public.index_recurring_aggregation_snapshots_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_record_deletions_on_updated_at;
@@ -11753,6 +11754,13 @@ CREATE INDEX index_recurring_aggregation_snapshots_on_billable_metric_id ON publ
 --
 
 CREATE INDEX index_recurring_aggregation_snapshots_on_charge_filter_id ON public.recurring_aggregation_snapshots USING btree (charge_filter_id);
+
+
+--
+-- Name: index_recurring_aggregation_snapshots_on_charge_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_recurring_aggregation_snapshots_on_charge_id ON public.recurring_aggregation_snapshots USING btree (charge_id);
 
 
 --
