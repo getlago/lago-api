@@ -4653,7 +4653,8 @@ RSpec.describe Fees::ChargeService, :premium do
 
     before do
       event_values.each_with_index do |value, index|
-        create(:event, organization:, subscription:, code: billable_metric.code, created_at: now - 1.minute,
+        create(:event, organization:, subscription:, code: billable_metric.code,
+          created_at: now - RecurringAggregationSnapshot::WATERMARK_LAG - 1.minute,
           timestamp: Time.zone.parse("2022-03-16") + index.days, properties: {value:, region: "eu"})
       end
     end
@@ -4705,7 +4706,8 @@ RSpec.describe Fees::ChargeService, :premium do
       end
 
       before do
-        create(:event, organization:, subscription:, code: billable_metric.code, created_at: now - 1.minute,
+        create(:event, organization:, subscription:, code: billable_metric.code,
+          created_at: now - RecurringAggregationSnapshot::WATERMARK_LAG - 1.minute,
           timestamp: Time.zone.parse("2022-03-20"), properties: {value: 7, region: "us"})
       end
 

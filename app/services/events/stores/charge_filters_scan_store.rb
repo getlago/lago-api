@@ -2,7 +2,7 @@
 
 module Events
   module Stores
-    # Answers a charge filter's count, sum, max and latest value from the read of every filter of
+    # Answers a charge filter's count, sum, recurring sum, max and latest value from the read of every filter of
     # its charge, and delegates the rest to the store it wraps, which also answers whatever the read does not
     # cover (see ChargeFiltersScan#covers?).
     #
@@ -43,6 +43,23 @@ module Events
       def grouped_sum(columns = grouped_by, with_count: true)
         if scanned?(columns, operation: :sum)
           scan.grouped_sum(__getobj__, with_count:)
+        else
+          super
+        end
+      end
+
+      # The delta of a snapshot keeps the store's own read, pruned by timestamp and enriched_at.
+      def recurring_sum(watermark:, snapshot: nil)
+        if snapshot.nil? && scanned?(operation: :recurring_sum)
+          scan.recurring_sum(__getobj__, watermark:)
+        else
+          super
+        end
+      end
+
+      def grouped_recurring_sum(watermark:, snapshot: nil)
+        if snapshot.nil? && scanned?(operation: :recurring_sum)
+          scan.grouped_recurring_sum(__getobj__, watermark:)
         else
           super
         end
