@@ -31,7 +31,9 @@ module X402
 
         settlement = insert_pending
         return result if result.failure?
-        return refuse_rebound(settlement) if rebound?
+
+        refusal = changed_invoice_refusal(settlement)
+        return refuse_changed_invoice(settlement, refusal) if refusal
 
         result.settlement = settlement
         settle(settlement)
@@ -99,14 +101,26 @@ module X402
         end
       end
 
-      def rebound?
-        invoice.present? && invoice.with_lock { invoice.x402_connection_id != connection.id }
+      def changed_invoice_refusal(settlement)
+        return unless invoice
+
+        invoice.with_lock do
+          if invoice.x402_connection_id != connection.id
+            [:invoice, "x402_connection_changed"]
+          elsif verified_payment.settled_amount_atomic != amount_due_atomic
+            [:payment, "amount_mismatch"]
+          elsif invoice.x402_settlements.where.not(id: settlement.id).where.not(status: :failed).exists?
+            [:base, "invoice_payment_pending"]
+          end
+        end
       end
 
-      def refuse_rebound(settlement)
-        log_failure("x402_connection_changed")
-        settlement.update!(status: :failed, error_reason: "x402_connection_changed")
-        result.single_validation_failure!(field: :invoice, error_code: "x402_connection_changed")
+      def refuse_changed_invoice(settlement, refusal)
+        field, code = refusal
+
+        log_failure(code)
+        settlement.update!(status: :failed, error_reason: code)
+        result.single_validation_failure!(field:, error_code: code)
       end
 
       def reconcile_after
