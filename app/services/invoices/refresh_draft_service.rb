@@ -80,7 +80,8 @@ module Invoices
     def product_catalog_invoice?
       return @product_catalog_invoice if defined?(@product_catalog_invoice)
 
-      @product_catalog_invoice = invoice.billing_segments.exists?
+      # Metered drafts can have no fees until usage is reported.
+      @product_catalog_invoice = invoice.fees.where.not(contract_id: nil).exists? || invoice.billing_segments.exists?
     end
 
     def billing_segment_context
