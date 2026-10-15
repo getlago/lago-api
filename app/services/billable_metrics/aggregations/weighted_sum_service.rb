@@ -13,7 +13,7 @@ module BillableMetrics
       def compute_aggregation(*)
         return empty_result if should_bypass_aggregation?
 
-        weighted_result = event_store.weighted_sum(initial_value:)
+        weighted_result = event_store.weighted_sum(initial_value: period_initial_value)
 
         result.aggregation = weighted_result.value.ceil(20)
         result.count = weighted_result.events_count
@@ -90,7 +90,7 @@ module BillableMetrics
 
       private
 
-      def initial_value
+      def period_initial_value
         return 0 unless billable_metric.recurring?
 
         latest_value
@@ -98,6 +98,10 @@ module BillableMetrics
 
       def latest_value
         return @latest_value if defined?(@latest_value)
+
+        if latest_snapshots
+          return @latest_value = latest_snapshots.first.units
+        end
 
         if latest_cached_aggregation
           return @latest_value = latest_cached_aggregation.current_aggregation
@@ -122,6 +126,13 @@ module BillableMetrics
         end
 
         @latest_breakdowns = []
+      end
+
+      # A snapshot closing an older period misses the events of the periods in between.
+      def latest_snapshots
+        return @latest_snapshots if defined?(@latest_snapshots)
+
+        @latest_snapshots = initial_value if initial_value.present? && initial_value.all? { it.to_datetime >= from_datetime - 1.second }
       end
 
       def latest_cached_aggregation
@@ -162,6 +173,10 @@ module BillableMetrics
 
       def grouped_latest_values
         return @grouped_latest_values if defined?(@grouped_latest_values)
+
+        if latest_snapshots
+          return @grouped_latest_values = latest_snapshots.map { {groups: it.grouped_by, value: it.units} }
+        end
 
         if grouped_latest_cached_aggregations.any?
           return @grouped_latest_values = grouped_latest_cached_aggregations.map do |cached_aggregation|
