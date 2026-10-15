@@ -35,6 +35,7 @@ end
 #  idx_recurring_aggregation_snapshots_unique                   (subscription_id,charge_id,charge_filter_id,grouped_by,to_datetime) UNIQUE NULLS NOT DISTINCT
 #  index_recurring_aggregation_snapshots_on_billable_metric_id  (billable_metric_id)
 #  index_recurring_aggregation_snapshots_on_charge_filter_id    (charge_filter_id)
+#  index_recurring_aggregation_snapshots_on_charge_id           (charge_id)
 #  index_recurring_aggregation_snapshots_on_organization_id     (organization_id)
 #
 # Foreign Keys

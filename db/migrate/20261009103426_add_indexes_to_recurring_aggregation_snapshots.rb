@@ -4,7 +4,7 @@ class AddIndexesToRecurringAggregationSnapshots < ActiveRecord::Migration[8.0]
   disable_ddl_transaction!
 
   # The unique index leads with subscription_id and also serves the latest-snapshot lookup,
-  # so neither subscription_id nor charge_id gets its own index.
+  # so subscription_id does not get its own index.
   INDEXES = [
     {
       columns: [:subscription_id, :charge_id, :charge_filter_id, :grouped_by, :to_datetime],
@@ -12,6 +12,7 @@ class AddIndexesToRecurringAggregationSnapshots < ActiveRecord::Migration[8.0]
       options: {unique: true, nulls_not_distinct: true}
     },
     {columns: :organization_id, name: :index_recurring_aggregation_snapshots_on_organization_id},
+    {columns: :charge_id, name: :index_recurring_aggregation_snapshots_on_charge_id},
     {columns: :charge_filter_id, name: :index_recurring_aggregation_snapshots_on_charge_filter_id},
     {columns: :billable_metric_id, name: :index_recurring_aggregation_snapshots_on_billable_metric_id}
   ].freeze
