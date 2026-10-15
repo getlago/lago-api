@@ -61,7 +61,7 @@ module X402
           payment_type: :x402
         )
         settlement.update!(payment:)
-        Invoices::UpdateService.call!(invoice:, params: invoice_params, webhook_notification: true)
+        ::Invoices::UpdateService.call!(invoice:, params: invoice_params, webhook_notification: true)
 
         after_commit do
           SendWebhookJob.perform_later("payment.succeeded", payment)
