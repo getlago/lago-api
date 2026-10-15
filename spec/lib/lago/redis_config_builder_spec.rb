@@ -15,6 +15,7 @@ RSpec.describe Lago::RedisConfigBuilder do
       LAGO_REDIS_CACHE_URL LAGO_REDIS_CACHE_PASSWORD
       LAGO_REDIS_CACHE_SENTINELS LAGO_REDIS_CACHE_MASTER_NAME
       LAGO_REDIS_CACHE_SENTINEL_USERNAME LAGO_REDIS_CACHE_SENTINEL_PASSWORD
+      LAGO_REDIS_THROTTLING_URL LAGO_REDIS_THROTTLING_PASSWORD
     ]
     original_env = ENV.to_h.slice(*env_keys)
     env_keys.each { |key| ENV.delete(key) }
@@ -606,6 +607,59 @@ RSpec.describe Lago::RedisConfigBuilder do
         ENV["LAGO_REDIS_CACHE_SENTINELS"] = ""
       end
 
+      it { is_expected.to be(false) }
+    end
+  end
+
+  describe "#throttling" do
+    subject(:result) { builder.throttling }
+
+    context "without environment variables" do
+      it "returns base config" do
+        expect(result).to eq(ssl_params: {verify_mode: OpenSSL::SSL::VERIFY_NONE}, timeout: 1)
+      end
+    end
+
+    context "with LAGO_REDIS_THROTTLING_URL and LAGO_REDIS_THROTTLING_PASSWORD set" do
+      before do
+        ENV["LAGO_REDIS_THROTTLING_URL"] = "redis://throttling:6379"
+        ENV["LAGO_REDIS_THROTTLING_PASSWORD"] = "throttling_secret"
+      end
+
+      it "includes the url and the password" do
+        expect(result).to include(url: "redis://throttling:6379", password: "throttling_secret")
+      end
+    end
+
+    context "with credentials for the other Redis consumers" do
+      before do
+        ENV["REDIS_URL"] = "redis://sidekiq:6379"
+        ENV["REDIS_PASSWORD"] = "sidekiq_secret"
+        ENV["LAGO_REDIS_CACHE_PASSWORD"] = "cache_secret"
+      end
+
+      it "does not use them" do
+        expect(result).not_to include(:url, :password)
+      end
+    end
+  end
+
+  describe ".throttling_enabled?" do
+    subject(:result) { described_class.throttling_enabled? }
+
+    context "when LAGO_REDIS_THROTTLING_URL is set" do
+      before { ENV["LAGO_REDIS_THROTTLING_URL"] = "redis://throttling:6379" }
+
+      it { is_expected.to be(true) }
+    end
+
+    context "when LAGO_REDIS_THROTTLING_URL is set to an empty string" do
+      before { ENV["LAGO_REDIS_THROTTLING_URL"] = "" }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "without LAGO_REDIS_THROTTLING_URL" do
       it { is_expected.to be(false) }
     end
   end

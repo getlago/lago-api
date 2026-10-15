@@ -49,10 +49,29 @@ RSpec.describe Auth::AttemptsThrottle do
       expect(Array.new(5) { described_class.hit!(:password_reset_per_email, nil) }).to all(be(false))
     end
 
-    it "does not block when the cache is unavailable" do
-      allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::NullStore.new)
+    it "counts a rule keyed on the email and IP pair per pair" do
+      10.times { described_class.hit!(:login_attempts_per_email_and_ip, "User@Example.com", "203.0.113.10") }
 
-      expect(Array.new(5) { described_class.hit!(:password_reset_per_email, "user@example.com") }).to all(be(false))
+      expect(described_class.hit!(:login_attempts_per_email_and_ip, "user@example.com", "203.0.113.11")).to be(false)
+      expect(described_class.hit!(:login_attempts_per_email_and_ip, "user@example.com", "203.0.113.10")).to be(true)
+    end
+
+    it "ignores a pair with a blank part" do
+      results = Array.new(11) { described_class.hit!(:login_attempts_per_email_and_ip, "user@example.com", nil) }
+
+      expect(results).to all(be(false))
+    end
+
+    it "raises when the identifiers do not match the rule" do
+      expect { described_class.hit!(:login_attempts_per_email_and_ip, "user@example.com") }.to raise_error(ArgumentError)
+    end
+
+    context "when the cache is unavailable" do
+      let(:cache) { ActiveSupport::Cache::NullStore.new }
+
+      it "does not block" do
+        expect(Array.new(5) { described_class.hit!(:password_reset_per_email, "user@example.com") }).to all(be(false))
+      end
     end
 
     it "does not store the identifier in clear" do
@@ -75,10 +94,20 @@ RSpec.describe Auth::AttemptsThrottle do
       expect(described_class.store).to be(cache)
     end
 
-    it "falls back to the Sidekiq Redis when Rails.cache is a per-process file store" do
-      allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::FileStore.new(Dir.mktmpdir))
+    context "when Rails.cache is a per-process file store" do
+      let(:cache) { ActiveSupport::Cache::FileStore.new(Dir.mktmpdir) }
 
-      expect(described_class.store).to be_a(ActiveSupport::Cache::RedisCacheStore)
+      it "falls back to the Sidekiq Redis" do
+        expect(described_class.store).to be(described_class::FALLBACK_STORE.value)
+      end
+    end
+
+    context "when a dedicated throttling Redis is configured" do
+      before { stub_const("ENV", ENV.to_h.merge("LAGO_REDIS_THROTTLING_URL" => "redis://throttling:6379")) }
+
+      it "uses it instead of Rails.cache" do
+        expect(described_class.store).to be(described_class::THROTTLING_STORE.value)
+      end
     end
   end
 end

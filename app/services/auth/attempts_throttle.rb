@@ -3,20 +3,27 @@
 module Auth
   # Counts authentication attempts in fixed time windows, in a store shared by all API processes, to slow down
   # credential stuffing, password guessing and password reset abuse on the public auth mutations.
-  # Identifiers (client IP, email) are hashed before being used in cache keys.
+  # Identifiers (client IP, email, or both for a rule keyed on the pair) are hashed before being used in cache keys.
   # When the cache is unavailable, attempts are not counted and nothing is blocked.
   module AttemptsThrottle
     Rule = Data.define(:limit, :period, :identifier)
 
     RULES = {
       login_per_ip: Rule.new(limit: 30, period: 1.minute, identifier: :ip),
-      login_attempts_per_email: Rule.new(limit: 10, period: 15.minutes, identifier: :email),
+      # Keyed on the pair, so that requests from other IPs cannot lock a user out of password login.
+      login_attempts_per_email_and_ip: Rule.new(limit: 10, period: 15.minutes, identifier: %i[email ip]),
+      # Password guessing spread over many IPs.
+      login_attempts_per_email: Rule.new(limit: 100, period: 15.minutes, identifier: :email),
       password_reset_per_ip: Rule.new(limit: 10, period: 1.hour, identifier: :ip),
       password_reset_per_email: Rule.new(limit: 3, period: 1.hour, identifier: :email),
       credentials_per_ip: Rule.new(limit: 20, period: 10.minutes, identifier: :ip)
     }.freeze
 
     # Built on first use only, and once per process.
+    THROTTLING_STORE = Concurrent::Delay.new do
+      ActiveSupport::Cache::RedisCacheStore.new(**Lago::RedisConfigBuilder.new.throttling)
+    end
+
     FALLBACK_STORE = Concurrent::Delay.new do
       ActiveSupport::Cache::RedisCacheStore.new(
         **Lago::RedisConfigBuilder.new.sidekiq.except(:reconnect_attempts, :middlewares, :custom),
@@ -27,38 +34,47 @@ module Auth
     module_function
 
     # Records an attempt and returns true when it goes over the limit.
-    def hit!(rule_name, identifier)
-      return false if identifier.blank?
+    def hit!(rule_name, *identifiers)
+      return false if identifiers.any?(&:blank?)
 
       rule = RULES.fetch(rule_name)
-      count = store.increment(cache_key(rule_name, identifier), 1, expires_in: rule.period)
+      count = store.increment(cache_key(rule_name, *identifiers), 1, expires_in: rule.period)
       count.to_i > rule.limit
     end
 
-    def reset!(rule_name, identifier)
-      return if identifier.blank?
+    def reset!(rule_name, *identifiers)
+      return if identifiers.any?(&:blank?)
 
-      store.delete(cache_key(rule_name, identifier))
+      store.delete(cache_key(rule_name, *identifiers))
     end
 
-    # Counters must be shared by every API process. Rails.cache is used when it is shared (Redis or
-    # Memcache). Without a configured cache, production falls back to a per-process file store, so the
-    # counters then go to the Redis instance Sidekiq already requires.
+    # Counters must be shared by every API process. The dedicated Redis is used when it is configured
+    # (LAGO_REDIS_THROTTLING_URL), then Rails.cache when it is shared (Redis or Memcache). Without a configured
+    # cache, production falls back to a per-process file store, so the counters then go to the Redis instance
+    # Sidekiq already requires.
     def store
-      return Rails.cache unless Rails.cache.is_a?(ActiveSupport::Cache::FileStore)
-
-      FALLBACK_STORE.value
+      if Lago::RedisConfigBuilder.throttling_enabled?
+        THROTTLING_STORE.value
+      elsif Rails.cache.is_a?(ActiveSupport::Cache::FileStore)
+        FALLBACK_STORE.value
+      else
+        Rails.cache
+      end
     end
 
-    def cache_key(rule_name, identifier)
+    def cache_key(rule_name, *identifiers)
       rule = RULES.fetch(rule_name)
-      "auth_attempts:#{rule_name}:#{Digest::SHA256.hexdigest(normalize(rule, identifier))}"
+      types = Array(rule.identifier)
+      raise ArgumentError, "#{rule_name} expects #{types.join(", ")}" if types.size != identifiers.size
+
+      value = types.zip(identifiers).map { |type, identifier| normalize(type, identifier) }.join("|")
+      "auth_attempts:#{rule_name}:#{Digest::SHA256.hexdigest(value)}"
     end
 
     # Emails go through the same normalization as the User lookup (invisible characters removed,
     # dash lookalikes replaced), so spelling variants of one address share a counter.
-    def normalize(rule, identifier)
-      value = (rule.identifier == :email) ? User.normalize_value_for(:email, identifier.to_s) : identifier.to_s
+    def normalize(type, identifier)
+      value = (type == :email) ? User.normalize_value_for(:email, identifier.to_s) : identifier.to_s
       value.to_s.strip.downcase
     end
   end

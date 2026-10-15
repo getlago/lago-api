@@ -76,4 +76,24 @@ RSpec.describe Mutations::RegisterUser do
       expect(result["errors"].first.dig("extensions", "details", "email")).to include("user_already_exists")
     end
   end
+
+  context "with attempts throttling" do
+    let(:cache) { ActiveSupport::Cache::MemoryStore.new }
+    let(:request) { instance_double(ActionDispatch::Request, remote_ip: "203.0.113.10") }
+    let(:user) { create(:user) }
+
+    before { allow(Rails).to receive(:cache).and_return(cache) }
+
+    def register(email)
+      execute_graphql(query: mutation, request:, variables: {input: {email:, password: "ILoveLago", organizationName: "FooBar"}})
+    end
+
+    it "limits attempts per client IP" do
+      20.times { register(user.email) }
+
+      result = register("foo@bar.com")
+
+      expect(result["errors"].first.dig("extensions", "code")).to eq("too_many_requests")
+    end
+  end
 end

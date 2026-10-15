@@ -82,5 +82,22 @@ RSpec.describe Mutations::PasswordResets::Create do
       expect { result = request_reset(email) }.not_to have_enqueued_job(PasswordResets::CreateJob)
       expect(result["errors"].first.dig("extensions", "code")).to eq("too_many_requests")
     end
+
+    context "when the requests come from one client IP" do
+      let(:request) { instance_double(ActionDispatch::Request, remote_ip: "203.0.113.10") }
+
+      def request_reset(email)
+        execute_graphql(query: mutation, request:, variables: {input: {email:}})
+      end
+
+      it "allows 10 requests per hour across emails" do
+        expect { 10.times { |i| request_reset("user-#{i}@example.com") } }
+          .to have_enqueued_job(PasswordResets::CreateJob).exactly(10).times
+
+        result = nil
+        expect { result = request_reset(email) }.not_to have_enqueued_job(PasswordResets::CreateJob)
+        expect(result["errors"].first.dig("extensions", "code")).to eq("too_many_requests")
+      end
+    end
   end
 end
