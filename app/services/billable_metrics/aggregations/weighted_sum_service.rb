@@ -113,11 +113,11 @@ module BillableMetrics
       def latest_breakdowns
         return @latest_breakdowns if defined?(@latest_breakdowns)
 
-        if latest_snapshots && !snapshot_breakdowns_missing?
+        if latest_snapshots
           return @latest_breakdowns = latest_snapshots.first.presentation_breakdowns
         end
 
-        if latest_snapshots || previous_events_counted?
+        if previous_events_counted?
           return @latest_breakdowns = latest_value_from_events.second
         end
 
@@ -129,11 +129,6 @@ module BillableMetrics
         return @latest_snapshots if defined?(@latest_snapshots)
 
         @latest_snapshots = initial_value if initial_value.present? && initial_value.all? { it.to_datetime >= from_datetime - 1.second }
-      end
-
-      # Snapshots persisted before presentation breakdowns were stored hold none
-      def snapshot_breakdowns_missing?
-        presentation_by.present? && latest_snapshots.any? { it.presentation_breakdowns.empty? && !it.units.zero? }
       end
 
       # Without a snapshot, the units carried over are read from the events of the previous periods,
@@ -170,11 +165,11 @@ module BillableMetrics
       def grouped_latest_breakdowns
         return @grouped_latest_breakdowns if defined?(@grouped_latest_breakdowns)
 
-        if latest_snapshots && !snapshot_breakdowns_missing?
+        if latest_snapshots
           return @grouped_latest_breakdowns = latest_snapshots.flat_map(&:presentation_breakdowns)
         end
 
-        if latest_snapshots || previous_events_counted?
+        if previous_events_counted?
           return @grouped_latest_breakdowns = grouped_latest_values_from_events.second
         end
 

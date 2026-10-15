@@ -5924,9 +5924,9 @@ CREATE TABLE public.recurring_aggregation_snapshots (
     watermark timestamp(6) without time zone NOT NULL,
     units numeric DEFAULT 0.0 NOT NULL,
     events_count bigint DEFAULT 0 NOT NULL,
+    presentation_breakdowns jsonb DEFAULT '[]'::jsonb NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    presentation_breakdowns jsonb DEFAULT '[]'::jsonb NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -15815,7 +15815,6 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
-('20261015142830'),
 ('20261013124033'),
 ('20261009154629'),
 ('20261009103426'),

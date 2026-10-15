@@ -244,20 +244,6 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
       end
     end
 
-    context "when the snapshot holds no presentation breakdowns" do
-      let(:presentation_by) { ["region"] }
-      let(:initial_value) { [snapshot(units: 10)] }
-
-      before { create_previous_event(value: 10, region: "eu") }
-
-      it "reads the presentation breakdowns from the events" do
-        result = aggregator.aggregate
-
-        expect(result.total_aggregated_units).to eq(10)
-        expect(result.breakdowns).to eq([{groups: {"region" => "eu"}, value: 10.to_d}])
-      end
-    end
-
     context "without a snapshot" do
       let(:initial_value) { nil }
 
@@ -492,8 +478,8 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
       let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
 
       let(:events_values) { [] }
-      let(:aragorn_presentation_breakdowns) { [{groups: {"agent_name" => "aragorn", "region" => "eu"}, value: "0"}] }
-      let(:frodo_presentation_breakdowns) { [{groups: {"agent_name" => "frodo", "region" => "us"}, value: "0"}] }
+      let(:aragorn_presentation_breakdowns) { [] }
+      let(:frodo_presentation_breakdowns) { [] }
 
       let(:initial_value) do
         [
