@@ -49,6 +49,24 @@ RSpec.describe Utils::PdfGenerator do
       end
     end
 
+    context "with a custom footer and bottom margin" do
+      let(:pdf_generator_service) do
+        described_class.new(
+          template: "invoices/v2",
+          context: invoice,
+          footer: "invoices/v4/product_catalog/footer",
+          margin_bottom: "1.0167"
+        )
+      end
+
+      it "sends that footer and margin" do
+        generate_pdf
+
+        expect(request_body).to match(/filename="footer\.html".*color: #525252;.*INV-123/m)
+        expect(request_body).to match(/name="marginBottom".*1\.0167/m)
+      end
+    end
+
     context "with a credit note" do
       let(:pdf_generator_service) do
         described_class.new(template: "credit_notes/credit_note", context: credit_note)
