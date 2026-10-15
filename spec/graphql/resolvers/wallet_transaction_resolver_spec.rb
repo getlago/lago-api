@@ -9,7 +9,7 @@ RSpec.describe Resolvers::WalletTransactionResolver do
     execute_graphql(
       current_user: membership.user,
       current_organization:,
-      permissions: "customers:view",
+      permissions:,
       query:,
       variables: {id: wallet_transaction_id}
     )
@@ -43,6 +43,7 @@ RSpec.describe Resolvers::WalletTransactionResolver do
   let(:invoice) { create(:invoice, customer:) }
 
   let(:wallet_transaction_id) { wallet_transaction.id }
+  let(:permissions) { "customers:view" }
 
   let_it_be(:membership) { create_default(:membership) }
   let_it_be(:customer) { create_default(:customer, organization:) }
@@ -78,6 +79,7 @@ RSpec.describe Resolvers::WalletTransactionResolver do
 
     context "when associated invoice is invisible" do
       let(:invoice) { create(:invoice, :invisible) }
+      let(:permissions) { "wallets:create" }
 
       it "returns a single wallet transaction with its invoice and payments" do
         transaction_response = result["data"]["walletTransaction"]
@@ -93,9 +95,26 @@ RSpec.describe Resolvers::WalletTransactionResolver do
 
     context "when transaction does not exist" do
       let(:wallet_transaction_id) { SecureRandom.uuid }
+      let(:permissions) { "wallets:update" }
 
       it "returns an error" do
         expect_graphql_error(result:, message: "Resource not found")
+      end
+    end
+
+    context "with the wallets:top_up permission" do
+      let(:permissions) { "wallets:top_up" }
+
+      it "returns the wallet transaction" do
+        expect(result["data"]["walletTransaction"]["id"]).to eq(wallet_transaction.id)
+      end
+    end
+
+    context "with the wallets:terminate permission" do
+      let(:permissions) { "wallets:terminate" }
+
+      it "returns the wallet transaction" do
+        expect(result["data"]["walletTransaction"]["id"]).to eq(wallet_transaction.id)
       end
     end
   end

@@ -49,7 +49,7 @@ RSpec.describe Resolvers::MembershipsResolver do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      permissions: "organization:members:view",
+      permissions: "quotes:update",
       query:
     )
 
@@ -107,11 +107,13 @@ RSpec.describe Resolvers::MembershipsResolver do
       create(:membership, organization:, role: finance_role, user: create(:user, email: "john.doe@example.com"))
     end
 
+    let(:permissions) { "organization:members:view" }
+
     let(:result) do
       execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        permissions: "organization:members:view",
+        permissions:,
         query:,
         variables:
       )
@@ -135,6 +137,7 @@ RSpec.describe Resolvers::MembershipsResolver do
 
     context "with role ids" do
       let(:variables) { {roleIds: [finance_role.id]} }
+      let(:permissions) { "order_forms:view" }
 
       it "returns the memberships holding one of the roles" do
         memberships_response = result["data"]["memberships"]
@@ -146,6 +149,7 @@ RSpec.describe Resolvers::MembershipsResolver do
 
     context "with both a search term and role ids" do
       let(:variables) { {searchTerm: "doe", roleIds: [admin_role.id]} }
+      let(:permissions) { "orders:view" }
 
       it "returns the memberships matching every filter" do
         memberships_response = result["data"]["memberships"]
@@ -183,7 +187,7 @@ RSpec.describe Resolvers::MembershipsResolver do
       execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        permissions: "organization:members:view",
+        permissions: "security_logs:view",
         query:
       )
     end

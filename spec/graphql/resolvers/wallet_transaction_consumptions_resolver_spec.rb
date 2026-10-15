@@ -83,7 +83,7 @@ RSpec.describe Resolvers::WalletTransactionConsumptionsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        permissions: "customers:view",
+        permissions: "wallets:create",
         query:,
         variables: {walletTransactionId: inbound_transaction.id, page: 1, limit: 2}
       )
@@ -99,7 +99,7 @@ RSpec.describe Resolvers::WalletTransactionConsumptionsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        permissions: "customers:view",
+        permissions: "wallets:update",
         query:,
         variables: {walletTransactionId: inbound_transaction.id, page: 2, limit: 2}
       )
@@ -117,7 +117,7 @@ RSpec.describe Resolvers::WalletTransactionConsumptionsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        permissions: "customers:view",
+        permissions: "wallets:top_up",
         query:,
         variables: {walletTransactionId: outbound_transaction.id}
       )
@@ -133,7 +133,7 @@ RSpec.describe Resolvers::WalletTransactionConsumptionsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        permissions: "customers:view",
+        permissions: "wallets:terminate",
         query:,
         variables: {walletTransactionId: inbound_transaction.id}
       )

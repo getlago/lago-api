@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::WalletsResolver do
+RSpec.describe Resolvers::WalletTransactionsResolver do
   let_it_be(:plan) { create_default(:plan) }
   let_it_be(:organization) { create_default(:organization) }
   let_it_be(:user) { create_default(:user) }
@@ -29,6 +29,10 @@ RSpec.describe Resolvers::WalletsResolver do
     wallet_transaction
   end
 
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", %w[customers:view wallets:create wallets:update wallets:top_up wallets:terminate]
+
   it "returns a list of wallet transactions" do
     result = execute_graphql(
       current_user: membership.user,
@@ -47,6 +51,42 @@ RSpec.describe Resolvers::WalletsResolver do
 
     expect(wallet_transactions_response["metadata"]["currentPage"]).to eq(1)
     expect(wallet_transactions_response["metadata"]["totalCount"]).to eq(1)
+  end
+
+  it "returns the walletTransactions with the wallets:update permission" do
+    result = execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      permissions: "wallets:update",
+      query:,
+      variables: {walletId: wallet.id}
+    )
+
+    expect(result["data"]["walletTransactions"]["collection"].map { it["id"] }).to eq([wallet_transaction.id])
+  end
+
+  it "returns the walletTransactions with the wallets:top_up permission" do
+    result = execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      permissions: "wallets:top_up",
+      query:,
+      variables: {walletId: wallet.id}
+    )
+
+    expect(result["data"]["walletTransactions"]["collection"].map { it["id"] }).to eq([wallet_transaction.id])
+  end
+
+  it "returns the walletTransactions with the wallets:terminate permission" do
+    result = execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      permissions: "wallets:terminate",
+      query:,
+      variables: {walletId: wallet.id}
+    )
+
+    expect(result["data"]["walletTransactions"]["collection"].map { it["id"] }).to eq([wallet_transaction.id])
   end
 
   context "without current organization" do
@@ -90,7 +130,7 @@ RSpec.describe Resolvers::WalletsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        permissions: "customers:view",
+        permissions: "wallets:create",
         query:,
         variables: {
           walletId: "123456"
