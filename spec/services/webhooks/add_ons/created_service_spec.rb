@@ -13,7 +13,8 @@ RSpec.describe Webhooks::AddOns::CreatedService do
       "lago_id" => String,
       "name" => String,
       "code" => String,
-      "amount_cents" => Integer
+      "amount_cents" => Integer,
+      "taxes" => Array
     }
   end
 end

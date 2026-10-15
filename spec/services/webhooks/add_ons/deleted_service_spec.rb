@@ -9,6 +9,9 @@ RSpec.describe Webhooks::AddOns::DeletedService do
   let(:add_on) { create(:add_on, organization:) }
 
   describe ".call" do
-    it_behaves_like "creates webhook", "add_on.deleted", "add_on"
+    it_behaves_like "creates webhook", "add_on.deleted", "add_on", {
+      "lago_id" => String,
+      "taxes" => Array
+    }
   end
 end

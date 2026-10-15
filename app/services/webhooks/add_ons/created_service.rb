@@ -8,7 +8,8 @@ module Webhooks
       def object_serializer
         ::V1::AddOnSerializer.new(
           object,
-          root_name: "add_on"
+          root_name: "add_on",
+          includes: %i[taxes]
         )
       end
 
