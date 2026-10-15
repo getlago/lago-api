@@ -78,6 +78,7 @@ RSpec.describe ProductCatalogInvoiceHelper do
       expect(category.name).to eq("Infrastructure")
       expect(category.products.map(&:name)).to eq(%w[Analytics Compute])
       expect(category.products.last.filters.map(&:name)).to eq(["Compute EU"])
+      expect(category.products.map(&:amount_cents)).to eq([300, 1_500])
       expect(standalone.name).to be_nil
       expect(standalone.products.map(&:name)).to eq(["Data transfer"])
       expect(standalone.amount_cents).to eq(700)
@@ -117,6 +118,45 @@ RSpec.describe ProductCatalogInvoiceHelper do
         fees.each_with_index.select { |fee, _| fee.true_up_parent_fee_id }.each do |true_up, index|
           expect(fees[index - 1].id).to eq(true_up.true_up_parent_fee_id)
         end
+      end
+    end
+  end
+
+  describe ".detail_rows" do
+    subject(:rows) { described_class.detail_rows(section, "EUR") }
+
+    let(:category_section) { described_class.contract_blocks(invoice).sole.sections.first }
+    let(:standalone_section) { described_class.contract_blocks(invoice).sole.sections.last }
+
+    context "with a category section" do
+      let(:section) { category_section }
+
+      it "nests products, periods and filters under the category" do
+        expect(rows.map { [it.kind, it.indent, it.label] }).to eq([
+          [:category, 0, "Infrastructure"],
+          [:product, 1, "Analytics"],
+          [:segment, 2, described_class.period_label(invoice.fees.find_by(amount_cents: 300))],
+          [:product, 1, "Compute"],
+          [:segment, 2, described_class.period_label(invoice.fees.find_by(amount_cents: 1_000))],
+          [:filter, 2, "Compute EU"],
+          [:segment, 3, described_class.period_label(invoice.fees.find_by(amount_cents: 500))]
+        ])
+        expect(rows.first.amount).to eq(MoneyHelper.format(Money.new(1_800, "EUR")))
+        expect(rows.fourth.amount).to eq(MoneyHelper.format(Money.new(1_500, "EUR")))
+      end
+    end
+
+    context "with standalone products" do
+      let(:section) { standalone_section }
+
+      it "starts products at the top level and adds tier lines below their period" do
+        expect(rows.map { [it.kind, it.indent] }).to eq([
+          [:product, 0],
+          [:segment, 1],
+          [:fee_detail, 2],
+          [:fee_detail, 2],
+          [:fee_detail, 2]
+        ])
       end
     end
   end
