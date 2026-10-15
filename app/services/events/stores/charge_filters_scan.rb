@@ -152,6 +152,7 @@ module Events
         end
       end
 
+      # The full history only: the delta of a snapshot keeps the read of the filter's own store.
       def recurring_sum(store, watermark:)
         rows = recurring_rows_for(store, watermark)
 
