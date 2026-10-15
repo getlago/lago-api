@@ -5,6 +5,8 @@ class UsageAttributionValue < ApplicationRecord
 
   self.discard_column = :deleted_at
 
+  MAX_PER_CUSTOMER_AND_TYPE = 100_000
+
   belongs_to :organization
   belongs_to :usage_attribution_type, -> { with_discarded }
   belongs_to :customer, -> { with_discarded }
@@ -14,6 +16,14 @@ class UsageAttributionValue < ApplicationRecord
   validates :value, presence: true, length: {maximum: 255}, uniqueness: {scope: %i[customer_id usage_attribution_type_id]}
 
   default_scope -> { kept }
+
+  def self.limit_reached?(customer_id:, usage_attribution_type_id:)
+    where(customer_id:, usage_attribution_type_id:).limit(MAX_PER_CUSTOMER_AND_TYPE).count >= MAX_PER_CUSTOMER_AND_TYPE
+  end
+
+  def self.limit_reached_cache_key(customer_id:, usage_attribution_type_id:)
+    "usage_attribution_values/limit_reached/#{customer_id}/#{usage_attribution_type_id}"
+  end
 end
 
 # == Schema Information
