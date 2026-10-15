@@ -28,6 +28,7 @@ class GraphqlController < ApplicationController
       current_user:,
       current_organization:,
       current_membership:,
+      organization_refused_for_session: organization_refused_for_session?,
       customer_portal_user:,
       request:,
       permissions: (current_membership || Permission)&.permissions_hash

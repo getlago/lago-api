@@ -218,6 +218,7 @@ RSpec.describe GraphqlController do
 
         expect(json[:data][:organization]).to be_nil
         expect(json[:errors].first[:extensions][:code]).to eq("forbidden")
+        expect(json[:errors].first[:message]).to eq("Login method not allowed for this organization")
       end
 
       it "refuses another organization that allows Okta without an Okta integration" do
@@ -238,17 +239,19 @@ RSpec.describe GraphqlController do
       context "when the token has no SSO claims" do
         let(:token) { Utils::AuthToken.encode(user:, login_method: okta) }
 
-        it "refuses every organization" do
-          query_organization(sso_organization)
+        it "treats the session as unauthenticated" do
+          post "/graphql",
+            headers: {"Authorization" => "Bearer #{token}"},
+            params: {query: "query { currentUser { id } }"}
 
-          expect(json[:errors].first[:extensions][:code]).to eq("forbidden")
+          expect(json[:errors].first[:extensions][:code]).to eq("unauthorized")
         end
       end
     end
 
     context "with a session whose login method the organization does not allow" do
-      let(:membership) { create(:membership, roles: [:admin]) }
-      let(:token) { Utils::AuthToken.encode(user: membership.user, login_method: Organizations::AuthenticationMethods::OKTA) }
+      let(:membership) { create(:membership, roles: [:admin], organization: create(:organization, authentication_methods: %w[email_password])) }
+      let(:token) { Utils::AuthToken.encode(user: membership.user, login_method: Organizations::AuthenticationMethods::GOOGLE_OAUTH) }
 
       it "refuses the organization" do
         post "/graphql",
@@ -256,6 +259,7 @@ RSpec.describe GraphqlController do
           params: {query: "query { organization { id } }"}
 
         expect(json[:errors].first[:extensions][:code]).to eq("forbidden")
+        expect(json[:errors].first[:message]).to eq("Login method not allowed for this organization")
       end
     end
 

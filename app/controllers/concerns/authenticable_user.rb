@@ -10,7 +10,7 @@ module AuthenticableUser
   private
 
   def current_user
-    @current_user ||= User.find_by(id: decoded_token["sub"]) if token && decoded_token
+    @current_user ||= User.find_by(id: decoded_token["sub"]) if token && decoded_token && !sso_session_without_claims?
   end
 
   def current_organization
@@ -23,10 +23,15 @@ module AuthenticableUser
   def current_membership
     return unless current_user
 
-    @current_membership ||= begin
-      membership = current_user.memberships.active.find_by(organization_id: organization_header)
-      membership if membership&.organization&.accessible_by_session?(**session_claims)
-    end
+    @current_membership ||= organization_membership if organization_membership&.organization&.accessible_by_session?(**session_claims)
+  end
+
+  def organization_membership
+    @organization_membership ||= current_user.memberships.active.find_by(organization_id: organization_header)
+  end
+
+  def organization_refused_for_session?
+    current_user.present? && organization_membership.present? && current_membership.nil?
   end
 
   def organization_header
@@ -43,6 +48,13 @@ module AuthenticableUser
     else
       {}
     end
+  end
+
+  # NOTE: Okta and Entra ID sessions issued before the SSO claims existed cannot be tied to an
+  #       identity provider, so they are treated as expired and the user logs in again.
+  def sso_session_without_claims?
+    Organizations::AuthenticationMethods::SSO_INTEGRATION_TYPES.key?(decoded_token["login_method"]) &&
+      decoded_token["sso_organization_id"].blank?
   end
 
   def token
