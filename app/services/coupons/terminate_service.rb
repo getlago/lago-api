@@ -9,10 +9,7 @@ module Coupons
         .active
         .time_limit
         .expired
-        .find_each do |coupon|
-          coupon.mark_as_terminated!
-          SendWebhookJob.perform_after_commit("coupon.updated", coupon)
-        end
+        .find_each { |coupon| call(coupon) }
     end
 
     def initialize(coupon)
@@ -25,7 +22,7 @@ module Coupons
 
       unless coupon.terminated?
         coupon.mark_as_terminated!
-        SendWebhookJob.perform_after_commit("coupon.updated", coupon)
+        SendWebhookJob.perform_after_commit("coupon.terminated", coupon)
       end
 
       result.coupon = coupon

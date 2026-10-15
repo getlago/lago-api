@@ -7020,6 +7020,7 @@ enum EventTypeEnum {
   contract_updated
   coupon_created
   coupon_deleted
+  coupon_terminated
   coupon_updated
   credit_note_created
   credit_note_generated

@@ -795,6 +795,10 @@ RSpec.describe SendWebhookJob do
       it_behaves_like "a webhook service",
         "coupon.deleted",
         Webhooks::Coupons::DeletedService
+
+      it_behaves_like "a webhook service",
+        "coupon.terminated",
+        Webhooks::Coupons::TerminatedService
     end
 
     context "with quote webhooks" do

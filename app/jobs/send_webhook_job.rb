@@ -18,6 +18,7 @@ class SendWebhookJob < ApplicationJob
     "coupon.created" => Webhooks::Coupons::CreatedService,
     "coupon.updated" => Webhooks::Coupons::UpdatedService,
     "coupon.deleted" => Webhooks::Coupons::DeletedService,
+    "coupon.terminated" => Webhooks::Coupons::TerminatedService,
     "dunning_campaign.finished" => Webhooks::DunningCampaigns::FinishedService,
     "invoice.created" => Webhooks::Invoices::CreatedService,
     "invoice.one_off_created" => Webhooks::Invoices::OneOffCreatedService,
