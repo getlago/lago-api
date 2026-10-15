@@ -5924,6 +5924,7 @@ CREATE TABLE public.recurring_aggregation_snapshots (
     watermark timestamp(6) without time zone NOT NULL,
     units numeric DEFAULT 0.0 NOT NULL,
     events_count bigint DEFAULT 0 NOT NULL,
+    presentation_breakdowns jsonb DEFAULT '[]'::jsonb NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
 );
