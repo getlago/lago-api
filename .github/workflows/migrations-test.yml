@@ -148,3 +148,29 @@ jobs:
           echo "Tables in public: $public_tables, in $POSTGRES_SCHEMA: $custom_tables"
           test "$public_tables" -eq 0
           test "$custom_tables" -gt 0
+      - name: Reset the database
+        run: psql "postgres://lago:lago@localhost:5432/postgres" -c "DROP DATABASE lago WITH (FORCE)" -c "CREATE DATABASE lago"
+      - name: Ensure a schema list starting with public keeps every table in public
+        env:
+          POSTGRES_SCHEMA: "public, lago"
+        run: |
+          psql "$DATABASE_URL" -c "CREATE SCHEMA lago"
+          bin/rails db:migrate
+          public_tables=$(psql "$DATABASE_URL" -Atc "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public'")
+          lago_tables=$(psql "$DATABASE_URL" -Atc "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'lago'")
+          echo "Tables in public: $public_tables, in lago: $lago_tables"
+          test "$lago_tables" -eq 0
+          test "$public_tables" -gt 0
+      - name: Reset the database
+        run: psql "postgres://lago:lago@localhost:5432/postgres" -c "DROP DATABASE lago WITH (FORCE)" -c "CREATE DATABASE lago"
+      - name: Ensure a missing custom schema stops the migrations
+        run: |
+          if bin/rails db:migrate > migrate.log 2>&1; then
+            tail -20 migrate.log
+            echo "The migrations should fail when the $POSTGRES_SCHEMA schema does not exist"
+            exit 1
+          fi
+          grep "set in POSTGRES_SCHEMA does not exist" migrate.log
+          public_tables=$(psql "$DATABASE_URL" -Atc "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name NOT IN ('schema_migrations', 'ar_internal_metadata')")
+          echo "Lago tables in public: $public_tables"
+          test "$public_tables" -eq 0

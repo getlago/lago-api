@@ -3009,6 +3009,14 @@ class InitialMigration < ActiveRecord::Migration[7.1]
       # configured with `POSTGRES_SCHEMA` when it is another one. The
       # extensions stay in `public`, which remains in the search path.
       schema = connection.current_schema
+
+      # PostgreSQL skips a schema of the search path that does not exist, so a
+      # missing `POSTGRES_SCHEMA` schema would silently move everything to `public`.
+      configured_schema = connection.schema_search_path.split(",").first.to_s.strip.delete('"')
+      if !configured_schema.start_with?("$") && configured_schema != schema
+        raise "The schema \"#{configured_schema}\" set in POSTGRES_SCHEMA does not exist. Create it before running the migrations."
+      end
+
       if schema != "public"
         quoted_schema = connection.quote_table_name(schema)
         sql = sql
