@@ -63,4 +63,25 @@ RSpec.describe Mutations::PasswordResets::Reset do
       expect_not_found(result)
     end
   end
+
+  context "with attempts throttling" do
+    let(:cache) { ActiveSupport::Cache::MemoryStore.new }
+    let(:request) { instance_double(ActionDispatch::Request, remote_ip: "203.0.113.10") }
+
+    before { allow(Rails).to receive(:cache).and_return(cache) }
+
+    it "limits attempts per client IP" do
+      20.times do
+        execute_graphql(query: mutation, request:, variables: {input: {newPassword: "HelloLago!2", token: "invalid"}})
+      end
+
+      result = execute_graphql(
+        query: mutation,
+        request:,
+        variables: {input: {newPassword: "HelloLago!2", token: password_reset.token}}
+      )
+
+      expect(result["errors"].first.dig("extensions", "code")).to eq("too_many_requests")
+    end
+  end
 end
