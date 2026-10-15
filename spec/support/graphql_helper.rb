@@ -45,6 +45,7 @@ module GraphQLHelper
     args = kwargs.merge(
       context: {
         controller:,
+        login_method:,
         current_user:,
         current_organization:,
         current_membership:,

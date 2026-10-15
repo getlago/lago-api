@@ -163,6 +163,8 @@ RSpec.describe Auth::EntraId::LoginService, cache: :memory do
     context "when an existing user differs from the typed email only by casing" do
       let!(:user) { create(:user, email: "Foo@Bar.com") }
 
+      before { create(:membership, user:, organization: entra_id_integration.organization) }
+
       it "signs in the existing user instead of creating a new one" do
         result = nil
 
@@ -174,7 +176,10 @@ RSpec.describe Auth::EntraId::LoginService, cache: :memory do
     context "when users exist with the typed casing and with another casing" do
       let!(:exact_user) { create(:user, email: "foo@bar.com") }
 
-      before { create(:user, email: "FOO@bar.com", created_at: 1.year.ago) }
+      before do
+        create(:user, email: "FOO@bar.com", created_at: 1.year.ago)
+        create(:membership, user: exact_user, organization: entra_id_integration.organization)
+      end
 
       it "signs in the user with the exact casing" do
         expect(service.call.user).to eq(exact_user)
@@ -184,10 +189,25 @@ RSpec.describe Auth::EntraId::LoginService, cache: :memory do
     context "when user already exists" do
       let(:user) { create(:user, email: "foo@bar.com") }
 
-      before { user }
+      before { create(:membership, user:, organization: entra_id_integration.organization) }
 
       it "does not create a new user" do
         expect { service.call }.not_to change(User, :count)
+      end
+    end
+
+    context "when an existing user is not a member of the integration organization" do
+      let(:user) { create(:user, email: "foo@bar.com") }
+
+      before { create(:membership, user:) }
+
+      it "refuses the login without adding the user to the organization" do
+        result = nil
+
+        expect { result = service.call }.not_to change(Membership, :count)
+        expect(result).not_to be_success
+        expect(result.error.messages[:entra_id]).to eq(["login_method_not_authorized"])
+        expect(result.token).to be_nil
       end
     end
 
