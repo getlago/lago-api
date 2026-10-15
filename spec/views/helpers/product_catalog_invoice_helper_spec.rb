@@ -161,6 +161,51 @@ RSpec.describe ProductCatalogInvoiceHelper do
     end
   end
 
+  describe ".subtotal?" do
+    subject(:subtotal) { described_class.subtotal?(fee) }
+
+    let(:fee) { build_stubbed(:fee, rate_card_rate: build_stubbed(:rate_card_rate, rate_model:)) }
+
+    context "with a volume rate" do
+      let(:rate_model) { "volume" }
+
+      it { is_expected.to be(true) }
+    end
+
+    context "with a dynamic rate" do
+      let(:rate_model) { "dynamic" }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "with a true-up of a graduated rate" do
+      let(:rate_model) { "graduated" }
+      let(:fee) do
+        build_stubbed(:fee, rate_card_rate: build_stubbed(:rate_card_rate, rate_model:), true_up_parent_fee: build_stubbed(:fee))
+      end
+
+      it { is_expected.to be(false) }
+    end
+  end
+
+  describe ".conversion_row" do
+    subject(:row) { described_class.conversion_row(fee, 2) }
+
+    let(:fee) { build_stubbed(:fee, amount_cents: 150_000, amount_currency: "EUR", pricing_unit_usage:) }
+    let(:pricing_unit_usage) { build_stubbed(:pricing_unit_usage, short_name: "CR", conversion_rate: 0.5) }
+
+    it "shows the conversion rate and the amount in the invoice currency" do
+      expect(row.label).to eq("Conversion rate: 1 CR = €0.50")
+      expect(row.amount).to eq("€1,500.00")
+    end
+
+    context "without a pricing unit" do
+      let(:pricing_unit_usage) { nil }
+
+      it { is_expected.to be_nil }
+    end
+  end
+
   describe ".tiers" do
     subject(:tiers) { described_class.tiers(invoice.fees.find_by(amount_cents: 700)) }
 

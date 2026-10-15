@@ -218,7 +218,7 @@ css:
     display: flex;
     align-items: flex-start;
     gap: var(--space-12);
-    padding: var(--space-4) var(--space-4) var(--space-4) var(--indent, var(--space-4));
+    padding: var(--space-2) var(--space-4) var(--space-2) var(--indent, var(--space-4));
     overflow-wrap: anywhere;
   }
 
@@ -249,7 +249,7 @@ css:
 
   .document-cell {
     vertical-align: top;
-    padding: var(--space-4) var(--space-4) var(--space-4) var(--space-12);
+    padding: var(--space-2) var(--space-4) var(--space-2) var(--space-12);
     text-align: right;
     overflow-wrap: anywhere;
   }
@@ -265,7 +265,7 @@ css:
 
   /* Numeric typography is independent of column layout. */
   .numeric {
-    font-variant-numeric: lining-nums tabular-nums slashed-zero;
+    font-variant-numeric: lining-nums tabular-nums;
   }
 
   /* Values live directly in cells. Caps only constrain exceptional lengths. */
@@ -282,7 +282,7 @@ css:
   }
 
   .cell--description {
-    padding: var(--space-4) var(--space-12) var(--space-4) var(--indent, var(--space-4));
+    padding: var(--space-2) var(--space-12) var(--space-2) var(--indent, var(--space-4));
     text-align: left;
     width: 100%;
     min-width: 50%
@@ -324,6 +324,12 @@ css:
   .document-table tr {
     break-inside: avoid;
     page-break-inside: avoid
+  }
+
+  .row--subtotal,
+  .row--conversion {
+    break-before: avoid;
+    page-break-before: avoid
   }
 
   .row--category,

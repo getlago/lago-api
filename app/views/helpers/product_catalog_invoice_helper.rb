@@ -7,6 +7,7 @@ class ProductCatalogInvoiceHelper
   ProductNode = Data.define(:name, :amount_cents, :fees, :filters)
   FilterNode = Data.define(:name, :fees)
   Tier = Data.define(:label, :units, :unit_price, :amount)
+  SUBTOTAL_RATE_MODELS = %w[graduated volume percentage package graduated_percentage].freeze
   Row = Data.define(:kind, :indent, :label, :units, :unit_price, :amount) do
     def initialize(units: nil, unit_price: nil, amount: nil, **)
       super
@@ -103,8 +104,27 @@ class ProductCatalogInvoiceHelper
           amount: unbreakable(tier.amount)
         )
       end
+      subtotal = Row.new(kind: :subtotal, indent: indent + 1, label: I18n.t("invoice.sub_total"), amount: segment.amount) if subtotal?(fee)
 
-      [segment, *details]
+      [segment, *details, subtotal, conversion_row(fee, indent + 1)].compact
+    end
+  end
+
+  def self.subtotal?(fee)
+    fee.true_up_parent_fee_id.nil? && SUBTOTAL_RATE_MODELS.include?((fee.rate_override || fee.rate_card_rate)&.rate_model)
+  end
+
+  def self.conversion_row(fee, indent)
+    usage = fee.pricing_unit_usage
+
+    if usage
+      rate = MoneyHelper.format_with_precision(usage.conversion_rate, fee.amount_currency)
+      Row.new(
+        kind: :conversion,
+        indent:,
+        label: "#{I18n.t("invoice.conversion_rate")}: 1 #{usage.short_name} = #{rate}",
+        amount: unbreakable(MoneyHelper.format(fee.amount))
+      )
     end
   end
 
@@ -155,7 +175,7 @@ class ProductCatalogInvoiceHelper
   attr_reader :invoice
 
   def product_fees
-    @product_fees ||= invoice.fees.product.includes(:product_filter, :pricing_unit_usage, invoice: :customer, contract: :catalog_plan, true_up_parent_fee: [:product_filter, :invoiceable]).to_a
+    @product_fees ||= invoice.fees.product.includes(:product_filter, :pricing_unit_usage, :rate_card_rate, :rate_override, invoice: :customer, contract: :catalog_plan, true_up_parent_fee: [:product_filter, :invoiceable]).to_a
   end
 
   def products

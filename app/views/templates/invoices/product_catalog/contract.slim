@@ -124,7 +124,7 @@ html lang=I18n.locale
                       td.document-cell.cell--description.cell--filter.body-3-emphasis class="indent-#{row.indent}" colspan=4 = row.label
                   - else
                     - kind = row.kind.to_s.dasherize
-                    - muted = ('color-muted' if row.kind == :fee_detail)
+                    - muted = ('color-muted' unless row.kind == :segment)
                     - at_end = ('cell--at-end' if index == rows.size - 1)
                     tr class="row--#{kind}"
                       td class=['document-cell', 'cell--description', "cell--#{kind}", 'body-3', "indent-#{row.indent}", muted, at_end] = row.label
