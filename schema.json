@@ -34123,6 +34123,12 @@
               "deprecationReason": null
             },
             {
+              "name": "COUPONS",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "DUNNING_CAMPAIGNS",
               "description": null,
               "isDeprecated": false,
@@ -34360,6 +34366,24 @@
             },
             {
               "name": "credit_note_provider_refund_failure",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "coupon_created",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "coupon_updated",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "coupon_deleted",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
