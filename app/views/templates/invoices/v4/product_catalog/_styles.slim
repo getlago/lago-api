@@ -127,6 +127,7 @@ css:
 
   .document {
     width: 100%;
+    container-type: inline-size;
     background: var(--color-paper)
   }
 
@@ -197,7 +198,7 @@ css:
 
   .document-table col.description-column,
   .document-totals col:first-child {
-    width: 50%;
+    width: auto;
   }
 
   .document-table col.quantity-column,
@@ -232,7 +233,6 @@ css:
     max-width: 50%;
     min-width: 0;
     text-align: right;
-    font-variant-numeric: tabular-nums;
   }
 
   .document-table tbody td:first-child {
@@ -252,28 +252,39 @@ css:
     padding: var(--space-4) var(--space-4) var(--space-4) var(--space-12);
     text-align: right;
     overflow-wrap: anywhere;
-    font-variant-numeric: tabular-nums
   }
 
-  /* Bound intrinsic numeric widths to preserve the label's 50% minimum.
-     The document is A4 with 32px left/right page margins. */
+  /* Each table sizes independently. Numeric cells shrink to their content;
+     Description receives all remaining space. */
   .document-cell:not(.cell--description) {
     width: 1%;
+  }
+  th.document-cell:not(.cell--description) {
+    white-space: nowrap;
+  }
+
+  /* Numeric typography is independent of column layout. */
+  .numeric {
+    font-variant-numeric: lining-nums tabular-nums slashed-zero;
+  }
+
+  /* Values live directly in cells. Caps only constrain exceptional lengths. */
+  td.numeric {
+    white-space: normal;
     overflow-wrap: break-word;
-    max-width: calc((210mm - 64px) / 2 - 1px);
+    max-width: calc(50cqi - 1px);
   }
-
-  .document-table--details .document-cell:not(.cell--description) {
-    max-width: calc((210mm - 64px) / 6 - 1px);
+  .document-table--details td.numeric {
+    max-width: calc(100cqi / 6 - 1px);
   }
-
-  .document-totals .document-cell:not(.cell--description) {
-    max-width: calc((210mm - 64px) / 4 - 1px);
+  .document-totals td.numeric {
+    max-width: calc(100cqi / 4 - 1px);
   }
 
   .cell--description {
     padding: var(--space-4) var(--space-12) var(--space-4) var(--indent, var(--space-4));
     text-align: left;
+    width: 100%;
     min-width: 50%
   }
 

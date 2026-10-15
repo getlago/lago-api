@@ -24,7 +24,7 @@ html lang=I18n.locale
               - at_end = ('cell--at-end' if index == summary_lines.size - 1)
               tr.row--summary
                 td class=['document-cell', 'cell--description', 'cell--summary', 'body-2', 'indent-0', at_end] = line.name
-                td class=['document-cell', 'cell--amount', 'cell--summary', 'body-2', at_end] = MoneyHelper.format(Money.new(line.amount_cents, currency))
+                td class=['document-cell', 'cell--amount', 'cell--summary', 'body-2', at_end, 'numeric'] = MoneyHelper.format(Money.new(line.amount_cents, currency))
         table.document-totals
           colgroup
             col
@@ -33,32 +33,32 @@ html lang=I18n.locale
             - credits.coupon_kind.order(created_at: :asc).each do |credit|
               tr.row--summary
                 td.document-cell.cell--description.cell--summary.body-2 = credit.invoice_coupon_display_name
-                td.document-cell.cell--amount.cell--summary.body-2 = '-' + MoneyHelper.format(credit.amount)
+                td.document-cell.cell--amount.cell--summary.body-2.numeric = '-' + MoneyHelper.format(credit.amount)
             tr.row--summary
               td.document-cell.cell--description.cell--summary.body-2 = I18n.t('invoice.sub_total_without_tax')
-              td.document-cell.cell--amount.cell--summary.body-2 = MoneyHelper.format(sub_total_excluding_taxes_amount)
+              td.document-cell.cell--amount.cell--summary.body-2.numeric = MoneyHelper.format(sub_total_excluding_taxes_amount)
             - applied_taxes.order(tax_rate: :desc).each do |applied_tax|
               tr.row--summary
                 - if applied_tax.applied_on_whole_invoice?
                   td.document-cell.cell--description.cell--summary.body-2 = I18n.t('invoice.tax_name_only.' + applied_tax.tax_code)
-                  td.document-cell.cell--amount.cell--summary.body-2
+                  td.document-cell.cell--amount.cell--summary.body-2.numeric
                 - else
                   td.document-cell.cell--description.cell--summary.body-2 = I18n.t('invoice.tax_name', name: applied_tax.tax_name, rate: applied_tax.tax_rate, amount: MoneyHelper.format(applied_tax.taxable_amount))
-                  td.document-cell.cell--amount.cell--summary.body-2 = MoneyHelper.format(applied_tax.amount)
+                  td.document-cell.cell--amount.cell--summary.body-2.numeric = MoneyHelper.format(applied_tax.amount)
             - if credit_notes_amount_cents.positive?
               tr.row--summary
                 td.document-cell.cell--description.cell--summary.body-2 = I18n.t('invoice.credit_notes')
-                td.document-cell.cell--amount.cell--summary.body-2 = '-' + MoneyHelper.format(credit_notes_amount)
+                td.document-cell.cell--amount.cell--summary.body-2.numeric = '-' + MoneyHelper.format(credit_notes_amount)
             - if prepaid_credit_amount_cents.positive?
               tr.row--summary
                 td.document-cell.cell--description.cell--summary.body-2 = I18n.t('invoice.prepaid_credits')
-                td.document-cell.cell--amount.cell--summary.body-2 = '-' + MoneyHelper.format(prepaid_credit_amount)
+                td.document-cell.cell--amount.cell--summary.body-2.numeric = '-' + MoneyHelper.format(prepaid_credit_amount)
             tr.row--total
               td.document-cell.cell--description.cell--total.body-2-emphasis = I18n.t('invoice.total')
-              td.document-cell.cell--amount.cell--total.body-2-emphasis = MoneyHelper.format(total_amount)
+              td.document-cell.cell--amount.cell--total.body-2-emphasis.numeric = MoneyHelper.format(total_amount)
             tr.row--total
               td.document-cell.cell--description.cell--total.body-2-emphasis = I18n.t('invoice.total_due_amount')
-              td.document-cell.cell--amount.cell--total.body-2-emphasis = MoneyHelper.format(total_due_amount)
+              td.document-cell.cell--amount.cell--total.body-2-emphasis.numeric = MoneyHelper.format(total_due_amount)
 
       - if billing_entity.eu_tax_management.present? && applied_taxes.present?
         - applied_tax_codes = applied_taxes.pluck(:tax_code)
@@ -107,7 +107,7 @@ html lang=I18n.locale
                       td.document-heading-cell class=["cell--#{row.kind}", 'body-2-emphasis'] colspan=4
                         .document-heading class="indent-#{row.indent}"
                           span.document-heading-label = row.label
-                          span.document-heading-amount = row.amount
+                          span.document-heading-amount.numeric = row.amount
                   - when :filter
                     tr.row--filter
                       td.document-cell.cell--description.cell--filter.body-3-emphasis class="indent-#{row.indent}" colspan=4 = row.label
@@ -117,6 +117,6 @@ html lang=I18n.locale
                     - at_end = ('cell--at-end' if index == rows.size - 1)
                     tr class="row--#{kind}"
                       td class=['document-cell', 'cell--description', "cell--#{kind}", 'body-3', "indent-#{row.indent}", muted, at_end] = row.label
-                      td class=['document-cell', 'cell--quantity', "cell--#{kind}", 'body-3', 'color-muted', at_end] = row.units
-                      td class=['document-cell', 'cell--unit-price', "cell--#{kind}", 'body-3', 'color-muted', at_end] = row.unit_price
-                      td class=['document-cell', 'cell--amount', "cell--#{kind}", 'body-3', 'color-muted', at_end] = row.amount
+                      td class=['document-cell', 'cell--quantity', "cell--#{kind}", 'body-3', 'color-muted', at_end, 'numeric'] = row.units
+                      td class=['document-cell', 'cell--unit-price', "cell--#{kind}", 'body-3', 'color-muted', at_end, 'numeric'] = row.unit_price
+                      td class=['document-cell', 'cell--amount', "cell--#{kind}", 'body-3', 'color-muted', at_end, 'numeric'] = row.amount
