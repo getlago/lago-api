@@ -18,6 +18,7 @@ end
 # Database name: primary
 #
 #  id                 :uuid             not null, primary key
+#  events_count       :bigint           default(0), not null
 #  grouped_by         :jsonb            not null
 #  to_datetime        :datetime         not null
 #  units              :decimal(, )      default(0.0), not null

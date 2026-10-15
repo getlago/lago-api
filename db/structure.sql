@@ -5931,6 +5931,7 @@ CREATE TABLE public.recurring_aggregation_snapshots (
     to_datetime timestamp(6) without time zone NOT NULL,
     watermark timestamp(6) without time zone NOT NULL,
     units numeric DEFAULT 0.0 NOT NULL,
+    events_count bigint DEFAULT 0 NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
 );
