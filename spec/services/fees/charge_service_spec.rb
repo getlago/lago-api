@@ -524,12 +524,13 @@ RSpec.describe Fees::ChargeService, :premium do
           context "with recurring weighted sum aggregation" do
             let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
 
-            it "creates a fee and a cached aggregation per group" do
+            it "creates a fee and a snapshot per group" do
               result = charge_subscription_service.call
               expect(result).to be_success
 
               expect(result.fees.count).to eq(2)
-              expect(result.cached_aggregations.count).to eq(2)
+              expect(result.cached_aggregations).to be_nil
+              expect(RecurringAggregationSnapshot.where(subscription:).count).to eq(2)
             end
           end
 
@@ -875,12 +876,13 @@ RSpec.describe Fees::ChargeService, :premium do
           context "with recurring weighted sum aggregation" do
             let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
 
-            it "creates a fee and a cached aggregation per group" do
+            it "creates a fee and a snapshot per group" do
               result = charge_subscription_service.call
               expect(result).to be_success
 
               expect(result.fees.count).to eq(2)
-              expect(result.cached_aggregations.count).to eq(2)
+              expect(result.cached_aggregations).to be_nil
+              expect(RecurringAggregationSnapshot.where(subscription:).count).to eq(2)
             end
           end
 
@@ -961,13 +963,15 @@ RSpec.describe Fees::ChargeService, :premium do
             let(:organization) { create_default(:organization, feature_flags: ["recurring_aggregation_snapshots"]) }
             let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
 
-            it "stores presentation_breakdowns on each cached aggregation scoped to its group" do
+            it "stores presentation_breakdowns on each snapshot scoped to its group" do
               result = charge_subscription_service.call
               expect(result).to be_success
-              expect(result.cached_aggregations.count).to eq(2)
 
-              aws_agg = result.cached_aggregations.find { |a| a.grouped_by["cloud"] == "aws" }
-              gcp_agg = result.cached_aggregations.find { |a| a.grouped_by["cloud"] == "gcp" }
+              snapshots = RecurringAggregationSnapshot.where(subscription:)
+              expect(snapshots.count).to eq(2)
+
+              aws_agg = snapshots.find { |a| a.grouped_by["cloud"] == "aws" }
+              gcp_agg = snapshots.find { |a| a.grouped_by["cloud"] == "gcp" }
 
               # Units active at period end, not the weighted units of the fee
               expect(aws_agg.presentation_breakdowns.map { [it["groups"], it["value"].to_d] }).to match_array(
@@ -977,10 +981,6 @@ RSpec.describe Fees::ChargeService, :premium do
                 [[{"region" => "eu-west-1"}, 3]]
               )
 
-              snapshots = RecurringAggregationSnapshot.where(subscription:)
-              expect(snapshots.map { [it.grouped_by, it.presentation_breakdowns] }).to match_array(
-                [[aws_agg.grouped_by, aws_agg.presentation_breakdowns], [gcp_agg.grouped_by, gcp_agg.presentation_breakdowns]]
-              )
             end
 
             context "when the next period is billed" do
@@ -2858,11 +2858,10 @@ RSpec.describe Fees::ChargeService, :premium do
       let(:context) { :recurring }
       let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
 
-      it "creates a fee and a cached aggregation" do
+      it "creates a fee and a snapshot" do
         result = charge_subscription_service.call
         expect(result).to be_success
         created_fee = result.fees.first
-        cached_aggregation = result.cached_aggregations.first
 
         expect(created_fee.id).not_to be_nil
         expect(created_fee.invoice_id).to eq(invoice.id)
@@ -2876,13 +2875,15 @@ RSpec.describe Fees::ChargeService, :premium do
         expect(created_fee.events_count).to eq(0)
         expect(created_fee.payment_status).to eq("pending")
 
-        expect(cached_aggregation.id).not_to be_nil
-        expect(cached_aggregation.organization).to eq(organization)
-        expect(cached_aggregation.external_subscription_id).to eq(subscription.external_id)
-        expect(cached_aggregation.charge_filter_id).to be_nil
-        expect(cached_aggregation.charge_id).to eq(charge.id)
-        expect(cached_aggregation.timestamp).to eq(boundaries.from_datetime)
-        expect(cached_aggregation.current_aggregation).to eq(0.0)
+        expect(result.cached_aggregations).to be_nil
+        expect(RecurringAggregationSnapshot.sole).to have_attributes(
+          organization_id: organization.id,
+          subscription_id: subscription.id,
+          charge_id: charge.id,
+          charge_filter_id: nil,
+          units: 0,
+          presentation_breakdowns: []
+        )
       end
 
       context "with presentation_group_keys" do
@@ -2905,16 +2906,15 @@ RSpec.describe Fees::ChargeService, :premium do
             timestamp: Time.zone.parse("2022-03-16"), properties: {region: "eu-west-1", value: 5})
         end
 
-        it "stores presentation_breakdowns on the cached aggregation" do
+        it "stores presentation_breakdowns on the snapshot" do
           result = charge_subscription_service.call
           expect(result).to be_success
 
-          cached_aggregation = result.cached_aggregations.first
+          snapshot = RecurringAggregationSnapshot.sole
           # Units active at period end, not the weighted units of the fee
-          expect(cached_aggregation.presentation_breakdowns.map { [it["groups"], it["value"].to_d] }).to match_array(
+          expect(snapshot.presentation_breakdowns.map { [it["groups"], it["value"].to_d] }).to match_array(
             [[{"region" => "us-east-1"}, 10], [{"region" => "eu-west-1"}, 5]]
           )
-          expect(RecurringAggregationSnapshot.sole.presentation_breakdowns).to eq(cached_aggregation.presentation_breakdowns)
           expect(result.fees.sole.presentation_breakdowns.map { [it.presentation_by, it.units.round(5).to_s] }).to match_array(
             [[{"region" => "us-east-1"}, "5.16129"], [{"region" => "eu-west-1"}, "2.58065"]]
           )
@@ -5107,7 +5107,6 @@ RSpec.describe Fees::ChargeService, :premium do
     end
 
     describe "initial value" do
-      let(:organization) { create(:organization, feature_flags: ["persisted_recurring_values"]) }
       let(:previous_to_datetime) { boundaries.charges_from_datetime - 1.second }
 
       before do
@@ -5203,8 +5202,8 @@ RSpec.describe Fees::ChargeService, :premium do
         end
       end
 
-      context "without the persisted_recurring_values feature flag" do
-        let(:organization) { create(:organization) }
+      context "when the snapshot read is forced off" do
+        around { |example| RecurringAggregationSnapshots.with_forced_read(false) { example.run } }
 
         it "falls back to a full scan" do
           charge_subscription_service.call
@@ -5279,7 +5278,6 @@ RSpec.describe Fees::ChargeService, :premium do
     end
 
     describe "billing from the snapshots over several periods" do
-      let(:organization) { create(:organization, feature_flags: ["recurring_aggregation_snapshots", "persisted_recurring_values"]) }
       let(:march) { [subscription.started_at, Time.zone.parse("2022-03-31").end_of_day] }
       let(:april) { [Time.zone.parse("2022-04-01"), Time.zone.parse("2022-04-30").end_of_day] }
       let(:may) { [Time.zone.parse("2022-05-01"), Time.zone.parse("2022-05-31").end_of_day] }

@@ -1160,7 +1160,7 @@ describe "Pay in advance charges Scenarios", transaction: false do
     end
 
     context "with snapshots" do
-      let(:feature_flags) { %w[recurring_aggregation_snapshots persisted_recurring_values] }
+      let(:feature_flags) { %w[recurring_aggregation_snapshots] }
       let(:read_periods) { [] }
 
       before do
@@ -1250,7 +1250,7 @@ describe "Pay in advance charges Scenarios", transaction: false do
     end
 
     context "with snapshots" do
-      let(:feature_flags) { %w[recurring_aggregation_snapshots persisted_recurring_values] }
+      let(:feature_flags) { %w[recurring_aggregation_snapshots] }
       let(:read_periods) { [] }
 
       before do

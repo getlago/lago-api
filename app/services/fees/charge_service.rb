@@ -539,6 +539,7 @@ module Fees
 
     def persist_recurring_value(aggregation_results, selected_metered_item, breakdowns_by_group)
       return if options.current_usage? || options.invoice_preview? || options.advance_renewal?
+      return if snapshot_eligible?(selected_metered_item)
 
       # NOTE: Only weighted sum and custom aggregations are setting this value
       return unless aggregation_results.first&.recurring_updated_at
@@ -709,7 +710,7 @@ module Fees
       if selected_metered_item.billing_segment || selected_metered_item.charge_filter.present?
         if selected_metered_item.charge_filter
           # Aggregations::BaseService retains this object for charge_filter_id cache lookups;
-          # WeightedSumService and CustomService also scope cached state by it. CustomService reads
+          # CustomService also scopes cached state by it and reads
           # its custom_properties, while BaseStore extracts its ID for enriched-event queries.
           filters[:charge_filter] = selected_metered_item.charge_filter
         end

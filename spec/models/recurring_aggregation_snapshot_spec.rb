@@ -97,19 +97,16 @@ RSpec.describe RecurringAggregationSnapshot do
   describe ".readable?" do
     subject(:readable) { described_class.readable?(metered_item:, billing_context:) }
 
-    let(:organization) { create(:organization) }
     let(:billable_metric) { build_stubbed(:sum_billable_metric, :recurring) }
     let(:metered_item) { instance_double(Fees::ChargeService::MeteredItem, billable_metric:, billing_segment: nil) }
-    let(:billing_context) { Billing::Context.from(subscription: build_stubbed(:subscription, organization:)) }
-
-    before { organization.enable_feature_flag!(:persisted_recurring_values) }
+    let(:billing_context) { Billing::Context.from(subscription: build_stubbed(:subscription)) }
 
     it { is_expected.to be(true) }
 
-    context "without the persisted_recurring_values feature flag" do
-      before { organization.disable_feature_flag!(:persisted_recurring_values) }
-
-      it { is_expected.to be(false) }
+    context "when the snapshot read is forced off" do
+      it "is false" do
+        RecurringAggregationSnapshots.with_forced_read(false) { expect(readable).to be(false) }
+      end
     end
 
     context "with a metric that is not recurring" do
