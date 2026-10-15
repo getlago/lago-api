@@ -40,6 +40,8 @@ RSpec.describe Resolvers::PaymentProviderCustomers::PaymentMethodsResolver do
     other_payment_method
   end
 
+  it_behaves_like "requires permission", "payment_methods:view"
+
   it "returns only the payment methods of the selected connection" do
     result = execute_graphql(
       current_user: membership.user,
