@@ -42,6 +42,8 @@ module V1
         voided_at: model.voided_at&.iso8601
       }
 
+      payload[:x402_payment_url] = model.x402_payment_url if model.organization.x402_payments_enabled?
+
       payload.merge!(customer) if include?(:customer)
       payload.merge!(subscriptions) if include?(:subscriptions)
       payload.merge!(billing_periods) if include?(:billing_periods)
