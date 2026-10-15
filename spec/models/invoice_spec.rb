@@ -293,6 +293,34 @@ RSpec.describe Invoice do
 
       it { is_expected.to be_nil }
     end
+
+    context "with a settled x402 attempt" do
+      before { create(:x402_settlement, :invoice_payment, invoice:) }
+
+      it { is_expected.to eq("invoice_payment_pending") }
+    end
+
+    context "with a settled x402 attempt recorded as a payment" do
+      before { create(:x402_settlement, :invoice_payment, invoice:, payment: create(:payment, payable: invoice)) }
+
+      it { is_expected.to be_nil }
+    end
+
+    context "with the credit invoice of an x402 credit purchase" do
+      let(:invoice) { create(:invoice, :credit, organization:, customer:, currency: "USD", total_amount_cents: 1_000) }
+
+      before { create(:wallet_transaction, wallet:, invoice:, source: :x402) }
+
+      it { is_expected.to eq("invoice_payment_pending") }
+    end
+
+    context "with the credit invoice of a manual credit purchase" do
+      let(:invoice) { create(:invoice, :credit, organization:, customer:, currency: "USD", total_amount_cents: 1_000) }
+
+      before { create(:wallet_transaction, wallet:, invoice:, source: :manual) }
+
+      it { is_expected.to be_nil }
+    end
   end
 
   describe "#x402_payment_eligible?" do

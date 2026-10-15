@@ -610,7 +610,7 @@ class Invoice < ApplicationRecord
       "invoice_currency_not_supported"
     elsif !customer.wallets.active.exists?(x402_enabled: true)
       "wallet_not_x402_enabled"
-    elsif x402_settlements.pending.exists?
+    elsif x402_payment_in_progress?
       "invoice_payment_pending"
     end
   end
@@ -861,6 +861,11 @@ class Invoice < ApplicationRecord
     if connection && connection.organization_id != organization_id
       errors.add(:x402_connection, :must_belong_to_same_organization)
     end
+  end
+
+  def x402_payment_in_progress?
+    x402_settlements.where(payment_id: nil).where.not(status: :failed).exists? ||
+      (credit? && wallet_transactions.x402.exists?)
   end
 end
 
