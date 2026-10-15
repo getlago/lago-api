@@ -211,6 +211,122 @@ RSpec.describe Invoice do
     end
   end
 
+  describe "#x402_payment_refusal" do
+    subject(:x402_payment_refusal) { invoice.x402_payment_refusal }
+
+    let(:customer) { create(:customer, organization:) }
+    let(:invoice) { create(:invoice, organization:, customer:, currency: "USD", total_amount_cents: 1_000) }
+    let(:wallet) { create(:wallet, customer:, currency: "USD", x402_enabled: true) }
+
+    before { wallet }
+
+    it { is_expected.to be_nil }
+
+    context "with an open credit invoice" do
+      let(:invoice) { create(:invoice, :open, :credit, organization:, customer:, currency: "USD", total_amount_cents: 1_000) }
+
+      it { is_expected.to eq("invalid_invoice_status_or_payment_status") }
+    end
+
+    context "with a draft invoice" do
+      let(:invoice) { create(:invoice, :draft, organization:, customer:, currency: "USD", total_amount_cents: 1_000) }
+
+      it { is_expected.to eq("invalid_invoice_status_or_payment_status") }
+    end
+
+    context "with a voided invoice" do
+      let(:invoice) { create(:invoice, :voided, organization:, customer:, currency: "USD", total_amount_cents: 1_000) }
+
+      it { is_expected.to eq("invalid_invoice_status_or_payment_status") }
+    end
+
+    context "with a paid invoice" do
+      let(:invoice) do
+        create(:invoice, organization:, customer:, currency: "USD", total_amount_cents: 1_000, payment_status: "succeeded")
+      end
+
+      it { is_expected.to eq("invalid_invoice_status_or_payment_status") }
+    end
+
+    context "with nothing left to pay" do
+      let(:invoice) do
+        create(:invoice, organization:, customer:, currency: "USD", total_amount_cents: 1_000, total_paid_amount_cents: 1_000)
+      end
+
+      it { is_expected.to eq("invalid_invoice_status_or_payment_status") }
+    end
+
+    context "with a non-USD invoice" do
+      let(:invoice) { create(:invoice, organization:, customer:, currency: "EUR", total_amount_cents: 1_000) }
+
+      it { is_expected.to eq("invoice_currency_not_supported") }
+    end
+
+    context "without an x402 wallet" do
+      let(:wallet) { create(:wallet, customer:, currency: "USD") }
+
+      it { is_expected.to eq("wallet_not_x402_enabled") }
+    end
+
+    context "with a terminated x402 wallet" do
+      let(:wallet) { create(:wallet, :terminated, customer:, currency: "USD", x402_enabled: true) }
+
+      it { is_expected.to eq("wallet_not_x402_enabled") }
+    end
+
+    context "with a pending x402 attempt" do
+      before { create(:x402_settlement, :invoice_payment, :pending, invoice:) }
+
+      it { is_expected.to eq("invoice_payment_pending") }
+    end
+
+    context "with a failed x402 attempt" do
+      before { create(:x402_settlement, :invoice_payment, :failed, invoice:) }
+
+      it { is_expected.to be_nil }
+    end
+  end
+
+  describe "#x402_payment_eligible?" do
+    subject(:x402_payment_eligible?) { invoice.x402_payment_eligible? }
+
+    let(:customer) { create(:customer, organization:) }
+    let(:invoice) { create(:invoice, organization:, customer:, currency: "USD", total_amount_cents: 1_000) }
+
+    before { create(:wallet, customer:, currency: "USD", x402_enabled: true) }
+
+    it { is_expected.to be(true) }
+
+    context "with a non-USD invoice" do
+      let(:invoice) { create(:invoice, organization:, customer:, currency: "EUR", total_amount_cents: 1_000) }
+
+      it { is_expected.to be(false) }
+    end
+  end
+
+  describe "#x402_payment_url" do
+    subject(:x402_payment_url) { invoice.x402_payment_url }
+
+    let(:invoice) { build(:invoice, organization:, x402_payment_token: "ab" * 32) }
+    let(:api_url) { "https://api.example.com" }
+
+    before { stub_const("ENV", ENV.to_hash.merge("LAGO_API_URL" => api_url)) }
+
+    it { is_expected.to eq("https://api.example.com/x402/invoice_payments/#{"ab" * 32}") }
+
+    context "with a trailing slash on LAGO_API_URL" do
+      let(:api_url) { "https://api.example.com/" }
+
+      it { is_expected.to eq("https://api.example.com/x402/invoice_payments/#{"ab" * 32}") }
+    end
+
+    context "without a token" do
+      let(:invoice) { build(:invoice, organization:) }
+
+      it { is_expected.to be_nil }
+    end
+  end
+
   it_behaves_like "a model with a purchase order number" do
     subject { build(:invoice) }
   end

@@ -599,6 +599,26 @@ class Invoice < ApplicationRecord
     MANUALLY_PAYABLE_INVOICE_STATUS.include?(status.to_sym)
   end
 
+  def x402_payment_eligible?
+    x402_payment_refusal.nil?
+  end
+
+  def x402_payment_refusal
+    if !finalized? || !payment_pending? || !total_due_amount_cents.positive?
+      "invalid_invoice_status_or_payment_status"
+    elsif currency != X402::Settlements::SettleService::INVOICE_CURRENCY
+      "invoice_currency_not_supported"
+    elsif !customer.wallets.active.exists?(x402_enabled: true)
+      "wallet_not_x402_enabled"
+    elsif x402_settlements.pending.exists?
+      "invoice_payment_pending"
+    end
+  end
+
+  def x402_payment_url
+    File.join(ENV["LAGO_API_URL"], "x402/invoice_payments", x402_payment_token) if x402_payment_token.present?
+  end
+
   # A safeguard while we're populating the expected finalization date.
   # We can drop it once fill_expected_finalization_date has been run.
   def expected_finalization_date
