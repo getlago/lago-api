@@ -42,7 +42,11 @@ module Auth
       attr_reader :code, :state
 
       def generate_token
-        result.token = Utils::AuthToken.encode(user: result.user, login_method: Organizations::AuthenticationMethods::ENTRA_ID)
+        result.token = Utils::AuthToken.encode(
+          user: result.user,
+          login_method: Organizations::AuthenticationMethods::ENTRA_ID,
+          **sso_token_claims
+        )
         result
       rescue => e
         result.service_failure!(code: "token_encoding_error", message: e.message)

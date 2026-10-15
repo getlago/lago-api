@@ -23,7 +23,10 @@ module AuthenticableUser
   def current_membership
     return unless current_user
 
-    @current_membership ||= current_user.memberships.active.find_by(organization_id: organization_header)
+    @current_membership ||= begin
+      membership = current_user.memberships.active.find_by(organization_id: organization_header)
+      membership if membership&.organization&.accessible_by_session?(**session_claims)
+    end
   end
 
   def organization_header
@@ -32,6 +35,14 @@ module AuthenticableUser
 
   def login_method
     @login_method ||= decoded_token["login_method"] if token && decoded_token
+  end
+
+  def session_claims
+    if token && decoded_token
+      decoded_token.slice("login_method", "sso_organization_id", "sso_issuer").symbolize_keys
+    else
+      {}
+    end
   end
 
   def token
