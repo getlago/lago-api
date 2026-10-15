@@ -197,6 +197,67 @@ RSpec.describe UsageAttributionValues::TrackService do
     end
   end
 
+  context "when the customer reached the values limit of a type", cache: :memory do
+    let(:entries) do
+      [
+        entry({"department" => "rnd", "team" => "eng", "user" => "carol"}),
+        entry({"department" => "rnd", "team" => "eng", "user" => "alice"}, at: seen_at + 1.hour)
+      ]
+    end
+
+    before do
+      stub_const("UsageAttributionValue::MAX_PER_CUSTOMER_AND_TYPE", 2)
+      described_class.call!(organization:, entries: [entry({"user" => "alice"}), entry({"user" => "bob"})])
+      allow(UsageAttributionValue).to receive(:limit_reached?).and_call_original
+    end
+
+    it "skips the new values of the type and still refreshes the existing ones" do
+      track
+
+      expect(value_of(user, "carol")).to be_nil
+      expect(value_of(user, "alice").last_seen_at).to eq(seen_at + 1.hour)
+      expect(value_of(user, "alice").parent_id).to eq(value_of(team, "eng").id)
+    end
+
+    it "still creates the values of the other types" do
+      track
+
+      expect(value_of(department, "rnd")).to be_present
+      expect(value_of(team, "eng").parent_id).to eq(value_of(department, "rnd").id)
+    end
+
+    it "counts the values once and caches the reached limit" do
+      track
+      described_class.call!(organization:, entries: [entry({"user" => "dave"})])
+
+      expect(UsageAttributionValue).to have_received(:limit_reached?)
+        .with(customer_id: customer.id, usage_attribution_type_id: user.id).once
+      expect(value_of(user, "dave")).to be_nil
+    end
+
+    it "still creates the new values of another customer" do
+      other_customer = create(:customer, organization:)
+      other_subscription = create(:subscription, customer: other_customer, organization:)
+
+      described_class.call!(organization:, entries: [entry({"user" => "carol"}, subscription_id: other_subscription.id)])
+
+      expect(UsageAttributionValue.find_by(customer: other_customer, usage_attribution_type: user, value: "carol")).to be_present
+    end
+  end
+
+  context "when all the values are already tracked" do
+    before do
+      described_class.call!(organization:, entries:)
+      allow(UsageAttributionValue).to receive(:limit_reached?)
+    end
+
+    it "does not count the values" do
+      track
+
+      expect(UsageAttributionValue).not_to have_received(:limit_reached?)
+    end
+  end
+
   context "when the subscription is unknown" do
     let(:entries) { [entry(labels, subscription_id: SecureRandom.uuid)] }
 

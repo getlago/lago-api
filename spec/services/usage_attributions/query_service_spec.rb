@@ -259,6 +259,36 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     end
   end
 
+  context "when the customer reached the values limit of the type", cache: :memory do
+    let(:team_type) { organization.usage_attribution_types.find_by(code: "team") }
+    let(:limited_customer) { customer }
+
+    before do
+      stub_const("UsageAttributionValue::MAX_PER_CUSTOMER_AND_TYPE", 1)
+      create(:usage_attribution_value, organization:, customer: limited_customer, usage_attribution_type: team_type, value: "eng")
+    end
+
+    it "returns a validation failure" do
+      expect(result.error.messages).to eq(group_by: ["too_many_values"])
+    end
+
+    context "when grouping by another type" do
+      let(:group_by) { "user" }
+
+      it "reads the level" do
+        expect(result).to be_success
+      end
+    end
+
+    context "when another customer reached it" do
+      let(:limited_customer) { create(:customer, organization:) }
+
+      it "reads the level" do
+        expect(result).to be_success
+      end
+    end
+  end
+
   context "with a search" do
     let(:search) { "EN" }
 
