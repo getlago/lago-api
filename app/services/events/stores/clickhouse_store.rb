@@ -735,12 +735,6 @@ module Events
         end
       end
 
-      def with_timestamp_boundaries(query, from_datetime, to_datetime)
-        query = query.where(arel_table[:timestamp].gteq(from_datetime)) if from_datetime
-        query = query.where(Arel.sql(upper_timestamp_boundary_sql(to_datetime, prefix: "events_enriched."))) if to_datetime
-        query
-      end
-
       def filters_scope(scope)
         matching_filters.each do |key, values|
           scope = scope.where("events_enriched.properties[?] IN (?)", key.to_s, values)
