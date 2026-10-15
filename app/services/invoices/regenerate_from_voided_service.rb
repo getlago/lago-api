@@ -70,8 +70,7 @@ module Invoices
 
     delegate :customer, to: :voided_invoice
 
-    # Contract fees have no charge to rebuild them from, and their billing segments stay on the
-    # voided invoice: billing a contract period again is not supported yet.
+    # Contract invoices not supported yet.
     def product_catalog_invoice?
       voided_invoice.fees.where.not(contract_id: nil).exists?
     end
