@@ -65,6 +65,10 @@ module Events
         end
       end
 
+      def incremental_sum?
+        scan.incremental? && scanned?(operation: :sum)
+      end
+
       def max(with_count: true)
         if scanned?(operation: :max)
           scan.max(__getobj__, with_count:)

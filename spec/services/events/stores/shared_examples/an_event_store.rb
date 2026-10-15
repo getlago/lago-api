@@ -1775,7 +1775,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
       it "sums the full history and bounds the snapshot value by the watermark" do
         expect(result).to eq(
-          Events::Stores::BaseStore::RecurringAggregationResult.new(value: 1115, snapshot_value: 115, events_count: 7)
+          Events::Stores::BaseStore::RecurringAggregationResult.new(value: 1115, snapshot_value: 115, events_count: 7, snapshot_events_count: 6)
         )
       end
 
@@ -1784,6 +1784,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           RecurringAggregationSnapshots::FetchService::Snapshot.new(
             grouped_by: {},
             units: 106,
+            events_count: 0,
             to_datetime: subscription_started_at + 3.days,
             watermark: Time.current + 1.minute
           )
@@ -1792,7 +1793,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
         it "sums the events dated after the snapshot and the late events" do
           expect(result).to eq(
-            Events::Stores::BaseStore::RecurringAggregationResult.new(value: 1009, snapshot_value: 1009, events_count: 3)
+            Events::Stores::BaseStore::RecurringAggregationResult.new(value: 1009, snapshot_value: 1009, events_count: 3, snapshot_events_count: 3)
           )
         end
 
@@ -1801,7 +1802,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
           it "excludes it from the snapshot value" do
             expect(result).to eq(
-              Events::Stores::BaseStore::RecurringAggregationResult.new(value: 1009, snapshot_value: 9, events_count: 3)
+              Events::Stores::BaseStore::RecurringAggregationResult.new(value: 1009, snapshot_value: 9, events_count: 3, snapshot_events_count: 2)
             )
           end
         end
@@ -1817,6 +1818,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         RecurringAggregationSnapshots::FetchService::Snapshot.new(
           grouped_by: {},
           units: 6,
+          events_count: 0,
           to_datetime: subscription_started_at + 3.days,
           watermark: Time.current + 1.minute
         )
@@ -1832,8 +1834,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
       it "sums the events dated after the snapshot and the late events per group" do
         expect(result).to match_array([
-          Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(groups: {"region" => nil}, value: 4, snapshot_value: 4, events_count: 1),
-          Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(groups: {"region" => "europe"}, value: 1005, snapshot_value: 5, events_count: 2)
+          Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(groups: {"region" => nil}, value: 4, snapshot_value: 4, events_count: 1, snapshot_events_count: 1),
+          Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(groups: {"region" => "europe"}, value: 1005, snapshot_value: 5, events_count: 2, snapshot_events_count: 1)
         ])
       end
 
@@ -1842,8 +1844,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
         it "sums the full history per group" do
           expect(result).to match_array([
-            Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(groups: {"region" => nil}, value: 6, snapshot_value: 6, events_count: 2),
-            Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(groups: {"region" => "europe"}, value: 1009, snapshot_value: 9, events_count: 4)
+            Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(groups: {"region" => nil}, value: 6, snapshot_value: 6, events_count: 2, snapshot_events_count: 2),
+            Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(groups: {"region" => "europe"}, value: 1009, snapshot_value: 9, events_count: 4, snapshot_events_count: 3)
           ])
         end
       end

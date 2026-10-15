@@ -342,7 +342,7 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
       item = pricing_buckets.find { it.charge_filter.persisted? && it.charge_filter.to_h == {"region" => ["us"]} }
 
       expect(recurring(scanned_store(item)).recurring_sum(watermark:)).to eq(
-        Events::Stores::BaseStore::RecurringAggregationResult.new(value: 4 + 512, snapshot_value: 4, events_count: 2)
+        Events::Stores::BaseStore::RecurringAggregationResult.new(value: 4 + 512, snapshot_value: 4, events_count: 2, snapshot_events_count: 1)
       )
     end
 
@@ -359,6 +359,7 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
         RecurringAggregationSnapshots::FetchService::Snapshot.new(
           grouped_by: {},
           units: 0,
+          events_count: 0,
           to_datetime: boundaries[:from_datetime] + 2.hours,
           watermark: Time.current - 1.minute
         )
@@ -484,6 +485,33 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
         store = filter_store(item).tap { it.grouped_by = ["workspace"] }
 
         expect(scan.covers?(store)).to be(false)
+      end
+    end
+  end
+
+  describe "ChargeFiltersScanStore#incremental_sum?" do
+    it "is false without the incremental cache" do
+      expect(pricing_buckets.map { scanned_store(it).incremental_sum? }).to all(be(false))
+    end
+
+    context "with the incremental cache" do
+      subject(:scan) do
+        described_class.new(
+          charge: loaded_charge,
+          incremental: Events::Stores::ChargeFiltersScan::IncrementalCache.new(subscription:, charge: loaded_charge)
+        )
+      end
+
+      it "is true for the stores the scan covers" do
+        expect(pricing_buckets.map { scanned_store(it).incremental_sum? }).to all(be(true))
+      end
+
+      it "is false for a store narrowed to one group" do
+        store = scanned_store(pricing_buckets.first)
+
+        store.with_grouped_by_values({"region" => "us"}) do
+          expect(store.incremental_sum?).to be(false)
+        end
       end
     end
   end

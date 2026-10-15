@@ -33,14 +33,14 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
     context "with snapshots of several periods" do
       before do
         create_snapshot(to_datetime: previous_to_datetime - 1.month, units: 4)
-        create_snapshot(to_datetime: previous_to_datetime, units: 10, watermark:)
+        create_snapshot(to_datetime: previous_to_datetime, units: 10, events_count: 3, watermark:)
         create_snapshot(to_datetime: from_datetime + 1.month - 1.second, units: 20)
       end
 
       it "returns the snapshot of the latest period closed before from_datetime" do
         expect(fetch_service.call.snapshots).to eq(
           [
-            described_class::Snapshot.new(grouped_by: {}, units: 10, to_datetime: previous_to_datetime, watermark:)
+            described_class::Snapshot.new(grouped_by: {}, units: 10, events_count: 3, to_datetime: previous_to_datetime, watermark:)
           ]
         )
       end

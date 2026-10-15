@@ -571,7 +571,9 @@ module Fees
           charge: selected_metered_item.charge,
           charge_filter: selected_metered_item.charge_filter,
           watermark:,
-          values: aggregation_results.map { {grouped_by: it.grouped_by || {}, units: it.recurring_units} }
+          values: aggregation_results.map do
+            {grouped_by: it.grouped_by || {}, units: it.recurring_units, events_count: it.recurring_events_count.to_i}
+          end
         }
       end
     end

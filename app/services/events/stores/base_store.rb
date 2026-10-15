@@ -56,13 +56,14 @@ module Events
         :events_count
       )
 
-      # NOTE: result of a recurring sum. `value` aggregates every event the period sees, while
-      #       `snapshot_value` only aggregates the events ingested up to the watermark of the snapshot
+      # NOTE: result of a recurring sum. `value` and `events_count` cover every event the period sees,
+      #       while the snapshot ones only cover the events ingested up to the watermark of the snapshot
       #       closing the period, as events ingested later are counted by the next period.
       RecurringAggregationResult = Data.define(
         :value,
         :snapshot_value,
-        :events_count
+        :events_count,
+        :snapshot_events_count
       )
 
       # NOTE: grouped variant of RecurringAggregationResult.
@@ -70,7 +71,8 @@ module Events
         :groups,
         :value,
         :snapshot_value,
-        :events_count
+        :events_count,
+        :snapshot_events_count
       ) do
         def to_grouped_hash
           {groups:, value:}
@@ -203,6 +205,11 @@ module Events
 
       def prorated_sum(period_duration:, persisted_duration: nil)
         raise NotImplementedError
+      end
+
+      # A store keeping its rows between computations answers a sum cheaper than a snapshot delta.
+      def incremental_sum?
+        false
       end
 
       def grouped_prorated_sum(period_duration:, persisted_duration: nil)
@@ -346,20 +353,22 @@ module Events
         RecurringAggregationResult.new(
           value: row["value"] || 0,
           snapshot_value: row["snapshot_value"] || 0,
-          events_count: row["events_count"].to_i
+          events_count: row["events_count"].to_i,
+          snapshot_events_count: row["snapshot_events_count"].to_i
         )
       end
 
-      # NOTE: the last three columns of each row are the value, the snapshot value and the events count.
+      # NOTE: the last four columns of each row are the value, the snapshot value and their events counts.
       def prepare_grouped_recurring_values(rows, columns: grouped_by)
         rows.map do |row|
           flat = row.flatten
 
           GroupedRecurringAggregationResult.new(
-            groups: build_groups(flat[...-3], columns:),
-            value: flat[-3] || 0,
-            snapshot_value: flat[-2] || 0,
-            events_count: flat[-1].to_i
+            groups: build_groups(flat[...-4], columns:),
+            value: flat[-4] || 0,
+            snapshot_value: flat[-3] || 0,
+            events_count: flat[-2].to_i,
+            snapshot_events_count: flat[-1].to_i
           )
         end
       end
