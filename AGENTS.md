@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Lago API is the Rails backend of [Lago](https://github.com/getlago/lago), an open-source usage-based billing platform. It serves the public REST API (`/api/v1`, `/api/v2`) and the GraphQL API of [lago-front](https://github.com/getlago/lago-front), and runs billing in Sidekiq jobs. PostgreSQL and Redis are required. ClickHouse, Kafka and a premium license are optional, so code must also work without them.
+Rails backend of [Lago](https://github.com/getlago/lago). PostgreSQL and Redis are required; ClickHouse, Kafka and a premium license are optional, so code must also work without them.
 
 This repository is public. Code, comments, specs, commits and PRs must not contain customer data, secrets or internal URLs, and ticket IDs stay out of code and comments.
 
@@ -142,9 +142,15 @@ Business logic, and every create, update or delete of a model, lives in a servic
 - `create_default(:organization)` makes factories reuse that organization. A record of another organization needs it passed explicitly (`create(:invoice, organization: create(:organization))`), and a `let_it_be` is declared after the records it depends on.
 - `transaction: false` groups delete all rows after each example, which removes `let_it_be` and `before_all` records: use `let` there.
 
-## Reviewing a change
+## Code Review Rules
 
-Read the PR description first, then check the code against it and against the ground rules above. Also check:
+Read the PR description first, then check the code against it and against the ground rules above.
+
+- **Important** means it breaks behaviour, leaks data or blocks a rollback: a query not scoped to the organization, money as `Float` or rounded too early, a breaking change to the REST API, webhooks or GraphQL schema, a migration that locks a large table, a changed job signature. Naming and refactoring are nits at most.
+- Do not report what CI enforces: RuboCop, `db/structure.sql`, `schema.graphql`, `schema.json`, model annotations.
+- A claim about behaviour cites the `file:line` that shows it, not a guess from a method name.
+
+Also check:
 
 - **Callers outside the diff.** Every caller of a changed method still gets what it expects: the return value, the default, the raised error.
 - **Existing data.** The first run of the new code on rows written before it (defaults, `NULL`s, old enum values) works, or the PR adds a backfill or a guard.
@@ -152,6 +158,9 @@ Read the PR description first, then check the code against it and against the gr
 - **Announced state.** For state that was sent outside (a webhook, a triggered alert, a balance shown), every event that changes its inputs has a path, both into and out of the state: configuration edits, deletion of the parent, time boundaries.
 - **Errors.** A rescue catches the narrowest exception the code raises, and a spec covers it.
 - **Tests.** Every new public method and branch has a spec, and the specs follow the rules above.
+- **Cache keys.** When a cached value changes shape or meaning, its cache key changes in the same PR, and the PR says the cache is rebuilt once.
+- **Large data.** A new or changed query on a table that grows with usage (events, fees, invoices, wallet transactions) has an index that serves it. Check the plan on a large dataset when unsure.
+- **Sign-in and permissions.** A change to sign-in, tokens or permissions covers every sign-in path (password, Google, Okta, Entra ID) and both the REST and GraphQL APIs, and logs no email, token or request body.
 - **Self-contained diff.** The code does not reference a class, constant or column that neither the diff nor `main` has.
 
 ## Code style
