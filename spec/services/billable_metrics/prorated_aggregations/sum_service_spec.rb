@@ -106,6 +106,141 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
     expect(result.count).to eq(4)
   end
 
+  describe "recurring snapshots" do
+    let(:old_events) { nil }
+    let(:latest_events) { nil }
+    let(:periods) do
+      Array.new(3) do |index|
+        from = subscription.started_at + (index + 1).months
+        from..(from + 1.month - 1.second)
+      end
+    end
+
+    def watermark(period)
+      period.end + 1.hour
+    end
+
+    def create_event(timestamp:, value:, region:, created_at: timestamp)
+      create(:event, organization_id: organization.id, code: billable_metric.code, customer:, subscription:,
+        timestamp:, created_at:, properties: {total_count: value, region:})
+    end
+
+    def aggregate(period, initial_value:, options: {}, charges_duration: nil)
+      charges_duration ||= ((period.end - period.begin) / 1.day).ceil
+      period_boundaries = {from_datetime: period.begin, to_datetime: period.end, charges_duration:}
+      store = event_store_class.new(code: billable_metric.code, billing_context:, boundaries: period_boundaries, filters:)
+
+      described_class.new(event_store: store, metered_item:, billing_context:, boundaries: period_boundaries, filters:, initial_value:)
+        .aggregate(options: {recurring_watermark: watermark(period)}.merge(options))
+    end
+
+    # The read of the persisted events without the recurring sum of the base aggregator
+    def legacy_aggregate(period, **)
+      aggregate(period, initial_value: nil, options: {recurring_watermark: nil}, **)
+    end
+
+    def snapshot(period, aggregation_result)
+      RecurringAggregationSnapshots::FetchService::Snapshot.new(
+        grouped_by: aggregation_result.grouped_by || {},
+        units: aggregation_result.recurring_units,
+        events_count: aggregation_result.recurring_events_count,
+        to_datetime: period.end,
+        watermark: watermark(period)
+      )
+    end
+
+    def totals(aggregation_result)
+      [aggregation_result.grouped_by, aggregation_result.aggregation, aggregation_result.full_units_number, aggregation_result.count]
+    end
+
+    before do
+      create_event(timestamp: subscription.started_at + 1.day, value: 3, region: "us")
+      periods.each_with_index do |period, index|
+        create_event(timestamp: period.begin + 10.days, value: 10 * (index + 1), region: "eu")
+      end
+      create_event(timestamp: periods.last.begin + 20.days, value: 4, region: "apac")
+
+      # Dated in the first period, ingested after its snapshot
+      create_event(timestamp: periods.first.begin + 2.days, created_at: watermark(periods.first) + 1.minute, value: 7, region: "eu")
+    end
+
+    it "matches the full scan from one period to the next" do
+      initial_value = nil
+
+      periods.each do |period|
+        from_snapshot = aggregate(period, initial_value:)
+
+        expect(totals(from_snapshot)).to eq(totals(legacy_aggregate(period)))
+        initial_value = [snapshot(period, from_snapshot)]
+      end
+
+      expect(totals(legacy_aggregate(periods.last))).to eq([nil, BigDecimal("61.74194"), 74, 6]) # 40 + 30 * 21/31 + 4 * 11/31
+    end
+
+    it "persists the units ingested up to the watermark" do
+      result = aggregate(periods.first, initial_value: nil)
+
+      expect([result.recurring_units, result.recurring_events_count]).to eq([13, 2])
+    end
+
+    it "bills the snapshot and the late events over the full period" do
+      initial_value = [snapshot(periods.first, aggregate(periods.first, initial_value: nil)).with(units: 1000)]
+
+      result = aggregate(periods.second, initial_value:)
+
+      expect(result.full_units_number).to eq(1000 + 7 + 20)
+      expect(result.aggregation).to eq((1007 + 20 * 18.fdiv(28)).ceil(5))
+    end
+
+    context "when the subscription terminates in the period" do
+      it "prorates the snapshot over the terminated period" do
+        initial_value = [snapshot(periods.first, aggregate(periods.first, initial_value: nil))]
+        terminated = periods.second.begin..(periods.second.begin + 14.days - 1.second)
+
+        result = aggregate(terminated, initial_value:, charges_duration: 28)
+
+        expect(totals(result)).to eq(totals(legacy_aggregate(terminated, charges_duration: 28)))
+      end
+    end
+
+    context "with pricing group keys" do
+      let(:grouped_by) { %w[region] }
+
+      it "matches the full scan from one period to the next" do
+        initial_value = nil
+
+        periods.each do |period|
+          from_snapshot = aggregate(period, initial_value:)
+
+          expect(from_snapshot.aggregations.map { totals(it) })
+            .to match_array(legacy_aggregate(period).aggregations.map { totals(it) })
+          initial_value = from_snapshot.aggregations.map { snapshot(period, it) }
+        end
+      end
+    end
+
+    context "when the charge is paid in advance" do
+      it "ignores the snapshot" do
+        initial_value = [snapshot(periods.first, aggregate(periods.first, initial_value: nil)).with(units: 1000)]
+
+        result = aggregate(periods.second, initial_value:, options: {is_pay_in_advance: true, is_current_usage: true})
+
+        expect(result.current_usage_units).to eq(40)
+      end
+    end
+
+    context "with current usage" do
+      let(:initial_value) { [snapshot(periods.first, aggregate(periods.first, initial_value: nil)).with(units: 1000)] }
+      let(:options) { {recurring_watermark: nil, is_current_usage: true} }
+
+      it "adds the events the snapshot did not count" do
+        result = aggregate(periods.second, initial_value:, options:)
+
+        expect(result.current_usage_units).to eq(1000 + 7 + 20)
+      end
+    end
+  end
+
   context "with an event exactly on the period boundary" do
     let(:boundary_event) do
       create(

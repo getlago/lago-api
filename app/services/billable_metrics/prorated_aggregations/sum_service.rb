@@ -22,6 +22,8 @@ module BillableMetrics
       def compute_aggregation(options: {})
         return base_aggregator.aggregate(options:) if bill_full_amount?(options)
 
+        @recurring_sum_result = base_aggregator.recurring_sum(options)
+
         # NOTE: Hand the result to the non-prorated aggregator to avoid duplicated queries
         aggregation_without_proration = base_aggregator.aggregate(
           options: options.merge(precomputed_aggregation: non_prorated_sum_result)
@@ -65,6 +67,8 @@ module BillableMetrics
       #       with the grouped_by_values filter
       def compute_grouped_by_aggregation(options: {})
         return base_aggregator.aggregate(options:) if bill_full_amount?(options)
+
+        @grouped_recurring_sum_result = base_aggregator.grouped_recurring_sum(options)
 
         # NOTE: Hand the result to the non-prorated aggregator to avoid duplicated queries
         aggregation_without_proration = base_aggregator.aggregate(
@@ -147,6 +151,10 @@ module BillableMetrics
 
       protected
 
+      # NOTE: recurring sum read by the base aggregator, from the snapshot of the previous period
+      #       when it has one. Nil when the persisted events are read with their own query.
+      attr_reader :recurring_sum_result, :grouped_recurring_sum_result
+
       # NOTE: pay in advance charges billed on the billing date (no event, not current usage)
       #       always bill the full amount, so proration is not applied.
       def bill_full_amount?(options)
@@ -175,14 +183,29 @@ module BillableMetrics
 
       # NOTE: prorated sum of the events persisted before the current period.
       def persisted_prorated_result
-        @persisted_prorated_result ||= persisted_event_store_instance.prorated_sum(
-          period_duration:,
-          persisted_duration: billing_context.date_diff_with_timezone(from_datetime, to_datetime)
-        )
+        @persisted_prorated_result ||= if recurring_sum_result
+          Events::Stores::BaseStore::ProratedAggregationResult.new(
+            **persisted_from_recurring(recurring_sum_result, current_prorated_result)
+          )
+        else
+          persisted_event_store_instance.prorated_sum(
+            period_duration:,
+            persisted_duration: billing_context.date_diff_with_timezone(from_datetime, to_datetime)
+          )
+        end
+      end
+
+      # NOTE: the recurring sum covers the full history, the persisted events are what precedes the period
+      def persisted_from_recurring(recurring, current)
+        value = recurring.value.to_d - (current&.value || 0)
+
+        {value:, prorated_value: value * persisted_pro_rata, events_count: recurring.events_count - (current&.events_count || 0)}
       end
 
       # NOTE: rebuilds the non-prorated AggregationResult for the base aggregator
       def non_prorated_sum_result
+        return recurring_sum_result if recurring_sum_result
+
         current = current_prorated_result
 
         unless billable_metric.recurring
@@ -225,6 +248,8 @@ module BillableMetrics
 
       # NOTE: rebuilds the per-group non-prorated AggregationResult for the base aggregator
       def non_prorated_grouped_sum_result
+        return grouped_recurring_sum_result if grouped_recurring_sum_result
+
         results = current_grouped_prorated_results
         results += persisted_grouped_prorated_results if billable_metric.recurring
 
@@ -242,10 +267,21 @@ module BillableMetrics
       end
 
       def persisted_grouped_prorated_results
-        @persisted_grouped_prorated_results ||= persisted_event_store_instance.grouped_prorated_sum(
-          period_duration:,
-          persisted_duration: billing_context.date_diff_with_timezone(from_datetime, to_datetime)
-        )
+        @persisted_grouped_prorated_results ||= if grouped_recurring_sum_result
+          current_results = current_grouped_prorated_results.index_by(&:groups)
+
+          grouped_recurring_sum_result.map do |recurring|
+            Events::Stores::BaseStore::GroupedProratedAggregationResult.new(
+              groups: recurring.groups,
+              **persisted_from_recurring(recurring, current_results[recurring.groups])
+            )
+          end
+        else
+          persisted_event_store_instance.grouped_prorated_sum(
+            period_duration:,
+            persisted_duration: billing_context.date_diff_with_timezone(from_datetime, to_datetime)
+          )
+        end
       end
     end
   end
