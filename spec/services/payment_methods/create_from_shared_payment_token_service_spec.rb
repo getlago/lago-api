@@ -70,11 +70,20 @@ RSpec.describe PaymentMethods::CreateFromSharedPaymentTokenService do
   end
 
   context "when the same token was already enrolled for the customer" do
-    before { described_class.call(customer:, params:) }
+    let!(:existing) { described_class.call(customer:, params:).payment_method }
 
-    it "refuses" do
-      expect(result.error.messages[:payment_method]).to eq(["value_already_exist"])
+    it "reuses the row while nothing references it" do
+      expect(result).to be_success
+      expect(result.payment_method).to eq(existing)
       expect(customer.payment_methods.count).to eq(1)
+    end
+
+    context "when a wallet transaction already uses it" do
+      before { create(:wallet_transaction, payment_method: existing) }
+
+      it "refuses" do
+        expect(result.error.messages[:payment_method]).to eq(["value_already_exist"])
+      end
     end
   end
 end

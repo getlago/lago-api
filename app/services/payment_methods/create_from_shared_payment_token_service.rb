@@ -33,7 +33,12 @@ module PaymentMethods
         return result.single_validation_failure!(field: :payment_method, error_code: "stripe_customer_not_created")
       end
 
-      result.payment_method = customer.payment_methods.create!(
+      existing = provider_customer.payment_methods.find_by(provider_method_id: shared_payment_token)
+      if existing && used?(existing)
+        return result.single_validation_failure!(field: :payment_method, error_code: "value_already_exist")
+      end
+
+      result.payment_method = existing || customer.payment_methods.create!(
         organization: customer.organization,
         payment_provider: provider_customer.payment_provider,
         payment_provider_customer: provider_customer,
@@ -55,6 +60,11 @@ module PaymentMethods
 
     def shared_payment_token
       params[:shared_payment_token]
+    end
+
+    # A row left behind by a request that failed validation is reused, so the same token can be retried.
+    def used?(payment_method)
+      [Payment, WalletTransaction, Invoice].any? { |model| model.where(payment_method:).exists? }
     end
 
     def provider_customer
