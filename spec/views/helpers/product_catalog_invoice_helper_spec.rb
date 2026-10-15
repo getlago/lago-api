@@ -78,6 +78,17 @@ RSpec.describe ProductCatalogInvoiceHelper do
       expect(standalone.products.map(&:name)).to eq(["Data transfer"])
       expect(standalone.amount_cents).to eq(700)
     end
+
+    context "with a true-up on a filtered fee" do
+      before { product_fee(compute, amount_cents: 200, true_up_parent_fee: invoice.fees.find_by(amount_cents: 500)) }
+
+      it "lists the true-up under the filter of the fee it tops up" do
+        compute_node = block.sections.first.products.last
+
+        expect(compute_node.fees.map(&:amount_cents)).to eq([1_000])
+        expect(compute_node.filters.sole.fees.map(&:amount_cents)).to eq([500, 200])
+      end
+    end
   end
 
   describe ".detail_rows" do
