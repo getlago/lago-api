@@ -214,6 +214,30 @@ module Api
         end
       end
 
+      def x402_payment_url
+        invoice = current_organization.invoices.visible.find_by(id: params[:id])
+        return not_found_error(resource: "invoice") unless invoice
+
+        result = ::X402::Invoices::MintPaymentLinkService.call(
+          invoice:,
+          connection_code: x402_payment_url_params[:connection_code]
+        )
+
+        if result.success?
+          render(
+            json: {
+              invoice_x402_payment_details: {
+                lago_invoice_id: invoice.id,
+                x402_connection_code: invoice.x402_connection.code,
+                x402_payment_url: invoice.x402_payment_url
+              }
+            }
+          )
+        else
+          render_error_response(result)
+        end
+      end
+
       def sync_salesforce_id
         invoice = current_organization.invoices.visible.find_by(id: params[:id])
         return not_found_error(resource: "invoice") unless invoice
@@ -331,6 +355,10 @@ module Api
             :payment_method_id
           ]
         ).to_h.deep_symbolize_keys
+      end
+
+      def x402_payment_url_params
+        params.permit(:connection_code)
       end
 
       def preview_params

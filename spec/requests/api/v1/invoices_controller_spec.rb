@@ -1127,6 +1127,94 @@ RSpec.describe Api::V1::InvoicesController do
     end
   end
 
+  describe "POST /api/v1/invoices/:id/x402_payment_url", :premium do
+    subject { post_with_token(organization, "/api/v1/invoices/#{invoice_id}/x402_payment_url", params) }
+
+    let(:organization) { create(:organization, feature_flags: ["x402_payments"]) }
+    let(:invoice) { create(:invoice, customer:, organization:, currency: "USD", total_amount_cents: 1_000) }
+    let(:invoice_id) { invoice.id }
+    let(:connection) { create(:x402_connection, organization:) }
+    let(:params) { {connection_code: connection.code} }
+
+    before { create(:wallet, customer:, currency: "USD", x402_enabled: true) }
+
+    include_examples "requires API permission", "invoice", "write"
+
+    it "returns the payment url bound to the connection" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:invoice_x402_payment_details]).to eq(
+        lago_invoice_id: invoice.id,
+        x402_connection_code: connection.code,
+        x402_payment_url: invoice.reload.x402_payment_url
+      )
+    end
+
+    context "without x402 payments" do
+      let(:organization) { create(:organization) }
+
+      it "answers 403" do
+        subject
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:code]).to eq("feature_unavailable")
+      end
+    end
+
+    context "with an invoice of another organization" do
+      let(:invoice) { create(:invoice, currency: "USD", total_amount_cents: 1_000) }
+
+      it "answers 404" do
+        subject
+
+        expect(response).to be_not_found_error("invoice")
+      end
+    end
+
+    context "with an open credit invoice" do
+      let(:invoice) { create(:invoice, :open, :credit, customer:, organization:, currency: "USD", total_amount_cents: 1_000) }
+
+      it "answers 404" do
+        subject
+
+        expect(response).to be_not_found_error("invoice")
+      end
+    end
+
+    context "without a connection code" do
+      let(:params) { {} }
+
+      it "answers 422 on connection_code" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(connection_code: ["value_is_mandatory"])
+      end
+    end
+
+    context "with an unknown connection code" do
+      let(:params) { {connection_code: "unknown"} }
+
+      it "answers 404" do
+        subject
+
+        expect(response).to be_not_found_error("connection")
+      end
+    end
+
+    context "with a non-USD invoice" do
+      let(:invoice) { create(:invoice, customer:, organization:, currency: "EUR", total_amount_cents: 1_000) }
+
+      it "answers 422 naming the currency rule" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(base: ["invoice_currency_not_supported"])
+      end
+    end
+  end
+
   describe "POST /api/v1/invoices/preview", :premium do
     subject { post_with_token(organization, "/api/v1/invoices/preview", preview_params) }
 
