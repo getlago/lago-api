@@ -937,6 +937,11 @@ RSpec.describe Fees::ChargeService, :premium do
               )
 
               expect(gcp_agg.presentation_breakdowns.map { |b| b["value"].to_f.round(5) }).to eq([1.54839])
+
+              snapshots = RecurringAggregationSnapshot.where(subscription:)
+              expect(snapshots.map { [it.grouped_by, it.presentation_breakdowns] }).to match_array(
+                [[aws_agg.grouped_by, aws_agg.presentation_breakdowns], [gcp_agg.grouped_by, gcp_agg.presentation_breakdowns]]
+              )
             end
           end
         end
@@ -2835,6 +2840,7 @@ RSpec.describe Fees::ChargeService, :premium do
             [{"region" => "us-east-1"}, {"region" => "eu-west-1"}]
           )
           expect(cached_aggregation.presentation_breakdowns.map { |b| b["value"].to_f.round(5) }).to eq([2.58065, 5.16129])
+          expect(RecurringAggregationSnapshot.sole.presentation_breakdowns).to eq(cached_aggregation.presentation_breakdowns)
         end
       end
     end

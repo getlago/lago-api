@@ -13,7 +13,8 @@ RSpec.describe RecurringAggregationSnapshots::PersistService do
   let(:charge_filter) { nil }
   let(:to_datetime) { Time.zone.parse("2026-09-30T23:59:59") }
   let(:watermark) { Time.zone.parse("2026-10-01T00:05:00") }
-  let(:values) { [{grouped_by: {}, units: 12, events_count: 4}] }
+  let(:presentation_breakdowns) { [{groups: {"region" => "eu"}, value: BigDecimal(12)}] }
+  let(:values) { [{grouped_by: {}, units: 12, events_count: 4, presentation_breakdowns:}] }
 
   let(:snapshots) { RecurringAggregationSnapshot.where(subscription:, charge:) }
 
@@ -29,7 +30,8 @@ RSpec.describe RecurringAggregationSnapshots::PersistService do
         to_datetime:,
         watermark:,
         units: 12,
-        events_count: 4
+        events_count: 4,
+        presentation_breakdowns: [{"groups" => {"region" => "eu"}, "value" => "12.0"}]
       )
     end
 
@@ -75,10 +77,16 @@ RSpec.describe RecurringAggregationSnapshots::PersistService do
 
       before { existing }
 
-      it "updates the units, the events count and the watermark" do
+      it "updates the units, the events count, the presentation breakdowns and the watermark" do
         persist_service.call
 
-        expect(snapshots.sole).to have_attributes(id: existing.id, units: 12, events_count: 4, watermark:)
+        expect(snapshots.sole).to have_attributes(
+          id: existing.id,
+          units: 12,
+          events_count: 4,
+          presentation_breakdowns: [{"groups" => {"region" => "eu"}, "value" => "12.0"}],
+          watermark:
+        )
       end
     end
 
