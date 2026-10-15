@@ -90,7 +90,7 @@ namespace :recipes do
       abort "ClickHouse is not enabled on this deployment (LAGO_CLICKHOUSE_ENABLED)." unless Events::Stores::StoreFactory.supports_clickhouse?
       abort "The organization still reads the Postgres events store, the buckets cannot be compared." unless organization.clickhouse_events_store?
 
-      subscriptions = realtime_usage_subscriptions(organization)
+      subscriptions = TaskPrompt.ask_for_sampled_subscriptions(organization)
       abort "No subscription to compare." if subscriptions.empty?
 
       default_path = Rails.root.join("tmp", "realtime_usage_comparison_#{organization.id}_#{Time.current.to_i}.csv").to_s
@@ -152,22 +152,6 @@ namespace :recipes do
       end)
     end
   end
-end
-
-def realtime_usage_subscriptions(organization)
-  subscription_ids = TaskPrompt.ask_for_subscription_ids
-  return Subscription.where(organization_id: organization.id, id: subscription_ids).to_a if subscription_ids.any?
-
-  active_count = Subscription.active.where(organization_id: organization.id).count
-  puts "Organization has #{active_count} active subscription(s)."
-  sample_size = TaskPrompt.ask("Number of active subscriptions to sample [50]: ")
-  sample_size = sample_size.empty? ? 50 : sample_size.to_i
-
-  Subscription.active
-    .where(organization_id: organization.id)
-    .order(Arel.sql("RANDOM()"))
-    .limit(sample_size)
-    .to_a
 end
 
 # Rolled up to charge level: the leaf detail of every charge is in the CSV.
