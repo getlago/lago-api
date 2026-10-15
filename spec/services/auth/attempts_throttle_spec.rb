@@ -34,7 +34,7 @@ RSpec.describe Auth::AttemptsThrottle do
       3.times { described_class.hit!(:password_reset_per_email, "user@example.com") }
 
       expect(described_class.hit!(:password_reset_per_email, "other@example.com")).to be(false)
-      expect(described_class.hit!(:login_attempts_per_email, "user@example.com")).to be(false)
+      expect(described_class.hit!(:login_per_email, "user@example.com")).to be(false)
     end
 
     it "resets after the period" do
@@ -50,20 +50,20 @@ RSpec.describe Auth::AttemptsThrottle do
     end
 
     it "counts a rule keyed on the email and IP pair per pair" do
-      10.times { described_class.hit!(:login_attempts_per_email_and_ip, "User@Example.com", "203.0.113.10") }
+      10.times { described_class.hit!(:login_per_email_and_ip, "User@Example.com", "203.0.113.10") }
 
-      expect(described_class.hit!(:login_attempts_per_email_and_ip, "user@example.com", "203.0.113.11")).to be(false)
-      expect(described_class.hit!(:login_attempts_per_email_and_ip, "user@example.com", "203.0.113.10")).to be(true)
+      expect(described_class.hit!(:login_per_email_and_ip, "user@example.com", "203.0.113.11")).to be(false)
+      expect(described_class.hit!(:login_per_email_and_ip, "user@example.com", "203.0.113.10")).to be(true)
     end
 
     it "ignores a pair with a blank part" do
-      results = Array.new(11) { described_class.hit!(:login_attempts_per_email_and_ip, "user@example.com", nil) }
+      results = Array.new(11) { described_class.hit!(:login_per_email_and_ip, "user@example.com", nil) }
 
       expect(results).to all(be(false))
     end
 
     it "raises when the identifiers do not match the rule" do
-      expect { described_class.hit!(:login_attempts_per_email_and_ip, "user@example.com") }.to raise_error(ArgumentError)
+      expect { described_class.hit!(:login_per_email_and_ip, "user@example.com") }.to raise_error(ArgumentError)
     end
 
     context "when the cache is unavailable" do
@@ -81,11 +81,11 @@ RSpec.describe Auth::AttemptsThrottle do
 
   describe ".reset!" do
     it "clears the counter" do
-      10.times { described_class.hit!(:login_attempts_per_email, "user@example.com") }
+      10.times { described_class.hit!(:login_per_email, "user@example.com") }
 
-      described_class.reset!(:login_attempts_per_email, "user@example.com")
+      described_class.reset!(:login_per_email, "user@example.com")
 
-      expect(described_class.hit!(:login_attempts_per_email, "user@example.com")).to be(false)
+      expect(described_class.hit!(:login_per_email, "user@example.com")).to be(false)
     end
   end
 

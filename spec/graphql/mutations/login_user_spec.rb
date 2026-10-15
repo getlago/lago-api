@@ -146,8 +146,8 @@ RSpec.describe Mutations::LoginUser do
 
       before do
         allow(UsersService).to receive(:call).and_wrap_original do |original, *args|
-          attempts_seen_during_check << %i[login_attempts_per_email_and_ip login_attempts_per_email].map do |rule_name|
-            identifiers = (rule_name == :login_attempts_per_email_and_ip) ? [user.email, request.remote_ip] : [user.email]
+          attempts_seen_during_check << %i[login_per_email_and_ip login_per_email].map do |rule_name|
+            identifiers = (rule_name == :login_per_email_and_ip) ? [user.email, request.remote_ip] : [user.email]
             cache.read(Auth::AttemptsThrottle.cache_key(rule_name, *identifiers), raw: true).to_i
           end
           original.call(*args)

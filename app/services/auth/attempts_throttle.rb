@@ -11,9 +11,9 @@ module Auth
     RULES = {
       login_per_ip: Rule.new(limit: 30, period: 1.minute, identifier: :ip),
       # Keyed on the pair, so that requests from other IPs cannot lock a user out of password login.
-      login_attempts_per_email_and_ip: Rule.new(limit: 10, period: 15.minutes, identifier: %i[email ip]),
+      login_per_email_and_ip: Rule.new(limit: 10, period: 15.minutes, identifier: %i[email ip]),
       # Password guessing spread over many IPs.
-      login_attempts_per_email: Rule.new(limit: 100, period: 15.minutes, identifier: :email),
+      login_per_email: Rule.new(limit: 100, period: 15.minutes, identifier: :email),
       password_reset_per_ip: Rule.new(limit: 10, period: 1.hour, identifier: :ip),
       password_reset_per_email: Rule.new(limit: 3, period: 1.hour, identifier: :email),
       credentials_per_ip: Rule.new(limit: 20, period: 10.minutes, identifier: :ip)

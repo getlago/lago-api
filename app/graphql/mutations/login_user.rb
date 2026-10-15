@@ -18,15 +18,15 @@ module Mutations
       # limit are not counted against the email.
       return too_many_attempts_error if ::Auth::AttemptsThrottle.hit!(:login_per_ip, client_ip)
 
-      over_email_and_ip_limit = ::Auth::AttemptsThrottle.hit!(:login_attempts_per_email_and_ip, email, client_ip)
-      over_email_limit = ::Auth::AttemptsThrottle.hit!(:login_attempts_per_email, email)
+      over_email_and_ip_limit = ::Auth::AttemptsThrottle.hit!(:login_per_email_and_ip, email, client_ip)
+      over_email_limit = ::Auth::AttemptsThrottle.hit!(:login_per_email, email)
       return too_many_attempts_error if over_email_and_ip_limit || over_email_limit
 
       result = UsersService.call(:login, email, password)
       return result_error(result) unless result.success?
 
-      ::Auth::AttemptsThrottle.reset!(:login_attempts_per_email_and_ip, email, client_ip)
-      ::Auth::AttemptsThrottle.reset!(:login_attempts_per_email, email)
+      ::Auth::AttemptsThrottle.reset!(:login_per_email_and_ip, email, client_ip)
+      ::Auth::AttemptsThrottle.reset!(:login_per_email, email)
       result
     end
   end
