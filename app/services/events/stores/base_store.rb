@@ -207,9 +207,13 @@ module Events
         boundaries[:max_timestamp] || to_datetime
       end
 
+      # Values are quoted into the SQL before the named binds are replaced:
+      # escape ":word" inside string literals so Rails does not read it as a bind.
+      # SQL comments are matched too so an apostrophe in them does not open a literal.
       def sanitize_colon(query)
-        # NOTE: escape ':' to avoid ActiveRecord::PreparedStatementInvalid,
-        query.gsub("'#{code}'", "'#{code.gsub(":", "\\:")}'")
+        query.gsub(/--[^\n]*|#{self.class::SQL_STRING_LITERAL}/) do |token|
+          token.start_with?("'") ? token.gsub(/:(?=[a-zA-Z])/, "\\:") : token
+        end
       end
 
       def timezone
