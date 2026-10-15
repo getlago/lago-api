@@ -2,7 +2,11 @@
 
 module RecurringAggregationSnapshots
   class FetchService < BaseService
-    Snapshot = Data.define(:grouped_by, :units, :to_datetime, :watermark)
+    Snapshot = Data.define(:grouped_by, :units, :presentation_breakdowns, :to_datetime, :watermark) do
+      def initialize(presentation_breakdowns: [], **)
+        super
+      end
+    end
 
     Result = BaseResult[:snapshots]
 
@@ -51,6 +55,7 @@ module RecurringAggregationSnapshots
       Snapshot.new(
         grouped_by: record.grouped_by.freeze,
         units: record.units,
+        presentation_breakdowns: record.presentation_breakdowns.map { it.symbolize_keys.freeze }.freeze,
         to_datetime: record.to_datetime,
         watermark: record.watermark
       )
