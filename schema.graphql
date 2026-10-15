@@ -6973,6 +6973,7 @@ enum EventCategoryEnum {
   ADD_ONS
   ALERTS
   BILLABLE_METRICS
+  COUPONS
   CREDIT_NOTES
   CUSTOMERS
   DUNNING_CAMPAIGNS
@@ -7021,6 +7022,9 @@ enum EventTypeEnum {
   contract_started
   contract_terminated
   contract_updated
+  coupon_created
+  coupon_deleted
+  coupon_updated
   credit_note_created
   credit_note_generated
   credit_note_provider_refund_failure
