@@ -398,19 +398,6 @@ DROP TRIGGER IF EXISTS record_deletions_on_fees ON public.fees;
 DROP TRIGGER IF EXISTS record_deletions_on_credit_notes_taxes ON public.credit_notes_taxes;
 DROP TRIGGER IF EXISTS ensure_consistency ON public.roles;
 DROP TRIGGER IF EXISTS before_payment_receipt_insert ON public.payment_receipts;
-CREATE OR REPLACE VIEW public.flat_filters AS
-SELECT
-    NULL::uuid AS organization_id,
-    NULL::character varying AS billable_metric_code,
-    NULL::uuid AS plan_id,
-    NULL::uuid AS charge_id,
-    NULL::timestamp(6) without time zone AS charge_updated_at,
-    NULL::uuid AS charge_filter_id,
-    NULL::timestamp(6) without time zone AS charge_filter_updated_at,
-    NULL::jsonb AS filters,
-    NULL::jsonb AS pricing_group_keys,
-    NULL::boolean AS pay_in_advance,
-    NULL::boolean AS accepts_target_wallet;
 CREATE OR REPLACE VIEW public.billable_metrics_grouped_charges AS
 SELECT
     NULL::uuid AS organization_id,
@@ -426,6 +413,7 @@ SELECT
     NULL::jsonb AS filters_grouped_by;
 DROP INDEX IF EXISTS public.unique_default_payment_method_per_customer;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_x402_connection_id;
+DROP INDEX IF EXISTS public.index_x402_settlements_on_ungranted_id;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_pending_reconcile_after;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_pending_invoice_id;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_pending_credit_purchase_payer;
@@ -1343,7 +1331,6 @@ DROP TABLE IF EXISTS public.inbound_webhooks;
 DROP TABLE IF EXISTS public.idempotency_records;
 DROP TABLE IF EXISTS public.groups;
 DROP TABLE IF EXISTS public.group_properties;
-DROP VIEW IF EXISTS public.flat_filters;
 DROP TABLE IF EXISTS public.fixed_charges_taxes;
 DROP TABLE IF EXISTS public.fixed_charge_events;
 DROP VIEW IF EXISTS public.exports_wallets;
@@ -5130,25 +5117,6 @@ CREATE TABLE public.fixed_charges_taxes (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
 );
-
-
---
--- Name: flat_filters; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.flat_filters AS
-SELECT
-    NULL::uuid AS organization_id,
-    NULL::character varying AS billable_metric_code,
-    NULL::uuid AS plan_id,
-    NULL::uuid AS charge_id,
-    NULL::timestamp(6) without time zone AS charge_updated_at,
-    NULL::uuid AS charge_filter_id,
-    NULL::timestamp(6) without time zone AS charge_filter_updated_at,
-    NULL::jsonb AS filters,
-    NULL::jsonb AS pricing_group_keys,
-    NULL::boolean AS pay_in_advance,
-    NULL::boolean AS accepts_target_wallet;
 
 
 --
@@ -12539,6 +12507,13 @@ CREATE INDEX index_x402_settlements_on_pending_reconcile_after ON public.x402_se
 
 
 --
+-- Name: index_x402_settlements_on_ungranted_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_x402_settlements_on_ungranted_id ON public.x402_settlements USING btree (id) WHERE ((kind = 'credit_purchase'::public.x402_settlement_kind) AND (status = 'settled'::public.x402_settlement_status) AND (wallet_transaction_id IS NULL));
+
+
+--
 -- Name: index_x402_settlements_on_x402_connection_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12609,38 +12584,6 @@ CREATE OR REPLACE VIEW public.billable_metrics_grouped_charges AS
      LEFT JOIN public.billable_metric_filters ON ((charge_filter_values.billable_metric_filter_id = billable_metric_filters.id)))
   WHERE ((billable_metrics.deleted_at IS NULL) AND (charges.deleted_at IS NULL) AND (charge_filters.deleted_at IS NULL) AND (charge_filter_values.deleted_at IS NULL) AND (billable_metric_filters.deleted_at IS NULL))
   GROUP BY billable_metrics.organization_id, billable_metrics.code, billable_metrics.aggregation_type, billable_metrics.field_name, charges.plan_id, charges.id, charge_filters.id;
-
-
---
--- Name: flat_filters _RETURN; Type: RULE; Schema: public; Owner: -
---
-
-CREATE OR REPLACE VIEW public.flat_filters AS
- SELECT billable_metrics.organization_id,
-    billable_metrics.code AS billable_metric_code,
-    charges.plan_id,
-    charges.id AS charge_id,
-    charges.updated_at AS charge_updated_at,
-    charge_filters.id AS charge_filter_id,
-    charge_filters.updated_at AS charge_filter_updated_at,
-        CASE
-            WHEN (charge_filters.id IS NOT NULL) THEN jsonb_object_agg(COALESCE(billable_metric_filters.key, ''::character varying),
-            CASE
-                WHEN ((charge_filter_values."values")::text[] && ARRAY['__ALL_FILTER_VALUES__'::text]) THEN billable_metric_filters."values"
-                ELSE charge_filter_values."values"
-            END)
-            ELSE NULL::jsonb
-        END AS filters,
-    (COALESCE(charge_filters.properties, charges.properties) -> 'pricing_group_keys'::text) AS pricing_group_keys,
-    charges.pay_in_advance,
-    charges.accepts_target_wallet
-   FROM ((((public.billable_metrics
-     JOIN public.charges ON ((charges.billable_metric_id = billable_metrics.id)))
-     LEFT JOIN public.charge_filters ON (((charge_filters.charge_id = charges.id) AND (charge_filters.deleted_at IS NULL))))
-     LEFT JOIN public.charge_filter_values ON (((charge_filter_values.charge_filter_id = charge_filters.id) AND (charge_filter_values.deleted_at IS NULL))))
-     LEFT JOIN public.billable_metric_filters ON (((billable_metric_filters.id = charge_filter_values.billable_metric_filter_id) AND (billable_metric_filters.deleted_at IS NULL))))
-  WHERE ((billable_metrics.deleted_at IS NULL) AND (charges.deleted_at IS NULL))
-  GROUP BY billable_metrics.organization_id, billable_metrics.code, charges.plan_id, charges.id, charges.updated_at, charge_filters.id, charge_filters.updated_at;
 
 
 --
@@ -15755,6 +15698,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261013124033'),
+('20261009154629'),
 ('20261008135612'),
 ('20261006134840'),
 ('20261005134744'),

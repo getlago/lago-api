@@ -31,11 +31,11 @@ module Events
     def catalog_pipeline?
       return @catalog_pipeline if defined?(@catalog_pipeline)
 
-      @catalog_pipeline = organization.product_catalog_enabled? && ENV["LAGO_KAFKA_CATALOG_RAW_EVENTS_TOPIC"].present?
+      @catalog_pipeline = organization.product_catalog_enabled? && ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"].present?
     end
 
     def topic
-      catalog_pipeline? ? ENV["LAGO_KAFKA_CATALOG_RAW_EVENTS_TOPIC"] : ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"]
+      catalog_pipeline? ? ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] : ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"]
     end
 
     def build_message(event)

@@ -34,10 +34,15 @@ RSpec.describe Resolvers::WalletsResolver do
     create(:wallet, status: :terminated, customer:)
   end
 
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", %w[customers:view wallets:create wallets:update wallets:top_up wallets:terminate]
+
   it "returns a list of wallets" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: described_class::REQUIRED_PERMISSION.sample,
       query:,
       variables: {
         customerId: customer.id
@@ -76,6 +81,7 @@ RSpec.describe Resolvers::WalletsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: create(:organization),
+        permissions: described_class::REQUIRED_PERMISSION.sample,
         query:,
         variables: {
           customerId: customer.id
@@ -94,6 +100,7 @@ RSpec.describe Resolvers::WalletsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: described_class::REQUIRED_PERMISSION.sample,
         query:,
         variables: {
           customerId: "123456"

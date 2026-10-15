@@ -28,6 +28,7 @@ module LagoApi
 
     config.api_only = true
     config.active_job.queue_adapter = :sidekiq
+    config.active_storage.variant_processor = :disabled
     config.lago_front_url = ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com"
 
     # Configuration for active record encryption

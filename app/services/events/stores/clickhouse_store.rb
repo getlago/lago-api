@@ -11,6 +11,8 @@ module Events
       CLICKHOUSE_MERGE_DELAY = 15.seconds
 
       DEDUP_KEY_COLUMNS = %w[code organization_id external_subscription_id transaction_id timestamp].freeze
+      # ClickHouse escapes quotes and backslashes in strings: 'a\\b''c'
+      SQL_STRING_LITERAL = /'(?:[^'\\]|\\.|'')*'/
 
       def events(force_from: false, ordered: false)
         Events::Stores::Utils::ClickhouseConnection.with_retry do

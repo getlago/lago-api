@@ -9,6 +9,9 @@ RSpec.describe Mutations::PasswordResets::Create do
   let_it_be(:membership) { create_default(:membership, organization:) }
   let(:user) { membership.user }
   let(:email) { user.email }
+  # A fresh store per example: other specs can leave a memory store in Rails.cache, and the counters
+  # would then carry over between examples.
+  let(:cache) { ActiveSupport::Cache::MemoryStore.new }
 
   let(:mutation) do
     <<~GQL
@@ -20,26 +23,64 @@ RSpec.describe Mutations::PasswordResets::Create do
     GQL
   end
 
+  before { allow(Rails).to receive(:cache).and_return(cache) }
+
+  def request_reset(email)
+    execute_graphql(query: mutation, variables: {input: {email:}})
+  end
+
   context "with a valid user" do
-    subject(:result) do
-      execute_graphql(
-        query: mutation,
-        variables: {
-          input: {
-            email:
-          }
-        }
-      )
+    subject(:result) { request_reset(email) }
+
+    it "enqueues the password reset job and returns an id" do
+      expect { result }.to have_enqueued_job(PasswordResets::CreateJob).with(email)
+
+      expect(result["data"]["createPasswordReset"]["id"]).to be_present
     end
 
-    it "creates a password reset for a user" do
-      data = result["data"]["createPasswordReset"]
-
-      expect(data["id"]).to be_present
+    it "creates a password reset once the job runs" do
+      expect { perform_enqueued_jobs(only: PasswordResets::CreateJob) { result } }
+        .to change(PasswordReset.where(user:), :count).by(1)
     end
 
     it_behaves_like "produces a security log", "user.password_reset_requested" do
-      before { result }
+      before { perform_enqueued_jobs(only: PasswordResets::CreateJob) { result } }
+    end
+  end
+
+  context "with an unknown email" do
+    it "returns the same response and does the same work as for a known email" do
+      known = request_reset(user.email)
+
+      expect { request_reset("nobody@example.com") }
+        .to have_enqueued_job(PasswordResets::CreateJob).with("nobody@example.com")
+
+      unknown = request_reset("nobody@example.com")
+
+      expect(unknown["errors"]).to be_nil
+      expect(unknown["data"]["createPasswordReset"]["id"]).to match(/\A\h{8}-\h{4}-\h{4}-\h{4}-\h{12}\z/)
+      expect(unknown.to_json.length).to eq(known.to_json.length)
+    end
+
+    it "does not create a password reset once the job runs" do
+      expect { perform_enqueued_jobs(only: PasswordResets::CreateJob) { request_reset("nobody@example.com") } }
+        .not_to change(PasswordReset, :count)
+    end
+  end
+
+  it "does not return the password reset id" do
+    result = perform_enqueued_jobs(only: PasswordResets::CreateJob) { request_reset(email) }
+
+    expect(result["data"]["createPasswordReset"]["id"]).not_to eq(PasswordReset.last.id)
+  end
+
+  context "with attempts throttling" do
+    it "allows 3 requests per email per hour" do
+      expect { 3.times { request_reset(email) } }.to have_enqueued_job(PasswordResets::CreateJob).exactly(3).times
+
+      result = nil
+      expect { result = request_reset(email) }.not_to have_enqueued_job(PasswordResets::CreateJob)
+      expect(result["errors"].first.dig("extensions", "code")).to eq("too_many_requests")
     end
   end
 end

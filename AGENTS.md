@@ -113,11 +113,12 @@ Business logic, and every create, update or delete of a model, lives in a servic
 
 ## Specs
 
-- `spec/` mirrors `app/`. Endpoint specs live in `spec/requests/api/v1` and `v2`. Billing scenarios in `spec/scenarios` go through API calls and jobs with `spec/support/scenarios_helper.rb`, rather than calling services.
+- `spec/` mirrors `app/`: a spec file is named after the class it tests, and its `RSpec.describe` names that class. Endpoint specs live in `spec/requests/api/v1` and `v2`. Billing scenarios in `spec/scenarios` go through API calls and jobs with `spec/support/scenarios_helper.rb`, rather than calling services.
 - A bug fix comes with a spec that fails without the fix. Cover the negative case (a record that must not be returned) and the error paths.
 - Helpers:
   - REST: `get_with_token(organization, path, params)` (also `post_`, `put_`, `delete_`), `json` for the parsed body, `expect(response).to be_not_found_error("alert")`, `include_examples "requires API permission", "alert", "write"`.
   - GraphQL: `execute_graphql(current_user:, current_organization:, permissions:, query:, variables:)`, `it_behaves_like "requires current user"`, `"requires current organization"` and `"requires permission", "alerts:create"`.
+- Every app resolver and mutation spec includes the three GraphQL shared examples, with the full `REQUIRED_PERMISSION` list. When a class accepts several permissions, examples pass `permissions: described_class::REQUIRED_PERMISSION.sample`, so each run uses one of them, rather than always the first one or one example per permission.
   - Jobs: `have_enqueued_job`, `have_been_enqueued`, `have_enqueued_job_after_commit`. Never stub or spy on job classes (cop `Lago/NoExpectReceiveOnJob`).
   - Metadata: `:premium`, `clickhouse: true`, `transaction: false`, `cache: :memory`, `:sentry`, `:bullet` (fails on N+1 queries).
 - WebMock blocks real HTTP calls: stub them with `stub_request`.

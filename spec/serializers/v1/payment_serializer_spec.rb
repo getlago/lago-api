@@ -135,4 +135,34 @@ RSpec.describe ::V1::PaymentSerializer do
       end
     end
   end
+
+  %w[Invoice PaymentRequest].each do |payable_type|
+    context "when the #{payable_type} payable no longer exists" do
+      let(:includes) { [] }
+      let(:missing_payable_id) { SecureRandom.uuid }
+      let(:payment) do
+        payable = (payable_type == "Invoice") ? create(:invoice) : create(:payment_request)
+        create(:payment, payable:).tap do |payment|
+          payment.update_columns(payable_id: missing_payable_id) # rubocop:disable Rails/SkipsModelValidations
+          payment.reload
+        end
+      end
+
+      it "serializes the payment with its own customer and stored payable id" do
+        result = JSON.parse(serializer.to_json)
+
+        expect(result["payment"]).to include(
+          "lago_id" => payment.id,
+          "lago_customer_id" => payment.customer_id,
+          "external_customer_id" => payment.customer.external_id,
+          "invoice_ids" => [],
+          "invoice_numbers" => [],
+          "lago_payable_id" => missing_payable_id,
+          "payable_type" => payable_type,
+          "amount_cents" => payment.amount_cents,
+          "amount_currency" => payment.amount_currency
+        )
+      end
+    end
+  end
 end
