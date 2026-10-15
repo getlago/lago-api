@@ -4,9 +4,14 @@ class ProductCatalogInvoiceHelper
   Line = Data.define(:name, :amount_cents)
   ContractBlock = Data.define(:title, :sections)
   Section = Data.define(:name, :amount_cents, :products)
-  ProductNode = Data.define(:name, :fees, :filters)
+  ProductNode = Data.define(:name, :amount_cents, :fees, :filters)
   FilterNode = Data.define(:name, :fees)
   Tier = Data.define(:label, :units, :unit_price, :amount)
+  Row = Data.define(:kind, :indent, :label, :units, :unit_price, :amount) do
+    def initialize(units: nil, unit_price: nil, amount: nil, **)
+      super
+    end
+  end
 
   def self.summary_lines(invoice)
     new(invoice).summary_lines
@@ -59,6 +64,45 @@ class ProductCatalogInvoiceHelper
     end
 
     per_unit + flat
+  end
+
+  def self.detail_rows(section, currency)
+    depth = section.name ? 1 : 0
+    rows = section.name ? [Row.new(kind: :category, indent: 0, label: section.name, amount: format_cents(section.amount_cents, currency))] : []
+
+    section.products.each do |product|
+      rows << Row.new(kind: :product, indent: depth, label: product.name, amount: format_cents(product.amount_cents, currency))
+      rows.concat(fee_rows(product.fees, depth + 1))
+
+      product.filters.each do |filter|
+        rows << Row.new(kind: :filter, indent: depth + 1, label: filter.name)
+        rows.concat(fee_rows(filter.fees, depth + 2))
+      end
+    end
+
+    rows
+  end
+
+  def self.fee_rows(fees, indent)
+    fees.flat_map do |fee|
+      segment = Row.new(
+        kind: :segment,
+        indent:,
+        label: period_label(fee),
+        units: RoundingHelper.round_decimal_part(fee.units),
+        unit_price: FeeDisplayHelper.format_precise_unit_amount(fee),
+        amount: FeeDisplayHelper.format_amount(fee)
+      )
+      details = tiers(fee).map do |tier|
+        Row.new(kind: :fee_detail, indent: indent + 1, label: tier.label, units: tier.units, unit_price: tier.unit_price, amount: tier.amount)
+      end
+
+      [segment, *details]
+    end
+  end
+
+  def self.format_cents(amount_cents, currency)
+    MoneyHelper.format(Money.new(amount_cents, currency))
   end
 
   def self.range_label(kind, range)
@@ -138,7 +182,12 @@ class ProductCatalogInvoiceHelper
       unfiltered, filtered = product_fees.partition { filter_for(it).nil? }
       filters = filtered.group_by { filter_for(it) }.map { |filter, filter_fees| FilterNode.new(name: filter.invoice_name, fees: by_period(filter_fees)) }
 
-      ProductNode.new(name: product.invoice_name, fees: by_period(unfiltered), filters: sort_by_name(filters))
+      ProductNode.new(
+        name: product.invoice_name,
+        amount_cents: product_fees.sum(&:amount_cents),
+        fees: by_period(unfiltered),
+        filters: sort_by_name(filters)
+      )
     end
 
     sort_by_name(nodes)
