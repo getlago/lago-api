@@ -604,7 +604,7 @@ class Invoice < ApplicationRecord
   end
 
   def x402_payment_refusal
-    if !finalized? || !payment_pending? || !total_due_amount_cents.positive?
+    if !finalized? || payment_succeeded? || !total_due_amount_cents.positive?
       "invalid_invoice_status_or_payment_status"
     elsif currency != X402::Settlements::SettleService::INVOICE_CURRENCY
       "invoice_currency_not_supported"

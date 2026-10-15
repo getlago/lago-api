@@ -248,6 +248,14 @@ RSpec.describe Invoice do
       it { is_expected.to eq("invalid_invoice_status_or_payment_status") }
     end
 
+    context "with a failed payment" do
+      let(:invoice) do
+        create(:invoice, organization:, customer:, currency: "USD", total_amount_cents: 1_000, payment_status: "failed")
+      end
+
+      it { is_expected.to be_nil }
+    end
+
     context "with nothing left to pay" do
       let(:invoice) do
         create(:invoice, organization:, customer:, currency: "USD", total_amount_cents: 1_000, total_paid_amount_cents: 1_000)
