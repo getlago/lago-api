@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Lago API is the Rails backend of [Lago](https://github.com/getlago/lago), an open-source usage-based billing platform. It serves the public REST API (`/api/v1`, `/api/v2`) and the GraphQL API of [lago-front](https://github.com/getlago/lago-front), and runs billing in Sidekiq jobs. PostgreSQL and Redis are required. ClickHouse, Kafka and a premium license are optional, so code must also work without them.
+Rails backend of [Lago](https://github.com/getlago/lago). PostgreSQL and Redis are required; ClickHouse, Kafka and a premium license are optional, so code must also work without them.
 
 This repository is public. Code, comments, specs, commits and PRs must not contain customer data, secrets or internal URLs, and ticket IDs stay out of code and comments.
 
@@ -18,8 +18,16 @@ The app runs with Docker Compose from [getlago/lago](https://github.com/getlago/
 | Refresh model annotations | `lago exec api bundle exec annotaterb models` |
 | Normalize locale files | `lago exec api bundle exec i18n-tasks normalize` |
 
-- Run the specs that cover the change before finishing, and only those. CI runs the full suite, lints the changed `.rb` files and runs `bin/rails zeitwerk:check`.
-- The container mounts the main checkout at `/app`. For a git worktree inside it, add `-w /app/<worktree path>` after `exec`. The worktree also needs the gitignored `.env`, `config/master.key` and `config/keys` of the main checkout: link them with relative symlinks so they resolve inside the container. Worktrees share the databases of the main checkout, so check `bin/rails db:migrate:status` before migrating: migrations applied from other branches end up in the `db/structure.sql` dump.
+Before finishing a change:
+
+- The specs that cover it pass, and only those run (see "Specs" for what counts as a passing run). CI runs the full suite, lints the changed `.rb` files and runs `bin/rails zeitwerk:check`.
+- `rubocop -a` passes on the changed files.
+- The generated files below are regenerated.
+- A convention the change adds, or a rule of this file it makes wrong, is updated here in the same PR.
+
+Running commands:
+
+- The container mounts the main checkout at `/app`. For a git worktree inside it, add `-w /app/<worktree path>` after `exec`. The worktree also needs the gitignored `.env`, `config/master.key` and `config/keys` of the main checkout: link them with relative symlinks so they resolve inside the container. Worktrees share the databases of the main checkout, so check `bin/rails db:migrate:status` before migrating: migrations applied from other branches end up in the `db/structure.sql` dump. When the worktree's `Gemfile.lock` differs from the main checkout's, run `bundle install` from the worktree first: the container's gems follow the main checkout.
 - Without Docker, the same commands run without the `lago exec api` prefix. `config/environments/test.rb` loads `.env`, whose template `.env.dist` points `DATABASE_URL` at a local `lago_test` database. Redis must be reachable too, and ClickHouse for `clickhouse: true` specs; `.github/workflows/spec.yml` shows the other variables and the RSA keys the suite needs.
 
 ### Generated files
@@ -40,7 +48,6 @@ Never edit the schema files or annotations by hand. Revert changes that do not c
 - **Compatibility.** SDKs, lago-front and customers rely on the REST API, the webhook payloads and the GraphQL schema. Add optional fields and parameters; do not rename or remove existing ones. A REST change also needs an update of [lago-openapi](https://github.com/getlago/lago-openapi), which the PR mentions.
 - **Rolling deploys.** Jobs enqueued by the previous version run on the new one, so a renamed job class or a changed `perform` signature must keep accepting old jobs for one release. A new validation must accept existing rows (`validates :email, ..., if: :email_changed?`).
 - **Input.** Cast and validate input before using it (`ActiveModel::Type::Boolean.new.cast`, enum values). Bad input returns a validation error, never a 500. Never interpolate input into SQL: use bind parameters or `connection.quote`.
-- **Soft deletion.** Never hard delete a model that includes `Discard::Model`.
 - **Feature gating.** Premium features check `License.premium?`. Premium integrations check `organization.<integration>_enabled?` (`Organization::PREMIUM_INTEGRATIONS`), which includes the license check. A rollout flag is declared in `app/config/feature_flags.yaml`, with a description and owners, and read with `organization.feature_flag_enabled?(:name)`.
 - **Scope.** Keep the diff to the task, and look for an existing helper before writing a new one. A bug fix also covers its sibling paths: REST and GraphQL, create and update services, the PostgreSQL and ClickHouse event stores.
 
@@ -88,7 +95,7 @@ Business logic, and every create, update or delete of a model, lives in a servic
 
 - Model schema annotations are generated. Read them and `db/structure.sql` before adding an index or writing a query: avoid duplicate indexes, and remember that a composite index only serves its leftmost columns.
 - Declare enum values in a constant, then `enum :status, STATUSES, validate: true` (`validate: {allow_nil: true}` for a nullable column). New enums are PostgreSQL enums with string values: `STATUSES = {draft: "draft", active: "active"}.freeze`. Older enums use arrays on integer columns.
-- Soft-deletable models use `include Discard::Model`, `self.discard_column = :deleted_at` and `default_scope -> { kept }`. Bulk deletion is `update_all(deleted_at: Time.current, updated_at: Time.current)` (cop `Lago/DiscardAll`). Discarding a record does not discard its children (`dependent:` does not apply), so the service discards them explicitly. Associations to a parent that can be discarded use `-> { with_discarded }`.
+- Soft-deletable models use `include Discard::Model` and are never hard deleted. They set `self.discard_column = :deleted_at` and `default_scope -> { kept }`. Bulk deletion is `update_all(deleted_at: Time.current, updated_at: Time.current)` (cop `Lago/DiscardAll`). Discarding a record does not discard its children (`dependent:` does not apply), so the service discards them explicitly. Associations to a parent that can be discarded use `-> { with_discarded }`.
 - `update_all` skips callbacks and `updated_at`: set `updated_at` yourself.
 - Give every list query a deterministic order. `.first` and `.last` order by the UUID `id`, not by creation, and `find_by` and `take` have no order: add an explicit order whenever the record picked matters. `find_each` iterates by id, and raises in tests when the relation has an order.
 - Query objects live in `app/queries` (`< BaseQuery`, `Filters = BaseFilters[...]`, `paginate` last). See `app/queries/contracts_query.rb`. Ransack attributes must be listed in `ransackable_attributes`.
@@ -114,14 +121,16 @@ Business logic, and every create, update or delete of a model, lives in a servic
 ## Specs
 
 - `spec/` mirrors `app/`: a spec file is named after the class it tests, and its `RSpec.describe` names that class. Endpoint specs live in `spec/requests/api/v1` and `v2`. Billing scenarios in `spec/scenarios` go through API calls and jobs with `spec/support/scenarios_helper.rb`, rather than calling services.
-- A bug fix comes with a spec that fails without the fix. Cover the negative case (a record that must not be returned) and the error paths.
+- A bug fix comes with a spec that fails without the fix: run it once with the fix reverted to see it fail. Cover the negative case (a record that must not be returned) and the error paths.
+- Before writing a spec, open one or two existing specs of the same kind (two `create_service_spec.rb` for a new create service) and follow their structure. Do not add top-level `describe` blocks they do not have.
+- Test behaviour, not configuration: a spec for a threshold, a schedule or a webhook crosses the trigger and checks the side effect, not only the saved settings.
+- A run counts only when its summary shows the expected number of examples and no "errors occurred outside of examples": a spec file that fails to load is left out of the count. Run new spec files on their own first.
 - Helpers:
   - REST: `get_with_token(organization, path, params)` (also `post_`, `put_`, `delete_`), `json` for the parsed body, `expect(response).to be_not_found_error("alert")`, `include_examples "requires API permission", "alert", "write"`.
   - GraphQL: `execute_graphql(current_user:, current_organization:, permissions:, query:, variables:)`, `it_behaves_like "requires current user"`, `"requires current organization"` and `"requires permission", "alerts:create"`.
-- A resolver or mutation spec has one shared example per check its class makes: `"requires current user"` for `AuthenticableApiUser`, `"requires current organization"` for `RequiredOrganization`, and `"requires permission"` with the full `REQUIRED_PERMISSION` list. When a class accepts several permissions, examples pass `permissions: described_class::REQUIRED_PERMISSION.sample`, so each run uses one of them.
   - Jobs: `have_enqueued_job`, `have_been_enqueued`, `have_enqueued_job_after_commit`. Never stub or spy on job classes (cop `Lago/NoExpectReceiveOnJob`).
   - Metadata: `:premium`, `clickhouse: true`, `transaction: false`, `cache: :memory`, `:sentry`, `:bullet` (fails on N+1 queries).
-- WebMock blocks real HTTP calls: stub them with `stub_request`.
+- A resolver or mutation spec has one shared example per check its class makes: `"requires current user"` for `AuthenticableApiUser`, `"requires current organization"` for `RequiredOrganization`, and `"requires permission"` with the full `REQUIRED_PERMISSION` list. When a class accepts several permissions, examples pass `permissions: described_class::REQUIRED_PERMISSION.sample`, so each run uses one of them.
 - `aggregate_failures` is on by default, so several expectations in one example are fine.
 - Name the subject: `subject(:result) { described_class.call(...) }`. Do not test `#initialize`.
 - Declare fixtures with `let`, `let_it_be` or `before`, never inside `it`, and prefer `let` with `before` over `let!`. Stub with `allow` in `before`. Vary a scenario by overriding a `let` in a nested context, not by updating records in the example, unless that update is what the spec tests.
@@ -139,26 +148,35 @@ Business logic, and every create, update or delete of a model, lives in a servic
 - `create_default(:organization)` makes factories reuse that organization. A record of another organization needs it passed explicitly (`create(:invoice, organization: create(:organization))`), and a `let_it_be` is declared after the records it depends on.
 - `transaction: false` groups delete all rows after each example, which removes `let_it_be` and `before_all` records: use `let` there.
 
+## Code Review Rules
+
+Read the PR description first, then check the code against it and against the ground rules above.
+
+- **Important** means it breaks behaviour, leaks data or blocks a rollback: a query not scoped to the organization, money as `Float` or rounded too early, a breaking change to the REST API, webhooks or GraphQL schema, a migration that locks a large table, a changed job signature. Naming and refactoring are nits at most.
+- Do not report what CI enforces: RuboCop, `db/structure.sql`, `schema.graphql`, `schema.json`, model annotations.
+- A claim about behaviour cites the `file:line` that shows it, not a guess from a method name.
+- On a later review of the same PR, report only important findings on the new commits.
+
+Also check:
+
+- **Callers outside the diff.** Every caller of a changed method still gets what it expects: the return value, the default, the raised error.
+- **Existing data.** The first run of the new code on rows written before it (defaults, `NULL`s, old enum values) works, or the PR adds a backfill or a guard.
+- **Concurrency.** The same request sent twice, two writers on one record, a job running during the change. A uniqueness or ordering guarantee rests on a lock or a unique index, not on a check before the write.
+- **Announced state.** For state that was sent outside (a webhook, a triggered alert, a balance shown), every event that changes its inputs has a path, both into and out of the state: configuration edits, deletion of the parent, time boundaries.
+- **Errors.** A rescue catches the narrowest exception the code raises, and a spec covers it.
+- **Tests.** Every new public method and branch has a spec, and the specs follow the rules above.
+- **Cache keys.** When a cached value changes shape or meaning, its cache key changes in the same PR, and the PR says the cache is rebuilt once.
+- **Large data.** A new or changed query on a table that grows with usage (events, fees, invoices, wallet transactions) has an index that serves it. Check the plan on a large dataset when unsure.
+- **Sign-in and permissions.** A change to sign-in, tokens or permissions covers every sign-in path (password, Google, Okta, Entra ID) and both the REST and GraphQL APIs, and logs no email, token or request body.
+- **Rules of this file.** A new violation of a rule here is a finding, and so is a change that makes a rule here wrong without updating it.
+- **Self-contained diff.** The code does not reference a class, constant or column that neither the diff nor `main` has.
+
 ## Code style
 
 - RuboCop (Standard, plugins and the custom cops in `dev/cops`) defines the style. Fix offenses in the files you change, and do not reformat other files.
 - No `OpenStruct`: use `Struct`, `Data.define` or a hash.
-- No guard clause right before the last line of a method:
-
-  ```ruby
-  # Bad
-  return other unless condition
-  value
-
-  # Good
-  if condition
-    value
-  else
-    other
-  end
-  ```
-
-- A method name says what the method does, side effects included. `?` methods return booleans, and datetime columns end with `_at`.
+- No guard clause right before the last line of a method (`return other unless condition` then `value`): write an `if`/`else` instead.
+- `?` methods return booleans, and datetime columns end with `_at`.
 - Comments explain why, in one or two lines. No ticket IDs, internal links or narration of the change.
 
 ## Commits and pull requests
