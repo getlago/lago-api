@@ -14,6 +14,7 @@ class CreateRecurringAggregationSnapshots < ActiveRecord::Migration[8.0]
       t.datetime :watermark, null: false
       t.decimal :units, null: false, default: 0
       t.bigint :events_count, null: false, default: 0
+      t.jsonb :presentation_breakdowns, null: false, default: []
 
       t.timestamps
     end
