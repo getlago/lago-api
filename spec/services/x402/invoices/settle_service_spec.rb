@@ -55,23 +55,34 @@ describe X402::Invoices::SettleService do
       expect(facilitator_request("/verify", x402_evm_payment.merge("resource" => resource), x402_evm_requirements)).to have_been_made.once
     end
 
-    context "with a bazaar extension and another resource" do
-      let(:payment) do
-        x402_evm_payment.merge(
-          "resource" => {"url" => "https://example.com/listed"},
-          "extensions" => {"bazaar" => {"info" => {}}, "other" => {"id" => 1}}
-        )
-      end
-      let(:reset_payment) { x402_evm_payment.merge("resource" => resource, "extensions" => {"other" => {"id" => 1}}) }
+    context "with another resource" do
+      let(:payment) { x402_evm_payment.merge("resource" => {"url" => "https://example.com/listed"}) }
+      let(:reset_payment) { x402_evm_payment.merge("resource" => resource) }
 
-      it "settles the challenge's envelope" do
+      it "settles the challenge's resource" do
         result
 
         expect(facilitator_request("/settle", reset_payment, x402_evm_requirements)).to have_been_made.once
       end
 
-      it "stores the challenge's envelope" do
-        expect(result.settlement.payload["payment"]).to eq(reset_payment)
+      context "with a bazaar extension" do
+        let(:payment) do
+          x402_evm_payment.merge(
+            "resource" => {"url" => "https://example.com/listed"},
+            "extensions" => {"bazaar" => {"info" => {}}, "other" => {"id" => 1}}
+          )
+        end
+        let(:reset_payment) { x402_evm_payment.merge("resource" => resource, "extensions" => {"other" => {"id" => 1}}) }
+
+        it "settles the challenge's envelope" do
+          result
+
+          expect(facilitator_request("/settle", reset_payment, x402_evm_requirements)).to have_been_made.once
+        end
+
+        it "stores the challenge's envelope" do
+          expect(result.settlement.payload["payment"]).to eq(reset_payment)
+        end
       end
     end
 
@@ -135,6 +146,22 @@ describe X402::Invoices::SettleService do
 
         it "still answers the settled attempt" do
           expect(result.settlement).to eq(settled)
+        end
+      end
+    end
+
+    context "with an authorization that is not valid UTF-8" do
+      let(:payment) { x402_evm_payment.deep_merge("payload" => {"authorization" => {"from" => "0x\xFF".dup.force_encoding("UTF-8")}}) }
+
+      it "refuses the payment" do
+        expect(result.error.messages).to eq({payment: ["invalid_payment"]})
+      end
+
+      context "with a settled attempt awaiting its payment" do
+        before { create(:x402_settlement, :invoice_payment, x402_connection:, invoice:, payment_digest: digest, payer_address:, payee_address:) }
+
+        it "answers that an attempt is pending" do
+          expect(result.error.messages).to eq({base: ["invoice_payment_pending"]})
         end
       end
     end
@@ -248,6 +275,43 @@ describe X402::Invoices::SettleService do
 
       it "answers the pending attempt" do
         expect(result).to have_attributes(settlement: racer, replayed: true)
+      end
+    end
+
+    context "when the pipeline refuses an invoice that has another attempt" do
+      before do
+        allow(X402::Settlements::SettleService).to receive(:call).and_wrap_original do |original, **kwargs|
+          create(:x402_settlement, :invoice_payment, x402_connection:, invoice:, payee_address:)
+          original.call(**kwargs)
+        end
+      end
+
+      it "answers that an attempt is pending" do
+        expect(result.error.messages).to eq({base: ["invoice_payment_pending"]})
+      end
+
+      it "fails the attempt" do
+        result
+
+        expect(X402::Settlement.find_by(payment_digest: digest)).to have_attributes(status: "failed", error_reason: "invoice_payment_pending")
+      end
+    end
+
+    context "when the finish raises" do
+      before do
+        allow(X402::Invoices::FinishPaymentService).to receive(:call).and_raise(ActiveRecord::StatementInvalid)
+      end
+
+      it "answers the pending attempt" do
+        expect(result).to have_attributes(settlement: have_attributes(status: "pending", transaction_hash: nil), replayed: false)
+      end
+
+      it "logs the failure" do
+        result
+
+        expect(Rails.logger).to have_received(:warn).with(
+          "X402::Invoices::SettleService call failed reason=finish_failed network=eip155:84532 error=ActiveRecord::StatementInvalid"
+        )
       end
     end
 
