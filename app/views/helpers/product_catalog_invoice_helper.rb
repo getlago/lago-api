@@ -90,15 +90,26 @@ class ProductCatalogInvoiceHelper
         indent:,
         label: period_label(fee),
         units: RoundingHelper.round_decimal_part(fee.units),
-        unit_price: FeeDisplayHelper.format_precise_unit_amount(fee),
-        amount: FeeDisplayHelper.format_amount(fee)
+        unit_price: unbreakable(FeeDisplayHelper.format_precise_unit_amount(fee)),
+        amount: unbreakable(FeeDisplayHelper.format_amount(fee))
       )
       details = tiers(fee).map do |tier|
-        Row.new(kind: :fee_detail, indent: indent + 1, label: tier.label, units: tier.units, unit_price: tier.unit_price, amount: tier.amount)
+        Row.new(
+          kind: :fee_detail,
+          indent: indent + 1,
+          label: tier.label,
+          units: tier.units,
+          unit_price: unbreakable(tier.unit_price),
+          amount: unbreakable(tier.amount)
+        )
       end
 
       [segment, *details]
     end
+  end
+
+  def self.unbreakable(value)
+    value.to_s.tr(" ", "\u00A0")
   end
 
   def self.format_cents(amount_cents, currency)
