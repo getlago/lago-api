@@ -75,12 +75,17 @@ describe "Void a contract invoice" do
     end
   end
 
+  def void_contract_invoice(invoice, params = {})
+    api_call { post_with_token(organization, "/api/v2/invoices/#{invoice.id}/void", params) }
+    invoice.reload
+  end
+
   it "keeps the period billed by the voided invoice, with its fees and their rate" do
     invoice = customer.invoices.sole
     fee = invoice.fees.sole
     expect(fee).to have_attributes(rate_card_rate_id: rate.id, units: 80, amount_cents: 8_000)
 
-    travel_to(february + 1.day) { void_invoice(invoice) }
+    travel_to(february + 1.day) { void_contract_invoice(invoice) }
 
     expect(invoice).to be_voided
     expect(fee.reload).to have_attributes(invoice_id: invoice.id, rate_card_rate_id: rate.id, units: 80, amount_cents: 8_000)
@@ -98,7 +103,7 @@ describe "Void a contract invoice" do
     create(:webhook_endpoint, organization:, webhook_url: "https://hooks.example.com/lago")
     stub_request(:post, "https://hooks.example.com/lago").to_return(status: 200)
 
-    travel_to(february + 1.day) { void_invoice(invoice) }
+    travel_to(february + 1.day) { void_contract_invoice(invoice) }
 
     payload = organization.webhooks.where(webhook_type: "invoice.voided").sole.payload
     expect(payload.dig("invoice", "lago_id")).to eq(invoice.id)
@@ -111,7 +116,7 @@ describe "Void a contract invoice" do
       invoice = customer.invoices.sole
 
       travel_to(february + 1.day) do
-        void_invoice(invoice, {generate_credit_note: true, credit_amount: 8_000, refund_amount: 0})
+        void_contract_invoice(invoice, {generate_credit_note: true, credit_amount: 8_000, refund_amount: 0})
       end
 
       expect(invoice).to be_voided

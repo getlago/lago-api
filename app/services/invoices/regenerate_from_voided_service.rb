@@ -19,6 +19,7 @@ module Invoices
 
     def call
       return result.not_found_failure!(resource: "invoice") unless voided_invoice
+      return result.not_allowed_failure!(code: "product_catalog_invoice_not_regenerable") if product_catalog_invoice?
 
       ActiveRecord::Base.transaction do
         create_regenerated_invoice
@@ -68,6 +69,12 @@ module Invoices
     attr_reader :voided_invoice, :fees_params, :purchase_order_number
 
     delegate :customer, to: :voided_invoice
+
+    # Contract fees have no charge to rebuild them from, and their billing segments stay on the
+    # voided invoice: billing a contract period again is not supported yet.
+    def product_catalog_invoice?
+      voided_invoice.fees.where.not(contract_id: nil).exists?
+    end
 
     def issuing_date
       @issuing_date ||= Time.current.in_time_zone(customer.applicable_timezone).to_date
