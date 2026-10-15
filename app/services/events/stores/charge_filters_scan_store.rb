@@ -48,16 +48,17 @@ module Events
         end
       end
 
-      def recurring_sum(watermark:)
-        if scanned?(operation: :recurring_sum)
+      # The delta of a snapshot keeps the store's own read, pruned by timestamp and enriched_at.
+      def recurring_sum(watermark:, snapshot: nil)
+        if snapshot.nil? && scanned?(operation: :recurring_sum)
           scan.recurring_sum(__getobj__, watermark:)
         else
           super
         end
       end
 
-      def grouped_recurring_sum(watermark:)
-        if scanned?(operation: :recurring_sum)
+      def grouped_recurring_sum(watermark:, snapshot: nil)
+        if snapshot.nil? && scanned?(operation: :recurring_sum)
           scan.grouped_recurring_sum(__getobj__, watermark:)
         else
           super
