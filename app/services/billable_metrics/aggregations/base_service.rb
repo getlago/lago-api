@@ -33,7 +33,8 @@ module BillableMetrics
         :units_applied, # Number of units applied by the event and cached in a pay in advance scenario (billing and current usage)
         :recurring_updated_at, # Date when the recurring cached aggregation was updated
         # Recurring aggregation snapshot fields
-        :recurring_units # Cumulative units of a recurring metric at the end of the period, before rounding
+        :recurring_units, # Cumulative units of a recurring metric at the end of the period, before rounding
+        :recurring_events_count # Cumulative events count behind recurring_units
       ]
       PerEventAggregationResult = BaseResult[:event_aggregation]
 

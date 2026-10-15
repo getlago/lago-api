@@ -842,7 +842,8 @@ module Events
         <<~SQL.squish
           sum(events.property) AS value,
           #{sql_condition("sumIf(events.property, events.enriched_at <= ?)", watermark)} AS snapshot_value,
-          count() AS events_count
+          count() AS events_count,
+          #{sql_condition("countIf(events.enriched_at <= ?)", watermark)} AS snapshot_events_count
         SQL
       end
 

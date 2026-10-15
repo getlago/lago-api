@@ -579,7 +579,12 @@ module Fees
           values: aggregation_results.map do
             grouped_by = it.grouped_by || {}
 
-            {grouped_by:, units: it.recurring_units, presentation_breakdowns: breakdowns_by_group.fetch(grouped_by, [])}
+            {
+              grouped_by:,
+              units: it.recurring_units,
+              events_count: it.recurring_events_count.to_i,
+              presentation_breakdowns: breakdowns_by_group.fetch(grouped_by, [])
+            }
           end
         }
       end

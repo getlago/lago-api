@@ -507,7 +507,8 @@ module Events
         <<~SQL.squish
           SUM((#{sanitized_property_name})::numeric) AS value,
           SUM((#{sanitized_property_name})::numeric) FILTER (WHERE #{ingested_before_watermark}) AS snapshot_value,
-          COUNT(*) AS events_count
+          COUNT(*) AS events_count,
+          COUNT(*) FILTER (WHERE #{ingested_before_watermark}) AS snapshot_events_count
         SQL
       end
 
