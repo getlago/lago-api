@@ -7,7 +7,7 @@ module Types
 
       def self.coerce_input(input_value, _context)
         input_value.to_h.each_with_object({}) do |(key, values), result|
-          result[key.to_s] = values&.map(&:to_s) || []
+          result[key.to_s.delete(NullByteGuard::NULL_BYTE)] = values&.map { it.to_s.delete(NullByteGuard::NULL_BYTE) } || []
         end
       rescue
         raise GraphQL::CoercionError, "#{input_value.inspect} is not a valid hash object"

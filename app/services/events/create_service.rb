@@ -15,6 +15,7 @@ module Events
     def call
       event_timestamp = parse_timestamp
       return result.single_validation_failure!(field: :timestamp, error_code: "invalid_format") unless event_timestamp
+      return result.single_validation_failure!(field: :timestamp, error_code: "value_is_out_of_range") unless TimestampWindow.within?(event_timestamp)
 
       event = Event.new
       event.organization_id = organization.id
@@ -54,9 +55,7 @@ module Events
     attr_reader :organization, :params, :timestamp, :metadata
 
     def parse_timestamp
-      Time.zone.at(params[:timestamp] ? BigDecimal(params[:timestamp].to_s) : timestamp)
-    rescue ArgumentError
-      nil
+      TimestampWindow.parse(params[:timestamp], default: timestamp)
     end
 
     def produce_kafka_event(event)
