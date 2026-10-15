@@ -9,8 +9,7 @@ RSpec.describe Mutations::PasswordResets::Create do
   let_it_be(:membership) { create_default(:membership, organization:) }
   let(:user) { membership.user }
   let(:email) { user.email }
-  # A fresh store per example: other specs can leave a memory store in Rails.cache, and the counters
-  # would then carry over between examples.
+  # A fresh store per example, so the counters do not carry over between examples.
   let(:cache) { ActiveSupport::Cache::MemoryStore.new }
 
   let(:mutation) do
@@ -23,7 +22,7 @@ RSpec.describe Mutations::PasswordResets::Create do
     GQL
   end
 
-  before { allow(Rails).to receive(:cache).and_return(cache) }
+  before { allow(Auth::AttemptsThrottle).to receive(:store).and_return(cache) }
 
   def request_reset(email)
     execute_graphql(query: mutation, variables: {input: {email:}})

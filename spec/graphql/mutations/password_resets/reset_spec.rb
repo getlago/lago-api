@@ -68,7 +68,7 @@ RSpec.describe Mutations::PasswordResets::Reset do
     let(:cache) { ActiveSupport::Cache::MemoryStore.new }
     let(:request) { instance_double(ActionDispatch::Request, remote_ip: "203.0.113.10") }
 
-    before { allow(Rails).to receive(:cache).and_return(cache) }
+    before { allow(Auth::AttemptsThrottle).to receive(:store).and_return(cache) }
 
     it "limits attempts per client IP" do
       20.times do

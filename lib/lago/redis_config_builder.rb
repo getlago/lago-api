@@ -29,7 +29,9 @@ module Lago
   #
   # Base config for `#throttling` includes URL (LAGO_REDIS_THROTTLING_URL), SSL
   # params and password (LAGO_REDIS_THROTTLING_PASSWORD). It holds the
-  # authentication attempt counters of Auth::AttemptsThrottle when configured.
+  # authentication attempt counters of Auth::AttemptsThrottle. Without
+  # LAGO_REDIS_THROTTLING_URL, the URL and password default to REDIS_URL and
+  # REDIS_PASSWORD.
   #
   # Sentinel credentials are only applied when the corresponding sentinels are
   # configured. Blank credentials are omitted; leave the username unset for
@@ -108,15 +110,18 @@ module Lago
     end
 
     def throttling
+      dedicated = ENV["LAGO_REDIS_THROTTLING_URL"].present?
       redis_config = {
-        url: ENV["LAGO_REDIS_THROTTLING_URL"].presence,
+        url: dedicated ? ENV["LAGO_REDIS_THROTTLING_URL"] : ENV["REDIS_URL"].presence,
         ssl_params: {
           verify_mode: OpenSSL::SSL::VERIFY_NONE
         },
         timeout: 1
       }.compact
 
-      add_password(redis_config, password: ENV["LAGO_REDIS_THROTTLING_PASSWORD"].presence)
+      # The password goes with the URL, so a dedicated instance never receives the Sidekiq password.
+      password = dedicated ? ENV["LAGO_REDIS_THROTTLING_PASSWORD"] : ENV["REDIS_PASSWORD"]
+      add_password(redis_config, password: password.presence)
       # No retry wiring, as for the cache: a failing store must not hold up the login requests.
 
       redis_config.merge(extra_options)
@@ -124,10 +129,6 @@ module Lago
 
     def self.cache_enabled?
       ENV["LAGO_REDIS_CACHE_URL"].present? || ENV["LAGO_REDIS_CACHE_SENTINELS"].present?
-    end
-
-    def self.throttling_enabled?
-      ENV["LAGO_REDIS_THROTTLING_URL"].present?
     end
 
     private

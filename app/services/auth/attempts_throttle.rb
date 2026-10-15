@@ -4,7 +4,7 @@ module Auth
   # Counts authentication attempts in fixed time windows, in a store shared by all API processes, to slow down
   # credential stuffing, password guessing and password reset abuse on the public auth mutations.
   # Identifiers (client IP, email, or both for a rule keyed on the pair) are hashed before being used in cache keys.
-  # When the cache is unavailable, attempts are not counted and nothing is blocked.
+  # When Redis is unavailable, attempts are not counted and nothing is blocked.
   module AttemptsThrottle
     Rule = Data.define(:limit, :period, :identifier)
 
@@ -20,15 +20,8 @@ module Auth
     }.freeze
 
     # Built on first use only, and once per process.
-    THROTTLING_STORE = Concurrent::Delay.new do
+    STORE = Concurrent::Delay.new do
       ActiveSupport::Cache::RedisCacheStore.new(**Lago::RedisConfigBuilder.new.throttling)
-    end
-
-    FALLBACK_STORE = Concurrent::Delay.new do
-      ActiveSupport::Cache::RedisCacheStore.new(
-        **Lago::RedisConfigBuilder.new.sidekiq.except(:reconnect_attempts, :middlewares, :custom),
-        namespace: "auth_attempts"
-      )
     end
 
     module_function
@@ -48,18 +41,10 @@ module Auth
       store.delete(cache_key(rule_name, *identifiers))
     end
 
-    # Counters must be shared by every API process. The dedicated Redis is used when it is configured
-    # (LAGO_REDIS_THROTTLING_URL), then Rails.cache when it is shared (Redis or Memcache). Without a configured
-    # cache, production falls back to a per-process file store, so the counters then go to the Redis instance
-    # Sidekiq already requires.
+    # Counters must be shared by every API process, so they live in Redis: the dedicated instance when
+    # LAGO_REDIS_THROTTLING_URL is set, else the Sidekiq Redis that every install already runs.
     def store
-      if Lago::RedisConfigBuilder.throttling_enabled?
-        THROTTLING_STORE.value
-      elsif Rails.cache.is_a?(ActiveSupport::Cache::FileStore)
-        FALLBACK_STORE.value
-      else
-        Rails.cache
-      end
+      STORE.value
     end
 
     def cache_key(rule_name, *identifiers)

@@ -614,9 +614,20 @@ RSpec.describe Lago::RedisConfigBuilder do
   describe "#throttling" do
     subject(:result) { builder.throttling }
 
-    context "without environment variables" do
-      it "returns base config" do
-        expect(result).to eq(ssl_params: {verify_mode: OpenSSL::SSL::VERIFY_NONE}, timeout: 1)
+    context "without LAGO_REDIS_THROTTLING_URL" do
+      before do
+        ENV["REDIS_URL"] = "redis://sidekiq:6379"
+        ENV["REDIS_PASSWORD"] = "sidekiq_secret"
+        ENV["LAGO_REDIS_THROTTLING_PASSWORD"] = "throttling_secret"
+      end
+
+      it "uses the Sidekiq URL and password" do
+        expect(result).to eq(
+          url: "redis://sidekiq:6379",
+          password: "sidekiq_secret",
+          ssl_params: {verify_mode: OpenSSL::SSL::VERIFY_NONE},
+          timeout: 1
+        )
       end
     end
 
@@ -631,36 +642,16 @@ RSpec.describe Lago::RedisConfigBuilder do
       end
     end
 
-    context "with credentials for the other Redis consumers" do
+    context "with LAGO_REDIS_THROTTLING_URL and credentials for the other Redis consumers" do
       before do
-        ENV["REDIS_URL"] = "redis://sidekiq:6379"
+        ENV["LAGO_REDIS_THROTTLING_URL"] = "redis://throttling:6379"
         ENV["REDIS_PASSWORD"] = "sidekiq_secret"
         ENV["LAGO_REDIS_CACHE_PASSWORD"] = "cache_secret"
       end
 
       it "does not use them" do
-        expect(result).not_to include(:url, :password)
+        expect(result).not_to include(:password)
       end
-    end
-  end
-
-  describe ".throttling_enabled?" do
-    subject(:result) { described_class.throttling_enabled? }
-
-    context "when LAGO_REDIS_THROTTLING_URL is set" do
-      before { ENV["LAGO_REDIS_THROTTLING_URL"] = "redis://throttling:6379" }
-
-      it { is_expected.to be(true) }
-    end
-
-    context "when LAGO_REDIS_THROTTLING_URL is set to an empty string" do
-      before { ENV["LAGO_REDIS_THROTTLING_URL"] = "" }
-
-      it { is_expected.to be(false) }
-    end
-
-    context "without LAGO_REDIS_THROTTLING_URL" do
-      it { is_expected.to be(false) }
     end
   end
 end

@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Auth::AttemptsThrottle do
   let(:cache) { ActiveSupport::Cache::MemoryStore.new }
 
-  before { allow(Rails).to receive(:cache).and_return(cache) }
+  before { allow(described_class).to receive(:store).and_return(cache) }
 
   describe ".hit!" do
     it "returns true once the limit is exceeded" do
@@ -90,24 +90,10 @@ RSpec.describe Auth::AttemptsThrottle do
   end
 
   describe ".store" do
-    it "uses Rails.cache when it is shared" do
-      expect(described_class.store).to be(cache)
-    end
+    before { allow(described_class).to receive(:store).and_call_original }
 
-    context "when Rails.cache is a per-process file store" do
-      let(:cache) { ActiveSupport::Cache::FileStore.new(Dir.mktmpdir) }
-
-      it "falls back to the Sidekiq Redis" do
-        expect(described_class.store).to be(described_class::FALLBACK_STORE.value)
-      end
-    end
-
-    context "when a dedicated throttling Redis is configured" do
-      before { stub_const("ENV", ENV.to_h.merge("LAGO_REDIS_THROTTLING_URL" => "redis://throttling:6379")) }
-
-      it "uses it instead of Rails.cache" do
-        expect(described_class.store).to be(described_class::THROTTLING_STORE.value)
-      end
+    it "is a Redis store" do
+      expect(described_class.store).to be_a(ActiveSupport::Cache::RedisCacheStore)
     end
   end
 end
