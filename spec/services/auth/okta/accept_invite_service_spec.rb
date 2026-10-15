@@ -136,5 +136,36 @@ RSpec.describe Auth::Okta::AcceptInviteService, :premium, cache: :memory do
         expect(result.error.messages.values.flatten).to include("okta_userinfo_error")
       end
     end
+
+    context "when the integration belongs to another organization" do
+      let(:integration_organization) { create(:organization, premium_integrations: ["okta"]) }
+      let(:okta_integration) { create(:okta_integration, domain: "bar.com", organization: integration_organization) }
+      let(:user) { create(:user, email: "foo@bar.com") }
+
+      context "when the invited email belongs to an existing user outside that organization" do
+        before { user }
+
+        it "refuses the invite without adding the user to the organization" do
+          result = nil
+
+          expect { result = service.call }.not_to change(Membership, :count)
+          expect(result).not_to be_success
+          expect(result.error.messages).to match(okta: ["login_method_not_authorized"])
+          expect(invite.reload).to be_pending
+        end
+      end
+
+      context "when the invited email belongs to an existing member of that organization" do
+        before { create(:membership, user:, organization: integration_organization) }
+
+        it "accepts the invite" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.user).to eq(user)
+          expect(invite.reload).to be_accepted
+        end
+      end
+    end
   end
 end

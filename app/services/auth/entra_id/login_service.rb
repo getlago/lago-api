@@ -20,14 +20,12 @@ module Auth
         query_entra_id_access_token
         check_userinfo(result.email)
 
+        return login_method_not_authorized_failure unless integration_organization_allows_login_method?
+
         find_or_create_user
-        return login_method_not_authorized_failure unless user_belongs_to_integration_organization?
+        return login_method_not_authorized_failure unless user_trusted_by_integration?(result.user)
 
         find_or_create_membership
-
-        unless result.user.active_organizations.pluck(:authentication_methods).flatten.uniq.include?(Organizations::AuthenticationMethods::ENTRA_ID)
-          return login_method_not_authorized_failure
-        end
 
         UserDevices::RegisterService.call!(user: result.user)
         generate_token
@@ -65,20 +63,6 @@ module Auth
         end
 
         result.user = user
-      end
-
-      # NOTE: The identity provider of an integration is chosen by its organization, so it only
-      #       vouches for that organization's users. An existing user joins another one through an invite.
-      def user_belongs_to_integration_organization?
-        result.user.previously_new_record? ||
-          result.user.memberships.active.exists?(organization_id: result.entra_id_integration.organization_id)
-      end
-
-      def login_method_not_authorized_failure
-        result.single_validation_failure!(
-          error_code: "login_method_not_authorized",
-          field: Organizations::AuthenticationMethods::ENTRA_ID
-        )
       end
 
       def find_or_create_membership

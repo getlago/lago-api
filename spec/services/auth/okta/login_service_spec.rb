@@ -93,6 +93,24 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
       end
     end
 
+    context "when the integration organization disallows the login method but another membership allows it" do
+      let(:user) { create(:user, email: "foo@bar.com") }
+
+      before do
+        create(:membership, user:, organization: okta_integration.organization)
+        create(:membership, user:, organization: create(:organization, authentication_methods: %w[email_password okta]))
+        okta_integration.organization.disable_okta_authentication!
+      end
+
+      it "refuses the login" do
+        result = service.call
+
+        expect(result).not_to be_success
+        expect(result.error.messages).to match(okta: ["login_method_not_authorized"])
+        expect(result.token).to be_nil
+      end
+    end
+
     context "when domain is not configured with an integration" do
       let(:okta_integration) { nil }
 

@@ -48,6 +48,26 @@ module Auth
         }
       end
 
+      # NOTE: The identity provider of an integration is chosen by its organization, so it only
+      #       vouches for that organization's users. An existing user joins another one through an
+      #       invite accepted with a login that organization already trusts.
+      def user_trusted_by_integration?(user)
+        user.nil? ||
+          user.previously_new_record? ||
+          user.memberships.active.exists?(organization_id: result.entra_id_integration.organization_id)
+      end
+
+      def integration_organization_allows_login_method?
+        result.entra_id_integration.organization.authentication_methods.include?(Organizations::AuthenticationMethods::ENTRA_ID)
+      end
+
+      def login_method_not_authorized_failure
+        result.single_validation_failure!(
+          error_code: "login_method_not_authorized",
+          field: Organizations::AuthenticationMethods::ENTRA_ID
+        )
+      end
+
       def check_invite(email)
         invite = Invite.pending.find_by(token: invite_token)
 

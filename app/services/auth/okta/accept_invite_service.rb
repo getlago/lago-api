@@ -20,6 +20,7 @@ module Auth
         check_invite(result.email)
         query_okta_access_token
         check_userinfo(result.email)
+        return login_method_not_authorized_failure unless user_trusted_by_integration?(result.invite.existing_user)
 
         Invites::AcceptService.new.call(
           invite: result.invite,
