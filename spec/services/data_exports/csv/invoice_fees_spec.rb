@@ -302,8 +302,8 @@ RSpec.describe DataExports::Csv::InvoiceFees do
           let(:commitment_boundaries) { {} }
 
           it "exports an empty period" do
-            # Every field is quoted, so an empty value is written as "" and parsed back as an empty string
-            expect(exported_period).to eq(["", ""])
+            # nil is written as an empty unquoted field, so it is parsed back as nil
+            expect(exported_period).to eq([nil, nil])
           end
         end
       end

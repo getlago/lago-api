@@ -16,8 +16,6 @@ module DataExports
       # Plain numbers such as "-150" or "-1.5" are left as is so they stay numbers in the spreadsheet.
       NUMBER_PATTERN = /\A[+-]?\d+(?:\.\d+)?\z/
 
-      CONVERTER = ->(field) { escape(field) }
-
       module_function
 
       def escape(value)

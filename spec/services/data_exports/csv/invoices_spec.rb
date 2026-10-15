@@ -159,8 +159,9 @@ RSpec.describe DataExports::Csv::Invoices, :premium do
         file.close
         File.unlink(file.path)
 
-        # Every field is quoted, so a spreadsheet splitting on ";" or another separator cannot cut a value
-        expect(line).to match(/\A"(?:[^"]|"")*"(?:,"(?:[^"]|"")*")*\n\z/)
+        # Every value is quoted (nil stays an empty unquoted field), so a spreadsheet splitting on ";"
+        # or another separator cannot cut a value
+        expect(line).to match(/\A(?:"(?:[^"]|"")*")?(?:,(?:"(?:[^"]|"")*")?)*\n\z/)
         expect(line).to include(%("safe;=1+1;safe"))
         expect(line).to include(%("a"",""=1+1"))
 
