@@ -100,9 +100,9 @@ module BillableMetrics
       end
 
       # The snapshots of every group bound one delta read, so they must share their watermark.
-      # Pay in advance and current usage served by the incremental scan keep their own read.
+      # Current usage served by the incremental scan keeps its own read.
       def delta_snapshot(options)
-        return if initial_value.blank? || options[:is_pay_in_advance]
+        return if initial_value.blank?
         return if options[:is_current_usage] && event_store.incremental_sum?
 
         snapshot = initial_value.first
