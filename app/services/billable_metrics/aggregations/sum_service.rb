@@ -128,7 +128,7 @@ module BillableMetrics
       end
 
       # Without snapshots, the period still bounds the delta: the bucket starts from zero.
-      # Pay in advance and current usage served by the incremental scan keep their own read.
+      # Pay in advance fees and current usage served by the incremental scan keep their own read.
       def delta_period(options)
         return if initial_period.nil? || options[:is_pay_in_advance]
         return if options[:is_current_usage] && event_store.incremental_sum?

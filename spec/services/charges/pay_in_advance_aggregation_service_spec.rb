@@ -76,6 +76,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
           metered_item:,
           billing_context: subscription_context,
           boundaries: aggregation_boundaries,
+          initial_value: nil,
           filters: anything
         )
       end
@@ -122,6 +123,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
           metered_item:,
           billing_context: have_attributes(contract:),
           boundaries: aggregation_boundaries,
+          initial_value: nil,
           filters: anything
         )
       end
@@ -143,6 +145,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
             metered_item:,
             billing_context: subscription_context,
             boundaries: aggregation_boundaries,
+            initial_value: nil,
             filters: {
               event: common_event,
               charge_id: charge.id
@@ -185,6 +188,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
               metered_item:,
               billing_context: subscription_context,
               boundaries: aggregation_boundaries,
+              initial_value: nil,
               filters: {
                 event: common_event,
                 charge_id: charge.id,
@@ -228,6 +232,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
               metered_item:,
               billing_context: subscription_context,
               boundaries: aggregation_boundaries,
+              initial_value: nil,
               filters: {
                 event: common_event,
                 charge_id: charge.id,
@@ -274,6 +279,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
                 metered_item:,
                 billing_context: subscription_context,
                 boundaries: aggregation_boundaries,
+                initial_value: nil,
                 filters: {
                   event: common_event,
                   charge_id: charge.id,
@@ -315,6 +321,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
               metered_item:,
               billing_context: subscription_context,
               boundaries: aggregation_boundaries,
+              initial_value: nil,
               filters: {
                 event: common_event,
                 charge_id: charge.id,
@@ -358,6 +365,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
               metered_item:,
               billing_context: subscription_context,
               boundaries: aggregation_boundaries,
+              initial_value: nil,
               filters: {
                 event: common_event,
                 charge_id: charge.id,
@@ -397,6 +405,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
               metered_item:,
               billing_context: subscription_context,
               boundaries: aggregation_boundaries,
+              initial_value: nil,
               filters: {
                 event: common_event,
                 charge_id: charge.id,
@@ -432,6 +441,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
             metered_item:,
             billing_context: subscription_context,
             boundaries: aggregation_boundaries,
+            initial_value: nil,
             filters: {
               event: common_event,
               charge_id: charge.id
@@ -462,6 +472,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
             metered_item:,
             billing_context: subscription_context,
             boundaries: aggregation_boundaries,
+            initial_value: nil,
             filters: {
               event: common_event,
               charge_id: charge.id
@@ -471,6 +482,84 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
         expect(unique_count_service).to have_received(:aggregate).with(
           options: {free_units_per_events: 0, free_units_per_total_aggregation: 0}
         )
+      end
+    end
+
+    describe "when recurring sum aggregation with a snapshot of the previous period" do
+      let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:, field_name: "value") }
+      let(:period_start) { subscription.started_at.beginning_of_month + 1.month }
+      let(:snapshot_watermark) { period_start + 1.hour }
+      let(:boundaries) do
+        BillingPeriodBoundaries.new(
+          from_datetime: period_start,
+          to_datetime: period_start.end_of_month,
+          charges_from_datetime: period_start,
+          charges_to_datetime: period_start.end_of_month,
+          charges_duration: 30,
+          timestamp: period_start.end_of_month.to_i
+        )
+      end
+      let(:event) { create_event(timestamp: period_start + 2.days, value: 5) }
+
+      def create_event(timestamp:, value:, region: "eu", created_at: timestamp)
+        create(:event, organization:, external_subscription_id: subscription.external_id, code: billable_metric.code,
+          timestamp:, created_at:, properties: {value:, region:})
+      end
+
+      def create_snapshot(units:, grouped_by: {})
+        create(:recurring_aggregation_snapshot, organization:, subscription:, charge:, grouped_by:, units:, events_count: 1,
+          to_datetime: period_start - 1.second, watermark: snapshot_watermark)
+      end
+
+      before do
+        organization.enable_feature_flag!(:persisted_recurring_values)
+
+        create_event(timestamp: subscription.started_at + 1.day, value: 10)
+        # Dated in the snapshot period, ingested after its watermark
+        create_event(timestamp: subscription.started_at + 2.days, value: 7, created_at: snapshot_watermark + 1.minute)
+      end
+
+      context "with a snapshot" do
+        before { create_snapshot(units: 100) }
+
+        it "adds the events the snapshot did not count to its units" do
+          expect(agg_service.call.aggregation).to eq(100 + 7 + 5)
+        end
+
+        context "without the persisted_recurring_values feature flag" do
+          before { organization.disable_feature_flag!(:persisted_recurring_values) }
+
+          it "reads the full history" do
+            expect(agg_service.call.aggregation).to eq(10 + 7 + 5)
+          end
+        end
+      end
+
+      context "with pricing group keys" do
+        let(:charge) do
+          create(:standard_charge, billable_metric:, pay_in_advance: true,
+            properties: {"amount" => "1", "pricing_group_keys" => ["region"]})
+        end
+        let(:properties) { charge.properties }
+
+        before do
+          create_snapshot(units: 100, grouped_by: {"region" => "eu"})
+          create_snapshot(units: 50, grouped_by: {"region" => "us"})
+        end
+
+        it "starts from the snapshot of the event group" do
+          expect(agg_service.call.aggregation).to eq(100 + 7 + 5)
+        end
+
+        context "when the event group has no snapshot" do
+          let(:event) { create_event(timestamp: period_start + 2.days, value: 5, region: "apac") }
+
+          before { create_event(timestamp: subscription.started_at + 1.day, value: 3, region: "apac") }
+
+          it "reads the full history of the group" do
+            expect(agg_service.call.aggregation).to eq(3 + 5)
+          end
+        end
       end
     end
   end
