@@ -16,8 +16,12 @@ module UsageAttributionValues
   # another team moves with it), an older event never moves it back, and an event without the
   # parent level keeps the current parent. Usage is unaffected: each event's own labels are stamped
   # in ClickHouse.
+  #
+  # A customer holds at most UsageAttributionValue::MAX_PER_CUSTOMER_AND_TYPE values per type: past
+  # it, new values are skipped and the existing ones are still refreshed.
   class TrackService < BaseService
     UNIQUE_INDEX = :index_usage_attribution_values_on_customer_type_and_value
+    LIMIT_REACHED_CACHE_TTL = 1.hour
 
     # In ON CONFLICT DO UPDATE, every expression reads the stored row as it was before the update.
     ON_DUPLICATE = Arel.sql(<<~SQL.squish)
@@ -47,6 +51,7 @@ module UsageAttributionValues
         types_in_tree_order.each do |attribution_type|
           value = labels[attribution_type.code]
           next if value.nil?
+          next unless trackable?(customer_id, attribution_type, value)
 
           parent_id = value_ids_by_type[attribution_type.parent_id]
           value_ids_by_type[attribution_type.id] = upsert_value(customer_id, attribution_type, value, parent_id, seen_at)
@@ -79,6 +84,45 @@ module UsageAttributionValues
       UsageAttributionValue
         .upsert(row, unique_by: UNIQUE_INDEX, on_duplicate: ON_DUPLICATE, returning: :id) # rubocop:disable Rails/SkipsModelValidations
         .first["id"]
+    end
+
+    def trackable?(customer_id, attribution_type, value)
+      existing_values.include?([customer_id, attribution_type.id, value]) || !limit_reached?(customer_id, attribution_type)
+    end
+
+    def existing_values
+      @existing_values ||= UsageAttributionValue
+        .where(
+          customer_id: resolved_entries.map(&:first).uniq,
+          usage_attribution_type_id: attribution_types.map(&:id),
+          value: resolved_entries.flat_map { |_, labels, _| labels.values }.uniq
+        )
+        .pluck(:customer_id, :usage_attribution_type_id, :value)
+        .to_set
+    end
+
+    def limit_reached?(customer_id, attribution_type)
+      @limit_reached ||= {}
+      @limit_reached.fetch([customer_id, attribution_type.id]) do |key|
+        @limit_reached[key] = cached_limit_reached?(customer_id:, usage_attribution_type_id: attribution_type.id)
+      end
+    end
+
+    def cached_limit_reached?(customer_id:, usage_attribution_type_id:)
+      cache_key = UsageAttributionValue.limit_reached_cache_key(customer_id:, usage_attribution_type_id:)
+      return true if Rails.cache.read(cache_key)
+
+      reached = UsageAttributionValue.limit_reached?(customer_id:, usage_attribution_type_id:)
+
+      if reached
+        Rails.cache.write(cache_key, true, expires_in: LIMIT_REACHED_CACHE_TTL)
+        Rails.logger.warn(
+          "Usage attribution values limit reached: organization #{organization.id}, " \
+          "customer #{customer_id}, usage attribution type #{usage_attribution_type_id}"
+        )
+      end
+
+      reached
     end
 
     def attribution_types

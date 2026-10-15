@@ -77,6 +77,37 @@ RSpec.describe UsageAttributionValue do
     end
   end
 
+  describe ".limit_reached?" do
+    subject(:limit_reached) { described_class.limit_reached?(customer_id: customer.id, usage_attribution_type_id: usage_attribution_type.id) }
+
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+    let(:usage_attribution_type) { create(:usage_attribution_type, organization:) }
+
+    before do
+      stub_const("UsageAttributionValue::MAX_PER_CUSTOMER_AND_TYPE", 2)
+      create(:usage_attribution_value, organization:, customer:, usage_attribution_type:)
+      create(:usage_attribution_value, organization:, customer: create(:customer, organization:), usage_attribution_type:)
+      create(:usage_attribution_value, organization:, customer:, usage_attribution_type: create(:usage_attribution_type, organization:))
+    end
+
+    it "is false below the maximum, counting the values of the customer and type only" do
+      expect(limit_reached).to be(false)
+    end
+
+    context "when the customer holds the maximum of values for the type" do
+      before { create(:usage_attribution_value, organization:, customer:, usage_attribution_type:) }
+
+      it { is_expected.to be(true) }
+
+      context "when one of them is discarded" do
+        before { described_class.where(customer:, usage_attribution_type:).first.discard! }
+
+        it { is_expected.to be(false) }
+      end
+    end
+  end
+
   describe "soft deletion" do
     it "hides discarded records behind the default scope" do
       usage_attribution_value.save!
