@@ -67,7 +67,7 @@ RSpec.describe RecurringAggregationSnapshots::CompareUsageService do
   it "leaves the read gate and the organization untouched" do
     result
 
-    expect(RecurringAggregationSnapshots.read_enabled?(organization)).to be(false)
+    expect(RecurringAggregationSnapshots.read_enabled?).to be(true)
     expect(RecurringAggregationSnapshot.count).to eq(1)
   end
 

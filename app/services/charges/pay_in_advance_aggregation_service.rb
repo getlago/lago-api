@@ -62,7 +62,7 @@ module Charges
       return false if metered_item.billing_segment
       return false unless billing_context.subscription?
 
-      RecurringAggregationSnapshots.read_enabled?(billing_context.organization)
+      RecurringAggregationSnapshots.read_enabled?
     end
 
     # The aggregation only reads the group of the event. A group without a snapshot had neither
@@ -94,7 +94,7 @@ module Charges
       if metered_item.billing_segment || metered_item.charge_filter.present?
         matching_result = metered_item.matching_and_ignored_filters
         # Aggregations::BaseService retains this object for charge_filter_id cache lookups;
-        # WeightedSumService and CustomService also scope cached state by it. CustomService reads
+        # CustomService also scopes cached state by it and reads
         # its custom_properties, while BaseStore extracts its ID for enriched-event queries.
         filters[:charge_filter] = metered_item.charge_filter if metered_item.charge_filter&.persisted?
         filters[:matching_filters] = matching_result.matching_filters

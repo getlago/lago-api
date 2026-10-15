@@ -118,11 +118,7 @@ module BillableMetrics
           return @latest_value = latest_snapshots.sum(BigDecimal(0), &:units)
         end
 
-        if latest_cached_aggregation
-          return @latest_value = latest_cached_aggregation.current_aggregation
-        end
-
-        if billing_context.previous_subscription_id?
+        if previous_events_counted?
           return @latest_value = latest_value_from_events.first
         end
 
@@ -136,11 +132,7 @@ module BillableMetrics
           return @latest_breakdowns = latest_snapshots.flat_map(&:presentation_breakdowns)
         end
 
-        if latest_cached_aggregation
-          return @latest_breakdowns = latest_cached_aggregation.presentation_breakdowns
-        end
-
-        if billing_context.previous_subscription_id?
+        if previous_events_counted?
           return @latest_breakdowns = latest_value_from_events.second
         end
 
@@ -155,31 +147,12 @@ module BillableMetrics
         @latest_snapshots = initial_value if initial_period && initial_period.to_datetime >= from_datetime - 1.second
       end
 
-      def latest_cached_aggregation
-        return @latest_cached_aggregation if defined?(@latest_cached_aggregation)
-
-        @latest_cached_aggregation = latest_cached_aggregations
-          .where(grouped_by: grouped_by.presence || {})
-          .first
+      # Without a snapshot, the units carried over are read from the events of the previous periods,
+      # attached to the same external subscription ID (upgrades and downgrades included)
+      def previous_events_counted?
+        from_datetime > billing_context.started_at || billing_context.previous_subscription_id?
       end
 
-      def latest_cached_aggregations
-        return @latest_cached_aggregations if defined?(@latest_cached_aggregations)
-
-        query = CachedAggregation
-          .where(organization_id: billable_metric.organization_id)
-          .where(external_subscription_id: billing_context.external_id)
-          .where(metered_item.cached_aggregation_identity)
-          .where(timestamp: ...from_datetime)
-          .order(timestamp: :desc, created_at: :desc)
-
-        query = query.where(charge_filter_id: charge_filter.id) if charge_filter
-
-        @latest_cached_aggregations = query
-      end
-
-      # NOTE: In case of upgrade/downgrade, if latest value is not persisted yet,
-      #       we need to fetch latest value from previous events attached to the same external subscription ID
       def latest_value_from_events
         return @latest_value_from_events if defined?(@latest_value_from_events)
 
@@ -198,16 +171,7 @@ module BillableMetrics
           return @grouped_latest_values = latest_snapshots.map { {groups: it.grouped_by, value: it.units} }
         end
 
-        if grouped_latest_cached_aggregations.any?
-          return @grouped_latest_values = grouped_latest_cached_aggregations.map do |cached_aggregation|
-            {
-              groups: cached_aggregation.grouped_by,
-              value: cached_aggregation.current_aggregation
-            }
-          end
-        end
-
-        if billing_context.previous_subscription_id?
+        if previous_events_counted?
           return @grouped_latest_values = grouped_latest_values_from_events.first
         end
 
@@ -223,13 +187,7 @@ module BillableMetrics
           end
         end
 
-        if grouped_latest_cached_aggregations.any?
-          return @grouped_latest_breakdowns = grouped_latest_cached_aggregations.flat_map do
-            with_grouped_by_keys(it.grouped_by, it.presentation_breakdowns)
-          end
-        end
-
-        if billing_context.previous_subscription_id?
+        if previous_events_counted?
           return @grouped_latest_breakdowns = grouped_latest_values_from_events.second
         end
 
@@ -244,18 +202,6 @@ module BillableMetrics
         end
       end
 
-      def grouped_latest_cached_aggregations
-        return @grouped_latest_cached_aggregations if defined?(@grouped_latest_cached_aggregations)
-
-        query = latest_cached_aggregations
-
-        grouped_by.each do |key|
-          query = query.where("grouped_by?:key", key:)
-        end
-
-        @grouped_latest_cached_aggregations = query.to_a.uniq(&:grouped_by)
-      end
-
       def previous_period_end
         precision = if event_store.is_a?(Events::Stores::ClickhouseStore)
           0.001.seconds
@@ -267,12 +213,14 @@ module BillableMetrics
       end
 
       def grouped_latest_values_from_events
+        return @grouped_latest_values_from_events if defined?(@grouped_latest_values_from_events)
+
         store = event_store.for_window(to_datetime: previous_period_end)
         store.use_from_boundary = false
 
         breakdowns = presentation_by.present? ? store.grouped_sum(uniq_grouped_by_and_presentation_by, with_count: false).map(&:to_grouped_hash) : []
 
-        [store.grouped_sum(with_count: false).map(&:to_grouped_hash), breakdowns]
+        @grouped_latest_values_from_events = [store.grouped_sum(with_count: false).map(&:to_grouped_hash), breakdowns]
       end
     end
   end

@@ -65,7 +65,7 @@ RSpec.describe RecurringAggregationSnapshots::ComparePayInAdvanceService do
 
   it "persists nothing and leaves the read gate untouched" do
     expect { result }.not_to change { [Fee.count, CachedAggregation.count, RecurringAggregationSnapshot.count] }
-    expect(RecurringAggregationSnapshots.read_enabled?(organization)).to be(false)
+    expect(RecurringAggregationSnapshots.read_enabled?).to be(true)
   end
 
   context "when the snapshot disagrees with the full history" do
