@@ -7155,6 +7155,7 @@ enum FeatureFlagEnum {
   incremental_charge_cache
   multi_connection
   order_forms
+  persisted_recurring_values
   postgres_enriched_events
   product_catalog
   realtime_usage
