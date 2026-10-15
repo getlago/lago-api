@@ -133,7 +133,7 @@ module BillableMetrics
         )
       end
 
-      # A precomputed prorated result carries no snapshot value: its full value is persisted
+      # A sum read without a watermark carries no snapshot value: it persists no snapshot
       def assign_recurring_snapshot(target_result, sum_result)
         return unless billable_metric.recurring?
 
