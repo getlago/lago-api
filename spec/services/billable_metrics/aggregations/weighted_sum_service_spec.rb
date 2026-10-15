@@ -71,8 +71,10 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
     ]
   end
 
-  def snapshot(units:, grouped_by: {}, to_datetime: from_datetime - 1.second)
-    RecurringAggregationSnapshots::FetchService::Snapshot.new(grouped_by:, units:, events_count: 0, to_datetime:, watermark: to_datetime)
+  def snapshot(units:, grouped_by: {}, presentation_breakdowns: [], to_datetime: from_datetime - 1.second)
+    RecurringAggregationSnapshots::FetchService::Snapshot.new(
+      grouped_by:, units:, events_count: 0, presentation_breakdowns:, to_datetime:, watermark: to_datetime
+    )
   end
 
   before do
@@ -215,6 +217,17 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
         expect(result.aggregation).to eq(400)
         expect(result.total_aggregated_units).to eq(400)
         expect(result.recurring_units).to eq(400)
+      end
+
+      context "when using presentation_by" do
+        let(:presentation_by) { ["region"] }
+        let(:initial_value) do
+          [snapshot(units: 400, presentation_breakdowns: [{groups: {"region" => "eu"}, value: "400.0"}])]
+        end
+
+        it "uses the snapshot presentation breakdowns as initial values" do
+          expect(aggregator.aggregate.breakdowns).to eq([{groups: {"region" => "eu"}, value: 400.to_d}])
+        end
       end
 
       context "when the snapshot closes an older period" do
@@ -586,6 +599,35 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
               [{"agent_name" => "frodo"}, 600, 600, 600]
             ]
           )
+        end
+
+        context "when using presentation_by" do
+          let(:presentation_by) { ["region"] }
+          let(:initial_value) do
+            [
+              snapshot(
+                units: 400,
+                grouped_by: {"agent_name" => "aragorn"},
+                presentation_breakdowns: [{groups: {"agent_name" => "aragorn", "region" => "eu"}, value: "400.0"}]
+              ),
+              snapshot(
+                units: 600,
+                grouped_by: {"agent_name" => "frodo"},
+                presentation_breakdowns: [{groups: {"agent_name" => "frodo", "region" => "us"}, value: "600.0"}]
+              )
+            ]
+          end
+
+          it "uses the snapshot presentation breakdowns as initial values" do
+            result = aggregator.aggregate
+
+            expect(result.breakdowns.map { |breakdown| {groups: breakdown[:groups], value: breakdown[:value].round(5).to_s} }).to match_array(
+              [
+                {groups: {"agent_name" => "aragorn", "region" => "eu"}, value: "400.0"},
+                {groups: {"agent_name" => "frodo", "region" => "us"}, value: "600.0"}
+              ]
+            )
+          end
         end
 
         context "when the snapshots close an older period" do
