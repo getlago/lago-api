@@ -114,13 +114,16 @@ Business logic, and every create, update or delete of a model, lives in a servic
 ## Specs
 
 - `spec/` mirrors `app/`: a spec file is named after the class it tests, and its `RSpec.describe` names that class. Endpoint specs live in `spec/requests/api/v1` and `v2`. Billing scenarios in `spec/scenarios` go through API calls and jobs with `spec/support/scenarios_helper.rb`, rather than calling services.
-- A bug fix comes with a spec that fails without the fix. Cover the negative case (a record that must not be returned) and the error paths.
+- A bug fix comes with a spec that fails without the fix: run it once with the fix reverted to see it fail. Cover the negative case (a record that must not be returned) and the error paths.
+- Before writing a spec, open one or two existing specs of the same kind (two `create_service_spec.rb` for a new create service) and follow their structure. Do not add top-level `describe` blocks they do not have.
+- Test behaviour, not configuration: a spec for a threshold, a schedule or a webhook crosses the trigger and checks the side effect, not only the saved settings.
+- A run counts only when its summary shows the expected number of examples and no "errors occurred outside of examples": a spec file that fails to load is left out of the count. Run new spec files on their own first.
 - Helpers:
   - REST: `get_with_token(organization, path, params)` (also `post_`, `put_`, `delete_`), `json` for the parsed body, `expect(response).to be_not_found_error("alert")`, `include_examples "requires API permission", "alert", "write"`.
   - GraphQL: `execute_graphql(current_user:, current_organization:, permissions:, query:, variables:)`, `it_behaves_like "requires current user"`, `"requires current organization"` and `"requires permission", "alerts:create"`.
-- A resolver or mutation spec has one shared example per check its class makes: `"requires current user"` for `AuthenticableApiUser`, `"requires current organization"` for `RequiredOrganization`, and `"requires permission"` with the full `REQUIRED_PERMISSION` list. When a class accepts several permissions, examples pass `permissions: described_class::REQUIRED_PERMISSION.sample`, so each run uses one of them.
   - Jobs: `have_enqueued_job`, `have_been_enqueued`, `have_enqueued_job_after_commit`. Never stub or spy on job classes (cop `Lago/NoExpectReceiveOnJob`).
   - Metadata: `:premium`, `clickhouse: true`, `transaction: false`, `cache: :memory`, `:sentry`, `:bullet` (fails on N+1 queries).
+- A resolver or mutation spec has one shared example per check its class makes: `"requires current user"` for `AuthenticableApiUser`, `"requires current organization"` for `RequiredOrganization`, and `"requires permission"` with the full `REQUIRED_PERMISSION` list. When a class accepts several permissions, examples pass `permissions: described_class::REQUIRED_PERMISSION.sample`, so each run uses one of them.
 - WebMock blocks real HTTP calls: stub them with `stub_request`.
 - `aggregate_failures` is on by default, so several expectations in one example are fine.
 - Name the subject: `subject(:result) { described_class.call(...) }`. Do not test `#initialize`.
@@ -138,6 +141,18 @@ Business logic, and every create, update or delete of a model, lives in a servic
 - Use `before_all` for setup that only needs to exist, such as `before_all { create_default(:billable_metric) }`.
 - `create_default(:organization)` makes factories reuse that organization. A record of another organization needs it passed explicitly (`create(:invoice, organization: create(:organization))`), and a `let_it_be` is declared after the records it depends on.
 - `transaction: false` groups delete all rows after each example, which removes `let_it_be` and `before_all` records: use `let` there.
+
+## Reviewing a change
+
+Read the PR description first, then check the code against it and against the ground rules above. Also check:
+
+- **Callers outside the diff.** Every caller of a changed method still gets what it expects: the return value, the default, the raised error.
+- **Existing data.** The first run of the new code on rows written before it (defaults, `NULL`s, old enum values) works, or the PR adds a backfill or a guard.
+- **Concurrency.** The same request sent twice, two writers on one record, a job running during the change. A uniqueness or ordering guarantee rests on a lock or a unique index, not on a check before the write.
+- **Announced state.** For state that was sent outside (a webhook, a triggered alert, a balance shown), every event that changes its inputs has a path, both into and out of the state: configuration edits, deletion of the parent, time boundaries.
+- **Errors.** A rescue catches the narrowest exception the code raises, and a spec covers it.
+- **Tests.** Every new public method and branch has a spec, and the specs follow the rules above.
+- **Self-contained diff.** The code does not reference a class, constant or column that neither the diff nor `main` has.
 
 ## Code style
 
