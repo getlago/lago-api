@@ -4,7 +4,8 @@ module RecurringAggregationSnapshots
   class PersistService < BaseService
     Result = BaseResult
 
-    # values: one {grouped_by:, units:, events_count:} per group of the charge filter, zero units included
+    # values: one {grouped_by:, units:, events_count:, presentation_breakdowns:} per group of the charge filter,
+    # zero units included
     def initialize(subscription:, charge:, charge_filter:, to_datetime:, watermark:, values:)
       @subscription = subscription
       @charge = charge
@@ -23,7 +24,8 @@ module RecurringAggregationSnapshots
           rows,
           unique_by: :idx_recurring_aggregation_snapshots_unique,
           on_duplicate: Arel.sql(<<~SQL.squish),
-            units = EXCLUDED.units, events_count = EXCLUDED.events_count, watermark = EXCLUDED.watermark,
+            units = EXCLUDED.units, events_count = EXCLUDED.events_count,
+            presentation_breakdowns = EXCLUDED.presentation_breakdowns, watermark = EXCLUDED.watermark,
             updated_at = CURRENT_TIMESTAMP
             WHERE recurring_aggregation_snapshots.watermark <= EXCLUDED.watermark
           SQL
@@ -50,7 +52,8 @@ module RecurringAggregationSnapshots
           to_datetime:,
           watermark:,
           units: value[:units],
-          events_count: value[:events_count]
+          events_count: value[:events_count],
+          presentation_breakdowns: value[:presentation_breakdowns] || []
         }
       end
     end

@@ -180,7 +180,12 @@ module Fees
           selected_metered_item,
           breakdowns_by_group
         )
-        collect_recurring_snapshot(aggregation_result.aggregations || [aggregation_result], selected_metered_item, watermark)
+        collect_recurring_snapshot(
+          aggregation_result.aggregations || [aggregation_result],
+          selected_metered_item,
+          watermark,
+          breakdowns_by_group
+        )
       end
 
       charge_fees = fees_from_charge_model_result(
@@ -562,7 +567,7 @@ module Fees
       end
     end
 
-    def collect_recurring_snapshot(aggregation_results, selected_metered_item, watermark)
+    def collect_recurring_snapshot(aggregation_results, selected_metered_item, watermark, breakdowns_by_group)
       return unless snapshot_recurring_units?(selected_metered_item)
 
       # A missing snapshot falls back to a full scan, a partial one would lose the missing groups
@@ -572,7 +577,14 @@ module Fees
           charge_filter: selected_metered_item.charge_filter,
           watermark:,
           values: aggregation_results.map do
-            {grouped_by: it.grouped_by || {}, units: it.recurring_units, events_count: it.recurring_events_count.to_i}
+            grouped_by = it.grouped_by || {}
+
+            {
+              grouped_by:,
+              units: it.recurring_units,
+              events_count: it.recurring_events_count.to_i,
+              presentation_breakdowns: breakdowns_by_group.fetch(grouped_by, [])
+            }
           end
         }
       end
