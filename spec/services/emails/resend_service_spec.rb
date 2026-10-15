@@ -239,6 +239,22 @@ RSpec.describe Emails::ResendService do
           expect(result).to be_success
         end.to have_enqueued_mail(PaymentReceiptMailer, :created)
       end
+
+      context "when the payment's payable no longer exists" do
+        before { payment.update_columns(payable_id: SecureRandom.uuid) } # rubocop:disable Rails/SkipsModelValidations
+
+        it "returns a not allowed failure without generating or enqueueing anything" do
+          allow(PaymentReceipts::GeneratePdfService).to receive(:new)
+
+          result = nil
+          expect { result = service.call }.not_to have_enqueued_mail(PaymentReceiptMailer, :created)
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(result.error.code).to eq("payable_not_found")
+          expect(PaymentReceipts::GeneratePdfService).not_to have_received(:new)
+        end
+      end
     end
   end
 end

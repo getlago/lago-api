@@ -22,6 +22,7 @@ module PaymentIndex
           result.payments.includes(
             :payment_provider_customer,
             :payment_provider,
+            :x402_settlement,
             payable: :customer
           ),
           ::V1::PaymentSerializer,

@@ -467,6 +467,24 @@ RSpec.describe CreditNotes::CreateService do
         end
       end
 
+      context "when the payment is an x402 payment" do
+        let(:payment) { create(:payment, :x402_payment, payable: invoice, amount_cents: 6) }
+
+        it "enqueues no refund job" do
+          expect { subject }
+            .to not_have_enqueued_job(CreditNotes::Refunds::StripeCreateJob)
+            .and not_have_enqueued_job(CreditNotes::Refunds::GocardlessCreateJob)
+            .and not_have_enqueued_job(CreditNotes::Refunds::AdyenCreateJob)
+        end
+
+        it "delivers the credit note webhook" do
+          expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with do |event, job_credit_note|
+            expect(event).to eq("credit_note.created")
+            expect(job_credit_note).to eq(credit_note)
+          end
+        end
+      end
+
       context "when the invoice payment is not succeeded" do
         let(:payment) { create(:payment, payable: invoice, payable_payment_status: "failed") }
 

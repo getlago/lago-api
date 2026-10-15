@@ -23,6 +23,17 @@ RSpec.describe Api::V1::CustomersController do
 
     include_examples "requires API permission", "customer", "write"
 
+    context "when net_payment_term is larger than an integer" do
+      let(:create_params) { {external_id: SecureRandom.uuid, currency: "EUR", net_payment_term: 10**12} }
+
+      it "returns a validation error instead of a 500" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq({base: ["value_is_out_of_range"]})
+      end
+    end
+
     context "when firstname and lastname contain null bytes" do
       let(:create_params) do
         {
@@ -528,7 +539,7 @@ RSpec.describe Api::V1::CustomersController do
     let(:organization) { create(:organization) }
     let(:external_id) { customer.external_id }
 
-    include_examples "requires API permission", "customer", "read"
+    include_examples "requires API permission", "customer", "write"
 
     it "returns the portal url" do
       subject
@@ -847,6 +858,16 @@ RSpec.describe Api::V1::CustomersController do
             status: 422
           })
         end
+      end
+    end
+
+    context "when the search term contains a null byte" do
+      let(:params) { {search_term: "a\u0000b"} }
+
+      it "ignores the null byte instead of returning a 500" do
+        subject
+
+        expect(response).to have_http_status(:success)
       end
     end
 

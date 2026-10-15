@@ -118,7 +118,6 @@ RSpec.describe "recipes:clickhouse:enable_clickhouse_events_store", clickhouse: 
 
         organization.reload
         expect(organization.clickhouse_events_store).to be(true)
-        expect(organization.clickhouse_deduplication_enabled).to be(true)
         expect(ApiKeys::CacheService).to have_received(:expire_all_cache).with(organization)
       end
     end

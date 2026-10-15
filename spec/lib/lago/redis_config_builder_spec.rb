@@ -15,6 +15,7 @@ RSpec.describe Lago::RedisConfigBuilder do
       LAGO_REDIS_CACHE_URL LAGO_REDIS_CACHE_PASSWORD
       LAGO_REDIS_CACHE_SENTINELS LAGO_REDIS_CACHE_MASTER_NAME
       LAGO_REDIS_CACHE_SENTINEL_USERNAME LAGO_REDIS_CACHE_SENTINEL_PASSWORD
+      LAGO_REDIS_THROTTLING_URL LAGO_REDIS_THROTTLING_PASSWORD
     ]
     original_env = ENV.to_h.slice(*env_keys)
     env_keys.each { |key| ENV.delete(key) }
@@ -607,6 +608,50 @@ RSpec.describe Lago::RedisConfigBuilder do
       end
 
       it { is_expected.to be(false) }
+    end
+  end
+
+  describe "#throttling" do
+    subject(:result) { builder.throttling }
+
+    context "without LAGO_REDIS_THROTTLING_URL" do
+      before do
+        ENV["REDIS_URL"] = "redis://sidekiq:6379"
+        ENV["REDIS_PASSWORD"] = "sidekiq_secret"
+        ENV["LAGO_REDIS_THROTTLING_PASSWORD"] = "throttling_secret"
+      end
+
+      it "uses the Sidekiq URL and password" do
+        expect(result).to eq(
+          url: "redis://sidekiq:6379",
+          password: "sidekiq_secret",
+          ssl_params: {verify_mode: OpenSSL::SSL::VERIFY_NONE},
+          timeout: 1
+        )
+      end
+    end
+
+    context "with LAGO_REDIS_THROTTLING_URL and LAGO_REDIS_THROTTLING_PASSWORD set" do
+      before do
+        ENV["LAGO_REDIS_THROTTLING_URL"] = "redis://throttling:6379"
+        ENV["LAGO_REDIS_THROTTLING_PASSWORD"] = "throttling_secret"
+      end
+
+      it "includes the url and the password" do
+        expect(result).to include(url: "redis://throttling:6379", password: "throttling_secret")
+      end
+    end
+
+    context "with LAGO_REDIS_THROTTLING_URL and credentials for the other Redis consumers" do
+      before do
+        ENV["LAGO_REDIS_THROTTLING_URL"] = "redis://throttling:6379"
+        ENV["REDIS_PASSWORD"] = "sidekiq_secret"
+        ENV["LAGO_REDIS_CACHE_PASSWORD"] = "cache_secret"
+      end
+
+      it "does not use them" do
+        expect(result).not_to include(:password)
+      end
     end
   end
 end

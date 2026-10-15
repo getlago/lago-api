@@ -13,6 +13,14 @@ class LagoApiSchema < GraphQL::Schema
   max_depth 15
   max_complexity 350
 
+  # A number too large for its column (bigint amounts, integer terms) fails when it is saved.
+  rescue_from(ActiveModel::RangeError, ActiveRecord::RangeError) do
+    raise GraphQL::ExecutionError.new(
+      "Unprocessable Entity",
+      extensions: {status: 422, code: "unprocessable_entity", details: {"base" => ["value_is_out_of_range"]}}
+    )
+  end
+
   # The schema is only described to clients (__schema, __type) in development and test, where
   # the front codegen and the schema dump specs need it. Elsewhere it stays hidden unless
   # LAGO_GRAPHQL_INTROSPECTION_ENABLED is set, for example on an API booted only to run codegen.

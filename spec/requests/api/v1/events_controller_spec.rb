@@ -36,6 +36,17 @@ RSpec.describe Api::V1::EventsController do
       expect(json[:event][:external_subscription_id]).to eq(subscription.external_id)
     end
 
+    context "when a property key contains a null byte" do
+      let(:create_params) { super().merge(properties: {"bad\u0000key" => "x"}) }
+
+      it "stores the event without the null byte instead of returning a 500" do
+        expect { subject }.to change(Event, :count).by(1)
+
+        expect(response).to have_http_status(:success)
+        expect(Event.last.properties).to eq({"badkey" => "x"})
+      end
+    end
+
     it "does not create an audit log", clickhouse: true do
       expect { subject }.not_to change(Clickhouse::ApiLog, :count)
     end

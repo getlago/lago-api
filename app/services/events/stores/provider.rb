@@ -26,8 +26,7 @@ module Events
           code: metered_item.billable_metric.code,
           billing_context:,
           boundaries:,
-          filters:,
-          deduplicate:
+          filters:
         )
         if served_from_buckets?(metered_item:, boundaries:, filters:)
           UsageBucketStore.new(
@@ -84,17 +83,6 @@ module Events
 
       def store_class
         @store_class ||= Events::Stores::StoreFactory.store_class(organization:)
-      end
-
-      def deduplicate
-        return @deduplicate if defined?(@deduplicate)
-
-        override = Events::Stores::StoreFactory.override
-        @deduplicate = if override
-          override[:deduplicate]
-        else
-          organization.clickhouse_events_store? && organization.clickhouse_deduplication_enabled?
-        end
       end
 
       private

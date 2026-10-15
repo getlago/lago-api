@@ -5,11 +5,11 @@ module V1
     def serialize
       payload = {
         lago_id: model.id,
-        lago_customer_id: model.payable.customer.id, # TODO: why?
-        external_customer_id: model.payable.customer.external_id,
-        invoice_ids: invoice_id,
+        lago_customer_id: customer&.id, # TODO: why?
+        external_customer_id: customer&.external_id,
+        invoice_ids: invoice_ids,
         invoice_numbers: model.invoice_numbers,
-        lago_payable_id: model.payable.id,
+        lago_payable_id: model.payable_id,
         payable_type: model.payable_type,
 
         amount_cents: model.amount_cents,
@@ -31,6 +31,7 @@ module V1
 
       payload.merge!(payment_receipt) if include?(:payment_receipt)
       payload.merge!(payment_method) if include?(:payment_method) && model.payment_method
+      payload[:x402_settlement] = x402_settlement if model.payment_type_x402?
       payload
     end
 
@@ -50,8 +51,30 @@ module V1
       }
     end
 
-    def invoice_id
-      model.payable.is_a?(Invoice) ? [model.payable.id] : model.payable.invoice_ids
+    def x402_settlement
+      settlement = model.x402_settlement
+
+      if settlement
+        {
+          lago_id: settlement.id,
+          network: settlement.network,
+          transaction_hash: settlement.transaction_hash,
+          payer_address: settlement.payer_address
+        }
+      end
+    end
+
+    # The payable can be missing when the invoice or payment request row it points to
+    # no longer exists. Fall back to the payment's own customer in that case.
+    def customer
+      @customer ||= model.payable&.customer || model.customer
+    end
+
+    def invoice_ids
+      payable = model.payable
+      return [] if payable.nil?
+
+      payable.is_a?(Invoice) ? [payable.id] : payable.invoice_ids
     end
   end
 end

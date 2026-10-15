@@ -3,6 +3,9 @@
 module Events
   module Stores
     class PostgresStore < BaseStore
+      # standard_conforming_strings is on: a backslash is a plain character, quotes are doubled
+      SQL_STRING_LITERAL = /'(?:[^']|'')*'/
+
       def events(force_from: false, ordered: false)
         scope = Event.where(external_subscription_id: billing_context.external_id)
           .where(organization_id: billing_context.organization.id)

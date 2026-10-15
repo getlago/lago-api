@@ -56,7 +56,7 @@ module Events
         :events_count
       )
 
-      def initialize(billing_context:, boundaries:, code: nil, filters: {}, deduplicate: false)
+      def initialize(billing_context:, boundaries:, code: nil, filters: {})
         @code = code
         @billing_context = billing_context
         @boundaries = boundaries
@@ -74,7 +74,6 @@ module Events
         @aggregation_property = nil
         @numeric_property = false
         @use_from_boundary = true
-        @deduplicate = deduplicate
       end
 
       def grouped_by_values?
@@ -99,7 +98,7 @@ module Events
       #       `use_from_boundary` is left to the caller: a window with no lower bound must
       #       not apply one.
       def for_window(filters: nil, **boundaries)
-        store = self.class.new(code:, billing_context:, boundaries:, filters: filters || self.filters, deduplicate:)
+        store = self.class.new(code:, billing_context:, boundaries:, filters: filters || self.filters)
 
         store.aggregation_property = aggregation_property
         store.numeric_property = numeric_property
@@ -207,9 +206,13 @@ module Events
         boundaries[:max_timestamp] || to_datetime
       end
 
+      # Values are quoted into the SQL before the named binds are replaced:
+      # escape ":word" inside string literals so Rails does not read it as a bind.
+      # SQL comments are matched too so an apostrophe in them does not open a literal.
       def sanitize_colon(query)
-        # NOTE: escape ':' to avoid ActiveRecord::PreparedStatementInvalid,
-        query.gsub("'#{code}'", "'#{code.gsub(":", "\\:")}'")
+        query.gsub(/--[^\n]*|#{self.class::SQL_STRING_LITERAL}/) do |token|
+          token.start_with?("'") ? token.gsub(/:(?=[a-zA-Z])/, "\\:") : token
+        end
       end
 
       def timezone
@@ -228,7 +231,7 @@ module Events
 
       attr_accessor :numeric_property, :aggregation_property, :use_from_boundary, :grouped_by, :charge_id, :charge_filter_id
 
-      attr_reader :code, :billing_context, :boundaries, :grouped_by_values, :filters, :matching_filters, :ignored_filters, :deduplicate
+      attr_reader :code, :billing_context, :boundaries, :grouped_by_values, :filters, :matching_filters, :ignored_filters
 
       protected
 
