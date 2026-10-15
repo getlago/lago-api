@@ -74,7 +74,7 @@ module Api
     end
 
     def strip_null_bytes
-      NullByteGuard.strip_params!(params) if NullByteGuard.contains_null_byte?(request)
+      NullByteGuard.sanitize_params!(request, params)
     end
 
     def value_out_of_range_error

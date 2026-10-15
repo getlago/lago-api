@@ -6,7 +6,7 @@
 #
 # The detection runs on the raw request (a single string scan, no parsing or copy), so it adds no
 # measurable cost, including on the events endpoints. Parameters are only rewritten for the rare
-# request that carries one.
+# request that carries one, or for a multipart request (see strip_needed?).
 module NullByteGuard
   NULL_BYTE = "\u0000"
   # Percent-encoded in a URL or a form body, escaped in a JSON body.
@@ -15,10 +15,24 @@ module NullByteGuard
 
   module_function
 
+  # Entry points for controllers: clean the parameters only when the request may carry a null byte.
+  def sanitize_params!(request, params)
+    strip_params!(params) if strip_needed?(request)
+    params
+  end
+
+  def sanitize(request, value)
+    strip_needed?(request) ? strip(value) : value
+  end
+
+  # A multipart body holds binary uploads that legitimately contain null bytes, so it can't be
+  # scanned. Its text fields are cleaned instead; uploaded files are not strings and stay untouched.
+  def strip_needed?(request)
+    request.media_type == "multipart/form-data" || contains_null_byte?(request)
+  end
+
   def contains_null_byte?(request)
     return true if request.fullpath.include?(ENCODED_NULL_BYTE)
-    # File uploads are binary and legitimately contain null bytes.
-    return false if request.media_type == "multipart/form-data"
 
     body = request.raw_post
     return false if body.blank?
