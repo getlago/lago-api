@@ -58,7 +58,7 @@ module Charges
       return false if metered_item.billing_segment
       return false unless billing_context.subscription?
 
-      RecurringAggregationSnapshots.read_enabled?(billing_context.organization)
+      RecurringAggregationSnapshots.read_enabled?
     end
 
     # The aggregation only reads the group of the event. A group without a snapshot reads its
@@ -76,7 +76,7 @@ module Charges
       #
       # TODO: Support product_id in BaseStore and the enriched-event schema, enrichment, queries, and dedup keys.
       # Adding a product_id key here alone would be ignored. StoreFactory also needs a product-compatible path.
-      # CachedAggregation reads in Aggregations::{BaseService, WeightedSumService, CustomService} obtain
+      # CachedAggregation reads in Aggregations::{BaseService, CustomService} obtain
       # charge_id from MeteredItem directly; those lookups and the cache schema also need product identity.
       filters = {event: metered_item.event, charge_id: metered_item.charge_id}
 
@@ -89,7 +89,7 @@ module Charges
       if metered_item.charge_filter.present?
         matching_result = metered_item.matching_and_ignored_filters
         # Aggregations::BaseService retains this object for charge_filter_id cache lookups;
-        # WeightedSumService and CustomService also scope cached state by it. CustomService reads
+        # CustomService also scopes cached state by it and reads
         # its custom_properties, while BaseStore extracts its ID for enriched-event queries.
         #
         # TODO: Carry product_filter/selected_filter through aggregators, stores, enrichment, and cache
