@@ -37,7 +37,7 @@ RSpec::Matchers.define :be_soft_deletable do
   private
 
   def includes_discard_model?
-    @model_class.include?(Discard::Model)
+    @model_class.included_modules.include?(Discard::Model)
   end
 
   def has_correct_discard_column?
