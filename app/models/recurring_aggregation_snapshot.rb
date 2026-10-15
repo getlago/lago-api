@@ -17,19 +17,20 @@ end
 # Table name: recurring_aggregation_snapshots
 # Database name: primary
 #
-#  id                 :uuid             not null, primary key
-#  events_count       :bigint           default(0), not null
-#  grouped_by         :jsonb            not null
-#  to_datetime        :datetime         not null
-#  units              :decimal(, )      default(0.0), not null
-#  watermark          :datetime         not null
-#  created_at         :datetime         not null
-#  updated_at         :datetime         not null
-#  billable_metric_id :uuid             not null
-#  charge_filter_id   :uuid
-#  charge_id          :uuid             not null
-#  organization_id    :uuid             not null
-#  subscription_id    :uuid             not null
+#  id                      :uuid             not null, primary key
+#  events_count            :bigint           default(0), not null
+#  grouped_by              :jsonb            not null
+#  presentation_breakdowns :jsonb            not null
+#  to_datetime             :datetime         not null
+#  units                   :decimal(, )      default(0.0), not null
+#  watermark               :datetime         not null
+#  created_at              :datetime         not null
+#  updated_at              :datetime         not null
+#  billable_metric_id      :uuid             not null
+#  charge_filter_id        :uuid
+#  charge_id               :uuid             not null
+#  organization_id         :uuid             not null
+#  subscription_id         :uuid             not null
 #
 # Indexes
 #
