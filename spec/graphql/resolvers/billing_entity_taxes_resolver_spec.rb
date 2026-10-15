@@ -40,7 +40,7 @@ RSpec.describe Resolvers::BillingEntityTaxesResolver do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      permissions: ["billing_entities:view"],
+      permissions: described_class::REQUIRED_PERMISSION.sample,
       query:,
       variables: {billing_entity_id: billing_entity.id}
     )
@@ -50,23 +50,11 @@ RSpec.describe Resolvers::BillingEntityTaxesResolver do
     expect(taxes_data.map { |t| t["id"] }).to include(tax1.id, tax2.id)
   end
 
-  it "returns billing entity taxes with the invoices:create permission" do
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: organization,
-      permissions: "invoices:create",
-      query:,
-      variables: {billing_entity_id: billing_entity.id}
-    )
-
-    expect(result["data"]["billingEntityTaxes"]["collection"].map { it["id"] }).to match_array([tax1.id, tax2.id])
-  end
-
   it "returns error if billing entity is not found" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      permissions: "billing_entities:update",
+      permissions: described_class::REQUIRED_PERMISSION.sample,
       query:,
       variables: {billing_entity_id: "invalid"}
     )

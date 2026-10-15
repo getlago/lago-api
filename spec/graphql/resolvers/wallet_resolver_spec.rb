@@ -34,7 +34,7 @@ RSpec.describe Resolvers::WalletResolver do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      permissions: "customers:view",
+      permissions: described_class::REQUIRED_PERMISSION.sample,
       query:,
       variables: {id: wallet.id}
     )
@@ -62,7 +62,7 @@ RSpec.describe Resolvers::WalletResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        permissions: "wallets:create",
+        permissions: described_class::REQUIRED_PERMISSION.sample,
         query:,
         variables: {id: wallet.id}
       )
@@ -98,7 +98,7 @@ RSpec.describe Resolvers::WalletResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        permissions: "customers:view",
+        permissions: described_class::REQUIRED_PERMISSION.sample,
         query:,
         variables: {id: "foo"}
       )
@@ -127,7 +127,7 @@ RSpec.describe Resolvers::WalletResolver do
         result = execute_graphql(
           current_user: membership.user,
           current_organization: organization,
-          permissions: "wallets:update",
+          permissions: described_class::REQUIRED_PERMISSION.sample,
           query:,
           variables: {id: wallet.id}
         )
@@ -143,7 +143,7 @@ RSpec.describe Resolvers::WalletResolver do
         result = execute_graphql(
           current_user: membership.user,
           current_organization: organization,
-          permissions: "wallets:top_up",
+          permissions: described_class::REQUIRED_PERMISSION.sample,
           query:,
           variables: {id: wallet.id}
         )
@@ -181,7 +181,7 @@ RSpec.describe Resolvers::WalletResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        permissions: "wallets:terminate",
+        permissions: described_class::REQUIRED_PERMISSION.sample,
         query: connections_query,
         variables: {id: wallet.id}
       )

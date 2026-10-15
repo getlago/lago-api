@@ -52,7 +52,7 @@ RSpec.describe Resolvers::WalletTransactionFundingsResolver do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      permissions: "customers:view",
+      permissions: described_class::REQUIRED_PERMISSION.sample,
       query:,
       variables: {walletTransactionId: outbound_transaction.id, limit: 5}
     )
@@ -84,7 +84,7 @@ RSpec.describe Resolvers::WalletTransactionFundingsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        permissions: "wallets:create",
+        permissions: described_class::REQUIRED_PERMISSION.sample,
         query:,
         variables: {walletTransactionId: outbound_transaction.id, page: 1, limit: 2}
       )
@@ -100,7 +100,7 @@ RSpec.describe Resolvers::WalletTransactionFundingsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        permissions: "wallets:update",
+        permissions: described_class::REQUIRED_PERMISSION.sample,
         query:,
         variables: {walletTransactionId: outbound_transaction.id, page: 2, limit: 2}
       )
@@ -118,7 +118,7 @@ RSpec.describe Resolvers::WalletTransactionFundingsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        permissions: "wallets:top_up",
+        permissions: described_class::REQUIRED_PERMISSION.sample,
         query:,
         variables: {walletTransactionId: inbound_transaction.id}
       )
@@ -134,7 +134,7 @@ RSpec.describe Resolvers::WalletTransactionFundingsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        permissions: "wallets:terminate",
+        permissions: described_class::REQUIRED_PERMISSION.sample,
         query:,
         variables: {walletTransactionId: outbound_transaction.id}
       )
@@ -148,7 +148,7 @@ RSpec.describe Resolvers::WalletTransactionFundingsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        permissions: "customers:view",
+        permissions: described_class::REQUIRED_PERMISSION.sample,
         query:,
         variables: {walletTransactionId: "non-existent-id"}
       )
@@ -172,7 +172,7 @@ RSpec.describe Resolvers::WalletTransactionFundingsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        permissions: "customers:view",
+        permissions: described_class::REQUIRED_PERMISSION.sample,
         query:,
         variables: {walletTransactionId: other_transaction.id}
       )

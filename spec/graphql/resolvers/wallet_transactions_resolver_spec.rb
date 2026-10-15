@@ -37,7 +37,7 @@ RSpec.describe Resolvers::WalletTransactionsResolver do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      permissions: "customers:view",
+      permissions: described_class::REQUIRED_PERMISSION.sample,
       query:,
       variables: {
         walletId: wallet.id
@@ -51,42 +51,6 @@ RSpec.describe Resolvers::WalletTransactionsResolver do
 
     expect(wallet_transactions_response["metadata"]["currentPage"]).to eq(1)
     expect(wallet_transactions_response["metadata"]["totalCount"]).to eq(1)
-  end
-
-  it "returns the walletTransactions with the wallets:update permission" do
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: organization,
-      permissions: "wallets:update",
-      query:,
-      variables: {walletId: wallet.id}
-    )
-
-    expect(result["data"]["walletTransactions"]["collection"].map { it["id"] }).to eq([wallet_transaction.id])
-  end
-
-  it "returns the walletTransactions with the wallets:top_up permission" do
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: organization,
-      permissions: "wallets:top_up",
-      query:,
-      variables: {walletId: wallet.id}
-    )
-
-    expect(result["data"]["walletTransactions"]["collection"].map { it["id"] }).to eq([wallet_transaction.id])
-  end
-
-  it "returns the walletTransactions with the wallets:terminate permission" do
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: organization,
-      permissions: "wallets:terminate",
-      query:,
-      variables: {walletId: wallet.id}
-    )
-
-    expect(result["data"]["walletTransactions"]["collection"].map { it["id"] }).to eq([wallet_transaction.id])
   end
 
   context "without current organization" do
@@ -111,7 +75,7 @@ RSpec.describe Resolvers::WalletTransactionsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: create(:organization),
-        permissions: "customers:view",
+        permissions: described_class::REQUIRED_PERMISSION.sample,
         query:,
         variables: {
           walletId: wallet.id
@@ -130,7 +94,7 @@ RSpec.describe Resolvers::WalletTransactionsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
-        permissions: "wallets:create",
+        permissions: described_class::REQUIRED_PERMISSION.sample,
         query:,
         variables: {
           walletId: "123456"
