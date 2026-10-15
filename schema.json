@@ -34099,6 +34099,12 @@
           "interfaces": null,
           "enumValues": [
             {
+              "name": "ADD_ONS",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "ALERTS",
               "description": null,
               "isDeprecated": false,
@@ -34256,6 +34262,24 @@
           "inputFields": null,
           "interfaces": null,
           "enumValues": [
+            {
+              "name": "add_on_created",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "add_on_updated",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "add_on_deleted",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
             {
               "name": "alert_triggered",
               "description": null,

@@ -6970,6 +6970,7 @@ type Event {
 }
 
 enum EventCategoryEnum {
+  ADD_ONS
   ALERTS
   BILLABLE_METRICS
   CREDIT_NOTES
@@ -7004,6 +7005,9 @@ type EventCollection {
 }
 
 enum EventTypeEnum {
+  add_on_created
+  add_on_deleted
+  add_on_updated
   alert_triggered
   all
   billable_metric_created
