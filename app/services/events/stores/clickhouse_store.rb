@@ -16,62 +16,23 @@ module Events
 
       def events(force_from: false, ordered: false)
         Events::Stores::Utils::ClickhouseConnection.with_retry do
-          scope = if deduplicate
-            events_from = (from_datetime if force_from || use_from_boundary)
-            events_to = (applicable_to_datetime if applicable_to_datetime)
+          events_from = (from_datetime if force_from || use_from_boundary)
+          events_to = (applicable_to_datetime if applicable_to_datetime)
 
-            deduplicated_subquery = deduplicated_events_sql(
-              from_datetime: events_from,
-              to_datetime: events_to,
-              deduplicated_columns: %w[value decimal_value properties precise_total_amount_cents]
-            )
+          deduplicated_subquery = deduplicated_events_sql(
+            from_datetime: events_from,
+            to_datetime: events_to,
+            deduplicated_columns: %w[value decimal_value properties precise_total_amount_cents]
+          )
 
-            ::Clickhouse::EventsEnriched.from("(#{deduplicated_subquery}) AS events_enriched")
-          else
-            query = ::Clickhouse::EventsEnriched
-              .where(external_subscription_id: billing_context.external_id)
-              .where(organization_id: billing_context.organization_id)
-              .where(code:)
-
-            query = query.where("events_enriched.timestamp >= ?", from_datetime) if force_from || use_from_boundary
-            query = query.where(upper_timestamp_boundary_sql(applicable_to_datetime, prefix: "events_enriched.")) if applicable_to_datetime
-            query
-          end
-
+          scope = ::Clickhouse::EventsEnriched.from("(#{deduplicated_subquery}) AS events_enriched")
           scope = scope.order(timestamp: :asc) if ordered
           scope = apply_grouped_by_values(scope) if grouped_by_values?
           filters_scope(scope)
         end
       end
 
-      def events_cte_queries(**args)
-        return events_cte_queries_with_deduplication(**args) if deduplicate
-
-        events_cte_queries_without_deduplication(**args)
-      end
-
-      def events_cte_queries_without_deduplication(force_from: false, ordered: false, select: arel_table[Arel.star], deduplicated_columns: [])
-        query = arel_table.where(
-          arel_table[:external_subscription_id].eq(billing_context.external_id)
-          .and(arel_table[:organization_id].eq(billing_context.organization.id)
-          .and(arel_table[:code].eq(code)))
-        )
-
-        query = query.order(arel_table[:timestamp].desc, arel_table[:value].asc) if ordered
-
-        query = with_timestamp_boundaries(
-          query,
-          (from_datetime if force_from || use_from_boundary),
-          applicable_to_datetime
-        )
-
-        query = arel_filters_scope(query)
-        query = apply_arel_grouped_by_values(query) if grouped_by_values?
-
-        {"events" => query.project(select).to_sql}
-      end
-
-      def events_cte_queries_with_deduplication(force_from: false, ordered: false, select: arel_table[Arel.star], deduplicated_columns: [])
+      def events_cte_queries(force_from: false, ordered: false, select: arel_table[Arel.star], deduplicated_columns: [])
         # Ensure presence of one of value or decimal_value for the ordering
         order_column = deduplicated_columns.include?("decimal_value") ? "decimal_value" : "value"
         deduplicated_columns << order_column if ordered
@@ -244,7 +205,7 @@ module Events
       def count_query
         filtered = grouped_by_values? || matching_filters.present? || ignored_filters.present?
 
-        if !deduplicate || filtered
+        if filtered
           return with_ctes(events_cte_queries(deduplicated_columns: %w[value]), <<-SQL)
             SELECT count()
             FROM events
@@ -772,12 +733,6 @@ module Events
             [timestamp, difference, cumul, second_duration.to_i, period_ratio]
           end
         end
-      end
-
-      def with_timestamp_boundaries(query, from_datetime, to_datetime)
-        query = query.where(arel_table[:timestamp].gteq(from_datetime)) if from_datetime
-        query = query.where(Arel.sql(upper_timestamp_boundary_sql(to_datetime, prefix: "events_enriched."))) if to_datetime
-        query
       end
 
       def filters_scope(scope)

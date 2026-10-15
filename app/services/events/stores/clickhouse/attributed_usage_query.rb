@@ -24,7 +24,7 @@ module Events
         ORDERS = {"amount" => "amount", "events_count" => "events"}.freeze
 
         def initialize(organization_id:, external_subscription_id:, from_datetime:, to_datetime:, group_key:, label_filters:,
-          charge_columns:, order_by:, search:, limit:, offset:, deduplicate:, max_groups:, max_execution_time:)
+          charge_columns:, order_by:, search:, limit:, offset:, max_groups:, max_execution_time:)
           @organization_id = organization_id
           @external_subscription_id = external_subscription_id
           @from_datetime = from_datetime
@@ -36,7 +36,6 @@ module Events
           @search = search
           @limit = limit
           @offset = offset
-          @deduplicate = deduplicate
           @max_groups = max_groups
           @max_execution_time = max_execution_time
         end
@@ -84,7 +83,7 @@ module Events
                     count() AS events
                   FROM (
                     SELECT #{event_columns_sql.join(", ")}
-                    FROM events_enriched#{" FINAL" if deduplicate}
+                    FROM events_enriched FINAL
                     WHERE #{where_sql}
                   )
                   GROUP BY node
@@ -107,7 +106,7 @@ module Events
         private
 
         attr_reader :organization_id, :external_subscription_id, :from_datetime, :to_datetime, :group_key, :label_filters,
-          :charge_columns, :order_by, :search, :limit, :offset, :deduplicate, :max_groups, :max_execution_time
+          :charge_columns, :order_by, :search, :limit, :offset, :max_groups, :max_execution_time
 
         def cell_names
           @cell_names ||= cells.each_index.flat_map { ["units_#{it}", "amount_#{it}", "events_#{it}"] }

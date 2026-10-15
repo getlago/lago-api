@@ -13,8 +13,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         ignored_filters:,
         charge_id: charge&.id,
         charge_filter: charge_filter
-      },
-      deduplicate: with_event_duplication
+      }
     )
   end
 
@@ -280,7 +279,6 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       expect(sibling.code).to eq(event_store.code)
       expect(sibling.billing_context).to eq(event_store.billing_context)
       expect(sibling.filters).to eq(event_store.filters)
-      expect(sibling.deduplicate).to eq(event_store.deduplicate)
       expect(sibling.boundaries).to eq({to_datetime: boundaries[:from_datetime] - 1.second})
     end
 
@@ -298,12 +296,6 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       event_store.use_from_boundary = false
 
       expect(event_store.for_window(to_datetime: boundaries[:to_datetime]).use_from_boundary).to be(true)
-    end
-
-    it "deduplicates like the store it was minted from" do
-      sibling = event_store.for_window(to_datetime: boundaries[:to_datetime])
-
-      expect(sibling.deduplicate).to eq(event_store.deduplicate)
     end
 
     it "forwards the boundaries it was given, whatever keys they carry" do
@@ -1016,8 +1008,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
               event:,
               charge_id: charge&.id,
               charge_filter: charge_filter
-            },
-            deduplicate: with_event_duplication
+            }
           )
         end
 
@@ -1772,8 +1763,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
             ignored_filters:,
             charge_id: charge&.id,
             charge_filter: charge_filter
-          },
-          deduplicate: with_event_duplication
+          }
         )
       end
 
@@ -1837,8 +1827,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
             ignored_filters:,
             charge_id: charge&.id,
             charge_filter: charge_filter
-          },
-          deduplicate: with_event_duplication
+          }
         )
       end
 
@@ -1897,8 +1886,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
             ignored_filters:,
             charge_id: charge&.id,
             charge_filter: charge_filter
-          },
-          deduplicate: with_event_duplication
+          }
         )
       end
 
@@ -1960,8 +1948,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
             ignored_filters:,
             charge_id: charge&.id,
             charge_filter: charge_filter
-          },
-          deduplicate: with_event_duplication
+          }
         )
       end
 
@@ -2025,8 +2012,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
             ignored_filters:,
             charge_id: charge&.id,
             charge_filter: charge_filter
-          },
-          deduplicate: with_event_duplication
+          }
         )
       end
 
@@ -2092,8 +2078,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
             ignored_filters:,
             charge_id: charge&.id,
             charge_filter: charge_filter
-          },
-          deduplicate: with_event_duplication
+          }
         )
       end
 

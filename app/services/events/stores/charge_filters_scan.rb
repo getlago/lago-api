@@ -271,7 +271,7 @@ module Events
       def scan(store, batch)
         from_datetime = (store.from_datetime if store.use_from_boundary)
         to_datetime = store.applicable_to_datetime
-        key = [batch, from_datetime, to_datetime, store.deduplicate]
+        key = [batch, from_datetime, to_datetime]
 
         @rows[key] ||= if incremental
           incremental.rows(
@@ -318,15 +318,9 @@ module Events
       end
 
       def scan_sql(store, batch:, from_datetime:, to_datetime:, before: nil)
-        events_sql = if store.deduplicate
-          store.deduplicated_events_sql(from_datetime:, to_datetime:, deduplicated_columns: %w[decimal_value properties], before:)
-        else
-          <<~SQL.squish
-            SELECT #{(aggregation_type == "latest_agg") ? "decimal_value, properties, timestamp" : "decimal_value, properties"}
-            FROM events_enriched
-            WHERE #{store.deduplicated_events_where_sql(from_datetime:, to_datetime:, before:)}
-          SQL
-        end
+        events_sql = store.deduplicated_events_sql(
+          from_datetime:, to_datetime:, deduplicated_columns: %w[decimal_value properties], before:
+        )
 
         group_columns = group_keys.map.with_index do |key, index|
           "#{store.sanitized_property_name(key)} AS g_#{index}"
