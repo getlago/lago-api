@@ -117,6 +117,10 @@ module BillableMetrics
       def latest_breakdowns
         return @latest_breakdowns if defined?(@latest_breakdowns)
 
+        if latest_snapshots
+          return @latest_breakdowns = latest_snapshots.first.presentation_breakdowns
+        end
+
         if latest_cached_aggregation
           return @latest_breakdowns = latest_cached_aggregation.presentation_breakdowns
         end
@@ -196,6 +200,10 @@ module BillableMetrics
 
       def grouped_latest_breakdowns
         return @grouped_latest_breakdowns if defined?(@grouped_latest_breakdowns)
+
+        if latest_snapshots
+          return @grouped_latest_breakdowns = latest_snapshots.flat_map(&:presentation_breakdowns)
+        end
 
         if grouped_latest_cached_aggregations.any?
           return @grouped_latest_breakdowns = grouped_latest_cached_aggregations.flat_map(&:presentation_breakdowns)
