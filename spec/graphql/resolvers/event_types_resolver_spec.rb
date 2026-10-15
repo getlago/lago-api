@@ -28,6 +28,7 @@ RSpec.describe Resolvers::EventTypesResolver do
   end
 
   it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "developers:manage"
 
   it "marks exactly the approved product catalog event types" do

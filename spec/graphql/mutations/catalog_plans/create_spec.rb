@@ -30,6 +30,8 @@ RSpec.describe Mutations::CatalogPlans::Create do
 
   before { organization.enable_feature_flag!(:product_catalog) }
 
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "plans:create"
 
   it "creates a catalog plan" do
