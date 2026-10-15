@@ -612,7 +612,7 @@ module Fees
 
     def recurring_initial_value(selected_metered_item)
       return unless selected_metered_item.billable_metric.recurring? && snapshot_eligible?(selected_metered_item)
-      return unless billing_context.organization.feature_flag_enabled?(:persisted_recurring_values)
+      return unless RecurringAggregationSnapshots.read_enabled?(billing_context.organization)
 
       RecurringAggregationSnapshots::FetchService.call!(
         subscription:,

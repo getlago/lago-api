@@ -58,7 +58,7 @@ module Charges
       return false if metered_item.billing_segment
       return false unless billing_context.subscription?
 
-      billing_context.organization.feature_flag_enabled?(:persisted_recurring_values)
+      RecurringAggregationSnapshots.read_enabled?(billing_context.organization)
     end
 
     # The aggregation only reads the group of the event. A group without a snapshot reads its
