@@ -213,6 +213,15 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
     end
   end
 
+  context "with a shipping address value containing a line break" do
+    let(:update_args) { {shipping_address: {address_line2: "Floor\n2"}} }
+
+    it "returns a validation error" do
+      expect(result).not_to be_success
+      expect(result.error.messages).to eq(shipping_address_line2: ["invalid_characters"])
+    end
+  end
+
   context "with a shipping address value over 255 characters" do
     let(:update_args) { {city: "Paris", shipping_address: {address_line1: "a" * 256}} }
 
@@ -237,10 +246,19 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
   end
 
   context "with a stored free text value that breaks the rule" do
-    let(:customer) { create(:customer, legal_name: "a" * 300, address_line2: "Street\nFloor 2") }
+    let(:customer) do
+      create(:customer, legal_name: "a" * 300, address_line2: "Street\nFloor 2", shipping_address_line2: "Street\nFloor 2")
+    end
 
     context "when the stored value is sent back unchanged" do
-      let(:update_args) { {legal_name: "a" * 300, address_line2: "Street\nFloor 2", city: "Updated customer city"} }
+      let(:update_args) do
+        {
+          legal_name: "a" * 300,
+          address_line2: "Street\nFloor 2",
+          city: "Updated customer city",
+          shipping_address: {address_line2: "Street\nFloor 2"}
+        }
+      end
 
       it "updates the other fields" do
         expect(result).to be_success
