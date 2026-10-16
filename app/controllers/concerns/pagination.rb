@@ -5,8 +5,15 @@ module Pagination
 
   # Default number of records per page
   PER_PAGE = 100
+  # Largest per_page accepted on /api/v1 lists when LAGO_API_PAGINATION_MAX_PAGE_SIZE is not a positive integer
+  DEFAULT_MAX_PER_PAGE = 200
   # The TTL for caching the number of records
   DEFAULT_TTL = 30.minutes.freeze
+
+  def self.max_per_page
+    max_per_page = Integer(ENV["LAGO_API_PAGINATION_MAX_PAGE_SIZE"].to_s, 10, exception: false)
+    max_per_page&.positive? ? max_per_page : DEFAULT_MAX_PER_PAGE
+  end
 
   def pagination_metadata(records, **count_params)
     current_page = prev_page = next_page = total_pages = nil
