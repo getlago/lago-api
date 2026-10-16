@@ -78,6 +78,25 @@ describe X402::Connections::UpdateService do
       end
     end
 
+    context "when only allowed_origins is sent" do
+      let(:params) { {allowed_origins: ["https://API.example.com/"]} }
+
+      it "saves the normalised list and keeps the rest" do
+        expect(result).to be_success
+        expect(connection.reload).to have_attributes(
+          name: connection.name,
+          allowed_origins: ["https://api.example.com"],
+          cdp_api_key_id:,
+          cdp_api_key_secret:
+        )
+      end
+
+      it "calls CDP for nothing" do
+        result
+        expect(a_request(:any, /api\.cdp\.coinbase\.com/)).not_to have_been_made
+      end
+    end
+
     context "when only cdp_api_key_secret is sent" do
       let(:rotated_signing_key) { OpenSSL::PKey.generate_key("ED25519") }
       let(:rotated_secret) { Base64.strict_encode64(rotated_signing_key.raw_private_key + rotated_signing_key.raw_public_key) }

@@ -42,6 +42,14 @@ describe X402::Connections::CreateService do
         )
       end
 
+      context "with allowed origins" do
+        let(:params) { super().merge(allowed_origins: ["https://API.example.com/"]) }
+
+        it "stores them normalised" do
+          expect(connection.allowed_origins).to eq(["https://api.example.com"])
+        end
+      end
+
       it "stores the secrets readable through the accessors" do
         expect(connection.reload).to have_attributes(cdp_api_key_id:, cdp_api_key_secret:)
       end

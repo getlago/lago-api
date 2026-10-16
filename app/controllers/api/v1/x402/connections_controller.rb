@@ -4,7 +4,8 @@ module Api
   module V1
     module X402
       class ConnectionsController < BaseController
-        MALFORMED_FIELD_ERRORS = {networks: "must_be_array", payout_addresses: "value_is_invalid"}.freeze
+        MALFORMED_FIELD_ERRORS = {networks: "must_be_array", payout_addresses: "value_is_invalid",
+                                  allowed_origins: "must_be_array"}.freeze
 
         filter_audit_log_params! :secret, :_key
 
@@ -86,7 +87,7 @@ module Api
         def input_params
           @input_params ||= params.require(:x402_connection).permit(
             :code, :name, :facilitator, :asset, :auto_create_customers, :cdp_api_key_id, :cdp_api_key_secret,
-            networks: [], payout_addresses: {}
+            networks: [], allowed_origins: [], payout_addresses: {}
           )
         end
 
