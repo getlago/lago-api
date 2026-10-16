@@ -7,6 +7,15 @@ RSpec.describe Integrations::AgentStorefrontIntegration do
 
   let_it_be(:organization) { create_default(:organization) }
 
+  describe "associations" do
+    it do
+      expect(integration).to have_many(:agent_registrations)
+        .class_name("Agents::Registration")
+        .with_foreign_key(:integration_id)
+        .dependent(:delete_all)
+    end
+  end
+
   describe "validations" do
     it do
       expect(subject).to validate_presence_of(:code)
@@ -77,6 +86,14 @@ RSpec.describe Integrations::AgentStorefrontIntegration do
   describe "#stripe_provider" do
     it "returns the stripe connection named by the code" do
       expect(integration.stripe_provider).to eq(organization.stripe_payment_providers.find_by(code: integration.payment_provider_code))
+    end
+  end
+
+  describe "#agent_url" do
+    it "is built on the connection id" do
+      integration.save!
+
+      expect(integration.agent_url).to eq("#{ENV["LAGO_API_URL"]}/agents/v1/#{integration.id}")
     end
   end
 
