@@ -451,11 +451,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     end
   end
 
-  context "with deduplication enabled" do
-    let(:organization) do
-      create(:organization, clickhouse_events_store: true, clickhouse_deduplication_enabled: true, feature_flags: ["account_tree"])
-    end
-
+  context "when reading the events" do
     before { allow(Events::Stores::Clickhouse::AttributedUsageQuery).to receive(:new).and_call_original }
 
     it "reads without FINAL" do
