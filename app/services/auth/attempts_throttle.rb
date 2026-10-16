@@ -16,7 +16,10 @@ module Auth
       login_per_email: Rule.new(limit: 100, period: 15.minutes, identifier: :email),
       password_reset_per_ip: Rule.new(limit: 10, period: 1.hour, identifier: :ip),
       password_reset_per_email: Rule.new(limit: 3, period: 1.hour, identifier: :email),
-      credentials_per_ip: Rule.new(limit: 20, period: 10.minutes, identifier: :ip)
+      credentials_per_ip: Rule.new(limit: 20, period: 10.minutes, identifier: :ip),
+      agent_challenge_per_ip: Rule.new(limit: 60, period: 1.minute, identifier: :ip),
+      agent_challenge_per_key: Rule.new(limit: 10, period: 1.minute, identifier: :public_key),
+      agent_proof_per_ip: Rule.new(limit: 60, period: 1.minute, identifier: :ip)
     }.freeze
 
     # Built on first use only, and once per process.
