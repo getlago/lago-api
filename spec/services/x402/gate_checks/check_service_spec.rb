@@ -177,8 +177,10 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
     end
   end
 
-  context "when the connection has no allowed origins" do
-    let(:connection) { create(:x402_connection, organization:, allowed_origins: []) }
+  context "with a connection saved without allowed origins" do
+    let(:connection) do
+      build(:x402_connection, organization:, allowed_origins: []).tap { |connection| connection.save!(validate: false) }
+    end
 
     before do
       wallet
