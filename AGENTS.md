@@ -192,7 +192,6 @@ Also check:
 
 - A new environment variable is read with a safe default, and the PR description names it with its default and purpose, so the self-hosting docs and the deployment configs can follow.
 - `lago:diagnostics` prints every environment variable for support tickets and masks values by name (`Lago::Diagnostics::SECRET_PATTERN`). A variable that holds a secret has a name the pattern matches (`_KEY`, `_SECRET`, `_TOKEN`, `_PASSWORD`). If it cannot, for example a URL with a key in its path, the PR extends the masking.
-- `LAGO_API_PAGINATION_MAX_PAGE_SIZE`: the largest `per_page` accepted on `/api/v1` list endpoints (422 `value_is_out_of_range` above it). It defaults to 200, and a missing, invalid or non-positive value falls back to 200. A non-null `organizations.pagination_max_page_size` overrides it for that organization, higher or lower. `/api/v2` paths and `customers/attributed_usage` are not checked. Example: `LAGO_API_PAGINATION_MAX_PAGE_SIZE=200`
 
 ## Keeping this file current
 
