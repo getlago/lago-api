@@ -514,6 +514,17 @@ RSpec.describe Api::V1::InvoicesController do
       end
     end
 
+    context "with per_page above the maximum page size" do
+      subject { get_with_token(organization, "/api/v1/invoices", per_page: 1_000_000_000) }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(per_page: ["value_is_out_of_range"])
+      end
+    end
+
     context "with unknown params" do
       before do
         allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
