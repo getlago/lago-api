@@ -148,8 +148,12 @@ module ChargeModels
       @compute_amount_with_transaction_min_max ||= events_values.reduce(0) do |total_amount, event_value|
         value = event_value
 
+        # NOTE: free units stop at whichever limit is reached first, so a used up free events
+        #       count ends them even when some free amount is left
+        free_events_used_up = free_units_per_events.positive? && !remaining_free_events.positive?
+
         # NOTE: apply free events
-        if remaining_free_events.positive? || remaining_free_amount.positive?
+        if !free_events_used_up && (remaining_free_events.positive? || remaining_free_amount.positive?)
           remaining_free_events -= 1
 
           next 0 unless remaining_free_amount.positive?
