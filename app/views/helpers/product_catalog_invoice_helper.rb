@@ -7,7 +7,6 @@ class ProductCatalogInvoiceHelper
   ProductNode = Data.define(:name, :amount_cents, :fees, :filters)
   FilterNode = Data.define(:name, :fees)
   Tier = Data.define(:label, :units, :unit_price, :amount)
-  SUBTOTAL_RATE_MODELS = %w[graduated volume percentage package graduated_percentage].freeze
   Row = Data.define(:kind, :indent, :label, :units, :unit_price, :amount) do
     def initialize(units: nil, unit_price: nil, amount: nil, **)
       super
@@ -82,23 +81,24 @@ class ProductCatalogInvoiceHelper
     per_unit + flat
   end
 
+  # Without a flat fee, the per-unit line would repeat the period line.
   def self.volume_tiers(fee)
     details = fee.amount_details
-    tiers = [
-      Tier.new(
-        label: I18n.t("invoice.volume.fee_per_unit"),
-        units: RoundingHelper.round_decimal_part(fee.units),
-        unit_price: FeeDisplayHelper.format_with_precision(fee, details["per_unit_amount"]),
-        amount: FeeDisplayHelper.format_as_currency(fee, details["per_unit_total_amount"])
-      )
-    ]
 
     if details["flat_unit_amount"].to_d.positive?
       flat_amount = FeeDisplayHelper.format_as_currency(fee, details["flat_unit_amount"])
-      tiers << Tier.new(label: I18n.t("invoice.volume.flat_fee_for_all_units"), units: 1, unit_price: flat_amount, amount: flat_amount)
+      [
+        Tier.new(
+          label: I18n.t("invoice.volume.fee_per_unit"),
+          units: RoundingHelper.round_decimal_part(fee.units),
+          unit_price: FeeDisplayHelper.format_with_precision(fee, details["per_unit_amount"]),
+          amount: FeeDisplayHelper.format_as_currency(fee, details["per_unit_total_amount"])
+        ),
+        Tier.new(label: I18n.t("invoice.volume.flat_fee_for_all_units"), units: 1, unit_price: flat_amount, amount: flat_amount)
+      ]
+    else
+      []
     end
-
-    tiers
   end
 
   def self.package_tiers(fee)
@@ -191,24 +191,21 @@ class ProductCatalogInvoiceHelper
         unit_price: unbreakable(FeeDisplayHelper.format_precise_unit_amount(fee)),
         amount: unbreakable(FeeDisplayHelper.format_amount(fee))
       )
+      conversion = conversion_row(fee, indent + 1)
+      detail_indent = conversion ? indent + 2 : indent + 1
       details = tiers(fee).map do |tier|
         Row.new(
           kind: :fee_detail,
-          indent: indent + 1,
+          indent: detail_indent,
           label: tier.label,
           units: tier.units,
           unit_price: unbreakable(tier.unit_price),
           amount: unbreakable(tier.amount)
         )
       end
-      subtotal = Row.new(kind: :subtotal, indent: indent + 1, label: I18n.t("invoice.sub_total"), amount: segment.amount) if subtotal?(fee)
 
-      [segment, *details, subtotal, conversion_row(fee, indent + 1)].compact
+      [segment, conversion, *details].compact
     end
-  end
-
-  def self.subtotal?(fee)
-    fee.true_up_parent_fee_id.nil? && SUBTOTAL_RATE_MODELS.include?(rate_model(fee))
   end
 
   def self.conversion_row(fee, indent)
@@ -259,6 +256,10 @@ class ProductCatalogInvoiceHelper
     end
 
     sort_by_name(category_lines) + sort_by_name(product_lines)
+  end
+
+  def advance_only?
+    product_fees.any? && product_fees.all? { it.contract_rate_card&.rate_card&.advance? }
   end
 
   def contract_blocks
