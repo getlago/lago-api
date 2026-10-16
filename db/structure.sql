@@ -413,6 +413,7 @@ SELECT
     NULL::jsonb AS filters_grouped_by;
 DROP INDEX IF EXISTS public.unique_default_payment_method_per_customer;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_x402_connection_id;
+DROP INDEX IF EXISTS public.index_x402_settlements_on_unpaid_id;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_ungranted_id;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_pending_reconcile_after;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_pending_invoice_id;
@@ -12514,6 +12515,13 @@ CREATE INDEX index_x402_settlements_on_ungranted_id ON public.x402_settlements U
 
 
 --
+-- Name: index_x402_settlements_on_unpaid_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_x402_settlements_on_unpaid_id ON public.x402_settlements USING btree (id) WHERE ((kind = 'invoice_payment'::public.x402_settlement_kind) AND (status = 'settled'::public.x402_settlement_status) AND (payment_id IS NULL));
+
+
+--
 -- Name: index_x402_settlements_on_x402_connection_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -15698,6 +15706,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261016024339'),
 ('20261013124033'),
 ('20261009154629'),
 ('20261008135612'),
