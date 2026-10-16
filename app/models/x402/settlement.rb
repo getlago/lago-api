@@ -6,6 +6,7 @@ module X402
     STATUSES = {pending: "pending", settled: "settled", failed: "failed"}.freeze
     SETTLED_BY = {lago: "lago", merchant: "merchant"}.freeze
     GRANT_RETRY_DELAY = 2.minutes
+    PAYMENT_RETRY_DELAY = 2.minutes
 
     belongs_to :organization
     belongs_to :x402_connection, -> { with_discarded }, class_name: "X402::Connection", inverse_of: :settlements
@@ -35,6 +36,7 @@ module X402
 
     scope :pending_reconciliation, -> { pending.where(reconcile_after: ..Time.current) }
     scope :grant_retry_due, -> { credit_purchase.settled.where(wallet_transaction_id: nil, updated_at: ..GRANT_RETRY_DELAY.ago) }
+    scope :payment_retry_due, -> { invoice_payment.settled.where(payment_id: nil, updated_at: ..PAYMENT_RETRY_DELAY.ago) }
 
     private
 
@@ -135,6 +137,7 @@ end
 #  index_x402_settlements_on_pending_invoice_id             (invoice_id) UNIQUE WHERE (status = 'pending'::x402_settlement_status)
 #  index_x402_settlements_on_pending_reconcile_after        (reconcile_after) WHERE (status = 'pending'::x402_settlement_status)
 #  index_x402_settlements_on_ungranted_id                   (id) WHERE ((kind = 'credit_purchase'::x402_settlement_kind) AND (status = 'settled'::x402_settlement_status) AND (wallet_transaction_id IS NULL))
+#  index_x402_settlements_on_unpaid_id                      (id) WHERE ((kind = 'invoice_payment'::x402_settlement_kind) AND (status = 'settled'::x402_settlement_status) AND (payment_id IS NULL))
 #  index_x402_settlements_on_x402_connection_id             (x402_connection_id)
 #
 # Foreign Keys
