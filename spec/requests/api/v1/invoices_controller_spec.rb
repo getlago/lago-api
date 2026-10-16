@@ -1160,6 +1160,28 @@ RSpec.describe Api::V1::InvoicesController do
         expect(response).to have_http_status(:forbidden)
         expect(json[:code]).to eq("feature_unavailable")
       end
+
+      context "with an unknown invoice" do
+        let(:invoice_id) { SecureRandom.uuid }
+
+        it "answers 403" do
+          subject
+
+          expect(response).to have_http_status(:forbidden)
+          expect(json[:code]).to eq("feature_unavailable")
+        end
+      end
+    end
+
+    context "without premium", premium: false do
+      let(:invoice_id) { SecureRandom.uuid }
+
+      it "answers 403" do
+        subject
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:code]).to eq("feature_unavailable")
+      end
     end
 
     context "with an invoice of another organization" do

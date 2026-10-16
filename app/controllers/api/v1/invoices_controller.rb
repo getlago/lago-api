@@ -5,6 +5,8 @@ module Api
     class InvoicesController < Api::BaseController
       include InvoiceIndex
 
+      before_action :ensure_x402_payments_enabled, only: [:x402_payment_url]
+
       def create
         result = Invoices::CreateOneOffService.call(
           customer:,
@@ -359,6 +361,10 @@ module Api
 
       def x402_payment_url_params
         params.permit(:connection_code)
+      end
+
+      def ensure_x402_payments_enabled
+        forbidden_error(code: "feature_unavailable") unless current_organization.x402_payments_enabled?
       end
 
       def preview_params
