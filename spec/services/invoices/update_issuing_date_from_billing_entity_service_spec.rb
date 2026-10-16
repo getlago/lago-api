@@ -84,6 +84,26 @@ RSpec.describe Invoices::UpdateIssuingDateFromBillingEntityService do
     it "changes the payment_due_date by 3 days" do
       expect { subject.call }.to change(invoice, :payment_due_date).by(3)
     end
+
+    context "when the invoice uses another billing entity" do
+      let(:invoice_billing_entity) { create(:billing_entity, organization: customer.organization) }
+      let(:invoice) do
+        create(
+          :invoice,
+          :draft,
+          customer:,
+          billing_entity: invoice_billing_entity,
+          issuing_date:,
+          expected_finalization_date:,
+          payment_due_date:,
+          applied_grace_period: 12
+        )
+      end
+
+      it "uses the invoice billing entity grace period" do
+        expect { subject.call }.to change(invoice, :applied_grace_period).to(15)
+      end
+    end
   end
 
   context "when going from 12 to 9 days" do

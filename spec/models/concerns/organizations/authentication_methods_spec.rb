@@ -84,4 +84,44 @@ RSpec.describe Organizations::AuthenticationMethods do
       end
     end
   end
+
+  describe "#accessible_by_session?" do
+    let(:organization) { create(:organization, authentication_methods: %w[email_password okta]) }
+    let(:okta) { Organizations::AuthenticationMethods::OKTA }
+
+    it "refuses a session whose login method the organization does not allow" do
+      expect(organization.accessible_by_session?(login_method: "google_oauth")).to be(false)
+      expect(organization.accessible_by_session?(login_method: nil)).to be(false)
+    end
+
+    it "accepts a non SSO session whose login method the organization allows" do
+      expect(organization.accessible_by_session?(login_method: "email_password")).to be(true)
+    end
+
+    context "with an SSO session" do
+      before { create(:okta_integration, organization:, domain: "acme.test", host: "acme.okta.com") }
+
+      it "accepts the organization whose integration authenticated the user" do
+        expect(organization.accessible_by_session?(login_method: okta, sso_organization_id: organization.id, sso_issuer: "evil.test")).to be(true)
+      end
+
+      it "accepts an organization whose integration has the same issuer" do
+        expect(organization.accessible_by_session?(login_method: okta, sso_organization_id: SecureRandom.uuid, sso_issuer: "acme.okta.com")).to be(true)
+      end
+
+      it "refuses an organization whose integration has another issuer" do
+        expect(organization.accessible_by_session?(login_method: okta, sso_organization_id: SecureRandom.uuid, sso_issuer: "evil.test")).to be(false)
+      end
+
+      it "refuses a session without SSO claims" do
+        expect(organization.accessible_by_session?(login_method: okta)).to be(false)
+      end
+    end
+
+    context "when the organization allows Okta without an Okta integration" do
+      it "refuses a session from another organization" do
+        expect(organization.accessible_by_session?(login_method: okta, sso_organization_id: SecureRandom.uuid, sso_issuer: "acme.okta.com")).to be(false)
+      end
+    end
+  end
 end

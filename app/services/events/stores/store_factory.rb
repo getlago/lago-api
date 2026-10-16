@@ -10,14 +10,13 @@ module Events
           ENV["LAGO_CLICKHOUSE_ENABLED"].present?
         end
 
-        # Temporarily override the resolved store class and deduplication flag
-        # for the duration of the given block. Used by tooling that needs to
+        # Temporarily override the resolved store class for the duration of the given block. Used by tooling that needs to
         # exercise a different event store without persisting state on the
         # organization (e.g. the ClickHouse migration recipe).
-        def with_override(store_class:, deduplicate:)
+        def with_override(store_class:)
           raise "Events::Stores::StoreFactory override already active" if Thread.current[OVERRIDE_KEY]
 
-          Thread.current[OVERRIDE_KEY] = {store_class:, deduplicate:}
+          Thread.current[OVERRIDE_KEY] = {store_class:}
           begin
             yield
           ensure

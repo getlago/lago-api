@@ -83,6 +83,14 @@ RSpec.describe Membership do
       it "returns false for non-finance permissions" do
         expect(permissions_hash).to include("coupons:attach" => false)
       end
+
+      it "can update customers, and so generate customer portal URLs, but not create or delete them" do
+        expect(permissions_hash).to include(
+          "customers:update" => true,
+          "customers:create" => false,
+          "customers:delete" => false
+        )
+      end
     end
 
     context "with manager role" do

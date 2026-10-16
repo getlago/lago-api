@@ -4,12 +4,22 @@ module Integrations
   class OktaIntegration < BaseIntegration
     validates :client_secret, :client_id, :domain, :organization_name, presence: true
     validate :domain_uniqueness
+    validate :host_format
 
     settings_accessors :client_id, :domain, :organization_name, :host
     secrets_accessors :client_secret
 
+    # A bare hostname: the token and userinfo URLs are built by appending a path to it.
+    HOST_FORMAT = /\A[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?\z/i
+
     def host
       get_from_settings("host") || "#{organization_name.downcase}.okta.com"
+    end
+
+    # The Okta org that answers the token request built from `host`. A session it issues can
+    # open another organization only if that organization's integration has the same issuer.
+    def sso_issuer
+      host.downcase
     end
 
     private
@@ -24,6 +34,21 @@ module Integrations
         .exists?
 
       errors.add(:domain, "domain_not_unique") if okta_integration
+    end
+
+    def host_format
+      host = get_from_settings("host")
+      return if host.blank? || host.match?(HOST_FORMAT)
+      # Existing integrations keep saving unrelated changes until their host is edited.
+      return if persisted? && host == stored_host
+
+      errors.add(:host, "host_invalid")
+    end
+
+    def stored_host
+      stored_settings = settings_in_database
+      stored_settings = JSON.parse(stored_settings) if stored_settings.is_a?(String)
+      (stored_settings || {})["host"]
     end
   end
 end

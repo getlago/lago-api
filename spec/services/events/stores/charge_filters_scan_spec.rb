@@ -18,7 +18,6 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
       charges_duration: 30
     }
   end
-  let(:deduplicate) { true }
 
   let(:charge_properties) { {"amount" => "1"} }
   let(:charge) { create(:standard_charge, organization:, plan:, billable_metric:, properties: charge_properties) }
@@ -92,8 +91,7 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
         grouped_by: item.pricing_group_keys.presence,
         matching_filters: matching_and_ignored.matching_filters,
         ignored_filters: matching_and_ignored.ignored_filters
-      },
-      deduplicate:
+      }
     ).tap do |store|
       store.numeric_property = true
       store.aggregation_property = billable_metric.field_name
@@ -137,12 +135,6 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
       totals = pricing_buckets.to_h { [it.charge_filter.id, scanned_store(it).sum.value] }
 
       expect(totals.values).to match_array([4, 3, 32, 72, 144 + 256])
-    end
-
-    context "without deduplication" do
-      let(:deduplicate) { false }
-
-      it_behaves_like "the filter stores"
     end
 
     context "with a question mark in a filter key" do
@@ -451,12 +443,6 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
         expect(scanned_store(item).last.value).to be_nil
       end
     end
-
-    context "without deduplication" do
-      let(:deduplicate) { false }
-
-      it_behaves_like "the filter stores of a latest charge"
-    end
   end
 
   describe "#covers?" do
@@ -472,8 +458,7 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
           code: billable_metric.code,
           billing_context:,
           boundaries:,
-          filters: filter_store(item).filters.merge(matching_filters: {"region" => ["eu"]}),
-          deduplicate:
+          filters: filter_store(item).filters.merge(matching_filters: {"region" => ["eu"]})
         )
 
         expect(scan.covers?(store)).to be(false)

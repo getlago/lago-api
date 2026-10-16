@@ -54,11 +54,13 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver, :premium do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "credit_notes:create"
 
   it "returns the estimate for the credit note creation" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: "credit_notes:create",
       query:,
       variables: {
         invoiceId: invoice.id,
@@ -83,6 +85,7 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver, :premium do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: "credit_notes:create",
         query:,
         variables: {
           invoiceId: create(:invoice).id,

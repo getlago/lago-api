@@ -11,7 +11,8 @@ module PasswordResets
     end
 
     def call
-      return result.not_found_failure!(resource: "user") if user.blank?
+      # NOTE: Unknown emails get the same response as known ones (no account enumeration).
+      return result if user.blank?
 
       password_reset = PasswordReset.create!(
         user:,

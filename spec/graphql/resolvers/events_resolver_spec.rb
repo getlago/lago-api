@@ -53,10 +53,15 @@ RSpec.describe Resolvers::EventsResolver, clickhouse: true, transaction: false d
     membership
   end
 
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "developers:manage"
+
   it "returns a list of events" do
     result = execute_graphql(
       current_user: user,
       current_organization: organization,
+      permissions: "developers:manage",
       query:
     )
 
@@ -86,6 +91,7 @@ RSpec.describe Resolvers::EventsResolver, clickhouse: true, transaction: false d
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: "developers:manage",
         query:
       )
 
@@ -112,6 +118,7 @@ RSpec.describe Resolvers::EventsResolver, clickhouse: true, transaction: false d
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: "developers:manage",
         query:
       )
 
@@ -128,6 +135,7 @@ RSpec.describe Resolvers::EventsResolver, clickhouse: true, transaction: false d
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: "developers:manage",
         query:
       )
 
@@ -156,6 +164,7 @@ RSpec.describe Resolvers::EventsResolver, clickhouse: true, transaction: false d
       result = execute_graphql(
         current_user: user,
         current_organization: organization,
+        permissions: "developers:manage",
         query:
       )
 
@@ -182,6 +191,7 @@ RSpec.describe Resolvers::EventsResolver, clickhouse: true, transaction: false d
         result = execute_graphql(
           current_user: user,
           current_organization: organization,
+          permissions: "developers:manage",
           query:,
           variables: {page: 5}
         )

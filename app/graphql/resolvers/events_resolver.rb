@@ -5,6 +5,8 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
+    REQUIRED_PERMISSION = "developers:manage"
+
     MAX_LIMIT = 1000
 
     description "Query events of an organization"

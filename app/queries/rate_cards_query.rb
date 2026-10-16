@@ -8,6 +8,7 @@ class RateCardsQuery < BaseQuery
     :product_category_ids,
     :without_product_category,
     :code,
+    :currency,
     :product_code,
     :product_filter_code
   ]
@@ -22,6 +23,7 @@ class RateCardsQuery < BaseQuery
       rate_cards = with_product_category(rate_cards)
     end
     rate_cards = with_code(rate_cards) if filters.code.present?
+    rate_cards = with_currency(rate_cards) if filters.currency.present?
     rate_cards = with_product_code(rate_cards) if filters.product_code.present?
     rate_cards = with_product_filter_code(rate_cards) if filters.product_filter_code.present?
 
@@ -65,6 +67,10 @@ class RateCardsQuery < BaseQuery
 
   def with_code(scope)
     scope.where(code: filters.code)
+  end
+
+  def with_currency(scope)
+    scope.where(currency: filters.currency)
   end
 
   def with_product_code(scope)
