@@ -20,9 +20,10 @@ describe "Top-ups paid with a shared payment token", :premium do
   end
 
   def top_up(wallet, payment_method)
-    create_wallet_transaction({
-      wallet_id: wallet.id, paid_credits: "10", invoice_requires_successful_payment: true, payment_method:
-    }, as: :model).first
+    WalletTransactions::CreateFromParamsService.call!(
+      organization:,
+      params: {wallet_id: wallet.id, paid_credits: "10", invoice_requires_successful_payment: true, payment_method:}
+    ).wallet_transactions.first
   end
 
   it "charges each top-up with its own token and nothing else" do

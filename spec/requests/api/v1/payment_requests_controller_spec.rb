@@ -85,30 +85,6 @@ RSpec.describe Api::V1::PaymentRequestsController do
         expect(response).to have_http_status(:success)
       end
     end
-
-    context "with a shared payment token" do
-      let(:params) do
-        {
-          external_customer_id: customer.external_id,
-          lago_invoice_ids: [invoice.id],
-          payment_method: {payment_method_type: "provider", shared_payment_token: "spt_abc_123"}
-        }
-      end
-
-      it "forwards the token to PaymentRequests::CreateService" do
-        subject
-
-        expect(PaymentRequests::CreateService).to have_received(:call).with(
-          organization:,
-          params: {
-            external_customer_id: customer.external_id,
-            lago_invoice_ids: [invoice.id],
-            payment_method: {payment_method_type: "provider", shared_payment_token: "spt_abc_123"}
-          }
-        )
-        expect(response).to have_http_status(:success)
-      end
-    end
   end
 
   describe "GET /api/v1/payment_requests" do

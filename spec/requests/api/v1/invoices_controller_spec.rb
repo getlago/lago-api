@@ -40,23 +40,6 @@ RSpec.describe Api::V1::InvoicesController do
 
     include_examples "requires API permission", "invoice", "write"
 
-    context "with a shared payment token" do
-      let(:customer) { create(:customer, organization:, payment_provider: "stripe", payment_provider_code: "stripe_1") }
-      let(:stripe_provider) { create(:stripe_provider, organization:, code: "stripe_1") }
-      let(:create_params) { super().merge(payment_method: {payment_method_type: "provider", shared_payment_token: "spt_abc_123"}) }
-
-      before { create(:stripe_customer, customer:, payment_provider: stripe_provider, provider_payment_methods: %w[shared_payment_token]) }
-
-      it "attaches a payment method row holding the token to the invoice" do
-        subject
-
-        expect(response).to have_http_status(:success)
-        row = customer.payment_methods.sole
-        expect(row).to have_attributes(provider_method_type: "shared_payment_token", provider_method_id: "spt_abc_123")
-        expect(Invoice.find(json[:invoice][:lago_id]).payment_method).to eq(row)
-      end
-    end
-
     it "creates an invoice" do
       subject
 
@@ -984,18 +967,6 @@ RSpec.describe Api::V1::InvoicesController do
 
       expect(response).to have_http_status(:success)
       expect(retry_service).to have_received(:call)
-    end
-
-    context "with a shared payment token" do
-      let(:payment_params) { {payment_method: {payment_method_type: "provider", shared_payment_token: "spt_abc_123"}} }
-
-      it "forwards the token to the retry service" do
-        subject
-
-        expect(response).to have_http_status(:success)
-        expect(Invoices::Payments::RetryService).to have_received(:new)
-          .with(invoice:, payment_method_params: {payment_method_type: "provider", shared_payment_token: "spt_abc_123"})
-      end
     end
 
     context "with payment method" do

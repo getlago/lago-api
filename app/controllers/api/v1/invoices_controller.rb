@@ -308,8 +308,7 @@ module Api
               ],
               payment_method: [
                 :payment_method_type,
-                :payment_method_id,
-                :shared_payment_token
+                :payment_method_id
               ]
             ).to_h.deep_symbolize_keys
       end
@@ -329,8 +328,7 @@ module Api
         params.permit(
           payment_method: [
             :payment_method_type,
-            :payment_method_id,
-            :shared_payment_token
+            :payment_method_id
           ]
         ).to_h.deep_symbolize_keys
       end
