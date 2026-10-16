@@ -268,17 +268,9 @@ css:
     font-variant-numeric: lining-nums tabular-nums;
   }
 
-  /* Values live directly in cells. Caps only constrain exceptional lengths. */
+  /* Number columns widen to fit their values; the description gives up the space. */
   td.numeric {
-    white-space: normal;
-    overflow-wrap: break-word;
-    max-width: calc(50cqi - 1px);
-  }
-  .document-table--details td.numeric {
-    max-width: calc(100cqi / 6 - 1px);
-  }
-  .document-totals td.numeric {
-    max-width: calc(100cqi / 4 - 1px);
+    white-space: nowrap;
   }
 
   .cell--description {
