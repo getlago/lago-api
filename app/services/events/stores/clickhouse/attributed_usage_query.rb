@@ -14,6 +14,10 @@ module Events
       # Ranking and level totals are window functions over every group, computed before paging. The
       # unattributed usage (empty value) is ranked in its own partition, and the query returns it
       # along with the page and the first ranked row, which always carries the level totals.
+      #
+      # The scan may be split across replicas (ClickHouse Cloud): one replica per 50M rows estimated
+      # to be read, up to 8, so a small subscription stays on one replica, where coordination would
+      # cost more than it saves. A server without replicas ignores these settings.
       class AttributedUsageQuery
         include Events::Stores::Utils::ClickhouseSqlHelpers
 
@@ -24,7 +28,7 @@ module Events
         ORDERS = {"amount" => "amount", "events_count" => "events"}.freeze
 
         def initialize(organization_id:, external_subscription_id:, from_datetime:, to_datetime:, group_key:, label_filters:,
-          charge_columns:, order_by:, search:, limit:, offset:, max_groups:, max_execution_time:)
+          charge_columns:, order_by:, search:, limit:, offset:, deduplicate:, max_groups:, max_execution_time:)
           @organization_id = organization_id
           @external_subscription_id = external_subscription_id
           @from_datetime = from_datetime
@@ -36,6 +40,7 @@ module Events
           @search = search
           @limit = limit
           @offset = offset
+          @deduplicate = deduplicate
           @max_groups = max_groups
           @max_execution_time = max_execution_time
         end
@@ -83,7 +88,7 @@ module Events
                     count() AS events
                   FROM (
                     SELECT #{event_columns_sql.join(", ")}
-                    FROM events_enriched FINAL
+                    FROM events_enriched#{" FINAL" if deduplicate}
                     WHERE #{where_sql}
                   )
                   GROUP BY node
@@ -99,14 +104,17 @@ module Events
               max_rows_to_group_by = #{Integer(max_groups)},
               group_by_overflow_mode = 'throw',
               max_execution_time = #{Integer(max_execution_time)},
-              timeout_overflow_mode = 'throw'
+              timeout_overflow_mode = 'throw',
+              enable_parallel_replicas = 1,
+              max_parallel_replicas = 8,
+              parallel_replicas_min_number_of_rows_per_replica = 50000000
           SQL
         end
 
         private
 
         attr_reader :organization_id, :external_subscription_id, :from_datetime, :to_datetime, :group_key, :label_filters,
-          :charge_columns, :order_by, :search, :limit, :offset, :max_groups, :max_execution_time
+          :charge_columns, :order_by, :search, :limit, :offset, :deduplicate, :max_groups, :max_execution_time
 
         def cell_names
           @cell_names ||= cells.each_index.flat_map { ["units_#{it}", "amount_#{it}", "events_#{it}"] }

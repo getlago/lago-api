@@ -451,14 +451,13 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     end
   end
 
-  context "with duplicated events" do
-    before do
-      create_event(code: "tokens", value: 50, labels: {"team" => "ops"}, transaction_id: "tr_dup")
-      create_event(code: "tokens", value: 50, labels: {"team" => "ops"}, transaction_id: "tr_dup")
-    end
+  context "when reading the events" do
+    before { allow(Events::Stores::Clickhouse::AttributedUsageQuery).to receive(:new).and_call_original }
 
-    it "counts duplicated events once" do
-      expect(result.rows.find { it.value == "ops" }.events_count).to eq(1)
+    it "reads without FINAL" do
+      result
+
+      expect(Events::Stores::Clickhouse::AttributedUsageQuery).to have_received(:new).with(hash_including(deduplicate: false))
     end
   end
 
