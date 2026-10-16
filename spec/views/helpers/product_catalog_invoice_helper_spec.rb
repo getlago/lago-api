@@ -245,15 +245,24 @@ RSpec.describe ProductCatalogInvoiceHelper do
     end
   end
 
+  describe ".range_label" do
+    it "names the first, next and remaining tiers by their upper bound" do
+      expect(described_class.range_label("fee", {"from_value" => 0, "to_value" => 10})).to eq("Fee for first 10 units")
+      expect(described_class.range_label("fee", {"from_value" => 10, "to_value" => 50})).to eq("Fee for units up to 50")
+      expect(described_class.range_label("fee", {"from_value" => 50, "to_value" => nil})).to eq("Fee for remaining units")
+      expect(described_class.range_label("flat_fee", {"from_value" => 10, "to_value" => 50})).to eq("Flat fee for units up to 50")
+    end
+  end
+
   describe ".tiers" do
     subject(:tiers) { described_class.tiers(invoice.fees.find_by(amount_cents: 700)) }
 
     it "lists per-unit tiers, then flat fees" do
       expect(tiers.map(&:label)).to eq(
         [
-          "Fee per unit for the first 100",
-          "Fee per unit for 100 and above",
-          "Flat fee for first 100"
+          "Fee for first 100 units",
+          "Fee for remaining units",
+          "Flat fee for first 100 units"
         ]
       )
       expect(tiers.map(&:unit_price)).to eq(["2%", "1%", "€1.00"])

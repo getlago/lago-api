@@ -118,6 +118,13 @@ fr:
       fr_tax_exempt: Le client est exonéré de taxe – art. 259-1 du CGI.
       reverse_charge: Taxe soumise à autoliquidation.
       tax_exempt: Le client est exonéré de taxe.
+    tiers:
+      fee_for_first: Frais pour les %{up_to} premières unités
+      fee_for_next: Frais pour les unités jusqu'à %{up_to}
+      fee_for_remaining: Frais pour les unités restantes
+      flat_fee_for_first: Frais fixes pour les %{up_to} premières unités
+      flat_fee_for_next: Frais fixes pour les unités jusqu'à %{up_to}
+      flat_fee_for_remaining: Frais fixes pour les unités restantes
     total: Total
     total_credits: Total crédits
     total_credits_with_value: 'Nombre total de crédits: %{credit_amount} crédits'
