@@ -8,12 +8,20 @@ module X402
     before_action :find_invoice
     before_action :ensure_x402_payments_enabled
 
+    INVOICE_REFUSALS = %w[invoice_currency_not_supported wallet_not_x402_enabled].freeze
+
     def show
       render_challenge(invoice)
     end
 
     def create
-      render_challenge(invoice)
+      header = request.headers[X402::Wire::V2Codec::PAYMENT_SIGNATURE]
+
+      if header
+        render_payment(invoice, X402::Invoices::SettleService.call(invoice:, payment: X402::Wire::V2Codec.decode(header)))
+      else
+        render_challenge(invoice)
+      end
     end
 
     private
@@ -30,6 +38,27 @@ module X402
       forbidden_error(code: "feature_unavailable") unless invoice.organization.x402_payments_enabled?
     end
 
+    def render_payment(invoice, result)
+      code = refusal_code(result.error)
+
+      if result.success? && result.settlement.settled?
+        render_receipt(result.settlement)
+      elsif result.success?
+        conflict_error(code: "invoice_payment_pending")
+      elsif code && INVOICE_REFUSALS.exclude?(code)
+        render_challenge(invoice, error: code)
+      else
+        render_error_response(result)
+      end
+    end
+
+    def render_receipt(settlement)
+      settlement_response = X402::Wire::V2Codec.settlement_response(settlement)
+
+      response.headers[X402::Wire::V2Codec::PAYMENT_RESPONSE] = X402::Wire::V2Codec.encode(settlement_response)
+      render(json: settlement_response)
+    end
+
     def render_challenge(invoice, error: nil)
       challenge = X402::Invoices::GenerateChallengeService.call(invoice:)
 
@@ -44,6 +73,10 @@ module X402
       else
         render_error_response(challenge)
       end
+    end
+
+    def refusal_code(error)
+      error.messages.values.flatten.first if error.is_a?(BaseService::ValidationFailure)
     end
   end
 end
