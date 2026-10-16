@@ -24,7 +24,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
       expect(json[:applied_rate_card][:lago_id]).to be_present
       expect(json[:applied_rate_card][:plan_code]).to eq(catalog_plan.code)
       expect(json[:applied_rate_card][:rate_card_code]).to eq(rate_card.code)
-      expect(json[:applied_rate_card][:rate_phases_count]).to eq(1)
+      expect(PlanRateCard.find(json[:applied_rate_card][:lago_id]).rate_phases.count).to eq(1)
     end
 
     context "when the plan does not exist" do
@@ -63,6 +63,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
 
       expect(response).to have_http_status(:success)
       expect(json[:applied_rate_cards].map { |i| i[:lago_id] }).to eq([plan_rate_card.id])
+      expect(json[:applied_rate_cards]).to all(be_a_flat_v2_payload)
       expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
     end
 
@@ -111,8 +112,16 @@ RSpec.describe Api::V2::PlanRateCardsController do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:applied_rate_card][:rate_phases_count]).to eq(2)
+      expect(PlanRateCard.find(json[:applied_rate_card][:lago_id]).rate_phases.count).to eq(2)
       expect(RateOverride.count).to eq(1)
+    end
+
+    # rate_phases_count left the payload: the list of the entry's rate phases replaces it.
+    it "lists both phases on the entry's rate_phases" do
+      subject
+      get_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases")
+
+      expect(json[:rate_phases].pluck(:code)).to eq(%w[launch standard])
     end
 
     context "when no phase is indefinite" do
@@ -163,6 +172,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
       expect(response).to have_http_status(:success)
       expect(json[:applied_rate_card][:lago_id]).to eq(plan_rate_card.id)
       expect(json[:applied_rate_card]).to include(deleted_at: nil)
+      expect(json[:applied_rate_card]).to be_a_flat_v2_payload
     end
 
     context "when it does not exist" do

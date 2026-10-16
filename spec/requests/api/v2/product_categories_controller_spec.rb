@@ -101,16 +101,14 @@ RSpec.describe Api::V2::ProductCategoriesController do
 
     include_examples "requires API permission", "product_category", "read"
 
-    it "returns the product_category" do
-      create(:product, organization:, product_category:)
-
+    it "returns the flat product_category" do
       subject
 
       expect(response).to have_http_status(:success)
       expect(json[:product_category][:lago_id]).to eq(product_category.id)
       expect(json[:product_category][:code]).to eq(product_category.code)
-      expect(json[:product_category][:products_count]).to eq(1)
       expect(json[:product_category]).to include(deleted_at: nil)
+      expect(json[:product_category]).to be_a_flat_v2_payload
     end
 
     context "when the product_category does not exist" do
@@ -141,30 +139,23 @@ RSpec.describe Api::V2::ProductCategoriesController do
 
     include_examples "requires API permission", "product_category", "read"
 
-    it "returns the paginated product_categories" do
-      create(:product_category, organization:)
+    context "with a second product_category" do
+      before { create(:product_category, organization:) }
 
-      subject
+      it "returns the paginated product_categories, flat" do
+        subject
 
-      expect(response).to have_http_status(:success)
-      expect(json[:product_categories].count).to eq(1)
-      expect(json[:meta][:next_cursor]).to be_present
-      expect(json[:product_categories].first[:lago_id]).to be_present
+        expect(response).to have_http_status(:success)
+        expect(json[:product_categories].count).to eq(1)
+        expect(json[:meta][:next_cursor]).to be_present
+        expect(json[:product_categories].first[:lago_id]).to be_present
+        expect(json[:product_categories]).to all(be_a_flat_v2_payload)
+      end
     end
 
     it_behaves_like "a cursor paginated v2 endpoint", collection: :product_categories, model: ProductCategory do
       let(:paginated_path) { "/api/v2/product_categories" }
       let(:create_paginated_record) { ->(created_at) { create(:product_category, organization:, created_at:) } }
-    end
-
-    it "returns the batched products counts" do
-      product_category = create(:product_category, organization:)
-      create(:product, organization:, product_category:)
-
-      get_with_token(organization, "/api/v2/product_categories?limit=10")
-
-      counts = json[:product_categories].to_h { [it[:lago_id], it[:products_count]] }
-      expect(counts[product_category.id]).to eq(1)
     end
 
     it "does not return product_categories from other organizations" do
@@ -220,6 +211,29 @@ RSpec.describe Api::V2::ProductCategoriesController do
 
         expect(response).to be_not_found_error("product_category")
       end
+    end
+  end
+
+  # products_count left the payload: the total count of the category's products replaces it.
+  describe "GET /api/v2/products?product_category_code=:code&include_total_count=true" do
+    subject do
+      get_with_token(organization, "/api/v2/products", {product_category_code: product_category.code, include_total_count: true})
+    end
+
+    let(:product_category) { create(:product_category, organization:) }
+    let(:activity_log_products_count) { V2::ProductCategorySerializer.new(product_category, includes: %i[counts]).serialize[:products_count] }
+
+    before do
+      create_list(:product, 2, organization:, product_category:)
+      create(:product, organization:, product_category:).discard!
+      create(:product, organization:)
+    end
+
+    it "equals the products_count the activity log still renders" do
+      subject
+
+      expect(json[:meta][:total_count]).to eq(2)
+      expect(json[:meta][:total_count]).to eq(activity_log_products_count)
     end
   end
 end

@@ -4,6 +4,7 @@ module Api
   module V2
     class ProductsController < Api::V2::BaseController
       cursor_paginated_index(Product)
+      expandable_with ::V2::ProductSerializer
 
       ERROR_FIELDS = {billable_metric: :billable_metric_code, product_category: :product_category_code}.freeze
 
@@ -69,7 +70,7 @@ module Api
 
         return not_found_error(resource: "product") unless product
 
-        render_product(product)
+        render_product(preload_expansions(product))
       end
 
       def index
@@ -94,8 +95,7 @@ module Api
         )
 
         if result.success?
-          # Preloaded so filters_count reads the loaded association.
-          page = ::CursorPagination::Page.new(records: result.products.includes(:filters), cursor:)
+          page = ::CursorPagination::Page.new(records: result.products, cursor:)
 
           render(
             json: ::CollectionSerializer.new(
