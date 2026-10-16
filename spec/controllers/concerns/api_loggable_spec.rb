@@ -37,6 +37,38 @@ RSpec.describe ApiLoggable do
     end
   end
 
+  context "without filter_audit_log_params!" do
+    it "produces api log with no filtered params" do
+      post :index
+
+      expect(Utils::ApiLog).to have_received(:produce)
+        .with(anything, anything, organization: nil, filtered_params: [])
+    end
+  end
+
+  context "with filter_audit_log_params!" do
+    # rubocop:disable RSpec/DescribedClass
+    controller(ApplicationController) do
+      include ApiLoggable
+
+      filter_audit_log_params! :secret_field
+
+      attr_reader :current_organization
+
+      def index
+        render json: :ok
+      end
+    end
+    # rubocop:enable RSpec/DescribedClass
+
+    it "produces api log with the filtered params" do
+      post :index
+
+      expect(Utils::ApiLog).to have_received(:produce)
+        .with(anything, anything, organization: nil, filtered_params: [:secret_field])
+    end
+  end
+
   context "with skip_audit_logs!" do
     # rubocop:disable RSpec/DescribedClass
     controller(ApplicationController) do

@@ -5,9 +5,14 @@ require "rails_helper"
 RSpec.describe UsageMonitoring::UpdateAlertService do
   subject(:result) { described_class.call(alert:, params:) }
 
-  let(:organization) { create(:organization, premium_integrations:) }
-  let(:premium_integrations) { [] }
+  let_it_be(:premium_integrations) { [] }
+  let_it_be(:organization) { create_default(:organization, premium_integrations:) }
   let(:alert) { create(:alert, thresholds: [1, 50], organization: organization) }
+
+  before_all do
+    create_default(:customer)
+    create_default(:plan)
+  end
 
   describe "#call" do
     let(:params) do
@@ -16,6 +21,13 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
         {code: :warn, value: 100},
         {code: :critical, value: 200, recurring: true}
       ]}
+    end
+
+    it "uses with_lock so evaluation cannot read half-rewritten thresholds" do
+      allow(alert).to receive(:with_lock).and_call_original
+      described_class.call(alert:, params:)
+
+      expect(alert).to have_received(:with_lock)
     end
 
     it "updates the alert" do
@@ -29,7 +41,7 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
 
     context "with a billable_metric_id" do
       let(:alert) { create(:billable_metric_current_usage_amount_alert, thresholds: [50]) }
-      let(:billable_metric) { create(:billable_metric, organization: alert.organization) }
+      let(:billable_metric) { create_default(:billable_metric) }
       let(:params) do
         {code: "new_code", name: "Renamed", billable_metric_id: billable_metric.id, thresholds: [
           {value: 40},
@@ -67,6 +79,29 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
           expect(result).to be_failure
           expect(result.error.messages[:code]).to eq(["value_already_exist"])
         end
+      end
+    end
+
+    context "with notify_on" do
+      it "accepts opting a coded threshold in to resolution" do
+        result = described_class.call(alert:, params: {thresholds: [{code: "warn", value: 10, notify_on: %w[triggered resolved]}]})
+
+        expect(result).to be_success
+        expect(alert.reload.thresholds.sole.notify_on).to eq(%w[triggered resolved])
+      end
+
+      it "rejects opting in without a code" do
+        result = described_class.call(alert:, params: {thresholds: [{value: 10, notify_on: %w[triggered resolved]}]})
+
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:code"]).to include("value_is_mandatory")
+      end
+
+      it "rejects dropping triggered" do
+        result = described_class.call(alert:, params: {thresholds: [{code: "warn", value: 10, notify_on: %w[resolved]}]})
+
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:notify_on"]).to include("triggered_is_mandatory")
       end
     end
 
@@ -219,6 +254,45 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
 
       it "does not create a subscription activity" do
         expect { result }.not_to change(UsageMonitoring::SubscriptionActivity, :count)
+      end
+
+      context "when renaming it to a code already used on the same wallet" do
+        let(:params) { {code: "taken"} }
+
+        before { create(:wallet_credits_balance_alert, organization:, wallet: alert.wallet, code: "taken") }
+
+        it "rejects it before reaching the database" do
+          expect(result).to be_failure
+          expect(result.error.messages[:code]).to eq(["value_already_exist"])
+        end
+
+        it "never saves the alert, so no update is attempted" do
+          allow(alert).to receive(:save!).and_call_original
+
+          expect(result).to be_failure
+          expect(alert).not_to have_received(:save!)
+        end
+
+        context "when another request takes the code between the check and the save" do
+          subject(:result) { service.call }
+
+          let(:service) { described_class.new(alert:, params:) }
+
+          before { allow(service).to receive(:wallet_alert_code_taken?).and_return(false) }
+
+          it "reports the wallet index violation on the code field" do
+            expect(result).to be_failure
+            expect(result.error.messages).to eq(code: ["value_already_exist"])
+          end
+        end
+      end
+
+      context "when keeping its own code" do
+        let(:params) { {code: alert.code} }
+
+        it "allows it" do
+          expect(result).to be_success
+        end
       end
 
       context "when processing wallet alerts", :premium do

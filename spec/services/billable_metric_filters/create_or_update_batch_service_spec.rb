@@ -5,6 +5,10 @@ require "rails_helper"
 RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
   subject(:service) { described_class.call(billable_metric:, filters_params:) }
 
+  before_all do
+    create_default(:organization)
+  end
+
   let(:billable_metric) { create(:billable_metric) }
 
   context "when filter params is empty" do
@@ -448,6 +452,111 @@ RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
         expect(other_filter_value.reload).not_to be_discarded
         expect(other_charge_filter.reload).not_to be_discarded
       end
+    end
+  end
+
+  describe "product filter references" do
+    let(:organization) { billable_metric.organization }
+    let!(:filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[us eu apac]) }
+    let(:product_filter) { create(:product_filter, organization:) }
+    let(:referenced_value) { "eu" }
+
+    before do
+      create(:product_filter_value, organization:, product_filter:, billable_metric_filter: filter, value: referenced_value)
+    end
+
+    context "when removing a referenced value" do
+      let(:filters_params) { [{key: "region", values: %w[us apac]}] }
+
+      it "blocks the edit without mutating the filter" do
+        result = service
+
+        expect(result).not_to be_success
+        expect(result.error.messages[:filters]).to eq(["referenced_by_product_filter"])
+        expect(filter.reload.values).to eq(%w[us eu apac])
+      end
+    end
+
+    context "when discarding a referenced filter" do
+      let(:filters_params) { [{key: "cloud", values: %w[aws gcp]}] }
+
+      it "blocks the edit" do
+        result = service
+
+        expect(result).not_to be_success
+        expect(result.error.messages[:filters]).to eq(["referenced_by_product_filter"])
+        expect(filter.reload).not_to be_discarded
+      end
+    end
+
+    context "when discarding all filters" do
+      let(:filters_params) { {} }
+
+      it "blocks the edit" do
+        result = service
+
+        expect(result).not_to be_success
+        expect(result.error.messages[:filters]).to eq(["referenced_by_product_filter"])
+        expect(filter.reload).not_to be_discarded
+      end
+    end
+
+    context "when removing an unreferenced value" do
+      let(:filters_params) { [{key: "region", values: %w[us eu]}] }
+
+      it "allows the edit" do
+        result = service
+
+        expect(result).to be_success
+        expect(filter.reload.values).to eq(%w[us eu])
+      end
+    end
+
+    context "when the reference tracks the whole set (nil value)" do
+      let(:referenced_value) { nil }
+
+      context "when trimming an individual value" do
+        let(:filters_params) { [{key: "region", values: %w[us eu]}] }
+
+        it "allows the trim" do
+          result = service
+
+          expect(result).to be_success
+          expect(filter.reload.values).to eq(%w[us eu])
+        end
+      end
+
+      context "when discarding the filter" do
+        let(:filters_params) { [{key: "cloud", values: %w[aws]}] }
+
+        it "still blocks" do
+          result = service
+
+          expect(result).not_to be_success
+          expect(result.error.messages[:filters]).to eq(["referenced_by_product_filter"])
+        end
+      end
+    end
+  end
+
+  describe "duplicate keys" do
+    let!(:filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[us eu]) }
+
+    # A later duplicate entry would remove `eu` (last write wins) while the
+    # orphaning guard reads only the first entry — reject the payload up front.
+    let(:filters_params) do
+      [
+        {key: "region", values: %w[us eu]},
+        {key: "region", values: %w[us]}
+      ]
+    end
+
+    it "rejects the payload without mutating" do
+      result = service
+
+      expect(result).not_to be_success
+      expect(result.error.messages[:key]).to eq(["value_already_exist"])
+      expect(filter.reload.values).to eq(%w[us eu])
     end
   end
 end

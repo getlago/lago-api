@@ -12,6 +12,7 @@ module Integrations
           def call
             return result unless integration
             return result unless ::Integrations::BaseIntegration::INTEGRATION_TAX_TYPES.include?(integration.type)
+            return result if never_reported?
 
             response = http_client.post_with_response(payload, headers)
             body = JSON.parse(response.body)
@@ -35,6 +36,19 @@ module Integrations
           end
 
           private
+
+          # NOTE: Only an invoice carrying no fee at all is left unreported, so it holds no
+          #       transaction to void and the call would be answered with an error that lands on
+          #       the customer as a tax webhook. A resource recorded against the tax integration
+          #       is proof the create call did reach the provider, so such an invoice is voided
+          #       whatever its fees look like now.
+          def never_reported?
+            taxable_fees.empty? && reported_resources.none?
+          end
+
+          def reported_resources
+            invoice.integration_resources.where(integration:, resource_type: :invoice)
+          end
 
           def payload
             case integration.type.to_s

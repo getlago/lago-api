@@ -4,9 +4,6 @@ require "rails_helper"
 
 RSpec.describe Utils::EmailActivityLog, :capture_kafka_messages do
   let(:invoice) { create(:invoice) }
-  let(:organization) { invoice.organization }
-  let(:customer) { invoice.customer }
-
   let(:message) do
     instance_double(
       Mail::Message,
@@ -19,6 +16,9 @@ RSpec.describe Utils::EmailActivityLog, :capture_kafka_messages do
       body: instance_double(Mail::Body, decoded: "")
     )
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
 
   before do
     stub_const("#{described_class}::AVAILABLE", true)
@@ -104,11 +104,12 @@ RSpec.describe Utils::EmailActivityLog, :capture_kafka_messages do
     end
 
     [
-      {exception: WaterDrop::Errors::ProduceError, message: "#<Rdkafka::RdkafkaError: Local: Unknown topic (unknown_topic)>"},
-      {exception: WaterDrop::Errors::MessageInvalidError, message: "Message is too large"}
+      {exception: WaterDrop::Errors::ProduceError, message: "#<Rdkafka::RdkafkaError: Local: Unknown topic (unknown_topic)>", level: :error},
+      {exception: WaterDrop::Errors::MessageInvalidError, message: "Message is too large", level: :warning}
     ].each do |error_context|
       exception = error_context[:exception]
       exception_message = error_context[:message]
+      level = error_context[:level]
       context "when producer raises #{exception}" do
         subject(:produce) { described_class.produce(document: invoice, message:) }
 
@@ -119,9 +120,10 @@ RSpec.describe Utils::EmailActivityLog, :capture_kafka_messages do
         end
 
         context "when sentry is configured", :sentry do
-          it "captures the exception and returns false" do
+          it "captures the exception with the #{level} level and returns false" do
             expect(produce).to eq false
             expect(sentry_events).to include_sentry_event(exception: exception, message: exception_message)
+            expect(sentry_events.last.level).to eq(level)
           end
         end
 

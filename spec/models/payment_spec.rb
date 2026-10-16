@@ -5,6 +5,9 @@ require "rails_helper"
 RSpec.describe Payment do
   subject(:payment) { build(:payment, payable:, payment_type:, provider_payment_id:, reference:, amount_cents:) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let(:customer) { create_default(:customer) }
+
   let(:payable) { create(:invoice, invoice_type:, total_amount_cents: 10000) }
   let(:invoice_type) { :subscription }
   let(:payment_type) { "provider" }
@@ -17,6 +20,7 @@ RSpec.describe Payment do
   it { is_expected.to have_many(:integration_resources) }
   it { is_expected.to have_one(:payment_receipt) }
   it { is_expected.to have_one(:invoice_settlement).with_foreign_key(:source_payment_id) }
+  it { is_expected.to have_one(:x402_settlement).class_name("X402::Settlement").inverse_of(:payment) }
   it { is_expected.to belong_to(:payable) }
   it { is_expected.to belong_to(:organization) }
   it { is_expected.to belong_to(:customer) }
@@ -341,6 +345,24 @@ RSpec.describe Payment do
         end
       end
 
+      context "when payment type is x402" do
+        let(:payment_type) { "x402" }
+
+        context "when reference is present" do
+          let(:reference) { "0xabc" }
+
+          it "adds an error" do
+            expect(errors.where(:reference, :present)).to be_present
+          end
+        end
+
+        context "when reference is not present" do
+          it "does not add an error" do
+            expect(errors.where(:reference, :present)).not_to be_present
+          end
+        end
+      end
+
       context "when payment type is manual" do
         let(:payment_type) { "manual" }
 
@@ -528,9 +550,9 @@ RSpec.describe Payment do
   describe "#should_sync_payment?" do
     subject(:method_call) { payment.should_sync_payment? }
 
-    let(:payment) { create(:payment, payable: invoice) }
+    let(:payment) { create(:payment, payable: invoice, payable_payment_status:) }
+    let(:payable_payment_status) { :succeeded }
     let(:invoice) { create(:invoice, customer:, organization:, status:) }
-    let(:organization) { create(:organization) }
 
     context "when invoice is not finalized" do
       let(:status) { %i[draft voided generating].sample }
@@ -546,7 +568,6 @@ RSpec.describe Payment do
       context "with integration customer" do
         let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
         let(:integration) { create(:netsuite_integration, organization:, sync_payments:) }
-        let(:customer) { create(:customer, organization:) }
 
         before { integration_customer }
 
@@ -582,7 +603,6 @@ RSpec.describe Payment do
       context "with integration customer" do
         let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
         let(:integration) { create(:netsuite_integration, organization:, sync_payments:) }
-        let(:customer) { create(:customer, organization:) }
 
         before { integration_customer }
 
@@ -591,6 +611,14 @@ RSpec.describe Payment do
 
           it "returns true" do
             expect(method_call).to eq(true)
+          end
+
+          context "when the payment has not succeeded" do
+            let(:payable_payment_status) { %i[pending processing failed].sample }
+
+            it "returns false" do
+              expect(method_call).to eq(false)
+            end
           end
         end
 

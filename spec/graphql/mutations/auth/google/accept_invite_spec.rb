@@ -3,6 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Auth::Google::AcceptInvite do
+  let_it_be(:organization) { create_default(:organization) }
   let(:user) { create(:user) }
   let(:invite) { create(:invite) }
 

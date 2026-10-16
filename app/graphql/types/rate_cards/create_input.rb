@@ -18,7 +18,7 @@ module Types
       argument :proration, Boolean, required: false
       argument :rates, [Types::RateCardRates::Input], required: false
       argument :regroup_paid_fees, Types::RateCards::RegroupPaidFeesEnum, required: false
-      argument :wallet_targetable, Boolean, required: false
+      argument :tax_codes, [String], required: false
     end
   end
 end

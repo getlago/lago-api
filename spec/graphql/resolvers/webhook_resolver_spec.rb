@@ -3,6 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::WebhookResolver do
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:required_permission) { "developers:manage" }
   let(:query) do
     <<~GQL
@@ -17,7 +20,8 @@ RSpec.describe Resolvers::WebhookResolver do
   let(:webhook_endpoint) { create(:webhook_endpoint) }
   let(:webhook) { create(:webhook, :succeeded, webhook_endpoint:) }
   let(:organization) { webhook_endpoint.organization.reload }
-  let(:membership) { create(:membership, organization:) }
+
+  let_it_be(:membership) { create_default(:membership, organization:) }
 
   before { webhook }
 

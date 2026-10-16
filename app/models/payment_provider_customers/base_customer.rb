@@ -26,6 +26,9 @@ module PaymentProviderCustomers
     has_many :payments
     has_many :payment_methods, foreign_key: :payment_provider_customer_id
     has_many :refunds, foreign_key: :payment_provider_customer_id
+    has_many :billing_object_connections, foreign_key: :payment_provider_customer_id, dependent: :destroy
+
+    before_validation :set_code
 
     validates :customer_id, uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :type}
     validates :code, uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :customer_id}, allow_nil: true
@@ -58,6 +61,11 @@ module PaymentProviderCustomers
     end
 
     private
+
+    # A connection's code defaults to its payment provider's code when none is provided.
+    def set_code
+      self.code ||= payment_provider&.code
+    end
 
     # The "lago_manual" code is reserved for the null-provider manual connection; a provider-backed
     # connection cannot use it.

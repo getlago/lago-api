@@ -21,11 +21,7 @@ module V1
       end
 
       def projected_amount_cents
-        fee_groups = model.fees.group_by(&:charge_id).values
-        fee_groups.sum do |fee_group|
-          projection_result = ::Fees::ProjectionService.call(fees: fee_group).raise_if_error!
-          projection_result.projected_amount_cents
-        end
+        model.projections.for(model.fees).amount_cents
       end
 
       private
@@ -33,7 +29,8 @@ module V1
       def charges_usage
         {
           charges_usage: ::V1::Customers::ProjectedChargeUsageSerializer.new(
-            model.fees
+            model.fees,
+            projections: model.projections
           ).serialize
         }
       end

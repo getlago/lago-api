@@ -24,4 +24,28 @@ RSpec.describe ::V1::Analytics::InvoiceCollectionSerializer do
     expect(result["invoice_collection"]["currency"]).to eq("EUR")
     expect(result["invoice_collection"]["amount_cents"]).to eq(100)
   end
+
+  context "when amount_cents is a BigDecimal" do
+    before { invoice_collection["amount_cents"] = BigDecimal("1000.0") }
+
+    it "serializes it as an integer" do
+      expect(result["invoice_collection"]["amount_cents"]).to be(1000)
+    end
+  end
+
+  context "when amount_cents is a float" do
+    before { invoice_collection["amount_cents"] = 1000.0 }
+
+    it "serializes it as an integer" do
+      expect(result["invoice_collection"]["amount_cents"]).to be(1000)
+    end
+  end
+
+  context "when amount_cents is nil" do
+    before { invoice_collection["amount_cents"] = nil }
+
+    it "serializes it as nil" do
+      expect(result["invoice_collection"]["amount_cents"]).to be_nil
+    end
+  end
 end

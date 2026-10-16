@@ -14,6 +14,7 @@ module Resolvers
     type Types::Invoices::Object, null: true
 
     def resolve(id:)
+      context.scoped_set!(:preserve_add_on_fee_period_dates, true)
       current_organization.invoices.visible.find(id)
     rescue ActiveRecord::RecordNotFound
       not_found_error(resource: "invoice")

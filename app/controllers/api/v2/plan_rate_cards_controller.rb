@@ -2,12 +2,12 @@
 
 module Api
   module V2
-    class PlanRateCardsController < Api::BaseController
-      include Api::RequiresProductCatalog
+    class PlanRateCardsController < Api::V2::BaseController
+      cursor_paginated_index(PlanRateCard)
 
       def create
         result = ::PlanRateCards::CreateService.call(
-          plan: find_plan,
+          catalog_plan: find_catalog_plan,
           params: create_params.to_h.deep_symbolize_keys
         )
 
@@ -52,24 +52,23 @@ module Api
       end
 
       def index
-        return not_found_error(resource: "plan") unless find_plan
+        return not_found_error(resource: "plan") unless find_catalog_plan
 
         result = ::PlanRateCardsQuery.call(
           organization: current_organization,
-          pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
-          },
-          filters: {plan_code: params[:plan_code]}
+          pagination: cursor,
+          filters: {plan_id: find_catalog_plan.id}
         )
 
         if result.success?
+          page = ::CursorPagination::Page.new(records: result.plan_rate_cards.includes(:catalog_plan, :rate_card, :rate_phases), cursor:)
+
           render(
             json: ::CollectionSerializer.new(
-              result.plan_rate_cards.includes(:plan, :rate_card, :rate_phases),
-              ::V1::PlanRateCardSerializer,
+              page.records,
+              ::V2::PlanRateCardSerializer,
               collection_name: "applied_rate_cards",
-              meta: pagination_metadata(result.plan_rate_cards)
+              meta: page.meta
             )
           )
         else
@@ -79,19 +78,45 @@ module Api
 
       private
 
-      def find_plan
-        current_organization.plans.parents.find_by(code: params[:plan_code])
+      def find_catalog_plan
+        return @find_catalog_plan if defined?(@find_catalog_plan)
+
+        @find_catalog_plan = current_organization.catalog_plans.find_by(code: params[:plan_code])
       end
 
       def find_plan_rate_card
-        plan = find_plan
-        return nil unless plan
+        catalog_plan = find_catalog_plan
+        return nil unless catalog_plan
 
-        plan.applied_rate_cards.joins(:rate_card).find_by(rate_cards: {code: params[:code]})
+        catalog_plan.applied_rate_cards.joins(:rate_card).find_by(rate_cards: {code: params[:code]})
       end
 
       def create_params
-        params.require(:applied_rate_card).permit(:rate_card_code, :units)
+        params.require(:applied_rate_card).permit(
+          :rate_card_code, :units,
+          rate_phases: [
+            :code,
+            :position,
+            :name,
+            :billing_interval_cycle_count,
+            {rate_override: [
+              :rate_model,
+              :min_amount_cents,
+              :billing_interval_count,
+              :billing_interval_unit,
+              :pricing_unit_conversion_rate,
+              # Structural card fields pass through so the override service can
+              # reject them explicitly instead of strong params dropping them.
+              :billing_timing,
+              :currency,
+              :proration,
+              :display_on_invoice,
+              :regroup_paid_fees,
+              :applied_pricing_unit_code,
+              {rate_properties: {}}
+            ]}
+          ]
+        )
       end
 
       def update_params
@@ -99,7 +124,7 @@ module Api
       end
 
       def render_plan_rate_card(plan_rate_card)
-        render(json: ::V1::PlanRateCardSerializer.new(plan_rate_card, root_name: "applied_rate_card"))
+        render(json: ::V2::PlanRateCardSerializer.new(plan_rate_card, root_name: "applied_rate_card"))
       end
 
       def resource_name

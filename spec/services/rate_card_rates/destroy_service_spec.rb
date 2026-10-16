@@ -5,8 +5,12 @@ require "rails_helper"
 RSpec.describe RateCardRates::DestroyService do
   subject(:result) { described_class.call(rate_card_rate:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:rate_card) { create(:rate_card, organization:) }
+
+  before_all do
+    create_default(:billable_metric)
+  end
 
   context "with a pending rate" do
     let(:rate_card_rate) do
@@ -49,7 +53,7 @@ RSpec.describe RateCardRates::DestroyService do
       create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.from_now.beginning_of_day)
     end
 
-    before { create(:subscription_rate_card, organization:, rate_card:) }
+    before { create(:contract_rate_card, organization:, rate_card:) }
 
     it "deletes the pending rate" do
       expect(result).to be_success

@@ -4,12 +4,6 @@ require "rails_helper"
 
 RSpec.describe Mutations::IntegrationCustomers::Destroy do
   let(:required_permission) { "customers:update" }
-  let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
-  let(:integration) { create(:netsuite_integration, organization:) }
-  let(:customer) { create(:customer, organization:) }
-  let(:organization) { membership.organization }
-  let(:membership) { create(:membership) }
-
   let(:mutation) do
     <<-GQL
       mutation($input: DestroyIntegrationCustomerInput!) {
@@ -17,6 +11,13 @@ RSpec.describe Mutations::IntegrationCustomers::Destroy do
       }
     GQL
   end
+  let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
+  let(:integration) { create(:netsuite_integration, organization:) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before { integration_customer }
 

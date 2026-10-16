@@ -5,6 +5,9 @@ require "rails_helper"
 RSpec.describe QuoteVersion do
   subject(:quote_version) { create(:quote_version) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+
   describe "enums" do
     it do
       expect(subject).to define_enum_for(:status)
@@ -119,9 +122,10 @@ RSpec.describe QuoteVersion do
 
     # The plan change carries the target's binding over, so the document has to name the same issuer.
     context "when the quote amends a subscription bound to another entity" do
-      let(:organization) { create(:organization) }
-      let(:customer) { create(:customer, organization:) }
-      let(:target_entity) { create(:billing_entity, organization:) }
+      let_it_be(:plan) { create_default(:plan) }
+      let_it_be(:organization) { create_default(:organization) }
+      let_it_be(:customer) { create_default(:customer, organization:) }
+      let_it_be(:target_entity) { create_default(:billing_entity, organization:) }
       let(:subscription) { create(:subscription, organization:, customer:, billing_entity: target_entity) }
       let(:quote) do
         create(:quote, organization:, customer:, subscription:, order_type: :subscription_amendment)

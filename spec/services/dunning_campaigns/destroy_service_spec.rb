@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe DunningCampaigns::DestroyService do
   subject(:destroy_service) { described_class.new(dunning_campaign:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:membership) { create(:membership, organization:) }
 
   let(:dunning_campaign) { create(:dunning_campaign, organization:) }
@@ -52,7 +52,7 @@ RSpec.describe DunningCampaigns::DestroyService do
       end
 
       context "when auto_dunning premium integration" do
-        let(:organization) do
+        let_it_be(:organization) do
           create(:organization, premium_integrations: ["auto_dunning"])
         end
 

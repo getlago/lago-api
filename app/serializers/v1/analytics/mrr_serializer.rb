@@ -6,7 +6,7 @@ module V1
       def serialize
         {
           month: model["month"],
-          amount_cents: model["amount_cents"],
+          amount_cents: model["amount_cents"]&.to_i,
           currency: model["currency"]
         }
       end

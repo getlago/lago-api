@@ -3,7 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Sources::AttachedToPlanOrSubscription do
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
   let(:product) { create(:product, organization:) }
 
   describe "#fetch" do
@@ -15,7 +16,7 @@ RSpec.describe Sources::AttachedToPlanOrSubscription do
         create(:plan_rate_card, organization:, rate_card: create(:rate_card, organization:, product: plan_attached))
 
         subscription_attached = create(:product, organization:)
-        create(:subscription_rate_card, organization:, rate_card: create(:rate_card, organization:, product: subscription_attached))
+        create(:contract_rate_card, organization:, rate_card: create(:rate_card, organization:, product: subscription_attached))
 
         result = source.fetch([plan_attached.id, subscription_attached.id, product.id])
 
@@ -37,7 +38,7 @@ RSpec.describe Sources::AttachedToPlanOrSubscription do
         create(:plan_rate_card, organization:, rate_card: plan_attached)
 
         subscription_attached = create(:rate_card, organization:, product:)
-        create(:subscription_rate_card, organization:, rate_card: subscription_attached)
+        create(:contract_rate_card, organization:, rate_card: subscription_attached)
 
         free_card = create(:rate_card, organization:, product:)
 

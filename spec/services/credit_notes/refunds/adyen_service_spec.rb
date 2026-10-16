@@ -5,16 +5,11 @@ require "rails_helper"
 RSpec.describe CreditNotes::Refunds::AdyenService do
   subject(:adyen_service) { described_class.new(credit_note) }
 
-  let(:customer) { create(:customer, payment_provider_code: code) }
-  let(:organization) { customer.organization }
-  let(:invoice) { create(:invoice, customer:, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:code) { "adyen_1" }
+  let_it_be(:customer) { create(:customer, payment_provider_code: code) }
+  let_it_be(:invoice) { create(:invoice, customer:, organization:) }
   let(:adyen_payment_provider) { create(:adyen_provider, organization:, code:) }
-  let(:adyen_customer) { create(:adyen_customer, customer:) }
-  let(:adyen_client) { instance_double(Adyen::Client) }
-  let(:modifications_api) { Adyen::ModificationsApi.new(adyen_client, 70) }
-  let(:checkout) { Adyen::Checkout.new(adyen_client, 70) }
-  let(:refunds_response) { generate(:adyen_refunds_response) }
-  let(:code) { "adyen_1" }
   let(:payment) do
     create(
       :payment,
@@ -22,10 +17,10 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
       payment_provider_customer: adyen_customer,
       amount_cents: 200,
       amount_currency: "CHF",
+      payable_payment_status: "succeeded",
       payable: credit_note.invoice
     )
   end
-
   let(:credit_note) do
     create(
       :credit_note,
@@ -36,6 +31,11 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
       refund_status: :pending
     )
   end
+  let(:adyen_customer) { create(:adyen_customer, customer:) }
+  let(:adyen_client) { instance_double(Adyen::Client) }
+  let(:modifications_api) { Adyen::ModificationsApi.new(adyen_client, 70) }
+  let(:checkout) { Adyen::Checkout.new(adyen_client, 70) }
+  let(:refunds_response) { generate(:adyen_refunds_response) }
 
   describe "#create" do
     before do
@@ -85,6 +85,30 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
           refund_status: "pending"
         }
       )
+    end
+
+    context "with a payment request for an invoice" do
+      let(:payment_request) { create(:payment_request, :succeeded, customer:, invoices: [invoice]) }
+      let(:payment) do
+        create(
+          :payment,
+          payment_provider: adyen_payment_provider,
+          payment_provider_customer: adyen_customer,
+          amount_cents: 200,
+          amount_currency: "CHF",
+          payable_payment_status: "succeeded",
+          payable: payment_request
+        )
+      end
+
+      it "refunds the payment request payment" do
+        result = adyen_service.create
+
+        expect(result).to be_success
+        expect(result.refund.payment).to eq(payment)
+        expect(modifications_api).to have_received(:refund_captured_payment)
+          .with(hash_including(paymentPspReference: payment.provider_payment_id), payment.provider_payment_id)
+      end
     end
 
     context "with an error on adyen" do

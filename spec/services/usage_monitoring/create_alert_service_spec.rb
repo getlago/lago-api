@@ -6,12 +6,17 @@ RSpec.describe UsageMonitoring::CreateAlertService do
   describe ".call" do
     subject(:result) { described_class.call(organization:, alertable: subscription, params:) }
 
-    let(:organization) { create(:organization, premium_integrations:) }
+    let(:organization) { create_default(:organization, premium_integrations:) }
     let(:premium_integrations) { [] }
     let(:thresholds) { [{code: "warning", value: 80}, {code: "critical", value: 120}] }
     let(:params) { {alert_type: "current_usage_amount", name: "Main", thresholds:, code: "first", billable_metric_id: billable_metric&.id} }
     let(:subscription) { create(:subscription, organization:) }
     let(:billable_metric) { nil }
+
+    before do
+      create_default(:customer)
+      create_default(:plan)
+    end
 
     it "creates a new alert" do
       expect(result).to be_success
@@ -145,6 +150,96 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       it "returns a validation failure result" do
         expect(result).to be_failure
         expect(result.error.messages[:thresholds]).to include("duplicate_threshold_values")
+      end
+    end
+
+    context "with notify_on" do
+      let(:base) { {alert_type: "current_usage_amount", code: "ok"} }
+
+      it "accepts opting a coded threshold in to resolution" do
+        params = base.merge(thresholds: [{code: "warn", value: 10, notify_on: %w[triggered resolved]}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_success
+        expect(result.alert.thresholds.sole.notify_on).to eq(%w[triggered resolved])
+      end
+
+      it "defaults to notifying on trigger only" do
+        params = base.merge(thresholds: [{code: "warn", value: 10}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_success
+        expect(result.alert.thresholds.sole.notify_on).to eq(%w[triggered])
+      end
+
+      it "rejects an unknown transition" do
+        params = base.merge(thresholds: [{code: "warn", value: 10, notify_on: %w[triggered exploded]}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:notify_on"]).to include("value_is_invalid")
+      end
+
+      it "rejects dropping triggered" do
+        params = base.merge(thresholds: [{code: "warn", value: 10, notify_on: %w[resolved]}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:notify_on"]).to include("triggered_is_mandatory")
+      end
+
+      it "rejects opting in without a code" do
+        params = base.merge(thresholds: [{value: 10, notify_on: %w[triggered resolved]}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:code"]).to include("value_is_mandatory")
+      end
+
+      it "rejects a code reused within the alert" do
+        params = base.merge(thresholds: [
+          {code: "warn", value: 10, notify_on: %w[triggered resolved]},
+          {code: "warn", value: 20}
+        ])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_failure
+        expect(result.error.messages[:thresholds]).to include("duplicate_threshold_codes")
+      end
+
+      it "allows a code shared between thresholds that do not opt in" do
+        params = base.merge(thresholds: [
+          {code: "final", value: 30, notify_on: %w[triggered resolved]},
+          {code: "tier", value: 10},
+          {code: "tier", value: 20}
+        ])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_success
+      end
+
+      it "falls back to the default when notify_on is explicitly null" do
+        params = base.merge(thresholds: [{code: "warn", value: 10, notify_on: nil}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_success
+        expect(result.alert.thresholds.sole.notify_on).to eq(%w[triggered])
+      end
+
+      it "rejects an explicitly emptied list" do
+        params = base.merge(thresholds: [{code: "warn", value: 10, notify_on: []}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:notify_on"]).to include("triggered_is_mandatory")
+      end
+
+      it "rejects opting a recurring threshold in to resolution" do
+        params = base.merge(thresholds: [{code: "warn", value: 10, recurring: true, notify_on: %w[triggered resolved]}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_failure
+        expect(result.error.messages[:"thresholds:notify_on"]).to include("recurring_not_supported")
       end
     end
 
@@ -375,8 +470,158 @@ RSpec.describe UsageMonitoring::CreateAlertService do
         expect(result.alert.direction).to eq("decreasing")
       end
 
+      it "inserts the alert before locking the wallet, so balance updates cannot race the baseline" do
+        statements = capture_sql { result }
+
+        inserted_alert = statements.index { it.start_with?("INSERT INTO \"usage_monitoring_alerts\"") }
+        locked_wallet = statements.index { it.include?("\"wallets\"") && it.include?("FOR NO KEY UPDATE") }
+
+        expect(inserted_alert).not_to be_nil
+        expect(locked_wallet).not_to be_nil
+        expect(inserted_alert).to be < locked_wallet
+        expect(result.alert.previous_value).to eq(wallet.balance_cents)
+      end
+
+      # A balance UPDATE holds FOR NO KEY UPDATE, which the alert insert's foreign-key check does not
+      # conflict with, so only the explicit lock makes the baseline wait for it.
+      it "waits for an in-flight balance update instead of baselining a stale value", transaction: false do
+        wallet_id = wallet.id # materialize on this connection before the other one reads it
+        creator = nil
+
+        Wallet.transaction do
+          Wallet.where(id: wallet_id).update_all(balance_cents: 400) # rubocop:disable Rails/SkipsModelValidations
+
+          creator = Thread.new do
+            ActiveRecord::Base.connection_pool.with_connection { described_class.call(organization:, alertable: wallet, params:) }
+          end
+          sleep 1.5 # long enough that an unlocked read would already have taken the stale balance
+        end
+
+        created = creator.value
+        expect(created).to be_success
+        expect(created.alert.previous_value).to eq(400)
+      end
+
+      # Both creates hold a key-share lock on the wallet from their own insert's foreign-key check, so an
+      # exclusive lock here would deadlock as each waits for the other to release it.
+      it "does not deadlock when two alerts are created for the same wallet at once", transaction: false do
+        wallet_id = wallet.id # materialize on this connection before the threads read it
+
+        results = Array.new(2) do |i|
+          Thread.new do
+            ActiveRecord::Base.connection_pool.with_connection do
+              described_class.call(
+                organization:,
+                alertable: Wallet.find(wallet_id),
+                params: params.merge(code: "wallet-concurrent-#{i}", alert_type: (i.zero? ? "wallet_balance_amount" : "wallet_credits_balance"))
+              )
+            end
+          end
+        end.map(&:value)
+
+        expect(results).to all(be_success)
+        expect(results.map { it.alert.previous_value }).to all(eq(wallet.balance_cents))
+      end
+
+      it "baselines from the stored balance, not from the caller's copy" do
+        Wallet.where(id: wallet.id).update_all(balance_cents: 42) # rubocop:disable Rails/SkipsModelValidations
+
+        expect(result).to be_success
+        expect(result.alert.previous_value).to eq(42)
+      end
+
       it "does not create a subscription activity" do
         expect { result }.not_to change(UsageMonitoring::SubscriptionActivity, :count)
+      end
+
+      context "when the code is already used on the same wallet" do
+        before { create(:wallet_credits_balance_alert, organization:, wallet:, code: "wallet1") }
+
+        it "rejects it before reaching the database" do
+          expect(result).to be_failure
+          expect(result.error.messages[:code]).to eq(["value_already_exist"])
+        end
+
+        it "never builds the alert, so no insert is attempted" do
+          allow(UsageMonitoring::Alert).to receive(:new).and_call_original
+
+          expect(result).to be_failure
+          expect(UsageMonitoring::Alert).not_to have_received(:new)
+        end
+
+        context "when another request takes the code between the check and the insert" do
+          subject(:result) { service.call }
+
+          let(:service) { described_class.new(organization:, alertable: wallet, params:) }
+
+          before { allow(service).to receive(:wallet_alert_code_taken?).and_return(false) }
+
+          it "reports the wallet index violation on the code field" do
+            expect(result).to be_failure
+            expect(result.error.messages).to eq(code: ["value_already_exist"])
+          end
+        end
+      end
+
+      context "when an alert of the same type with the same code exists on the wallet" do
+        before { create(:wallet_balance_amount_alert, organization:, wallet:, code: "wallet1") }
+
+        it "returns an alert_already_exists failure" do
+          expect { result }.not_to change(UsageMonitoring::Alert, :count)
+
+          expect(result).to be_failure
+          expect(result.error.messages[:base]).to eq(["alert_already_exists"])
+        end
+      end
+
+      context "when the type is taken on the wallet and the code is held by an alert of another type" do
+        before do
+          create(:wallet_balance_amount_alert, organization:, wallet:, code: "other")
+          create(:wallet_credits_balance_alert, organization:, wallet:, code: "wallet1")
+        end
+
+        it "reports the taken type rather than the taken code" do
+          expect(result).to be_failure
+          expect(result.error.messages).to eq(base: ["alert_already_exists"])
+        end
+      end
+
+      context "when an alert of the same type exists on another wallet" do
+        before do
+          other = create(:wallet, organization:)
+          create(:wallet_balance_amount_alert, organization:, wallet: other, code: "wallet1")
+        end
+
+        it "allows it" do
+          expect(result).to be_success
+        end
+      end
+
+      context "when a discarded alert of the same type exists on the wallet" do
+        before { create(:wallet_balance_amount_alert, organization:, wallet:, code: "wallet1").discard! }
+
+        it "allows it" do
+          expect(result).to be_success
+        end
+      end
+
+      context "when the same code is used on another wallet" do
+        before do
+          other = create(:wallet, organization:)
+          create(:wallet_credits_balance_alert, organization:, wallet: other, code: "wallet1")
+        end
+
+        it "allows it" do
+          expect(result).to be_success
+        end
+      end
+
+      context "when a discarded alert holds the code" do
+        before { create(:wallet_credits_balance_alert, organization:, wallet:, code: "wallet1").discard! }
+
+        it "allows it" do
+          expect(result).to be_success
+        end
       end
 
       context "when processing wallet alerts", :premium do

@@ -5,9 +5,32 @@ require "rails_helper"
 RSpec.describe Invoice::AppliedTax do
   subject(:applied_tax) { create(:invoice_applied_tax) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+
   it_behaves_like "paper_trail traceable"
 
   it { is_expected.to belong_to(:organization) }
+
+  describe "#provider_tax?" do
+    subject(:provider_tax) { applied_tax.provider_tax? }
+
+    let(:applied_tax) { build_stubbed(:invoice_applied_tax, tax: nil, taxable_base_amount_cents: 100) }
+
+    it { is_expected.to be(true) }
+
+    context "when the local tax definition was deleted" do
+      let(:applied_tax) { build_stubbed(:invoice_applied_tax, tax: nil, taxable_base_amount_cents: 0) }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when a local tax definition is present" do
+      let(:applied_tax) { build_stubbed(:invoice_applied_tax, taxable_base_amount_cents: 100) }
+
+      it { is_expected.to be(false) }
+    end
+  end
 
   describe "#applied_on_whole_invoice?" do
     subject(:applicable_on_whole_invoice) { applied_tax.applied_on_whole_invoice? }

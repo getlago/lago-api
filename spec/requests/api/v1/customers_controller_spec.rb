@@ -23,6 +23,17 @@ RSpec.describe Api::V1::CustomersController do
 
     include_examples "requires API permission", "customer", "write"
 
+    context "when net_payment_term is larger than an integer" do
+      let(:create_params) { {external_id: SecureRandom.uuid, currency: "EUR", net_payment_term: 10**12} }
+
+      it "returns a validation error instead of a 500" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq({base: ["value_is_out_of_range"]})
+      end
+    end
+
     context "when firstname and lastname contain null bytes" do
       let(:create_params) do
         {
@@ -92,6 +103,37 @@ RSpec.describe Api::V1::CustomersController do
 
         expect(response).to have_http_status(:success)
         expect(json[:customer][:finalize_zero_amount_invoice]).to eq("skip")
+      end
+    end
+
+    context "with an x402 agent address" do
+      let(:create_params) { {external_id: SecureRandom.uuid, x402_agent_address: "0xf4a43B9cc729c9E4E139CB86808f48e3eD09Dcb2"} }
+
+      it "ignores the address" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(organization.customers.find_by(external_id: create_params[:external_id]).x402_agent_address).to be_nil
+      end
+
+      it "omits the address from the response" do
+        subject
+
+        expect(json[:customer]).not_to have_key(:x402_agent_address)
+      end
+
+      context "when the customer is an agent" do
+        let(:customer) { create(:customer, organization:, x402_agent_address: "0x94bA479439C2f1bA5f5DaCBD06Ea0c129604B4a5") }
+        let(:create_params) { {external_id: customer.external_id, x402_agent_address: "0xf4a43B9cc729c9E4E139CB86808f48e3eD09Dcb2"} }
+
+        before { customer }
+
+        it "keeps the stored address" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(customer.reload.x402_agent_address).to eq("0x94bA479439C2f1bA5f5DaCBD06Ea0c129604B4a5")
+        end
       end
     end
 
@@ -497,7 +539,7 @@ RSpec.describe Api::V1::CustomersController do
     let(:organization) { create(:organization) }
     let(:external_id) { customer.external_id }
 
-    include_examples "requires API permission", "customer", "read"
+    include_examples "requires API permission", "customer", "write"
 
     it "returns the portal url" do
       subject
@@ -816,6 +858,16 @@ RSpec.describe Api::V1::CustomersController do
             status: 422
           })
         end
+      end
+    end
+
+    context "when the search term contains a null byte" do
+      let(:params) { {search_term: "a\u0000b"} }
+
+      it "ignores the null byte instead of returning a 500" do
+        subject
+
+        expect(response).to have_http_status(:success)
       end
     end
 

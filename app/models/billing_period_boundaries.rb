@@ -73,4 +73,13 @@ class BillingPeriodBoundaries
     h["max_timestamp"] = max_timestamp if max_timestamp.present?
     h
   end
+
+  def to_contract_fee_properties
+    properties = to_h
+    %w[from_datetime to_datetime charges_from_datetime charges_to_datetime].each do |key|
+      value = properties[key]
+      properties[key] = value.in_time_zone("UTC").iso8601(6) if value
+    end
+    properties
+  end
 end

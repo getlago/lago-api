@@ -3,6 +3,12 @@
 require "rails_helper"
 
 RSpec.describe UsageMonitoring::ProcessSubscriptionActivityJob do
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+    create_default(:plan)
+  end
+
   it_behaves_like "a configurable queue", "alerts", "SIDEKIQ_ALERTS" do
     let(:arguments) { create(:subscription_activity).id }
   end

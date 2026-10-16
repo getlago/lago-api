@@ -304,6 +304,43 @@ RSpec.describe Api::V1::InvoicesController do
       expect(json[:invoice][:fees].first).to include(lago_charge_filter_id: charge_filter.id)
     end
 
+    context "when the invoice has a product fee" do
+      subject { get_with_token(organization, "/api/v2/invoices/#{invoice_id}") }
+
+      let(:product) do
+        create(:product, organization:, code: "compute", name: "Compute", description: "Compute usage")
+      end
+      let(:rate_card) { create(:rate_card, organization:, product:) }
+      let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card:) }
+
+      before do
+        create(
+          :fee,
+          fee_type: "product",
+          invoice:,
+          invoiceable: product,
+          rate_card_rate:,
+          subscription: nil,
+          invoice_display_name: nil
+        )
+      end
+
+      it "returns the product fee" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoice][:fees].sole[:item]).to include(
+          type: "product",
+          code: "compute",
+          name: "Compute",
+          description: "Compute usage",
+          invoice_display_name: "Compute",
+          lago_item_id: product.id,
+          item_type: "Product"
+        )
+      end
+    end
+
     context "when customer has an integration customer" do
       let!(:netsuite_customer) { create(:netsuite_customer, customer:) }
 
@@ -458,6 +495,22 @@ RSpec.describe Api::V1::InvoicesController do
           expect(invoice[:customer][:integration_customers]).to be_present
           expect(invoice[:customer][:metadata]).to be_present
         end
+      end
+    end
+
+    context "when the result set exceeds the graphql cap" do
+      before do
+        stub_const("BaseQuery::CappedTotalCount::MAX_COUNTED_RECORDS", 1)
+        create(:invoice, customer:, organization:)
+        create(:invoice, customer:, organization:)
+      end
+
+      it "still returns the exact total count" do
+        get_with_token(organization, "/api/v1/invoices", page: 1, per_page: 1)
+
+        expect(response).to have_http_status(:success)
+        expect(json[:meta][:total_count]).to eq(2)
+        expect(json[:meta]).not_to have_key(:total_count_capped)
       end
     end
 
@@ -1151,6 +1204,62 @@ RSpec.describe Api::V1::InvoicesController do
             units: "2.0"
           )
         )
+      end
+    end
+
+    context "with an invoiceable recurring pay-in-advance charge" do
+      let(:timestamp) { Time.zone.parse("2024-03-15") }
+      let(:customer) { create(:customer, organization:) }
+      let(:billing_time) { "calendar" }
+      let(:subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan:,
+          billing_time:,
+          subscription_at: Time.zone.parse("2024-02-10"),
+          started_at: Time.zone.parse("2024-02-10")
+        )
+      end
+      let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+      let(:preview_params) do
+        {
+          customer: {external_id: customer.external_id},
+          subscriptions: {external_ids: [subscription.external_id]}
+        }
+      end
+      let(:expected_from_date) { "2024-04-01T00:00:00+00:00" }
+      let(:expected_to_date) { "2024-04-30T23:59:59+00:00" }
+
+      before do
+        create(:standard_charge, plan:, billable_metric:, pay_in_advance: true, invoiceable: true, properties: {amount: "1"})
+        create(:event, organization:, customer:, subscription:, code: billable_metric.code, timestamp: timestamp - 1.day, properties: {item_id: "3"})
+      end
+
+      shared_examples "a preview with pay-in-advance date boundaries" do
+        it "serializes the charge's upcoming period without saving an invoice", transaction: false do
+          travel_to(timestamp) do
+            expect { subject }.not_to change(Invoice, :count)
+
+            expect(response).to have_http_status(:success)
+            charge_fee = json[:invoice][:fees].find { |fee| fee[:item][:type] == "charge" }
+            expect(charge_fee).to include(
+              amount_cents: 300,
+              from_date: expected_from_date,
+              to_date: expected_to_date
+            )
+          end
+        end
+      end
+
+      include_examples "a preview with pay-in-advance date boundaries"
+
+      context "with anniversary billing" do
+        let(:billing_time) { "anniversary" }
+        let(:expected_from_date) { "2024-04-10T00:00:00+00:00" }
+        let(:expected_to_date) { "2024-05-09T23:59:59+00:00" }
+
+        include_examples "a preview with pay-in-advance date boundaries"
       end
     end
 

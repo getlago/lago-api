@@ -27,8 +27,10 @@ RSpec.describe Organization do
       expect(subject).to have_many(:product_filters)
       expect(subject).to have_many(:rate_cards)
       expect(subject).to have_many(:rate_card_rates)
+      expect(subject).to have_many(:catalog_plans)
       expect(subject).to have_many(:customers)
       expect(subject).to have_many(:subscriptions)
+      expect(subject).to have_many(:contracts)
       expect(subject).to have_many(:activation_rules).class_name("Subscription::ActivationRule")
       expect(subject).to have_many(:credit_notes)
       expect(subject).to have_many(:invoices)
@@ -38,6 +40,7 @@ RSpec.describe Organization do
       expect(subject).to have_many(:wallet_transactions)
       expect(subject).to have_one(:default_billing_entity).class_name("BillingEntity")
       expect(subject).to have_many(:webhook_endpoints)
+      expect(subject).to have_many(:streaming_destinations).class_name("StreamingDestinations::BaseDestination")
       expect(subject).to have_many(:webhooks)
       expect(subject).to have_many(:hubspot_integrations)
       expect(subject).to have_many(:netsuite_integrations)
@@ -58,8 +61,12 @@ RSpec.describe Organization do
       expect(subject).to have_many(:entitlement_values).class_name("Entitlement::EntitlementValue")
       expect(subject).to have_many(:subscription_feature_removals).class_name("Entitlement::SubscriptionFeatureRemoval")
 
+      expect(subject).to have_many(:usage_attribution_types)
+      expect(subject).to have_many(:usage_attribution_values)
+      expect(subject).to have_many(:x402_connections).class_name("X402::Connection")
+      expect(subject).to have_many(:x402_settlements).class_name("X402::Settlement")
+
       expect(subject).to have_one(:applied_dunning_campaign).conditions(applied_to_organization: true)
-      expect(subject).to have_one(:enriched_store_migration)
       expect(subject).to have_many(:pending_vies_checks)
       expect(subject).to have_many(:order_forms)
       expect(subject).to have_many(:orders)
@@ -624,6 +631,26 @@ RSpec.describe Organization do
           expect(subject).to eq(nil)
         end
       end
+    end
+  end
+
+  describe "#x402_payments_enabled?" do
+    subject(:organization) { build(:organization, feature_flags:) }
+
+    let(:feature_flags) { ["x402_payments"] }
+
+    context "with a premium license", :premium do
+      it { expect(organization.x402_payments_enabled?).to be(true) }
+
+      context "without the x402_payments flag" do
+        let(:feature_flags) { [] }
+
+        it { expect(organization.x402_payments_enabled?).to be(false) }
+      end
+    end
+
+    context "without a premium license" do
+      it { expect(organization.x402_payments_enabled?).to be(false) }
     end
   end
 end

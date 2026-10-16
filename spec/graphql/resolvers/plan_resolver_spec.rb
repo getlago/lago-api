@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::PlanResolver do
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   subject(:result) do
     execute_graphql(
       current_user: membership.user,
@@ -14,6 +16,11 @@ RSpec.describe Resolvers::PlanResolver do
   end
 
   let(:required_permission) { "plans:view" }
+  let(:organization) { membership.organization }
+  let(:add_on) { create(:add_on, organization:) }
+  let(:billable_metric) { create(:billable_metric, organization:) }
+  let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:) }
+  let(:usage_threshold) { create(:usage_threshold, plan:, amount_cents: 100) }
   let(:query) do
     <<~GQL
       query($planId: ID!) {
@@ -70,15 +77,9 @@ RSpec.describe Resolvers::PlanResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:) }
-
-  let(:add_on) { create(:add_on, organization:) }
-  let(:billable_metric) { create(:billable_metric, organization:) }
-  let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:) }
-  let(:usage_threshold) { create(:usage_threshold, plan:, amount_cents: 100) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
+  let_it_be(:customer, refind: true) { create_default(:customer, organization:) }
+  let_it_be(:plan, refind: true) { create_default(:plan, organization:) }
 
   before do
     customer
@@ -337,29 +338,6 @@ RSpec.describe Resolvers::PlanResolver do
       it "doesn't return entitlements to avoid confusion" do
         expect(result["data"]["plan"]["entitlements"]).to be_empty
       end
-    end
-  end
-
-  context "when the plan uses the product catalog" do
-    let(:query) do
-      <<~GQL
-        query($planId: ID!) {
-          plan(id: $planId) { id amountCents interval payInAdvance }
-        }
-      GQL
-    end
-
-    let(:plan) do
-      create(:plan, organization:, pricing_type: "product_catalog", interval: nil, amount_cents: nil, pay_in_advance: nil)
-    end
-
-    it "returns the plan with null plan-level billing fields" do
-      expect(result["data"]["plan"]).to eq(
-        "id" => plan.id,
-        "amountCents" => nil,
-        "interval" => nil,
-        "payInAdvance" => nil
-      )
     end
   end
 

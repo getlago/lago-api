@@ -58,7 +58,10 @@ module Invoices
           recurring:,
           context:
         )
-        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:, resources: subscriptions)
+        Invoices::ApplyInvoiceCustomSectionsService.call(
+          invoice:,
+          resources: subscriptions.map { |subscription| Invoices::ApplyInvoiceCustomSectionsService::Resource.from(resource: subscription) }
+        )
 
         skip_payment_gating_for_zero_amount if subscription_payment_gated? && invoice.total_amount_cents.zero? && !invoice.tax_pending?
 
@@ -215,7 +218,7 @@ module Invoices
     def grace_period?
       return false if subscription_gated?
 
-      @grace_period ||= customer.applicable_invoice_grace_period.positive?
+      @grace_period ||= customer.applicable_invoice_grace_period(billing_entity: invoice_billing_entity).positive?
     end
 
     def invoice_billing_entity

@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Fees::ApplyTaxesService do
   subject(:apply_service) { described_class.new(fee:) }
 
-  let(:customer) { create(:customer) }
-  let(:organization) { customer.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let(:customer) { create_default(:customer) }
   let(:billing_entity) { customer.billing_entity }
 
   let(:invoice) { create(:invoice, organization:, customer:) }
@@ -118,7 +118,7 @@ RSpec.describe Fees::ApplyTaxesService do
     end
 
     context "when fee is a charge type with taxes applied to the plan" do
-      let(:plan) { create(:plan, organization:) }
+      let(:plan) { create_default(:plan, organization:) }
       let(:charge) { create(:standard_charge, plan:) }
       let(:subscription) { create(:subscription, organization:, customer:, plan:) }
 
@@ -356,7 +356,7 @@ RSpec.describe Fees::ApplyTaxesService do
 
     context "with explicit customer and plan arguments" do
       let(:other_customer) { create(:customer, organization:) }
-      let(:plan) { create(:plan, organization:) }
+      let(:plan) { create_default(:plan, organization:) }
       let(:passed_plan) { create(:plan, organization:) }
       let(:subscription) { create(:subscription, organization:, customer:, plan:) }
 
@@ -390,7 +390,7 @@ RSpec.describe Fees::ApplyTaxesService do
     end
 
     context "when customer and plan are passed as nil" do
-      let(:plan) { create(:plan, organization:) }
+      let(:plan) { create_default(:plan, organization:) }
       let(:subscription) { create(:subscription, organization:, customer:, plan:) }
 
       context "when the fee has an invoice" do

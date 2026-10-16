@@ -5,6 +5,7 @@ module Resolvers
     include RequiresProductCatalog
     include AuthenticableApiUser
     include RequiredOrganization
+    include RateCardListArguments
 
     REQUIRED_PERMISSION = "plans:view"
 
@@ -16,11 +17,13 @@ module Resolvers
 
     type Types::PlanAppliedRateCards::Object.collection_type, null: false
 
-    def resolve(plan_id: nil, page: nil, limit: nil)
+    def resolve(plan_id: nil, page: nil, limit: nil, search_term: nil, **filters)
       result = ::PlanRateCardsQuery.call(
         organization: current_organization,
         pagination: {page:, limit:},
-        filters: {plan_id:}
+        filters: filters.merge(plan_id:),
+        search_term:,
+        order: :product_category
       )
 
       result.plan_rate_cards

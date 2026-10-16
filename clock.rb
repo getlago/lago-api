@@ -24,6 +24,12 @@ module Clockwork
       .perform_later
   end
 
+  every(5.minutes, "schedule:activate_contracts") do
+    Clock::ActivateContractsJob
+      .set(sentry: {"slug" => "lago_activate_contracts", "cron" => "*/5 * * * *"})
+      .perform_later
+  end
+
   every(5.minutes, "schedule:refresh_draft_invoices") do
     Clock::RefreshDraftInvoicesJob
       .set(sentry: {"slug" => "lago_refresh_draft_invoices", "cron" => "*/5 * * * *"})
@@ -82,9 +88,23 @@ module Clockwork
       .perform_later
   end
 
+  every(1.hour, "schedule:create_billing_segments", at: "*:12") do
+    Clock::CreateBillingSegmentsJob
+      .set(sentry: {"slug" => "lago_create_billing_segments", "cron" => "12 */1 * * *"})
+      .perform_later
+  end
+
   every(1.hour, "schedule:api_keys_track_usage", at: "*:15") do
     Clock::ApiKeys::TrackUsageJob
       .set(sentry: {"slug" => "lago_api_keys_track_usage", "cron" => "15 */1 * * *"})
+      .perform_later
+  end
+
+  # Five minutes behind the producer, so a card that comes due is invoiced in the same hour.
+  # A fan-out that runs long only defers its stragglers to the next tick; nothing is lost.
+  every(1.hour, "schedule:process_billing_segments", at: "*:17") do
+    Clock::ProcessBillingSegmentsJob
+      .set(sentry: {"slug" => "lago_process_billing_segments", "cron" => "17 */1 * * *"})
       .perform_later
   end
 
@@ -172,6 +192,12 @@ module Clockwork
       .perform_later
   end
 
+  every(1.day, "schedule:clean_record_deletions", at: "01:20") do
+    Clock::RecordDeletionsCleanupJob
+      .set(sentry: {"slug" => "lago_clean_record_deletions", "cron" => "20 1 * * *"})
+      .perform_later
+  end
+
   unless ActiveModel::Type::Boolean.new.cast(ENV["LAGO_DISABLE_EVENTS_VALIDATION"])
     every(1.hour, "schedule:post_validate_events", at: "*:05") do
       Clock::EventsValidationJob
@@ -185,6 +211,12 @@ module Clockwork
   every(1.hour, "schedule:compute_daily_usage", at: "*:15") do
     Clock::ComputeAllDailyUsagesJob
       .set(sentry: {"slug" => "lago_compute_daily_usage", "cron" => "15 */1 * * *"})
+      .perform_later
+  end
+
+  every(1.hour, "schedule:cancel_abandoned_payments", at: "*:40") do
+    Clock::CancelAbandonedPaymentsJob
+      .set(sentry: {"slug" => "lago_cancel_abandoned_payments", "cron" => "40 */1 * * *"})
       .perform_later
   end
 
@@ -203,6 +235,12 @@ module Clockwork
   every(15.minutes, "schedule:retry_inbound_webhooks") do
     Clock::InboundWebhooksRetryJob
       .set(sentry: {"slug" => "lago_retry_inbound_webhooks", "cron" => "*/15 * * * *"})
+      .perform_later
+  end
+
+  every(1.minute, "schedule:reconcile_x402_settlements") do
+    Clock::ReconcileX402SettlementsJob
+      .set(sentry: {"slug" => "lago_reconcile_x402_settlements", "cron" => "* * * * *"})
       .perform_later
   end
 

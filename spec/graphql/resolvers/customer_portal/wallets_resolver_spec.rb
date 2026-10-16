@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::CustomerPortal::WalletsResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:query) do
     <<~GQL
       query {
@@ -19,11 +21,11 @@ RSpec.describe Resolvers::CustomerPortal::WalletsResolver do
       }
     GQL
   end
-
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
   let(:wallet) { create(:wallet, organization:, customer:, paid_top_up_min_amount_cents: 10_00) }
+
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before do
     wallet
@@ -49,6 +51,22 @@ RSpec.describe Resolvers::CustomerPortal::WalletsResolver do
     expect(wallet_item["currency"]).to eq(wallet.currency)
     expect(wallet_item["paidTopUpMinAmountCents"]).to eq("1000")
     expect(wallet_item["paidTopUpMinCredits"]).to eq("10")
+  end
+
+  context "with several wallets" do
+    let(:wallet) { create(:wallet, organization:, customer:, priority: 10, created_at: 1.day.ago) }
+    let!(:wallet_expiring) { create(:wallet, organization:, customer:, priority: 10, expiration_at: 1.month.from_now) }
+    let!(:wallet_top_priority) { create(:wallet, organization:, customer:, priority: 1) }
+
+    it "returns wallets in application order" do
+      result = execute_graphql(
+        customer_portal_user: customer,
+        query:
+      )
+
+      ids = result["data"]["customerPortalWallets"]["collection"].map { |w| w["id"] }
+      expect(ids).to eq([wallet_top_priority.id, wallet_expiring.id, wallet.id])
+    end
   end
 
   context "without customer portal user" do

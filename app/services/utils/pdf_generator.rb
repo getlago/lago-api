@@ -44,14 +44,19 @@ module Utils
           "image/png",
           SlimHelper::PDF_LOGO_FILENAME
         ),
+        file3: prepare_http_files(render_footer, "text/html", "footer.html"),
         scale: "1.28",
         marginTop: "0.42",
-        marginBottom: "0.42",
+        marginBottom: "0.6",
         marginLeft: "0.42",
         marginRight: "0.42"
       )
 
       response.body.force_encoding("UTF-8")
+    end
+
+    def render_footer
+      SlimHelper.render("templates/documents/footer", context)
     end
 
     def prepare_http_files(content, type, name)

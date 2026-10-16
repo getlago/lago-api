@@ -3,9 +3,13 @@
 require "rails_helper"
 
 RSpec.describe ProductsQuery do
+  before_all do
+    create_default(:billable_metric)
+  end
+
   subject(:result) { described_class.call(organization:, search_term:, pagination:, filters:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:search_term) { nil }
   let(:pagination) { nil }
   let(:filters) { {} }
@@ -69,6 +73,15 @@ RSpec.describe ProductsQuery do
     it "paginates the results" do
       expect(result.products.count).to eq(1)
       expect(result.products.total_count).to eq(2)
+    end
+  end
+
+  context "with cursor pagination" do
+    let(:pagination) { CursorPagination::Cursor.new(table: "products", limit: 1) }
+    let(:filters) { {product_type: "fixed"} }
+
+    it "paginates after filtering" do
+      expect(result.products).to eq([fixed_item])
     end
   end
 end

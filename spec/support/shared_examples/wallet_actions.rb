@@ -719,6 +719,139 @@ RSpec.shared_examples "a wallet create endpoint" do
       end
     end
   end
+
+  context "with connections" do
+    let(:stripe_connection) { create(:stripe_customer, customer:, code: "stripe_us") }
+    let(:netsuite_connection) { create(:netsuite_customer, customer:, code: "netsuite_main") }
+    let(:create_params) do
+      {
+        external_customer_id: customer.external_id,
+        rate_amount: "1",
+        name: "Wallet1",
+        currency: "EUR",
+        paid_credits: "10",
+        granted_credits: "10",
+        connections: {
+          payment: {code: "stripe_us"},
+          tax: {behavior: "skip"},
+          accounting: {code: "netsuite_main"},
+          crm: {behavior: "skip"}
+        }
+      }
+    end
+
+    before do
+      organization.enable_feature_flag!(:multi_connection)
+      stripe_connection
+      netsuite_connection
+    end
+
+    it "persists one connection per category" do
+      expect { subject }.to change(BillingObjectConnection, :count).by(4)
+
+      expect(response).to have_http_status(:success)
+
+      wallet = Wallet.find(json[:wallet][:lago_id])
+      expect(wallet.billing_object_connections.pluck(:category)).to match_array(%w[payment tax accounting crm])
+      expect(wallet.effective_payment_connection).to eq(stripe_connection)
+      expect(wallet.effective_accounting_connection).to eq(netsuite_connection)
+      expect(wallet.effective_tax_connection).to be_nil
+    end
+
+    it "keeps the top-level payment_method working alongside connections" do
+      create_params[:payment_method] = {payment_method_type: "provider", payment_method_id: payment_method.id}
+
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:wallet][:payment_method][:payment_method_id]).to eq(payment_method.id)
+      expect(Wallet.find(json[:wallet][:lago_id]).billing_object_connections.count).to eq(4)
+    end
+
+    context "when a code does not resolve" do
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          name: "Wallet1",
+          currency: "EUR",
+          connections: {payment: {code: "unknown_connection"}}
+        }
+      end
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details][:connections]).to include("connection_not_found")
+      end
+    end
+
+    context "when the behavior is invalid" do
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          name: "Wallet1",
+          currency: "EUR",
+          connections: {payment: {behavior: "nonsense"}}
+        }
+      end
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details][:connections]).to include("invalid_connection_behavior")
+      end
+    end
+
+    context "when the multi_connection flag is disabled" do
+      before { organization.disable_feature_flag!(:multi_connection) }
+
+      it "returns a forbidden error" do
+        subject
+
+        expect(response).to have_http_status(:forbidden)
+      end
+    end
+
+    context "with connections on a recurring transaction rule", :premium do
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          name: "Wallet1",
+          currency: "EUR",
+          paid_credits: "10",
+          granted_credits: "10",
+          recurring_transaction_rules: [
+            {
+              trigger: "interval",
+              interval: "monthly",
+              connections: {payment: {code: "stripe_us"}}
+            }
+          ]
+        }
+      end
+
+      it "owns the connection by the rule, not the wallet" do
+        subject
+
+        expect(response).to have_http_status(:success)
+
+        wallet = Wallet.find(json[:wallet][:lago_id])
+        expect(wallet.billing_object_connections).to be_empty
+
+        rule = wallet.recurring_transaction_rules.sole
+        expect(rule.billing_object_connections.sole).to have_attributes(
+          category: "payment",
+          behavior: "specific",
+          payment_provider_customer_id: stripe_connection.id
+        )
+      end
+    end
+  end
 end
 
 RSpec.shared_examples "a wallet create endpoint with billing_entity_id" do
@@ -833,6 +966,21 @@ RSpec.shared_examples "a wallet update endpoint" do
       expect(json[:wallet][:applies_to][:billable_metric_codes]).to eq([bm.code])
 
       expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
+    end
+  end
+
+  context "when applies_to is omitted" do
+    let(:bm) { create(:billable_metric, organization:) }
+    let(:update_params) { {name: "wallet1"} }
+
+    before { create(:wallet_target, wallet:, billable_metric: bm) }
+
+    it "keeps the existing billable metric limitations" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:wallet][:applies_to][:billable_metric_codes]).to eq([bm.code])
+      expect(wallet.reload.billable_metrics).to eq([bm])
     end
   end
 
@@ -1252,6 +1400,153 @@ RSpec.shared_examples "a wallet update endpoint" do
       end
     end
   end
+
+  context "with connections" do
+    let(:stripe_connection) { create(:stripe_customer, customer:, code: "stripe_us") }
+    let(:update_params) { {name: "wallet1", connections: {payment: {code: "stripe_us"}}} }
+
+    before do
+      organization.enable_feature_flag!(:multi_connection)
+      stripe_connection
+    end
+
+    it "pins the connection on the wallet" do
+      expect { subject }.to change(BillingObjectConnection, :count).by(1)
+
+      expect(response).to have_http_status(:success)
+      expect(wallet.reload.effective_payment_connection).to eq(stripe_connection)
+    end
+
+    context "when inherit is sent for a category that has an override" do
+      let(:update_params) { {name: "wallet1", connections: {payment: {behavior: "inherit"}}} }
+
+      before do
+        create(:billing_object_connection, owner: wallet, organization:, category: "payment", behavior: "skip")
+      end
+
+      it "clears the override so resolution falls back to the customer" do
+        expect { subject }.to change(BillingObjectConnection, :count).by(-1)
+
+        expect(response).to have_http_status(:success)
+        expect(wallet.reload.billing_object_connections).to be_empty
+      end
+    end
+
+    context "when the multi_connection flag is disabled" do
+      before { organization.disable_feature_flag!(:multi_connection) }
+
+      it "returns a forbidden error" do
+        subject
+
+        expect(response).to have_http_status(:forbidden)
+      end
+    end
+  end
+
+  context "with x402_enabled" do
+    let(:wallet) { create(:wallet, customer:, currency: "USD") }
+    let(:update_params) { {x402_enabled: true} }
+
+    context "without x402 payments" do
+      it "returns a forbidden error" do
+        subject
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:code]).to eq("feature_unavailable")
+      end
+
+      context "with an x402 wallet" do
+        let(:wallet) { create(:wallet, customer:, currency: "USD", x402_enabled: true) }
+        let(:update_params) { {x402_enabled: false} }
+
+        it "disables x402 on the wallet" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(wallet.reload).not_to be_x402_enabled
+        end
+      end
+    end
+
+    context "with x402 payments enabled", :premium do
+      let(:organization) { create(:organization, feature_flags: ["x402_payments"]) }
+      let(:customer) { create(:customer, organization:, currency: "EUR") }
+      let(:disable_wallet_refresh) { nil }
+
+      before do
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with("LAGO_REDIS_CACHE_URL").and_return("redis://cache:6379")
+        allow(ENV).to receive(:[]).with("LAGO_DISABLE_WALLET_REFRESH").and_return(disable_wallet_refresh)
+      end
+
+      it "enables x402 on the wallet" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet][:x402_enabled]).to eq(true)
+      end
+
+      context "with a EUR wallet" do
+        let(:wallet) { create(:wallet, customer:, currency: "EUR") }
+
+        it "returns the currency rule" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq(x402_enabled: ["currency_not_supported"])
+        end
+      end
+
+      context "when the wallet refresh is disabled" do
+        let(:disable_wallet_refresh) { "true" }
+
+        it "returns the refresh rule" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq(x402_enabled: ["wallet_refresh_unavailable"])
+        end
+      end
+
+      context "with an active recurring transaction rule" do
+        before { create(:recurring_transaction_rule, wallet:) }
+
+        it "returns the recurring rules rule" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq(x402_enabled: ["recurring_transaction_rules_not_supported"])
+        end
+      end
+
+      context "with an x402 wallet" do
+        let(:wallet) { create(:wallet, customer:, currency: "USD", x402_enabled: true) }
+
+        context "when x402_enabled is false" do
+          let(:update_params) { {x402_enabled: false} }
+
+          it "disables x402 on the wallet" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:wallet][:x402_enabled]).to eq(false)
+            expect(wallet.reload).not_to be_x402_enabled
+          end
+        end
+
+        context "with recurring transaction rules" do
+          let(:update_params) { {recurring_transaction_rules: [{trigger: "interval", interval: "monthly", paid_credits: "10.0", granted_credits: "0.0"}]} }
+
+          it "refuses the rules" do
+            subject
+
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json[:error_details]).to eq(recurring_transaction_rules: ["not_supported_for_x402_wallet"])
+          end
+        end
+      end
+    end
+  end
 end
 
 RSpec.shared_examples "a wallet show endpoint" do
@@ -1274,6 +1569,52 @@ RSpec.shared_examples "a wallet show endpoint" do
     it "returns not found" do
       subject
       expect(response).to have_http_status(:not_found)
+    end
+  end
+
+  context "with connections in response" do
+    let(:stripe_connection) do
+      create(:stripe_customer, customer:, organization:, code: "stripe_default", is_default: true)
+    end
+
+    before { stripe_connection }
+
+    it "reports every category with its behaviour and effective code" do
+      subject
+
+      expect(response).to have_http_status(:success)
+
+      connections = json[:wallet][:connections]
+      expect(connections.keys).to match_array(%i[payment tax accounting crm])
+      expect(connections[:payment]).to eq({behavior: "inherit", code: "stripe_default"})
+      expect(connections[:crm]).to eq({behavior: "inherit", code: nil})
+    end
+
+    context "when the wallet pins a specific connection" do
+      let(:pinned) { create(:gocardless_customer, customer:, organization:, code: "gocardless_eu") }
+
+      before do
+        create(:billing_object_connection, owner: wallet, organization:, category: "payment",
+          behavior: "specific", payment_provider_customer: pinned)
+      end
+
+      it "reports specific with the pinned code" do
+        subject
+
+        expect(json[:wallet][:connections][:payment]).to eq({behavior: "specific", code: "gocardless_eu"})
+      end
+    end
+
+    context "when the wallet skips a category" do
+      before do
+        create(:billing_object_connection, owner: wallet, organization:, category: "payment", behavior: "skip")
+      end
+
+      it "reports skip with no code" do
+        subject
+
+        expect(json[:wallet][:connections][:payment]).to eq({behavior: "skip", code: nil})
+      end
     end
   end
 

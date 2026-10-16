@@ -109,7 +109,7 @@ RSpec.describe Api::V1::Customers::ProjectedUsageController, :premium do
         expect(json[:customer_projected_usage][:amount_cents]).to eq(5)
         expect(json[:customer_projected_usage][:currency]).to eq("EUR")
         expect(json[:customer_projected_usage][:total_amount_cents]).to eq(6)
-        expect(json[:customer_projected_usage][:projected_amount_cents]).to be_present
+        expect(json[:customer_projected_usage][:projected_amount_cents]).to be_an(Integer)
 
         charge_usage = json[:customer_projected_usage][:charges_usage].first
         expect(charge_usage[:billable_metric][:name]).to eq(metric.name)
@@ -121,6 +121,21 @@ RSpec.describe Api::V1::Customers::ProjectedUsageController, :premium do
         expect(charge_usage[:amount_currency]).to eq("EUR")
         expect(charge_usage[:projected_units]).to be_present
         expect(charge_usage[:projected_amount_cents]).to be_present
+      end
+    end
+
+    context "with full_usage" do
+      let(:params) { {external_subscription_id: subscription.external_id, charge_id: charge.id, full_usage: true} }
+
+      before { organization.update!(premium_integrations: organization.premium_integrations | %w[granular_lifetime_usage]) }
+
+      it "projects the current period, as lifetime usage has no period to project over" do
+        travel_to(Time.parse("2025-07-03T10:00:00Z")) do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:customer_projected_usage][:from_datetime]).to eq(Time.zone.today.beginning_of_month.beginning_of_day.iso8601)
+        end
       end
     end
 
@@ -247,6 +262,54 @@ RSpec.describe Api::V1::Customers::ProjectedUsageController, :premium do
           expect(gcp_filter_data[:amount_cents]).to eq(2000)
           expect(gcp_filter_data[:projected_units]).to eq("10.33")
           expect(gcp_filter_data[:projected_amount_cents]).to eq(20660)
+        end
+      end
+    end
+
+    context "with a charge code in the usage filters" do
+      let(:params) { {external_subscription_id: subscription.external_id, charge_code: charge.code} }
+      let(:other_metric) { create(:billable_metric, aggregation_type: "count_agg", organization:) }
+
+      before do
+        create(:standard_charge, plan: subscription.plan, billable_metric: other_metric, properties: {amount: "1"})
+
+        travel_to(Time.parse("2025-07-02T10:00:00Z")) do
+          create(:event, organization:, customer:, subscription:, code: other_metric.code, timestamp: Time.zone.now)
+        end
+      end
+
+      it "projects the filtered charge only" do
+        travel_to(Time.parse("2025-07-03T10:00:00Z")) do
+          subject
+
+          charges_usage = json[:customer_projected_usage][:charges_usage]
+
+          expect(charges_usage.map { |usage| usage[:charge][:lago_id] }).to eq([charge.id])
+          expect(json[:customer_projected_usage][:projected_amount_cents]).to eq(charges_usage.sole[:projected_amount_cents])
+        end
+      end
+    end
+
+    context "with a group in the usage filters" do
+      let(:params) { {external_subscription_id: subscription.external_id, filter_by_group: {region: "eu"}} }
+      let(:charge) do
+        create(:standard_charge, plan: subscription.plan, billable_metric: metric, properties: {amount: "1", pricing_group_keys: ["region"]})
+      end
+
+      before do
+        travel_to(Time.parse("2025-07-02T10:00:00Z")) do
+          create(:event, organization:, customer:, subscription:, code: metric.code, timestamp: Time.zone.now, properties: {region: "eu"})
+          create(:event, organization:, customer:, subscription:, code: metric.code, timestamp: Time.zone.now, properties: {region: "us"})
+        end
+      end
+
+      it "projects the filtered group only" do
+        travel_to(Time.parse("2025-07-03T10:00:00Z")) do
+          subject
+
+          charge_usage = json[:customer_projected_usage][:charges_usage].sole
+
+          expect(charge_usage).to include(units: "1.0", projected_units: "10.33")
         end
       end
     end

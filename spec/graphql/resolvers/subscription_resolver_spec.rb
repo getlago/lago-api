@@ -3,7 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::SubscriptionResolver do
+  let_it_be(:plan, refind: true) { create_default(:plan) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "subscriptions:view" }
+  let(:organization) { membership.organization }
+  let(:subscription) { create(:subscription, customer:) }
   let(:query) do
     <<~GQL
       query($subscriptionId: ID, $externalId: ID) {
@@ -35,10 +40,8 @@ RSpec.describe Resolvers::SubscriptionResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
-  let(:subscription) { create(:subscription, customer:) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
+  let_it_be(:customer, refind: true) { create_default(:customer, organization:) }
 
   before do
     customer
@@ -130,8 +133,8 @@ RSpec.describe Resolvers::SubscriptionResolver do
   end
 
   context "when subscription has a pending downgrade" do
-    let(:plan) { create(:plan, organization:, amount_cents: 500_00) }
-    let(:lower_plan) { create(:plan, organization:, amount_cents: 100_00) }
+    let_it_be(:plan, refind: true) { create_default(:plan, organization:, amount_cents: 500_00) }
+    let_it_be(:lower_plan) { create_default(:plan, organization:, amount_cents: 100_00) }
     let(:subscription) do
       create(:subscription, :anniversary, customer:, plan:, subscription_at: Time.zone.parse("2026-04-22 00:00:00"), started_at: Time.zone.parse("2026-04-22 00:00:00"))
     end
@@ -228,11 +231,11 @@ RSpec.describe Resolvers::SubscriptionResolver do
         }
       GQL
     end
-
-    let(:plan) { create(:plan, organization:) }
-    let(:add_on) { create(:add_on, organization:) }
     let(:subscription) { create(:subscription, customer:, plan:) }
     let(:fixed_charge) { create(:fixed_charge, plan:, organization:, add_on:, units: 10) }
+
+    let_it_be(:plan, refind: true) { create_default(:plan, organization:) }
+    let_it_be(:add_on, refind: true) { create_default(:add_on, organization:) }
 
     context "without a per-subscription override" do
       before { fixed_charge }
@@ -313,6 +316,79 @@ RSpec.describe Resolvers::SubscriptionResolver do
         )
 
         expect(result["data"]["subscription"]["billingEntityId"]).to be_nil
+      end
+    end
+  end
+
+  context "with connections" do
+    let(:connections_query) do
+      <<~GQL
+        query($subscriptionId: ID!) {
+          subscription(id: $subscriptionId) {
+            id
+            connections { category behavior code }
+          }
+        }
+      GQL
+    end
+
+    let(:default_connection) do
+      create(:stripe_customer, customer:, organization:, code: "stripe_default", is_default: true)
+    end
+
+    before { default_connection }
+
+    def routing
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: connections_query,
+        variables: {subscriptionId: subscription.id}
+      )
+
+      result["data"]["subscription"]["connections"].index_by { it["category"] }
+    end
+
+    it "reports every category" do
+      expect(routing.keys).to match_array(%w[payment tax accounting crm])
+    end
+
+    context "when the category is inherited" do
+      it "reports inherit with the customer default's code" do
+        expect(routing["payment"]).to eq(
+          {"category" => "payment", "behavior" => "inherit", "code" => "stripe_default"}
+        )
+      end
+    end
+
+    context "when the subscription pins the customer's own default connection" do
+      before do
+        create(:billing_object_connection, owner: subscription, organization:, category: "payment",
+          behavior: "specific", payment_provider_customer: default_connection)
+      end
+
+      it "stays specific even though the code matches the customer default" do
+        expect(routing["payment"]).to eq(
+          {"category" => "payment", "behavior" => "specific", "code" => "stripe_default"}
+        )
+      end
+    end
+
+    context "when the category is skipped" do
+      before do
+        create(:billing_object_connection, owner: subscription, organization:, category: "payment",
+          behavior: "skip")
+      end
+
+      it "reports skip with no code" do
+        expect(routing["payment"]).to eq({"category" => "payment", "behavior" => "skip", "code" => nil})
+      end
+    end
+
+    context "when nothing resolves" do
+      it "reports inherit with a nil code" do
+        expect(routing["crm"]).to eq({"category" => "crm", "behavior" => "inherit", "code" => nil})
       end
     end
   end

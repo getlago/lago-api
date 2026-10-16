@@ -5,9 +5,13 @@ require "rails_helper"
 RSpec.describe InvoiceCustomSection do
   subject(:invoice_custom_section) { create(:invoice_custom_section) }
 
+  let_it_be(:organization) { create_default(:organization) }
+
   it { is_expected.to belong_to(:organization) }
   it { is_expected.to have_many(:customer_applied_invoice_custom_sections).dependent(:destroy) }
   it { is_expected.to have_many(:billing_entity_applied_invoice_custom_sections).dependent(:destroy) }
+  it { is_expected.to have_many(:subscription_applied_invoice_custom_sections).dependent(:destroy) }
+  it { is_expected.to have_many(:contract_applied_invoice_custom_sections).dependent(:destroy) }
 
   describe "enums" do
     it "defines section_type enum with correct values" do

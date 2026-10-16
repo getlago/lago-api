@@ -27,7 +27,7 @@ RSpec.describe Mutations::RateCardRates::Update do
     <<-GQL
       mutation($input: UpdateRateCardRateInput!) {
         updateRateCardRate(input: $input) {
-          id rateProperties status
+          id rateProperties { amount } status
         }
       }
     GQL

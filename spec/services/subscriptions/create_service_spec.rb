@@ -5,9 +5,13 @@ require "rails_helper"
 RSpec.describe Subscriptions::CreateService do
   subject(:create_service) { described_class.new(customer:, plan:, params:) }
 
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, amount_cents: 100, organization:, amount_currency: "EUR") }
-  let(:customer) { create(:customer, organization:, currency: "EUR") }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:plan, refind: true) { create(:plan, amount_cents: 100, organization:, amount_currency: "EUR") }
+  let_it_be(:customer, refind: true) { create_default(:customer, organization:, currency: "EUR") }
+
+  before_all do
+    create_default(:add_on)
+  end
 
   let(:external_id) { SecureRandom.uuid }
   let(:billing_time) { "anniversary" }
@@ -123,7 +127,7 @@ RSpec.describe Subscriptions::CreateService do
     end
 
     context "when subscription should sync with Hubspot" do
-      let(:customer) { create(:customer, :with_hubspot_integration, organization:, currency: "EUR") }
+      let_it_be(:customer, refind: true) { create(:customer, :with_hubspot_integration, organization:, currency: "EUR") }
 
       it "enqueues the Hubspot create job for a new subscription" do
         create_service.call
@@ -235,6 +239,28 @@ RSpec.describe Subscriptions::CreateService do
 
         expect(result).to be_success
         expect(result.subscription.consolidate_invoice).to be(false)
+      end
+    end
+
+    context "when consolidate_invoice is passed as null" do
+      let(:params) do
+        {
+          external_customer_id:,
+          plan_code:,
+          name:,
+          external_id:,
+          billing_time:,
+          subscription_at:,
+          subscription_id:,
+          consolidate_invoice: "null"
+        }
+      end
+
+      it "returns a validation failure" do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq({consolidate_invoice: ["invalid_value"]})
       end
     end
 
@@ -565,7 +591,7 @@ RSpec.describe Subscriptions::CreateService do
       end
 
       context "when an entry references a fixed_charge id not on the plan" do
-        let(:other_plan) { create(:plan, organization:) }
+        let_it_be(:other_plan, refind: true) { create(:plan, organization:) }
         let(:foreign_fixed_charge) { create(:fixed_charge, plan: other_plan) }
         let(:params) do
           {
@@ -693,7 +719,7 @@ RSpec.describe Subscriptions::CreateService do
     end
 
     context "when plan is pay_in_advance" do
-      let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true) }
+      let_it_be(:plan, refind: true) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true) }
 
       context "when subscription_at is current date" do
         it "enqueues a job to bill the subscription" do
@@ -710,7 +736,7 @@ RSpec.describe Subscriptions::CreateService do
       end
 
       context "when subscription_at is current date but there is a trial period" do
-        let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true, trial_period: 10) }
+        let_it_be(:plan, refind: true) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true, trial_period: 10) }
 
         it "does not enqueue a job to bill the subscription" do
           expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
@@ -747,7 +773,7 @@ RSpec.describe Subscriptions::CreateService do
     end
 
     context "when plan is not pay_in_advance, subscription_at is current date and there are fixed charges" do
-      let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: false) }
+      let_it_be(:plan, refind: true) { create(:plan, amount_cents: 100, organization:, pay_in_advance: false) }
       let(:fixed_charge) { create(:fixed_charge, plan:, pay_in_advance:) }
 
       before do
@@ -766,7 +792,7 @@ RSpec.describe Subscriptions::CreateService do
         end
 
         context "when plan has a trial period" do
-          let(:plan) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true, trial_period: 10) }
+          let_it_be(:plan, refind: true) { create(:plan, amount_cents: 100, organization:, pay_in_advance: true, trial_period: 10) }
 
           it "does not queue a job to bill the subscription" do
             expect { create_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
@@ -1137,9 +1163,9 @@ RSpec.describe Subscriptions::CreateService do
 
       context "when plan is not the same" do
         context "when we upgrade the plan" do
-          let(:customer) { create(:customer, :with_hubspot_integration, organization:, currency: "EUR") }
-          let(:plan) { create(:plan, amount_cents: 200, organization:) }
-          let(:old_plan) { create(:plan, amount_cents: 100, organization:) }
+          let_it_be(:customer, refind: true) { create(:customer, :with_hubspot_integration, organization:, currency: "EUR") }
+          let_it_be(:plan, refind: true) { create(:plan, amount_cents: 200, organization:) }
+          let_it_be(:old_plan, refind: true) { create(:plan, amount_cents: 100, organization:) }
           let(:name) { "invoice display name new" }
 
           before do
@@ -1433,8 +1459,8 @@ RSpec.describe Subscriptions::CreateService do
             subscription.mark_as_active!
           end
 
-          let(:plan) { create(:plan, amount_cents: 50, organization:) }
-          let(:old_plan) { create(:plan, amount_cents: 100, organization:) }
+          let_it_be(:plan, refind: true) { create(:plan, amount_cents: 50, organization:) }
+          let_it_be(:old_plan, refind: true) { create(:plan, amount_cents: 100, organization:) }
           let(:name) { "invoice display name new" }
 
           it "creates a new subscription" do
@@ -1743,7 +1769,7 @@ RSpec.describe Subscriptions::CreateService do
     end
 
     context "with activation_rules" do
-      let(:customer) { create(:customer, organization:, payment_provider: "stripe") }
+      let_it_be(:customer, refind: true) { create(:customer, organization:, payment_provider: "stripe") }
 
       let(:params) do
         {
@@ -1787,7 +1813,7 @@ RSpec.describe Subscriptions::CreateService do
         end
 
         context "when plan is pay in advance" do
-          let(:plan) { create(:plan, amount_cents: 100, organization:, amount_currency: "EUR", pay_in_advance: true) }
+          let_it_be(:plan, refind: true) { create(:plan, amount_cents: 100, organization:, amount_currency: "EUR", pay_in_advance: true) }
 
           it "creates incomplete subscription with pending activation rule" do
             result = create_service.call
@@ -1821,7 +1847,7 @@ RSpec.describe Subscriptions::CreateService do
         end
 
         context "when plan is pay in arrears with pay-in-advance fixed charges" do
-          let(:add_on) { create(:add_on, organization:) }
+          let_it_be(:add_on, refind: true) { create(:add_on, organization:) }
 
           before { create(:fixed_charge, plan:, add_on:, pay_in_advance: true) }
 
@@ -1841,7 +1867,7 @@ RSpec.describe Subscriptions::CreateService do
         end
 
         context "when plan is pay in advance with trial period" do
-          let(:plan) { create(:plan, amount_cents: 100, organization:, amount_currency: "EUR", pay_in_advance: true, trial_period: 30) }
+          let_it_be(:plan, refind: true) { create(:plan, amount_cents: 100, organization:, amount_currency: "EUR", pay_in_advance: true, trial_period: 30) }
 
           it "creates active subscription with not_applicable activation rule" do
             result = create_service.call
@@ -2012,7 +2038,7 @@ RSpec.describe Subscriptions::CreateService do
     end
 
     describe "billing entity binding" do
-      let(:billing_entity) { create(:billing_entity, organization:) }
+      let_it_be(:billing_entity, refind: true) { create(:billing_entity, organization:) }
 
       context "when binding a billing entity" do
         it "persists nil when no billing entity reference is provided" do
@@ -2074,10 +2100,10 @@ RSpec.describe Subscriptions::CreateService do
     end
 
     describe "billing entity binding on downgrade" do
-      let(:current_entity) { create(:billing_entity, organization:, code: "entity-x") }
-      let(:target_entity) { create(:billing_entity, organization:, code: "entity-y") }
-      let(:old_plan) { create(:plan, amount_cents: 100, organization:) }
-      let(:plan) { create(:plan, amount_cents: 50, organization:) }
+      let_it_be(:current_entity, refind: true) { create(:billing_entity, organization:, code: "entity-x") }
+      let_it_be(:target_entity, refind: true) { create(:billing_entity, organization:, code: "entity-y") }
+      let_it_be(:old_plan, refind: true) { create(:plan, amount_cents: 100, organization:) }
+      let_it_be(:plan, refind: true) { create(:plan, amount_cents: 50, organization:) }
 
       let(:subscription) do
         create(
@@ -2194,6 +2220,139 @@ RSpec.describe Subscriptions::CreateService do
           expect(result).to be_success
           expect(result.subscription.id).to eq(subscription.id)
           expect(result.subscription.reload.billing_entity_id).to eq(current_entity.id)
+        end
+      end
+    end
+
+    context "with connections" do
+      let(:stripe_connection) { create(:stripe_customer, customer:, code: "stripe_us") }
+      let(:params) do
+        {
+          external_customer_id:,
+          plan_code:,
+          name:,
+          external_id:,
+          billing_time:,
+          connections: {payment: {code: "stripe_us"}}
+        }
+      end
+
+      before do
+        organization.enable_feature_flag!(:multi_connection)
+        stripe_connection
+      end
+
+      it "pins the connection on the created subscription" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.subscription.billing_object_connections.sole).to have_attributes(
+          category: "payment",
+          behavior: "specific",
+          payment_provider_customer_id: stripe_connection.id
+        )
+      end
+
+      context "when the code does not resolve" do
+        let(:params) { super().merge(connections: {payment: {code: "nope"}}) }
+
+        it "fails with connection_not_found and creates no subscription" do
+          expect { create_service.call }.not_to change(Subscription, :count)
+          expect(create_service.call.error.messages[:connections]).to include("connection_not_found")
+        end
+      end
+
+      context "when the multi_connection flag is disabled" do
+        before { customer.organization.disable_feature_flag!(:multi_connection) }
+
+        it "returns a forbidden failure rather than dropping the routing choice" do
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        end
+      end
+
+      context "when upgrading an existing subscription" do
+        let(:old_plan) { create(:plan, amount_cents: 50, organization:, amount_currency: "EUR") }
+        let!(:current_subscription) do
+          create(:subscription, customer:, organization:, plan: old_plan, external_id:)
+        end
+
+        it "pins the connection on the new subscription, not the terminated one" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.id).not_to eq(current_subscription.id)
+          expect(result.subscription.billing_object_connections.sole.payment_provider_customer_id)
+            .to eq(stripe_connection.id)
+          expect(current_subscription.reload.billing_object_connections).to be_empty
+        end
+      end
+
+      context "when downgrading an existing subscription" do
+        let(:plan) { create(:plan, amount_cents: 50, organization:, amount_currency: "EUR") }
+        let(:old_plan) { create(:plan, amount_cents: 500, organization:, amount_currency: "EUR") }
+        let!(:current_subscription) do
+          create(:subscription, customer:, organization:, plan: old_plan, external_id:)
+        end
+
+        it "pins the connection on the pending subscription" do
+          result = create_service.call
+
+          expect(result).to be_success
+
+          pending_subscription = current_subscription.next_subscriptions.sole
+          expect(pending_subscription).to be_pending
+          expect(pending_subscription.billing_object_connections.sole.payment_provider_customer_id)
+            .to eq(stripe_connection.id)
+        end
+
+        it "leaves the subscription that is still active untouched" do
+          create_service.call
+
+          expect(current_subscription.reload.billing_object_connections).to be_empty
+        end
+      end
+
+      context "when upgrading a subscription that has not started yet" do
+        let(:old_plan) { create(:plan, amount_cents: 50, organization:, amount_currency: "EUR") }
+        let!(:current_subscription) do
+          create(:subscription, :pending, customer:, organization:, plan: old_plan, external_id:,
+            subscription_at: 10.days.from_now)
+        end
+
+        it "pins the connection on the subscription updated in place" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.id).to eq(current_subscription.id)
+          expect(current_subscription.reload.billing_object_connections.sole.payment_provider_customer_id)
+            .to eq(stripe_connection.id)
+        end
+      end
+
+      context "when downgrading a subscription that has not started yet" do
+        let(:plan) { create(:plan, amount_cents: 50, organization:, amount_currency: "EUR") }
+        let(:old_plan) { create(:plan, amount_cents: 500, organization:, amount_currency: "EUR") }
+        let!(:current_subscription) do
+          create(:subscription, :pending, customer:, organization:, plan: old_plan, external_id:,
+            subscription_at: 10.days.from_now)
+        end
+
+        it "pins the connection on the subscription updated in place" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.id).to eq(current_subscription.id)
+          expect(current_subscription.reload.billing_object_connections.sole.payment_provider_customer_id)
+            .to eq(stripe_connection.id)
+        end
+
+        it "does not create a pending downgrade subscription" do
+          create_service.call
+
+          expect(current_subscription.reload.next_subscriptions).to be_empty
         end
       end
     end

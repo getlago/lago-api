@@ -3,7 +3,7 @@
 module Customers
   class RefreshInvoicesSearchTermsJob < ApplicationJob
     queue_as "default"
-    unique :until_executed
+    unique :until_executing, on_conflict: :log
 
     def perform(customer_id)
       customer = Customer.with_discarded.find_by(id: customer_id)

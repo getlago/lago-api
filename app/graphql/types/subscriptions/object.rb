@@ -27,6 +27,8 @@ module Types
       field :current_billing_period_ending_at, GraphQL::Types::ISO8601DateTime
       field :current_billing_period_started_at, GraphQL::Types::ISO8601DateTime
 
+      field :connections, [Types::Connections::Object], null: false, method: :connection_routing
+
       field :selected_invoice_custom_sections, [Types::InvoiceCustomSections::Object], null: true
       field :skip_invoice_custom_sections, Boolean
 
@@ -86,8 +88,6 @@ module Types
       end
 
       def period_end_date
-        return if object.plan.product_catalog?
-
         ::Subscriptions::DatesService.new_instance(object, object.billing_reference_time)
           .next_end_of_period
       end
@@ -127,11 +127,7 @@ module Types
         end
       end
 
-      # Billing periods derive from the plan interval, which product-catalog
-      # plans don't have: their rate cards each carry their own billing cycle.
       def dates_service
-        return if object.plan.product_catalog?
-
         @dates_service ||= ::Subscriptions::DatesService.new_instance(object, object.billing_reference_time, current_usage: true)
       end
     end

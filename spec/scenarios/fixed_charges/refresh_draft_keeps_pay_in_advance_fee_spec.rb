@@ -42,8 +42,6 @@ describe "Refreshing a draft invoice keeps its pay in advance fixed charge", :pr
       )
     end
 
-    # Repeating units that are already billed leaves the pay in advance run with nothing
-    # to bill, so it writes a fee of zero units on a second invoice.
     travel_to subscription_date + 1.hour do
       update_subscription(
         subscription,
@@ -52,25 +50,43 @@ describe "Refreshing a draft invoice keeps its pay in advance fixed charge", :pr
     end
   end
 
-  # Pins the setup itself: without this fee on a second invoice there is nothing for the
-  # guard to misread, and the example below would pass whether or not the bug exists.
-  it "leaves a fee that billed nothing on a second invoice" do
-    placeholder = subscription.invoices.where.not(id: draft.id).sole
-
-    expect(placeholder.fees.fixed_charge.sole).to have_attributes(units: 0, amount_cents: 0)
+  # Repeating units that are already billed is a no-op: it emits no fixed charge event, so
+  # there is no pay in advance run and no second invoice.
+  it "does not invoice again when the units are unchanged" do
+    expect(subscription.invoices.where.not(id: draft.id)).to be_empty
   end
 
-  # A refresh destroys the fees and builds them again. The zero-unit fee on the other
-  # invoice billed nothing, so it is not proof of billing and must not stop the rebuild.
-  it "keeps the fee and the invoice total when the draft is refreshed" do
-    expect(draft.fees.fixed_charge.sole.amount_cents).to eq(fee_amount_cents)
+  # A pay in advance run that has nothing left to bill still writes a fee of zero units.
+  # A units decrease is what produces one now that repeating the same units does not.
+  context "when a fee that billed nothing exists for the period" do
+    let(:placeholder) { create(:invoice, customer:, organization:, status: :finalized) }
 
-    travel_to subscription_date + 1.day do
-      refresh_invoice(draft)
+    before do
+      create(
+        :fee,
+        organization:,
+        invoice: placeholder,
+        subscription:,
+        fixed_charge:,
+        fee_type: :fixed_charge,
+        units: 0,
+        amount_cents: 0,
+        properties: draft.fees.fixed_charge.sole.properties
+      )
     end
 
-    draft.reload
-    expect(draft.fees.fixed_charge.sum(:amount_cents)).to eq(fee_amount_cents)
-    expect(draft.total_amount_cents).to eq(fee_amount_cents)
+    # A refresh destroys the fees and builds them again. The zero-unit fee on the other
+    # invoice billed nothing, so it is not proof of billing and must not stop the rebuild.
+    it "keeps the fee and the invoice total when the draft is refreshed" do
+      expect(draft.fees.fixed_charge.sole.amount_cents).to eq(fee_amount_cents)
+
+      travel_to subscription_date + 1.day do
+        refresh_invoice(draft)
+      end
+
+      draft.reload
+      expect(draft.fees.fixed_charge.sum(:amount_cents)).to eq(fee_amount_cents)
+      expect(draft.total_amount_cents).to eq(fee_amount_cents)
+    end
   end
 end

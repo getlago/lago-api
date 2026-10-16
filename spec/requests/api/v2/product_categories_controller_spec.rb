@@ -134,7 +134,7 @@ RSpec.describe Api::V2::ProductCategoriesController do
   end
 
   describe "GET /api/v2/product_categories" do
-    subject { get_with_token(organization, "/api/v2/product_categories?page=1&per_page=1") }
+    subject { get_with_token(organization, "/api/v2/product_categories?limit=1") }
 
     before { create(:product_category, organization:) }
 
@@ -147,15 +147,20 @@ RSpec.describe Api::V2::ProductCategoriesController do
 
       expect(response).to have_http_status(:success)
       expect(json[:product_categories].count).to eq(1)
-      expect(json[:meta][:total_count]).to eq(2)
+      expect(json[:meta][:next_cursor]).to be_present
       expect(json[:product_categories].first[:lago_id]).to be_present
+    end
+
+    it_behaves_like "a cursor paginated v2 endpoint", collection: :product_categories, model: ProductCategory do
+      let(:paginated_path) { "/api/v2/product_categories" }
+      let(:create_paginated_record) { ->(created_at) { create(:product_category, organization:, created_at:) } }
     end
 
     it "returns the batched products counts" do
       product_category = create(:product_category, organization:)
       create(:product, organization:, product_category:)
 
-      get_with_token(organization, "/api/v2/product_categories?per_page=10")
+      get_with_token(organization, "/api/v2/product_categories?limit=10")
 
       counts = json[:product_categories].to_h { [it[:lago_id], it[:products_count]] }
       expect(counts[product_category.id]).to eq(1)

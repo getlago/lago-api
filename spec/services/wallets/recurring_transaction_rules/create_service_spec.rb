@@ -5,6 +5,11 @@ require "rails_helper"
 RSpec.describe Wallets::RecurringTransactionRules::CreateService do
   subject(:create_service) { described_class.new(wallet:, wallet_params:) }
 
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
+
   let(:wallet) { create(:wallet, paid_top_up_min_amount_cents: 15_00) }
   let(:wallet_params) do
     {
@@ -451,6 +456,40 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
             expect(sections.count).to eq(2)
             expect(sections.pluck(:invoice_custom_section_id)).to include(section_1.id, section_2.id)
           end
+        end
+      end
+    end
+
+    context "with connections", :premium do
+      let(:customer) { wallet.customer }
+      let(:rule_params) { super().merge(connections: {payment: {code: "stripe_us"}}) }
+
+      before { customer.organization.enable_feature_flag!(:multi_connection) }
+
+      context "when the code resolves" do
+        let!(:stripe_connection) { create(:stripe_customer, customer:, code: "stripe_us") }
+
+        it "pins the connection on the rule" do
+          rule = create_service.call.recurring_transaction_rule
+
+          expect(rule.billing_object_connections.sole).to have_attributes(
+            category: "payment",
+            behavior: "specific",
+            payment_provider_customer_id: stripe_connection.id
+          )
+        end
+      end
+
+      context "when the code does not resolve" do
+        it "surfaces connection_not_found rather than swallowing it" do
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages[:connections]).to include("connection_not_found")
+        end
+
+        it "persists no connection row" do
+          expect { create_service.call }.not_to change(BillingObjectConnection, :count)
         end
       end
     end

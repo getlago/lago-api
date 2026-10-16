@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Mutations::CatalogPlans::Create do
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   subject(:result) do
     execute_graphql(
       current_user: membership.user,
@@ -13,7 +15,7 @@ RSpec.describe Mutations::CatalogPlans::Create do
     )
   end
 
-  let(:membership) { create(:membership) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
   let(:organization) { membership.organization }
   let(:required_permission) { "plans:create" }
   let(:input) { {name: "Growth", code: "growth", currency: "EUR"} }
@@ -21,23 +23,23 @@ RSpec.describe Mutations::CatalogPlans::Create do
   let(:query) do
     <<~GQL
       mutation($input: CreateCatalogPlanInput!) {
-        createCatalogPlan(input: $input) { id code amountCurrency }
+        createCatalogPlan(input: $input) { id code currency }
       }
     GQL
   end
 
   before { organization.enable_feature_flag!(:product_catalog) }
 
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "plans:create"
 
   it "creates a catalog plan" do
     plan_response = result["data"]["createCatalogPlan"]
 
     expect(plan_response["code"]).to eq("growth")
-    expect(plan_response["amountCurrency"]).to eq("EUR")
-    expect(Plan.find(plan_response["id"])).to have_attributes(
-      pricing_type: "product_catalog", interval: nil, amount_cents: nil
-    )
+    expect(plan_response["currency"]).to eq("EUR")
+    expect(CatalogPlan.find(plan_response["id"])).to have_attributes(name: "Growth", currency: "EUR")
   end
 
   context "when the organization is not on the product catalog" do

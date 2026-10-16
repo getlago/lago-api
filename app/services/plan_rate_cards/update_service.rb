@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module PlanRateCards
-  # Edits a plan's rate card entry. A plan with subscriptions is immutable:
-  # pricing changes go through a new plan and a subscription migration.
+  # Edits a plan's rate card entry. A plan with contracts is immutable:
+  # pricing changes go through a new plan and a contract migration.
   class UpdateService < BaseService
     Result = BaseResult[:plan_rate_card]
 
@@ -15,7 +15,7 @@ module PlanRateCards
     def call
       return result.not_found_failure!(resource: "applied_rate_card") unless plan_rate_card
 
-      if plan_rate_card.plan.attached_to_subscriptions?
+      if plan_rate_card.catalog_plan.attached_to_contracts?
         return result.single_validation_failure!(field: :plan, error_code: "plan_locked")
       end
 

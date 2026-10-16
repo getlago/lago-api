@@ -6,7 +6,7 @@ module Types
       graphql_name "RateCard"
       description "Base rate card"
 
-      dataload_association :product, :product_filter
+      dataload_association :product, :product_filter, :taxes
 
       field :id, ID, null: false
       field :organization, Types::Organizations::OrganizationType
@@ -19,10 +19,9 @@ module Types
       field :currency, Types::CurrencyEnum, null: false
       field :display_on_invoice, Boolean, null: false
       field :proration, Boolean, null: false
-      field :regroup_paid_fees, Types::RateCards::RegroupPaidFeesEnum, null: false
+      field :regroup_paid_fees, Types::RateCards::RegroupPaidFeesEnum, null: true
 
       field :applied_pricing_unit_code, String, null: true
-      field :wallet_targetable, Boolean, null: true
 
       # Lock signals for clients: deletion locks at any plan/subscription
       # attachment, rate edits lock once a subscription bills the card.
@@ -31,6 +30,7 @@ module Types
 
       field :product, Types::Products::Object, null: false
       field :product_filter, Types::ProductFilters::Object, null: true
+      field :taxes, [Types::Taxes::Object], null: false
 
       field :active_rate, Types::RateCardRates::Object, null: true
       field :rates_count, Integer, null: false

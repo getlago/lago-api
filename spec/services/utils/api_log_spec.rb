@@ -31,7 +31,7 @@ RSpec.describe Utils::ApiLog do
   end
 
   describe ".produce", :capture_kafka_messages do
-    let(:organization) { create(:organization) }
+    let_it_be(:organization) { create_default(:organization) }
 
     context "when kafka is configured" do
       before do
@@ -68,6 +68,44 @@ RSpec.describe Utils::ApiLog do
         )
       end
 
+      context "with filtered params" do
+        let(:fake_request) do
+          instance_double(
+            "ActionDispatch::Request",
+            user_agent: "RSpec",
+            params: {x402_connection: {name: "CDP", cdp_api_key_secret: "secret"}},
+            path: "/api/v1/customers",
+            base_url: "https://lago.test",
+            method_symbol: :post,
+            request_id: "1234"
+          )
+        end
+
+        it "masks the filtered params in the request body" do
+          api_log.produce(fake_request, fake_response, organization:, filtered_params: [:cdp_api_key_secret])
+
+          expect(karafka_producer).to have_received(:produce_async).with(
+            topic: "api_logs",
+            key: "#{organization.id}--1234",
+            payload: {
+              request_id: "1234",
+              organization_id: organization.id,
+              api_key_id: api_key.id,
+              api_version: "v1",
+              client: "RSpec",
+              request_body: {x402_connection: {name: "CDP", cdp_api_key_secret: "[FILTERED]"}},
+              request_path: "/api/v1/customers",
+              request_origin: "https://lago.test",
+              http_method: :post,
+              request_response: {"success" => true},
+              http_status: 200,
+              logged_at: Time.current.iso8601[...-1],
+              created_at: Time.current.iso8601[...-1]
+            }.to_json
+          )
+        end
+      end
+
       context "when request_id is empty" do
         let(:fake_request) do
           instance_double(
@@ -89,6 +127,58 @@ RSpec.describe Utils::ApiLog do
       end
     end
 
+    context "when the payload is over the Kafka size limit" do
+      before do
+        ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = "kafka"
+        ENV["LAGO_KAFKA_API_LOGS_TOPIC"] = "api_logs"
+        stub_const("#{described_class}::MAX_PAYLOAD_BYTESIZE", 1_000)
+      end
+
+      after do
+        ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = nil
+        ENV["LAGO_KAFKA_API_LOGS_TOPIC"] = nil
+      end
+
+      let(:produced_payload) do
+        api_log.produce(fake_request, fake_response, organization:)
+        JSON.parse(kafka_messages.sole[:payload])
+      end
+
+      context "when the response is too large" do
+        let(:fake_response) do
+          instance_double("ActionDispatch::Response", status: 200, body: {"plan" => "a" * 2_000}.to_json)
+        end
+
+        it "replaces the response with a marker and keeps the request body" do
+          expect(produced_payload["request_body"]).to eq({"parameters" => [1, 2, 3, 4]})
+          expect(produced_payload["request_response"]["truncated"]).to eq("true")
+          expect(produced_payload["request_response"]["original_bytesize"].to_i).to be > 1_000
+          expect(produced_payload["http_status"]).to eq(200)
+          expect(produced_payload["request_path"]).to eq("/api/v1/customers")
+        end
+      end
+
+      context "when the request body is too large" do
+        let(:fake_request) do
+          instance_double(
+            "ActionDispatch::Request",
+            user_agent: "RSpec",
+            params: {plan: "a" * 2_000},
+            path: "/api/v1/plans/code",
+            base_url: "https://lago.test",
+            method_symbol: :put,
+            request_id: "1234"
+          )
+        end
+
+        it "replaces both the request body and the response with a marker" do
+          expect(produced_payload["request_body"]["truncated"]).to eq("true")
+          expect(produced_payload["request_response"]["truncated"]).to eq("true")
+          expect(produced_payload["request_path"]).to eq("/api/v1/plans/code")
+        end
+      end
+    end
+
     context "when kafka is not configured" do
       before do
         ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = nil
@@ -102,11 +192,12 @@ RSpec.describe Utils::ApiLog do
     end
 
     [
-      {exception: WaterDrop::Errors::ProduceError, message: "#<Rdkafka::RdkafkaError: Local: Unknown topic (unknown_topic)>"},
-      {exception: WaterDrop::Errors::MessageInvalidError, message: "Message is too large"}
+      {exception: WaterDrop::Errors::ProduceError, message: "#<Rdkafka::RdkafkaError: Local: Unknown topic (unknown_topic)>", level: :error},
+      {exception: WaterDrop::Errors::MessageInvalidError, message: "Message is too large", level: :warning}
     ].each do |error_context|
       exception = error_context[:exception]
       message = error_context[:message]
+      level = error_context[:level]
       context "when producer raises #{exception}" do
         subject(:produce) { api_log.produce(fake_request, fake_response, organization:) }
 
@@ -115,9 +206,10 @@ RSpec.describe Utils::ApiLog do
         end
 
         context "when sentry is configured", :sentry do
-          it "captures the exception and returns false" do
+          it "captures the exception with the #{level} level and returns false" do
             expect { produce }.not_to raise_error
             expect(sentry_events).to include_sentry_event(exception: exception, message: message)
+            expect(sentry_events.last.level).to eq(level)
           end
         end
 

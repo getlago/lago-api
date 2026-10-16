@@ -6,15 +6,9 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Update do
   subject { execute_query(query:, input:) }
 
   let(:required_permission) { "organization:integrations:update" }
-  let(:integration_collection_mapping) { create(:netsuite_collection_mapping, integration:) }
-  let(:integration) { create(:netsuite_integration, organization:) }
-  let(:mapping_type) { %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit].sample.to_s }
-  let(:organization) { membership.organization }
-  let(:membership) { create(:membership) }
   let(:external_account_code) { Faker::Barcode.ean }
   let(:external_id) { SecureRandom.uuid }
   let(:external_name) { Faker::Commerce.department }
-
   let(:query) do
     <<-GQL
       mutation($input: UpdateIntegrationCollectionMappingInput!) {
@@ -30,7 +24,6 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Update do
       }
     GQL
   end
-
   let(:input) do
     original_mapping_type = integration_collection_mapping.mapping_type
     different_integration = create(:netsuite_integration, organization:)
@@ -45,6 +38,12 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Update do
       externalName: external_name
     }
   end
+  let(:integration_collection_mapping) { create(:netsuite_collection_mapping, integration:) }
+  let(:integration) { create(:netsuite_integration, organization:) }
+  let(:mapping_type) { %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit].sample.to_s }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

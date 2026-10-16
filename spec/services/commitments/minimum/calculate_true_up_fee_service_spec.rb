@@ -18,18 +18,8 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
       timestamp:
     )
   end
-
-  let(:from_datetime) { DateTime.parse("2024-01-01T00:00:00") }
-  let(:to_datetime) { DateTime.parse("2024-12-31T23:59:59.999") }
-  let(:charges_from_datetime) { DateTime.parse("2024-01-01T00:00:00") }
-  let(:charges_to_datetime) { DateTime.parse("2024-12-31T23:59:59.999") }
-  let(:fixed_charges_from_datetime) { DateTime.parse("2024-01-01T00:00:00") }
-  let(:fixed_charges_to_datetime) { DateTime.parse("2024-12-31T23:59:59.999") }
-  let(:timestamp) { DateTime.parse("2025-01-01T10:00:00") }
   let(:subscription) { create(:subscription, customer:, plan:, billing_time:, subscription_at:) }
-  let(:customer) { create(:customer, organization:) }
   let(:subscription_at) { DateTime.parse("2024-01-01T00:00:00") }
-  let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:, pay_in_advance:, interval:, bill_charges_monthly:, bill_fixed_charges_monthly:) }
   let(:billing_time) { :calendar }
   let(:bill_charges_monthly) { false }
@@ -38,6 +28,17 @@ RSpec.describe Commitments::Minimum::CalculateTrueUpFeeService do
   let(:interval) { :yearly }
   let(:fixed_charge) { create(:fixed_charge, plan:, pay_in_advance: false) }
   let(:fixed_charge_pay_in_advance) { create(:fixed_charge, :pay_in_advance, plan:) }
+
+  let(:from_datetime) { DateTime.parse("2024-01-01T00:00:00") }
+  let(:to_datetime) { DateTime.parse("2024-12-31T23:59:59.999") }
+  let(:charges_from_datetime) { DateTime.parse("2024-01-01T00:00:00") }
+  let(:charges_to_datetime) { DateTime.parse("2024-12-31T23:59:59.999") }
+  let(:fixed_charges_from_datetime) { DateTime.parse("2024-01-01T00:00:00") }
+  let(:fixed_charges_to_datetime) { DateTime.parse("2024-12-31T23:59:59.999") }
+  let(:timestamp) { DateTime.parse("2025-01-01T10:00:00") }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   describe "#call" do
     subject(:service_call) { service.call }

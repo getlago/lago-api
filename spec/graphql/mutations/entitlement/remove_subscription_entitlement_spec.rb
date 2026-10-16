@@ -6,13 +6,9 @@ RSpec.describe Mutations::Entitlement::RemoveSubscriptionEntitlement, :premium d
   subject { execute_query(query:, input:) }
 
   let(:required_permission) { "subscriptions:update" }
-  let(:organization) { create(:organization) }
-
   let(:feature) { create(:feature, organization:, code: "seats") }
-  let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, organization:, plan:) }
   let(:privilege) { create(:privilege, feature:, code: "max") }
-
   let(:query) do
     <<~GQL
       mutation($input: RemoveSubscriptionEntitlementInput!) {
@@ -22,13 +18,17 @@ RSpec.describe Mutations::Entitlement::RemoveSubscriptionEntitlement, :premium d
       }
     GQL
   end
-
   let(:input) do
     {
       subscriptionId: subscription.id,
       featureCode: feature.code
     }
   end
+
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan, organization:) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

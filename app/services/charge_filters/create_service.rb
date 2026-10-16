@@ -34,6 +34,7 @@ module ChargeFilters
       trigger_filter_cascade(
         action: "create",
         filter_values: result.charge_filter.to_h,
+        code: result.charge_filter.code,
         new_properties: result.charge_filter.properties,
         invoice_display_name: result.charge_filter.invoice_display_name
       )

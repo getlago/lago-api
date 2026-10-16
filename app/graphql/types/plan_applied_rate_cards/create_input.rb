@@ -7,6 +7,7 @@ module Types
 
       argument :plan_id, ID, required: true
       argument :rate_card_code, String, required: true
+      argument :rate_phases, [Types::RatePhases::PhaseInput], required: false
 
       argument :units, GraphQL::Types::Float, required: false
     end

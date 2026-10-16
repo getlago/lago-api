@@ -2,8 +2,8 @@
 
 module Api
   module V2
-    class RateCardsController < Api::BaseController
-      include Api::RequiresProductCatalog
+    class RateCardsController < Api::V2::BaseController
+      cursor_paginated_index(RateCard)
 
       def create
         if create_params[:product_filter_code].present? && product && product_filter.nil?
@@ -58,13 +58,10 @@ module Api
         result = ::RateCardsQuery.call(
           organization: current_organization,
           search_term: params[:search_term],
-          pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
-          },
+          pagination: cursor,
           filters: {
-            product_id: params[:product_id],
-            product_filter_id: params[:product_filter_id],
+            product_ids: Array(params[:product_id]).presence,
+            product_filter_ids: Array(params[:product_filter_id]).presence,
             code: params[:code],
             product_code: params[:product_code],
             product_filter_code: params[:product_filter_code]
@@ -72,12 +69,14 @@ module Api
         )
 
         if result.success?
+          page = ::CursorPagination::Page.new(records: result.rate_cards.includes(:product, :product_filter, :rates), cursor:)
+
           render(
             json: ::CollectionSerializer.new(
-              result.rate_cards.includes(:product, :product_filter, :rates),
-              ::V1::RateCardSerializer,
+              page.records,
+              ::V2::RateCardSerializer,
               collection_name: "rate_cards",
-              meta: pagination_metadata(result.rate_cards)
+              meta: page.meta
             )
           )
         else
@@ -114,7 +113,7 @@ module Api
           :display_on_invoice,
           :regroup_paid_fees,
           :applied_pricing_unit_code,
-          :wallet_targetable,
+          tax_codes: [],
           rates: [
             :code,
             :effective_from,
@@ -139,12 +138,12 @@ module Api
           :display_on_invoice,
           :regroup_paid_fees,
           :applied_pricing_unit_code,
-          :wallet_targetable
+          tax_codes: []
         )
       end
 
       def render_rate_card(rate_card)
-        render(json: ::V1::RateCardSerializer.new(rate_card, root_name: "rate_card", includes: %i[active_rate]))
+        render(json: ::V2::RateCardSerializer.new(rate_card, root_name: "rate_card", includes: %i[active_rate taxes]))
       end
 
       def resource_name

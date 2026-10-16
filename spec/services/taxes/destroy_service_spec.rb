@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Taxes::DestroyService do
   subject(:destroy_service) { described_class.new(tax:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:billing_entity) { organization.default_billing_entity }
   let(:tax) { create(:tax, :applied_to_billing_entity, organization:) }
   let(:customer) { create(:customer, organization:) }
@@ -54,6 +54,9 @@ RSpec.describe Taxes::DestroyService do
       fixed_charge = create(:fixed_charge, organization:)
       fixed_charge_tax = create(:fixed_charge_applied_tax, fixed_charge:, tax:)
 
+      rate_card = create(:rate_card, organization:)
+      rate_card_tax = create(:rate_card_applied_tax, rate_card:, tax:, organization:)
+
       credit_note = create(:credit_note, organization:)
       credit_note_tax = create(:credit_note_applied_tax, credit_note:, tax:)
 
@@ -79,6 +82,7 @@ RSpec.describe Taxes::DestroyService do
       expect { charge_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
       expect { commitment_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
       expect { fixed_charge_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
+      expect { rate_card_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
       expect { credit_note_tax.reload }.to raise_error(ActiveRecord::RecordNotFound)
 
       # Draft invoice/fee taxes removed

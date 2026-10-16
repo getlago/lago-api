@@ -56,6 +56,47 @@ RSpec.describe Events::CreateService do
       expect { create_service.call }.to have_enqueued_job(Events::PostProcessJob)
     end
 
+    context "when the post processing job cannot be enqueued" do
+      before do
+        allow(ActiveJob::Base.queue_adapter).to receive(:enqueue)
+          .and_raise(Redis::CannotConnectError.new("no connection"))
+      end
+
+      # `index_unique_transaction_id` has no `deleted_at` predicate, so keeping the event would
+      # answer the caller's retry with `value_already_exist` forever.
+      it "does not keep the event" do
+        expect { create_service.call }.to raise_error(Redis::CannotConnectError)
+          .and(not_change(Event, :count))
+      end
+
+      context "when kafka is configured", :capture_kafka_messages do
+        before do
+          ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = "kafka"
+          ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"] = "raw_events"
+        end
+
+        it "does not produce the event on kafka" do
+          expect { create_service.call }.to raise_error(Redis::CannotConnectError)
+
+          expect(karafka_producer).not_to have_received(:produce_many_async)
+        end
+      end
+    end
+
+    # `ActiveJob::SerializationError` is an `ArgumentError`, which must not be reported to the
+    # caller as an invalid timestamp.
+    context "when the job cannot be serialized" do
+      before do
+        allow(ActiveJob::Base.queue_adapter).to receive(:enqueue)
+          .and_raise(ActiveJob::SerializationError.new("unserializable"))
+      end
+
+      it "surfaces the failure instead of blaming the payload" do
+        expect { create_service.call }.to raise_error(ActiveJob::SerializationError)
+          .and(not_change(Event, :count))
+      end
+    end
+
     context "when event already exists" do
       let(:existing_event) do
         create(
@@ -77,6 +118,45 @@ RSpec.describe Events::CreateService do
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages.keys).to include(:transaction_id)
         expect(result.error.messages[:transaction_id]).to include("value_already_exist")
+      end
+    end
+
+    context "when timestamp is outside what the event stores can hold" do
+      [-1, 99_999_999_999].each do |value|
+        context "with #{value}" do
+          let(:timestamp) { value }
+
+          it "returns an error and does not create the event" do
+            result = nil
+
+            expect { result = create_service.call }.not_to change(Event, :count)
+            expect(result).not_to be_success
+            expect(result.error.messages).to eq({timestamp: ["value_is_out_of_range"]})
+          end
+        end
+      end
+    end
+
+    context "when a maximum future window is configured" do
+      before { stub_const("Events::TimestampWindow::MAX_FUTURE_HOURS", 24) }
+
+      context "with a timestamp beyond it" do
+        let(:timestamp) { 2.days.from_now.to_f }
+
+        it "returns an error" do
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages).to eq({timestamp: ["value_is_out_of_range"]})
+        end
+      end
+
+      context "with a timestamp within it" do
+        let(:timestamp) { 1.hour.from_now.to_f }
+
+        it "creates the event" do
+          expect(create_service.call).to be_success
+        end
       end
     end
 
@@ -143,6 +223,19 @@ RSpec.describe Events::CreateService do
 
         expect(result).not_to be_success
         expect(result.error.messages).to include({timestamp: ["invalid_format"]})
+      end
+    end
+
+    %w[Infinity -Infinity NaN].each do |value|
+      context "when timestamp is #{value}" do
+        let(:timestamp) { value }
+
+        it "returns an error instead of raising" do
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages).to include({timestamp: ["invalid_format"]})
+        end
       end
     end
 

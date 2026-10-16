@@ -6,11 +6,12 @@ RSpec.describe Emails::ResendService do
   subject(:service) { described_class.new(resource:, to:, cc:, bcc:) }
 
   let(:to) { nil }
-  let(:cc) { nil }
-  let(:bcc) { nil }
-  let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:, email: "customer@example.com") }
   let(:billing_entity) { customer.billing_entity }
+  let(:cc) { nil }
+  let(:bcc) { nil }
+
+  let_it_be(:organization, refind: true) { create_default(:organization) }
 
   before do
     billing_entity.update!(email: "billing@example.com")
@@ -33,7 +34,7 @@ RSpec.describe Emails::ResendService do
     end
 
     context "with an invoice" do
-      let(:resource) { create(:invoice, organization:, customer:, status:) }
+      let(:resource) { create(:invoice, organization:, customer:, status:, fees_amount_cents: 1000) }
 
       context "when invoice is finalized" do
         let(:status) { :finalized }
@@ -93,12 +94,55 @@ RSpec.describe Emails::ResendService do
           billing_entity.save!
         end
 
-        it "returns a not allowed failure" do
+        it "sends the email successfully" do
+          expect do
+            result = service.call
+            expect(result).to be_success
+          end.to have_enqueued_mail(InvoiceMailer, :created)
+        end
+      end
+
+      context "when no sender email address is configured" do
+        let(:status) { :finalized }
+        let(:previous_from_email) { ENV["LAGO_FROM_EMAIL"] }
+
+        before do
+          previous_from_email
+          ENV["LAGO_FROM_EMAIL"] = nil
+        end
+
+        after { ENV["LAGO_FROM_EMAIL"] = previous_from_email }
+
+        it "returns a validation failure" do
           result = service.call
 
           expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-          expect(result.error.code).to eq("email_settings_disabled")
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:from]).to include("must have a sender email address configured")
+        end
+
+        context "when the organization sends from its own email address" do
+          before { organization.update!(premium_integrations: ["from_email"]) }
+
+          it "sends the email successfully" do
+            expect do
+              result = service.call
+              expect(result).to be_success
+            end.to have_enqueued_mail(InvoiceMailer, :created)
+          end
+        end
+      end
+
+      context "when the invoice has no fees" do
+        let(:status) { :finalized }
+        let(:resource) { create(:invoice, organization:, customer:, status:, fees_amount_cents: 0) }
+
+        it "returns a validation failure" do
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:invoice]).to include("must have a non-zero fees amount")
         end
       end
 
@@ -194,6 +238,22 @@ RSpec.describe Emails::ResendService do
           result = service.call
           expect(result).to be_success
         end.to have_enqueued_mail(PaymentReceiptMailer, :created)
+      end
+
+      context "when the payment's payable no longer exists" do
+        before { payment.update_columns(payable_id: SecureRandom.uuid) } # rubocop:disable Rails/SkipsModelValidations
+
+        it "returns a not allowed failure without generating or enqueueing anything" do
+          allow(PaymentReceipts::GeneratePdfService).to receive(:new)
+
+          result = nil
+          expect { result = service.call }.not_to have_enqueued_mail(PaymentReceiptMailer, :created)
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(result.error.code).to eq("payable_not_found")
+          expect(PaymentReceipts::GeneratePdfService).not_to have_received(:new)
+        end
       end
     end
   end

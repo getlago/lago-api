@@ -4,12 +4,8 @@ require "rails_helper"
 
 RSpec.describe Mutations::CreditNotes::Update do
   let(:required_permission) { "credit_notes:update" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, organization:, customer:) }
   let(:credit_note) { create(:credit_note, customer:, invoice:) }
-
   let(:mutation) do
     <<~GQL
       mutation($input: UpdateCreditNoteInput!) {
@@ -20,6 +16,10 @@ RSpec.describe Mutations::CreditNotes::Update do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

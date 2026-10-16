@@ -3,10 +3,11 @@
 module CreditNotes
   class CreateFromProgressiveBillingInvoice < BaseService
     Result = BaseResult[:credit_note]
-    def initialize(progressive_billing_invoice:, amount:, reason: :other)
+    def initialize(progressive_billing_invoice:, amount:, reason: :other, fee_items: nil)
       @progressive_billing_invoice = progressive_billing_invoice
       @amount = amount
       @reason = reason
+      @fee_items = fee_items
 
       super
     end
@@ -16,10 +17,11 @@ module CreditNotes
       return result.forbidden_failure! unless progressive_billing_invoice.progressive_billing?
 
       # Important to call this method as it modifies @amount if needed
-      items = calculate_items!
+      items = fee_items || calculate_items!
       return result unless result.success?
 
       credit_amount_cents = creditable_amount_cents(amount, items)
+      return result unless result.success?
       return result if credit_amount_cents.zero?
 
       credit_note_result = CreditNotes::CreateService.call!(
@@ -36,7 +38,7 @@ module CreditNotes
 
     private
 
-    attr_reader :progressive_billing_invoice, :amount, :reason
+    attr_reader :progressive_billing_invoice, :amount, :reason, :fee_items
 
     def calculate_items!
       items = []
@@ -71,6 +73,7 @@ module CreditNotes
         invoice: progressive_billing_invoice,
         items: items.map { |item| CreditNoteItem.new(fee_id: item[:fee_id], precise_amount_cents: item[:amount_cents]) }
       )
+      return result.fail_with_error!(taxes_result.error) unless taxes_result.success?
 
       (
         amount.truncate(CreditNote::DB_PRECISION_SCALE) -

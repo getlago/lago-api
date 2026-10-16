@@ -5,6 +5,11 @@ require "rails_helper"
 RSpec.describe ::V1::FeeSerializer do
   subject(:serializer) { described_class.new(fee, root_name: "fee", includes: inclusion) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:invoice) { create_default(:invoice) }
   let(:charge) do
     create(:standard_charge, properties: {
       "amount" => "100",
@@ -189,9 +194,9 @@ RSpec.describe ::V1::FeeSerializer do
   end
 
   context "when fee is fixed_charge" do
-    let(:organization) { create(:organization) }
-    let(:customer) { create(:customer, organization:) }
-    let(:plan) { create(:plan, organization:) }
+    let_it_be(:organization) { create_default(:organization) }
+    let_it_be(:customer) { create_default(:customer, organization:) }
+    let_it_be(:plan, refind: true) { create_default(:plan, organization:) }
     let(:subscription) { create(:subscription, customer:, plan:) }
     let(:add_on) { create(:add_on, organization:) }
     let(:fixed_charge) { create(:fixed_charge, plan:, add_on:) }
@@ -257,6 +262,65 @@ RSpec.describe ::V1::FeeSerializer do
     it "does not serializes the fees with date boundaries" do
       expect(result["fee"]["from_date"]).to be_nil
       expect(result["fee"]["to_date"]).to be_nil
+    end
+  end
+
+  context "when fee is product" do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+    let(:invoice) { create(:invoice, organization:, customer:) }
+    let(:billable_metric) { create(:billable_metric, organization:) }
+    let(:product) do
+      create(
+        :product,
+        organization:,
+        billable_metric:,
+        code: "compute",
+        name: "Compute",
+        description: "Compute usage"
+      )
+    end
+    let(:product_filter) do
+      create(:product_filter, organization:, product:, invoice_display_name: "Europe")
+    end
+    let(:billable_metric_filter) do
+      create(:billable_metric_filter, organization:, billable_metric:, key: "region", values: ["eu"])
+    end
+    let(:rate_card) { create(:rate_card, organization:, product:, product_filter:) }
+    let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card:) }
+    let(:fee) do
+      create(
+        :fee,
+        fee_type: "product",
+        invoice:,
+        invoiceable: product,
+        product_filter:,
+        rate_card_rate:,
+        subscription: nil,
+        invoice_display_name: nil
+      )
+    end
+
+    before do
+      create(:product_filter_value, organization:, product_filter:, billable_metric_filter:, value: "eu")
+    end
+
+    it "serializes the product and its filter" do
+      expect(result["fee"]).to include(
+        "lago_subscription_id" => nil,
+        "external_subscription_id" => nil
+      )
+      expect(result["fee"]["item"]).to include(
+        "type" => "product",
+        "code" => "compute",
+        "name" => "Compute",
+        "description" => "Compute usage",
+        "invoice_display_name" => "Compute",
+        "filters" => {"region" => ["eu"]},
+        "filter_invoice_display_name" => "Europe",
+        "lago_item_id" => product.id,
+        "item_type" => "Product"
+      )
     end
   end
 

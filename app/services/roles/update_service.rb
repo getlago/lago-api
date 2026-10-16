@@ -4,8 +4,9 @@ module Roles
   class UpdateService < BaseService
     Result = BaseResult[:role]
 
-    def initialize(role:, params:)
+    def initialize(role:, acting_membership:, params:)
       @role = role
+      @acting_membership = acting_membership
       @params = params
       super
     end
@@ -13,6 +14,8 @@ module Roles
     def call
       return result.not_found_failure!(resource: "role") unless role
       return result.forbidden_failure!(code: "predefined_role") if predefined_role?
+      return result.forbidden_failure!(code: "cannot_grant_permissions") unless acting_membership.can_grant_roles?([role])
+      return result.forbidden_failure!(code: "cannot_grant_permissions") if adding_permissions_not_held?
 
       role.update!(params.slice(:name, :description, :permissions).compact)
 
@@ -26,7 +29,14 @@ module Roles
 
     private
 
-    attr_reader :role, :params
+    attr_reader :role, :acting_membership, :params
+
+    # A member can only update a role they could grant, and only add permissions they hold.
+    def adding_permissions_not_held?
+      return false if params[:permissions].nil?
+
+      !acting_membership.can_grant_permissions?(params[:permissions] - role.permissions)
+    end
 
     def predefined_role?
       role.organization_id.nil?

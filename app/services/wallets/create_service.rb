@@ -19,6 +19,7 @@ module Wallets
       result.billable_metrics = billable_metrics
       result.payment_method = payment_method
 
+      return result.forbidden_failure! if connections_requested? && organization_flag_disabled?(:multi_connection)
       return result unless valid?
 
       code = params[:code]
@@ -45,6 +46,7 @@ module Wallets
       }
 
       attributes[:priority] = params[:priority] if params[:priority]
+      attributes[:x402_enabled] = params[:x402_enabled] if params[:x402_enabled]
 
       if params.key?(:invoice_requires_successful_payment)
         attributes[:invoice_requires_successful_payment] = ActiveModel::Type::Boolean.new.cast(params[:invoice_requires_successful_payment]) || false
@@ -86,6 +88,10 @@ module Wallets
 
         if params[:invoice_custom_section].present?
           InvoiceCustomSections::AttachToResourceService.call(resource: wallet, params:)
+        end
+
+        if connections_requested?
+          BillingObjectConnections::AttachToResourceService.call!(resource: wallet, params:)
         end
 
         billable_metrics.each do |bm|
@@ -161,6 +167,18 @@ module Wallets
 
     def organization_flag_enabled?(flag)
       customer.organization.feature_flag_enabled?(flag)
+    end
+
+    def organization_flag_disabled?(flag)
+      return false if customer.nil?
+
+      !organization_flag_enabled?(flag)
+    end
+
+    def connections_requested?
+      return true if params[:connections].present?
+
+      Array(params[:recurring_transaction_rules]).any? { |rule| rule[:connections].present? }
     end
 
     def valid?

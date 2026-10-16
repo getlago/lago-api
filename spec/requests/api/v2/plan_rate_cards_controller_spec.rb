@@ -4,13 +4,13 @@ require "rails_helper"
 
 RSpec.describe Api::V2::PlanRateCardsController do
   let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, :product_catalog, organization:) }
+  let(:catalog_plan) { create(:catalog_plan, organization:) }
   let(:rate_card) { create(:rate_card, organization:) }
 
   describe "POST /api/v2/plans/:plan_code/applied_rate_cards" do
     subject { post_with_token(organization, "/api/v2/plans/#{plan_code}/applied_rate_cards", {applied_rate_card: create_params}) }
 
-    let(:plan_code) { plan.code }
+    let(:plan_code) { catalog_plan.code }
     let(:create_params) do
       {rate_card_code: rate_card.code, units: "10"}
     end
@@ -22,7 +22,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
 
       expect(response).to have_http_status(:success)
       expect(json[:applied_rate_card][:lago_id]).to be_present
-      expect(json[:applied_rate_card][:plan_code]).to eq(plan.code)
+      expect(json[:applied_rate_card][:plan_code]).to eq(catalog_plan.code)
       expect(json[:applied_rate_card][:rate_card_code]).to eq(rate_card.code)
       expect(json[:applied_rate_card][:rate_phases_count]).to eq(1)
     end
@@ -51,8 +51,8 @@ RSpec.describe Api::V2::PlanRateCardsController do
   describe "GET /api/v2/plans/:plan_code/applied_rate_cards" do
     subject { get_with_token(organization, "/api/v2/plans/#{plan_code}/applied_rate_cards") }
 
-    let(:plan_code) { plan.code }
-    let!(:plan_rate_card) { create(:plan_rate_card, organization:, plan:) }
+    let(:plan_code) { catalog_plan.code }
+    let!(:plan_rate_card) { create(:plan_rate_card, organization:, catalog_plan:) }
 
     before { create(:plan_rate_card, organization:) }
 
@@ -63,6 +63,25 @@ RSpec.describe Api::V2::PlanRateCardsController do
 
       expect(response).to have_http_status(:success)
       expect(json[:applied_rate_cards].map { |i| i[:lago_id] }).to eq([plan_rate_card.id])
+      expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
+    end
+
+    context "with an invalid limit and an unknown plan" do
+      subject { get_with_token(organization, "/api/v2/plans/unknown/applied_rate_cards", {limit: 0}) }
+
+      it "rejects the pagination parameters first" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:code]).to eq("invalid_pagination_limit")
+      end
+    end
+
+    it_behaves_like "a cursor paginated v2 endpoint", collection: :applied_rate_cards, model: PlanRateCard do
+      let(:paginated_path) { "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards" }
+      let(:create_paginated_record) { ->(created_at) { create(:plan_rate_card, organization:, catalog_plan:, created_at:) } }
+      # Rendered under the same collection name, from another table.
+      let(:other_table_record) { create(:contract_rate_card, organization:) }
     end
 
     context "when the plan does not exist" do
@@ -76,10 +95,65 @@ RSpec.describe Api::V2::PlanRateCardsController do
     end
   end
 
-  describe "GET /api/v2/plans/:plan_code/applied_rate_cards/:code" do
-    subject { get_with_token(organization, "/api/v2/plans/#{plan.code}/applied_rate_cards/#{plan_rate_card.rate_card.code}") }
+  context "with a nested rate_phases sequence" do
+    subject do
+      post_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards", {applied_rate_card: {
+        rate_card_code: rate_card.code,
+        units: "1",
+        rate_phases: [
+          {code: "launch", position: 1, name: "Launch", billing_interval_cycle_count: 3, rate_override: {rate_model: "standard", rate_properties: {amount: "0.02"}}},
+          {code: "standard", position: 2, name: "Standard", billing_interval_cycle_count: nil}
+        ]
+      }})
+    end
 
-    let(:plan_rate_card) { create(:plan_rate_card, organization:, plan:) }
+    it "creates the entry with the provided phases and overrides in one call" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:applied_rate_card][:rate_phases_count]).to eq(2)
+      expect(RateOverride.count).to eq(1)
+    end
+
+    context "when no phase is indefinite" do
+      subject do
+        post_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards", {applied_rate_card: {
+          rate_card_code: rate_card.code,
+          rate_phases: [
+            {code: "a", position: 1, billing_interval_cycle_count: 2},
+            {code: "b", position: 2, billing_interval_cycle_count: 3}
+          ]
+        }})
+      end
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json.dig(:error_details, :rate_phases)).to eq(["last_phase_must_be_indefinite"])
+      end
+    end
+
+    context "when the list is explicitly empty" do
+      subject do
+        post_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards", {applied_rate_card: {
+          rate_card_code: rate_card.code, rate_phases: []
+        }})
+      end
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json.dig(:error_details, :rate_phases)).to eq(["value_is_mandatory"])
+      end
+    end
+  end
+
+  describe "GET /api/v2/plans/:plan_code/applied_rate_cards/:code" do
+    subject { get_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/#{plan_rate_card.rate_card.code}") }
+
+    let(:plan_rate_card) { create(:plan_rate_card, organization:, catalog_plan:) }
 
     include_examples "requires API permission", "plan_rate_card", "read"
 
@@ -91,7 +165,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
     end
 
     context "when it does not exist" do
-      subject { get_with_token(organization, "/api/v2/plans/#{plan.code}/applied_rate_cards/unknown") }
+      subject { get_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/unknown") }
 
       it "returns a not found error" do
         subject
@@ -102,9 +176,9 @@ RSpec.describe Api::V2::PlanRateCardsController do
   end
 
   describe "PUT /api/v2/plans/:plan_code/applied_rate_cards/:code" do
-    subject { put_with_token(organization, "/api/v2/plans/#{plan.code}/applied_rate_cards/#{plan_rate_card.rate_card.code}", {applied_rate_card: {units: "12"}}) }
+    subject { put_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/#{plan_rate_card.rate_card.code}", {applied_rate_card: {units: "12"}}) }
 
-    let(:plan_rate_card) { create(:plan_rate_card, organization:, plan:, units: 5) }
+    let(:plan_rate_card) { create(:plan_rate_card, organization:, catalog_plan:, units: 5) }
 
     include_examples "requires API permission", "plan_rate_card", "write"
 
@@ -115,8 +189,8 @@ RSpec.describe Api::V2::PlanRateCardsController do
       expect(json[:applied_rate_card][:units]).to eq("12.0")
     end
 
-    context "when the plan has subscriptions" do
-      before { create(:subscription, plan:, organization:) }
+    context "when the plan has contracts" do
+      before { create(:contract, catalog_plan:, organization:) }
 
       it "returns a validation error" do
         subject
@@ -126,7 +200,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
     end
 
     context "when it does not exist" do
-      subject { put_with_token(organization, "/api/v2/plans/#{plan.code}/applied_rate_cards/unknown", {applied_rate_card: {units: "12"}}) }
+      subject { put_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/unknown", {applied_rate_card: {units: "12"}}) }
 
       it "returns a not found error" do
         subject
@@ -137,9 +211,9 @@ RSpec.describe Api::V2::PlanRateCardsController do
   end
 
   describe "DELETE /api/v2/plans/:plan_code/applied_rate_cards/:code" do
-    subject { delete_with_token(organization, "/api/v2/plans/#{plan.code}/applied_rate_cards/#{plan_rate_card.rate_card.code}") }
+    subject { delete_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/#{plan_rate_card.rate_card.code}") }
 
-    let(:plan_rate_card) { create(:plan_rate_card, organization:, plan:) }
+    let(:plan_rate_card) { create(:plan_rate_card, organization:, catalog_plan:) }
 
     include_examples "requires API permission", "plan_rate_card", "write"
 
@@ -147,11 +221,11 @@ RSpec.describe Api::V2::PlanRateCardsController do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(plan.reload.applied_rate_cards).to be_empty
+      expect(catalog_plan.reload.applied_rate_cards).to be_empty
     end
 
-    context "when the plan has subscriptions" do
-      before { create(:subscription, plan:, organization:) }
+    context "when the plan has contracts" do
+      before { create(:contract, catalog_plan:, organization:) }
 
       it "returns a validation error" do
         subject

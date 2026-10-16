@@ -42,10 +42,19 @@ module V1
       payload = payload.merge(usage_threshold:) if include?(:usage_threshold)
       payload = payload.merge(applicable_usage_thresholds) if include?(:applicable_usage_thresholds)
       payload = payload.merge(applied_invoice_custom_sections) if include?(:applied_invoice_custom_sections)
-      payload.merge(activation_rules)
+      payload = payload.merge(activation_rules)
+      payload.merge(connections)
     end
 
     private
+
+    def connections
+      {
+        connections: model.connection_routing.index_by { it.category }.transform_values do |routing|
+          {behavior: routing.behavior, code: routing.code}
+        end
+      }
+    end
 
     def organization
       options[:organization] || model.organization
@@ -87,11 +96,7 @@ module V1
       ::V1::UsageThresholdSerializer.new(options[:usage_threshold]).serialize
     end
 
-    # Billing periods derive from the plan interval, which product-catalog
-    # plans don't have: their rate cards each carry their own billing cycle.
     def dates_service
-      return if model.plan.product_catalog?
-
       @dates_service ||= ::Subscriptions::DatesService.new_instance(model, model.billing_reference_time, current_usage: true)
     end
 
@@ -103,9 +108,10 @@ module V1
       ).serialize
     end
 
+    # A section deleted before its links were cleaned up is skipped, not served as nil.
     def applied_invoice_custom_sections
       ::CollectionSerializer.new(
-        model.applied_invoice_custom_sections,
+        model.applied_invoice_custom_sections.joins(:invoice_custom_section).includes(:invoice_custom_section),
         ::V1::AppliedInvoiceCustomSectionSerializer,
         collection_name: "applied_invoice_custom_sections"
       ).serialize

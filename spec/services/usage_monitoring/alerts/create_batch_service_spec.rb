@@ -6,9 +6,8 @@ RSpec.describe UsageMonitoring::Alerts::CreateBatchService do
   describe ".call" do
     subject(:result) { described_class.call(organization:, alertable:, alerts_params:) }
 
-    let(:organization) { create(:organization) }
+    let_it_be(:organization) { create_default(:organization) }
     let(:alertable) { create(:subscription, organization:) }
-    let(:billable_metrics) { create_list(:billable_metric, 2, organization:) }
     let(:alerts_params) do
       [
         {
@@ -26,6 +25,13 @@ RSpec.describe UsageMonitoring::Alerts::CreateBatchService do
           thresholds: [{code: "critical", value: 100}]
         }
       ]
+    end
+
+    let_it_be(:billable_metrics) { create_list(:billable_metric, 2, organization:) }
+
+    before_all do
+      create_default(:customer)
+      create_default(:plan)
     end
 
     it "creates multiple alerts" do
@@ -80,6 +86,23 @@ RSpec.describe UsageMonitoring::Alerts::CreateBatchService do
           have_attributes(code: "alert1", name: "First Alert", wallet: alertable),
           have_attributes(code: "alert2", name: "Second Alert", wallet: alertable)
         ])
+      end
+
+      context "when two alerts of the same type share a code" do
+        let(:alerts_params) do
+          [
+            {alert_type: "wallet_balance_amount", code: "duplicated", thresholds: [{value: 80}]},
+            {alert_type: "wallet_balance_amount", code: "duplicated", thresholds: [{value: 100}]}
+          ]
+        end
+
+        it "rejects the second one as an existing alert" do
+          expect { result }.not_to change(UsageMonitoring::Alert, :count)
+
+          expect(result).to be_failure
+          expect(result.error.messages.keys).to eq([1])
+          expect(result.error.messages[1][:errors]).to eq('Validation errors: {"base":["alert_already_exists"]}')
+        end
       end
     end
 

@@ -17,7 +17,10 @@ module Mutations
 
       def resolve(**args)
         rate_card_rate = current_organization.rate_card_rates.find_by(id: args[:id])
-        result = ::RateCardRates::UpdateService.call(rate_card_rate:, params: args.except(:id))
+        params = args.except(:id).to_h
+        # Typed input objects reach the service as plain hashes, like charges do.
+        params[:rate_properties] = params[:rate_properties].to_h if params[:rate_properties]
+        result = ::RateCardRates::UpdateService.call(rate_card_rate:, params:)
 
         result.success? ? result.rate_card_rate : result_error(result)
       end

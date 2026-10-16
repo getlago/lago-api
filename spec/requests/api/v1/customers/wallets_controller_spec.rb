@@ -13,6 +13,17 @@ RSpec.describe Api::V1::Customers::WalletsController do
 
   before { subscription }
 
+  # Reproduces the reported sequence: create a wallet, terminate it, then create a new one
+  # reusing the code. The terminated wallet must be persisted first for the endpoints to
+  # have a chance of resolving it instead of the active one.
+  shared_context "with a terminated wallet created before the active one" do
+    let(:other_wallet) { create(:wallet, customer:, code: "primary", status: "terminated") }
+    let(:wallet) do
+      other_wallet
+      create(:wallet, customer:, code: "primary")
+    end
+  end
+
   describe "POST /api/v1/customers/:customer_external_id/wallets" do
     it_behaves_like "a wallet create endpoint" do
       subject do
@@ -104,6 +115,16 @@ RSpec.describe Api::V1::Customers::WalletsController do
           expect(other_wallet.reload.name).not_to eq(update_params[:name])
         end
       end
+
+      context "when the terminated wallet sharing the code was created before the active one" do
+        include_context "with a terminated wallet created before the active one"
+
+        it "updates the active wallet" do
+          subject
+          expect(wallet.reload.name).to eq(update_params[:name])
+          expect(other_wallet.reload.name).not_to eq(update_params[:name])
+        end
+      end
     end
   end
 
@@ -142,6 +163,15 @@ RSpec.describe Api::V1::Customers::WalletsController do
           expect(json[:wallet][:lago_id]).to eq(wallet.id)
         end
       end
+
+      context "when the terminated wallet sharing the code was created before the active one" do
+        include_context "with a terminated wallet created before the active one"
+
+        it "returns the active wallet" do
+          subject
+          expect(json[:wallet][:lago_id]).to eq(wallet.id)
+        end
+      end
     end
   end
 
@@ -150,6 +180,17 @@ RSpec.describe Api::V1::Customers::WalletsController do
       subject { delete_with_token(organization, "/api/v1/customers/#{external_id}/wallets/#{id}") }
 
       let(:id) { wallet.code }
+
+      context "when the terminated wallet sharing the code was created before the active one" do
+        include_context "with a terminated wallet created before the active one"
+
+        it "terminates the active wallet" do
+          subject
+
+          expect(json[:wallet][:lago_id]).to eq(wallet.id)
+          expect(wallet.reload.status).to eq("terminated")
+        end
+      end
     end
   end
 

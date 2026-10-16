@@ -4,9 +4,6 @@ require "rails_helper"
 
 RSpec.describe Mutations::Wallets::Update, :premium do
   let(:required_permission) { "wallets:update" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
   let(:billable_metric) { create(:billable_metric, organization: membership.organization) }
   let(:subscription) { create(:subscription, customer:) }
   let(:wallet) { create(:wallet, customer:, purchase_order_number: wallet_purchase_order_number) }
@@ -16,7 +13,6 @@ RSpec.describe Mutations::Wallets::Update, :premium do
     create(:recurring_transaction_rule, wallet:, purchase_order_number: recurring_transaction_rule_purchase_order_number)
   end
   let(:recurring_transaction_rule_purchase_order_number) { nil }
-
   let(:mutation) do
     <<-GQL
       mutation($input: UpdateCustomerWalletInput!) {
@@ -65,6 +61,11 @@ RSpec.describe Mutations::Wallets::Update, :premium do
       }
     GQL
   end
+
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:plan, refind: true) { create_default(:plan) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
+  let_it_be(:customer, refind: true) { create_default(:customer, organization:) }
 
   before do
     subscription
@@ -332,6 +333,88 @@ RSpec.describe Mutations::Wallets::Update, :premium do
 
       expect(result["data"]["updateCustomerWallet"]["id"]).to eq(wallet.id)
       expect(wallet.reload.billing_entity_id).to eq(billing_entity.id)
+    end
+  end
+
+  context "with connections" do
+    let(:stripe_connection) { create(:stripe_customer, customer:, code: "stripe_us") }
+
+    let(:connections_mutation) do
+      <<-GQL
+        mutation($input: UpdateCustomerWalletInput!) {
+          updateCustomerWallet(input: $input) {
+            id
+            recurringTransactionRules { lagoId }
+          }
+        }
+      GQL
+    end
+
+    def update_wallet(input)
+      execute_graphql(
+        current_organization: organization,
+        current_user: membership.user,
+        permissions: required_permission,
+        query: connections_mutation,
+        variables: {input: {id: wallet.id, priority: 1}.merge(input)}
+      )
+    end
+
+    before do
+      organization.enable_feature_flag!(:multi_connection)
+      stripe_connection
+    end
+
+    it "pins the connection on the wallet" do
+      update_wallet(connections: {payment: {code: "stripe_us"}})
+
+      expect(wallet.reload.effective_payment_connection).to eq(stripe_connection)
+    end
+
+    it "clears the override when inherit is sent" do
+      create(:billing_object_connection, owner: wallet, organization:, category: "payment", behavior: "skip")
+
+      expect { update_wallet(connections: {payment: {behavior: "inherit"}}) }
+        .to change(BillingObjectConnection, :count).by(-1)
+
+      expect(wallet.reload.billing_object_connections).to be_empty
+    end
+
+    it "pins a per-rule connection through the rule update path" do
+      recurring_transaction_rule
+
+      update_wallet(
+        recurringTransactionRules: [
+          {
+            lagoId: recurring_transaction_rule.id,
+            trigger: "interval",
+            interval: "monthly",
+            connections: {payment: {code: "stripe_us"}}
+          }
+        ]
+      )
+
+      rule = wallet.reload.recurring_transaction_rules.active.sole
+      expect(rule.id).to eq(recurring_transaction_rule.id)
+      expect(rule.billing_object_connections.sole).to have_attributes(
+        category: "payment",
+        behavior: "specific",
+        payment_provider_customer_id: stripe_connection.id
+      )
+    end
+
+    it "returns a validation error when the code does not resolve" do
+      result = update_wallet(connections: {payment: {code: "nope"}})
+
+      expect(result["errors"].first["extensions"]["details"]["connections"]).to include("connection_not_found")
+    end
+
+    it "returns a forbidden error when the multi_connection flag is disabled" do
+      organization.disable_feature_flag!(:multi_connection)
+
+      result = update_wallet(connections: {payment: {code: "stripe_us"}})
+
+      expect(result["errors"].first["extensions"]["code"]).to eq("feature_unavailable")
     end
   end
 end

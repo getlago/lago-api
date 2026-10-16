@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe ProductFilters::CreateService do
   subject(:result) { described_class.call(product:, params:) }
 
-  let(:organization) { create(:organization) }
-  let(:billable_metric) { create(:billable_metric, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:billable_metric, refind: true) { create(:billable_metric, organization:) }
   let(:product) { create(:product, organization:, billable_metric:) }
   let(:region_filter) { create(:billable_metric_filter, organization:, billable_metric:, key: "region", values: %w[us eu]) }
   let(:scheme_filter) { create(:billable_metric_filter, organization:, billable_metric:, key: "scheme", values: %w[visa mastercard]) }
@@ -72,12 +72,28 @@ RSpec.describe ProductFilters::CreateService do
       }
     end
 
-    it "creates the filter matching any value of the key" do
+    it "creates the filter selecting all configured values of the key" do
       expect { result }.to change(ProductFilterValue, :count).by(1)
 
       value = result.product_filter.values.sole
       expect(value.billable_metric_filter).to eq(region_filter)
       expect(value.value).to be_nil
+      expect(result.product_filter.to_h).to eq("region" => [nil])
+      expect(result.product_filter.to_h_with_all_values).to eq("region" => %w[us eu])
+    end
+
+    context "when value is explicitly nil" do
+      before { params[:values] = [{key: region_filter.key, value: nil}] }
+
+      it "creates the filter selecting all configured values of the key" do
+        expect { result }.to change(ProductFilter, :count).by(1)
+          .and change(ProductFilterValue, :count).by(1)
+
+        expect(result).to be_success
+        expect(result.product_filter.values.sole.billable_metric_filter).to eq(region_filter)
+        expect(result.product_filter.values.sole.value).to be_nil
+        expect(result.product_filter.to_h_with_all_values).to eq("region" => %w[us eu])
+      end
     end
   end
 
@@ -215,5 +231,25 @@ RSpec.describe ProductFilters::CreateService do
   it "produces an activity log" do
     filter = result.product_filter
     expect(Utils::ActivityLog).to have_produced("product_filter.created").after_commit.with(filter)
+  end
+
+  # Deleting a metric discards its filters asynchronously; a create landing in
+  # that window would otherwise be orphaned when the cleanup job runs.
+  context "when the billable metric was just deleted" do
+    before { billable_metric.discard! }
+
+    let(:params) do
+      {
+        name: "US",
+        code: "us",
+        values: [{billable_metric_filter_id: region_filter.id, value: "us"}]
+      }
+    end
+
+    it "blocks the create instead of orphaning a reference" do
+      expect { result }.not_to change(ProductFilter, :count)
+      expect(result).not_to be_success
+      expect(result.error.messages[:"values.billable_metric_filter"]).to eq(["billable_metric_deleted"])
+    end
   end
 end

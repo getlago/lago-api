@@ -6,8 +6,13 @@ RSpec.describe UsageMonitoring::Alerts::DestroyAllService do
   describe ".call" do
     subject(:result) { described_class.call(alertable: alertable) }
 
-    let(:organization) { create(:organization) }
+    let_it_be(:organization) { create_default(:organization) }
     let(:alertable) { create(:subscription, organization:) }
+
+    before_all do
+      create_default(:customer)
+      create_default(:plan)
+    end
 
     context "when alertable is a subscription" do
       let!(:alert1) do
@@ -26,6 +31,17 @@ RSpec.describe UsageMonitoring::Alerts::DestroyAllService do
         expect(alert1.reload).to be_discarded
         expect(alert2.reload).to be_discarded
         expect(other_alert.reload).not_to be_discarded
+      end
+
+      it "locks the alert rows before deleting their thresholds" do
+        statements = capture_sql { result }
+
+        locked_alerts = statements.index { it.include?("usage_monitoring_alerts") && it.include?("FOR UPDATE") }
+        deleted_thresholds = statements.index { it.start_with?("DELETE FROM \"usage_monitoring_alert_thresholds\"") }
+
+        expect(locked_alerts).not_to be_nil
+        expect(deleted_thresholds).not_to be_nil
+        expect(locked_alerts).to be < deleted_thresholds
       end
 
       it "deletes all thresholds for the discarded alerts" do

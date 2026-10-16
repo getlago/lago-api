@@ -5,7 +5,12 @@ require "rails_helper"
 RSpec.describe Products::DestroyService do
   subject(:result) { described_class.call(product:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
+
+  before_all do
+    create_default(:billable_metric)
+  end
+
   let(:product) { create(:product, :with_filters, organization:) }
 
   before do
@@ -50,7 +55,7 @@ RSpec.describe Products::DestroyService do
   context "when the item is attached to a subscription" do
     before do
       rate_card = create(:rate_card, organization:, product:)
-      create(:subscription_rate_card, organization:, rate_card:)
+      create(:contract_rate_card, organization:, rate_card:)
     end
 
     it "returns a validation failure and discards nothing" do

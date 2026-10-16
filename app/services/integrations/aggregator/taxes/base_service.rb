@@ -82,8 +82,8 @@ module Integrations
                 type: b["type"]
               )
             elsif b["rate"]
-              # If there are taxes, that client shouldn't pay, we nullify the taxes
-              if taxes_to_pay.zero? && b["tax_amount"].positive?
+              # If exact taxes are at least one cent but booked taxes are zero, the seller pays them
+              if taxes_to_pay.zero? && b["tax_amount"] >= 1
                 TaxResult::TaxBreakdownItem.new(
                   name: "Tax",
                   rate: "0.00",

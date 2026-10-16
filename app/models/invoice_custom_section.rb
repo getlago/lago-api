@@ -12,6 +12,12 @@ class InvoiceCustomSection < ApplicationRecord
   has_many :billing_entity_applied_invoice_custom_sections,
     class_name: "BillingEntity::AppliedInvoiceCustomSection",
     dependent: :destroy
+  has_many :subscription_applied_invoice_custom_sections,
+    class_name: "Subscription::AppliedInvoiceCustomSection",
+    dependent: :destroy
+  has_many :contract_applied_invoice_custom_sections,
+    class_name: "Contract::AppliedInvoiceCustomSection",
+    dependent: :destroy
 
   SECTION_TYPES = {manual: "manual", system_generated: "system_generated"}.freeze
   enum :section_type, SECTION_TYPES, default: :manual, prefix: :section_type

@@ -16,9 +16,11 @@ module Mutations
       type Types::PlanAppliedRateCards::Object
 
       def resolve(**args)
-        plan = current_organization.plans.parents.find_by(id: args[:plan_id])
+        # The public argument stays `plan_id`; internally these plans live in
+        # the catalog_plans table.
+        catalog_plan = current_organization.catalog_plans.find_by(id: args[:plan_id])
 
-        result = ::PlanRateCards::CreateService.call(plan:, params: args.except(:plan_id))
+        result = ::PlanRateCards::CreateService.call(catalog_plan:, params: args.except(:plan_id))
 
         result.success? ? result.plan_rate_card : result_error(result)
       end

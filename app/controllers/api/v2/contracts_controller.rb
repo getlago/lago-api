@@ -1,0 +1,166 @@
+# frozen_string_literal: true
+
+module Api
+  module V2
+    class ContractsController < Api::V2::BaseController
+      cursor_paginated_index(Contract)
+
+      def create
+        result = ::Contracts::CreateService.call(
+          organization: current_organization,
+          params: create_params.to_h.deep_symbolize_keys
+        )
+
+        if result.success?
+          render_contract(result.contract)
+        else
+          render_error_response(result)
+        end
+      end
+
+      def update
+        contract = current_organization.contracts.live_by_external_id(params[:external_id])
+
+        result = ::Contracts::UpdateService.call(
+          contract:,
+          params: update_params.to_h.deep_symbolize_keys
+        )
+
+        if result.success?
+          render_contract(result.contract)
+        else
+          render_error_response(result)
+        end
+      end
+
+      # A contract is never destroyed: DELETE ends its lifecycle. An active
+      # contract is terminated, a pending one canceled — the service decides.
+      def terminate
+        contract = current_organization.contracts.terminatable_by_external_id(params[:external_id])
+
+        result = ::Contracts::TerminateService.call(contract:)
+
+        if result.success?
+          render_contract(result.contract)
+        else
+          render_error_response(result)
+        end
+      end
+
+      def index
+        filters = params.permit(:plan_code, :external_customer_id, :external_id, :has_rate_overrides, billing_entity_ids: [])
+        # Accept both ?status=pending and ?status[]=pending — strong params
+        # would silently drop the scalar form and hand back active contracts
+        # to a caller who believes they filtered.
+        statuses = params[:status].is_a?(Array) ? params[:status] : [params[:status]]
+        filters[:status] = statuses.compact_blank.presence || ["active"]
+
+        result = ::ContractsQuery.call(
+          organization: current_organization,
+          pagination: cursor,
+          filters:,
+          search_term: params[:search_term]
+        )
+
+        if result.success?
+          page = ::CursorPagination::Page.new(records: result.contracts.includes(:catalog_plan, customer: :billing_entity), cursor:)
+
+          # One grouped query instead of one COUNT per row in the serializer.
+          applied_rate_cards_counts = ContractRateCard
+            .where(contract_id: page.records.map(&:id))
+            .group(:contract_id)
+            .count
+
+          render(
+            json: ::CollectionSerializer.new(
+              page.records,
+              ::V2::ContractSerializer,
+              collection_name: "contracts",
+              meta: page.meta,
+              applied_rate_cards_counts:
+            )
+          )
+        else
+          render_error_response(result)
+        end
+      end
+
+      def show
+        # No status filter resolves to the live contract (pending or active),
+        # so a pending contract is visible on its own detail URL and matches
+        # what the nested applied-rate-card endpoints operate on. An explicit
+        # status reads a specific one, including terminated/canceled history.
+        contract =
+          if params[:status].present?
+            current_organization.contracts
+              .order(started_at: :desc)
+              .find_by(external_id: params[:external_id], status: requested_status)
+          else
+            current_organization.contracts.live_by_external_id(params[:external_id])
+          end
+        return not_found_error(resource: "contract") unless contract
+
+        render(
+          json: ::V2::ContractSerializer.new(
+            contract,
+            root_name: "contract",
+            includes: %i[applied_rate_cards applied_invoice_custom_sections]
+          )
+        )
+      end
+
+      private
+
+      # The column is a PostgreSQL enum: an unknown value would be a
+      # database-level cast error, so anything else falls back to active.
+      def requested_status
+        if Contract::STATUSES.value?(params[:status])
+          params[:status]
+        else
+          "active"
+        end
+      end
+
+      def create_params
+        params.require(:contract).permit(
+          :external_customer_id,
+          :external_id,
+          :name,
+          :plan_code,
+          :billing_time,
+          :billing_anchor_date,
+          :started_at,
+          :ended_at,
+          :consolidate_invoice,
+          :purchase_order_number,
+          invoice_custom_section: [:skip_invoice_custom_sections, {invoice_custom_section_codes: []}]
+        )
+      end
+
+      # external_customer_id and external_id are set at creation and address the
+      # contract. Contracts::UpdateService decides which of the rest may change
+      # for the contract's status.
+      def update_params
+        params.require(:contract).permit(
+          :name,
+          :plan_code,
+          :billing_time,
+          :billing_anchor_date,
+          :started_at,
+          :ended_at,
+          :consolidate_invoice,
+          :purchase_order_number,
+          invoice_custom_section: [:skip_invoice_custom_sections, {invoice_custom_section_codes: []}]
+        )
+      end
+
+      def render_contract(contract)
+        render(json: ::V2::ContractSerializer.new(contract, root_name: "contract", includes: %i[applied_rate_cards applied_invoice_custom_sections]))
+      end
+
+      def resource_name
+        "contract"
+      end
+    end
+  end
+end

@@ -8,8 +8,8 @@ RSpec.describe PasswordResets::ResetService do
   include_context "with mocked security logger"
 
   describe "#call" do
-    let(:organization) { create(:organization) }
-    let(:membership) { create(:membership, organization:) }
+    let_it_be(:organization, refind: true) { create(:organization) }
+    let_it_be(:membership, refind: true) { create(:membership, organization:) }
     let(:user) { membership.user }
     let(:password_reset) { create(:password_reset, user:) }
     let(:reset_args) do

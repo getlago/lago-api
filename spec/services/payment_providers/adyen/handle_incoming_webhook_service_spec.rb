@@ -4,21 +4,19 @@ require "rails_helper"
 
 RSpec.describe PaymentProviders::Adyen::HandleIncomingWebhookService do
   let(:webhook_service) { described_class.new(organization_id:, body:, code:) }
-
-  let(:organization) { create(:organization) }
   let(:organization_id) { organization.id }
   let(:adyen_provider) { create(:adyen_provider, organization:, hmac_key:) }
   let(:hmac_key) { "a1b2c3d4e5f6" }
   let(:code) { nil }
-
   let(:body) do
     JSON.parse(event_response_json)["notificationItems"].first&.dig("NotificationRequestItem")
   end
-
   let(:event_response_json) do
     path = Rails.root.join("spec/fixtures/adyen/webhook_authorisation_response.json")
     File.read(path)
   end
+
+  let_it_be(:organization) { create(:organization) }
 
   before { adyen_provider }
 

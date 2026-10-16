@@ -4,14 +4,9 @@ require "rails_helper"
 
 RSpec.describe Mutations::Integrations::FetchDraftInvoiceTaxes do
   let(:required_permission) { "invoices:create" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:integration) { create(:anrok_integration, organization:) }
   let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
   let(:currency) { "EUR" }
-  let(:customer) { create(:customer, organization:) }
-  let(:add_on_first) { create(:add_on, organization:) }
-  let(:add_on_second) { create(:add_on, amount_cents: 400, organization:) }
   let(:response) { instance_double(Net::HTTPOK) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { "https://api.nango.dev/v1/anrok/draft_invoices" }
@@ -81,6 +76,13 @@ RSpec.describe Mutations::Integrations::FetchDraftInvoiceTaxes do
     GQL
   end
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
+  let_it_be(:add_on_first) { create_default(:add_on, organization:) }
+  let_it_be(:add_on_second) { create_default(:add_on, amount_cents: 400, organization:) }
+
   before do
     integration_customer
     integration_collection_mapping1
@@ -136,6 +138,91 @@ RSpec.describe Mutations::Integrations::FetchDraftInvoiceTaxes do
     expect(breakdown2["taxAmount"]).to eq("0")
     expect(breakdown2["type"]).to eq("exempt")
     expect(breakdown2["enumedTaxCode"]).to eq("reverse_charge")
+
+    expect(lago_client).to have_received(:post_with_response) do |payload, _headers|
+      expect(payload.first["fees"].map { |item| item["item_id"] }).to eq([add_on_first.id, add_on_second.id])
+    end
+  end
+
+  context "when a fee has no amount" do
+    let(:fees) do
+      [
+        {
+          addOnId: add_on_first.id,
+          unitAmountCents: 1200,
+          units: 2,
+          description: "desc-123",
+          invoiceDisplayName: "fee-123",
+          fromDatetime: current_time.utc.iso8601(3),
+          toDatetime: current_time.utc.iso8601(3)
+        },
+        {
+          addOnId: add_on_second.id,
+          unitAmountCents: 0,
+          units: 1,
+          description: "desc-12345",
+          invoiceDisplayName: "fee-12345",
+          fromDatetime: current_time.utc.iso8601(3),
+          toDatetime: current_time.utc.iso8601(3)
+        }
+      ]
+    end
+
+    it "excludes it from the request" do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            customerId: customer.id,
+            currency:,
+            fees:
+          }
+        }
+      )
+
+      expect(lago_client).to have_received(:post_with_response) do |payload, _headers|
+        expect(payload.first["fees"].map { |fee| fee["item_id"] }).to eq([add_on_first.id])
+      end
+    end
+  end
+
+  context "when no fee has an amount" do
+    let(:fees) do
+      [
+        {
+          addOnId: add_on_first.id,
+          unitAmountCents: 0,
+          units: 2,
+          description: "desc-123",
+          invoiceDisplayName: "fee-123",
+          fromDatetime: current_time.utc.iso8601(3),
+          toDatetime: current_time.utc.iso8601(3)
+        }
+      ]
+    end
+
+    it "still asks the provider, standing the request on a single fee" do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            customerId: customer.id,
+            currency:,
+            fees:
+          }
+        }
+      )
+
+      expect(lago_client).to have_received(:post_with_response) do |payload, _headers|
+        expect(payload.first["fees"].map { |fee| fee["item_id"] }).to eq([add_on_first.id])
+      end
+    end
   end
 
   context "when there is tax error" do

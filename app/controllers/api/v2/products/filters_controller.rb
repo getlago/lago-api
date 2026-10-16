@@ -3,8 +3,8 @@
 module Api
   module V2
     module Products
-      class FiltersController < Api::BaseController
-        include Api::RequiresProductCatalog
+      class FiltersController < Api::V2::BaseController
+        cursor_paginated_index(ProductFilter)
 
         before_action :find_product
         before_action :find_product_filter, only: %i[show update destroy]
@@ -13,20 +13,19 @@ module Api
           result = ::ProductFiltersQuery.call(
             organization: current_organization,
             search_term: params[:search_term],
-            pagination: {
-              page: params[:page],
-              limit: params[:per_page] || PER_PAGE
-            },
+            pagination: cursor,
             filters: {product_id: product.id}
           )
 
           if result.success?
+            page = ::CursorPagination::Page.new(records: result.product_filters, cursor:)
+
             render(
               json: ::CollectionSerializer.new(
-                result.product_filters,
-                ::V1::ProductFilterSerializer,
+                page.records,
+                ::V2::ProductFilterSerializer,
                 collection_name: "filters",
-                meta: pagination_metadata(result.product_filters)
+                meta: page.meta
               )
             )
           else
@@ -112,7 +111,7 @@ module Api
         end
 
         def render_filter(filter, values: nil)
-          render(json: ::V1::ProductFilterSerializer.new(filter, root_name: "filter", values:))
+          render(json: ::V2::ProductFilterSerializer.new(filter, root_name: "filter", values:))
         end
 
         def resource_name

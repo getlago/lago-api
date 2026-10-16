@@ -6,7 +6,6 @@ class ProductsQuery < BaseQuery
 
   def call
     products = base_scope.result.includes(:product_category, :billable_metric)
-    products = paginate(products)
     products = apply_consistent_ordering(products)
 
     if filters.product_category_ids.present? || filters.without_product_category.present?
@@ -14,7 +13,7 @@ class ProductsQuery < BaseQuery
     end
     products = with_product_type(products) if filters.product_type.present?
 
-    result.products = products
+    result.products = paginate(products)
     result
   end
 
@@ -36,13 +35,7 @@ class ProductsQuery < BaseQuery
 
   # The product_category dimension is a multi-select: chosen product_categories OR "no product_category".
   def with_product_category(scope)
-    if filters.product_category_ids.present? && filters.without_product_category.present?
-      scope.where(product_category_id: filters.product_category_ids).or(scope.where(product_category_id: nil))
-    elsif filters.without_product_category.present?
-      scope.where(product_category_id: nil)
-    else
-      scope.where(product_category_id: filters.product_category_ids)
-    end
+    scope.in_categories(filters.product_category_ids, include_uncategorized: filters.without_product_category.present?)
   end
 
   def with_product_type(scope)

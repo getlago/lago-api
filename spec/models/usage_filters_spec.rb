@@ -99,6 +99,17 @@ RSpec.describe UsageFilters do
     end
   end
 
+  describe ".init_from_params_for_projected_usage" do
+    subject(:filters) { described_class.init_from_params_for_projected_usage(params) }
+
+    let(:params) { {filter_by_charge_id: "charge-id", full_usage: "true"} }
+
+    it "builds filters from params, ignoring full_usage" do
+      expect(filters.filter_by_charge_id).to eq("charge-id")
+      expect(filters.full_usage).to be_nil
+    end
+  end
+
   describe "#has_charge_filter?" do
     it "returns false when no charge filters are set" do
       expect(described_class.new.has_charge_filter?).to be(false)

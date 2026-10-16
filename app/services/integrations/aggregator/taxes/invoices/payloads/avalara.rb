@@ -5,7 +5,7 @@ module Integrations
     module Taxes
       module Invoices
         module Payloads
-          class Avalara < BasePayload
+          class Avalara < Integrations::Aggregator::Taxes::BasePayload
             def initialize(integration:, customer:, invoice:, integration_customer:, fees: [])
               super(integration:, billing_entity: customer.billing_entity)
 
@@ -46,22 +46,10 @@ module Integrations
             end
 
             def fee_item(fee)
-              mapped_item = if fee.charge?
-                billable_metric_item(fee)
-              elsif fee.add_on_id.present?
-                add_on_item(fee)
-              elsif fee.fixed_charge?
-                fixed_charge_item(fee)
-              elsif fee.commitment?
-                commitment_item
-              elsif fee.subscription?
-                subscription_item
-              end
-
               {
                 "item_key" => fee.item_key,
                 "item_id" => fee.id || fee.item_id,
-                "item_code" => mapped_item&.external_id,
+                "item_code" => mapped_item(fee)&.external_id,
                 "unit" => fee.units,
                 "amount" => item_amount(fee)
               }

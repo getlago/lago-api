@@ -6,12 +6,13 @@ RSpec.describe ::V1::InvoiceSerializer do
   subject(:serializer) { described_class.new(invoice, root_name: "invoice", includes:) }
 
   let(:includes) { %i[metadata error_details] }
-
-  let(:invoice) { create(:invoice) }
-
   let(:metadata) { create(:invoice_metadata, invoice:) }
   let(:error_details1) { create(:error_detail, owner: invoice) }
   let(:error_details2) { create(:error_detail, owner: invoice, deleted_at: Time.current) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:invoice, refind: true) { create_default(:invoice) }
 
   before do
     metadata
@@ -100,15 +101,12 @@ RSpec.describe ::V1::InvoiceSerializer do
 
   context "when including subscriptions with multiple subscriptions" do
     let(:includes) { %i[subscriptions billing_periods] }
-    let(:organization) { invoice.organization }
-    let(:customer) { invoice.customer }
-
-    let(:plan_zebra) { create(:plan, organization:, name: "Zebra Plan", invoice_display_name: nil) }
-    let(:plan_alpha) { create(:plan, organization:, name: "Alpha Plan", invoice_display_name: nil) }
-
     let(:subscription_zebra) { create(:subscription, customer:, plan: plan_zebra, name: nil) }
     let(:subscription_alpha) { create(:subscription, customer:, plan: plan_alpha, name: nil) }
     let(:subscription_custom) { create(:subscription, customer:, plan: plan_zebra, name: "AAA Custom") }
+
+    let_it_be(:plan_zebra) { create_default(:plan, organization:, name: "Zebra Plan", invoice_display_name: nil) }
+    let_it_be(:plan_alpha) { create_default(:plan, organization:, name: "Alpha Plan", invoice_display_name: nil) }
 
     before do
       create(:invoice_subscription, :boundaries, invoice:, subscription: subscription_zebra)
@@ -136,6 +134,62 @@ RSpec.describe ::V1::InvoiceSerializer do
         subscription_alpha.id,
         subscription_zebra.id
       ])
+    end
+  end
+
+  context "when including subscriptions carrying connection routing" do
+    let(:includes) { %i[subscriptions] }
+    let(:organization) { invoice.organization }
+    let(:customer) { invoice.customer }
+    let(:plan) { create(:plan, organization:) }
+
+    let(:invoice_with_three) do
+      target = create(:invoice, organization:, customer:)
+
+      3.times do
+        subscription = create(:subscription, customer:, organization:, plan:, external_id: SecureRandom.uuid)
+        create(:invoice_subscription, :boundaries, invoice: target, subscription:)
+      end
+
+      Invoice.find(target.id)
+    end
+
+    def capture_sql
+      queries = []
+      collector = ->(_name, _start, _finish, _id, payload) {
+        queries << payload[:sql] unless /SCHEMA|TRANSACTION/.match?(payload[:name].to_s)
+      }
+
+      ActiveSupport::Notifications.subscribed(collector, "sql.active_record") { yield }
+
+      queries
+    end
+
+    def serialize(target)
+      JSON.parse(described_class.new(target, root_name: "invoice", includes:).to_json)
+    end
+
+    before { create(:stripe_customer, customer:, organization:, code: "stripe_us", is_default: true) }
+
+    it "loads the routing of every subscription in a single query" do
+      target = invoice_with_three
+
+      queries = capture_sql { serialize(target) }
+
+      expect(queries.count { |sql| sql.include?("billing_object_connections") }).to eq(1)
+      expect(queries.count { |sql| sql.include?("payment_provider_customers") }).to eq(1)
+      expect(queries.count { |sql| sql.include?("integration_customers") }).to eq(1)
+    end
+
+    it "reports every category on each subscription" do
+      result = serialize(invoice_with_three)
+      connections = result["invoice"]["subscriptions"].map { |subscription| subscription["connections"] }
+
+      expect(connections.count).to eq(3)
+      connections.each do |connection|
+        expect(connection.keys).to match_array(%w[payment tax accounting crm])
+        expect(connection["payment"]).to eq({"behavior" => "inherit", "code" => "stripe_us"})
+      end
     end
   end
 

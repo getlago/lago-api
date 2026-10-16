@@ -23,6 +23,7 @@ pt-BR:
     breakdown_of: Detalhamento de %{fee_filter_display_name}
     charges_paid_in_advance: Cobranças pagas antecipadamente
     clabe: CLABE
+    conversion_rate: Taxa de conversão
     country: País
     coupons: Cupons
     credit_notes: Notas de crédito
@@ -58,7 +59,7 @@ pt-BR:
     month: mês
     monthly: Mensal
     notice_full: Independentemente de quando um evento é recebido, a unidade não é proporcional, cobramos o preço total.
-    notice_prorated: Se uma unidade é adicionada ou removida durante o plano mensal, calculamos o preço proporcional com base na proporção de dias restantes ou usados em relação ao número total de dias no plano. Por exemplo, se restam 15 dias no plano, multiplicamos o preço por 15/%{days_in_month}, e se uma unidade foi usada por 10 dias, multiplicamos o preço por 10/%{days_in_month}.
+    notice_prorated: Se uma unidade é adicionada ou removida durante o plano mensal, calculamos o preço proporcional com base na proporção de dias restantes ou usados em relação ao número total de dias no plano. Por exemplo, se restam 15 dias em um período de %{days_in_month} dias, multiplicamos o preço por 15/%{days_in_month}, e se uma unidade foi usada por 10 dias, multiplicamos o preço por 10/%{days_in_month}.
     package:
       fee_per_package: Taxa por pacote
       fee_per_package_unit_price: "%{amount} por %{package_size}"

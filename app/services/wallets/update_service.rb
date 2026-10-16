@@ -19,11 +19,15 @@ module Wallets
 
     def call
       return result.not_found_failure!(resource: "wallet") unless wallet
+      return result.forbidden_failure! if x402_enable_forbidden?
       return result.single_validation_failure!(field: :wallet_id, error_code: "wallet_is_terminated") if wallet.terminated?
+      return result.forbidden_failure! if connections_requested? && organization_flag_disabled?(:multi_connection)
       return result unless valid_expiration_at?(expiration_at: params[:expiration_at])
       return result unless valid_recurring_transaction_rules?
       return result unless valid_limitations?
       return result unless valid_payment_method?
+      return result unless valid_connections?
+      return result unless valid_x402?
 
       if billing_entity_param_sent?
         if billing_entity_value_provided? && billing_entity.nil?
@@ -42,6 +46,7 @@ module Wallets
         unless params[:invoice_requires_successful_payment].nil?
           wallet.invoice_requires_successful_payment = ActiveModel::Type::Boolean.new.cast(params[:invoice_requires_successful_payment])
         end
+        wallet.x402_enabled = x402_enabled_param unless x402_enabled_param.nil?
         wallet.paid_top_up_min_amount_cents = params[:paid_top_up_min_amount_cents] if params.key?(:paid_top_up_min_amount_cents)
         wallet.paid_top_up_max_amount_cents = params[:paid_top_up_max_amount_cents] if params.key?(:paid_top_up_max_amount_cents)
         if params[:recurring_transaction_rules] && License.premium?
@@ -66,7 +71,7 @@ module Wallets
           wallet.payment_method_id = params[:payment_method][:payment_method_id] if params[:payment_method].key?(:payment_method_id)
         end
 
-        process_billable_metrics
+        process_billable_metrics if billable_metric_limitations_sent?
 
         wallet.save!
 
@@ -78,6 +83,8 @@ module Wallets
         end
 
         InvoiceCustomSections::AttachToResourceService.call!(resource: wallet, params:)
+
+        BillingObjectConnections::AttachToResourceService.call!(resource: wallet, params:) if connections_requested?
         SendWebhookJob.perform_after_commit("wallet.updated", wallet)
       end
 
@@ -116,6 +123,18 @@ module Wallets
       Wallets::ValidateRecurringTransactionRulesService.new(result, **params).valid?
     end
 
+    def valid_x402?
+      Wallets::ValidateX402Service.new(result, wallet:, **params).valid?
+    end
+
+    def x402_enable_forbidden?
+      x402_enabled_param == true && !wallet.organization.x402_payments_enabled?
+    end
+
+    def x402_enabled_param
+      ActiveModel::Type::Boolean.new.cast(params[:x402_enabled])
+    end
+
     def valid_expiration_at?(expiration_at:)
       return true if Validators::ExpirationDateValidator.valid?(expiration_at)
 
@@ -132,6 +151,15 @@ module Wallets
     def valid_payment_method?
       result.payment_method = payment_method
       PaymentMethods::ValidateService.new(result, **params).valid?
+    end
+
+    def valid_connections?
+      validator = BillingObjectConnections::ValidateService.new(result, **params)
+      return true if validator.valid?
+
+      result.validation_failure!(errors: {connections: validator.error_codes})
+
+      false
     end
 
     def process_billable_metrics
@@ -165,10 +193,23 @@ module Wallets
       (wallet.saved_changes.keys & Wallet::REFRESH_RELEVANT_ATTRIBUTES).any?
     end
 
+    # Billable metric limitations are only processed when the payload explicitly carries the
+    # identifiers key: omitting it leaves the existing wallet targets untouched, while sending
+    # an empty array still clears them.
+    def billable_metric_limitations_sent?
+      return false if params[:applies_to].nil?
+
+      params[:applies_to].key?(billable_metric_identifiers_key)
+    end
+
+    def billable_metric_identifiers_key
+      api_context? ? :billable_metric_codes : :billable_metric_ids
+    end
+
     def billable_metric_identifiers
       return [] if params[:applies_to].blank?
 
-      key = api_context? ? :billable_metric_codes : :billable_metric_ids
+      key = billable_metric_identifiers_key
 
       return [] if params[:applies_to][key].blank?
 
@@ -201,6 +242,16 @@ module Wallets
 
     def organization_flag_enabled?(flag)
       wallet.customer.organization.feature_flag_enabled?(flag)
+    end
+
+    def organization_flag_disabled?(flag)
+      !organization_flag_enabled?(flag)
+    end
+
+    def connections_requested?
+      return true if params[:connections].present?
+
+      Array(params[:recurring_transaction_rules]).any? { |rule| rule[:connections].present? }
     end
 
     def billing_entity_param_sent?

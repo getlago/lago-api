@@ -36,6 +36,15 @@ RSpec.describe Auth::EntraId::LoginService, cache: :memory do
       expect(UserDevices::RegisterService).to have_received(:call!).with(user: result.user)
     end
 
+    it "protects the token request against private addresses" do
+      service.call
+
+      expect(LagoHttpClient::Client).to have_received(:new).with(
+        "https://login.microsoftonline.com/#{entra_id_integration.tenant_id}/oauth2/v2.0/token",
+        block_private_addresses: true
+      )
+    end
+
     it "creates user, membership and authenticate user" do
       result = service.call
 
@@ -134,6 +143,39 @@ RSpec.describe Auth::EntraId::LoginService, cache: :memory do
 
         expect(result).not_to be_success
         expect(result.error.messages.values.flatten).to include("entra_id_userinfo_error")
+      end
+    end
+
+    context "when the email domain is an additional domain of the integration" do
+      let(:entra_id_integration) { create(:entra_id_integration, domain: "bosch.com", additional_domains: ["bar.com"]) }
+
+      it "authenticates the user against that integration" do
+        result = service.call
+
+        expect(result).to be_success
+        expect(result.user.email).to eq("foo@bar.com")
+        expect(result.user.memberships.pluck(:organization_id)).to eq([entra_id_integration.organization_id])
+      end
+    end
+
+    context "when an existing user differs from the typed email only by casing" do
+      let!(:user) { create(:user, email: "Foo@Bar.com") }
+
+      it "signs in the existing user instead of creating a new one" do
+        result = nil
+
+        expect { result = service.call }.not_to change(User, :count)
+        expect(result.user).to eq(user)
+      end
+    end
+
+    context "when users exist with the typed casing and with another casing" do
+      let!(:exact_user) { create(:user, email: "foo@bar.com") }
+
+      before { create(:user, email: "FOO@bar.com", created_at: 1.year.ago) }
+
+      it "signs in the user with the exact casing" do
+        expect(service.call.user).to eq(exact_user)
       end
     end
 

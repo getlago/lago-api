@@ -34,13 +34,37 @@ RSpec.describe PlansQuery do
     expect(returned_ids).not_to include(plan_fourth.id)
   end
 
+  it "returns plans ordered by name" do
+    expect(result).to be_success
+    expect(returned_ids).to eq([plan_second.id, plan_first.id, plan_third.id])
+  end
+
+  context "when filtering to include deleted plans" do
+    let(:filters) { {with_deleted: true} }
+    # Deleted first but named last, so the expected order only holds if name decides between them
+    let(:plan_deleted) { create(:plan, organization:, name: "zzzzz", code: "55", deleted_at: 2.days.ago) }
+    let(:plan_deleted_other) { create(:plan, organization:, name: "aaaaa", code: "66", deleted_at: Time.current) }
+
+    before do
+      plan_deleted
+      plan_deleted_other
+    end
+
+    it "returns deleted plans after the active ones, sorted by name" do
+      expect(result).to be_success
+      expect(returned_ids).to eq(
+        [plan_second.id, plan_first.id, plan_third.id, plan_deleted_other.id, plan_deleted.id]
+      )
+    end
+  end
+
   context "when plans have the same values for the ordering criteria" do
     let(:plan_second) do
       create(
         :plan,
         organization:,
         id: "00000000-0000-0000-0000-000000000000",
-        name: "abcde",
+        name: plan_first.name,
         code: "22",
         created_at: plan_first.created_at
       )
@@ -87,47 +111,6 @@ RSpec.describe PlansQuery do
       expect(returned_ids).to include(plan_first.id)
       expect(returned_ids).to include(plan_second.id)
       expect(returned_ids).not_to include(plan_third.id)
-    end
-  end
-
-  context "when filtering by product_category_id" do
-    let(:product_category) { create(:product_category, organization:) }
-    let(:filters) { {product_category_id: product_category.id} }
-
-    before do
-      item = create(:product, organization:, product_category:)
-      rate_card = create(:rate_card, organization:, product: item)
-      create(:plan_rate_card, organization:, plan: plan_first, rate_card:)
-    end
-
-    it "returns only the plans linked to the product_category" do
-      expect(result).to be_success
-      expect(returned_ids).to eq([plan_first.id])
-    end
-  end
-
-  context "when preloading counts" do
-    let(:filters) { {preload_counts: true} }
-
-    before do
-      allow(Plan::CountsQuery).to receive(:call).and_call_original
-      create(:subscription, plan: plan_first, organization:)
-    end
-
-    it "attaches the counts to the returned plans" do
-      returned_plan = result.plans.find { |plan| plan.id == plan_first.id }
-
-      expect(returned_plan.subscriptions_count).to eq(1)
-      expect(Plan::CountsQuery).to have_received(:call)
-    end
-
-    context "when no plans match" do
-      let(:search_term) { "missing" }
-
-      it "does not query the plan counts" do
-        expect(result.plans).to be_empty
-        expect(Plan::CountsQuery).not_to have_received(:call)
-      end
     end
   end
 end

@@ -22,6 +22,7 @@ resources :customers, param: :external_id, only: %i[create index show destroy] d
   get :current_usage, to: "customers/usage#current"
   get :projected_usage, to: "customers/projected_usage#current"
   get :past_usage, to: "customers/usage#past"
+  get :attributed_usage, to: "customers/attributed_usage#show"
 
   post :checkout_url
 
@@ -143,6 +144,7 @@ resources :plans, param: :code, code: /.*/ do
   draw(:plan_nested_api)
 end
 resources :taxes, param: :code, code: /.*/
+resources :usage_attribution_types, param: :code, code: /.*/, only: %i[index show create update destroy]
 resources :wallet_transactions, only: %i[create show] do
   post :payment_url, on: :member
   get :consumptions, on: :member
@@ -167,4 +169,11 @@ resources :webhook_endpoints, only: %i[create index show destroy update]
 resources :webhooks, only: %i[] do
   get :public_key, on: :collection
   get :json_public_key, on: :collection
+end
+
+resources :x402_connections, param: :code, code: /.*/, controller: "x402/connections", only: %i[index show create update destroy]
+
+namespace :x402 do
+  resources :gate_checks, only: :create
+  resources :credit_purchases, only: :create
 end

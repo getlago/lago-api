@@ -5,14 +5,19 @@ require "rails_helper"
 RSpec.describe MultiCustomerConnections::BackfillConnectionsService do
   subject(:result) { described_class.call(organization:, dry_run:, batch_size: 1000) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:dry_run) { false }
 
   describe "#call" do
     context "with a payment_provider_customer missing a code" do
       let(:provider) { create(:stripe_provider, organization:, code: "stripe_eu") }
-      let(:pp_customer) { create(:stripe_customer, customer:, organization:, payment_provider: provider, code: nil) }
+      let(:pp_customer) do
+        # Simulate a legacy row: the model now derives code on save, so null it directly.
+        create(:stripe_customer, customer:, organization:, payment_provider: provider).tap do |pp|
+          pp.update_columns(code: nil) # rubocop:disable Rails/SkipsModelValidations
+        end
+      end
 
       before { pp_customer }
 
@@ -106,7 +111,12 @@ RSpec.describe MultiCustomerConnections::BackfillConnectionsService do
     context "with dry_run: true" do
       let(:dry_run) { true }
       let(:provider) { create(:stripe_provider, organization:, code: "stripe_eu") }
-      let(:pp_customer) { create(:stripe_customer, customer:, organization:, payment_provider: provider, code: nil) }
+      let(:pp_customer) do
+        # Simulate a legacy row: the model now derives code on save, so null it directly.
+        create(:stripe_customer, customer:, organization:, payment_provider: provider).tap do |pp|
+          pp.update_columns(code: nil) # rubocop:disable Rails/SkipsModelValidations
+        end
+      end
 
       before { pp_customer }
 

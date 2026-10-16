@@ -19,7 +19,7 @@ module Resolvers
         wallets
           .page(page)
           .per(limit)
-          .order(:priority, :created_at)
+          .in_application_order
       rescue ActiveRecord::RecordNotFound
         not_found_error(resource: "customer")
       end

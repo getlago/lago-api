@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Customers::UpdateService do
   subject(:customers_service) { described_class.new(customer:, args: update_args) }
 
-  let(:billing_entity) { create(:billing_entity) }
-  let(:organization) { billing_entity.organization }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:billing_entity, refind: true) { create_default(:billing_entity) }
   let(:payment_provider_code) { "stripe_1" }
 
   describe "call" do
@@ -77,26 +77,6 @@ RSpec.describe Customers::UpdateService do
 
       it "does not refresh the invoices search terms" do
         expect { customers_service.call }.not_to have_enqueued_job(Customers::RefreshInvoicesSearchTermsJob)
-      end
-    end
-
-    context "when Meilisearch is enabled" do
-      before do
-        customer
-        stub_const("ENV", ENV.to_h.merge("LAGO_MEILISEARCH_URL" => "http://meilisearch:7700"))
-      end
-
-      it "reindexes the customer's invoices when a searchable field changes" do
-        expect { customers_service.call }
-          .to have_enqueued_job_after_commit(Customers::ReindexInvoicesJob).with(customer.id)
-      end
-
-      context "when no searchable field changes" do
-        let(:update_args) { {id: customer.id, net_payment_term: 8} }
-
-        it "does not reindex" do
-          expect { customers_service.call }.not_to have_enqueued_job(Customers::ReindexInvoicesJob)
-        end
       end
     end
 

@@ -4,6 +4,7 @@ class RateCardRate < ApplicationRecord
   include PaperTrailTraceable
   include ChargePropertiesValidation
   include Discard::Model
+  include CatalogCodeFormat
 
   self.discard_column = :deleted_at
 
@@ -169,7 +170,7 @@ class RateCardRate < ApplicationRecord
     return unless rate_model
     return if errors[:rate_model].any?
 
-    validator = ChargePropertiesValidation::PROPERTIES_VALIDATORS[rate_model.to_sym]
+    validator = ChargePropertiesValidation::RATE_PROPERTIES_VALIDATORS[rate_model.to_sym]
     validator ||= Charges::Validators::BaseService
 
     instance = validator.new(charge: self)

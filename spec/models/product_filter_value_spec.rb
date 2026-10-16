@@ -23,7 +23,7 @@ RSpec.describe ProductFilterValue do
         expect(product_filter_value).to be_valid
       end
 
-      it "is valid without a value (key-only selection matches any value)" do
+      it "is valid without a value (key-only selection selects all configured values)" do
         product_filter_value.value = nil
         expect(product_filter_value).to be_valid
       end
@@ -32,6 +32,25 @@ RSpec.describe ProductFilterValue do
         product_filter_value.value = "not-a-known-value"
         product_filter_value.valid?
         expect(product_filter_value.errors.added?(:value, :inclusion)).to be(true)
+      end
+    end
+
+    describe "referenced metric filter must be kept on create" do
+      it "rejects a new reference to a discarded metric filter" do
+        metric_filter = create(:billable_metric_filter, values: %w[us])
+        metric_filter.discard!
+        value = build(:product_filter_value, billable_metric_filter: metric_filter, value: "us")
+        value.valid?
+        expect(value.errors.added?(:billable_metric_filter, :billable_metric_deleted)).to be(true)
+      end
+
+      it "rejects a new reference when the metric itself is discarded" do
+        metric = create(:billable_metric)
+        metric_filter = create(:billable_metric_filter, billable_metric: metric, values: %w[us])
+        metric.discard!
+        value = build(:product_filter_value, billable_metric_filter: metric_filter, value: "us")
+        value.valid?
+        expect(value.errors.added?(:billable_metric_filter, :billable_metric_deleted)).to be(true)
       end
     end
 

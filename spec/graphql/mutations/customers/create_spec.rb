@@ -3,13 +3,13 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Customers::Create do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permissions) { "customers:create" }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:billing_entity) { create(:billing_entity, organization:) }
   let(:stripe_provider) { create(:stripe_provider, organization:) }
   let(:tax) { create(:tax, organization:) }
-
   let(:mutation) do
     <<~GQL
       mutation($input: CreateCustomerInput!) {
@@ -45,13 +45,14 @@ RSpec.describe Mutations::Customers::Create do
       }
     GQL
   end
-
   let(:body) do
     {
       object: "event",
       data: {url: "test.url"}
     }
   end
+
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     stub_request(:post, "https://api.stripe.com/v1/checkout/sessions")
@@ -211,6 +212,45 @@ RSpec.describe Mutations::Customers::Create do
 
       expect(result_data["timezone"]).to eq("TZ_EUROPE_PARIS")
       expect(result_data["invoiceGracePeriod"]).to eq(2)
+    end
+  end
+
+  context "with the payment_provider_customers array" do
+    let(:array_mutation) do
+      <<~GQL
+        mutation($input: CreateCustomerInput!) {
+          createCustomer(input: $input) {
+            id
+            connectionStatus
+            paymentProviderCustomers { id code isDefault }
+          }
+        }
+      GQL
+    end
+
+    it "creates the connection declaratively" do
+      stripe_provider
+
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permissions,
+        query: array_mutation,
+        variables: {
+          input: {
+            name: "Array Inc",
+            externalId: "array_inc",
+            paymentProviderCustomers: [
+              {code: "stripe_eu", paymentProvider: "stripe", providerCustomerId: "cu_12345", providerPaymentMethods: ["card"]}
+            ]
+          }
+        }
+      )
+
+      expect(result["data"]["createCustomer"]).to be_present
+
+      created = organization.customers.find_by(external_id: "array_inc")
+      expect(created.payment_provider_customers.pluck(:code)).to eq(["stripe_eu"])
     end
   end
 

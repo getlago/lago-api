@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Mutations::CustomerPortal::WalletTransactions::Create do
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:organization) { create_default(:organization) }
   let(:wallet) { create(:wallet, balance: 10.0, credits_balance: 10.0) }
 
   let(:mutation) do

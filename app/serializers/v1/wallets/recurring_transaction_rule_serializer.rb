@@ -27,6 +27,7 @@ module V1
 
         payload.merge!(applied_invoice_custom_sections)
         payload.merge!(payment_method)
+        payload.merge!(connections)
 
         payload
       end
@@ -47,6 +48,15 @@ module V1
             payment_method_id: model.payment_method_id,
             payment_method_type: model.payment_method_type
           }
+        }
+      end
+
+      # Keyed by category, mirroring the shape accepted on create/update.
+      def connections
+        {
+          connections: model.connection_routing.index_by { it.category }.transform_values do |routing|
+            {behavior: routing.behavior, code: routing.code}
+          end
         }
       end
     end

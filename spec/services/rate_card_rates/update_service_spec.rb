@@ -5,8 +5,12 @@ require "rails_helper"
 RSpec.describe RateCardRates::UpdateService do
   subject(:result) { described_class.call(rate_card_rate:, params:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:rate_card) { create(:rate_card, organization:) }
+
+  before_all do
+    create_default(:billable_metric)
+  end
 
   context "with a pending rate" do
     let(:rate_card_rate) do
@@ -26,12 +30,46 @@ RSpec.describe RateCardRates::UpdateService do
       expect(Utils::ActivityLog).to have_produced("rate_card.updated").after_commit.with(rate_card)
     end
 
-    context "when the effective_from is moved to the past" do
+    context "with graduated tiers" do
+      let(:params) do
+        {
+          rate_model: "graduated",
+          rate_properties: {graduated_ranges: [{to_value: "10", flat_amount: "0", per_unit_amount: "1"}, {to_value: nil, flat_amount: "0", per_unit_amount: "0.5"}]}
+        }
+      end
+
+      it "stores each tier starting where the previous one ends" do
+        expect(result).to be_success
+        expect(result.rate_card_rate.rate_properties["graduated_ranges"].map { it.values_at("from_value", "to_value") })
+          .to eq([[0, 10], [10, nil]])
+      end
+
+      context "when a tier names its lower bound" do
+        let(:params) { {rate_model: "graduated", rate_properties: {graduated_ranges: [{from_value: 0, to_value: nil, flat_amount: "0", per_unit_amount: "1"}]}} }
+
+        it "returns a validation failure and keeps the stored properties" do
+          expect(result.error.messages[:graduated_ranges]).to eq(["from_value_not_allowed"])
+          expect(rate_card_rate.reload.rate_properties).to eq("amount" => "10")
+        end
+      end
+    end
+
+    context "when the effective_from is moved to the start of today" do
       let(:params) { {effective_from: Time.current.beginning_of_day.iso8601} }
 
       it "activates the rate" do
         expect(result).to be_success
         expect(result.rate_card_rate.status).to eq("active")
+      end
+    end
+
+    context "when the effective_from is moved before today" do
+      let(:params) { {effective_from: 1.day.ago.beginning_of_day.iso8601} }
+
+      it "returns a validation failure and leaves the rate pending" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:effective_from]).to eq(["must_not_be_before_today"])
+        expect(rate_card_rate.reload.status).to eq("pending")
       end
     end
 
@@ -127,7 +165,7 @@ RSpec.describe RateCardRates::UpdateService do
   context "when the card is attached to a subscription" do
     let(:params) { {rate_properties: {"amount" => "25"}} }
 
-    before { create(:subscription_rate_card, organization:, rate_card:) }
+    before { create(:contract_rate_card, organization:, rate_card:) }
 
     context "with a pending rate" do
       let(:rate_card_rate) do

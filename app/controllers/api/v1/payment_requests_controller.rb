@@ -43,7 +43,11 @@ module Api
         params.require(:payment_request).permit(
           :email,
           :external_customer_id,
-          lago_invoice_ids: []
+          lago_invoice_ids: [],
+          payment_method: [
+            :payment_method_type,
+            :payment_method_id
+          ]
         )
       end
 

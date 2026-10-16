@@ -3,6 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::RateCardsResolver do
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   subject(:execution) do
     execute_graphql(
       current_user: membership.user,
@@ -14,14 +17,12 @@ RSpec.describe Resolvers::RateCardsResolver do
   end
 
   let(:required_permission) { "rate_cards:view" }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:variables) { {} }
-
   let(:query) do
     <<~GQL
-      query($searchTerm: String, $productId: ID) {
-        rateCards(limit: 5, searchTerm: $searchTerm, productId: $productId) {
+      query($searchTerm: String, $productIds: [ID!], $productCategoryIds: [ID!], $withoutProductCategory: Boolean, $currency: CurrencyEnum) {
+        rateCards(limit: 5, searchTerm: $searchTerm, productIds: $productIds, productCategoryIds: $productCategoryIds, withoutProductCategory: $withoutProductCategory, currency: $currency) {
           collection { id name code currency }
           metadata { currentPage totalCount }
         }
@@ -29,9 +30,12 @@ RSpec.describe Resolvers::RateCardsResolver do
     GQL
   end
 
-  let(:product) { create(:product, organization:) }
-  let!(:card_one) { create(:rate_card, organization:, product:, name: "Growth USD", code: "growth_usd") }
-  let!(:card_two) { create(:rate_card, organization:, name: "Standard EUR", code: "standard_eur") }
+  let(:product_category) { create(:product_category, organization:) }
+  let(:product) { create(:product, organization:, product_category:) }
+  let!(:card_one) { create(:rate_card, organization:, product:, name: "Growth USD", code: "growth_usd", currency: "USD") }
+  let!(:card_two) { create(:rate_card, organization:, name: "Standard EUR", code: "standard_eur", currency: "EUR") }
+
+  let_it_be(:membership, refind: true) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
@@ -44,11 +48,29 @@ RSpec.describe Resolvers::RateCardsResolver do
     expect(response["metadata"]["totalCount"]).to eq(2)
   end
 
-  context "with a product filter" do
-    let(:variables) { {productId: product.id} }
+  context "with a productIds filter" do
+    let(:variables) { {productIds: [product.id]} }
 
-    it "returns only the cards of that item" do
+    it "returns only the cards of those items" do
       expect(execution["data"]["rateCards"]["collection"].map { it["id"] }).to eq([card_one.id])
+    end
+  end
+
+  context "with a productCategoryIds filter" do
+    let(:variables) { {productCategoryIds: [product_category.id]} }
+
+    it "returns only the cards of products in that category" do
+      expect(execution["data"]["rateCards"]["collection"].map { it["id"] }).to eq([card_one.id])
+    end
+  end
+
+  context "with a withoutProductCategory filter" do
+    # card_one and card_two are on products that each carry a category.
+    let!(:standalone_card) { create(:rate_card, organization:, product: create(:product, :standalone, organization:), code: "standalone") }
+    let(:variables) { {withoutProductCategory: true} }
+
+    it "returns only the cards of uncategorized products" do
+      expect(execution["data"]["rateCards"]["collection"].map { it["id"] }).to eq([standalone_card.id])
     end
   end
 
@@ -57,6 +79,21 @@ RSpec.describe Resolvers::RateCardsResolver do
 
     it "returns matching cards" do
       expect(execution["data"]["rateCards"]["collection"].map { it["id"] }).to eq([card_one.id])
+    end
+  end
+
+  context "with a currency filter" do
+    let(:variables) { {currency: "USD"} }
+
+    before do
+      5.times { |index| create(:rate_card, organization:, currency: "EUR", code: "other_eur_#{index}") }
+    end
+
+    it "filters before pagination and counts only matching cards" do
+      response = execution["data"]["rateCards"]
+
+      expect(response["collection"].map { it["id"] }).to eq([card_one.id])
+      expect(response["metadata"]["totalCount"]).to eq(1)
     end
   end
 end

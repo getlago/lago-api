@@ -3,9 +3,14 @@
 require "rails_helper"
 
 RSpec.describe Integrations::Aggregator::Invoices::Hubspot::CreateJob do
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
+
   subject(:create_job) { described_class }
 
-  let(:invoice) { create(:invoice) }
+  let_it_be(:invoice) { create(:invoice) }
   let(:result) { Integrations::Aggregator::Invoices::Hubspot::CreateService::Result.new }
 
   before do

@@ -3,13 +3,18 @@
 require "rails_helper"
 
 RSpec.describe IntegrationCustomers::CreateJob do
+  before_all do
+    create_default(:organization)
+  end
+
   let(:integration) { create(:netsuite_integration) }
-  let(:customer) { create(:customer) }
   let(:integration_customer_params) do
     {
       sync_with_provider: true
     }
   end
+
+  let_it_be(:customer) { create(:customer) }
 
   describe "#perform" do
     subject(:create_job) { described_class }

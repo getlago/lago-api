@@ -3,9 +3,12 @@
 module Events
   module Stores
     class PostgresStore < BaseStore
+      # standard_conforming_strings is on: a backslash is a plain character, quotes are doubled
+      SQL_STRING_LITERAL = /'(?:[^']|'')*'/
+
       def events(force_from: false, ordered: false)
-        scope = Event.where(external_subscription_id: subscription.external_id)
-          .where(organization_id: subscription.organization.id)
+        scope = Event.where(external_subscription_id: billing_context.external_id)
+          .where(organization_id: billing_context.organization.id)
           .where(code:)
 
         scope = scope.order(timestamp: :asc) if ordered
@@ -22,22 +25,6 @@ module Events
         filters_scope(scope)
       end
 
-      # Returns [charge_id, charge_filter_id, last_seen_at] tuples, where last_seen_at is the
-      # enriched_at of the most recent event for that charge/filter in the period.
-      # With with_last_seen_at disabled the aggregate is not computed and last_seen_at is nil, which
-      # callers that never read it use to avoid scanning the column (see BillingPeriodFilterService).
-      def distinct_charges_and_filters(codes: nil, include_all_history: false, with_last_seen_at: true)
-        lower_bound = include_all_history ? nil : from_datetime
-        scope = EnrichedEvent.where(organization_id: subscription.organization_id)
-          .where(subscription_id: subscription.id)
-          .where(timestamp: lower_bound..to_datetime)
-
-        scope = scope.where(code: codes) unless codes.nil?
-        scope = scope.group(:charge_id, :charge_filter_id)
-
-        scope.pluck(:charge_id, :charge_filter_id, Arel.sql(with_last_seen_at ? "MAX(enriched_at)" : "NULL"))
-      end
-
       # Returns the distinct [code, properties, last_seen_at] combinations present in the events
       # of the period. Only properties present in the filter_keys are considered, so the result
       # holds only the dimensions that can be matched against charge filters.
@@ -45,12 +32,13 @@ module Events
       # last_seen_at is the created_at of the most recent event in the combination. With
       # with_last_seen_at disabled the aggregate is not computed and last_seen_at is nil, which
       # callers that never read it use to avoid scanning the column (see BillingPeriodFilterService).
-      def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false, with_last_seen_at: true)
-        scope = Event.where(external_subscription_id: subscription.external_id)
-          .where(organization_id: subscription.organization_id)
+      def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false, with_last_seen_at: true, ingested_after: nil)
+        scope = Event.where(external_subscription_id: billing_context.external_id)
+          .where(organization_id: billing_context.organization_id)
           .where(code: codes)
           .to_datetime(applicable_to_datetime)
         scope = scope.from_datetime(from_datetime) unless include_all_history
+        scope = scope.where("events.created_at > ?", ingested_after) if ingested_after
 
         selects = [<<~SQL.squish]
           events.code AS code,
@@ -122,10 +110,31 @@ module Events
       # NOTE: check if an event created before the current on belongs to an active (as in present and not removed)
       #       unique property
       def active_unique_property?(event)
-        previous_event = events.where.not(id: event.id)
+        previous_events = events.where.not(id: event.id)
           .where("events.properties @> ?", {aggregation_property => event.properties[aggregation_property]}.to_json)
-          .where("events.timestamp < ?", event.timestamp)
-          .order(timestamp: :desc)
+
+        if event.persisted? && event.id.present? && event.created_at.present?
+          previous_events = previous_events.where(
+            "(events.timestamp, events.created_at, events.id) < (?, ?, ?::uuid)",
+            event.timestamp,
+            event.created_at,
+            event.id
+          )
+        elsif event.persisted? && event.id.present?
+          # Jobs queued before created_at was serialized still need the database tie-breaker.
+          current_event = events.where(id: event.id).select(:created_at, :id)
+          previous_events = previous_events.where(
+            "events.timestamp < ? OR (events.timestamp = ? AND (events.created_at, events.id) < (#{current_event.to_sql}))",
+            event.timestamp,
+            event.timestamp
+          )
+        else
+          # Estimates and events without an ID have no persisted position among timestamp ties.
+          previous_events = previous_events.where("events.timestamp < ?", event.timestamp)
+        end
+
+        previous_event = previous_events
+          .order(timestamp: :desc, created_at: :desc, id: :desc)
           .first
 
         previous_event && (

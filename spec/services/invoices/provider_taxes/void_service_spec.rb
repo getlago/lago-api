@@ -125,6 +125,40 @@ RSpec.describe Invoices::ProviderTaxes::VoidService do
       end
     end
 
+    context "when the invoice carries no fee" do
+      let(:fee_subscription) { nil }
+      let(:fee_charge) { nil }
+
+      it "voids without contacting the tax provider" do
+        result = void_service.call
+
+        expect(result).to be_success
+        expect(lago_client1).not_to have_received(:post_with_response)
+      end
+
+      it "records no tax voiding error" do
+        void_service.call
+
+        expect(invoice.reload.error_details.tax_voiding_error).to be_empty
+      end
+    end
+
+    context "when every fee has a zero amount" do
+      let(:fee_subscription) do
+        create(:fee, invoice:, subscription:, fee_type: :subscription, amount_cents: 0)
+      end
+      let(:fee_charge) do
+        create(:fee, invoice:, charge:, fee_type: :charge, total_aggregated_units: 100, amount_cents: 0)
+      end
+
+      it "voids the transaction the invoice was reported as" do
+        result = void_service.call
+
+        expect(result).to be_success
+        expect(lago_client1).to have_received(:post_with_response)
+      end
+    end
+
     context "when voided invoice is successfully synced" do
       it "returns successful result" do
         result = void_service.call

@@ -8,7 +8,7 @@ class Organization < ApplicationRecord
   include HasFeatureFlags
   include Organizations::Sluggable
 
-  self.ignored_columns += [:clickhouse_aggregation]
+  self.ignored_columns += [:clickhouse_aggregation, :pre_filter_events, :clickhouse_deduplication_enabled]
 
   EMAIL_SETTINGS = [
     "invoice.finalized",
@@ -52,9 +52,11 @@ class Organization < ApplicationRecord
   has_many :product_filters
   has_many :rate_cards
   has_many :rate_card_rates
+  has_many :catalog_plans
   has_many :pricing_units
   has_many :customers
   has_many :subscriptions
+  has_many :contracts
   has_many :activation_rules, class_name: "Subscription::ActivationRule"
   has_many :invoices
   has_many :credit_notes
@@ -70,6 +72,7 @@ class Organization < ApplicationRecord
   has_many :payment_providers, class_name: "PaymentProviders::BaseProvider"
   has_many :payment_receipts
   has_many :payment_requests
+  has_many :streaming_destinations, class_name: "StreamingDestinations::BaseDestination"
   has_many :taxes
   has_many :wallets
   has_many :wallet_transactions
@@ -91,6 +94,12 @@ class Organization < ApplicationRecord
   has_many :entitlement_values, class_name: "Entitlement::EntitlementValue"
   has_many :subscription_feature_removals, class_name: "Entitlement::SubscriptionFeatureRemoval"
 
+  has_many :usage_attribution_types
+  has_many :usage_attribution_values
+
+  has_many :x402_connections, class_name: "X402::Connection"
+  has_many :x402_settlements, class_name: "X402::Settlement"
+
   has_many :subscription_activities, class_name: "UsageMonitoring::SubscriptionActivity"
   has_many :alerts, class_name: "UsageMonitoring::Alert"
   has_many :triggered_alerts, -> { triggered }, class_name: "UsageMonitoring::TriggeredAlert"
@@ -108,7 +117,6 @@ class Organization < ApplicationRecord
 
   has_one :applied_dunning_campaign, -> { where(applied_to_organization: true) }, class_name: "DunningCampaign"
   has_one :default_billing_entity, -> { active.order(created_at: :asc) }, class_name: "BillingEntity"
-  has_one :enriched_store_migration
 
   has_many :invoice_custom_sections
   has_many :manual_invoice_custom_sections, -> { where(section_type: "manual") }, class_name: "InvoiceCustomSection"
@@ -209,6 +217,14 @@ class Organization < ApplicationRecord
   # premium integration: it is available to any organization, premium or not.
   def product_catalog_enabled?
     feature_flag_enabled?(:product_catalog)
+  end
+
+  def account_tree_enabled?
+    feature_flag_enabled?(:account_tree)
+  end
+
+  def x402_payments_enabled?
+    License.premium? && feature_flag_enabled?(:x402_payments)
   end
 
   def using_lifetime_usage?
@@ -365,7 +381,6 @@ end
 #  max_wallets                      :integer
 #  name                             :string           not null
 #  net_payment_term                 :integer          default(0), not null
-#  pre_filter_events                :boolean          default(FALSE), not null
 #  premium_integrations             :string           default([]), not null, is an Array
 #  slug                             :string           not null
 #  state                            :string

@@ -18,6 +18,24 @@ RSpec.describe ::V1::Customers::ProjectedUsageSerializer do
   let(:billable_metric) { create(:billable_metric, organization: organization) }
   let(:charge) { create(:standard_charge, plan: plan, billable_metric: billable_metric) }
 
+  let(:fee) do
+    build(
+      :charge_fee,
+      charge: charge,
+      subscription: subscription,
+      units: "4.0",
+      amount_cents: 5,
+      amount_currency: "EUR",
+      events_count: 1,
+      charge_filter: nil,
+      grouped_by: {}
+    )
+  end
+
+  let(:projection) do
+    UsageProjection.new(units: BigDecimal("60.0"), amount_cents: 75, pricing_unit_amount_cents: nil, presentation_breakdowns: [])
+  end
+
   let(:usage) do
     SubscriptionUsage.new(
       from_datetime: from_datetime.iso8601,
@@ -27,36 +45,8 @@ RSpec.describe ::V1::Customers::ProjectedUsageSerializer do
       currency: "EUR",
       total_amount_cents: 6,
       taxes_amount_cents: 1,
-      fees: [
-        build(
-          :charge_fee,
-          charge: charge,
-          subscription: subscription,
-          units: "4.0",
-          amount_cents: 5,
-          amount_currency: "EUR",
-          events_count: 1,
-          charge_filter: nil,
-          grouped_by: {}
-        )
-      ]
-    )
-  end
-
-  before do
-    allow(Date).to receive(:current).and_return(fixed_date)
-    allow(Time).to receive(:current).and_return(fixed_date.to_time)
-
-    projection_result = instance_double(
-      "Fees::ProjectionService::Result",
-      projected_units: BigDecimal("60.0"),
-      projected_amount_cents: 75,
-      projected_pricing_unit_amount_cents: BigDecimal(0),
-      projected_presentation_breakdowns: []
-    )
-
-    allow(::Fees::ProjectionService).to receive(:call).and_return(
-      instance_double("BaseService::Result", raise_if_error!: projection_result)
+      fees: [fee],
+      projections: UsageProjections.new({fee => projection}.compare_by_identity)
     )
   end
 
@@ -80,5 +70,29 @@ RSpec.describe ::V1::Customers::ProjectedUsageSerializer do
     expect(charge_usage["amount_cents"]).to eq(5)
     expect(charge_usage["projected_amount_cents"]).to eq(75)
     expect(charge_usage["amount_currency"]).to eq("EUR")
+  end
+
+  context "with several filters on the same charge" do
+    let(:charge_filter) { create(:charge_filter, charge:) }
+    let(:filter_fee) { build(:charge_fee, charge:, subscription:, units: "1.0", amount_cents: 2, amount_currency: "EUR", charge_filter:, grouped_by: {}) }
+    let(:filter_projection) { projection.with(amount_cents: 25) }
+
+    let(:usage) do
+      SubscriptionUsage.new(
+        from_datetime: from_datetime.iso8601,
+        to_datetime: to_datetime.iso8601,
+        issuing_date: issuing_date.iso8601,
+        amount_cents: 7,
+        currency: "EUR",
+        total_amount_cents: 7,
+        taxes_amount_cents: 0,
+        fees: [fee, filter_fee],
+        projections: UsageProjections.new({fee => projection, filter_fee => filter_projection}.compare_by_identity)
+      )
+    end
+
+    it "sums the projection of every filter" do
+      expect(result["customer_projected_usage"]["projected_amount_cents"]).to eq(100)
+    end
   end
 end

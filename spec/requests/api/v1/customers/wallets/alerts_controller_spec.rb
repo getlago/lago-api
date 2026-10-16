@@ -3,14 +3,15 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::Customers::Wallets::AlertsController do
-  let(:organization) { create(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let(:customer_external_id) { customer.external_id }
-  let(:wallet_code) { wallet.code }
-  let(:customer) { create(:customer, organization:) }
   let(:wallet) { create(:wallet, customer:, organization:) }
   let(:code) { "my-wallet-alert" }
   let(:alert) { create(:wallet_balance_amount_alert, :processed, code:, wallet:, organization:) }
   let(:deleted_alert) { create(:wallet_balance_amount_alert, :processed, deleted_at: Time.current, wallet:, organization:, thresholds: []) }
+  let(:wallet_code) { wallet.code }
+
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before do
     alert
@@ -365,6 +366,26 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
         expect(json[:error_details]).to match(
           "1": match(params: params[:alerts][1], errors: include("invalid_type")),
           "2": match(params: params[:alerts][2], errors: include("alert_already_exists"))
+        )
+      end
+    end
+
+    context "when two alerts of different types share a code" do
+      let(:params) do
+        {
+          alerts: [
+            {code: "duplicated", alert_type: "wallet_balance_amount", thresholds: [{value: 1000}]},
+            {code: "duplicated", alert_type: "wallet_credits_balance", thresholds: [{value: 2000}]}
+          ]
+        }
+      end
+
+      it "returns an error naming the code" do
+        expect { subject }.not_to change(UsageMonitoring::Alert, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details]).to match(
+          "1": match(params: params[:alerts][1], errors: include("value_already_exist"))
         )
       end
     end

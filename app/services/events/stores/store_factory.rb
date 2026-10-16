@@ -10,14 +10,13 @@ module Events
           ENV["LAGO_CLICKHOUSE_ENABLED"].present?
         end
 
-        # Temporarily override the resolved store class and deduplication flag
-        # for the duration of the given block. Used by tooling that needs to
+        # Temporarily override the resolved store class for the duration of the given block. Used by tooling that needs to
         # exercise a different event store without persisting state on the
         # organization (e.g. the ClickHouse migration recipe).
-        def with_override(store_class:, deduplicate:)
+        def with_override(store_class:)
           raise "Events::Stores::StoreFactory override already active" if Thread.current[OVERRIDE_KEY]
 
-          Thread.current[OVERRIDE_KEY] = {store_class:, deduplicate:}
+          Thread.current[OVERRIDE_KEY] = {store_class:}
           begin
             yield
           ensure
@@ -33,21 +32,15 @@ module Events
       def self.store_class(organization:)
         return override[:store_class] if override
 
-        event_store = Events::Stores::PostgresStore
-
         if supports_clickhouse? && organization.clickhouse_events_store?
-          event_store = Events::Stores::ClickhouseStore
-
-          if organization.feature_flag_enabled?(:enriched_events_aggregation)
-            event_store = Events::Stores::ClickhouseEnrichedStore
-          end
+          Events::Stores::ClickhouseStore
+        else
+          Events::Stores::PostgresStore
         end
-
-        event_store
       end
 
-      def self.new_instance(organization:, **kwargs)
-        store_class(organization: organization).new(**kwargs)
+      def self.new_instance(organization:, billing_context:, **kwargs)
+        store_class(organization: organization).new(billing_context:, **kwargs)
       end
     end
   end

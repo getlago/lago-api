@@ -1,0 +1,91 @@
+# frozen_string_literal: true
+
+class ContractRateCard < ApplicationRecord
+  include PaperTrailTraceable
+  include Discard::Model
+
+  self.discard_column = :deleted_at
+  # The contract end date is the only end of a card; drop once released.
+  self.ignored_columns += %w[ended_date]
+
+  belongs_to :organization
+  belongs_to :contract
+  belongs_to :rate_card
+
+  has_one :product, through: :rate_card
+
+  has_many :rate_phases, -> { order(:position) }
+  has_many :billing_segments
+  has_many :fees
+
+  validates :billing_anchor_date, presence: true
+  # Only on create: nil means the schedule is exhausted, not that the card was made wrong.
+  validates :next_billing_at, presence: true, on: :create
+  validates :effective_date, presence: true
+  validates :units, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
+  validates :rate_card_id, uniqueness: {scope: :contract_id, conditions: -> { where(deleted_at: nil) }}
+
+  default_scope -> { kept }
+
+  scope :due_for_billing, ->(timestamp) {
+    joins(contract: {customer: :billing_entity})
+      .where(next_billing_at: ..timestamp)
+      .where(contracts: {status: Contract::BILLABLE_STATUSES, started_at: ..timestamp})
+      .where(customers: {deleted_at: nil})
+      # Only a priced card owes anything: a period with no price is not one to be paid for.
+      .where(rate_card_id: RateCardRate.select(:rate_card_id))
+      # And only a card with a window: one that starts after its contract ends has no period
+      # to owe anything in, which is an ordinary outcome of bringing a termination forward.
+      .where(
+        "contracts.ended_at IS NULL OR contracts.ended_at AT TIME ZONE 'UTC' > " \
+        "(contract_rate_cards.effective_date::timestamp AT TIME ZONE " \
+        "COALESCE(customers.timezone, billing_entities.timezone, 'UTC'))"
+      )
+  }
+
+  # A card seeded from its contract carries the contract's explicit anchor, or
+  # its own start day when the contract set none: an anchor matching what it
+  # would have inherited follows the contract, any other was set on the card.
+  def inherited_billing_anchor?(contract_billing_anchor_date)
+    billing_anchor_date == (contract_billing_anchor_date || effective_date)
+  end
+
+  def edit_error_code
+    "contract_locked" unless contract.editable?
+  end
+end
+
+# == Schema Information
+#
+# Table name: contract_rate_cards
+# Database name: primary
+#
+#  id                  :uuid             not null, primary key
+#  billing_anchor_date :date             not null
+#  deleted_at          :datetime
+#  effective_date      :date             not null
+#  next_billing_at     :datetime
+#  units               :decimal(, )
+#  created_at          :datetime         not null
+#  updated_at          :datetime         not null
+#  contract_id         :uuid             not null
+#  organization_id     :uuid             not null
+#  rate_card_id        :uuid             not null
+#
+# Indexes
+#
+#  index_contract_rate_cards_by_cursor                  (contract_id,created_at DESC,id DESC) WHERE (deleted_at IS NULL)
+#  index_contract_rate_cards_on_contract_and_rate_card  (contract_id,rate_card_id) UNIQUE WHERE (deleted_at IS NULL)
+#  index_contract_rate_cards_on_contract_id             (contract_id)
+#  index_contract_rate_cards_on_deleted_at              (deleted_at)
+#  index_contract_rate_cards_on_id_and_contract_id      (id,contract_id) UNIQUE
+#  index_contract_rate_cards_on_next_billing_at         (next_billing_at) WHERE (deleted_at IS NULL)
+#  index_contract_rate_cards_on_organization_id         (organization_id)
+#  index_contract_rate_cards_on_rate_card_id            (rate_card_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (contract_id => contracts.id)
+#  fk_rails_...  (organization_id => organizations.id)
+#  fk_rails_...  (rate_card_id => rate_cards.id)
+#

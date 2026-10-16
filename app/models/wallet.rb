@@ -4,6 +4,7 @@ class Wallet < ApplicationRecord
   include HasPurchaseOrderNumber
   include PaperTrailTraceable
   include Currencies
+  include ConnectionResolvable
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
@@ -67,7 +68,7 @@ class Wallet < ApplicationRecord
   scope :ready_to_be_refreshed, -> { where(ready_to_be_refreshed: true) }
 
   def self.in_application_order
-    order(:priority, :created_at)
+    order(:priority, arel_table[:expiration_at].asc.nulls_last, :created_at)
   end
 
   def billing_entity
@@ -153,6 +154,7 @@ end
 #  lock_version                        :integer          default(0), not null
 #  name                                :string
 #  ongoing_balance_cents               :bigint           default(0), not null
+#  ongoing_billable_metric_amounts     :jsonb            not null
 #  ongoing_usage_balance_cents         :bigint           default(0), not null
 #  paid_top_up_max_amount_cents        :bigint
 #  paid_top_up_min_amount_cents        :bigint
@@ -165,6 +167,7 @@ end
 #  status                              :integer          not null
 #  terminated_at                       :datetime
 #  traceable                           :boolean          default(FALSE), not null
+#  x402_enabled                        :boolean          default(FALSE), not null
 #  created_at                          :datetime         not null
 #  updated_at                          :datetime         not null
 #  billing_entity_id                   :uuid
@@ -181,6 +184,7 @@ end
 #  index_wallets_on_organization_id_and_customer_id  (organization_id,customer_id)
 #  index_wallets_on_payment_method_id                (payment_method_id)
 #  index_wallets_on_ready_to_be_refreshed            (ready_to_be_refreshed) WHERE ready_to_be_refreshed
+#  index_x402_enabled_wallets_on_customer_id         (customer_id) WHERE x402_enabled
 #
 # Foreign Keys
 #

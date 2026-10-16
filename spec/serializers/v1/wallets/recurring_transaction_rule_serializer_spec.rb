@@ -44,4 +44,24 @@ RSpec.describe ::V1::Wallets::RecurringTransactionRuleSerializer do
       expect(result["recurring_transaction_rule"]["grants_target_top_up"]).to be(true)
     end
   end
+
+  context "with connections" do
+    let(:customer) { recurring_transaction_rule.wallet.customer }
+
+    before do
+      create(:stripe_customer, customer:, organization: customer.organization,
+        code: "stripe_default", is_default: true)
+      create(:billing_object_connection, owner: recurring_transaction_rule,
+        organization: recurring_transaction_rule.organization, category: "tax", behavior: "skip")
+    end
+
+    it "reports every category with its behaviour and effective code" do
+      result = JSON.parse(serializer.to_json)
+      connections = result["recurring_transaction_rule"]["connections"]
+
+      expect(connections.keys).to match_array(%w[payment tax accounting crm])
+      expect(connections["payment"]).to eq({"behavior" => "inherit", "code" => "stripe_default"})
+      expect(connections["tax"]).to eq({"behavior" => "skip", "code" => nil})
+    end
+  end
 end

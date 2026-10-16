@@ -57,15 +57,17 @@ class Customer < ApplicationRecord
   enum :subscription_invoice_issuing_date_anchor, SUBSCRIPTION_INVOICE_ISSUING_DATE_ANCHORS, prefix: true, validate: {allow_nil: true}
   enum :subscription_invoice_issuing_date_adjustment, SUBSCRIPTION_INVOICE_ISSUING_DATE_ADJUSTMENTS, prefix: true, validate: {allow_nil: true}
 
+  attr_readonly :x402_agent_address
+
+  before_validation :normalize_x402_agent_address, on: :create
   before_save :ensure_slug
-  after_update :flag_invoices_for_search_reindex, if: -> { Lago::Meilisearch.indexing_enabled? && search_indexed_fields_changed? }
-  after_commit :enqueue_invoices_reindex_job, if: -> { @invoices_search_reindex_needed }
 
   belongs_to :organization
   belongs_to :billing_entity, optional: true
   belongs_to :applied_dunning_campaign, optional: true, class_name: "DunningCampaign"
 
   has_many :subscriptions
+  has_many :contracts
   has_many :events
   has_many :invoices
   has_many :applied_coupons
@@ -86,6 +88,7 @@ class Customer < ApplicationRecord
   has_many :payment_methods, dependent: :destroy
   has_many :payment_requests, dependent: :destroy
   has_many :quantified_events
+  has_many :usage_attribution_values
   has_many :integration_customers,
     class_name: "IntegrationCustomers::BaseCustomer",
     dependent: :destroy
@@ -138,6 +141,15 @@ class Customer < ApplicationRecord
     lock_key: ->(customer) { customer.organization_id }
 
   scope :awaiting_wallet_refresh, -> { where(awaiting_wallet_refresh: true) }
+  scope :by_x402_agent_address, ->(address) {
+    family = X402::Network.family_of_address(address)
+
+    if family
+      where(x402_agent_address: X402::Network.normalize_address(address, family:))
+    else
+      none
+    end
+  }
   scope :with_active_wallets, -> { joins(:wallets).where(wallets: {status: :active}) }
 
   scope :falling_back_to_default_dunning_campaign, -> {
@@ -169,6 +181,7 @@ class Customer < ApplicationRecord
   validates :payment_provider, inclusion: {in: PAYMENT_PROVIDERS}, allow_nil: true
   validates :timezone, timezone: true, allow_nil: true
   validates :email, email: true, if: -> { email? && will_save_change_to_email? }
+  validate :validate_x402_agent_address, on: :create, if: :x402_agent_address
 
   BILLING_ADDRESS_FIELDS = %i[
     address_line1 address_line2 city zipcode state country
@@ -223,7 +236,7 @@ class Customer < ApplicationRecord
     billing_entity.timezone || "UTC"
   end
 
-  def applicable_invoice_grace_period
+  def applicable_invoice_grace_period(billing_entity: self.billing_entity)
     return invoice_grace_period if invoice_grace_period.present?
 
     billing_entity.invoice_grace_period || 0
@@ -385,6 +398,11 @@ class Customer < ApplicationRecord
     payment_provider_customers.find_by(is_default: true)
   end
 
+  # The customer's default integration connection for a category (tax / accounting / crm).
+  def integration_connection(category)
+    integration_customers.where(category:).find_by(is_default: true)
+  end
+
   def payment_connection_status
     connection = payment_connection
 
@@ -411,20 +429,20 @@ class Customer < ApplicationRecord
     self.slug = "#{organization.document_number_prefix}-#{formatted_sequential_id}"
   end
 
-  # `deleted_at` is included because invoice documents embed customer fields
-  # only while the customer is kept: discarding must blank them, undiscarding
-  # must restore them.
-  def search_indexed_fields_changed?
-    (saved_changes.keys & (SEARCHABLE_CUSTOMER_FIELDS + ["deleted_at"])).any?
+  def normalize_x402_agent_address
+    family = X402::Network.family_of_address(x402_agent_address)
+
+    if family
+      self.x402_agent_address = X402::Network.normalize_address(x402_agent_address, family:)
+    end
   end
 
-  def flag_invoices_for_search_reindex
-    @invoices_search_reindex_needed = true
-  end
+  def validate_x402_agent_address
+    family = X402::Network.family_of_address(x402_agent_address)
 
-  def enqueue_invoices_reindex_job
-    @invoices_search_reindex_needed = false
-    Customers::ReindexInvoicesJob.perform_later(id)
+    if family.nil? || !X402::Network.valid_address?(x402_agent_address, family:)
+      errors.add(:x402_agent_address, :invalid_format)
+    end
   end
 end
 
@@ -478,6 +496,7 @@ end
 #  timezone                                     :string
 #  url                                          :string
 #  vat_rate                                     :float
+#  x402_agent_address                           :string
 #  zipcode                                      :string
 #  created_at                                   :datetime         not null
 #  updated_at                                   :datetime         not null
@@ -499,6 +518,7 @@ end
 #  index_customers_on_external_id                               (organization_id,external_id)
 #  index_customers_on_external_id_and_organization_id           (external_id,organization_id) UNIQUE WHERE (deleted_at IS NULL)
 #  index_customers_on_org_id_and_sequential_id_unique           (organization_id,sequential_id) UNIQUE WHERE (sequential_id IS NOT NULL)
+#  index_customers_on_organization_id_and_x402_agent_address    (organization_id,x402_agent_address) UNIQUE WHERE ((deleted_at IS NULL) AND (x402_agent_address IS NOT NULL))
 #  index_customers_on_organization_id_email_gin_trgm_ops        (organization_id,email) WHERE (deleted_at IS NULL) USING gin
 #  index_customers_on_organization_id_external_id_gin_trgm_ops  (organization_id,external_id) WHERE (deleted_at IS NULL) USING gin
 #  index_customers_on_organization_id_firstname_gin_trgm_ops    (organization_id,firstname) WHERE (deleted_at IS NULL) USING gin

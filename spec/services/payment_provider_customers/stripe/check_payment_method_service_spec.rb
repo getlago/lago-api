@@ -5,9 +5,10 @@ require "rails_helper"
 RSpec.describe PaymentProviderCustomers::Stripe::CheckPaymentMethodService do
   subject(:check_service) { described_class.new(stripe_customer:, payment_method_id:) }
 
-  let(:customer) { create(:customer, organization:) }
-  let(:stripe_provider) { create(:stripe_provider) }
-  let(:organization) { stripe_provider.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:stripe_provider) { create(:stripe_provider) }
+  let_it_be(:customer) { create(:customer, organization:) }
 
   let(:stripe_customer) do
     create(

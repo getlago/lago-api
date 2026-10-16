@@ -43,6 +43,27 @@ RSpec.describe FeeDisplayHelper do
         expect(subject).to eq("Compute • eu • EU Premium")
       end
     end
+
+    context "when product filter is present" do
+      let(:product) { create(:product, organization: charge.organization, name: "Compute") }
+      let(:product_filter) { create(:product_filter, product:, invoice_display_name: "EU Premium") }
+      let(:fee) do
+        build(
+          :fee,
+          charge: nil,
+          fee_type: "product",
+          invoiceable: product,
+          subscription: nil,
+          product_filter:,
+          grouped_by: {},
+          invoice_display_name: nil
+        )
+      end
+
+      it "returns invoice_name appended with the product filter display name" do
+        expect(subject).to eq("Compute • EU Premium")
+      end
+    end
   end
 
   describe ".should_display_subscription_fee?" do
@@ -200,6 +221,24 @@ RSpec.describe FeeDisplayHelper do
       it "returns the amount with the pricing unit's short name" do
         expect(subject).to eq "10.53 #{pricing_unit_usage.short_name}"
       end
+    end
+  end
+
+  describe ".format_percentage_rate" do
+    it "rounds float artifacts and removes trailing zeros" do
+      expect(helper.format_percentage_rate("0.8999999999999999")).to eq("0.9%")
+      expect(helper.format_percentage_rate("0.7000000000000001")).to eq("0.7%")
+      expect(helper.format_percentage_rate("5.55")).to eq("5.55%")
+      expect(helper.format_percentage_rate("5")).to eq("5%")
+      expect(helper.format_percentage_rate("100")).to eq("100%")
+      expect(helper.format_percentage_rate("0.001")).to eq("0.001%")
+      expect(helper.format_percentage_rate("2.125")).to eq("2.125%")
+      expect(helper.format_percentage_rate("1.0")).to eq("1%")
+      expect(helper.format_percentage_rate("0.0000004")).to eq("0.0000004%")
+    end
+
+    it "returns nil when the rate is blank" do
+      expect(helper.format_percentage_rate("")).to be_nil
     end
   end
 

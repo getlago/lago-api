@@ -186,15 +186,23 @@ module Customers
         Customers::Metadata::UpdateService.call(customer:, params: args[:metadata]) if args[:metadata]
       end
 
-      # NOTE: if payment provider is updated, we need to create/update the provider customer
-      if args.key?(:provider_customer) || args.key?(:payment_provider)
-        payment_provider = old_payment_provider || customer.payment_provider
-        create_or_update_provider_customer(customer, payment_provider, args[:provider_customer])
-      end
+      # NOTE: the payment_provider_customers array (new shape) takes precedence over the singular
+      # provider_customer (deprecated). Only fall back to the legacy path when the array is absent.
+      if args.key?(:payment_provider_customers)
+        PaymentProviderCustomers::CreateOrUpdateBatchService.call(
+          payment_provider_customers: args[:payment_provider_customers],
+          customer:
+        ).raise_if_error!
+      else
+        if args.key?(:provider_customer) || args.key?(:payment_provider)
+          payment_provider = old_payment_provider || customer.payment_provider
+          create_or_update_provider_customer(customer, payment_provider, args[:provider_customer])
+        end
 
-      if args.dig(:provider_customer, :provider_customer_id)
-        update_result = PaymentProviderCustomers::UpdateService.call(customer)
-        update_result.raise_if_error!
+        if args.dig(:provider_customer, :provider_customer_id)
+          update_result = PaymentProviderCustomers::UpdateService.call(customer)
+          update_result.raise_if_error!
+        end
       end
 
       result.customer = customer

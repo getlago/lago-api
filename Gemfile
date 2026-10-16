@@ -3,18 +3,19 @@
 source "https://rubygems.org"
 git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
-ruby "4.0.2"
+ruby "~> 4.0.6"
 
 # Core
 gem "aasm"
-gem "activejob-uniqueness", require: "active_job/uniqueness/sidekiq_patch"
+gem "activejob-uniqueness", github: "getlago/activejob-uniqueness", branch: "main", require: "active_job/uniqueness/sidekiq_patch"
 gem "redlock", "~> 2.0.6" # Used through `activejob-uniqueness`. It's pinned to 2.0.x because we patched the library to fix a bug.
 gem "active_storage_validations"
+gem "benchmark" # Bundled gem since Ruby 3.5; ActiveSupport 8.1 no longer pulls it in.
 gem "bootsnap", require: false
 gem "clockwork", require: false
 gem "parallel"
 gem "puma", "~> 7.2"
-gem "rails", "~> 8.0"
+gem "rails", "~> 8.1.4"
 gem "redis"
 gem "sidekiq"
 gem "sidekiq-prometheus-exporter"
@@ -42,7 +43,6 @@ gem "after_commit_everywhere"
 gem "clickhouse-activerecord", "~> 1.6.1"
 gem "discard", "~> 2.0"
 gem "kaminari-activerecord"
-gem "meilisearch-rails"
 gem "paper_trail"
 gem "pg"
 gem "ransack"
@@ -100,7 +100,12 @@ gem "datadog", require: false
 
 # Storage
 gem "aws-sdk-s3", require: false
+gem "aws-sdk-kinesis", require: false
 gem "google-cloud-storage", require: false
+# google-apis-core < 1.2.1 loads representable/json, which calls `gem "multi_json"`
+# without declaring the dependency. googleauth 1.17 and signet 0.22 both migrated to
+# stdlib json, so multi_json is no longer pulled in transitively and must be pinned.
+gem "multi_json", require: false
 
 # Templating
 gem "slim"
@@ -117,7 +122,7 @@ gem "valvat"
 # Data Export
 gem "csv", "~> 3.0"
 
-gem "lago-expression", github: "getlago/lago-expression", glob: "expression-ruby/lago-expression.gemspec", ref: "2abd2b3"
+gem "lago-expression", github: "getlago/lago-expression", glob: "expression-ruby/lago-expression.gemspec", ref: "6a70c6d"
 
 group :development, :test, :staging do
   gem "factory_bot_rails"
@@ -163,6 +168,8 @@ group :test do
   # HTML testing (invoice rendering)
   gem "rspec-snapshot", "~> 2.0"
   gem "htmlbeautifier", "~> 1.4"
+
+  gem "test-prof", "~> 1.0"
 end
 
 group :development do

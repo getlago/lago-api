@@ -5,10 +5,11 @@ require "rails_helper"
 RSpec.describe PaymentProviders::Moneyhash::HandleEventService do
   subject(:event_service) { described_class.new(organization:, event_json:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:moneyhash_provider) { create(:moneyhash_provider, organization:) }
-  let(:customer) { create(:customer, organization:) }
   let(:moneyhash_customer) { create(:moneyhash_customer, customer:) }
+
+  let_it_be(:customer) { create(:customer, organization:) }
 
   # Intent
   # handle event - intent.processed <-

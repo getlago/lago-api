@@ -4,14 +4,9 @@ require "rails_helper"
 
 RSpec.describe Mutations::PaymentReceipts::DownloadXml do
   let(:required_permission) { "invoices:view" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:billing_entity) { create(:billing_entity, country: "FR", einvoicing: true) }
-  let(:customer) { create(:customer, organization:, billing_entity:) }
   let(:invoice) { create(:invoice, customer:, organization:) }
   let(:payment) { create(:payment, payable: invoice, customer:) }
   let(:payment_receipt) { create(:payment_receipt, payment:, organization:, billing_entity:) }
-
   let(:mutation) do
     <<~GQL
       mutation($input: DownloadXMLPaymentReceiptInput!) {
@@ -22,6 +17,11 @@ RSpec.describe Mutations::PaymentReceipts::DownloadXml do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:billing_entity) { create_default(:billing_entity, country: "FR", einvoicing: true) }
+  let_it_be(:customer) { create_default(:customer, organization:, billing_entity:) }
 
   before { payment_receipt }
 

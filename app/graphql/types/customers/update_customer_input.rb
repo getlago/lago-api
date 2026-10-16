@@ -37,6 +37,7 @@ module Types
 
       argument :payment_provider, Types::PaymentProviders::ProviderTypeEnum, required: false, permission: "customers:update"
       argument :payment_provider_code, String, required: false, permission: "customers:update"
+      argument :payment_provider_customers, [Types::PaymentProviderCustomers::CustomerInput], required: false, permission: "customers:update"
       argument :provider_customer, Types::PaymentProviderCustomers::ProviderInput, required: false, permission: "customers:update"
 
       argument :integration_customers, [Types::IntegrationCustomers::Input], required: false, permission: "customers:update"

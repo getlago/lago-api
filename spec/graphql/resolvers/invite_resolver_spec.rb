@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::InviteResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:query) do
     <<~GQL
       query($token: String!) {
@@ -10,6 +12,7 @@ RSpec.describe Resolvers::InviteResolver do
           id
           token
           email
+          existingUser
           organization {
             id
             name
@@ -18,10 +21,10 @@ RSpec.describe Resolvers::InviteResolver do
       }
     GQL
   end
-
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:invite) { create(:invite, organization:) }
+
+  let_it_be(:membership) { create_default(:membership) }
 
   it "returns a single invite" do
     result = execute_graphql(
@@ -33,9 +36,25 @@ RSpec.describe Resolvers::InviteResolver do
 
     data = result["data"]["invite"]
 
-    expect(data["token"]).to eq(invite.token)
     expect(data["email"]).to eq(invite.email)
+    expect(data["existingUser"]).to eq(false)
     expect(data["organization"]["name"]).to eq(organization.name)
+  end
+
+  it "does not expose the invite token to an anonymous caller" do
+    result = execute_graphql(query:, variables: {token: invite.token})
+
+    expect(result["data"]["invite"]["token"]).to be_nil
+  end
+
+  context "when the invited email belongs to an existing user" do
+    before { create(:user, email: invite.email) }
+
+    it "flags the invite as targeting an existing user" do
+      result = execute_graphql(query:, variables: {token: invite.token})
+
+      expect(result["data"]["invite"]["existingUser"]).to eq(true)
+    end
   end
 
   context "when invite is not found" do

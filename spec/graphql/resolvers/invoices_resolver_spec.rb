@@ -4,6 +4,15 @@ require "rails_helper"
 
 RSpec.describe Resolvers::InvoicesResolver do
   let(:required_permission) { "invoices:view" }
+  let(:customer_first) { create(:customer, organization:) }
+  let(:customer_second) { create(:customer, organization:) }
+  let(:organization) { membership.organization }
+  let(:invoice_first) do
+    create(:invoice, customer: customer_first, payment_status: :pending, status: :finalized, organization:)
+  end
+  let(:invoice_second) do
+    create(:invoice, customer: customer_second, payment_status: :succeeded, status: :finalized, organization:)
+  end
   let(:query) do
     <<~GQL
       query {
@@ -15,16 +24,8 @@ RSpec.describe Resolvers::InvoicesResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer_first) { create(:customer, organization:) }
-  let(:customer_second) { create(:customer, organization:) }
-  let(:invoice_first) do
-    create(:invoice, customer: customer_first, payment_status: :pending, status: :finalized, organization:)
-  end
-  let(:invoice_second) do
-    create(:invoice, customer: customer_second, payment_status: :succeeded, status: :finalized, organization:)
-  end
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     invoice_first
@@ -832,6 +833,83 @@ RSpec.describe Resolvers::InvoicesResolver do
       )
 
       expect(result["data"]["invoices"]["collection"].count).to eq(2)
+    end
+  end
+
+  describe "total count" do
+    let(:page) { 1 }
+    let(:query) do
+      <<~GQL
+        query {
+          invoices(page: #{page}, limit: 1) {
+            collection { id }
+            metadata { currentPage totalCount totalPages totalCountCapped hasNextPage }
+          }
+        }
+      GQL
+    end
+
+    let(:metadata) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )["data"]["invoices"]["metadata"]
+    end
+
+    it "returns the exact total" do
+      expect(metadata).to eq(
+        "currentPage" => 1,
+        "totalCount" => 2,
+        "totalPages" => 2,
+        "totalCountCapped" => false,
+        "hasNextPage" => true
+      )
+    end
+
+    context "when the result set exceeds the cap" do
+      before { stub_const("BaseQuery::CappedTotalCount::MAX_COUNTED_RECORDS", 1) }
+
+      it "caps the total and keeps advertising the next page" do
+        expect(metadata).to eq(
+          "currentPage" => 1,
+          "totalCount" => 1,
+          "totalPages" => 1,
+          "totalCountCapped" => true,
+          "hasNextPage" => true
+        )
+      end
+
+      context "when on the last page" do
+        let(:page) { 2 }
+
+        it "reports no next page" do
+          expect(metadata).to include("totalCountCapped" => true, "hasNextPage" => false)
+        end
+      end
+
+      context "when the results land exactly on the limit" do
+        before { stub_const("BaseQuery::CappedTotalCount::MAX_COUNTED_RECORDS", 2) }
+
+        it "reports the total as exact" do
+          expect(metadata).to eq(
+            "currentPage" => 1,
+            "totalCount" => 2,
+            "totalPages" => 2,
+            "totalCountCapped" => false,
+            "hasNextPage" => true
+          )
+        end
+      end
+
+      context "when past the last page" do
+        let(:page) { 3 }
+
+        it "reports no next page" do
+          expect(metadata).to include("hasNextPage" => false)
+        end
+      end
     end
   end
 end

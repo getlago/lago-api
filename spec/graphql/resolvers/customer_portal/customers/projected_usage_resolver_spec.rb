@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::CustomerPortal::Customers::ProjectedUsageResolver do
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let(:query) do
     <<~GQL
       query($subscriptionId: ID!) {
@@ -43,12 +45,8 @@ RSpec.describe Resolvers::CustomerPortal::Customers::ProjectedUsageResolver do
       }
     GQL
   end
-
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:tax) { create(:tax, organization:, rate: 20) }
-
-  let(:customer) { create(:customer, organization:) }
   let(:subscription) do
     create(
       :subscription,
@@ -57,9 +55,6 @@ RSpec.describe Resolvers::CustomerPortal::Customers::ProjectedUsageResolver do
       started_at: Time.zone.now - 2.years
     )
   end
-  let(:plan) { create(:plan, interval: "monthly") }
-
-  let(:metric) { create(:billable_metric, aggregation_type: "count_agg") }
   let(:sum_metric) { create(:sum_billable_metric, organization:) }
   let(:charge) do
     create(
@@ -90,15 +85,20 @@ RSpec.describe Resolvers::CustomerPortal::Customers::ProjectedUsageResolver do
       }
     )
   end
-
   let(:billable_metric_filter) do
     create(:billable_metric_filter, billable_metric: sum_metric, key: "cloud", values: %w[aws gcp])
   end
-
   let(:charge_filter) { create(:charge_filter, charge: standard_charge, invoice_display_name: nil) }
   let(:charge_filter_value) do
     create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ["aws"])
   end
+
+  let_it_be(:membership, refind: true) { create_default(:membership) }
+
+  let_it_be(:customer, refind: true) { create_default(:customer, organization:) }
+  let_it_be(:plan, refind: true) { create_default(:plan, interval: "monthly") }
+
+  let_it_be(:metric) { create_default(:billable_metric, aggregation_type: "count_agg") }
 
   before do
     subscription
@@ -160,7 +160,7 @@ RSpec.describe Resolvers::CustomerPortal::Customers::ProjectedUsageResolver do
       expect(usage_response["currency"]).to eq("EUR")
       expect(usage_response["issuingDate"]).to eq(Time.zone.today.end_of_month.iso8601)
       expect(usage_response["amountCents"]).to eq("105")
-      expect(usage_response["projectedAmountCents"]).to eq("836")
+      expect(usage_response["projectedAmountCents"]).to eq("216")
       expect(usage_response["totalAmountCents"]).to eq("105")
       expect(usage_response["taxesAmountCents"]).to eq("0")
 
@@ -179,15 +179,15 @@ RSpec.describe Resolvers::CustomerPortal::Customers::ProjectedUsageResolver do
       expect(charge_usage["billableMetric"]["aggregationType"]).to eq("sum_agg")
       expect(charge_usage["charge"]["chargeModel"]).to eq("standard")
       expect(charge_usage["pricingUnitAmountCents"]).to eq("400")
-      expect(charge_usage["pricingUnitProjectedAmountCents"]).to eq("207")
+      expect(charge_usage["pricingUnitProjectedAmountCents"]).to eq("827")
       expect(charge_usage["units"]).to eq(4.0)
       expect(charge_usage["projectedUnits"]).to eq(8.27)
       expect(charge_usage["amountCents"]).to eq("100")
-      expect(charge_usage["projectedAmountCents"]).to eq("827")
+      expect(charge_usage["projectedAmountCents"]).to eq("207")
 
       grouped_usage = charge_usage["groupedUsage"].first
       expect(grouped_usage["amountCents"]).to eq("100")
-      expect(grouped_usage["projectedAmountCents"]).to eq("827")
+      expect(grouped_usage["projectedAmountCents"]).to eq("207")
       expect(grouped_usage["units"]).to eq(4.0)
       expect(grouped_usage["projectedUnits"]).to eq(8.27)
       expect(grouped_usage["eventsCount"]).to eq(4)
@@ -286,7 +286,7 @@ RSpec.describe Resolvers::CustomerPortal::Customers::ProjectedUsageResolver do
         expect(charge_usage["units"]).to eq(4)
         expect(charge_usage["amountCents"]).to eq("1000")
         expect(charge_usage["projectedUnits"]).to eq(8.27)
-        expect(charge_usage["projectedAmountCents"]).to eq("10340")
+        expect(charge_usage["projectedAmountCents"]).to eq("2068")
 
         aws_filter_data = filters_usage.find { |f| f["id"] == aws_filter.id }
         expect(aws_filter_data["units"]).to eq(3)

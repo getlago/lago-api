@@ -1,4 +1,4 @@
-ARG PDFCPU_VERSION=0.11.1
+ARG PDFCPU_VERSION=0.15.0
 ARG GO_VERSION=1.26.6
 
 FROM golang:${GO_VERSION} AS pdfcpu-build
@@ -7,7 +7,7 @@ ARG PDFCPU_VERSION
 
 RUN go install github.com/pdfcpu/pdfcpu/cmd/pdfcpu@v${PDFCPU_VERSION}
 
-FROM ruby:4.0.2-slim
+FROM ruby:4.0.6-slim
 
 WORKDIR /app
 ENV POSTGRES_VERSION=15
@@ -19,7 +19,7 @@ RUN apt update -qq && \
 
 COPY --from=pdfcpu-build /go/bin/pdfcpu /usr/local/bin/pdfcpu
 
-ENV BUNDLER_VERSION='4.0.4'
+ENV BUNDLER_VERSION='4.0.19'
 ENV PATH="$PATH:/root/.cargo/bin/"
 
 ENV LD_PRELOAD=libjemalloc.so.2

@@ -3,7 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::PaymentResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "payments:view" }
+  let(:organization) { membership.organization }
+  let(:invoice) { create(:invoice, customer:, organization:, fees_amount_cents: 10) }
+  let(:payment) { create(:payment, payable: invoice) }
 
   let(:query) do
     <<~GQL
@@ -15,11 +20,8 @@ RSpec.describe Resolvers::PaymentResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
-  let(:invoice) { create(:invoice, customer:, organization:, fees_amount_cents: 10) }
-  let(:payment) { create(:payment, payable: invoice) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before { payment }
 

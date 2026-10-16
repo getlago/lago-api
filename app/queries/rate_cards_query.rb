@@ -3,25 +3,31 @@
 class RateCardsQuery < BaseQuery
   Result = BaseResult[:rate_cards]
   Filters = BaseFilters[
-    :product_id,
-    :product_filter_id,
+    :product_ids,
+    :product_filter_ids,
+    :product_category_ids,
+    :without_product_category,
     :code,
+    :currency,
     :product_code,
     :product_filter_code
   ]
 
   def call
     rate_cards = base_scope.result
-    rate_cards = paginate(rate_cards)
     rate_cards = apply_consistent_ordering(rate_cards)
 
-    rate_cards = with_product(rate_cards) if filters.product_id.present?
-    rate_cards = with_product_filter(rate_cards) if filters.product_filter_id.present?
+    rate_cards = with_products(rate_cards) if filters.product_ids.present?
+    rate_cards = with_product_filters(rate_cards) if filters.product_filter_ids.present?
+    if filters.product_category_ids.present? || filters.without_product_category.present?
+      rate_cards = with_product_category(rate_cards)
+    end
     rate_cards = with_code(rate_cards) if filters.code.present?
+    rate_cards = with_currency(rate_cards) if filters.currency.present?
     rate_cards = with_product_code(rate_cards) if filters.product_code.present?
     rate_cards = with_product_filter_code(rate_cards) if filters.product_filter_code.present?
 
-    result.rate_cards = rate_cards
+    result.rate_cards = paginate(rate_cards)
     result
   end
 
@@ -41,16 +47,30 @@ class RateCardsQuery < BaseQuery
     }
   end
 
-  def with_product(scope)
-    scope.where(product_id: filters.product_id)
+  def with_products(scope)
+    scope.where(product_id: filters.product_ids)
   end
 
-  def with_product_filter(scope)
-    scope.where(product_filter_id: filters.product_filter_id)
+  def with_product_filters(scope)
+    scope.where(product_filter_id: filters.product_filter_ids)
+  end
+
+  # A rate card reaches a product_category through its product, so scope the
+  # cards to the matching products (shared Product.in_categories rule).
+  def with_product_category(scope)
+    matching_products = organization.products.in_categories(
+      filters.product_category_ids,
+      include_uncategorized: filters.without_product_category.present?
+    )
+    scope.where(product_id: matching_products.select(:id))
   end
 
   def with_code(scope)
     scope.where(code: filters.code)
+  end
+
+  def with_currency(scope)
+    scope.where(currency: filters.currency)
   end
 
   def with_product_code(scope)

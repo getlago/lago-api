@@ -1,0 +1,440 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+RSpec.describe Api::V2::ContractsController do
+  let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
+  let(:customer) { create(:customer, organization:) }
+  let(:catalog_plan) { create(:catalog_plan, organization:) }
+
+  describe "POST /api/v2/contracts" do
+    subject { post_with_token(organization, "/api/v2/contracts", {contract: create_params}) }
+
+    let(:create_params) do
+      {
+        external_customer_id: customer.external_id,
+        external_id: "contract-1",
+        plan_code: catalog_plan.code
+      }
+    end
+
+    include_examples "requires API permission", "contract", "write"
+
+    it "creates the contract and returns it with its materialized rate cards" do
+      rate_card = create(:rate_card, organization:)
+      create(:plan_rate_card, organization:, catalog_plan:, rate_card:, units: 2)
+
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:contract][:external_id]).to eq("contract-1")
+      expect(json[:contract][:plan_code]).to eq(catalog_plan.code)
+      expect(json[:contract][:status]).to eq("active")
+      expect(json[:contract][:applied_rate_cards_count]).to eq(1)
+      expect(json[:contract][:applied_rate_cards].sole[:rate_card_code]).to eq(rate_card.code)
+    end
+
+    context "with invoicing settings" do
+      let(:create_params) { super().merge(consolidate_invoice: false, purchase_order_number: "PO-111") }
+
+      it "persists and returns the settings used to group invoices" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract]).to include(consolidate_invoice: false, purchase_order_number: "PO-111")
+        expect(organization.contracts.find_by!(external_id: "contract-1")).to have_attributes(
+          consolidate_invoice: false, purchase_order_number: "PO-111"
+        )
+      end
+    end
+
+    context "with invoice custom sections" do
+      let(:section) { create(:invoice_custom_section, organization:) }
+      let(:create_params) { super().merge(invoice_custom_section: {invoice_custom_section_codes: [section.code]}) }
+
+      it "attaches the sections and returns them" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:skip_invoice_custom_sections]).to be(false)
+        expect(json[:contract][:applied_invoice_custom_sections].map { |s| s[:invoice_custom_section_id] }).to eq([section.id])
+      end
+    end
+
+    context "without a plan" do
+      let(:create_params) { {external_customer_id: customer.external_id, external_id: "contract-1"} }
+
+      it "creates a plan-less contract" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:plan_code]).to be_nil
+        expect(json[:contract][:applied_rate_cards]).to be_empty
+      end
+    end
+
+    context "when the customer does not exist" do
+      let(:create_params) { super().merge(external_customer_id: "unknown") }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_not_found_error("customer")
+      end
+    end
+
+    context "when a live contract already uses the external id" do
+      before { create(:contract, organization:, customer:, external_id: "contract-1") }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json.dig(:error_details, :external_id)).to eq(["value_already_exists"])
+      end
+    end
+  end
+
+  describe "GET /api/v2/contracts" do
+    subject { get_with_token(organization, "/api/v2/contracts") }
+
+    let!(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
+
+    include_examples "requires API permission", "contract", "read"
+
+    it "lists active contracts with their card counts" do
+      create(:contract_rate_card, organization:, contract:)
+
+      subject
+
+      expect(response).to have_http_status(:success)
+      result = json[:contracts].sole
+      expect(result[:lago_id]).to eq(contract.id)
+      expect(result[:applied_rate_cards_count]).to eq(1)
+      expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
+    end
+
+    it_behaves_like "a cursor paginated v2 endpoint", collection: :contracts, model: Contract do
+      let(:paginated_path) { "/api/v2/contracts" }
+      let(:create_paginated_record) { ->(created_at) { create(:contract, organization:, customer:, created_at:) } }
+    end
+
+    context "with a pending contract" do
+      let!(:pending_contract) { create(:contract, :pending, organization:, customer:) }
+
+      it "lists only active contracts by default" do
+        subject
+
+        expect(json[:contracts].map { |c| c[:lago_id] }).to eq([contract.id])
+      end
+
+      it "lists pending contracts when the status filter asks for them" do
+        get_with_token(organization, "/api/v2/contracts?status[]=pending")
+
+        expect(json[:contracts].map { |c| c[:lago_id] }).to eq([pending_contract.id])
+      end
+
+      it "accepts the scalar status form" do
+        get_with_token(organization, "/api/v2/contracts?status=pending")
+
+        expect(json[:contracts].map { |c| c[:lago_id] }).to eq([pending_contract.id])
+      end
+    end
+
+    context "with a billing entity filter" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let!(:matching) { create(:contract, organization:, billing_entity:) }
+
+      it "returns only contracts on that billing entity" do
+        get_with_token(organization, "/api/v2/contracts?billing_entity_ids[]=#{billing_entity.id}")
+
+        expect(json[:contracts].map { |c| c[:lago_id] }).to eq([matching.id])
+      end
+    end
+
+    context "with a has_rate_overrides filter" do
+      it "returns only contracts carrying a rate override" do
+        card = create(:contract_rate_card, organization:, contract:)
+        create(:rate_phase, organization:, plan_rate_card: nil, contract_rate_card: card, rate_override: create(:rate_override, organization:))
+
+        get_with_token(organization, "/api/v2/contracts?has_rate_overrides=true")
+
+        expect(json[:contracts].map { |c| c[:lago_id] }).to eq([contract.id])
+      end
+    end
+
+    context "with a search term" do
+      let!(:matching) { create(:contract, organization:, external_id: "needle-1") }
+
+      it "returns only the matching contracts" do
+        get_with_token(organization, "/api/v2/contracts?search_term=needle")
+
+        expect(json[:contracts].map { |c| c[:lago_id] }).to eq([matching.id])
+      end
+    end
+  end
+
+  describe "GET /api/v2/contracts/:external_id" do
+    subject { get_with_token(organization, "/api/v2/contracts/#{contract.external_id}") }
+
+    let!(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
+
+    include_examples "requires API permission", "contract", "read"
+
+    it "returns the contract with its rate cards" do
+      card = create(:contract_rate_card, organization:, contract:)
+
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:contract][:lago_id]).to eq(contract.id)
+      expect(json[:contract][:applied_rate_cards].sole[:lago_id]).to eq(card.id)
+    end
+
+    context "with invoicing settings" do
+      let(:contract) do
+        create(:contract, organization:, customer:, catalog_plan:, consolidate_invoice: false, purchase_order_number: "PO-222")
+      end
+
+      it "returns the persisted settings" do
+        subject
+
+        expect(json[:contract]).to include(consolidate_invoice: false, purchase_order_number: "PO-222")
+      end
+    end
+
+    context "without a billing anchor" do
+      let(:contract) { create(:contract, organization:, customer:, catalog_plan:, started_at: Time.zone.parse("2026-10-01")) }
+
+      it "returns the start day as the effective anchor" do
+        subject
+
+        expect(json[:contract]).to include(billing_anchor_date: nil, effective_billing_anchor_date: "2026-10-01")
+      end
+    end
+
+    context "with a section deleted while the contract still links it" do
+      let(:section) { create(:invoice_custom_section, organization:) }
+
+      before do
+        create(:contract_applied_invoice_custom_section, organization:, contract:, invoice_custom_section: section)
+        section.discard!
+      end
+
+      it "returns the contract without the deleted section" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:applied_invoice_custom_sections]).to be_empty
+      end
+    end
+
+    context "when the external id contains a dot" do
+      let(:contract) { create(:contract, organization:, customer:, external_id: "contract.2026-01") }
+
+      it "matches the full id instead of truncating at the format separator" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:external_id]).to eq("contract.2026-01")
+      end
+    end
+
+    context "with an unknown status filter value" do
+      it "falls back to the active contract instead of raising on the enum cast" do
+        get_with_token(organization, "/api/v2/contracts/#{contract.external_id}?status=bogus")
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:lago_id]).to eq(contract.id)
+      end
+    end
+
+    context "when the contract is pending" do
+      let!(:contract) { create(:contract, :pending, organization:, customer:) }
+
+      it "returns it without a status filter" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:lago_id]).to eq(contract.id)
+        expect(json[:contract][:status]).to eq("pending")
+      end
+    end
+
+    context "when reading a terminated contract by status" do
+      let!(:contract) { create(:contract, :terminated, organization:, customer:) }
+
+      it "returns it only with an explicit status filter" do
+        subject
+        expect(response).to be_not_found_error("contract")
+
+        get_with_token(organization, "/api/v2/contracts/#{contract.external_id}?status=terminated")
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:lago_id]).to eq(contract.id)
+      end
+    end
+
+    context "when it does not exist" do
+      subject { get_with_token(organization, "/api/v2/contracts/unknown") }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_not_found_error("contract")
+      end
+    end
+  end
+
+  describe "PUT /api/v2/contracts/:external_id" do
+    subject { put_with_token(organization, "/api/v2/contracts/#{contract.external_id}", {contract: update_params}) }
+
+    let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:) }
+    let(:update_params) { {name: "Renamed"} }
+
+    include_examples "requires API permission", "contract", "write"
+
+    it "updates the contract and returns it" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:contract][:external_id]).to eq(contract.external_id)
+      expect(json[:contract][:name]).to eq("Renamed")
+    end
+
+    context "when skipping invoice custom sections" do
+      let(:update_params) { {invoice_custom_section: {skip_invoice_custom_sections: true}} }
+
+      before { create(:contract_applied_invoice_custom_section, organization:, contract:) }
+
+      it "flags the contract and removes the attached sections" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:skip_invoice_custom_sections]).to be(true)
+        expect(json[:contract][:applied_invoice_custom_sections]).to be_empty
+      end
+    end
+
+    context "when changing the plan" do
+      let(:other_plan) { create(:catalog_plan, organization:) }
+      let(:update_params) { {plan_code: other_plan.code} }
+
+      it "re-materializes the rate cards from the new plan" do
+        rate_card = create(:rate_card, organization:)
+        create(:plan_rate_card, organization:, catalog_plan: other_plan, rate_card:, units: 4)
+
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:plan_code]).to eq(other_plan.code)
+        expect(json[:contract][:applied_rate_cards].sole[:rate_card_code]).to eq(rate_card.code)
+      end
+    end
+
+    context "when the contract is already active" do
+      let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
+
+      it "updates the fields that stay editable" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:name]).to eq("Renamed")
+      end
+
+      context "with invoicing settings" do
+        let(:update_params) { {consolidate_invoice: false, purchase_order_number: "PO-222"} }
+
+        it "persists and returns both settings" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:contract]).to include(consolidate_invoice: false, purchase_order_number: "PO-222")
+          expect(contract.reload).to have_attributes(consolidate_invoice: false, purchase_order_number: "PO-222")
+        end
+
+        context "when clearing the purchase order" do
+          let(:contract) { create(:contract, organization:, customer:, catalog_plan:, purchase_order_number: "PO-111") }
+          let(:update_params) { {purchase_order_number: nil} }
+
+          it "clears the stored purchase order without changing consolidation" do
+            subject
+
+            expect(json[:contract]).to include(consolidate_invoice: true, purchase_order_number: nil)
+            expect(contract.reload).to have_attributes(consolidate_invoice: true, purchase_order_number: nil)
+          end
+        end
+      end
+
+      context "when changing the plan" do
+        let(:other_plan) { create(:catalog_plan, organization:) }
+        let(:update_params) { {plan_code: other_plan.code} }
+
+        it "returns an unprocessable entity error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json[:error_details][:contract]).to eq(["contract_locked"])
+        end
+      end
+    end
+
+    context "when it does not exist" do
+      subject { put_with_token(organization, "/api/v2/contracts/unknown", {contract: update_params}) }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_not_found_error("contract")
+      end
+    end
+  end
+
+  describe "DELETE /api/v2/contracts/:external_id" do
+    subject { delete_with_token(organization, "/api/v2/contracts/#{contract.external_id}") }
+
+    let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
+
+    include_examples "requires API permission", "contract", "write"
+
+    it "terminates the active contract and returns it" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:contract][:external_id]).to eq(contract.external_id)
+      expect(json[:contract][:status]).to eq("terminated")
+    end
+
+    context "when the contract is pending" do
+      let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:) }
+
+      it "cancels it" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:status]).to eq("canceled")
+      end
+    end
+
+    context "when a pending replacement coexists with the active contract" do
+      it "terminates the active contract and leaves the replacement live" do
+        replacement = create(:contract, :pending, organization:, customer:, catalog_plan:, external_id: contract.external_id)
+
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract][:status]).to eq("terminated")
+        expect(replacement.reload.status).to eq("pending")
+      end
+    end
+
+    context "when no live contract matches the external id" do
+      subject { delete_with_token(organization, "/api/v2/contracts/unknown") }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_not_found_error("contract")
+      end
+    end
+  end
+end

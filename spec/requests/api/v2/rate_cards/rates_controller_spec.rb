@@ -169,6 +169,45 @@ RSpec.describe Api::V2::RateCards::RatesController do
       expect(response).to have_http_status(:success)
       expect(json[:rates].map { it[:lago_id] }).to eq([rate.id])
     end
+
+    context "with offset pagination parameters" do
+      subject { get_with_token(organization, "/api/v2/rate_cards/#{rate_card.code}/rates", {page: 2, per_page: 1}) }
+
+      it "returns a bad request error, since the rates are returned whole" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:code]).to eq("invalid_pagination_parameter")
+        expect(json[:error_details]).to eq(page: {reason: "not_paginated"}, per_page: {reason: "not_paginated"})
+      end
+    end
+
+    context "with offset pagination parameters and an unknown rate card" do
+      subject { get_with_token(organization, "/api/v2/rate_cards/unknown/rates", {page: 2}) }
+
+      it "rejects the pagination parameters first" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:code]).to eq("invalid_pagination_parameter")
+      end
+    end
+
+    context "with more rates than a default page" do
+      # Scheduled one after the other, since a rate must start after the active one.
+      let(:scheduled_rates) do
+        (1..25).map { |days| create(:rate_card_rate, organization:, rate_card:, effective_from: rate.effective_from + days.days) }
+      end
+
+      before { scheduled_rates }
+
+      it "returns every rate, latest effective first, without pagination metadata" do
+        subject
+
+        expect(json[:rates].map { it[:lago_id] }).to eq([*scheduled_rates.reverse.map(&:id), rate.id])
+        expect(json).not_to have_key(:meta)
+      end
+    end
   end
 
   describe "DELETE /api/v2/rate_cards/:rate_card_id/rates/:code" do

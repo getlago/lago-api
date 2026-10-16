@@ -1,0 +1,4 @@
+---
+en:
+  document:
+    page_numbering: Page %{current} of %{total}

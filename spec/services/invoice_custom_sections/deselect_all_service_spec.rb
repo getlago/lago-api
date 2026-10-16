@@ -6,8 +6,8 @@ RSpec.describe InvoiceCustomSections::DeselectAllService do
   describe "#call" do
     subject(:service_result) { described_class.call(section:) }
 
-    let(:customer) { create(:customer) }
-    let(:organization) { customer.organization }
+    let_it_be(:organization) { create_default(:organization) }
+    let_it_be(:customer) { create(:customer) }
     let(:billing_entity) { customer.billing_entity }
     let(:section) { create(:invoice_custom_section, organization:) }
 
@@ -22,6 +22,22 @@ RSpec.describe InvoiceCustomSections::DeselectAllService do
           .to change(billing_entity.applied_invoice_custom_sections, :count).from(1).to(0)
           .and change(customer.applied_invoice_custom_sections, :count).from(1).to(0)
         expect(service_result).to be_success
+      end
+
+      context "with subscriptions and contracts using it" do
+        let(:subscription) { create(:subscription, organization:, customer:) }
+        let(:contract) { create(:contract, organization:, customer:) }
+
+        before do
+          create(:subscription_applied_invoice_custom_section, organization:, subscription:, invoice_custom_section: section)
+          create(:contract_applied_invoice_custom_section, organization:, contract:, invoice_custom_section: section)
+        end
+
+        it "deselects it for them too" do
+          expect { service_result }
+            .to change(subscription.applied_invoice_custom_sections, :count).from(1).to(0)
+            .and change(contract.applied_invoice_custom_sections, :count).from(1).to(0)
+        end
       end
     end
 

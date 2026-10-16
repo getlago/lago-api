@@ -5,8 +5,13 @@ require "rails_helper"
 RSpec.describe CreditNotes::AdjustAmountsWithRoundingService do
   subject(:adjust_service) { described_class.new(credit_note:) }
 
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
+
   describe "#call" do
-    let(:invoice) do
+    let_it_be(:invoice) do
       create(
         :invoice,
         total_amount_cents: 25000,

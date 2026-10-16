@@ -8,6 +8,10 @@ RSpec.describe Wallet do
   it_behaves_like "paper_trail traceable"
   it_behaves_like "a model with a purchase order number"
 
+  it_behaves_like "a connection-resolvable billing object" do
+    let(:resolvable) { create(:wallet) }
+  end
+
   describe "associations" do
     it do
       expect(subject).to belong_to(:organization)
@@ -28,8 +32,8 @@ RSpec.describe Wallet do
   end
 
   describe "#billing_entity" do
-    let(:organization) { create(:organization) }
-    let(:customer) { create(:customer, organization:) }
+    let_it_be(:organization) { create_default(:organization) }
+    let_it_be(:customer) { create_default(:customer, organization:) }
 
     context "when wallet has a billing_entity" do
       let(:billing_entity) { create(:billing_entity, organization:) }
@@ -70,11 +74,15 @@ RSpec.describe Wallet do
     let!(:wallet_10_newer) { create(:wallet, priority: 10, created_at: 1.day.ago) }
     let!(:wallet_5) { create(:wallet, priority: 5, created_at: 1.second.ago) }
     let!(:wallet_10_older) { create(:wallet, priority: 10, created_at: 3.days.ago) }
+    let!(:wallet_10_expiring_later) { create(:wallet, priority: 10, created_at: 1.second.ago, expiration_at: 2.months.from_now) }
+    let!(:wallet_10_expiring_sooner) { create(:wallet, priority: 10, created_at: 2.seconds.ago, expiration_at: 1.month.from_now) }
     let!(:wallet_50) { create(:wallet, created_at: 2.seconds.ago) }
 
-    it "orders by priority first then by created_at" do
+    it "orders by priority, then by expiration_at with non-expiring wallets last, then by created_at" do
       expect(subject.to_a).to eq([
         wallet_5,
+        wallet_10_expiring_sooner,
+        wallet_10_expiring_later,
         wallet_10_older,
         wallet_10_newer,
         wallet_50
@@ -278,6 +286,7 @@ RSpec.describe Wallet do
       lock_version
       name
       ongoing_balance_cents
+      ongoing_billable_metric_amounts
       ongoing_usage_balance_cents
       paid_top_up_max_amount_cents
       paid_top_up_min_amount_cents
@@ -288,6 +297,7 @@ RSpec.describe Wallet do
       status
       terminated_at
       traceable
+      x402_enabled
       created_at
       updated_at
       billing_entity_id

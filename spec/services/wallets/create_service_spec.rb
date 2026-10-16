@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe Wallets::CreateService do
   subject(:create_service) { described_class.new(params:) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:, external_id: "foobar", currency: customer_currency) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
+  let(:customer) { create_default(:customer, organization:, external_id: "foobar", currency: customer_currency) }
   let(:customer_currency) { "EUR" }
 
   describe "#call" do
@@ -972,6 +972,14 @@ RSpec.describe Wallets::CreateService do
       end
     end
 
+    context "with x402_enabled" do
+      let(:params) { {name: "Agent credits", customer:, organization_id: organization.id, currency: "EUR", rate_amount: "1.00", x402_enabled: true} }
+
+      it "enables x402 on the wallet" do
+        expect(service_result.wallet).to be_x402_enabled
+      end
+    end
+
     context "when metadata is nil" do
       let(:params) do
         {
@@ -1333,6 +1341,65 @@ RSpec.describe Wallets::CreateService do
             wallet = service_result.wallet
             expect(wallet.code).to eq("default_#{wallet.created_at.to_i}")
           end
+        end
+      end
+    end
+
+    context "when connections are sent with the flag disabled" do
+      let(:params) { super().merge(connections: {payment: {code: "stripe_us"}}) }
+
+      it "returns a forbidden failure without running the other validations" do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+      end
+
+      context "when the customer does not exist" do
+        let(:params) { super().merge(customer: nil) }
+
+        it "still reports customer_not_found rather than raising" do
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages[:customer]).to include("customer_not_found")
+        end
+      end
+    end
+
+    context "with connections on a recurring transaction rule", :premium do
+      let(:params) do
+        super().merge(
+          recurring_transaction_rules: [
+            {trigger: "interval", interval: "monthly", connections: {payment: {code: "stripe_us"}}}
+          ]
+        )
+      end
+
+      before { organization.enable_feature_flag!(:multi_connection) }
+
+      context "when the code does not resolve" do
+        it "fails instead of creating the wallet with the routing silently dropped" do
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages[:connections]).to include("connection_not_found")
+        end
+
+        it "creates no wallet" do
+          expect { create_service.call }.not_to change(Wallet, :count)
+        end
+      end
+
+      context "when the code resolves" do
+        let!(:stripe_connection) { create(:stripe_customer, customer:, code: "stripe_us") }
+
+        it "pins the connection on the rule" do
+          result = create_service.call
+
+          expect(result).to be_success
+          rule = result.wallet.recurring_transaction_rules.sole
+          expect(rule.billing_object_connections.sole.payment_provider_customer_id).to eq(stripe_connection.id)
         end
       end
     end

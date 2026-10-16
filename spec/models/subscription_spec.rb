@@ -3,12 +3,20 @@
 require "rails_helper"
 
 RSpec.describe Subscription do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:customer) { create_default(:customer) }
+
   subject(:subscription) { create(:subscription, plan:) }
 
   let(:plan) { create(:plan) }
 
   it_behaves_like "paper_trail traceable"
   it_behaves_like "a model with a purchase order number"
+
+  it_behaves_like "a connection-resolvable billing object" do
+    let(:resolvable) { create(:subscription) }
+  end
 
   describe "enums" do
     it do
@@ -828,25 +836,6 @@ RSpec.describe Subscription do
         travel_to(Time.zone.parse("2022-07-03T00:00:00Z")) do
           expect(subscription.downgrade_plan_date).to eq(Date.parse("4 Jul 2022"))
         end
-      end
-    end
-
-    context "with a product-catalog plan" do
-      let(:plan) do
-        create(:plan, pricing_type: "product_catalog", interval: nil, amount_cents: nil, pay_in_advance: nil)
-      end
-      let(:subscription) { create(:subscription, plan:) }
-
-      it "returns nil rather than deriving a plan-level period" do
-        create(:subscription, previous_subscription: subscription, status: :pending)
-
-        expect(subscription.downgrade_plan_date).to be_nil
-      end
-
-      it "returns nil without comparing plan amounts when the next subscription is active" do
-        create(:subscription, previous_subscription: subscription, status: :active)
-
-        expect(subscription.downgrade_plan_date).to be_nil
       end
     end
 

@@ -62,8 +62,19 @@ module UsageMonitoring
         return result.single_validation_failure!(field: "thresholds:value", error_code: "recurring_value_is_negative")
       end
 
+      validate_notify_on!(params[:thresholds])
+      return result unless result.success?
+
       billable_metric = find_billable_metric_from_params!
       return result unless result.success?
+
+      if wallet_alert_type_taken?(wallet_id: wallet&.id, alert_type: params[:alert_type])
+        return result.single_validation_failure!(field: :base, error_code: "alert_already_exists")
+      end
+
+      if wallet_alert_code_taken?(wallet_id: wallet&.id, code: params[:code])
+        return result.single_validation_failure!(field: :code, error_code: "value_already_exist")
+      end
 
       ActiveRecord::Base.transaction do
         alert = Alert.new(
@@ -77,14 +88,13 @@ module UsageMonitoring
           direction: direction_for_alert
         )
 
-        alertable.with_lock do
-          # Lock alertable to prevent any changes to it and avoid it becoming stale
-          # as we set previous_value to the alertable metric when the alert
-          # direction is :decreasing
-          alert.previous_value = alert.find_value(alertable) if alert.decreasing?
-          alert.save!
-        end
+        alert.save!
 
+        # NOTE: the alert row is inserted before the alertable is locked, so this takes the same order as
+        #       evaluation; the lock is what keeps the baseline in step with concurrent balance changes.
+        # NOTE: FOR NO KEY UPDATE still conflicts with a balance update, but not with the key-share lock the
+        #       insert above took on the same row, which two concurrent creates would otherwise deadlock upgrading
+        alert.update!(previous_value: alert.find_value(alertable.lock!("FOR NO KEY UPDATE"))) if alert.decreasing?
         alert.thresholds.create!(prepare_thresholds(params[:thresholds], organization.id))
 
         result.alert = alert
@@ -99,7 +109,7 @@ module UsageMonitoring
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     rescue ActiveRecord::RecordNotUnique => e
-      if e.message.include?("idx_alerts_code_unique_per_subscription") || e.message.include?("idx_alerts_code_unique_per_wallet")
+      if duplicate_code_error?(e)
         result.single_validation_failure!(field: :code, error_code: "value_already_exist")
       else
         # Only one alert per [alert_type, billable_metric] pair is allowed.

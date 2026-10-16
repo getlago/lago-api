@@ -4,7 +4,7 @@ module RateCards
   # Rails casts any non-falsey value to true on boolean columns; reject
   # non-boolean input from the permissive REST layer instead. nil is allowed.
   module ValidatesBooleanParams
-    BOOLEAN_FIELDS = %i[proration display_on_invoice wallet_targetable].freeze
+    BOOLEAN_FIELDS = %i[proration display_on_invoice].freeze
 
     private
 

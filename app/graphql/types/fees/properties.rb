@@ -9,11 +9,21 @@ module Types
       field :to_datetime, GraphQL::Types::ISO8601DateTime, null: true
 
       def from_datetime
-        object.date_boundaries[:from_date]
+        period_boundary(:from_date, "from_datetime")
       end
 
       def to_datetime
-        object.date_boundaries[:to_date]
+        period_boundary(:to_date, "to_datetime")
+      end
+
+      private
+
+      def period_boundary(boundary, property)
+        if context[:preserve_add_on_fee_period_dates] && object.add_on?
+          object.properties[property]&.to_date
+        else
+          object.date_boundaries[boundary]
+        end
       end
     end
   end

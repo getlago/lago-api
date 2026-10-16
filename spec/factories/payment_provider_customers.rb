@@ -9,6 +9,16 @@ FactoryBot.define do
     provider_payment_methods { %w[card sepa_debit] }
   end
 
+  # The reserved manual connection: a null-provider row keyed by code "lago_manual" (no dedicated STI
+  # class; the base type is stamped explicitly since the column is NOT NULL).
+  factory :manual_payment_provider_customer, class: "PaymentProviderCustomers::BaseCustomer" do
+    customer
+    organization { customer.organization }
+
+    type { "PaymentProviderCustomers::BaseCustomer" }
+    code { "lago_manual" }
+  end
+
   factory :gocardless_customer, class: "PaymentProviderCustomers::GocardlessCustomer" do
     customer
     organization { customer.organization }

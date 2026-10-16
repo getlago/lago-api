@@ -11,10 +11,16 @@ module Types
     field :name, String, null: false
     field :permissions, [PermissionEnum], null: false
 
+    field :grantable, Boolean, null: false, description: "Whether the current member can assign this role"
+
     def memberships
       dataloader
         .with(Sources::MembershipsForRole, context[:current_organization])
         .load(object.id)
+    end
+
+    def grantable
+      !!context[:current_membership]&.can_grant_roles?([object])
     end
 
     def permissions

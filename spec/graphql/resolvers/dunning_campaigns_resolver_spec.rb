@@ -3,7 +3,11 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::DunningCampaignsResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "dunning_campaigns:view" }
+  let(:organization) { membership.organization }
+  let(:dunning_campaign) { create(:dunning_campaign, organization:) }
   let(:query) do
     <<~GQL
       query {
@@ -15,9 +19,7 @@ RSpec.describe Resolvers::DunningCampaignsResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:dunning_campaign) { create(:dunning_campaign, organization:) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before { dunning_campaign }
 

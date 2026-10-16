@@ -16,15 +16,6 @@ Rails.application.routes.draw do
   get "/health", to: "application#health"
   get "/ready", to: "application#ready"
 
-  namespace :data_api do
-    namespace :v1 do
-      resources :charges, only: [] do
-        post :forecasted_usage_amount, on: :member
-        post :bulk_forecasted_usage_amount, on: :collection
-      end
-    end
-  end
-
   namespace :api do
     namespace :v1 do
       draw(:shared_api)
@@ -41,8 +32,27 @@ Rails.application.routes.draw do
         resources :rates, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "rate_cards/rates"
       end
       resources :plans, param: :code, code: /.*/, only: %i[index show create update] do
-        resources :applied_rate_cards, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "plan_rate_cards"
+        resources :applied_rate_cards, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "plan_rate_cards" do
+          scope module: :plan_rate_cards do
+            resources :rate_phases, param: :code, code: /.*/, only: %i[index create update destroy]
+          end
+        end
         draw(:plan_nested_api)
+      end
+      # The constraint mirrors v1: without it, an external id containing a
+      # dot is truncated at the format separator.
+      resources :contracts, only: %i[index show create update], param: :external_id, constraints: {external_id: /[^\/]+/} do
+        resources :applied_rate_cards, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "contract_rate_cards" do
+          scope module: :contract_rate_cards do
+            resources :rate_phases, param: :code, code: /.*/, only: %i[index create update destroy]
+          end
+        end
+      end
+      # A contract is never destroyed — DELETE ends its lifecycle, the same
+      # idiom subscriptions follow.
+      delete "/contracts/:external_id", to: "contracts#terminate", constraints: {external_id: /[^\/]+/}
+      resources :invoices, only: [] do
+        post :void, on: :member
       end
     end
 
@@ -60,11 +70,13 @@ Rails.application.routes.draw do
     post "moneyhash/:organization_id", to: "webhooks#moneyhash", on: :collection, as: :moneyhash
   end
 
-  namespace :admin do
-    resources :memberships, only: %i[create]
-    resources :organizations, only: %i[update create]
-    resources :invoices do
-      post :regenerate, on: :member
+  if Rails.env.local?
+    namespace :admin do
+      resources :memberships, only: %i[create]
+      resources :organizations, only: %i[update create]
+      resources :invoices do
+        post :regenerate, on: :member
+      end
     end
   end
 

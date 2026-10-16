@@ -89,6 +89,26 @@ RSpec.describe Events::CreateBatchService do
       end
     end
 
+    context "when the post processing jobs cannot be enqueued" do
+      before do
+        allow(ActiveJob::Base.queue_adapter).to receive(:enqueue)
+          .and_raise(Redis::CannotConnectError.new("no connection"))
+      end
+
+      it "does not keep any of the events" do
+        expect { create_batch_service.call }.to raise_error(Redis::CannotConnectError)
+          .and(not_change(Event, :count))
+      end
+
+      it "does not produce the events on kafka" do
+        allow(Events::KafkaProducerService).to receive(:call!).and_call_original
+
+        expect { create_batch_service.call }.to raise_error(Redis::CannotConnectError)
+
+        expect(Events::KafkaProducerService).not_to have_received(:call!)
+      end
+    end
+
     context "when no events are provided" do
       let(:events_params) { build_params(count: 0) }
 
@@ -251,6 +271,24 @@ RSpec.describe Events::CreateBatchService do
       end
     end
 
+    context "when a timestamp is outside what the event stores can hold" do
+      let(:events_params) { build_params(count: 2) { |event, i| event[:timestamp] = 99_999_999_999 if i == 1 } }
+
+      it "returns an error for that event" do
+        test_validation_failure({1 => {timestamp: ["value_is_out_of_range"]}})
+      end
+    end
+
+    %w[Infinity NaN].each do |value|
+      context "when a timestamp is #{value}" do
+        let(:events_params) { build_params(count: 2) { |event, i| event[:timestamp] = value if i == 1 } }
+
+        it "returns an error for that event instead of raising" do
+          test_validation_failure({1 => {timestamp: ["invalid_format"]}})
+        end
+      end
+    end
+
     context "when timestamp is in a wrong format" do
       let(:timestamp) { Time.current.to_s }
       let(:events_params) { build_params(count: 1) { |event| event[:timestamp] = timestamp } }
@@ -339,7 +377,7 @@ RSpec.describe Events::CreateBatchService do
               expected_params = events_params[:events][index]
 
               expect(message[:topic]).to eq("raw_events")
-              expect(message[:key]).to eq("#{organization.id}-#{external_subscription_id}")
+              expect(message).not_to have_key(:key)
 
               payload = JSON.parse(message[:payload])
               expect(payload["organization_id"]).to eq(organization.id)
