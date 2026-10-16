@@ -206,7 +206,7 @@ describe X402::Connection do
         it { expect(connection.errors).to be_empty }
       end
 
-      context "with a non-canonical origin and its canonical form" do
+      context "with a non-canonical origin duplicating a canonical one" do
         let(:allowed_origins) { ["HTTPS://API.example.com:443/", "https://api.example.com"] }
 
         it "stores the canonical origin once" do
@@ -256,6 +256,12 @@ describe X402::Connection do
 
       context "without a scheme" do
         let(:allowed_origins) { ["api.example.com"] }
+
+        it { expect(errors).to eq(["invalid_format"]) }
+      end
+
+      context "with a nil entry beside a valid origin" do
+        let(:allowed_origins) { ["https://api.example.com", nil] }
 
         it { expect(errors).to eq(["invalid_format"]) }
       end
