@@ -73,6 +73,7 @@ namespace :recipes do
       pay_in_advance_events = 0
       compared = 0
       failed = 0
+      pay_in_advance_failed = 0
       without_snapshot = 0
       mismatching = 0
 
@@ -88,21 +89,21 @@ namespace :recipes do
         csv_rows.concat(recurring_snapshots_csv_rows(subscription, comparison))
         recurring_snapshots_print_comparison(subscription, comparison)
 
+        compared += 1
         pay_in_advance = RecurringAggregationSnapshots::ComparePayInAdvanceService.call(subscription:)
 
-        unless pay_in_advance.success?
-          failed += 1
+        if pay_in_advance.success?
+          pay_in_advance_events += pay_in_advance.compared_events_count
+          pay_in_advance_csv_rows.concat(recurring_snapshots_pay_in_advance_csv_rows(subscription, pay_in_advance))
+          recurring_snapshots_print_pay_in_advance_comparison(pay_in_advance)
+        else
+          pay_in_advance_failed += 1
           puts "      pay in advance: FAILED (#{pay_in_advance.error})"
-          next
         end
 
-        compared += 1
-        pay_in_advance_events += pay_in_advance.compared_events_count
-        without_snapshot += 1 if comparison.snapshot_charges_count.zero? && pay_in_advance.rows.none?(&:snapshot_read)
-        mismatching += 1 if comparison.differences.any? || pay_in_advance.differences.any?
-
-        pay_in_advance_csv_rows.concat(recurring_snapshots_pay_in_advance_csv_rows(subscription, pay_in_advance))
-        recurring_snapshots_print_pay_in_advance_comparison(pay_in_advance)
+        pay_in_advance_rows = pay_in_advance.success? ? pay_in_advance.rows : []
+        without_snapshot += 1 if comparison.snapshot_charges_count.zero? && pay_in_advance_rows.none?(&:snapshot_read)
+        mismatching += 1 if comparison.differences.any? || pay_in_advance_rows.any?(&:different?)
       end
 
       CSV.open(csv_path, "w") do |csv|
@@ -120,7 +121,7 @@ namespace :recipes do
       puts "  subscriptions compared:         #{compared} (#{failed} failed)"
       puts "  subscriptions without snapshot: #{without_snapshot} (full scan on both sides, nothing compared)"
       puts "  subscriptions mismatching:      #{mismatching}"
-      puts "  pay in advance events replayed: #{pay_in_advance_events}"
+      puts "  pay in advance events replayed: #{pay_in_advance_events} (#{pay_in_advance_failed} subscription(s) failed)"
       puts "  per-leaf CSV: #{csv_path}"
       puts "  per-event pay in advance CSV: #{pay_in_advance_csv_path}"
       puts ""
