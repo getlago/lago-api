@@ -8,6 +8,8 @@ module Integrations
 
     settings_accessors :payment_provider_code, :resource_endpoint, :resource_instructions, :scope
 
+    scope :with_payment_provider_code, ->(code) { where("settings->>'payment_provider_code' = ?", code) }
+
     def stripe_provider
       organization&.stripe_payment_providers&.find_by(code: payment_provider_code)
     end
