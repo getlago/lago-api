@@ -18,6 +18,7 @@ RSpec.describe "templates/invoices/v4/product_catalog/contract.slim" do
   end
   let(:self_billed) { false }
   let(:prepaid_credit_amount_cents) { 0 }
+  let(:pay_in_advance) { false }
   let(:contract) { create(:contract, organization:, customer:, name: "Platform") }
   let(:category) { create(:product_category, organization:, name: "Infrastructure", invoice_display_name: nil) }
   let(:product) { create(:product, organization:, product_category: category, name: "Compute", invoice_display_name: nil) }
@@ -40,6 +41,7 @@ RSpec.describe "templates/invoices/v4/product_catalog/contract.slim" do
       amount_currency: invoice.currency,
       units: 280,
       precise_unit_amount: 0.1,
+      pay_in_advance:,
       properties: {"from_datetime" => "2026-10-01T00:00:00Z", "to_datetime" => "2026-10-31T23:59:59Z"}
     )
   end
@@ -62,6 +64,17 @@ RSpec.describe "templates/invoices/v4/product_catalog/contract.slim" do
 
     it "shows the deduction in the totals" do
       expect(rendered_text).to match(/Prepaid credits -\S+5\.00/)
+    end
+  end
+
+  context "when the invoice bills a single fee on event reception" do
+    let(:pay_in_advance) { true }
+
+    it "replaces the summary with the fee details and omits the details page" do
+      expect(rendered_text).to include("Description Quantity Unit price Amount Infrastructure")
+      expect(rendered_text).to match(/From 1 Oct to 31 Oct 2026 280 .*Subtotal/)
+      expect(rendered_text).not_to include("Description Amount Infrastructure")
+      expect(rendered_text).not_to include("Details Platform")
     end
   end
 

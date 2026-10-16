@@ -10,21 +10,26 @@ html lang=I18n.locale
     .document.body-1
       == SlimHelper.render('templates/invoices/v4/product_catalog/_header', self)
 
+      - single_event_fee = catalog.single_event_fee?
       .document-section
-        table.document-table.document-table--summary
-          colgroup
-            col.description-column
-            col.amount-column
-          thead
-            tr.row--header
-              th.document-cell.cell--description.cell--header.body-3.indent-0.color-muted scope='col' = I18n.t('invoice.description')
-              th.document-cell.cell--amount.cell--header.body-3.color-muted scope='col' = I18n.t('invoice.amount')
-          tbody
-            - summary_lines.each_with_index do |line, index|
-              - at_end = ('cell--at-end' if index == summary_lines.size - 1)
-              tr.row--summary
-                td class=['document-cell', 'cell--description', 'cell--summary', 'body-2', 'indent-0', at_end] = line.name
-                td class=['document-cell', 'cell--amount', 'cell--summary', 'body-2', at_end, 'numeric'] = MoneyHelper.format(Money.new(line.amount_cents, currency))
+        - if single_event_fee
+          - catalog.contract_blocks.flat_map(&:sections).each do |section|
+            == SlimHelper.render('templates/invoices/v4/product_catalog/_details_table', self, section:, spaced: false)
+        - else
+          table.document-table.document-table--summary
+            colgroup
+              col.description-column
+              col.amount-column
+            thead
+              tr.row--header
+                th.document-cell.cell--description.cell--header.body-3.indent-0.color-muted scope='col' = I18n.t('invoice.description')
+                th.document-cell.cell--amount.cell--header.body-3.color-muted scope='col' = I18n.t('invoice.amount')
+            tbody
+              - summary_lines.each_with_index do |line, index|
+                - at_end = ('cell--at-end' if index == summary_lines.size - 1)
+                tr.row--summary
+                  td class=['document-cell', 'cell--description', 'cell--summary', 'body-2', 'indent-0', at_end] = line.name
+                  td class=['document-cell', 'cell--amount', 'cell--summary', 'body-2', at_end, 'numeric'] = MoneyHelper.format(Money.new(line.amount_cents, currency))
         table.document-totals
           colgroup
             col
@@ -80,43 +85,11 @@ html lang=I18n.locale
 
       == SlimHelper.render('templates/invoices/v4/_powered_by_logo', self)
 
-      - catalog.contract_blocks.each do |block|
-        div class=(catalog.single_event_fee? ? 'details-section' : 'details-page')
-          .details-heading.document-stack.document-stack--tight
-            h1.title = I18n.t('invoice.details_title')
-            p.body-1.color-muted = block.title
-          - block.sections.each do |section|
-            - rows = ProductCatalogInvoiceHelper.detail_rows(section, currency)
-            table.document-table.document-table--details.document-section
-              colgroup
-                col.description-column
-                col.quantity-column
-                col.unit-price-column
-                col.amount-column
-              thead
-                tr.row--header
-                  th.document-cell.cell--description.cell--header.body-3.indent-0.color-muted scope='col' = I18n.t('invoice.description')
-                  th.document-cell.cell--quantity.cell--header.body-3.color-muted scope='col' = I18n.t('invoice.quantity')
-                  th.document-cell.cell--unit-price.cell--header.body-3.color-muted scope='col' = I18n.t('invoice.unit_price')
-                  th.document-cell.cell--amount.cell--header.body-3.color-muted scope='col' = I18n.t('invoice.amount')
-              tbody
-                - rows.each_with_index do |row, index|
-                  - case row.kind
-                  - when :category, :product
-                    tr class="row--#{row.kind}"
-                      td.document-heading-cell class=["cell--#{row.kind}", 'body-2-emphasis'] colspan=4
-                        .document-heading class="indent-#{row.indent}"
-                          span.document-heading-label = row.label
-                          span.document-heading-amount.numeric = row.amount
-                  - when :filter
-                    tr.row--filter
-                      td.document-cell.cell--description.cell--filter.body-3-emphasis class="indent-#{row.indent}" colspan=4 = row.label
-                  - else
-                    - kind = row.kind.to_s.dasherize
-                    - muted = ('color-muted' unless row.kind == :segment)
-                    - at_end = ('cell--at-end' if index == rows.size - 1)
-                    tr class="row--#{kind}"
-                      td class=['document-cell', 'cell--description', "cell--#{kind}", 'body-3', "indent-#{row.indent}", muted, at_end] = row.label
-                      td class=['document-cell', 'cell--quantity', "cell--#{kind}", 'body-3', 'color-muted', at_end, 'numeric'] = row.units
-                      td class=['document-cell', 'cell--unit-price', "cell--#{kind}", 'body-3', 'color-muted', at_end, 'numeric'] = row.unit_price
-                      td class=['document-cell', 'cell--amount', "cell--#{kind}", 'body-3', 'color-muted', at_end, 'numeric'] = row.amount
+      - unless single_event_fee
+        - catalog.contract_blocks.each do |block|
+          .details-page
+            .details-heading.document-stack.document-stack--tight
+              h1.title = I18n.t('invoice.details_title')
+              p.body-1.color-muted = block.title
+            - block.sections.each do |section|
+              == SlimHelper.render('templates/invoices/v4/product_catalog/_details_table', self, section:, spaced: true)
