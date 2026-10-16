@@ -111,9 +111,9 @@ module CustomerPortal
     end
 
     def free_text_error(value, stored_value)
-      return if value.nil? || value == stored_value
-
-      if value.to_s.length > FREE_TEXT_MAX_LENGTH
+      if value.nil? || value == stored_value
+        nil
+      elsif value.to_s.length > FREE_TEXT_MAX_LENGTH
         "value_is_too_long"
       elsif CONTROL_CHARACTERS.match?(value.to_s)
         "invalid_characters"
