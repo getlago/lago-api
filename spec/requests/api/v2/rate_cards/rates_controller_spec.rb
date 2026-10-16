@@ -33,7 +33,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
     it "returns effective_from as a midnight datetime on an arrears card" do
       subject
 
-      expect(json[:rate][:effective_from]).to eq(1.month.from_now.beginning_of_day.iso8601)
+      expect(json[:rate][:effective_from]).to eq(1.month.from_now.beginning_of_day.iso8601(6))
     end
 
     context "when an arrears card receives a datetime string" do
@@ -43,7 +43,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:rate][:effective_from]).to eq("2026-12-01T00:00:00Z")
+        expect(json[:rate][:effective_from]).to eq("2026-12-01T00:00:00.000000Z")
       end
 
       context "when the day already has a rate" do
@@ -67,7 +67,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:rate][:effective_from]).to eq("2026-12-01T17:00:00Z")
+        expect(json[:rate][:effective_from]).to eq("2026-12-01T17:00:00.000000Z")
       end
     end
 
@@ -221,7 +221,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
       it "deletes the rate" do
         expect { subject }.to change { rate.reload.discarded? }.from(false).to(true)
         expect(response).to have_http_status(:success)
-        expect(json[:rate][:deleted_at]).to eq(rate.deleted_at.iso8601)
+        expect(json[:rate][:deleted_at]).to eq(rate.deleted_at.iso8601(6))
       end
     end
 

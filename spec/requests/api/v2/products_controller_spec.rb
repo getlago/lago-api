@@ -237,7 +237,7 @@ RSpec.describe Api::V2::ProductsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:product][:billable_metric]).to eq(V2::BillableMetricSerializer.new(product.billable_metric).serialize)
+        expect(json[:product][:billable_metric]).to eq(V2::BillableMetricSerializer.new(product.billable_metric, includes: %i[usec_timestamps]).serialize)
         expect(json[:product]).not_to have_key(:product_category)
       end
 
@@ -247,8 +247,8 @@ RSpec.describe Api::V2::ProductsController do
         it "embeds it with its deletion date" do
           subject
 
-          expect(json[:product][:billable_metric]).to eq(V2::BillableMetricSerializer.new(product.billable_metric.reload).serialize)
-          expect(json[:product][:billable_metric][:deleted_at]).to eq(product.billable_metric.deleted_at.iso8601)
+          expect(json[:product][:billable_metric]).to eq(V2::BillableMetricSerializer.new(product.billable_metric.reload, includes: %i[usec_timestamps]).serialize)
+          expect(json[:product][:billable_metric][:deleted_at]).to eq(product.billable_metric.deleted_at.iso8601(6))
         end
       end
     end
@@ -478,7 +478,7 @@ RSpec.describe Api::V2::ProductsController do
       expect(response).to have_http_status(:success)
       expect(json[:product][:lago_id]).to eq(product.id)
       expect(product.reload).to be_discarded
-      expect(json[:product][:deleted_at]).to eq(product.deleted_at.iso8601)
+      expect(json[:product][:deleted_at]).to eq(product.deleted_at.iso8601(6))
     end
 
     context "when the product does not exist" do

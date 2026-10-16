@@ -11,7 +11,7 @@ RSpec.describe Api::Serializable do
   let(:product_category) { create(:product_category, organization:) }
   let(:product) { create(:product, organization:, product_category:) }
   let(:expands) { nil }
-  let(:product_category_payload) { ::V2::ProductCategorySerializer.new(product_category).serialize }
+  let(:product_category_payload) { ::V2::ProductCategorySerializer.new(product_category, includes: %i[usec_timestamps]).serialize }
 
   # Two expansions, so that their order and a repeated key can be told apart.
   let(:serializer) do

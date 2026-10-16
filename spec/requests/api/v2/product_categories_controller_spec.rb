@@ -204,7 +204,7 @@ RSpec.describe Api::V2::ProductCategoriesController do
       expect(response).to have_http_status(:success)
       expect(json[:product_category][:lago_id]).to eq(product_category.id)
       expect(product_category.reload).to be_discarded
-      expect(json[:product_category][:deleted_at]).to eq(product_category.deleted_at.iso8601)
+      expect(json[:product_category][:deleted_at]).to eq(product_category.deleted_at.iso8601(6))
     end
 
     context "when the product_category does not exist" do
