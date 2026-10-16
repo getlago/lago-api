@@ -147,6 +147,18 @@ RSpec.describe InvoicesQuery do
     end
   end
 
+  context "with cursor pagination" do
+    let(:pagination) { CursorPagination::Cursor.new(table: "invoices", limit: 2) }
+    let(:filters) { {status: "finalized"} }
+
+    it "paginates after filtering and ordering" do
+      page = CursorPagination::Page.new(records: result.invoices, cursor: pagination)
+
+      expect(page.records.map(&:id)).to eq(Invoice.where(status: "finalized").order(created_at: :desc, id: :desc).limit(2).ids)
+      expect(page.meta[:next_cursor]).to be_present
+    end
+  end
+
   context "when filtering by draft status" do
     let(:filters) { {status: "draft"} }
 
@@ -298,6 +310,31 @@ RSpec.describe InvoicesQuery do
 
     it "returns 1 invoice" do
       expect(returned_ids).to eq [invoice_fifth.id]
+    end
+  end
+
+  context "when filtering by product_catalog" do
+    let(:filters) { {product_catalog: true} }
+    let(:contract_invoice) { create(:invoice, organization:, customer: customer_first, invoice_type: :contract, number: "7777777777") }
+    let(:invoice_with_product_fee) { create(:invoice, organization:, customer: customer_first, number: "8888888888") }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract: create(:contract, organization:, customer: customer_first)) }
+
+    before do
+      contract_invoice
+      create(:fee, invoice: invoice_with_product_fee, subscription: nil, fee_type: :product,
+        invoiceable: contract_rate_card.rate_card.product, contract: contract_rate_card.contract, contract_rate_card:)
+    end
+
+    it "returns the invoices billed from the product catalog" do
+      expect(returned_ids).to match_array([contract_invoice.id, invoice_with_product_fee.id])
+    end
+
+    context "when searching" do
+      let(:search_term) { "7777" }
+
+      it "keeps the search scope on both branches" do
+        expect(returned_ids).to eq([contract_invoice.id])
+      end
     end
   end
 

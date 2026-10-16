@@ -3,6 +3,25 @@
 module Api
   module V2
     class InvoicesController < BaseController
+      include Api::V2::InvoiceIndex
+
+      def index
+        invoice_index
+      end
+
+      def show
+        invoice = current_organization.invoices.visible.product_catalog.find_by(id: params[:id])
+        return not_found_error(resource: "invoice") unless invoice
+
+        render(
+          json: ::V2::InvoiceSerializer.new(
+            invoice,
+            root_name: "invoice",
+            includes: ::V2::InvoiceSerializer::DETAIL_INCLUDES
+          )
+        )
+      end
+
       def void
         invoice = current_organization.invoices.visible.find_by(id: params[:id])
 
