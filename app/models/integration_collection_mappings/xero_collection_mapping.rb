@@ -2,6 +2,7 @@
 
 module IntegrationCollectionMappings
   class XeroCollectionMapping < BaseCollectionMapping
+    settings_accessors :tax_type
   end
 end
 
