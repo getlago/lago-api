@@ -10,8 +10,14 @@ module Integrations
     class_methods do
       # Picks, in order: the integration of the invite's organization, the integration of an
       # organization the user is already an active member of, the first candidate.
-      # `candidates` is ordered by priority (oldest first).
+      # `candidates` is ordered by priority (oldest first). Integrations whose organization does
+      # not allow this login method are skipped, unless none does: the login is then refused with
+      # `login_method_not_authorized` rather than `domain_not_configured`.
       def pick_for_login(candidates, email:, organization_id: nil)
+        login_method = Organizations::AuthenticationMethods::SSO_INTEGRATION_TYPES.key(name)
+        eligible = candidates.select { it.organization.authentication_methods.include?(login_method) }
+        candidates = eligible if eligible.any?
+
         return candidates.first if candidates.size <= 1
 
         if organization_id

@@ -111,6 +111,27 @@ RSpec.describe Integrations::EntraIdIntegration do
       expect(described_class.for_login(email:)).to eq(second_integration)
     end
 
+    context "when the oldest member organization does not allow Entra ID" do
+      let(:first_integration) do
+        create(:entra_id_integration, tenant_id:, created_at: 2.days.ago,
+          organization: create(:organization, authentication_methods: %w[email_password]))
+      end
+      let(:second_integration) do
+        create(:entra_id_integration, tenant_id:, created_at: 1.day.ago,
+          organization: create(:organization, authentication_methods: %w[email_password entra_id]))
+      end
+
+      before do
+        user = create(:user, email:)
+        create(:membership, user:, organization: first_integration.organization)
+        create(:membership, user:, organization: second_integration.organization)
+      end
+
+      it "returns the integration of the member organization that allows it" do
+        expect(described_class.for_login(email:)).to eq(second_integration)
+      end
+    end
+
     it "returns the integration of the invite's organization first" do
       expect(described_class.for_login(email:, organization_id: second_integration.organization_id)).to eq(second_integration)
     end

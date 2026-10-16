@@ -31,7 +31,7 @@ module Integrations
     #       their routing.
     def self.for_login(email:, organization_id: nil)
       email_domain = email.split("@").last
-      exact, others = with_domain(email_domain).order(:created_at).to_a.partition { it.domain == email_domain }
+      exact, others = with_domain(email_domain).includes(:organization).order(:created_at).to_a.partition { it.domain == email_domain }
 
       pick_for_login(exact + others, email:, organization_id:)
     end

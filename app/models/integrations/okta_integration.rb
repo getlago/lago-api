@@ -20,7 +20,7 @@ module Integrations
 
     # The integration that handles a login for this email, see SsoLoginSelection.
     def self.for_login(email:, organization_id: nil)
-      candidates = with_domain(email.split("@").last).order(:created_at).to_a
+      candidates = with_domain(email.split("@").last).includes(:organization).order(:created_at).to_a
 
       pick_for_login(candidates, email:, organization_id:)
     end
