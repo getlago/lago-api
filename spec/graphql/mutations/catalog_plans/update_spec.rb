@@ -29,6 +29,8 @@ RSpec.describe Mutations::CatalogPlans::Update do
 
   before { organization.enable_feature_flag!(:product_catalog) }
 
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "plans:update"
 
   context "when the plan holds rate card attachments" do

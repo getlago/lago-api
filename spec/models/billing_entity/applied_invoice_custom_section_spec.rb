@@ -7,6 +7,8 @@ RSpec.describe BillingEntity::AppliedInvoiceCustomSection do
     create(:billing_entity_applied_invoice_custom_section)
   end
 
+  let_it_be(:organization) { create_default(:organization) }
+
   it { is_expected.to belong_to(:organization) }
   it { is_expected.to belong_to(:billing_entity) }
   it { is_expected.to belong_to(:invoice_custom_section) }

@@ -6,11 +6,9 @@ RSpec.describe Mutations::Entitlement::UpdateFeature, :premium do
   subject { execute_query(query:, input:) }
 
   let(:required_permission) { "features:update" }
-  let(:organization) { create(:organization) }
   let(:feature) do
     create(:feature, organization:)
   end
-
   let(:query) do
     <<-GQL
       mutation($input: UpdateFeatureInput!) {
@@ -32,6 +30,8 @@ RSpec.describe Mutations::Entitlement::UpdateFeature, :premium do
       privileges: []
     }
   end
+
+  let_it_be(:organization) { create_default(:organization) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

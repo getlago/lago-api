@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe PaymentRequests::Payments::StripeService do
+  let_it_be(:organization) { create_default(:organization) }
   let(:customer) { create(:customer, payment_provider_code: code) }
-  let(:organization) { customer.organization }
   let(:billing_entity) { organization.default_billing_entity }
   let(:stripe_payment_provider) { create(:stripe_provider, organization:, code:) }
   let(:stripe_customer) {
@@ -64,7 +64,7 @@ RSpec.describe PaymentRequests::Payments::StripeService do
         .to have_received(:create)
         .with(
           {
-            line_items: [
+            line_items: contain_exactly(
               {
                 quantity: 1,
                 price_data: {
@@ -81,7 +81,7 @@ RSpec.describe PaymentRequests::Payments::StripeService do
                   product_data: {name: invoice_2.number}
                 }
               }
-            ],
+            ),
             mode: "payment",
             success_url: stripe_payment_provider.success_redirect_url,
             customer: customer.stripe_customer.provider_customer_id,

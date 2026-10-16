@@ -8,8 +8,9 @@ RSpec.describe Invites::CreateService do
   include_context "with mocked security logger"
 
   let(:admin_role) { create(:role, :admin) }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
 
   before { create(:membership_role, membership:, role: admin_role) }
 
@@ -33,7 +34,7 @@ RSpec.describe Invites::CreateService do
     end
 
     context "when non-admin invites with admin role" do
-      let(:non_admin_membership) { create(:membership, organization:) }
+      let_it_be(:non_admin_membership) { create(:membership, organization:) }
       let(:create_args) do
         {
           email: Faker::Internet.email,
@@ -53,6 +54,47 @@ RSpec.describe Invites::CreateService do
 
       it_behaves_like "does not produce a security log" do
         before { create_service.call }
+      end
+    end
+
+    context "when non-admin invites with a role holding permissions they do not hold" do
+      let(:finance_membership) { create(:membership, organization:, roles: %i[finance]) }
+      let(:custom_role) { create(:role, :custom, organization:, permissions: %w[developers:keys:manage]) }
+      let(:create_args) do
+        {
+          email: Faker::Internet.email,
+          current_organization: organization,
+          user: finance_membership.user,
+          roles: [custom_role.code]
+        }
+      end
+
+      it "returns an error" do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("cannot_grant_permissions")
+      end
+
+      it "does not create an invite" do
+        expect { create_service.call }.not_to change(Invite, :count)
+      end
+    end
+
+    context "when non-admin invites with a role within their own permissions" do
+      let(:finance_membership) { create(:membership, organization:, roles: %i[finance]) }
+      let(:create_args) do
+        {
+          email: Faker::Internet.email,
+          current_organization: organization,
+          user: finance_membership.user,
+          roles: %w[finance]
+        }
+      end
+
+      it "creates an invite" do
+        expect { create_service.call }.to change(Invite, :count).by(1)
       end
     end
 

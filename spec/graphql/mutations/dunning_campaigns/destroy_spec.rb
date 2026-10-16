@@ -4,10 +4,7 @@ require "rails_helper"
 
 RSpec.describe Mutations::DunningCampaigns::Destroy, :premium do
   let(:required_permissions) { "dunning_campaigns:delete" }
-  let(:membership) { create(:membership, organization:) }
-  let(:organization) { create(:organization, premium_integrations: ["auto_dunning"]) }
   let(:dunning_campaign) { create(:dunning_campaign, organization:) }
-
   let(:mutation) do
     <<-GQL
       mutation($input: DestroyDunningCampaignInput!) {
@@ -17,6 +14,9 @@ RSpec.describe Mutations::DunningCampaigns::Destroy, :premium do
       }
     GQL
   end
+  let(:membership) { create(:membership, organization:) }
+
+  let_it_be(:organization) { create(:organization, premium_integrations: ["auto_dunning"]) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

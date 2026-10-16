@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Taxes::AutoGenerateService do
   subject(:auto_generate_service) { described_class.new(organization:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
 
   describe ".call" do
     it "creates eu taxes for organization" do

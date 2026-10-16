@@ -51,7 +51,15 @@ module Events
         event.external_subscription_id = event_params[:external_subscription_id].presence || event_params[:external_contract_id]
         event.properties = event_params[:properties] || {}
         event.metadata = metadata || {}
-        event.timestamp = Time.zone.at(event_params[:timestamp] ? BigDecimal(event_params[:timestamp].to_s) : timestamp)
+        event.timestamp = TimestampWindow.parse(event_params[:timestamp], default: timestamp)
+        unless event.timestamp
+          result.errors[index] = {timestamp: ["invalid_format"]}
+          next
+        end
+        unless TimestampWindow.within?(event.timestamp)
+          result.errors[index] = {timestamp: ["value_is_out_of_range"]}
+          next
+        end
         event.precise_total_amount_cents = event_params[:precise_total_amount_cents]
 
         expression_result = CalculateExpressionService.call(organization:, event:)

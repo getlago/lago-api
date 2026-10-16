@@ -14,13 +14,10 @@ RSpec.describe Mutations::RatePhases::Update do
   end
 
   let(:required_permission) { "plans:update" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:plan_rate_card) { create(:plan_rate_card, organization:) }
   let!(:rate_phase) { create(:rate_phase, organization:, plan_rate_card:, position: 1, code: "launch", name: "Before", billing_interval_cycle_count: 3) }
 
   let(:input) { {planAppliedRateCardId: plan_rate_card.id, code: rate_phase.code, name: "After", newCode: "intro"} }
-
   let(:mutation) do
     <<~GQL
       mutation($input: UpdateRatePhaseInput!) {
@@ -30,6 +27,11 @@ RSpec.describe Mutations::RatePhases::Update do
       }
     GQL
   end
+
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:plan, refind: true) { create_default(:plan) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

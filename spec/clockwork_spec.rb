@@ -370,6 +370,27 @@ describe Clockwork do
     end
   end
 
+  describe "schedule:reconcile_x402_settlements" do
+    let(:job) { "schedule:reconcile_x402_settlements" }
+    let(:start_time) { Time.zone.parse("1 Apr 2022 00:00:00") }
+    let(:end_time) { Time.zone.parse("1 Apr 2022 00:05:00") }
+
+    it "enqueues a reconcile x402 settlements job every minute" do
+      Clockwork::Test.run(
+        file: clock_file,
+        start_time:,
+        end_time:,
+        tick_speed: 1.second
+      )
+
+      expect(Clockwork::Test).to be_ran_job(job)
+      expect(Clockwork::Test.times_run(job)).to eq(5)
+
+      Clockwork::Test.block_for(job).call
+      expect(Clock::ReconcileX402SettlementsJob).to have_been_enqueued
+    end
+  end
+
   describe "schedule:refresh_flagged_subscriptions" do
     let(:job) { "schedule:refresh_flagged_subscriptions" }
     let(:start_time) { Time.zone.parse("2025-03-27T00:05:00") }

@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Coupons::TerminateService do
   subject(:terminate_service) { described_class.new(coupon) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
 
   let(:coupon) { create(:coupon, organization:) }
 

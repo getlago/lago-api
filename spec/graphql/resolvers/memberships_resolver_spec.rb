@@ -14,11 +14,12 @@ RSpec.describe Resolvers::MembershipsResolver do
     GQL
   end
 
-  let(:membership) { create(:membership, roles: %i[admin]) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership, roles: %i[admin]) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", %w[organization:members:view organization:members:update quotes:view quotes:create quotes:update order_forms:view orders:view security_logs:view]
 
   it "returns a list of memberships" do
     create(:membership, organization: organization, roles: %i[admin])
@@ -27,6 +28,7 @@ RSpec.describe Resolvers::MembershipsResolver do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: described_class::REQUIRED_PERMISSION.sample,
       query:
     )
 
@@ -47,10 +49,35 @@ RSpec.describe Resolvers::MembershipsResolver do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: described_class::REQUIRED_PERMISSION.sample,
       query:
     )
 
     expect(result["data"]["memberships"]["metadata"]["adminCount"]).to eq(1)
+  end
+
+  %w[organization:members:update quotes:view quotes:create].each do |permission|
+    it "returns the memberships with #{permission} only" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: permission,
+        query:
+      )
+
+      expect(result["data"]["memberships"]["collection"].map { it["id"] }).to include(membership.id)
+    end
+  end
+
+  it "returns a forbidden error without any of the required permissions" do
+    result = execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      permissions: "invoices:view",
+      query:
+    )
+
+    expect(result["errors"].first["extensions"]["code"]).to eq("forbidden")
   end
 
   describe "filters" do
@@ -84,6 +111,7 @@ RSpec.describe Resolvers::MembershipsResolver do
       execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: described_class::REQUIRED_PERMISSION.sample,
         query:,
         variables:
       )
@@ -129,11 +157,10 @@ RSpec.describe Resolvers::MembershipsResolver do
   end
 
   describe "traversal attack attempt" do
-    let!(:other_org) { create(:organization) }
-
-    let(:other_user) { create(:user) }
-    let(:other_user_membership) { create(:membership, user: other_user, organization:) }
-    let(:other_user_other_membership) { create(:membership, user: other_user, organization: other_org) }
+    let_it_be(:other_org) { create(:organization) }
+    let_it_be(:other_user) { create(:user) }
+    let_it_be(:other_user_membership) { create(:membership, user: other_user, organization:) }
+    let_it_be(:other_user_other_membership) { create(:membership, user: other_user, organization: other_org) }
 
     let(:query) do
       <<~GQL
@@ -156,6 +183,7 @@ RSpec.describe Resolvers::MembershipsResolver do
       execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: described_class::REQUIRED_PERMISSION.sample,
         query:
       )
     end

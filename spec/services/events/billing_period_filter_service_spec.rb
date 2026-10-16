@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Events::BillingPeriodFilterService do
   subject(:filter_result) { described_class.for_charges!(subscription:, boundaries:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   let(:subscription) do
     create(

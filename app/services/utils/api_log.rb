@@ -2,6 +2,9 @@
 
 module Utils
   class ApiLog
+    # WaterDrop rejects messages over its `max_payload_size` (1_000_012 bytes by default).
+    MAX_PAYLOAD_BYTESIZE = 1_000_000
+
     def self.produce(*, **, &)
       new(*, **, &).produce
     end
@@ -12,11 +15,12 @@ module Utils
         ENV["LAGO_KAFKA_API_LOGS_TOPIC"].present?
     end
 
-    def initialize(request, response, organization:, &block)
+    def initialize(request, response, organization:, filtered_params: [], &block)
       @request = request
       @response = response
       @organization = organization
       @request_id = request.request_id.presence || SecureRandom.uuid
+      @filtered_params = filtered_params
       @block = block
     end
 
@@ -28,20 +32,31 @@ module Utils
         topic: ENV["LAGO_KAFKA_API_LOGS_TOPIC"],
         invalid_message_level: :warning,
         key:,
-        payload: {
-          **payload,
-          logged_at: current_time,
-          created_at: current_time
-        }.to_json
+        payload: serialized_payload(logged_at: current_time, created_at: current_time)
       )
     end
 
     private
 
-    attr_reader :request, :response, :organization, :request_id, :block
+    attr_reader :request, :response, :organization, :request_id, :filtered_params, :block
 
     def key
       "#{organization.id}--#{request_id}"
+    end
+
+    # A large request or response (e.g. a plan with many charges) can push the message over the
+    # Kafka limit. Instead of dropping the whole log, the response, then the request body, are
+    # replaced by a marker. Both are Map(String, Nullable(String)) in ClickHouse.
+    def serialized_payload(**timestamps)
+      full_payload = payload.merge(timestamps)
+      json = full_payload.to_json
+      return json if json.bytesize <= MAX_PAYLOAD_BYTESIZE
+
+      marker = {truncated: "true", original_bytesize: json.bytesize.to_s}
+      json = full_payload.merge(request_response: marker).to_json
+      return json if json.bytesize <= MAX_PAYLOAD_BYTESIZE
+
+      full_payload.merge(request_body: marker, request_response: marker).to_json
     end
 
     def payload
@@ -58,7 +73,8 @@ module Utils
     def request_data
       {
         client: request.user_agent,
-        request_body: request.params.except(:controller, :action, :format),
+        request_body: ActiveSupport::ParameterFilter.new(filtered_params)
+          .filter(request.params.except(:controller, :action, :format)),
         request_path: request.path,
         request_origin: request.base_url,
         http_method: request.method_symbol

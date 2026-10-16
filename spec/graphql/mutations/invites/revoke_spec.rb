@@ -4,10 +4,7 @@ require "rails_helper"
 
 RSpec.describe Mutations::Invites::Revoke do
   let(:required_permission) { "organization:members:delete" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:user) { membership.user }
-
   let(:mutation) do
     <<-GQL
       mutation($input: RevokeInviteInput!) {
@@ -19,6 +16,10 @@ RSpec.describe Mutations::Invites::Revoke do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

@@ -8,8 +8,8 @@ RSpec.describe PasswordResets::CreateService do
   include_context "with mocked security logger"
 
   describe "#call" do
-    let(:organization) { create(:organization) }
-    let(:membership) { create(:membership, organization:) }
+    let_it_be(:organization) { create(:organization) }
+    let_it_be(:membership) { create(:membership, organization:) }
     let(:user) { membership.user }
     let(:create_args) do
       {
@@ -34,12 +34,15 @@ RSpec.describe PasswordResets::CreateService do
       end
     end
 
-    context "without arguments" do
-      it "raises an error" do
-        result = create_service.call(user: nil)
+    context "without user" do
+      it "succeeds without creating a password reset or sending an email" do
+        result = nil
 
-        expect(result).not_to be_success
-        expect(result.error.error_code).to eq("user_not_found")
+        expect { result = create_service.call(user: nil) }
+          .to not_change(PasswordReset, :count)
+          .and not_have_enqueued_job(SendEmailJob)
+
+        expect(result).to be_success
       end
 
       it_behaves_like "does not produce a security log" do

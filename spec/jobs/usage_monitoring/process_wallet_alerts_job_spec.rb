@@ -3,6 +3,11 @@
 require "rails_helper"
 
 RSpec.describe UsageMonitoring::ProcessWalletAlertsJob do
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
+
   it_behaves_like "a configurable queue", "alerts_high_priority", "SIDEKIQ_ALERTS" do
     let(:arguments) { create(:wallet) }
   end

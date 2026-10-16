@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::WalletResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:query) do
     <<~GQL
       query($id: ID!) {
@@ -16,18 +18,23 @@ RSpec.describe Resolvers::WalletResolver do
       }
     GQL
   end
-
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
   let(:wallet) { create(:wallet, :with_recurring_transaction_rules, customer:) }
 
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
+
   before { wallet }
+
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", %w[customers:view wallets:create wallets:update wallets:top_up wallets:terminate]
 
   it "returns a wallet" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: described_class::REQUIRED_PERMISSION.sample,
       query:,
       variables: {id: wallet.id}
     )
@@ -55,6 +62,7 @@ RSpec.describe Resolvers::WalletResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: described_class::REQUIRED_PERMISSION.sample,
         query:,
         variables: {id: wallet.id}
       )
@@ -90,6 +98,7 @@ RSpec.describe Resolvers::WalletResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: described_class::REQUIRED_PERMISSION.sample,
         query:,
         variables: {id: "foo"}
       )
@@ -118,6 +127,7 @@ RSpec.describe Resolvers::WalletResolver do
         result = execute_graphql(
           current_user: membership.user,
           current_organization: organization,
+          permissions: described_class::REQUIRED_PERMISSION.sample,
           query:,
           variables: {id: wallet.id}
         )
@@ -133,6 +143,7 @@ RSpec.describe Resolvers::WalletResolver do
         result = execute_graphql(
           current_user: membership.user,
           current_organization: organization,
+          permissions: described_class::REQUIRED_PERMISSION.sample,
           query:,
           variables: {id: wallet.id}
         )
@@ -170,6 +181,7 @@ RSpec.describe Resolvers::WalletResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: described_class::REQUIRED_PERMISSION.sample,
         query: connections_query,
         variables: {id: wallet.id}
       )

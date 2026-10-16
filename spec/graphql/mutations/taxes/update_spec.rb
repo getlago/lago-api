@@ -26,10 +26,15 @@ RSpec.describe Mutations::Taxes::Update do
     GQL
   end
 
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "organization:taxes:update"
+
   it "updates a tax" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
+      permissions: "organization:taxes:update",
       query: mutation,
       variables: {input:}
     )
@@ -42,5 +47,18 @@ RSpec.describe Mutations::Taxes::Update do
       "rate" => 30.0,
       "appliedToOrganization" => false
     )
+  end
+
+  it "returns a forbidden error without the organization:taxes:update permission" do
+    result = execute_graphql(
+      current_user: membership.user,
+      current_organization: membership.organization,
+      permissions: [],
+      query: mutation,
+      variables: {input:}
+    )
+
+    expect(result["errors"].first["extensions"]["code"]).to eq("forbidden")
+    expect(tax.reload.rate).to eq(20.0)
   end
 end

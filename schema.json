@@ -33,17 +33,13 @@
               "name": "email",
               "description": null,
               "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
               },
               "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
+              "isDeprecated": true,
+              "deprecationReason": "The email is resolved from the invitation token."
             },
             {
               "name": "password",
@@ -416,6 +412,16 @@
             },
             {
               "kind": "OBJECT",
+              "name": "Contract",
+              "ofType": null
+            },
+            {
+              "kind": "OBJECT",
+              "name": "ContractAppliedRateCard",
+              "ofType": null
+            },
+            {
+              "kind": "OBJECT",
               "name": "Coupon",
               "ofType": null
             },
@@ -466,6 +472,11 @@
             },
             {
               "kind": "OBJECT",
+              "name": "PlanAppliedRateCard",
+              "ofType": null
+            },
+            {
+              "kind": "OBJECT",
               "name": "Product",
               "ofType": null
             },
@@ -487,6 +498,11 @@
             {
               "kind": "OBJECT",
               "name": "RateCard",
+              "ofType": null
+            },
+            {
+              "kind": "OBJECT",
+              "name": "RateCardRate",
               "ofType": null
             },
             {
@@ -913,6 +929,90 @@
             {
               "name": "rate_card_deleted",
               "description": "rate_card.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "rate_card_rate_created",
+              "description": "rate_card_rate.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "rate_card_rate_updated",
+              "description": "rate_card_rate.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "rate_card_rate_deleted",
+              "description": "rate_card_rate.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_rate_card_created",
+              "description": "plan_rate_card.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_rate_card_updated",
+              "description": "plan_rate_card.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_rate_card_deleted",
+              "description": "plan_rate_card.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract_rate_card_created",
+              "description": "contract_rate_card.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract_rate_card_updated",
+              "description": "contract_rate_card.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract_rate_card_deleted",
+              "description": "contract_rate_card.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract_created",
+              "description": "contract.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract_updated",
+              "description": "contract.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract_started",
+              "description": "contract.started",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract_terminated",
+              "description": "contract.terminated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract_canceled",
+              "description": "contract.canceled",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -34083,6 +34183,12 @@
               "deprecationReason": null
             },
             {
+              "name": "PRODUCT_CATALOG",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "WALLETS_AND_CREDITS",
               "description": null,
               "isDeprecated": false,
@@ -34493,6 +34599,162 @@
               "deprecationReason": null
             },
             {
+              "name": "product_category_created",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_category_updated",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_category_deleted",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_created",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_updated",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_deleted",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_filter_created",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_filter_updated",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_filter_deleted",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "rate_card_created",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "rate_card_updated",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "rate_card_deleted",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "rate_card_rate_created",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "rate_card_rate_updated",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "rate_card_rate_deleted",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_rate_card_created",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_rate_card_updated",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_rate_card_deleted",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract_rate_card_created",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract_rate_card_updated",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract_rate_card_deleted",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract_created",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract_updated",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract_started",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract_terminated",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract_canceled",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "quote_created",
               "description": null,
               "isDeprecated": false,
@@ -34804,6 +35066,12 @@
             },
             {
               "name": "usage_prefilter_incremental",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "incremental_charge_cache",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -40551,6 +40819,22 @@
               "deprecationReason": null
             },
             {
+              "name": "existingUser",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "id",
               "description": null,
               "args": [],
@@ -43331,6 +43615,45 @@
           "description": "Represents untyped JSON",
           "fields": null,
           "inputFields": null,
+          "interfaces": null,
+          "enumValues": null,
+          "possibleTypes": null
+        },
+        {
+          "kind": "INPUT_OBJECT",
+          "name": "JoinOrganizationInput",
+          "description": "Autogenerated input type of JoinOrganization",
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "token",
+              "description": "Unique token of the Invite",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
           "interfaces": null,
           "enumValues": null,
           "possibleTypes": null
@@ -48684,6 +49007,35 @@
               "type": {
                 "kind": "OBJECT",
                 "name": "RegisterUser",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "joinOrganization",
+              "description": "Joins the organization of an Invite as the authenticated user",
+              "args": [
+                {
+                  "name": "input",
+                  "description": "Parameters for JoinOrganization",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "INPUT_OBJECT",
+                      "name": "JoinOrganizationInput",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "OBJECT",
+                "name": "Membership",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -70991,6 +71343,18 @@
                   "deprecationReason": null
                 },
                 {
+                  "name": "currency",
+                  "description": null,
+                  "type": {
+                    "kind": "ENUM",
+                    "name": "CurrencyEnum",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
                   "name": "limit",
                   "description": null,
                   "type": {
@@ -76784,6 +77148,30 @@
               "deprecationReason": null
             },
             {
+              "name": "rate_card_rate",
+              "description": "RateCardRate",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_rate_card",
+              "description": "PlanRateCard",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract_rate_card",
+              "description": "ContractRateCard",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract",
+              "description": "Contract",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "quote",
               "description": "Quote",
               "isDeprecated": false,
@@ -77196,6 +77584,22 @@
                 "kind": "SCALAR",
                 "name": "String",
                 "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "grantable",
+              "description": "Whether the current member can assign this role",
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null
@@ -81324,6 +81728,12 @@
             {
               "name": "TZ_AMERICA_ARGENTINA_BUENOS_AIRES",
               "description": "America/Argentina/Buenos_Aires",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "TZ_AMERICA_ASUNCION",
+              "description": "America/Asuncion",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -92803,6 +93213,12 @@
             },
             {
               "name": "threshold",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "x402",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

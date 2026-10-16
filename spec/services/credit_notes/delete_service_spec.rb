@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe CreditNotes::DeleteService do
   subject(:delete_service) { described_class.new(credit_note:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
-  let(:invoice) { create(:invoice, :draft, organization:, customer:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:invoice) { create(:invoice, :draft, organization:, customer:) }
   let(:credit_note) { create(:credit_note, :draft, invoice:, customer:) }
 
   describe "#call" do

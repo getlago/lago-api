@@ -5,6 +5,9 @@ require "rails_helper"
 RSpec.describe AppliedCoupon do
   subject(:applied_coupon) { create(:applied_coupon) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+
   it_behaves_like "paper_trail traceable"
 
   describe "associations" do

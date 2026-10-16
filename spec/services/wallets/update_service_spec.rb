@@ -5,13 +5,17 @@ require "rails_helper"
 RSpec.describe Wallets::UpdateService do
   subject(:result) { described_class.call(wallet:, params:) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
-  let(:subscription) { create(:subscription, customer:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
+  let(:customer) { create_default(:customer, organization:) }
+  let(:subscription) { create_default(:subscription, customer:) }
   let(:wallet) { create(:wallet, customer:, allowed_fee_types: []) }
   let(:expiration_at) { (Time.current + 1.year).iso8601 }
   let(:priority) { 5 }
+
+  before_all do
+    create_default(:plan)
+  end
 
   describe "#call" do
     before do
@@ -228,6 +232,126 @@ RSpec.describe Wallets::UpdateService do
 
         expect(wallet.reload.name).not_to eq("new name")
         expect(SendWebhookJob).not_to have_been_enqueued.with("wallet.updated", Wallet)
+      end
+    end
+
+    context "with x402_enabled" do
+      let(:wallet) { create(:wallet, customer:, currency: "EUR", allowed_fee_types: []) }
+      let(:params) { {id: wallet.id, x402_enabled: true} }
+
+      context "without x402 payments" do
+        it "returns a forbidden failure" do
+          expect(result).to be_failure
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        end
+
+        it "leaves the wallet unchanged" do
+          result
+
+          expect(wallet.reload).not_to be_x402_enabled
+        end
+
+        context "with a terminated wallet" do
+          let(:wallet) { create(:wallet, :terminated, customer:, allowed_fee_types: []) }
+
+          it "returns a forbidden failure" do
+            expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          end
+        end
+
+        context "when x402_enabled is null" do
+          let(:params) { {id: wallet.id, name: "new name", x402_enabled: nil} }
+
+          it "updates the wallet" do
+            expect(result).to be_success
+            expect(wallet.reload.name).to eq("new name")
+          end
+        end
+
+        context "with an x402 wallet" do
+          let(:wallet) { create(:wallet, customer:, currency: "USD", allowed_fee_types: [], x402_enabled: true) }
+
+          context "when x402_enabled is false" do
+            let(:params) { {id: wallet.id, x402_enabled: false} }
+
+            it "disables x402 on the wallet" do
+              expect(result).to be_success
+              expect(wallet.reload).not_to be_x402_enabled
+            end
+          end
+        end
+      end
+
+      context "with x402 payments enabled", :premium do
+        let(:organization) { create(:organization, feature_flags: ["x402_payments"]) }
+        let(:wallet) { create(:wallet, customer:, currency: "USD", allowed_fee_types: []) }
+
+        before do
+          allow(ENV).to receive(:[]).and_call_original
+          allow(ENV).to receive(:[]).with("LAGO_REDIS_CACHE_URL").and_return("redis://cache:6379")
+          allow(ENV).to receive(:[]).with("LAGO_DISABLE_WALLET_REFRESH").and_return(nil)
+        end
+
+        it "enables x402 on the wallet" do
+          expect(result).to be_success
+          expect(wallet.reload).to be_x402_enabled
+        end
+
+        it "sends a wallet.updated webhook" do
+          result
+
+          expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
+        end
+
+        context "with a non-USD wallet" do
+          let(:wallet) { create(:wallet, customer:, currency: "EUR", allowed_fee_types: []) }
+
+          it "refuses with the currency rule" do
+            expect(result).to be_failure
+            expect(result.error.messages).to eq(x402_enabled: ["currency_not_supported"])
+          end
+
+          it "leaves the wallet unchanged" do
+            result
+
+            expect(wallet.reload).not_to be_x402_enabled
+          end
+        end
+
+        context "when x402_enabled is blank" do
+          let(:params) { {id: wallet.id, x402_enabled: ""} }
+
+          it "leaves the wallet unchanged" do
+            expect(result).to be_success
+            expect(wallet.reload).not_to be_x402_enabled
+          end
+        end
+
+        context "with an x402 wallet" do
+          let(:wallet) { create(:wallet, customer:, currency: "USD", allowed_fee_types: [], x402_enabled: true) }
+
+          context "when x402_enabled is false" do
+            let(:params) { {id: wallet.id, x402_enabled: false} }
+
+            it "disables x402 on the wallet" do
+              expect(result).to be_success
+              expect(wallet.reload).not_to be_x402_enabled
+            end
+          end
+
+          context "with recurring transaction rules" do
+            let(:params) { {id: wallet.id, recurring_transaction_rules: [{trigger: "interval", interval: "monthly", paid_credits: "10.0", granted_credits: "0.0"}]} }
+
+            it "refuses the rules" do
+              expect(result).to be_failure
+              expect(result.error.messages).to eq(recurring_transaction_rules: ["not_supported_for_x402_wallet"])
+            end
+
+            it "creates no rule" do
+              expect { result }.not_to change(RecurringTransactionRule, :count)
+            end
+          end
+        end
       end
     end
 

@@ -3,6 +3,11 @@
 require "rails_helper"
 
 describe Clock::TerminateWalletsJob, job: true do
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
+
   it_behaves_like "a unique job" do
     let(:job_args) { [] }
   end

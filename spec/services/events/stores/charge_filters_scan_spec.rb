@@ -18,7 +18,6 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
       charges_duration: 30
     }
   end
-  let(:deduplicate) { true }
 
   let(:charge_properties) { {"amount" => "1"} }
   let(:charge) { create(:standard_charge, organization:, plan:, billable_metric:, properties: charge_properties) }
@@ -92,8 +91,7 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
         grouped_by: item.pricing_group_keys.presence,
         matching_filters: matching_and_ignored.matching_filters,
         ignored_filters: matching_and_ignored.ignored_filters
-      },
-      deduplicate:
+      }
     ).tap do |store|
       store.numeric_property = true
       store.aggregation_property = billable_metric.field_name
@@ -137,12 +135,6 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
       totals = pricing_buckets.to_h { [it.charge_filter.id, scanned_store(it).sum.value] }
 
       expect(totals.values).to match_array([4, 3, 32, 72, 144 + 256])
-    end
-
-    context "without deduplication" do
-      let(:deduplicate) { false }
-
-      it_behaves_like "the filter stores"
     end
 
     context "with a question mark in a filter key" do
@@ -306,6 +298,77 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
     end
   end
 
+  describe "a max charge" do
+    let(:billable_metric) { create(:max_billable_metric, organization:, field_name: "value") }
+    let(:charge_properties) { {"amount" => "1", "pricing_group_keys" => ["user"]} }
+    # The most recent events are the smallest, so the max of a filter is not its latest value.
+    let(:events) { super().reverse }
+
+    it "answers every filter as its own store does" do
+      pricing_buckets.each do |item|
+        expect(scanned_store(item).max).to eq(filter_store(item).max)
+        expect(scanned_store(item).max(with_count: false)).to eq(filter_store(item).max(with_count: false))
+        expect(scanned_store(item).count).to eq(filter_store(item).count)
+        expect(sorted(scanned_store(item).grouped_max)).to eq(sorted(filter_store(item).grouped_max))
+      end
+    end
+
+    it "leaves the other aggregations to the filter stores" do
+      expect(pricing_buckets.map { scan.covers?(filter_store(it), :sum) }).to all(be(false))
+      expect(pricing_buckets.map { scan.covers?(filter_store(it), :last) }).to all(be(false))
+    end
+  end
+
+  describe "a latest charge" do
+    let(:billable_metric) { create(:latest_billable_metric, organization:, field_name: "value") }
+    let(:charge_properties) { {"amount" => "1", "pricing_group_keys" => ["user"]} }
+    # The most recent events are the smallest, so the latest value of a filter is not its max.
+    let(:events) { super().reverse }
+
+    shared_examples "the filter stores of a latest charge" do
+      it "answers every filter as its own store does" do
+        pricing_buckets.each do |item|
+          expect(scanned_store(item).last).to eq(filter_store(item).last)
+          expect(scanned_store(item).last(with_count: false)).to eq(filter_store(item).last(with_count: false))
+          expect(scanned_store(item).count).to eq(filter_store(item).count)
+          expect(sorted(scanned_store(item).grouped_last)).to eq(sorted(filter_store(item).grouped_last))
+        end
+      end
+    end
+
+    it_behaves_like "the filter stores of a latest charge"
+
+    it "answers the value of the latest event of each filter" do
+      totals = pricing_buckets.to_h { [it.charge_filter.id, scanned_store(it).last.value] }
+
+      expect(totals.values).to match_array([1, 4, 32, 8, 16])
+    end
+
+    context "when the latest event of a filter has no value" do
+      before do
+        Clickhouse::EventsEnriched.create!(
+          transaction_id: "tr_without_value",
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: boundaries[:from_datetime] + 1.day,
+          properties: {"region" => "eu", "model" => "b", "user" => "u2"},
+          value: nil,
+          decimal_value: nil,
+          enriched_at: Time.current
+        )
+      end
+
+      it_behaves_like "the filter stores of a latest charge"
+
+      it "answers no value for it" do
+        item = pricing_buckets.find { it.charge_filter.persisted? && it.charge_filter.to_h == {"model" => ["b"]} }
+
+        expect(scanned_store(item).last.value).to be_nil
+      end
+    end
+  end
+
   describe "#covers?" do
     let(:item) { pricing_buckets.first }
 
@@ -319,8 +382,7 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
           code: billable_metric.code,
           billing_context:,
           boundaries:,
-          filters: filter_store(item).filters.merge(matching_filters: {"region" => ["eu"]}),
-          deduplicate:
+          filters: filter_store(item).filters.merge(matching_filters: {"region" => ["eu"]})
         )
 
         expect(scan.covers?(store)).to be(false)
@@ -363,6 +425,24 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
 
       it "does not support it" do
         expect(described_class.supported_charge?(charge)).to be(false)
+      end
+    end
+
+    context "with a max metric" do
+      let(:billable_metric) { create(:max_billable_metric, organization:, field_name: "value") }
+
+      it "only supports it with the incremental cache" do
+        expect(described_class.supported_charge?(charge)).to be(false)
+        expect(described_class.supported_charge?(charge, incremental: true)).to be(true)
+      end
+    end
+
+    context "with a latest metric" do
+      let(:billable_metric) { create(:latest_billable_metric, organization:, field_name: "value") }
+
+      it "only supports it with the incremental cache" do
+        expect(described_class.supported_charge?(charge)).to be(false)
+        expect(described_class.supported_charge?(charge, incremental: true)).to be(true)
       end
     end
   end

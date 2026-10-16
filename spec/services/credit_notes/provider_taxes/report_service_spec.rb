@@ -6,8 +6,8 @@ RSpec.describe CreditNotes::ProviderTaxes::ReportService do
   subject(:report_service) { described_class.new(credit_note:) }
 
   describe "#call" do
-    let(:organization) { create(:organization) }
-    let(:customer) { create(:customer, organization:) }
+    let_it_be(:organization) { create_default(:organization) }
+    let(:customer) { create_default(:customer, organization:) }
 
     let(:invoice) do
       create(

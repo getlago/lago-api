@@ -6,10 +6,6 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::CreateService do
   subject(:service_call) { service.call }
 
   let(:service) { described_class.new(invoice:) }
-  let(:integration) { create(:hubspot_integration, organization:, invoices_properties_version: 2) }
-  let(:integration_customer) { create(:hubspot_customer, integration:, customer:) }
-  let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { "https://api.nango.dev/v1/hubspot/records" }
   let(:invoice_file_url) { invoice.file_url }
@@ -17,7 +13,6 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::CreateService do
   let(:due_date) { invoice.payment_due_date.strftime("%Y-%m-%d") }
   let(:purchase_order_number) { "PO-123" }
   let(:invoice_url_path) { "/#{organization.slug}/customer/#{customer.id}/invoice/#{invoice.id}/overview" }
-
   let(:invoice) do
     create(
       :invoice,
@@ -31,7 +26,6 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::CreateService do
       purchase_order_number:
     )
   end
-
   let(:headers) do
     {
       "Connection-Id" => integration.connection_id,
@@ -39,10 +33,14 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::CreateService do
       "Provider-Config-Key" => "hubspot"
     }
   end
-
   let(:params) do
     service.__send__(:payload).create_body
   end
+  let(:integration) { create(:hubspot_integration, organization:, invoices_properties_version: 2) }
+  let(:integration_customer) { create(:hubspot_customer, integration:, customer:) }
+
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
 
   before do
     allow(LagoHttpClient::Client).to receive(:new)
