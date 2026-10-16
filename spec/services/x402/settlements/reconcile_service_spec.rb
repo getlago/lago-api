@@ -357,6 +357,10 @@ describe X402::Settlements::ReconcileService do
         )
       end
 
+      it "marks the row failed" do
+        expect(result.settlement.reload).to be_failed
+      end
+
       it "marks the invoice payment failed" do
         result
 
@@ -376,6 +380,22 @@ describe X402::Settlements::ReconcileService do
           result
 
           expect(invoice.reload.payment_status).to eq("succeeded")
+        end
+
+        it "sends no webhook" do
+          expect { result }.not_to have_enqueued_job(SendWebhookJob).with("invoice.payment_status_updated", invoice)
+        end
+      end
+
+      context "with a voided invoice" do
+        let(:invoice) { create(:invoice, :voided, organization: x402_connection.organization, currency: "USD", total_amount_cents: 100) }
+
+        it "marks the row failed" do
+          expect(result.settlement.reload).to be_failed
+        end
+
+        it "leaves the invoice as it was" do
+          expect { result }.not_to change { invoice.reload.attributes.slice("status", "payment_status") }
         end
       end
 
