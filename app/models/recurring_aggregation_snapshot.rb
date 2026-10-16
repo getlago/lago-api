@@ -14,6 +14,18 @@ class RecurringAggregationSnapshot < ApplicationRecord
   validates :to_datetime, presence: true
   validates :watermark, presence: true
   validates :units, numericality: true
+
+  # A filter or filter value created, edited or removed since the marker moves older events between
+  # buckets, so the snapshots of every bucket of the charges are stale, not only the one of that filter
+  def self.filters_changed_since?(organization_id:, charge_ids:, watermark:)
+    charge_filters = ChargeFilter.with_discarded.unscope(:order).where(organization_id:, charge_id: charge_ids)
+
+    charge_filters.where("created_at > :watermark OR deleted_at > :watermark", watermark:).exists? ||
+      ChargeFilterValue.with_discarded.unscope(:order)
+        .where(organization_id:, charge_filter_id: charge_filters.select(:id))
+        .where("updated_at > :watermark OR deleted_at > :watermark", watermark:)
+        .exists?
+  end
 end
 
 # == Schema Information
