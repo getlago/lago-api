@@ -359,16 +359,17 @@ module Events
       end
 
       # NOTE: the last four columns of each row are the value, the snapshot value and their events counts.
+      #       A missing and a blank group value are one group, as on ClickHouse.
       def prepare_grouped_recurring_values(rows, columns: grouped_by)
-        rows.map do |row|
-          flat = row.flatten
+        rows.map(&:flatten).group_by { build_groups(it[...-4], columns:) }.map do |groups, group_rows|
+          values = group_rows.map { it.last(4) }
 
           GroupedRecurringAggregationResult.new(
-            groups: build_groups(flat[...-4], columns:),
-            value: flat[-4] || 0,
-            snapshot_value: flat[-3] || 0,
-            events_count: flat[-2].to_i,
-            snapshot_events_count: flat[-1].to_i
+            groups:,
+            value: values.sum(0) { it[0] || 0 },
+            snapshot_value: values.sum(0) { it[1] || 0 },
+            events_count: values.sum(0) { it[2].to_i },
+            snapshot_events_count: values.sum(0) { it[3].to_i }
           )
         end
       end
