@@ -12,6 +12,7 @@ module PaymentProviders
 
     def call
       return result.not_found_failure!(resource: "payment_provider") unless payment_provider
+      return result.not_allowed_failure!(code: "payment_provider_used_by_agent_storefront") if used_by_agent_storefront?
 
       customer_ids = payment_provider.customer_ids
 
@@ -33,6 +34,11 @@ module PaymentProviders
     private
 
     attr_reader :payment_provider
+
+    def used_by_agent_storefront?
+      payment_provider.is_a?(PaymentProviders::StripeProvider) &&
+        payment_provider.organization.agent_storefront_integrations.with_payment_provider_code(payment_provider.code).exists?
+    end
 
     def register_security_log
       Utils::SecurityLog.produce(
