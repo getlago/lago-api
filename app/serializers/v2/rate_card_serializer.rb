@@ -2,8 +2,22 @@
 
 module V2
   class RateCardSerializer < ModelSerializer
+    EXPANDABLE_RELATIONS = {
+      active_rate: nil,
+      # Few per card, attached one by one through tax_codes.
+      taxes: nil,
+      # One per price change, /rates returns them whole.
+      rates: :rates,
+      product: {product: %i[product_category billable_metric]},
+      product_filter: {product_filter: {values: :billable_metric_filter}}
+    }.freeze
+
+    def self.expandable_relations
+      EXPANDABLE_RELATIONS
+    end
+
     def serialize
-      payload = {
+      {
         lago_id: model.id,
         product_code: model.product.code,
         product_filter_code: model.product_filter&.code,
@@ -16,46 +30,52 @@ module V2
         display_on_invoice: model.display_on_invoice,
         regroup_paid_fees: model.regroup_paid_fees,
         applied_pricing_unit_code: model.applied_pricing_unit_code,
-        rates_count: model.rates.size,
+        **counts,
         created_at: model.created_at.iso8601,
         updated_at: model.updated_at.iso8601,
-        **deleted_at_payload
+        **deleted_at_payload,
+        **expanded_payload
       }
-
-      payload[:active_rate] = active_rate if include?(:active_rate)
-      payload.merge!(taxes) if include?(:taxes)
-      # Full timeline for activity-log payloads; API payloads stay lean.
-      payload.merge!(rates) if include?(:rates)
-      payload
     end
 
     private
 
+    def counts = include?(:counts) ? {rates_count: model.rates.size} : {}
+
+    def expand(name)
+      case name
+      when :active_rate
+        active_rate&.then { ::V2::RateCardRateSerializer.new(it, includes: nested_includes).serialize }
+      when :taxes
+        # Forwards :counts so that the activity log, the only caller passing it, keeps V1's zeros on its
+        # taxes. A tax discarded between the query of the links and the preload of their taxes loads as nil.
+        model.applied_taxes.listed.filter_map(&:tax).map do |tax|
+          ::V2::TaxSerializer.new(tax, includes: nested_includes(forward: %i[counts])).serialize
+        end
+      when :rates
+        # Latest effective_from first, as /rates lists them. Sorted in memory, so that every
+        # status reads its siblings from the loaded association rather than querying them.
+        model.rates.sort_by(&:effective_from).reverse.map do |rate|
+          ::V2::RateCardRateSerializer.new(rate, includes: nested_includes).serialize
+        end
+      when :product
+        ::V2::ProductSerializer.new(model.product, includes: nested_includes).serialize
+      when :product_filter
+        model.product_filter&.then { ::V2::ProductFilterSerializer.new(it, includes: nested_includes).serialize }
+      else
+        super
+      end
+    end
+
+    # The latest effective rate, as RateCard#active_rate selects it. From the rates when a show
+    # preloaded them for `expand[]=rates`, so that both expansions read the same rows.
     def active_rate
-      rate = model.active_rate
-      return if rate.nil?
-
-      ::V2::RateCardRateSerializer.new(rate, includes: nested_includes).serialize
-    end
-
-    # Latest effective_from first, as /rates lists them. Sorted in memory, so that every
-    # status reads its siblings from the loaded association rather than querying them.
-    def rates
-      ::CollectionSerializer.new(
-        model.rates.sort_by(&:effective_from).reverse,
-        ::V2::RateCardRateSerializer,
-        collection_name: "rates",
-        includes: nested_includes
-      ).serialize
-    end
-
-    # A tax discarded between the query of the links and the preload of their taxes loads as nil.
-    def taxes
-      ::CollectionSerializer.new(
-        model.applied_taxes.listed.filter_map(&:tax),
-        ::V1::TaxSerializer,
-        collection_name: "taxes"
-      ).serialize
+      if model.rates.loaded?
+        now = Time.current
+        model.rates.select { it.effective_from <= now }.max_by(&:effective_from)
+      else
+        model.active_rate
+      end
     end
   end
 end
