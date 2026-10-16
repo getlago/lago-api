@@ -5,5 +5,6 @@ class ValidateContractCachedAggregationForeignKeys < ActiveRecord::Migration[8.0
     validate_foreign_key :cached_aggregations, :contracts
     validate_foreign_key :cached_aggregations, :products
     validate_foreign_key :cached_aggregations, :product_filters
+    validate_check_constraint :cached_aggregations, name: "cached_aggregations_identity_present"
   end
 end

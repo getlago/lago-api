@@ -2661,7 +2661,8 @@ CREATE TABLE public.cached_aggregations (
     presentation_breakdowns jsonb DEFAULT '[]'::jsonb NOT NULL,
     contract_id uuid,
     product_id uuid,
-    product_filter_id uuid
+    product_filter_id uuid,
+    CONSTRAINT cached_aggregations_identity_present CHECK (((charge_id IS NOT NULL) OR ((contract_id IS NOT NULL) AND (product_id IS NOT NULL))))
 );
 
 

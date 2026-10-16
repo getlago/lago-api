@@ -43,4 +43,51 @@ RSpec.describe CachedAggregation do
       expect(contract_aggregation_without_contract).not_to be_valid
     end
   end
+
+  describe "check constraints" do
+    subject(:insert) { aggregation.save(validate: false) }
+
+    let(:organization) { create(:organization) }
+
+    context "without a charge or a complete contract/product pair" do
+      let(:aggregation) { build(:cached_aggregation, organization:, charge: nil) }
+
+      it do
+        expect { insert }.to raise_error(ActiveRecord::StatementInvalid, /PG::CheckViolation.*cached_aggregations_identity_present/)
+      end
+    end
+
+    context "with a charge identity" do
+      let(:charge) { create(:standard_charge, organization:) }
+      let(:aggregation) { build(:cached_aggregation, organization:, charge:) }
+
+      it { expect(insert).to be(true) }
+    end
+
+    context "with a complete contract/product identity" do
+      let(:contract) { create(:contract, organization:) }
+      let(:product) { create(:product, organization:) }
+      let(:aggregation) { build(:cached_aggregation, organization:, charge: nil, contract:, product:) }
+
+      it { expect(insert).to be(true) }
+    end
+
+    context "with only a contract" do
+      let(:contract) { create(:contract, organization:) }
+      let(:aggregation) { build(:cached_aggregation, organization:, charge: nil, contract:) }
+
+      it do
+        expect { insert }.to raise_error(ActiveRecord::StatementInvalid, /PG::CheckViolation.*cached_aggregations_identity_present/)
+      end
+    end
+
+    context "with only a product" do
+      let(:product) { create(:product, organization:) }
+      let(:aggregation) { build(:cached_aggregation, organization:, charge: nil, product:) }
+
+      it do
+        expect { insert }.to raise_error(ActiveRecord::StatementInvalid, /PG::CheckViolation.*cached_aggregations_identity_present/)
+      end
+    end
+  end
 end
