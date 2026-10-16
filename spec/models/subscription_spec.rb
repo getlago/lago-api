@@ -590,6 +590,17 @@ RSpec.describe Subscription do
     end
   end
 
+  describe "#previous_recurring_aggregation_snapshots" do
+    let(:subscription) { build_stubbed(:subscription) }
+
+    it "returns the same lookup on every call" do
+      lookup = subscription.previous_recurring_aggregation_snapshots
+
+      expect(lookup).to be_a(RecurringAggregationSnapshots::PreviousSubscriptionSnapshots)
+      expect(subscription.previous_recurring_aggregation_snapshots).to be(lookup)
+    end
+  end
+
   describe "#trial_end_date" do
     let(:plan) { create(:plan, trial_period: 3) }
 

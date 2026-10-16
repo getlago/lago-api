@@ -30,6 +30,25 @@ class RecurringAggregationSnapshot < ApplicationRecord
       eligible?(metered_item:, billing_context:) &&
       billing_context.organization.feature_flag_enabled?(:persisted_recurring_values)
   end
+
+  # A filter or filter value created, edited or removed since the marker moves older events between
+  # buckets, so the snapshots of every bucket of the charges are stale, not only the one of that filter.
+  # A value set to all values reads the metric filter's values, which change without touching it.
+  def self.filters_changed_since?(organization_id:, charge_ids:, watermark:)
+    charge_filters = ChargeFilter.with_discarded.unscope(:order).where(organization_id:, charge_id: charge_ids)
+    charge_filter_values = ChargeFilterValue.with_discarded.unscope(:order)
+      .where(organization_id:, charge_filter_id: charge_filters.select(:id))
+
+    charge_filters.where("created_at > :watermark OR deleted_at > :watermark", watermark:).exists? ||
+      charge_filter_values.where("updated_at > :watermark OR deleted_at > :watermark", watermark:).exists? ||
+      BillableMetricFilter.with_discarded.unscope(:order)
+        .where(
+          organization_id:,
+          id: charge_filter_values.where(values: [ChargeFilterValue::ALL_FILTER_VALUES]).select(:billable_metric_filter_id)
+        )
+        .where("updated_at > :watermark OR deleted_at > :watermark", watermark:)
+        .exists?
+  end
 end
 
 # == Schema Information
