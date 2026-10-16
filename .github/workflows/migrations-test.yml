@@ -6,11 +6,23 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 permissions: {}
+env:
+  DATABASE_URL: "postgres://lago:lago@localhost:5432/lago"
+  RAILS_MASTER_KEY: N+XcWoGDzKjuoxrU8BIPN5D0/GSuqx9s
+  SECRET_KEY_BASE: cvIAI6ycC0OnVDRAjT5hmbRxnjCxl4YB
+  ENCRYPTION_PRIMARY_KEY: 5I9mjfzry2P787x4S5ZuDdJwXNgYEwqo
+  ENCRYPTION_DETERMINISTIC_KEY: SGiZzmh18EjBF9gSW8LCNk7pelauWVr4
+  ENCRYPTION_KEY_DERIVATION_SALT: q3pkMw34ZkRPFSf2LmtWe705yw532Pf7
+  LAGO_API_URL: https://api.lago.dev
+  LAGO_PDF_URL: https://pdf.lago.dev
+  LAGO_FROM_EMAIL: noreply@getlago.com
+  # Keep migrations from updating annotations before the frozen check below.
+  ANNOTATERB_SKIP_ON_DB_TASKS: 1
 jobs:
   run-migrations:
     name: Run migrations
     runs-on: ubuntu-latest
-    services:
+    services: &services
       postgres:
         image: getlago/postgres-partman:15.0-alpine
         ports:
@@ -30,15 +42,6 @@ jobs:
           --health-retries 5
     env:
       RAILS_ENV: test
-      DATABASE_URL: "postgres://lago:lago@localhost:5432/lago"
-      RAILS_MASTER_KEY: N+XcWoGDzKjuoxrU8BIPN5D0/GSuqx9s
-      SECRET_KEY_BASE: cvIAI6ycC0OnVDRAjT5hmbRxnjCxl4YB
-      ENCRYPTION_PRIMARY_KEY: 5I9mjfzry2P787x4S5ZuDdJwXNgYEwqo
-      ENCRYPTION_DETERMINISTIC_KEY: SGiZzmh18EjBF9gSW8LCNk7pelauWVr4
-      ENCRYPTION_KEY_DERIVATION_SALT: q3pkMw34ZkRPFSf2LmtWe705yw532Pf7
-      LAGO_API_URL: https://api.lago.dev
-      LAGO_PDF_URL: https://pdf.lago.dev
-      LAGO_FROM_EMAIL: noreply@getlago.com
       LAGO_CLICKHOUSE_ENABLED: true
       LAGO_CLICKHOUSE_MIGRATIONS_ENABLED: true
       LAGO_CLICKHOUSE_HOST: localhost
@@ -48,17 +51,18 @@ jobs:
       LAGO_DISABLE_SCHEMA_DUMP: true
       LAGO_KAFKA_EVENTS_CHARGED_IN_ADVANCE_TOPIC: events_charged_in_advance
       LAGO_KAFKA_REALTIME_USAGE_TRIGGERS_TOPIC: realtime_usage_triggers
-      # Keep migrations from updating annotations before the frozen check below.
-      ANNOTATERB_SKIP_ON_DB_TASKS: 1
     steps:
-      - name: Checkout code
+      - &checkout
+        name: Checkout code
         uses: actions/checkout@v4
-      - name: Install Ruby and gems
+      - &install-ruby
+        name: Install Ruby and gems
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "4.0.6"
           bundler-cache: true
-      - name: Install pg 15
+      - &install-pg
+        name: Install pg 15
         uses: tj-actions/install-postgresql@v3
         with:
           postgresql-version: "15"
@@ -66,7 +70,8 @@ jobs:
         run: |
           docker run -d --rm -p 8123:8123 -p 9000:9000 --ulimit nofile=262144:262144 -v ./clickhouse-s3:/var/lib/clickhouse-s3 -v ./ci/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml -e CLICKHOUSE_PASSWORD=password clickhouse/clickhouse-server:26.4-alpine
         shell: bash
-      - name: Generate RSA keys
+      - &generate-rsa-keys
+        name: Generate RSA keys
         run: ./scripts/generate.rsa.sh
       - run: "pg_dump --version"
       - name: Move db schema for comparison
@@ -84,3 +89,57 @@ jobs:
         run: bundle exec annotaterb --frozen
       - name: Perform Clickhouse database migrations
         run: bin/rails db:migrate:clickhouse
+
+  run-migrations-custom-schema:
+    name: Run migrations in a custom schema
+    runs-on: ubuntu-latest
+    services: *services
+    env:
+      # A fresh self-hosted install with `POSTGRES_SCHEMA`, which only the
+      # production database config reads.
+      RAILS_ENV: production
+      POSTGRES_SCHEMA: lago
+    steps:
+      - *checkout
+      - *install-ruby
+      - *install-pg
+      - *generate-rsa-keys
+      - name: Create the custom schema
+        run: psql "$DATABASE_URL" -c "CREATE SCHEMA $POSTGRES_SCHEMA"
+      - name: Perform Postgres database migrations
+        run: bin/rails db:migrate
+      - name: Ensure no migration is pending
+        run: bin/rails db:abort_if_pending_migrations
+      - name: Ensure every table is in the custom schema
+        run: |
+          public_tables=$(ci/count_tables.sh public)
+          custom_tables=$(ci/count_tables.sh "$POSTGRES_SCHEMA")
+          echo "Tables in public: $public_tables, in $POSTGRES_SCHEMA: $custom_tables"
+          test "$public_tables" -eq 0
+          test "$custom_tables" -gt 0
+      - &reset-database
+        name: Reset the database
+        run: psql "postgres://lago:lago@localhost:5432/postgres" -c "DROP DATABASE lago WITH (FORCE)" -c "CREATE DATABASE lago"
+      - name: Ensure a schema list starting with public keeps every table in public
+        env:
+          POSTGRES_SCHEMA: "public, lago"
+        run: |
+          psql "$DATABASE_URL" -c "CREATE SCHEMA lago"
+          bin/rails db:migrate
+          public_tables=$(ci/count_tables.sh public)
+          lago_tables=$(ci/count_tables.sh lago)
+          echo "Tables in public: $public_tables, in lago: $lago_tables"
+          test "$lago_tables" -eq 0
+          test "$public_tables" -gt 0
+      - *reset-database
+      - name: Ensure a missing custom schema stops the migrations
+        run: |
+          if bin/rails db:migrate > migrate.log 2>&1; then
+            tail -20 migrate.log
+            echo "The migrations should fail when the $POSTGRES_SCHEMA schema does not exist"
+            exit 1
+          fi
+          grep "set in POSTGRES_SCHEMA does not exist" migrate.log
+          public_tables=$(ci/count_tables.sh public)
+          echo "Tables in public: $public_tables"
+          test "$public_tables" -eq 0
