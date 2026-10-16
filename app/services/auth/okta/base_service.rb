@@ -20,12 +20,8 @@ module Auth
         result.email = email
       end
 
-      def check_okta_integration(email)
-        email_domain = email.split("@").last
-        okta_integration = ::Integrations::OktaIntegration
-          .where("settings->>'domain' IS NOT NULL")
-          .where("settings->>'domain' = ?", email_domain)
-          .first
+      def check_okta_integration(email, organization_id: nil)
+        okta_integration = ::Integrations::OktaIntegration.for_login(email:, organization_id:)
 
         raise ValidationError, "domain_not_configured" if okta_integration.blank?
 
