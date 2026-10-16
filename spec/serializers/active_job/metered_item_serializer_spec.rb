@@ -134,6 +134,53 @@ RSpec.describe ActiveJob::MeteredItemSerializer do
       expect(deserialized.event.timestamp).to eq(event.timestamp)
     end
 
+    context "when the stored segment changes after the job is queued" do
+      subject(:deserialized) { ActiveJob::Arguments.deserialize([serialized]).first }
+
+      let(:serialized) { JSON.parse(ActiveJob::Arguments.serialize([billing_segment_metered_item]).to_json).first }
+      let(:original_ended_at) { billing_segment.ended_at }
+
+      before do
+        original_ended_at
+        serialized
+        billing_segment.update!(rate_properties: {"amount" => "99"}, ended_at: Time.zone.parse("2026-10-01").end_of_day)
+      end
+
+      it "uses the rate and service period captured when the segment was built" do
+        expect(deserialized.billing_segment).to be_new_record
+        expect(deserialized.billing_segment.rate_properties).to eq("amount" => "20")
+        expect(deserialized.billing_segment.ended_at).to eq(original_ended_at)
+        expect(deserialized.billing_segment.rate_card_rate).to eq(rate_card_rate)
+      end
+    end
+
+    context "when the event pricing segment is not persisted" do
+      subject(:deserialized) do
+        serialized = JSON.parse(ActiveJob::Arguments.serialize([metered_item]).to_json).first
+        ActiveJob::Arguments.deserialize([serialized]).first
+      end
+
+      let(:unsaved_segment) { billing_segment.dup }
+      let(:metered_item) do
+        Fees::ChargeService::MeteredItem.from_billing_segment(
+          billing_segment: unsaved_segment, event: Events::CommonFactory.new_instance(source: event)
+        )
+      end
+
+      it "round trips the selected pricing and service period without writing a segment" do
+        expect(deserialized.billing_segment).to be_new_record
+        expect(deserialized.billing_segment).to have_attributes(
+          contract_rate_card:,
+          rate_card_rate:,
+          rate_properties: {"amount" => "20"},
+          started_at: unsaved_segment.started_at,
+          ended_at: unsaved_segment.ended_at,
+          billing_at: unsaved_segment.billing_at
+        )
+        expect(deserialized.event.timestamp).to eq(event.timestamp)
+      end
+    end
+
     it "preserves the selected billing segment product filter" do
       metered_item = billing_segment_metered_item.with_filter(product_filter)
       serialized = JSON.parse(ActiveJob::Arguments.serialize([metered_item]).to_json).first
