@@ -21,7 +21,7 @@ describe "Upgrade terminated within the upgrade billing second" do
 
     previous_subscription = customer.subscriptions.sole
 
-    travel_to(DateTime.new(2026, 10, 2, 7, 25, 31)) do
+    travel_to(Time.zone.parse("2026-10-02T07:25:31.850"), with_usec: true) do
       create_subscription(
         {
           external_customer_id: customer.external_id,
@@ -42,8 +42,9 @@ describe "Upgrade terminated within the upgrade billing second" do
     expect(upgrade_invoice.invoice_subscriptions.pluck(:subscription_id, :invoicing_reason))
       .to match_array(expected_invoicing_reasons)
 
-    # The upgrade invoice is timestamped one second after the upgrade, so a termination in the upgrade second precedes it.
-    travel_to(DateTime.new(2026, 10, 2, 7, 25, 31)) do
+    # The upgrade invoice is timestamped at the whole second after the upgrade (07:25:32), so a termination 200ms
+    # after the upgrade rounds to that same second.
+    travel_to(Time.zone.parse("2026-10-02T07:25:32.050"), with_usec: true) do
       terminate_subscription(new_subscription)
     end
 
