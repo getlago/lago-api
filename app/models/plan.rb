@@ -121,31 +121,6 @@ class Plan < ApplicationRecord
     amount_cents * 52
   end
 
-  def active_subscriptions_count
-    count = subscriptions.active.count
-    active_count_per_child = Subscription.active
-      .where(Subscription.arel_table[:plan_id].eq(Plan.arel_table[:id]))
-      .select("COUNT(*)")
-
-    # Count through the (plan_id, status) index for each override instead of
-    # joining all active subscriptions before filtering by the parent plan.
-    count + children.sum(Arel::Nodes::Grouping.new(active_count_per_child.arel)).to_i
-  end
-
-  def customers_count
-    count = subscriptions.active.select(:customer_id).distinct.count
-    return count unless children
-
-    count + children.joins(:subscriptions).merge(Subscription.active).select(:customer_id).distinct.count
-  end
-
-  def draft_invoices_count
-    draft_invoices = Invoice.draft.where(organization_id:)
-    count = subscriptions.joins(:invoices).merge(draft_invoices).select(:invoice_id).distinct.count
-
-    count + children.joins(subscriptions: :invoices).merge(draft_invoices).select(:invoice_id).distinct.count
-  end
-
   private
 
   def validate_code_unique
