@@ -66,6 +66,24 @@ RSpec.describe Mutations::Invites::JoinOrganization do
     end
   end
 
+  context "with an SSO session the invited organization does not accept" do
+    let(:organization) { create(:organization, authentication_methods: %w[okta]) }
+
+    it "returns an error" do
+      result = execute_graphql(
+        current_user: user,
+        login_method: Organizations::AuthenticationMethods::OKTA,
+        session_claims: {login_method: "okta", sso_organization_id: membership.organization_id, sso_issuer: "other.okta.com"},
+        query: mutation,
+        variables: {input: {token: invite.token}}
+      )
+
+      expect(result["errors"].first["extensions"]["status"]).to eq(422)
+      expect(result["errors"].first["extensions"]["details"]["okta"]).to eq(["login_method_not_authorized"])
+      expect(invite.reload).to be_pending
+    end
+  end
+
   context "when the invite is revoked" do
     let(:invite) { create(:invite, organization:, email: user.email, status: :revoked) }
 

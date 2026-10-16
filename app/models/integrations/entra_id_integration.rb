@@ -30,8 +30,8 @@ module Integrations
     # Tenant aliases that accept users of any Entra tenant, so they do not identify one.
     MULTI_TENANT_IDS = %w[common organizations consumers].freeze
 
-    # The Entra tenant that authenticates users of this integration. A session it issues can
-    # open another organization only if that organization's integration has the same issuer.
+    # The Entra tenant that answers the token request built from `host` and `tenant_id`. A session
+    # it issues can open another organization only if that organization's integration has the same issuer.
     def sso_issuer
       return if tenant_id.blank? || MULTI_TENANT_IDS.include?(tenant_id.downcase)
 

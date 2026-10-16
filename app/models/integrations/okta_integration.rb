@@ -16,7 +16,7 @@ module Integrations
       get_from_settings("host") || "#{organization_name.downcase}.okta.com"
     end
 
-    # The Okta org that authenticates users of this integration. A session it issues can
+    # The Okta org that answers the token request built from `host`. A session it issues can
     # open another organization only if that organization's integration has the same issuer.
     def sso_issuer
       host.downcase

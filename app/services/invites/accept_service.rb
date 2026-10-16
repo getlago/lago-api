@@ -7,7 +7,7 @@ module Invites
     def call(**args)
       invite = args[:invite] || Invite.find_by(token: args[:token], status: :pending)
       return result.not_found_failure!(resource: "invite") unless invite
-      unless invite.login_method_allowed?(args[:login_method])
+      unless invite.organization.accessible_by_session?(login_method: args[:login_method], **args.fetch(:token_claims, {}))
         return result.single_validation_failure!(error_code: "login_method_not_authorized", field: args[:login_method])
       end
 
