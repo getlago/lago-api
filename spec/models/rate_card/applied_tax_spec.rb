@@ -48,6 +48,24 @@ RSpec.describe RateCard::AppliedTax do
         expect(queries.second).to match(/\ASELECT .+ FROM "taxes" WHERE/)
         expect(listed).to all(satisfy { it.association(:tax).loaded? })
       end
+
+      # Scoped to the transaction wrapping the example. The test table is nearly empty, so the
+      # costs would not tell the indexes apart: without scans nor sorts, only an index serving both
+      # the rate card and the order is left. The plan tells that the index CAN serve the list, not
+      # that the planner will prefer it on production data.
+      context "when the planner can only use an index already in the listed order" do
+        before do
+          %w[enable_seqscan enable_bitmapscan enable_sort].each do |setting|
+            ActiveRecord::Base.connection.execute("SET LOCAL #{setting} = off")
+          end
+        end
+
+        it "serves the links of a rate card from the cursor index" do
+          plan = ActiveRecord::Base.connection.select_rows("EXPLAIN #{rate_card.applied_taxes.listed.to_sql}").flatten.join("\n")
+
+          expect(plan).to include("Index Scan using index_rate_cards_taxes_by_cursor on rate_cards_taxes")
+        end
+      end
     end
   end
 end
