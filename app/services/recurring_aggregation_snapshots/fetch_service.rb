@@ -10,9 +10,6 @@ module RecurringAggregationSnapshots
 
     Period = Data.define(:to_datetime, :watermark)
 
-    # The snapshots of one bucket: this subscription's, or the matching one of the previous subscription
-    Bucket = Data.define(:subscription_id, :charge_id, :charge_filter, :before)
-
     Result = BaseResult[:snapshots, :period]
 
     def initialize(subscription:, charge:, charge_filter:, grouped_by_keys:, from_datetime:)
@@ -28,17 +25,8 @@ module RecurringAggregationSnapshots
     # Returns the snapshots of the latest period closed before from_datetime, one per group with
     # units or events, and that period. Both are nil when the aggregation must fall back to a full scan.
     def call
-      bucket = own_bucket
-      marker = latest_marker(bucket)
-
-      unless marker
-        bucket = previous_subscription_bucket
-        marker = latest_marker(bucket) if bucket
-      end
-      return result unless marker && same_grouped_by_keys?(marker) && !filters_changed_since?(bucket, marker)
-
-      records = period_records(bucket, marker).to_a
-      return result unless records.all? { same_grouped_by_keys?(it) }
+      marker, records = own_period || previous_subscription_period
+      return result unless marker && [marker, *records].all? { same_grouped_by_keys?(it) }
 
       result.period = Period.new(to_datetime: marker.to_datetime, watermark: marker.watermark)
       result.snapshots = records.map { to_snapshot(it) }
@@ -49,104 +37,45 @@ module RecurringAggregationSnapshots
 
     attr_reader :subscription, :charge, :charge_filter, :grouped_by_keys, :from_datetime
 
-    def own_bucket
-      Bucket.new(subscription_id: subscription.id, charge_id: charge.id, charge_filter:, before: from_datetime)
+    # A marker the filters changed since falls back to a full scan, not to the previous subscription
+    def own_period
+      marker = latest_marker
+      return unless marker
+
+      filters_changed = RecurringAggregationSnapshot.filters_changed_since?(
+        organization_id: subscription.organization_id, charge_ids: charge.id, watermark: marker.watermark
+      )
+      return [] if filters_changed
+
+      [marker, period_records(marker).to_a]
     end
 
-    def charge_snapshots(bucket)
+    # An upgrade or downgrade keeps the external id, so the events counted by the previous
+    # subscription are the ones this one reads.
+    def previous_subscription_period
+      subscription.previous_recurring_aggregation_snapshots.period(charge:, charge_filter:)
+    end
+
+    def charge_snapshots
       RecurringAggregationSnapshot.where(
         organization_id: subscription.organization_id,
-        subscription_id: bucket.subscription_id,
-        charge_id: bucket.charge_id
+        subscription_id: subscription.id,
+        charge_id: charge.id
       )
     end
 
     # The default bucket keeps a row for every closed period, other buckets only for groups with
     # units or events: the marker tells a bucket without usage from a period never closed.
-    def latest_marker(bucket)
-      scope = charge_snapshots(bucket).where(charge_filter_id: nil)
-      scope = scope.where(to_datetime: ...bucket.before) if bucket.before
-
-      scope.order(to_datetime: :desc, watermark: :desc).first
+    def latest_marker
+      charge_snapshots
+        .where(charge_filter_id: nil, to_datetime: ...from_datetime)
+        .order(to_datetime: :desc, watermark: :desc)
+        .first
     end
 
     # Rows of an older watermark belong to an overlapping run of the period, not to the marker's
-    def period_records(bucket, marker)
-      charge_snapshots(bucket).where(
-        charge_filter_id: bucket.charge_filter&.id,
-        to_datetime: marker.to_datetime,
-        watermark: marker.watermark
-      )
-    end
-
-    # A filter created or removed since the marker moves older events between buckets, so the
-    # snapshots of every bucket of the charge are stale, not only the one of that filter. Both
-    # charges count when the snapshots come from the previous subscription.
-    def filters_changed_since?(bucket, marker)
-      ChargeFilter.with_discarded.unscope(:order)
-        .where(organization_id: subscription.organization_id, charge_id: [charge.id, bucket.charge_id].uniq)
-        .where("created_at > :watermark OR deleted_at > :watermark", watermark: marker.watermark)
-        .exists?
-    end
-
-    # An upgrade or downgrade keeps the external id, so the events counted by the previous
-    # subscription are the ones this one reads. Its snapshots close at the termination, which an
-    # upgrade stamps just after this subscription starts: they are not bounded by from_datetime.
-    def previous_subscription_bucket
-      return unless subscription.previous_subscription_id
-
-      # Two matching charges would read the same events, but a plan with both is ambiguous enough
-      # to pay one full scan rather than guess
-      matching_charges = previous_charges
-      return unless matching_charges.one?
-
-      previous_charge = matching_charges.first
-      previous_filter = matching_previous_filter(previous_charge)
-      return if !default_bucket? && previous_filter.nil?
-
-      Bucket.new(
-        subscription_id: subscription.previous_subscription_id,
-        charge_id: previous_charge.id,
-        charge_filter: previous_filter,
-        before: nil
-      )
-    end
-
-    # An event goes to the most specific matching filter: a bucket only holds the same events when
-    # both charges have the same filters. A discarded charge is skipped, its filters are discarded
-    # with it and would no longer tell its buckets apart.
-    def previous_charges
-      charge_ids = RecurringAggregationSnapshot
-        .where(
-          organization_id: subscription.organization_id,
-          subscription_id: subscription.previous_subscription_id,
-          billable_metric_id: charge.billable_metric_id
-        )
-        .distinct
-        .select(:charge_id)
-
-      Charge
-        .where(organization_id: subscription.organization_id, id: charge_ids)
-        .includes(filters: {values: :billable_metric_filter})
-        .select { |previous_charge| filters_signature(previous_charge) == filters_signature(charge) }
-    end
-
-    def matching_previous_filter(previous_charge)
-      return if default_bucket?
-
-      previous_charge.filters.find { filter_signature(it) == filter_signature(charge_filter) }
-    end
-
-    def filters_signature(target_charge)
-      target_charge.filters.map { filter_signature(it) }.to_set
-    end
-
-    def filter_signature(filter)
-      filter.to_h.transform_values(&:sort)
-    end
-
-    def default_bucket?
-      !charge_filter&.persisted?
+    def period_records(marker)
+      charge_snapshots.where(charge_filter_id: charge_filter&.id, to_datetime: marker.to_datetime, watermark: marker.watermark)
     end
 
     # Snapshots grouped on other keys cannot be regrouped, only a full scan can
