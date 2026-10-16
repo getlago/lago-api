@@ -24,16 +24,13 @@ module Api
         end
 
         def signed_payment_params
-          body = JSON.parse(request.raw_post)
-          purchase = body["credit_purchase"] if body.is_a?(Hash)
+          section = raw_body_section("credit_purchase")
 
-          if purchase.is_a?(Hash)
-            {payment: purchase["payment"], payment_requirements: purchase["payment_requirements"]}
+          if section
+            {payment: section["payment"], payment_requirements: section["payment_requirements"]}
           else
             {}
           end
-        rescue JSON::ParserError
-          {}
         end
 
         def resource_name
