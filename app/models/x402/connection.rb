@@ -63,6 +63,8 @@ module X402
     def validate_allowed_origins
       origins = Array(allowed_origins)
 
+      errors.add(:allowed_origins, :blank) if origins.empty?
+
       if origins.any? { |origin| !(origin.is_a?(String) && X402::Origin.normalize(origin) == origin) }
         errors.add(:allowed_origins, :invalid_format)
       end

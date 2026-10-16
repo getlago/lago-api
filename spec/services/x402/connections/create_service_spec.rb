@@ -16,6 +16,7 @@ describe X402::Connections::CreateService do
       name: "Coinbase CDP",
       networks: ["eip155:84532"],
       payout_addresses: {evm: evm_address},
+      allowed_origins: ["https://api.example.com"],
       cdp_api_key_id:,
       cdp_api_key_secret:
     }
@@ -67,6 +68,18 @@ describe X402::Connections::CreateService do
           log_event: "integration.created",
           resources: {integration_name: "Coinbase CDP", integration_type: "x402"}
         )
+      end
+    end
+
+    context "without allowed origins" do
+      let(:params) { super().except(:allowed_origins) }
+
+      it "fails with the validation error and saves nothing" do
+        expect { result }.not_to change(X402::Connection, :count)
+
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq(allowed_origins: ["value_is_mandatory"])
+        expect(a_request(:any, /api\.cdp\.coinbase\.com/)).not_to have_been_made
       end
     end
 

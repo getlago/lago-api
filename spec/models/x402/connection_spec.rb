@@ -197,13 +197,21 @@ describe X402::Connection do
     describe "allowed_origins validation" do
       subject(:connection) { build(:x402_connection, allowed_origins:) }
 
-      let(:allowed_origins) { [] }
+      let(:allowed_origins) { ["https://api.example.com"] }
       let(:errors) { connection.errors.to_hash[:allowed_origins] }
 
       before { connection.valid? }
 
-      context "without origins" do
-        it { expect(connection.errors).to be_empty }
+      context "with an empty list" do
+        let(:allowed_origins) { [] }
+
+        it { expect(errors).to eq(["value_is_mandatory"]) }
+      end
+
+      context "with nil" do
+        let(:allowed_origins) { nil }
+
+        it { expect(errors).to eq(["value_is_mandatory"]) }
       end
 
       context "with a non-canonical origin duplicating a canonical one" do
