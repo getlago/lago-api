@@ -280,8 +280,7 @@ class ProductCatalogInvoiceHelper
     sort_by_name(category_lines) + sort_by_name(product_lines)
   end
 
-  # An invoice billed on event reception holds a single fee billed for that event. Fees billed
-  # in advance for their period are also `pay_in_advance`, so the event is what tells them apart.
+  # An invoice billed on event reception holds a single pay-in-advance fee.
   def single_event_fee?
     !invoice.advance_charges? && product_fees.one? && product_fees.first.pay_in_advance_event_transaction_id.present?
   end
