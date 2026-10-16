@@ -53,53 +53,7 @@ module RecurringAggregationSnapshots
     # subscription are the ones this one reads. Its snapshots close at the termination, which an
     # upgrade stamps just after this subscription starts: they are not bounded by from_datetime.
     def previous_subscription_records
-      return [] unless subscription.previous_subscription_id
-
-      # Two matching charges would read the same events, but a plan with both is ambiguous enough
-      # to pay one full scan rather than guess
-      matching_charges = previous_charges
-      return [] unless matching_charges.one?
-
-      previous_charge = matching_charges.first
-      previous_filter = matching_previous_filter(previous_charge)
-      return [] if !default_bucket? && previous_filter.nil?
-
-      latest_records(
-        RecurringAggregationSnapshot.where(
-          subscription_id: subscription.previous_subscription_id,
-          charge_id: previous_charge.id,
-          charge_filter_id: previous_filter&.id
-        )
-      ).to_a
-    end
-
-    # An event goes to the most specific matching filter: a bucket only holds the same events when
-    # both charges have the same filters. A discarded charge is skipped, its filters are discarded
-    # with it and would no longer tell its buckets apart.
-    def previous_charges
-      charge_ids = RecurringAggregationSnapshot
-        .where(subscription_id: subscription.previous_subscription_id, billable_metric_id: charge.billable_metric_id)
-        .distinct
-        .select(:charge_id)
-
-      Charge
-        .where(organization_id: subscription.organization_id, id: charge_ids)
-        .includes(filters: {values: :billable_metric_filter})
-        .select { |previous_charge| filters_signature(previous_charge) == filters_signature(charge) }
-    end
-
-    def matching_previous_filter(previous_charge)
-      return if default_bucket?
-
-      previous_charge.filters.find { filter_signature(it) == filter_signature(charge_filter) }
-    end
-
-    def filters_signature(target_charge)
-      target_charge.filters.map { filter_signature(it) }.to_set
-    end
-
-    def filter_signature(filter)
-      filter.to_h.transform_values(&:sort)
+      subscription.previous_recurring_aggregation_snapshots.records(charge:, charge_filter:)
     end
 
     def default_bucket?
