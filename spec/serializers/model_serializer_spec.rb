@@ -176,17 +176,17 @@ RSpec.describe ModelSerializer do
   describe "#nested_includes" do
     subject(:nested_includes) { serializer.send(:nested_includes, forward: %i[counts]) }
 
-    let(:options) { {includes: %i[product counts deleted_at]} }
+    let(:options) { {includes: %i[product counts deleted_at usec_timestamps]} }
 
-    it "keeps deleted_at and the forwarded options, never an expansion" do
-      expect(nested_includes).to eq(%i[deleted_at counts])
+    it "keeps the internal and forwarded options, never an expansion" do
+      expect(nested_includes).to eq(%i[deleted_at usec_timestamps counts])
     end
 
     context "without forwarded options" do
       subject(:nested_includes) { serializer.send(:nested_includes) }
 
-      it "keeps deleted_at only" do
-        expect(nested_includes).to eq(%i[deleted_at])
+      it "keeps the internal options only" do
+        expect(nested_includes).to eq(%i[deleted_at usec_timestamps])
       end
     end
 
@@ -203,6 +203,68 @@ RSpec.describe ModelSerializer do
 
       it "returns nothing" do
         expect(nested_includes).to eq([])
+      end
+    end
+  end
+
+  describe "#format_time" do
+    subject(:formatted) { serializer.send(:format_time, value) }
+
+    let(:value) { Time.zone.parse("2026-03-22T12:00:00.123456Z") }
+    let(:options) { {includes: %i[usec_timestamps]} }
+
+    it "renders the microseconds" do
+      expect(formatted).to eq("2026-03-22T12:00:00.123456Z")
+    end
+
+    context "with a time on a whole second" do
+      let(:value) { Time.zone.parse("2026-03-22T12:00:00Z") }
+
+      it "renders six zero digits" do
+        expect(formatted).to eq("2026-03-22T12:00:00.000000Z")
+      end
+    end
+
+    context "without the usec_timestamps option" do
+      let(:options) { {includes: %i[deleted_at]} }
+
+      it "renders whole seconds" do
+        expect(formatted).to eq("2026-03-22T12:00:00Z")
+      end
+    end
+
+    context "without includes" do
+      let(:options) { {} }
+
+      it "renders whole seconds" do
+        expect(formatted).to eq("2026-03-22T12:00:00Z")
+      end
+    end
+
+    context "with nil" do
+      let(:value) { nil }
+
+      it "renders nil" do
+        expect(formatted).to be_nil
+      end
+    end
+  end
+
+  describe "#format_date" do
+    subject(:formatted) { serializer.send(:format_date, value) }
+
+    let(:value) { Date.new(2026, 3, 22) }
+    let(:options) { {includes: %i[usec_timestamps]} }
+
+    it "renders the day only, whatever the options" do
+      expect(formatted).to eq("2026-03-22")
+    end
+
+    context "with nil" do
+      let(:value) { nil }
+
+      it "renders nil" do
+        expect(formatted).to be_nil
       end
     end
   end

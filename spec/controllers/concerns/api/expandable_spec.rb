@@ -60,7 +60,7 @@ RSpec.describe Api::Expandable, type: :controller do
       show
 
       expect(response).to have_http_status(:success)
-      expect(json).to eq(includes: %w[product_category deleted_at], loaded: %w[product_category])
+      expect(json).to eq(includes: %w[product_category deleted_at usec_timestamps], loaded: %w[product_category])
     end
   end
 
@@ -71,7 +71,7 @@ RSpec.describe Api::Expandable, type: :controller do
       it "reads the same expansion" do
         show
 
-        expect(json).to eq(includes: %w[product_category deleted_at], loaded: %w[product_category])
+        expect(json).to eq(includes: %w[product_category deleted_at usec_timestamps], loaded: %w[product_category])
       end
     end
   end
@@ -82,7 +82,7 @@ RSpec.describe Api::Expandable, type: :controller do
     it "keeps the order of the list" do
       show
 
-      expect(json[:includes]).to eq(%w[product_category computed deleted_at])
+      expect(json[:includes]).to eq(%w[product_category computed deleted_at usec_timestamps])
     end
   end
 
@@ -93,7 +93,7 @@ RSpec.describe Api::Expandable, type: :controller do
       show
 
       expect(response).to have_http_status(:success)
-      expect(json[:includes]).to eq(%w[computed deleted_at])
+      expect(json[:includes]).to eq(%w[computed deleted_at usec_timestamps])
     end
   end
 
@@ -107,7 +107,7 @@ RSpec.describe Api::Expandable, type: :controller do
       show
 
       expect(response).to have_http_status(:success)
-      expect(json[:includes]).to eq(%w[product_category computed deleted_at])
+      expect(json[:includes]).to eq(%w[product_category computed deleted_at usec_timestamps])
     end
   end
 
@@ -121,7 +121,7 @@ RSpec.describe Api::Expandable, type: :controller do
       show
 
       expect(response).to have_http_status(:success)
-      expect(json[:includes]).to eq(%w[product_category deleted_at])
+      expect(json[:includes]).to eq(%w[product_category deleted_at usec_timestamps])
     end
   end
 
@@ -131,7 +131,7 @@ RSpec.describe Api::Expandable, type: :controller do
     it "preloads nothing" do
       show
 
-      expect(json).to eq(includes: %w[computed deleted_at], loaded: [])
+      expect(json).to eq(includes: %w[computed deleted_at usec_timestamps], loaded: [])
     end
   end
 
@@ -141,7 +141,7 @@ RSpec.describe Api::Expandable, type: :controller do
     it "passes no expansion" do
       show
 
-      expect(json).to eq(includes: %w[deleted_at], loaded: [])
+      expect(json).to eq(includes: %w[deleted_at usec_timestamps], loaded: [])
     end
   end
 
@@ -154,21 +154,21 @@ RSpec.describe Api::Expandable, type: :controller do
         show
 
         expect(response).to have_http_status(:success)
-        expect(json[:includes]).to eq(%w[deleted_at])
+        expect(json[:includes]).to eq(%w[deleted_at usec_timestamps])
       end
 
       it "passes no expansion on index" do
         get(:index, params: {expand: empty}.compact)
 
         expect(response).to have_http_status(:success)
-        expect(json[:includes]).to eq(%w[deleted_at])
+        expect(json[:includes]).to eq(%w[deleted_at usec_timestamps])
       end
 
       it "passes no expansion on create" do
         post(:create, params: {expand: empty}.compact, as: :json)
 
         expect(response).to have_http_status(:success)
-        expect(json[:includes]).to eq(%w[deleted_at])
+        expect(json[:includes]).to eq(%w[deleted_at usec_timestamps])
       end
     end
   end
@@ -180,7 +180,7 @@ RSpec.describe Api::Expandable, type: :controller do
       create_request
 
       expect(response).to have_http_status(:success)
-      expect(json[:includes]).to eq(%w[deleted_at])
+      expect(json[:includes]).to eq(%w[deleted_at usec_timestamps])
     end
   end
 
@@ -206,6 +206,7 @@ RSpec.describe Api::Expandable, type: :controller do
     "a name in another case" => [["Product_Category"], ["Product_Category"]],
     "the counts option" => [["counts"], ["counts"]],
     "the deleted_at option" => [["deleted_at"], ["deleted_at"]],
+    "the usec_timestamps option" => [["usec_timestamps"], ["usec_timestamps"]],
     "valid and invalid names" => [["product_category", " fees ", "computed"], ["fees"]]
   }.each do |description, (value, invalid_values)|
     context "with #{description}" do
