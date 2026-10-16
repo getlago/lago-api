@@ -542,6 +542,11 @@ RSpec.describe Api::V1::InvoicesController do
         [{per_page: 0}, {per_page: ["value_is_out_of_range"]}],
         [{per_page: "abc"}, {per_page: ["value_is_out_of_range"]}],
         [{per_page: "0x10"}, {per_page: ["value_is_out_of_range"]}],
+        [{per_page: "010"}, {per_page: ["value_is_out_of_range"]}],
+        [{per_page: "+5"}, {per_page: ["value_is_out_of_range"]}],
+        [{per_page: "1_0"}, {per_page: ["value_is_out_of_range"]}],
+        [{per_page: " 5"}, {per_page: ["value_is_out_of_range"]}],
+        [{page: "01"}, {page: ["value_is_out_of_range"]}],
         [{page: 0, per_page: -1}, {page: ["value_is_out_of_range"], per_page: ["value_is_out_of_range"]}]
       ].each do |invalid_params, error_details|
         context "with #{invalid_params}" do
