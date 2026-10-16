@@ -4721,6 +4721,24 @@ RSpec.describe Fees::ChargeService, :premium do
 
         expect(snapshots.pluck(:grouped_by, :units)).to match_array([[{"region" => "eu"}, 15], [{"region" => "us"}, 7]])
       end
+
+      context "when events omit the group or send it blank" do
+        before do
+          [{value: 3}, {value: 4, region: ""}].each do |properties|
+            create(:event, organization:, subscription:, code: billable_metric.code,
+              created_at: now - RecurringAggregationSnapshot::WATERMARK_LAG - 1.minute,
+              timestamp: Time.zone.parse("2022-03-20"), properties:)
+          end
+        end
+
+        it "bills and persists them as one group" do
+          result = charge_subscription_service.call
+
+          expect(result).to be_success
+          expect(result.fees.map { [it.grouped_by, it.units] }).to match_array([[{"region" => "eu"}, 15], [{"region" => "us"}, 7], [{"region" => nil}, 7]])
+          expect(snapshots.pluck(:grouped_by, :units)).to match_array([[{"region" => "eu"}, 15], [{"region" => "us"}, 7], [{"region" => nil}, 7]])
+        end
+      end
     end
 
     context "with a prorated charge" do
