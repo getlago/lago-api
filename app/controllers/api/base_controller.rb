@@ -76,12 +76,13 @@ module Api
       validation_errors(errors:) if errors.any?
     end
 
-    # A blank value is treated as absent. Parsing is base 10 only, so 0x10, 010 or 1_000 are rejected.
+    # A blank value is treated as absent. Only plain positive decimals are valid: Integer() would also
+    # accept forms such as 010, +5, 1_000 or a leading space.
     def pagination_param_error(name, max:)
       return if params[name].blank?
 
-      value = Integer(params[name].to_s, 10, exception: false)
-      if value&.positive? && (max.nil? || value <= max)
+      value = params[name].to_s
+      if value.match?(/\A[1-9]\d*\z/) && (max.nil? || value.to_i <= max)
         nil
       else
         ["value_is_out_of_range"]
