@@ -229,6 +229,28 @@ RSpec.describe Api::V1::Customers::AttributedUsageController, clickhouse: {clean
       end
     end
 
+    context "with per_page above its own maximum but within the API page size limit" do
+      let(:params) { {external_subscription_id: subscription.external_id, group_by: "team", per_page: 150} }
+
+      it "returns its own validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(per_page: ["value_is_out_of_range"])
+      end
+    end
+
+    context "with an unknown customer and per_page above the API page size limit" do
+      let(:customer_external_id) { "unknown" }
+      let(:params) { {external_subscription_id: subscription.external_id, group_by: "team", per_page: 1_000_000_000} }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_not_found_error("customer")
+      end
+    end
+
     context "when the query service rejects the request" do
       let(:params) { {external_subscription_id: subscription.external_id, group_by: "team", basis: "euros"} }
 

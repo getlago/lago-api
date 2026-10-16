@@ -172,5 +172,34 @@ RSpec.describe Pagination do
       expect(result["total_count"]).to eq(5)
     end
   end
+
+  describe ".max_per_page" do
+    subject(:max_per_page) { described_class.max_per_page }
+
+    let(:max_page_size_env) { nil }
+
+    before do
+      allow(ENV).to receive(:[]).and_call_original
+      allow(ENV).to receive(:[]).with("LAGO_API_PAGINATION_MAX_PAGE_SIZE").and_return(max_page_size_env)
+    end
+
+    context "when the env var is unset" do
+      it { expect(max_per_page).to eq(200) }
+    end
+
+    context "when the env var is a positive integer" do
+      let(:max_page_size_env) { "300" }
+
+      it { expect(max_per_page).to eq(300) }
+    end
+
+    %w[0 -5 abc 0x10].each do |invalid_value|
+      context "when the env var is #{invalid_value.inspect}" do
+        let(:max_page_size_env) { invalid_value }
+
+        it { expect(max_per_page).to eq(200) }
+      end
+    end
+  end
 end
 # rubocop:enable RSpec/VerifiedDoubles
