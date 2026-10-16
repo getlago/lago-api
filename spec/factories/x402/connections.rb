@@ -7,6 +7,7 @@ FactoryBot.define do
     name { "Coinbase CDP" }
     networks { ["eip155:84532"] }
     payout_addresses { {"evm" => "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed"} }
+    allowed_origins { ["https://api.example.com"] }
     cdp_api_key_id { "test-key-id" }
     cdp_api_key_secret { "test-key-secret" }
 

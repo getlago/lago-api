@@ -33,7 +33,7 @@ describe Api::V1::X402::ConnectionsController, :premium do
     let(:params) do
       {
         code: "my_cdp", name: "My CDP", networks: ["eip155:84532"], payout_addresses: {evm: evm_address},
-        cdp_api_key_id:, cdp_api_key_secret:
+        allowed_origins: ["https://api.example.com"], cdp_api_key_id:, cdp_api_key_secret:
       }
     end
 
@@ -137,6 +137,17 @@ describe Api::V1::X402::ConnectionsController, :premium do
 
         expect(response).to have_http_status(:unprocessable_content)
         expect(json[:error_details]).to eq(networks: ["must_be_array"])
+      end
+    end
+
+    context "without allowed origins" do
+      let(:params) { super().except(:allowed_origins) }
+
+      it "returns a validation error and creates nothing" do
+        expect { subject }.not_to change { organization.x402_connections.count }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(allowed_origins: ["value_is_mandatory"])
       end
     end
 
@@ -314,6 +325,20 @@ describe Api::V1::X402::ConnectionsController, :premium do
         subject
         expect(response).to have_http_status(:unprocessable_content)
         expect(json[:error_details]).to eq(networks: ["value_is_invalid"])
+      end
+    end
+
+    context "with a connection saved without allowed origins" do
+      let(:connection) do
+        build(:x402_connection, organization:, cdp_api_key_id:, cdp_api_key_secret:, allowed_origins: [])
+          .tap { |connection| connection.save!(validate: false) }
+      end
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(allowed_origins: ["value_is_mandatory"])
       end
     end
 
