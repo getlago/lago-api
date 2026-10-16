@@ -477,7 +477,7 @@ describe X402::Settlements::SettleService do
 
     context "with an invoice payment" do
       let(:kind) { :invoice_payment }
-      let(:invoice) { create(:invoice, organization:, currency: "USD", total_amount_cents: 105) }
+      let(:invoice) { create(:invoice, organization:, currency: "USD", total_amount_cents: 105, x402_connection:) }
       let(:purchase_settings) { nil }
       let(:x402_evm_requirements) { super().merge("amount" => "1050000") }
       let(:x402_evm_payment) { super().deep_merge("payload" => {"authorization" => {"value" => "1050000"}}) }
@@ -524,6 +524,91 @@ describe X402::Settlements::SettleService do
         before { create(:x402_settlement, :pending, :invoice_payment, organization:, x402_connection: other_connection, invoice:) }
 
         it_behaves_like "a refusal before settle", {base: ["invoice_payment_pending"]}
+      end
+
+      shared_examples "a refusal after the insert" do |errors, reason|
+        it "refuses the payment" do
+          expect(result.error.messages).to eq(errors)
+        end
+
+        it "fails the attempt" do
+          result
+
+          expect(X402::Settlement.find_by(payment_digest: "digest")).to have_attributes(status: "failed", error_reason: reason, invoice:)
+        end
+
+        it "never settles" do
+          result
+
+          expect(a_request(:post, "#{cdp_facilitator_url}/settle")).not_to have_been_made
+        end
+
+        it "logs the refusal" do
+          result
+
+          expect(Rails.logger).to have_received(:warn).with("X402::Settlements::SettleService call failed reason=#{reason} network=eip155:84532")
+        end
+      end
+
+      def change_invoice_during_insert
+        allow(X402::Settlement).to receive(:create!).and_wrap_original do |original, *args, **kwargs|
+          yield
+          original.call(*args, **kwargs)
+        end
+      end
+
+      context "when the invoice is paid meanwhile" do
+        before do
+          change_invoice_during_insert { Invoice.where(id: invoice.id).update_all(total_paid_amount_cents: 105, payment_status: "succeeded") } # rubocop:disable Rails/SkipsModelValidations
+        end
+
+        it_behaves_like "a refusal after the insert", {payment: ["amount_mismatch"]}, "amount_mismatch"
+      end
+
+      context "when another attempt settles meanwhile" do
+        before do
+          change_invoice_during_insert do
+            create(:x402_settlement, :invoice_payment, organization:, x402_connection:, invoice:, payee_address: "0x94bA479439C2f1bA5f5DaCBD06Ea0c129604B4a5")
+          end
+        end
+
+        it_behaves_like "a refusal after the insert", {base: ["invoice_payment_pending"]}, "invoice_payment_pending"
+      end
+
+      context "when the invoice is rebound meanwhile" do
+        before do
+          change_invoice_during_insert { Invoice.where(id: invoice.id).update_all(x402_connection_id: other_connection.id) } # rubocop:disable Rails/SkipsModelValidations
+        end
+
+        it_behaves_like "a refusal after the insert", {invoice: ["x402_connection_changed"]}, "x402_connection_changed"
+      end
+
+      context "when the invoice was rebound to another connection" do
+        let(:invoice) { create(:invoice, organization:, currency: "USD", total_amount_cents: 105, x402_connection: other_connection) }
+
+        it "refuses the payment" do
+          expect(result.error.messages).to eq({invoice: ["x402_connection_changed"]})
+        end
+
+        it "fails the attempt" do
+          result
+
+          expect(X402::Settlement.sole).to have_attributes(status: "failed", error_reason: "x402_connection_changed", invoice:)
+        end
+
+        it "never settles" do
+          result
+
+          expect(a_request(:post, "#{cdp_facilitator_url}/settle")).not_to have_been_made
+        end
+
+        it "logs the refusal" do
+          result
+
+          expect(Rails.logger).to have_received(:warn).with(
+            "X402::Settlements::SettleService call failed reason=x402_connection_changed network=eip155:84532"
+          )
+        end
       end
     end
 

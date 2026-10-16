@@ -161,4 +161,220 @@ describe X402::InvoicePaymentsController, :premium do
       expect(payment_required["accepts"].size).to eq(2)
     end
   end
+
+  describe "POST /x402/invoice_payments/:token with a payment" do
+    subject { post("/x402/invoice_payments/#{token}", headers: {"PAYMENT-SIGNATURE" => header}) }
+
+    let(:x402_evm_requirements) { super().merge("amount" => "1050000") }
+    let(:x402_evm_payment) { super().deep_merge("payload" => {"authorization" => {"value" => "1050000"}}) }
+    let(:header) { X402::Wire::V2Codec.encode(x402_evm_payment) }
+    let(:payer_address) { "0xf4a43B9cc729c9E4E139CB86808f48e3eD09Dcb2" }
+    let(:receipt) do
+      {
+        "success" => true,
+        "transaction" => "0xefad33f01282b3a8b18893a9eb0aecbc2fc210ffcfa7fda7ca79f14c8822963a",
+        "network" => "eip155:84532",
+        "payer" => payer_address
+      }
+    end
+    let(:digest) do
+      X402::Payments::ComputeDigestService.call(payment: x402_evm_payment, network: "eip155:84532", asset: x402_evm_requirements["asset"]).digest
+    end
+    let(:payment_response) { X402::Wire::V2Codec.decode(response.headers["PAYMENT-RESPONSE"]) }
+    let(:fault) { nil }
+
+    before do
+      travel_to(Time.zone.at(1_789_649_271))
+      stub_cdp_facilitator(fault:)
+    end
+
+    it "answers the receipt" do
+      subject
+
+      expect(response).to have_http_status(:ok)
+      expect(payment_response).to eq(receipt)
+    end
+
+    it "renders the receipt as the body" do
+      subject
+
+      expect(JSON.parse(response.body)).to eq(receipt)
+    end
+
+    it "marks the invoice paid" do
+      subject
+
+      expect(invoice.reload).to have_attributes(payment_status: "succeeded", total_paid_amount_cents: 105)
+    end
+
+    it "records one x402 payment" do
+      subject
+
+      expect(invoice.payments.sole).to have_attributes(payment_type: "x402", amount_cents: 105)
+    end
+
+    context "with a GET" do
+      subject { get("/x402/invoice_payments/#{token}", headers: {"PAYMENT-SIGNATURE" => header}) }
+
+      it "answers the receipt" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(payment_response).to eq(receipt)
+      end
+    end
+
+    context "with a resent payment" do
+      before { post("/x402/invoice_payments/#{token}", headers: {"PAYMENT-SIGNATURE" => header}) }
+
+      it "answers the same receipt" do
+        subject
+
+        expect(payment_response).to eq(receipt)
+      end
+
+      it "settles once" do
+        subject
+
+        expect(a_request(:post, "#{cdp_facilitator_url}/settle")).to have_been_made.once
+      end
+
+      it "records one payment" do
+        subject
+
+        expect(invoice.payments.count).to eq(1)
+      end
+    end
+
+    context "with a resent payment after a void" do
+      let(:invoice) do
+        create(:invoice, :voided, organization:, customer:, currency: "USD", total_amount_cents: 105, x402_payment_token: token, x402_connection:)
+      end
+
+      before do
+        create(
+          :x402_settlement, :invoice_payment,
+          x402_connection:, invoice:, payment_digest: digest, payer_address:, payee_address:, transaction_hash: receipt["transaction"]
+        )
+      end
+
+      it "answers the receipt" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(payment_response).to eq(receipt)
+      end
+
+      it "asks CDP nothing" do
+        subject
+
+        expect(a_request(:any, /api\.cdp\.coinbase\.com/)).not_to have_been_made
+      end
+
+      context "with another payment" do
+        let(:header) { X402::Wire::V2Codec.encode(x402_evm_payment.deep_merge("payload" => {"authorization" => {"nonce" => "0x#{"11" * 32}"}})) }
+
+        it "answers 410" do
+          subject
+
+          expect(response).to have_http_status(:gone)
+        end
+      end
+    end
+
+    context "with a payment a paid invoice never received" do
+      let(:invoice) do
+        create(
+          :invoice,
+          organization:, customer:, currency: "USD", total_amount_cents: 105, payment_status: "succeeded",
+          x402_payment_token: token, x402_connection:
+        )
+      end
+
+      it "answers 410" do
+        subject
+
+        expect(response).to have_http_status(:gone)
+      end
+    end
+
+    context "with settlement_pending" do
+      let(:fault) { :settlement_pending }
+
+      it "answers 409" do
+        subject
+
+        expect(response).to have_http_status(:conflict)
+        expect(json[:code]).to eq("invoice_payment_pending")
+      end
+
+      it "leaves the invoice unpaid" do
+        subject
+
+        expect(invoice.reload.payment_status).to eq("pending")
+      end
+    end
+
+    context "with a facilitator rejection" do
+      let(:fault) { :verify_reject }
+
+      it "answers a fresh challenge naming the reason" do
+        subject
+
+        expect(response).to have_http_status(:payment_required)
+        expect(payment_required).to include(
+          "error" => "invalid_exact_evm_payload_signature",
+          "accepts" => [x402_evm_requirements, x402_svm_requirements.merge("amount" => "1050000")]
+        )
+      end
+
+      it "writes no attempt" do
+        expect { subject }.not_to change(X402::Settlement, :count)
+      end
+    end
+
+    context "with a blank payment header" do
+      let(:header) { "" }
+
+      it "answers the plain challenge" do
+        subject
+
+        expect(response).to have_http_status(:payment_required)
+        expect(payment_required).not_to have_key("error")
+      end
+    end
+
+    context "with a malformed payment header" do
+      let(:header) { "%%%" }
+
+      it "answers a fresh challenge naming the payment invalid" do
+        subject
+
+        expect(response).to have_http_status(:payment_required)
+        expect(payment_required["error"]).to eq("invalid_payment")
+      end
+    end
+
+    context "with a pending attempt" do
+      before { create(:x402_settlement, :pending, :invoice_payment, x402_connection:, invoice:, payee_address:) }
+
+      it "answers 409 without verifying" do
+        subject
+
+        expect(response).to have_http_status(:conflict)
+        expect(a_request(:post, "#{cdp_facilitator_url}/verify")).not_to have_been_made
+      end
+    end
+
+    context "with a discarded connection" do
+      let(:x402_connection) { create(:x402_connection, :discarded, organization:) }
+
+      it "answers 404 naming the connection" do
+        subject
+
+        expect(response).to have_http_status(:not_found)
+        expect(json[:code]).to eq("connection_not_found")
+      end
+    end
+  end
 end
