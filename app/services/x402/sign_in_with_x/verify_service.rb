@@ -16,6 +16,7 @@ module X402
       REQUIRED_FIELDS = %w[domain address statement uri version chainId type nonce issuedAt signature].freeze
       OPTIONAL_FIELDS = %w[expirationTime notBefore requestId signatureScheme].freeze
       TIMESTAMP_FIELDS = %w[issuedAt expirationTime notBefore].freeze
+      TIMESTAMP_FORMAT = /\A(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\z/
       SIGNATURE_TYPES = {"eip155" => "eip191", "solana" => "ed25519"}.freeze
       EVM_SIGNATURE = /\A0x\h{130}\z/
       SVM_SIGNATURE_MAX_LENGTH = 88
@@ -81,7 +82,12 @@ module X402
       end
 
       def parse_time(value)
-        Time.iso8601(value)
+        match = TIMESTAMP_FORMAT.match(value)
+
+        if match
+          time = Time.iso8601(value)
+          time if match.captures.map(&:to_i) == [time.year, time.month, time.day, time.hour, time.min, time.sec]
+        end
       rescue ArgumentError
         nil
       end

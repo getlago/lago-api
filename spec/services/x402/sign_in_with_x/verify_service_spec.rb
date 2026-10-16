@@ -44,6 +44,12 @@ describe X402::SignInWithX::VerifyService do
     it { expect(result.error.messages).to eq(siwx: ["value_is_invalid"]) }
   end
 
+  context "with a payload that is an Array" do
+    let(:payload) { [] }
+
+    it { expect(result.error.messages).to eq(siwx: ["value_is_invalid"]) }
+  end
+
   %w[domain address statement uri version chainId type nonce issuedAt signature].each do |field|
     context "without #{field}" do
       let(:payload) { signed_siwx(key).except(field) }
@@ -142,6 +148,36 @@ describe X402::SignInWithX::VerifyService do
     it { expect(result.error.messages).to eq(siwx: ["value_is_invalid"]) }
   end
 
+  context "with a zone-less issuedAt" do
+    let(:payload) { signed_siwx(key, issuedAt: Time.current.utc.strftime("%Y-%m-%dT%H:%M:%S")) }
+
+    it { expect(result.error.messages).to eq(siwx: ["value_is_invalid"]) }
+  end
+
+  context "with an issuedAt offset written without a colon" do
+    let(:payload) { signed_siwx(key, issuedAt: Time.current.in_time_zone("Paris").strftime("%Y-%m-%dT%H:%M:%S%z")) }
+
+    it { expect(result.error.messages).to eq(siwx: ["value_is_invalid"]) }
+  end
+
+  context "with a space instead of T in issuedAt" do
+    let(:payload) { signed_siwx(key, issuedAt: Time.current.utc.strftime("%Y-%m-%d %H:%M:%SZ")) }
+
+    it { expect(result.error.messages).to eq(siwx: ["value_is_invalid"]) }
+  end
+
+  context "with a trailing space in issuedAt" do
+    let(:payload) { signed_siwx(key, issuedAt: "#{Time.current.utc.iso8601(3)} ") }
+
+    it { expect(result.error.messages).to eq(siwx: ["value_is_invalid"]) }
+  end
+
+  context "with an issuedAt on a day the month does not have" do
+    let(:payload) { signed_siwx(key, issuedAt: "2026-02-31T00:00:00Z") }
+
+    it { expect(result.error.messages).to eq(siwx: ["value_is_invalid"]) }
+  end
+
   context "with version 2" do
     let(:payload) { signed_siwx(key, version: "2") }
 
@@ -182,6 +218,16 @@ describe X402::SignInWithX::VerifyService do
     let(:payload) { signed_siwx(key, uri: "http://api.example.com/v1") }
 
     it { expect(result.error.messages).to eq(siwx: ["uri_mismatch"]) }
+  end
+
+  context "with two allowed origins" do
+    let(:allowed_origins) { ["https://a.example.com", "https://b.example.com"] }
+
+    context "with a uri on the origin of another host than the domain" do
+      let(:payload) { signed_siwx(key, domain: "a.example.com", uri: "https://b.example.com/v1") }
+
+      it { expect(result.error.messages).to eq(siwx: ["uri_mismatch"]) }
+    end
   end
 
   context "with a localhost origin" do
@@ -274,6 +320,12 @@ describe X402::SignInWithX::VerifyService do
     it { expect(result.error.messages).to eq(siwx: ["invalid_address"]) }
   end
 
+  context "with an address that is too short" do
+    let(:payload) { signed_siwx(key, address: "0x123") }
+
+    it { expect(result.error.messages).to eq(siwx: ["invalid_address"]) }
+  end
+
   context "with a statement changed after signing" do
     let(:payload) { signed_siwx(key).merge("statement" => "Sign in to use all your credits") }
 
@@ -288,6 +340,12 @@ describe X402::SignInWithX::VerifyService do
 
   context "with a 64-byte signature" do
     let(:payload) { signed_siwx(key).then { |proof| proof.merge("signature" => proof["signature"].first(130)) } }
+
+    it { expect(result.error.messages).to eq(siwx: ["invalid_signature"]) }
+  end
+
+  context "with a signature without the 0x prefix" do
+    let(:payload) { signed_siwx(key).then { |proof| proof.merge("signature" => proof["signature"].delete_prefix("0x")) } }
 
     it { expect(result.error.messages).to eq(siwx: ["invalid_signature"]) }
   end
