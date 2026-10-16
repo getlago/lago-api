@@ -99,23 +99,29 @@ describe X402::SignInWithX::Message do
       it { is_expected.to end_with("Issued At: 2026-05-27T00:00:00Z") }
     end
 
-    context "with not before and request id but no expiration time" do
-      let(:payload) { evm_payload.except("expirationTime", "resources").merge("notBefore" => "2026-05-26T23:59:00Z") }
-
-      let(:expected) do
-        "api.example.com wants you to sign in with your Ethereum account:\n" \
-          "0x0000000000000000000000000000000000000001\n\n" \
-          "Sign in to access your purchased content\n\n" \
-          "URI: https://api.example.com/data\n" \
-          "Version: 1\n" \
-          "Chain ID: 8453\n" \
-          "Nonce: abc123xyz\n" \
-          "Issued At: 2026-05-27T00:00:00Z\n" \
-          "Not Before: 2026-05-26T23:59:00Z\n" \
-          "Request ID: request-1"
+    context "with a not before" do
+      let(:not_before_payload) do
+        evm_payload.except("expirationTime", "requestId", "resources").merge("notBefore" => "2026-05-26T23:59:00Z")
       end
 
-      it { is_expected.to eq(expected) }
+      context "with a request id" do
+        let(:payload) { not_before_payload.merge("requestId" => "request-1") }
+
+        let(:expected) do
+          "api.example.com wants you to sign in with your Ethereum account:\n" \
+            "0x0000000000000000000000000000000000000001\n\n" \
+            "Sign in to access your purchased content\n\n" \
+            "URI: https://api.example.com/data\n" \
+            "Version: 1\n" \
+            "Chain ID: 8453\n" \
+            "Nonce: abc123xyz\n" \
+            "Issued At: 2026-05-27T00:00:00Z\n" \
+            "Not Before: 2026-05-26T23:59:00Z\n" \
+            "Request ID: request-1"
+        end
+
+        it { is_expected.to eq(expected) }
+      end
     end
 
     context "with an unsupported chain" do
