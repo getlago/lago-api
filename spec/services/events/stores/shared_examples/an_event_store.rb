@@ -1857,6 +1857,30 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           ])
         end
       end
+
+      context "when events omit the group or send it blank" do
+        before do
+          create_event(timestamp: subscription_started_at + 2.days, value: 7, properties: {"region" => ""}, created_at: Time.current + 10.minutes)
+        end
+
+        it "returns a single group for both" do
+          expect(result).to match_array([
+            Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(groups: {"region" => nil}, value: 11, snapshot_value: 11, events_count: 2, snapshot_events_count: 2),
+            Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(groups: {"region" => "europe"}, value: 1005, snapshot_value: 5, events_count: 2, snapshot_events_count: 1)
+          ])
+        end
+
+        context "without a snapshot" do
+          let(:snapshot) { nil }
+
+          it "returns a single group for both" do
+            expect(result).to match_array([
+              Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(groups: {"region" => nil}, value: 13, snapshot_value: 13, events_count: 3, snapshot_events_count: 3),
+              Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(groups: {"region" => "europe"}, value: 1009, snapshot_value: 9, events_count: 4, snapshot_events_count: 3)
+            ])
+          end
+        end
+      end
     end
   end
 
