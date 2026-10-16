@@ -70,6 +70,10 @@ Rails.application.routes.draw do
     post "moneyhash/:organization_id", to: "webhooks#moneyhash", on: :collection, as: :moneyhash
   end
 
+  namespace :x402 do
+    match "invoice_payments/:token", to: "invoice_payments#create", via: %i[get post], as: :invoice_payment
+  end
+
   if Rails.env.local?
     namespace :admin do
       resources :memberships, only: %i[create]
