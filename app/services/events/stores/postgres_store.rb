@@ -100,7 +100,7 @@ module Events
 
       def grouped_count(columns = grouped_by)
         results = events
-          .group(columns.map { sanitized_property_name(it) })
+          .group(columns.map { sanitized_group_name(it) })
           .count
           .map { |group, value| [group, value].flatten }
 
@@ -230,7 +230,7 @@ module Events
       end
 
       def grouped_max(columns = grouped_by, with_count: true)
-        groups = columns.map { sanitized_property_name(it) }
+        groups = columns.map { sanitized_group_name(it) }
 
         results = events
           .group(groups)
@@ -254,8 +254,8 @@ module Events
       end
 
       def grouped_last(columns = grouped_by, with_count: true)
-        sanitized_columns = columns.map { sanitized_property_name(it) }
-        distinct_on_columns = grouped_by.present? ? grouped_by.map { sanitized_property_name(it) } : []
+        sanitized_columns = columns.map { sanitized_group_name(it) }
+        distinct_on_columns = grouped_by.present? ? sanitized_grouped_by : []
 
         sql = if distinct_on_columns.empty?
           count_select = with_count ? "COUNT(*) OVER ()" : "NULL"
@@ -298,7 +298,7 @@ module Events
       end
 
       def grouped_sum(columns = grouped_by, with_count: true)
-        groups = columns.map { sanitized_property_name(it) }
+        groups = columns.map { sanitized_group_name(it) }
 
         results = events
           .group(groups)
@@ -533,7 +533,12 @@ module Events
       end
 
       def sanitized_grouped_by
-        grouped_by.map { sanitized_property_name(it) }
+        grouped_by.map { sanitized_group_name(it) }
+      end
+
+      # A missing and a blank value are one group, as on ClickHouse where a missing key reads as ''
+      def sanitized_group_name(property)
+        "NULLIF(#{sanitized_property_name(property)}, '')"
       end
 
       delegate :connection, to: :Event
