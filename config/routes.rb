@@ -147,6 +147,15 @@ Rails.application.routes.draw do
     post "invoice_payments/:token", to: "invoice_payments#create"
   end
 
+  scope "agents/v1/:storefront_id", module: :agents, as: :agents do
+    get "AUTH.md", to: "documents#auth", format: false
+    post "auth/challenges", to: "auth#challenge"
+    post "signup", to: "auth#signup"
+    post "auth/token", to: "auth#token"
+    post "auth/revoke", to: "auth#revoke"
+    get "me", to: "auth#me"
+  end
+
   if Rails.env.local?
     namespace :admin do
       resources :memberships, only: %i[create]
