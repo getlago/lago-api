@@ -39,10 +39,25 @@ class ProductCatalogInvoiceHelper
   end
 
   def self.tiers(fee)
-    return [] if fee.true_up_parent_fee_id
+    details = fee.amount_details
 
+    if fee.true_up_parent_fee_id || details.blank?
+      []
+    elsif details.key?("graduated_ranges") || details.key?("graduated_percentage_ranges")
+      graduated_tiers(fee)
+    else
+      case rate_model(fee)
+      when "volume" then volume_tiers(fee)
+      when "package" then package_tiers(fee)
+      when "percentage" then percentage_tiers(fee)
+      else []
+      end
+    end
+  end
+
+  def self.graduated_tiers(fee)
     percentage = fee.amount_details.key?("graduated_percentage_ranges")
-    ranges = fee.amount_details["graduated_ranges"] || fee.amount_details["graduated_percentage_ranges"] || []
+    ranges = fee.amount_details["graduated_ranges"] || fee.amount_details["graduated_percentage_ranges"]
 
     per_unit = ranges.map do |range|
       unit_price = if percentage
@@ -65,6 +80,88 @@ class ProductCatalogInvoiceHelper
     end
 
     per_unit + flat
+  end
+
+  def self.volume_tiers(fee)
+    details = fee.amount_details
+    tiers = [
+      Tier.new(
+        label: I18n.t("invoice.volume.fee_per_unit"),
+        units: RoundingHelper.round_decimal_part(fee.units),
+        unit_price: FeeDisplayHelper.format_with_precision(fee, details["per_unit_amount"]),
+        amount: FeeDisplayHelper.format_as_currency(fee, details["per_unit_total_amount"])
+      )
+    ]
+
+    if details["flat_unit_amount"].to_d.positive?
+      flat_amount = FeeDisplayHelper.format_as_currency(fee, details["flat_unit_amount"])
+      tiers << Tier.new(label: I18n.t("invoice.volume.flat_fee_for_all_units"), units: 1, unit_price: flat_amount, amount: flat_amount)
+    end
+
+    tiers
+  end
+
+  def self.package_tiers(fee)
+    details = fee.amount_details
+    free_units = RoundingHelper.round_decimal_part(details["free_units"].to_d)
+    tiers = []
+
+    if details["free_units"].to_d.positive?
+      tiers << free_tier(fee, I18n.t("invoice.package.free_units_for_the_first", count: free_units), free_units)
+    end
+
+    tiers << Tier.new(
+      label: I18n.t("invoice.package.fee_per_package"),
+      units: RoundingHelper.round_decimal_part(details["paid_units"].to_d),
+      unit_price: I18n.t(
+        "invoice.package.fee_per_package_unit_price",
+        amount: FeeDisplayHelper.format_with_precision(fee, details["per_package_unit_amount"]),
+        package_size: details["per_package_size"]
+      ),
+      amount: FeeDisplayHelper.format_amount(fee)
+    )
+  end
+
+  def self.percentage_tiers(fee)
+    details = fee.amount_details
+    tiers = []
+
+    if details["free_units"].to_d.positive?
+      label = I18n.t("invoice.percentage.free_units_per_transaction", count: details["free_events"].to_i)
+      tiers << free_tier(fee, label, RoundingHelper.round_decimal_part(details["free_units"].to_d))
+    end
+
+    tiers << Tier.new(
+      label: I18n.t("invoice.percentage.percentage_rate_on_amount"),
+      units: RoundingHelper.round_decimal_part(details["paid_units"].to_d),
+      unit_price: FeeDisplayHelper.format_percentage_rate(details["rate"]),
+      amount: FeeDisplayHelper.format_as_currency(fee, details["per_unit_total_amount"])
+    )
+
+    if details["fixed_fee_unit_amount"].to_d.positive?
+      tiers << Tier.new(
+        label: I18n.t("invoice.percentage.fee_per_transaction"),
+        units: details["paid_events"].to_i,
+        unit_price: FeeDisplayHelper.format_as_currency(fee, details["fixed_fee_unit_amount"]),
+        amount: FeeDisplayHelper.format_as_currency(fee, details["fixed_fee_total_amount"])
+      )
+    end
+
+    unless details["min_max_adjustment_total_amount"].to_d.zero?
+      adjustment = FeeDisplayHelper.format_as_currency(fee, details["min_max_adjustment_total_amount"])
+      tiers << Tier.new(label: I18n.t("invoice.percentage.adjustment_per_transaction"), units: 1, unit_price: adjustment, amount: adjustment)
+    end
+
+    tiers
+  end
+
+  def self.free_tier(fee, label, units)
+    zero = FeeDisplayHelper.format_as_currency(fee, 0)
+    Tier.new(label:, units:, unit_price: zero, amount: zero)
+  end
+
+  def self.rate_model(fee)
+    (fee.rate_override || fee.rate_card_rate)&.rate_model
   end
 
   def self.detail_rows(section, currency)
@@ -111,7 +208,7 @@ class ProductCatalogInvoiceHelper
   end
 
   def self.subtotal?(fee)
-    fee.true_up_parent_fee_id.nil? && SUBTOTAL_RATE_MODELS.include?((fee.rate_override || fee.rate_card_rate)&.rate_model)
+    fee.true_up_parent_fee_id.nil? && SUBTOTAL_RATE_MODELS.include?(rate_model(fee))
   end
 
   def self.conversion_row(fee, indent)

@@ -130,6 +130,76 @@ RSpec.describe ProductCatalogInvoiceHelper do
     end
   end
 
+  describe ".tiers by rate model" do
+    subject(:lines) { described_class.tiers(fee).map { [it.label, it.units.to_s, it.unit_price, it.amount] } }
+
+    let(:fee) do
+      build_stubbed(
+        :fee,
+        amount_currency: "EUR",
+        amount_cents:,
+        units:,
+        amount_details:,
+        rate_card_rate: build_stubbed(:rate_card_rate, rate_model:)
+      )
+    end
+    let(:amount_cents) { 0 }
+    let(:units) { 0 }
+
+    context "with a volume rate" do
+      let(:rate_model) { "volume" }
+      let(:units) { 3 }
+      let(:amount_details) { {"per_unit_amount" => "400.0", "flat_unit_amount" => "100.0", "per_unit_total_amount" => "1200.0"} }
+
+      it "lists the per-unit fee and the flat fee for all units" do
+        expect(lines).to eq([
+          ["Fee per unit", "3", "€400.00", "€1,200.00"],
+          ["Flat fee for all units", "1", "€100.00", "€100.00"]
+        ])
+      end
+    end
+
+    context "with a package rate" do
+      let(:rate_model) { "package" }
+      let(:amount_cents) { 18_000 }
+      let(:amount_details) { {"free_units" => "500.0", "paid_units" => "11845.0", "per_package_size" => 1000, "per_package_unit_amount" => "15.0"} }
+
+      it "lists the free units and the fee per package" do
+        expect(lines).to eq([
+          ["Free units for the first 500", "500", "€0.00", "€0.00"],
+          ["Fee per package", "11845", "€15.00 per 1000", "€180.00"]
+        ])
+      end
+    end
+
+    context "with a percentage rate" do
+      let(:rate_model) { "percentage" }
+      let(:amount_details) do
+        {
+          "rate" => "2.9", "paid_units" => "1250.0", "free_units" => "100.0", "free_events" => 2, "paid_events" => 3,
+          "fixed_fee_unit_amount" => "0.3", "fixed_fee_total_amount" => "0.9", "per_unit_total_amount" => "36.25",
+          "min_max_adjustment_total_amount" => "1.5"
+        }
+      end
+
+      it "lists free units, the rate, the fixed fee and the min/max adjustment" do
+        expect(lines).to eq([
+          ["Free units for 2 transactions", "100", "€0.00", "€0.00"],
+          ["Rate on the amount", "1250", "2.9%", "€36.25"],
+          ["Fixed fee per transaction", "3", "€0.30", "€0.90"],
+          ["Adjustment for min/max per transaction", "1", "€1.50", "€1.50"]
+        ])
+      end
+    end
+
+    context "with a standard rate" do
+      let(:rate_model) { "standard" }
+      let(:amount_details) { {} }
+
+      it { is_expected.to be_empty }
+    end
+  end
+
   describe ".subtotal?" do
     subject(:subtotal) { described_class.subtotal?(fee) }
 
