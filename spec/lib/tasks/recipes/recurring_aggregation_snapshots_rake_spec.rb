@@ -188,9 +188,23 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
 
     before { stub_stdin(organization.id, "y", subscription.id, csv_path) }
 
-    it "keeps the current usage rows" do
-      expect { task.invoke }.to output(/pay in advance: FAILED/).to_stdout
+    it "keeps the current usage comparison" do
+      expect { task.invoke }.to output(
+        a_string_including(
+          "pay in advance: FAILED",
+          "subscriptions compared:         1 (0 failed)",
+          "pay in advance events replayed: 0 (1 subscription(s) failed)"
+        )
+      ).to_stdout
       expect(CSV.read(csv_path).size).to eq(2)
+    end
+
+    context "when a leaf mismatches" do
+      let(:row) { build_row(snapshot_units: BigDecimal(12)) }
+
+      it "reports the mismatch" do
+        expect { task.invoke }.to output(/Mismatches detected, investigate before enabling the organization/).to_stdout
+      end
     end
   end
 
