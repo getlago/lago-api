@@ -20,6 +20,7 @@ module UsageAttributions
     MAX_CUSTOM_WINDOW = 31.days
     MAX_GROUPS = 250_000
     MAX_EXECUTION_TIME = 8
+    VALUES_LIMIT_CACHE_TTL = 10.minutes
 
     BASES = %w[units amount].freeze
     ORDERS = %w[amount events_count].freeze
@@ -116,15 +117,27 @@ module UsageAttributions
       }.compact_blank
     end
 
+    def group_by_errors
+      errors = []
+      errors << "parent_filter_required" if parent_filter_required?
+      errors << "too_many_values" if values_limit_reached?
+      errors
+    end
+
     # A level of the hierarchy is read under one of its parents, as the tree is expanded one level at a
     # time. The top level, and a level whose parent type was deleted, need no filter.
-    def group_by_errors
+    def parent_filter_required?
       parent = attribution_types[group_by].parent
+      !(parent.nil? || parent.discarded? || filters.key?(parent.code))
+    end
 
-      if parent.nil? || parent.discarded? || filters.key?(parent.code)
-        []
-      else
-        ["parent_filter_required"]
+    def values_limit_reached?
+      customer_id = subscription.customer_id
+      usage_attribution_type_id = attribution_types[group_by].id
+      cache_key = UsageAttributionValue.limit_reached_cache_key(customer_id:, usage_attribution_type_id:)
+
+      Rails.cache.fetch(cache_key, expires_in: VALUES_LIMIT_CACHE_TTL) do
+        UsageAttributionValue.limit_reached?(customer_id:, usage_attribution_type_id:)
       end
     end
 
