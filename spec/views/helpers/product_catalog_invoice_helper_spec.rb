@@ -13,6 +13,7 @@ RSpec.describe ProductCatalogInvoiceHelper do
   let(:analytics) { create(:product, organization:, product_category: infrastructure, name: "Analytics") }
   let(:transfer) { create(:product, organization:, product_category: nil, name: "Data transfer") }
   let(:eu) { create(:product_filter, organization:, product: compute, invoice_display_name: "Compute EU") }
+  let(:billing_timing) { "arrears" }
 
   let(:graduated_percentage_details) do
     {
@@ -31,7 +32,7 @@ RSpec.describe ProductCatalogInvoiceHelper do
   end
 
   def product_fee(product, amount_cents:, product_filter: nil, amount_details: {}, true_up_parent_fee: nil)
-    rate_card = create(:rate_card, organization:, product:, product_filter:)
+    rate_card = create(:rate_card, organization:, product:, product_filter:, billing_timing:)
     contract_rate_card = create(:contract_rate_card, organization:, contract:, rate_card:)
 
     create(
@@ -157,6 +158,12 @@ RSpec.describe ProductCatalogInvoiceHelper do
           ["Flat fee for all units", "1", "€100.00", "€100.00"]
         ])
       end
+
+      context "without a flat fee" do
+        let(:amount_details) { {"per_unit_amount" => "400.0", "flat_unit_amount" => "0.0", "per_unit_total_amount" => "1200.0"} }
+
+        it { is_expected.to be_empty }
+      end
     end
 
     context "with a package rate" do
@@ -200,30 +207,45 @@ RSpec.describe ProductCatalogInvoiceHelper do
     end
   end
 
-  describe ".subtotal?" do
-    subject(:subtotal) { described_class.subtotal?(fee) }
+  describe ".fee_rows" do
+    subject(:rows) { described_class.fee_rows([fee], 2).map { [it.kind, it.indent] } }
 
-    let(:fee) { build_stubbed(:fee, rate_card_rate: build_stubbed(:rate_card_rate, rate_model:)) }
+    let(:fee) do
+      build_stubbed(
+        :fee,
+        amount_currency: "EUR",
+        units: 3,
+        amount_details: {"per_unit_amount" => "400.0", "flat_unit_amount" => "100.0", "per_unit_total_amount" => "1200.0"},
+        rate_card_rate: build_stubbed(:rate_card_rate, rate_model: "volume"),
+        pricing_unit_usage:,
+        properties: {"from_datetime" => "2026-10-01T00:00:00Z", "to_datetime" => "2026-10-31T23:59:59Z"},
+        invoice: build_stubbed(:invoice, customer: build_stubbed(:customer))
+      )
+    end
+    let(:pricing_unit_usage) { nil }
 
-    context "with a volume rate" do
-      let(:rate_model) { "volume" }
+    it "nests the details one level under the period" do
+      expect(rows).to eq([[:segment, 2], [:fee_detail, 3], [:fee_detail, 3]])
+    end
+
+    context "with a pricing unit" do
+      let(:pricing_unit_usage) { build_stubbed(:pricing_unit_usage, short_name: "CR", conversion_rate: 0.5) }
+
+      it "shows the conversion first and nests the details one level deeper" do
+        expect(rows).to eq([[:segment, 2], [:conversion, 3], [:fee_detail, 4], [:fee_detail, 4]])
+      end
+    end
+  end
+
+  describe "#advance_only?" do
+    subject(:advance_only) { described_class.new(invoice).advance_only? }
+
+    it { is_expected.to be(false) }
+
+    context "when every fee comes from an advance rate card" do
+      let(:billing_timing) { "advance" }
 
       it { is_expected.to be(true) }
-    end
-
-    context "with a dynamic rate" do
-      let(:rate_model) { "dynamic" }
-
-      it { is_expected.to be(false) }
-    end
-
-    context "with a true-up of a graduated rate" do
-      let(:rate_model) { "graduated" }
-      let(:fee) do
-        build_stubbed(:fee, rate_card_rate: build_stubbed(:rate_card_rate, rate_model:), true_up_parent_fee: build_stubbed(:fee))
-      end
-
-      it { is_expected.to be(false) }
     end
   end
 
