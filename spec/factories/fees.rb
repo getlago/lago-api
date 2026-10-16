@@ -175,7 +175,8 @@ FactoryBot.define do
         rate_card: association(:rate_card, organization: invoice.organization)
       )
     end
-    invoiceable { rate_card_rate.rate_card.product }
+    invoiceable_type { "Product" }
+    invoiceable_id { rate_card_rate.rate_card.product.id }
     billing_entity { invoice.billing_entity }
     taxes_amount_cents { 0 }
     taxes_precise_amount_cents { 0 }

@@ -408,21 +408,6 @@ RSpec.describe BillingSegments::ProcessService do
           expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
         end
 
-        context "when the contract belongs to a catalog plan with taxes" do
-          let(:catalog_plan) { create(:catalog_plan, organization:) }
-          let(:tax) { create(:tax, organization:, rate: 20) }
-
-          before { create(:plan_applied_tax, :catalog_plan, organization:, catalog_plan:, tax:) }
-
-          it "applies the catalog plan taxes to the fee" do
-            expect(result).to be_success
-
-            fee = result.invoices.sole.fees.sole.reload
-            expect(fee).to have_attributes(taxes_amount_cents: 600, taxes_rate: 20)
-            expect(fee.applied_taxes.sole).to have_attributes(tax:, amount_cents: 600)
-          end
-        end
-
         context "with an invoice grace period" do
           let(:invoice_grace_period) { 3 }
           let(:late_event) do
@@ -446,6 +431,21 @@ RSpec.describe BillingSegments::ProcessService do
 
             expect(invoice.reload.status).to eq("finalized")
             expect(invoice.fees.sole).to have_attributes(units: 3, amount_cents: 4_500)
+          end
+        end
+
+        context "when the contract belongs to a catalog plan with taxes" do
+          let(:catalog_plan) { create(:catalog_plan, organization:) }
+          let(:tax) { create(:tax, organization:, rate: 20) }
+
+          before { create(:plan_applied_tax, :catalog_plan, organization:, catalog_plan:, tax:) }
+
+          it "applies the catalog plan taxes to the fee" do
+            expect(result).to be_success
+
+            fee = result.invoices.sole.fees.sole.reload
+            expect(fee).to have_attributes(taxes_amount_cents: 600, taxes_rate: 20)
+            expect(fee.applied_taxes.sole).to have_attributes(tax:, amount_cents: 600)
           end
         end
 
@@ -937,49 +937,6 @@ RSpec.describe BillingSegments::ProcessService do
       expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
     end
 
-    context "when the contract belongs to a catalog plan with taxes" do
-      let(:catalog_plan) { create(:catalog_plan, organization:) }
-      let(:tax) { create(:tax, organization:, rate: 20) }
-
-      before { create(:plan_applied_tax, :catalog_plan, organization:, catalog_plan:, tax:) }
-
-      it "applies the catalog plan taxes to the fee" do
-        expect(result).to be_success
-
-        fee = result.invoices.sole.fees.sole.reload
-        expect(fee).to have_attributes(taxes_amount_cents: 1_500, taxes_rate: 20)
-        expect(fee.applied_taxes.sole).to have_attributes(tax:, amount_cents: 1_500)
-      end
-    end
-
-    context "when the customer uses provider taxes" do
-      let(:integration) { create(:anrok_integration, organization:) }
-      let(:local_tax) { create(:tax, organization:, rate: 20) }
-
-      before do
-        create(:anrok_customer, integration:, customer:)
-        create(:rate_card_applied_tax, organization:, rate_card:, tax: local_tax)
-      end
-
-      it "defers tax calculation to the provider" do
-        expect { result }.to have_enqueued_job(Invoices::ProviderTaxes::PullTaxesAndApplyJob)
-
-        invoice = result.invoices.sole.reload
-        expect(Invoices::ProviderTaxes::PullTaxesAndApplyJob).to have_been_enqueued.with(invoice:)
-        expect(invoice).to have_attributes(
-          status: "pending",
-          tax_status: "pending",
-          fees_amount_cents: 7_500,
-          sub_total_excluding_taxes_amount_cents: 7_500
-        )
-
-        fee = invoice.fees.sole.reload
-        expect(fee).to have_attributes(taxes_amount_cents: 0)
-        expect(fee.applied_taxes).to be_empty
-        expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
-      end
-    end
-
     context "with an invoice grace period" do
       let(:invoice_grace_period) { 3 }
 
@@ -1017,6 +974,82 @@ RSpec.describe BillingSegments::ProcessService do
           status: "draft",
           expected_finalization_date: Date.parse("2026-09-03")
         )
+      end
+    end
+
+    context "when the contract belongs to a catalog plan with taxes" do
+      let(:catalog_plan) { create(:catalog_plan, organization:) }
+      let(:tax) { create(:tax, organization:, rate: 20) }
+
+      before { create(:plan_applied_tax, :catalog_plan, organization:, catalog_plan:, tax:) }
+
+      it "applies the catalog plan taxes to the fee" do
+        expect(result).to be_success
+
+        fee = result.invoices.sole.fees.sole.reload
+        expect(fee).to have_attributes(taxes_amount_cents: 1_500, taxes_rate: 20)
+        expect(fee.applied_taxes.sole).to have_attributes(tax:, amount_cents: 1_500)
+      end
+
+      context "with an invoice grace period" do
+        let(:invoice_grace_period) { 3 }
+
+        it "keeps the catalog plan taxes when refreshing the draft" do
+          invoice = result.invoices.sole.reload
+          expect(invoice).to have_attributes(status: "draft", total_amount_cents: 9_000)
+
+          expect(Invoices::RefreshDraftService.call(invoice:)).to be_success
+
+          expect(invoice.reload).to have_attributes(status: "draft", total_amount_cents: 9_000)
+          expect(invoice.fees.sole.applied_taxes.sole).to have_attributes(tax:, amount_cents: 1_500)
+        end
+      end
+    end
+
+    context "when the customer uses provider taxes" do
+      let(:integration) { create(:anrok_integration, organization:) }
+      let(:local_tax) { create(:tax, organization:, rate: 20) }
+
+      before do
+        create(:anrok_customer, integration:, customer:)
+        create(:rate_card_applied_tax, organization:, rate_card:, tax: local_tax)
+      end
+
+      it "defers tax calculation to the provider" do
+        expect { result }.to have_enqueued_job(Invoices::ProviderTaxes::PullTaxesAndApplyJob)
+
+        invoice = result.invoices.sole.reload
+        expect(Invoices::ProviderTaxes::PullTaxesAndApplyJob).to have_been_enqueued.with(invoice:)
+        expect(invoice).to have_attributes(
+          status: "pending",
+          tax_status: "pending",
+          fees_amount_cents: 7_500,
+          sub_total_excluding_taxes_amount_cents: 7_500
+        )
+
+        fee = invoice.fees.sole.reload
+        expect(fee).to have_attributes(taxes_amount_cents: 0)
+        expect(fee.applied_taxes).to be_empty
+        expect(billing_segment.reload).to have_attributes(status: "done", invoice:)
+      end
+
+      context "with an invoice grace period" do
+        let(:invoice_grace_period) { 3 }
+
+        it "keeps the invoice as a draft while requesting provider taxes on creation and refresh" do
+          expect { result }.to have_enqueued_job(Invoices::ProviderTaxes::PullTaxesAndApplyJob)
+
+          invoice = result.invoices.sole.reload
+          expect(invoice).to have_attributes(status: "draft", tax_status: "pending", fees_amount_cents: 7_500)
+          expect(invoice.fees.sole.applied_taxes).to be_empty
+
+          expect { Invoices::RefreshDraftService.call!(invoice:) }
+            .to have_enqueued_job(Invoices::ProviderTaxes::PullTaxesAndApplyJob).with(invoice:)
+
+          expect(invoice.reload).to have_attributes(status: "draft", tax_status: "pending", fees_amount_cents: 7_500)
+          expect(invoice.fees.sole).to have_attributes(taxes_amount_cents: 0)
+          expect(invoice.fees.sole.applied_taxes).to be_empty
+        end
       end
     end
 

@@ -128,7 +128,7 @@ module BillableMetrics
           end
         end
 
-        recurring_result = recurring_value
+        recurring_result = recurring_value(grouped_by_values:)
         recurring_aggregation = recurring_result ? [BigDecimal(recurring_result)] : []
         recurring_prorated_aggregation = recurring_result ? [BigDecimal(recurring_result) * persisted_pro_rata] : []
 
