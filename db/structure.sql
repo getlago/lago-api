@@ -3716,6 +3716,7 @@ CREATE TABLE public.organizations (
     feature_flags character varying[] DEFAULT '{}'::character varying[] NOT NULL,
     max_wallets integer,
     slug character varying NOT NULL,
+    pagination_max_page_size integer,
     CONSTRAINT check_organizations_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -15698,6 +15699,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261016153657'),
 ('20261013124033'),
 ('20261009154629'),
 ('20261008135612'),
