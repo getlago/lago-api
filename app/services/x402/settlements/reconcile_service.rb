@@ -67,7 +67,7 @@ module X402
       end
 
       def fail_invoice
-        invoice = settlement.invoice
+        invoice = settlement.invoice.lock!
 
         if invoice.finalized? && invoice.payment_pending?
           ::Invoices::UpdateService.call!(invoice:, params: {payment_status: "failed"}, webhook_notification: true)
