@@ -81,7 +81,13 @@ module LagoMcpClient
       end
 
       def wrap_untrusted(content)
-        body = content.to_s.gsub(UNTRUSTED_TAG_PATTERN, "")
+        body = content.to_s
+        loop do
+          stripped = body.gsub(UNTRUSTED_TAG_PATTERN, "")
+          break if stripped == body
+
+          body = stripped
+        end
 
         "#{UNTRUSTED_DATA_PREAMBLE}\n<untrusted_data_#{untrusted_nonce}>\n#{body}\n</untrusted_data_#{untrusted_nonce}>"
       end
