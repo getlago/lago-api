@@ -42,8 +42,8 @@ describe "Upgrade terminated within the upgrade billing second" do
     expect(upgrade_invoice.invoice_subscriptions.pluck(:subscription_id, :invoicing_reason))
       .to match_array(expected_invoicing_reasons)
 
-    # The upgrade invoice is timestamped one second after the upgrade, so this termination rounds to the same second.
-    travel_to(DateTime.new(2026, 10, 2, 7, 25, 32)) do
+    # The upgrade invoice is timestamped one second after the upgrade, so a termination in the upgrade second precedes it.
+    travel_to(DateTime.new(2026, 10, 2, 7, 25, 31)) do
       terminate_subscription(new_subscription)
     end
 
