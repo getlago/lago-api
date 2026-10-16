@@ -28,6 +28,7 @@ RSpec.describe ProductFeesQuery do
 
   let(:other_contract) { create(:contract, organization:) }
   let(:other_contract_rate_card) { create(:contract_rate_card, organization:, contract: other_contract) }
+  let(:other_rate_card_rate) { create(:rate_card_rate, organization:, rate_card: other_contract_rate_card.rate_card) }
   let(:other_fee) do
     create(
       :fee,
@@ -36,6 +37,7 @@ RSpec.describe ProductFeesQuery do
         invoiceable: other_contract_rate_card.rate_card.product,
         contract: other_contract,
         contract_rate_card: other_contract_rate_card,
+        rate_card_rate: other_rate_card_rate,
         amount_currency: "USD",
         pay_in_advance_event_transaction_id: "tx_other"
       )
@@ -158,6 +160,49 @@ RSpec.describe ProductFeesQuery do
       it "returns a validation failure instead of the fees not invoiced yet" do
         expect(result).not_to be_success
         expect(result.error.messages[:lago_invoice_id]).to eq(["value_is_invalid"])
+      end
+    end
+  end
+
+  context "when filtering by product_code" do
+    let(:filters) { {product_code: other_contract_rate_card.rate_card.product.code} }
+
+    it "returns the fees of that product" do
+      expect(result.fees).to contain_exactly(other_fee)
+    end
+
+    context "when the product was deleted after billing" do
+      before { other_contract_rate_card.rate_card.product.discard! }
+
+      it "still returns its fees" do
+        expect(result.fees).to contain_exactly(other_fee)
+      end
+    end
+  end
+
+  context "when filtering by rate_card_code" do
+    let(:filters) { {rate_card_code: other_contract_rate_card.rate_card.code} }
+
+    it "returns the fees of that rate card" do
+      expect(result.fees).to contain_exactly(other_fee)
+    end
+
+    context "with a product fee billed before contracts" do
+      let(:legacy_fee) do
+        create(
+          :fee,
+          fee_attributes.merge(
+            contract: nil,
+            contract_rate_card: nil,
+            rate_card_rate: other_rate_card_rate
+          )
+        )
+      end
+
+      before { legacy_fee }
+
+      it "finds it through its rate" do
+        expect(result.fees).to contain_exactly(other_fee, legacy_fee)
       end
     end
   end
