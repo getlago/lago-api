@@ -194,5 +194,14 @@ RSpec.describe PaymentProviders::Stripe::Customers::CreateService do
         end
       end
     end
+
+    context "when the connection pays with a shared payment token" do
+      let(:params) { {provider_customer_id: "id", provider_payment_methods: %w[shared_payment_token]} }
+
+      it "does not fetch a payment method from Stripe" do
+        expect { create_service.call }
+          .not_to have_enqueued_job(PaymentProviders::Stripe::Customers::FetchDefaultPaymentMethodJob)
+      end
+    end
   end
 end

@@ -318,6 +318,42 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
           expect(transaction.payment_method_type).to eq("provider")
         end
       end
+
+      context "with a shared payment token" do
+        let(:stripe_provider) { create(:stripe_provider, organization:, code: "stripe_1") }
+        let(:provider_payment_methods) { %w[shared_payment_token] }
+        let(:params) do
+          {
+            wallet_id: wallet.id,
+            paid_credits:,
+            payment_method: {payment_method_type: "provider", shared_payment_token: "spt_abc_123"}
+          }
+        end
+
+        before do
+          customer.update!(payment_provider: "stripe", payment_provider_code: stripe_provider.code)
+          create(:stripe_customer, customer:, payment_provider: stripe_provider, provider_customer_id: "cus_1", provider_payment_methods:)
+        end
+
+        it "pays the purchased credits with a payment method row holding the token" do
+          expect(result).to be_success
+
+          row = customer.payment_methods.sole
+          expect(row).to have_attributes(provider_method_type: "shared_payment_token", provider_method_id: "spt_abc_123", is_default: false)
+          expect(result.wallet_transactions.sole).to have_attributes(payment_method_id: row.id, payment_method_type: "provider")
+        end
+
+        context "when the Stripe connection also accepts cards" do
+          let(:provider_payment_methods) { %w[card] }
+
+          it "returns an error without creating anything" do
+            expect(result).not_to be_success
+            expect(result.error.messages[:payment_method]).to eq(["invalid_payment_method"])
+            expect(WalletTransaction.where(wallet_id: wallet.id)).to be_empty
+            expect(customer.payment_methods).to be_empty
+          end
+        end
+      end
     end
 
     context "with validation error" do

@@ -30,6 +30,20 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::CustomerUpdatedService do
         expect(result.stripe_customer.payment_method_id).to eq(payment_method_id)
       end
 
+      context "when the stripe customer only uses a shared payment token" do
+        let(:stripe_customer) do
+          create(:stripe_customer, payment_provider: stripe_provider, customer:, provider_customer_id:, provider_payment_methods: %w[shared_payment_token])
+        end
+
+        it "records no payment method" do
+          result = webhook_service.call
+
+          expect(result).to be_success
+          expect(stripe_customer.reload.payment_method_id).to be_nil
+          expect(customer.payment_methods).to be_empty
+        end
+      end
+
       context "when the customer has a payment method" do
         before do
           create(:payment_method, customer:, payment_provider_customer: stripe_customer, provider_method_id: "pm_updateMe")

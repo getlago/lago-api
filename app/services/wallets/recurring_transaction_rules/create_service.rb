@@ -110,8 +110,14 @@ module Wallets
 
       def valid_payment_method?
         result.payment_method = payment_method
+        return false unless PaymentMethods::ValidateService.new(result, **rule_params).valid?
 
-        PaymentMethods::ValidateService.new(result, **rule_params).valid?
+        if result.payment_method&.shared_payment_token?
+          result.single_validation_failure!(field: :payment_method, error_code: "invalid_payment_method")
+          false
+        else
+          true
+        end
       end
 
       def valid_connections?

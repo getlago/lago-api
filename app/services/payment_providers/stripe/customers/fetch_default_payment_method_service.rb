@@ -14,6 +14,7 @@ module PaymentProviders
 
         def call
           return result unless provider_customer.provider_customer_id?
+          return result if provider_customer.shared_payment_token_only?
 
           payment_method_id = PaymentProviderCustomers::Stripe::RetrieveLatestPaymentMethodService.call!(
             provider_customer:

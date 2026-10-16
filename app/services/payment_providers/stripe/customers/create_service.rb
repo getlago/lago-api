@@ -100,6 +100,7 @@ module PaymentProviders
 
         def should_fetch_payment_method?
           !should_create_provider_customer? &&
+            !result.provider_customer.shared_payment_token_only? &&
             customer.payment_methods.empty? &&
             result.provider_customer.provider_customer_id?
         end

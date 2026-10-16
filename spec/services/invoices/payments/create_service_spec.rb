@@ -502,6 +502,21 @@ RSpec.describe Invoices::Payments::CreateService do
         expect(provider_class).to have_received(:new)
       end
 
+      context "when the customer only uses a shared payment token and the invoice has no token row" do
+        let(:provider_customer) do
+          create(:stripe_customer, payment_provider:, customer:, provider_payment_methods: %w[shared_payment_token])
+        end
+
+        it "does not create a payment" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment).to be_nil
+          expect(invoice.reload.payment_attempts).to eq(0)
+          expect(provider_class).not_to have_received(:new)
+        end
+      end
+
       context "when the customer only uses crypto" do
         let(:provider_customer) do
           create(:stripe_customer, payment_provider:, customer:, provider_payment_methods: %w[crypto])
