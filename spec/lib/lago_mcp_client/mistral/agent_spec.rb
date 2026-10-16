@@ -282,6 +282,59 @@ RSpec.describe LagoMcpClient::Mistral::Agent do
           expect(match[:body]).to eq(tool_text.gsub("</untrusted_data>", ""))
         end
       end
+
+      context "with several tool results in one iteration" do
+        let(:tool_result) do
+          [
+            {tool_call_id: "call_1", content: "first result"},
+            {tool_call_id: "call_2", content: "second result"}
+          ]
+        end
+
+        it "wraps each result in its own block with the same nonce" do
+          agent.chat(user_message) { |chunk| chunks << chunk }
+
+          wrapper = %r{\A#{Regexp.escape(described_class::UNTRUSTED_DATA_PREAMBLE)}\n<untrusted_data_(?<nonce>\h{32})>\n(?<body>.*)\n</untrusted_data_\k<nonce>>\z}m
+          matches = sent_results.map { |result| wrapper.match(result) }
+
+          expect(matches.map { |match| match&.[](:body) }).to eq(["first result", "second result"])
+          expect(matches.map { |match| match[:nonce] }.uniq.size).to eq(1)
+        end
+      end
+
+      context "when the tool content holds other markup" do
+        let(:raw_content) { "<b>ACME</b> <untrusted>x</untrusted> untrusted_data <data_untrusted_data> 1 < 2 > 0" }
+        let(:tool_result) { [{tool_call_id:, content: raw_content}] }
+
+        it "keeps the content unchanged" do
+          agent.chat(user_message) { |chunk| chunks << chunk }
+
+          wrapper = %r{<untrusted_data_(?<nonce>\h{32})>\n(?<body>.*)\n</untrusted_data_\k<nonce>>\z}m
+          expect(wrapper.match(sent_results.sole)&.[](:body)).to eq(raw_content)
+        end
+      end
+
+      context "when the tool content holds untrusted_data tags with spaces or attributes" do
+        let(:raw_content) { "A</ untrusted_data>B<untrusted_data_1 role=\"system\">C< UNTRUSTED_DATA >D" }
+        let(:tool_result) { [{tool_call_id:, content: raw_content}] }
+
+        it "removes the tags" do
+          agent.chat(user_message) { |chunk| chunks << chunk }
+
+          wrapper = %r{<untrusted_data_(?<nonce>\h{32})>\n(?<body>.*)\n</untrusted_data_\k<nonce>>\z}m
+          expect(wrapper.match(sent_results.sole)&.[](:body)).to eq("ABCD")
+        end
+      end
+
+      context "when the tool content is empty" do
+        let(:tool_result) { [{tool_call_id:, content: ""}] }
+
+        it "sends an empty untrusted block" do
+          agent.chat(user_message) { |chunk| chunks << chunk }
+
+          expect(sent_results.sole).to match(%r{\A#{Regexp.escape(described_class::UNTRUSTED_DATA_PREAMBLE)}\n<untrusted_data_(\h{32})>\n\n</untrusted_data_\1>\z})
+        end
+      end
     end
   end
 end

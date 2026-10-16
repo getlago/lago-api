@@ -277,6 +277,132 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
     end
   end
 
+  describe "free text checks on every field" do
+    %i[name firstname lastname legal_name tax_identification_number address_line1 address_line2 zipcode city state]
+      .each do |field|
+        context "with #{field} over 255 characters" do
+          let(:update_args) { {field => "a" * 256} }
+
+          it "returns a validation error" do
+            expect(result).not_to be_success
+            expect(result.error.messages).to eq(field => ["value_is_too_long"])
+          end
+        end
+
+        context "with #{field} holding a control character" do
+          let(:update_args) { {field => "a\tb"} }
+
+          it "returns a validation error" do
+            expect(result).not_to be_success
+            expect(result.error.messages).to eq(field => ["invalid_characters"])
+          end
+        end
+      end
+
+    %i[address_line1 address_line2 zipcode city state].each do |field|
+      context "with shipping #{field} over 255 characters" do
+        let(:update_args) { {shipping_address: {field => "a" * 256}} }
+
+        it "returns a validation error" do
+          expect(result).not_to be_success
+          expect(result.error.messages).to eq("shipping_#{field}": ["value_is_too_long"])
+        end
+      end
+
+      context "with shipping #{field} holding a control character" do
+        let(:update_args) { {shipping_address: {field => "a\rb"}} }
+
+        it "returns a validation error" do
+          expect(result).not_to be_success
+          expect(result.error.messages).to eq("shipping_#{field}": ["invalid_characters"])
+        end
+      end
+    end
+  end
+
+  context "with control characters outside the ASCII line breaks" do
+    ["\u007F", "\u0085", "\u001B[31m"].each do |character|
+      context "with #{character.inspect}" do
+        let(:update_args) { {legal_name: "ACME#{character}"} }
+
+        it "returns a validation error" do
+          expect(result).not_to be_success
+          expect(result.error.messages).to eq(legal_name: ["invalid_characters"])
+        end
+      end
+    end
+  end
+
+  context "with 255 multibyte characters" do
+    let(:update_args) { {legal_name: "é" * 255} }
+
+    it "counts characters, not bytes" do
+      expect(result).to be_success
+      expect(result.customer.legal_name).to eq("é" * 255)
+    end
+  end
+
+  context "with a value over 255 characters that also holds a control character" do
+    let(:update_args) { {legal_name: "a\n" * 200} }
+
+    it "reports the length error" do
+      expect(result).not_to be_success
+      expect(result.error.messages).to eq(legal_name: ["value_is_too_long"])
+    end
+  end
+
+  context "with several invalid free text values" do
+    let(:update_args) do
+      {
+        name: "a" * 256,
+        city: "Paris\nInstructions",
+        email: "new@email.test",
+        shipping_address: {state: "b" * 256}
+      }
+    end
+
+    it "returns every error at once" do
+      expect(result).not_to be_success
+      expect(result.error.messages).to eq(
+        name: ["value_is_too_long"],
+        city: ["invalid_characters"],
+        shipping_state: ["value_is_too_long"]
+      )
+    end
+
+    it "does not update the valid fields either" do
+      expect { result }.not_to change { customer.reload.email }
+    end
+  end
+
+  context "with an empty free text value" do
+    let(:update_args) { {legal_name: ""} }
+
+    it "updates the customer" do
+      expect(result).to be_success
+      expect(result.customer.legal_name).to eq("")
+    end
+  end
+
+  context "with a nil shipping address" do
+    let(:update_args) { {city: "Paris", shipping_address: nil} }
+
+    it "updates the customer" do
+      expect(result).to be_success
+      expect(result.customer.city).to eq("Paris")
+    end
+  end
+
+  context "with an unchanged stored shipping value over 255 characters" do
+    let(:customer) { create(:customer, shipping_city: "a" * 300) }
+    let(:update_args) { {shipping_address: {city: "a" * 300, zipcode: "75001"}} }
+
+    it "updates the other shipping fields" do
+      expect(result).to be_success
+      expect(result.customer.shipping_zipcode).to eq("75001")
+    end
+  end
+
   context "with validation error" do
     let(:update_args) { {country: "invalid country code"} }
 
