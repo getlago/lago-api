@@ -187,6 +187,7 @@ RSpec.describe Api::V2::ProductsController do
       expect(json[:product][:lago_id]).to eq(product.id)
       expect(json[:product][:code]).to eq(product.code)
       expect(json[:product][:filters_count]).to eq(1)
+      expect(json[:product]).to include(deleted_at: nil)
     end
 
     context "when the product belongs to another organization" do
@@ -353,6 +354,7 @@ RSpec.describe Api::V2::ProductsController do
       expect(response).to have_http_status(:success)
       expect(json[:product][:lago_id]).to eq(product.id)
       expect(product.reload).to be_discarded
+      expect(json[:product][:deleted_at]).to eq(product.deleted_at.iso8601)
     end
 
     context "when the product does not exist" do

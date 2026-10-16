@@ -23,7 +23,8 @@ module Api
               json: ::CollectionSerializer.new(
                 result.rate_card_rates,
                 ::V2::RateCardRateSerializer,
-                collection_name: "rates"
+                collection_name: "rates",
+                includes: serializer_includes
               )
             )
           else
@@ -101,7 +102,7 @@ module Api
         end
 
         def render_rate(rate)
-          render(json: ::V2::RateCardRateSerializer.new(rate, root_name: "rate"))
+          render(json: ::V2::RateCardRateSerializer.new(rate, root_name: "rate", includes: serializer_includes))
         end
 
         def resource_name

@@ -172,4 +172,66 @@ RSpec.describe ModelSerializer do
       end
     end
   end
+
+  describe "#nested_includes" do
+    subject(:nested_includes) { serializer.send(:nested_includes, forward: %i[counts]) }
+
+    let(:options) { {includes: %i[product counts deleted_at]} }
+
+    it "keeps deleted_at and the forwarded options, never an expansion" do
+      expect(nested_includes).to eq(%i[deleted_at counts])
+    end
+
+    context "without forwarded options" do
+      subject(:nested_includes) { serializer.send(:nested_includes) }
+
+      it "keeps deleted_at only" do
+        expect(nested_includes).to eq(%i[deleted_at])
+      end
+    end
+
+    context "without internal options" do
+      let(:options) { {includes: %i[product]} }
+
+      it "returns nothing" do
+        expect(nested_includes).to eq([])
+      end
+    end
+
+    context "without includes" do
+      let(:options) { {} }
+
+      it "returns nothing" do
+        expect(nested_includes).to eq([])
+      end
+    end
+  end
+
+  describe "#deleted_at_payload" do
+    subject(:payload) { serializer.send(:deleted_at_payload) }
+
+    let(:model) { build_stubbed(:product, deleted_at:) }
+    let(:deleted_at) { Time.zone.parse("2026-03-22T12:00:00Z") }
+    let(:options) { {includes: %i[deleted_at]} }
+
+    it "renders deleted_at in ISO 8601" do
+      expect(payload).to eq(deleted_at: "2026-03-22T12:00:00Z")
+    end
+
+    context "when the record is kept" do
+      let(:deleted_at) { nil }
+
+      it "renders a null deleted_at" do
+        expect(payload).to eq(deleted_at: nil)
+      end
+    end
+
+    context "without the deleted_at option" do
+      let(:options) { {includes: %i[counts]} }
+
+      it "renders nothing" do
+        expect(payload).to eq({})
+      end
+    end
+  end
 end

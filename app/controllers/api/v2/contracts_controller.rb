@@ -77,7 +77,8 @@ module Api
               ::V2::ContractSerializer,
               collection_name: "contracts",
               meta: page.meta,
-              applied_rate_cards_counts:
+              applied_rate_cards_counts:,
+              includes: serializer_includes
             )
           )
         else
@@ -104,7 +105,7 @@ module Api
           json: ::V2::ContractSerializer.new(
             contract,
             root_name: "contract",
-            includes: %i[applied_rate_cards applied_invoice_custom_sections]
+            includes: [:applied_rate_cards, :applied_invoice_custom_sections, *serializer_includes]
           )
         )
       end
@@ -155,7 +156,7 @@ module Api
       end
 
       def render_contract(contract)
-        render(json: ::V2::ContractSerializer.new(contract, root_name: "contract", includes: %i[applied_rate_cards applied_invoice_custom_sections]))
+        render(json: ::V2::ContractSerializer.new(contract, root_name: "contract", includes: [:applied_rate_cards, :applied_invoice_custom_sections, *serializer_includes]))
       end
 
       def resource_name

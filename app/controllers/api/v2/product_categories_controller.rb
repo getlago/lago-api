@@ -64,7 +64,8 @@ module Api
               page.records,
               ::V2::ProductCategorySerializer,
               collection_name: "product_categories",
-              meta: page.meta
+              meta: page.meta,
+              includes: serializer_includes
             )
           )
         else
@@ -93,7 +94,7 @@ module Api
       end
 
       def render_product_category(product_category)
-        render(json: ::V2::ProductCategorySerializer.new(product_category, root_name: "product_category"))
+        render(json: ::V2::ProductCategorySerializer.new(product_category, root_name: "product_category", includes: serializer_includes))
       end
 
       def resource_name
