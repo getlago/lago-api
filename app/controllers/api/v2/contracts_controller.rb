@@ -4,6 +4,7 @@ module Api
   module V2
     class ContractsController < Api::V2::BaseController
       cursor_paginated_index(Contract)
+      expandable_with ::V2::ContractSerializer
 
       def create
         result = ::Contracts::CreateService.call(
@@ -65,19 +66,12 @@ module Api
         if result.success?
           page = ::CursorPagination::Page.new(records: result.contracts.includes(:catalog_plan, customer: :billing_entity), cursor:)
 
-          # One grouped query instead of one COUNT per row in the serializer.
-          applied_rate_cards_counts = ContractRateCard
-            .where(contract_id: page.records.map(&:id))
-            .group(:contract_id)
-            .count
-
           render(
             json: ::CollectionSerializer.new(
               page.records,
               ::V2::ContractSerializer,
               collection_name: "contracts",
               meta: page.meta,
-              applied_rate_cards_counts:,
               includes: serializer_includes
             )
           )
@@ -101,13 +95,7 @@ module Api
           end
         return not_found_error(resource: "contract") unless contract
 
-        render(
-          json: ::V2::ContractSerializer.new(
-            contract,
-            root_name: "contract",
-            includes: [:applied_rate_cards, :applied_invoice_custom_sections, *serializer_includes]
-          )
-        )
+        render_contract(preload_expansions(contract))
       end
 
       private
@@ -156,7 +144,7 @@ module Api
       end
 
       def render_contract(contract)
-        render(json: ::V2::ContractSerializer.new(contract, root_name: "contract", includes: [:applied_rate_cards, :applied_invoice_custom_sections, *serializer_includes]))
+        render(json: ::V2::ContractSerializer.new(contract, root_name: "contract", includes: serializer_includes))
       end
 
       def resource_name
