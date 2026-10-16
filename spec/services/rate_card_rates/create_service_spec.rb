@@ -156,6 +156,8 @@ RSpec.describe RateCardRates::CreateService do
 
     it "adds the rate without persisting an event-pricing segment" do
       expect { result }.not_to change(BillingSegment, :count)
+      expect(result).to be_success
+      expect(result.rate_card_rate).to be_persisted
       expect(contract_rate_card.billing_segments).to be_empty
     end
   end

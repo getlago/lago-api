@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "Contract usage billing with duplicate percentage events" do
+RSpec.describe "Contract percentage billing with duplicate unique_count_agg events on user_id" do
   subject(:event_fee_records) do
     inputs.each do |input|
       travel_to(input.fetch(:at) + 1.minute)
@@ -67,7 +67,7 @@ RSpec.describe "Contract usage billing with duplicate percentage events" do
     card
   end
 
-  it "does not charge a second fixed fee for a duplicate user event" do
+  it "does not charge a second fixed fee for a duplicate percentage event with the same user_id" do
     records = event_fee_records
     expect(records.map { |event, _fee| event.transaction_id }).to eq(inputs.map { |input| input.fetch(:transaction_id) })
 

@@ -38,6 +38,8 @@ RSpec.describe RatePhases::CreateService do
   context "with a priced metered advance contract rate card" do
     subject(:result) { described_class.call(contract_rate_card:, params:) }
 
+    let(:params) { super().merge(billing_interval_cycle_count: nil) }
+
     let(:customer) { create(:customer, organization:) }
     let(:contract) { create(:contract, :pending, organization:, customer:) }
     let(:rate_card) { create(:rate_card, :advance, organization:) }
@@ -49,6 +51,8 @@ RSpec.describe RatePhases::CreateService do
 
     it "creates the phase without persisting an event-pricing segment" do
       expect { result }.not_to change(BillingSegment, :count)
+      expect(result).to be_success
+      expect(result.rate_phase).to be_persisted
       expect(contract_rate_card.billing_segments).to be_empty
     end
   end

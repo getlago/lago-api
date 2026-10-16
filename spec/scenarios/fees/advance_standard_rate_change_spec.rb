@@ -112,7 +112,7 @@ RSpec.describe "Advance standard pricing across rate changes" do
     end
   end
 
-  it "keeps a future rate off T6's event while shortening its fee period" do
+  it "prices the event at the active rate and shortens the fee period at the future rate change" do
     expect(fees.map { |fee| [fee.rate_card_rate, fee.amount_cents, fee.units] }).to eq([[first_rate, 1_000, 10]])
     expect(fees.sole.properties).to include(
       "from_datetime" => cycle_started_at.iso8601(6),
@@ -123,7 +123,7 @@ RSpec.describe "Advance standard pricing across rate changes" do
     expect(Invoice.where(customer:, invoice_type: :subscription).count).to eq(1)
   end
 
-  context "when Z4's first rate begins after the event" do
+  context "when the first rate begins after the event" do
     let(:initial_rate_start) { second_rate_start }
     let(:rate_changes) { [] }
 
@@ -135,7 +135,7 @@ RSpec.describe "Advance standard pricing across rate changes" do
     end
   end
 
-  context "when R5 attempts to append a backdated third rate" do
+  context "when a backdated third rate is attempted after its effective date" do
     let(:second_rate_start) { Time.zone.parse("2027-01-15 00:00:00") }
     let(:event_inputs) { [{at: Time.zone.parse("2027-01-26 12:00:00"), quantity: 10}] }
     let(:rejected_rate_params) do
@@ -143,7 +143,7 @@ RSpec.describe "Advance standard pricing across rate changes" do
        rate_model: "standard", billing_interval_unit: "month", rate_properties: {amount: "3"}}
     end
 
-    it "rejects R3 and invoices the following event at the surviving R2 price" do
+    it "rejects the backdated rate and invoices the later event at the surviving rate" do
       expect(fees.map { |fee| [fee.rate_card_rate, fee.amount_cents, fee.units] }).to eq([[second_rate, 2_000, 10]])
       expect(rejected_rate_response.first).to eq(422)
       expect(rejected_rate_response.last.to_s).to include("must_not_be_before_today")
@@ -157,7 +157,7 @@ RSpec.describe "Advance standard pricing across rate changes" do
     end
   end
 
-  context "when T3's pre-noon event arrives after the noon rate change and later event" do
+  context "when an event before a noon rate change arrives after a later event" do
     let(:second_rate_start) { Time.zone.parse("2027-01-15 12:00:00") }
     let(:rate_changes) do
       [{code: "r2", added_at: second_rate_start, effective_at: second_rate_start, amount: "2"}]
@@ -183,7 +183,7 @@ RSpec.describe "Advance standard pricing across rate changes" do
     end
   end
 
-  context "when B11's events cross the monthly cycle boundary" do
+  context "when events cross the monthly cycle boundary" do
     let(:second_rate_start) { Time.zone.parse("2027-01-15 00:00:00") }
     let(:event_inputs) do
       [
@@ -206,7 +206,7 @@ RSpec.describe "Advance standard pricing across rate changes" do
     end
   end
 
-  context "when T1's event falls between two rate changes" do
+  context "when an event falls between two rate changes" do
     let(:second_rate_start) { Time.zone.parse("2027-01-10 00:00:00") }
     let(:third_rate_start) { Time.zone.parse("2027-01-20 00:00:00") }
     let(:rate_changes) do
@@ -216,7 +216,7 @@ RSpec.describe "Advance standard pricing across rate changes" do
       ]
     end
 
-    it "uses R2 and saves T1's Jan 10–20 service window" do
+    it "uses the rate active for the event and saves its Jan 10–20 service window" do
       expect(fees.map { |fee| [fee.rate_card_rate, fee.amount_cents, fee.units] }).to eq([[second_rate, 2_000, 10]])
       expect(fees.sole.properties).to include(
         "from_datetime" => second_rate_start.iso8601(6),
@@ -226,7 +226,7 @@ RSpec.describe "Advance standard pricing across rate changes" do
       expect(Invoice.where(customer:, invoice_type: :subscription).count).to eq(1)
     end
 
-    context "when A1 sends events across all three rate windows" do
+    context "when events arrive in all three rate windows" do
       let(:event_inputs) do
         [
           {at: Time.zone.parse("2027-01-05 12:00:00"), quantity: 10},
@@ -235,7 +235,7 @@ RSpec.describe "Advance standard pricing across rate changes" do
         ]
       end
 
-      it "issues three invoices for R1, R2, and R3 without persisting event segments" do
+      it "issues one invoice at each rate without persisting event segments" do
         expect(fees.map { |fee| [fee.rate_card_rate, fee.amount_cents, fee.units] }).to eq([
           [first_rate, 1_000, 10], [second_rate, 2_000, 10], [third_rate, 3_000, 10]
         ])
@@ -254,7 +254,7 @@ RSpec.describe "Advance standard pricing across rate changes" do
     end
   end
 
-  context "when standard A5 sends three events across R2's activation" do
+  context "when standard events arrive before and after the second rate activates" do
     let(:second_rate_start) { Time.zone.parse("2027-01-15 00:00:00") }
     let(:event_inputs) do
       [
