@@ -850,6 +850,16 @@ type AdyenProvider {
   successRedirectUrl: String
 }
 
+type AgentStorefrontIntegration {
+  code: String!
+  id: ID!
+  name: String!
+  paymentProviderCode: String!
+  resourceEndpoint: String
+  resourceInstructions: String
+  scope: String!
+}
+
 enum AggregationTypeEnum {
   count_agg
   custom_agg
@@ -7808,7 +7818,7 @@ An ISO 8601-encoded datetime
 """
 scalar ISO8601DateTime @specifiedBy(url: "https://tools.ietf.org/html/rfc3339")
 
-union Integration = AnrokIntegration | AvalaraIntegration | EntraIdIntegration | HubspotIntegration | NetsuiteIntegration | OktaIntegration | SalesforceIntegration | XeroIntegration
+union Integration = AgentStorefrontIntegration | AnrokIntegration | AvalaraIntegration | EntraIdIntegration | HubspotIntegration | NetsuiteIntegration | OktaIntegration | SalesforceIntegration | XeroIntegration
 
 """
 IntegrationCollection type
@@ -7877,6 +7887,7 @@ enum IntegrationItemTypeEnum {
 }
 
 enum IntegrationTypeEnum {
+  agent_storefront
   analytics_dashboards
   anrok
   api_permissions
@@ -11937,6 +11948,7 @@ input PlanOverridesInput {
 }
 
 enum PremiumIntegrationTypeEnum {
+  agent_storefront
   analytics_dashboards
   api_permissions
   auto_dunning
