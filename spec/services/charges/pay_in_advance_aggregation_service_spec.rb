@@ -508,8 +508,6 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
       end
 
       before do
-        organization.enable_feature_flag!(:persisted_recurring_values)
-
         create_event(timestamp: subscription.started_at + 1.day, value: 10)
         # Dated in the snapshot period, ingested after its watermark
         create_event(timestamp: subscription.started_at + 2.days, value: 7, created_at: snapshot_watermark + 1.minute)
@@ -522,8 +520,8 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
           expect(agg_service.call.aggregation).to eq(100 + 7 + 5)
         end
 
-        context "without the persisted_recurring_values feature flag" do
-          before { organization.disable_feature_flag!(:persisted_recurring_values) }
+        context "when the snapshot read is forced off" do
+          around { |example| RecurringAggregationSnapshots.with_forced_read(false) { example.run } }
 
           it "reads the full history" do
             expect(agg_service.call.aggregation).to eq(10 + 7 + 5)

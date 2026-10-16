@@ -541,6 +541,7 @@ module Fees
       # product_id and product_filter_id support before segment-backed values can be persisted.
       return if selected_metered_item.billing_segment
       return if options.current_usage?
+      return if snapshot_eligible?(selected_metered_item)
 
       # NOTE: Only weighted sum and custom aggregations are setting this value
       return unless aggregation_results.first&.recurring_updated_at
@@ -612,7 +613,7 @@ module Fees
 
     def recurring_initial_value(selected_metered_item)
       return unless selected_metered_item.billable_metric.recurring? && snapshot_eligible?(selected_metered_item)
-      return unless RecurringAggregationSnapshots.read_enabled?(billing_context.organization)
+      return unless RecurringAggregationSnapshots.read_enabled?
 
       RecurringAggregationSnapshots::FetchService.call!(
         subscription:,
@@ -648,7 +649,7 @@ module Fees
       #
       # TODO: Support product_id in BaseStore and the enriched-event schema, enrichment, queries, and dedup keys.
       # Adding a product_id key here alone would be ignored. StoreFactory also needs a product-compatible path.
-      # CachedAggregation reads in Aggregations::{BaseService, WeightedSumService, CustomService} obtain
+      # CachedAggregation reads in Aggregations::{BaseService, CustomService} obtain
       # charge_id from MeteredItem directly; those lookups and the cache schema also need product identity.
       filters = if selected_metered_item.billing_segment
         {}
@@ -667,7 +668,7 @@ module Fees
       if selected_metered_item.billing_segment || selected_metered_item.charge_filter.present?
         if selected_metered_item.charge_filter
           # Aggregations::BaseService retains this object for charge_filter_id cache lookups;
-          # WeightedSumService and CustomService also scope cached state by it. CustomService reads
+          # CustomService also scopes cached state by it and reads
           # its custom_properties, while BaseStore extracts its ID for enriched-event queries.
           #
           # TODO: Carry product_filter/selected_filter through aggregators, stores, enrichment, and cache
