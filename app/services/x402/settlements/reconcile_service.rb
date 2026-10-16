@@ -16,7 +16,11 @@ module X402
       def call
         raise "#{self.class.name} must run outside a database transaction" if in_transaction?
 
-        reconcile if settlement.pending?
+        if settlement.pending?
+          reconcile
+        elsif unpaid?
+          finish_payment(settlement.transaction_hash)
+        end
         grant if ungranted?
 
         result.settlement = settlement
@@ -31,7 +35,7 @@ module X402
         if reader.settled?
           mark_settled(reader.identifier)
         elsif reader.final?
-          transition(status: :failed, transaction_hash: nil)
+          transition(status: :failed, transaction_hash: nil) { fail_invoice if settlement.invoice_payment? }
         end
       rescue X402::Chain::Error => e
         report("chain read failed", e)
@@ -54,6 +58,22 @@ module X402
         end
       end
 
+      def unpaid?
+        settlement.invoice_payment? && settlement.settled? && settlement.payment_id.nil?
+      end
+
+      def finish_payment(transaction_hash)
+        X402::Invoices::FinishPaymentService.call(settlement:, transaction_hash:)
+      end
+
+      def fail_invoice
+        invoice = settlement.invoice
+
+        if invoice.finalized? && invoice.payment_pending?
+          ::Invoices::UpdateService.call!(invoice:, params: {payment_status: "failed"}, webhook_notification: true)
+        end
+      end
+
       def reader
         @reader ||= READERS.fetch(X402::Network.family_of_network(settlement.network)).new(
           network: settlement.network,
@@ -64,7 +84,11 @@ module X402
       end
 
       def mark_settled(transaction_hash)
-        transition(status: :settled, transaction_hash:)
+        if settlement.invoice_payment?
+          finish_payment(transaction_hash)
+        else
+          transition(status: :settled, transaction_hash:)
+        end
       rescue ActiveRecord::RecordNotUnique => e
         raise unless e.message.include?(TRANSACTION_INDEX)
 
@@ -83,7 +107,10 @@ module X402
 
       def transition(**attributes)
         settlement.with_lock do
-          settlement.update!(**attributes) if settlement.pending?
+          if settlement.pending?
+            settlement.update!(**attributes)
+            yield if block_given?
+          end
         end
       end
 
