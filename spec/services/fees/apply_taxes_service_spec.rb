@@ -395,6 +395,28 @@ RSpec.describe Fees::ApplyTaxesService do
         expect(result.applied_taxes.map(&:tax_code)).to contain_exactly(tax3.code)
       end
 
+      context "without a subscription" do
+        let(:subscription) { nil }
+
+        it "falls back to the billing entity taxes without a plan" do
+          result = apply_service.call
+
+          expect(result).to be_success
+          expect(result.applied_taxes.map(&:tax_code)).to eq([tax3.code])
+        end
+
+        context "when the customer has taxes" do
+          before { create(:customer_applied_tax, customer:, tax: tax1) }
+
+          it "uses the customer taxes before the billing entity taxes" do
+            result = apply_service.call
+
+            expect(result).to be_success
+            expect(result.applied_taxes.map(&:tax_code)).to eq([tax1.code])
+          end
+        end
+      end
+
       context "when the subscription uses another billing entity" do
         let(:subscription_billing_entity) { create(:billing_entity, organization:) }
         let(:subscription_tax) { create(:tax, organization:, rate: 20) }
