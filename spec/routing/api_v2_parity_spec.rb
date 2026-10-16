@@ -26,9 +26,9 @@ RSpec.describe "API v2 routing parity" do
   end
 
   it "keeps customer-nested paths on their shared controllers" do
-    recognized = Rails.application.routes.recognize_path("/api/v2/customers/customer/invoices", method: :get)
+    recognized = Rails.application.routes.recognize_path("/api/v2/customers/customer/credit_notes", method: :get)
 
-    expect(recognized[:controller]).to eq("api/v1/customers/invoices")
+    expect(recognized[:controller]).to eq("api/v1/customers/credit_notes")
     expect(recognized[:customer_external_id]).to eq("customer")
   end
 
