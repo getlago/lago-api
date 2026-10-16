@@ -15,7 +15,8 @@ module Mutations
         result = ::Invites::JoinService.call(
           token:,
           user: context[:current_user],
-          login_method: context[:login_method]
+          login_method: context[:login_method],
+          sso_claims: context[:session_claims].to_h.slice(:sso_organization_id, :sso_issuer)
         )
 
         result.success? ? result.membership : result_error(result)
