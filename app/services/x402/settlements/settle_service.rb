@@ -31,8 +31,8 @@ module X402
         settlement = insert_pending
         return result if result.failure?
 
-        refusal = changed_invoice_refusal(settlement)
-        return refuse_changed_invoice(settlement, refusal) if refusal
+        refusal = fail_on_changed_invoice(settlement)
+        return refuse_changed_invoice(refusal) if refusal
 
         result.settlement = settlement
         settle(settlement)
@@ -99,25 +99,28 @@ module X402
         end
       end
 
-      def changed_invoice_refusal(settlement)
-        return unless invoice
-
-        invoice.with_lock do
-          if invoice.x402_connection_id != connection.id
-            [:invoice, "x402_connection_changed"]
-          elsif verified_payment.settled_amount_atomic != amount_due_atomic
-            [:payment, "amount_mismatch"]
-          elsif invoice.x402_settlements.where.not(id: settlement.id).where.not(status: :failed).exists?
-            [:base, "invoice_payment_pending"]
-          end
+      def fail_on_changed_invoice(settlement)
+        invoice&.with_lock do
+          refusal = changed_invoice_refusal(settlement)
+          settlement.update!(status: :failed, error_reason: refusal.last) if refusal
+          refusal
         end
       end
 
-      def refuse_changed_invoice(settlement, refusal)
+      def changed_invoice_refusal(settlement)
+        if invoice.x402_connection_id != connection.id
+          [:invoice, "x402_connection_changed"]
+        elsif verified_payment.settled_amount_atomic != amount_due_atomic
+          [:payment, "amount_mismatch"]
+        elsif invoice.x402_settlements.where.not(id: settlement.id).where.not(status: :failed).exists?
+          [:base, "invoice_payment_pending"]
+        end
+      end
+
+      def refuse_changed_invoice(refusal)
         field, code = refusal
 
         log_failure(code)
-        settlement.update!(status: :failed, error_reason: code)
         result.single_validation_failure!(field:, error_code: code)
       end
 

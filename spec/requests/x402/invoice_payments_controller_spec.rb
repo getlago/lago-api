@@ -213,6 +213,17 @@ describe X402::InvoicePaymentsController, :premium do
       expect(invoice.payments.sole).to have_attributes(payment_type: "x402", amount_cents: 105)
     end
 
+    context "with a GET" do
+      subject { get("/x402/invoice_payments/#{token}", headers: {"PAYMENT-SIGNATURE" => header}) }
+
+      it "answers the receipt" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(payment_response).to eq(receipt)
+      end
+    end
+
     context "with a resent payment" do
       before { post("/x402/invoice_payments/#{token}", headers: {"PAYMENT-SIGNATURE" => header}) }
 
@@ -319,6 +330,17 @@ describe X402::InvoicePaymentsController, :premium do
 
       it "writes no attempt" do
         expect { subject }.not_to change(X402::Settlement, :count)
+      end
+    end
+
+    context "with a blank payment header" do
+      let(:header) { "" }
+
+      it "answers the plain challenge" do
+        subject
+
+        expect(response).to have_http_status(:payment_required)
+        expect(payment_required).not_to have_key("error")
       end
     end
 
