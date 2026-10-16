@@ -4,6 +4,13 @@ module CustomerPortal
   class CustomerUpdateService < BaseService
     Result = BaseResult[:customer]
 
+    FREE_TEXT_FIELDS = %i[
+      name firstname lastname legal_name tax_identification_number address_line1 address_line2 zipcode city state
+    ].freeze
+    SHIPPING_FREE_TEXT_FIELDS = %i[address_line1 address_line2 zipcode city state].freeze
+    FREE_TEXT_MAX_LENGTH = 255
+    CONTROL_CHARACTERS = /\p{Cc}/
+
     def initialize(customer:, args:)
       @customer = customer
       @args = args
@@ -13,6 +20,9 @@ module CustomerPortal
 
     def call
       return result.not_found_failure!(resource: "customer") unless customer
+
+      errors = free_text_errors
+      return result.validation_failure!(errors:) if errors.present?
 
       ActiveRecord::Base.transaction do
         original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
@@ -76,5 +86,38 @@ module CustomerPortal
     private
 
     attr_reader :customer, :args
+
+    # Only values that differ from the stored one are checked: the portal sends every field on each save,
+    # so a stored value that breaks the rule must not block an update of another field.
+    def free_text_errors
+      errors = {}
+
+      FREE_TEXT_FIELDS.each do |field|
+        next unless args.key?(field)
+
+        error = free_text_error(args[field], customer.public_send(field))
+        errors[field] = [error] if error
+      end
+
+      shipping_address = args[:shipping_address]&.to_h || {}
+      SHIPPING_FREE_TEXT_FIELDS.each do |field|
+        next unless shipping_address.key?(field)
+
+        error = free_text_error(shipping_address[field], customer.public_send("shipping_#{field}"))
+        errors[:"shipping_#{field}"] = [error] if error
+      end
+
+      errors
+    end
+
+    def free_text_error(value, stored_value)
+      return if value.nil? || value == stored_value
+
+      if value.to_s.length > FREE_TEXT_MAX_LENGTH
+        "value_is_too_long"
+      elsif CONTROL_CHARACTERS.match?(value.to_s)
+        "invalid_characters"
+      end
+    end
   end
 end

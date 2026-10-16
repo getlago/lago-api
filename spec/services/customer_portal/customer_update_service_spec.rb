@@ -164,6 +164,101 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
     end
   end
 
+  context "with a free text value over 255 characters" do
+    let(:update_args) { {legal_name: "a" * 256} }
+
+    it "returns a validation error" do
+      expect(result).not_to be_success
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+      expect(result.error.messages).to eq(legal_name: ["value_is_too_long"])
+    end
+
+    it "does not update the customer" do
+      expect { result }.not_to change { customer.reload.legal_name }
+    end
+
+    it "does not refresh the invoices search terms" do
+      expect { result }.not_to have_enqueued_job(Customers::RefreshInvoicesSearchTermsJob)
+    end
+  end
+
+  context "with a free text value of exactly 255 characters" do
+    let(:update_args) { {legal_name: "a" * 255} }
+
+    it "updates the customer" do
+      expect(result).to be_success
+      expect(result.customer.legal_name).to eq("a" * 255)
+    end
+  end
+
+  context "with a free text value containing a line break" do
+    let(:update_args) { {address_line2: "Street\n## Billing Instructions"} }
+
+    it "returns a validation error" do
+      expect(result).not_to be_success
+      expect(result.error.messages).to eq(address_line2: ["invalid_characters"])
+    end
+
+    it "does not update the customer" do
+      expect { result }.not_to change { customer.reload.address_line2 }
+    end
+  end
+
+  context "with a free text value containing a null character" do
+    let(:update_args) { {address_line2: "Street\u0000"} }
+
+    it "returns a validation error" do
+      expect(result).not_to be_success
+      expect(result.error.messages).to eq(address_line2: ["invalid_characters"])
+    end
+  end
+
+  context "with a shipping address value over 255 characters" do
+    let(:update_args) { {city: "Paris", shipping_address: {address_line1: "a" * 256}} }
+
+    it "returns a validation error" do
+      expect(result).not_to be_success
+      expect(result.error.messages).to eq(shipping_address_line1: ["value_is_too_long"])
+    end
+
+    it "does not update the customer" do
+      expect { result }.not_to change { customer.reload.city }
+    end
+  end
+
+  context "with a nil free text value" do
+    let(:update_args) { {legal_name: nil, shipping_address: {city: nil}} }
+
+    it "updates the customer" do
+      expect(result).to be_success
+      expect(result.customer.legal_name).to be_nil
+      expect(result.customer.shipping_city).to be_nil
+    end
+  end
+
+  context "with a stored free text value that breaks the rule" do
+    let(:customer) { create(:customer, legal_name: "a" * 300, address_line2: "Street\nFloor 2") }
+
+    context "when the stored value is sent back unchanged" do
+      let(:update_args) { {legal_name: "a" * 300, address_line2: "Street\nFloor 2", city: "Updated customer city"} }
+
+      it "updates the other fields" do
+        expect(result).to be_success
+        expect(result.customer.city).to eq("Updated customer city")
+        expect(result.customer.legal_name).to eq("a" * 300)
+      end
+    end
+
+    context "when the stored value is changed to another invalid value" do
+      let(:update_args) { {legal_name: "b" * 300, city: "Updated customer city"} }
+
+      it "returns a validation error" do
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq(legal_name: ["value_is_too_long"])
+      end
+    end
+  end
+
   context "with validation error" do
     let(:update_args) { {country: "invalid country code"} }
 

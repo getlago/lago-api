@@ -120,6 +120,14 @@ RSpec.describe Mutations::CustomerPortal::UpdateCustomer do
     end
   end
 
+  context "with a legal name over 255 characters" do
+    let(:input) { {legalName: "a" * 256} }
+
+    it "returns a validation error" do
+      expect_unprocessable_entity(result, details: {legalName: ["value_is_too_long"]})
+    end
+  end
+
   context "when updating not allowed fields" do
     let(:input) { {currency: "USD"} }
 
