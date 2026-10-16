@@ -3,7 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::CouponResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "coupons:view" }
+  let(:organization) { membership.organization }
+  let(:coupon) { create(:coupon, organization:) }
+  let(:applied_coupon) { create(:applied_coupon, coupon:) }
   let(:query) do
     <<~GQL
       query($couponId: ID!) {
@@ -14,11 +19,8 @@ RSpec.describe Resolvers::CouponResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
-  let(:coupon) { create(:coupon, organization:) }
-  let(:applied_coupon) { create(:applied_coupon, coupon:) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before do
     customer

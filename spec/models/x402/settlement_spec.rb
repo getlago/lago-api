@@ -63,6 +63,30 @@ describe X402::Settlement do
         expect(described_class.pending_reconciliation).to eq([due])
       end
     end
+
+    describe ".grant_retry_due" do
+      let(:due) { create(:x402_settlement, updated_at: 3.minutes.ago) }
+      let(:recorded) { create(:x402_settlement, :merchant, updated_at: 3.minutes.ago) }
+      let(:customer) { create(:customer) }
+
+      before do
+        due
+        recorded
+        create(:x402_settlement, updated_at: 1.minute.ago)
+        create(:x402_settlement, :pending, updated_at: 3.minutes.ago)
+        create(:x402_settlement, :failed, updated_at: 3.minutes.ago)
+        create(:x402_settlement, :invoice_payment, updated_at: 3.minutes.ago)
+        create(
+          :x402_settlement,
+          customer:, updated_at: 3.minutes.ago,
+          wallet_transaction: create(:wallet_transaction, wallet: create(:wallet, customer:)), subscription: create(:subscription, customer:)
+        )
+      end
+
+      it "returns settled credit purchases left without a grant for two minutes" do
+        expect(described_class.grant_retry_due).to match_array([due, recorded])
+      end
+    end
   end
 
   describe "validations" do

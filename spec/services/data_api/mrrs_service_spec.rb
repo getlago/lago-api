@@ -4,10 +4,11 @@ require "rails_helper"
 
 RSpec.describe DataApi::MrrsService do
   let(:service) { described_class.new(organization, **params) }
-  let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
   let(:body_response) { File.read("spec/fixtures/lago_data_api/mrrs.json") }
   let(:params) { {} }
+  let(:customer) { create(:customer, organization:) }
+
+  let_it_be(:organization) { create(:organization) }
 
   before do
     stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/mrrs/#{organization.id}/")

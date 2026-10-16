@@ -2,13 +2,6 @@
 
 module Fees
   class AdvanceChargesToDatetimeFilterResolver
-    PRODUCT_FEE_MATCH_ATTRIBUTES = %i[
-      contract_id
-      contract_rate_card_id
-      invoiceable_type
-      invoiceable_id
-    ].freeze
-
     def initialize(billing_contexts:, billing_at:, metered_items: nil)
       @billing_contexts = billing_contexts
       @billing_at = billing_at
@@ -22,7 +15,7 @@ module Fees
 
       relation = Fee.joins(:subscription)
         .where(invoice: nil, payment_status: :succeeded)
-        .where("succeeded_at <= ?", billing_at)
+        .where("fees.succeeded_at <= ?", billing_at)
         .where(subscriptions: {
           customer_id: customer.id,
           external_id: billing_contexts.map(&:external_id).uniq,
@@ -32,7 +25,7 @@ module Fees
       # Upgrades, downgrades and terminations may invoice fees before their period ends.
       if regular_periodic_billing?
         relation.where(
-          "(properties ->> 'charges_to_datetime') IS NULL OR (properties ->> 'charges_to_datetime')::timestamp <= ?",
+          "(fees.properties ->> 'charges_to_datetime') IS NULL OR (fees.properties ->> 'charges_to_datetime')::timestamp <= ?",
           billing_at
         )
       else

@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe Plans::PrepareDestroyService do
   subject(:prepare_destroy_service) { described_class.new(plan:) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:plan) { create(:plan, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:plan) { create(:plan, organization:) }
 
   describe "#call" do
     it "sets pending_deletion to true" do

@@ -7,9 +7,8 @@ RSpec.describe AppliedCoupons::CreateService do
     described_class.new(customer:, coupon:, params:)
   end
 
+  let(:organization) { create_default(:organization) }
   let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-
   let(:customer) { create(:customer, organization:) }
   let(:coupon) { create(:coupon, status: "active", organization:) }
 
@@ -281,8 +280,10 @@ RSpec.describe AppliedCoupons::CreateService do
       context "when it fails to acquire the lock" do
         let(:lock_released_after) { 2.seconds }
 
-        it "raises a BaseLockService::FailedToAcquireLock error" do
-          expect { create_result }.to raise_error(BaseLockService::FailedToAcquireLock, "Failed to acquire lock customer-#{customer.id}-coupon")
+        it "returns a concurrency conflict" do
+          expect(create_result).not_to be_success
+          expect(create_result.error).to be_a(BaseService::ValidationFailure)
+          expect(create_result.error.messages[:base]).to eq(["concurrency_conflict"])
         end
       end
 
@@ -292,6 +293,51 @@ RSpec.describe AppliedCoupons::CreateService do
         it "successfully applies coupon to the customer" do
           expect { create_result }.not_to raise_error
         end
+      end
+    end
+
+    context "when a non-reusable coupon is applied by concurrent requests", transaction: false do
+      let(:coupon) { create(:coupon, status: "active", organization:, reusable: false) }
+
+      it "applies the coupon only once" do
+        customer
+        coupon
+
+        # The first request pauses between the reuse check and the insert, so a second request
+        # runs while the first application is not committed yet.
+        first_call = Queue.new
+        first_call << true
+        checked = Queue.new
+        resume = Queue.new
+
+        allow_any_instance_of(described_class).to receive(:apply_coupon).and_wrap_original do |original, *args| # rubocop:disable RSpec/AnyInstance
+          if first_call.pop(timeout: 0)
+            checked << true
+            resume.pop
+          end
+
+          original.call(*args)
+        end
+
+        apply = lambda do
+          Thread.new do
+            ActiveRecord::Base.connection_pool.with_connection do
+              described_class.call(customer: Customer.find(customer.id), coupon: Coupon.find(coupon.id), params:)
+            end
+          end
+        end
+
+        first = apply.call
+        checked.pop
+        second = apply.call
+        sleep 0.5
+        resume << true
+
+        results = [first.value, second.value]
+
+        expect(results.count(&:success?)).to eq(1)
+        expect(results.reject(&:success?).map { |r| r.error.messages }).to eq([{coupon: ["coupon_is_not_reusable"]}])
+        expect(AppliedCoupon.where(customer_id: customer.id, coupon_id: coupon.id).count).to eq(1)
       end
     end
   end

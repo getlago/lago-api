@@ -8,7 +8,7 @@ Bundler.require(*Rails.groups)
 
 module LagoApi
   class Application < Rails::Application
-    config.load_defaults 8.0
+    config.load_defaults 8.1
 
     # YJIT is disabled by default, enable it with LAGO_ENABLE_YJIT=true
     config.yjit = ActiveModel::Type::Boolean.new.cast(ENV["LAGO_ENABLE_YJIT"]) || false
@@ -28,7 +28,15 @@ module LagoApi
 
     config.api_only = true
     config.active_job.queue_adapter = :sidekiq
+    config.active_storage.variant_processor = :disabled
     config.lago_front_url = ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com"
+
+    # A proxy with a public address (CDN, external load balancer) is not trusted by default, so without it
+    # `request.remote_ip` returns the proxy IP and every client shares the per-IP auth limits.
+    if ENV["LAGO_TRUSTED_PROXIES"].present?
+      config.action_dispatch.trusted_proxies = ActionDispatch::RemoteIp::TRUSTED_PROXIES +
+        ENV["LAGO_TRUSTED_PROXIES"].split(",").map(&:strip).compact_blank.map { IPAddr.new(it) }
+    end
 
     # Configuration for active record encryption
     config.active_record.encryption.hash_digest_class = OpenSSL::Digest::SHA1
@@ -64,4 +72,7 @@ require_relative "../lib/active_job/logging"
 require_relative "../lib/active_job/json_log_subscriber"
 require_relative "../app/serializers/active_job/metered_item_serializer"
 
-ActiveJob::Serializers.add_serializers(ActiveJob::MeteredItemSerializer)
+# Deferred because the serializer's `klass` references an autoloaded constant.
+Rails.application.config.after_initialize do
+  ActiveJob::Serializers.add_serializers(ActiveJob::MeteredItemSerializer)
+end

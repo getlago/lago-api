@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Customers::ApplyTaxesService do
   subject(:apply_service) { described_class.new(customer:, tax_codes:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:tax1) { create(:tax, organization:, code: "tax1") }
   let(:tax2) { create(:tax, organization:, code: "tax2") }
   let(:tax_codes) { [tax1.code, tax2.code] }

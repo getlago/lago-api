@@ -3,6 +3,12 @@
 require "rails_helper"
 
 RSpec.describe BillableMetrics::Aggregations::BaseService do
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+    create_default(:plan)
+  end
+
   describe ".null_result" do
     subject(:null_result) { described_class.null_result(result, **args) }
 
@@ -88,8 +94,6 @@ RSpec.describe BillableMetrics::Aggregations::BaseService do
 
     let(:boundaries) { {from_datetime: Time.current, to_datetime: Time.current} }
     let(:billing_context) { Billing::Context.from(subscription:) }
-
-    let(:subscription) { create(:subscription) }
     let(:charge) { create(:standard_charge, plan: subscription.plan) }
     let(:metered_item) do
       Fees::ChargeService::MeteredItem.from_charge(
@@ -105,6 +109,8 @@ RSpec.describe BillableMetrics::Aggregations::BaseService do
       )
     end
     let(:filters) { {} }
+
+    let_it_be(:subscription, refind: true) { create(:subscription) }
 
     context "without grouped_by" do
       it "returns the aggregator's result zeroed out with the aggregator attached" do

@@ -16,8 +16,8 @@ RSpec.describe CreditNotes::CreateService do
     )
   end
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:customer, refind: true) { create_default(:customer, organization:) }
   let(:args) { {} }
 
   let(:invoice) do
@@ -462,6 +462,24 @@ RSpec.describe CreditNotes::CreateService do
 
         it "enqueues a refund job after commit" do
           expect { subject }.to have_enqueued_job_after_commit(CreditNotes::Refunds::StripeCreateJob).with do |job_credit_note|
+            expect(job_credit_note).to eq(credit_note)
+          end
+        end
+      end
+
+      context "when the payment is an x402 payment" do
+        let(:payment) { create(:payment, :x402_payment, payable: invoice, amount_cents: 6) }
+
+        it "enqueues no refund job" do
+          expect { subject }
+            .to not_have_enqueued_job(CreditNotes::Refunds::StripeCreateJob)
+            .and not_have_enqueued_job(CreditNotes::Refunds::GocardlessCreateJob)
+            .and not_have_enqueued_job(CreditNotes::Refunds::AdyenCreateJob)
+        end
+
+        it "delivers the credit note webhook" do
+          expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with do |event, job_credit_note|
+            expect(event).to eq("credit_note.created")
             expect(job_credit_note).to eq(credit_note)
           end
         end

@@ -3,15 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Orders::Execute do
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "orders:execute" }
-  let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
-  let(:membership) { create(:membership, organization:) }
-  let(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:, order_type: :one_off) }
   let(:quote_version) { create(:quote_version, :approved, quote:, organization:) }
   let(:order_form) { create(:order_form, :signed, organization:, customer:, quote_version:) }
   let(:order) { create(:order, organization:, customer:, order_form:, execution_mode: :order_only) }
-
   let(:mutation) do
     <<~GQL
       mutation($input: ExecuteOrderInput!) {
@@ -23,6 +20,10 @@ RSpec.describe Mutations::Orders::Execute do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization, feature_flags: ["order_forms"]) }
+  let_it_be(:membership) { create_default(:membership, organization:) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

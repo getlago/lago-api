@@ -3,6 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Subscriptions::TerminateEndedSubscriptionJob do
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+    create_default(:plan)
+  end
+
   let(:subscription) { create(:subscription) }
   let(:result) { Subscriptions::TerminateService::Result.new }
 

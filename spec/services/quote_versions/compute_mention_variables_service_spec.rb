@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe QuoteVersions::ComputeMentionVariablesService do
   subject(:service) { described_class.new(quote_version:) }
 
-  let(:organization) { create(:organization, name: "Lago") }
-  let(:billing_entity) do
-    create(
+  let_it_be(:organization) { create_default(:organization, name: "Lago") }
+  let_it_be(:billing_entity) do
+    create_default(
       :billing_entity,
       organization:,
       name: "Globex SARL",
@@ -26,7 +26,7 @@ RSpec.describe QuoteVersions::ComputeMentionVariablesService do
   let(:customer_net_payment_term) { nil }
   let(:customer_document_locale) { nil }
   let(:customer) do
-    create(
+    create_default(
       :customer,
       organization:,
       billing_entity:,

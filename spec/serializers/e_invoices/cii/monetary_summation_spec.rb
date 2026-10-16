@@ -10,7 +10,9 @@ RSpec.describe EInvoices::Cii::MonetarySummation do
     end
   end
 
-  let(:resource) { create(:invoice, currency: "USD") }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:resource) { create_default(:invoice, currency: "USD") }
   let(:amounts) do
     described_class::Amounts.new(
       line_total_amount: Money.new(100000),

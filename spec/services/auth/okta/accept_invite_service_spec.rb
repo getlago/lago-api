@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Auth::Okta::AcceptInviteService, :premium, cache: :memory do
   subject(:service) { described_class.new(invite_token:, code:, state:) }
 
-  let(:organization) { create(:organization, premium_integrations: ["okta"]) }
+  let_it_be(:organization, refind: true) { create(:organization, premium_integrations: ["okta"]) }
   let(:okta_integration) { create(:okta_integration, domain: "bar.com", organization_name: "foo", organization:) }
   let(:invite) { create(:invite, email: "foo@bar.com", organization:) }
   let(:invite_token) { invite.token }
@@ -39,6 +39,48 @@ RSpec.describe Auth::Okta::AcceptInviteService, :premium, cache: :memory do
 
       decoded = Utils::AuthToken.decode(token: result.token)
       expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::OKTA)
+      expect(decoded["sso_organization_id"]).to eq(okta_integration.organization_id)
+      expect(decoded["sso_issuer"]).to eq(okta_integration.sso_issuer)
+    end
+
+    context "when the email domain belongs to another organization's integration" do
+      let(:other_organization) { create(:organization, premium_integrations: ["okta"]) }
+      let(:okta_integration) { create(:okta_integration, domain: "bar.com", organization_name: "foo", organization: other_organization) }
+
+      before { other_organization.enable_okta_authentication! }
+
+      it "refuses the invite and keeps it pending" do
+        result = service.call
+
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq({okta: ["login_method_not_authorized"]})
+        expect(invite.reload).to be_pending
+        expect(User.find_by(email: "foo@bar.com")).to be_nil
+      end
+
+      context "when the invited organization's integration has the same issuer" do
+        before { create(:okta_integration, domain: "baz.com", organization_name: "foo", organization:) }
+
+        it "accepts the invite" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(invite.reload).to be_accepted
+          expect(Utils::AuthToken.decode(token: result.token)["sso_organization_id"]).to eq(other_organization.id)
+        end
+
+        context "when the integration's organization does not allow the login method" do
+          before { other_organization.disable_okta_authentication! }
+
+          it "refuses the invite and keeps it pending" do
+            result = service.call
+
+            expect(result).not_to be_success
+            expect(result.error.messages).to eq({okta: ["login_method_not_authorized"]})
+            expect(invite.reload).to be_pending
+          end
+        end
+      end
     end
 
     context "when code is not provided" do
@@ -106,6 +148,21 @@ RSpec.describe Auth::Okta::AcceptInviteService, :premium, cache: :memory do
 
         expect(result).not_to be_success
         expect(result.error.messages.values.flatten).to include("okta_userinfo_error")
+      end
+    end
+
+    context "when the invited email belongs to a member of another organization" do
+      let(:user) { create(:user, email: "foo@bar.com") }
+
+      before { create(:membership, user:) }
+
+      it "adds the user to the invited organization" do
+        result = service.call
+
+        expect(result).to be_success
+        expect(result.user).to eq(user)
+        expect(invite.reload).to be_accepted
+        expect(user.memberships.active.where(organization:)).to exist
       end
     end
   end

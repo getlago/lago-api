@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Mutations::PasswordResets::Reset do
   include_context "with mocked security logger"
 
-  let(:organization) { create(:organization) }
-  let(:membership) { create(:membership, organization:, user: create(:user, password: "HelloLago!1")) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership, organization:, user: create(:user, password: "HelloLago!1")) }
   let(:user) { membership.user }
   let(:password_reset) { create(:password_reset, user:) }
 
@@ -61,6 +61,27 @@ RSpec.describe Mutations::PasswordResets::Reset do
       )
 
       expect_not_found(result)
+    end
+  end
+
+  context "with attempts throttling" do
+    let(:cache) { ActiveSupport::Cache::MemoryStore.new }
+    let(:request) { instance_double(ActionDispatch::Request, remote_ip: "203.0.113.10") }
+
+    before { Auth::AttemptsThrottle.store = cache }
+
+    it "limits attempts per client IP" do
+      20.times do
+        execute_graphql(query: mutation, request:, variables: {input: {newPassword: "HelloLago!2", token: "invalid"}})
+      end
+
+      result = execute_graphql(
+        query: mutation,
+        request:,
+        variables: {input: {newPassword: "HelloLago!2", token: password_reset.token}}
+      )
+
+      expect(result["errors"].first.dig("extensions", "code")).to eq("too_many_requests")
     end
   end
 end

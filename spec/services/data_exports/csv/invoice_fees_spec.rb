@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe DataExports::Csv::InvoiceFees do
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let(:customer) { create(:customer, timezone:) }
-  let(:plan) { create(:plan, organization: customer.organization) }
   let(:subscription) { create(:subscription, customer:, plan:, organization: customer.organization) }
   let(:invoice) { create(:invoice, customer:, organization: customer.organization) }
   let(:to_utc) { "2024-06-06 12:48:59 UTC" }
@@ -50,6 +50,8 @@ RSpec.describe DataExports::Csv::InvoiceFees do
   let(:fee_serializer_klass) { class_double("V1::FeeSerializer") }
   let(:invoice_serializer_klass) { class_double("V1::InvoiceSerializer") }
 
+  let_it_be(:plan, refind: true) { create_default(:plan, organization:) }
+
   describe ".base_headers" do
     it "uses timezone-agnostic column names" do
       expect(described_class.base_headers).to include("fee_from_date", "fee_to_date")
@@ -82,7 +84,7 @@ RSpec.describe DataExports::Csv::InvoiceFees do
 
     it "generates the correct CSV output" do
       expected_csv = <<~CSV
-        292ef60b-9e0c-42e7-9f50-44d5af4162ec,TWI-2B86-170-001,2024-06-06,cc16e6d5-b5e1-4e2c-9ad3-62b3ee4be302,charge,group,group,charge 1 description,group,Converted to EUR,"{models: ""model_1""}",#{fee.subscription.external_id},#{fee.subscription.plan.code},2024-05-08,2024-06-06,USD,100.0,10.0,50,10000
+        "292ef60b-9e0c-42e7-9f50-44d5af4162ec","TWI-2B86-170-001","2024-06-06","cc16e6d5-b5e1-4e2c-9ad3-62b3ee4be302","charge","group","group","charge 1 description","group","Converted to EUR","{models: ""model_1""}","#{fee.subscription.external_id}","#{fee.subscription.plan.code}","2024-05-08","2024-06-06","USD","100.0","10.0","50","10000"
       CSV
 
       expect(result).to be_success
@@ -300,6 +302,7 @@ RSpec.describe DataExports::Csv::InvoiceFees do
           let(:commitment_boundaries) { {} }
 
           it "exports an empty period" do
+            # nil is written as an empty unquoted field, so it is parsed back as nil
             expect(exported_period).to eq([nil, nil])
           end
         end

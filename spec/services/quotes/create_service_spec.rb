@@ -12,10 +12,9 @@ RSpec.describe Quotes::CreateService do
     )
   end
 
-  let(:organization) { create(:organization, feature_flags: ["order_forms"]) }
-  let(:membership) { create(:membership, organization:) }
+  let_it_be(:organization) { create_default(:organization, feature_flags: ["order_forms"]) }
+  let_it_be(:membership) { create_default(:membership, organization:) }
   let(:owner) { membership.user }
-  let(:customer) { create(:customer, organization:) }
   let(:subscription) { nil }
   let(:create_params) do
     {
@@ -25,6 +24,8 @@ RSpec.describe Quotes::CreateService do
       owners: [owner.id]
     }
   end
+
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   describe ".call" do
     let(:result) { create_service.call }

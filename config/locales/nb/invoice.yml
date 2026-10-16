@@ -21,6 +21,7 @@ nb:
     breakdown: Oversikt
     breakdown_for_days: "%{breakdown_duration} av %{breakdown_total_duration} dager"
     breakdown_of: Fordeling av %{fee_filter_display_name}
+    charges_paid_in_advance: Gebyrer betalt på forskudd
     clabe: CLABE
     conversion_rate: Valutakurs
     country: Land
@@ -58,7 +59,7 @@ nb:
     month: måned
     monthly: Månedlig
     notice_full: Uavhengig av når en hendelse mottas, blir enheten ikke forholdsmessig priset, vi belaster full pris.
-    notice_prorated: Hvis en enhet legges til eller fjernes i løpet av faktureringsperioden, beregner vi den proporsjonale prisen basert på forholdet mellom gjenværende eller brukte dager og det totale antallet dager i planen. For eksempel, hvis det er 15 dager igjen i planen, multipliserer vi prisen med 15/%{days_in_month}, og hvis en enhet ble brukt i 10 dager, multipliserer vi prisen med 10/%{days_in_month}.
+    notice_prorated: Hvis en enhet legges til eller fjernes i løpet av faktureringsperioden, beregner vi den proporsjonale prisen basert på forholdet mellom gjenværende eller brukte dager og det totale antallet dager i planen. For eksempel, hvis det er 15 dager igjen i en periode på %{days_in_month} dager, multipliserer vi prisen med 15/%{days_in_month}, og hvis en enhet ble brukt i 10 dager, multipliserer vi prisen med 10/%{days_in_month}.
     package:
       fee_per_package: Gebyr per pakke
       fee_per_package_unit_price: "%{amount} per %{package_size}"

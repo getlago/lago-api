@@ -69,6 +69,8 @@ class Payment < ApplicationRecord
   end
 
   def invoices
+    return Invoice.none if payable.nil?
+
     payable.payment_invoices
   end
 

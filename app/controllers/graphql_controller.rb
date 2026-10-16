@@ -24,15 +24,21 @@ class GraphqlController < ApplicationController
     operation_name = params[:operationName]
     context = {
       login_method:,
+      session_claims:,
       current_user:,
       current_organization:,
       current_membership:,
+      organization_refused_for_session: organization_refused_for_session?,
       customer_portal_user:,
       request:,
       permissions: (current_membership || Permission)&.permissions_hash
     }
 
     CurrentContext.device_info = Utils::DeviceInfo.parse(request)
+
+    # String and ID arguments are cleaned when GraphQL coerces them (see the graphql_null_bytes
+    # initializer), which covers inline literals. Variables of other types (JSON) are cleaned here.
+    variables = NullByteGuard.sanitize(request, variables)
 
     if query.present? && query.length > MAX_QUERY_LENGTH
       return render_graphql_error(

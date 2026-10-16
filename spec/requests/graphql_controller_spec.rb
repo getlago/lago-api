@@ -86,7 +86,7 @@ RSpec.describe GraphqlController do
       end
 
       let(:token) do
-        Utils::AuthToken.encode(user:)
+        Utils::AuthToken.encode(user:, login_method: Organizations::AuthenticationMethods::EMAIL_PASSWORD)
       end
 
       it "retrieves the current user" do
@@ -177,6 +177,92 @@ RSpec.describe GraphqlController do
       end
     end
 
+    context "with an SSO session" do
+      let(:okta) { Organizations::AuthenticationMethods::OKTA }
+      let(:user) { create(:user) }
+      let(:sso_organization) { create(:organization, authentication_methods: [okta]) }
+      let(:other_organization) { create(:organization, authentication_methods: %w[email_password okta]) }
+      let(:sso_integration) { create(:okta_integration, organization: sso_organization, domain: "sso.test", host: "sso.okta.com") }
+      let(:token) { Utils::AuthToken.encode(user:, login_method: okta, sso_organization_id: sso_organization.id, sso_issuer: sso_integration.sso_issuer) }
+      let(:query) do
+        <<~GRAPHQL
+          query {
+            organization { id apiKey accessibleByCurrentSession }
+          }
+        GRAPHQL
+      end
+
+      before do
+        create(:membership, user:, organization: sso_organization, roles: [:admin])
+        create(:membership, user:, organization: other_organization, roles: [:admin])
+      end
+
+      def query_organization(organization)
+        post "/graphql",
+          headers: {"Authorization" => "Bearer #{token}", "x-lago-organization" => organization.id},
+          params: {query:}
+      end
+
+      it "opens the organization whose integration authenticated the user" do
+        query_organization(sso_organization)
+
+        expect(json[:errors]).to be_nil
+        expect(json[:data][:organization][:id]).to eq(sso_organization.id)
+        expect(json[:data][:organization][:accessibleByCurrentSession]).to be(true)
+      end
+
+      it "refuses another organization that allows Okta through another identity provider" do
+        create(:okta_integration, organization: other_organization, domain: "other.test", host: "other.okta.com")
+
+        query_organization(other_organization)
+
+        expect(json[:data][:organization]).to be_nil
+        expect(json[:errors].first[:extensions][:code]).to eq("forbidden")
+        expect(json[:errors].first[:message]).to eq("Login method not allowed for this organization")
+      end
+
+      it "refuses another organization that allows Okta without an Okta integration" do
+        query_organization(other_organization)
+
+        expect(json[:errors].first[:extensions][:code]).to eq("forbidden")
+      end
+
+      it "opens another organization whose integration uses the same identity provider" do
+        create(:okta_integration, organization: other_organization, domain: "other.test", host: "SSO.okta.com")
+
+        query_organization(other_organization)
+
+        expect(json[:errors]).to be_nil
+        expect(json[:data][:organization][:id]).to eq(other_organization.id)
+      end
+
+      context "when the token has no SSO claims" do
+        let(:token) { Utils::AuthToken.encode(user:, login_method: okta) }
+
+        it "treats the session as unauthenticated" do
+          post "/graphql",
+            headers: {"Authorization" => "Bearer #{token}"},
+            params: {query: "query { currentUser { id } }"}
+
+          expect(json[:errors].first[:extensions][:code]).to eq("unauthorized")
+        end
+      end
+    end
+
+    context "with a session whose login method the organization does not allow" do
+      let(:membership) { create(:membership, roles: [:admin], organization: create(:organization, authentication_methods: %w[email_password])) }
+      let(:token) { Utils::AuthToken.encode(user: membership.user, login_method: Organizations::AuthenticationMethods::GOOGLE_OAUTH) }
+
+      it "refuses the organization" do
+        post "/graphql",
+          headers: {"Authorization" => "Bearer #{token}", "x-lago-organization" => membership.organization_id},
+          params: {query: "query { organization { id } }"}
+
+        expect(json[:errors].first[:extensions][:code]).to eq("forbidden")
+        expect(json[:errors].first[:message]).to eq("Login method not allowed for this organization")
+      end
+    end
+
     context "with customer portal token" do
       let(:customer) { create(:customer) }
       let(:query) do
@@ -205,6 +291,107 @@ RSpec.describe GraphqlController do
         )
 
         expect(response.status).to be(200)
+      end
+    end
+
+    context "with null bytes in the variables" do
+      let(:membership) { create(:membership, roles: [:admin]) }
+      let(:token) { Utils::AuthToken.encode(user: membership.user, login_method: Organizations::AuthenticationMethods::EMAIL_PASSWORD) }
+      let(:query) do
+        <<~GRAPHQL
+          query($searchTerm: String) {
+            customers(searchTerm: $searchTerm) { collection { id } }
+          }
+        GRAPHQL
+      end
+
+      before { create(:customer, organization: membership.organization, name: "ab") }
+
+      it "strips them instead of returning a 500" do
+        post "/graphql",
+          headers: {
+            "Authorization" => "Bearer #{token}",
+            "x-lago-organization" => membership.organization_id,
+            "Content-Type" => "application/json"
+          },
+          params: {query:, variables: {searchTerm: "a\u0000b"}}.to_json
+
+        expect(response.status).to be(200)
+        expect(json[:errors]).to be_nil
+        expect(json[:data][:customers][:collection].count).to eq(1)
+      end
+    end
+
+    context "with a null byte escape in an inline string literal" do
+      let(:membership) { create(:membership, roles: [:admin]) }
+      let(:token) { Utils::AuthToken.encode(user: membership.user, login_method: Organizations::AuthenticationMethods::EMAIL_PASSWORD) }
+
+      before { create(:customer, organization: membership.organization, name: "ab") }
+
+      def search(term_literal)
+        post "/graphql",
+          headers: {
+            "Authorization" => "Bearer #{token}",
+            "x-lago-organization" => membership.organization_id,
+            "Content-Type" => "application/json"
+          },
+          params: {query: "query { customers(searchTerm: \"#{term_literal}\") { collection { id } } }"}.to_json
+      end
+
+      it "strips the decoded null byte instead of returning a 500" do
+        search('a\\u0000b')
+
+        expect(response.status).to be(200)
+        expect(json[:errors]).to be_nil
+        expect(json[:data][:customers][:collection].count).to eq(1)
+      end
+
+      it "keeps an escaped backslash followed by u0000 as text" do
+        search('a\\\\u0000')
+
+        expect(response.status).to be(200)
+        expect(json[:errors]).to be_nil
+      end
+    end
+
+    context "with a null byte escape inside an inline JSON argument", :premium do
+      let(:membership) { create(:membership, roles: [:admin]) }
+      let(:token) { Utils::AuthToken.encode(user: membership.user, login_method: Organizations::AuthenticationMethods::EMAIL_PASSWORD) }
+      let(:customer) { create(:customer, organization: membership.organization) }
+      let(:add_on) { create(:add_on, organization: membership.organization) }
+
+      before { membership.organization.enable_feature_flag!(:order_forms) }
+
+      it "strips it instead of returning a 500" do
+        mutation = <<~GQL
+          mutation {
+            createQuote(input: {
+              customerId: "#{customer.id}",
+              orderType: one_off,
+              content: "Test content",
+              billingItems: {addOns: [{
+                id: "#{add_on.id}",
+                localId: "a\\u0000b",
+                type: "add_on",
+                payload: {code: "#{add_on.code}", units: 1, unitAmountCents: 10000, totalAmountCents: 10000}
+              }]}
+            }) {
+              currentVersion { billingItems }
+            }
+          }
+        GQL
+
+        post "/graphql",
+          headers: {
+            "Authorization" => "Bearer #{token}",
+            "x-lago-organization" => membership.organization_id,
+            "Content-Type" => "application/json"
+          },
+          params: {query: mutation}.to_json
+
+        expect(response.status).to be(200)
+        expect(json[:errors]).to be_nil
+        expect(json[:data][:createQuote][:currentVersion][:billingItems][:addOns].first[:localId]).to eq("ab")
       end
     end
 

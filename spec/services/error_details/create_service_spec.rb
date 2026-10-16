@@ -3,10 +3,10 @@
 require "rails_helper"
 
 RSpec.describe ErrorDetails::CreateService do
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
-  let(:owner) { create(:invoice, organization:, customer:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:owner) { create(:invoice, organization:, customer:) }
 
   describe "#call" do
     subject(:service_call) { described_class.call(params:, owner:, organization:) }

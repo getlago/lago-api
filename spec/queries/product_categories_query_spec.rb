@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe ProductCategoriesQuery do
   subject(:result) { described_class.call(organization:, search_term:, pagination:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:search_term) { nil }
   let(:pagination) { nil }
 

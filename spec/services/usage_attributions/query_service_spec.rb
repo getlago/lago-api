@@ -451,11 +451,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     end
   end
 
-  context "with deduplication enabled" do
-    let(:organization) do
-      create(:organization, clickhouse_events_store: true, clickhouse_deduplication_enabled: true, feature_flags: ["account_tree"])
-    end
-
+  context "with duplicated events" do
     before do
       create_event(code: "tokens", value: 50, labels: {"team" => "ops"}, transaction_id: "tr_dup")
       create_event(code: "tokens", value: 50, labels: {"team" => "ops"}, transaction_id: "tr_dup")

@@ -5,7 +5,9 @@ require "rails_helper"
 RSpec.describe Metadata::CustomerMetadata do
   subject(:metadata) { described_class.new(attributes) }
 
-  let(:customer) { create(:customer) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+
   let(:key) { "hello" }
   let(:value) { "abcdef" }
   let(:attributes) do

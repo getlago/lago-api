@@ -951,4 +951,25 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
       end
     end
   end
+
+  context "when the voided invoice was billed from a contract" do
+    subject(:result) { Invoices::RegenerateFromVoidedService.call(voided_invoice:, fees_params:) }
+
+    let(:voided_invoice) { create(:invoice, :voided, organization:, customer:) }
+    let(:contract_rate_card) do
+      create(:contract_rate_card, organization:, contract: create(:contract, organization:, customer:))
+    end
+    let(:product_fee) do
+      create(:fee, invoice: voided_invoice, subscription: nil, fee_type: :product,
+        invoiceable: contract_rate_card.rate_card.product, contract: contract_rate_card.contract, contract_rate_card:)
+    end
+    let(:fees_params) { [{id: product_fee.id, units: 10}] }
+
+    it "refuses to regenerate it" do
+      expect(result).to be_failure
+      expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+      expect(result.error.code).to eq("product_catalog_invoice_not_regenerable")
+      expect(voided_invoice.reload.regenerated_invoice).to be_nil
+    end
+  end
 end

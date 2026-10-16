@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Auth::Google::RegisterUser do
-  let(:user) { create(:user) }
+  let_it_be(:user) { create_default(:user) }
 
   let(:register_user_result) do
     result = Auth::GoogleService::RESULTS.fetch(:register_user).new

@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Customer do
   subject(:customer) { create(:customer) }
 
-  let(:organization) { create(:organization) }
-  let(:billing_entity) { create(:billing_entity, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billing_entity, refind: true) { create_default(:billing_entity, organization:) }
 
   it_behaves_like "paper_trail traceable"
 
@@ -437,7 +437,7 @@ RSpec.describe Customer do
     end
 
     context "with another organization" do
-      subject(:duplicate) { build(:customer, x402_agent_address: address) }
+      subject(:duplicate) { build(:customer, organization: create(:organization), x402_agent_address: address) }
 
       it { expect(duplicate.save).to be(true) }
     end
@@ -848,6 +848,14 @@ RSpec.describe Customer do
       expect(customer.applicable_invoice_grace_period).to eq(3)
     end
 
+    context "when another billing entity is provided" do
+      let(:other_billing_entity) { build(:billing_entity, invoice_grace_period: 7) }
+
+      it "keeps the customer invoice_grace_period" do
+        expect(customer.applicable_invoice_grace_period(billing_entity: other_billing_entity)).to eq(3)
+      end
+    end
+
     context "when customer does not have an invoice grace period" do
       let(:billing_entity_invoice_grace_period) { 5 }
 
@@ -858,6 +866,14 @@ RSpec.describe Customer do
 
       it "returns the billing entity invoice_grace_period" do
         expect(customer.applicable_invoice_grace_period).to eq(5)
+      end
+
+      context "when another billing entity is provided" do
+        let(:other_billing_entity) { build(:billing_entity, invoice_grace_period: 7) }
+
+        it "returns the provided billing entity invoice_grace_period" do
+          expect(customer.applicable_invoice_grace_period(billing_entity: other_billing_entity)).to eq(7)
+        end
       end
 
       context "when billing entity invoice_grace_period is nil" do
@@ -1319,7 +1335,7 @@ RSpec.describe Customer do
   describe "#overdue_balance_cents" do
     subject(:overdue_balance_cents) { customer.overdue_balance_cents }
 
-    let(:customer) { create(:customer, currency: "USD") }
+    let_it_be(:customer) { create(:customer, currency: "USD") }
 
     context "when there are no overdue invoices" do
       before do
@@ -1385,7 +1401,7 @@ RSpec.describe Customer do
   end
 
   describe "#overdue_balances" do
-    let(:customer) { create(:customer, currency: "USD") }
+    let_it_be(:customer) { create(:customer, currency: "USD") }
 
     context "when there are no overdue invoices" do
       it "returns an empty hash" do
@@ -1448,8 +1464,8 @@ RSpec.describe Customer do
   end
 
   describe "#reset_dunning_campaign_for_currency!" do
-    let(:last_dunning_campaign_attempt_at) { 1.day.ago }
-    let(:customer) do
+    let_it_be(:last_dunning_campaign_attempt_at) { 1.day.ago }
+    let_it_be(:customer, refind: true) do
       create(
         :customer,
         last_dunning_campaign_attempt: 5,
@@ -1563,7 +1579,7 @@ RSpec.describe Customer do
   end
 
   describe "#payment_connection" do
-    let(:customer) { create(:customer) }
+    let_it_be(:customer) { create(:customer) }
     let!(:default_connection) { create(:stripe_customer, customer:, code: "stripe_eu", is_default: true) }
     let!(:other_connection) { create(:gocardless_customer, customer:, code: "gc") }
 

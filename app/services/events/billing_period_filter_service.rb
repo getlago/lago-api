@@ -7,7 +7,8 @@ module Events
     # precomputed_filters maps a charge served from the pre-aggregated usage buckets to the charge
     # filter ids those buckets hold usage for, nil being the default bucket. Such a charge is
     # resolved from them rather than from the events store.
-    def self.for_charges!(subscription:, boundaries:, codes: nil, with_last_seen_at: true, precomputed_filters: {}, combinations_cache_ttl: nil)
+    def self.for_charges!(subscription:, boundaries:, codes: nil, with_last_seen_at: true, precomputed_filters: {}, combinations_cache_ttl: nil,
+      incremental_combinations: false)
       call!(
         resolver: BillingPeriodFilters::ChargesResolver.new(
           subscription:,
@@ -15,7 +16,8 @@ module Events
           codes:,
           with_last_seen_at:,
           precomputed_filters:,
-          combinations_cache_ttl:
+          combinations_cache_ttl:,
+          incremental_combinations:
         )
       )
     end

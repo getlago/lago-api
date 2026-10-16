@@ -5,7 +5,9 @@ require "rails_helper"
 RSpec.describe Invoice do
   subject(:invoice) { create(:invoice, organization:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:add_on) { create_default(:add_on) }
 
   it_behaves_like "paper_trail traceable"
   it_behaves_like "a model with a purchase order number"
@@ -157,13 +159,13 @@ RSpec.describe Invoice do
       it { expect(invoice.errors.messages[:x402_connection]).to be_empty }
 
       context "with a connection of another organization" do
-        let(:connection) { create(:x402_connection) }
+        let(:connection) { create(:x402_connection, organization: create(:organization)) }
 
         it { expect(invoice.errors.messages[:x402_connection]).to eq(["must_belong_to_same_organization"]) }
       end
 
       context "with a discarded connection of another organization" do
-        let(:connection) { create(:x402_connection, :discarded) }
+        let(:connection) { create(:x402_connection, :discarded, organization: create(:organization)) }
 
         it { expect(invoice.errors.messages[:x402_connection]).to eq(["must_belong_to_same_organization"]) }
       end
@@ -353,8 +355,16 @@ RSpec.describe Invoice do
     end
 
     context "with invoices on other organization" do
+      let(:other_organization) { create(:organization) }
+
       before do
-        create(:invoice, sequential_id: 1, organization_sequential_id: 0)
+        create(
+          :invoice,
+          organization: other_organization,
+          customer: create(:customer, organization: other_organization),
+          sequential_id: 1,
+          organization_sequential_id: 0
+        )
       end
 
       it "scopes the sequence to the organization" do
@@ -428,6 +438,26 @@ RSpec.describe Invoice do
 
     it "returns only the invoices that are ready for refresh" do
       expect(described_class.ready_to_be_refreshed.pluck(:id)).to include(invoices[0].id)
+    end
+  end
+
+  describe ".with_active_contracts" do
+    let(:customer) { create(:customer, organization:) }
+    let(:active_invoice) { create(:invoice, organization:, customer:) }
+    let(:pending_invoice) { create(:invoice, organization:, customer:) }
+    let(:terminated_invoice) { create(:invoice, organization:, customer:) }
+
+    before do
+      active_contract = create(:contract, organization:, customer:)
+      pending_contract = create(:contract, :pending, organization:, customer:)
+      terminated_contract = create(:contract, :terminated, organization:, customer:)
+      create(:billing_segment, organization:, customer:, contract: active_contract, invoice: active_invoice)
+      create(:billing_segment, organization:, customer:, contract: pending_contract, invoice: pending_invoice)
+      create(:billing_segment, organization:, customer:, contract: terminated_contract, invoice: terminated_invoice)
+    end
+
+    it "returns invoices related to active contracts" do
+      expect(described_class.with_active_contracts).to eq([active_invoice])
     end
   end
 

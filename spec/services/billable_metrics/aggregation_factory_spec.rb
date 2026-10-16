@@ -5,22 +5,19 @@ require "rails_helper"
 RSpec.describe BillableMetrics::AggregationFactory do
   subject(:factory) { described_class }
 
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+    create_default(:plan)
+  end
+
   let(:billable_metric) { create(billable_aggregation, recurring:) }
-  let(:billable_aggregation) { :billable_metric }
-  let(:recurring) { false }
-
-  let(:charge) { build(:standard_charge, billable_metric:, pay_in_advance:, prorated:) }
-  let(:pay_in_advance) { false }
-  let(:prorated) { false }
-
-  let(:subscription) { create(:subscription, started_at: DateTime.parse("2023-03-15")) }
   let(:boundaries) do
     {
       charges_from_datetime: subscription.started_at.beginning_of_day,
       charges_to_datetime: subscription.started_at.end_of_month.end_of_day
     }
   end
-
   let(:current_usage) { false }
   let(:metered_item) do
     Fees::ChargeService::MeteredItem.from_charge(
@@ -35,10 +32,16 @@ RSpec.describe BillableMetrics::AggregationFactory do
       )
     )
   end
-
   let(:billing_context) { Billing::Context.from(subscription:) }
-
   let(:result) { factory.new_instance(metered_item:, current_usage:, billing_context:, boundaries:) }
+  let(:billable_aggregation) { :billable_metric }
+  let(:recurring) { false }
+
+  let(:charge) { build(:standard_charge, billable_metric:, pay_in_advance:, prorated:) }
+  let(:pay_in_advance) { false }
+  let(:prorated) { false }
+
+  let_it_be(:subscription) { create(:subscription, started_at: DateTime.parse("2023-03-15")) }
 
   describe "#new_instance" do
     context "with count_agg aggregation" do
@@ -141,7 +144,6 @@ RSpec.describe BillableMetrics::AggregationFactory do
         expect(store.code).to eq(billable_metric.code)
         expect(store.billing_context).to eq(billing_context)
         expect(store.boundaries).to eq(boundaries)
-        expect(store.deduplicate).to be(false)
       end
 
       it "forwards the aggregation filters" do
@@ -153,20 +155,19 @@ RSpec.describe BillableMetrics::AggregationFactory do
         expect(store.filters).to eq(filters)
       end
 
-      context "when the organization deduplicates its clickhouse events" do
+      context "when the organization uses the clickhouse events store" do
         include_context "with clickhouse availability"
 
         let(:billable_metric) do
           create(
             billable_aggregation,
             recurring:,
-            organization: create(:organization, clickhouse_events_store: true, clickhouse_deduplication_enabled: true)
+            organization: create(:organization, clickhouse_events_store: true)
           )
         end
 
-        it "resolves the store class and the deduplication mode from the organization" do
+        it "resolves the store class from the organization" do
           expect(store).to be_a(Events::Stores::ClickhouseStore)
-          expect(store.deduplicate).to be(true)
         end
       end
 

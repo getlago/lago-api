@@ -14,6 +14,7 @@ module Emails
 
     def call
       return result.not_found_failure!(resource: resource_type) unless resource
+      return result.not_allowed_failure!(code: "payable_not_found") if missing_payable?
       return result.not_allowed_failure!(code: "#{resource_type}_not_finalized") unless valid_status?
       return result.forbidden_failure!(code: "premium_license_required") unless License.premium?
       return result.validation_failure!(errors: validation_errors) if validation_errors.any?
@@ -44,6 +45,12 @@ module Emails
     def mailer_params
       param_key = resource.class.name.underscore.to_sym
       {param_key => resource, :resend => true, :to => recipients_to, :cc => recipients_cc, :bcc => recipients_bcc}
+    end
+
+    # A payment receipt whose invoice or payment request no longer exists cannot be
+    # rendered or emailed, so stop before the mailer generates any document.
+    def missing_payable?
+      resource.is_a?(PaymentReceipt) && resource.payment.payable.nil?
     end
 
     def valid_status?

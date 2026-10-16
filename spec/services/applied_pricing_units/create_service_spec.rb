@@ -65,7 +65,7 @@ RSpec.describe AppliedPricingUnits::CreateService do
     end
 
     context "when charge is present" do
-      let(:organization) { create(:organization) }
+      let_it_be(:organization) { create(:organization) }
       let(:charge) { create(:standard_charge, organization:) }
 
       context "when applied pricing unit should not be created" do

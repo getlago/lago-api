@@ -3,8 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Invites::Accept do
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:membership) { create_default(:membership) }
   let(:password) { Faker::Internet.password }
 
   let(:mutation) do
@@ -32,7 +33,6 @@ RSpec.describe Mutations::Invites::Accept do
           query: mutation,
           variables: {
             input: {
-              email: invite.email,
               password:,
               token: invite.token
             }
@@ -48,6 +48,66 @@ RSpec.describe Mutations::Invites::Accept do
       end
     end
 
+    context "with the deprecated email argument" do
+      let(:invite) { create(:invite, organization:) }
+
+      it "ignores it and accepts the invite" do
+        result = execute_graphql(
+          query: mutation,
+          variables: {
+            input: {
+              email: "not-the-invited-email@example.com",
+              password:,
+              token: invite.token
+            }
+          }
+        )
+
+        data = result["data"]["acceptInvite"]
+
+        expect(data["user"]["email"]).to eq(invite.email)
+        expect(data["token"]).to be_present
+      end
+    end
+
+    context "with an existing user" do
+      let(:invite) { create(:invite, organization:) }
+
+      before { create(:user, email: invite.email, password: "ILoveLago") }
+
+      it "accepts the invite with the password of the existing user" do
+        result = execute_graphql(
+          query: mutation,
+          variables: {
+            input: {
+              password: "ILoveLago",
+              token: invite.token
+            }
+          }
+        )
+
+        data = result["data"]["acceptInvite"]
+
+        expect(data["user"]["email"]).to eq(invite.email)
+        expect(data["token"]).to be_present
+      end
+
+      it "returns an error with any other password" do
+        result = execute_graphql(
+          query: mutation,
+          variables: {
+            input: {
+              password:,
+              token: invite.token
+            }
+          }
+        )
+
+        expect(result["errors"].first["extensions"]["status"]).to eq(422)
+        expect(result["errors"].first["extensions"]["details"]["base"]).to eq(["incorrect_login_or_password"])
+      end
+    end
+
     context "when invite is revoked" do
       let(:invite) { create(:invite, organization:, status: :revoked) }
 
@@ -58,7 +118,6 @@ RSpec.describe Mutations::Invites::Accept do
           query: mutation,
           variables: {
             input: {
-              email: invite.email,
               password:,
               token: invite.token
             }
@@ -81,7 +140,6 @@ RSpec.describe Mutations::Invites::Accept do
           query: mutation,
           variables: {
             input: {
-              email: invite.email,
               password:,
               token: invite.token
             }
@@ -91,6 +149,24 @@ RSpec.describe Mutations::Invites::Accept do
         expect(result["errors"].first["extensions"]["status"]).to eq(404)
         expect(result["errors"].first["extensions"]["code"]).to eq("not_found")
         expect(result["errors"].first["extensions"]["details"]["invite"]).to eq(["not_found"])
+      end
+    end
+
+    context "with attempts throttling" do
+      let(:cache) { ActiveSupport::Cache::MemoryStore.new }
+      let(:request) { instance_double(ActionDispatch::Request, remote_ip: "203.0.113.10") }
+      let(:invite) { create(:invite, organization:) }
+
+      before { Auth::AttemptsThrottle.store = cache }
+
+      it "limits attempts per client IP" do
+        20.times do
+          execute_graphql(query: mutation, request:, variables: {input: {email: invite.email, password:, token: "invalid"}})
+        end
+
+        result = execute_graphql(query: mutation, request:, variables: {input: {email: invite.email, password:, token: invite.token}})
+
+        expect(result["errors"].first.dig("extensions", "code")).to eq("too_many_requests")
       end
     end
   end

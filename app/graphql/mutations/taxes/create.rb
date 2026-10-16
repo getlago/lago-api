@@ -6,8 +6,7 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      # Permissions ??
-      # REQUIRED_PERMISSION = 'taxes:create'
+      REQUIRED_PERMISSION = "organization:taxes:update"
 
       graphql_name "CreateTax"
       description "Creates a tax"

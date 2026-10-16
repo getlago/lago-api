@@ -20,6 +20,10 @@ module Api
     include ApiLoggable
 
     rescue_from ActionController::ParameterMissing, with: :bad_request_error
+    # A number too large for its column (bigint amounts, integer terms) fails when it is saved.
+    rescue_from ActiveModel::RangeError, ActiveRecord::RangeError, with: :value_out_of_range_error
+
+    before_action :strip_null_bytes
 
     private
 
@@ -67,6 +71,14 @@ module Api
 
     def track_api_key_usage?
       true
+    end
+
+    def strip_null_bytes
+      NullByteGuard.sanitize_params!(request, params)
+    end
+
+    def value_out_of_range_error
+      validation_errors(errors: {base: ["value_is_out_of_range"]})
     end
 
     def authorize

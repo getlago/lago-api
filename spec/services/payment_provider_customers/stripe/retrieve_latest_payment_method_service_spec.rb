@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe PaymentProviderCustomers::Stripe::RetrieveLatestPaymentMethodService do
   subject { described_class.new(provider_customer:) }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:provider_customer_id) { "cus_Rw5Qso78STEap3" }
   let(:provider_customer) { create(:stripe_customer, customer:, provider_customer_id:, payment_provider: create(:stripe_provider, organization:), payment_method_id: nil) }
 

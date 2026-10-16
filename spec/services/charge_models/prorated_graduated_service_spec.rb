@@ -11,9 +11,14 @@ RSpec.describe ChargeModels::ProratedGraduatedService do
     )
   end
 
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
-  let(:subscription) { create(:subscription, organization:, plan:) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:plan, refind: true) { create(:plan, organization:) }
+
+  before_all do
+    create_default(:customer)
+  end
+
+  let_it_be(:subscription, refind: true) { create(:subscription, organization:, plan:) }
   let(:metered_item) do
     Fees::ChargeService::MeteredItem.from_charge(
       charge:,

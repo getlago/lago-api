@@ -33,5 +33,15 @@ RSpec.describe Events::CalculateExpressionService do
         expect(service_call.event.properties[field_name]).to eq(3)
       end
     end
+
+    context "when the expression divides by a property equal to zero" do
+      let(:expression) { "event.properties.left / event.properties.right" }
+      let(:properties) { {"left" => "1", "right" => "0"} }
+
+      it "returns a failure instead of raising" do
+        expect(service_call).not_to be_success
+        expect(service_call.error.code.to_s).to eq("expression_evaluation_failed")
+      end
+    end
   end
 end

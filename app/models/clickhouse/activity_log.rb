@@ -22,7 +22,10 @@ module Clickhouse
     belongs_to :user, optional: true
     belongs_to :api_key, optional: true
 
-    RESOURCE_TYPES_WITH_DISCARDED = %w[BillableMetric Plan CatalogPlan Customer BillingEntity Coupon ProductCategory Product ProductFilter RateCard].freeze
+    RESOURCE_TYPES_WITH_DISCARDED = %w[
+      BillableMetric Plan CatalogPlan Customer BillingEntity Coupon ProductCategory Product ProductFilter RateCard
+      RateCardRate PlanRateCard ContractRateCard
+    ].freeze
 
     RESOURCE_TYPES = {
       billable_metric: "BillableMetric",
@@ -42,6 +45,10 @@ module Clickhouse
       product: "Product",
       product_filter: "ProductFilter",
       rate_card: "RateCard",
+      rate_card_rate: "RateCardRate",
+      plan_rate_card: "PlanRateCard",
+      contract_rate_card: "ContractRateCard",
+      contract: "Contract",
       quote: "Quote",
       order_form: "OrderForm",
       order: "Order"
@@ -111,6 +118,20 @@ module Clickhouse
       rate_card_created: "rate_card.created",
       rate_card_updated: "rate_card.updated",
       rate_card_deleted: "rate_card.deleted",
+      rate_card_rate_created: "rate_card_rate.created",
+      rate_card_rate_updated: "rate_card_rate.updated",
+      rate_card_rate_deleted: "rate_card_rate.deleted",
+      plan_rate_card_created: "plan_rate_card.created",
+      plan_rate_card_updated: "plan_rate_card.updated",
+      plan_rate_card_deleted: "plan_rate_card.deleted",
+      contract_rate_card_created: "contract_rate_card.created",
+      contract_rate_card_updated: "contract_rate_card.updated",
+      contract_rate_card_deleted: "contract_rate_card.deleted",
+      contract_created: "contract.created",
+      contract_updated: "contract.updated",
+      contract_started: "contract.started",
+      contract_terminated: "contract.terminated",
+      contract_canceled: "contract.canceled",
       quote_created: "quote.created",
       quote_updated: "quote.updated",
       quote_approved: "quote.approved",

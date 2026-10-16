@@ -263,7 +263,6 @@ module UsageAttributions
         search:,
         limit:,
         offset:,
-        deduplicate: organization.clickhouse_deduplication_enabled?,
         max_groups: MAX_GROUPS,
         max_execution_time: MAX_EXECUTION_TIME
       )

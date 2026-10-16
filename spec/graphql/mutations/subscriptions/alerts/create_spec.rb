@@ -16,6 +16,19 @@ RSpec.describe Mutations::Subscriptions::Alerts::Create do
   end
 
   let(:required_permission) { "subscriptions:update" }
+  let(:subscription) { create(:subscription, customer:) }
+  let(:input) do
+    {
+      subscriptionId: subscription.id,
+      code: "global",
+      alertType: "current_usage_amount",
+      thresholds: [
+        {code: "warn", value: "10"},
+        {code: "alert", value: "50"},
+        {value: "20", recurring: true}
+      ]
+    }
+  end
   let(:mutation) do
     <<-GQL
     mutation ($input: CreateSubscriptionAlertInput!) {
@@ -33,22 +46,11 @@ RSpec.describe Mutations::Subscriptions::Alerts::Create do
     }
     GQL
   end
-  let(:membership) { create(:membership) }
-  let(:customer) { create(:customer, organization: membership.organization) }
-  let(:subscription) { create(:subscription, customer:) }
 
-  let(:input) do
-    {
-      subscriptionId: subscription.id,
-      code: "global",
-      alertType: "current_usage_amount",
-      thresholds: [
-        {code: "warn", value: "10"},
-        {code: "alert", value: "50"},
-        {value: "20", recurring: true}
-      ]
-    }
-  end
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:customer) { create_default(:customer, organization: membership.organization) }
 
   before do
     subscription

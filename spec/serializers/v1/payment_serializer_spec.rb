@@ -7,6 +7,9 @@ RSpec.describe ::V1::PaymentSerializer do
     described_class.new(payment, root_name: "payment", includes:)
   end
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+
   context "when payable is an invoice" do
     let(:payment) { create(:payment) }
 
@@ -88,6 +91,37 @@ RSpec.describe ::V1::PaymentSerializer do
     end
   end
 
+  context "when the payment is an x402 payment" do
+    let(:invoice) { create(:invoice, total_amount_cents: 1000) }
+    let(:payment) { create(:payment, :x402_payment, payable: invoice, amount_cents: 1000) }
+    let(:includes) { [] }
+
+    context "with its settlement" do
+      let(:settlement) { create(:x402_settlement, payment:) }
+
+      before { settlement }
+
+      it "serializes the settlement" do
+        result = JSON.parse(serializer.to_json)
+
+        expect(result["payment"]["x402_settlement"]).to eq(
+          "lago_id" => settlement.id,
+          "network" => "eip155:84532",
+          "transaction_hash" => settlement.transaction_hash,
+          "payer_address" => settlement.payer_address
+        )
+      end
+    end
+
+    context "without a settlement" do
+      it "serializes a null settlement" do
+        result = JSON.parse(serializer.to_json)
+
+        expect(result["payment"]).to include("x402_settlement" => nil)
+      end
+    end
+  end
+
   context "when payable is a payment request" do
     let(:payment) { create(:payment, payable: payment_request) }
     let(:payment_request) { create(:payment_request, payment_status: "succeeded") }
@@ -128,6 +162,36 @@ RSpec.describe ::V1::PaymentSerializer do
           "lago_id" => payment_receipt.id,
           "number" => payment_receipt.number,
           "created_at" => payment_receipt.created_at.iso8601
+        )
+      end
+    end
+  end
+
+  %w[Invoice PaymentRequest].each do |payable_type|
+    context "when the #{payable_type} payable no longer exists" do
+      let(:includes) { [] }
+      let(:missing_payable_id) { SecureRandom.uuid }
+      let(:payment) do
+        payable = (payable_type == "Invoice") ? create(:invoice) : create(:payment_request)
+        create(:payment, payable:).tap do |payment|
+          payment.update_columns(payable_id: missing_payable_id) # rubocop:disable Rails/SkipsModelValidations
+          payment.reload
+        end
+      end
+
+      it "serializes the payment with its own customer and stored payable id" do
+        result = JSON.parse(serializer.to_json)
+
+        expect(result["payment"]).to include(
+          "lago_id" => payment.id,
+          "lago_customer_id" => payment.customer_id,
+          "external_customer_id" => payment.customer.external_id,
+          "invoice_ids" => [],
+          "invoice_numbers" => [],
+          "lago_payable_id" => missing_payable_id,
+          "payable_type" => payable_type,
+          "amount_cents" => payment.amount_cents,
+          "amount_currency" => payment.amount_currency
         )
       end
     end

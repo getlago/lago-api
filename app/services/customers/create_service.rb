@@ -67,12 +67,17 @@ module Customers
         tax_identification_number: args[:tax_identification_number],
         firstname: args[:firstname],
         lastname: args[:lastname],
-        customer_type: args[:customer_type]
+        customer_type: args[:customer_type],
+        x402_agent_address: args[:x402_agent_address]
       )
 
       if customer&.organization&.revenue_share_enabled?
         customer.account_type = args[:account_type] if args.key?(:account_type)
         customer.exclude_from_dunning_campaign = customer.partner_account?
+      end
+
+      if args.key?(:exclude_from_dunning_campaign)
+        customer.exclude_from_dunning_campaign = args[:exclude_from_dunning_campaign]
       end
 
       if args.key?(:finalize_zero_amount_invoice)
@@ -124,7 +129,7 @@ module Customers
         new_customer: true
       )
 
-      SendWebhookJob.perform_later("customer.created", customer)
+      SendWebhookJob.perform_after_commit("customer.created", customer)
       result
     rescue BaseService::FailedResult => e
       result.fail_with_error!(e)

@@ -23,7 +23,7 @@ RSpec.describe Fees::ChargeService, :premium do
 
   let(:customer) { create(:customer, organization:) }
   let(:billing_context) { Billing::Context.from(subscription:) }
-  let(:organization) { create(:organization) }
+  let(:organization) { create_default(:organization) }
   let(:context) { :finalize }
   let(:apply_taxes) { false }
   let(:filtered_aggregations) { nil }
@@ -764,6 +764,24 @@ RSpec.describe Fees::ChargeService, :premium do
               precise_unit_amount: 20,
               grouped_by: {"cloud" => "gcp"}
             )
+          end
+
+          context "when events omit the group or send it blank" do
+            before do
+              [{value: 3}, {value: 4, cloud: ""}].each do |properties|
+                create(:event, organization: subscription.organization, subscription:, code: charge.billable_metric.code,
+                  timestamp: Time.zone.parse("2022-03-16"), properties:)
+              end
+            end
+
+            it "creates a single fee for both" do
+              result = charge_subscription_service.call
+
+              expect(result).to be_success
+              expect(result.fees.map { [it.grouped_by, it.units] }).to match_array([
+                [{"cloud" => "aws"}, 15], [{"cloud" => "gcp"}, 10], [{"cloud" => nil}, 7]
+              ])
+            end
           end
 
           context "with adjusted fee" do

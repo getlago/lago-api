@@ -21,6 +21,7 @@ fr:
     breakdown: Détails de consommation
     breakdown_for_days: "%{breakdown_duration} sur %{breakdown_total_duration} jours"
     breakdown_of: Détails de consommation de %{fee_filter_display_name}
+    charges_paid_in_advance: Frais payés à l'avance
     clabe: CLABE
     conversion_rate: Taux de conversion
     country: Pays
@@ -58,7 +59,7 @@ fr:
     month: mois
     monthly: mensuel
     notice_full: Peu importe quand l’évènement de consommation est reçu, l'unité n'est pas proratisée et nous facturons le prix complet.
-    notice_prorated: Si une unité est ajoutée ou supprimée pendant la période de facturation, nous calculons le prix au prorata en fonction du ratio des jours restants ou utilisés. Par exemple, s'il reste 15 jours dans le plan, nous multiplions le prix par 15/%{days_in_month}, et si une unité a été utilisée pendant 10 jours, nous multiplions le prix par 10/%{days_in_month}.
+    notice_prorated: Si une unité est ajoutée ou supprimée pendant la période de facturation, nous calculons le prix au prorata en fonction du ratio des jours restants ou utilisés. Par exemple, s'il reste 15 jours sur une période de %{days_in_month} jours, nous multiplions le prix par 15/%{days_in_month}, et si une unité a été utilisée pendant 10 jours, nous multiplions le prix par 10/%{days_in_month}.
     package:
       fee_per_package: Frais par tranche
       fee_per_package_unit_price: "%{amount} par tranche de %{package_size}"

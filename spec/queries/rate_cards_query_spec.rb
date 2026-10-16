@@ -3,16 +3,20 @@
 require "rails_helper"
 
 RSpec.describe RateCardsQuery do
+  before_all do
+    create_default(:billable_metric)
+  end
+
   subject(:result) { described_class.call(organization:, search_term:, pagination:, filters:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:search_term) { nil }
   let(:pagination) { nil }
   let(:filters) { {} }
 
   let(:product) { create(:product, organization:) }
-  let!(:card_one) { create(:rate_card, organization:, product:, name: "Growth USD", code: "growth_usd") }
-  let!(:card_two) { create(:rate_card, organization:, name: "Standard EUR", code: "standard_eur") }
+  let!(:card_one) { create(:rate_card, organization:, product:, name: "Growth USD", code: "growth_usd", currency: "USD") }
+  let!(:card_two) { create(:rate_card, organization:, name: "Standard EUR", code: "standard_eur", currency: "EUR") }
 
   it "returns all rate cards of the organization" do
     expect(result.rate_cards).to match_array([card_one, card_two])
@@ -107,6 +111,16 @@ RSpec.describe RateCardsQuery do
 
     it "returns only the card with that code" do
       expect(result.rate_cards).to eq([card_one])
+    end
+  end
+
+  context "with a currency filter" do
+    let(:filters) { {currency: "USD"} }
+    let(:pagination) { {page: 1, limit: 1} }
+
+    it "filters before pagination and counts only matching cards" do
+      expect(result.rate_cards).to eq([card_one])
+      expect(result.rate_cards.total_count).to eq(1)
     end
   end
 

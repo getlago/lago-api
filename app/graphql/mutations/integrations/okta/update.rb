@@ -7,7 +7,9 @@ module Mutations
         include AuthenticableApiUser
         include RequiredOrganization
 
-        REQUIRED_PERMISSION = "organization:integrations:update"
+        # NOTE: The integration decides who can log in to the organization, so it is managed
+        #       with the authentication methods rather than with the other integrations.
+        REQUIRED_PERMISSION = "authentication_methods:update"
 
         graphql_name "UpdateOktaIntegration"
         description "Update Okta integration"

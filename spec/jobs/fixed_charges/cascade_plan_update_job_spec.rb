@@ -11,8 +11,8 @@ RSpec.describe FixedCharges::CascadePlanUpdateJob do
     )
   end
 
-  let(:organization) { create(:organization) }
-  let(:plan) { create(:plan, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:plan) { create(:plan, organization:) }
   let(:timestamp) { Time.current.to_i }
   let(:cascade_fixed_charges_payload) do
     [
