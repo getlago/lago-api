@@ -135,6 +135,7 @@ module Fees
         properties["fixed_charges_from_datetime"] = nil
         properties["fixed_charges_to_datetime"] = nil
         properties["fixed_charges_duration"] = nil
+        properties["product_filter_values"] = product_filter&.to_h if billing_segment
         properties
       end
     end
