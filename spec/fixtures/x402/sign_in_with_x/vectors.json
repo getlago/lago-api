@@ -1,0 +1,127 @@
+{
+  "generated_with": {
+    "viem": "2.56.7",
+    "@signinwithethereum/siwe": "4.2.1",
+    "eth-account": "0.14.0",
+    "tweetnacl": "1.0.3",
+    "@x402/extensions": "2.26.0"
+  },
+  "evm": [
+    {
+      "name": "base_sepolia_full",
+      "public_key": "0x044f355bdcb7cc0af728ef3cceb9615d90684bb5b2ca5f859ab0f0b704075871aa385b6b1b8ead809ca67454d9683fcf2ba03456d6fe2c4abe2b07f0fbdbb2f1c1",
+      "message": "api.example.com wants you to sign in with your Ethereum account:\n0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A\n\nSign in to use your credits\n\nURI: https://api.example.com/v1/generate\nVersion: 1\nChain ID: 84532\nNonce: a1b2c3d4e5f67890a1b2c3d4e5f67890\nIssued At: 2026-10-16T10:00:00.000Z\nExpiration Time: 2026-10-16T10:05:00.000Z\nRequest ID: req-1\nResources:\n- https://api.example.com/v1/generate",
+      "payload": {
+        "domain": "api.example.com",
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "statement": "Sign in to use your credits",
+        "uri": "https://api.example.com/v1/generate",
+        "version": "1",
+        "chainId": "eip155:84532",
+        "type": "eip191",
+        "nonce": "a1b2c3d4e5f67890a1b2c3d4e5f67890",
+        "issuedAt": "2026-10-16T10:00:00.000Z",
+        "expirationTime": "2026-10-16T10:05:00.000Z",
+        "requestId": "req-1",
+        "resources": [
+          "https://api.example.com/v1/generate"
+        ],
+        "signature": "0xeea8e077e327e6f271cbf173bfd048a3b5b7488f354570ea9e4a1d20abdc297809144724dcb8e1d2d5d04f6e0a1c846dff37d776e65958956954897ea7773bd41b"
+      }
+    },
+    {
+      "name": "base_minimal",
+      "public_key": "0x04466d7fcae563e5cb09a0d1870bb580344804617879a14949cf22285f1bae3f276728176c3c6431f8eeda4538dc37c865e2784f3a9e77d044f33e407797e1278a",
+      "message": "api.example.com wants you to sign in with your Ethereum account:\n0x1563915e194D8CfBA1943570603F7606A3115508\n\nSign in to use your credits\n\nURI: https://api.example.com/v1/generate\nVersion: 1\nChain ID: 8453\nNonce: a1b2c3d4e5f67890a1b2c3d4e5f67890\nIssued At: 2026-10-16T10:00:00.000Z",
+      "payload": {
+        "domain": "api.example.com",
+        "address": "0x1563915e194D8CfBA1943570603F7606A3115508",
+        "statement": "Sign in to use your credits",
+        "uri": "https://api.example.com/v1/generate",
+        "version": "1",
+        "chainId": "eip155:8453",
+        "type": "eip191",
+        "nonce": "a1b2c3d4e5f67890a1b2c3d4e5f67890",
+        "issuedAt": "2026-10-16T10:00:00.000Z",
+        "signature": "0x70af69dcccc4f178f8971bbbdec3a763f46e07d3588358f30045232fd30027bd356482f04b7a787958dca71494275bb64d28837001d8675c2940161471822c071c"
+      }
+    }
+  ],
+  "svm": [
+    {
+      "name": "solana_devnet_full",
+      "message": "api.example.com wants you to sign in with your Solana account:\n2btLJAAb1S3x6hZYdVyAePjqtQYi2ZBSRGy4569RZu8h\n\nSign in to use your credits\n\nURI: https://api.example.com/v1/generate\nVersion: 1\nChain ID: EtWTRABZaYq6iMfeYKouRu166VU2xqa1\nNonce: a1b2c3d4e5f67890a1b2c3d4e5f67890\nIssued At: 2026-10-16T10:00:00.000Z\nExpiration Time: 2026-10-16T10:05:00.000Z\nRequest ID: req-1\nResources:\n- https://api.example.com/v1/generate",
+      "payload": {
+        "domain": "api.example.com",
+        "address": "2btLJAAb1S3x6hZYdVyAePjqtQYi2ZBSRGy4569RZu8h",
+        "statement": "Sign in to use your credits",
+        "uri": "https://api.example.com/v1/generate",
+        "version": "1",
+        "chainId": "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1",
+        "type": "ed25519",
+        "nonce": "a1b2c3d4e5f67890a1b2c3d4e5f67890",
+        "issuedAt": "2026-10-16T10:00:00.000Z",
+        "expirationTime": "2026-10-16T10:05:00.000Z",
+        "requestId": "req-1",
+        "resources": [
+          "https://api.example.com/v1/generate"
+        ],
+        "signature": "2Kx94qZyoB8fqvEetxDSTmbX7W81ytuU7A2oerocXf2sGC1YQQzNznQanxeBST1njQjuZehXrGJzx2GJ6raNfo9W"
+      }
+    },
+    {
+      "name": "solana_mainnet_minimal",
+      "message": "api.example.com wants you to sign in with your Solana account:\n2btLJAAb1S3x6hZYdVyAePjqtQYi2ZBSRGy4569RZu8h\n\nSign in to use your credits\n\nURI: https://api.example.com/v1/generate\nVersion: 1\nChain ID: 5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp\nNonce: a1b2c3d4e5f67890a1b2c3d4e5f67890\nIssued At: 2026-10-16T10:00:00.000Z",
+      "payload": {
+        "domain": "api.example.com",
+        "address": "2btLJAAb1S3x6hZYdVyAePjqtQYi2ZBSRGy4569RZu8h",
+        "statement": "Sign in to use your credits",
+        "uri": "https://api.example.com/v1/generate",
+        "version": "1",
+        "chainId": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+        "type": "ed25519",
+        "nonce": "a1b2c3d4e5f67890a1b2c3d4e5f67890",
+        "issuedAt": "2026-10-16T10:00:00.000Z",
+        "signature": "2WCF2JZb97EWuiNjKxysRTFannRoLRtdReUf2gQnLjuAUBmZv73AsEnhPp1sbb29EnkQfaSc9gxKNu2XWkRvvyFa"
+      }
+    }
+  ],
+  "x402_client": [
+    {
+      "name": "evm",
+      "payload": {
+        "domain": "api.example.com",
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "statement": "Sign in to use your credits",
+        "uri": "https://api.example.com/v1/generate",
+        "version": "1",
+        "chainId": "eip155:84532",
+        "type": "eip191",
+        "nonce": "a1b2c3d4e5f67890a1b2c3d4e5f67890",
+        "issuedAt": "2026-10-16T10:00:00.000Z",
+        "resources": [
+          "https://api.example.com/v1/generate"
+        ],
+        "signature": "0xb9498525191064eb4310d018aa665a74451bddb7f7f02c3d6be655316bff1f046f117492dc11ecce79ad51a6f5b52215e702b40919cc934098d2fe56e8e253511c"
+      }
+    },
+    {
+      "name": "svm",
+      "payload": {
+        "domain": "api.example.com",
+        "address": "2btLJAAb1S3x6hZYdVyAePjqtQYi2ZBSRGy4569RZu8h",
+        "statement": "Sign in to use your credits",
+        "uri": "https://api.example.com/v1/generate",
+        "version": "1",
+        "chainId": "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1",
+        "type": "ed25519",
+        "nonce": "a1b2c3d4e5f67890a1b2c3d4e5f67890",
+        "issuedAt": "2026-10-16T10:00:00.000Z",
+        "resources": [
+          "https://api.example.com/v1/generate"
+        ],
+        "signature": "3aa7iPuMSVvgJQQQpZTYWtMNBEXEEBd6JSC6zaAGBjuwJGXrx8x4B1tciYGDBhQXc7Ks5733AWJnP48629sGg9AL"
+      }
+    }
+  ]
+}
