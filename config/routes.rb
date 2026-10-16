@@ -57,6 +57,11 @@ Rails.application.routes.draw do
         post :void, on: :member
       end
       resources :fees, only: %i[index show update destroy]
+      resources :customers, only: [], param: :external_id, constraints: {external_id: /[^\/]+/} do
+        scope module: :customers do
+          resources :invoices, only: :index
+        end
+      end
     end
 
     namespace :v2, module: :v1 do
