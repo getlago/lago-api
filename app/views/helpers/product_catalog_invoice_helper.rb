@@ -258,8 +258,9 @@ class ProductCatalogInvoiceHelper
     sort_by_name(category_lines) + sort_by_name(product_lines)
   end
 
-  def advance_only?
-    product_fees.any? && product_fees.all? { it.contract_rate_card&.rate_card&.advance? }
+  # An invoice billed on event reception holds a single pay-in-advance fee.
+  def single_event_fee?
+    !invoice.advance_charges? && product_fees.one? && product_fees.first.pay_in_advance?
   end
 
   def contract_blocks
@@ -273,7 +274,7 @@ class ProductCatalogInvoiceHelper
   attr_reader :invoice
 
   def product_fees
-    @product_fees ||= invoice.fees.product.includes(:product_filter, :contract, :pricing_unit_usage, :rate_card_rate, :rate_override, contract_rate_card: :rate_card, true_up_parent_fee: :product_filter).to_a
+    @product_fees ||= invoice.fees.product.includes(:product_filter, :contract, :pricing_unit_usage, :rate_card_rate, :rate_override, true_up_parent_fee: :product_filter).to_a
   end
 
   def products

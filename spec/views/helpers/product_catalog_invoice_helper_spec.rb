@@ -13,7 +13,6 @@ RSpec.describe ProductCatalogInvoiceHelper do
   let(:analytics) { create(:product, organization:, product_category: infrastructure, name: "Analytics") }
   let(:transfer) { create(:product, organization:, product_category: nil, name: "Data transfer") }
   let(:eu) { create(:product_filter, organization:, product: compute, invoice_display_name: "Compute EU") }
-  let(:billing_timing) { "arrears" }
 
   let(:graduated_percentage_details) do
     {
@@ -31,13 +30,14 @@ RSpec.describe ProductCatalogInvoiceHelper do
     product_fee(transfer, amount_cents: 700, amount_details: graduated_percentage_details)
   end
 
-  def product_fee(product, amount_cents:, product_filter: nil, amount_details: {}, true_up_parent_fee: nil)
-    rate_card = create(:rate_card, organization:, product:, product_filter:, billing_timing:)
+  def product_fee(product, amount_cents:, product_filter: nil, amount_details: {}, true_up_parent_fee: nil, fee_invoice: invoice, pay_in_advance: false)
+    rate_card = create(:rate_card, organization:, product:, product_filter:)
     contract_rate_card = create(:contract_rate_card, organization:, contract:, rate_card:)
 
     create(
       :fee,
-      invoice:,
+      invoice: fee_invoice,
+      pay_in_advance:,
       subscription: nil,
       fee_type: "product",
       invoiceable_type: "Product",
@@ -237,15 +237,33 @@ RSpec.describe ProductCatalogInvoiceHelper do
     end
   end
 
-  describe "#advance_only?" do
-    subject(:advance_only) { described_class.new(invoice).advance_only? }
+  describe "#single_event_fee?" do
+    subject(:single_event_fee) { described_class.new(event_invoice).single_event_fee? }
 
-    it { is_expected.to be(false) }
+    let(:event_invoice) { create(:invoice, organization:, customer:, invoice_type:) }
+    let(:invoice_type) { :contract }
+    let(:pay_in_advance) { true }
 
-    context "when every fee comes from an advance rate card" do
-      let(:billing_timing) { "advance" }
+    before { product_fee(compute, amount_cents: 400, fee_invoice: event_invoice, pay_in_advance:) }
 
-      it { is_expected.to be(true) }
+    it { is_expected.to be(true) }
+
+    context "when the fee is not charged on event reception" do
+      let(:pay_in_advance) { false }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when the invoice regroups paid fees" do
+      let(:invoice_type) { :advance_charges }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "with several fees" do
+      before { product_fee(analytics, amount_cents: 100, fee_invoice: event_invoice, pay_in_advance: true) }
+
+      it { is_expected.to be(false) }
     end
   end
 
