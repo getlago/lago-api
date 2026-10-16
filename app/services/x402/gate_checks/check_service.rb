@@ -113,9 +113,10 @@ module X402
       def record_nonce
         organization.x402_sign_in_nonces.create!(agent_address:, nonce:)
         result
-      rescue ActiveRecord::RecordNotUnique => e
-        if e.message.include?(NONCE_INDEX)
-          reservation_counter.release(estimated_call_cost_cents) if @reserved
+      rescue => e
+        reservation_counter.release(estimated_call_cost_cents) if @reserved
+
+        if e.is_a?(ActiveRecord::RecordNotUnique) && e.message.include?(NONCE_INDEX)
           nonce_already_used
         else
           raise

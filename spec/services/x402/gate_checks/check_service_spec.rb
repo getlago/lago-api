@@ -251,6 +251,22 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
     end
   end
 
+  context "when the nonce insert fails", cache: :redis do
+    let(:key) { "x402:reserved:#{wallet.id}" }
+
+    before do
+      wallet
+      subscription
+      Rails.cache.redis.then { it.set(key, 5, ex: 60) }
+      allow(organization.x402_sign_in_nonces).to receive(:create!).and_raise(ActiveRecord::StatementInvalid)
+    end
+
+    it "re-raises after restoring the held reservation" do
+      expect { result }.to raise_error(ActiveRecord::StatementInvalid)
+      expect(Rails.cache.read(key, raw: true)).to eq("5")
+    end
+  end
+
   context "when the computed base is below the floor" do
     let(:wallet) do
       create(:wallet, customer:, code: "agent_credits", currency: "USD", x402_enabled: true,
