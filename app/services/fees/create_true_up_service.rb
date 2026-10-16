@@ -37,6 +37,7 @@ module Fees
         events_count: 0,
         charge_filter_id: nil,
         product_filter_id: nil,
+        properties: fee.properties.except("product_filter_values"),
         true_up_parent_fee: fee
       )
 
