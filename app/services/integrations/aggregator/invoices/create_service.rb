@@ -6,8 +6,6 @@ module Integrations
       class CreateService < BaseService
         Result = BaseResult[:invoice_id, :external_id]
 
-        INVALID_LOGIN_ATTEMPT = "INVALID_LOGIN_ATTEMPT"
-
         def initialize(invoice:, find_first: false)
           @find_first = find_first
           super(invoice:)
@@ -97,15 +95,6 @@ module Integrations
 
         def process_string_result(body)
           result.external_id = body
-        end
-
-        def retryable_error?(http_error)
-          server_error = http_error.error_code.to_i >= 500 || http_error.error_code.to_i == 424
-          server_error && !invalid_login_attempt_error?(http_error)
-        end
-
-        def invalid_login_attempt_error?(http_error)
-          http_error.error_body.include?(INVALID_LOGIN_ATTEMPT)
         end
       end
     end
