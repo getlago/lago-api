@@ -15,7 +15,7 @@ module V1
         invoice_type: model.invoice_type,
         status: model.status,
         payment_status: model.payment_status,
-        payment_dispute_lost_at: model.payment_dispute_lost_at,
+        payment_dispute_lost_at: model.payment_dispute_lost_at&.iso8601,
         payment_overdue: model.payment_overdue,
         currency: model.currency,
         fees_amount_cents: model.fees_amount_cents,
