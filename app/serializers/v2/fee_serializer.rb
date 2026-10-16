@@ -6,7 +6,7 @@ module V2
   class FeeSerializer < ModelSerializer
     PRELOADS = [
       :applied_taxes,
-      :pricing_unit_usage,
+      {pricing_unit_usage: :pricing_unit},
       :true_up_fee,
       :rate_card_rate,
       :product_filter,
