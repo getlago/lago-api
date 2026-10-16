@@ -23,7 +23,7 @@ module Auth
         find_or_create_user
         find_or_create_membership
 
-        unless result.user.active_organizations.pluck(:authentication_methods).flatten.uniq.include?(Organizations::AuthenticationMethods::ENTRA_ID)
+        unless entra_id_enabled_for_login?
           return result.single_validation_failure!(
             error_code: "login_method_not_authorized",
             field: Organizations::AuthenticationMethods::ENTRA_ID
@@ -40,6 +40,13 @@ module Auth
       private
 
       attr_reader :code, :state
+
+      def entra_id_enabled_for_login?
+        organization = result.entra_id_integration.organization
+
+        result.user.active_organizations.include?(organization) &&
+          organization.authentication_methods.include?(Organizations::AuthenticationMethods::ENTRA_ID)
+      end
 
       def generate_token
         result.token = Utils::AuthToken.encode(user: result.user, login_method: Organizations::AuthenticationMethods::ENTRA_ID)
