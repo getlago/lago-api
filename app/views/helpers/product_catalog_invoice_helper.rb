@@ -67,7 +67,7 @@ class ProductCatalogInvoiceHelper
       end
 
       Tier.new(
-        label: range_label("fee_per_unit", range),
+        label: range_label("fee", range),
         units: RoundingHelper.round_decimal_part(range["units"].to_d),
         unit_price:,
         amount: FeeDisplayHelper.format_as_currency(fee, range["per_unit_total_amount"])
@@ -235,14 +235,14 @@ class ProductCatalogInvoiceHelper
 
   def self.range_label(kind, range)
     position = if range["to_value"].nil?
-      "last"
+      "remaining"
     elsif range["from_value"].to_d.zero?
       "first"
     else
       "next"
     end
 
-    I18n.t("invoice.graduated.#{kind}_for_the_#{position}", from: range["from_value"], to: range["to_value"])
+    I18n.t("invoice.tiers.#{kind}_for_#{position}", up_to: range["to_value"])
   end
 
   def initialize(invoice)
