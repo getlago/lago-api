@@ -113,6 +113,7 @@ resources :invoices, only: %i[create update show index destroy] do
   post :retry, on: :member
   post :retry_payment, on: :member
   post :payment_url, on: :member
+  post :x402_payment_url, on: :member
   post :preview, on: :collection
   put :refresh, on: :member
   put :finalize, on: :member
