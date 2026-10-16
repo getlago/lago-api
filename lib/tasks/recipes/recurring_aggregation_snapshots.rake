@@ -129,6 +129,8 @@ namespace :recipes do
         "No subscription could be compared."
       elsif compared == without_snapshot
         "No subscription read a snapshot: this run says nothing about parity."
+      elsif mismatching.zero? && (failed + pay_in_advance_failed).positive?
+        "No mismatch over the comparisons that ran, but #{failed + pay_in_advance_failed} failed: rerun them before enabling the organization."
       elsif mismatching.zero?
         "No mismatch over the charges and events read from a snapshot."
       else

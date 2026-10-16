@@ -193,7 +193,8 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
         a_string_including(
           "pay in advance: FAILED",
           "subscriptions compared:         1 (0 failed)",
-          "pay in advance events replayed: 0 (1 subscription(s) failed)"
+          "pay in advance events replayed: 0 (1 subscription(s) failed)",
+          "No mismatch over the comparisons that ran, but 1 failed: rerun them before enabling the organization."
         )
       ).to_stdout
       expect(CSV.read(csv_path).size).to eq(2)
