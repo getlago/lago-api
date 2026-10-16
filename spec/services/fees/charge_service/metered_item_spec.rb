@@ -59,7 +59,7 @@ RSpec.describe Fees::ChargeService::MeteredItem do
         rate_card_rate:,
         currency: "USD",
         rate_properties: {"amount" => "24"},
-        proration_ratio: 0.5,
+        proration_ratio: 1.0,
         billing_at: Time.zone.parse("2026-10-01"),
         cycle_started_at: Time.zone.parse("2026-09-01"),
         started_at: Time.zone.parse("2026-09-01"),
