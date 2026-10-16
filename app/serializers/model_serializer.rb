@@ -7,7 +7,7 @@ class ModelSerializer
 
   # Names a v2 `show` accepts in `expand`, mapped to what a single record loads in advance:
   # nil for a computed value or a list built by its own query. Each renders through `expand`.
-  # Internal options (`:counts`, `:deleted_at`) are never listed.
+  # Internal options (`:counts`, `:deleted_at`, `:usec_timestamps`) are never listed.
   def self.expandable_relations
     NO_EXPANDABLE_RELATIONS
   end
@@ -83,7 +83,18 @@ class ModelSerializer
 
   # Includes of a record rendered inside this one: never expansions, so it stays flat.
   def nested_includes(forward: [])
-    [:deleted_at, *forward].select { include?(it) }
+    [:deleted_at, :usec_timestamps, *forward].select { include?(it) }
+  end
+
+  # At the microsecond precision the columns store when the render passes `:usec_timestamps`, as
+  # the native v2 endpoints do. At whole seconds otherwise, so webhooks and activity logs keep theirs.
+  def format_time(value)
+    value&.iso8601(include?(:usec_timestamps) ? 6 : 0)
+  end
+
+  # A calendar day, never a datetime: it has no time zone of its own.
+  def format_date(value)
+    value&.iso8601
   end
 
   def deleted_at_payload

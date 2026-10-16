@@ -37,7 +37,7 @@ module Api
     end
 
     # Passed as `includes:` by every v2 render.
-    def serializer_includes = [*requested_expansions, :deleted_at]
+    def serializer_includes = [*requested_expansions, :deleted_at, :usec_timestamps]
 
     def preload_expansions(record)
       associations = requested_expansions.filter_map { expandable_serializer.expandable_relations[it] }
