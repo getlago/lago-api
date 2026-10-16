@@ -44,6 +44,7 @@ describe X402::Secp256k1 do
       "a zero s" => ->(r, _s, v, _n) { r + ("\x00" * 32).b + v.chr },
       "r equal to the order" => ->(_r, s, v, n) { [n.to_s(16).rjust(64, "0")].pack("H*") + s + v.chr },
       "s equal to the order" => ->(r, _s, v, n) { r + [n.to_s(16).rjust(64, "0")].pack("H*") + v.chr },
+      "r above the order" => ->(_r, s, v, n) { [(n + 2).to_s(16).rjust(64, "0")].pack("H*") + s + v.chr },
       "an r off the curve" => ->(_r, s, v, _n) { [5.to_s(16).rjust(64, "0")].pack("H*") + s + v.chr },
       "64 bytes" => ->(r, s, _v, _n) { r + s }
     }.each do |shape, build|

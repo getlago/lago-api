@@ -15,9 +15,10 @@ module X402
       recid = recovery_id(signature.getbyte(64))
       r = signature.byteslice(0, 32).unpack1("H*").to_i(16)
       s = signature.byteslice(32, 32).unpack1("H*").to_i(16)
-      return nil unless recid && r.between?(1, ORDER - 1) && s.between?(1, ORDER - 1)
 
-      recover(digest.unpack1("H*").to_i(16), r, s, recid)
+      if recid && r.between?(1, ORDER - 1) && s.between?(1, ORDER - 1)
+        recover(digest.unpack1("H*").to_i(16), r, s, recid)
+      end
     end
 
     def self.recovery_id(v)
