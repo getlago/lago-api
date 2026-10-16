@@ -9,7 +9,7 @@ module Api
         def create
           result = ::X402::GateChecks::CheckService.call(
             organization: current_organization,
-            params: create_params.to_h.deep_symbolize_keys
+            params: create_params.to_h.deep_symbolize_keys.merge(siwx: raw_body_section("gate_check")&.dig("siwx"))
           )
 
           if result.success?
@@ -23,7 +23,7 @@ module Api
 
         def create_params
           params.require(:gate_check).permit(
-            :connection_code, :wallet_code, :agent_address, :resource, :plan_code,
+            :connection_code, :wallet_code, :resource, :plan_code,
             :billable_metric_code, :amount_cents, :estimated_call_cost_cents
           )
         end
