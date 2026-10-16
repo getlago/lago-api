@@ -55,6 +55,17 @@ describe Api::V1::X402::ConnectionsController, :premium do
       expect(json[:x402_connection].keys.grep(/secret|cdp_api_key/)).to be_empty
     end
 
+    context "with allowed origins" do
+      let(:params) { super().merge(allowed_origins: ["https://api.example.com"]) }
+
+      it "renders them" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:x402_connection][:allowed_origins]).to eq(["https://api.example.com"])
+      end
+    end
+
     context "when the API log is produced" do
       before { allow(Utils::ApiLog).to receive(:produce) }
 
@@ -126,6 +137,28 @@ describe Api::V1::X402::ConnectionsController, :premium do
 
         expect(response).to have_http_status(:unprocessable_content)
         expect(json[:error_details]).to eq(networks: ["must_be_array"])
+      end
+    end
+
+    context "with a string for allowed origins" do
+      let(:params) { super().merge(allowed_origins: "https://api.example.com") }
+
+      it "returns a validation error and creates nothing" do
+        expect { subject }.not_to change { organization.x402_connections.count }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(allowed_origins: ["must_be_array"])
+      end
+    end
+
+    context "with a null for allowed origins" do
+      let(:params) { super().merge(allowed_origins: nil) }
+
+      it "returns a validation error and creates nothing" do
+        expect { subject }.not_to change { organization.x402_connections.count }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(allowed_origins: ["must_be_array"])
       end
     end
 
@@ -301,6 +334,28 @@ describe Api::V1::X402::ConnectionsController, :premium do
           subject
           expect(response).to be_not_found_error("x402_connection")
         end
+      end
+    end
+
+    context "with a string for allowed origins" do
+      let(:params) { {allowed_origins: "https://api.example.com"} }
+
+      it "returns a validation error and keeps the origins" do
+        expect { subject }.not_to change { connection.reload.allowed_origins }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(allowed_origins: ["must_be_array"])
+      end
+    end
+
+    context "with an origin that is not normalised" do
+      let(:params) { {allowed_origins: ["http://api.example.com"]} }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(allowed_origins: ["invalid_format"])
       end
     end
 
