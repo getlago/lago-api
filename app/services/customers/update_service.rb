@@ -133,6 +133,7 @@ module Customers
 
       ActiveRecord::Base.transaction do
         if old_provider_customer && payment_provider_removed?
+          old_provider_customer.is_default = false
           old_provider_customer.discard!
           customer.payment_provider_code = nil
           old_provider_customer.payment_methods.find_each do |payment_method|
@@ -197,6 +198,7 @@ module Customers
         if args.key?(:provider_customer) || args.key?(:payment_provider)
           payment_provider = old_payment_provider || customer.payment_provider
           create_or_update_provider_customer(customer, payment_provider, args[:provider_customer])
+          PaymentProviderCustomers::SetDefaultIfUnsetService.call!(customer:)
         end
 
         if args.dig(:provider_customer, :provider_customer_id)

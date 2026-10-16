@@ -409,6 +409,15 @@ RSpec.describe Customers::UpdateService do
 
             expect(stripe_customer.reload).to be_discarded
           end
+
+          it "releases the default so a later connection can take it" do
+            stripe_customer.update!(is_default: true)
+
+            customers_service.call
+
+            expect(stripe_customer.reload).not_to be_is_default
+            expect(customer.reload.payment_connection).to be_nil
+          end
         end
       end
     end
