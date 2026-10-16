@@ -2,6 +2,8 @@
 
 module Integrations
   class EntraIdIntegration < BaseIntegration
+    include SsoLoginSelection
+
     # A bare hostname with at least two labels (e.g. "de.bosch.com"), so an
     # additional domain can never be a single label or a whole TLD.
     DOMAIN_FORMAT = /\A(?=.{1,253}\z)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}\z/
@@ -21,6 +23,17 @@ module Integrations
 
       where("LOWER(settings->>'domain') = :email_domain", email_domain:)
         .or(where("settings->'additional_domains' @> jsonb_build_array(CAST(:email_domain AS text))", email_domain:))
+    end
+
+    # The integration that handles a login for this email, see SsoLoginSelection.
+    # NOTE: An exact match on the primary domain comes first, as it did before domains were
+    #       compared case-insensitively, so integrations whose domains differ only by casing keep
+    #       their routing.
+    def self.for_login(email:, organization_id: nil)
+      email_domain = email.split("@").last
+      exact, others = with_domain(email_domain).includes(:organization).order(:created_at).to_a.partition { it.domain == email_domain }
+
+      pick_for_login(exact + others, email:, organization_id:)
     end
 
     def host
@@ -55,7 +68,9 @@ module Integrations
 
     # NOTE: Only domains this save newly claims are checked. Primary domains used to be unique
     #       case-sensitively, so legacy integrations whose domains differ only by casing must
-    #       keep saving unrelated changes (credentials, host).
+    #       keep saving unrelated changes (credentials, host). An integration that shares a domain
+    #       and later moves to another tenant fails closed: its sessions stop matching the other
+    #       organization's issuer, and userinfo always comes from Microsoft Graph.
     def domain_uniqueness
       return if domain.blank?
 
@@ -78,8 +93,12 @@ module Integrations
         .map(&:downcase)
     end
 
+    # Another organization can claim the same domain only with the same Entra tenant.
     def domain_claimed_elsewhere?(email_domain)
-      ::Integrations::EntraIdIntegration.with_domain(email_domain).where.not(id:).exists?
+      ::Integrations::EntraIdIntegration
+        .with_domain(email_domain)
+        .where.not(id:)
+        .any? { !same_identity_provider?(it) }
     end
 
     def additional_domains_format

@@ -26,14 +26,8 @@ module Auth
         result.email = email
       end
 
-      def check_entra_id_integration(email)
-        email_domain = email.split("@").last
-        # NOTE: An exact match on the primary domain wins, as it did before domains were compared
-        #       case-insensitively, so integrations whose domains differ only by casing keep
-        #       their routing. The fallback order is fixed so the result is deterministic.
-        entra_id_integration =
-          ::Integrations::EntraIdIntegration.find_by("settings->>'domain' = ?", email_domain) ||
-          ::Integrations::EntraIdIntegration.with_domain(email_domain).order(:created_at).first
+      def check_entra_id_integration(email, organization_id: nil)
+        entra_id_integration = ::Integrations::EntraIdIntegration.for_login(email:, organization_id:)
 
         raise ValidationError, "domain_not_configured" if entra_id_integration.blank?
 

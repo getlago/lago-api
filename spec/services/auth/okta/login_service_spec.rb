@@ -171,6 +171,42 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
       end
     end
 
+    context "when another organization shares the domain with the same Okta org" do
+      let(:user) { create(:user, email: "foo@bar.com") }
+      let(:other_organization) { create(:organization, premium_integrations: ["okta"]) }
+      let(:other_integration) do
+        create(:okta_integration, domain: "bar.com", organization_name: "foo", organization: other_organization)
+      end
+
+      before do
+        other_organization.enable_okta_authentication!
+        other_integration
+      end
+
+      it "logs in a member of that organization only, bound to it" do
+        create(:membership, user:, organization: other_organization)
+
+        result = service.call
+
+        expect(result).to be_success
+        decoded = Utils::AuthToken.decode(token: result.token)
+        expect(decoded["sso_organization_id"]).to eq(other_organization.id)
+        expect(user.memberships.pluck(:organization_id)).to eq([other_organization.id])
+      end
+
+      it "opens both organizations for a member of both" do
+        create(:membership, user:, organization: okta_integration.organization)
+        create(:membership, user:, organization: other_organization)
+
+        result = service.call
+
+        expect(result).to be_success
+        claims = Utils::AuthToken.decode(token: result.token).slice("login_method", "sso_organization_id", "sso_issuer").symbolize_keys
+        expect(okta_integration.organization.reload.accessible_by_session?(**claims)).to be(true)
+        expect(other_organization.reload.accessible_by_session?(**claims)).to be(true)
+      end
+    end
+
     context "when membership already exists" do
       let(:user) { create(:user, email: "foo@bar.com") }
       let(:membership) { create(:membership, user:, organization: okta_integration.organization) }

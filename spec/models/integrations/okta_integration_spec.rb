@@ -85,13 +85,90 @@ RSpec.describe Integrations::OktaIntegration do
       expect(okta_integration).to be_valid
     end
 
-    context "when domain already exists" do
-      before { create(:okta_integration) }
+    context "when domain already exists with another Okta org" do
+      before { create(:okta_integration, organization_name: "other") }
 
       it "does not validate the record" do
         expect(okta_integration).not_to be_valid
-        expect(okta_integration.errors).to include(:domain)
+        expect(okta_integration.errors.details[:domain]).to include(error: "domain_not_unique")
       end
+    end
+
+    context "when domain already exists with the same Okta org" do
+      before { create(:okta_integration, host: "Login.Foobar.test") }
+
+      it "accepts the shared domain" do
+        okta_integration.host = "login.foobar.test"
+
+        expect(okta_integration).to be_valid
+      end
+
+      it "refuses moving the shared domain to another host" do
+        okta_integration.host = "login.foobar.test"
+        okta_integration.save!
+        okta_integration.host = "evil.test"
+
+        expect(okta_integration).not_to be_valid
+        expect(okta_integration.errors.details[:domain]).to include(error: "domain_not_unique")
+      end
+    end
+  end
+
+  describe ".for_login" do
+    let(:email) { "user@foo.test" }
+    let(:first_integration) { create(:okta_integration, created_at: 2.days.ago) }
+    let(:second_integration) { create(:okta_integration, created_at: 1.day.ago) }
+
+    before do
+      first_integration
+      second_integration
+    end
+
+    it "returns nil when no integration claims the domain" do
+      expect(described_class.for_login(email: "user@other.test")).to be_nil
+    end
+
+    it "returns the oldest integration when the user belongs to none of their organizations" do
+      expect(described_class.for_login(email:)).to eq(first_integration)
+    end
+
+    it "returns the integration of an organization the user is an active member of" do
+      create(:membership, user: create(:user, email:), organization: second_integration.organization)
+
+      expect(described_class.for_login(email:)).to eq(second_integration)
+    end
+
+    it "ignores revoked memberships" do
+      create(:membership, :revoked, user: create(:user, email:), organization: second_integration.organization)
+
+      expect(described_class.for_login(email:)).to eq(first_integration)
+    end
+
+    context "when the oldest member organization does not allow Okta" do
+      let(:first_integration) do
+        create(:okta_integration, created_at: 2.days.ago,
+          organization: create(:organization, authentication_methods: %w[email_password]))
+      end
+      let(:second_integration) do
+        create(:okta_integration, created_at: 1.day.ago,
+          organization: create(:organization, authentication_methods: %w[email_password okta]))
+      end
+
+      before do
+        user = create(:user, email:)
+        create(:membership, user:, organization: first_integration.organization)
+        create(:membership, user:, organization: second_integration.organization)
+      end
+
+      it "returns the integration of the member organization that allows it" do
+        expect(described_class.for_login(email:)).to eq(second_integration)
+      end
+    end
+
+    it "returns the integration of the invite's organization first" do
+      create(:membership, user: create(:user, email:), organization: first_integration.organization)
+
+      expect(described_class.for_login(email:, organization_id: second_integration.organization_id)).to eq(second_integration)
     end
   end
 end
