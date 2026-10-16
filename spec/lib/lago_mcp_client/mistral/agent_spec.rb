@@ -148,7 +148,7 @@ RSpec.describe LagoMcpClient::Mistral::Agent do
         }
       end
 
-      let(:final_after) { 1 }
+      let(:initial_response_calls) { [1] }
       let(:sent_results) { [] }
 
       before do
@@ -157,7 +157,7 @@ RSpec.describe LagoMcpClient::Mistral::Agent do
           call_count += 1
           block&.call("chunk#{call_count}")
           sent_results.concat(Array(inputs).filter_map { |input| input[:result] if input.is_a?(Hash) })
-          (call_count <= final_after) ? initial_response : final_response
+          initial_response_calls.include?(call_count) ? initial_response : final_response
         end
 
         allow(mcp_context).to receive(:process_tool_calls)
@@ -202,7 +202,7 @@ RSpec.describe LagoMcpClient::Mistral::Agent do
       end
 
       context "with several tool iterations in one chat call" do
-        let(:final_after) { 2 }
+        let(:initial_response_calls) { [1, 2] }
 
         it "uses the same nonce for every tool result" do
           agent.chat(user_message, max_tool_iterations: 2) { |chunk| chunks << chunk }
@@ -215,15 +215,7 @@ RSpec.describe LagoMcpClient::Mistral::Agent do
       end
 
       context "with two chat calls on the same agent" do
-        before do
-          call_count = 0
-          allow(mistral_client).to receive(:append_to_conversation) do |inputs:, **_args, &block|
-            call_count += 1
-            block&.call("chunk#{call_count}")
-            sent_results.concat(inputs.filter_map { |input| input[:result] })
-            call_count.odd? ? initial_response : final_response
-          end
-        end
+        let(:initial_response_calls) { [1, 3] }
 
         it "uses a different nonce for each call" do
           agent.chat(user_message) { |chunk| chunks << chunk }
@@ -244,6 +236,18 @@ RSpec.describe LagoMcpClient::Mistral::Agent do
 
           wrapper = %r{<untrusted_data_(?<nonce>\h{32})>\n(?<body>.*)\n</untrusted_data_\k<nonce>>\z}m
           expect(wrapper.match(sent_results.sole)&.[](:body)).to eq("Error: tool failed oops")
+        end
+      end
+
+      context "when the tool content holds an unclosed untrusted_data tag" do
+        let(:raw_content) { "a <untrusted_data b\n\"c\": \"d\"> e" }
+        let(:tool_result) { [{tool_call_id:, content: raw_content}] }
+
+        it "passes the content through unchanged" do
+          agent.chat(user_message) { |chunk| chunks << chunk }
+
+          wrapper = %r{<untrusted_data_(?<nonce>\h{32})>\n(?<body>.*)\n</untrusted_data_\k<nonce>>\z}m
+          expect(wrapper.match(sent_results.sole)&.[](:body)).to eq(raw_content)
         end
       end
 
