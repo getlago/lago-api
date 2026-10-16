@@ -13,6 +13,8 @@ module X402
       end
 
       def call
+        raise "#{self.class.name} must run outside a database transaction" if in_transaction?
+
         ActiveRecord::Base.transaction do
           settlement.lock!
           settlement.update!(status: :settled, transaction_hash:) if settlement.pending?

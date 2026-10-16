@@ -55,6 +55,17 @@ describe X402::Invoices::SettleService do
       expect(facilitator_request("/verify", x402_evm_payment.merge("resource" => resource), x402_evm_requirements)).to have_been_made.once
     end
 
+    context "with an accepted carrying other money terms" do
+      let(:payment) { x402_evm_payment.merge("accepted" => x402_evm_requirements.merge("amount" => "1", "payTo" => "0x#{"22" * 20}")) }
+      let(:reset_payment) { payment.merge("resource" => resource) }
+
+      it "verifies against the requirements built from the invoice" do
+        result
+
+        expect(facilitator_request("/verify", reset_payment, x402_evm_requirements)).to have_been_made.once
+      end
+    end
+
     context "with another resource" do
       let(:payment) { x402_evm_payment.merge("resource" => {"url" => "https://example.com/listed"}) }
       let(:reset_payment) { x402_evm_payment.merge("resource" => resource) }

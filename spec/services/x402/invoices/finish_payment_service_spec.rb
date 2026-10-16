@@ -105,4 +105,12 @@ describe X402::Invoices::FinishPaymentService do
       expect(settlement.reload).to be_pending
     end
   end
+
+  context "when called inside a transaction" do
+    subject(:result) { ApplicationRecord.transaction { described_class.call(settlement:, transaction_hash:) } }
+
+    it "refuses to run" do
+      expect { result }.to raise_error(RuntimeError, /must run outside a database transaction/)
+    end
+  end
 end
