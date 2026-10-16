@@ -52,7 +52,7 @@ RSpec.describe "templates/invoices/v4/product_catalog/contract.slim" do
 
   it "renders the details page per contract, down to the billing period" do
     expect(rendered_text).to include("Details Platform - Invoice INV-001")
-    expect(rendered_text).to include("Compute From 1 Oct to 31 Oct 2026 280")
+    expect(rendered_text).to include("Compute €28.00 From 1 Oct to 31 Oct 2026 280")
   end
 
   it "bills from the billing entity to the customer" do
