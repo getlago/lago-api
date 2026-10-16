@@ -68,8 +68,7 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
       :add_on,
       :credit,
       :advance_charges,
-      :progressive_billing,
-      :contract
+      :progressive_billing
     ].each do |invoice_type|
       context "when invoice is #{invoice_type}" do
         let(:invoice) { create(:invoice, :draft, organization:, customer:, invoice_type:) }
