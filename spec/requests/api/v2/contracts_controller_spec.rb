@@ -235,6 +235,34 @@ RSpec.describe Api::V2::ContractsController do
       end
     end
 
+    context "with dates and datetimes" do
+      let(:params) { {status: "terminated"} }
+      let(:contract) do
+        create(
+          :contract,
+          :terminated,
+          organization:,
+          customer:,
+          catalog_plan:,
+          billing_anchor_date: Date.new(2026, 10, 5),
+          started_at: Time.zone.parse("2026-10-01T08:30:00.123456Z"),
+          terminated_at: Time.zone.parse("2026-10-20T17:45:00.654321Z")
+        )
+      end
+
+      it "returns the datetimes to the microsecond and the dates as days" do
+        subject
+
+        expect(json[:contract]).to include(
+          billing_anchor_date: "2026-10-05",
+          effective_billing_anchor_date: "2026-10-05",
+          started_at: "2026-10-01T08:30:00.123456Z",
+          terminated_at: "2026-10-20T17:45:00.654321Z",
+          created_at: contract.created_at.iso8601(6)
+        )
+      end
+    end
+
     context "with an applied rate card" do
       before { create(:contract_rate_card, organization:, contract:) }
 
@@ -314,7 +342,7 @@ RSpec.describe Api::V2::ContractsController do
         it "embeds it with its deleted_at" do
           subject
 
-          expect(json[:contract][:plan]).to include(lago_id: catalog_plan.id, deleted_at: catalog_plan.reload.deleted_at.iso8601)
+          expect(json[:contract][:plan]).to include(lago_id: catalog_plan.id, deleted_at: catalog_plan.reload.deleted_at.iso8601(6))
         end
       end
 
@@ -332,7 +360,7 @@ RSpec.describe Api::V2::ContractsController do
     context "with expand[]=customer" do
       let(:params) { {expand: %w[customer]} }
       # The v2 customer has no endpoint of its own, so its serializer is the reference.
-      let(:customer_payload) { JSON.parse(V2::CustomerSerializer.new(customer, includes: %i[deleted_at]).serialize.to_json, symbolize_names: true) }
+      let(:customer_payload) { JSON.parse(V2::CustomerSerializer.new(customer, includes: %i[deleted_at usec_timestamps]).serialize.to_json, symbolize_names: true) }
 
       it "embeds the flat customer, with a null deleted_at" do
         subject
@@ -349,7 +377,7 @@ RSpec.describe Api::V2::ContractsController do
         it "embeds it with its deleted_at" do
           subject
 
-          expect(json[:contract][:customer]).to include(lago_id: customer.id, deleted_at: customer.reload.deleted_at.iso8601)
+          expect(json[:contract][:customer]).to include(lago_id: customer.id, deleted_at: customer.reload.deleted_at.iso8601(6))
         end
       end
     end

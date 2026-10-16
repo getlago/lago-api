@@ -8,8 +8,8 @@ module V2
         plan_code: model.catalog_plan.code,
         rate_card_code: model.rate_card.code,
         units: model.units,
-        created_at: model.created_at.iso8601,
-        updated_at: model.updated_at.iso8601,
+        created_at: format_time(model.created_at),
+        updated_at: format_time(model.updated_at),
         **deleted_at_payload
       }
     end

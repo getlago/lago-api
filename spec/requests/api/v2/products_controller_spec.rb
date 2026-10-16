@@ -222,7 +222,7 @@ RSpec.describe Api::V2::ProductsController do
 
           expect(json[:product][:billable_metric]).to include(
             lago_id: product.billable_metric.id,
-            deleted_at: product.billable_metric.reload.deleted_at.iso8601
+            deleted_at: product.billable_metric.reload.deleted_at.iso8601(6)
           )
         end
       end
@@ -465,7 +465,7 @@ RSpec.describe Api::V2::ProductsController do
       expect(response).to have_http_status(:success)
       expect(json[:product][:lago_id]).to eq(product.id)
       expect(product.reload).to be_discarded
-      expect(json[:product][:deleted_at]).to eq(product.deleted_at.iso8601)
+      expect(json[:product][:deleted_at]).to eq(product.deleted_at.iso8601(6))
     end
 
     context "when the product does not exist" do

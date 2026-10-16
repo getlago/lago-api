@@ -180,7 +180,7 @@ RSpec.describe Api::V2::ContractRateCardsController do
 
       expect(response).to have_http_status(:success)
       expect(contract_rate_card.reload.discarded?).to be(true)
-      expect(json[:applied_rate_card][:deleted_at]).to eq(contract_rate_card.deleted_at.iso8601)
+      expect(json[:applied_rate_card][:deleted_at]).to eq(contract_rate_card.deleted_at.iso8601(6))
     end
   end
 end

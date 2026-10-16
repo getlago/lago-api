@@ -21,7 +21,7 @@ module V2
         description: model.description,
         applied_to_organization: model.applied_to_organization,
         **counts,
-        created_at: model.created_at.iso8601,
+        created_at: format_time(model.created_at),
         **deleted_at_payload
       }
     end

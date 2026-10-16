@@ -233,7 +233,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
 
       expect(response).to have_http_status(:success)
       expect(catalog_plan.reload.applied_rate_cards).to be_empty
-      expect(json[:applied_rate_card][:deleted_at]).to eq(plan_rate_card.reload.deleted_at.iso8601)
+      expect(json[:applied_rate_card][:deleted_at]).to eq(plan_rate_card.reload.deleted_at.iso8601(6))
     end
 
     context "when the plan has contracts" do

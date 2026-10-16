@@ -98,6 +98,6 @@ class ModelSerializer
   end
 
   def deleted_at_payload
-    include?(:deleted_at) ? {deleted_at: model.deleted_at&.iso8601} : {}
+    include?(:deleted_at) ? {deleted_at: format_time(model.deleted_at)} : {}
   end
 end

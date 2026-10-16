@@ -31,8 +31,8 @@ module V2
         regroup_paid_fees: model.regroup_paid_fees,
         applied_pricing_unit_code: model.applied_pricing_unit_code,
         **counts,
-        created_at: model.created_at.iso8601,
-        updated_at: model.updated_at.iso8601,
+        created_at: format_time(model.created_at),
+        updated_at: format_time(model.updated_at),
         **deleted_at_payload,
         **expanded_payload
       }
