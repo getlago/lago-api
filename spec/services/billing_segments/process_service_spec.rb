@@ -384,7 +384,7 @@ RSpec.describe BillingSegments::ProcessService do
               expect(invoice).to be_generating
               expect(Payments::ManualCreateJob).not_to have_been_enqueued
 
-              expect(described_class.call!(customer:).invoices).to eq([])
+              expect(described_class.call!(customer:).invoices).to eq([invoice])
 
               expect(invoice.reload).to be_finalized
               expect(Payments::ManualCreateJob).to have_been_enqueued.once.with(

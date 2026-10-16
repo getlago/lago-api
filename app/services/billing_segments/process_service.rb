@@ -13,7 +13,7 @@ module BillingSegments
       result.invoices = []
 
       acquired = customer.with_advisory_lock("billing_segment_process_customer_#{customer.id}", timeout_seconds: 0) do
-        pending_segments.group_by { |segment| pending_invoice_key(segment) }.each_value do |invoice_segments|
+        built_invoices = pending_segments.group_by { |segment| pending_invoice_key(segment) }.values.map do |invoice_segments|
           build_invoice(invoice_segments)
         end
 
@@ -21,7 +21,7 @@ module BillingSegments
           process_advance_segments(invoice_segments)
         end
 
-        result.invoices = finalize_generating_invoices
+        result.invoices = built_invoices.select(&:draft?) + finalize_generating_invoices
         true
       end
 
