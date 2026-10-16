@@ -12,16 +12,18 @@ describe X402::Ed25519 do
     let(:public_key) { X402::Base58.decode(vector.dig("payload", "address")) }
     let(:signature) { X402::Base58.decode(vector.dig("payload", "signature")) }
 
-    it "accepts every ground-truth vector" do
-      results = vectors.map do |entry|
-        described_class.verify?(
-          public_key: X402::Base58.decode(entry.dig("payload", "address")),
-          signature: X402::Base58.decode(entry.dig("payload", "signature")),
-          message: entry.fetch("message")
-        )
+    context "with every ground-truth vector" do
+      let(:results) do
+        vectors.map do |entry|
+          described_class.verify?(
+            public_key: X402::Base58.decode(entry.dig("payload", "address")),
+            signature: X402::Base58.decode(entry.dig("payload", "signature")),
+            message: entry.fetch("message")
+          )
+        end
       end
 
-      expect(results).to all(be(true))
+      it { expect(results).to all(be(true)) }
     end
 
     context "with a message that has one more character" do
@@ -67,7 +69,15 @@ describe X402::Ed25519 do
       it { is_expected.to be(false) }
     end
 
-    described_class::SMALL_ORDER_KEYS.each do |hex|
+    %w[
+      0000000000000000000000000000000000000000000000000000000000000000
+      0100000000000000000000000000000000000000000000000000000000000000
+      26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05
+      c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a
+      ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f
+      edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f
+      eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f
+    ].each do |hex|
       [false, true].each do |top_bit|
         context "with the small-order key #{hex} #{top_bit ? "with" : "without"} the top bit set" do
           let(:public_key) do
@@ -75,8 +85,16 @@ describe X402::Ed25519 do
             bytes.setbyte(31, bytes.getbyte(31) | 0x80) if top_bit
             bytes
           end
-          let(:signature) { ("\x00" * 64).b }
-          let(:message) { "any" }
+          let(:signature) { "\x01".b + ("\x00" * 63).b }
+          let(:message) do
+            (0..63).map { |i| "m#{i}" }.find do |candidate|
+              OpenSSL::PKey.new_raw_public_key("ED25519", public_key).verify(nil, signature, candidate)
+            end
+          end
+
+          it "is forged under plain OpenSSL" do
+            expect(message).not_to be_nil
+          end
 
           it { is_expected.to be(false) }
         end
@@ -84,13 +102,14 @@ describe X402::Ed25519 do
     end
 
     context "with random keys and signatures" do
-      it "returns false and never raises" do
-        results = Array.new(100) do
-          described_class.verify?(public_key: Random.bytes(32), signature: Random.bytes(64), message: "any")
+      let(:keys_and_signatures) { Array.new(100) { [Random.bytes(32), Random.bytes(64)] } }
+      let(:results) do
+        keys_and_signatures.map do |key, sig|
+          described_class.verify?(public_key: key, signature: sig, message: "any")
         end
-
-        expect(results).to all(be(false))
       end
+
+      it { expect(results).to all(be(false)) }
     end
   end
 end
