@@ -15,7 +15,7 @@ module X402
 
       header = request.headers[X402::Wire::V2Codec::PAYMENT_SIGNATURE]
 
-      if header
+      if header.present?
         render_payment(invoice, X402::Invoices::SettleService.call(invoice:, payment: X402::Wire::V2Codec.decode(header)))
       else
         render_challenge(invoice)
