@@ -19,7 +19,7 @@ module V2
     def rate_override
       return unless model.rate_override
 
-      ::V2::RateOverrideSerializer.new(model.rate_override).serialize
+      ::V2::RateOverrideSerializer.new(model.rate_override, nested_options).serialize
     end
   end
 end

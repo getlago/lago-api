@@ -160,6 +160,14 @@ RSpec.describe ModelSerializer do
       expect(payload[:first]).to eq(code: "first", options: {})
     end
 
+    context "with the usec_timestamps include" do
+      let(:options) { {includes: %i[first usec_timestamps]} }
+
+      it "passes it on to the embedded record, and no expansion" do
+        expect(payload).to eq(code: "parent", first: {code: "first", options: {includes: %i[usec_timestamps]}})
+      end
+    end
+
     context "with a private method named after an expansion" do
       let(:options) { {includes: %i[first third], label: "from the options"} }
 
@@ -247,6 +255,94 @@ RSpec.describe ModelSerializer do
 
       it "renders its own payload only" do
         expect(payload).to eq(code: "parent")
+      end
+    end
+  end
+
+  describe "#format_time" do
+    subject(:formatted) { serializer.send(:format_time, value) }
+
+    let(:value) { Time.zone.parse("2026-03-22T12:00:00.123456Z") }
+    let(:options) { {includes: %i[usec_timestamps]} }
+
+    it "renders the microseconds" do
+      expect(formatted).to eq("2026-03-22T12:00:00.123456Z")
+    end
+
+    context "with a time on a whole second" do
+      let(:value) { Time.zone.parse("2026-03-22T12:00:00Z") }
+
+      it "renders six zero digits" do
+        expect(formatted).to eq("2026-03-22T12:00:00.000000Z")
+      end
+    end
+
+    context "without the usec_timestamps include" do
+      let(:options) { {includes: %i[counts]} }
+
+      it "renders whole seconds" do
+        expect(formatted).to eq("2026-03-22T12:00:00Z")
+      end
+    end
+
+    context "without includes" do
+      let(:options) { {} }
+
+      it "renders whole seconds" do
+        expect(formatted).to eq("2026-03-22T12:00:00Z")
+      end
+    end
+
+    context "with nil" do
+      let(:value) { nil }
+
+      it "renders nil" do
+        expect(formatted).to be_nil
+      end
+    end
+  end
+
+  describe "#format_date" do
+    subject(:formatted) { serializer.send(:format_date, value) }
+
+    let(:value) { Date.new(2026, 3, 22) }
+    let(:options) { {includes: %i[usec_timestamps]} }
+
+    it "renders the day only" do
+      expect(formatted).to eq("2026-03-22")
+    end
+
+    context "without the usec_timestamps include" do
+      let(:options) { {} }
+
+      it "renders the same day" do
+        expect(formatted).to eq("2026-03-22")
+      end
+    end
+
+    context "with nil" do
+      let(:value) { nil }
+
+      it "renders nil" do
+        expect(formatted).to be_nil
+      end
+    end
+  end
+
+  describe "#nested_options" do
+    subject(:nested_options) { serializer.send(:nested_options) }
+
+    let(:options) { {includes: %i[product counts usec_timestamps]} }
+
+    it "keeps the timestamp precision only, never an expansion" do
+      expect(nested_options).to eq(includes: %i[usec_timestamps])
+    end
+
+    context "without the usec_timestamps include" do
+      let(:options) { {includes: %i[product counts]} }
+
+      it "passes nothing" do
+        expect(nested_options).to eq({})
       end
     end
   end

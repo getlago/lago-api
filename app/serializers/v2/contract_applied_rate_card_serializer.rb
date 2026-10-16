@@ -22,7 +22,7 @@ module V2
 
     def rate_phases
       model.rate_phases.order(:position).map do |phase|
-        ::V2::RatePhaseSerializer.new(phase).serialize
+        ::V2::RatePhaseSerializer.new(phase, nested_options).serialize
       end
     end
   end
