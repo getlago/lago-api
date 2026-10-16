@@ -92,7 +92,7 @@ html lang=I18n.locale
       == SlimHelper.render('templates/invoices/v4/_powered_by_logo', self)
 
       - catalog.contract_blocks.each do |block|
-        div class=(catalog.advance_only? ? 'details-section' : 'details-page')
+        div class=(catalog.single_event_fee? ? 'details-section' : 'details-page')
           .details-heading.document-stack.document-stack--tight
             h1.title = I18n.t('invoice.details_title')
             p.body-1.color-muted = block.title
