@@ -459,6 +459,7 @@ RSpec.describe Api::V2::RateCardsController do
         get_with_token(organization, "/api/v2/products/#{product.code}")
 
         expect(expanded[:product]).to eq(json[:product])
+        expect(expanded[:product][:created_at]).to eq(product.created_at.iso8601(6))
         expect(expanded[:product]).to be_a_flat_v2_payload
         expect(expanded.keys.last).to eq(:product)
       end
@@ -621,7 +622,7 @@ RSpec.describe Api::V2::RateCardsController do
 
       expect(response).to have_http_status(:success)
       expect(json[:rate_card][:lago_id]).to eq(rate_card.id)
-      expect(json[:rate_card][:deleted_at]).to eq(rate_card.deleted_at.iso8601)
+      expect(json[:rate_card][:deleted_at]).to eq(rate_card.deleted_at.iso8601(6))
       expect(json[:rate_card].keys).to eq(flat_keys)
     end
 

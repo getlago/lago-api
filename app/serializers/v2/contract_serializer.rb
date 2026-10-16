@@ -31,15 +31,15 @@ module V2
         billing_time: model.billing_time,
         consolidate_invoice: model.consolidate_invoice,
         purchase_order_number: model.purchase_order_number,
-        billing_anchor_date: model.billing_anchor_date&.iso8601,
-        effective_billing_anchor_date: model.effective_billing_anchor_date&.iso8601,
-        started_at: model.started_at&.iso8601,
-        ended_at: model.ended_at&.iso8601,
-        terminated_at: model.terminated_at&.iso8601,
-        canceled_at: model.canceled_at&.iso8601,
+        billing_anchor_date: format_date(model.billing_anchor_date),
+        effective_billing_anchor_date: format_date(model.effective_billing_anchor_date),
+        started_at: format_time(model.started_at),
+        ended_at: format_time(model.ended_at),
+        terminated_at: format_time(model.terminated_at),
+        canceled_at: format_time(model.canceled_at),
         skip_invoice_custom_sections: model.skip_invoice_custom_sections,
-        created_at: model.created_at.iso8601,
-        updated_at: model.updated_at.iso8601,
+        created_at: format_time(model.created_at),
+        updated_at: format_time(model.updated_at),
         **expanded_payload
       }
     end

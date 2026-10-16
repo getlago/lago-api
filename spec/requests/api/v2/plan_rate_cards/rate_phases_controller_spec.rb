@@ -334,7 +334,7 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
       expect(response).to have_http_status(:success)
       expect(launch.reload).to be_discarded
       expect(terminal.reload.position).to eq(1)
-      expect(json[:rate_phase][:deleted_at]).to eq(launch.deleted_at.iso8601)
+      expect(json[:rate_phase][:deleted_at]).to eq(launch.deleted_at.iso8601(6))
     end
 
     context "with a rate override" do
@@ -344,7 +344,7 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:rate_phase][:rate_override][:deleted_at]).to eq(launch_override.reload.deleted_at.iso8601)
+        expect(json[:rate_phase][:rate_override][:deleted_at]).to eq(launch_override.reload.deleted_at.iso8601(6))
       end
     end
 

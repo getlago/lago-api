@@ -19,8 +19,8 @@ module V2
         invoice_display_name: model.invoice_display_name,
         product_type: model.product_type,
         **counts,
-        created_at: model.created_at.iso8601,
-        updated_at: model.updated_at.iso8601,
+        created_at: format_time(model.created_at),
+        updated_at: format_time(model.updated_at),
         **deleted_at_payload,
         **expanded_payload
       }

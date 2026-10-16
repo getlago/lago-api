@@ -6,7 +6,7 @@ module V2
       {
         lago_id: model.id,
         code: model.code,
-        effective_from: model.effective_from.iso8601,
+        effective_from: format_time(model.effective_from),
         status: model.status,
         rate_model: model.rate_model,
         rate_properties: ::RateProperties.present(model.rate_properties),
@@ -14,8 +14,8 @@ module V2
         billing_interval_count: model.billing_interval_count,
         billing_interval_unit: model.billing_interval_unit,
         applied_pricing_unit_conversion_rate: model.applied_pricing_unit_conversion_rate,
-        created_at: model.created_at.iso8601,
-        updated_at: model.updated_at.iso8601,
+        created_at: format_time(model.created_at),
+        updated_at: format_time(model.updated_at),
         **deleted_at_payload
       }
     end
