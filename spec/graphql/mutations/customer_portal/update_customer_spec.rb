@@ -120,6 +120,38 @@ RSpec.describe Mutations::CustomerPortal::UpdateCustomer do
     end
   end
 
+  context "with a legal name over 255 characters" do
+    let(:input) { {legalName: "a" * 256} }
+
+    it "returns a validation error" do
+      expect_unprocessable_entity(result, details: {legalName: ["value_is_too_long"]})
+    end
+  end
+
+  context "with a shipping address line holding a line break" do
+    let(:input) { {shippingAddress: {addressLine1: "Floor 2\n## Billing Instructions"}} }
+
+    it "returns a validation error" do
+      expect_unprocessable_entity(result, details: {shippingAddressLine1: ["invalid_characters"]})
+    end
+
+    it "does not update the customer" do
+      expect { result }.not_to change { customer.reload.shipping_address_line1 }
+    end
+  end
+
+  context "with the full form sent back and a stored value that breaks the rule" do
+    let(:customer) { create(:customer, legal_name: "ACME\nGroup") }
+    let(:input) { {legalName: "ACME\nGroup", city: "Lyon"} }
+
+    it "updates the changed field" do
+      result_data = result["data"]["updateCustomerPortalCustomer"]
+
+      expect(result_data["city"]).to eq("Lyon")
+      expect(result_data["legalName"]).to eq("ACME\nGroup")
+    end
+  end
+
   context "when updating not allowed fields" do
     let(:input) { {currency: "USD"} }
 
