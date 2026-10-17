@@ -47,7 +47,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::ChargeFeeGroup do
 
     it "sums amounts and units, using the charge identity" do
       expect(group).to have_attributes(
-        id: nil, item_key: charge.id, item_id: charge.id, charge?: true,
+        id: nil, item_key: charge.id, item_id: charge.id, charge?: true, product?: false,
         billable_metric: charge.billable_metric, units: 5, amount_cents: 1000,
         sub_total_excluding_taxes_amount_cents: 1000
       )

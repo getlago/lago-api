@@ -18,7 +18,7 @@ module Integrations
 
           attr_reader :fees
 
-          delegate :charge_id, :billable_metric, to: "fees.first"
+          delegate :charge_id, :billable_metric, :product?, to: "fees.first"
 
           def id
             nil
