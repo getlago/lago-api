@@ -20,12 +20,15 @@ module Auth
         query_entra_id_access_token
         check_userinfo(result.email)
 
-        return login_method_not_authorized_failure unless integration_organization_allows_login_method?
-
         find_or_create_user
-        return login_method_not_authorized_failure unless user_trusted_by_integration?(result.user)
-
         find_or_create_membership
+
+        unless result.user.active_organizations.pluck(:authentication_methods).flatten.uniq.include?(Organizations::AuthenticationMethods::ENTRA_ID)
+          return result.single_validation_failure!(
+            error_code: "login_method_not_authorized",
+            field: Organizations::AuthenticationMethods::ENTRA_ID
+          )
+        end
 
         UserDevices::RegisterService.call!(user: result.user)
         generate_token
