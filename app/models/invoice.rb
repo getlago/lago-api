@@ -569,11 +569,13 @@ class Invoice < ApplicationRecord
   end
 
   def should_sync_invoice?
-    !self_billed && finalized? && customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_invoices }
+    !self_billed && finalized? &&
+      customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_invoices } &&
+      !product_catalog?
   end
 
   def should_sync_hubspot_invoice?
-    finalized? && should_update_hubspot_invoice?
+    finalized? && should_update_hubspot_invoice? && !product_catalog?
   end
 
   def should_sync_salesforce_invoice?
