@@ -4400,6 +4400,7 @@ CREATE VIEW public.exports_invoices AS
             WHEN 3 THEN 'one_off'::text
             WHEN 4 THEN 'advance_charges'::text
             WHEN 5 THEN 'progressive_billing'::text
+            WHEN 6 THEN 'contract'::text
             ELSE NULL::text
         END AS invoice_type,
         CASE i.status
@@ -15698,6 +15699,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261014180403'),
 ('20261013124033'),
 ('20261009154629'),
 ('20261008135612'),

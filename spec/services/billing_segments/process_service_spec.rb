@@ -67,6 +67,10 @@ RSpec.describe BillingSegments::ProcessService do
       billing_segment
     end
 
+    it "builds the arrears invoice with the contract type" do
+      expect(result.invoices.sole.reload).to have_attributes(invoice_type: "contract", status: "finalized")
+    end
+
     context "when a contract selects invoice custom sections" do
       let(:section) { create(:invoice_custom_section, organization:) }
 
@@ -747,7 +751,7 @@ RSpec.describe BillingSegments::ProcessService do
           expect(result).to be_success
 
           invoice = result.invoices.sole.reload
-          expect(invoice.status).to eq("finalized")
+          expect(invoice).to have_attributes(invoice_type: "contract", status: "finalized")
           expect(invoice.fees.count).to eq(2)
 
           metered_fee = invoice.fees.find { |f| f.invoiceable == product }
