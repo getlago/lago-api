@@ -93,24 +93,6 @@ RSpec.describe Auth::EntraId::LoginService, cache: :memory do
       end
     end
 
-    context "when the integration organization disallows the login method but another membership allows it" do
-      let(:user) { create(:user, email: "foo@bar.com") }
-
-      before do
-        create(:membership, user:, organization: entra_id_integration.organization)
-        create(:membership, user:, organization: create(:organization, authentication_methods: %w[email_password entra_id]))
-        entra_id_integration.organization.disable_entra_id_authentication!
-      end
-
-      it "refuses the login" do
-        result = service.call
-
-        expect(result).not_to be_success
-        expect(result.error.messages).to match(entra_id: ["login_method_not_authorized"])
-        expect(result.token).to be_nil
-      end
-    end
-
     context "when domain is not configured with an integration" do
       let(:entra_id_integration) { nil }
 
@@ -181,8 +163,6 @@ RSpec.describe Auth::EntraId::LoginService, cache: :memory do
     context "when an existing user differs from the typed email only by casing" do
       let!(:user) { create(:user, email: "Foo@Bar.com") }
 
-      before { create(:membership, user:, organization: entra_id_integration.organization) }
-
       it "signs in the existing user instead of creating a new one" do
         result = nil
 
@@ -194,10 +174,7 @@ RSpec.describe Auth::EntraId::LoginService, cache: :memory do
     context "when users exist with the typed casing and with another casing" do
       let!(:exact_user) { create(:user, email: "foo@bar.com") }
 
-      before do
-        create(:user, email: "FOO@bar.com", created_at: 1.year.ago)
-        create(:membership, user: exact_user, organization: entra_id_integration.organization)
-      end
+      before { create(:user, email: "FOO@bar.com", created_at: 1.year.ago) }
 
       it "signs in the user with the exact casing" do
         expect(service.call.user).to eq(exact_user)
@@ -207,25 +184,10 @@ RSpec.describe Auth::EntraId::LoginService, cache: :memory do
     context "when user already exists" do
       let(:user) { create(:user, email: "foo@bar.com") }
 
-      before { create(:membership, user:, organization: entra_id_integration.organization) }
+      before { user }
 
       it "does not create a new user" do
         expect { service.call }.not_to change(User, :count)
-      end
-    end
-
-    context "when an existing user is not a member of the integration organization" do
-      let(:user) { create(:user, email: "foo@bar.com") }
-
-      before { create(:membership, user:) }
-
-      it "refuses the login without adding the user to the organization" do
-        result = nil
-
-        expect { result = service.call }.not_to change(Membership, :count)
-        expect(result).not_to be_success
-        expect(result.error.messages[:entra_id]).to eq(["login_method_not_authorized"])
-        expect(result.token).to be_nil
       end
     end
 

@@ -3,13 +3,6 @@
 module AuthenticableAdminUser
   extend ActiveSupport::Concern
 
-  # NOTE: Okta and Entra ID identities come from a provider configured by a tenant, so they never
-  #       grant access to the admin endpoints.
-  SSO_LOGIN_METHODS = [
-    Organizations::AuthenticationMethods::OKTA,
-    Organizations::AuthenticationMethods::ENTRA_ID
-  ].freeze
-
   private
 
   def ready?(**args)
@@ -17,7 +10,6 @@ module AuthenticableAdminUser
     raise unauthorized_error unless context[:current_user]
     raise unauthorized_error unless context[:current_user].cs_admin?
     raise unauthorized_error unless context[:current_user].email.end_with?("@getlago.com")
-    raise unauthorized_error if SSO_LOGIN_METHODS.include?(context[:login_method])
 
     super
   end
