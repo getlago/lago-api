@@ -781,6 +781,26 @@ RSpec.describe SendWebhookJob do
         Webhooks::BillableMetrics::DeletedService
     end
 
+    context "with coupon webhooks" do
+      let(:object) { create(:coupon, organization:) }
+
+      it_behaves_like "a webhook service",
+        "coupon.created",
+        Webhooks::Coupons::CreatedService
+
+      it_behaves_like "a webhook service",
+        "coupon.updated",
+        Webhooks::Coupons::UpdatedService
+
+      it_behaves_like "a webhook service",
+        "coupon.deleted",
+        Webhooks::Coupons::DeletedService
+
+      it_behaves_like "a webhook service",
+        "coupon.terminated",
+        Webhooks::Coupons::TerminatedService
+    end
+
     context "with quote webhooks" do
       let(:object) { create(:quote_version, organization:) }
 
