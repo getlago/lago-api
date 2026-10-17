@@ -3,14 +3,18 @@
 module BillingSegments
   # Produces customer due billing segments. It resolves what a run needs once — the card's
   # schedule, its pricing unit — and hands them down, so no collaborator looks anything up.
+  #
+  # Given a contract, it runs on every card of that contract instead of the ones the clock
+  # brought due: termination closes them all at once, and the clock no longer selects them.
   class ScheduleService < BaseService
     OVERLAP_CONSTRAINT = "billing_segments_no_overlapping_periods"
 
     Result = BaseResult[:billing_segments]
 
-    def initialize(customer:, timestamp: Time.current)
+    def initialize(customer:, timestamp: Time.current, contract: nil)
       @customer = customer
       @timestamp = timestamp
+      @contract = contract
       super
     end
 
@@ -20,7 +24,7 @@ module BillingSegments
 
       ActiveRecord::Base.transaction do
         Customers::LockService.call!(customer:, scope: :billing_schedule) do
-          due_cards.find_each { |card| scheduled.concat(schedule_card(card)) }
+          cards.find_each { |card| scheduled.concat(schedule_card(card)) }
         end
       end
 
@@ -40,10 +44,16 @@ module BillingSegments
 
     private
 
-    attr_reader :customer, :timestamp
+    attr_reader :customer, :timestamp, :contract
 
-    def due_cards
-      ContractRateCard.due_for_billing(timestamp)
+    def cards
+      selection = if contract
+        ContractRateCard.billable.where(contract_id: contract.id)
+      else
+        ContractRateCard.due_for_billing(timestamp)
+      end
+
+      selection
         .where(organization_id: customer.organization_id, contracts: {customer_id: customer.id})
         .includes(
           :rate_card,

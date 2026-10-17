@@ -20,18 +20,19 @@ RSpec.describe ContractRateCard do
   end
 
   describe "Scopes" do
+    let(:organization) { create(:organization) }
+
+    # Priced by default: an unpriced rate card is not due, which one example checks on its own.
+    def card(contract: nil, priced: true, **attributes)
+      contract ||= create(:contract, organization:, started_at: 1.year.ago)
+      rate_card = create(:rate_card, organization:)
+      create(:rate_card_rate, organization:, rate_card:) if priced
+
+      create(:contract_rate_card, organization:, contract:, rate_card:, **attributes)
+    end
+
     describe ".due_for_billing" do
       let(:timestamp) { Time.zone.parse("2026-03-01 00:00:00") }
-      let(:organization) { create(:organization) }
-
-      # Priced by default: an unpriced rate card is not due, which one example checks on its own.
-      def card(contract: nil, priced: true, **attributes)
-        contract ||= create(:contract, organization:, started_at: 1.year.ago)
-        rate_card = create(:rate_card, organization:)
-        create(:rate_card_rate, organization:, rate_card:) if priced
-
-        create(:contract_rate_card, organization:, contract:, rate_card:, **attributes)
-      end
 
       it "takes cards whose clock has come due" do
         due = card(next_billing_at: timestamp)
@@ -136,6 +137,37 @@ RSpec.describe ContractRateCard do
         card(contract: late_contract, next_billing_at: timestamp)
 
         expect(described_class.due_for_billing(timestamp)).to be_empty
+      end
+    end
+
+    # What a termination closes: the clock and the contract's status do not matter.
+    describe ".billable" do
+      it "takes priced cards whatever their clock or their contract's status" do
+        later = card(next_billing_at: 1.month.from_now)
+        terminated = card(contract: create(:contract, :terminated, organization:, started_at: 1.year.ago))
+
+        expect(described_class.billable).to contain_exactly(later, terminated)
+      end
+
+      it "leaves out a card whose rate card has no price yet" do
+        card(priced: false)
+
+        expect(described_class.billable).to be_empty
+      end
+
+      it "leaves out a card that starts after its contract ends" do
+        ending_early = create(:contract, organization:, started_at: 1.year.ago, ended_at: 1.month.ago)
+        card(contract: ending_early, effective_date: 1.week.ago.to_date)
+
+        expect(described_class.billable).to be_empty
+      end
+
+      it "leaves out cards of a deleted customer" do
+        deleted = create(:customer, organization:)
+        card(contract: create(:contract, organization:, customer: deleted, started_at: 1.year.ago))
+        deleted.discard!
+
+        expect(described_class.billable).to be_empty
       end
     end
   end

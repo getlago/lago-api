@@ -169,5 +169,44 @@ RSpec.describe BillingSegments::ScheduleService do
         expect(result.billing_segments).to eq([])
       end
     end
+
+    # The termination path: the clock no longer selects a terminated contract, and its cards'
+    # clocks still point at the cycle end the termination cut away.
+    context "when given a terminated contract" do
+      subject(:result) { described_class.call(customer:, timestamp: terminated_at, contract:) }
+
+      let(:terminated_at) { Time.zone.parse("2026-01-20 00:00:00") }
+
+      let(:other_card) do
+        create(
+          :contract_rate_card,
+          organization:,
+          contract: create(:contract, organization:, customer:, started_at: Time.zone.parse("2026-01-01 00:00:00")),
+          rate_card:,
+          effective_date: Date.new(2026, 1, 1),
+          billing_anchor_date: Date.new(2026, 1, 1),
+          next_billing_at: Time.zone.parse("2026-01-01 00:00:00")
+        )
+      end
+
+      before do
+        contract.update!(status: :terminated, terminated_at:, ended_at: terminated_at)
+        other_card
+      end
+
+      it "writes the cut-short cycle of its cards, though their clocks are not due" do
+        expect(result.billing_segments.map { [it.contract_rate_card_id, it.started_at, it.billing_at] }).to eq(
+          [[contract_rate_card.id, Time.zone.parse("2026-01-01 00:00:00"), terminated_at]]
+        )
+      end
+
+      it "stops their clocks" do
+        expect { result }.to change { contract_rate_card.reload.next_billing_at }.to(nil)
+      end
+
+      it "leaves the customer's other contracts to the clock" do
+        expect { result }.not_to change { other_card.reload.next_billing_at }
+      end
+    end
   end
 end

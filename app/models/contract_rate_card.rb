@@ -28,9 +28,14 @@ class ContractRateCard < ApplicationRecord
   default_scope -> { kept }
 
   scope :due_for_billing, ->(timestamp) {
-    joins(contract: {customer: :billing_entity})
+    billable
       .where(next_billing_at: ..timestamp)
       .where(contracts: {status: Contract::BILLABLE_STATUSES, started_at: ..timestamp})
+  }
+
+  # Cards that can owe a period at all, whatever their clock or their contract's status.
+  scope :billable, -> {
+    joins(contract: {customer: :billing_entity})
       .where(customers: {deleted_at: nil})
       # Only a priced card owes anything: a period with no price is not one to be paid for.
       .where(rate_card_id: RateCardRate.select(:rate_card_id))

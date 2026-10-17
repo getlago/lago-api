@@ -436,22 +436,29 @@ RSpec.describe Billing::RateCards::Schedule do
       end
     end
 
-    # An unprorated card pays the full price for whatever it got: the clamp changes what
-    # the cycle covers, never what it costs. Without this the `prorated` flag could be
-    # deleted outright and every other example here would still pass.
+    # A termination ends the service, so the clamped cycle bills the days it ran even on a
+    # card that does not prorate. The flag still prices every cycle the end leaves whole.
     context "when the card does not prorate" do
       let(:prorated) { false }
       let(:ends_at) { Time.utc(2022, 3, 20) }
 
-      it "bills a clamped cycle whole" do
-        expect(ratios).to eq([1.0])
+      it "prorates the clamped cycle" do
+        expect(ratios).to eq([19.fdiv(31)])
+      end
+
+      context "when the end falls on the cycle's boundary" do
+        let(:ends_at) { Time.utc(2022, 4, 1) }
+
+        it "bills the cycle whole" do
+          expect(ratios).to eq([1.0])
+        end
       end
 
       context "when a rate change cuts the cycle as well" do
         let(:rates) { [card_rate(Time.utc(2021, 1, 1)), card_rate(Time.utc(2022, 3, 10))] }
 
-        it "bills each slice whole, so the cut cycle costs twice" do
-          expect(ratios).to eq([1.0, 1.0])
+        it "shares the clamped run between the slices" do
+          expect(ratios).to eq([9.fdiv(31), 10.fdiv(31)])
         end
       end
     end
