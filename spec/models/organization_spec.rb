@@ -88,6 +88,7 @@ RSpec.describe Organization do
   describe "Validations" do
     it do
       expect(subject).to validate_inclusion_of(:default_currency).in_array(described_class.currency_list)
+      expect(subject).to validate_numericality_of(:pagination_max_page_size).only_integer.is_greater_than(0).allow_nil
     end
 
     it "is valid with valid attributes" do

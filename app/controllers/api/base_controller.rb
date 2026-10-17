@@ -16,6 +16,7 @@ module Api
     before_action :set_context_source
     before_action :track_api_key_usage
     before_action :authorize
+    before_action :validate_pagination_params, if: :api_v1_request?
     include Trackable
     include ApiLoggable
 
@@ -58,6 +59,38 @@ module Api
 
     def api_v2_request?
       request.path.start_with?("/api/v2/")
+    end
+
+    # Keyed on the path rather than the controller: the /api/v2 fallback routes serve the same
+    # v1 controllers and keep accepting any page size.
+    def api_v1_request?
+      request.path.start_with?("/api/v1/")
+    end
+
+    def validate_pagination_params
+      errors = {
+        page: pagination_param_error(:page, max: nil),
+        per_page: pagination_param_error(:per_page, max: max_per_page)
+      }.compact
+
+      validation_errors(errors:) if errors.any?
+    end
+
+    # A blank value is treated as absent. Only plain positive decimals are valid: Integer() would also
+    # accept forms such as 010, +5, 1_000 or a leading space.
+    def pagination_param_error(name, max:)
+      return if params[name].blank?
+
+      value = params[name].to_s
+      if value.match?(/\A[1-9]\d*\z/) && (max.nil? || value.to_i <= max)
+        nil
+      else
+        ["value_is_out_of_range"]
+      end
+    end
+
+    def max_per_page
+      current_organization.pagination_max_page_size || Pagination.max_per_page
     end
 
     def track_api_key_usage

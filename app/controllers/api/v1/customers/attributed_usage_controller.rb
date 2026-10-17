@@ -9,6 +9,8 @@ module Api
         QUERY_LIMIT_ERRORS = %w[too_many_groups query_timeout memory_limit_exceeded].freeze
 
         before_action :ensure_feature_flag!
+        # Its own MAX_PER_PAGE applies, after the customer and subscription lookups.
+        skip_before_action :validate_pagination_params
 
         def show
           return not_found_error(resource: "customer") unless customer
