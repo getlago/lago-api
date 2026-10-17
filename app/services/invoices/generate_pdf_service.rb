@@ -78,7 +78,9 @@ module Invoices
     end
 
     def template
-      if invoice.self_billed?
+      if invoice.product_catalog?
+        "invoices/v#{invoice.version_number}/product_catalog/contract"
+      elsif invoice.self_billed?
         "invoices/v#{invoice.version_number}/self_billed"
 
       elsif invoice.one_off?

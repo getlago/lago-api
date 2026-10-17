@@ -29,7 +29,9 @@ en:
     credit_notes: Credit notes
     date_from: From
     date_to: to
+    description: Description
     details: "%{resource} details"
+    details_title: Details
     document_name: Invoice
     document_tax_name: Tax invoice
     due_date: Due %{date}
@@ -82,6 +84,7 @@ en:
     prepaid_credits_with_value: Prepaid credits - %{wallet_name}
     progressive_billing_credit: Usage already billed
     purchase_order_number: Purchase Order Number
+    quantity: Quantity
     quarter: quarter
     quarterly: Quarterly
     reached_usage_threshold: This progressive billing is generated because your cumulative usage has reached %{usage_amount}, exceeding the %{threshold_amount} threshold.

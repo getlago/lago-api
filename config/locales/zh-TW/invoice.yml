@@ -29,7 +29,9 @@ zh-TW:
     credit_notes: 折讓單
     date_from: 自
     date_to: 至
+    description: 描述
     details: "%{resource} 詳細資訊"
+    details_title: 明細
     document_name: 發票
     document_tax_name: 稅務發票
     due_date: 繳款期限 %{date}
@@ -82,6 +84,7 @@ zh-TW:
     prepaid_credits_with_value: 預付點數 - %{wallet_name}
     progressive_billing_credit: 已計費的使用量
     purchase_order_number: 採購訂單編號
+    quantity: 數量
     quarter: 季
     quarterly: 每季
     reached_usage_threshold: 此累進計費因您的累積使用量已達到 %{usage_amount}，超過 %{threshold_amount} 的門檻而產生。

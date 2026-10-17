@@ -29,7 +29,9 @@ pt-BR:
     credit_notes: Notas de crédito
     date_from: De
     date_to: até
+    description: Descrição
     details: Detalhes de %{resource}
+    details_title: Detalhes
     document_name: Fatura
     document_tax_name: Nota fiscal
     due_date: Vencimento %{date}
@@ -82,6 +84,7 @@ pt-BR:
     prepaid_credits_with_value: Créditos pré-pagos - %{wallet_name}
     progressive_billing_credit: Uso já faturado
     purchase_order_number: Número do pedido de compra
+    quantity: Quantidade
     quarter: trimestre
     quarterly: Trimestral
     reached_usage_threshold: Esta cobrança progressiva é gerada porque seu uso cumulativo atingiu %{usage_amount}, excedendo o limite de %{threshold_amount}.
