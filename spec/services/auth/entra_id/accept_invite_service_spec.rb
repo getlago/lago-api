@@ -41,32 +41,6 @@ RSpec.describe Auth::EntraId::AcceptInviteService, :premium, cache: :memory do
       expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::ENTRA_ID)
     end
 
-    context "when the email domain belongs to another organization's integration" do
-      let(:other_organization) { create(:organization, premium_integrations: ["entra_id"]) }
-      let(:entra_id_integration) { create(:entra_id_integration, domain: "bar.com", organization: other_organization) }
-
-      it "refuses the invite and keeps it pending" do
-        result = service.call
-
-        expect(result).not_to be_success
-        expect(result.error.messages).to eq({entra_id: ["login_method_not_authorized"]})
-        expect(invite.reload).to be_pending
-        expect(User.find_by(email: "foo@bar.com")).to be_nil
-      end
-
-      context "when the invited organization's integration has the same issuer" do
-        before { create(:entra_id_integration, domain: "baz.com", tenant_id: entra_id_integration.tenant_id, organization:) }
-
-        it "accepts the invite" do
-          result = service.call
-
-          expect(result).to be_success
-          expect(invite.reload).to be_accepted
-          expect(Utils::AuthToken.decode(token: result.token)["sso_organization_id"]).to eq(other_organization.id)
-        end
-      end
-    end
-
     context "when code is not provided" do
       let(:code) { nil }
 

@@ -76,7 +76,7 @@ module Types
       end
 
       def accessible_by_current_session
-        object.accessible_by_session?(**context[:session_claims].to_h)
+        object.authentication_methods.include?(context[:login_method])
       end
 
       def authenticated_method

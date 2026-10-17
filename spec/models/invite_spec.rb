@@ -35,6 +35,13 @@ RSpec.describe Invite do
     end
   end
 
+  describe "#login_method_allowed?" do
+    it "checks the authentication methods of the organization" do
+      expect(invite.login_method_allowed?(Organizations::AuthenticationMethods::EMAIL_PASSWORD)).to be true
+      expect(invite.login_method_allowed?(Organizations::AuthenticationMethods::OKTA)).to be false
+    end
+  end
+
   describe "#mark_as_revoked" do
     it "revokes the invite with a Time" do
       freeze_time do

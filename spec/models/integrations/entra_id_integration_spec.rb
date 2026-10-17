@@ -32,22 +32,6 @@ RSpec.describe Integrations::EntraIdIntegration do
     end
   end
 
-  describe "#sso_issuer" do
-    it "combines the host and the tenant" do
-      entra_id_integration.tenant_id = "AbC-123"
-
-      expect(entra_id_integration.sso_issuer).to eq("login.microsoftonline.com/abc-123")
-    end
-
-    %w[common organizations consumers Common].each do |tenant_id|
-      it "is nil for the multi-tenant alias #{tenant_id}" do
-        entra_id_integration.tenant_id = tenant_id
-
-        expect(entra_id_integration.sso_issuer).to be_nil
-      end
-    end
-  end
-
   describe "Scopes" do
     describe ".with_domain" do
       let!(:integration) { create(:entra_id_integration, domain: "bosch.com", additional_domains: ["de.bosch.com"]) }

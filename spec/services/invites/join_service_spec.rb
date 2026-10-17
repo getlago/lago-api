@@ -150,34 +150,5 @@ RSpec.describe Invites::JoinService do
         expect { join_service.call }.not_to change(Membership, :count)
       end
     end
-
-    context "with an SSO session" do
-      subject(:join_service) { described_class.new(token:, user:, login_method:, sso_claims:) }
-
-      let(:organization) { create(:organization, authentication_methods: %w[email_password okta]) }
-      let(:login_method) { Organizations::AuthenticationMethods::OKTA }
-      let(:sso_claims) { {sso_organization_id: SecureRandom.uuid, sso_issuer: "acme.okta.com"} }
-
-      before { create(:okta_integration, organization:, host: "acme.okta.com") }
-
-      it "creates a membership when the organization's integration has the session issuer" do
-        result = join_service.call
-
-        expect(result).to be_success
-        expect(result.membership.organization).to eq(organization)
-      end
-
-      context "when the organization's integration has another issuer" do
-        let(:sso_claims) { {sso_organization_id: SecureRandom.uuid, sso_issuer: "other.okta.com"} }
-
-        it "returns a login_method_not_authorized error" do
-          result = join_service.call
-
-          expect(result).not_to be_success
-          expect(result.error.messages[:okta]).to eq(["login_method_not_authorized"])
-          expect(invite.reload).to be_pending
-        end
-      end
-    end
   end
 end

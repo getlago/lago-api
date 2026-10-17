@@ -32,14 +32,6 @@ module Auth
         result.okta_integration = okta_integration
       end
 
-      # Ties the session to the organization and identity provider that authenticated the user.
-      def sso_token_claims
-        {
-          sso_organization_id: result.okta_integration.organization_id,
-          sso_issuer: result.okta_integration.sso_issuer
-        }
-      end
-
       def check_invite(email)
         invite = Invite.pending.find_by(token: invite_token)
 
