@@ -3,6 +3,8 @@
 module Resolvers
   module PaymentProviderCustomers
     class PaymentMethodsResolver < Resolvers::BaseResolver
+      include AuthenticableApiUser
+
       REQUIRED_PERMISSION = "payment_methods:view"
 
       description "Query payment methods of a payment connection"

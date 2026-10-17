@@ -3,6 +3,8 @@
 module Resolvers
   module Customers
     class SubscriptionsResolver < Resolvers::BaseResolver
+      include AuthenticableApiUser
+
       REQUIRED_PERMISSION = "customers:view"
 
       description "Query subscriptions of a customer"
