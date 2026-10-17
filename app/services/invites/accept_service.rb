@@ -7,7 +7,7 @@ module Invites
     def call(**args)
       invite = args[:invite] || Invite.find_by(token: args[:token], status: :pending)
       return result.not_found_failure!(resource: "invite") unless invite
-      unless invite.organization.accessible_by_session?(login_method: args[:login_method], **args.fetch(:token_claims, {}))
+      unless invite.login_method_allowed?(args[:login_method])
         return result.single_validation_failure!(error_code: "login_method_not_authorized", field: args[:login_method])
       end
 
@@ -36,7 +36,7 @@ module Invites
         result.user = registration_result.user
         result.organization = registration_result.organization
         result.membership = registration_result.membership
-        result.token = generate_token(result.user, login_method: args[:login_method], **args.fetch(:token_claims, {}))
+        result.token = generate_token(result.user, login_method: args[:login_method])
         invite.recipient = result.membership
         invite.mark_as_accepted!
         result
@@ -57,7 +57,7 @@ module Invites
       result.user = user
       result.membership = join_result.membership
       result.organization = invite.organization
-      result.token = generate_token(user, login_method: args[:login_method], **args.fetch(:token_claims, {}))
+      result.token = generate_token(user, login_method: args[:login_method])
       return result unless result.success?
 
       UserDevices::RegisterService.call!(user:, skip_log: false)

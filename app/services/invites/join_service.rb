@@ -4,12 +4,11 @@ module Invites
   class JoinService < BaseService
     Result = BaseResult[:invite, :membership]
 
-    def initialize(user:, login_method:, token: nil, invite: nil, sso_claims: {})
+    def initialize(user:, login_method:, token: nil, invite: nil)
       @token = token
       @invite = invite
       @user = user
       @login_method = login_method
-      @sso_claims = sso_claims
 
       super
     end
@@ -23,7 +22,7 @@ module Invites
         return result.single_validation_failure!(field: :email, error_code: "invite_email_mistmatch")
       end
 
-      unless invite.organization.accessible_by_session?(login_method:, **sso_claims)
+      unless invite.login_method_allowed?(login_method)
         return result.single_validation_failure!(error_code: "login_method_not_authorized", field: login_method)
       end
 
@@ -46,7 +45,7 @@ module Invites
 
     private
 
-    attr_reader :token, :user, :login_method, :sso_claims
+    attr_reader :token, :user, :login_method
 
     def invite
       @invite ||= Invite.find_by(token:, status: :pending)
