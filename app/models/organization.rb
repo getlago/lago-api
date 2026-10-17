@@ -184,7 +184,7 @@ class Organization < ApplicationRecord
   validates :invoice_footer, length: {maximum: 600}
   validates :document_number_prefix, length: {minimum: 1, maximum: 10}, on: :update
   validates :invoice_grace_period, numericality: {greater_than_or_equal_to: 0}
-  validates :net_payment_term, numericality: {greater_than_or_equal_to: 0}
+  validates :net_payment_term, numericality: {greater_than_or_equal_to: 0, only_integer: true}
   validates :logo,
     image: {authorized_content_type: %w[image/png image/jpg image/jpeg], max_size: 800.kilobytes},
     if: :logo?
