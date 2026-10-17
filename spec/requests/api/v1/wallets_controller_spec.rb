@@ -28,6 +28,21 @@ RSpec.describe Api::V1::WalletsController do
           expect(json[:error_details][:customer]).to eq ["customer_not_found"]
         end
       end
+
+      context "when recurring transaction rules are requested without Premium" do
+        let(:create_params) do
+          super().merge(recurring_transaction_rules: [
+            {trigger: "threshold", method: "fixed", threshold_credits: "1", paid_credits: "10"}
+          ])
+        end
+
+        it "returns feature unavailable instead of an internal error" do
+          expect { subject }.not_to change(Wallet, :count)
+
+          expect(response).to have_http_status(:forbidden)
+          expect(json[:code]).to eq("feature_unavailable")
+        end
+      end
     end
 
     it_behaves_like "a wallet create endpoint with billing_entity_id" do
@@ -48,6 +63,22 @@ RSpec.describe Api::V1::WalletsController do
       end
 
       let(:id) { wallet.id }
+
+      context "when recurring transaction rules are requested without Premium" do
+        let(:update_params) do
+          super().merge(recurring_transaction_rules: [
+            {trigger: "threshold", method: "fixed", threshold_credits: "1", paid_credits: "10"}
+          ])
+        end
+
+        it "returns feature unavailable without changing the wallet" do
+          subject
+
+          expect(response).to have_http_status(:forbidden)
+          expect(json[:code]).to eq("feature_unavailable")
+          expect(wallet.reload.name).not_to eq("wallet1")
+        end
+      end
     end
   end
 

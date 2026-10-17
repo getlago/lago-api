@@ -13,7 +13,7 @@ module Wallets
       end
 
       def call
-        return unless License.premium?
+        return result.forbidden_failure! unless License.premium?
         return result unless valid_payment_method?
         return result unless valid_connections?
 
