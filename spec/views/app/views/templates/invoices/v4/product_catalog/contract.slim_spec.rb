@@ -14,9 +14,10 @@ RSpec.describe "templates/invoices/v4/product_catalog/contract.slim" do
   let(:billing_entity) { organization.default_billing_entity }
   let(:customer) { create(:customer, organization:, name: "Pied Piper", legal_name: nil) }
   let(:invoice) do
-    create(:invoice, organization:, billing_entity:, customer:, invoice_type: :contract, number: "INV-001", self_billed:)
+    create(:invoice, organization:, billing_entity:, customer:, invoice_type: :contract, number: "INV-001", self_billed:, prepaid_credit_amount_cents:)
   end
   let(:self_billed) { false }
+  let(:prepaid_credit_amount_cents) { 0 }
   let(:contract) { create(:contract, organization:, customer:, name: "Platform") }
   let(:category) { create(:product_category, organization:, name: "Infrastructure", invoice_display_name: nil) }
   let(:product) { create(:product, organization:, product_category: category, name: "Compute", invoice_display_name: nil) }
@@ -54,6 +55,14 @@ RSpec.describe "templates/invoices/v4/product_catalog/contract.slim" do
 
   it "bills from the billing entity to the customer" do
     expect(rendered_text).to match(/From Hooli.*Bill to Pied Piper/)
+  end
+
+  context "when the invoice is partly paid with prepaid credits" do
+    let(:prepaid_credit_amount_cents) { 500 }
+
+    it "shows the deduction in the totals" do
+      expect(rendered_text).to match(/Prepaid credits -\S+5\.00/)
+    end
   end
 
   context "when the invoice is self billed" do
