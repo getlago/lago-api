@@ -418,6 +418,24 @@ RSpec.describe FixedCharges::UpdateService do
             expect(FixedCharges::UpdateChildrenJob).not_to have_been_enqueued
           end
         end
+
+        context "when the cascaded attributes are unchanged" do
+          let(:fixed_charge) { create(:fixed_charge, plan:, add_on:, units: 10, properties: {amount: "100"}) }
+          let(:params) do
+            {
+              charge_model: "standard",
+              invoice_display_name: "Updated Display Name",
+              units: 10,
+              properties: {amount: "100"}
+            }
+          end
+
+          it "does not trigger cascade update" do
+            result
+
+            expect(FixedCharges::UpdateChildrenJob).not_to have_been_enqueued
+          end
+        end
       end
 
       context "without cascade_updates when fixed_charge has children" do
