@@ -18,8 +18,17 @@ RSpec.describe BillingSegments::ProcessService do
     end
     let(:customer_finalize_zero_amount_invoice) { "inherit" }
     let(:invoice_grace_period) { 0 }
+    let(:catalog_plan) { nil }
     let(:contract) do
-      create(:contract, organization:, customer:, consolidate_invoice:, purchase_order_number: purchase_number, started_at: Time.zone.parse("2026-07-01"))
+      create(
+        :contract,
+        organization:,
+        customer:,
+        catalog_plan:,
+        consolidate_invoice:,
+        purchase_order_number: purchase_number,
+        started_at: Time.zone.parse("2026-07-01")
+      )
     end
     let(:consolidate_invoice) { true }
     let(:purchase_number) { nil }
@@ -653,6 +662,21 @@ RSpec.describe BillingSegments::ProcessService do
           end
         end
 
+        context "when the contract belongs to a catalog plan with taxes" do
+          let(:catalog_plan) { create(:catalog_plan, organization:) }
+          let(:tax) { create(:tax, organization:, rate: 20) }
+
+          before { create(:plan_applied_tax, :catalog_plan, organization:, catalog_plan:, tax:) }
+
+          it "applies the catalog plan taxes to the fee" do
+            expect(result).to be_success
+
+            fee = result.invoices.sole.fees.sole.reload
+            expect(fee).to have_attributes(taxes_amount_cents: 600, taxes_rate: 20)
+            expect(fee.applied_taxes.sole).to have_attributes(tax:, amount_cents: 600)
+          end
+        end
+
         context "with a minimum amount" do
           let(:min_amount_cents) { 10_000 }
 
@@ -1228,6 +1252,21 @@ RSpec.describe BillingSegments::ProcessService do
           status: "draft",
           expected_finalization_date: Date.parse("2026-09-03")
         )
+      end
+    end
+
+    context "when the contract belongs to a catalog plan with taxes" do
+      let(:catalog_plan) { create(:catalog_plan, organization:) }
+      let(:tax) { create(:tax, organization:, rate: 20) }
+
+      before { create(:plan_applied_tax, :catalog_plan, organization:, catalog_plan:, tax:) }
+
+      it "applies the catalog plan taxes to the fee" do
+        expect(result).to be_success
+
+        fee = result.invoices.sole.fees.sole.reload
+        expect(fee).to have_attributes(taxes_amount_cents: 1_500, taxes_rate: 20)
+        expect(fee.applied_taxes.sole).to have_attributes(tax:, amount_cents: 1_500)
       end
     end
 

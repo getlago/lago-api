@@ -16,25 +16,37 @@ module CatalogPlans
     )
 
     def call
-      catalog_plan = CatalogPlan.new(
-        organization_id: args[:organization_id],
-        name: args[:name],
-        code: args[:code],
-        description: args[:description],
-        invoice_display_name: args[:invoice_display_name],
-        currency: args[:currency]
-      )
-      catalog_plan.save!
+      ActiveRecord::Base.transaction do
+        catalog_plan = CatalogPlan.create!(
+          organization_id: args[:organization_id],
+          name: args[:name],
+          code: args[:code],
+          description: args[:description],
+          invoice_display_name: args[:invoice_display_name],
+          currency: args[:currency]
+        )
 
-      result.catalog_plan = catalog_plan
-      SendWebhookJob.perform_after_commit("plan.created", catalog_plan) if send_webhook
+        apply_taxes(catalog_plan)
+
+        result.catalog_plan = catalog_plan
+      end
+
+      SendWebhookJob.perform_after_commit("plan.created", result.catalog_plan) if send_webhook
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e.result.error)
     end
 
     private
 
     attr_reader :args, :send_webhook
+
+    def apply_taxes(catalog_plan)
+      return unless args.key?(:tax_codes) && !args[:tax_codes].nil?
+
+      CatalogPlans::ApplyTaxesService.call!(catalog_plan:, tax_codes: args[:tax_codes])
+    end
   end
 end
