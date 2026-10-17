@@ -37,29 +37,27 @@ module PaymentMethods
     end
 
     def determine_invoice_payment_method
-      case invoice.invoice_type
-      when "subscription", "advance_charges", "progressive_billing"
-        determine_subscription_payment_method
-      when "credit"
-        determine_credit_payment_method
-      when "contract"
-        nil
+      if invoice.product_catalog?
+        payment_method_for(invoice_contract)
       else
-        customer.default_payment_method
+        case invoice.invoice_type
+        when "subscription", "advance_charges", "progressive_billing"
+          determine_subscription_payment_method
+        when "credit"
+          determine_credit_payment_method
+        else
+          customer.default_payment_method
+        end
       end
     end
 
+    def invoice_contract
+      invoice.contracts.first ||
+        Contract.where(id: invoice.fees.where.not(contract_id: nil).select(:contract_id)).order(:created_at, :id).first
+    end
+
     def determine_subscription_payment_method
-      subscription = invoice.invoice_subscriptions.first&.subscription
-      return nil unless subscription
-
-      return nil if subscription.payment_method_type == "manual"
-
-      if subscription.payment_method_id.present?
-        return customer.payment_methods.find_by(id: subscription.payment_method_id)
-      end
-
-      customer.default_payment_method
+      payment_method_for(invoice.invoice_subscriptions.first&.subscription)
     end
 
     def determine_credit_payment_method
@@ -78,14 +76,18 @@ module PaymentMethods
         return customer.payment_methods.find_by(id: rule.payment_method_id) if rule&.payment_method_id.present?
       end
 
-      wallet = wallet_transaction.wallet
-      return nil if wallet.payment_method_type == "manual"
+      payment_method_for(wallet_transaction.wallet)
+    end
 
-      if wallet.payment_method_id.present?
-        return customer.payment_methods.find_by(id: wallet.payment_method_id)
+    def payment_method_for(holder)
+      return nil unless holder
+      return nil if holder.payment_method_type == "manual"
+
+      if holder.payment_method_id.present?
+        customer.payment_methods.find_by(id: holder.payment_method_id)
+      else
+        customer.default_payment_method
       end
-
-      customer.default_payment_method
     end
   end
 end
