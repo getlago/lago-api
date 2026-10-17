@@ -281,6 +281,91 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
           expect(result.recurring_updated_at).to eq(from_datetime)
         end
 
+        context "when an event falls just before the subscription boundary" do
+          before do
+            create(
+              :event,
+              organization_id: organization.id,
+              code: billable_metric.code,
+              subscription: previous_subscription,
+              customer:,
+              timestamp: from_datetime - 0.5.seconds,
+              properties: {value: 5}
+            )
+          end
+
+          it "includes the event in the recurring value" do
+            result = aggregator.aggregate
+
+            expect(result.total_aggregated_units).to eq(15)
+          end
+        end
+
+        context "with ClickHouse events", clickhouse: true do
+          let(:event_store_class) { Events::Stores::ClickhouseStore }
+          let(:organization) { create(:organization, clickhouse_events_store: true) }
+          let(:previous_subscription) do
+            create(
+              :subscription,
+              :terminated,
+              organization:,
+              started_at: DateTime.parse("2022-01-01 22:22:22"),
+              terminated_at: DateTime.parse("2023-04-01 22:22:21")
+            )
+          end
+          let(:customer) { previous_subscription.customer }
+          let(:subscription) do
+            create(
+              :subscription,
+              organization:,
+              started_at: DateTime.parse("2023-04-01 22:22:22"),
+              previous_subscription:,
+              customer:,
+              external_id: previous_subscription.external_id
+            )
+          end
+
+          before do
+            create(
+              :clickhouse_events_enriched,
+              organization:,
+              subscription:,
+              customer:,
+              billable_metric:,
+              timestamp: from_datetime - 0.001.seconds,
+              value: "5",
+              decimal_value: 5
+            )
+            create(
+              :clickhouse_events_enriched,
+              organization:,
+              subscription:,
+              customer:,
+              billable_metric:,
+              timestamp: from_datetime - 0.5.seconds,
+              value: "2",
+              decimal_value: 2
+            )
+            create(
+              :clickhouse_events_enriched,
+              organization:,
+              subscription:,
+              customer:,
+              billable_metric:,
+              timestamp: from_datetime,
+              value: "100",
+              decimal_value: 100
+            )
+          end
+
+          it "keeps the exact-boundary event in the current interval" do
+            result = aggregator.aggregate
+
+            expect(result.variation).to eq(100)
+            expect(result.total_aggregated_units).to eq(107)
+          end
+        end
+
         context "when using presentation_by" do
           let(:presentation_by) { ["region"] }
 
@@ -465,6 +550,16 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
             current_aggregation: 1000,
             grouped_by: {"agent_name" => "frodo"},
             presentation_breakdowns: frodo_presentation_breakdowns
+          ),
+
+          create(
+            :cached_aggregation,
+            organization:,
+            charge:,
+            external_subscription_id: subscription.external_id,
+            timestamp: from_datetime - 2.days,
+            current_aggregation: 2000,
+            grouped_by: {"agent_name" => "aragorn"}
           )
         ]
       end
