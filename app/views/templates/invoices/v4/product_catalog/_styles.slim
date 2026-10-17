@@ -1,37 +1,414 @@
 css:
-  h1, h2, p { margin: 0; padding: 0; }
-  html { font-family: Inter, sans-serif; }
-  h1 { color: #19212e; font-weight: 700; font-size: 24px; line-height: 32px; }
-  .body-1 { color: #19212e; font-weight: 600; font-size: 10px; line-height: 16px; }
-  .body-2 { color: #19212e; font-weight: 400; font-size: 10px; line-height: 16px; }
-  .body-3 { color: #66758f; font-weight: 400; font-size: 9px; line-height: 16px; }
-  .mb-24 { margin-bottom: 24px; }
-  .overflow-auto { overflow: auto; }
-  .invoice-title { display: inline; }
-  .header-logo { float: right; max-height: 32px; }
-  .half { float: left; width: 50%; }
-  .info-table { border-collapse: collapse; }
-  .info-table td { padding: 0 16px 0 0; vertical-align: top; }
-  table.lines, table.totals { width: 100%; border-collapse: collapse; }
-  table.lines th { color: #66758f; font-size: 9px; font-weight: 400; text-align: right; padding: 4px 8px; }
-  table.lines th:first-child { text-align: left; }
-  table.lines tbody { border: 1px solid #d9dee7; }
-  table.lines td { padding: 4px 8px; text-align: right; white-space: nowrap; }
-  table.lines td:first-child { text-align: left; white-space: normal; width: 55%; }
-  table.lines tr { break-inside: avoid; }
-  tr.category td { background: #f3f4f6; font-weight: 600; border-bottom: 1px solid #d9dee7; }
-  tr.product td, tr.filter td { font-weight: 600; padding-top: 8px; }
-  tr.filter td:first-child { padding-left: 16px; }
-  tr.period td:first-child { padding-left: 16px; }
-  tr.filter-period td:first-child { padding-left: 24px; }
-  tr.tier td { color: #66758f; }
-  tr.tier td:first-child { padding-left: 24px; }
-  tr.filter-tier td:first-child { padding-left: 32px; }
-  table.totals { width: 50%; margin-left: 50%; border: 1px solid #d9dee7; border-top: none; }
-  table.totals td { padding: 6px 8px; border-bottom: 1px solid #d9dee7; }
-  table.totals td:last-child { text-align: right; }
-  table.totals tr.total td { font-weight: 600; }
-  .details-page { page-break-before: always; }
-  .powered-by { width: 100%; text-align: right; }
-  .powered-by span { color: #8c95a6; }
-  .powered-by img { width: 37px; height: 11px; vertical-align: middle; margin-top: 2px; }
+  @font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: local("Inter-Regular");
+  }
+
+  @font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: local("Inter-SemiBold");
+  }
+
+  @font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: local("Inter-Bold");
+  }
+
+  h1,
+  h2,
+  p {
+    margin: 0;
+    padding: 0;
+  }
+
+  :root {
+    --color-paper: #fff;
+    --color-ink: #1a1a1a;
+    --color-muted: #525252;
+    --color-rule: #d9dee7;
+    --color-band: #f1f3f5;
+    --space-0: 0px;
+    --space-2: 2px;
+    --space-4: 4px;
+    --space-6: 6px;
+    --space-8: 8px;
+    --space-12: 12px;
+    --space-16: 16px;
+    --space-20: 20px;
+    --space-24: 24px;
+    --space-28: 28px;
+    --space-32: 32px;
+    --space-40: 40px;
+    --space-48: 48px;
+    --rule: 1px solid var(--color-rule);
+  }
+
+  * {
+    box-sizing: border-box
+  }
+
+  html,
+  body,
+  h1,
+  h2,
+  p {
+    margin: 0;
+    padding: 0
+  }
+
+  html {
+    font-family: Inter, sans-serif;
+    color: var(--color-ink);
+    background: var(--color-paper);
+    font-synthesis: none;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact
+  }
+
+  .title {
+    font-size: 24px;
+    line-height: 32px;
+    font-weight: 700
+  }
+
+  .amount-due {
+    font-size: 18px;
+    line-height: 24px;
+    font-weight: 700
+  }
+
+  .body-1 {
+    font-size: 10px;
+    line-height: 16px;
+    font-weight: 400
+  }
+
+  .body-1-emphasis {
+    font-size: 10px;
+    line-height: 16px;
+    font-weight: 600
+  }
+
+  .body-2 {
+    font-size: 9px;
+    line-height: 16px;
+    font-weight: 400
+  }
+
+  .body-2-emphasis {
+    font-size: 9px;
+    line-height: 16px;
+    font-weight: 600
+  }
+
+  .body-3 {
+    font-size: 8px;
+    line-height: 12px;
+    font-weight: 400
+  }
+
+  .body-3-emphasis {
+    font-size: 8px;
+    line-height: 12px;
+    font-weight: 600
+  }
+
+  .color-muted {
+    color: var(--color-muted)
+  }
+
+  .document {
+    width: 100%;
+    container-type: inline-size;
+    background: var(--color-paper)
+  }
+
+  .document-section {
+    margin-bottom: var(--space-20)
+  }
+
+  .document-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--space-16)
+  }
+
+  .document-columns>* {
+    min-width: 0;
+    overflow-wrap: anywhere
+  }
+
+  .document-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4)
+  }
+
+  .document-stack--tight {
+    gap: var(--space-2)
+  }
+
+  .info-table {
+    border-collapse: collapse;
+    width: 100%
+  }
+
+  .info-table td {
+    vertical-align: top;
+    padding: 0 var(--space-12) 0 0
+  }
+
+  .info-table td:first-child {
+    width: 1%;
+  }
+
+  .info-label {
+    display: block;
+    width: max-content;
+    max-width: calc((210mm - 64px - 16px) / 4 - 13px);
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .info-table td:last-child {
+    width: 50%;
+    padding-right: 0;
+    overflow-wrap: anywhere
+  }
+
+  .document-table,
+  .document-totals {
+    border-collapse: collapse;
+    width: 100%;
+    table-layout: auto;
+  }
+
+  .document-table {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .document-table col.description-column,
+  .document-totals col:first-child {
+    width: auto;
+  }
+
+  .document-table col.quantity-column,
+  .document-table col.unit-price-column,
+  .document-table col.amount-column,
+  .document-totals col:last-child {
+    width: auto;
+  }
+
+  /* Headings span the table, without contributing to column sizing. */
+  .document-heading-cell {
+    padding: 0;
+  }
+
+  .document-heading {
+    contain: inline-size;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-12);
+    padding: var(--space-2) var(--space-4) var(--space-2) var(--indent, var(--space-4));
+    overflow-wrap: anywhere;
+  }
+
+  .document-heading-label {
+    flex: 1 1 0;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .document-heading-amount {
+    flex: 0 1 auto;
+    max-width: 50%;
+    min-width: 0;
+    text-align: right;
+  }
+
+  .document-table tbody td:first-child {
+    border-left: var(--rule)
+  }
+
+  .document-table tbody td:last-child {
+    border-right: var(--rule)
+  }
+
+  .document-table tbody tr:first-child td {
+    border-top: var(--rule)
+  }
+
+  .document-cell {
+    vertical-align: top;
+    padding: var(--space-2) var(--space-4) var(--space-2) var(--space-12);
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  /* Each table sizes independently. Numeric cells shrink to their content;
+     Description receives all remaining space. */
+  .document-cell:not(.cell--description) {
+    width: 1%;
+  }
+  th.document-cell:not(.cell--description) {
+    white-space: nowrap;
+  }
+
+  /* Numeric typography is independent of column layout. */
+  .numeric {
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+
+  /* Number columns widen to fit their values; the description gives up the space. */
+  td.numeric {
+    white-space: nowrap;
+  }
+
+  .cell--description {
+    padding: var(--space-2) var(--space-12) var(--space-2) var(--indent, var(--space-4));
+    text-align: left;
+    width: 100%;
+    min-width: 50%
+  }
+
+  .indent-0 {
+    --indent: var(--space-4)
+  }
+
+  .indent-1 {
+    --indent: var(--space-8)
+  }
+
+  .indent-2 {
+    --indent: var(--space-16)
+  }
+
+  .indent-3 {
+    --indent: var(--space-24)
+  }
+
+  .indent-4 {
+    --indent: var(--space-32)
+  }
+
+  .indent-5 {
+    --indent: var(--space-40)
+  }
+
+  .cell--category {
+    background: var(--color-band);
+    border-bottom: var(--rule)
+  }
+
+  .cell--at-end {
+    border-bottom: var(--rule)
+  }
+
+  .document-table thead {
+    display: table-header-group
+  }
+
+  .document-table tr {
+    break-inside: avoid;
+    page-break-inside: avoid
+  }
+
+  .row--subtotal,
+  .row--conversion {
+    break-before: avoid;
+    page-break-before: avoid
+  }
+
+  .row--category,
+  .row--product,
+  .row--filter {
+    break-after: avoid;
+    page-break-after: avoid
+  }
+
+  .document-totals {
+    width: 50%;
+    margin-left: auto;
+    border: var(--rule);
+    border-top: 0
+  }
+
+
+
+  .document-totals .cell--total {
+    border-top: var(--rule)
+  }
+
+  .document-custom-section {
+    padding: var(--space-20) 0;
+    border-bottom: var(--rule);
+    break-inside: avoid
+  }
+
+  .document-custom-sections > .document-custom-section:first-child {
+    padding-top: 0;
+  }
+
+  .document-custom-section .section-name {
+    margin-bottom: var(--space-4)
+  }
+
+  .document-custom-footer {
+    padding: var(--space-20) 0
+  }
+
+  .separator {
+    border: 0;
+    border-top: var(--rule)
+  }
+
+  .border-top {
+    border-top: var(--rule)
+  }
+
+  .border-bottom {
+    border-bottom: var(--rule)
+  }
+
+  .border-outline {
+    border: var(--rule)
+  }
+
+
+  .details-page {
+    break-before: page;
+    page-break-before: always
+  }
+
+  .details-heading {
+    margin-bottom: var(--space-20)
+  }
+
+  .details-heading p {
+    overflow-wrap: anywhere
+  }
+
+  .header-logo {
+    float: right;
+    max-height: 32px
+  }
+
+  .powered-by {
+    text-align: right
+  }
+
+  .powered-by img {
+    width: 37px;
+    height: 11px;
+    vertical-align: middle
+  }

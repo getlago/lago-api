@@ -118,6 +118,13 @@ zh-TW:
       fr_tax_exempt: 依據法國稅法總則第 259-1 條，客戶免稅。
       reverse_charge: 反向課稅 - 稅負轉由客戶承擔。
       tax_exempt: 客戶免稅。
+    tiers:
+      fee_for_first: 前 %{up_to} 單位的費用
+      fee_for_next: 最多 %{up_to} 單位的費用
+      fee_for_remaining: 其餘單位的費用
+      flat_fee_for_first: 前 %{up_to} 單位的固定費用
+      flat_fee_for_next: 最多 %{up_to} 單位的固定費用
+      flat_fee_for_remaining: 其餘單位的固定費用
     total: 總計
     total_credits: 點數總計
     total_credits_with_value: 點數總計：%{credit_amount} 點

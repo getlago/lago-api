@@ -118,6 +118,13 @@ it:
       fr_tax_exempt: Il cliente è esente da tasse secondo l'articolo 259-1 del Codice Generale delle Imposte francese.
       reverse_charge: Responsabilità fiscale trasferita al cliente.
       tax_exempt: Il cliente è esente da tasse.
+    tiers:
+      fee_for_first: Tariffa per le prime %{up_to} unità
+      fee_for_next: Tariffa per le unità fino a %{up_to}
+      fee_for_remaining: Tariffa per le unità rimanenti
+      flat_fee_for_first: Tariffa fissa per le prime %{up_to} unità
+      flat_fee_for_next: Tariffa fissa per le unità fino a %{up_to}
+      flat_fee_for_remaining: Tariffa fissa per le unità rimanenti
     total: Totale
     total_credits: Crediti totali
     total_credits_with_value: 'Crediti totali: %{credit_amount} crediti'

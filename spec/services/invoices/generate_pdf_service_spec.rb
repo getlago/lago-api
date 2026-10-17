@@ -147,11 +147,15 @@ RSpec.describe Invoices::GeneratePdfService do
         allow(Utils::PdfGenerator).to receive(:new).and_return(pdf_generator)
       end
 
-      it "calls the product catalog template, even when self billed" do
+      it "calls the product catalog template and footer, even when self billed" do
         described_class.call(invoice:, context:)
 
-        expect(Utils::PdfGenerator).to have_received(:new)
-          .with(template: "invoices/v4/product_catalog/contract", context: invoice)
+        expect(Utils::PdfGenerator).to have_received(:new).with(
+          template: "invoices/v4/product_catalog/contract",
+          context: invoice,
+          footer: "invoices/v4/product_catalog/footer",
+          margin_bottom: "1.0167"
+        )
       end
     end
 

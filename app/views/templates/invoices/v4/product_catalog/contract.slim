@@ -1,90 +1,95 @@
 doctype html
-html
+html lang=I18n.locale
   head
     meta charset='UTF-8'
-    meta name='viewport' content='width=device-width, initial-scale=1.0'
     title = document_invoice_name
-  body
     == SlimHelper.render('templates/invoices/v4/product_catalog/_styles', self)
-
+  body
     - catalog = ProductCatalogInvoiceHelper.new(self)
-    .wrapper
+    - summary_lines = catalog.summary_lines
+    .document.body-1
       == SlimHelper.render('templates/invoices/v4/product_catalog/_header', self)
 
-      .mb-24
-        table.lines
-          thead
-            tr
-              th = I18n.t('invoice.description')
-              th = I18n.t('invoice.amount')
+      - single_event_fee = catalog.single_event_fee?
+      .document-section
+        - if single_event_fee
+          - catalog.contract_blocks.flat_map(&:sections).each do |section|
+            == SlimHelper.render('templates/invoices/v4/product_catalog/_details_table', self, section:, spaced: false)
+        - else
+          table.document-table.document-table--summary
+            colgroup
+              col.description-column
+              col.amount-column
+            thead
+              tr.row--header
+                th.document-cell.cell--description.cell--header.body-3.indent-0.color-muted scope='col' = I18n.t('invoice.description')
+                th.document-cell.cell--amount.cell--header.body-3.color-muted scope='col' = I18n.t('invoice.amount')
+            tbody
+              - summary_lines.each_with_index do |line, index|
+                - at_end = ('cell--at-end' if index == summary_lines.size - 1)
+                tr.row--summary
+                  td class=['document-cell', 'cell--description', 'cell--summary', 'body-2', 'indent-0', at_end] = line.name
+                  td class=['document-cell', 'cell--amount', 'cell--summary', 'body-2', at_end, 'numeric'] = MoneyHelper.format(Money.new(line.amount_cents, currency))
+        table.document-totals
+          colgroup
+            col
+            col
           tbody
-            - catalog.summary_lines.each do |line|
-              tr
-                td.body-2 = line.name
-                td.body-2 = MoneyHelper.format(Money.new(line.amount_cents, currency))
-        table.totals
-          - credits.coupon_kind.order(created_at: :asc).each do |credit|
-            tr
-              td.body-2 = credit.invoice_coupon_display_name
-              td.body-2 = '-' + MoneyHelper.format(credit.amount)
-          tr
-            td.body-2 = I18n.t('invoice.sub_total_without_tax')
-            td.body-2 = MoneyHelper.format(sub_total_excluding_taxes_amount)
-          - applied_taxes.order(tax_rate: :desc).each do |applied_tax|
-            tr
-              - if applied_tax.applied_on_whole_invoice?
-                td.body-2 = I18n.t('invoice.tax_name_only.' + applied_tax.tax_code)
-                td.body-2
-              - else
-                td.body-2 = I18n.t('invoice.tax_name', name: applied_tax.tax_name, rate: applied_tax.tax_rate, amount: MoneyHelper.format(applied_tax.taxable_amount))
-                td.body-2 = MoneyHelper.format(applied_tax.amount)
-          - if credit_notes_amount_cents.positive?
-            tr
-              td.body-2 = I18n.t('invoice.credit_notes')
-              td.body-2 = '-' + MoneyHelper.format(credit_notes_amount)
-          - if prepaid_credit_amount_cents.positive?
-            tr
-              td.body-2 = I18n.t('invoice.prepaid_credits')
-              td.body-2 = '-' + MoneyHelper.format(prepaid_credit_amount)
-          tr.total
-            td.body-1 = I18n.t('invoice.total')
-            td.body-1 = MoneyHelper.format(total_amount)
-          tr.total
-            td.body-1 = I18n.t('invoice.total_due_amount')
-            td.body-1 = MoneyHelper.format(total_due_amount)
+            - credits.coupon_kind.order(created_at: :asc).each do |credit|
+              tr.row--summary
+                td.document-cell.cell--description.cell--summary.body-2 = credit.invoice_coupon_display_name
+                td.document-cell.cell--amount.cell--summary.body-2.numeric = '-' + MoneyHelper.format(credit.amount)
+            tr.row--summary
+              td.document-cell.cell--description.cell--summary.body-2 = I18n.t('invoice.sub_total_without_tax')
+              td.document-cell.cell--amount.cell--summary.body-2.numeric = MoneyHelper.format(sub_total_excluding_taxes_amount)
+            - applied_taxes.order(tax_rate: :desc).each do |applied_tax|
+              tr.row--summary
+                - if applied_tax.applied_on_whole_invoice?
+                  td.document-cell.cell--description.cell--summary.body-2 = I18n.t('invoice.tax_name_only.' + applied_tax.tax_code)
+                  td.document-cell.cell--amount.cell--summary.body-2.numeric
+                - else
+                  td.document-cell.cell--description.cell--summary.body-2 = I18n.t('invoice.tax_name', name: applied_tax.tax_name, rate: applied_tax.tax_rate, amount: MoneyHelper.format(applied_tax.taxable_amount))
+                  td.document-cell.cell--amount.cell--summary.body-2.numeric = MoneyHelper.format(applied_tax.amount)
+            - if credit_notes_amount_cents.positive?
+              tr.row--summary
+                td.document-cell.cell--description.cell--summary.body-2 = I18n.t('invoice.credit_notes')
+                td.document-cell.cell--amount.cell--summary.body-2.numeric = '-' + MoneyHelper.format(credit_notes_amount)
+            - if prepaid_credit_amount_cents.positive?
+              tr.row--summary
+                td.document-cell.cell--description.cell--summary.body-2 = I18n.t('invoice.prepaid_credits')
+                td.document-cell.cell--amount.cell--summary.body-2.numeric = '-' + MoneyHelper.format(prepaid_credit_amount)
+            tr.row--total
+              td.document-cell.cell--description.cell--total.body-2-emphasis = I18n.t('invoice.total')
+              td.document-cell.cell--amount.cell--total.body-2-emphasis.numeric = MoneyHelper.format(total_amount)
+            tr.row--total
+              td.document-cell.cell--description.cell--total.body-2-emphasis = I18n.t('invoice.total_due_amount')
+              td.document-cell.cell--amount.cell--total.body-2-emphasis.numeric = MoneyHelper.format(total_due_amount)
 
-      == SlimHelper.render('templates/invoices/v4/_eu_tax_management', self)
+      - if billing_entity.eu_tax_management.present? && applied_taxes.present?
+        - applied_tax_codes = applied_taxes.pluck(:tax_code)
+        p.document-section.body-2.color-muted
+          - if applied_tax_codes.include?('lago_eu_tax_exempt')
+            = billing_entity.country == 'FR' ? I18n.t('invoice.taxes.fr_tax_exempt') : I18n.t('invoice.taxes.tax_exempt')
+          - if applied_tax_codes.include?('lago_eu_reverse_charge')
+            = I18n.t('invoice.taxes.reverse_charge')
 
       - if applied_invoice_custom_sections.present?
-        == SlimHelper.render('templates/invoices/v4/_custom_sections', self)
+        .document-custom-sections.body-2.color-muted.document-section
+          - applied_invoice_custom_sections.each do |section|
+            .document-custom-section
+              p.section-name.body-2-emphasis = section.display_name
+              p.body-2.color-muted = LineBreakHelper.break_lines(section.details)
 
-      p.body-3.mb-24 = LineBreakHelper.break_lines(billing_entity.invoice_footer)
+      - if billing_entity.invoice_footer.present?
+        p.document-custom-footer.body-2.color-muted = LineBreakHelper.break_lines(billing_entity.invoice_footer)
 
       == SlimHelper.render('templates/invoices/v4/_powered_by_logo', self)
 
-      - catalog.contract_blocks.each do |block|
-        .details-page
-          .mb-24
-            h1 = I18n.t('invoice.details_title')
-            p.body-3 = block.title
-          - block.sections.each do |section|
-            table.lines.mb-24
-              thead
-                tr
-                  th = I18n.t('invoice.description')
-                  th = I18n.t('invoice.quantity')
-                  th = I18n.t('invoice.unit_price')
-                  th = I18n.t('invoice.amount')
-              tbody
-                - if section.name
-                  tr.category
-                    td.body-1 colspan=3 = section.name
-                    td.body-1 = MoneyHelper.format(Money.new(section.amount_cents, currency))
-                - section.products.each do |product|
-                  tr.product
-                    td.body-1 colspan=4 = product.name
-                  == SlimHelper.render('templates/invoices/v4/product_catalog/_period_rows', self, fees: product.fees, nested: false)
-                  - product.filters.each do |filter|
-                    tr.filter
-                      td.body-1 colspan=4 = filter.name
-                    == SlimHelper.render('templates/invoices/v4/product_catalog/_period_rows', self, fees: filter.fees, nested: true)
+      - unless single_event_fee
+        - catalog.contract_blocks.each do |block|
+          .details-page
+            .details-heading.document-stack.document-stack--tight
+              h1.title = I18n.t('invoice.details_title')
+              p.body-1.color-muted = block.title
+            - block.sections.each do |section|
+              == SlimHelper.render('templates/invoices/v4/product_catalog/_details_table', self, section:, spaced: true)

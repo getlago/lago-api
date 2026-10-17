@@ -118,6 +118,13 @@ de:
       fr_tax_exempt: Kunde ist gemäß Artikel 259-1 des französischen Allgemeinen Steuergesetzbuchs von der Steuer befreit.
       reverse_charge: Steuerschuld auf Kunden übertragen.
       tax_exempt: Kunde ist von der Steuer befreit.
+    tiers:
+      fee_for_first: Gebühr für die ersten %{up_to} Einheiten
+      fee_for_next: Gebühr für Einheiten bis %{up_to}
+      fee_for_remaining: Gebühr für die verbleibenden Einheiten
+      flat_fee_for_first: Pauschalgebühr für die ersten %{up_to} Einheiten
+      flat_fee_for_next: Pauschalgebühr für Einheiten bis %{up_to}
+      flat_fee_for_remaining: Pauschalgebühr für die verbleibenden Einheiten
     total: Gesamt
     total_credits: Gesamtguthaben
     total_credits_with_value: 'Gesamtguthaben: %{credit_amount} Credits'

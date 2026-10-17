@@ -118,6 +118,13 @@ sv:
       fr_tax_exempt: Kunden är skattebefriad enligt artikel 259-1 i den franska skatteförvaltningskoden.
       reverse_charge: Skattskyldighet överförd till kunden.
       tax_exempt: Kunden är skattebefriad.
+    tiers:
+      fee_for_first: Avgift för de första %{up_to} enheterna
+      fee_for_next: Avgift för enheter upp till %{up_to}
+      fee_for_remaining: Avgift för återstående enheter
+      flat_fee_for_first: Fast avgift för de första %{up_to} enheterna
+      flat_fee_for_next: Fast avgift för enheter upp till %{up_to}
+      flat_fee_for_remaining: Fast avgift för återstående enheter
     total: Totalt
     total_credits: Totalt antal krediter
     total_credits_with_value: 'Totalt antal krediter med värde: %{credit_amount} krediter'
