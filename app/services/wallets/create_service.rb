@@ -21,6 +21,7 @@ module Wallets
 
       return result.forbidden_failure! if connections_requested? && organization_flag_disabled?(:multi_connection)
       return result unless valid?
+      return result.forbidden_failure! if params[:recurring_transaction_rules].present? && !License.premium?
 
       code = params[:code]
 

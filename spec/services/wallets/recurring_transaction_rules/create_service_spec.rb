@@ -34,8 +34,14 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
 
   describe "#call" do
     context "when freemium" do
-      it "does not create any recurring transaction rule" do
-        expect { create_service.call }.not_to change { wallet.reload.recurring_transaction_rules.count }
+      it "returns feature unavailable without creating a rule" do
+        result = nil
+
+        expect { result = described_class.call(wallet:, wallet_params:) }
+          .not_to change { wallet.reload.recurring_transaction_rules.count }
+
+        expect(result).to be_failure
+        expect(result.error.code).to eq("feature_unavailable")
       end
     end
 

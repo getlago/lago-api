@@ -48,6 +48,21 @@ RSpec.describe Wallets::UpdateService do
       expect(Utils::ActivityLog).to have_produced("wallet.updated").after_commit.with(wallet)
     end
 
+    context "when recurring transaction rules are requested without Premium" do
+      let(:params) do
+        super().merge(recurring_transaction_rules: [
+          {trigger: "threshold", method: "fixed", threshold_credits: "1", paid_credits: "2"}
+        ])
+      end
+
+      it "returns feature unavailable without changing the wallet" do
+        expect(result).to be_failure
+        expect(result.error.code).to eq("feature_unavailable")
+        expect(wallet.reload.name).not_to eq("new name")
+        expect(wallet.recurring_transaction_rules).to be_empty
+      end
+    end
+
     context "when purchase_order_number is present" do
       let(:params) do
         super().merge(purchase_order_number: "PO-WALLET-123")
