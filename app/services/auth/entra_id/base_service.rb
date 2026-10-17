@@ -40,14 +40,6 @@ module Auth
         result.entra_id_integration = entra_id_integration
       end
 
-      # Ties the session to the organization and identity provider that authenticated the user.
-      def sso_token_claims
-        {
-          sso_organization_id: result.entra_id_integration.organization_id,
-          sso_issuer: result.entra_id_integration.sso_issuer
-        }
-      end
-
       def check_invite(email)
         invite = Invite.pending.find_by(token: invite_token)
 

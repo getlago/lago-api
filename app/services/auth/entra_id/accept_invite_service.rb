@@ -26,8 +26,7 @@ module Auth
           email: result.email,
           token: invite_token,
           password: SecureRandom.hex,
-          login_method: Organizations::AuthenticationMethods::ENTRA_ID,
-          token_claims: sso_token_claims
+          login_method: Organizations::AuthenticationMethods::ENTRA_ID
         )
       rescue ValidationError => e
         result.single_validation_failure!(error_code: e.message)
