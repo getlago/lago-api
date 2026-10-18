@@ -58,7 +58,9 @@ module V2
     # has no billing segment linking it to the contract.
     def contracts
       ::CollectionSerializer.new(
-        Contract.where(id: model.fees.where.not(contract_id: nil).select(:contract_id)).order(:created_at, :id),
+        Contract
+          .where(organization_id: model.organization_id, id: model.fees.where.not(contract_id: nil).select(:contract_id))
+          .order(:created_at, :id),
         ::V2::Invoices::ContractSerializer,
         collection_name: "contracts"
       ).serialize[:contracts]
@@ -74,7 +76,7 @@ module V2
 
     def applied_taxes
       ::CollectionSerializer.new(
-        model.applied_taxes,
+        model.applied_taxes.order(:created_at, :id),
         ::V2::Invoices::AppliedTaxSerializer,
         collection_name: "applied_taxes"
       ).serialize[:applied_taxes]
@@ -82,7 +84,7 @@ module V2
 
     def applied_invoice_custom_sections
       ::CollectionSerializer.new(
-        model.applied_invoice_custom_sections,
+        model.applied_invoice_custom_sections.order(:created_at, :id),
         ::V2::Invoices::AppliedInvoiceCustomSectionSerializer,
         collection_name: "applied_invoice_custom_sections"
       ).serialize[:applied_invoice_custom_sections]
@@ -90,7 +92,7 @@ module V2
 
     def error_details
       ::CollectionSerializer.new(
-        model.error_details,
+        model.error_details.order(:created_at, :id),
         ::V2::ErrorDetailSerializer,
         collection_name: "error_details"
       ).serialize[:error_details]

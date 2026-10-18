@@ -14,7 +14,8 @@ module V2
           tax_description: model.tax_description,
           amount_cents: model.amount_cents,
           fees_amount_cents: model.fees_amount_cents,
-          created_at: model.created_at.iso8601
+          created_at: model.created_at.iso8601,
+          updated_at: model.updated_at.iso8601
         }
       end
     end
