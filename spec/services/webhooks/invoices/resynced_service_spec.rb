@@ -11,6 +11,7 @@ RSpec.describe Webhooks::Invoices::ResyncedService do
 
   describe ".call" do
     it_behaves_like "creates webhook", "invoice.resynced", "invoice"
+    it_behaves_like "sends the catalog invoice on v2"
 
     it "calls the InvoiceSerializer with integration_customers included" do
       serializer_instance = instance_double(V1::InvoiceSerializer)
