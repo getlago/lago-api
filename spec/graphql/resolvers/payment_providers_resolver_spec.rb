@@ -307,4 +307,39 @@ RSpec.describe Resolvers::PaymentProvidersResolver do
       end
     end
   end
+
+  context "when a MoneyHash provider has no api key" do
+    let(:moneyhash_provider) { create(:moneyhash_provider, organization:) }
+    let(:query) do
+      <<~GQL
+        query {
+          paymentProviders(limit: 10, type: moneyhash) {
+            collection {
+              ... on MoneyhashProvider {
+                id
+                apiKey
+              }
+            }
+          }
+        }
+      GQL
+    end
+
+    before do
+      moneyhash_provider.api_key = nil
+      moneyhash_provider.save!(validate: false)
+    end
+
+    it "returns null instead of an error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: ["organization:integrations:view"],
+        query:
+      )
+
+      expect(result["errors"]).to be_nil
+      expect(result["data"]["paymentProviders"]["collection"]).to eq([{"id" => moneyhash_provider.id, "apiKey" => nil}])
+    end
+  end
 end
