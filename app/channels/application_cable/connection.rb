@@ -42,12 +42,12 @@ module ApplicationCable
       @current_user = nil
     end
 
-    def subprotocol_protocols
+    def offered_protocols
       env[PROTOCOL_HEADER].to_s.split(",").map(&:strip)
     end
 
     def subprotocol_token
-      subprotocol_protocols
+      offered_protocols
         .find { |protocol| protocol.start_with?(TOKEN_SUBPROTOCOL_PREFIX) }
         &.delete_prefix(TOKEN_SUBPROTOCOL_PREFIX)
     end
@@ -55,7 +55,7 @@ module ApplicationCable
     def redact_token_from_env
       return if env[PROTOCOL_HEADER].blank?
 
-      env[PROTOCOL_HEADER] = subprotocol_protocols.map do |protocol|
+      env[PROTOCOL_HEADER] = offered_protocols.map do |protocol|
         protocol.start_with?(TOKEN_SUBPROTOCOL_PREFIX) ? "#{TOKEN_SUBPROTOCOL_PREFIX}[FILTERED]" : protocol
       end.join(", ")
     end
