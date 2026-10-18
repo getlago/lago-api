@@ -309,7 +309,7 @@ RSpec.describe Api::V2::InvoicesController, v2_timestamps: false do
   describe "POST /api/v2/invoices/:id/void" do
     subject { post_with_token(organization, "/api/v2/invoices/#{invoice_id}/void", params) }
 
-    let(:invoice) { create(:invoice, status:, payment_status: :pending, customer:, organization:) }
+    let(:invoice) { create(:invoice, status:, payment_status: :pending, customer:, organization:, invoice_type: :contract) }
     let(:invoice_id) { invoice.id }
     let(:status) { :finalized }
     let(:params) { {} }
@@ -330,7 +330,8 @@ RSpec.describe Api::V2::InvoicesController, v2_timestamps: false do
 
       expect(response).to have_http_status(:success)
       expect(invoice.reload).to be_voided
-      expect(json[:invoice]).to include(lago_id: invoice.id, status: "voided")
+      expect(json[:invoice]).to include(lago_id: invoice.id, status: "voided", invoice_type: "contract")
+      expect(json[:invoice]).not_to have_key(:subscriptions)
       expect(json[:invoice][:fees].pluck(:lago_id)).to eq(invoice.fees.ids)
     end
 
@@ -341,6 +342,17 @@ RSpec.describe Api::V2::InvoicesController, v2_timestamps: false do
         subject
 
         expect(response).to be_not_found_error("invoice")
+      end
+    end
+
+    context "when the invoice is a legacy one" do
+      let(:invoice_id) { legacy_invoice.id }
+
+      it "returns a not found error without voiding it" do
+        subject
+
+        expect(response).to be_not_found_error("invoice")
+        expect(legacy_invoice.reload).to be_finalized
       end
     end
 
@@ -397,6 +409,146 @@ RSpec.describe Api::V2::InvoicesController, v2_timestamps: false do
         expect(response).to have_http_status(:forbidden)
         expect(json[:code]).to eq("feature_unavailable")
         expect(invoice.reload).to be_finalized
+      end
+    end
+  end
+
+  describe "POST /api/v2/invoices/:id/download_pdf" do
+    subject { post_with_token(organization, "/api/v2/invoices/#{invoice_id}/download_pdf") }
+
+    let(:invoice) { create(:invoice, organization:, customer:, invoice_type: :contract, status:) }
+    let(:invoice_id) { invoice.id }
+    let(:status) { :finalized }
+
+    include_examples "requires API permission", "invoice", "write"
+
+    it "generates the pdf asynchronously" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to be_empty
+      expect(Invoices::GeneratePdfJob).to have_been_enqueued.with(invoice)
+    end
+
+    context "when the pdf is already generated" do
+      before do
+        invoice.file.attach(
+          io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.pdf"))),
+          filename: "invoice.pdf",
+          content_type: "application/pdf"
+        )
+      end
+
+      it "returns the invoice without regenerating it" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoice]).to include(lago_id: invoice.id, invoice_type: "contract")
+        expect(json[:invoice][:pdf_url]).to be_present
+        expect(json[:invoice]).not_to have_key(:fees)
+        expect(Invoices::GeneratePdfJob).not_to have_been_enqueued
+      end
+    end
+
+    context "when the invoice is a draft" do
+      let(:status) { :draft }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_not_found_error("invoice")
+      end
+    end
+
+    context "when the invoice is a legacy one" do
+      let(:invoice_id) { legacy_invoice.id }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_not_found_error("invoice")
+        expect(Invoices::GeneratePdfJob).not_to have_been_enqueued
+      end
+    end
+  end
+
+  describe "POST /api/v2/invoices/:id/resend_email" do
+    subject { post_with_token(organization, "/api/v2/invoices/#{invoice_id}/resend_email", params) }
+
+    let(:invoice) { create(:invoice, organization:, customer:, invoice_type: :contract, status: :finalized, fees_amount_cents: 1_000) }
+    let(:invoice_id) { invoice.id }
+    let(:params) { {to: ["custom@example.com"], cc: ["cc@example.com"], bcc: ["bcc@example.com"]} }
+
+    before { customer.billing_entity.update!(email: "billing@example.com") }
+
+    include_examples "requires API permission", "invoice", "write"
+
+    it "resends the invoice email", :premium do
+      expect { subject }.to have_enqueued_mail(InvoiceMailer, :created)
+        .with(params: {invoice:, resend: true, to: ["custom@example.com"], cc: ["cc@example.com"], bcc: ["bcc@example.com"]}, args: [])
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to be_empty
+    end
+
+    context "without a premium license" do
+      it "returns a forbidden error" do
+        expect { subject }.not_to have_enqueued_mail(InvoiceMailer, :created)
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:code]).to eq("premium_license_required")
+      end
+    end
+
+    context "when the invoice is a legacy one", :premium do
+      let(:invoice_id) { legacy_invoice.id }
+
+      it "returns a not found error" do
+        expect { subject }.not_to have_enqueued_mail(InvoiceMailer, :created)
+
+        expect(response).to be_not_found_error("invoice")
+      end
+    end
+  end
+
+  describe "POST /api/v2/invoices/:id/retry_taxes" do
+    subject { post_with_token(organization, "/api/v2/invoices/#{invoice_id}/retry_taxes") }
+
+    let(:invoice) { create(:invoice, organization:, customer:, invoice_type: :contract, status:) }
+    let(:invoice_id) { invoice.id }
+    let(:status) { :failed }
+
+    include_examples "requires API permission", "invoice", "write"
+
+    it "reopens the failed invoice and returns it" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(invoice.reload).to be_pending
+      expect(json[:invoice]).to include(lago_id: invoice.id, status: "pending", invoice_type: "contract", fees: [])
+      expect(Invoices::ProviderTaxes::PullTaxesAndApplyJob).to have_been_enqueued.with(invoice:)
+    end
+
+    context "when the invoice is not failed" do
+      let(:status) { :finalized }
+
+      it "returns a method not allowed error" do
+        subject
+
+        expect(response).to have_http_status(:method_not_allowed)
+        expect(json[:code]).to eq("invalid_status")
+        expect(invoice.reload).to be_finalized
+      end
+    end
+
+    context "when the invoice is a legacy one" do
+      let(:invoice_id) { legacy_invoice.id }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_not_found_error("invoice")
+        expect(Invoices::ProviderTaxes::PullTaxesAndApplyJob).not_to have_been_enqueued
       end
     end
   end
