@@ -9,7 +9,7 @@ module V2
       {pricing_unit_usage: :pricing_unit},
       :true_up_fee,
       :rate_card_rate,
-      :product_filter,
+      {product_filter: {values: :billable_metric_filter}},
       {invoice: :customer},
       {contract: :customer},
       {contract_rate_card: :rate_card},
@@ -71,7 +71,8 @@ module V2
         refunded_at: model.refunded_at&.iso8601,
         applied_taxes:,
         created_at: model.created_at.iso8601,
-        updated_at: model.updated_at.iso8601
+        updated_at: model.updated_at.iso8601,
+        deleted_at: model.deleted_at&.iso8601
       }
     end
 
@@ -104,7 +105,8 @@ module V2
     # The default scopes hide a discarded catalog record from its association;
     # a fee is a historical record and must still name what it billed.
     def record_or_discarded(record, klass, id)
-      record || (id && klass.with_discarded.find_by(id:))
+      record ||= id && klass.with_discarded.find_by(organization_id: model.organization_id, id:)
+      record if record&.organization_id == model.organization_id
     end
 
     # Fees created before filter values were stored fall back to the filter's current values.
@@ -128,7 +130,7 @@ module V2
 
     def applied_taxes
       ::CollectionSerializer.new(
-        model.applied_taxes,
+        model.applied_taxes.sort_by { [it.created_at, it.id] },
         ::V2::Fees::AppliedTaxSerializer,
         collection_name: "applied_taxes"
       ).serialize[:applied_taxes]

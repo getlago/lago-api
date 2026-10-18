@@ -128,11 +128,14 @@ RSpec.describe V2::FeeSerializer do
           "tax_code" => tax.code,
           "tax_rate" => 20.0,
           "tax_description" => "French Standard VAT",
-          "amount_cents" => 200
+          "amount_cents" => 200,
+          "created_at" => applied_tax.created_at.iso8601,
+          "updated_at" => applied_tax.updated_at.iso8601
         }
       ],
       "created_at" => fee.created_at.iso8601,
-      "updated_at" => fee.updated_at.iso8601
+      "updated_at" => fee.updated_at.iso8601,
+      "deleted_at" => nil
     )
   end
 
@@ -148,6 +151,7 @@ RSpec.describe V2::FeeSerializer do
     let(:fixed_product) { create(:product, :fixed, :standalone, organization:) }
     let(:fixed_rate_card) { create(:rate_card, organization:, product: fixed_product) }
     let(:fixed_contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card: fixed_rate_card) }
+    let(:fixed_rate) { create(:rate_card_rate, organization:, rate_card: fixed_rate_card) }
     let(:properties) { super().except("product_filter_values") }
     let(:fee) do
       create(
@@ -155,14 +159,14 @@ RSpec.describe V2::FeeSerializer do
         fee_attributes.merge(
           invoiceable: fixed_product,
           contract_rate_card: fixed_contract_rate_card,
-          rate_card_rate: nil,
+          rate_card_rate: fixed_rate,
           product_filter: nil,
           pay_in_advance: false
         )
       )
     end
 
-    it "leaves the category, filter and rate fields empty" do
+    it "leaves the category and filter fields empty" do
       expect(result).to include(
         "lago_product_id" => fixed_product.id,
         "lago_product_category_id" => nil,
@@ -173,8 +177,8 @@ RSpec.describe V2::FeeSerializer do
         "product_filter_invoice_display_name" => nil,
         "filters" => nil,
         "lago_rate_card_id" => fixed_rate_card.id,
-        "lago_rate_id" => nil,
-        "rate_code" => nil,
+        "lago_rate_id" => fixed_rate.id,
+        "rate_code" => fixed_rate.code,
         "billing_timing" => "arrears"
       )
     end
@@ -256,6 +260,14 @@ RSpec.describe V2::FeeSerializer do
     end
   end
 
+  context "when the fee is deleted" do
+    before { fee.discard! }
+
+    it "renders the deletion time" do
+      expect(result["deleted_at"]).to eq(fee.deleted_at.iso8601)
+    end
+  end
+
   context "when the product and the rate card are discarded" do
     before do
       fee
@@ -272,6 +284,41 @@ RSpec.describe V2::FeeSerializer do
         "lago_rate_card_id" => rate_card.id,
         "rate_card_code" => rate_card.code,
         "display_on_invoice" => true
+      )
+    end
+  end
+
+  context "with several applied taxes" do
+    let(:earlier_applied_tax) { create(:fee_applied_tax, fee:, tax: create(:tax, organization:), created_at: 1.day.ago) }
+
+    before { earlier_applied_tax }
+
+    it "lists them in creation order" do
+      expect(result["applied_taxes"].map { it["lago_id"] }).to eq([earlier_applied_tax.id, applied_tax.id])
+    end
+  end
+
+  context "when a discarded product of another organization shares the fee's product id" do
+    let(:foreign_product) { create(:product, organization: create(:organization)) }
+    let(:fee) { create(:fee, fee_attributes.except(:invoiceable).merge(invoiceable_type: "Product", invoiceable_id: foreign_product.id)) }
+
+    before { foreign_product.discard! }
+
+    it "does not load it" do
+      expect(result).to include("lago_product_id" => nil, "product_code" => nil)
+    end
+  end
+
+  context "when the fee references a product of another organization" do
+    let(:foreign_product) { create(:product, organization: create(:organization)) }
+    let(:fee) { create(:fee, fee_attributes.merge(invoiceable: foreign_product)) }
+
+    it "does not expose it" do
+      expect(result).to include(
+        "lago_product_id" => nil,
+        "product_code" => nil,
+        "product_invoice_display_name" => nil,
+        "lago_product_category_id" => nil
       )
     end
   end

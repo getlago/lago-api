@@ -12,7 +12,9 @@ module V2
           tax_code: model.tax_code,
           tax_rate: model.tax_rate,
           tax_description: model.tax_description,
-          amount_cents: model.amount_cents
+          amount_cents: model.amount_cents,
+          created_at: model.created_at.iso8601,
+          updated_at: model.updated_at.iso8601
         }
       end
     end
