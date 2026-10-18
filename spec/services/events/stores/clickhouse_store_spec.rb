@@ -112,6 +112,84 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
     end
   end
 
+  describe "string values containing a backslash or a quote" do
+    subject(:event_store) do
+      described_class.new(
+        code: billable_metric.code,
+        billing_context: Billing::Context.from(subscription:),
+        boundaries:,
+        filters:
+      )
+    end
+
+    let(:billable_metric) { create(:sum_billable_metric, field_name: "value") }
+    let(:organization) { billable_metric.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:, started_at: DateTime.parse("2023-03-15")) }
+    let(:boundaries) do
+      {
+        from_datetime: subscription.started_at.beginning_of_day,
+        to_datetime: subscription.started_at.end_of_month.end_of_day,
+        charges_duration: 31
+      }
+    end
+    let(:filters) { {} }
+
+    before do
+      event_store.aggregation_property = billable_metric.field_name
+      event_store.numeric_property = true
+
+      create_event(timestamp: subscription.started_at + 1.day, value: 2, properties: {"a\\" => "back\\", "b'" => "quote'"})
+      create_event(timestamp: subscription.started_at + 2.days, value: 3, properties: {"a\\" => "other"})
+    end
+
+    context "when the group keys end with a backslash or contain a quote" do
+      let(:filters) { {grouped_by: ["a\\", "b'"]} }
+
+      it "groups by the literal keys" do
+        expect(event_store.grouped_sum).to match_array([
+          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"a\\" => "back\\", "b'" => "quote'"}, value: 2, events_count: 1),
+          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"a\\" => "other", "b'" => nil}, value: 3, events_count: 1)
+        ])
+      end
+    end
+
+    context "when a key that escapes its closing quote is followed by SQL" do
+      let(:filters) { {grouped_by: ["a\\", ") AS g_0, (SELECT 'injected') AS g_1 FROM events_enriched) --"]} }
+
+      it "treats the second key as a property name" do
+        groups = event_store.grouped_sum.map(&:groups)
+
+        expect(groups.flat_map(&:values)).not_to include("injected")
+        expect(groups).to all(include(") AS g_0, (SELECT 'injected') AS g_1 FROM events_enriched) --" => nil))
+      end
+    end
+
+    context "when a grouped_by value ends with a backslash" do
+      let(:filters) { {grouped_by_values: {"a\\" => "back\\"}} }
+
+      it "matches the literal value" do
+        expect(event_store.sum).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 2, events_count: 1))
+      end
+    end
+
+    context "when a matching filter value ends with a backslash" do
+      let(:filters) { {matching_filters: {"a\\" => ["back\\"]}} }
+
+      it "matches the literal value" do
+        expect(event_store.count).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 1, events_count: 1))
+      end
+    end
+
+    context "when an ignored filter value ends with a backslash" do
+      let(:filters) { {ignored_filters: [{"a\\" => ["back\\"]}]} }
+
+      it "ignores the literal value" do
+        expect(event_store.count).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 1, events_count: 1))
+      end
+    end
+  end
+
   # Pins the query shape behind #count. Deduplication relies on the `FINAL`
   # modifier (ReplacingMergeTree collapses duplicated sorting keys at read time).
   # The unfiltered count queries the table directly; filtered counts go through

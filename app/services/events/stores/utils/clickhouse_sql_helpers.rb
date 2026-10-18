@@ -24,9 +24,28 @@ module Events
             "toTimezone(toDateTime64(:date, 5, 'UTC'), :timezone)"
           end
 
-          ActiveRecord::Base.sanitize_sql_for_conditions(
-            [sql, {date: date_value, timezone:}]
-          )
+          sanitize_clickhouse_sql([sql, {date: date_value, timezone:}])
+        end
+
+        # NOTE: ClickHouse reads a backslash inside a string literal as an escape character, while
+        #       `ActiveRecord::Base.sanitize_sql_for_conditions` quotes for PostgreSQL and only doubles
+        #       single quotes. Backslashes in string values are doubled first, so a value ending with
+        #       one cannot escape its closing quote. Dates and numbers are quoted as before.
+        def sanitize_clickhouse_sql(statement)
+          template, *values = statement
+
+          ActiveRecord::Base.sanitize_sql_for_conditions([template, *values.map { escape_clickhouse_backslashes(it) }])
+        end
+
+        # NOTE: For values quoted later by the PostgreSQL connection, such as Arel nodes built on
+        #       `Clickhouse::EventsEnriched.arel_table` and turned into SQL with the default engine.
+        def escape_clickhouse_backslashes(value)
+          case value
+          when String then value.gsub("\\") { "\\\\" }
+          when Array then value.map { escape_clickhouse_backslashes(it) }
+          when Hash then value.transform_values { escape_clickhouse_backslashes(it) }
+          else value
+          end
         end
 
         def quote(value)
@@ -41,7 +60,7 @@ module Events
         end
 
         def sql_condition(template, *values)
-          ActiveRecord::Base.sanitize_sql_for_conditions([template, *values])
+          sanitize_clickhouse_sql([template, *values])
         end
 
         # When the boundary is the pay-in-advance event's own timestamp, tie-break events

@@ -114,7 +114,7 @@ module Events
         end
 
         def fetch_query_log_rows
-          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+          sql = sanitize_clickhouse_sql(
             [
               "SELECT log_comment, query_duration_ms, memory_usage, read_rows, read_bytes, result_rows " \
               "FROM system.query_log " \

@@ -80,7 +80,7 @@ module Events
 
       def deduplicated_events_where_sql(from_datetime:, to_datetime:, before: nil)
         conditions = [
-          ActiveRecord::Base.sanitize_sql_for_conditions(
+          sanitize_clickhouse_sql(
             [
               "organization_id = ? AND code = ? AND external_subscription_id = ?",
               billing_context.organization_id,
@@ -90,9 +90,9 @@ module Events
           )
         ]
 
-        conditions << ActiveRecord::Base.sanitize_sql_for_conditions(["timestamp >= ?", from_datetime]) if from_datetime
+        conditions << sanitize_clickhouse_sql(["timestamp >= ?", from_datetime]) if from_datetime
         conditions << upper_timestamp_boundary_sql(to_datetime) if to_datetime
-        conditions << ActiveRecord::Base.sanitize_sql_for_conditions(["timestamp < ?", before]) if before
+        conditions << sanitize_clickhouse_sql(["timestamp < ?", before]) if before
         conditions.join(" AND ")
       end
 
@@ -123,7 +123,7 @@ module Events
           selects = ["code AS code"]
           group_columns = ["code"]
           filter_keys.each_with_index do |key, index|
-            selects << ActiveRecord::Base.sanitize_sql_array(["properties[?] AS prop_#{index}", key.to_s])
+            selects << sanitize_clickhouse_sql(["properties[?] AS prop_#{index}", key.to_s])
             group_columns << "prop_#{index}"
           end
           selects << (with_last_seen_at ? "MAX(enriched_at) AS last_seen_at" : "NULL AS last_seen_at")
@@ -274,7 +274,7 @@ module Events
       def unique_count
         result = Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
-          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+          sql = sanitize_clickhouse_sql(
             [
               sanitize_colon(query.query),
               {decimal_date_scale: DECIMAL_DATE_SCALE}
@@ -292,7 +292,7 @@ module Events
           query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
 
           connection.select_all(
-            ActiveRecord::Base.sanitize_sql_for_conditions(
+            sanitize_clickhouse_sql(
               [
                 sanitize_colon(query.breakdown_query),
                 {decimal_date_scale: DECIMAL_DATE_SCALE}
@@ -305,7 +305,7 @@ module Events
       def prorated_unique_count
         result = Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
-          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+          sql = sanitize_clickhouse_sql(
             [
               sanitize_colon(query.prorated_query),
               {
@@ -325,7 +325,7 @@ module Events
       def prorated_unique_count_breakdown(with_remove: false)
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
-          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+          sql = sanitize_clickhouse_sql(
             [
               sanitize_colon(query.prorated_breakdown_query(with_remove:)),
               {
@@ -347,7 +347,7 @@ module Events
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: duplicated_unique_count_store)
-          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+          sql = sanitize_clickhouse_sql(
             [
               sanitize_colon(query.grouped_query),
               {
@@ -366,7 +366,7 @@ module Events
       def grouped_prorated_unique_count
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
-          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+          sql = sanitize_clickhouse_sql(
             [
               sanitize_colon(query.grouped_prorated_query),
               {
@@ -646,7 +646,7 @@ module Events
         result = Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Events::Stores::Clickhouse::WeightedSumQuery.new(store: self)
 
-          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+          sql = sanitize_clickhouse_sql(
             [
               sanitize_colon(query.query),
               {
@@ -687,7 +687,7 @@ module Events
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Clickhouse::WeightedSumQuery.new(store: duplicated_weighted_sum_store)
 
-          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+          sql = sanitize_clickhouse_sql(
             [
               sanitize_colon(query.grouped_query(initial_values: formatted_initial_values)),
               {
@@ -708,7 +708,7 @@ module Events
           query = Events::Stores::Clickhouse::WeightedSumQuery.new(store: self)
 
           rows = connection.select_all(
-            ActiveRecord::Base.sanitize_sql_for_conditions(
+            sanitize_clickhouse_sql(
               [
                 sanitize_colon(query.breakdown_query),
                 {
@@ -749,7 +749,7 @@ module Events
       def arel_filters_scope(scope)
         matching_filters.each do |key, values|
           scope = scope.where(
-            Arel::Nodes::SqlLiteral.new(sanitized_property_name(key.to_s)).in(values.map(&:to_s))
+            Arel::Nodes::SqlLiteral.new(sanitized_property_name(key.to_s)).in(escape_clickhouse_backslashes(values.map(&:to_s)))
           )
         end
 
@@ -763,7 +763,7 @@ module Events
       # Events::Stores::ChargeFiltersScan can evaluate it for every filter of a charge in one read.
       def filters_condition_sql(matching_filters: self.matching_filters, ignored_filters: self.ignored_filters)
         conditions = matching_filters.map do |key, values|
-          ActiveRecord::Base.sanitize_sql_for_conditions(
+          sanitize_clickhouse_sql(
             ["events_enriched.properties[?] IN (?)", key.to_s, values.map(&:to_s)]
           )
         end
@@ -784,7 +784,7 @@ module Events
           clause = filters.filter_map do |key, values|
             next if values.empty?
 
-            ActiveRecord::Base.sanitize_sql_for_conditions(
+            sanitize_clickhouse_sql(
               ["(coalesce(events_enriched.properties[?], '') IN (?))", key.to_s, values.map(&:to_s)]
             )
           end.join(" AND ")
@@ -809,7 +809,7 @@ module Events
       def apply_arel_grouped_by_values(query)
         grouped_by_values.each do |grouped_by, grouped_by_value|
           query = if grouped_by_value.present?
-            query.where(Arel::Nodes::SqlLiteral.new(sanitized_property_name(grouped_by)).eq(grouped_by_value))
+            query.where(Arel::Nodes::SqlLiteral.new(sanitized_property_name(grouped_by)).eq(escape_clickhouse_backslashes(grouped_by_value)))
           else
             query.where(
               Arel::Nodes::NamedFunction.new(
@@ -827,7 +827,7 @@ module Events
       end
 
       def sanitized_property_name(property = aggregation_property)
-        ActiveRecord::Base.sanitize_sql_for_conditions(
+        sanitize_clickhouse_sql(
           ["events_enriched.properties[?]", property]
         )
       end

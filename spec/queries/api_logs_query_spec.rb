@@ -164,6 +164,18 @@ RSpec.describe ApiLogsQuery, clickhouse: true do
     end
   end
 
+  context "with a request_paths filter ending with a backslash" do
+    let(:api_log) { create(:clickhouse_api_log, organization:, request_path: "/v1/customers/a\\") }
+
+    it "matches the literal path" do
+      filters = {request_paths: [api_log.request_path]}
+      expect(described_class.call(organization:, pagination:, filters:).api_logs.map(&:request_id)).to eq([api_log.request_id])
+
+      filters = {request_paths: ["/v1/customers/a\\*"]}
+      expect(described_class.call(organization:, pagination:, filters:).api_logs.map(&:request_id)).to eq([api_log.request_id])
+    end
+  end
+
   context "with request_ids filter" do
     let(:filler_api_log) { create(:clickhouse_api_log, organization:, http_status: 404) }
     let(:sorted_ids) { [api_log.request_id, filler_api_log.request_id].sort }
