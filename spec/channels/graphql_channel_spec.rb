@@ -9,6 +9,7 @@ RSpec.describe GraphqlChannel, type: :channel do
   let(:conversation_id) { ai_conversation.id }
   let(:current_user) { membership.user }
   let(:auth_error_code) { nil }
+  let(:token_expired) { false }
 
   let(:subscription_query) do
     <<~GQL
@@ -24,7 +25,9 @@ RSpec.describe GraphqlChannel, type: :channel do
     perform :execute, query: subscription_query, variables: {id: conversation_id}
   end
 
-  before { stub_connection(connection_identifier: SecureRandom.uuid, current_user:, auth_error_code:) }
+  before do
+    stub_connection(connection_identifier: SecureRandom.uuid, current_user:, auth_error_code:, token_expired?: token_expired)
+  end
 
   context "with an authenticated user and an organization" do
     before { subscribe(organization_id: organization.id) }
@@ -96,7 +99,26 @@ RSpec.describe GraphqlChannel, type: :channel do
     end
   end
 
-  context "when the connection token has expired" do
+  context "when the token expires while the socket is open" do
+    let(:token_expired) { true }
+    let(:close_calls) { [] }
+
+    before do
+      calls = close_calls
+      connection.define_singleton_method(:close) { |**options| calls << options }
+      subscribe(organization_id: organization.id)
+    end
+
+    it "closes the socket so the client reconnects with its renewed token" do
+      execute_subscription
+
+      expect(close_calls).to eq([{reason: "token_expired", reconnect: true}])
+      expect(transmissions.pluck("result")).to all(be_nil)
+      expect(subscription.streams).to be_empty
+    end
+  end
+
+  context "when the token had expired when the socket opened" do
     let(:current_user) { nil }
     let(:auth_error_code) { "expired_jwt_token" }
 

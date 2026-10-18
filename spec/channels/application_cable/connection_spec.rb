@@ -17,6 +17,20 @@ RSpec.describe ApplicationCable::Connection, type: :channel do
     expect(connection.auth_error_code).to be_nil
   end
 
+  it "redacts the token from the env once read" do
+    connect_with("actioncable-v1-json, actioncable-unsupported, lago-token.#{token}")
+
+    expect(connection.env["HTTP_SEC_WEBSOCKET_PROTOCOL"])
+      .to eq("actioncable-v1-json, actioncable-unsupported, lago-token.[FILTERED]")
+  end
+
+  it "tracks the expiration of the token" do
+    connect_with("actioncable-v1-json, lago-token.#{token}")
+
+    expect(connection.token_expired?).to be(false)
+    travel_to(4.hours.from_now) { expect(connection.token_expired?).to be(true) }
+  end
+
   it "accepts the connection without a user when no token is sent" do
     connect_with("actioncable-v1-json, actioncable-unsupported")
 

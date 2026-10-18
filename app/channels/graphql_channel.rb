@@ -5,6 +5,15 @@ class GraphqlChannel < ApplicationCable::Channel
   end
 
   def execute(data)
+    # The client reopens the socket with its renewed token, and ActionCableLink sends the
+    # operation again once reconnected. Returning expired_jwt_token here would log out a user
+    # whose session is still active.
+    if connection.token_expired?
+      connection.close(reason: "token_expired", reconnect: true)
+      return
+    end
+
+    # The token was already expired when the socket opened: the session itself has expired.
     if connection.auth_error_code
       code = connection.auth_error_code
       transmit({result: {errors: [{message: code, extensions: {status: 401, code:}}]}, more: false})
