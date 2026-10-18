@@ -21,19 +21,18 @@ module Mutations
         raise forbidden_error(code: "feature_unavailable") if ENV["MISTRAL_API_KEY"].blank? || ENV["MISTRAL_AGENT_ID"].blank?
 
         ai_conversation = if conversation_id.present?
-          current_organization.ai_conversations.find_by!(id: conversation_id, membership: current_membership)
+          current_organization.ai_conversations.find_by(id: conversation_id, membership: current_membership)
         else
           current_organization.ai_conversations.create!(
             membership: current_membership,
             name: message
           )
         end
+        return not_found_error(resource: "ai_conversation") unless ai_conversation
 
         ::AiConversations::StreamJob.perform_later(ai_conversation:, message:)
 
         ai_conversation
-      rescue ActiveRecord::RecordNotFound
-        not_found_error(resource: "ai_conversation")
       end
     end
   end
