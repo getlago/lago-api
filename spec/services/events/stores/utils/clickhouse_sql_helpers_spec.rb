@@ -26,4 +26,17 @@ RSpec.describe Events::Stores::Utils::ClickhouseSqlHelpers do
         .to eq(ActiveRecord::Base.sanitize_sql_for_conditions(["timestamp >= ? AND value = ?", time, 3]))
     end
   end
+
+  describe "#quote" do
+    it "quotes with the ClickHouse adapter" do
+      expect(helper.quote("a\\'b")).to eq("'a\\\\''b'")
+    end
+  end
+
+  describe "#decimal_literal" do
+    it "renders a fixed-point string" do
+      expect(helper.decimal_literal(2500.0)).to eq("2500.0")
+      expect(helper.decimal_literal("0.000000000000000001")).to eq("0.000000000000000001")
+    end
+  end
 end
