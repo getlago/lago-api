@@ -8473,6 +8473,7 @@ input LoseInvoiceDisputeInput {
 enum MappableTypeEnum {
   AddOn
   BillableMetric
+  Tax
 }
 
 type Mapping {
@@ -14758,6 +14759,7 @@ type Tax {
   customersCount: Int!
   description: String
   id: ID!
+  integrationMappings(integrationId: ID): [Mapping!]
   name: String!
   organization: Organization
 

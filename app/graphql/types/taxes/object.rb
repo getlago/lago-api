@@ -26,6 +26,10 @@ module Types
 
       field :auto_generated, Boolean, null: false
 
+      field :integration_mappings, [Types::IntegrationMappings::Object], null: true do
+        argument :integration_id, ID, required: false
+      end
+
       def applied_to_organization
         organization = dataloader.with(Sources::ActiveRecordAssociation, :organization).load(object)
         default_billing_entity = dataloader.with(Sources::ActiveRecordAssociation, :default_billing_entity).load(organization)
@@ -50,6 +54,15 @@ module Types
 
       def plans_count
         object.plans.count
+      end
+
+      def integration_mappings(integration_id: nil)
+        mappings = object.integration_mappings
+        if integration_id
+          mappings.where(integration_id:)
+        else
+          mappings
+        end
       end
 
       private

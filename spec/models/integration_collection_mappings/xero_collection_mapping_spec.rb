@@ -31,4 +31,13 @@ RSpec.describe IntegrationCollectionMappings::XeroCollectionMapping do
       expect(mapping.external_name).to eq(external_name)
     end
   end
+
+  describe "#tax_type" do
+    let(:tax_type) { "tax-type-1" }
+
+    it "assigns and retrieve a setting" do
+      mapping.tax_type = tax_type
+      expect(mapping.tax_type).to eq(tax_type)
+    end
+  end
 end

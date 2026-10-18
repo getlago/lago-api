@@ -2,6 +2,7 @@
 
 class Tax < ApplicationRecord
   include PaperTrailTraceable
+  include IntegrationMappable
   include Discard::Model
 
   self.discard_column = :deleted_at
