@@ -48,7 +48,7 @@ module Events
 
         {
           "events_enriched" => deduplicated_events_sql(from_datetime: events_from, to_datetime: events_to, deduplicated_columns:),
-          "events" => query.project(select).to_sql
+          "events" => query.project(select).to_sql(::Clickhouse::EventsEnriched)
         }
       end
 
@@ -749,7 +749,7 @@ module Events
       def arel_filters_scope(scope)
         matching_filters.each do |key, values|
           scope = scope.where(
-            Arel::Nodes::SqlLiteral.new(sanitized_property_name(key.to_s)).in(escape_clickhouse_backslashes(values.map(&:to_s)))
+            Arel::Nodes::SqlLiteral.new(sanitized_property_name(key.to_s)).in(values.map(&:to_s))
           )
         end
 
@@ -809,7 +809,7 @@ module Events
       def apply_arel_grouped_by_values(query)
         grouped_by_values.each do |grouped_by, grouped_by_value|
           query = if grouped_by_value.present?
-            query.where(Arel::Nodes::SqlLiteral.new(sanitized_property_name(grouped_by)).eq(escape_clickhouse_backslashes(grouped_by_value)))
+            query.where(Arel::Nodes::SqlLiteral.new(sanitized_property_name(grouped_by)).eq(grouped_by_value))
           else
             query.where(
               Arel::Nodes::NamedFunction.new(

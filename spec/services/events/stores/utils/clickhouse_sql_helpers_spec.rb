@@ -15,18 +15,15 @@ RSpec.describe Events::Stores::Utils::ClickhouseSqlHelpers do
       expect(helper.sanitize_clickhouse_sql(["code = :code", {code: "a\\"}])).to eq("code = 'a\\\\'")
     end
 
+    it "escapes symbol values" do
+      expect(helper.sanitize_clickhouse_sql(["properties[?]", :"a\\"])).to eq("properties['a\\\\']")
+    end
+
     it "quotes dates and numbers like ActiveRecord" do
       time = Time.zone.parse("2026-10-18 12:34:56.789")
 
       expect(helper.sanitize_clickhouse_sql(["timestamp >= ? AND value = ?", time, 3]))
         .to eq(ActiveRecord::Base.sanitize_sql_for_conditions(["timestamp >= ? AND value = ?", time, 3]))
-    end
-  end
-
-  describe "#escape_clickhouse_backslashes" do
-    it "leaves values without a backslash unchanged" do
-      expect(helper.escape_clickhouse_backslashes("region")).to eq("region")
-      expect(helper.escape_clickhouse_backslashes(nil)).to be_nil
     end
   end
 end

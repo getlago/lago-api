@@ -27,36 +27,23 @@ module Events
           sanitize_clickhouse_sql([sql, {date: date_value, timezone:}])
         end
 
-        # NOTE: ClickHouse reads a backslash inside a string literal as an escape character, while
-        #       `ActiveRecord::Base.sanitize_sql_for_conditions` quotes for PostgreSQL and only doubles
-        #       single quotes. Backslashes in string values are doubled first, so a value ending with
-        #       one cannot escape its closing quote. Dates and numbers are quoted as before.
+        # NOTE: ClickHouse reads a backslash inside a string literal as an escape character, which the
+        #       PostgreSQL quoting of `ActiveRecord::Base.sanitize_sql_for_conditions` leaves alone: a value
+        #       ending with one escapes its closing quote. Values are quoted by the ClickHouse adapter instead,
+        #       except times, which it renders without their fractional seconds.
         def sanitize_clickhouse_sql(statement)
           template, *values = statement
 
-          ActiveRecord::Base.sanitize_sql_for_conditions([template, *values.map { escape_clickhouse_backslashes(it) }])
+          ::Clickhouse::BaseRecord.sanitize_sql_for_conditions([template, *values.map { clickhouse_bind_value(it) }])
         end
 
-        # NOTE: For values quoted later by the PostgreSQL connection, such as Arel nodes built on
-        #       `Clickhouse::EventsEnriched.arel_table` and turned into SQL with the default engine.
-        def escape_clickhouse_backslashes(value)
+        def clickhouse_bind_value(value)
           case value
-          when String then value.gsub("\\") { "\\\\" }
-          when Array then value.map { escape_clickhouse_backslashes(it) }
-          when Hash then value.transform_values { escape_clickhouse_backslashes(it) }
+          when Array then value.map { clickhouse_bind_value(it) }
+          when Hash then value.transform_values { clickhouse_bind_value(it) }
+          when Time, DateTime, ActiveSupport::TimeWithZone then ActiveRecord::Base.with_connection { it.quoted_date(value) }
           else value
           end
-        end
-
-        def quote(value)
-          ::Clickhouse::BaseRecord.connection.quote(value)
-        end
-
-        # NOTE: A numeric literal containing a decimal point (e.g. 2500.0) is parsed as a Float64 by
-        #       ClickHouse and loses precision when cast to Decimal. Rendering the value as a
-        #       fixed-point string makes toDecimalXX read an exact decimal literal instead.
-        def decimal_literal(value)
-          BigDecimal(value.to_s).to_s("F")
         end
 
         def sql_condition(template, *values)

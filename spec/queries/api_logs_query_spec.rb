@@ -165,7 +165,7 @@ RSpec.describe ApiLogsQuery, clickhouse: true do
   end
 
   context "with a request_paths filter ending with a backslash" do
-    let(:api_log) { create(:clickhouse_api_log, organization:, request_path: "/v1/customers/a\\") }
+    let(:api_log) { create(:clickhouse_api_log, request_path: "/v1/customers/a\\") }
 
     it "matches the literal path" do
       filters = {request_paths: [api_log.request_path]}

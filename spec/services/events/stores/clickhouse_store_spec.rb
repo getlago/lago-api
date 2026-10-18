@@ -165,6 +165,22 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       end
     end
 
+    context "when the unique count property ends with a backslash" do
+      before { event_store.aggregation_property = "a\\" }
+
+      it "counts the literal property values" do
+        expect(event_store.unique_count.value).to eq(2)
+      end
+    end
+
+    context "when a weighted sum is grouped by a key ending with a backslash" do
+      let(:filters) { {grouped_by: ["a\\"]} }
+
+      it "groups by the literal key" do
+        expect(event_store.grouped_weighted_sum.map(&:groups)).to match_array([{"a\\" => "back\\"}, {"a\\" => "other"}])
+      end
+    end
+
     context "when a grouped_by value ends with a backslash" do
       let(:filters) { {grouped_by_values: {"a\\" => "back\\"}} }
 
