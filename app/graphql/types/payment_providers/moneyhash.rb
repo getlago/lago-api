@@ -5,7 +5,7 @@ module Types
     class Moneyhash < Types::BaseObject
       graphql_name "MoneyhashProvider"
 
-      field :api_key, String, null: true, permission: "organization:integrations:view"
+      field :api_key, ObfuscatedStringType, null: true, permission: "organization:integrations:view"
       field :code, String, null: false
       field :flow_id, String, null: true, permission: "organization:integrations:view"
       field :id, ID, null: false

@@ -1496,7 +1496,7 @@ enum CancellationReasonEnum {
 
 type CashfreeProvider {
   clientId: String
-  clientSecret: String
+  clientSecret: ObfuscatedString
   code: String!
   id: ID!
   name: String!
@@ -8580,7 +8580,7 @@ input MetadataInput {
 }
 
 type MoneyhashProvider {
-  apiKey: String
+  apiKey: ObfuscatedString
   code: String!
   flowId: String
   id: ID!

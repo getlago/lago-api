@@ -233,7 +233,7 @@ RSpec.describe Resolvers::PaymentProvidersResolver do
         payment_providers_response = result["data"]["paymentProviders"]["collection"]
         expect(payment_providers_response.map(&:values)).to contain_exactly(
           [adyen_provider.live_prefix],
-          [cashfree_provider.client_id, cashfree_provider.client_secret],
+          [cashfree_provider.client_id, "••••••••…#{cashfree_provider.client_secret[-3..]}"],
           [true],
           [stripe_provider.success_redirect_url]
         )
