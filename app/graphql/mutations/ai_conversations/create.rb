@@ -20,13 +20,11 @@ module Mutations
         raise unauthorized_error unless License.premium?
         raise forbidden_error(code: "feature_unavailable") if ENV["MISTRAL_API_KEY"].blank? || ENV["MISTRAL_AGENT_ID"].blank?
 
-        membership = current_organization.memberships.find_by(user_id: context[:current_user].id)
-
         ai_conversation = if conversation_id.present?
-          current_organization.ai_conversations.find(conversation_id)
+          current_organization.ai_conversations.find_by!(id: conversation_id, membership: current_membership)
         else
           current_organization.ai_conversations.create!(
-            membership:,
+            membership: current_membership,
             name: message
           )
         end
@@ -34,6 +32,8 @@ module Mutations
         ::AiConversations::StreamJob.perform_later(ai_conversation:, message:)
 
         ai_conversation
+      rescue ActiveRecord::RecordNotFound
+        not_found_error(resource: "ai_conversation")
       end
     end
   end

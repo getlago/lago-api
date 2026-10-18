@@ -1,0 +1,110 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+RSpec.describe GraphqlChannel, type: :channel do
+  let(:membership) { create(:membership, roles: [:admin]) }
+  let(:organization) { membership.organization }
+  let(:ai_conversation) { create(:ai_conversation, organization:, membership:) }
+  let(:token) { Utils::AuthToken.encode(user: membership.user) }
+  let(:conversation_id) { ai_conversation.id }
+
+  let(:subscription_query) do
+    <<~GQL
+      subscription($id: ID!) {
+        aiConversationStreamed(id: $id) { chunk done }
+      }
+    GQL
+  end
+
+  let(:last_transmission) { transmissions.last }
+
+  def execute_subscription
+    perform :execute, query: subscription_query, variables: {id: conversation_id}
+  end
+
+  before { stub_connection(connection_identifier: SecureRandom.uuid) }
+
+  context "with a valid token and organization" do
+    before { subscribe(token:, organization_id: organization.id) }
+
+    it "subscribes to the member's own conversation" do
+      execute_subscription
+
+      expect(last_transmission["more"]).to be(true)
+      expect(last_transmission["result"]["errors"]).to be_nil
+      expect(last_transmission["result"]["data"]["aiConversationStreamed"]).to eq("chunk" => nil, "done" => false)
+      expect(subscription.streams).not_to be_empty
+    end
+
+    context "when the conversation belongs to another member of the organization" do
+      let(:other_membership) { create(:membership, organization:) }
+      let(:conversation_id) { create(:ai_conversation, organization:, membership: other_membership).id }
+
+      it "rejects the subscription" do
+        execute_subscription
+
+        expect(last_transmission["more"]).to be(false)
+        expect(last_transmission["result"]["errors"].first["message"]).to eq("Resource not found")
+        expect(subscription.streams).to be_empty
+      end
+    end
+
+    context "when the member does not have the ai_conversations:view permission" do
+      let(:membership) do
+        create(:membership).tap do |membership|
+          role = create(:role, organization: membership.organization, permissions: %w[customers:view])
+          create(:membership_role, membership:, role:)
+        end
+      end
+
+      it "rejects the subscription" do
+        execute_subscription
+
+        expect(last_transmission["more"]).to be(false)
+        expect(last_transmission["result"]["errors"].first["message"]).to eq("Missing permissions")
+        expect(subscription.streams).to be_empty
+      end
+    end
+
+    it "refuses queries and mutations" do
+      perform :execute, query: "query { currentUser { id } }"
+
+      expect(last_transmission["more"]).to be(false)
+      expect(last_transmission["result"]["errors"].first["message"]).to eq("Only subscriptions are supported on this channel")
+    end
+  end
+
+  context "without a token" do
+    before { subscribe(organization_id: organization.id) }
+
+    it "rejects the subscription" do
+      execute_subscription
+
+      expect(last_transmission["result"]["errors"]).to be_present
+      expect(subscription.streams).to be_empty
+    end
+  end
+
+  context "with an invalid token" do
+    before { subscribe(token: "invalid", organization_id: organization.id) }
+
+    it "rejects the subscription" do
+      execute_subscription
+
+      expect(last_transmission["result"]["errors"]).to be_present
+      expect(subscription.streams).to be_empty
+    end
+  end
+
+  context "with an organization the user is not a member of" do
+    before { subscribe(token:, organization_id: create(:organization).id) }
+
+    it "rejects the subscription" do
+      execute_subscription
+
+      expect(last_transmission["result"]["errors"]).to be_present
+      expect(subscription.streams).to be_empty
+    end
+  end
+end
