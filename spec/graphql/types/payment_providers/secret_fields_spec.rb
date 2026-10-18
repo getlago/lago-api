@@ -7,16 +7,7 @@ RSpec.describe "Payment provider secret fields" do # rubocop:disable RSpec/Descr
   # configure the integration.
   configure_permissions = %w[organization:integrations:create organization:integrations:update]
 
-  provider_types = [
-    Types::PaymentProviders::Adyen,
-    Types::PaymentProviders::Cashfree,
-    Types::PaymentProviders::Flutterwave,
-    Types::PaymentProviders::Gocardless,
-    Types::PaymentProviders::Moneyhash,
-    Types::PaymentProviders::Stripe
-  ]
-
-  provider_types.each do |type|
+  Types::PaymentProviders::Object.possible_types.each do |type|
     type.fields.each_value do |field|
       next unless field.name.match?(/secret|key|token/i)
       next if field.type.unwrap == GraphQL::Types::Boolean
