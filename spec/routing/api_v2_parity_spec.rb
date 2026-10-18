@@ -103,6 +103,11 @@ RSpec.describe "API v2 routing parity" do
     end
   end
 
+  it "routes the invoice payment URL to its v2 controller" do
+    expect(Rails.application.routes.recognize_path("/api/v2/invoices/#{SecureRandom.uuid}/payment_url", method: :post)[:controller])
+      .to eq("api/v2/invoices/payment_urls")
+  end
+
   it "routes catalog invoice endpoints to the v2 controller" do
     id = SecureRandom.uuid
 
@@ -112,7 +117,10 @@ RSpec.describe "API v2 routing parity" do
       [:post, "/api/v2/invoices/#{id}/void"],
       [:post, "/api/v2/invoices/#{id}/download_pdf"],
       [:post, "/api/v2/invoices/#{id}/resend_email"],
-      [:post, "/api/v2/invoices/#{id}/retry_taxes"]
+      [:post, "/api/v2/invoices/#{id}/retry_taxes"],
+      [:post, "/api/v2/invoices/#{id}/retry_payment"],
+      [:put, "/api/v2/invoices/#{id}/refresh"],
+      [:put, "/api/v2/invoices/#{id}/finalize"]
     ].each do |method, path|
       expect(Rails.application.routes.recognize_path(path, method:)[:controller]).to eq("api/v2/invoices")
     end

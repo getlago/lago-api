@@ -69,6 +69,10 @@ Rails.application.routes.draw do
         post :download_pdf, on: :member
         post :resend_email, on: :member
         post :retry_taxes, on: :member
+        post :retry_payment, on: :member
+        post :payment_url, on: :member, to: "invoices/payment_urls#create"
+        put :refresh, on: :member
+        put :finalize, on: :member
       end
       resources :fees, only: %i[index show update destroy]
       # The v2 log endpoints have their own route here and a matching v1 route
