@@ -81,6 +81,8 @@ Rails.application.routes.draw do
       resources :activity_logs, param: :activity_id, only: %i[index show]
       resources :api_logs, param: :request_id, only: %i[index show]
       resources :security_logs, param: :log_id, only: %i[index show]
+      # An invoice route v2 does not serve is unknown on v2, not a v1 fallback.
+      match "invoices(/*path)", to: "/application#not_found", via: :all
     end
 
     namespace :v2, module: :v1 do
