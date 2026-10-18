@@ -73,7 +73,11 @@ RSpec.describe "API v2 routing parity" do
       [:post, "/api/v2/invoices/#{id}/void"],
       [:post, "/api/v2/invoices/#{id}/download_pdf"],
       [:post, "/api/v2/invoices/#{id}/resend_email"],
-      [:post, "/api/v2/invoices/#{id}/retry"]
+      [:post, "/api/v2/invoices/#{id}/retry"],
+      [:post, "/api/v2/invoices/#{id}/retry_payment"],
+      [:post, "/api/v2/invoices/#{id}/payment_url"],
+      [:put, "/api/v2/invoices/#{id}/refresh"],
+      [:put, "/api/v2/invoices/#{id}/finalize"]
     ].each do |method, path|
       expect(Rails.application.routes.recognize_path(path, method:)[:controller]).to eq("api/v2/invoices")
     end
