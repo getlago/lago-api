@@ -240,4 +240,71 @@ RSpec.describe Resolvers::PaymentProvidersResolver do
       end
     end
   end
+
+  context "when requesting webhook secrets" do
+    let(:flutterwave_provider) { create(:flutterwave_provider, organization:) }
+    let(:gocardless_provider) do
+      create(:gocardless_provider, organization:).tap { it.update!(webhook_secret: SecureRandom.hex(32)) }
+    end
+    let(:query) do
+      <<~GQL
+        query {
+          paymentProviders(limit: 10) {
+            collection {
+              ... on FlutterwaveProvider {
+                webhookSecret
+                __typename
+              }
+              ... on GocardlessProvider {
+                webhookSecret
+                __typename
+              }
+            }
+          }
+        }
+      GQL
+    end
+
+    before { flutterwave_provider }
+
+    def webhook_secrets(result)
+      result["data"]["paymentProviders"]["collection"]
+        .select { %w[FlutterwaveProvider GocardlessProvider].include?(it["__typename"]) }
+        .to_h { [it["__typename"], it["webhookSecret"]] }
+    end
+
+    context "with only organization:integrations:view permission" do
+      it "does not return the webhook secrets" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: ["organization:integrations:view"],
+          query:
+        )
+
+        expect(result["errors"]).to be_nil
+        expect(flutterwave_provider.webhook_secret).to be_present
+        expect(gocardless_provider.webhook_secret).to be_present
+        expect(webhook_secrets(result)).to eq("FlutterwaveProvider" => nil, "GocardlessProvider" => nil)
+      end
+    end
+
+    %w[organization:integrations:create organization:integrations:update].each do |permission|
+      context "with #{permission} permission" do
+        it "returns the webhook secrets" do
+          result = execute_graphql(
+            current_user: membership.user,
+            current_organization: organization,
+            permissions: ["organization:integrations:view", permission],
+            query:
+          )
+
+          expect(webhook_secrets(result)).to eq(
+            "FlutterwaveProvider" => flutterwave_provider.webhook_secret,
+            "GocardlessProvider" => gocardless_provider.webhook_secret
+          )
+        end
+      end
+    end
+  end
 end
