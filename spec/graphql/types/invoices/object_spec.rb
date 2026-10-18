@@ -60,9 +60,9 @@ RSpec.describe Types::Invoices::Object do
 
     expect(subject).to have_field(:file_url).of_type("String")
     expect(subject).to have_field(:xml_url).of_type("String")
-    expect(subject).to have_field(:metadata).of_type("[InvoiceMetadata!]")
+    expect(subject).to have_field(:metadata).of_type("[InvoiceMetadata!]").with_permission("invoices:view")
 
-    expect(subject).to have_field(:activity_logs).of_type("[ActivityLog!]")
+    expect(subject).to have_field(:activity_logs).of_type("[ActivityLog!]").with_permission("audit_logs:view")
     expect(subject).to have_field(:applied_taxes).of_type("[InvoiceAppliedTax!]")
     expect(subject).to have_field(:credit_notes).of_type("[CreditNote!]")
     expect(subject).to have_field(:fees).of_type("[Fee!]")

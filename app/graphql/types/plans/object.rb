@@ -29,7 +29,7 @@ module Types
 
       field :entitlements, [Types::Entitlement::PlanEntitlementObject]
 
-      field :activity_logs, [Types::ActivityLogs::Object], null: true
+      field :activity_logs, [Types::ActivityLogs::Object], null: true, permission: "audit_logs:view"
       field :charges, [Types::Charges::Object]
       field :fixed_charges, [Types::FixedCharges::Object]
       field :taxes, [Types::Taxes::Object]

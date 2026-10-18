@@ -65,9 +65,9 @@ module Types
       field :file_url, String, null: true
       field :xml_url, String, null: true
 
-      field :metadata, [Types::Invoices::Metadata::Object], null: true
+      field :metadata, [Types::Invoices::Metadata::Object], null: true, permission: "invoices:view"
 
-      field :activity_logs, [Types::ActivityLogs::Object], null: true
+      field :activity_logs, [Types::ActivityLogs::Object], null: true, permission: "audit_logs:view"
       field :applied_taxes, [Types::Invoices::AppliedTaxes::Object]
       field :credit_notes, [Types::CreditNotes::Object], null: true
       field :error_details, [Types::ErrorDetails::Object], null: true
