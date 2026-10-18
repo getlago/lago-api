@@ -5,6 +5,12 @@ class GraphqlChannel < ApplicationCable::Channel
   end
 
   def execute(data)
+    if connection.auth_error_code
+      code = connection.auth_error_code
+      transmit({result: {errors: [{message: code, extensions: {status: 401, code:}}]}, more: false})
+      return
+    end
+
     query = GraphQL::Query.new(
       LagoApiSchema,
       data["query"],
@@ -20,7 +26,8 @@ class GraphqlChannel < ApplicationCable::Channel
     )
 
     # Queries and mutations go through GraphqlController, the socket only serves subscriptions.
-    unless query.subscription?
+    # A query that does not parse has no selected operation and gets its errors from query.result.
+    if query.selected_operation && !query.subscription?
       transmit({result: {errors: [{message: "Only subscriptions are supported on this channel"}]}, more: false})
       return
     end
@@ -47,14 +54,12 @@ class GraphqlChannel < ApplicationCable::Channel
 
   private
 
-  # The front end sends the user token and the organization id as channel params
-  # (graphql-ruby-client ActionCableLink `connectionParams`), mirroring the
-  # Authorization and x-lago-organization headers of the HTTP endpoint.
+  # The user comes from the token authenticated by the connection. The organization id is a
+  # channel param (graphql-ruby-client ActionCableLink `connectionParams`), mirroring the
+  # x-lago-organization header of the HTTP endpoint. Channel params end up in the logs,
+  # so they must never carry a credential.
   def current_user
-    return @current_user if defined?(@current_user)
-
-    user_id = decoded_token&.dig("sub")
-    @current_user = user_id.present? ? User.find_by(id: user_id) : nil
+    connection.current_user
   end
 
   def current_membership
@@ -68,14 +73,6 @@ class GraphqlChannel < ApplicationCable::Channel
 
   def current_organization
     current_membership&.organization
-  end
-
-  def decoded_token
-    return @decoded_token if defined?(@decoded_token)
-
-    @decoded_token = Utils::AuthToken.decode(token: params["token"])
-  rescue JWT::DecodeError
-    @decoded_token = nil
   end
 
   def ensure_hash(ambiguous_param)

@@ -6,8 +6,9 @@ RSpec.describe GraphqlChannel, type: :channel do
   let(:membership) { create(:membership, roles: [:admin]) }
   let(:organization) { membership.organization }
   let(:ai_conversation) { create(:ai_conversation, organization:, membership:) }
-  let(:token) { Utils::AuthToken.encode(user: membership.user) }
   let(:conversation_id) { ai_conversation.id }
+  let(:current_user) { membership.user }
+  let(:auth_error_code) { nil }
 
   let(:subscription_query) do
     <<~GQL
@@ -23,10 +24,10 @@ RSpec.describe GraphqlChannel, type: :channel do
     perform :execute, query: subscription_query, variables: {id: conversation_id}
   end
 
-  before { stub_connection(connection_identifier: SecureRandom.uuid) }
+  before { stub_connection(connection_identifier: SecureRandom.uuid, current_user:, auth_error_code:) }
 
-  context "with a valid token and organization" do
-    before { subscribe(token:, organization_id: organization.id) }
+  context "with an authenticated user and an organization" do
+    before { subscribe(organization_id: organization.id) }
 
     it "subscribes to the member's own conversation" do
       execute_subscription
@@ -67,6 +68,13 @@ RSpec.describe GraphqlChannel, type: :channel do
       end
     end
 
+    it "returns the parse error of a malformed query" do
+      perform :execute, query: "subscription {"
+
+      expect(last_transmission["more"]).to be(false)
+      expect(last_transmission["result"]["errors"].first["message"]).to include("Expected")
+    end
+
     it "refuses queries and mutations" do
       perform :execute, query: "query { currentUser { id } }"
 
@@ -75,7 +83,9 @@ RSpec.describe GraphqlChannel, type: :channel do
     end
   end
 
-  context "without a token" do
+  context "without an authenticated user" do
+    let(:current_user) { nil }
+
     before { subscribe(organization_id: organization.id) }
 
     it "rejects the subscription" do
@@ -86,19 +96,23 @@ RSpec.describe GraphqlChannel, type: :channel do
     end
   end
 
-  context "with an invalid token" do
-    before { subscribe(token: "invalid", organization_id: organization.id) }
+  context "when the connection token has expired" do
+    let(:current_user) { nil }
+    let(:auth_error_code) { "expired_jwt_token" }
 
-    it "rejects the subscription" do
+    before { subscribe(organization_id: organization.id) }
+
+    it "returns the expired token error" do
       execute_subscription
 
-      expect(last_transmission["result"]["errors"]).to be_present
+      expect(last_transmission["more"]).to be(false)
+      expect(last_transmission["result"]["errors"].first["extensions"]).to eq("status" => 401, "code" => "expired_jwt_token")
       expect(subscription.streams).to be_empty
     end
   end
 
   context "with an organization the user is not a member of" do
-    before { subscribe(token:, organization_id: create(:organization).id) }
+    before { subscribe(organization_id: create(:organization).id) }
 
     it "rejects the subscription" do
       execute_subscription
