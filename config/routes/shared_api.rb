@@ -164,7 +164,6 @@ post "/events/batch", to: "events#batch"
 
 get "/organizations", to: "organizations#show"
 put "/organizations", to: "organizations#update"
-get "/organizations/grpc_token", to: "organizations#grpc_token"
 
 resources :webhook_endpoints, only: %i[create index show destroy update]
 resources :webhooks, only: %i[] do
