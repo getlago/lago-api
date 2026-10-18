@@ -15,7 +15,7 @@ module Api
       end
 
       def show
-        invoice = current_organization.invoices.visible.product_catalog.find_by(id: params[:id])
+        invoice = find_invoice(:visible)
         return not_found_error(resource: "invoice") unless invoice
 
         fees_count = invoice.fees.product.count if requested_expansions.include?(:fees)
@@ -30,12 +30,57 @@ module Api
       end
 
       def void
-        invoice = current_organization.invoices.visible.find_by(id: params[:id])
+        invoice = find_invoice(:visible)
+        return not_found_error(resource: "invoice") unless invoice
 
         result = ::Invoices::VoidService.call(invoice:, params: params.permit(:generate_credit_note, :refund_amount, :credit_amount))
 
         if result.success?
-          render_v1_invoice(result.invoice)
+          render_invoice(result.invoice)
+        else
+          render_error_response(result)
+        end
+      end
+
+      def download_pdf
+        invoice = find_invoice(:finalized)
+        return not_found_error(resource: "invoice") unless invoice
+
+        if invoice.file.present?
+          return render_invoice(invoice)
+        end
+
+        ::Invoices::GeneratePdfJob.perform_later(invoice)
+
+        head(:ok)
+      end
+
+      def resend_email
+        invoice = find_invoice(:visible)
+        return not_found_error(resource: "invoice") unless invoice
+
+        result = ::Emails::ResendService.call(
+          resource: invoice,
+          to: resend_email_params[:to],
+          cc: resend_email_params[:cc],
+          bcc: resend_email_params[:bcc]
+        )
+
+        if result.success?
+          head(:ok)
+        else
+          render_error_response(result)
+        end
+      end
+
+      def retry
+        invoice = find_invoice(:visible)
+        return not_found_error(resource: "invoice") unless invoice
+
+        result = ::Invoices::RetryService.call(invoice:)
+
+        if result.success?
+          render_invoice(result.invoice)
         else
           render_error_response(result)
         end
@@ -43,15 +88,12 @@ module Api
 
       private
 
-      # The v1 invoice payload until the v2 invoice serializer exists.
-      def render_v1_invoice(invoice)
-        render(
-          json: ::V1::InvoiceSerializer.new(
-            invoice,
-            root_name: "invoice",
-            includes: %i[customer integration_customers billing_periods subscriptions fees credits metadata applied_taxes error_details applied_invoice_custom_sections]
-          )
-        )
+      def find_invoice(status_scope)
+        current_organization.invoices.public_send(status_scope).product_catalog.find_by(id: params[:id])
+      end
+
+      def resend_email_params
+        params.permit(to: [], cc: [], bcc: [])
       end
 
       def resource_name
