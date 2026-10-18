@@ -76,11 +76,25 @@ RSpec.describe V2::InvoiceSerializer do
     let(:includes) { described_class::DETAIL_INCLUDES }
     let(:tax) { create(:tax, organization:) }
     let(:other_contract) { create(:contract, organization:, customer:) }
-    let(:fee_attributes) { {invoice:, subscription: nil, fee_type: :product, invoiceable: product, contract:} }
+    let(:rate_card) { create(:rate_card, organization:, product:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+    let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card:) }
+    let(:other_contract_rate_card) { create(:contract_rate_card, organization:, contract: other_contract, rate_card:) }
+    let(:fee_attributes) do
+      {invoice:, subscription: nil, fee_type: :product, invoiceable: product, contract:, contract_rate_card:, rate_card_rate:}
+    end
     let(:later_fee) { create(:fee, fee_attributes.merge(created_at: 1.hour.ago)) }
     let(:earlier_fee) { create(:fee, fee_attributes.merge(created_at: 2.hours.ago)) }
     let(:event_fee) do
-      create(:fee, fee_attributes.merge(contract: other_contract, pay_in_advance: true, pay_in_advance_event_transaction_id: "tx_1"))
+      create(
+        :fee,
+        fee_attributes.merge(
+          contract: other_contract,
+          contract_rate_card: other_contract_rate_card,
+          pay_in_advance: true,
+          pay_in_advance_event_transaction_id: "tx_1"
+        )
+      )
     end
     let(:applied_tax) { create(:invoice_applied_tax, invoice:, tax:, fees_amount_cents: 900) }
     let(:custom_section) { create(:applied_invoice_custom_section, invoice:) }
@@ -130,10 +144,29 @@ RSpec.describe V2::InvoiceSerializer do
             "tax_description" => "French Standard VAT",
             "amount_cents" => 200,
             "fees_amount_cents" => 900,
-            "created_at" => applied_tax.created_at.iso8601
+            "created_at" => applied_tax.created_at.iso8601,
+            "updated_at" => applied_tax.updated_at.iso8601
           }
         ]
       )
+    end
+
+    context "with several applied taxes, custom sections and error details" do
+      let(:earlier_tax) { create(:invoice_applied_tax, invoice:, tax: create(:tax, organization:), created_at: 1.day.ago) }
+      let(:earlier_section) { create(:applied_invoice_custom_section, invoice:, created_at: 1.day.ago) }
+      let(:earlier_error) { create(:error_detail, owner: invoice, error_code: "tax_voiding_error", created_at: 1.day.ago) }
+
+      before do
+        earlier_tax
+        earlier_section
+        earlier_error
+      end
+
+      it "lists each collection in creation order" do
+        expect(result["applied_taxes"].map { it["lago_id"] }).to eq([earlier_tax.id, applied_tax.id])
+        expect(result["applied_invoice_custom_sections"].map { it["lago_id"] }).to eq([earlier_section.id, custom_section.id])
+        expect(result["error_details"].map { it["lago_id"] }).to eq([earlier_error.id, error_detail.id])
+      end
     end
 
     it "serializes the custom sections and error details" do
@@ -145,12 +178,22 @@ RSpec.describe V2::InvoiceSerializer do
             "code" => custom_section.code,
             "details" => custom_section.details,
             "display_name" => custom_section.display_name,
-            "created_at" => custom_section.created_at.iso8601
+            "created_at" => custom_section.created_at.iso8601,
+            "updated_at" => custom_section.updated_at.iso8601
           }
         ]
       )
       expect(result["error_details"]).to eq(
-        [{"lago_id" => error_detail.id, "error_code" => "tax_error", "details" => {"code" => "x"}}]
+        [
+          {
+            "lago_id" => error_detail.id,
+            "error_code" => "tax_error",
+            "details" => {"code" => "x"},
+            "created_at" => error_detail.created_at.iso8601,
+            "updated_at" => error_detail.updated_at.iso8601,
+            "deleted_at" => nil
+          }
+        ]
       )
     end
   end
