@@ -64,6 +64,8 @@ Rails.application.routes.draw do
         put :finalize, on: :member
       end
       resources :fees, only: %i[index show update destroy]
+      # An invoice route v2 does not serve is unknown on v2, not a v1 fallback.
+      match "invoices(/*path)", to: "/application#not_found", via: :all
       resources :customers, only: [], param: :external_id, constraints: {external_id: /[^\/]+/} do
         scope module: :customers do
           resources :invoices, only: :index
