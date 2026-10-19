@@ -14,8 +14,9 @@ RSpec.describe "templates/invoices/product_catalog/contract.slim" do
   let(:billing_entity) { organization.default_billing_entity }
   let(:customer) { create(:customer, organization:, name: "Pied Piper", legal_name: nil) }
   let(:invoice) do
-    create(:invoice, organization:, billing_entity:, customer:, invoice_type: :contract, number: "INV-001", self_billed:)
+    create(:invoice, organization:, billing_entity:, customer:, invoice_type:, number: "INV-001", self_billed:)
   end
+  let(:invoice_type) { :contract }
   let(:self_billed) { false }
   let(:contract) { create(:contract, organization:, customer:, name: "Platform") }
   let(:category) { create(:product_category, organization:, name: "Infrastructure", invoice_display_name: nil) }
@@ -54,6 +55,15 @@ RSpec.describe "templates/invoices/product_catalog/contract.slim" do
 
   it "bills from the billing entity to the customer" do
     expect(rendered_text).to match(/From Hooli.*Bill to Pied Piper/)
+  end
+
+  context "when the invoice bills charges paid in advance" do
+    let(:invoice_type) { :advance_charges }
+
+    it "shows the total as already paid, with nothing due" do
+      expect(rendered_text).to match(/Already paid \S+/)
+      expect(rendered_text).not_to include("Amount due")
+    end
   end
 
   context "when the invoice is self billed" do
