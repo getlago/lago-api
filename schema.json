@@ -7846,7 +7846,7 @@
               "args": [],
               "type": {
                 "kind": "SCALAR",
-                "name": "String",
+                "name": "ObfuscatedString",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -44808,7 +44808,7 @@
               "args": [],
               "type": {
                 "kind": "SCALAR",
-                "name": "String",
+                "name": "ObfuscatedString",
                 "ofType": null
               },
               "isDeprecated": false,
