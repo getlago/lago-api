@@ -1,37 +1,38 @@
 # frozen_string_literal: true
 
 module CursorPagination
-  # Opaque cursor: Base64URL of `{"v": version, "o": {"t": table, "s": sort}, "k": [time, tiebreak]}`,
-  # where `time` is the ISO8601 value of the sort's first column and `tiebreak` the string
-  # value of its second (a UUID `id` on the Postgres lists, a string business id on the logs).
+  # Opaque cursor: Base64URL of `{"v": version, "o": {"t": table, "s": sort}, "k": key}`,
+  # the key holding one value per sort column, in the order of the sort.
   #
   # It is not signed. Every query is scoped to the organization of the API key, so a
   # forged cursor only repositions its caller within their own data. It is validated
-  # strictly instead, so that a bad cursor is a 400 and never reaches Postgres.
+  # strictly instead, so that a bad cursor is a 400 and never reaches the database.
   module Token
     VERSION = 1
     MAX_LENGTH = 512
-    # Upper bound of the tiebreak value carried in a key: a UUID id or a short business id
-    # fit well under it, and the whole token is already capped at `MAX_LENGTH`.
-    MAX_KEY_LENGTH = 256
+    # Upper bound of a string tiebreak: a short business id fits well under it, and the whole
+    # token is already capped at `MAX_LENGTH`.
+    MAX_TIEBREAK_LENGTH = 256
     ENCODED_FORMAT = /\A[A-Za-z0-9_-]+\z/
-    TIMESTAMP_FORMAT = /\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z\z/
+    # PostgreSQL has no year 0, which Ruby parses: a key in that year is malformed rather than
+    # a failing query.
+    TIMESTAMP_FORMAT = /\A(?!0000)\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z\z/
+    DATE_FORMAT = /\A(?!0000)\d{4}-\d{2}-\d{2}\z/
 
     def self.encode(table:, record:, sort: DEFAULT_SORT)
       CursorPagination.validate_sort!(sort)
 
-      time_column, tiebreak_column = sort.keys
       payload = {
         v: VERSION,
         o: {t: table, s: CursorPagination.signature(sort)},
-        k: [record.public_send(time_column).utc.iso8601(6), record.public_send(tiebreak_column).to_s]
+        k: sort.keys.map { |column| written_value(column, record.public_send(column)) }
       }
 
       Base64.urlsafe_encode64(payload.to_json, padding: false)
     end
 
-    # Returns the `[time, tiebreak]` key of the anchor row. `param` names the request
-    # parameter the value came from, to key the error details.
+    # Returns the key of the anchor row, one typed value per sort column. `param` names
+    # the request parameter the value came from, to key the error details.
     def self.decode(value, table:, param:, sort: DEFAULT_SORT)
       CursorPagination.validate_sort!(sort)
       invalid = ->(reason) { raise Error.new(code: Error::INVALID_CURSOR, details: {param => {reason:}}) }
@@ -53,7 +54,7 @@ module CursorPagination
         raise Error.new(code: Error::CURSOR_EXPIRED, details: {param => {reason: "sort_changed"}})
       end
 
-      key(payload["k"]) || invalid.call("malformed_key")
+      key(payload["k"], sort) || invalid.call("malformed_key")
     end
 
     def self.parse(value)
@@ -63,25 +64,44 @@ module CursorPagination
     end
     private_class_method :parse
 
-    def self.key(values)
-      return unless values.is_a?(Array) && values.size == 2
+    def self.key(values, sort)
+      return unless values.is_a?(Array) && values.size == sort.size
 
-      timestamp, tiebreak = values
-      if timestamp.is_a?(String) && timestamp.match?(TIMESTAMP_FORMAT) && valid_tiebreak?(tiebreak)
-        [Time.iso8601(timestamp), tiebreak]
-      end
+      key = sort.keys.zip(values).map { |column, value| read_value(column, value) }
+      key unless key.include?(nil)
     rescue ArgumentError
-      # A well-shaped but impossible timestamp, like month 13.
+      # A well-shaped but impossible date or timestamp, like month 13.
       nil
     end
     private_class_method :key
 
-    # The tiebreak is any opaque key the sort's second column holds: a UUID id or a string
-    # business id. It is only required to be a bounded, non-empty string, so a non-string,
-    # empty, or over-long value is rejected before the cursor reaches the database.
-    def self.valid_tiebreak?(value)
-      value.is_a?(String) && !value.empty? && value.bytesize <= MAX_KEY_LENGTH
+    def self.written_value(column, value)
+      case CursorPagination::KEY_COLUMNS[column]
+      when :date then value.iso8601
+      when :time then value.utc.iso8601(6)
+      else value.to_s
+      end
     end
-    private_class_method :valid_tiebreak?
+    private_class_method :written_value
+
+    # Read back as the type the column compares with: a date stays a `Date`, so that a
+    # timestamp is never resumed in its place. Nil when the value is not of that format. An
+    # `id` must be a UUID, or Postgres would fail the comparison; another tiebreak is an
+    # opaque string.
+    def self.read_value(column, value)
+      return unless value.is_a?(String)
+
+      case CursorPagination::KEY_COLUMNS[column]
+      when :date then Date.iso8601(value) if value.match?(DATE_FORMAT)
+      when :time then Time.iso8601(value) if value.match?(TIMESTAMP_FORMAT)
+      else
+        if column == :id
+          value if value.match?(BaseQuery::UUID_REGEX)
+        elsif !value.empty? && value.bytesize <= MAX_TIEBREAK_LENGTH
+          value
+        end
+      end
+    end
+    private_class_method :read_value
   end
 end

@@ -47,19 +47,31 @@ RSpec.describe CursorPagination::Cursor do
     end
   end
 
-  context "with a sort of more than two columns" do
+  context "with a sort on a column the cursor key cannot hold" do
     subject(:cursor) { described_class.new(table: "products", sort: {created_at: :desc, name: :desc, id: :desc}) }
 
-    it "raises an argument error, since the cursor key holds two columns" do
-      expect { cursor }.to raise_error(ArgumentError, /two columns/)
+    it "raises an argument error" do
+      expect { cursor }.to raise_error(ArgumentError, /columns among issuing_date, created_at, logged_at/)
     end
   end
 
-  context "with a sort mixing directions" do
-    subject(:cursor) { described_class.new(table: "products", sort: {created_at: :desc, id: :asc}) }
+  context "with a sort not ending with a tiebreak" do
+    subject(:cursor) { described_class.new(table: "products", sort: {created_at: :desc}) }
 
     it "raises an argument error" do
-      expect { cursor }.to raise_error(ArgumentError, /single direction/)
+      expect { cursor }.to raise_error(ArgumentError, /then a unique tiebreak/)
+    end
+  end
+
+  context "with a sort on the issuing date, mixing directions" do
+    subject(:cursor) { described_class.from_params(params, table: "invoices", sort:) }
+
+    let(:sort) { {issuing_date: :desc, created_at: :desc, id: :asc} }
+    let(:invoice) { build_stubbed(:invoice, issuing_date: Date.new(2026, 9, 27), created_at: product.created_at) }
+    let(:params) { {after: CursorPagination::Token.encode(table: "invoices", record: invoice, sort:)} }
+
+    it "pages forward from the typed key" do
+      expect(cursor).to have_attributes(sort:, direction: :forward, key: [Date.new(2026, 9, 27), invoice.created_at.utc, invoice.id])
     end
   end
 

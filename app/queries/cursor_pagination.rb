@@ -4,29 +4,35 @@
 # (`Pagination`), which keeps serving v1 and GraphQL.
 module CursorPagination
   # The sort of a cursor-paginated list, unless its endpoint declares another. Immutable
-  # and NOT NULL columns only, so that no row moves while a client iterates; the second
-  # column only breaks ties, and its direction is invisible to clients since both ids and
-  # random tiebreaks are opaque.
+  # and NOT NULL columns only, so that no row moves while a client iterates; `id` only
+  # breaks ties, and its direction is invisible to clients since ids are random.
   #
-  # A sort is exactly two columns, a time column then a tiebreak column, in the same
-  # single direction: a single row-value comparison then bounds a page, and a
-  # `(…, <time> DESC, <tiebreak> DESC)` index serves it. Mixed directions would need an
-  # OR-chain predicate. A keyset query replaces the ordering of the query anyway, so the
-  # offset lists keep theirs. The tiebreak is any typed key the token round-trips: a UUID
-  # `id` on the Postgres lists, a string business id on the ClickHouse log lists.
+  # Both columns run in the same direction, unlike the `id ASC` tie-break that
+  # `BaseQuery#apply_consistent_ordering` gives the offset lists: a single row-value
+  # comparison then bounds a page, and a `(…, created_at DESC, id DESC)` index serves it.
+  # A keyset query replaces the ordering of the query anyway, so the offset lists keep
+  # theirs. An endpoint whose index serves the offset order declares that sort instead.
   DEFAULT_SORT = {created_at: :desc, id: :desc}.freeze
+
+  # The columns a sort can order on before its tiebreak, with the type `Token` writes and
+  # reads their value as.
+  KEY_COLUMNS = {issuing_date: :date, created_at: :time, logged_at: :time}.freeze
 
   # Written in every cursor: a cursor minted under another sort is rejected as expired.
   def self.signature(sort)
     sort.map { |column, direction| "#{column}:#{direction}" }.join(",")
   end
 
-  # A programming error rather than a client one: the endpoint declares its sort, and a
-  # cursor can only be resumed on the two columns its key holds, in a single direction.
+  # A programming error rather than a client one: the endpoint declares its sort. It ends
+  # with a unique tiebreak, so that two rows never tie: `id` on the Postgres lists, a string
+  # business id on the ClickHouse log lists.
   def self.validate_sort!(sort)
-    directions = sort.values.uniq
-    supported = sort.size == 2 && directions.size == 1 && %i[asc desc].include?(directions.first)
+    *columns, tiebreak = sort.keys
+    supported = columns.any? &&
+      columns.all? { KEY_COLUMNS.key?(it) } &&
+      !KEY_COLUMNS.key?(tiebreak) &&
+      sort.values.all? { %i[asc desc].include?(it) }
 
-    raise ArgumentError, "unsupported cursor sort #{sort.inspect}: exactly two columns in a single direction" unless supported
+    raise ArgumentError, "unsupported cursor sort #{sort.inspect}: columns among #{KEY_COLUMNS.keys.join(", ")}, then a unique tiebreak, each asc or desc" unless supported
   end
 end
