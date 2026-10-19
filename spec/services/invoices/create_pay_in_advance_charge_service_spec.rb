@@ -86,6 +86,23 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
     end
 
+    context "when calculating fees without an existing transaction", transaction: false do
+      let(:aggregation_isolations) { [] }
+
+      before do
+        allow(Charges::PayInAdvanceAggregationService).to receive(:call).and_wrap_original do |method, **kwargs|
+          aggregation_isolations << ApplicationRecord.connection.select_value("SHOW transaction_isolation")
+          method.call(**kwargs)
+        end
+        allow(Charges::ApplyPayInAdvanceChargeModelService).to receive(:call).and_return(charge_result)
+      end
+
+      it "calculates the invoiceable fee in a repeatable-read transaction" do
+        expect(invoice_service.call).to be_success
+        expect(aggregation_isolations).to eq(["repeatable read"])
+      end
+    end
+
     it "creates an invoice" do
       result = invoice_service.call
 

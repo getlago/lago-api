@@ -20,13 +20,13 @@ module Invoices
     private
 
     def create_invoice
+      fee_result = generate_fees
+      fees = fee_result.fees
+      return result if fees.none?
+
       tax_deferred = false
 
       ApplicationRecord.transaction do
-        fee_result = generate_fees
-        fees = fee_result.fees
-        return result if fees.none?
-
         create_generating_invoice
         fees.each { |f| f.update!(invoice:) }
         fee_result.cached_aggregations.each(&:save!)
@@ -116,7 +116,6 @@ module Invoices
     end
 
     def generate_fees
-      # The invoice transaction persists both the estimated fees and their aggregation state.
       Fees::CreatePayInAdvanceService.call!(metered_item:, billing_context:, estimate: true).tap do |fee_result|
         result.invoice_id = fee_result.invoice_id
       end

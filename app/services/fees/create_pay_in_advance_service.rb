@@ -25,8 +25,11 @@ module Fees
 
           return result unless result.success?
         end
+      end
 
+      ActiveRecord::Base.transaction do
         result.fees = persist_fees(fees.compact)
+        result.cached_aggregations.each(&:save!) unless estimate
 
         if !metered_item.invoiceable? && customer_provider_taxation?
           Fees::ApplyProviderTaxesToStandaloneFeesService.call!(
@@ -180,9 +183,6 @@ module Fees
         )
       )
 
-      unless estimate
-        aggregation.save!
-      end
       result.cached_aggregations << aggregation
     end
 
@@ -199,7 +199,7 @@ module Fees
     end
 
     def isolation_mode
-      # NOTE: this is only to avoid failure with spec scnearios
+      # An enclosing transaction determines the isolation level.
       return {} if ActiveRecord::Base.connection.transaction_open?
 
       {isolation: :repeatable_read}
