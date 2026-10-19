@@ -127,7 +127,7 @@ module Wallets
           pm_result = BaseResult[:payment_method].new
           pm_result.payment_method = payment_method(payload_rule)
 
-          if !PaymentMethods::ValidateService.new(pm_result, **payload_rule).valid? || pm_result.payment_method&.shared_payment_token?
+          unless PaymentMethods::ValidateService.new(pm_result, **payload_rule).valid?
             result.single_validation_failure!(field: :payment_method, error_code: "invalid_payment_method")
 
             return false

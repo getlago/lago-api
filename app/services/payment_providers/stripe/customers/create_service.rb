@@ -6,11 +6,12 @@ module PaymentProviders
       class CreateService < BaseService
         Result = BaseResult[:provider_customer]
 
-        def initialize(customer:, payment_provider_id:, params:, async: true)
+        def initialize(customer:, payment_provider_id:, params:, async: true, allow_shared_payment_token: false)
           @customer = customer
           @payment_provider_id = payment_provider_id
           @params = params || {}
           @async = async
+          @allow_shared_payment_token = allow_shared_payment_token
 
           super
         end
@@ -22,6 +23,10 @@ module PaymentProviders
             payment_provider_id:,
             organization_id: organization.id
           )
+
+          if adds_shared_payment_token?(provider_customer) && !allow_shared_payment_token
+            return result.single_validation_failure!(field: :provider_payment_methods, error_code: "value_is_invalid")
+          end
 
           if params.key?(:provider_customer_id)
             provider_customer.provider_customer_id = params[:provider_customer_id].presence
@@ -53,9 +58,14 @@ module PaymentProviders
 
         private
 
-        attr_accessor :customer, :payment_provider_id, :params, :async
+        attr_accessor :customer, :payment_provider_id, :params, :async, :allow_shared_payment_token
 
         delegate :organization, to: :customer
+
+        def adds_shared_payment_token?(provider_customer)
+          Array(params[:provider_payment_methods]).map(&:to_s).include?("shared_payment_token") &&
+            !(provider_customer.persisted? && provider_customer.provider_payment_methods.include?("shared_payment_token"))
+        end
 
         def handle_provider_payment_methods(provider_customer:, params:)
           provider_payment_methods = (params || {})[:provider_payment_methods]

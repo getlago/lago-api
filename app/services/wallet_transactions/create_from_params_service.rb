@@ -177,7 +177,7 @@ module WalletTransactions
 
       result.payment_method = payment_method
 
-      validate_params = params.merge(organization: organization)
+      validate_params = params.merge(organization: organization, allow_shared_payment_token: @payment_method_params.present?)
       WalletTransactions::ValidateService.new(result, **validate_params).valid?
     end
 

@@ -487,6 +487,21 @@ RSpec.describe Invoices::Payments::CreateService do
       end
     end
 
+    context "when the customer only uses a shared payment token and kept its old default card" do
+      let(:provider_customer) do
+        create(:stripe_customer, payment_provider:, customer:, provider_payment_methods: %w[shared_payment_token])
+      end
+
+      it "does not create a payment" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.payment).to be_nil
+        expect(invoice.reload.payment_status).to eq("pending")
+        expect(provider_class).not_to have_received(:new)
+      end
+    end
+
     context "when the stripe customer only uses customer_balance" do
       let(:default_payment_method) { nil }
       let(:provider_customer) do

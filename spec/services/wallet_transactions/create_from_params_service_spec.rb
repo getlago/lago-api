@@ -343,6 +343,19 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
           expect(result.wallet_transactions.sole).to have_attributes(payment_method_id: row.id, payment_method_type: "provider")
         end
 
+        context "when the organization has used hosted checkout" do
+          before { create(:payment_intent, invoice: create(:invoice, organization:, customer: create(:customer, organization:))) }
+
+          it "charges the top-up without the checkout delay" do
+            freeze_time do
+              result
+
+              expect { perform_enqueued_jobs(only: BillPaidCreditJob) }
+                .to have_enqueued_job(Invoices::Payments::CreateJob).at(:no_wait)
+            end
+          end
+        end
+
         context "when the Stripe connection also accepts cards" do
           let(:provider_payment_methods) { %w[card] }
 
