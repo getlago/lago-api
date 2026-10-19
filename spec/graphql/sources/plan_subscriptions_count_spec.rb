@@ -119,6 +119,17 @@ RSpec.describe Sources::PlanSubscriptionsCount do
       it "counts each customer with an active subscription once across the plan and its overrides" do
         expect(counts).to eq([2])
       end
+
+      context "with active subscriptions on unrelated plans and other organizations" do
+        before do
+          create(:subscription, plan: create(:plan, organization:), customer: create(:customer, organization:))
+          create(:subscription)
+        end
+
+        it "does not count their customers" do
+          expect(counts).to eq([2])
+        end
+      end
     end
 
     context "with :draft_invoices" do
