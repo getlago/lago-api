@@ -49,7 +49,9 @@ module Auth
       end
 
       def find_or_create_user
-        user = User.find_or_initialize_by(email: result.email)
+        user = User.find_by(email: result.email) ||
+          User.where("LOWER(email) = ?", result.email.to_s.downcase).order(:created_at).first ||
+          User.new(email: result.email)
 
         if user.new_record?
           user.password = SecureRandom.hex(16)

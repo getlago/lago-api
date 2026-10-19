@@ -123,6 +123,17 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
       end
     end
 
+    context "when an existing user differs from the Okta email only by casing" do
+      let!(:user) { create(:user, email: "Foo@Bar.com") }
+
+      it "signs in the existing user instead of creating a new one" do
+        result = nil
+
+        expect { result = service.call }.not_to change(User, :count)
+        expect(result.user).to eq(user)
+      end
+    end
+
     context "when membership already exists" do
       let(:user) { create(:user, email: "foo@bar.com") }
       let(:membership) { create(:membership, user:, organization: okta_integration.organization) }
