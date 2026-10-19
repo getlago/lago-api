@@ -5,7 +5,7 @@ class ProductFiltersQuery < BaseQuery
   Filters = BaseFilters[:product_id, :product_category_ids, :without_product_category]
 
   def call
-    product_filters = base_scope.result.includes(values: :billable_metric_filter)
+    product_filters = base_scope.result.includes(product: :product_category, values: :billable_metric_filter)
     product_filters = apply_consistent_ordering(product_filters)
 
     product_filters = with_product(product_filters) if filters.product_id.present?

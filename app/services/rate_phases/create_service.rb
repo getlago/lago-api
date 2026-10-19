@@ -56,25 +56,25 @@ module RatePhases
           return result.single_validation_failure!(field: :billing_interval_cycle_count, error_code: "last_phase_must_be_indefinite")
         end
 
-        # Highest positions first so the unique (card, position) index never
-        # sees a duplicate mid-shift.
-        existing.select { |phase| phase.position >= position }.reverse_each do |phase|
-          phase.update!(position: phase.position + 1)
-        end
+        rate_override = build_override
 
-        result.rate_phase = RatePhase.create!(
-          organization: applied_rate_card.organization,
-          plan_rate_card:,
-          contract_rate_card:,
-          code: params[:code].presence,
-          position:,
-          billing_interval_cycle_count: params[:billing_interval_cycle_count],
-          name: params[:name],
-          rate_override: build_override
-        )
+        publish_owner_update do
+          # Highest positions first so the unique (card, position) index never
+          # sees a duplicate mid-shift.
+          existing.select { |phase| phase.position >= position }.reverse_each do |phase|
+            phase.update!(position: phase.position + 1)
+          end
 
-        if emit_events
-          publish_owner_update
+          result.rate_phase = RatePhase.create!(
+            organization: applied_rate_card.organization,
+            plan_rate_card:,
+            contract_rate_card:,
+            code: params[:code].presence,
+            position:,
+            billing_interval_cycle_count: params[:billing_interval_cycle_count],
+            name: params[:name],
+            rate_override:
+          )
         end
       end
 
@@ -95,8 +95,15 @@ module RatePhases
 
     def publish_owner_update
       event_type = plan_rate_card ? "plan_rate_card.updated" : "contract_rate_card.updated"
-      SendWebhookJob.perform_after_commit(event_type, applied_rate_card)
-      Utils::ActivityLog.produce_after_commit(applied_rate_card, event_type)
+      if emit_events
+        Utils::ActivityLog.produce_after_commit(applied_rate_card, event_type) do
+          yield
+          SendWebhookJob.perform_after_commit(event_type, applied_rate_card)
+          result
+        end
+      else
+        yield
+      end
     end
 
     def build_override

@@ -24,7 +24,7 @@ class RateCard < ApplicationRecord
   belongs_to :product
   belongs_to :product_filter, optional: true
 
-  has_many :rates, class_name: "RateCardRate"
+  has_many :rates, class_name: "RateCardRate", inverse_of: :rate_card
   has_many :plan_applied_rate_cards, class_name: "PlanRateCard"
   has_many :contract_applied_rate_cards, class_name: "ContractRateCard"
   has_many :applied_taxes, class_name: "RateCard::AppliedTax", dependent: :destroy

@@ -11,10 +11,12 @@ module Utils
     SERIALIZED_INCLUDED_OBJECTS = {
       billing_entity: %i[taxes],
       rate_card: %i[rates taxes],
+      contract_rate_card: %i[rate_phases],
       credit_note: %i[items applied_taxes error_details],
       customer: %i[taxes integration_customers applicable_invoice_custom_sections],
       invoice: %i[customer integration_customers billing_periods subscriptions fees credits metadata applied_taxes error_details applied_invoice_custom_sections],
       plan: %i[charges usage_thresholds taxes minimum_commitment],
+      plan_rate_card: %i[rate_phases],
       quote: %i[owners],
       # content is an unbounded rich-text document and produce serializes the record three times
       # per log, so only the billing state is auditable here.
@@ -143,6 +145,12 @@ module Utils
 
     def serializer_includes(root_name)
       case root_name
+      when :plan_rate_card, :contract_rate_card
+        if activity_type.include?("updated")
+          SERIALIZED_INCLUDED_OBJECTS[root_name]
+        else
+          []
+        end
       when :invoice
         if object.fees.count > MAX_SERIALIZED_FEES
           SERIALIZED_INCLUDED_OBJECTS[:invoice] - [:fees]

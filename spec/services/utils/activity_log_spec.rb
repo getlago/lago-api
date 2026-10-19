@@ -194,6 +194,24 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
           expect(karafka_producer).to have_received(:produce_async) do |args|
             payload = JSON.parse(args[:payload])
             expect(payload).to include("resource_type" => "RateCardRate", "external_customer_id" => nil)
+            expect(payload.fetch("activity_object")).to include("rate_card_code" => rate_card_rate.rate_card.code)
+          end
+        end
+
+        it "keeps the parent code in the delayed activity payload after both records are discarded" do
+          rate_card = rate_card_rate.rate_card
+          other_rate_card = create(:rate_card, organization:, code: "other-card")
+
+          rate_card_rate.discard
+          rate_card.discard
+          delayed_rate = RateCardRate.with_discarded.find(rate_card_rate.id)
+
+          activity_log.produce(delayed_rate, "rate_card_rate.deleted")
+
+          expect(karafka_producer).to have_received(:produce_async) do |args|
+            payload = JSON.parse(args[:payload])
+            expect(payload.fetch("activity_object")).to include("rate_card_code" => rate_card.code)
+            expect(payload.fetch("activity_object")).not_to include("rate_card_code" => other_rate_card.code)
           end
         end
 
@@ -382,10 +400,11 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
 
   describe "#object_serialized" do
     subject(:method_call) do
-      activity_log.new(object, "object.created").send(:object_serialized)
+      activity_log.new(object, activity_type).send(:object_serialized)
     end
 
     let(:object) { create(:credit_note, organization:) }
+    let(:activity_type) { "object.created" }
 
     let(:serialized_object) do
       V1::CreditNoteSerializer.new(
@@ -452,11 +471,25 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
     context "when the object is a rate card" do
       let(:object) { create(:rate_card, organization:) }
       let(:tax) { create(:tax, organization:) }
+      let(:active_rate) { create(:rate_card_rate, rate_card: object, organization:, effective_from: Time.current.beginning_of_day) }
 
-      before { create(:rate_card_applied_tax, rate_card: object, tax:, organization:) }
+      before do
+        active_rate
+        create(:rate_card_applied_tax, rate_card: object, tax:, organization:)
+      end
 
       it "serializes the taxes" do
         expect(method_call[:taxes].pluck(:code)).to eq([tax.code])
+      end
+
+      context "when the rate card is deleted" do
+        let(:activity_type) { "rate_card.deleted" }
+
+        it "includes rates and assigned taxes without an active rate field" do
+          expect(method_call).not_to have_key(:active_rate)
+          expect(method_call[:rates].map { |rate| rate[:lago_id] }).to eq([active_rate.id])
+          expect(method_call[:taxes].map { |item| item[:lago_id] }).to eq([tax.id])
+        end
       end
     end
 
@@ -497,9 +530,10 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
 
   describe "#serializer_includes" do
     subject(:method_call) do
-      activity_log.new(object, "object.created").send(:serializer_includes, root_name)
+      activity_log.new(object, serializer_activity_type).send(:serializer_includes, root_name)
     end
 
+    let(:serializer_activity_type) { "object.created" }
     let(:root_name) { object.class.name.underscore.to_sym }
 
     context "when object is not an invoice" do
@@ -509,6 +543,22 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
 
       it "returns the default includes for the object" do
         expect(method_call).to eq(serialized_includes)
+      end
+    end
+
+    context "when object is a plan rate card" do
+      let(:object) { create(:plan_rate_card, organization:) }
+
+      context "when the activity updates the card" do
+        let(:serializer_activity_type) { "plan_rate_card.updated" }
+
+        it "includes the ordered phase sequence for the audit snapshot" do
+          expect(method_call).to eq([:rate_phases])
+        end
+      end
+
+      it "does not include phases for a non-update activity" do
+        expect(method_call).to eq([])
       end
     end
 

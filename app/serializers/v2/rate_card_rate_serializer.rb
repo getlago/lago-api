@@ -6,6 +6,7 @@ module V2
       {
         lago_id: model.id,
         code: model.code,
+        rate_card_code: model.rate_card&.code,
         effective_from: model.effective_from.iso8601,
         status: model.status,
         rate_model: model.rate_model,

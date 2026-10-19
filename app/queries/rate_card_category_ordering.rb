@@ -3,9 +3,8 @@
 # Orders applied rate cards the way the catalog groups them on screen: by
 # product category, products outside any category last, then by product, a
 # product's own card before its filter cards. Groups stay contiguous across
-# pages, so a client groups consecutive rows. Outer joins keep every card: a
-# card whose category was discarded falls with the standalone products, as
-# its product then reports no category.
+# pages, so a client groups consecutive rows. Outer joins keep cards whose
+# product is unavailable; discarded categories remain joined for ordering.
 module RateCardCategoryOrdering
   private
 

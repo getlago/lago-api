@@ -13,7 +13,18 @@ RSpec.describe RatePhases::CreateService do
 
   let(:params) { {code: "trial", position: 1, billing_interval_cycle_count: 6, name: "Trial period"} }
 
-  before { allow(Utils::ActivityLog).to receive(:produce_after_commit) }
+  before { allow(Utils::ActivityLog).to receive(:produce_after_commit).and_yield }
+
+  def activity_payload(owner, event_type)
+    expect(kafka_messages.size).to eq(1)
+    payload = JSON.parse(kafka_messages.first.fetch(:payload))
+    expect(payload).to include(
+      "activity_type" => event_type,
+      "resource_id" => owner.id,
+      "resource_type" => owner.class.name
+    )
+    payload
+  end
 
   it "creates a rate phase" do
     expect { result }.to change(RatePhase, :count).by(1)
@@ -172,6 +183,27 @@ RSpec.describe RatePhases::CreateService do
         contract_rate_card,
         "contract_rate_card.updated"
       )
+    end
+  end
+
+  context "when logging a phase insertion", :capture_kafka_messages, transaction: false do
+    let!(:terminal) { create(:rate_phase, plan_rate_card:, organization:, code: "forever", position: 2, billing_interval_cycle_count: nil) }
+    let!(:intro) { create(:rate_phase, plan_rate_card:, organization:, code: "intro", position: 1, billing_interval_cycle_count: 3) }
+    let(:params) { {code: "trial", name: "Trial", position: 1, billing_interval_cycle_count: 1} }
+
+    before do
+      allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+      allow(Utils::ActivityLog).to receive(:produce_after_commit).and_call_original
+    end
+
+    it "emits one owner update with the ordered phase and count changes" do
+      expect(result).to be_success
+      payload = activity_payload(plan_rate_card, "plan_rate_card.updated")
+      before_phases, after_phases = payload.fetch("activity_object_changes").fetch("rate_phases")
+      expect([before_phases.map { |phase| phase.fetch("code") }, after_phases.map { |phase| phase.fetch("code") }])
+        .to eq([%w[intro forever], %w[trial intro forever]])
+      expect(payload.fetch("activity_object_changes").fetch("rate_phases_count")).to eq([2, 3])
+      expect(intro.reload.position).to eq(2)
     end
   end
 end

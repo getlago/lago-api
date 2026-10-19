@@ -36,9 +36,11 @@ RSpec.describe ProductFilters::DestroyService, :capture_kafka_messages do
 
     webhook = Webhook.find_by!(webhook_type: "product_filter.deleted")
     expect(webhook.payload.fetch("product_filter").fetch("values")).to eq([])
+    expect(webhook.payload.fetch("product_filter")).to include("product_code" => product_filter.product.code, "product_category_code" => product_filter.product.product_category.code)
     expect(webhook.payload.fetch("product_filter")).not_to have_key("rate_cards")
     activity = JSON.parse(kafka_messages.find { |message| JSON.parse(message[:payload]).fetch("activity_type") == "product_filter.deleted" }.fetch(:payload))
     expect(activity.fetch("activity_object").fetch("values")).to eq([])
+    expect(activity.fetch("activity_object")).to include("product_code" => product_filter.product.code, "product_category_code" => product_filter.product.product_category.code)
     expect(activity.fetch("activity_object")).not_to have_key("rate_cards")
   end
 

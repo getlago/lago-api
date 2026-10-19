@@ -7,10 +7,11 @@ RSpec.describe RateCards::DestroyService, :capture_kafka_messages do
 
   let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
   let(:rate_card) { create(:rate_card, organization:) }
+  let(:active_rate) { create(:rate_card_rate, organization:, rate_card:, effective_from: Time.current.beginning_of_day) }
 
   before do
     allow(Utils::ActivityLog).to receive(:produce).and_call_original
-    create(:rate_card_rate, organization:, rate_card:) if rate_card
+    active_rate if rate_card
   end
 
   it "soft deletes the card and its rates" do
@@ -30,6 +31,48 @@ RSpec.describe RateCards::DestroyService, :capture_kafka_messages do
     )
     expect(rate_card.reload.rates).to be_empty
     expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "rate_card_rate.deleted", any_args)
+  end
+
+  context "when delivering deletion events", transaction: false do
+    let(:tax) { create(:tax, organization:) }
+    let(:webhook_endpoint) { create(:webhook_endpoint, organization:) }
+
+    before do
+      webhook_endpoint
+      create(:rate_card_applied_tax, rate_card:, tax:, organization:)
+      allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+    end
+
+    it "publishes discarded rates and assigned taxes in the webhook and activity payloads" do
+      perform_enqueued_jobs(only: SendWebhookJob) { result }
+
+      webhook_payload = Webhook.find_by!(webhook_type: "rate_card.deleted").payload.fetch("rate_card")
+      expect(webhook_payload).to include("active_rate" => nil, "rates" => [])
+      expect(webhook_payload.fetch("taxes").map { |item| item.fetch("lago_id") }).to eq([tax.id])
+      expect(kafka_messages.size).to eq(1)
+
+      activity_payload = JSON.parse(kafka_messages.first.fetch(:payload)).fetch("activity_object")
+      expect(activity_payload).not_to have_key("active_rate")
+      expect(activity_payload).to include("rates" => [])
+      expect(activity_payload.fetch("taxes").map { |item| item.fetch("lago_id") }).to eq([tax.id])
+    end
+
+    context "when rate associations are preloaded before deletion" do
+      before { rate_card.rates.load }
+
+      it "reports zero rates and retains assigned taxes in both post-commit payloads" do
+        perform_enqueued_jobs(only: SendWebhookJob) { result }
+
+        webhook_payload = Webhook.find_by!(webhook_type: "rate_card.deleted").payload.fetch("rate_card")
+        expect(webhook_payload).to include("rates_count" => 0, "active_rate" => nil, "rates" => [])
+        expect(webhook_payload.fetch("taxes").map { |item| item.fetch("lago_id") }).to eq([tax.id])
+
+        activity_payload = JSON.parse(kafka_messages.first.fetch(:payload)).fetch("activity_object")
+        expect(activity_payload).not_to have_key("active_rate")
+        expect(activity_payload).to include("rates_count" => 0, "rates" => [])
+        expect(activity_payload.fetch("taxes").map { |item| item.fetch("lago_id") }).to eq([tax.id])
+      end
+    end
   end
 
   context "when the catalog flag is disabled" do

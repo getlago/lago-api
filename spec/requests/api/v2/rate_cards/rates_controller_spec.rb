@@ -168,6 +168,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
 
       expect(response).to have_http_status(:success)
       expect(json[:rates].map { it[:lago_id] }).to eq([rate.id])
+      expect(json[:rates].sole[:rate_card_code]).to eq(rate_card.code)
     end
 
     context "with offset pagination parameters" do

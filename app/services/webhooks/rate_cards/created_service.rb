@@ -6,7 +6,7 @@ module Webhooks
       private
 
       def object_serializer
-        ::V2::RateCardSerializer.new(object, root_name: object_type)
+        ::V2::RateCardSerializer.new(object, root_name: object_type, includes: %i[active_rate rates taxes])
       end
 
       def webhook_type

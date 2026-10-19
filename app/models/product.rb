@@ -14,12 +14,12 @@ class Product < ApplicationRecord
   }.freeze
 
   belongs_to :organization
-  belongs_to :product_category, optional: true
+  belongs_to :product_category, -> { with_discarded }, optional: true, inverse_of: :products
   belongs_to :billable_metric, -> { with_discarded }, optional: true
   belongs_to :add_on, -> { with_discarded }, optional: true
   belongs_to :charge, -> { with_discarded }, optional: true
 
-  has_many :filters, class_name: "ProductFilter"
+  has_many :filters, class_name: "ProductFilter", inverse_of: :product
   has_many :rate_cards
   has_many :plan_applied_rate_cards, through: :rate_cards
   has_many :contract_applied_rate_cards, through: :rate_cards
