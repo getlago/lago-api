@@ -61,6 +61,16 @@ RSpec.describe Invoices::FinalizeContractInvoiceService do
     end
   end
 
+  context "when the invoice syncs to an accounting integration" do
+    before { allow(invoice).to receive(:should_sync_invoice?).and_return(true) }
+
+    it "enqueues the accounting sync" do
+      result
+
+      expect(Integrations::Aggregator::Invoices::CreateJob).to have_been_enqueued.once.with(invoice:)
+    end
+  end
+
   context "when the enclosing transaction rolls back" do
     it "does not track the invoice creation" do
       ActiveRecord::Base.transaction do
