@@ -103,7 +103,6 @@ module BillingSegments
     def build_invoice(segments)
       contract = segments.first.contract
       invoice = nil
-      suppressed_empty_invoice = false
 
       ActiveRecord::Base.transaction do
         ActiveRecord::Base.transaction(requires_new: true) do
@@ -134,12 +133,11 @@ module BillingSegments
 
           if context == :finalize && segments.all?(&:recurring_advance_invoiceable?) && invoice.fees.reload.empty?
             invoice = nil
-            suppressed_empty_invoice = true
             raise ActiveRecord::Rollback
           end
         end
 
-        segments.each { |segment| segment.update!(status: :done, invoice:) } if invoice || suppressed_empty_invoice
+        segments.each { |segment| segment.update!(status: :done, invoice:) }
       end
 
       invoice
