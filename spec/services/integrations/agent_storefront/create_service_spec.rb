@@ -82,6 +82,29 @@ RSpec.describe Integrations::AgentStorefront::CreateService do
           end
         end
 
+        context "with plans" do
+          let(:plan) { create(:plan, organization:) }
+          let(:create_args) { super().merge(plans: [{plan_code: plan.code, minimum_topup_cents: 500, maximum_topup_cents: 10_000}]) }
+
+          it "stores the plans it sells" do
+            expect(service_call.integration.reload.plans).to eq(
+              [{"plan_code" => plan.code, "minimum_topup_cents" => 500, "maximum_topup_cents" => 10_000}]
+            )
+          end
+        end
+
+        context "with a top-up limit too large to store" do
+          let(:plan) { create(:plan, organization:) }
+          let(:create_args) { super().merge(plans: [{plan_code: plan.code, maximum_topup_cents: 2**63}]) }
+
+          it "returns an error" do
+            result = service_call
+
+            expect(result).not_to be_success
+            expect(result.error.messages[:plans]).to eq(["value_is_invalid"])
+          end
+        end
+
         context "without events targeting wallets" do
           before { organization.update!(premium_integrations: %w[agent_storefront]) }
 
