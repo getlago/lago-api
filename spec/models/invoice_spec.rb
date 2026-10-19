@@ -965,6 +965,7 @@ RSpec.describe Invoice do
     end
 
     context "when a contract invoice is finalized for a customer with a Hubspot integration" do
+      let(:customer) { create(:customer, organization:) }
       let(:invoice) { create(:invoice, customer:, organization:, invoice_type: :contract, status: :finalized) }
       let(:integration) { create(:hubspot_integration, organization:, sync_invoices: true) }
 
