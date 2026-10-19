@@ -845,9 +845,54 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
       expect(result).to have_attributes(requirements: nil, external_subscription_id: "x402_#{agent_address}_#{plan.code}")
     end
 
+    it "records the nonce under its base58 address" do
+      result
+      expect(X402::SignInNonce.sole).to have_attributes(organization:, agent_address:, nonce: siwx["nonce"])
+    end
+
     it "makes no facilitator call" do
       result
       expect(a_request(:any, /api\.cdp\.coinbase\.com/)).not_to have_been_made
+    end
+
+    context "with a replayed proof" do
+      before { described_class.call(organization:, params:) }
+
+      it "refuses with nonce_already_used" do
+        expect(result.error.messages).to eq(siwx: ["nonce_already_used"])
+      end
+    end
+  end
+
+  context "with a mainnet connection" do
+    let(:connection) { create(:x402_connection, organization:, networks: ["eip155:8453"]) }
+    let(:siwx) { signed_siwx(agent_key, chainId: "eip155:8453") }
+
+    context "with a funded agent" do
+      before do
+        wallet
+        subscription
+      end
+
+      it "passes" do
+        expect(result).to have_attributes(requirements: nil, sign_in_chains: nil)
+      end
+    end
+
+    context "with a testnet proof" do
+      let(:siwx) { signed_siwx(agent_key) }
+
+      it "refuses with unsupported_chain" do
+        expect(result.error.messages).to eq(siwx: ["unsupported_chain"])
+      end
+    end
+
+    context "without siwx" do
+      let(:params) { super().except(:siwx) }
+
+      it "lists the mainnet chains" do
+        expect(result.sign_in_chains).to eq(["eip155:8453", "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"])
+      end
     end
   end
 
