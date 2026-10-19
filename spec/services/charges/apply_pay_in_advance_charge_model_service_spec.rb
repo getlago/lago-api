@@ -237,6 +237,80 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
           aggregation_result:
         )
       end
+
+      context "with percentage pricing on a SUM metric" do
+        let(:billable_metric) { create(:sum_billable_metric, organization:) }
+        let(:rate_properties) { {"rate" => "2.5", "fixed_amount" => "0.30"} }
+        let(:rate_card_rate) do
+          create(:rate_card_rate, organization:, rate_card:, rate_model: "percentage", rate_properties:)
+        end
+        let(:billing_segment) do
+          create(
+            :billing_segment,
+            organization:,
+            customer:,
+            contract:,
+            contract_rate_card:,
+            rate_card_rate:,
+            currency: "EUR",
+            rate_properties:
+          )
+        end
+        let(:properties) { rate_properties }
+        let(:aggregator) do
+          BillableMetrics::Aggregations::SumService.new(
+            event_store: Events::Stores::PostgresStore.new(billing_context:, boundaries: nil),
+            metered_item:,
+            billing_context:,
+            boundaries: nil
+          )
+        end
+
+        context "when a negative adjustment stays below the billed maximum" do
+          let(:aggregation_result) do
+            super().tap do |result|
+              result.aggregation = 700
+              result.count = 4
+              result.pay_in_advance_aggregation = 0
+              result.current_aggregation = 700
+              result.max_aggregation = 1000
+              result.units_applied = -300
+            end
+          end
+
+          it "does not charge a fixed fee or count a paid event" do
+            result = charge_service.call
+
+            expect(result.amount).to eq(0)
+            expect(result.units).to eq(0)
+            expect(result.amount_details).to include(
+              fixed_fee_total_amount: "0.0",
+              paid_events: "0.0"
+            )
+          end
+        end
+
+        context "when a zero-valued SUM event has no high-water metadata" do
+          let(:aggregation_result) do
+            super().tap do |result|
+              result.aggregation = 700
+              result.count = 5
+              result.pay_in_advance_aggregation = 0
+            end
+          end
+
+          it "still charges the fixed fee for the event" do
+            result = charge_service.call
+
+            expect(result.amount).to eq(30)
+            expect(result.units).to eq(0)
+            expect(result.amount_details).to include(
+              fixed_fee_total_amount: "0.3",
+              paid_events: "1.0"
+            )
+          end
+        end
+      end
     end
 
     describe "when percentage charge model" do

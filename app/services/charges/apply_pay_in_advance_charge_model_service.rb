@@ -120,6 +120,14 @@ module Charges
     def count_delta
       if metered_item.billable_metric.unique_count_agg?
         aggregation_result.pay_in_advance_aggregation
+      elsif metered_item.billing_segment &&
+          metered_item.billable_metric.sum_agg? &&
+          aggregation_result.current_aggregation &&
+          aggregation_result.max_aggregation &&
+          aggregation_result.pay_in_advance_aggregation.zero? &&
+          aggregation_result.units_applied.present? &&
+          !aggregation_result.units_applied.to_d.zero?
+        0
       else
         1
       end

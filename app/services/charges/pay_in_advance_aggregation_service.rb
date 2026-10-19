@@ -44,8 +44,6 @@ module Charges
       #
       # TODO: Support product_id in BaseStore and the enriched-event schema, enrichment, queries, and dedup keys.
       # Adding a product_id key here alone would be ignored. StoreFactory also needs a product-compatible path.
-      # CachedAggregation reads in Aggregations::{BaseService, WeightedSumService, CustomService} obtain
-      # charge_id from MeteredItem directly; those lookups and the cache schema also need product identity.
       filters = {event: metered_item.event, charge_id: metered_item.charge_id}
 
       grouped_by_values = metered_item.grouped_by_values
@@ -54,16 +52,12 @@ module Charges
       presentation_group_keys_values = metered_item.presentation_group_keys_values
       filters[:presentation_by] = presentation_group_keys_values if presentation_group_keys_values.present?
 
-      if metered_item.charge_filter.present?
+      if metered_item.billing_segment || metered_item.charge_filter.present?
         matching_result = metered_item.matching_and_ignored_filters
         # Aggregations::BaseService retains this object for charge_filter_id cache lookups;
         # WeightedSumService and CustomService also scope cached state by it. CustomService reads
         # its custom_properties, while BaseStore extracts its ID for enriched-event queries.
-        #
-        # TODO: Carry product_filter/selected_filter through aggregators, stores, enrichment, and cache
-        # schemas/keys, preserving nil as the default bucket. Keep product custom_properties on the
-        # segment's pricing snapshot; product event matching already uses matching/ignored_filters below.
-        filters[:charge_filter] = metered_item.charge_filter if metered_item.charge_filter.persisted?
+        filters[:charge_filter] = metered_item.charge_filter if metered_item.charge_filter&.persisted?
         filters[:matching_filters] = matching_result.matching_filters
         filters[:ignored_filters] = matching_result.ignored_filters
       end

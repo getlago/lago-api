@@ -31,8 +31,8 @@ RSpec.describe Billing::Context do
       expect(context.organization_id).to eq(subscription.organization_id)
       expect(context.customer).to eq(subscription.customer)
       expect(context.external_id).to eq(subscription.external_id)
-      expect(context.applicable_billing_entity_id).to eq(subscription.applicable_billing_entity_id)
       expect(context.purchase_order_number).to eq(subscription.purchase_order_number)
+      expect(context.applicable_billing_entity_id).to eq(subscription.applicable_billing_entity_id)
       expect(context.subscription_at).to eq(subscription.subscription_at)
       expect(context.organization).to eq(subscription.organization)
       expect(context.currency).to eq(subscription.plan.amount_currency)
@@ -118,12 +118,15 @@ RSpec.describe Billing::Context do
       end
     end
 
+    it "allows recurring aggregation to recover opening balances from contract events" do
+      expect(context.previous_subscription_id?).to be(true)
+    end
+
     it "rejects subscription-only lifecycle methods" do
       %i[
         invoice_subscriptions
         previous_subscription
         previous_subscription_id
-        previous_subscription_id?
         next_subscription
         upgraded?
         downgraded?

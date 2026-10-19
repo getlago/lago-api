@@ -4,8 +4,9 @@ module BillingSegments
   class ProcessService < BaseService
     Result = BaseResult[:invoices]
 
-    def initialize(customer:)
+    def initialize(customer:, timestamp: Time.current)
       @customer = customer
+      @timestamp = timestamp
       super
     end
 
@@ -14,7 +15,8 @@ module BillingSegments
 
       acquired = customer.with_advisory_lock("billing_segment_process_customer_#{customer.id}", timeout_seconds: 0) do
         pending_segments.group_by { |segment| pending_invoice_key(segment) }.each_value do |invoice_segments|
-          result.invoices << build_invoice(invoice_segments)
+          invoice = build_invoice(invoice_segments)
+          result.invoices << invoice if invoice
         end
 
         processing_advance_segments.group_by { |segment| invoice_key(segment) }.each_value do |invoice_segments|
@@ -23,6 +25,7 @@ module BillingSegments
         end
 
         finalize_generating_invoices
+        result.invoices.each(&:reload)
         true
       end
 
@@ -35,7 +38,7 @@ module BillingSegments
 
     private
 
-    attr_reader :customer
+    attr_reader :customer, :timestamp
 
     def pending_segments
       grouped_segments.fetch(:pending_segments, [])
@@ -46,9 +49,10 @@ module BillingSegments
     end
 
     def grouped_segments
-      @grouped_segments ||= BillingSegment.ready_for_invoicing
+      @grouped_segments ||= BillingSegment.ready_for_invoicing(timestamp)
         .where(customer_id: customer.id)
-        .includes(:pricing_unit, :rate_override, :contract, contract_rate_card: {rate_card: :product}, rate_card_rate: :rate_card)
+        .includes(:pricing_unit, :rate_override, :contract,
+          contract_rate_card: {rate_card: {product: :billable_metric}}, rate_card_rate: :rate_card)
         .sort_by { |segment| [segment.billing_at, segment.id] }
         .filter_map do |segment|
           group = segment_group(segment)
@@ -61,7 +65,7 @@ module BillingSegments
     def segment_group(segment)
       advance_metered = segment.contract_rate_card.rate_card.advance? && segment.contract_rate_card.product.metered?
 
-      if advance_metered
+      if advance_metered && (segment.status_processing? || !segment.recurring_advance_invoiceable?)
         :processing_advance_segments
       elsif segment.status_pending?
         :pending_segments
@@ -99,35 +103,44 @@ module BillingSegments
     def build_invoice(segments)
       contract = segments.first.contract
       invoice = nil
+      suppressed_empty_invoice = false
 
       ActiveRecord::Base.transaction do
         segments.each { |segment| segment.update!(status: :processing) }
-        invoice = Invoices::CreateGeneratingService.call!(
-          customer:,
-          billing_entity: contract.billing_entity || customer.billing_entity,
-          invoice_type: :subscription,
-          invoicing_reason: :subscription_periodic,
-          currency: segments.first.currency,
-          datetime: segments.first.billing_at,
-          purchase_order_number: contract.purchase_order_number
-        ).invoice
+        ActiveRecord::Base.transaction(requires_new: true) do
+          invoice = Invoices::CreateGeneratingService.call!(
+            customer:,
+            billing_entity: contract.billing_entity || customer.billing_entity,
+            invoice_type: :subscription,
+            invoicing_reason: :subscription_periodic,
+            currency: segments.first.currency,
+            datetime: segments.first.billing_at,
+            purchase_order_number: contract.purchase_order_number
+          ).invoice
 
-        context = grace_period?(invoice) ? :draft : :finalize
-        BillingSegments::ComputeInvoiceService.call!(
-          invoice:,
-          billing_segments: segments,
-          context:
-        )
-        Invoices::ApplyInvoiceCustomSectionsService.call!(
-          invoice:,
-          resources: segments.map(&:contract).uniq.map { |contract| Invoices::ApplyInvoiceCustomSectionsService::Resource.from(resource: contract) }
-        )
-        segments.each { |segment| segment.update!(status: :done, invoice:) }
+          context = grace_period?(invoice) ? :draft : :finalize
+          BillingSegments::ComputeInvoiceService.call!(
+            invoice:,
+            billing_segments: segments,
+            context:
+          )
+          Invoices::ApplyInvoiceCustomSectionsService.call!(
+            invoice:,
+            resources: segments.map(&:contract).uniq.map { |segment_contract| Invoices::ApplyInvoiceCustomSectionsService::Resource.from(resource: segment_contract) }
+          )
+          if context == :draft
+            invoice.update!(status: :draft)
+            notify_draft_created(invoice)
+          end
 
-        if context == :draft
-          invoice.update!(status: :draft)
-          notify_draft_created(invoice)
+          if context == :finalize && segments.all?(&:recurring_advance_invoiceable?) && invoice.fees.reload.empty?
+            invoice = nil
+            suppressed_empty_invoice = true
+            raise ActiveRecord::Rollback
+          end
         end
+
+        segments.each { |segment| segment.update!(status: :done, invoice:) } if invoice || suppressed_empty_invoice
       end
 
       invoice

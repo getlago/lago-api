@@ -81,6 +81,25 @@ module Fees
         selected_filter&.id
       end
 
+      # Rate changes reset advance state through the segment's aggregation window;
+      # recurring closing balances remain available across those windows.
+      def cached_aggregation_identity
+        if billing_segment
+          {contract_id: contract.id, product_id: invoiceable.id, product_filter_id: product_filter&.id}
+        else
+          {charge_id:, charge_filter_id: charge_filter&.id}
+        end
+      end
+
+      def with_aggregation_lock(&block)
+        # Invoice creation holds the same reentrant lock until its transaction commits.
+        if contract
+          contract.with_advisory_lock!("advance_aggregation_#{contract.id}_#{invoiceable.id}", &block)
+        else
+          yield
+        end
+      end
+
       # Charge sources resolve the event's matching filter before selecting the bucket.
       def pricing_buckets
         source.pricing_buckets(event:).map { |bucket| with(source: bucket) }

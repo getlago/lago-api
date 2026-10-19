@@ -525,10 +525,7 @@ module Fees
     end
 
     def persist_recurring_value(aggregation_results, selected_metered_item, breakdowns_by_group)
-      # TODO: Review recurring product usage persistence. CachedAggregation needs
-      # product_id and product_filter_id support before segment-backed values can be persisted.
-      return if selected_metered_item.billing_segment
-      return if options.current_usage?
+      return if options.current_usage? || options.invoice_preview?
 
       # NOTE: Only weighted sum and custom aggregations are setting this value
       return unless aggregation_results.first&.recurring_updated_at
@@ -539,19 +536,33 @@ module Fees
       aggregation_results.each do |aggregation_result|
         grouped_by = aggregation_result.grouped_by || {}
 
-        result.cached_aggregations << CachedAggregation.find_or_initialize_by(
+        cache_identity = {
           organization_id: selected_metered_item.organization_id,
           external_subscription_id: billing_context.external_id,
-          charge_id: selected_metered_item.charge.id,
-          charge_filter_id: selected_metered_item.charge_filter&.id,
+          **selected_metered_item.cached_aggregation_identity,
           grouped_by:,
-          timestamp: aggregation_result.recurring_updated_at
-        ) do |aggregation|
-          aggregation.current_aggregation = aggregation_result.total_aggregated_units || aggregation_result.aggregation
-          aggregation.current_amount = aggregation_result.custom_aggregation&.[](:amount)
-          aggregation.presentation_breakdowns = breakdowns_by_group.fetch(grouped_by, [])
-          aggregation.save!
+          timestamp: selected_metered_item.billing_segment&.ended_at || aggregation_result.recurring_updated_at
+        }
+
+        cached_aggregation = if selected_metered_item.billing_segment
+          CachedAggregation.find_or_initialize_by(**cache_identity, event_transaction_id: nil).tap do |aggregation|
+            aggregation.assign_attributes(
+              current_aggregation: aggregation_result.total_aggregated_units || aggregation_result.aggregation,
+              current_amount: aggregation_result.custom_aggregation&.[](:amount),
+              presentation_breakdowns: breakdowns_by_group.fetch(grouped_by, [])
+            )
+            aggregation.save!
+          end
+        else
+          CachedAggregation.find_or_initialize_by(**cache_identity) do |aggregation|
+            aggregation.current_aggregation = aggregation_result.total_aggregated_units || aggregation_result.aggregation
+            aggregation.current_amount = aggregation_result.custom_aggregation&.[](:amount)
+            aggregation.presentation_breakdowns = breakdowns_by_group.fetch(grouped_by, [])
+            aggregation.save!
+          end
         end
+
+        result.cached_aggregations << cached_aggregation
       end
     end
 
@@ -566,8 +577,6 @@ module Fees
       #
       # TODO: Support product_id in BaseStore and the enriched-event schema, enrichment, queries, and dedup keys.
       # Adding a product_id key here alone would be ignored. StoreFactory also needs a product-compatible path.
-      # CachedAggregation reads in Aggregations::{BaseService, WeightedSumService, CustomService} obtain
-      # charge_id from MeteredItem directly; those lookups and the cache schema also need product identity.
       filters = if selected_metered_item.billing_segment
         {}
       else
@@ -587,10 +596,6 @@ module Fees
           # Aggregations::BaseService retains this object for charge_filter_id cache lookups;
           # WeightedSumService and CustomService also scope cached state by it. CustomService reads
           # its custom_properties, while BaseStore extracts its ID for enriched-event queries.
-          #
-          # TODO: Carry product_filter/selected_filter through aggregators, stores, enrichment, and cache
-          # schemas/keys, preserving nil as the default bucket. Keep product custom_properties on the
-          # segment's pricing snapshot; product event matching already uses matching/ignored_filters below.
           filters[:charge_filter] = selected_metered_item.charge_filter
         end
 

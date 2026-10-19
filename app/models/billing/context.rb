@@ -16,6 +16,7 @@ module Billing
 
     delegate :external_id,
       :applicable_billing_entity_id,
+      :billing_entity,
       :organization,
       :organization_id,
       :customer,
@@ -23,12 +24,12 @@ module Billing
       :started_at,
       :terminated_at,
       :terminated?,
+      :active?,
       :terminated_at?,
       :date_diff_with_timezone,
       :calendar?,
       :anniversary?,
       :fees,
-      :active?,
       to: :record
 
     def subscription_id
@@ -104,9 +105,11 @@ module Billing
     end
 
     def previous_subscription_id?
-      return previous_subscription_id.present? if subscription?
-
-      raise_contract_context_not_supported(:previous_subscription_id?)
+      if subscription?
+        previous_subscription_id.present?
+      else
+        true
+      end
     end
 
     def next_subscription

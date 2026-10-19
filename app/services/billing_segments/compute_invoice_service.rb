@@ -56,10 +56,20 @@ module BillingSegments
     def compute_metered_fees(segment, filtered_aggregations)
       ::Fees::ChargeService.call!(
         invoice:,
-        metered_item: ::Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: segment),
+        metered_item: build_metered_item(segment),
         billing_context: Billing::Context.from(contract: segment.contract),
         options: ::Fees::ChargeService::Options.new(context:, skip_adjusted_fees: true),
         filtered_aggregations: filtered_aggregations[segment.target_key]&.keys || []
+      )
+    end
+
+    def build_metered_item(segment)
+      max_timestamp = if segment.recurring_advance_invoiceable?
+        ::BillingSegment.inclusive_end(segment.started_at)
+      end
+
+      ::Fees::ChargeService::MeteredItem.new(
+        source: ::Fees::ChargeService::Sources::BillingSegment.new(billing_segment: segment, max_timestamp:)
       )
     end
 

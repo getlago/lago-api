@@ -362,6 +362,54 @@ RSpec.describe Invoices::RefreshDraftService do
         expect(invoice.fees.sole).to have_attributes(invoiceable: product, amount_cents: 7_500)
       end
 
+      context "with recurring weighted usage" do
+        let(:billable_metric) do
+          create(
+            :billable_metric,
+            organization:,
+            aggregation_type: :weighted_sum_agg,
+            recurring: true,
+            field_name: "value",
+            weighted_interval: :seconds
+          )
+        end
+        let(:product) { create(:product, organization:, billable_metric:) }
+        let(:closing_snapshot) do
+          create(
+            :cached_aggregation,
+            organization:,
+            charge: nil,
+            contract:,
+            product:,
+            external_subscription_id: contract.external_id,
+            event_transaction_id: nil,
+            timestamp: billing_segment.ended_at,
+            current_aggregation: 5
+          )
+        end
+
+        before do
+          create(
+            :event,
+            organization:,
+            customer:,
+            external_subscription_id: contract.external_id,
+            code: billable_metric.code,
+            timestamp: billing_segment.started_at,
+            properties: {value: "10"}
+          )
+          closing_snapshot
+        end
+
+        it "refreshes the existing closing snapshot with late weighted usage" do
+          result = nil
+          expect { result = refresh_service.call }.not_to change(CachedAggregation, :count)
+
+          expect(result).to be_success
+          expect(closing_snapshot.reload.current_aggregation).to eq(10)
+        end
+      end
+
       it "hard-deletes the previous draft fees and their applied taxes" do
         previous_fee = create(
           :fee,
