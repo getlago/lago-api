@@ -24,7 +24,7 @@ RSpec.describe "templates/invoices/product_catalog/contract.slim" do
   let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
 
   before do
-    billing_entity.update!(name: "Hooli")
+    billing_entity.update!(name: "Hooli", invoice_footer: "Hooli footer")
     create(
       :fee,
       invoice:,
@@ -61,6 +61,11 @@ RSpec.describe "templates/invoices/product_catalog/contract.slim" do
 
     it "swaps the issuer and the recipient" do
       expect(rendered_text).to match(/From Pied Piper.*Bill to Hooli/)
+    end
+
+    it "replaces the billing entity footer with the self-billing mention" do
+      expect(rendered_text).to include("This self-billing invoice was issued by the client on behalf of the partner")
+      expect(rendered_text).not_to include("Hooli footer")
     end
   end
 end

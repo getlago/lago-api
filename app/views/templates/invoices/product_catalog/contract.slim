@@ -40,7 +40,7 @@ html
       - if applied_invoice_custom_sections.present?
         == SlimHelper.render('templates/invoices/v4/_custom_sections', self)
 
-      p.body-3.mb-24 = LineBreakHelper.break_lines(billing_entity.invoice_footer)
+      p.body-3.mb-24 = LineBreakHelper.break_lines(self_billed? ? I18n.t('invoice.self_billed.footer') : billing_entity.invoice_footer)
 
       == SlimHelper.render('templates/invoices/v4/_powered_by_logo', self)
 
