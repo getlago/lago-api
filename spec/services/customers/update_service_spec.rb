@@ -105,6 +105,17 @@ RSpec.describe Customers::UpdateService do
       end
     end
 
+    context "with a tab in the address" do
+      let(:update_args) { {id: customer.id, address_line2: "Floor 2\tSuite 4"} }
+
+      it "stores the tab" do
+        result = customers_service.call
+
+        expect(result).to be_success
+        expect(customer.reload.address_line2).to eq("Floor 2\tSuite 4")
+      end
+    end
+
     context "when updating the billing entity reference" do
       let(:billing_entity_2) { create(:billing_entity, organization:) }
 
