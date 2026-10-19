@@ -30,7 +30,7 @@ RSpec.describe Api::V2::Customers::InvoicesController do
       expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
     end
 
-    it_behaves_like "a cursor paginated v2 endpoint", collection: :invoices, model: Invoice do
+    it_behaves_like "a cursor paginated v2 endpoint", collection: :invoices, model: Invoice, sort: Api::V2::InvoiceIndex::SORT do
       let(:paginated_path) { "/api/v2/customers/#{customer.external_id}/invoices" }
       let(:create_paginated_record) { ->(created_at) { create(:invoice, organization:, customer:, invoice_type: :contract, created_at:) } }
     end
@@ -38,8 +38,13 @@ RSpec.describe Api::V2::Customers::InvoicesController do
     context "with filters" do
       let(:params) { {invoice_type: "advance_fees"} }
       let(:advance_fees_invoice) { create(:invoice, organization:, customer:, invoice_type: :advance_charges) }
+      let(:contract_rate_card) { create(:contract_rate_card, organization:, contract: create(:contract, organization:, customer:)) }
 
-      before { advance_fees_invoice }
+      before do
+        create(:fee, invoice: advance_fees_invoice, subscription: nil, fee_type: :product,
+          invoiceable: contract_rate_card.rate_card.product, contract: contract_rate_card.contract, contract_rate_card:,
+          rate_card_rate: create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card))
+      end
 
       it "passes them to the query" do
         subject
@@ -67,6 +72,17 @@ RSpec.describe Api::V2::Customers::InvoicesController do
         subject
 
         expect(response).to be_not_found_error("customer")
+      end
+    end
+
+    context "with an expand parameter" do
+      let(:params) { {expand: "fees", limit: 0} }
+
+      it "rejects it before validating pagination" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:error_details]).to eq(expand: {reason: "not_expandable", invalid_values: ["fees"]})
       end
     end
 
