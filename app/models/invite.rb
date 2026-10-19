@@ -28,10 +28,6 @@ class Invite < ApplicationRecord
     existing_user.present?
   end
 
-  def login_method_allowed?(login_method)
-    organization.authentication_methods.include?(login_method)
-  end
-
   def mark_as_revoked!(timestamp = Time.current)
     self.revoked_at ||= timestamp
     revoked!
