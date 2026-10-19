@@ -6,7 +6,7 @@ describe Api::V1::X402::GateChecksController, :premium do
   subject { post_with_token(organization, "/api/v1/x402/gate_checks", {gate_check: params}) }
 
   let(:organization) { create(:organization, feature_flags: ["x402_payments"], premium_integrations: ["events_targeting_wallets"]) }
-  let(:connection) { create(:x402_connection, organization:, allowed_origins: ["https://api.example.com"]) }
+  let(:connection) { create(:x402_connection, organization:) }
   let(:plan) { create(:plan, organization:, amount_cents: 0, amount_currency: "USD") }
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:agent_key) { siwx_evm_key }
@@ -155,7 +155,7 @@ describe Api::V1::X402::GateChecksController, :premium do
   end
 
   context "when the connection refuses strangers" do
-    let(:connection) { create(:x402_connection, organization:, auto_create_customers: false, allowed_origins: ["https://api.example.com"]) }
+    let(:connection) { create(:x402_connection, organization:, auto_create_customers: false) }
 
     it "renders the challenge" do
       subject

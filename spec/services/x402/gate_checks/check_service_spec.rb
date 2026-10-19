@@ -9,7 +9,7 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
   include SignInWithXSigner
 
   let(:organization) { create(:organization, premium_integrations: ["events_targeting_wallets"]) }
-  let(:connection) { create(:x402_connection, organization:, allowed_origins: ["https://api.example.com"]) }
+  let(:connection) { create(:x402_connection, organization:) }
   let(:plan) { create(:plan, organization:, amount_cents: 0, amount_currency: "USD") }
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:agent_key) { siwx_evm_key }
@@ -130,7 +130,7 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
     end
 
     context "with the proof already used on another connection of the organization" do
-      let(:other_connection) { create(:x402_connection, organization:, allowed_origins: ["https://api.example.com"]) }
+      let(:other_connection) { create(:x402_connection, organization:) }
 
       before { described_class.call(organization:, params: params.merge(connection_code: other_connection.code)) }
 
@@ -206,9 +206,7 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
   end
 
   context "with a connection saved without allowed origins" do
-    let(:connection) do
-      build(:x402_connection, organization:, allowed_origins: []).tap { |connection| connection.save!(validate: false) }
-    end
+    let(:connection) { create(:x402_connection, :without_allowed_origins, organization:) }
 
     before do
       wallet
@@ -372,7 +370,7 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
     end
 
     context "when the connection refuses strangers" do
-      let(:connection) { create(:x402_connection, organization:, auto_create_customers: false, allowed_origins: ["https://api.example.com"]) }
+      let(:connection) { create(:x402_connection, organization:, auto_create_customers: false) }
 
       it "refuses with buyer_not_recognized" do
         expect(result.error.messages).to eq(base: ["buyer_not_recognized"])
@@ -398,7 +396,7 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
     it("records no nonce") { expect { result }.not_to change(X402::SignInNonce, :count) }
 
     context "when the connection refuses strangers" do
-      let(:connection) { create(:x402_connection, organization:, auto_create_customers: false, allowed_origins: ["https://api.example.com"]) }
+      let(:connection) { create(:x402_connection, organization:, auto_create_customers: false) }
 
       it("still challenges") { expect(result.requirements).to eq([evm_requirement]) }
     end
@@ -425,7 +423,7 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
   end
 
   context "when the connection refuses strangers" do
-    let(:connection) { create(:x402_connection, organization:, auto_create_customers: false, allowed_origins: ["https://api.example.com"]) }
+    let(:connection) { create(:x402_connection, organization:, auto_create_customers: false) }
 
     context "with a known agent" do
       before do
@@ -612,7 +610,7 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
   end
 
   context "with a discarded connection" do
-    let(:connection) { create(:x402_connection, :discarded, organization:, allowed_origins: ["https://api.example.com"]) }
+    let(:connection) { create(:x402_connection, :discarded, organization:) }
 
     it "fails with connection_not_found" do
       expect(result.error.error_code).to eq("connection_not_found")
@@ -623,7 +621,7 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
     let(:plan) { create(:plan, organization:, amount_cents: 0, amount_currency: "EUR") }
 
     context "when the connection refuses strangers" do
-      let(:connection) { create(:x402_connection, organization:, auto_create_customers: false, allowed_origins: ["https://api.example.com"]) }
+      let(:connection) { create(:x402_connection, organization:, auto_create_customers: false) }
 
       context "with a stranger" do
         it "answers the route code first" do
@@ -798,7 +796,7 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
   end
 
   context "with an EVM agent on a Solana-only connection" do
-    let(:connection) { create(:x402_connection, :solana, organization:, allowed_origins: ["https://api.example.com"]) }
+    let(:connection) { create(:x402_connection, :solana, organization:) }
 
     it "refuses with agent_address_family_unsupported" do
       expect(result.error.messages).to eq(base: ["agent_address_family_unsupported"])
@@ -835,7 +833,7 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
   end
 
   context "with a funded Solana agent" do
-    let(:connection) { create(:x402_connection, :solana, organization:, allowed_origins: ["https://api.example.com"]) }
+    let(:connection) { create(:x402_connection, :solana, organization:) }
     let(:agent_key) { siwx_svm_key }
 
     before do
@@ -854,9 +852,7 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
   end
 
   context "without siwx on a Solana-only connection" do
-    let(:connection) do
-      create(:x402_connection, :solana, organization:, cdp_api_key_id:, cdp_api_key_secret:, allowed_origins: ["https://api.example.com"])
-    end
+    let(:connection) { create(:x402_connection, :solana, organization:, cdp_api_key_id:, cdp_api_key_secret:) }
     let(:params) { super().except(:siwx) }
 
     before { stub_request(:get, "#{cdp_facilitator_url}/supported").to_return(status: 200, body: cdp_fixture("supported")) }
@@ -870,7 +866,7 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
     let(:connection) do
       create(:x402_connection, organization:, networks: ["eip155:84532", "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"],
         payout_addresses: {"evm" => "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed", "svm" => "2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4"},
-        cdp_api_key_id:, cdp_api_key_secret:, allowed_origins: ["https://api.example.com"])
+        cdp_api_key_id:, cdp_api_key_secret:)
     end
 
     before { stub_request(:get, "#{cdp_facilitator_url}/supported").to_return(status: 200, body: cdp_fixture("supported")) }
