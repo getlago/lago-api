@@ -26,4 +26,16 @@ RSpec.describe V2::CatalogPlanSerializer do
 
     expect(result["plan"]["applied_rate_cards_count"]).to eq(1)
   end
+
+  context "when taxes are included" do
+    subject(:serializer) { described_class.new(catalog_plan, root_name: "plan", includes: %i[taxes]) }
+
+    let(:tax) { create(:tax, organization: catalog_plan.organization) }
+
+    before { create(:plan_applied_tax, :catalog_plan, catalog_plan:, tax:, organization: catalog_plan.organization) }
+
+    it "serializes the catalog plan taxes" do
+      expect(result["plan"]["taxes"]).to contain_exactly(include("lago_id" => tax.id, "code" => tax.code))
+    end
+  end
 end
