@@ -83,6 +83,55 @@ RSpec.describe "templates/invoices/product_catalog/contract.slim" do
     end
   end
 
+  context "when the prepaid credits are split between free and purchased credits" do
+    before { invoice.update!(prepaid_credit_amount_cents: 500, prepaid_granted_credit_amount_cents: 300, prepaid_purchased_credit_amount_cents: 200) }
+
+    it "shows each kind of credit on its own line" do
+      expect(rendered_text).to match(/Free credits -\S+3\.00 Prepaid credits -\S+2\.00/)
+    end
+  end
+
+  context "when a coupon applies to the invoice" do
+    let(:coupon) { create(:coupon, organization:, name: "Launch", amount_cents: 300) }
+
+    before do
+      applied_coupon = create(:applied_coupon, organization:, customer:, coupon:, amount_cents: 300)
+      create(:credit, invoice:, applied_coupon:, amount_cents: 300)
+    end
+
+    it "deducts it before the subtotal" do
+      expect(rendered_text).to match(/Launch \(\S+3\.00\) -\S+3\.00 Subtotal/)
+    end
+  end
+
+  context "when credit notes are applied to the invoice" do
+    before { invoice.update!(credit_notes_amount_cents: 400) }
+
+    it "shows the deduction in the totals" do
+      expect(rendered_text).to match(/Credit notes -\S+4\.00/)
+    end
+  end
+
+  context "when a tax applies to the whole invoice" do
+    before { create(:invoice_applied_tax, invoice:, tax_code: "reverse_charge") }
+
+    it "names the tax without a rate or amount" do
+      expect(rendered_text).to include("Reverse charge - Tax liability shifted to customer")
+      expect(rendered_text).not_to include("VAT (20")
+    end
+  end
+
+  context "when the billing entity manages EU taxes and the customer is reverse charged" do
+    before do
+      billing_entity.update!(eu_tax_management: true)
+      create(:invoice_applied_tax, invoice:, tax_code: "lago_eu_reverse_charge")
+    end
+
+    it "renders the reverse charge mention" do
+      expect(rendered_text).to include("Reverse charge - Tax liability shifted to customer.")
+    end
+  end
+
   context "when the invoice is self billed" do
     let(:self_billed) { true }
 
