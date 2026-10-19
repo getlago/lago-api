@@ -33,7 +33,7 @@ module Events
       # its aggregation needs, a max for a max charge, so they answer no other.
       OPERATIONS = {
         "count_agg" => %i[count sum],
-        "sum_agg" => %i[count sum],
+        "sum_agg" => %i[count sum recurring_sum],
         "max_agg" => %i[count max],
         "latest_agg" => %i[count last]
       }.freeze
@@ -56,6 +56,10 @@ module Events
           super
         end
       end
+
+      # The rows of a recurring sum, which also hold the value of the events ingested up to the
+      # watermark of the snapshot the computation persists (see BaseStore#recurring_sum).
+      RecurringRow = Data.define(:groups, :value, :snapshot_value, :events_count)
 
       # A charge without filters only has the default bucket, which its own store reads as cheaply.
       # The scan only takes one when it keeps its rows between computations (see IncrementalCache).
@@ -144,6 +148,27 @@ module Events
             groups:,
             value: rows.sum(BigDecimal(0), &:value),
             events_count: (rows.sum(0, &:events_count) if with_count)
+          )
+        end
+      end
+
+      def recurring_sum(store, watermark:)
+        rows = recurring_rows_for(store, watermark)
+
+        BaseStore::RecurringAggregationResult.new(
+          value: rows.sum(BigDecimal(0), &:value),
+          snapshot_value: rows.sum(BigDecimal(0), &:snapshot_value),
+          events_count: rows.sum(0, &:events_count)
+        )
+      end
+
+      def grouped_recurring_sum(store, watermark:)
+        group_rows(store, recurring_rows_for(store, watermark)).map do |groups, rows|
+          BaseStore::GroupedRecurringAggregationResult.new(
+            groups:,
+            value: rows.sum(BigDecimal(0), &:value),
+            snapshot_value: rows.sum(BigDecimal(0), &:snapshot_value),
+            events_count: rows.sum(0, &:events_count)
           )
         end
       end
@@ -259,11 +284,28 @@ module Events
       end
 
       def grouped_rows_for(store)
+        group_rows(store, rows_for(store))
+      end
+
+      def group_rows(store, rows)
         columns = store.grouped_by
 
-        rows_for(store)
+        rows
           .group_by { |row| columns.index_with { row.groups[it].presence } }
           .to_a
+      end
+
+      # Read apart from the other rows: only an invoice persisting a snapshot asks for them, and it
+      # never keeps rows between computations.
+      def recurring_rows_for(store, watermark)
+        key = filter_key(store.charge_filter_id)
+        batch = batch_index.fetch(key)
+        to_datetime = store.applicable_to_datetime
+
+        @rows[[:recurring, batch, to_datetime, watermark]] ||=
+          read_recurring_rows(store, batch, to_datetime:, watermark:)
+
+        @rows[[:recurring, batch, to_datetime, watermark]].fetch(key, [])
       end
 
       # One read per batch and window: the stores of the batch share it, and recurring metrics
@@ -289,22 +331,35 @@ module Events
       # The rows of the batch's filters for the events of `from_datetime` (included) to
       # `to_datetime` (included) or `before` (excluded).
       def read_rows(store, batch, from_datetime:, to_datetime:, before: nil)
-        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          connection
-            .select_all(scan_sql(store, batch:, from_datetime:, to_datetime:, before:))
-            .rows
-            .each_with_object({}) do |(position, *columns), acc|
-              filter_key = batch_keys(batch).fetch(position.to_i - 1)
-              groups = columns.first(group_keys.size)
-              value, events_count, timestamp = columns.drop(group_keys.size)
+        sql = scan_sql(store, batch:, from_datetime:, to_datetime:, before:)
 
-              (acc[filter_key] ||= []) << Row.new(
-                groups: group_keys.zip(groups).to_h,
-                value: row_value(value),
-                events_count: events_count.to_i,
-                timestamp: timestamp&.to_i
-              )
-            end
+        select_rows(sql, batch) do |groups, (value, events_count, timestamp)|
+          Row.new(groups:, value: row_value(value), events_count: events_count.to_i, timestamp: timestamp&.to_i)
+        end
+      end
+
+      # A recurring metric reads its whole history, up to `to_datetime` (included).
+      def read_recurring_rows(store, batch, to_datetime:, watermark:)
+        sql = scan_sql(store, batch:, from_datetime: nil, to_datetime:, watermark:)
+
+        select_rows(sql, batch) do |groups, (value, snapshot_value, events_count)|
+          RecurringRow.new(
+            groups:,
+            value: row_value(value),
+            snapshot_value: row_value(snapshot_value),
+            events_count: events_count.to_i
+          )
+        end
+      end
+
+      def select_rows(sql, batch)
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          connection.select_all(sql).rows.each_with_object({}) do |(position, *columns), acc|
+            filter_key = batch_keys(batch).fetch(position.to_i - 1)
+            groups = group_keys.zip(columns.first(group_keys.size)).to_h
+
+            (acc[filter_key] ||= []) << yield(groups, columns.drop(group_keys.size))
+          end
         end
       end
 
@@ -317,10 +372,12 @@ module Events
         end
       end
 
-      def scan_sql(store, batch:, from_datetime:, to_datetime:, before: nil)
-        events_sql = store.deduplicated_events_sql(
-          from_datetime:, to_datetime:, deduplicated_columns: %w[decimal_value properties], before:
-        )
+      # With a `watermark`, the rows are those of a recurring sum (see #recurring_sum).
+      def scan_sql(store, batch:, from_datetime:, to_datetime:, before: nil, watermark: nil)
+        columns = %w[decimal_value properties]
+        columns << "enriched_at" if watermark
+
+        events_sql = store.deduplicated_events_sql(from_datetime:, to_datetime:, deduplicated_columns: columns, before:)
 
         group_columns = group_keys.map.with_index do |key, index|
           "#{store.sanitized_property_name(key)} AS g_#{index}"
@@ -330,7 +387,7 @@ module Events
         <<~SQL.squish
           SELECT
             #{["filter_position", *group_columns].join(", ")},
-            #{aggregates_sql}
+            #{watermark ? recurring_aggregates_sql(watermark) : aggregates_sql}
           FROM (#{events_sql}) AS events_enriched
           ARRAY JOIN #{filter_positions_sql(store, batch)} AS filter_position
           GROUP BY #{["filter_position", *group_names].join(", ")}
@@ -353,6 +410,14 @@ module Events
         else
           "sum(events_enriched.decimal_value), count()"
         end
+      end
+
+      def recurring_aggregates_sql(watermark)
+        <<~SQL.squish
+          sum(events_enriched.decimal_value),
+          #{ActiveRecord::Base.sanitize_sql_for_conditions(["sumIf(events_enriched.decimal_value, events_enriched.enriched_at <= ?)", watermark])},
+          count()
+        SQL
       end
 
       # The positions in the batch of the filters an event counts in. An event none of them keeps
