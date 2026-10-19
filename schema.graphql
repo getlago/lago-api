@@ -3706,6 +3706,7 @@ input CreateCustomerWalletInput {
   ignorePaidTopUpLimitsOnCreation: Boolean @deprecated(reason: "The app no longer creates a transaction on wallet creation. Use createCustomerWalletTransaction.")
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   invoiceRequiresSuccessfulPayment: Boolean
+  invoiceUsageOnExpiration: Boolean
   metadata: [MetadataInput!]
   name: String
   paidCredits: String @deprecated(reason: "The app no longer creates a transaction on wallet creation. Use createCustomerWalletTransaction.")
@@ -16486,6 +16487,7 @@ input UpdateCustomerWalletInput {
   id: ID!
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   invoiceRequiresSuccessfulPayment: Boolean
+  invoiceUsageOnExpiration: Boolean
   metadata: [MetadataInput!]
   name: String
   paidTopUpMaxAmountCents: BigInt
@@ -17416,6 +17418,7 @@ type Wallet {
   expirationAt: ISO8601DateTime
   id: ID!
   invoiceRequiresSuccessfulPayment: Boolean!
+  invoiceUsageOnExpiration: Boolean!
   lastBalanceSyncAt: ISO8601DateTime
   lastConsumedCreditAt: ISO8601DateTime
   lastOngoingBalanceSyncAt: ISO8601DateTime
