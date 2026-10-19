@@ -4,7 +4,11 @@
     "@signinwithethereum/siwe": "4.2.1",
     "eth-account": "0.14.0",
     "tweetnacl": "1.0.3",
-    "@x402/extensions": "2.26.0"
+    "@x402/extensions": "2.26.0",
+    "x402 (python)": "2.25.0",
+    "signinwithethereum": "5.0.2",
+    "x402/go/v2": "faa1c694c",
+    "siwe-go": "1.0.0"
   },
   "evm": [
     {
@@ -121,6 +125,117 @@
           "https://api.example.com/v1/generate"
         ],
         "signature": "3aa7iPuMSVvgJQQQpZTYWtMNBEXEEBd6JSC6zaAGBjuwJGXrx8x4B1tciYGDBhQXc7Ks5733AWJnP48629sGg9AL"
+      }
+    },
+    {
+      "name": "evm_lowercase",
+      "payload": {
+        "domain": "api.example.com",
+        "address": "0x19e7e376e7c213b7e7e7e46cc70a5dd086daff2a",
+        "statement": "Sign in to use your credits",
+        "uri": "https://api.example.com/v1/generate",
+        "version": "1",
+        "chainId": "eip155:84532",
+        "type": "eip191",
+        "nonce": "a1b2c3d4e5f67890a1b2c3d4e5f67890",
+        "issuedAt": "2026-10-16T10:00:00.000Z",
+        "resources": [
+          "https://api.example.com/v1/generate"
+        ],
+        "signature": "0xb9498525191064eb4310d018aa665a74451bddb7f7f02c3d6be655316bff1f046f117492dc11ecce79ad51a6f5b52215e702b40919cc934098d2fe56e8e253511c"
+      }
+    },
+    {
+      "name": "python_evm",
+      "payload": {
+        "domain": "api.example.com",
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "uri": "https://api.example.com/v1/generate",
+        "version": "1",
+        "chainId": "eip155:84532",
+        "type": "eip191",
+        "nonce": "a1b2c3d4e5f67890a1b2c3d4e5f67890",
+        "issuedAt": "2026-10-16T10:00:00.000Z",
+        "statement": "Sign in to use your credits",
+        "resources": [
+          "https://api.example.com/v1/generate"
+        ],
+        "signature": "0xb9498525191064eb4310d018aa665a74451bddb7f7f02c3d6be655316bff1f046f117492dc11ecce79ad51a6f5b52215e702b40919cc934098d2fe56e8e253511c"
+      }
+    },
+    {
+      "name": "python_evm_lowercase",
+      "payload": {
+        "domain": "api.example.com",
+        "address": "0x19e7e376e7c213b7e7e7e46cc70a5dd086daff2a",
+        "uri": "https://api.example.com/v1/generate",
+        "version": "1",
+        "chainId": "eip155:84532",
+        "type": "eip191",
+        "nonce": "a1b2c3d4e5f67890a1b2c3d4e5f67890",
+        "issuedAt": "2026-10-16T10:00:00.000Z",
+        "statement": "Sign in to use your credits",
+        "resources": [
+          "https://api.example.com/v1/generate"
+        ],
+        "signature": "0xc136fc9dec1e6cd45c4f1f3a595e82d66d762b8bc7f5235383d6a9228eaca08b27aa8ee1e8910750127c4047f6881847ad98c82d276da567bd4ea3da52e278e71b"
+      }
+    },
+    {
+      "name": "go_evm",
+      "payload": {
+        "domain": "api.example.com",
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "statement": "Sign in to use your credits",
+        "uri": "https://api.example.com/v1/generate",
+        "version": "1",
+        "chainId": "eip155:84532",
+        "type": "eip191",
+        "nonce": "a1b2c3d4e5f67890a1b2c3d4e5f67890",
+        "issuedAt": "2026-10-16T10:00:00.000Z",
+        "resources": [
+          "https://api.example.com/v1/generate"
+        ],
+        "signatureScheme": "eip191",
+        "signature": "0xb9498525191064eb4310d018aa665a74451bddb7f7f02c3d6be655316bff1f046f117492dc11ecce79ad51a6f5b52215e702b40919cc934098d2fe56e8e253511c"
+      }
+    },
+    {
+      "name": "go_evm_lowercase",
+      "payload": {
+        "domain": "api.example.com",
+        "address": "0x19e7e376e7c213b7e7e7e46cc70a5dd086daff2a",
+        "statement": "Sign in to use your credits",
+        "uri": "https://api.example.com/v1/generate",
+        "version": "1",
+        "chainId": "eip155:84532",
+        "type": "eip191",
+        "nonce": "a1b2c3d4e5f67890a1b2c3d4e5f67890",
+        "issuedAt": "2026-10-16T10:00:00.000Z",
+        "resources": [
+          "https://api.example.com/v1/generate"
+        ],
+        "signatureScheme": "eip191",
+        "signature": "0xc136fc9dec1e6cd45c4f1f3a595e82d66d762b8bc7f5235383d6a9228eaca08b27aa8ee1e8910750127c4047f6881847ad98c82d276da567bd4ea3da52e278e71b"
+      }
+    },
+    {
+      "name": "go_evm_uppercase",
+      "payload": {
+        "domain": "api.example.com",
+        "address": "0x19E7E376E7C213B7E7E7E46CC70A5DD086DAFF2A",
+        "statement": "Sign in to use your credits",
+        "uri": "https://api.example.com/v1/generate",
+        "version": "1",
+        "chainId": "eip155:84532",
+        "type": "eip191",
+        "nonce": "a1b2c3d4e5f67890a1b2c3d4e5f67890",
+        "issuedAt": "2026-10-16T10:00:00.000Z",
+        "resources": [
+          "https://api.example.com/v1/generate"
+        ],
+        "signatureScheme": "eip191",
+        "signature": "0x5bc4b8968d0b79005ca820084dbe5457b4a9a097080bfddfc455f67dc564d10b31fcb05c98347db662a8350243684d7c5b114c3db17d53e27817e69c496337971c"
       }
     }
   ]

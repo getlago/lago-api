@@ -27,12 +27,15 @@ describe X402::SignInWithX::VerifyService do
       context "with the #{group} #{entry["name"]} vector" do
         let(:payload) { entry["payload"] }
         let(:networks) { [payload["chainId"]] }
+        let(:expected_address) do
+          payload["chainId"].start_with?("eip155:") ? X402::Network.checksum(payload["address"]) : payload["address"]
+        end
 
         before { travel_to(Time.zone.parse("2026-10-16T10:01:00Z")) }
 
         it "returns the vector's signer" do
           expect(result).to be_success
-          expect(result.address).to eq(payload["address"])
+          expect(result.address).to eq(expected_address)
         end
       end
     end
@@ -315,7 +318,50 @@ describe X402::SignInWithX::VerifyService do
   end
 
   context "with a lowercase address" do
-    let(:payload) { signed_siwx(key, address: siwx_address(key).downcase) }
+    let(:address) { siwx_address(key).downcase }
+
+    context "when the text was signed with the address as sent" do
+      let(:payload) { signed_siwx(key, address:) }
+
+      it "returns the EIP-55 form" do
+        expect(result).to be_success
+        expect(result.address).to eq(siwx_address(key))
+      end
+    end
+
+    context "when the text was signed with its EIP-55 form" do
+      let(:payload) { signed_siwx(key).merge("address" => address) }
+
+      it "returns the EIP-55 form" do
+        expect(result).to be_success
+        expect(result.address).to eq(siwx_address(key))
+      end
+    end
+
+    context "when another key signed the text" do
+      let(:payload) { signed_siwx(siwx_evm_key, address:) }
+
+      it { expect(result.error.messages).to eq(siwx: ["invalid_signature"]) }
+    end
+
+    context "with a statement changed after signing" do
+      let(:payload) { signed_siwx(key, address:).merge("statement" => "Sign in to use all your credits") }
+
+      it { expect(result.error.messages).to eq(siwx: ["invalid_signature"]) }
+    end
+  end
+
+  context "with an uppercase address" do
+    let(:payload) { signed_siwx(key, address: "0x#{siwx_address(key).delete_prefix("0x").upcase}") }
+
+    it "returns the EIP-55 form" do
+      expect(result).to be_success
+      expect(result.address).to eq(siwx_address(key))
+    end
+  end
+
+  context "with a mixed-case address whose checksum is wrong" do
+    let(:payload) { signed_siwx(key, address: siwx_address(key).sub(/[a-fA-F]/, &:swapcase)) }
 
     it { expect(result.error.messages).to eq(siwx: ["invalid_address"]) }
   end

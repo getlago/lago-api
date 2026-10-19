@@ -35,7 +35,7 @@ module X402
         if error_code
           result.single_validation_failure!(field: :siwx, error_code:)
         else
-          result.address = payload["address"]
+          result.address = proven_address
           result.family = X402::Network::FAMILIES.fetch(namespace)
           result.nonce = payload["nonce"]
           result
@@ -147,18 +147,32 @@ module X402
       end
 
       def evm_signer_error
-        address = payload["address"]
-
-        if !X402::Network::EVM_ADDRESS.match?(address) || X402::Network.checksum(address) != address
+        if !X402::Network.valid_address?(payload["address"], family: :evm)
           "invalid_address"
-        elsif recovered_evm_address != address
+        elsif evm_messages.none? { |text| recovered_evm_address(text) == proven_address }
           "invalid_signature"
         end
       end
 
-      def recovered_evm_address
+      def proven_address
+        @proven_address ||= if namespace == "eip155"
+          X402::Network.checksum(payload["address"])
+        else
+          payload["address"]
+        end
+      end
+
+      def evm_messages
+        if payload["address"] == proven_address
+          [message]
+        else
+          [message, X402::SignInWithX::Message.build(payload.merge("address" => proven_address))]
+        end
+      end
+
+      def recovered_evm_address(text)
         if EVM_SIGNATURE.match?(payload["signature"])
-          digest = X402::Keccak256.digest("\x19Ethereum Signed Message:\n#{message.bytesize}#{message}")
+          digest = X402::Keccak256.digest("\x19Ethereum Signed Message:\n#{text.bytesize}#{text}")
           signature = [payload["signature"].delete_prefix("0x")].pack("H*")
           public_key = X402::Secp256k1.recover_public_key(digest:, signature:)
 
