@@ -21,7 +21,6 @@ module Wallets
 
       return result.forbidden_failure! if connections_requested? && organization_flag_disabled?(:multi_connection)
       return result unless valid?
-      return result.forbidden_failure! if params[:recurring_transaction_rules].present? && !License.premium?
 
       code = params[:code]
 
@@ -81,7 +80,7 @@ module Wallets
 
         validate_wallet_initial_amount! wallet
 
-        if params[:recurring_transaction_rules].present?
+        if params[:recurring_transaction_rules].present? && License.premium?
           recurring_transaction_rule = Wallets::RecurringTransactionRules::CreateService
             .call!(wallet:, wallet_params: params)
             .recurring_transaction_rule

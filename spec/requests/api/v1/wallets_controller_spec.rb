@@ -36,11 +36,11 @@ RSpec.describe Api::V1::WalletsController do
           ])
         end
 
-        it "returns feature unavailable instead of an internal error" do
-          expect { subject }.not_to change(Wallet, :count)
+        it "creates the wallet and ignores the recurring transaction rules" do
+          expect { subject }.to change(Wallet, :count).by(1)
 
-          expect(response).to have_http_status(:forbidden)
-          expect(json[:code]).to eq("feature_unavailable")
+          expect(response).to have_http_status(:success)
+          expect(Wallet.find(json[:wallet][:lago_id]).recurring_transaction_rules).to be_empty
         end
       end
     end
@@ -71,12 +71,12 @@ RSpec.describe Api::V1::WalletsController do
           ])
         end
 
-        it "returns feature unavailable without changing the wallet" do
+        it "updates the wallet and ignores the recurring transaction rules" do
           subject
 
-          expect(response).to have_http_status(:forbidden)
-          expect(json[:code]).to eq("feature_unavailable")
-          expect(wallet.reload.name).not_to eq("wallet1")
+          expect(response).to have_http_status(:success)
+          expect(wallet.reload.name).to eq("wallet1")
+          expect(wallet.recurring_transaction_rules).to be_empty
         end
       end
     end

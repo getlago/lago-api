@@ -55,10 +55,9 @@ RSpec.describe Wallets::UpdateService do
         ])
       end
 
-      it "returns feature unavailable without changing the wallet" do
-        expect(result).to be_failure
-        expect(result.error.code).to eq("feature_unavailable")
-        expect(wallet.reload.name).not_to eq("new name")
+      it "updates the wallet and ignores the recurring transaction rules" do
+        expect(result).to be_success
+        expect(wallet.reload.name).to eq("new name")
         expect(wallet.recurring_transaction_rules).to be_empty
       end
     end

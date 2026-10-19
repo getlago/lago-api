@@ -60,11 +60,11 @@ RSpec.describe Wallets::CreateService do
         ])
       end
 
-      it "returns feature unavailable without creating a wallet" do
-        expect { service_result }.not_to change(Wallet, :count)
+      it "creates the wallet and ignores the recurring transaction rules" do
+        expect { service_result }.to change(Wallet, :count).by(1)
 
-        expect(service_result).to be_failure
-        expect(service_result.error.code).to eq("feature_unavailable")
+        expect(service_result).to be_success
+        expect(service_result.wallet.recurring_transaction_rules).to be_empty
       end
     end
 
