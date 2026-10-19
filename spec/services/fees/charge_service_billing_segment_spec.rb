@@ -524,10 +524,13 @@ RSpec.describe Fees::ChargeService do
         )
       end
 
-      it "does not persist a closing snapshot beyond the cutoff" do
-        expect { result }.not_to change(CachedAggregation, :count)
+      it "persists a closing snapshot at the segment end" do
+        expect { result }.to change(CachedAggregation, :count).by(1)
         expect(result).to be_success
-        expect(result.cached_aggregations).to be_nil
+        expect(result.cached_aggregations.sole).to have_attributes(
+          current_aggregation: 2,
+          timestamp: billing_segment.ended_at
+        )
       end
     end
   end

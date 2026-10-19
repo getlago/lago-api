@@ -439,10 +439,10 @@ RSpec.describe Invoices::RefreshDraftService do
           )
         end
 
-        it "excludes a post-renewal event without writing a future closing snapshot" do
+        it "excludes a post-renewal event from the draft before writing the closing snapshot" do
           expect(refresh_service.call).to be_success
           expect(invoice.fees).to be_empty
-          expect(CachedAggregation.where(contract:, product:, timestamp: billing_segment.ended_at)).to be_empty
+          expect(CachedAggregation.where(contract:, product:, timestamp: billing_segment.ended_at).sole.current_aggregation).to eq(0)
         end
       end
 

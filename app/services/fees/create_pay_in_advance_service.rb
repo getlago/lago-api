@@ -19,21 +19,19 @@ module Fees
       fees = []
       result.cached_aggregations = []
 
-      Contracts::LockAdvanceAggregationService.call!(metered_item:) do
-        ActiveRecord::Base.transaction(**isolation_mode) do
-          metered_item.pricing_buckets.each do |selected_metered_item|
-            fees << init_fee(selected_metered_item:)
+      ActiveRecord::Base.transaction(**isolation_mode) do
+        metered_item.pricing_buckets.each do |selected_metered_item|
+          fees << init_fee(selected_metered_item:)
 
-            return result unless result.success?
-          end
+          return result unless result.success?
+        end
 
-          result.fees = persist_fees(fees.compact)
+        result.fees = persist_fees(fees.compact)
 
-          if !metered_item.invoiceable? && customer_provider_taxation?
-            Fees::ApplyProviderTaxesToStandaloneFeesService.call!(
-              customer: billing_context.customer, fees: result.fees, currency: metered_item.currency
-            )
-          end
+        if !metered_item.invoiceable? && customer_provider_taxation?
+          Fees::ApplyProviderTaxesToStandaloneFeesService.call!(
+            customer: billing_context.customer, fees: result.fees, currency: metered_item.currency
+          )
         end
       end
 
