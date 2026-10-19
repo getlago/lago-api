@@ -4660,6 +4660,7 @@ RSpec.describe Fees::ChargeService, :premium do
     before do
       event_values.each_with_index do |value, index|
         create(:event, organization:, subscription:, code: billable_metric.code,
+          created_at: now - RecurringAggregationSnapshot::WATERMARK_LAG - 1.minute,
           timestamp: Time.zone.parse("2022-03-16") + index.days, properties: {value:, region: "eu"})
       end
     end
@@ -4672,9 +4673,23 @@ RSpec.describe Fees::ChargeService, :premium do
         billable_metric_id: billable_metric.id,
         grouped_by: {},
         to_datetime: boundaries.charges_to_datetime.floor(6),
-        watermark: now,
+        watermark: now - RecurringAggregationSnapshot::WATERMARK_LAG,
         units: 15
       )
+    end
+
+    context "with an event ingested after the watermark" do
+      before do
+        create(:event, organization:, subscription:, code: billable_metric.code, created_at: now - 1.second,
+          timestamp: Time.zone.parse("2022-03-20"), properties: {value: 7})
+      end
+
+      it "bills the event but leaves it to the next period's snapshot" do
+        result = charge_subscription_service.call
+
+        expect(result.fees.sole.units).to eq(22)
+        expect(snapshots.sole.units).to eq(15)
+      end
     end
 
     context "with a rounding function" do
@@ -4698,6 +4713,7 @@ RSpec.describe Fees::ChargeService, :premium do
 
       before do
         create(:event, organization:, subscription:, code: billable_metric.code,
+          created_at: now - RecurringAggregationSnapshot::WATERMARK_LAG - 1.minute,
           timestamp: Time.zone.parse("2022-03-20"), properties: {value: 7, region: "us"})
       end
 
@@ -4713,11 +4729,11 @@ RSpec.describe Fees::ChargeService, :premium do
         create(:standard_charge, plan: subscription.plan, billable_metric:, prorated: true, properties: {amount: "20"})
       end
 
-      it "persists the units without proration" do
+      it "persists no snapshot, as its units are not bounded by the watermark" do
         result = charge_subscription_service.call
 
         expect(result.fees.sole.precise_amount_cents).to be < 15 * 2_000
-        expect(snapshots.sole.units).to eq(15)
+        expect(snapshots).to be_empty
       end
     end
 
@@ -4728,6 +4744,19 @@ RSpec.describe Fees::ChargeService, :premium do
         charge_subscription_service.call
 
         expect(snapshots.sole.units).to eq(15)
+      end
+
+      context "with an event ingested after the watermark" do
+        before do
+          create(:event, organization:, subscription:, code: billable_metric.code, created_at: now - 1.second,
+            timestamp: Time.zone.parse("2022-03-20"), properties: {value: 7})
+        end
+
+        it "persists it, as its read never counts an event dated in a closed period" do
+          charge_subscription_service.call
+
+          expect(snapshots.sole.units).to eq(22)
+        end
       end
     end
 

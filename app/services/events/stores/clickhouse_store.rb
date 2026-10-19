@@ -581,6 +581,41 @@ module Events
         end
       end
 
+      def recurring_sum(watermark:)
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          ctes_sql = events_cte_queries(
+            select: [arel_table[:decimal_value].as("property"), arel_table[:enriched_at]],
+            deduplicated_columns: %w[decimal_value enriched_at]
+          )
+
+          sql = with_ctes(ctes_sql, <<-SQL)
+            SELECT #{recurring_sum_sql(watermark)}
+            FROM events
+          SQL
+
+          build_recurring_aggregation_result(connection.select_one(sql))
+        end
+      end
+
+      def grouped_recurring_sum(watermark:)
+        groups, column_names = grouped_arel_columns
+
+        Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
+          ctes_sql = events_cte_queries(
+            select: groups + [arel_table[:decimal_value].as("property"), arel_table[:enriched_at]],
+            deduplicated_columns: %w[decimal_value properties enriched_at]
+          )
+
+          sql = with_ctes(ctes_sql, <<-SQL)
+            SELECT #{column_names}, #{recurring_sum_sql(watermark)}
+            FROM events
+            GROUP BY #{column_names}
+          SQL
+
+          prepare_grouped_recurring_values(connection.select_all(sql).rows)
+        end
+      end
+
       def prorated_sum(period_duration:, persisted_duration: nil)
         ratio = if persisted_duration
           persisted_duration.fdiv(period_duration)
@@ -772,6 +807,14 @@ module Events
             [timestamp, difference, cumul, second_duration.to_i, period_ratio]
           end
         end
+      end
+
+      def recurring_sum_sql(watermark)
+        <<~SQL.squish
+          sum(events.property) AS value,
+          #{sql_condition("sumIf(events.property, events.enriched_at <= ?)", watermark)} AS snapshot_value,
+          count() AS events_count
+        SQL
       end
 
       def with_timestamp_boundaries(query, from_datetime, to_datetime)
