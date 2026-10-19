@@ -141,6 +141,42 @@ RSpec.describe ProductCatalogInvoiceHelper do
     end
   end
 
+  describe "queries" do
+    def contract_blocks_query_count
+      capture_sql { described_class.contract_blocks(Invoice.find(invoice.id)) }.size
+    end
+
+    def unnamed_contract_fee(amount_cents)
+      unnamed_contract = create(:contract, organization:, customer:, name: nil, catalog_plan: create(:catalog_plan, organization:))
+      rate_card = create(:rate_card, organization:, product: analytics)
+      contract_rate_card = create(:contract_rate_card, organization:, contract: unnamed_contract, rate_card:)
+
+      create(
+        :fee,
+        invoice:,
+        subscription: nil,
+        fee_type: "product",
+        invoiceable: analytics,
+        invoice_display_name: nil,
+        contract: unnamed_contract,
+        contract_rate_card:,
+        amount_cents:,
+        properties: {"from_datetime" => "2026-10-01T00:00:00Z", "to_datetime" => "2026-10-31T23:59:59Z"}
+      )
+    end
+
+    it "does not grow with true-ups and contracts" do
+      product_fee(compute, amount_cents: 50, true_up_parent_fee: invoice.fees.find_by(amount_cents: 1_000))
+      unnamed_contract_fee(200)
+      baseline = contract_blocks_query_count
+
+      product_fee(analytics, amount_cents: 30, true_up_parent_fee: invoice.fees.find_by(amount_cents: 300))
+      unnamed_contract_fee(250)
+
+      expect(contract_blocks_query_count).to eq(baseline)
+    end
+  end
+
   describe ".period_label" do
     subject(:label) { described_class.period_label(invoice.fees.find_by(amount_cents: 300)) }
 
