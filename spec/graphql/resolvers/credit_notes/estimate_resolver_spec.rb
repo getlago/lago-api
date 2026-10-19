@@ -88,9 +88,10 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver, :premium do
     end
     let(:contract) { create(:contract, organization:, customer:) }
     let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
+    let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card) }
     let(:fee) do
       create(:fee, invoice:, subscription: nil, fee_type: :product, amount_cents: 100, precise_amount_cents: 100, taxes_rate: 0,
-        invoiceable: contract_rate_card.rate_card.product, contract:, contract_rate_card:, taxes_amount_cents: 0,
+        invoiceable: contract_rate_card.rate_card.product, contract:, contract_rate_card:, rate_card_rate:, taxes_amount_cents: 0,
         taxes_precise_amount_cents: 0)
     end
     let(:other_organization) { create(:organization) }
@@ -98,10 +99,11 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver, :premium do
     let(:other_invoice) { create(:invoice, organization: other_organization, customer: other_customer) }
     let(:other_contract) { create(:contract, organization: other_organization, customer: other_customer) }
     let(:other_rate_card) { create(:contract_rate_card, organization: other_organization, contract: other_contract) }
+    let(:other_rate_card_rate) { create(:rate_card_rate, organization: other_organization, rate_card: other_rate_card.rate_card) }
     let(:foreign_fee) do
       create(:fee, invoice: other_invoice, subscription: nil, fee_type: :product, amount_cents: 100, precise_amount_cents: 100,
         invoiceable: other_rate_card.rate_card.product, contract: other_contract, contract_rate_card: other_rate_card,
-        taxes_amount_cents: 0, taxes_precise_amount_cents: 0)
+        rate_card_rate: other_rate_card_rate, taxes_amount_cents: 0, taxes_precise_amount_cents: 0)
     end
 
     it "estimates a partial credit without requiring a subscription" do
