@@ -30,6 +30,7 @@ RSpec.describe Wallets::UpdateService do
         priority:,
         expiration_at:,
         invoice_requires_successful_payment: true,
+        invoice_usage_on_expiration: true,
         paid_top_up_min_amount_cents: 1_00,
         paid_top_up_max_amount_cents: 1_000_00
       }
@@ -41,6 +42,7 @@ RSpec.describe Wallets::UpdateService do
       expect(result.wallet.name).to eq("new name")
       expect(result.wallet.expiration_at.iso8601).to eq(expiration_at)
       expect(result.wallet.invoice_requires_successful_payment).to eq(true)
+      expect(result.wallet.invoice_usage_on_expiration).to eq(true)
       expect(result.wallet.priority).to eq(priority)
       expect(wallet.paid_top_up_min_amount_cents).to eq(1_00)
       expect(wallet.paid_top_up_max_amount_cents).to eq(1_000_00)
