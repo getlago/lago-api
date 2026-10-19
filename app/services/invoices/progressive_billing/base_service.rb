@@ -79,6 +79,10 @@ module Invoices
         raise NotImplementedError
       end
 
+      def progressive_billing_trigger
+        raise NotImplementedError
+      end
+
       def after_fees_created
       end
 
@@ -97,7 +101,8 @@ module Invoices
           datetime: Time.zone.at(timestamp),
           billing_entity: subscription.billing_entity || subscription.customer.billing_entity,
           purchase_order_number: subscription.purchase_order_number,
-          subscription:
+          subscription:,
+          progressive_billing_trigger:
         ) do |invoice|
           CreateInvoiceSubscriptionService
             .call(invoice:, subscriptions: [subscription], timestamp:, invoicing_reason: :progressive_billing)
