@@ -140,7 +140,7 @@ class InvoicesQuery < BaseQuery
   end
 
   def with_payment_dispute_lost(scope)
-    if filters.payment_dispute_lost
+    if ActiveModel::Type::Boolean.new.cast(filters.payment_dispute_lost)
       scope.where.not(payment_dispute_lost_at: nil)
     else
       scope.where(payment_dispute_lost_at: nil)
