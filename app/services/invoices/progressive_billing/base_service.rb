@@ -27,6 +27,12 @@ module Invoices
 
           credits = Credits::ProgressiveBillingService.call(invoice:).credits
           after_progressive_billing_credits_applied(credits)
+
+          if nothing_to_invoice?
+            @invoice = nil
+            raise ActiveRecord::Rollback
+          end
+
           Credits::AppliedCouponsService.call(invoice:)
           Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
 
@@ -42,7 +48,7 @@ module Invoices
           Invoices::FinalizeService.call!(invoice: invoice)
         end
 
-        if invoice.finalized?
+        if invoice&.finalized?
           Utils::SegmentTrack.invoice_created(invoice)
           SendWebhookJob.perform_later("invoice.created", invoice)
           Utils::ActivityLog.produce(invoice, "invoice.created")
@@ -78,6 +84,10 @@ module Invoices
       end
 
       def after_progressive_billing_credits_applied(credits)
+      end
+
+      def nothing_to_invoice?
+        false
       end
 
       def create_generating_invoice
