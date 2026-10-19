@@ -39,6 +39,7 @@ module RecurringAggregationSnapshots
 
     def own_snapshots
       RecurringAggregationSnapshot.where(
+        organization_id: subscription.organization_id,
         subscription_id: subscription.id,
         charge_id: charge.id,
         charge_filter_id: default_bucket? ? nil : charge_filter.id
@@ -66,6 +67,7 @@ module RecurringAggregationSnapshots
 
       latest_records(
         RecurringAggregationSnapshot.where(
+          organization_id: subscription.organization_id,
           subscription_id: subscription.previous_subscription_id,
           charge_id: previous_charge.id,
           charge_filter_id: previous_filter&.id
@@ -78,7 +80,11 @@ module RecurringAggregationSnapshots
     # with it and would no longer tell its buckets apart.
     def previous_charges
       charge_ids = RecurringAggregationSnapshot
-        .where(subscription_id: subscription.previous_subscription_id, billable_metric_id: charge.billable_metric_id)
+        .where(
+          organization_id: subscription.organization_id,
+          subscription_id: subscription.previous_subscription_id,
+          billable_metric_id: charge.billable_metric_id
+        )
         .distinct
         .select(:charge_id)
 
