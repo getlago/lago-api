@@ -23,6 +23,9 @@ module Queries
       optional(:self_billed).maybe(:bool)
       optional(:partially_paid).maybe(:bool)
       optional(:payment_overdue).maybe(:bool)
+      optional(:payment_dispute_lost).maybe(:bool)
+      optional(:amount_from).maybe(:decimal)
+      optional(:amount_to).maybe(:decimal)
     end
   end
 end

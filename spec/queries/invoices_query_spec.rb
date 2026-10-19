@@ -148,13 +148,13 @@ RSpec.describe InvoicesQuery do
   end
 
   context "with cursor pagination" do
-    let(:pagination) { CursorPagination::Cursor.new(table: "invoices", limit: 2) }
+    let(:pagination) { CursorPagination::Cursor.new(table: "invoices", sort: Api::V2::InvoiceIndex::SORT, limit: 2) }
     let(:filters) { {status: "finalized"} }
 
-    it "paginates after filtering and ordering" do
+    it "paginates after filtering, in the order of the v1 lists" do
       page = CursorPagination::Page.new(records: result.invoices, cursor: pagination)
 
-      expect(page.records.map(&:id)).to eq(Invoice.where(status: "finalized").order(created_at: :desc, id: :desc).limit(2).ids)
+      expect(page.records.map(&:id)).to eq(Invoice.where(status: "finalized").order(Api::V2::InvoiceIndex::SORT).limit(2).ids)
       expect(page.meta[:next_cursor]).to be_present
     end
   end
@@ -223,6 +223,23 @@ RSpec.describe InvoicesQuery do
       expect(returned_ids).to include(invoice_fourth.id)
       expect(returned_ids).to include(invoice_fifth.id)
       expect(returned_ids).not_to include(invoice_sixth.id)
+    end
+  end
+
+  context "when filtering by payment dispute lost false as a string" do
+    let(:filters) { {payment_dispute_lost: "false"} }
+
+    it "excludes the invoices whose dispute was lost" do
+      expect(returned_ids).to match_array([invoice_first.id, invoice_second.id, invoice_third.id, invoice_fourth.id, invoice_fifth.id])
+    end
+  end
+
+  context "when filtering by payment dispute lost with a value that is not a boolean" do
+    let(:filters) { {payment_dispute_lost: "maybe"} }
+
+    it "returns a validation failure" do
+      expect(result).not_to be_success
+      expect(result.error.messages.keys).to eq([:payment_dispute_lost])
     end
   end
 
@@ -322,7 +339,8 @@ RSpec.describe InvoicesQuery do
     before do
       contract_invoice
       create(:fee, invoice: invoice_with_product_fee, subscription: nil, fee_type: :product,
-        invoiceable: contract_rate_card.rate_card.product, contract: contract_rate_card.contract, contract_rate_card:)
+        invoiceable: contract_rate_card.rate_card.product, contract: contract_rate_card.contract, contract_rate_card:,
+        rate_card_rate: create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card))
     end
 
     it "returns the invoices billed from the product catalog" do
@@ -331,6 +349,10 @@ RSpec.describe InvoicesQuery do
 
     context "when searching" do
       let(:search_term) { "7777" }
+      let(:returned_ids) do
+        [contract_invoice, invoice_with_product_fee].each { |invoice| Invoices::RefreshSearchTermsService.call!(invoice:) }
+        result.invoices.pluck(:id)
+      end
 
       it "keeps the search scope on both branches" do
         expect(returned_ids).to eq([contract_invoice.id])
@@ -659,6 +681,16 @@ RSpec.describe InvoicesQuery do
       it "returns invoices with total cents amount in provided range" do
         expect(result).to be_success
         expect(result.invoices.pluck(:id)).to match_array invoices[1..3].pluck(:id)
+      end
+    end
+
+    context "when an amount is not a number" do
+      let(:amount_from) { "abc" }
+      let(:amount_to) { nil }
+
+      it "returns a validation failure" do
+        expect(result).not_to be_success
+        expect(result.error.messages.keys).to eq([:amount_from])
       end
     end
 

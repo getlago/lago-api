@@ -4,6 +4,7 @@ module Api
   module V2
     class InvoicesController < BaseController
       include Api::V2::InvoiceIndex
+      include Api::V2::RejectsExpand
 
       def index
         invoice_index

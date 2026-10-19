@@ -63,4 +63,16 @@ RSpec.describe "API v2 routing parity" do
       end
     end
   end
+
+  it "routes catalog invoice endpoints to the v2 controller" do
+    id = SecureRandom.uuid
+
+    [
+      [:get, "/api/v2/invoices"],
+      [:get, "/api/v2/invoices/#{id}"],
+      [:post, "/api/v2/invoices/#{id}/void"]
+    ].each do |method, path|
+      expect(Rails.application.routes.recognize_path(path, method:)[:controller]).to eq("api/v2/invoices")
+    end
+  end
 end

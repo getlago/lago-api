@@ -9,8 +9,11 @@ module Api
       # Public value => stored enum.
       INVOICE_TYPES = {"contract" => "contract", "advance_fees" => "advance_charges"}.freeze
 
+      # The order of the v1 lists, which `index_invoices_by_cursor` was built for.
+      SORT = {issuing_date: :desc, created_at: :desc, id: :asc}.freeze
+
       included do
-        cursor_paginated_index(Invoice)
+        cursor_paginated_index(Invoice, sort: SORT)
       end
 
       private
@@ -37,6 +40,7 @@ module Api
             amount_to: filters[:amount_to],
             billing_entity_ids:,
             currency: filters[:currency],
+            customer_external_id: (filters[:external_customer_id] || filters[:customer_external_id] unless customer),
             customer_id: customer&.id,
             invoice_type: INVOICE_TYPES[filters[:invoice_type]],
             issuing_date_from: filters[:issuing_date_from],
@@ -75,6 +79,8 @@ module Api
           :amount_to,
           :billing_entity_codes,
           :currency,
+          :customer_external_id,
+          :external_customer_id,
           :invoice_type,
           :issuing_date_from,
           :issuing_date_to,
