@@ -31,7 +31,7 @@
 .mb-24.overflow-auto
   .half
     .body-1 = I18n.t('invoice.bill_from')
-    == SlimHelper.render("templates/invoices/v4/product_catalog/#{issuer}", self)
+    == SlimHelper.render("templates/invoices/product_catalog/#{issuer}", self)
   .half
     .body-1 = I18n.t('invoice.bill_to')
-    == SlimHelper.render("templates/invoices/v4/product_catalog/#{recipient}", self)
+    == SlimHelper.render("templates/invoices/product_catalog/#{recipient}", self)

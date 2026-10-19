@@ -2,9 +2,9 @@
 
 require "rails_helper"
 
-RSpec.describe "templates/invoices/v4/product_catalog/contract.slim" do
+RSpec.describe "templates/invoices/product_catalog/contract.slim" do
   subject(:rendered_text) do
-    html = Slim::Template.new(Rails.root.join("app/views/templates/invoices/v4/product_catalog/contract.slim").to_s).render(invoice)
+    html = Slim::Template.new(Rails.root.join("app/views/templates/invoices/product_catalog/contract.slim").to_s).render(invoice)
     document = Nokogiri::HTML(html)
     document.css("style").remove
     document.xpath("//body//text()").map(&:text).join(" ").squish

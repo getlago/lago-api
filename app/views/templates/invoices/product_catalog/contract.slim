@@ -5,11 +5,11 @@ html
     meta name='viewport' content='width=device-width, initial-scale=1.0'
     title = document_invoice_name
   body
-    == SlimHelper.render('templates/invoices/v4/product_catalog/_styles', self)
+    == SlimHelper.render('templates/invoices/product_catalog/_styles', self)
 
     - catalog = ProductCatalogInvoiceHelper.new(self)
     .wrapper
-      == SlimHelper.render('templates/invoices/v4/product_catalog/_header', self)
+      == SlimHelper.render('templates/invoices/product_catalog/_header', self)
 
       .mb-24
         table.lines
@@ -65,8 +65,8 @@ html
                 - section.products.each do |product|
                   tr.product
                     td.body-1 colspan=4 = product.name
-                  == SlimHelper.render('templates/invoices/v4/product_catalog/_period_rows', self, fees: product.fees, nested: false)
+                  == SlimHelper.render('templates/invoices/product_catalog/_period_rows', self, fees: product.fees, nested: false)
                   - product.filters.each do |filter|
                     tr.filter
                       td.body-1 colspan=4 = filter.name
-                    == SlimHelper.render('templates/invoices/v4/product_catalog/_period_rows', self, fees: filter.fees, nested: true)
+                    == SlimHelper.render('templates/invoices/product_catalog/_period_rows', self, fees: filter.fees, nested: true)

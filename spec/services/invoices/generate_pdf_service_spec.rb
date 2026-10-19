@@ -151,7 +151,7 @@ RSpec.describe Invoices::GeneratePdfService do
         described_class.call(invoice:, context:)
 
         expect(Utils::PdfGenerator).to have_received(:new)
-          .with(template: "invoices/v4/product_catalog/contract", context: invoice)
+          .with(template: "invoices/product_catalog/contract", context: invoice)
       end
     end
 
