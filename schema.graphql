@@ -7168,6 +7168,7 @@ enum FeatureFlagEnum {
   product_catalog
   realtime_usage
   skip_credit_invoice_auto_payment_delay
+  sso_cross_organization_sessions
   stripe_shared_payment_token
   usage_prefilter_incremental
   usage_prefilter_short_cache

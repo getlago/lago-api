@@ -3,6 +3,8 @@
 module Auth
   module Okta
     class BaseService < BaseService
+      include Auth::SsoIntegrationChecks
+
       private
 
       def check_code
@@ -30,6 +32,14 @@ module Auth
         raise ValidationError, "domain_not_configured" if okta_integration.blank?
 
         result.okta_integration = okta_integration
+      end
+
+      def sso_integration
+        result.okta_integration
+      end
+
+      def sso_login_method
+        Organizations::AuthenticationMethods::OKTA
       end
 
       def check_invite(email)
