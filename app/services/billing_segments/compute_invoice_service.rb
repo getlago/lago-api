@@ -58,7 +58,10 @@ module BillingSegments
         invoice:,
         metered_item: build_metered_item(segment),
         billing_context: Billing::Context.from(contract: segment.contract),
-        options: ::Fees::ChargeService::Options.new(context:, skip_adjusted_fees: true),
+        options: ::Fees::ChargeService::Options.new(
+          context: charge_service_context(segment),
+          skip_adjusted_fees: true
+        ),
         filtered_aggregations: filtered_aggregations[segment.target_key]&.keys || []
       )
     end
@@ -69,6 +72,14 @@ module BillingSegments
       end
 
       ::Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: segment, max_timestamp:)
+    end
+
+    def charge_service_context(segment)
+      if segment.recurring_advance_invoiceable?
+        :advance_renewal
+      else
+        context
+      end
     end
 
     def event_filters(metered_segments)

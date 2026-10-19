@@ -514,7 +514,7 @@ RSpec.describe Fees::ChargeService do
       end
     end
 
-    context "with an early-renewal cutoff" do
+    context "with a renewal cutoff" do
       let(:metered_item) do
         described_class::MeteredItem.new(
           source: described_class::Sources::BillingSegment.new(
@@ -524,13 +524,23 @@ RSpec.describe Fees::ChargeService do
         )
       end
 
-      it "persists a closing snapshot at the segment end" do
+      it "persists a closing snapshot when the charge context is not an advance renewal" do
         expect { result }.to change(CachedAggregation, :count).by(1)
         expect(result).to be_success
         expect(result.cached_aggregations.sole).to have_attributes(
           current_aggregation: 2,
           timestamp: billing_segment.ended_at
         )
+      end
+
+      context "with an advance-renewal context" do
+        let(:options) { described_class::Options.new(context: :advance_renewal) }
+
+        it "does not persist a closing snapshot" do
+          expect { result }.not_to change(CachedAggregation, :count)
+          expect(result).to be_success
+          expect(result.cached_aggregations).to be_nil
+        end
       end
     end
   end

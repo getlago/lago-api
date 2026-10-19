@@ -525,7 +525,7 @@ module Fees
     end
 
     def persist_recurring_value(aggregation_results, selected_metered_item, breakdowns_by_group)
-      return if options.current_usage? || options.invoice_preview?
+      return if options.current_usage? || options.invoice_preview? || options.advance_renewal?
 
       # NOTE: Only weighted sum and custom aggregations are setting this value
       return unless aggregation_results.first&.recurring_updated_at
