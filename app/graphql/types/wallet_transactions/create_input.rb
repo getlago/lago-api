@@ -7,8 +7,8 @@ module Types
 
       argument :wallet_id, ID, required: true
 
-      argument :granted_credits, String, required: false
-      argument :ignore_paid_top_up_limits, Boolean, required: false
+      argument :granted_credits, String, required: false, permission: "wallets:update"
+      argument :ignore_paid_top_up_limits, Boolean, required: false, permission: "wallets:update"
       argument :invoice_custom_section, Types::InvoiceCustomSections::ReferenceInput, required: false
       argument :invoice_requires_successful_payment, Boolean, required: false
       argument :metadata, [Types::WalletTransactions::MetadataInput], required: false
@@ -17,7 +17,7 @@ module Types
       argument :payment_method, Types::PaymentMethods::ReferenceInput, required: false
       argument :priority, Integer, required: false
       argument :purchase_order_number, String, required: false
-      argument :voided_credits, String, required: false
+      argument :voided_credits, String, required: false, permission: "wallets:update"
     end
   end
 end

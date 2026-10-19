@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Mutations::WalletTransactions::Create do
   subject(:result) { execute_query(query:, input:) }
 
-  let(:required_permission) { "wallets:top_up" }
+  let(:required_permission) { %w[wallets:top_up wallets:update] }
   let(:subscription) { create(:subscription, customer:) }
   let(:wallet) { create(:wallet, customer:, balance: 10.0, credits_balance: 10.0) }
   let(:query) do
@@ -105,6 +105,28 @@ RSpec.describe Mutations::WalletTransactions::Create do
     )
   end
 
+  context "with wallets:top_up only" do
+    let(:required_permission) { "wallets:top_up" }
+    let(:input) do
+      {
+        walletId: wallet.id,
+        paidCredits: "5.00",
+        grantedCredits: "15.00",
+        voidedCredits: "5.00"
+      }
+    end
+
+    it "creates only the paid wallet transaction" do
+      result_data = result["data"]["createCustomerWalletTransaction"]
+
+      expect(result_data["collection"]).to contain_exactly(include(
+        "transactionStatus" => "purchased",
+        "creditAmount" => "5.0"
+      ))
+      expect(wallet.reload.credits_balance).to eq(10)
+    end
+  end
+
   context "when wallet has a minimum amount" do
     before do
       wallet.update!(paid_top_up_min_amount_cents: 10_00)
@@ -129,6 +151,15 @@ RSpec.describe Mutations::WalletTransactions::Create do
 
         result_data = result["data"]["createCustomerWalletTransaction"]
         expect(result_data["collection"].count).to eq 1
+      end
+
+      context "with wallets:top_up only" do
+        let(:required_permission) { "wallets:top_up" }
+
+        it "enforces the wallet limit" do
+          expect { subject }.not_to change(organization.wallet_transactions, :count)
+          expect_unprocessable_entity(result)
+        end
       end
     end
   end
