@@ -53,7 +53,26 @@ RSpec.describe Invoices::ProgressiveBilling::WalletTerminationService, transacti
 
   it "creates only one invoice per wallet and subscription" do
     expect(described_class.call(wallet:, subscription:, timestamp:)).to be_success
+
+    create(
+      :event,
+      organization_id: organization.id,
+      external_subscription_id: subscription.external_id,
+      code: billable_metric.code,
+      properties: {billable_metric.field_name => 1},
+      timestamp: timestamp - 30.minutes
+    )
+
     expect(result).not_to be_success
+    expect(result.error).to be_a(Idempotency::IdempotencyError)
+    expect(customer.invoices.progressive_billing.count).to eq(1)
+  end
+
+  it "does not invoice again the usage it already invoiced" do
+    expect(described_class.call(wallet:, subscription:, timestamp:)).to be_success
+
+    expect(result).to be_success
+    expect(result.invoice).to be_nil
     expect(customer.invoices.progressive_billing.count).to eq(1)
   end
 
