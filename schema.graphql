@@ -1910,6 +1910,7 @@ Rate card applied to a contract
 """
 type ContractAppliedRateCard {
   billingAnchorDate: ISO8601Date!
+  contract: Contract!
   createdAt: ISO8601DateTime!
   effectiveDate: ISO8601Date!
   id: ID!
@@ -11872,6 +11873,7 @@ type Plan {
 Rate card applied to a plan
 """
 type PlanAppliedRateCard {
+  catalogPlan: CatalogPlan!
   createdAt: ISO8601DateTime!
   id: ID!
   product: Product!

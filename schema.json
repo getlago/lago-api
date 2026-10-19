@@ -11086,6 +11086,22 @@
               "deprecationReason": null
             },
             {
+              "name": "contract",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "Contract",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "createdAt",
               "description": null,
               "args": [],
@@ -59431,6 +59447,22 @@
           "name": "PlanAppliedRateCard",
           "description": "Rate card applied to a plan",
           "fields": [
+            {
+              "name": "catalogPlan",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "CatalogPlan",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
             {
               "name": "createdAt",
               "description": null,

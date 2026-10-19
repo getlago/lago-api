@@ -16,7 +16,7 @@ RSpec.describe Resolvers::ContractAppliedRateCardResolver do
   let(:required_permission) { "contracts:view" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:contract) { create(:contract, organization:) }
+  let(:contract) { create(:contract, organization:, name: "Platform contract") }
   let(:contract_rate_card) do
     create(
       :contract_rate_card,
@@ -35,6 +35,7 @@ RSpec.describe Resolvers::ContractAppliedRateCardResolver do
         contractAppliedRateCard(id: $id) {
           id units
           effectiveDate billingAnchorDate nextBillingAt
+          contract { id name }
           product { id }
           rateCard { id }
           ratePhases { id rateOverride { id } }
@@ -48,7 +49,7 @@ RSpec.describe Resolvers::ContractAppliedRateCardResolver do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "contracts:view"
 
-  it "returns the applied rate card with its dates and rate phases" do
+  it "returns the applied rate card with its contract, dates and rate phases" do
     rate_override = create(:rate_override, organization:)
     rate_phase = create(:rate_phase, :contract_level, organization:, contract_rate_card:, rate_override:)
 
@@ -58,6 +59,7 @@ RSpec.describe Resolvers::ContractAppliedRateCardResolver do
       "effectiveDate" => "2026-10-01",
       "billingAnchorDate" => "2026-10-15",
       "nextBillingAt" => "2026-10-15T00:00:00Z",
+      "contract" => {"id" => contract.id, "name" => "Platform contract"},
       "product" => {"id" => contract_rate_card.rate_card.product_id},
       "rateCard" => {"id" => contract_rate_card.rate_card_id},
       "ratePhases" => [{"id" => rate_phase.id, "rateOverride" => {"id" => rate_override.id}}],

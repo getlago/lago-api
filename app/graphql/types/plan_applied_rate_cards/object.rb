@@ -6,11 +6,12 @@ module Types
       graphql_name "PlanAppliedRateCard"
       description "Rate card applied to a plan"
 
-      dataload_association :product, :rate_card
+      dataload_association :catalog_plan, :product, :rate_card
 
       field :id, ID, null: false
       field :units, GraphQL::Types::Float, null: true
 
+      field :catalog_plan, Types::CatalogPlans::Object, null: false
       field :product, Types::Products::Object, null: false
       field :rate_card, Types::RateCards::Object, null: false
 

@@ -24,6 +24,7 @@ RSpec.describe Resolvers::PlanAppliedRateCardResolver do
       query($id: ID!) {
         planAppliedRateCard(id: $id) {
           id units
+          catalogPlan { id name }
           product { id }
           rateCard { id }
           ratePhases { id rateOverride { id } }
@@ -37,13 +38,14 @@ RSpec.describe Resolvers::PlanAppliedRateCardResolver do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "plans:view"
 
-  it "returns the applied rate card with its rate phases" do
+  it "returns the applied rate card with its plan and rate phases" do
     rate_override = create(:rate_override, organization:)
     rate_phase = create(:rate_phase, organization:, plan_rate_card:, rate_override:)
 
     expect(execution["data"]["planAppliedRateCard"]).to eq(
       "id" => plan_rate_card.id,
       "units" => 3.0,
+      "catalogPlan" => {"id" => catalog_plan.id, "name" => catalog_plan.name},
       "product" => {"id" => plan_rate_card.rate_card.product_id},
       "rateCard" => {"id" => plan_rate_card.rate_card_id},
       "ratePhases" => [{"id" => rate_phase.id, "rateOverride" => {"id" => rate_override.id}}],
