@@ -206,6 +206,15 @@ describe Api::V1::X402::GateChecksController, :premium do
     end
   end
 
+  context "with a scalar root" do
+    let(:params) { "x" }
+
+    it "answers 400" do
+      subject
+      expect(response).to have_http_status(:bad_request)
+    end
+  end
+
   context "when the x402_payments flag is off" do
     let(:organization) { create(:organization, premium_integrations: ["events_targeting_wallets"]) }
 
