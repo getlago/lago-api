@@ -44,7 +44,7 @@ module Types
       field :previous_plan, Types::Plans::Object
       field :previous_subscription, Types::Subscriptions::Object
 
-      field :activity_logs, [Types::ActivityLogs::Object], null: true
+      field :activity_logs, [Types::ActivityLogs::Object], null: true, permission: "audit_logs:view"
       field :charges, [Types::Charges::Object], null: true
       field :fees, [Types::Fees::Object], null: true
       field :fixed_charges, [Types::FixedCharges::Object], null: true
