@@ -4752,6 +4752,19 @@ RSpec.describe Fees::ChargeService, :premium do
         expect(result.fees.sole.precise_amount_cents).to be < 15 * 2_000
         expect(snapshots.sole.units).to eq(15)
       end
+
+      context "with an event ingested after the watermark" do
+        before do
+          create(:event, organization:, subscription:, code: billable_metric.code, created_at: now - 1.second,
+            timestamp: Time.zone.parse("2022-03-20"), properties: {value: 7})
+        end
+
+        it "leaves it to the next period's snapshot" do
+          charge_subscription_service.call
+
+          expect(snapshots.sole.units).to eq(15)
+        end
+      end
     end
 
     context "with a weighted sum billable metric" do
@@ -4761,6 +4774,19 @@ RSpec.describe Fees::ChargeService, :premium do
         charge_subscription_service.call
 
         expect(snapshots.sole.units).to eq(15)
+      end
+
+      context "with an event ingested after the watermark" do
+        before do
+          create(:event, organization:, subscription:, code: billable_metric.code, created_at: now - 1.second,
+            timestamp: Time.zone.parse("2022-03-20"), properties: {value: 7})
+        end
+
+        it "persists it, as its read never counts an event dated in a closed period" do
+          charge_subscription_service.call
+
+          expect(snapshots.sole.units).to eq(22)
+        end
       end
     end
 
