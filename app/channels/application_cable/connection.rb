@@ -2,9 +2,7 @@
 
 module ApplicationCable
   class Connection < ActionCable::Connection::Base
-    # Browsers cannot set headers on a websocket, so the front end sends the user token as an
-    # extra Sec-WebSocket-Protocol entry. Rails does not log that header, unlike the URL and
-    # the channel identifier.
+    # The token comes as a Sec-WebSocket-Protocol entry: unlike the URL and channel params, Rails does not log it.
     TOKEN_SUBPROTOCOL_PREFIX = "lago-token."
     PROTOCOL_HEADER = "HTTP_SEC_WEBSOCKET_PROTOCOL"
 
@@ -14,16 +12,14 @@ module ApplicationCable
 
     def connect
       token = subprotocol_token
-      # The handshake is answered before connect runs, so the header is no longer needed.
-      # Error trackers such as Sentry read it from this env when reporting channel errors.
+      # The handshake is already answered, and Sentry reads this env when reporting channel errors.
       redact_token_from_env
 
       self.connection_identifier = SecureRandom.uuid
       authenticate_user(token)
     end
 
-    # The connection is authenticated once, when the socket opens. Past the token expiration,
-    # GraphqlChannel closes the socket and the client reopens it with its renewed token.
+    # Authenticated once, when the socket opens: past expiry, GraphqlChannel makes the client reconnect.
     def token_expired?
       @token_expires_at.present? && Time.current.to_i >= @token_expires_at
     end

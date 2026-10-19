@@ -5,19 +5,17 @@ class GraphqlChannel < ApplicationCable::Channel
   end
 
   def execute(data)
-    # The client reopens the socket with its renewed token, and ActionCableLink sends the
-    # operation again once reconnected. Returning expired_jwt_token here would log out a user
-    # whose session is still active.
+    # Not expired_jwt_token: that would log out an active user. The client reconnects with its renewed token.
     if connection.token_expired?
       connection.close(reason: "token_expired", reconnect: true)
       return
     end
 
-    # The token was already expired when the socket opened: the session itself has expired.
-    if connection.auth_error_code
-      code = connection.auth_error_code
-      transmit({result: {errors: [{message: code, extensions: {status: 401, code:}}]}, more: false})
-      return
+    return transmit_error(code: connection.auth_error_code, status: 401) if connection.auth_error_code
+    return transmit_error(code: "unauthorized", status: 401) unless current_user
+
+    if data["query"].to_s.length > GraphqlController::MAX_QUERY_LENGTH
+      return transmit_error(code: "query_is_too_large", status: 413)
     end
 
     query = GraphQL::Query.new(
@@ -34,8 +32,7 @@ class GraphqlChannel < ApplicationCable::Channel
       }
     )
 
-    # Queries and mutations go through GraphqlController, the socket only serves subscriptions.
-    # A query that does not parse has no selected operation and gets its errors from query.result.
+    # A query that does not parse has no selected operation, and query.result returns its errors.
     if query.selected_operation && !query.subscription?
       transmit({result: {errors: [{message: "Only subscriptions are supported on this channel"}]}, more: false})
       return
@@ -63,10 +60,11 @@ class GraphqlChannel < ApplicationCable::Channel
 
   private
 
-  # The user comes from the token authenticated by the connection. The organization id is a
-  # channel param (graphql-ruby-client ActionCableLink `connectionParams`), mirroring the
-  # x-lago-organization header of the HTTP endpoint. Channel params end up in the logs,
-  # so they must never carry a credential.
+  def transmit_error(code:, status:)
+    transmit({result: {errors: [{message: code, extensions: {status:, code:}}]}, more: false})
+  end
+
+  # Channel params are logged by ActionCable: they carry the organization id, never a credential.
   def current_user
     connection.current_user
   end

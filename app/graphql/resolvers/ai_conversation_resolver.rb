@@ -17,7 +17,7 @@ module Resolvers
       raise unauthorized_error unless License.premium?
       raise forbidden_error(code: "feature_unavailable") if ENV["MISTRAL_API_KEY"].blank? || ENV["MISTRAL_AGENT_ID"].blank?
 
-      ai_conversation = current_organization.ai_conversations.find_by!(id:, membership: current_membership)
+      ai_conversation = current_membership.ai_conversations.find_by!(id:)
       result = ::AiConversations::FetchMessagesService.call(ai_conversation:).raise_if_error!
 
       ai_conversation.attributes.symbolize_keys.merge(

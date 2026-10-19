@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe GraphqlChannel, type: :channel do
+RSpec.describe GraphqlChannel, :premium, type: :channel do
   let(:membership) { create(:membership, roles: [:admin]) }
   let(:organization) { membership.organization }
   let(:ai_conversation) { create(:ai_conversation, organization:, membership:) }
@@ -26,6 +26,9 @@ RSpec.describe GraphqlChannel, type: :channel do
   end
 
   before do
+    ENV["MISTRAL_API_KEY"] = "test_api_key"
+    ENV["MISTRAL_AGENT_ID"] = "test_agent_id"
+
     stub_connection(connection_identifier: SecureRandom.uuid, current_user:, auth_error_code:, token_expired?: token_expired)
   end
 
@@ -91,10 +94,37 @@ RSpec.describe GraphqlChannel, type: :channel do
 
     before { subscribe(organization_id: organization.id) }
 
+    it "rejects the operation as unauthorized before parsing it" do
+      allow(GraphQL::Query).to receive(:new).and_call_original
+
+      execute_subscription
+
+      expect(last_transmission["result"]["errors"].first["extensions"]).to eq("status" => 401, "code" => "unauthorized")
+      expect(GraphQL::Query).not_to have_received(:new)
+      expect(subscription.streams).to be_empty
+    end
+  end
+
+  context "with a query over the maximum length" do
+    before { subscribe(organization_id: organization.id) }
+
+    it "rejects it" do
+      perform :execute, query: "subscription { #{"a" * GraphqlController::MAX_QUERY_LENGTH} }"
+
+      expect(last_transmission["result"]["errors"].first["extensions"]).to eq("status" => 413, "code" => "query_is_too_large")
+    end
+  end
+
+  context "without the Mistral configuration" do
+    before do
+      ENV["MISTRAL_API_KEY"] = nil
+      subscribe(organization_id: organization.id)
+    end
+
     it "rejects the subscription" do
       execute_subscription
 
-      expect(last_transmission["result"]["errors"]).to be_present
+      expect(last_transmission["result"]["errors"].first["extensions"]["code"]).to eq("feature_unavailable")
       expect(subscription.streams).to be_empty
     end
   end

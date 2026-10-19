@@ -21,7 +21,7 @@ module Mutations
         raise forbidden_error(code: "feature_unavailable") if ENV["MISTRAL_API_KEY"].blank? || ENV["MISTRAL_AGENT_ID"].blank?
 
         ai_conversation = if conversation_id.present?
-          current_organization.ai_conversations.find_by(id: conversation_id, membership: current_membership)
+          current_membership.ai_conversations.find_by(id: conversation_id)
         else
           current_organization.ai_conversations.create!(
             membership: current_membership,

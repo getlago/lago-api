@@ -14,9 +14,10 @@ module Types
       type Types::AiConversations::Stream, null: false
 
       def subscribe(id:)
-        unless current_organization.ai_conversations.exists?(id:, membership: current_membership)
-          return not_found_error(resource: "ai_conversation")
-        end
+        raise unauthorized_error unless License.premium?
+        raise forbidden_error(code: "feature_unavailable") if ENV["MISTRAL_API_KEY"].blank? || ENV["MISTRAL_AGENT_ID"].blank?
+
+        return not_found_error(resource: "ai_conversation") unless current_membership.ai_conversations.exists?(id:)
 
         # Return an empty object to keep subscription alive
         {chunk: nil, done: false}
