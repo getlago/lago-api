@@ -44,6 +44,41 @@ RSpec.describe GraphqlChannel, :premium, type: :channel do
       expect(subscription.streams).not_to be_empty
     end
 
+    context "when access changes while the subscription is open" do
+      let(:event) { instance_double(GraphQL::Subscriptions::Event, topic:, context: nil) }
+      let(:topic) do
+        field = LagoApiSchema.subscription.fields["aiConversationStreamed"]
+        arguments = {"id" => conversation_id}
+        GraphQL::Subscriptions::Event.new(name: field.name, arguments:, field:, context: LagoApiSchema.null_context).topic
+      end
+      let(:subscription_id) { subscription.instance_variable_get(:@subscription_ids).first }
+
+      def stream_chunk
+        LagoApiSchema.subscriptions.execute_update(subscription_id, event, {chunk: "Hello", done: false})
+      end
+
+      before { execute_subscription }
+
+      it "keeps streaming while the member still has access" do
+        expect(stream_chunk["data"]["aiConversationStreamed"]).to eq("chunk" => "Hello", "done" => false)
+      end
+
+      it "ends the subscription once the member loses ai_conversations:view" do
+        MembershipRole.where(membership:).delete_all
+        role = create(:role, organization:, permissions: %w[ai_conversations:create])
+        create(:membership_role, membership:, role:)
+
+        expect(stream_chunk.nil?).to be(true)
+        expect(LagoApiSchema.subscriptions.read_subscription(subscription_id)).to be_nil
+      end
+
+      it "ends the subscription once the membership is revoked" do
+        membership.update!(status: :revoked, revoked_at: Time.current)
+
+        expect(stream_chunk.nil?).to be(true)
+      end
+    end
+
     context "when the conversation belongs to another member of the organization" do
       let(:other_membership) { create(:membership, organization:) }
       let(:conversation_id) { create(:ai_conversation, organization:, membership: other_membership).id }

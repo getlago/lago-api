@@ -24,7 +24,17 @@ module Types
       end
 
       def update(id:)
+        # The saved context keeps the permissions of subscribe time, so access is checked again on each chunk.
+        unsubscribe unless still_allowed?
+
         object
+      end
+
+      private
+
+      def still_allowed?
+        membership = Membership.active.find_by(id: current_membership.id)
+        membership.present? && membership.permissions_hash[REQUIRED_PERMISSION]
       end
     end
   end
