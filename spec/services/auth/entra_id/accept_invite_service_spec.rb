@@ -82,6 +82,19 @@ RSpec.describe Auth::EntraId::AcceptInviteService, :premium, cache: :memory do
       end
     end
 
+    context "when the integration's organization does not allow the login method" do
+      let(:other_organization) { create(:organization, premium_integrations: ["entra_id"]) }
+      let(:entra_id_integration) { create(:entra_id_integration, domain: "bar.com", organization: other_organization) }
+
+      it "refuses the invite and keeps it pending" do
+        result = service.call
+
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq({entra_id: ["login_method_not_authorized"]})
+        expect(invite.reload).to be_pending
+      end
+    end
+
     context "when state is not provided" do
       let(:state) { nil }
 

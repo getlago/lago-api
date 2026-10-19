@@ -82,6 +82,19 @@ RSpec.describe Auth::Okta::AcceptInviteService, :premium, cache: :memory do
       end
     end
 
+    context "when the integration's organization does not allow the login method" do
+      let(:other_organization) { create(:organization, premium_integrations: ["okta"]) }
+      let(:okta_integration) { create(:okta_integration, domain: "bar.com", organization_name: "foo", organization: other_organization) }
+
+      it "refuses the invite and keeps it pending" do
+        result = service.call
+
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq({okta: ["login_method_not_authorized"]})
+        expect(invite.reload).to be_pending
+      end
+    end
+
     context "when state is not provided" do
       let(:state) { nil }
 
