@@ -122,6 +122,17 @@ RSpec.describe PaymentProviders::FlutterwaveService do
         expect(result.flutterwave_provider.secret_key).to eq("original_secret_key") # unchanged
         expect(result.flutterwave_provider.success_redirect_url).to eq("https://original.example.com") # unchanged
       end
+
+      it "keeps the secret key when the masked value is sent back" do
+        result = flutterwave_service.create_or_update(
+          organization:,
+          id: existing_provider.id,
+          secret_key: "••••••••…key"
+        )
+
+        expect(result).to be_success
+        expect(result.flutterwave_provider.reload.secret_key).to eq("original_secret_key")
+      end
     end
 
     context "when validation fails" do

@@ -233,11 +233,113 @@ RSpec.describe Resolvers::PaymentProvidersResolver do
         payment_providers_response = result["data"]["paymentProviders"]["collection"]
         expect(payment_providers_response.map(&:values)).to contain_exactly(
           [adyen_provider.live_prefix],
-          [cashfree_provider.client_id, cashfree_provider.client_secret],
+          [cashfree_provider.client_id, "••••••••…#{cashfree_provider.client_secret[-3..]}"],
           [true],
           [stripe_provider.success_redirect_url]
         )
       end
+    end
+  end
+
+  context "when requesting webhook secrets" do
+    let(:flutterwave_provider) { create(:flutterwave_provider, organization:) }
+    let(:gocardless_provider) do
+      create(:gocardless_provider, organization:).tap { it.update!(webhook_secret: SecureRandom.hex(32)) }
+    end
+    let(:query) do
+      <<~GQL
+        query {
+          paymentProviders(limit: 10) {
+            collection {
+              ... on FlutterwaveProvider {
+                webhookSecret
+                __typename
+              }
+              ... on GocardlessProvider {
+                webhookSecret
+                __typename
+              }
+            }
+          }
+        }
+      GQL
+    end
+
+    before { flutterwave_provider }
+
+    def webhook_secrets(result)
+      result["data"]["paymentProviders"]["collection"]
+        .select { %w[FlutterwaveProvider GocardlessProvider].include?(it["__typename"]) }
+        .to_h { [it["__typename"], it["webhookSecret"]] }
+    end
+
+    context "with only organization:integrations:view permission" do
+      it "does not return the webhook secrets" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: ["organization:integrations:view"],
+          query:
+        )
+
+        expect(result["errors"]).to be_nil
+        expect(flutterwave_provider.webhook_secret).to be_present
+        expect(gocardless_provider.webhook_secret).to be_present
+        expect(webhook_secrets(result)).to eq("FlutterwaveProvider" => nil, "GocardlessProvider" => nil)
+      end
+    end
+
+    %w[organization:integrations:create organization:integrations:update].each do |permission|
+      context "with #{permission} permission" do
+        it "returns the webhook secrets" do
+          result = execute_graphql(
+            current_user: membership.user,
+            current_organization: organization,
+            permissions: ["organization:integrations:view", permission],
+            query:
+          )
+
+          expect(webhook_secrets(result)).to eq(
+            "FlutterwaveProvider" => flutterwave_provider.webhook_secret,
+            "GocardlessProvider" => gocardless_provider.webhook_secret
+          )
+        end
+      end
+    end
+  end
+
+  context "when a MoneyHash provider has no api key" do
+    let(:moneyhash_provider) { create(:moneyhash_provider, organization:) }
+    let(:query) do
+      <<~GQL
+        query {
+          paymentProviders(limit: 10, type: moneyhash) {
+            collection {
+              ... on MoneyhashProvider {
+                id
+                apiKey
+              }
+            }
+          }
+        }
+      GQL
+    end
+
+    before do
+      moneyhash_provider.api_key = nil
+      moneyhash_provider.save!(validate: false)
+    end
+
+    it "returns null instead of an error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: ["organization:integrations:view"],
+        query:
+      )
+
+      expect(result["errors"]).to be_nil
+      expect(result["data"]["paymentProviders"]["collection"]).to eq([{"id" => moneyhash_provider.id, "apiKey" => nil}])
     end
   end
 end
