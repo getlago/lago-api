@@ -39,6 +39,26 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService d
         end
       end
 
+      context "when the stripe customer only uses a shared payment token" do
+        let(:event_json) do
+          get_stripe_fixtures("webhooks/setup_intent_succeeded.json", version:) do |h|
+            h[:data][:object][:customer] = "cus_123" if h[:data][:object][:customer].nil?
+          end
+        end
+        let(:stripe_customer) do
+          create(:stripe_customer, payment_provider: stripe_provider, customer:, provider_customer_id:, provider_payment_methods: %w[shared_payment_token])
+        end
+
+        it "touches neither Stripe nor the customer" do
+          result = webhook_service.call
+
+          expect(result).to be_success
+          expect(result.payment_method).to be_nil
+          expect(customer.payment_methods).to be_empty
+          expect(a_request(:post, %r{/v1/customers/})).not_to have_been_made
+        end
+      end
+
       context "when payment method has no customer" do
         let(:event_json) do
           get_stripe_fixtures("webhooks/setup_intent_succeeded.json", version:) do |h|
