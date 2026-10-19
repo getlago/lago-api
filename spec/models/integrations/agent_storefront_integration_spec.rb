@@ -101,7 +101,8 @@ RSpec.describe Integrations::AgentStorefrontIntegration do
       [
         [{plan_code: plan.code}, {plan_code: plan.code}],
         [{plan_code: plan.code, minimum_topup_cents: 900, maximum_topup_cents: 100}],
-        [{plan_code: plan.code, minimum_topup_cents: "500"}]
+        [{plan_code: plan.code, minimum_topup_cents: "500"}],
+        [{plan_code: plan.code, maximum_topup_cents: 2**63}]
       ].each do |plans|
         integration.plans = plans
         expect(integration).not_to be_valid
