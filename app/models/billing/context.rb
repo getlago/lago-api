@@ -16,7 +16,6 @@ module Billing
 
     delegate :external_id,
       :applicable_billing_entity_id,
-      :billing_entity,
       :organization,
       :organization_id,
       :customer,
