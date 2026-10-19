@@ -102,6 +102,31 @@ RSpec.describe Api::V1::AgentStorefrontsController, :premium do
       )
     end
 
+    context "with plans" do
+      let(:plan) { create(:plan, organization:) }
+      let(:params) { {plans: [{plan_code: plan.code, minimum_topup_cents: 500, maximum_topup_cents: 10_000}]} }
+
+      it "saves and renders them" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:agent_storefront][:plans]).to eq([{plan_code: plan.code, minimum_topup_cents: 500, maximum_topup_cents: 10_000}])
+      end
+
+      context "when the list is empty" do
+        let(:params) { {plans: []} }
+
+        before { storefront.update!(plans: [{plan_code: plan.code}]) }
+
+        it "clears them" do
+          subject
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:agent_storefront][:plans]).to eq([])
+        end
+      end
+    end
+
     context "with an http url" do
       let(:params) { {resource_instructions: "http://acme.example/agents"} }
 

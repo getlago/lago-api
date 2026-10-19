@@ -5,12 +5,17 @@ module Integrations
     validates :code, :payment_provider_code, :scope, presence: true
     validate :https_urls
     validate :stripe_provider_exists
+    validate :validate_plans, if: :plans_changed?
 
     has_many :agent_registrations, class_name: "Agents::Registration", foreign_key: :integration_id, dependent: :delete_all
 
+    PLAN_KEYS = %w[plan_code minimum_topup_cents maximum_topup_cents].freeze
+
     settings_accessors :payment_provider_code, :resource_endpoint, :resource_instructions, :scope
+    settings_accessors :plans, default: []
 
     scope :with_payment_provider_code, ->(code) { where("settings->>'payment_provider_code' = ?", code) }
+    scope :with_plan_code, ->(code) { where("settings->'plans' @> ?::jsonb", [{plan_code: code}].to_json) }
 
     def stripe_provider
       organization&.stripe_payment_providers&.find_by(code: payment_provider_code)
@@ -20,7 +25,46 @@ module Integrations
       "#{ENV["LAGO_API_URL"]}/agents/v1/#{id}"
     end
 
+    def plans=(value)
+      entries = Array.wrap(value).map { it.respond_to?(:to_h) ? it.to_h.stringify_keys.slice(*PLAN_KEYS) : {} }
+      push_to_settings(key: "plans", value: entries)
+    end
+
+    def plans_for_sale
+      organization.plans.parents.where(pending_deletion: false, code: plans.map { it["plan_code"] })
+    end
+
+    def sold_plan(code)
+      plans.find { it["plan_code"] == code }
+    end
+
+    def enrolled_agents?
+      external_ids = agent_registrations.select(:id).map { Agents::ExternalIds.subscription(it) }
+      organization.subscriptions.active.where(external_id: external_ids).exists?
+    end
+
     private
+
+    def plans_changed?
+      attribute_in_database(:settings).to_h["plans"] != settings.to_h["plans"]
+    end
+
+    def validate_plans
+      codes = plans.map { it["plan_code"] }
+
+      if codes.uniq.size != codes.size || !plans.all? { valid_topup_bounds?(it) }
+        errors.add(:plans, "value_is_invalid")
+      elsif !(codes - plans_for_sale.pluck(:code)).empty?
+        errors.add(:plans, "plan_not_found")
+      end
+    end
+
+    def valid_topup_bounds?(sold_plan)
+      minimum, maximum = sold_plan.values_at("minimum_topup_cents", "maximum_topup_cents")
+
+      [minimum, maximum].compact.all? { it.is_a?(Integer) && it.positive? } &&
+        (minimum.nil? || maximum.nil? || maximum >= minimum)
+    end
 
     def https_urls
       %i[resource_endpoint resource_instructions].each do |attribute|
