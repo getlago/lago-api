@@ -64,6 +64,15 @@ module LagoApi
     config.active_support.cache_format_version = 7.1
 
     config.api_key_cache_ttl = 1.hour
+
+    # The Origin header a browser sends from the front end, e.g. "https://app.getlago.com".
+    # Read on each call because the environment files can override `lago_front_url`.
+    def lago_front_origin
+      uri = URI(config.lago_front_url)
+      port = ":#{uri.port}" unless uri.port == uri.default_port
+
+      "#{uri.scheme}://#{uri.host&.downcase}#{port}"
+    end
   end
 end
 

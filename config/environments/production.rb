@@ -36,9 +36,7 @@ Rails.application.configure do
   config.force_ssl = false
 
   # NOTE: The WebSocket is opened by the front end, so the browser sends the front end's origin.
-  config.action_cable.allowed_request_origins = [
-    URI(config.lago_front_url).then { |uri| "#{uri.scheme}://#{uri.host}#{":#{uri.port}" unless uri.port == uri.default_port}" }
-  ]
+  config.action_cable.allowed_request_origins = [Rails.application.lago_front_origin]
 
   config.action_mailer.perform_caching = false
   config.i18n.fallbacks = true
