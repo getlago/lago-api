@@ -41,11 +41,35 @@ RSpec.describe Invoices::FinalizeContractInvoiceService do
     expect(Utils::SegmentTrack).to have_received(:invoice_created).once.with(invoice)
   end
 
-  it "does not sync the invoice with integrations" do
+  it "does not sync the invoice with integrations the customer does not use" do
     result
 
     expect(Integrations::Aggregator::Invoices::CreateJob).not_to have_been_enqueued
     expect(Integrations::Aggregator::Invoices::Hubspot::CreateJob).not_to have_been_enqueued
+  end
+
+  context "when the customer syncs invoices to Hubspot" do
+    before do
+      integration = create(:hubspot_integration, organization:, sync_invoices: true)
+      create(:hubspot_customer, integration:, customer:)
+    end
+
+    it "enqueues the Hubspot sync" do
+      result
+
+      expect(Integrations::Aggregator::Invoices::Hubspot::CreateJob).to have_been_enqueued.once.with(invoice:)
+    end
+  end
+
+  context "when the enclosing transaction rolls back" do
+    it "does not track the invoice creation" do
+      ActiveRecord::Base.transaction do
+        described_class.call(invoice:)
+        raise ActiveRecord::Rollback
+      end
+
+      expect(Utils::SegmentTrack).not_to have_received(:invoice_created)
+    end
   end
 
   context "with a premium license", :premium do
@@ -69,10 +93,11 @@ RSpec.describe Invoices::FinalizeContractInvoiceService do
   context "when the invoice is a draft" do
     let(:invoice_status) { :draft }
 
-    it "finalizes and publishes the invoice" do
+    it "leaves it to the draft finalization flow" do
       expect(result).to be_success
-      expect(invoice.reload).to be_finalized
-      expect(SendWebhookJob).to have_been_enqueued.once.with("invoice.created", invoice)
+      expect(invoice.reload).to be_draft
+      expect(SendWebhookJob).not_to have_been_enqueued
+      expect(Utils::SegmentTrack).not_to have_received(:invoice_created)
     end
   end
 

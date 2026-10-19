@@ -29,7 +29,7 @@ module Invoices
     attr_reader :invoice
 
     def finalizable?
-      invoice.contract? && (invoice.generating? || invoice.draft?)
+      invoice.contract? && invoice.generating?
     end
 
     def publish
@@ -37,7 +37,8 @@ module Invoices
       Utils::ActivityLog.produce_after_commit(invoice, "invoice.created")
       Invoices::GenerateDocumentsJob.perform_after_commit(invoice:, notify: should_deliver_email?)
       Invoices::Payments::CreateService.call_async(invoice:)
-      Utils::SegmentTrack.invoice_created(invoice)
+      Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_after_commit(invoice:) if invoice.should_sync_hubspot_invoice?
+      after_commit { Utils::SegmentTrack.invoice_created(invoice) }
     end
 
     def should_deliver_email?
