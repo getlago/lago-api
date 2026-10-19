@@ -513,6 +513,23 @@ RSpec.describe Fees::ChargeService do
         expect(result.cached_aggregations).to be_nil
       end
     end
+
+    context "with an early-renewal cutoff" do
+      let(:metered_item) do
+        described_class::MeteredItem.new(
+          source: described_class::Sources::BillingSegment.new(
+            billing_segment:,
+            max_timestamp: BillingSegment.inclusive_end(billing_segment.started_at)
+          )
+        )
+      end
+
+      it "does not persist a closing snapshot beyond the cutoff" do
+        expect { result }.not_to change(CachedAggregation, :count)
+        expect(result).to be_success
+        expect(result.cached_aggregations).to be_nil
+      end
+    end
   end
 
   context "with a minimum amount" do

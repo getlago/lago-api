@@ -90,16 +90,8 @@ RSpec.describe BillingSegment do
         context "with custom aggregation" do
           let(:billable_metric) { create(:custom_billable_metric, organization:, recurring: true) }
 
-          it "waits for the segment to end before reconciliation" do
-            expect(segments).to be_empty
-          end
-
-          context "when the segment has ended" do
-            let(:ended_at) { timestamp }
-
-            it "selects the segment for end-of-segment reconciliation" do
-              expect(segments).to eq([segment])
-            end
+          it "selects the segment at its renewal billing time before it ends" do
+            expect(segments).to eq([segment])
           end
         end
       end
@@ -114,8 +106,8 @@ RSpec.describe BillingSegment do
         context "when the segment has ended" do
           let(:ended_at) { timestamp }
 
-          it "selects it for legacy reconciliation" do
-            expect(segments).to eq([segment])
+          it "excludes the processing segment" do
+            expect(segments).to be_empty
           end
         end
       end

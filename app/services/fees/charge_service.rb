@@ -526,6 +526,9 @@ module Fees
 
     def persist_recurring_value(aggregation_results, selected_metered_item, breakdowns_by_group)
       return if options.current_usage? || options.invoice_preview?
+      if selected_metered_item.billing_segment && selected_metered_item.event.nil? && selected_metered_item.boundaries.max_timestamp
+        return
+      end
 
       # NOTE: Only weighted sum and custom aggregations are setting this value
       return unless aggregation_results.first&.recurring_updated_at

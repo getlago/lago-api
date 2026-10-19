@@ -410,6 +410,42 @@ RSpec.describe Invoices::RefreshDraftService do
         end
       end
 
+      context "with an early custom advance renewal" do
+        let(:billable_metric) do
+          create(
+            :custom_billable_metric,
+            organization:,
+            recurring: true,
+            custom_aggregator: <<~RUBY
+              def aggregate(event, previous_state, _aggregation_properties)
+                value = BigDecimal(event.properties['value'].to_s)
+                {total_units: previous_state[:total_units] + value, amount: previous_state[:amount] + value}
+              end
+            RUBY
+          )
+        end
+        let(:product) { create(:product, organization:, billable_metric:) }
+        let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD", billing_timing: :advance) }
+
+        before do
+          create(
+            :event,
+            organization:,
+            customer:,
+            external_subscription_id: contract.external_id,
+            code: billable_metric.code,
+            timestamp: billing_segment.started_at + 1.second,
+            properties: {value: "10"}
+          )
+        end
+
+        it "excludes a post-renewal event without writing a future closing snapshot" do
+          expect(refresh_service.call).to be_success
+          expect(invoice.fees).to be_empty
+          expect(CachedAggregation.where(contract:, product:, timestamp: billing_segment.ended_at)).to be_empty
+        end
+      end
+
       it "hard-deletes the previous draft fees and their applied taxes" do
         previous_fee = create(
           :fee,

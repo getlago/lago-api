@@ -33,26 +33,18 @@ class BillingSegment < ApplicationRecord
   # Pending periodic segments are ready immediately. Advance-metered usage is reconciled
   # after its segment ends, except displayed recurring usage, which bills at renewal.
   scope :ready_for_invoicing, ->(timestamp = Time.current) {
-    where(status: [:pending, :processing])
+    status_pending
       .joins(contract_rate_card: {rate_card: :product})
       .joins("LEFT OUTER JOIN billable_metrics ON billable_metrics.id = products.billable_metric_id")
       .where(
-        "(billing_segments.status = :pending AND NOT (rate_cards.billing_timing = :advance AND " \
-        "products.product_type = :metered)) OR " \
-        "(billing_segments.status IN (:pending, :processing) AND " \
-        "rate_cards.billing_timing = :advance AND products.product_type = :metered AND " \
+        "(NOT (rate_cards.billing_timing = :advance AND products.product_type = :metered) OR " \
+        "(rate_cards.billing_timing = :advance AND products.product_type = :metered AND " \
         "billing_segments.ended_at <= :timestamp) OR " \
-         "(billing_segments.status = :pending AND rate_cards.billing_timing = :advance AND " \
-         "products.product_type = :metered AND rate_cards.display_on_invoice = TRUE AND " \
-         "billable_metrics.recurring = TRUE AND " \
-         "billable_metrics.aggregation_type IN (:sum_aggregation_type, :unique_count_aggregation_type) AND " \
-         "billing_segments.billing_at <= :timestamp)",
-        pending: STATUSES[:pending],
-        processing: STATUSES[:processing],
+        "(rate_cards.billing_timing = :advance AND products.product_type = :metered AND " \
+        "rate_cards.display_on_invoice = TRUE AND " \
+        "billable_metrics.recurring = TRUE AND billing_segments.billing_at <= :timestamp))",
         advance: RateCard::BILLING_TIMINGS[:advance],
         metered: Product::PRODUCT_TYPES[:metered],
-        sum_aggregation_type: BillableMetric::AGGREGATION_TYPES[:sum_agg],
-        unique_count_aggregation_type: BillableMetric::AGGREGATION_TYPES[:unique_count_agg],
         timestamp:
       )
   }
@@ -77,8 +69,7 @@ class BillingSegment < ApplicationRecord
     product = rate_card.product
     metric = product.billable_metric
 
-    rate_card.advance? && product.metered? && rate_card.display_on_invoice? && metric&.recurring? &&
-      (metric.sum_agg? || metric.unique_count_agg?)
+    rate_card.advance? && product.metered? && rate_card.display_on_invoice? && metric&.recurring?
   end
 
   def target_key
