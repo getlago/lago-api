@@ -19,10 +19,10 @@ class CreditNoteDetailsHelper
 
     def self.associations_for(fee_type)
       case fee_type
-      when :subscription then [:applied_taxes, {subscription: :plan}]
-      when :fixed_charge then [:applied_taxes, {fixed_charge: :add_on}]
-      when :charge then [:applied_taxes, {charge: :billable_metric}]
-      when :add_on then [:add_on, :applied_taxes]
+      when :subscription then {subscription: :plan}
+      when :fixed_charge then {fixed_charge: :add_on}
+      when :charge then {charge: :billable_metric}
+      when :add_on then :add_on
       end
     end
 

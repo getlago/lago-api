@@ -42,7 +42,7 @@ RSpec.describe CreditNoteDetailsHelper do
         rows = described_class.new(credit_note).rows
 
         expect(rows).to contain_exactly(
-          described_class::Row.new(label: "Usage • Region", tax_rates: ["0.0%"],
+          described_class::Row.new(label: "Usage • Region", tax_html: "<div>0.0%</div>",
             formatted_amount: MoneyHelper.format(5.to_money("EUR")), label_width: nil)
         )
       end
@@ -376,7 +376,7 @@ RSpec.describe CreditNoteDetailsHelper do
         end
 
         it "uses the sole note tax for that code" do
-          expect(described_class.new(credit_note).rows.sole.tax_rates).to eq(["20.0%"])
+          expect(Nokogiri::HTML.fragment(described_class.new(credit_note).rows.sole.tax_html).text).to eq("20.0%")
         end
       end
 
@@ -404,8 +404,8 @@ RSpec.describe CreditNoteDetailsHelper do
         it "maps each credited fee to its exact tax code and rate" do
           rows_by_label = described_class.new(credit_note).rows.index_by(&:label)
 
-          expect(rows_by_label.fetch("Usage • Region").tax_rates).to eq(["10.0%"])
-          expect(rows_by_label.fetch("Other usage").tax_rates).to eq(["20.0%"])
+          expect(Nokogiri::HTML.fragment(rows_by_label.fetch("Usage • Region").tax_html).text).to eq("10.0%")
+          expect(Nokogiri::HTML.fragment(rows_by_label.fetch("Other usage").tax_html).text).to eq("20.0%")
         end
       end
     end

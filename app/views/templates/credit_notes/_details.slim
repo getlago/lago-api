@@ -15,11 +15,7 @@
         tr
           td.body-1 width=row.label_width = row.label
           td.body-2 width="20%"
-            - if row.tax_rates.present?
-              - row.tax_rates.each do |tax_rate|
-                div = tax_rate
-            - else
-              div 0.0%
+            == row.tax_html
           td.body-2 width="20%" = row.formatted_amount
 
   table.total-table width="100%"

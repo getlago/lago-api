@@ -279,12 +279,12 @@ RSpec.describe "templates/credit_notes/credit_note.slim" do
       allow(applied_taxes_relation).to receive(:present?).and_return(true)
       allow(credit_note).to receive(:applied_taxes).and_return(applied_taxes_relation)
 
-      allow(fixed_charge_fee1).to receive(:applied_taxes).and_return([
-        build_stubbed(:fee_applied_tax, fee: fixed_charge_fee1, tax_code: "vat", tax_rate: 10.0)
-      ])
-      allow(fixed_charge_fee2).to receive(:applied_taxes).and_return([
-        build_stubbed(:fee_applied_tax, fee: fixed_charge_fee2, tax_code: "vat", tax_rate: 10.0)
-      ])
+      fee_applied_taxes = instance_double(ActiveRecord::Relation)
+      allow(fee_applied_taxes).to receive(:present?).and_return(true)
+      allow(fee_applied_taxes).to receive(:order).with(tax_rate: :desc).and_return(fee_applied_taxes)
+      allow(fee_applied_taxes).to receive(:pluck).with(:tax_rate).and_return([10.0])
+      allow(fixed_charge_item1).to receive(:applied_taxes).and_return(fee_applied_taxes)
+      allow(fixed_charge_item2).to receive(:applied_taxes).and_return(fee_applied_taxes)
 
       # Stub sub_total_excluding_taxes_amount
       allow(credit_note).to receive(:sub_total_excluding_taxes_amount).and_return(Money.new(2000, "USD"))
@@ -431,12 +431,12 @@ RSpec.describe "templates/credit_notes/credit_note.slim" do
       allow(applied_taxes_relation).to receive(:present?).and_return(true)
       allow(credit_note).to receive(:applied_taxes).and_return(applied_taxes_relation)
 
-      allow(fixed_charge_fee1).to receive(:applied_taxes).and_return([
-        build_stubbed(:fee_applied_tax, fee: fixed_charge_fee1, tax_code: "sales_tax", tax_rate: 20.0)
-      ])
-      allow(fixed_charge_fee2).to receive(:applied_taxes).and_return([
-        build_stubbed(:fee_applied_tax, fee: fixed_charge_fee2, tax_code: "sales_tax", tax_rate: 20.0)
-      ])
+      fee_applied_taxes = instance_double(ActiveRecord::Relation)
+      allow(fee_applied_taxes).to receive(:present?).and_return(true)
+      allow(fee_applied_taxes).to receive(:order).with(tax_rate: :desc).and_return(fee_applied_taxes)
+      allow(fee_applied_taxes).to receive(:pluck).with(:tax_rate).and_return([20.0])
+      allow(fixed_charge_item1).to receive(:applied_taxes).and_return(fee_applied_taxes)
+      allow(fixed_charge_item2).to receive(:applied_taxes).and_return(fee_applied_taxes)
 
       # Stub sub_total_excluding_taxes_amount
       allow(credit_note).to receive(:sub_total_excluding_taxes_amount).and_return(Money.new(2000, "USD"))
@@ -537,8 +537,8 @@ RSpec.describe "templates/credit_notes/credit_note.slim" do
       allow(applied_taxes_relation).to receive(:present?).and_return(false)
       allow(credit_note).to receive(:applied_taxes).and_return(applied_taxes_relation)
 
-      allow(fixed_charge_fee1).to receive(:applied_taxes).and_return([])
-      allow(fixed_charge_fee2).to receive(:applied_taxes).and_return([])
+      allow(fixed_charge_item1).to receive(:applied_taxes).and_return(CreditNote::AppliedTax.none)
+      allow(fixed_charge_item2).to receive(:applied_taxes).and_return(CreditNote::AppliedTax.none)
 
       # Stub coupons_adjustment_amount for display
       allow(credit_note).to receive(:coupons_adjustment_amount).and_return(Money.new(500, "USD"))

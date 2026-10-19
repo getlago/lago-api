@@ -8,7 +8,7 @@ class CreditNoteDetailsHelper
 
       items.joins(:fee)
         .where(credit_note_items: {organization_id: credit_note.organization_id}, fees: {fee_type: :product})
-        .includes(fee: [:product_filter, :applied_taxes])
+        .includes(fee: :product_filter)
         .order(:created_at, :id)
         .to_a.tap do |product_items|
           fees_without_display_name = product_items.map(&:fee).select { |fee| fee.invoice_display_name.blank? }

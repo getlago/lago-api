@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class CreditNoteDetailsHelper
-  Row = Data.define(:label, :tax_rates, :formatted_amount, :label_width)
+  Row = Data.define(:label, :tax_html, :formatted_amount, :label_width)
 
   def initialize(credit_note)
     @credit_note = credit_note
@@ -10,10 +10,9 @@ class CreditNoteDetailsHelper
   def rows
     return [] if credit_note.invoice.credit?
 
-    note_taxes = credit_note.applied_taxes.to_a
     contract_items = ContractRows.load(credit_note)
     subscription_items = SubscriptionRows.load(credit_note)
-    metered_rows(contract_items, note_taxes) + subscription_rows(subscription_items, note_taxes)
+    metered_rows(contract_items) + subscription_rows(subscription_items)
   end
 
   def self.metered_source_id(fee)
@@ -46,50 +45,45 @@ class CreditNoteDetailsHelper
 
   attr_reader :credit_note
 
-  def subscription_rows(items, note_taxes)
+  def subscription_rows(items)
     items.group_by { |item| item.fee.subscription_id }.values.flat_map do |bucket|
       if bucket.first.fee.subscription_id.nil?
-        add_on_rows(bucket, note_taxes)
+        add_on_rows(bucket)
       else
-        subscription_bucket_rows(bucket, note_taxes)
+        subscription_bucket_rows(bucket)
       end
     end
   end
 
-  def subscription_bucket_rows(items, note_taxes)
+  def subscription_bucket_rows(items)
     rows = []
     subscription_item = items.find { |item| item.fee.subscription? }
     if subscription_item&.amount&.positive?
       label = "#{I18n.t("credit_note.subscription")} - #{subscription_item.fee.subscription.invoice_name}"
-      rows << row(subscription_item, label, note_taxes, "60%")
+      rows << row(subscription_item, label, "60%")
     end
     items.select { |item| item.fee.fixed_charge? }.each do |item|
-      rows << row(item, item.fee.invoice_name + FeeDisplayHelper.grouped_by_display(item.fee), note_taxes, "60%")
+      rows << row(item, item.fee.invoice_name + FeeDisplayHelper.grouped_by_display(item.fee), "60%")
     end
-    rows.concat(metered_rows(items.select { |item| item.fee.charge? }, note_taxes))
+    rows.concat(metered_rows(items.select { |item| item.fee.charge? }))
     rows
   end
 
-  def add_on_rows(items, note_taxes)
+  def add_on_rows(items)
     items.select { |item| item.fee.add_on? }.map do |item|
       label = if item.fee.true_up_parent_fee_id.present?
         I18n.t("invoice.true_up_metric", metric: item.fee.true_up_parent_fee.invoice_name)
       else
         item.fee.invoice_name
       end
-      row(item, label, note_taxes)
+      row(item, label)
     end
   end
 
-  def metered_rows(items, note_taxes)
-    credited_fee_ids = items.map { |item| item.fee.id }
-    parent_items = items.select do |item|
-      item.fee.true_up_parent_fee_id.nil? ||
-        (item.fee.product? && !credited_fee_ids.include?(item.fee.true_up_parent_fee_id))
-    end
+  def metered_rows(items)
     rows = []
     shown_true_up_ids = []
-    parent_items.group_by { |item| CreditNoteDetailsHelper.credit_note_metered_group_key(item.fee) }.each_value do |group|
+    metered_parent_items(items).group_by { |item| CreditNoteDetailsHelper.credit_note_metered_group_key(item.fee) }.each_value do |group|
       filtered = group.all? { |item| CreditNoteDetailsHelper.metered_filter_id(item.fee).present? }
       displayed = []
       # Product fees can represent distinct billed segments; subscription charges retain their legacy aggregate display.
@@ -98,6 +92,7 @@ class CreditNoteDetailsHelper
       else
         group.first(1)
       end
+
       displayed_items.each do |item|
         displayed << item
         fee = item.fee
@@ -105,7 +100,7 @@ class CreditNoteDetailsHelper
         label += FeeDisplayHelper.grouped_by_display(fee)
         filter_name = fee.filter_display_name(separator: " • ") if filtered
         label += " • #{filter_name}" if filter_name.present?
-        rows << row(item, label, note_taxes, filtered ? nil : "60%")
+        rows << row(item, label, filtered ? nil : "60%")
       end
 
       displayed.each do |parent_item|
@@ -114,24 +109,23 @@ class CreditNoteDetailsHelper
 
           shown_true_up_ids << child_item.fee.id
           label = I18n.t("invoice.true_up_metric", metric: child_item.fee.invoice_name)
-          rows << row(child_item, label, note_taxes, "60%")
+          rows << row(child_item, label, "60%")
         end
       end
     end
     rows
   end
 
-  def row(item, label, note_taxes, label_width = nil)
-    fee_taxes = item.fee.applied_taxes.to_a
-    matched_taxes = fee_taxes.filter_map do |fee_tax|
-      exact = note_taxes.find { |tax| tax.tax_code == fee_tax.tax_code && tax.tax_rate == fee_tax.tax_rate }
-      code_matches = note_taxes.select { |tax| tax.tax_code == fee_tax.tax_code }
-      exact || code_matches.first if exact || code_matches.one?
+  def metered_parent_items(items)
+    credited_fee_ids = items.map { |item| item.fee.id }.to_set
+    items.select do |item|
+      item.fee.true_up_parent_fee_id.nil? ||
+        (item.fee.product? && !credited_fee_ids.include?(item.fee.true_up_parent_fee_id))
     end
+  end
 
-    rates = matched_taxes.uniq.map(&:tax_rate).sort.reverse
-    rates = [0.0] if rates.empty?
-    Row.new(label:, tax_rates: rates.map { |rate| "#{rate}%" },
+  def row(item, label, label_width = nil)
+    Row.new(label:, tax_html: TaxHelper.applied_taxes(item),
       formatted_amount: MoneyHelper.format(item.amount), label_width:)
   end
 end
