@@ -14,10 +14,13 @@ RSpec.describe Resolvers::InvitesResolver do
       }
     GQL
   end
-
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:invite) { create(:invite, organization:) }
+
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
+
+  let_it_be(:membership, refind: true) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
@@ -180,7 +183,7 @@ RSpec.describe Resolvers::InvitesResolver do
       end
 
       context "with an admin member" do
-        let(:membership) { create(:membership, roles: %i[admin]) }
+        let(:membership) { create(:membership, user: create(:user), roles: %i[admin]) }
 
         it "returns the token" do
           expect(tokens).to eq([pending_invite.token])

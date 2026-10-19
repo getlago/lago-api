@@ -102,19 +102,19 @@ describe X402::Connection do
       context "when an SVM network has only an EVM payout address" do
         let(:networks) { ["eip155:84532", "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"] }
 
-        it { expect(connection.errors.messages[:payout_addresses]).to eq(["missing_svm_payout_address"]) }
+        it { expect(connection.validation_error_messages[:payout_addresses]).to eq(svm: ["value_is_mandatory"]) }
       end
 
       context "when an EVM network has only an SVM payout address" do
         let(:payout_addresses) { {"svm" => svm_address} }
 
-        it { expect(connection.errors.messages[:payout_addresses]).to eq(["missing_evm_payout_address"]) }
+        it { expect(connection.validation_error_messages[:payout_addresses]).to eq(evm: ["value_is_mandatory"]) }
       end
 
       context "with a mixed-case EVM address whose checksum is wrong" do
         let(:evm_address) { "0x5AAeb6053F3E94C9b9A09f33669435E7Ef1BeAed" }
 
-        it { expect(connection.errors.messages[:payout_addresses]).to eq(["invalid_checksum"]) }
+        it { expect(connection.validation_error_messages[:payout_addresses]).to eq(evm: ["invalid_checksum"]) }
       end
 
       context "with a lowercase EVM address" do
@@ -135,32 +135,39 @@ describe X402::Connection do
       context "with a truncated EVM address" do
         let(:evm_address) { "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeA" }
 
-        it { expect(connection.errors.messages[:payout_addresses]).to eq(["invalid_format"]) }
+        it { expect(connection.validation_error_messages[:payout_addresses]).to eq(evm: ["invalid_format"]) }
       end
 
       context "with a transaction signature as the SVM address" do
         let(:networks) { ["solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"] }
         let(:payout_addresses) { {"svm" => X402::Base58.encode("\x01".b * 64)} }
 
-        it { expect(connection.errors.messages[:payout_addresses]).to eq(["invalid_format"]) }
+        it { expect(connection.validation_error_messages[:payout_addresses]).to eq(svm: ["invalid_format"]) }
+      end
+
+      context "with malformed addresses for both families" do
+        let(:networks) { ["eip155:84532", "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"] }
+        let(:payout_addresses) { {"evm" => "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeA", "svm" => X402::Base58.encode("\x01".b * 64)} }
+
+        it { expect(connection.validation_error_messages[:payout_addresses]).to eq(evm: ["invalid_format"], svm: ["invalid_format"]) }
       end
 
       context "with an unknown family" do
         let(:payout_addresses) { {"evm" => evm_address, "sui" => evm_address} }
 
-        it { expect(connection.errors.messages[:payout_addresses]).to eq(["value_is_invalid"]) }
+        it { expect(connection.validation_error_messages[:payout_addresses]).to eq(["value_is_invalid"]) }
       end
 
       context "with payout addresses that are not an object" do
         let(:payout_addresses) { [evm_address] }
 
-        it { expect(connection.errors.messages[:payout_addresses]).to eq(["value_is_invalid"]) }
+        it { expect(connection.validation_error_messages[:payout_addresses]).to eq(["value_is_invalid"]) }
       end
 
       context "without payout addresses" do
         let(:payout_addresses) { nil }
 
-        it { expect(connection.errors.messages[:payout_addresses]).to eq(["value_is_invalid"]) }
+        it { expect(connection.validation_error_messages[:payout_addresses]).to eq(["value_is_invalid"]) }
       end
 
       context "with symbol keys" do
@@ -185,6 +192,24 @@ describe X402::Connection do
       before { connection.valid? }
 
       it { expect(connection.errors.messages[:auto_create_customers]).to eq(["value_is_invalid"]) }
+    end
+  end
+
+  describe "#validation_error_messages" do
+    before { connection.valid? }
+
+    context "with errors on other attributes" do
+      let(:networks) { ["eip155:84532", "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"] }
+
+      it "keeps them flat beside the payout addresses grouped by family" do
+        expect(connection.validation_error_messages).to eq(networks: ["mixed_environments"], payout_addresses: {svm: ["value_is_mandatory"]})
+      end
+    end
+
+    context "without payout address errors" do
+      let(:networks) { ["eip155:8453", "eip155:84532"] }
+
+      it { expect(connection.validation_error_messages).to eq(networks: ["mixed_environments"]) }
     end
   end
 

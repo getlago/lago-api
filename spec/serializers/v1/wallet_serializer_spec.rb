@@ -5,6 +5,9 @@ require "rails_helper"
 RSpec.describe ::V1::WalletSerializer do
   subject(:serializer) { described_class.new(wallet, root_name: "wallet", includes: %i[limitations recurring_transaction_rules applied_invoice_custom_sections]) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:customer) { create_default(:customer) }
   let(:wallet) { create(:wallet, :with_purchase_order_number, :with_top_up_limits, allowed_fee_types: %w[charge]) }
   let(:recurring_transaction_rule) { create(:recurring_transaction_rule, :with_purchase_order_number, wallet:) }
   let(:wallet_target) { create(:wallet_target, wallet:) }
@@ -73,6 +76,32 @@ RSpec.describe ::V1::WalletSerializer do
       ids = result["wallet"]["recurring_transaction_rules"].map { |r| r["lago_id"] }
 
       expect(ids).to match_array([recurring_transaction_rule.id, active_rule.id, active_future_expiration_rule.id])
+    end
+  end
+
+  context "with an x402 wallet" do
+    let(:wallet) { create(:wallet, customer:, x402_enabled: true) }
+
+    context "without x402 payments" do
+      it "omits x402_enabled" do
+        expect(JSON.parse(serializer.to_json)["wallet"]).not_to have_key("x402_enabled")
+      end
+    end
+
+    context "with x402 payments enabled" do
+      let(:customer) { create(:customer, organization: create(:organization, feature_flags: ["x402_payments"])) }
+
+      context "without premium" do
+        it "omits x402_enabled" do
+          expect(JSON.parse(serializer.to_json)["wallet"]).not_to have_key("x402_enabled")
+        end
+      end
+
+      context "with premium", :premium do
+        it "serializes x402_enabled" do
+          expect(JSON.parse(serializer.to_json)["wallet"]["x402_enabled"]).to eq(true)
+        end
+      end
     end
   end
 end

@@ -9,10 +9,14 @@ RSpec.describe EInvoices::Invoices::Cii::Builder do
     end
   end
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:customer) { create_default(:customer) }
   let(:invoice) { create(:invoice, invoice_type:, currency: "USD", total_amount_cents: 3000, payment_due_date: "20250316".to_date) }
-  let(:invoice_type) { :one_off }
   let(:invoice_fee1) { create(:fee, invoice:, units: 5, amount: 10, precise_unit_amount: 2) }
   let(:invoice_fee2) { create(:fee, invoice:, units: 1, amount: 25, precise_unit_amount: 25) }
+
+  let(:invoice_type) { :one_off }
 
   before do
     invoice_fee1

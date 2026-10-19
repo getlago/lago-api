@@ -5,9 +5,8 @@ require "rails_helper"
 RSpec.describe RateCardRates::CreateService do
   subject(:result) { described_class.call(rate_card:, params:) }
 
-  let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
+  let_it_be(:organization, refind: true) { create(:organization, feature_flags: ["product_catalog"]) }
   let(:rate_card) { create(:rate_card, organization:) }
-
   let(:params) do
     {
       code: "standard_price",
@@ -25,6 +24,10 @@ RSpec.describe RateCardRates::CreateService do
     allow(Utils::ActivityLog).to receive(:produce) do |*args, **kwargs, &block|
       activity_log_calls << {args:, kwargs:, block:}
     end
+  end
+
+  before_all do
+    create_default(:billable_metric)
   end
 
   it "creates an active rate when effective now" do
@@ -206,6 +209,25 @@ RSpec.describe RateCardRates::CreateService do
         expect(result).not_to be_success
         expect(result.error.messages[:effective_from]).to eq(["must_be_after_active_rate"])
       end
+    end
+  end
+
+  context "when an attached metered advance card receives its first rate" do
+    let(:customer) { create(:customer, organization:) }
+    let(:contract) { create(:contract, :pending, organization:, customer:) }
+    let(:rate_card) { create(:rate_card, :advance, organization:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+
+    before do
+      contract_rate_card
+      create(:rate_phase, :contract_level, organization:, contract_rate_card:, position: 1)
+    end
+
+    it "adds the rate without persisting an event-pricing segment" do
+      expect { result }.not_to change(BillingSegment, :count)
+      expect(result).to be_success
+      expect(result.rate_card_rate).to be_persisted
+      expect(contract_rate_card.billing_segments).to be_empty
     end
   end
 

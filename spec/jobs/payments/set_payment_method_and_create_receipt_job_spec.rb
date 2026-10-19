@@ -3,6 +3,11 @@
 require "rails_helper"
 
 RSpec.describe Payments::SetPaymentMethodAndCreateReceiptJob do
+  before_all do
+    create_default(:organization)
+    create_default(:invoice)
+  end
+
   let(:payment) { create(:payment) }
   let(:provider_payment_method_id) { "pm_001" }
 

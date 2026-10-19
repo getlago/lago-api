@@ -10,6 +10,7 @@ RSpec.describe RateCards::DestroyService, :capture_kafka_messages do
   let(:active_rate) { create(:rate_card_rate, organization:, rate_card:, effective_from: Time.current.beginning_of_day) }
 
   before do
+    create_default(:billable_metric)
     allow(Utils::ActivityLog).to receive(:produce).and_call_original
     active_rate if rate_card
   end

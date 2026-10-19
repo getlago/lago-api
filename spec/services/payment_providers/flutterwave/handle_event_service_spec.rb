@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe PaymentProviders::Flutterwave::HandleEventService do
   subject(:handle_event_service) { described_class.new(organization:, event_json:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:event_json) { payload.to_json }
 
   let(:payload) do

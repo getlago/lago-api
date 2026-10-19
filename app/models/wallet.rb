@@ -154,6 +154,7 @@ end
 #  lock_version                        :integer          default(0), not null
 #  name                                :string
 #  ongoing_balance_cents               :bigint           default(0), not null
+#  ongoing_billable_metric_amounts     :jsonb            not null
 #  ongoing_usage_balance_cents         :bigint           default(0), not null
 #  paid_top_up_max_amount_cents        :bigint
 #  paid_top_up_min_amount_cents        :bigint

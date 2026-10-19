@@ -11,10 +11,17 @@ class SendWebhookJob < ApplicationJob
   retry_on "Aws::S3::Errors::SlowDown", wait: :polynomially_longer, attempts: 6
 
   WEBHOOK_SERVICES = {
+    "add_on.created" => Webhooks::AddOns::CreatedService,
+    "add_on.updated" => Webhooks::AddOns::UpdatedService,
+    "add_on.deleted" => Webhooks::AddOns::DeletedService,
     "alert.triggered" => Webhooks::UsageMonitoring::AlertTriggeredService,
     "billable_metric.created" => Webhooks::BillableMetrics::CreatedService,
     "billable_metric.updated" => Webhooks::BillableMetrics::UpdatedService,
     "billable_metric.deleted" => Webhooks::BillableMetrics::DeletedService,
+    "coupon.created" => Webhooks::Coupons::CreatedService,
+    "coupon.updated" => Webhooks::Coupons::UpdatedService,
+    "coupon.deleted" => Webhooks::Coupons::DeletedService,
+    "coupon.terminated" => Webhooks::Coupons::TerminatedService,
     "dunning_campaign.finished" => Webhooks::DunningCampaigns::FinishedService,
     "invoice.created" => Webhooks::Invoices::CreatedService,
     "invoice.one_off_created" => Webhooks::Invoices::OneOffCreatedService,

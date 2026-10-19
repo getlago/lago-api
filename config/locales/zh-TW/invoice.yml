@@ -41,6 +41,7 @@ zh-TW:
       standard_payment: 標準付款
     fee_prorated: 費用依期間按比例計算，顯示的單價為平均值
     fees_from_to_date: 費用期間：%{from_date} 至 %{to_date}
+    free_credits: 免費點數
     from_to_date: "%{from_date} 至 %{to_date}"
     graduated:
       fee_per_unit_for_the_first: 前 %{to} 單位的每單位費用
@@ -130,6 +131,7 @@ zh-TW:
     units: 單位
     units_prorated_per_period: 每 %{period} 每秒按比例計算的單位
     usage_based_fees: 依使用量計費的費用
+    usage_breakdown_by: 依 %{keys} 的用量明細
     volume:
       fee_per_unit: 每單位費用
       flat_fee_for_all_units: 所有單位的固定費用

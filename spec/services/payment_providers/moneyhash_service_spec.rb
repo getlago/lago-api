@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe PaymentProviders::MoneyhashService do
   include_context "with mocked security logger"
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:moneyhash_provider) { create(:moneyhash_provider, organization:) }
   let(:customer) { create(:customer, organization:) }
   let(:moneyhash_customer) { create(:moneyhash_customer, customer:) }
@@ -40,6 +40,25 @@ RSpec.describe PaymentProviders::MoneyhashService do
       expect(result.moneyhash_provider.code).to eq(moneyhash_provider.code)
       expect(result.moneyhash_provider.name).to eq("updated_name")
       expect(result.moneyhash_provider.flow_id).to eq("updated_flow_id")
+    end
+
+    it "keeps the api key when the masked value is sent back" do
+      moneyhash_provider.update!(signature_key: "same_signature_key")
+      api_key = moneyhash_provider.api_key
+
+      result = described_class.new.create_or_update(organization:, code: moneyhash_provider.code, api_key: "••••••••…#{api_key[-3..]}")
+
+      expect(result).to be_success
+      expect(result.moneyhash_provider.reload.api_key).to eq(api_key)
+    end
+
+    it "updates the api key when a new value is sent" do
+      moneyhash_provider.update!(signature_key: "same_signature_key")
+
+      result = described_class.new.create_or_update(organization:, code: moneyhash_provider.code, api_key: "new_api_key")
+
+      expect(result).to be_success
+      expect(result.moneyhash_provider.reload.api_key).to eq("new_api_key")
     end
 
     it_behaves_like "produces a security log", "integration.updated" do

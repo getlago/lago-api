@@ -3,15 +3,20 @@
 require "rails_helper"
 
 RSpec.describe SendWebhookJob do
+  before_all do
+    create_default(:customer)
+  end
+
   subject(:send_webhook_job) { described_class }
 
-  let(:organization) { create(:organization, webhook_url: "http://foo.bar") }
-  let(:invoice) { create(:invoice, organization:) }
+  let_it_be(:organization) { create_default(:organization, webhook_url: "http://foo.bar") }
+  let_it_be(:invoice) { create(:invoice, organization:) }
   let(:triggered_alert) { create(:triggered_alert, alert: create(:alert, organization:)) }
 
   describe ".perform_later" do
     context "when no webhook endpoints is present" do
-      let(:organization) { create(:organization, webhook_url: nil) }
+      let_it_be(:organization) { create_default(:organization, webhook_url: nil) }
+      let_it_be(:invoice) { create(:invoice, organization:) }
 
       it "does not enqueue a job" do
         expect do
@@ -760,6 +765,22 @@ RSpec.describe SendWebhookJob do
       end
     end
 
+    context "with add_on webhooks" do
+      let(:object) { create(:add_on, organization:) }
+
+      it_behaves_like "a webhook service",
+        "add_on.created",
+        Webhooks::AddOns::CreatedService
+
+      it_behaves_like "a webhook service",
+        "add_on.updated",
+        Webhooks::AddOns::UpdatedService
+
+      it_behaves_like "a webhook service",
+        "add_on.deleted",
+        Webhooks::AddOns::DeletedService
+    end
+
     context "with billable metric webhooks" do
       let(:object) { create(:billable_metric, organization:) }
 
@@ -774,6 +795,26 @@ RSpec.describe SendWebhookJob do
       it_behaves_like "a webhook service",
         "billable_metric.deleted",
         Webhooks::BillableMetrics::DeletedService
+    end
+
+    context "with coupon webhooks" do
+      let(:object) { create(:coupon, organization:) }
+
+      it_behaves_like "a webhook service",
+        "coupon.created",
+        Webhooks::Coupons::CreatedService
+
+      it_behaves_like "a webhook service",
+        "coupon.updated",
+        Webhooks::Coupons::UpdatedService
+
+      it_behaves_like "a webhook service",
+        "coupon.deleted",
+        Webhooks::Coupons::DeletedService
+
+      it_behaves_like "a webhook service",
+        "coupon.terminated",
+        Webhooks::Coupons::TerminatedService
     end
 
     context "with quote webhooks" do

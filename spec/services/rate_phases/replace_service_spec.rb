@@ -8,16 +8,18 @@ RSpec.describe RatePhases::ReplaceService, :capture_kafka_messages do
   let(:organization) { create(:organization) }
   let(:catalog_plan) { create(:catalog_plan, organization:) }
   let(:rate_card) { create(:rate_card, organization:) }
-  let(:plan_rate_card) { create(:plan_rate_card, organization:, catalog_plan:, rate_card:) }
-
   let(:phases_params) do
     [
       {code: "trial", position: 1, name: "trial", billing_interval_cycle_count: 3},
       {code: "standard", position: 2, name: "standard", billing_interval_cycle_count: nil}
     ]
   end
+  let(:plan_rate_card) { create(:plan_rate_card, organization:, catalog_plan:, rate_card:) }
 
-  before { allow(Utils::ActivityLog).to receive(:produce_after_commit).and_yield }
+  before {
+    create_default(:billable_metric)
+    allow(Utils::ActivityLog).to receive(:produce_after_commit).and_yield
+  }
 
   def activity_payload(owner, event_type)
     expect(kafka_messages.size).to eq(1)

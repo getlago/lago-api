@@ -34,6 +34,15 @@ RSpec.describe OrganizationMailer do
       expect(email_body).to include("Disabled Google Oauth")
     end
 
+    context "with a non-English document locale" do
+      let(:organization) { create(:organization, document_locale: "fr") }
+
+      it "sends the email in English" do
+        expect(subject.subject).to eq("Login method updated in your Lago workspace")
+        expect(subject.message.body).to include("Enabled Okta")
+      end
+    end
+
     context "without changes" do
       let(:additions) { [] }
       let(:deletions) { [] }

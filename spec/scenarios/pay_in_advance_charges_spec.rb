@@ -496,11 +496,7 @@ describe "Pay in advance charges Scenarios", transaction: false do
       end
 
       if organization.clickhouse_events_store?
-        Events::Stores::StoreFactory.with_override(
-          store_class: Events::Stores::ClickhouseStore,
-          deduplicate: false,
-          &process_events
-        )
+        Events::Stores::StoreFactory.with_override(store_class: Events::Stores::ClickhouseStore, &process_events)
       else
         process_events.call
       end

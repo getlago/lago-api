@@ -117,6 +117,7 @@ ALTER TABLE IF EXISTS ONLY public.billing_segments DROP CONSTRAINT IF EXISTS fk_
 ALTER TABLE IF EXISTS ONLY public.contracts_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_b3aef9be8c;
 ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS fk_rails_b3864df641;
 ALTER TABLE IF EXISTS ONLY public.billing_entities_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_b283a89721;
+ALTER TABLE IF EXISTS ONLY public.cached_aggregations DROP CONSTRAINT IF EXISTS fk_rails_b205a930f5;
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_b07fc711f7;
 ALTER TABLE IF EXISTS ONLY public.billing_object_connections DROP CONSTRAINT IF EXISTS fk_rails_aed4cbd20b;
 ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS fk_rails_aea6422e6a;
@@ -128,6 +129,7 @@ ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.integration_items DROP CONSTRAINT IF EXISTS fk_rails_a9dc2ea536;
 ALTER TABLE IF EXISTS ONLY public.rate_phases DROP CONSTRAINT IF EXISTS fk_rails_a9ba49506f;
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_a958b8f5a7;
+ALTER TABLE IF EXISTS ONLY public.cached_aggregations DROP CONSTRAINT IF EXISTS fk_rails_a808f6f3b4;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_a7f20c73bb;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_a710519346;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_a6d07eec6e;
@@ -283,6 +285,7 @@ ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS fk_rails_49
 ALTER TABLE IF EXISTS ONLY public.integration_items DROP CONSTRAINT IF EXISTS fk_rails_47d8081062;
 ALTER TABLE IF EXISTS ONLY public.contract_rate_cards DROP CONSTRAINT IF EXISTS fk_rails_457dfe353b;
 ALTER TABLE IF EXISTS ONLY public.quote_owners DROP CONSTRAINT IF EXISTS fk_rails_45230f8485;
+ALTER TABLE IF EXISTS ONLY public.cached_aggregations DROP CONSTRAINT IF EXISTS fk_rails_41915ef8ff;
 ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rails_4117574b51;
 ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rails_41088c7d45;
 ALTER TABLE IF EXISTS ONLY public.x402_settlements DROP CONSTRAINT IF EXISTS fk_rails_40fb23816d;
@@ -398,19 +401,6 @@ DROP TRIGGER IF EXISTS record_deletions_on_fees ON public.fees;
 DROP TRIGGER IF EXISTS record_deletions_on_credit_notes_taxes ON public.credit_notes_taxes;
 DROP TRIGGER IF EXISTS ensure_consistency ON public.roles;
 DROP TRIGGER IF EXISTS before_payment_receipt_insert ON public.payment_receipts;
-CREATE OR REPLACE VIEW public.flat_filters AS
-SELECT
-    NULL::uuid AS organization_id,
-    NULL::character varying AS billable_metric_code,
-    NULL::uuid AS plan_id,
-    NULL::uuid AS charge_id,
-    NULL::timestamp(6) without time zone AS charge_updated_at,
-    NULL::uuid AS charge_filter_id,
-    NULL::timestamp(6) without time zone AS charge_filter_updated_at,
-    NULL::jsonb AS filters,
-    NULL::jsonb AS pricing_group_keys,
-    NULL::boolean AS pay_in_advance,
-    NULL::boolean AS accepts_target_wallet;
 CREATE OR REPLACE VIEW public.billable_metrics_grouped_charges AS
 SELECT
     NULL::uuid AS organization_id,
@@ -426,6 +416,7 @@ SELECT
     NULL::jsonb AS filters_grouped_by;
 DROP INDEX IF EXISTS public.unique_default_payment_method_per_customer;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_x402_connection_id;
+DROP INDEX IF EXISTS public.index_x402_settlements_on_ungranted_id;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_pending_reconcile_after;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_pending_invoice_id;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_pending_credit_purchase_payer;
@@ -1115,6 +1106,7 @@ DROP INDEX IF EXISTS public.idx_cs_audit_feature_created;
 DROP INDEX IF EXISTS public.idx_cs_audit_batch;
 DROP INDEX IF EXISTS public.idx_cs_audit_actor_created;
 DROP INDEX IF EXISTS public.idx_cached_aggregation_filtered_lookup;
+DROP INDEX IF EXISTS public.idx_cached_aggregation_contract_lookup;
 DROP INDEX IF EXISTS public.idx_billable_metrics_id_agg_type;
 DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_wallet;
 DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_subscription_with_bm;
@@ -1343,7 +1335,6 @@ DROP TABLE IF EXISTS public.inbound_webhooks;
 DROP TABLE IF EXISTS public.idempotency_records;
 DROP TABLE IF EXISTS public.groups;
 DROP TABLE IF EXISTS public.group_properties;
-DROP VIEW IF EXISTS public.flat_filters;
 DROP TABLE IF EXISTS public.fixed_charges_taxes;
 DROP TABLE IF EXISTS public.fixed_charge_events;
 DROP VIEW IF EXISTS public.exports_wallets;
@@ -2642,7 +2633,7 @@ CREATE TABLE public.cached_aggregations (
     organization_id uuid NOT NULL,
     "timestamp" timestamp(6) without time zone NOT NULL,
     external_subscription_id character varying NOT NULL,
-    charge_id uuid NOT NULL,
+    charge_id uuid,
     group_id uuid,
     current_aggregation numeric,
     max_aggregation numeric,
@@ -2653,7 +2644,11 @@ CREATE TABLE public.cached_aggregations (
     charge_filter_id uuid,
     current_amount numeric,
     event_transaction_id character varying,
-    presentation_breakdowns jsonb DEFAULT '[]'::jsonb NOT NULL
+    presentation_breakdowns jsonb DEFAULT '[]'::jsonb NOT NULL,
+    contract_id uuid,
+    product_id uuid,
+    product_filter_id uuid,
+    CONSTRAINT cached_aggregations_identity_present CHECK (((charge_id IS NOT NULL) OR ((contract_id IS NOT NULL) AND (product_id IS NOT NULL))))
 );
 
 
@@ -4971,6 +4966,7 @@ CREATE TABLE public.wallet_transactions (
     voided_invoice_id uuid,
     billing_entity_id uuid,
     purchase_order_number character varying,
+    billable_metric_amounts jsonb,
     CONSTRAINT remaining_amount_cents_non_negative CHECK (((remaining_amount_cents >= 0) OR (remaining_amount_cents IS NULL)))
 );
 
@@ -4993,6 +4989,7 @@ CREATE VIEW public.exports_wallet_transactions AS
             WHEN 0 THEN 'manual'::text
             WHEN 1 THEN 'interval'::text
             WHEN 2 THEN 'threshold'::text
+            WHEN 3 THEN 'x402'::text
             ELSE NULL::text
         END AS source,
         CASE wt.transaction_status
@@ -5062,7 +5059,8 @@ CREATE TABLE public.wallets (
     code character varying,
     billing_entity_id uuid,
     purchase_order_number character varying,
-    x402_enabled boolean DEFAULT false NOT NULL
+    x402_enabled boolean DEFAULT false NOT NULL,
+    ongoing_billable_metric_amounts jsonb DEFAULT '{}'::jsonb NOT NULL
 );
 
 
@@ -5127,25 +5125,6 @@ CREATE TABLE public.fixed_charges_taxes (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
 );
-
-
---
--- Name: flat_filters; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.flat_filters AS
-SELECT
-    NULL::uuid AS organization_id,
-    NULL::character varying AS billable_metric_code,
-    NULL::uuid AS plan_id,
-    NULL::uuid AS charge_id,
-    NULL::timestamp(6) without time zone AS charge_updated_at,
-    NULL::uuid AS charge_filter_id,
-    NULL::timestamp(6) without time zone AS charge_filter_updated_at,
-    NULL::jsonb AS filters,
-    NULL::jsonb AS pricing_group_keys,
-    NULL::boolean AS pay_in_advance,
-    NULL::boolean AS accepts_target_wallet;
 
 
 --
@@ -7706,6 +7685,13 @@ CREATE UNIQUE INDEX idx_alerts_unique_per_type_per_wallet ON public.usage_monito
 --
 
 CREATE INDEX idx_billable_metrics_id_agg_type ON public.billable_metrics USING btree (id) INCLUDE (aggregation_type);
+
+
+--
+-- Name: idx_cached_aggregation_contract_lookup; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_cached_aggregation_contract_lookup ON public.cached_aggregations USING btree (contract_id, product_id, product_filter_id, "timestamp" DESC) WHERE (contract_id IS NOT NULL);
 
 
 --
@@ -12536,6 +12522,13 @@ CREATE INDEX index_x402_settlements_on_pending_reconcile_after ON public.x402_se
 
 
 --
+-- Name: index_x402_settlements_on_ungranted_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_x402_settlements_on_ungranted_id ON public.x402_settlements USING btree (id) WHERE ((kind = 'credit_purchase'::public.x402_settlement_kind) AND (status = 'settled'::public.x402_settlement_status) AND (wallet_transaction_id IS NULL));
+
+
+--
 -- Name: index_x402_settlements_on_x402_connection_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12606,38 +12599,6 @@ CREATE OR REPLACE VIEW public.billable_metrics_grouped_charges AS
      LEFT JOIN public.billable_metric_filters ON ((charge_filter_values.billable_metric_filter_id = billable_metric_filters.id)))
   WHERE ((billable_metrics.deleted_at IS NULL) AND (charges.deleted_at IS NULL) AND (charge_filters.deleted_at IS NULL) AND (charge_filter_values.deleted_at IS NULL) AND (billable_metric_filters.deleted_at IS NULL))
   GROUP BY billable_metrics.organization_id, billable_metrics.code, billable_metrics.aggregation_type, billable_metrics.field_name, charges.plan_id, charges.id, charge_filters.id;
-
-
---
--- Name: flat_filters _RETURN; Type: RULE; Schema: public; Owner: -
---
-
-CREATE OR REPLACE VIEW public.flat_filters AS
- SELECT billable_metrics.organization_id,
-    billable_metrics.code AS billable_metric_code,
-    charges.plan_id,
-    charges.id AS charge_id,
-    charges.updated_at AS charge_updated_at,
-    charge_filters.id AS charge_filter_id,
-    charge_filters.updated_at AS charge_filter_updated_at,
-        CASE
-            WHEN (charge_filters.id IS NOT NULL) THEN jsonb_object_agg(COALESCE(billable_metric_filters.key, ''::character varying),
-            CASE
-                WHEN ((charge_filter_values."values")::text[] && ARRAY['__ALL_FILTER_VALUES__'::text]) THEN billable_metric_filters."values"
-                ELSE charge_filter_values."values"
-            END)
-            ELSE NULL::jsonb
-        END AS filters,
-    (COALESCE(charge_filters.properties, charges.properties) -> 'pricing_group_keys'::text) AS pricing_group_keys,
-    charges.pay_in_advance,
-    charges.accepts_target_wallet
-   FROM ((((public.billable_metrics
-     JOIN public.charges ON ((charges.billable_metric_id = billable_metrics.id)))
-     LEFT JOIN public.charge_filters ON (((charge_filters.charge_id = charges.id) AND (charge_filters.deleted_at IS NULL))))
-     LEFT JOIN public.charge_filter_values ON (((charge_filter_values.charge_filter_id = charge_filters.id) AND (charge_filter_values.deleted_at IS NULL))))
-     LEFT JOIN public.billable_metric_filters ON (((billable_metric_filters.id = charge_filter_values.billable_metric_filter_id) AND (billable_metric_filters.deleted_at IS NULL))))
-  WHERE ((billable_metrics.deleted_at IS NULL) AND (charges.deleted_at IS NULL))
-  GROUP BY billable_metrics.organization_id, billable_metrics.code, charges.plan_id, charges.id, charges.updated_at, charge_filters.id, charge_filters.updated_at;
 
 
 --
@@ -13551,6 +13512,14 @@ ALTER TABLE ONLY public.credit_notes
 
 ALTER TABLE ONLY public.credit_notes
     ADD CONSTRAINT fk_rails_4117574b51 FOREIGN KEY (invoice_id) REFERENCES public.invoices(id);
+
+
+--
+-- Name: cached_aggregations fk_rails_41915ef8ff; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cached_aggregations
+    ADD CONSTRAINT fk_rails_41915ef8ff FOREIGN KEY (product_filter_id) REFERENCES public.product_filters(id);
 
 
 --
@@ -14794,6 +14763,14 @@ ALTER TABLE ONLY public.recurring_transaction_rules_invoice_custom_sections
 
 
 --
+-- Name: cached_aggregations fk_rails_a808f6f3b4; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cached_aggregations
+    ADD CONSTRAINT fk_rails_a808f6f3b4 FOREIGN KEY (product_id) REFERENCES public.products(id);
+
+
+--
 -- Name: invoices fk_rails_a958b8f5a7; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14879,6 +14856,14 @@ ALTER TABLE ONLY public.billing_object_connections
 
 ALTER TABLE ONLY public.daily_usages
     ADD CONSTRAINT fk_rails_b07fc711f7 FOREIGN KEY (customer_id) REFERENCES public.customers(id);
+
+
+--
+-- Name: cached_aggregations fk_rails_b205a930f5; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cached_aggregations
+    ADD CONSTRAINT fk_rails_b205a930f5 FOREIGN KEY (contract_id) REFERENCES public.contracts(id);
 
 
 --
@@ -15752,7 +15737,15 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261014123350'),
+('20261014123349'),
+('20261014123348'),
+('20261013124033'),
+('20261009154629'),
+('20261008135612'),
 ('20261006134840'),
+('20261005134744'),
+('20261005133729'),
 ('20261005112941'),
 ('20261005105630'),
 ('20261005094159'),

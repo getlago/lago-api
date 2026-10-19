@@ -14,10 +14,7 @@ RSpec.describe Mutations::RateCards::Create do
   end
 
   let(:required_permission) { "rate_cards:create" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:product) { create(:product, organization:) }
-
   let(:input) do
     {
       productId: product.id,
@@ -27,7 +24,6 @@ RSpec.describe Mutations::RateCards::Create do
       billingTiming: "arrears"
     }
   end
-
   let(:mutation) do
     <<-GQL
       mutation($input: CreateRateCardInput!) {
@@ -41,6 +37,10 @@ RSpec.describe Mutations::RateCards::Create do
       }
     GQL
   end
+
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
@@ -73,7 +73,7 @@ RSpec.describe Mutations::RateCards::Create do
     end
 
     context "when a tax belongs to another organization" do
-      let(:other_tax) { create(:tax) }
+      let(:other_tax) { create(:tax, organization: create(:organization)) }
 
       before { input[:taxCodes] = [other_tax.code] }
 

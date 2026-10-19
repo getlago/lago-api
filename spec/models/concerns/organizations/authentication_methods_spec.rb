@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Organizations::AuthenticationMethods do
   describe "authentication_methods" do
-    let(:organization) { create(:organization) }
+    let_it_be(:organization, refind: true) { create_default(:organization) }
 
     before do
       organization
@@ -81,6 +81,65 @@ RSpec.describe Organizations::AuthenticationMethods do
           organization.authentication_methods = ["strange"]
           organization.save!
         end.to raise_error(ActiveRecord::RecordInvalid)
+      end
+    end
+  end
+
+  describe "#accessible_by_session?" do
+    let(:organization) { create(:organization, authentication_methods: %w[email_password okta]) }
+    let(:okta) { Organizations::AuthenticationMethods::OKTA }
+
+    it "refuses a session whose login method the organization does not allow" do
+      expect(organization.accessible_by_session?(login_method: "google_oauth")).to be(false)
+      expect(organization.accessible_by_session?(login_method: nil)).to be(false)
+    end
+
+    it "accepts a non SSO session whose login method the organization allows" do
+      expect(organization.accessible_by_session?(login_method: "email_password")).to be(true)
+    end
+
+    context "with an SSO session" do
+      before { create(:okta_integration, organization:, domain: "acme.test", host: "acme.okta.com") }
+
+      it "accepts the organization whose integration authenticated the user" do
+        expect(organization.accessible_by_session?(login_method: okta, sso_organization_id: organization.id, sso_issuer: "evil.test")).to be(true)
+      end
+
+      it "accepts an organization whose integration has the same issuer" do
+        expect(organization.accessible_by_session?(login_method: okta, sso_organization_id: SecureRandom.uuid, sso_issuer: "acme.okta.com")).to be(true)
+      end
+
+      it "refuses an organization whose integration has another issuer" do
+        expect(organization.accessible_by_session?(login_method: okta, sso_organization_id: SecureRandom.uuid, sso_issuer: "evil.test")).to be(false)
+      end
+
+      it "refuses a session without SSO claims" do
+        expect(organization.accessible_by_session?(login_method: okta)).to be(false)
+      end
+    end
+
+    context "when the organization allows Okta without an Okta integration" do
+      it "refuses a session from another organization" do
+        expect(organization.accessible_by_session?(login_method: okta, sso_organization_id: SecureRandom.uuid, sso_issuer: "acme.okta.com")).to be(false)
+      end
+    end
+
+    context "when the organization keeps cross-organization SSO sessions" do
+      let(:organization) { create(:organization, authentication_methods: %w[email_password okta], feature_flags: ["sso_cross_organization_sessions"]) }
+
+      let(:sso_organization) { create(:organization, feature_flags: ["sso_cross_organization_sessions"]) }
+
+      it "accepts an SSO session from a flagged organization's identity provider" do
+        expect(organization.accessible_by_session?(login_method: okta, sso_organization_id: sso_organization.id, sso_issuer: "acme.okta.com")).to be(true)
+      end
+
+      it "refuses an SSO session from an organization without the flag" do
+        expect(organization.accessible_by_session?(login_method: okta, sso_organization_id: create(:organization).id, sso_issuer: "evil.test")).to be(false)
+        expect(organization.accessible_by_session?(login_method: okta, sso_organization_id: SecureRandom.uuid, sso_issuer: "evil.test")).to be(false)
+      end
+
+      it "refuses a login method the organization does not allow" do
+        expect(organization.accessible_by_session?(login_method: Organizations::AuthenticationMethods::ENTRA_ID, sso_organization_id: SecureRandom.uuid)).to be(false)
       end
     end
   end

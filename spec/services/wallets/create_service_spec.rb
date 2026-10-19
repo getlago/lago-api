@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe Wallets::CreateService do
   subject(:create_service) { described_class.new(params:) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:, external_id: "foobar", currency: customer_currency) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
+  let(:customer) { create_default(:customer, organization:, external_id: "foobar", currency: customer_currency) }
   let(:customer_currency) { "EUR" }
 
   describe "#call" do
@@ -969,6 +969,14 @@ RSpec.describe Wallets::CreateService do
         wallet = service_result.wallet
         expect(wallet.metadata).to be_present
         expect(wallet.metadata.value).to eq({"foo" => "bar", "baz" => "qux"})
+      end
+    end
+
+    context "with x402_enabled" do
+      let(:params) { {name: "Agent credits", customer:, organization_id: organization.id, currency: "EUR", rate_amount: "1.00", x402_enabled: true} }
+
+      it "enables x402 on the wallet" do
+        expect(service_result.wallet).to be_x402_enabled
       end
     end
 

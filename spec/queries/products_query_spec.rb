@@ -3,9 +3,13 @@
 require "rails_helper"
 
 RSpec.describe ProductsQuery do
+  before_all do
+    create_default(:billable_metric)
+  end
+
   subject(:result) { described_class.call(organization:, search_term:, pagination:, filters:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:search_term) { nil }
   let(:pagination) { nil }
   let(:filters) { {} }

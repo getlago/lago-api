@@ -5,7 +5,15 @@ require "rails_helper"
 RSpec.describe CreditNotes::ValidateItemService do
   subject(:validator) { described_class.new(result, item:) }
 
+  before_all do
+    create_default(:organization)
+  end
+
+  let_it_be(:customer, refind: true) { create_default(:customer) }
+  let_it_be(:invoice, refind: true) { create(:invoice, total_amount_cents: 120) }
+
   let(:result) { BaseService::Result.new }
+  let(:fee) { create(:fee, invoice:, amount_cents: 100, taxes_rate: 20) }
   let(:amount_cents) { 10 }
   let(:credit_amount_cents) { 10 }
   let(:refund_amount_cents) { 0 }
@@ -27,14 +35,36 @@ RSpec.describe CreditNotes::ValidateItemService do
     )
   end
 
-  let(:invoice) { create(:invoice, total_amount_cents: 120) }
-  let(:customer) { invoice.customer }
-
-  let(:fee) { create(:fee, invoice:, amount_cents: 100, taxes_rate: 20) }
-
   describe ".call" do
     it "validates the item" do
       expect(validator).to be_valid
+    end
+
+    context "when the fee is a contract product fee" do
+      let(:contract) { create(:contract, customer: invoice.customer, organization: invoice.organization) }
+      let(:contract_rate_card) { create(:contract_rate_card, organization: invoice.organization, contract:) }
+      let(:fee) do
+        create(:fee, invoice:, subscription: nil, fee_type: :product, amount_cents: 100, precise_amount_cents: 100, taxes_rate: 0,
+          invoiceable: contract_rate_card.rate_card.product, contract:, contract_rate_card:, taxes_amount_cents: 0,
+          taxes_precise_amount_cents: 0)
+      end
+
+      it "validates a partial credit" do
+        expect(validator).to be_valid
+        expect(fee.subscription_id).to be_nil
+      end
+
+      context "when a finalized credit note has already consumed the remaining amount" do
+        before do
+          create(:credit_note_item, fee:, amount_cents: 95)
+          item.amount_cents = 10
+        end
+
+        it "rejects an over-credit" do
+          expect(validator).not_to be_valid
+          expect(result.error.messages[:amount_cents]).to eq(["higher_than_remaining_fee_amount"])
+        end
+      end
     end
 
     context "when fee is missing" do

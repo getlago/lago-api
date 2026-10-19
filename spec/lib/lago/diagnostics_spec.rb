@@ -68,6 +68,12 @@ RSpec.describe Lago::Diagnostics do
       expect(diagnostics.mask("LAGO_TLS_CERT", "-----BEGIN-----")).to eq("***")
     end
 
+    it "masks values of RPC endpoint keys, whose API key sits in the URL path" do
+      value = '{"eip155:8453":"https://base-mainnet.g.alchemy.com/v2/abc123"}'
+
+      expect(diagnostics.mask("LAGO_X402_RPC_URLS", value)).to eq("***")
+    end
+
     it "redacts URL userinfo credentials while keeping host and port visible" do
       expect(diagnostics.mask("DATABASE_URL", "postgresql://lago:changeme@db:5432/lago"))
         .to eq("postgresql://***@db:5432/lago")

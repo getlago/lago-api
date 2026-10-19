@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::WalletTransactionConsumptionsResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:query) do
     <<~GQL
       query($walletTransactionId: ID!, $page: Int, $limit: Int) {
@@ -19,10 +21,7 @@ RSpec.describe Resolvers::WalletTransactionConsumptionsResolver do
       }
     GQL
   end
-
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
   let(:wallet) { create(:wallet, customer:, traceable: true) }
   let(:inbound_transaction) do
     create(:wallet_transaction,
@@ -42,13 +41,18 @@ RSpec.describe Resolvers::WalletTransactionConsumptionsResolver do
       consumed_amount_cents: 500)
   end
 
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
+
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", %w[customers:view wallets:create wallets:update wallets:top_up wallets:terminate]
 
   it "returns a list of consumptions for an inbound transaction" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: described_class::REQUIRED_PERMISSION.sample,
       query:,
       variables: {walletTransactionId: inbound_transaction.id, limit: 5}
     )
@@ -79,6 +83,7 @@ RSpec.describe Resolvers::WalletTransactionConsumptionsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: described_class::REQUIRED_PERMISSION.sample,
         query:,
         variables: {walletTransactionId: inbound_transaction.id, page: 1, limit: 2}
       )
@@ -94,6 +99,7 @@ RSpec.describe Resolvers::WalletTransactionConsumptionsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: described_class::REQUIRED_PERMISSION.sample,
         query:,
         variables: {walletTransactionId: inbound_transaction.id, page: 2, limit: 2}
       )
@@ -111,6 +117,7 @@ RSpec.describe Resolvers::WalletTransactionConsumptionsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: described_class::REQUIRED_PERMISSION.sample,
         query:,
         variables: {walletTransactionId: outbound_transaction.id}
       )
@@ -126,6 +133,7 @@ RSpec.describe Resolvers::WalletTransactionConsumptionsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: described_class::REQUIRED_PERMISSION.sample,
         query:,
         variables: {walletTransactionId: inbound_transaction.id}
       )
@@ -139,6 +147,7 @@ RSpec.describe Resolvers::WalletTransactionConsumptionsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: described_class::REQUIRED_PERMISSION.sample,
         query:,
         variables: {walletTransactionId: "non-existent-id"}
       )
@@ -163,6 +172,7 @@ RSpec.describe Resolvers::WalletTransactionConsumptionsResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: described_class::REQUIRED_PERMISSION.sample,
         query:,
         variables: {walletTransactionId: other_transaction.id}
       )

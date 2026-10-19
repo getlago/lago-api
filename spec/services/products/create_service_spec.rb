@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Products::CreateService do
   subject(:result) { described_class.call(organization:, params:) }
 
-  let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
-  let(:billable_metric) { create(:billable_metric, organization:) }
+  let_it_be(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
+  let_it_be(:billable_metric) { create(:billable_metric, organization:) }
   let(:product_category) { create(:product_category, organization:) }
 
   let(:params) do
@@ -51,6 +51,7 @@ RSpec.describe Products::CreateService do
 
   context "when the catalog flag is disabled" do
     let(:organization) { create(:organization) }
+    let(:billable_metric) { create(:billable_metric, organization:) }
 
     it "creates and publishes the product event" do
       expect { result }.to have_enqueued_job(SendWebhookJob)

@@ -5,16 +5,18 @@ require "rails_helper"
 RSpec.describe RatePhases::UpdateService do
   subject(:result) { described_class.call(rate_phase:, params:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:plan_rate_card) { create(:plan_rate_card, organization:) }
   let!(:launch) { create(:rate_phase, plan_rate_card:, organization:, position: 1, billing_interval_cycle_count: 3, name: "Before", code: "launch") }
   let(:rate_phase) { launch }
   let(:terminal_position) { 2 }
   let!(:terminal) { create(:rate_phase, plan_rate_card:, organization:, position: terminal_position, billing_interval_cycle_count: nil, code: "forever") }
-
   let(:params) { {name: "After", billing_interval_cycle_count: 6} }
 
-  before { allow(Utils::ActivityLog).to receive(:produce_after_commit).and_yield }
+  before {
+    allow(Utils::ActivityLog).to receive(:produce_after_commit).and_yield
+    create_default(:billable_metric)
+  }
 
   def activity_payload(owner, event_type)
     expect(kafka_messages.size).to eq(1)
@@ -325,6 +327,7 @@ RSpec.describe RatePhases::UpdateService do
   end
 
   context "when logging phase changes", :capture_kafka_messages, transaction: false do
+    let(:organization) { create(:organization) }
     let!(:ramp) { create(:rate_phase, plan_rate_card:, organization:, position: 2, billing_interval_cycle_count: 6, code: "ramp") }
     let!(:terminal) { create(:rate_phase, plan_rate_card:, organization:, position: 3, billing_interval_cycle_count: nil, code: "forever") }
     let(:params) { {position: 2, code: "intro-v2", name: "New intro", billing_interval_cycle_count: 4} }
@@ -350,6 +353,7 @@ RSpec.describe RatePhases::UpdateService do
   end
 
   context "when an update leaves the phase unchanged", :capture_kafka_messages, transaction: false do
+    let(:organization) { create(:organization) }
     let(:params) { {name: "Before"} }
 
     before do
@@ -364,6 +368,7 @@ RSpec.describe RatePhases::UpdateService do
   end
 
   context "when an update is rejected", :capture_kafka_messages, transaction: false do
+    let(:organization) { create(:organization) }
     let(:params) { {position: 99} }
 
     before do
@@ -403,6 +408,7 @@ RSpec.describe RatePhases::UpdateService do
   end
 
   context "when the override is omitted", :capture_kafka_messages, transaction: false do
+    let(:organization) { create(:organization) }
     let(:previous_override) { create(:rate_override, organization:, rate_model: "standard", rate_properties: {amount: "2"}) }
     let!(:launch) do
       create(:rate_phase, plan_rate_card:, organization:, position: 1, billing_interval_cycle_count: 3, code: "launch", rate_override: previous_override)
@@ -424,6 +430,7 @@ RSpec.describe RatePhases::UpdateService do
   end
 
   context "when the override is cleared", :capture_kafka_messages, transaction: false do
+    let(:organization) { create(:organization) }
     let(:previous_override) { create(:rate_override, organization:, rate_model: "standard", rate_properties: {amount: "2"}) }
     let!(:launch) do
       create(:rate_phase, plan_rate_card:, organization:, position: 1, billing_interval_cycle_count: 3, code: "launch", rate_override: previous_override)
@@ -445,6 +452,7 @@ RSpec.describe RatePhases::UpdateService do
   end
 
   context "when override pricing changes", :capture_kafka_messages, transaction: false do
+    let(:organization) { create(:organization) }
     let(:previous_override) { create(:rate_override, organization:, rate_model: "standard", rate_properties: {amount: "2"}) }
     let!(:launch) do
       create(:rate_phase, plan_rate_card:, organization:, position: 1, billing_interval_cycle_count: 3, code: "launch", rate_override: previous_override)
@@ -469,6 +477,7 @@ RSpec.describe RatePhases::UpdateService do
   end
 
   context "when override pricing is equal but the ID changes", :capture_kafka_messages, transaction: false do
+    let(:organization) { create(:organization) }
     let(:previous_override) { create(:rate_override, organization:, rate_model: "standard", rate_properties: {amount: "5"}) }
     let!(:launch) do
       create(:rate_phase, plan_rate_card:, organization:, position: 1, billing_interval_cycle_count: 3, code: "launch", rate_override: previous_override)

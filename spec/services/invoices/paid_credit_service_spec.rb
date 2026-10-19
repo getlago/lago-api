@@ -241,6 +241,28 @@ RSpec.describe Invoices::PaidCreditService do
       expect(Invoices::Payments::CreateJob).to have_been_enqueued.with(invoice: result.invoice, payment_provider: :stripe, payment_method_params: {})
     end
 
+    context "with an x402 purchase" do
+      let(:wallet_transaction) do
+        create(:wallet_transaction, wallet:, amount: "15.00", credit_amount: "15.00", source: :x402, invoice_requires_successful_payment:)
+      end
+
+      it "pays the invoice through the x402 payment job" do
+        result = invoice_service.call
+
+        expect(X402::CreditPurchases::CreatePaymentJob).to have_been_enqueued.with(result.invoice, wallet_transaction)
+      end
+
+      it "enqueues no provider payment" do
+        invoice_service.call
+
+        expect(Invoices::Payments::CreateJob).not_to have_been_enqueued
+      end
+
+      it "records no payment inline" do
+        expect { invoice_service.call }.not_to change(Payment, :count)
+      end
+    end
+
     context "with customer timezone" do
       before { customer.update!(timezone: "America/Los_Angeles") }
 

@@ -28,6 +28,7 @@ module LagoHttpClient
       open_timeout: nil,
       read_timeout: nil,
       write_timeout: nil,
+      max_retries: nil,
       retries_on: [],
       retry_on_transient_errors: false,
       block_private_addresses: false
@@ -36,6 +37,7 @@ module LagoHttpClient
       @open_timeout = open_timeout
       @read_timeout = read_timeout
       @write_timeout = write_timeout
+      @max_retries = max_retries
       @http_client = build_http_client(uri.host)
       @retries_on = retries_on
       @retry_on_transient_errors = retry_on_transient_errors
@@ -145,13 +147,14 @@ module LagoHttpClient
 
     private
 
-    attr_reader :http_client, :open_timeout, :read_timeout, :write_timeout
+    attr_reader :http_client, :open_timeout, :read_timeout, :write_timeout, :max_retries
 
     def build_http_client(address)
       client = Net::HTTP.new(address, uri.port)
       client.open_timeout = open_timeout if open_timeout.present?
       client.read_timeout = read_timeout if read_timeout.present?
       client.write_timeout = write_timeout if write_timeout.present?
+      client.max_retries = max_retries if max_retries.present?
       client.use_ssl = true if uri.scheme == "https"
       client
     end

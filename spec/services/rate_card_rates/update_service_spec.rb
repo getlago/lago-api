@@ -8,7 +8,10 @@ RSpec.describe RateCardRates::UpdateService do
   let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
   let(:rate_card) { create(:rate_card, organization:) }
 
-  before { allow(Utils::ActivityLog).to receive(:produce).and_call_original }
+  before {
+    allow(Utils::ActivityLog).to receive(:produce).and_call_original
+    create_default(:billable_metric)
+  }
 
   context "with a pending rate" do
     let(:rate_card_rate) do

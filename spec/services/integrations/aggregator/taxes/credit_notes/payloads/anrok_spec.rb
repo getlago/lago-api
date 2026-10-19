@@ -3,6 +3,10 @@
 require "rails_helper"
 
 RSpec.describe Integrations::Aggregator::Taxes::CreditNotes::Payloads::Anrok do
+  before_all do
+    create_default(:organization)
+  end
+
   describe "#body" do
     subject(:payload) { described_class.new(integration:, customer:, integration_customer:, credit_note:).body }
 

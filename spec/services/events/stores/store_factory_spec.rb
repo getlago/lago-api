@@ -52,30 +52,30 @@ RSpec.describe Events::Stores::StoreFactory do
 
   describe ".with_override" do
     it "forces the store class for the duration of the block" do
-      described_class.with_override(store_class: Events::Stores::ClickhouseStore, deduplicate: true) do
+      described_class.with_override(store_class: Events::Stores::ClickhouseStore) do
         expect(described_class.store_class(organization:)).to eq(Events::Stores::ClickhouseStore)
-        expect(described_class.override).to eq(store_class: Events::Stores::ClickhouseStore, deduplicate: true)
+        expect(described_class.override).to eq(store_class: Events::Stores::ClickhouseStore)
       end
     end
 
     it "clears the override after the block returns" do
-      described_class.with_override(store_class: Events::Stores::ClickhouseStore, deduplicate: true) {}
+      described_class.with_override(store_class: Events::Stores::ClickhouseStore) {}
       expect(described_class.override).to be_nil
     end
 
     it "clears the override when the block raises" do
       expect {
-        described_class.with_override(store_class: Events::Stores::ClickhouseStore, deduplicate: true) { raise "boom" }
+        described_class.with_override(store_class: Events::Stores::ClickhouseStore) { raise "boom" }
       }.to raise_error("boom")
       expect(described_class.override).to be_nil
     end
 
     it "raises when nested" do
-      described_class.with_override(store_class: Events::Stores::ClickhouseStore, deduplicate: true) do
+      described_class.with_override(store_class: Events::Stores::ClickhouseStore) do
         expect {
-          described_class.with_override(store_class: Events::Stores::PostgresStore, deduplicate: false) {}
+          described_class.with_override(store_class: Events::Stores::PostgresStore) {}
         }.to raise_error("Events::Stores::StoreFactory override already active")
-        expect(described_class.override).to eq(store_class: Events::Stores::ClickhouseStore, deduplicate: true)
+        expect(described_class.override).to eq(store_class: Events::Stores::ClickhouseStore)
       end
     end
   end

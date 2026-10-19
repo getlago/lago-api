@@ -8,10 +8,10 @@ RSpec.describe PlanRateCards::DestroyService, :capture_kafka_messages do
   let(:organization) { create(:organization) }
   let(:catalog_plan) { create(:catalog_plan, organization:) }
   let(:plan_rate_card) { create(:plan_rate_card, organization:, catalog_plan:) }
-
   let(:activity_log_calls) { [] }
 
   before do
+    create_default(:billable_metric)
     allow(Utils::ActivityLog).to receive(:produce) do |*args, **kwargs, &block|
       activity_log_calls << {args:, kwargs:, block:}
     end

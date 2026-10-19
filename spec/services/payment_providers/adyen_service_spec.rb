@@ -7,8 +7,8 @@ RSpec.describe PaymentProviders::AdyenService do
 
   include_context "with mocked security logger"
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
   let(:api_key) { "test_api_key_1" }
   let(:code) { "code_1" }
   let(:name) { "Name 1" }
@@ -80,6 +80,21 @@ RSpec.describe PaymentProviders::AdyenService do
         expect(result.adyen_provider.code).to eq(code)
         expect(result.adyen_provider.name).to eq(name)
         expect(result.adyen_provider.success_redirect_url).to eq(success_redirect_url)
+      end
+
+      it "keeps the keys when the masked values are sent back" do
+        adyen_provider.update!(hmac_key: "hmac_key_123")
+
+        result = adyen_service.create_or_update(
+          organization:,
+          code:,
+          api_key: "••••••••…789",
+          hmac_key: "••••••••…123"
+        )
+
+        expect(result).to be_success
+        expect(result.adyen_provider.reload.api_key).to eq("api_key_789")
+        expect(result.adyen_provider.hmac_key).to eq("hmac_key_123")
       end
 
       it_behaves_like "produces a security log", "integration.updated" do

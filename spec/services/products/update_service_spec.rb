@@ -6,8 +6,8 @@ RSpec.describe Products::UpdateService do
   subject(:result) { described_class.call(product:, params:) }
 
   let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
-  let(:product) { create(:product, organization:, name: "Before", code: "before") }
 
+  let(:product) { create(:product, organization:, name: "Before", code: "before") }
   let(:params) { {name: "After", description: "new", invoice_display_name: "Display"} }
 
   before { allow(Utils::ActivityLog).to receive(:produce).and_call_original }

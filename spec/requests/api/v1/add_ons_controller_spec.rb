@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::AddOnsController do
-  let(:organization) { create(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let(:tax) { create(:tax, organization:) }
 
   describe "POST /api/v1/add_ons" do
@@ -22,6 +22,17 @@ RSpec.describe Api::V1::AddOnsController do
     end
 
     include_examples "requires API permission", "add_on", "write"
+
+    context "when amount_cents is larger than a bigint" do
+      let(:create_params) { super().merge(amount_cents: 10**20) }
+
+      it "returns a validation error instead of a 500" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq({base: ["value_is_out_of_range"]})
+      end
+    end
 
     it "creates a add-on" do
       subject
@@ -42,7 +53,7 @@ RSpec.describe Api::V1::AddOnsController do
       put_with_token(organization, "/api/v1/add_ons/#{add_on_code}", {add_on: update_params})
     end
 
-    let(:add_on) { create(:add_on, organization:) }
+    let_it_be(:add_on, refind: true) { create_default(:add_on, organization:) }
     let(:add_on_code) { add_on.code }
     let(:add_on_applied_tax) { create(:add_on_applied_tax, add_on:, tax:) }
     let(:code) { "add_on_code" }
@@ -124,7 +135,7 @@ RSpec.describe Api::V1::AddOnsController do
   describe "DELETE /api/v1/add_ons/:code" do
     subject { delete_with_token(organization, "/api/v1/add_ons/#{add_on_code}") }
 
-    let!(:add_on) { create(:add_on, organization:) }
+    let_it_be(:add_on, refind: true) { create_default(:add_on, organization:) }
     let(:add_on_code) { add_on.code }
 
     include_examples "requires API permission", "add_on", "write"
@@ -154,7 +165,7 @@ RSpec.describe Api::V1::AddOnsController do
   describe "GET /api/v1/add_ons" do
     subject { get_with_token(organization, "/api/v1/add_ons", params) }
 
-    let(:add_on) { create(:add_on, organization:) }
+    let_it_be(:add_on, refind: true) { create_default(:add_on, organization:) }
     let(:params) { {} }
 
     before { create(:add_on_applied_tax, add_on:, tax:) }

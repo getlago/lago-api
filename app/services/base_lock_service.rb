@@ -22,13 +22,15 @@ class BaseLockService < BaseService
   end
 
   def call
-    result.value = lock_owner.with_advisory_lock!(
-      lock_key,
-      timeout_seconds:,
-      transaction:,
-      disable_query_cache: true
-    ) do
-      yield
+    result.value = with_transaction do
+      lock_owner.with_advisory_lock!(
+        lock_key,
+        timeout_seconds:,
+        transaction:,
+        disable_query_cache: true
+      ) do
+        yield
+      end
     end
 
     result
@@ -43,6 +45,16 @@ class BaseLockService < BaseService
   private
 
   attr_reader :timeout_seconds, :transaction
+
+  # A transaction-level advisory lock (pg_advisory_xact_lock) is held until the end of the
+  # surrounding transaction. with_advisory_lock does not open one, so without an open transaction
+  # the lock would be released as soon as the statement taking it completes, before the block runs.
+  # Joins the caller's transaction when there is one.
+  def with_transaction(&)
+    return yield unless transaction
+
+    lock_owner.transaction(&)
+  end
 
   def lock_owner
     raise NotImplementedError, "#{self.class} must implement #lock_owner"

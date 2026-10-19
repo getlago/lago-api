@@ -5,10 +5,14 @@ require "rails_helper"
 RSpec.describe RateCardRates::DestroyService, :capture_kafka_messages do
   subject(:result) { described_class.call(rate_card_rate:) }
 
-  let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
+  let_it_be(:organization, refind: true) { create(:organization, feature_flags: ["product_catalog"]) }
   let(:rate_card) { create(:rate_card, organization:) }
 
   before { allow(Utils::ActivityLog).to receive(:produce).and_call_original }
+
+  before_all do
+    create_default(:billable_metric)
+  end
 
   context "with a pending rate" do
     let(:rate_card_rate) do

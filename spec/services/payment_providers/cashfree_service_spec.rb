@@ -7,8 +7,8 @@ RSpec.describe PaymentProviders::CashfreeService do
 
   include_context "with mocked security logger"
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
   let(:code) { "code_1" }
   let(:name) { "Name 1" }
   let(:client_id) { "123456_abc" }
@@ -98,6 +98,13 @@ RSpec.describe PaymentProviders::CashfreeService do
         expect(result.cashfree_provider.code).to eq(code)
         expect(result.cashfree_provider.name).to eq(name)
         expect(result.cashfree_provider.success_redirect_url).to eq(success_redirect_url)
+      end
+
+      it "keeps the client secret when the masked value is sent back" do
+        result = cashfree_service.create_or_update(organization:, code:, name:, client_secret: "••••••••…old")
+
+        expect(result).to be_success
+        expect(result.cashfree_provider.reload.client_secret).to eq("cfsk_ma_prod_abc_123456_old")
       end
 
       it_behaves_like "produces a security log", "integration.updated" do

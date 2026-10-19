@@ -72,6 +72,16 @@ Sentry.init do |config|
   config.transport.transport_class = Sentry::DummyTransport
 end
 
+require "test_prof/recipes/rspec/sample"
+require "test_prof/recipes/rspec/let_it_be"
+require "test_prof/recipes/rspec/factory_default"
+
+# Records shared through `let_it_be` are frozen, so an example that modifies one raises a `FrozenError`
+# instead of leaking its changes into the next examples. Use `refind: true` when an example must update it.
+TestProf::LetItBe.configure do |config|
+  config.default_modifiers[:freeze] = true
+end
+
 RSpec.configure do |config|
   config.include ActiveJob::TestHelper
   config.include FactoryBot::Syntax::Methods
@@ -164,6 +174,9 @@ RSpec.configure do |config|
 
     ActiveJob::Base.queue_adapter.enqueued_jobs.clear
     allow(Utils::ActivityLog).to receive(:produce).and_call_original
+    # Like Rails.cache, auth attempts are not counted unless a spec sets a store, so that examples
+    # do not share counters through the Redis.
+    Auth::AttemptsThrottle.store = ActiveSupport::Cache::NullStore.new
 
     if (clickhouse = metadata[:clickhouse])
       WebMock.disable_net_connect!(allow: ENV.fetch("LAGO_CLICKHOUSE_HOST", "clickhouse"))

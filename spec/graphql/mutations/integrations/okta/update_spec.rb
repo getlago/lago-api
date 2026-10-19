@@ -5,11 +5,7 @@ require "rails_helper"
 RSpec.describe Mutations::Integrations::Okta::Update, :premium do
   include_context "with mocked security logger"
 
-  let(:required_permission) { "organization:integrations:update" }
-  let(:integration) { create(:okta_integration, organization:) }
-  let(:organization) { membership.organization }
-  let(:membership) { create(:membership) }
-
+  let(:required_permission) { "authentication_methods:update" }
   let(:mutation) do
     <<-GQL
       mutation($input: UpdateOktaIntegrationInput!) {
@@ -25,6 +21,11 @@ RSpec.describe Mutations::Integrations::Okta::Update, :premium do
       }
     GQL
   end
+  let(:integration) { create(:okta_integration, organization:) }
+
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:membership, refind: true) { create_default(:membership) }
 
   before do
     integration
@@ -33,7 +34,7 @@ RSpec.describe Mutations::Integrations::Okta::Update, :premium do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "organization:integrations:update"
+  it_behaves_like "requires permission", "authentication_methods:update"
 
   context "with valid input" do
     let!(:result) do

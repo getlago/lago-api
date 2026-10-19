@@ -5,14 +5,17 @@ require "rails_helper"
 RSpec.describe RatePhases::DestroyService do
   subject(:result) { described_class.call(rate_phase:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:plan_rate_card) { create(:plan_rate_card, organization:) }
-
   let!(:launch) { create(:rate_phase, plan_rate_card:, organization:, position: 1, billing_interval_cycle_count: 3) }
   let!(:ramp) { create(:rate_phase, plan_rate_card:, organization:, position: 2, billing_interval_cycle_count: 6) }
   let!(:terminal) { create(:rate_phase, plan_rate_card:, organization:, position: 3, billing_interval_cycle_count: nil) }
 
-  before { allow(Utils::ActivityLog).to receive(:produce_after_commit).and_yield }
+  before {
+    allow(Utils::ActivityLog).to receive(:produce_after_commit).and_yield
+    create_default(:plan)
+    create_default(:billable_metric)
+  }
 
   def activity_payload(owner, event_type)
     expect(kafka_messages.size).to eq(1)
@@ -156,6 +159,7 @@ RSpec.describe RatePhases::DestroyService do
   end
 
   context "when logging phase removal", :capture_kafka_messages, transaction: false do
+    let(:organization) { create(:organization) }
     let!(:launch) { create(:rate_phase, plan_rate_card:, organization:, code: "launch", position: 1, billing_interval_cycle_count: 3) }
     let!(:ramp) { create(:rate_phase, plan_rate_card:, organization:, code: "ramp", position: 2, billing_interval_cycle_count: 6) }
     let!(:terminal) { create(:rate_phase, plan_rate_card:, organization:, code: "forever", position: 3, billing_interval_cycle_count: nil) }

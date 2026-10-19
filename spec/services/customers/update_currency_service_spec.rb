@@ -5,6 +5,10 @@ require "rails_helper"
 RSpec.describe Customers::UpdateCurrencyService do
   subject(:currency_service) { described_class.new(customer:, currency:, customer_update:) }
 
+  before_all do
+    create_default(:organization)
+  end
+
   let(:customer) { create(:customer, currency: nil) }
   let(:currency) { "USD" }
   let(:customer_update) { false }
@@ -81,6 +85,7 @@ RSpec.describe Customers::UpdateCurrencyService do
 
       context "when customer_update is true (direct API update)" do
         let(:customer_update) { true }
+
         let(:customer) { create(:customer, currency: "EUR") }
 
         it "allows the currency update" do

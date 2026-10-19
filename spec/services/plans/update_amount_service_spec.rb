@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Plans::UpdateAmountService do
   subject(:update_service) { described_class.new(plan:, amount_cents:, expected_amount_cents:) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
   let(:plan) { create(:plan, organization:, amount_cents: 111) }
   let(:amount_cents) { 222 }
   let(:expected_amount_cents) { 111 }

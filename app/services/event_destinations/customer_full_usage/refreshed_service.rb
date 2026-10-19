@@ -91,7 +91,7 @@ module EventDestinations
           customer_external_id: customer.external_id,
           subscription_external_id: subscription.external_id,
           version:,
-          customer_usage: serialized_usage(usage)
+          customer_usage: serialized_usage(subscription, usage)
         }
       end
 
@@ -99,12 +99,21 @@ module EventDestinations
         @version ||= Time.current.utc.iso8601(6)
       end
 
-      def serialized_usage(usage)
+      def serialized_usage(subscription, usage)
         EventDestinations::CustomerUsageSerializer.new(
           usage,
           root_name: OBJECT_TYPE,
-          wallets: active_wallets
+          wallets: active_wallets,
+          wallet_amounts: wallet_amounts(subscription, usage)
         ).serialize
+      end
+
+      def wallet_amounts(subscription, usage)
+        EventDestinations::WalletAmountsService.call!(
+          subscription:,
+          active_wallets:,
+          from_datetime: usage.from_datetime
+        ).amounts
       end
     end
   end

@@ -9,7 +9,10 @@ RSpec.describe RateCards::UpdateService do
   let(:rate_card) { create(:rate_card, organization:, name: "Before", currency: "EUR") }
   let(:params) { {name: "After", description: "new", billing_timing: "advance"} }
 
-  before { allow(Utils::ActivityLog).to receive(:produce).and_call_original }
+  before {
+    allow(Utils::ActivityLog).to receive(:produce).and_call_original
+    create_default(:billable_metric)
+  }
 
   it "updates the attributes" do
     expect(result).to be_success

@@ -19,6 +19,7 @@ module Wallets
 
     def call
       return result.not_found_failure!(resource: "wallet") unless wallet
+      return result.forbidden_failure! if x402_enable_forbidden?
       return result.single_validation_failure!(field: :wallet_id, error_code: "wallet_is_terminated") if wallet.terminated?
       return result.forbidden_failure! if connections_requested? && organization_flag_disabled?(:multi_connection)
       return result unless valid_expiration_at?(expiration_at: params[:expiration_at])
@@ -26,6 +27,7 @@ module Wallets
       return result unless valid_limitations?
       return result unless valid_payment_method?
       return result unless valid_connections?
+      return result unless valid_x402?
 
       if billing_entity_param_sent?
         if billing_entity_value_provided? && billing_entity.nil?
@@ -44,6 +46,7 @@ module Wallets
         unless params[:invoice_requires_successful_payment].nil?
           wallet.invoice_requires_successful_payment = ActiveModel::Type::Boolean.new.cast(params[:invoice_requires_successful_payment])
         end
+        wallet.x402_enabled = x402_enabled_param unless x402_enabled_param.nil?
         wallet.paid_top_up_min_amount_cents = params[:paid_top_up_min_amount_cents] if params.key?(:paid_top_up_min_amount_cents)
         wallet.paid_top_up_max_amount_cents = params[:paid_top_up_max_amount_cents] if params.key?(:paid_top_up_max_amount_cents)
         if params[:recurring_transaction_rules] && License.premium?
@@ -118,6 +121,18 @@ module Wallets
 
     def valid_recurring_transaction_rules?
       Wallets::ValidateRecurringTransactionRulesService.new(result, **params).valid?
+    end
+
+    def valid_x402?
+      Wallets::ValidateX402Service.new(result, wallet:, **params).valid?
+    end
+
+    def x402_enable_forbidden?
+      x402_enabled_param == true && !wallet.organization.x402_payments_enabled?
+    end
+
+    def x402_enabled_param
+      ActiveModel::Type::Boolean.new.cast(params[:x402_enabled])
     end
 
     def valid_expiration_at?(expiration_at:)

@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::OrganizationsController do
-  let(:organization) { create(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let(:webhook_url) { Faker::Internet.url }
 
   describe "PUT /api/v1/organizations" do
@@ -80,19 +80,6 @@ RSpec.describe Api::V1::OrganizationsController do
         billing = json[:organization][:billing_configuration]
         expect(billing[:invoice_grace_period]).to eq(3)
       end
-    end
-  end
-
-  describe "GET /api/v1/organizations/grpc_token" do
-    subject { get_with_token(organization, "/api/v1/organizations/grpc_token") }
-
-    include_examples "requires API permission", "organization", "read"
-
-    it "returns the grpc_token" do
-      subject
-
-      expect(response).to have_http_status(:success)
-      expect(json[:organization][:grpc_token]).not_to be_nil
     end
   end
 

@@ -238,6 +238,12 @@ module Clockwork
       .perform_later
   end
 
+  every(1.minute, "schedule:reconcile_x402_settlements") do
+    Clock::ReconcileX402SettlementsJob
+      .set(sentry: {"slug" => "lago_reconcile_x402_settlements", "cron" => "* * * * *"})
+      .perform_later
+  end
+
   # NOTE: Enable wallets and lifetime usage refresh from the events-processor
   if ENV["LAGO_REDIS_STORE_URL"].present? && ENV["LAGO_CLICKHOUSE_ENABLED"].present?
     every(10.seconds, "schedule:refresh_flagged_subscriptions") do

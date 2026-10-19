@@ -7,9 +7,9 @@ RSpec.describe BillingEntities::UpdateAppliedDunningCampaignService do
 
   include_context "with mocked security logger"
 
-  let(:billing_entity) { create(:billing_entity) }
-  let(:organization) { billing_entity.organization }
-  let(:second_billing_entity) { create(:billing_entity, organization:) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billing_entity) { create(:billing_entity) }
+  let_it_be(:second_billing_entity) { create(:billing_entity, organization:) }
   let(:dunning_campaign_1) { create(:dunning_campaign, organization:) }
   let(:dunning_campaign_2) { create(:dunning_campaign, organization:) }
   let(:customer_1) { create(:customer, organization:, billing_entity:, last_dunning_campaign_attempt: 2, last_dunning_campaign_attempt_at: 1.day.ago) }

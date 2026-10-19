@@ -5,6 +5,9 @@ require "rails_helper"
 RSpec.describe Types::Subscriptions::Object do
   subject { described_class }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+
   it do
     expect(subject).to have_field(:billing_entity_id).of_type("ID")
     expect(subject).to have_field(:customer).of_type("Customer!")
@@ -43,7 +46,7 @@ RSpec.describe Types::Subscriptions::Object do
     expect(subject).to have_field(:previous_plan).of_type("Plan")
     expect(subject).to have_field(:previous_subscription).of_type("Subscription")
 
-    expect(subject).to have_field(:activity_logs).of_type("[ActivityLog!]")
+    expect(subject).to have_field(:activity_logs).of_type("[ActivityLog!]").with_permission("audit_logs:view")
     expect(subject).to have_field(:charges).of_type("[Charge!]")
     expect(subject).to have_field(:fees).of_type("[Fee!]")
     expect(subject).to have_field(:fixed_charges).of_type("[FixedCharge!]")
@@ -63,7 +66,7 @@ RSpec.describe Types::Subscriptions::Object do
   end
 
   context "when the subscription starts in the future" do
-    let(:plan) { create(:plan, interval: "monthly", pay_in_advance: true) }
+    let_it_be(:plan) { create_default(:plan, interval: "monthly", pay_in_advance: true) }
     let(:future_start) { Time.zone.parse("2026-07-03T00:00:00Z") }
     let(:subscription) do
       create(

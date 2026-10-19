@@ -129,6 +129,19 @@ RSpec.describe Contracts::MaterializeRateCardsService do
     end
   end
 
+  context "with a priced metered advance plan rate card" do
+    let(:rate_card) { create(:rate_card, :advance, organization:) }
+
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: contract.started_at.beginning_of_day)
+    end
+
+    it "does not persist a segment for event-time pricing" do
+      expect { result }.not_to change(BillingSegment, :count)
+      expect(result.contract_rate_cards.sole.billing_segments).to be_empty
+    end
+  end
+
   describe "next_billing_at" do
     subject(:next_billing_at) { result.contract_rate_cards.sole.next_billing_at }
 

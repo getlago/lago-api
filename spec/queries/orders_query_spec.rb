@@ -8,18 +8,19 @@ RSpec.describe OrdersQuery do
   end
 
   let(:returned_ids) { result.orders.pluck(:id) }
-  let(:pagination) { nil }
-  let(:filters) { nil }
-  let(:search_term) { nil }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
   let(:quote) { create(:quote, organization:, customer:) }
   let(:order_form) { create(:order_form, :signed, organization:, customer:, quote:) }
   let(:order_one) { create(:order, organization:, customer:, order_form:) }
   let(:quote_two) { create(:quote, organization:, customer:) }
   let(:order_form_two) { create(:order_form, :signed, organization:, customer:, quote: quote_two) }
   let(:order_two) { create(:order, organization:, customer:, order_form: order_form_two) }
+  let(:pagination) { nil }
+  let(:filters) { nil }
+  let(:search_term) { nil }
+
+  let_it_be(:membership) { create(:membership) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
 
   before do
     order_one

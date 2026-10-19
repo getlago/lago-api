@@ -8,15 +8,16 @@ RSpec.describe ::V1::CustomerSerializer do
   end
 
   let(:result) { JSON.parse(serializer.to_json) }
-  let(:organization) { customer.organization }
-  let(:billing_entity) { customer.billing_entity }
   let(:customer) { create(:customer, :with_salesforce_integration, shipping_city: "Paris", shipping_address_line1: "test1", shipping_zipcode: "002") }
   let(:metadata) { create(:customer_metadata, customer:) }
   let(:tax) { create(:tax, organization: customer.organization) }
   let(:customer_applied_tax) { create(:customer_applied_tax, customer:, tax:) }
   let(:invoice_custom_section) { create(:invoice_custom_section, organization:) }
-
   let(:error_detail) { create(:error_detail, owner: customer) }
+  let(:organization) { customer.organization }
+  let(:billing_entity) { customer.billing_entity }
+
+  let_it_be(:organization) { create_default(:organization) }
 
   before do
     metadata
@@ -94,6 +95,28 @@ RSpec.describe ::V1::CustomerSerializer do
         }
       ]
     )
+  end
+
+  context "with an x402 agent address" do
+    let(:customer) { create(:customer, x402_agent_address: "0xf4a43B9cc729c9E4E139CB86808f48e3eD09Dcb2") }
+
+    it "omits the address" do
+      expect(result["customer"]).not_to have_key("x402_agent_address")
+    end
+
+    context "with x402 payments enabled", :premium do
+      let(:customer) do
+        create(
+          :customer,
+          organization: create(:organization, feature_flags: ["x402_payments"]),
+          x402_agent_address: "0xf4a43B9cc729c9E4E139CB86808f48e3eD09Dcb2"
+        )
+      end
+
+      it "serializes the address" do
+        expect(result["customer"]["x402_agent_address"]).to eq("0xf4a43B9cc729c9E4E139CB86808f48e3eD09Dcb2")
+      end
+    end
   end
 
   context "with a stripe customer" do
