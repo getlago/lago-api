@@ -56,6 +56,14 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
       end
     end
 
+    context "with a snapshot of another organization" do
+      before { create_snapshot(to_datetime: previous_to_datetime, units: 10, organization: create(:organization)) }
+
+      it "returns no snapshot" do
+        expect(fetch_service.call.snapshots).to be_nil
+      end
+    end
+
     context "with snapshots of another charge filter" do
       let(:charge_filter) { create(:charge_filter, charge:) }
 
