@@ -10,6 +10,7 @@ module Integrations
     has_many :agent_registrations, class_name: "Agents::Registration", foreign_key: :integration_id, dependent: :delete_all
 
     PLAN_KEYS = %w[plan_code minimum_topup_cents maximum_topup_cents].freeze
+    MAX_TOPUP_CENTS = 2**63 - 1
 
     settings_accessors :payment_provider_code, :resource_endpoint, :resource_instructions, :scope
     settings_accessors :plans, default: []
@@ -62,7 +63,7 @@ module Integrations
     def valid_topup_bounds?(sold_plan)
       minimum, maximum = sold_plan.values_at("minimum_topup_cents", "maximum_topup_cents")
 
-      [minimum, maximum].compact.all? { it.is_a?(Integer) && it.positive? } &&
+      [minimum, maximum].compact.all? { it.is_a?(Integer) && it.positive? && it <= MAX_TOPUP_CENTS } &&
         (minimum.nil? || maximum.nil? || maximum >= minimum)
     end
 
