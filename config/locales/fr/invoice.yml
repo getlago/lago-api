@@ -69,6 +69,7 @@ fr:
     paid_invoice: Facture payée
     paid_tax_invoice: Facture fiscale payée
     pay_with_bank_transfer: Payer par virement bancaire
+    payment_due_date: Date d'échéance
     payment_term: Délai de paiement
     payment_term_days: "%{net_payment_term} jours"
     percentage:

@@ -21,6 +21,10 @@
       tr
         td.body-1 = I18n.t('invoice.payment_term')
         td.body-2 = I18n.t('invoice.payment_term_days', net_payment_term:)
+      - unless advance_charges?
+        tr
+          td.body-1 = I18n.t('invoice.payment_due_date')
+          td.body-2 = I18n.l(payment_due_date, format: :default)
   .half
     table.info-table
       - customer.metadata.displayable.order(created_at: :asc).each do |metadata|

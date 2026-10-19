@@ -57,12 +57,19 @@ RSpec.describe "templates/invoices/product_catalog/contract.slim" do
     expect(rendered_text).to match(/From Hooli.*Bill to Pied Piper/)
   end
 
+  it "shows the payment due date" do
+    invoice.update!(payment_due_date: Date.new(2026, 11, 15))
+
+    expect(rendered_text).to include("Due date #{I18n.l(Date.new(2026, 11, 15), format: :default)}")
+  end
+
   context "when the invoice bills charges paid in advance" do
     let(:invoice_type) { :advance_charges }
 
     it "shows the total as already paid, with nothing due" do
       expect(rendered_text).to match(/Already paid \S+/)
       expect(rendered_text).not_to include("Amount due")
+      expect(rendered_text).not_to include("Due date")
     end
   end
 

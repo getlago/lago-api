@@ -69,6 +69,7 @@ it:
     paid_invoice: Fattura pagata
     paid_tax_invoice: Fattura fiscale pagata
     pay_with_bank_transfer: Paga con bonifico bancario
+    payment_due_date: Data di scadenza
     payment_term: Termine di pagamento
     payment_term_days: "%{net_payment_term} giorni"
     percentage:

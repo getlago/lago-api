@@ -69,6 +69,7 @@ pt-BR:
     paid_invoice: Fatura paga
     paid_tax_invoice: Nota fiscal paga
     pay_with_bank_transfer: Pagar com transferência bancária
+    payment_due_date: Data de vencimento
     payment_term: Prazo de pagamento
     payment_term_days: "%{net_payment_term} dias"
     percentage:

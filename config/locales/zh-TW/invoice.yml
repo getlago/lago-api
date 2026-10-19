@@ -69,6 +69,7 @@ zh-TW:
     paid_invoice: 已付款發票
     paid_tax_invoice: 已付款稅務發票
     pay_with_bank_transfer: 使用銀行轉帳付款
+    payment_due_date: 到期日
     payment_term: 付款條件
     payment_term_days: "%{net_payment_term} 天"
     percentage:

@@ -69,6 +69,7 @@ en:
     paid_invoice: Paid invoice
     paid_tax_invoice: Paid tax invoice
     pay_with_bank_transfer: Pay with a bank transfer
+    payment_due_date: Due date
     payment_term: Payment term
     payment_term_days: "%{net_payment_term} days"
     percentage:

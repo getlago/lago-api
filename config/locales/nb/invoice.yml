@@ -69,6 +69,7 @@ nb:
     paid_invoice: Betalt faktura
     paid_tax_invoice: Betalt skattefaktura
     pay_with_bank_transfer: Betal med bankoverføring
+    payment_due_date: Forfallsdato
     payment_term: Betalingsperiode
     payment_term_days: "%{net_payment_term} dager"
     percentage:
