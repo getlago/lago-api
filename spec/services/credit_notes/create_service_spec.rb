@@ -608,6 +608,50 @@ RSpec.describe CreditNotes::CreateService do
       end
     end
 
+    context "when crediting a contract product fee", :premium do
+      let(:automatic) { false }
+      let(:create_default_applied_taxes) { false }
+      let(:credit_amount_cents) { 50 }
+      let(:refund_amount_cents) { 0 }
+      let(:invoice) do
+        create(:invoice, organization:, customer:, currency: "EUR", fees_amount_cents: 100, status: :finalized,
+          total_amount_cents: 100, total_paid_amount_cents: 100, taxes_amount_cents: 0,
+          payment_status: :succeeded, version_number: 3)
+      end
+      let(:contract) { create(:contract, organization:, customer:) }
+      let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
+      let(:fee1) do
+        create(:fee, invoice:, subscription: nil, fee_type: :product, amount_cents: 100, precise_amount_cents: 100, taxes_rate: 0,
+          invoiceable: contract_rate_card.rate_card.product, contract:, contract_rate_card:, taxes_amount_cents: 0,
+          taxes_precise_amount_cents: 0)
+      end
+      let(:fee2) { nil }
+      let(:items) { [{fee_id: fee1.id, amount_cents: 50}] }
+
+      it "creates a partial credit without changing the source invoice" do
+        expect(result).to be_success
+
+        credit_note = result.credit_note
+        expect(credit_note.items.sole).to have_attributes(fee: fee1, amount_cents: 50)
+        expect(credit_note.invoice).to eq(invoice)
+        expect(credit_note.fees.sole.subscription_id).to be_nil
+        expect(invoice.reload).to have_attributes(status: "finalized", total_amount_cents: 100)
+      end
+
+      context "when the fee belongs to another invoice" do
+        let(:other_invoice) { create(:invoice, organization:, customer:, version_number: 3) }
+        let(:fee1) do
+          create(:fee, invoice: other_invoice, subscription: nil, fee_type: :product, amount_cents: 100, precise_amount_cents: 100,
+            invoiceable: contract_rate_card.rate_card.product, contract:, contract_rate_card:)
+        end
+
+        it "rejects the fee" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+        end
+      end
+    end
+
     context "when invoice is v3 with coupons" do
       let(:invoice) do
         create(

@@ -7211,6 +7211,8 @@ type Fee implements InvoiceItem {
   appliedTaxes: [FeeAppliedTax!]
   charge: Charge
   chargeFilter: ChargeFilter
+  contract: Contract
+  contractRateCard: ContractAppliedRateCard
   creditableAmountCents: BigInt!
   currency: CurrencyEnum!
   description: String
