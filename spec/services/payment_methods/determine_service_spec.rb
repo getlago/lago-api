@@ -314,6 +314,47 @@ RSpec.describe PaymentMethods::DetermineService do
             expect(result.payment_method).to be_nil
           end
         end
+
+        context "when billing segments belong to several contracts" do
+          let(:contract_payment_method) { create(:payment_method, customer:, is_default: false) }
+          let(:contract) { create(:contract, organization:, customer:, payment_method: contract_payment_method, created_at: 2.days.ago) }
+
+          before do
+            later_contract = create(:contract, organization:, customer:, payment_method: create(:payment_method, customer:, is_default: false))
+            create(:billing_segment, organization:, customer:, contract: later_contract, invoice:)
+          end
+
+          it "returns the payment method of the earliest contract" do
+            result = service.call
+
+            expect(result.payment_method).to eq(contract_payment_method)
+          end
+        end
+      end
+
+      context "with an advance_charges invoice holding a fee of another customer's contract" do
+        let(:invoice) { create(:invoice, customer:, organization:, invoice_type: :advance_charges) }
+        let(:contract) { create(:contract, organization:, customer: create(:customer, organization:)) }
+        let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
+
+        before do
+          create(
+            :fee,
+            invoice:,
+            organization:,
+            subscription: nil,
+            fee_type: :product,
+            invoiceable: contract_rate_card.rate_card.product,
+            contract:,
+            contract_rate_card:
+          )
+        end
+
+        it "does not use that contract to pick the payment method" do
+          result = service.call
+
+          expect(result.payment_method).to be_nil
+        end
       end
 
       context "with an advance_charges invoice holding a contract fee without billing segment" do

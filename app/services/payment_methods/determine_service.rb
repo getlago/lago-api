@@ -52,8 +52,12 @@ module PaymentMethods
     end
 
     def invoice_contract
-      invoice.contracts.first ||
-        Contract.where(id: invoice.fees.where.not(contract_id: nil).select(:contract_id)).order(:created_at, :id).first
+      customer_contracts = Contract.where(organization_id: invoice.organization_id, customer_id: invoice.customer_id)
+
+      customer_contracts.where(id: invoice.contracts.select(:id))
+        .or(customer_contracts.where(id: invoice.fees.select(:contract_id)))
+        .order(:created_at, :id)
+        .first
     end
 
     def determine_subscription_payment_method
