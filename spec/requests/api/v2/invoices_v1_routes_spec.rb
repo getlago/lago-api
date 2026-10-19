@@ -11,15 +11,11 @@ RSpec.describe "API v2 invoice routes left to v1", v2_timestamps: false do
   [
     [:post, "/invoices"],
     [:post, "/invoices/preview"],
-    [:put, "/invoices/:id"],
-    [:patch, "/invoices/:id"],
-    [:delete, "/invoices/:id"],
-    [:post, "/invoices/:id/lose_dispute"],
     [:post, "/invoices/:id/download"],
     [:post, "/invoices/:id/download_xml"],
     [:post, "/invoices/:id/retry"],
-    [:post, "/invoices/:id/x402_payment_url"],
-    [:put, "/invoices/:id/sync_salesforce_id"]
+    [:put, "/invoices/:id/sync_salesforce_id"],
+    [:post, "/invoices/:id/x402_payment_url"]
   ].each do |verb, path|
     it "answers 404 to #{verb.upcase} #{path} on v2" do
       public_send(:"#{verb}_with_token", organization, "/api/v2#{path.sub(":id", invoice.id)}")

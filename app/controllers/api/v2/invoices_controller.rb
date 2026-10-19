@@ -29,11 +29,55 @@ module Api
         render_invoice(invoice)
       end
 
+      def update
+        invoice = find_invoice(:visible)
+        return not_found_error(resource: "invoice") unless invoice
+        return method_not_allowed_error(code: "update_on_voided_invoice") if invoice.voided?
+
+        result = ::Invoices::UpdateService.call(
+          invoice:,
+          params: update_params.to_h.deep_symbolize_keys,
+          webhook_notification: true
+        )
+
+        if result.success?
+          render_invoice(result.invoice)
+        else
+          render_error_response(result)
+        end
+      end
+
+      def destroy
+        invoice = find_invoice(:visible)
+        return not_found_error(resource: "invoice") unless invoice
+
+        result = ::Invoices::DeleteService.call(invoice:)
+
+        if result.success?
+          render_invoice(result.invoice)
+        else
+          render_error_response(result)
+        end
+      end
+
       def void
         invoice = find_invoice(:visible)
         return not_found_error(resource: "invoice") unless invoice
 
         result = ::Invoices::VoidService.call(invoice:, params: params.permit(:generate_credit_note, :refund_amount, :credit_amount))
+
+        if result.success?
+          render_invoice(result.invoice)
+        else
+          render_error_response(result)
+        end
+      end
+
+      def lose_dispute
+        invoice = find_invoice(:visible)
+        return not_found_error(resource: "invoice") unless invoice
+
+        result = ::Invoices::LoseDisputeService.call(invoice:, payment_dispute_lost_at: Time.current)
 
         if result.success?
           render_invoice(result.invoice)
@@ -133,6 +177,10 @@ module Api
 
       def find_invoice(status_scope)
         current_organization.invoices.public_send(status_scope).product_catalog.find_by(id: params[:id])
+      end
+
+      def update_params
+        params.require(:invoice).permit(:payment_status)
       end
 
       def resend_email_params
