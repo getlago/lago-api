@@ -67,6 +67,18 @@ RSpec.describe PaymentMethods::SetAsDefaultService do
       end
     end
 
+    context "when the payment method is a shared payment token row" do
+      let(:payment_method) { create(:payment_method, customer:, organization:, is_default: false, provider_method_type: "shared_payment_token", provider_method_id: "spt_123", details: {}) }
+
+      it "refuses to make it the default" do
+        result = default_service.call
+
+        expect(result).not_to be_success
+        expect(result.error.code).to eq("single_use_payment_method")
+        expect(payment_method.reload.is_default).to eq(false)
+      end
+    end
+
     context "when billing entity is nil" do
       let(:payment_method) { nil }
 

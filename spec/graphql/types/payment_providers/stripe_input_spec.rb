@@ -9,6 +9,7 @@ RSpec.describe Types::PaymentProviders::StripeInput do
     expect(subject).to accept_argument(:code).of_type("String!")
     expect(subject).to accept_argument(:name).of_type("String!")
     expect(subject).to accept_argument(:secret_key).of_type("String")
+    expect(subject).to accept_argument(:seller_profile).of_type("String")
     expect(subject).to accept_argument(:success_redirect_url).of_type("String")
     expect(subject).to accept_argument(:supports_3ds).of_type("Boolean")
     expect(subject).to accept_argument(:require_terms_of_service_consent).of_type("Boolean")

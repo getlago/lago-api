@@ -80,6 +80,8 @@ Rails.application.routes.draw do
     get "BILLING.md", to: "documents#billing", format: false
     post "billing/enroll", to: "billing#enroll"
     get "billing", to: "billing#show"
+    post "billing/payments", to: "billing#pay"
+    get "billing/payments/:id", to: "billing#payment"
   end
 
   if Rails.env.local?

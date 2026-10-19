@@ -685,6 +685,7 @@ input AddStripePaymentProviderInput {
   name: String!
   requireTermsOfServiceConsent: Boolean
   secretKey: String
+  sellerProfile: String
   successRedirectUrl: String
   supports3ds: Boolean
 }
@@ -12340,6 +12341,7 @@ enum ProviderPaymentMethodsEnum {
   customer_balance
   link
   sepa_debit
+  shared_payment_token
   us_bank_account
 }
 
@@ -14502,6 +14504,7 @@ type StripeProvider {
   name: String!
   requireTermsOfServiceConsent: Boolean
   secretKey: ObfuscatedString
+  sellerProfile: String
   successRedirectUrl: String
   supports3ds: Boolean
 }
@@ -15671,6 +15674,7 @@ input UpdateAdyenPaymentProviderInput {
   id: ID!
   name: String
   requireTermsOfServiceConsent: Boolean
+  sellerProfile: String
   successRedirectUrl: String
   supports3ds: Boolean
 }
@@ -15793,6 +15797,7 @@ input UpdateCashfreePaymentProviderInput {
   id: ID!
   name: String
   requireTermsOfServiceConsent: Boolean
+  sellerProfile: String
   successRedirectUrl: String
   supports3ds: Boolean
 }
@@ -16123,6 +16128,7 @@ input UpdateFlutterwavePaymentProviderInput {
   id: ID!
   name: String
   requireTermsOfServiceConsent: Boolean
+  sellerProfile: String
   successRedirectUrl: String
   supports3ds: Boolean
 }
@@ -16140,6 +16146,7 @@ input UpdateGocardlessPaymentProviderInput {
   id: ID!
   name: String
   requireTermsOfServiceConsent: Boolean
+  sellerProfile: String
   successRedirectUrl: String
   supports3ds: Boolean
 }
@@ -16280,6 +16287,7 @@ input UpdateMoneyhashPaymentProviderInput {
   id: ID!
   name: String
   requireTermsOfServiceConsent: Boolean
+  sellerProfile: String
   successRedirectUrl: String
   supports3ds: Boolean
 }
@@ -16652,6 +16660,7 @@ input UpdateStripePaymentProviderInput {
   id: ID!
   name: String
   requireTermsOfServiceConsent: Boolean
+  sellerProfile: String
   successRedirectUrl: String
   supports3ds: Boolean
 }

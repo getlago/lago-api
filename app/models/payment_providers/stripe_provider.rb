@@ -55,6 +55,7 @@ module PaymentProviders
     secrets_accessors :secret_key
     settings_accessors :supports_3ds
     settings_accessors :require_terms_of_service_consent, default: false
+    settings_accessors :seller_profile
 
     def payment_type
       "stripe"
