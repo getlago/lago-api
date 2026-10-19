@@ -103,6 +103,26 @@ credit_note_provider_refund_failure:
   description: The refund of a credit note has failed on a payment provider
   category: Credit Notes
   deprecated: false
+coupon_created:
+  name: coupon.created
+  description: A new coupon has been created
+  category: Coupons
+  deprecated: false
+coupon_updated:
+  name: coupon.updated
+  description: A coupon has been updated
+  category: Coupons
+  deprecated: false
+coupon_deleted:
+  name: coupon.deleted
+  description: A coupon has been deleted
+  category: Coupons
+  deprecated: false
+coupon_terminated:
+  name: coupon.terminated
+  description: A coupon has been terminated, manually or because it expired
+  category: Coupons
+  deprecated: false
 dunning_campaign_finished:
   name: dunning_campaign.finished
   description: The dunning campaign has been completed for a customer
