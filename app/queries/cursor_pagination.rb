@@ -10,24 +10,28 @@ module CursorPagination
   # Both columns run in the same direction, unlike the `id ASC` tie-break that
   # `BaseQuery#apply_consistent_ordering` gives the offset lists: a single row-value
   # comparison then bounds a page, and a `(…, created_at DESC, id DESC)` index serves it.
-  # Mixed directions would need an OR-chain predicate. A keyset query replaces the
-  # ordering of the query anyway, so the offset lists keep theirs.
+  # A keyset query replaces the ordering of the query anyway, so the offset lists keep
+  # theirs. An endpoint whose index serves the offset order declares that sort instead.
   DEFAULT_SORT = {created_at: :desc, id: :desc}.freeze
 
-  # The columns of a cursor key. A sort on other columns needs typed keys first.
-  SORT_COLUMNS = %i[created_at id].freeze
+  # The columns a sort can use, in the order it lists them. `Token` knows how to write each
+  # one in a cursor key.
+  SORT_COLUMNS = %i[issuing_date created_at id].freeze
 
   # Written in every cursor: a cursor minted under another sort is rejected as expired.
   def self.signature(sort)
     sort.map { |column, direction| "#{column}:#{direction}" }.join(",")
   end
 
-  # A programming error rather than a client one: the endpoint declares its sort, and a
-  # cursor can only be resumed on the columns its key holds, in a single direction.
+  # A programming error rather than a client one: the endpoint declares its sort. It ends
+  # with `id`, the only unique column, so that two rows never tie.
   def self.validate_sort!(sort)
-    directions = sort.values.uniq
-    supported = sort.keys == SORT_COLUMNS && directions.size == 1 && %i[asc desc].include?(directions.first)
+    columns = sort.keys
+    supported = columns.size > 1 &&
+      (SORT_COLUMNS & columns) == columns &&
+      columns.last == :id &&
+      sort.values.all? { %i[asc desc].include?(it) }
 
-    raise ArgumentError, "unsupported cursor sort #{sort.inspect}: created_at then id, in a single direction" unless supported
+    raise ArgumentError, "unsupported cursor sort #{sort.inspect}: columns among #{SORT_COLUMNS.join(", ")} in that order, id last, each asc or desc" unless supported
   end
 end
