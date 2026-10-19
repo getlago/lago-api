@@ -642,6 +642,17 @@ RSpec.describe Invoice do
 
       it { expect(invoice).not_to be_product_catalog }
     end
+
+    context "when the fees are already loaded" do
+      before { contract_fee }
+
+      it "reads them without querying" do
+        loaded_invoice = described_class.includes(:fees).find(invoice.id)
+
+        expect(capture_sql { loaded_invoice.product_catalog? }).to be_empty
+        expect(loaded_invoice).to be_product_catalog
+      end
+    end
   end
 
   describe "ready_to_be_finalized" do

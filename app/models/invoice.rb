@@ -502,7 +502,10 @@ class Invoice < ApplicationRecord
   end
 
   def product_catalog?
-    contract? || fees.where.not(contract_id: nil).exists?
+    return true if contract?
+    return fees.any? { it.contract_id.present? } if fees.loaded?
+
+    fees.where.not(contract_id: nil).exists?
   end
 
   def subscription_gated?
