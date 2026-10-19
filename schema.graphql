@@ -8021,6 +8021,7 @@ type Invoice {
   prepaidGrantedCreditAmountCents: BigInt
   prepaidPurchasedCreditAmountCents: BigInt
   progressiveBillingCreditAmountCents: BigInt!
+  progressiveBillingTrigger: InvoiceProgressiveBillingTriggerEnum
   purchaseOrderNumber: String
   readyForPaymentProcessing: Boolean!
   refundableAmountCents: BigInt!
@@ -8198,6 +8199,11 @@ enum InvoicePaymentStatusTypeEnum {
   failed
   pending
   succeeded
+}
+
+enum InvoiceProgressiveBillingTriggerEnum {
+  usage_threshold
+  wallet_expiration
 }
 
 enum InvoiceSettlementTypeEnum {
