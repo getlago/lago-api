@@ -26,13 +26,15 @@ RSpec.describe PaymentProviders::StripeService do
           name:,
           success_redirect_url:,
           supports_3ds: true,
-          require_terms_of_service_consent: true
+          require_terms_of_service_consent: true,
+          seller_profile: "profile_test_123"
         )
 
         expect(PaymentProviders::Stripe::RegisterWebhookJob).to have_been_enqueued
           .with(result.stripe_provider)
         expect(result.stripe_provider.supports_3ds).to be(true)
         expect(result.stripe_provider.require_terms_of_service_consent).to be(true)
+        expect(result.stripe_provider.seller_profile).to eq("profile_test_123")
       end.to change(PaymentProviders::StripeProvider, :count).by(1)
     end
 
@@ -116,7 +118,8 @@ RSpec.describe PaymentProviders::StripeService do
           secret_key: "new_key",
           code:,
           name:,
-          success_redirect_url:
+          success_redirect_url:,
+          seller_profile: "profile_test_123"
         )
 
         expect(result).to be_success
@@ -126,6 +129,7 @@ RSpec.describe PaymentProviders::StripeService do
         expect(result.stripe_provider.code).to eq(code)
         expect(result.stripe_provider.name).to eq(name)
         expect(result.stripe_provider.success_redirect_url).to eq(success_redirect_url)
+        expect(result.stripe_provider.seller_profile).to eq("profile_test_123")
 
         expect(PaymentProviders::Stripe::RegisterWebhookJob).not_to have_been_enqueued
       end
