@@ -129,6 +129,7 @@ ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.integration_items DROP CONSTRAINT IF EXISTS fk_rails_a9dc2ea536;
 ALTER TABLE IF EXISTS ONLY public.rate_phases DROP CONSTRAINT IF EXISTS fk_rails_a9ba49506f;
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_a958b8f5a7;
+ALTER TABLE IF EXISTS ONLY public.applied_wallet_expirations DROP CONSTRAINT IF EXISTS fk_rails_a88ad8b389;
 ALTER TABLE IF EXISTS ONLY public.cached_aggregations DROP CONSTRAINT IF EXISTS fk_rails_a808f6f3b4;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_a7f20c73bb;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_a710519346;
@@ -175,6 +176,7 @@ ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_8da4c1
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alerts DROP CONSTRAINT IF EXISTS fk_rails_8c18828b53;
 ALTER TABLE IF EXISTS ONLY public.fixed_charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_8c09ee2428;
 ALTER TABLE IF EXISTS ONLY public.invoice_metadata DROP CONSTRAINT IF EXISTS fk_rails_8bb5b094c4;
+ALTER TABLE IF EXISTS ONLY public.applied_wallet_expirations DROP CONSTRAINT IF EXISTS fk_rails_8a65cfc992;
 ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS fk_rails_89e1020aca;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlement_values DROP CONSTRAINT IF EXISTS fk_rails_8887954ec7;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_885dc100ef;
@@ -247,6 +249,7 @@ ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_6023b3
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF EXISTS fk_rails_5efea6fe31;
 ALTER TABLE IF EXISTS ONLY public.invoice_connections DROP CONSTRAINT IF EXISTS fk_rails_5eaad62ac0;
 ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fk_rails_5e06da3c18;
+ALTER TABLE IF EXISTS ONLY public.applied_wallet_expirations DROP CONSTRAINT IF EXISTS fk_rails_5cee1f6b23;
 ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rails_5cb67dee79;
 ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_5cb2f24c3d;
 ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS fk_rails_5c2e0b6d34;
@@ -991,6 +994,9 @@ DROP INDEX IF EXISTS public.index_billable_metrics_on_deleted_at;
 DROP INDEX IF EXISTS public.index_billable_metric_filters_on_organization_id;
 DROP INDEX IF EXISTS public.index_billable_metric_filters_on_deleted_at;
 DROP INDEX IF EXISTS public.index_billable_metric_filters_on_billable_metric_id;
+DROP INDEX IF EXISTS public.index_applied_wallet_expirations_on_wallet_id;
+DROP INDEX IF EXISTS public.index_applied_wallet_expirations_on_organization_id;
+DROP INDEX IF EXISTS public.index_applied_wallet_expirations_on_invoice_id;
 DROP INDEX IF EXISTS public.index_applied_usage_thresholds_on_usage_threshold_id;
 DROP INDEX IF EXISTS public.index_applied_usage_thresholds_on_organization_id;
 DROP INDEX IF EXISTS public.index_applied_usage_thresholds_on_invoice_id;
@@ -1252,6 +1258,7 @@ ALTER TABLE IF EXISTS ONLY public.billing_entities_invoice_custom_sections DROP 
 ALTER TABLE IF EXISTS ONLY public.billable_metrics DROP CONSTRAINT IF EXISTS billable_metrics_pkey;
 ALTER TABLE IF EXISTS ONLY public.billable_metric_filters DROP CONSTRAINT IF EXISTS billable_metric_filters_pkey;
 ALTER TABLE IF EXISTS ONLY public.ar_internal_metadata DROP CONSTRAINT IF EXISTS ar_internal_metadata_pkey;
+ALTER TABLE IF EXISTS ONLY public.applied_wallet_expirations DROP CONSTRAINT IF EXISTS applied_wallet_expirations_pkey;
 ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EXISTS applied_usage_thresholds_pkey;
 ALTER TABLE IF EXISTS ONLY public.applied_pricing_units DROP CONSTRAINT IF EXISTS applied_pricing_units_pkey;
 ALTER TABLE IF EXISTS ONLY public.applied_invoice_custom_sections DROP CONSTRAINT IF EXISTS applied_invoice_custom_sections_pkey;
@@ -1440,6 +1447,7 @@ DROP VIEW IF EXISTS public.billable_metrics_grouped_charges;
 DROP TABLE IF EXISTS public.billable_metrics;
 DROP TABLE IF EXISTS public.billable_metric_filters;
 DROP TABLE IF EXISTS public.ar_internal_metadata;
+DROP TABLE IF EXISTS public.applied_wallet_expirations;
 DROP TABLE IF EXISTS public.applied_usage_thresholds;
 DROP TABLE IF EXISTS public.applied_pricing_units;
 DROP TABLE IF EXISTS public.applied_invoice_custom_sections;
@@ -1492,6 +1500,7 @@ DROP TYPE IF EXISTS public.order_form_void_reason;
 DROP TYPE IF EXISTS public.order_form_status;
 DROP TYPE IF EXISTS public.order_execution_mode;
 DROP TYPE IF EXISTS public.invoice_settlement_settlement_type;
+DROP TYPE IF EXISTS public.invoice_progressive_billing_trigger;
 DROP TYPE IF EXISTS public.invoice_custom_section_type;
 DROP TYPE IF EXISTS public.inbound_webhook_status;
 DROP TYPE IF EXISTS public.fixed_charge_charge_model;
@@ -1721,6 +1730,16 @@ CREATE TYPE public.inbound_webhook_status AS ENUM (
 CREATE TYPE public.invoice_custom_section_type AS ENUM (
     'manual',
     'system_generated'
+);
+
+
+--
+-- Name: invoice_progressive_billing_trigger; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.invoice_progressive_billing_trigger AS ENUM (
+    'usage_threshold',
+    'wallet_expiration'
 );
 
 
@@ -2427,6 +2446,20 @@ CREATE TABLE public.applied_usage_thresholds (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     organization_id uuid NOT NULL
+);
+
+
+--
+-- Name: applied_wallet_expirations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.applied_wallet_expirations (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    invoice_id uuid NOT NULL,
+    wallet_id uuid NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -4020,6 +4053,7 @@ CREATE TABLE public.invoices (
     search_terms text,
     x402_payment_token character varying,
     x402_connection_id uuid,
+    progressive_billing_trigger public.invoice_progressive_billing_trigger,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 
@@ -6511,6 +6545,14 @@ ALTER TABLE ONLY public.applied_usage_thresholds
 
 
 --
+-- Name: applied_wallet_expirations applied_wallet_expirations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.applied_wallet_expirations
+    ADD CONSTRAINT applied_wallet_expirations_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: ar_internal_metadata ar_internal_metadata_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8501,6 +8543,27 @@ CREATE INDEX index_applied_usage_thresholds_on_organization_id ON public.applied
 --
 
 CREATE INDEX index_applied_usage_thresholds_on_usage_threshold_id ON public.applied_usage_thresholds USING btree (usage_threshold_id);
+
+
+--
+-- Name: index_applied_wallet_expirations_on_invoice_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_applied_wallet_expirations_on_invoice_id ON public.applied_wallet_expirations USING btree (invoice_id);
+
+
+--
+-- Name: index_applied_wallet_expirations_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_applied_wallet_expirations_on_organization_id ON public.applied_wallet_expirations USING btree (organization_id);
+
+
+--
+-- Name: index_applied_wallet_expirations_on_wallet_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_applied_wallet_expirations_on_wallet_id ON public.applied_wallet_expirations USING btree (wallet_id);
 
 
 --
@@ -13827,6 +13890,14 @@ ALTER TABLE ONLY public.credit_notes
 
 
 --
+-- Name: applied_wallet_expirations fk_rails_5cee1f6b23; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.applied_wallet_expirations
+    ADD CONSTRAINT fk_rails_5cee1f6b23 FOREIGN KEY (invoice_id) REFERENCES public.invoices(id);
+
+
+--
 -- Name: fixed_charges fk_rails_5e06da3c18; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14403,6 +14474,14 @@ ALTER TABLE ONLY public.add_ons_taxes
 
 
 --
+-- Name: applied_wallet_expirations fk_rails_8a65cfc992; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.applied_wallet_expirations
+    ADD CONSTRAINT fk_rails_8a65cfc992 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: invoice_metadata fk_rails_8bb5b094c4; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14768,6 +14847,14 @@ ALTER TABLE ONLY public.recurring_transaction_rules_invoice_custom_sections
 
 ALTER TABLE ONLY public.cached_aggregations
     ADD CONSTRAINT fk_rails_a808f6f3b4 FOREIGN KEY (product_id) REFERENCES public.products(id);
+
+
+--
+-- Name: applied_wallet_expirations fk_rails_a88ad8b389; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.applied_wallet_expirations
+    ADD CONSTRAINT fk_rails_a88ad8b389 FOREIGN KEY (wallet_id) REFERENCES public.wallets(id);
 
 
 --
@@ -15737,6 +15824,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261019185401'),
+('20261019185400'),
 ('20261019074555'),
 ('20261014123350'),
 ('20261014123349'),

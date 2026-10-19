@@ -61,6 +61,7 @@ RSpec.describe Invoices::ProgressiveBilling::UsageThresholdService, transaction:
       expect(invoice.invoice_subscriptions.count).to eq(1)
       expect(invoice.fees.count).to eq(1)
       expect(invoice.applied_usage_thresholds.count).to eq(1)
+      expect(invoice.progressive_billing_trigger).to eq("usage_threshold")
 
       expect(invoice.applied_usage_thresholds.first.lifetime_usage_amount_cents)
         .to eq(lifetime_usage.total_amount_cents)

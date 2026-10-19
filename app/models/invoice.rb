@@ -54,6 +54,7 @@ class Invoice < ApplicationRecord
   has_many :customer_payments, -> { where.not(customer_id: nil).order(updated_at: :desc) }, class_name: "Payment", as: :payable
 
   has_many :applied_usage_thresholds
+  has_one :applied_wallet_expiration
   has_many :usage_thresholds, through: :applied_usage_thresholds
   has_many :applied_invoice_custom_sections
   has_one :regenerated_invoice, class_name: "Invoice", foreign_key: :voided_invoice_id
@@ -100,6 +101,10 @@ class Invoice < ApplicationRecord
     succeeded: "succeeded",
     failed: "failed"
   }.freeze
+  PROGRESSIVE_BILLING_TRIGGERS = {
+    usage_threshold: "usage_threshold",
+    wallet_expiration: "wallet_expiration"
+  }.freeze
 
   VISIBLE_STATUS = {draft: 0, finalized: 1, voided: 2, failed: 4, pending: 7}.freeze
   INVISIBLE_STATUS = {generating: 3, open: 5, closed: 6, deleted: 8}.freeze
@@ -113,6 +118,9 @@ class Invoice < ApplicationRecord
 
   attribute :tax_status, :string
   enum :tax_status, TAX_STATUSES, prefix: :tax
+
+  attribute :progressive_billing_trigger, :string
+  enum :progressive_billing_trigger, PROGRESSIVE_BILLING_TRIGGERS, prefix: :triggered_by, validate: {allow_nil: true}
 
   aasm column: "status", timestamps: true do
     state :generating
@@ -898,6 +906,7 @@ end
 #  prepaid_granted_credit_amount_cents     :bigint
 #  prepaid_purchased_credit_amount_cents   :bigint
 #  progressive_billing_credit_amount_cents :bigint           default(0), not null
+#  progressive_billing_trigger             :enum
 #  purchase_order_number                   :string
 #  ready_for_payment_processing            :boolean          default(TRUE), not null
 #  ready_to_be_refreshed                   :boolean          default(FALSE), not null

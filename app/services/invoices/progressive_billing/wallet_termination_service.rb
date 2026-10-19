@@ -14,8 +14,16 @@ module Invoices
 
       attr_reader :wallet, :subscription
 
+      def progressive_billing_trigger
+        :wallet_expiration
+      end
+
       def idempotency_values
         {wallet_id: wallet.id}
+      end
+
+      def after_fees_created
+        AppliedWalletExpiration.create!(organization_id: wallet.organization_id, invoice:, wallet:)
       end
 
       def nothing_to_invoice?

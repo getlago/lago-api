@@ -48,6 +48,8 @@ RSpec.describe Invoices::ProgressiveBilling::WalletTerminationService, transacti
     )
     expect(result.invoice.invoice_subscriptions.map(&:subscription)).to eq([subscription])
     expect(result.invoice.applied_usage_thresholds).to be_empty
+    expect(result.invoice.progressive_billing_trigger).to eq("wallet_expiration")
+    expect(result.invoice.applied_wallet_expiration.wallet).to eq(wallet)
     expect(wallet.reload.balance_cents).to eq(900)
   end
 
@@ -85,6 +87,7 @@ RSpec.describe Invoices::ProgressiveBilling::WalletTerminationService, transacti
       expect(result).to be_success
       expect(result.invoice).to be_nil
       expect(wallet.reload.balance_cents).to eq(1000)
+      expect(AppliedWalletExpiration.count).to eq(0)
     end
 
     it "does not enqueue the invoice side effects" do
