@@ -53,13 +53,16 @@ Rails.application.routes.draw do
       # A contract is never destroyed — DELETE ends its lifecycle, the same
       # idiom subscriptions follow.
       delete "/contracts/:external_id", to: "contracts#terminate", constraints: {external_id: /[^\/]+/}
-      resources :invoices, only: %i[index show] do
+      resources :invoices, only: %i[index show update destroy] do
         post :void, on: :member
+        post :lose_dispute, on: :member
         post :download_pdf, on: :member
         post :resend_email, on: :member
         post :retry, on: :member
+        post :retry_taxes, on: :member, action: :retry
         post :retry_payment, on: :member
         post :payment_url, on: :member
+        post :x402_payment_url, on: :member
         put :refresh, on: :member
         put :finalize, on: :member
       end
