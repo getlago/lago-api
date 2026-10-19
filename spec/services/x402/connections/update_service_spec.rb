@@ -84,7 +84,12 @@ describe X402::Connections::UpdateService do
       it "saves the normalised list and keeps the rest" do
         expect(result).to be_success
         expect(connection.reload).to have_attributes(
-          name: connection.name,
+          name: "Coinbase CDP",
+          networks: ["eip155:84532", "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"],
+          payout_addresses: {
+            "evm" => evm_address,
+            "svm" => svm_address
+          },
           allowed_origins: ["https://api.example.com"],
           cdp_api_key_id:,
           cdp_api_key_secret:
@@ -99,15 +104,15 @@ describe X402::Connections::UpdateService do
 
     context "with a connection saved without allowed origins" do
       let(:connection) do
-        build(
+        create(
           :x402_connection,
+          :without_allowed_origins,
           organization:,
           networks: ["eip155:84532", "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"],
           payout_addresses: {"evm" => evm_address, "svm" => svm_address},
           cdp_api_key_id:,
-          cdp_api_key_secret:,
-          allowed_origins: []
-        ).tap { |connection| connection.save!(validate: false) }
+          cdp_api_key_secret:
+        )
       end
 
       context "when only name is sent" do

@@ -19,5 +19,10 @@ FactoryBot.define do
       networks { ["solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"] }
       payout_addresses { {"svm" => "2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4"} }
     end
+
+    trait :without_allowed_origins do
+      allowed_origins { [] }
+      to_create { |connection| connection.save!(validate: false) }
+    end
   end
 end

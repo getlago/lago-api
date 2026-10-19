@@ -55,10 +55,10 @@ describe Api::V1::X402::ConnectionsController, :premium do
       expect(json[:x402_connection].keys.grep(/secret|cdp_api_key/)).to be_empty
     end
 
-    context "with allowed origins" do
-      let(:params) { super().merge(allowed_origins: ["https://api.example.com"]) }
+    context "with an origin to normalise" do
+      let(:params) { super().merge(allowed_origins: ["HTTPS://API.example.com:443/"]) }
 
-      it "renders them" do
+      it "renders it normalised" do
         subject
 
         expect(response).to have_http_status(:ok)
@@ -330,8 +330,7 @@ describe Api::V1::X402::ConnectionsController, :premium do
 
     context "with a connection saved without allowed origins" do
       let(:connection) do
-        build(:x402_connection, organization:, cdp_api_key_id:, cdp_api_key_secret:, allowed_origins: [])
-          .tap { |connection| connection.save!(validate: false) }
+        create(:x402_connection, :without_allowed_origins, organization:, cdp_api_key_id:, cdp_api_key_secret:)
       end
 
       it "returns a validation error" do
