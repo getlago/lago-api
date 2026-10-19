@@ -36,6 +36,7 @@ RSpec.describe Types::Wallets::Object do
     expect(subject).to have_field(:recurring_transaction_rules).of_type("[RecurringTransactionRule!]")
 
     expect(subject).to have_field(:invoice_requires_successful_payment).of_type("Boolean!")
+    expect(subject).to have_field(:invoice_usage_on_expiration).of_type("Boolean!")
 
     expect(subject).to have_field(:paid_top_up_max_amount_cents).of_type("BigInt")
     expect(subject).to have_field(:paid_top_up_min_amount_cents).of_type("BigInt")
