@@ -10,6 +10,9 @@ module AuthenticableAdminUser
     raise unauthorized_error unless context[:current_user]
     raise unauthorized_error unless context[:current_user].cs_admin?
     raise unauthorized_error unless context[:current_user].email.end_with?("@getlago.com")
+    # NOTE: Okta and Entra ID identities come from a provider configured by a tenant, so they never
+    #       grant access to the admin endpoints.
+    raise unauthorized_error if Organizations::AuthenticationMethods::PREMIUM_AUTHENTICATION_METHODS.include?(context[:login_method])
 
     super
   end
