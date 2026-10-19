@@ -575,7 +575,7 @@ class Invoice < ApplicationRecord
   end
 
   def should_sync_hubspot_invoice?
-    finalized? && should_update_hubspot_invoice? && !product_catalog?
+    finalized? && should_update_hubspot_invoice?
   end
 
   def should_sync_salesforce_invoice?

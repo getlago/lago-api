@@ -964,34 +964,14 @@ RSpec.describe Invoice do
       end
     end
 
-    context "when the invoice is finalized for a customer with a Hubspot integration" do
-      include_context "with a contract fee"
-
-      let(:invoice) { create(:invoice, customer:, organization:, invoice_type:, status: :finalized) }
+    context "when a contract invoice is finalized for a customer with a Hubspot integration" do
+      let(:invoice) { create(:invoice, customer:, organization:, invoice_type: :contract, status: :finalized) }
       let(:integration) { create(:hubspot_integration, organization:, sync_invoices: true) }
 
       before { create(:hubspot_customer, integration:, customer:) }
 
-      context "when the invoice is a contract invoice" do
-        let(:invoice_type) { :contract }
-
-        it "returns false" do
-          expect(method_call).to eq(false)
-        end
-      end
-
-      context "when the invoice holds a contract fee" do
-        before { contract_fee }
-
-        it "returns false" do
-          expect(method_call).to eq(false)
-        end
-      end
-
-      context "when the invoice has no contract fee" do
-        it "returns true" do
-          expect(method_call).to eq(true)
-        end
+      it "returns true" do
+        expect(method_call).to eq(true)
       end
     end
   end

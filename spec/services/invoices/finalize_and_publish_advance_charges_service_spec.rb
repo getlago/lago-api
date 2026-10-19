@@ -86,10 +86,10 @@ RSpec.describe Invoices::FinalizeAndPublishAdvanceChargesService do
           )
         end
 
-        it "does not enqueue the invoice integrations" do
+        it "enqueues the Hubspot sync only" do
           expect(result).to be_success
           expect(Integrations::Aggregator::Invoices::CreateJob).not_to have_been_enqueued
-          expect(Integrations::Aggregator::Invoices::Hubspot::CreateJob).not_to have_been_enqueued
+          expect(Integrations::Aggregator::Invoices::Hubspot::CreateJob).to have_been_enqueued.with(invoice:)
         end
       end
     end
