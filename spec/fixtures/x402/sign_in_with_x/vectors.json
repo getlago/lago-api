@@ -8,7 +8,8 @@
     "x402 (python)": "2.25.0",
     "signinwithethereum": "5.0.2",
     "x402/go/v2": "faa1c694c",
-    "siwe-go": "1.0.0"
+    "siwe-go": "1.0.0",
+    "pynacl": "1.6.2"
   },
   "evm": [
     {
@@ -236,6 +237,110 @@
         ],
         "signatureScheme": "eip191",
         "signature": "0x5bc4b8968d0b79005ca820084dbe5457b4a9a097080bfddfc455f67dc564d10b31fcb05c98347db662a8350243684d7c5b114c3db17d53e27817e69c496337971c"
+      }
+    },
+    {
+      "name": "evm_no_statement",
+      "payload": {
+        "domain": "api.example.com",
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "uri": "https://api.example.com/v1/generate",
+        "version": "1",
+        "chainId": "eip155:84532",
+        "type": "eip191",
+        "nonce": "a1b2c3d4e5f67890a1b2c3d4e5f67890",
+        "issuedAt": "2026-10-16T10:00:00.000Z",
+        "resources": [
+          "https://api.example.com/v1/generate"
+        ],
+        "signature": "0x38e079adea291f323acdcdd46dc019cf224b032bb65a08c21a6a37e83b9ee9f54c27d0fe36dcbf1d2bb67632eb82ad9b066cfcc1f09e0516e9dc49137a44ad2c1c"
+      }
+    },
+    {
+      "name": "svm_no_statement",
+      "payload": {
+        "domain": "api.example.com",
+        "address": "2btLJAAb1S3x6hZYdVyAePjqtQYi2ZBSRGy4569RZu8h",
+        "uri": "https://api.example.com/v1/generate",
+        "version": "1",
+        "chainId": "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1",
+        "type": "ed25519",
+        "nonce": "a1b2c3d4e5f67890a1b2c3d4e5f67890",
+        "issuedAt": "2026-10-16T10:00:00.000Z",
+        "resources": [
+          "https://api.example.com/v1/generate"
+        ],
+        "signature": "MRYTrkyYPdjRw1XdyfjxKT3HN8PLw3CMf1sFSmgtBJBRPudwp8qvCcSTgX5TEqwNYY9qFBg7R69dDeRcJTM897x"
+      }
+    },
+    {
+      "name": "python_evm_no_statement",
+      "payload": {
+        "domain": "api.example.com",
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "uri": "https://api.example.com/v1/generate",
+        "version": "1",
+        "chainId": "eip155:84532",
+        "type": "eip191",
+        "nonce": "a1b2c3d4e5f67890a1b2c3d4e5f67890",
+        "issuedAt": "2026-10-16T10:00:00.000Z",
+        "resources": [
+          "https://api.example.com/v1/generate"
+        ],
+        "signature": "0x38e079adea291f323acdcdd46dc019cf224b032bb65a08c21a6a37e83b9ee9f54c27d0fe36dcbf1d2bb67632eb82ad9b066cfcc1f09e0516e9dc49137a44ad2c1c"
+      }
+    },
+    {
+      "name": "python_svm_no_statement",
+      "payload": {
+        "domain": "api.example.com",
+        "address": "2btLJAAb1S3x6hZYdVyAePjqtQYi2ZBSRGy4569RZu8h",
+        "uri": "https://api.example.com/v1/generate",
+        "version": "1",
+        "chainId": "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1",
+        "type": "ed25519",
+        "nonce": "a1b2c3d4e5f67890a1b2c3d4e5f67890",
+        "issuedAt": "2026-10-16T10:00:00.000Z",
+        "resources": [
+          "https://api.example.com/v1/generate"
+        ],
+        "signature": "MRYTrkyYPdjRw1XdyfjxKT3HN8PLw3CMf1sFSmgtBJBRPudwp8qvCcSTgX5TEqwNYY9qFBg7R69dDeRcJTM897x"
+      }
+    },
+    {
+      "name": "go_evm_no_statement",
+      "payload": {
+        "domain": "api.example.com",
+        "address": "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2A",
+        "uri": "https://api.example.com/v1/generate",
+        "version": "1",
+        "chainId": "eip155:84532",
+        "type": "eip191",
+        "nonce": "a1b2c3d4e5f67890a1b2c3d4e5f67890",
+        "issuedAt": "2026-10-16T10:00:00.000Z",
+        "resources": [
+          "https://api.example.com/v1/generate"
+        ],
+        "signatureScheme": "eip191",
+        "signature": "0x38e079adea291f323acdcdd46dc019cf224b032bb65a08c21a6a37e83b9ee9f54c27d0fe36dcbf1d2bb67632eb82ad9b066cfcc1f09e0516e9dc49137a44ad2c1c"
+      }
+    },
+    {
+      "name": "go_svm_no_statement",
+      "payload": {
+        "domain": "api.example.com",
+        "address": "2btLJAAb1S3x6hZYdVyAePjqtQYi2ZBSRGy4569RZu8h",
+        "uri": "https://api.example.com/v1/generate",
+        "version": "1",
+        "chainId": "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1",
+        "type": "ed25519",
+        "nonce": "a1b2c3d4e5f67890a1b2c3d4e5f67890",
+        "issuedAt": "2026-10-16T10:00:00.000Z",
+        "resources": [
+          "https://api.example.com/v1/generate"
+        ],
+        "signatureScheme": "siws",
+        "signature": "5qJqcFHhyBpAPeMJGAVmDMgWBKg5TduX8WxCNNMNn81RP7NkbBgwucLY2WJVrrprQBvKGQx65fdrvhaYz5QwUYhf"
       }
     }
   ]

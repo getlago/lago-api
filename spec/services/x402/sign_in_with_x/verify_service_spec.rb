@@ -53,7 +53,7 @@ describe X402::SignInWithX::VerifyService do
     it { expect(result.error.messages).to eq(siwx: ["value_is_invalid"]) }
   end
 
-  %w[domain address statement uri version chainId type nonce issuedAt signature].each do |field|
+  %w[domain address uri version chainId type nonce issuedAt signature].each do |field|
     context "without #{field}" do
       let(:payload) { signed_siwx(key).except(field) }
 
@@ -135,6 +135,12 @@ describe X402::SignInWithX::VerifyService do
 
   context "with an empty statement" do
     let(:payload) { signed_siwx(key, statement: "") }
+
+    it { expect(result.error.messages).to eq(siwx: ["value_is_invalid"]) }
+  end
+
+  context "with a null statement" do
+    let(:payload) { signed_siwx(key).merge("statement" => nil) }
 
     it { expect(result.error.messages).to eq(siwx: ["value_is_invalid"]) }
   end
@@ -378,6 +384,27 @@ describe X402::SignInWithX::VerifyService do
     it { expect(result.error.messages).to eq(siwx: ["invalid_signature"]) }
   end
 
+  context "with the statement removed after signing" do
+    let(:payload) { signed_siwx(key).except("statement") }
+
+    it { expect(result.error.messages).to eq(siwx: ["invalid_signature"]) }
+  end
+
+  context "without a statement" do
+    let(:payload) { signed_siwx(key, statement: nil) }
+
+    it "returns the proven signer" do
+      expect(result).to be_success
+      expect(result.address).to eq(siwx_address(key))
+    end
+
+    context "with a statement added after signing" do
+      let(:payload) { signed_siwx(key, statement: nil).merge("statement" => "Sign in to use your credits") }
+
+      it { expect(result.error.messages).to eq(siwx: ["invalid_signature"]) }
+    end
+  end
+
   context "with a proof signed by another key" do
     let(:payload) { signed_siwx(siwx_evm_key, address: siwx_address(key)) }
 
@@ -432,6 +459,21 @@ describe X402::SignInWithX::VerifyService do
       let(:payload) { signed_siwx(key).merge("statement" => "Sign in to use all your credits") }
 
       it { expect(result.error.messages).to eq(siwx: ["invalid_signature"]) }
+    end
+
+    context "with the statement removed after signing" do
+      let(:payload) { signed_siwx(key).except("statement") }
+
+      it { expect(result.error.messages).to eq(siwx: ["invalid_signature"]) }
+    end
+
+    context "without a statement" do
+      let(:payload) { signed_siwx(key, statement: nil) }
+
+      it "returns the proven signer" do
+        expect(result).to be_success
+        expect(result.address).to eq(siwx_address(key))
+      end
     end
 
     context "with a small-order forgery" do

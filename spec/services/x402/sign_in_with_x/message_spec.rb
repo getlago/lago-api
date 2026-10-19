@@ -93,6 +93,54 @@ describe X402::SignInWithX::Message do
       it { is_expected.to eq(expected) }
     end
 
+    context "without a statement" do
+      let(:payload) { evm_payload.except("statement", "expirationTime", "requestId", "resources") }
+
+      let(:expected) do
+        "api.example.com wants you to sign in with your Ethereum account:\n" \
+          "0x0000000000000000000000000000000000000001\n\n\n" \
+          "URI: https://api.example.com/data\n" \
+          "Version: 1\n" \
+          "Chain ID: 8453\n" \
+          "Nonce: abc123xyz\n" \
+          "Issued At: 2026-05-27T00:00:00Z"
+      end
+
+      it { is_expected.to eq(expected) }
+
+      context "with a Solana payload" do
+        let(:payload) { solana_payload.except("statement", "expirationTime", "requestId", "resources") }
+
+        let(:expected) do
+          "api.example.com wants you to sign in with your Solana account:\n" \
+            "6nYoFimREYaxQZZqBv7vbSd6ozGS1J8uhAAgUXPtaYy6\n\n\n" \
+            "URI: https://api.example.com/data\n" \
+            "Version: 1\n" \
+            "Chain ID: 5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp\n" \
+            "Nonce: abc123xyz\n" \
+            "Issued At: 2026-05-27T00:00:00Z"
+        end
+
+        it { is_expected.to eq(expected) }
+
+        context "without the empty statement line" do
+          subject(:message) { described_class.build(payload, empty_statement_line: false) }
+
+          let(:expected) do
+            "api.example.com wants you to sign in with your Solana account:\n" \
+              "6nYoFimREYaxQZZqBv7vbSd6ozGS1J8uhAAgUXPtaYy6\n\n" \
+              "URI: https://api.example.com/data\n" \
+              "Version: 1\n" \
+              "Chain ID: 5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp\n" \
+              "Nonce: abc123xyz\n" \
+              "Issued At: 2026-05-27T00:00:00Z"
+          end
+
+          it { is_expected.to eq(expected) }
+        end
+      end
+    end
+
     context "with an empty resources array" do
       let(:payload) { evm_payload.except("expirationTime", "requestId").merge("resources" => []) }
 

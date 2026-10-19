@@ -13,8 +13,8 @@ module X402
       MAX_SIGNATURE_LENGTH = 16_384
       MAX_RESOURCES = 10
 
-      REQUIRED_FIELDS = %w[domain address statement uri version chainId type nonce issuedAt signature].freeze
-      OPTIONAL_FIELDS = %w[expirationTime notBefore requestId signatureScheme].freeze
+      REQUIRED_FIELDS = %w[domain address uri version chainId type nonce issuedAt signature].freeze
+      OPTIONAL_FIELDS = %w[statement expirationTime notBefore requestId signatureScheme].freeze
       TIMESTAMP_FIELDS = %w[issuedAt expirationTime notBefore].freeze
       TIMESTAMP_FORMAT = /\A(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\z/
       SIGNATURE_TYPES = {"eip155" => "eip191", "solana" => "ed25519"}.freeze
@@ -74,7 +74,7 @@ module X402
       end
 
       def valid_values?
-        !payload["statement"].empty? && timestamps.values.all?
+        payload["statement"] != "" && timestamps.values.all?
       end
 
       def timestamps
@@ -185,7 +185,15 @@ module X402
         signature = X402::Base58.decode(payload["signature"]) if payload["signature"].length <= SVM_SIGNATURE_MAX_LENGTH
 
         public_key&.bytesize == X402::Ed25519::PUBLIC_KEY_SIZE && signature&.bytesize == X402::Ed25519::SIGNATURE_SIZE &&
-          X402::Ed25519.verify?(public_key:, signature:, message:)
+          svm_messages.any? { |text| X402::Ed25519.verify?(public_key:, signature:, message: text) }
+      end
+
+      def svm_messages
+        if payload.key?("statement")
+          [message]
+        else
+          [message, X402::SignInWithX::Message.build(payload, empty_statement_line: false)]
+        end
       end
 
       def message

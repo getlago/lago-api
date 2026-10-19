@@ -5,7 +5,7 @@ module X402
     module Message
       ACCOUNTS = {"eip155" => "Ethereum", "solana" => "Solana"}.freeze
 
-      def self.build(payload)
+      def self.build(payload, empty_statement_line: true)
         namespace, reference = payload["chainId"].to_s.split(":", 2)
         account = ACCOUNTS.fetch(namespace) { raise ArgumentError, "unsupported chain #{payload["chainId"]}" }
 
@@ -13,8 +13,7 @@ module X402
           "#{payload["domain"]} wants you to sign in with your #{account} account:",
           payload["address"],
           "",
-          payload["statement"],
-          "",
+          *statement_lines(payload["statement"], empty_statement_line),
           "URI: #{payload["uri"]}",
           "Version: #{payload["version"]}",
           "Chain ID: #{reference}",
@@ -23,6 +22,16 @@ module X402
         ]
         lines.concat(optional_lines(payload))
         lines.join("\n")
+      end
+
+      def self.statement_lines(statement, empty_statement_line)
+        if statement
+          [statement, ""]
+        elsif empty_statement_line
+          [""]
+        else
+          []
+        end
       end
 
       def self.optional_lines(payload)
@@ -35,7 +44,7 @@ module X402
         lines
       end
 
-      private_class_method :optional_lines
+      private_class_method :statement_lines, :optional_lines
     end
   end
 end
