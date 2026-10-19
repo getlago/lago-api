@@ -157,5 +157,13 @@ RSpec.describe ProductCatalogInvoiceHelper do
         expect(label).to eq("Analytics - True-up")
       end
     end
+
+    context "when the fee has no billing period" do
+      before { invoice.fees.find_by(amount_cents: 300).update!(properties: {"from_datetime" => nil}) }
+
+      it "returns an empty label" do
+        expect(label).to eq("")
+      end
+    end
   end
 end
