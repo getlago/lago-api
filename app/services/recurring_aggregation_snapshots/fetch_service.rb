@@ -38,6 +38,7 @@ module RecurringAggregationSnapshots
 
     def latest_records
       scope = RecurringAggregationSnapshot.where(
+        organization_id: subscription.organization_id,
         subscription_id: subscription.id,
         charge_id: charge.id,
         charge_filter_id: charge_filter&.persisted? ? charge_filter.id : nil
