@@ -5,15 +5,16 @@ module Agents
     class VerifyTokenService < BaseService
       Result = BaseResult[:registration]
 
-      def initialize(storefront:, token:)
+      def initialize(storefront:, token:, scope:)
         @storefront = storefront
         @token = token
+        @scope = scope
         super
       end
 
       def call
         claims = decode
-        return result.unauthorized_failure!(message: "invalid_token") unless claims
+        return result.unauthorized_failure!(message: "invalid_token") unless claims && claims["scope"] == scope
 
         registration = storefront.agent_registrations.find_by(id: claims["sub"])
         return result.unauthorized_failure!(message: "registration_inactive") unless registration&.active?
@@ -24,7 +25,7 @@ module Agents
 
       private
 
-      attr_reader :storefront, :token
+      attr_reader :storefront, :token, :scope
 
       def decode
         return if token.blank?

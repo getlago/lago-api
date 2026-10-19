@@ -26,6 +26,18 @@ RSpec.describe Plans::PrepareDestroyService do
       expect(result.plan).to eq(plan)
     end
 
+    context "when an agent storefront sells the plan" do
+      before { create(:agent_storefront_integration, organization:).update!(plans: [{plan_code: plan.code}]) }
+
+      it "refuses and keeps the plan" do
+        result = prepare_destroy_service.call
+
+        expect(result.error.code).to eq("plan_sold_by_agent_storefront")
+        expect(plan.reload.pending_deletion).to be(false)
+        expect(Plans::DestroyJob).not_to have_been_enqueued
+      end
+    end
+
     context "when plan is not found" do
       let(:plan) { nil }
 

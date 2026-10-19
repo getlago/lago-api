@@ -5,6 +5,7 @@ module Agents
     self.table_name = "agent_registrations"
 
     STATUSES = {active: "active", revoked: "revoked"}.freeze
+    WALLET_CODE = "agent_credits"
 
     belongs_to :organization
     belongs_to :storefront, class_name: "Integrations::AgentStorefrontIntegration", foreign_key: :integration_id
@@ -14,6 +15,18 @@ module Agents
     attr_readonly :key_id, :public_key
 
     validates :key_id, :public_key, presence: true
+
+    def customer
+      organization.customers.find_by(external_id: Agents::ExternalIds.customer(self))
+    end
+
+    def subscription
+      organization.subscriptions.active.find_by(external_id: Agents::ExternalIds.subscription(self))
+    end
+
+    def wallet
+      customer&.wallets&.active&.find_by(code: WALLET_CODE)
+    end
   end
 end
 
