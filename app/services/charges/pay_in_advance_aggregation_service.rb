@@ -24,7 +24,9 @@ module Charges
         filters: aggregation_filters
       )
 
-      aggregator.aggregate(options: aggregation_options)
+      aggregation_result = aggregator.aggregate(options: aggregation_options)
+      aggregation_result.pay_in_advance_count_delta ||= 1
+      aggregation_result
     end
 
     private

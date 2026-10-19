@@ -125,7 +125,7 @@ RSpec.describe BillingSegments::ProcessService do
             segment = service.send(:pending_segments).sole
 
             expect(segment.contract_rate_card.rate_card).to equal(segment.rate_card_rate.rate_card)
-            expect(service.send(:advance_segments)).to eq([])
+            expect(service.send(:pending_advance_segments)).to eq([])
           end
         end
 

@@ -50,8 +50,9 @@ RSpec.describe ActiveJob::MeteredItemSerializer do
   end
   let(:billing_segment_max_timestamp) { Time.zone.parse("2026-09-15 12:34:56") }
   let(:billing_segment_metered_item_with_max_timestamp) do
-    Fees::ChargeService::MeteredItem.new(
-      source: Fees::ChargeService::Sources::BillingSegment.new(billing_segment:, max_timestamp: billing_segment_max_timestamp),
+    Fees::ChargeService::MeteredItem.from_billing_segment(
+      billing_segment:,
+      max_timestamp: billing_segment_max_timestamp,
       event: Events::CommonFactory.new_instance(source: event)
     )
   end
@@ -104,6 +105,7 @@ RSpec.describe ActiveJob::MeteredItemSerializer do
           "ended_at" => anything
         ),
         "product_filter" => nil,
+        "max_timestamp" => nil,
         "event" => anything
       )
       expect(serialized["billing_segment"]).not_to have_key("id")

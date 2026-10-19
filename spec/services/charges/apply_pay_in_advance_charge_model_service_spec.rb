@@ -27,6 +27,7 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
     BillableMetrics::Aggregations::BaseService::Result.new.tap do |result|
       result.aggregation = 10
       result.pay_in_advance_aggregation = 1
+      result.pay_in_advance_count_delta = 1
       result.count = 5
       result.options = {}
       result.aggregator = aggregator
@@ -272,6 +273,7 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
               result.aggregation = 700
               result.count = 4
               result.pay_in_advance_aggregation = 0
+              result.pay_in_advance_count_delta = 0
               result.current_aggregation = 700
               result.max_aggregation = 1000
               result.units_applied = -300
@@ -332,7 +334,10 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
           )
         end
         let(:aggregation_result) do
-          super().tap { |result| result.pay_in_advance_aggregation = 0 }
+          super().tap do |result|
+            result.pay_in_advance_aggregation = 0
+            result.pay_in_advance_count_delta = 0
+          end
         end
         let(:amount_details) do
           {
@@ -413,7 +418,10 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService do
 
         context "when the event adds a unique unit" do
           let(:aggregation_result) do
-            super().tap { |result| result.pay_in_advance_aggregation = 1 }
+            super().tap do |result|
+              result.pay_in_advance_aggregation = 1
+              result.pay_in_advance_count_delta = 1
+            end
           end
 
           it "adjusts the count by the new unique unit" do

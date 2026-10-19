@@ -19,7 +19,7 @@ module Fees
       fees = []
       result.cached_aggregations = []
 
-      metered_item.with_aggregation_lock do
+      Contracts::LockAdvanceAggregationService.call!(metered_item:) do
         ActiveRecord::Base.transaction(**isolation_mode) do
           metered_item.pricing_buckets.each do |selected_metered_item|
             fees << init_fee(selected_metered_item:)

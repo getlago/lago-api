@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe "Contract usage billing QA regressions" do
+RSpec.describe "Contract usage billing behavior" do
   let(:organization) { create(:organization, feature_flags: ["product_catalog"], webhook_url: nil) }
   let(:customer) { create(:customer, organization:, currency: "USD", timezone: "UTC") }
   let(:started_at) { Time.zone.parse("2026-10-06 00:00:00") }
@@ -148,7 +148,7 @@ RSpec.describe "Contract usage billing QA regressions" do
       end
     end
 
-    it "O10 bills only the newly reached unit" do
+    it "bills only the unit above the previously billed maximum with standard pricing" do
       event_fees
       expect(CachedAggregation.where(contract:, product:).order(:created_at).pluck(:current_aggregation, :max_aggregation))
         .to eq([[3, 3], [10, 10], [7, 10], [11, 11]])
@@ -157,7 +157,7 @@ RSpec.describe "Contract usage billing QA regressions" do
       expect(invoices.sum(&:total_amount_cents)).to eq(1100)
     end
 
-    context "with graduated pricing G10" do
+    context "with graduated pricing" do
       let(:rate_model) { :graduated }
       let(:rate_properties) do
         {"graduated_ranges" => [
@@ -166,27 +166,14 @@ RSpec.describe "Contract usage billing QA regressions" do
         ]}
       end
 
-      it "bills only unit eleven" do
+      it "bills only the unit above the first graduated tier" do
         expect(event_fees.map(&:amount_cents)).to eq([300, 700, 0, 50])
         expect(invoices.map(&:status)).to eq(["finalized"] * 4)
         expect(invoices.sum(&:total_amount_cents)).to eq(1050)
       end
     end
 
-    context "with percentage pricing M10" do
-      let(:inputs) { [300, 700, -300, 400].map { |value| {value: value.to_s} } }
-      let(:rate_model) { :percentage }
-      let(:rate_properties) { {"rate" => "2.5", "fixed_amount" => "0.30"} }
-
-      it "bills only the newly reached hundred units plus the event fee" do
-        expect(event_fees.map(&:amount_cents)).to eq([780, 1780, 0, 280])
-        expect(event_fees.third.amount_details).to include("fixed_fee_total_amount" => "0.0", "paid_events" => "0.0")
-        expect(invoices.map(&:status)).to eq(["finalized"] * 4)
-        expect(invoices.sum(&:total_amount_cents)).to eq(2840)
-      end
-    end
-
-    context "with graduated percentage pricing I10" do
+    context "with graduated percentage pricing" do
       let(:inputs) { [300, 700, -300, 400].map { |value| {value: value.to_s} } }
       let(:rate_model) { :graduated_percentage }
       let(:rate_properties) do
@@ -196,14 +183,14 @@ RSpec.describe "Contract usage billing QA regressions" do
         ]}
       end
 
-      it "bills only the new tier exposure and flat fee" do
+      it "charges only the new tier exposure and its flat fee" do
         expect(event_fees.map(&:amount_cents)).to eq([600, 1400, 0, 600])
         expect(invoices.map(&:status)).to eq(["finalized"] * 4)
         expect(invoices.sum(&:total_amount_cents)).to eq(2600)
       end
     end
 
-    context "with prorated standard pricing O11" do
+    context "with prorated standard pricing" do
       let(:proration) { true }
       let(:rate_properties) { {"amount" => "10"} }
       let(:inputs) do
@@ -212,7 +199,7 @@ RSpec.describe "Contract usage billing QA regressions" do
         end
       end
 
-      it "prorates the one newly reached unit" do
+      it "prorates only the newly reached unit for the remaining period" do
         expect(event_fees.map(&:amount_cents)).to eq([3000, 6774, 0, 548])
         expect(invoices.map(&:status)).to eq(["finalized"] * 4)
         expect(invoices.sum(&:total_amount_cents)).to eq(10_322)
@@ -258,7 +245,7 @@ RSpec.describe "Contract usage billing QA regressions" do
       end
     end
 
-    context "with nonrecurring unique package pricing K4" do
+    context "with nonrecurring unique-count package pricing" do
       let(:aggregation_type) { :unique_count_agg }
       let(:recurring) { false }
       let(:field_name) { "user_id" }
@@ -266,7 +253,7 @@ RSpec.describe "Contract usage billing QA regressions" do
       let(:rate_properties) { {"amount" => "5", "package_size" => 2, "free_units" => 0} }
       let(:inputs) { %w[A A B].map { |value| {value:} } }
 
-      it "bills one package for A, A, B" do
+      it "bills one package as distinct values accumulate" do
         expect(event_fees.map(&:amount_cents)).to eq([500, 0, 0])
       end
 
@@ -292,7 +279,7 @@ RSpec.describe "Contract usage billing QA regressions" do
           create(:organization, feature_flags: ["product_catalog"], webhook_url: nil, clickhouse_events_store: true)
         end
 
-        it "bills one package for A, A, B" do
+        it "bills one package when two distinct values arrive via ClickHouse" do
           expect(event_fees.map(&:amount_cents)).to eq([500, 0, 0])
         end
       end

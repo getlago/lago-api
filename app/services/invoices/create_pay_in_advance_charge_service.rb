@@ -13,7 +13,7 @@ module Invoices
     end
 
     def call
-      metered_item.with_aggregation_lock { create_invoice }
+      Contracts::LockAdvanceAggregationService.call!(metered_item:) { create_invoice }
       result
     end
 

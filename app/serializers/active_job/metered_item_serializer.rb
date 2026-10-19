@@ -44,12 +44,10 @@ module ActiveJob
 
       case payload["source_type"]
       when "billing_segment"
-        Fees::ChargeService::MeteredItem.new(
-          source: Fees::ChargeService::Sources::BillingSegment.new(
-            billing_segment: BillingSegment.new(payload.fetch("billing_segment")),
-            product_filter: payload["product_filter"],
-            max_timestamp: payload["max_timestamp"]
-          ),
+        Fees::ChargeService::MeteredItem.from_billing_segment(
+          billing_segment: BillingSegment.new(payload.fetch("billing_segment")),
+          product_filter: payload["product_filter"],
+          max_timestamp: payload["max_timestamp"],
           event:
         )
       when "charge"

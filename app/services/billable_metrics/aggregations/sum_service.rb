@@ -132,6 +132,7 @@ module BillableMetrics
       end
 
       def compute_pay_in_advance_aggregation
+        result.pay_in_advance_count_delta = 1 if event
         return BigDecimal(0) unless event
         return BigDecimal(0) if event.properties.blank?
 
@@ -154,18 +155,19 @@ module BillableMetrics
 
         old_max = BigDecimal(cached_aggregation.max_aggregation)
 
-        result = if current_aggregation > old_max
+        aggregation_delta = if current_aggregation > old_max
           diff = [current_aggregation, current_aggregation - old_max].max
           handle_event_metadata(current_aggregation:, max_aggregation: diff)
 
           current_aggregation - old_max
         else
           handle_event_metadata(current_aggregation:, max_aggregation: old_max, units_applied: value)
+          result.pay_in_advance_count_delta = 0 unless BigDecimal(value).zero?
 
           0
         end
 
-        BigDecimal(result)
+        BigDecimal(aggregation_delta)
       end
 
       def compute_per_event_aggregation(exclude_event:, include_event_value:)

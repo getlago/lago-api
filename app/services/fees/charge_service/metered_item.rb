@@ -23,8 +23,8 @@ module Fees
         )
       end
 
-      def self.from_billing_segment(billing_segment:, product_filter: nil, event: nil)
-        new(source: Sources::BillingSegment.new(billing_segment:, product_filter:), event:)
+      def self.from_billing_segment(billing_segment:, product_filter: nil, max_timestamp: nil, event: nil)
+        new(source: Sources::BillingSegment.new(billing_segment:, product_filter:, max_timestamp:), event:)
       end
 
       delegate :charge,
@@ -88,15 +88,6 @@ module Fees
           {contract_id: contract.id, product_id: invoiceable.id, product_filter_id: product_filter&.id}
         else
           {charge_id:, charge_filter_id: charge_filter&.id}
-        end
-      end
-
-      def with_aggregation_lock(&block)
-        # Invoice creation holds the same reentrant lock until its transaction commits.
-        if contract
-          contract.with_advisory_lock!("advance_aggregation_#{contract.id}_#{invoiceable.id}", &block)
-        else
-          yield
         end
       end
 

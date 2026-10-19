@@ -24,6 +24,7 @@ module BillableMetrics
         # Pay in advance fields
         :pay_in_advance_event, # Event that is triggering a pay in advance aggregation
         :pay_in_advance_aggregation, # Aggregation result for a single pay in advance event
+        :pay_in_advance_count_delta, # Event-count contribution used to price the triggering event
         :pay_in_advance_breakdowns, # Breakdown result for a single pay in advance event
         :pay_in_advance_precise_total_amount_cents, # Precise total amount in cents when in a pay in advance scenario
         # Cached aggregation fields

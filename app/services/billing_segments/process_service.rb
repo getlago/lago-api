@@ -19,8 +19,8 @@ module BillingSegments
           result.invoices << invoice if invoice
         end
 
-        pending_pending_advance_segments.group_by { |segment| invoice_key(segment) }.each_value do |invoice_segments|
-          invoice = process_pending_pending_advance_segments(invoice_segments)
+        pending_advance_segments.group_by { |segment| invoice_key(segment) }.each_value do |invoice_segments|
+          invoice = process_pending_advance_segments(invoice_segments)
           result.invoices << invoice if invoice
         end
 
@@ -44,8 +44,8 @@ module BillingSegments
       grouped_segments.fetch(:pending_segments, [])
     end
 
-    def pending_pending_advance_segments
-      grouped_segments.fetch(:pending_pending_advance_segments, [])
+    def pending_advance_segments
+      grouped_segments.fetch(:pending_advance_segments, [])
     end
 
     def grouped_segments
@@ -66,7 +66,7 @@ module BillingSegments
       advance_metered = segment.contract_rate_card.rate_card.advance? && segment.contract_rate_card.product.metered?
 
       if advance_metered && !segment.recurring_advance_invoiceable?
-        :pending_pending_advance_segments
+        :pending_advance_segments
       elsif segment.status_pending?
         :pending_segments
       end
@@ -145,7 +145,7 @@ module BillingSegments
       invoice
     end
 
-    def process_pending_pending_advance_segments(segments)
+    def process_pending_advance_segments(segments)
       metered_items = segments.map do |segment|
         ::Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: segment)
       end

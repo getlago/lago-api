@@ -68,9 +68,7 @@ module BillingSegments
         ::BillingSegment.inclusive_end(segment.started_at)
       end
 
-      ::Fees::ChargeService::MeteredItem.new(
-        source: ::Fees::ChargeService::Sources::BillingSegment.new(billing_segment: segment, max_timestamp:)
-      )
+      ::Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: segment, max_timestamp:)
     end
 
     def event_filters(metered_segments)
