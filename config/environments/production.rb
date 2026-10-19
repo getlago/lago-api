@@ -35,8 +35,10 @@ Rails.application.configure do
   config.assume_ssl = !ActiveModel::Type::Boolean.new.cast(ENV["LAGO_DISABLE_SSL"])
   config.force_ssl = false
 
-  config.action_cable.disable_request_forgery_protection = true
-  config.action_cable.allowed_request_origins = [ENV["LAGO_API_URL"]]
+  # NOTE: The WebSocket is opened by the front end, so the browser sends the front end's origin.
+  config.action_cable.allowed_request_origins = [
+    URI(config.lago_front_url).then { |uri| "#{uri.scheme}://#{uri.host}#{":#{uri.port}" unless uri.port == uri.default_port}" }
+  ]
 
   config.action_mailer.perform_caching = false
   config.i18n.fallbacks = true
