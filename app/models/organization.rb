@@ -114,6 +114,7 @@ class Organization < ApplicationRecord
   has_many :netsuite_integrations, class_name: "Integrations::NetsuiteIntegration"
   has_many :xero_integrations, class_name: "Integrations::XeroIntegration"
   has_one :salesforce_integration, class_name: "Integrations::SalesforceIntegration"
+  has_many :agent_storefront_integrations, class_name: "Integrations::AgentStorefrontIntegration"
 
   has_one :applied_dunning_campaign, -> { where(applied_to_organization: true) }, class_name: "DunningCampaign"
   has_one :default_billing_entity, -> { active.order(created_at: :asc) }, class_name: "BillingEntity"
@@ -169,6 +170,7 @@ class Organization < ApplicationRecord
     granular_lifetime_usage
     order_forms
     revenue_recognition
+    agent_storefront
   ].freeze
 
   SECURITY_LOGS_RETENTION_DAYS = 90
