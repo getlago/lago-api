@@ -30,8 +30,12 @@ RSpec.describe ProductCatalogInvoiceHelper do
     product_fee(transfer, amount_cents: 700, amount_details: graduated_percentage_details)
   end
 
-  def product_fee(product, amount_cents:, product_filter: nil, amount_details: {}, true_up_parent_fee: nil)
-    rate_card = create(:rate_card, organization:, product:, product_filter:)
+  def product_fee(product, amount_cents:, product_filter: nil, amount_details: {}, true_up_parent_fee: nil, hidden: false)
+    rate_card = if hidden
+      create(:rate_card, :advance, organization:, product:, product_filter:, display_on_invoice: false)
+    else
+      create(:rate_card, organization:, product:, product_filter:)
+    end
     contract_rate_card = create(:contract_rate_card, organization:, contract:, rate_card:)
 
     create(
@@ -76,6 +80,43 @@ RSpec.describe ProductCatalogInvoiceHelper do
       expect(standalone.name).to be_nil
       expect(standalone.products.map(&:name)).to eq(["Data transfer"])
       expect(standalone.amount_cents).to eq(700)
+    end
+
+    context "with a paid-in-advance fee regrouped on this invoice" do
+      before { product_fee(transfer, amount_cents: 250, hidden: true) }
+
+      it "includes it in the summary and the details" do
+        expect(described_class.summary_lines(invoice).map { [it.name, it.amount_cents] }).to eq([["Infrastructure", 1_800], ["Data transfer", 950]])
+        expect(block.sections.last.products.sole.fees.map(&:amount_cents)).to contain_exactly(700, 250)
+      end
+    end
+
+    context "with a true-up on a filtered fee" do
+      before { product_fee(compute, amount_cents: 200, true_up_parent_fee: invoice.fees.find_by(amount_cents: 500)) }
+
+      it "lists the true-up under the filter of the fee it tops up" do
+        compute_node = block.sections.first.products.last
+
+        expect(compute_node.fees.map(&:amount_cents)).to eq([1_000])
+        expect(compute_node.filters.sole.fees.map(&:amount_cents)).to eq([500, 200])
+      end
+    end
+
+    context "with true-ups on several fees of one product" do
+      before do
+        second_fee = product_fee(analytics, amount_cents: 400)
+        product_fee(analytics, amount_cents: 60, true_up_parent_fee: second_fee)
+        product_fee(analytics, amount_cents: 30, true_up_parent_fee: invoice.fees.find_by(amount_cents: 300))
+      end
+
+      it "lists each true-up right after the fee it tops up" do
+        fees = block.sections.first.products.first.fees
+
+        expect(fees.size).to eq(4)
+        fees.each_with_index.select { |fee, _| fee.true_up_parent_fee_id }.each do |true_up, index|
+          expect(fees[index - 1].id).to eq(true_up.true_up_parent_fee_id)
+        end
+      end
     end
   end
 

@@ -100,15 +100,17 @@ class ProductCatalogInvoiceHelper
   attr_reader :invoice
 
   def product_fees
-    @product_fees ||= invoice.fees.product.includes(:product_filter, :contract, :pricing_unit_usage, :true_up_parent_fee).to_a
+    @product_fees ||= invoice.fees.product.includes(:product_filter, :contract, :pricing_unit_usage, true_up_parent_fee: :product_filter).to_a
   end
 
   def products
-    @products ||= Product.with_discarded.where(id: product_fees.map(&:invoiceable_id)).index_by(&:id)
+    @products ||= Product.with_discarded.where(organization_id: invoice.organization_id, id: product_fees.map(&:invoiceable_id)).index_by(&:id)
   end
 
   def categories
-    @categories ||= ProductCategory.with_discarded.where(id: products.values.map(&:product_category_id)).index_by(&:id)
+    @categories ||= ProductCategory.with_discarded
+      .where(organization_id: invoice.organization_id, id: products.values.map(&:product_category_id))
+      .index_by(&:id)
   end
 
   def product_for(fee)
@@ -133,8 +135,8 @@ class ProductCatalogInvoiceHelper
 
   def product_nodes(fees)
     nodes = fees.group_by { product_for(it) }.map do |product, product_fees|
-      unfiltered, filtered = product_fees.partition { it.product_filter_id.nil? }
-      filters = filtered.group_by(&:product_filter).map { |filter, filter_fees| FilterNode.new(name: filter.invoice_name, fees: by_period(filter_fees)) }
+      unfiltered, filtered = product_fees.partition { filter_for(it).nil? }
+      filters = filtered.group_by { filter_for(it) }.map { |filter, filter_fees| FilterNode.new(name: filter.invoice_name, fees: by_period(filter_fees)) }
 
       ProductNode.new(name: product.invoice_name, fees: by_period(unfiltered), filters: sort_by_name(filters))
     end
@@ -142,8 +144,17 @@ class ProductCatalogInvoiceHelper
     sort_by_name(nodes)
   end
 
+  # A true-up fee carries no filter of its own; it belongs with the fee it tops up.
+  def filter_for(fee)
+    (fee.true_up_parent_fee || fee).product_filter
+  end
+
+  # Each true-up follows the fee it tops up.
   def by_period(fees)
-    fees.sort_by { [it.properties["from_datetime"].to_s, it.true_up_parent_fee_id ? 1 : 0] }
+    fees.sort_by do |fee|
+      parent = fee.true_up_parent_fee || fee
+      [parent.properties["from_datetime"].to_s, parent.id, fee.true_up_parent_fee_id ? 1 : 0]
+    end
   end
 
   def sort_by_name(items)
