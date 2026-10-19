@@ -18,6 +18,5 @@ module X402
         !plan.fixed_charges.exists? &&
         !plan.charges.where(min_amount_cents: 1..).exists?
     end
-    private_class_method :usage_only?
   end
 end

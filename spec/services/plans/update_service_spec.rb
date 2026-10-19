@@ -193,6 +193,19 @@ RSpec.describe Plans::UpdateService do
       end
     end
 
+    context "when the code changes and an agent storefront sells the plan" do
+      let(:update_args) { {code: "renamed_plan"} }
+      let(:storefront) { create(:agent_storefront_integration, organization:) }
+
+      before { storefront.update!(plans: [{plan_code: plan.code, minimum_topup_cents: 500}]) }
+
+      it "renames the plan in the storefront" do
+        plans_service.call
+
+        expect(storefront.reload.plans).to eq([{"plan_code" => "renamed_plan", "minimum_topup_cents" => 500}])
+      end
+    end
+
     context "when marking draft invoices for refresh" do
       let(:update_args) { {name: plan_name} }
       let(:customer) { create(:customer, organization:) }

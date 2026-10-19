@@ -5,7 +5,7 @@ module Agents
     class ProofService < BaseService
       TOKEN_TTL = 300.seconds
 
-      Result = BaseResult[:registration, :created, :access_token]
+      Result = BaseResult[:registration, :created, :access_token, :scope]
 
       def initialize(storefront:, challenge_id:, signature:, purpose:)
         @storefront = storefront
@@ -35,7 +35,8 @@ module Agents
           registration.update!(status: :revoked, revoked_at: Time.current)
         else
           registration.update!(last_authenticated_at: Time.current)
-          result.access_token = access_token(registration)
+          result.scope = challenge[:scope] || storefront.scope
+          result.access_token = access_token(registration, result.scope)
         end
 
         result.registration = registration
@@ -75,14 +76,14 @@ module Agents
         storefront.agent_registrations.find_by!(key_id: challenge[:key_id])
       end
 
-      def access_token(registration)
+      def access_token(registration, scope)
         issued_at = Time.current.to_i
 
         JWT.encode(
           {
             iss: storefront.agent_url,
             sub: registration.id,
-            scope: storefront.scope,
+            scope:,
             iat: issued_at,
             nbf: issued_at,
             exp: issued_at + TOKEN_TTL.to_i,

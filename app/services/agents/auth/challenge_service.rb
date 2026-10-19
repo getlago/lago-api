@@ -6,6 +6,7 @@ module Agents
       PROTOCOL = "lago-agent-auth-v1"
       PURPOSES = %w[signup authenticate revoke].freeze
       TTL = 120.seconds
+      BILLING_SCOPE = "billing"
 
       Result = BaseResult[:challenge_id, :message, :expires_at]
 
@@ -26,10 +27,11 @@ module Agents
         Base64.urlsafe_encode64(Digest::SHA256.digest(raw_public_key), padding: false)
       end
 
-      def initialize(storefront:, public_key:, purpose:)
+      def initialize(storefront:, public_key:, purpose:, scope: nil)
         @storefront = storefront
         @public_key = public_key
         @purpose = purpose
+        @scope = scope.presence || storefront.scope
         super
       end
 
@@ -37,6 +39,7 @@ module Agents
         raw_public_key = self.class.decode(public_key, 32)
         return result.single_validation_failure!(field: :public_key, error_code: "value_is_invalid") unless raw_public_key
         return result.single_validation_failure!(field: :purpose, error_code: "value_is_invalid") unless PURPOSES.include?(purpose)
+        return result.single_validation_failure!(field: :scope, error_code: "value_is_invalid") unless [storefront.scope, BILLING_SCOPE].include?(scope)
 
         challenge_id = SecureRandom.uuid
         issued_at = Time.current.to_i
@@ -51,12 +54,13 @@ module Agents
           key_fingerprint: key_id,
           nonce: SecureRandom.urlsafe_base64(32),
           protocol: PROTOCOL,
-          purpose:
+          purpose:,
+          scope:
         )
 
         Rails.cache.write(
           self.class.cache_key(challenge_id),
-          {storefront_id: storefront.id, public_key:, key_id:, purpose:, message:, expires_at:},
+          {storefront_id: storefront.id, public_key:, key_id:, purpose:, scope:, message:, expires_at:},
           expires_in: TTL
         )
 
@@ -68,7 +72,7 @@ module Agents
 
       private
 
-      attr_reader :storefront, :public_key, :purpose
+      attr_reader :storefront, :public_key, :purpose, :scope
     end
   end
 end

@@ -9,7 +9,8 @@ RSpec.describe Agents::Auth::ProofService, cache: :memory do
   let(:key) { OpenSSL::PKey.generate_key("ED25519") }
   let(:public_key) { Base64.urlsafe_encode64(key.raw_public_key, padding: false) }
   let(:purpose) { "signup" }
-  let(:challenge) { Agents::Auth::ChallengeService.call(storefront: challenge_storefront, public_key:, purpose: challenge_purpose) }
+  let(:challenge) { Agents::Auth::ChallengeService.call(storefront: challenge_storefront, public_key:, purpose: challenge_purpose, scope: challenge_scope) }
+  let(:challenge_scope) { nil }
   let(:challenge_storefront) { storefront }
   let(:challenge_purpose) { purpose }
   let(:challenge_id) { challenge.challenge_id }
@@ -63,6 +64,15 @@ RSpec.describe Agents::Auth::ProofService, cache: :memory do
         expect(result.registration).to eq(registration)
         expect(result.registration.last_authenticated_at).to eq(Time.current)
         expect(result.access_token).to be_present
+      end
+
+      context "with a challenge for the billing scope" do
+        let(:challenge_scope) { "billing" }
+
+        it "issues a billing token" do
+          expect(result.scope).to eq("billing")
+          expect(JWT.decode(result.access_token, RsaPublicKey, true, algorithm: "RS256").first).to include("scope" => "billing")
+        end
       end
     end
 
