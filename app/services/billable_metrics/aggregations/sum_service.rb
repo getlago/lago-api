@@ -88,9 +88,9 @@ module BillableMetrics
         end
       end
 
-      # A precomputed prorated result carries no snapshot value: its full value is persisted
+      # A precomputed prorated result is not bounded by the watermark, so it persists no snapshot
       def snapshot_units(sum_result)
-        sum_result.respond_to?(:snapshot_value) ? sum_result.snapshot_value : sum_result.value
+        sum_result.snapshot_value if sum_result.respond_to?(:snapshot_value)
       end
 
       def compute_precise_total_amount_cents(options: {})
