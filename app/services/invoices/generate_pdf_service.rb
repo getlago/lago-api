@@ -26,7 +26,9 @@ module Invoices
     end
 
     def render_html
-      Utils::PdfGenerator.new(template:, context: invoice).render_html
+      I18n.with_locale(invoice.customer.preferred_document_locale) do
+        Utils::PdfGenerator.new(template:, context: invoice).render_html
+      end
     end
 
     private

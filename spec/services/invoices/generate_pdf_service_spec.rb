@@ -245,4 +245,20 @@ RSpec.describe Invoices::GeneratePdfService do
       end
     end
   end
+
+  describe "#render_html" do
+    subject(:html) { described_class.new(invoice:).render_html }
+
+    let(:customer) { create(:customer, organization:, document_locale: "fr") }
+    let(:pdf_generator) { instance_double(Utils::PdfGenerator) }
+
+    before do
+      allow(Utils::PdfGenerator).to receive(:new).and_return(pdf_generator)
+      allow(pdf_generator).to receive(:render_html) { I18n.locale.to_s }
+    end
+
+    it "renders in the customer document locale" do
+      expect(html).to eq("fr")
+    end
+  end
 end
