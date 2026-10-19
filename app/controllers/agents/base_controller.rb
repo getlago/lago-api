@@ -15,6 +15,10 @@ module Agents
       not_found_error(resource: "agent_storefront") unless storefront&.organization&.agent_storefront_enabled?
     end
 
+    def bearer_token
+      request.authorization.to_s[/\ABearer (.+)\z/i, 1]
+    end
+
     def throttled?(rule, identifier)
       return false unless ::Auth::AttemptsThrottle.hit!(rule, identifier)
 

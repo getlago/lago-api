@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Agents::Auth::VerifyTokenService do
-  subject(:result) { described_class.call(storefront:, token:) }
+  subject(:result) { described_class.call(storefront:, token:, scope: storefront.scope) }
 
   let(:storefront) { create(:agent_storefront_integration) }
   let(:registration) { create(:agent_registration, storefront:) }
@@ -31,6 +31,14 @@ RSpec.describe Agents::Auth::VerifyTokenService do
 
     it "refuses" do
       expect(renamed.scope).to eq(storefront.scope)
+      expect(result.error.message).to eq("invalid_token")
+    end
+  end
+
+  context "with a token of another scope" do
+    let(:claims) { super().merge(scope: "billing") }
+
+    it "refuses" do
       expect(result.error.message).to eq("invalid_token")
     end
   end
