@@ -233,8 +233,7 @@ module Events
         end
 
         # Values coming from the API or the organization's configuration are quoted by the ClickHouse
-        # adapter: unlike `sql_condition`, which applies the PostgreSQL rules, it escapes backslashes,
-        # that ClickHouse reads as escape characters inside a string.
+        # adapter, which escapes backslashes that ClickHouse reads as escape characters inside a string.
         def quote_list(values)
           values.map { quote(it) }.join(", ")
         end

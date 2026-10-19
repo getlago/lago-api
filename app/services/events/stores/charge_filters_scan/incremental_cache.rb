@@ -163,7 +163,7 @@ module Events
         def late_events?(store:, from_datetime:, entry:)
           where = [
             store.deduplicated_events_where_sql(from_datetime:, to_datetime: nil, before: entry.cut),
-            ActiveRecord::Base.sanitize_sql_for_conditions(["enriched_at > ?", entry.watermark])
+            store.sanitize_clickhouse_sql(["enriched_at > ?", entry.watermark])
           ].join(" AND ")
           sql = "SELECT 1 FROM events_enriched WHERE #{where} LIMIT 1"
 
