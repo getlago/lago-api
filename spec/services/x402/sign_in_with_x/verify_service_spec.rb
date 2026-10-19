@@ -397,7 +397,7 @@ describe X402::SignInWithX::VerifyService do
   end
 
   context "with a mixed-case address whose checksum is wrong" do
-    let(:payload) { signed_siwx(key, address: siwx_address(key).sub(/[a-fA-F]/, &:swapcase)) }
+    let(:payload) { signed_siwx(key, address: "0x19E7E376E7C213B7E7e7e46cc70A5dD086DAff2a") }
 
     it { expect(result.error.messages).to eq(siwx: ["invalid_address"]) }
   end
