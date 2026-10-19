@@ -11,7 +11,8 @@ module RateCardCategoryOrdering
   def order_by_product_category(scope)
     scope
       .left_outer_joins(rate_card: [:product_filter, {product: :product_category}])
-      .order(Arel.sql("product_categories.name ASC NULLS LAST, product_categories.id ASC NULLS LAST"))
+      .order(Arel.sql("CASE WHEN product_categories.deleted_at IS NULL THEN product_categories.name END ASC NULLS LAST"))
+      .order(Arel.sql("CASE WHEN product_categories.deleted_at IS NULL THEN product_categories.id END ASC NULLS LAST"))
       .order(Arel.sql("products.name ASC, products.id ASC"))
       .order(Arel.sql("product_filters.name ASC NULLS FIRST, product_filters.id ASC NULLS FIRST"))
   end
