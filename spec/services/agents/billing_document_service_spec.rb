@@ -42,4 +42,22 @@ RSpec.describe Agents::BillingDocumentService do
       expect(document).to include("This storefront sells no plans yet.")
     end
   end
+
+  context "when the Stripe connection has a seller profile" do
+    before { storefront.stripe_provider.update!(seller_profile: "profile_test_123") }
+
+    it "explains how to pay with a shared payment token" do
+      expect(document).to include("## Add credits")
+      expect(document).to include("`seller_details[network_business_profile]` set to `profile_test_123`")
+      expect(document).to include("POST `#{storefront.agent_url}/billing/payments` with JSON `amount_cents` and `shared_payment_token`")
+      expect(document).to include("GET `#{storefront.agent_url}/billing/payments/<id>`")
+    end
+  end
+
+  context "when the Stripe connection has no seller profile" do
+    it "says payments are not accepted yet" do
+      expect(document).to include("#{storefront.name} does not accept payments from agents yet.")
+      expect(document).not_to include("/billing/payments")
+    end
+  end
 end
