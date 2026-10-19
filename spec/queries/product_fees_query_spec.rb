@@ -9,6 +9,7 @@ RSpec.describe ProductFeesQuery do
   let(:customer) { create(:customer, organization:) }
   let(:contract) { create(:contract, organization:, customer:) }
   let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
+  let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card) }
   let(:invoice) { create(:invoice, organization:, customer:) }
   let(:filters) { {} }
 
@@ -19,7 +20,8 @@ RSpec.describe ProductFeesQuery do
       fee_type: :product,
       invoiceable: contract_rate_card.rate_card.product,
       contract:,
-      contract_rate_card:
+      contract_rate_card:,
+      rate_card_rate:
     }
   end
   let(:fee) { create(:fee, fee_attributes) }
@@ -70,6 +72,15 @@ RSpec.describe ProductFeesQuery do
         expect(result.error.messages[:payment_status]).to eq(["value_is_invalid"])
       end
     end
+
+    context "with a status that is not a string" do
+      let(:filters) { {payment_status: true} }
+
+      it "returns a validation failure" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:payment_status]).to eq(["value_is_invalid"])
+      end
+    end
   end
 
   context "when filtering by external_customer_id" do
@@ -94,6 +105,40 @@ RSpec.describe ProductFeesQuery do
 
       it "finds it through the contract" do
         expect(result.fees).to contain_exactly(fee)
+      end
+    end
+
+    context "when the customer was deleted" do
+      before { customer.discard! }
+
+      it "still returns its fees" do
+        expect(result.fees).to contain_exactly(fee)
+      end
+    end
+
+    context "with product fees billed before contracts" do
+      let(:invoiced_fee) { create(:fee, fee_attributes.merge(contract: nil, contract_rate_card: nil)) }
+      let(:subscription_fee) do
+        create(
+          :fee,
+          fee_attributes.merge(
+            invoice: nil,
+            organization:,
+            billing_entity: customer.billing_entity,
+            contract: nil,
+            contract_rate_card: nil,
+            subscription: create(:subscription, organization:, customer:)
+          )
+        )
+      end
+
+      before do
+        invoiced_fee
+        subscription_fee
+      end
+
+      it "finds them through their invoice or subscription" do
+        expect(result.fees).to contain_exactly(fee, invoiced_fee, subscription_fee)
       end
     end
   end
@@ -130,6 +175,15 @@ RSpec.describe ProductFeesQuery do
 
     it "matches the currency regardless of case" do
       expect(result.fees).to contain_exactly(other_fee)
+    end
+
+    context "with a currency that is not a string" do
+      let(:filters) { {currency: true} }
+
+      it "returns a validation failure" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:currency]).to eq(["value_is_invalid"])
+      end
     end
   end
 

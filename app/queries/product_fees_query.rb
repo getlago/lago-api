@@ -29,7 +29,7 @@ class ProductFeesQuery < BaseQuery
     fees = with_payment_status(fees) if filters.payment_status.present?
     fees = with_external_customer(fees) if filters.external_customer_id.present?
     fees = with_external_contract(fees) if filters.external_contract_id.present?
-    fees = fees.where(amount_currency: filters.currency.upcase) if filters.currency.present?
+    fees = with_currency(fees) if filters.currency.present?
     fees = fees.where(pay_in_advance_event_transaction_id: filters.event_transaction_id) if filters.event_transaction_id.present?
 
     DATE_RANGES.each { |column| fees = with_date_range(fees, column) }
@@ -50,23 +50,35 @@ class ProductFeesQuery < BaseQuery
   end
 
   def with_payment_status(scope)
-    unless Fee::PAYMENT_STATUS.include?(filters.payment_status.to_sym)
-      result.single_validation_failure!(field: :payment_status, error_code: "value_is_invalid")
-        .raise_if_error!
-    end
+    invalid_filter!(:payment_status) unless Fee::PAYMENT_STATUS.map(&:to_s).include?(filters.payment_status)
 
     scope.where(payment_status: filters.payment_status)
   end
 
+  def with_currency(scope)
+    invalid_filter!(:currency) unless filters.currency.is_a?(String)
+
+    scope.where(amount_currency: filters.currency.upcase)
+  end
+
   # Through the contract rather than the invoice: a fee billed on an event has no invoice yet.
+  # Product fees billed before contracts carry their customer through the subscription or the invoice.
   def with_external_customer(scope)
-    customer_ids = organization.customers.where(external_id: filters.external_customer_id).select(:id)
+    # Discarded too: a deleted customer's fees stay billed and findable.
+    customer_ids = Customer.with_discarded.where(organization:, external_id: filters.external_customer_id).select(:id)
+    without_contract = scope.where(contract_id: nil)
 
     scope.where(contract_id: organization.contracts.where(customer_id: customer_ids).select(:id))
+      .or(without_contract.where(subscription_id: Subscription.where(organization:, customer_id: customer_ids).select(:id)))
+      .or(without_contract.where(invoice_id: Invoice.where(organization:, customer_id: customer_ids).select(:id)))
   end
 
   def with_external_contract(scope)
     scope.where(contract_id: organization.contracts.where(external_id: filters.external_contract_id).select(:id))
+  end
+
+  def invalid_filter!(field)
+    result.single_validation_failure!(field:, error_code: "value_is_invalid").raise_if_error!
   end
 
   def with_date_range(scope, column)
