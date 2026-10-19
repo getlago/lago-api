@@ -8485,6 +8485,7 @@ input LoseInvoiceDisputeInput {
 enum MappableTypeEnum {
   AddOn
   BillableMetric
+  Product
 }
 
 type Mapping {
@@ -12109,6 +12110,7 @@ type Product {
   description: String
   filtersCount: Int!
   id: ID!
+  integrationMappings(integrationId: ID): [Mapping!]
   invoiceDisplayName: String
   name: String!
   organization: Organization
