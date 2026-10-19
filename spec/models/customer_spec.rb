@@ -168,6 +168,39 @@ RSpec.describe Customer do
       expect(customer).to be_valid
     end
 
+    %i[
+      name firstname lastname legal_name tax_identification_number
+      address_line1 address_line2 zipcode city state
+      shipping_address_line1 shipping_address_line2 shipping_zipcode shipping_city shipping_state
+    ].each do |field|
+      describe "#{field} length validation" do
+        it "accepts 255 characters" do
+          customer[field] = "a" * 255
+          expect(customer).to be_valid
+        end
+
+        it "rejects 256 characters with value_is_too_long" do
+          customer[field] = "a" * 256
+
+          expect(customer).not_to be_valid
+          expect(customer.errors.where(field, :too_long)).to be_present
+          expect(customer.errors.messages[field]).to eq(["value_is_too_long"])
+        end
+
+        context "when the stored value is already over 255 characters" do
+          before do
+            customer.save!
+            customer.update_column(field, "a" * 256) # rubocop:disable Rails/SkipsModelValidations
+          end
+
+          it "stays valid when another attribute changes" do
+            customer.timezone = "Europe/Paris"
+            expect(customer).to be_valid
+          end
+        end
+      end
+    end
+
     describe "of email" do
       let(:customer) { build_stubbed(:customer, email: "invalid @example.com") }
       let(:error) { customer.errors.where(:email, :invalid_email_format) }
