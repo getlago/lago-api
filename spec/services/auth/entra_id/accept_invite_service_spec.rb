@@ -39,6 +39,8 @@ RSpec.describe Auth::EntraId::AcceptInviteService, :premium, cache: :memory do
 
       decoded = Utils::AuthToken.decode(token: result.token)
       expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::ENTRA_ID)
+      expect(decoded["sso_organization_id"]).to eq(entra_id_integration.organization_id)
+      expect(decoded["sso_issuer"]).to eq(entra_id_integration.sso_issuer)
     end
 
     context "when code is not provided" do

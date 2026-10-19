@@ -33,6 +33,14 @@ RSpec.describe Integrations::OktaIntegration do
     end
   end
 
+  describe "#sso_issuer" do
+    it "returns the downcased host" do
+      okta_integration.host = "Acme.Okta.com"
+
+      expect(okta_integration.sso_issuer).to eq("acme.okta.com")
+    end
+  end
+
   describe "validations" do
     it "validates uniqueness of domain" do
       expect(okta_integration).to be_valid
