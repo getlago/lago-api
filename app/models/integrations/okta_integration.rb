@@ -4,8 +4,8 @@ module Integrations
   class OktaIntegration < BaseIntegration
     validates :client_secret, :client_id, :domain, :organization_name, presence: true
     validate :domain_uniqueness
-    validate :host_format
-    validate :organization_name_format
+    validate :validate_host_format, if: -> { setting_changed?("host") }
+    validate :validate_organization_name_format, if: :default_host_changed?
 
     settings_accessors :client_id, :domain, :organization_name, :host
     secrets_accessors :client_secret
@@ -32,20 +32,25 @@ module Integrations
       errors.add(:domain, "domain_not_unique") if okta_integration
     end
 
-    def host_format
-      errors.add(:host, "host_invalid") if invalid_hostname_setting?("host")
+    def validate_host_format
+      errors.add(:host, "host_invalid") unless valid_hostname?(get_from_settings("host"))
     end
 
-    def organization_name_format
-      if get_from_settings("host").blank? && invalid_hostname_setting?("organization_name")
-        errors.add(:organization_name, "organization_name_invalid")
-      end
+    def validate_organization_name_format
+      errors.add(:organization_name, "organization_name_invalid") unless valid_hostname?(organization_name)
+    end
+
+    def valid_hostname?(value)
+      value.blank? || value.match?(HOST_FORMAT)
+    end
+
+    def default_host_changed?
+      get_from_settings("host").blank? && (setting_changed?("host") || setting_changed?("organization_name"))
     end
 
     # Existing integrations keep saving unrelated changes until the setting is edited.
-    def invalid_hostname_setting?(key)
-      value = get_from_settings(key)
-      value.present? && !value.match?(HOST_FORMAT) && !(persisted? && value == stored_setting(key))
+    def setting_changed?(key)
+      get_from_settings(key) != stored_setting(key)
     end
 
     def stored_setting(key)

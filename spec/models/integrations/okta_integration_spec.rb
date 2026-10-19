@@ -88,6 +88,17 @@ RSpec.describe Integrations::OktaIntegration do
         expect(okta_integration).to be_valid
       end
 
+      context "when the host of an existing integration is cleared" do
+        subject(:okta_integration) { create(:okta_integration, settings: {client_id: "id", domain: "acme.test", organization_name: "Acme Corp", host: "acme.okta.com"}) }
+
+        it "rejects a name that does not build a bare hostname" do
+          okta_integration.host = nil
+
+          expect(okta_integration).not_to be_valid
+          expect(okta_integration.errors[:organization_name]).to eq(["organization_name_invalid"])
+        end
+      end
+
       context "when an existing integration already stores an invalid name" do
         subject(:okta_integration) { create(:okta_integration) }
 
