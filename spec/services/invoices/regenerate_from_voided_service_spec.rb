@@ -961,8 +961,9 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
     end
     let(:product_fee) do
       create(:fee, invoice: voided_invoice, subscription: nil, fee_type: :product,
-        invoiceable: contract_rate_card.rate_card.product, contract: contract_rate_card.contract, contract_rate_card:)
+        invoiceable: contract_rate_card.rate_card.product, contract: contract_rate_card.contract, contract_rate_card:, rate_card_rate:)
     end
+    let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card) }
     let(:fees_params) { [{id: product_fee.id, units: 10}] }
 
     it "refuses to regenerate it" do

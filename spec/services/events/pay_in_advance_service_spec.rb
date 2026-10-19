@@ -149,6 +149,7 @@ RSpec.describe Events::PayInAdvanceService do
       let(:product) { create(:product, :metered, organization:, billable_metric:) }
       let(:rate_card) { create(:rate_card, :advance, organization:, product:, display_on_invoice:) }
       let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+      let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card:) }
       let(:display_on_invoice) { false }
 
       before do
@@ -158,6 +159,7 @@ RSpec.describe Events::PayInAdvanceService do
           customer:,
           contract:,
           contract_rate_card:,
+          rate_card_rate:,
           started_at: timestamp.beginning_of_day,
           ended_at: timestamp.end_of_day,
           status: :processing
@@ -245,6 +247,7 @@ RSpec.describe Events::PayInAdvanceService do
             invoice: fee_invoice,
             contract:,
             contract_rate_card:,
+            rate_card_rate:,
             invoiceable: product,
             fee_type: :product,
             pay_in_advance: true,
@@ -277,6 +280,7 @@ RSpec.describe Events::PayInAdvanceService do
         let(:other_product) { create(:product, :metered, organization:, billable_metric:) }
         let(:other_rate_card) { create(:rate_card, :advance, organization:, product: other_product, display_on_invoice: false) }
         let(:other_contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card: other_rate_card) }
+        let(:other_rate_card_rate) { create(:rate_card_rate, organization:, rate_card: other_rate_card) }
         let(:other_segment) do
           create(
             :billing_segment,
@@ -284,6 +288,7 @@ RSpec.describe Events::PayInAdvanceService do
             customer:,
             contract:,
             contract_rate_card: other_contract_rate_card,
+            rate_card_rate: other_rate_card_rate,
             started_at: timestamp.beginning_of_day,
             ended_at: timestamp.end_of_day,
             status: :processing
@@ -309,6 +314,7 @@ RSpec.describe Events::PayInAdvanceService do
               invoice: nil,
               contract:,
               contract_rate_card: other_contract_rate_card,
+              rate_card_rate: other_rate_card_rate,
               invoiceable: other_product,
               fee_type: :product,
               pay_in_advance: true,
@@ -329,6 +335,7 @@ RSpec.describe Events::PayInAdvanceService do
                 invoice: nil,
                 contract:,
                 contract_rate_card:,
+                rate_card_rate:,
                 invoiceable: product,
                 fee_type: :product,
                 pay_in_advance: true,
