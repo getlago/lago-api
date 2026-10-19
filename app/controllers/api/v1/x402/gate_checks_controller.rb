@@ -22,10 +22,10 @@ module Api
         private
 
         def create_params
-          params.require(:gate_check).permit(
+          params.expect(gate_check: [
             :connection_code, :wallet_code, :resource, :plan_code,
             :billable_metric_code, :amount_cents, :estimated_call_cost_cents
-          )
+          ])
         end
 
         def resource_name
