@@ -757,6 +757,16 @@ RSpec.describe Customers::RefreshWalletsService do
         end
       end
 
+      context "with the wallet of an agent storefront" do
+        let(:wallet) { create(:wallet, customer:, code: Agents::Registration::WALLET_CODE, x402_enabled: false) }
+
+        it "releases the captured amount" do
+          result
+
+          expect(Rails.cache.read(key, raw: true)).to eq("0")
+        end
+      end
+
       context "with a wallet not enabled for x402" do
         let(:wallet) { create(:wallet, customer:, x402_enabled: false) }
 
