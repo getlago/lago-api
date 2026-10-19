@@ -108,6 +108,41 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
     end
   end
 
+  context "with a control character in a changed free text field" do
+    let(:update_args) { {legal_name: "Acme\nAPPROVED GOODWILL CREDIT", city: "Updated customer city"} }
+
+    it "returns a validation error and does not update the customer" do
+      expect { result }.not_to change { customer.reload.attributes.slice("legal_name", "city") }
+
+      expect(result).not_to be_success
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+      expect(result.error.messages).to eq({legal_name: ["invalid_characters"]})
+    end
+  end
+
+  context "with a control character in a changed shipping address field" do
+    let(:update_args) { {shipping_address: {address_line2: "Floor 2\tAPPROVED"}} }
+
+    it "returns a validation error" do
+      expect { result }.not_to change { customer.reload.shipping_address_line2 }
+
+      expect(result).not_to be_success
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+      expect(result.error.messages).to eq({shipping_address_line2: ["invalid_characters"]})
+    end
+  end
+
+  context "with a control character in an unchanged free text field" do
+    let(:customer) { create(:customer, address_line2: "Line A\nLine B") }
+    let(:update_args) { {address_line2: "Line A\nLine B", city: "Updated customer city"} }
+
+    it "updates the customer" do
+      expect(result).to be_success
+      expect(customer.reload.city).to eq("Updated customer city")
+      expect(customer.address_line2).to eq("Line A\nLine B")
+    end
+  end
+
   context "when organization has eu tax management" do
     let_it_be(:organization, refind: true) { create_default(:organization) }
     let_it_be(:customer, refind: true) { create :customer }

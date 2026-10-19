@@ -94,6 +94,17 @@ RSpec.describe Customers::UpdateService do
       end
     end
 
+    context "with a line break in the address" do
+      let(:update_args) { {id: customer.id, address_line2: "Line A\nLine B"} }
+
+      it "stores the line break" do
+        result = customers_service.call
+
+        expect(result).to be_success
+        expect(customer.reload.address_line2).to eq("Line A\nLine B")
+      end
+    end
+
     context "when updating the billing entity reference" do
       let(:billing_entity_2) { create(:billing_entity, organization:) }
 
