@@ -12,6 +12,9 @@ module Integrations
 
     def call
       return result.not_found_failure!(resource: "integration") unless integration
+      if integration.is_a?(Integrations::AgentStorefrontIntegration) && integration.enrolled_agents?
+        return result.not_allowed_failure!(code: "agent_storefront_has_enrolled_agents")
+      end
 
       integration.destroy!
 

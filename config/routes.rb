@@ -77,6 +77,9 @@ Rails.application.routes.draw do
     post "auth/token", to: "auth#token"
     post "auth/revoke", to: "auth#revoke"
     get "me", to: "auth#me"
+    get "BILLING.md", to: "documents#billing", format: false
+    post "billing/enroll", to: "billing#enroll"
+    get "billing", to: "billing#show"
   end
 
   if Rails.env.local?

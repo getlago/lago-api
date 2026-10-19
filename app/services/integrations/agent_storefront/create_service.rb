@@ -35,6 +35,7 @@ module Integrations
           resource_instructions: params[:resource_instructions],
           scope: "#{params[:code]}:use"
         )
+        integration.plans = params[:plans] if params.key?(:plans)
 
         integration.save!
 

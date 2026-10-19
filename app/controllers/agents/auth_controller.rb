@@ -6,7 +6,7 @@ module Agents
       return if throttled?(:agent_challenge_per_ip, request.remote_ip)
       return if throttled?(:agent_challenge_per_key, params[:public_key].to_s)
 
-      result = Agents::Auth::ChallengeService.call(storefront:, public_key: params[:public_key], purpose: params[:purpose])
+      result = Agents::Auth::ChallengeService.call(storefront:, public_key: params[:public_key], purpose: params[:purpose], scope: params[:scope])
 
       if result.success?
         render(
@@ -43,7 +43,7 @@ module Agents
     end
 
     def me
-      result = Agents::Auth::VerifyTokenService.call(storefront:, token: request.authorization.to_s[/\ABearer (.+)\z/i, 1])
+      result = Agents::Auth::VerifyTokenService.call(storefront:, token: bearer_token, scope: storefront.scope)
 
       if result.success?
         render(json: {registration_id: result.registration.id, scope: storefront.scope, status: result.registration.status})
@@ -67,7 +67,7 @@ module Agents
             access_token: result.access_token,
             token_type: "Bearer",
             expires_in: Agents::Auth::ProofService::TOKEN_TTL.to_i,
-            scope: storefront.scope
+            scope: result.scope
           }
         )
       else

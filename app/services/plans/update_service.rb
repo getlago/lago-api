@@ -57,6 +57,7 @@ module Plans
 
       ActiveRecord::Base.transaction do
         plan.save!
+        rename_in_agent_storefronts if plan.saved_change_to_code?
         update_metadata!
 
         if params[:tax_codes]
@@ -388,6 +389,14 @@ module Plans
             params: upgrade_params
           ).raise_if_error!
         end
+      end
+    end
+
+    def rename_in_agent_storefronts
+      old_code, new_code = plan.saved_change_to_code
+
+      plan.organization.agent_storefront_integrations.with_plan_code(old_code).find_each do |storefront|
+        storefront.update!(plans: storefront.plans.map { (it["plan_code"] == old_code) ? it.merge("plan_code" => new_code) : it })
       end
     end
   end

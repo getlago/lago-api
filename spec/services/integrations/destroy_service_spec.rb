@@ -24,6 +24,28 @@ RSpec.describe Integrations::DestroyService do
       before { destroy_service.call }
     end
 
+    context "with an agent storefront" do
+      let(:integration) { create(:agent_storefront_integration, organization:) }
+      let(:registration) { create(:agent_registration, storefront: integration) }
+
+      it "destroys it while no agent is enrolled" do
+        registration
+
+        expect { destroy_service.call }.to change(Integrations::BaseIntegration, :count).by(-1)
+      end
+
+      context "when an agent is enrolled" do
+        before { create(:subscription, organization:, external_id: Agents::ExternalIds.subscription(registration)) }
+
+        it "refuses and keeps it" do
+          result = destroy_service.call
+
+          expect(result.error.code).to eq("agent_storefront_has_enrolled_agents")
+          expect(integration.reload).to be_present
+        end
+      end
+    end
+
     context "when integration is not found" do
       let(:integration) { nil }
 
