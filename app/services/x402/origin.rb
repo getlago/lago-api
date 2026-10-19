@@ -3,11 +3,13 @@
 module X402
   module Origin
     LOOPBACK_HOSTS = %w[localhost 127.0.0.1 [::1]].freeze
+    PORTS = 1..65_535
+    HOSTNAME = /\A[a-z0-9-]+(\.[a-z0-9-]+)*\z/i
 
     def self.normalize(value)
       uri = parse(value)
 
-      if bare?(uri) && (uri.scheme.downcase == "https" || LOOPBACK_HOSTS.include?(uri.host.downcase))
+      if bare?(uri) && valid_authority?(uri) && (uri.scheme.downcase == "https" || LOOPBACK_HOSTS.include?(uri.host.downcase))
         format(uri)
       end
     end
@@ -38,6 +40,11 @@ module X402
       !uri.nil? && uri.path.in?(["", "/"]) && uri.query.nil? && uri.fragment.nil? && uri.userinfo.nil?
     end
     private_class_method :bare?
+
+    def self.valid_authority?(uri)
+      PORTS.cover?(uri.port) && (uri.host.start_with?("[") || HOSTNAME.match?(uri.host))
+    end
+    private_class_method :valid_authority?
 
     def self.format(uri)
       port = (uri.port == uri.default_port) ? "" : ":#{uri.port}"
