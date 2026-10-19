@@ -10,6 +10,7 @@ module X402
       MAX_CLOCK_SKEW = 30.seconds
       NONCE_FORMAT = /\A[A-Za-z0-9]{8,64}\z/
       MAX_FIELD_LENGTH = 512
+      MAX_FIELDS_SIZE = 2_048
       MAX_SIGNATURE_LENGTH = 16_384
       MAX_RESOURCES = 10
 
@@ -65,7 +66,8 @@ module X402
       def valid_strings?
         texts = payload.slice(*REQUIRED_FIELDS, *OPTIONAL_FIELDS).except("signature").values + payload.fetch("resources", [])
 
-        texts.all? { |text| valid_text?(text, MAX_FIELD_LENGTH) } && valid_text?(payload["signature"], MAX_SIGNATURE_LENGTH)
+        texts.all? { |text| valid_text?(text, MAX_FIELD_LENGTH) } && texts.sum(&:bytesize) <= MAX_FIELDS_SIZE &&
+          valid_text?(payload["signature"], MAX_SIGNATURE_LENGTH)
       end
 
       def valid_text?(value, max_length)

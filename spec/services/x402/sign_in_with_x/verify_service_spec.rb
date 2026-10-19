@@ -14,6 +14,12 @@ describe X402::SignInWithX::VerifyService do
 
   before { freeze_time }
 
+  def statement_filling(total)
+    size = total - signed_siwx(key).except("statement", "signature").values.sum(&:bytesize)
+
+    ("😀" * (size / 4)) + ("a" * (size % 4))
+  end
+
   context "with a signed EVM proof" do
     it "returns the proven signer" do
       expect(result).to be_success
@@ -107,6 +113,30 @@ describe X402::SignInWithX::VerifyService do
     let(:payload) { signed_siwx(key).merge("signature" => "0x#{"a" * 16_383}") }
 
     it { expect(result.error.messages).to eq(siwx: ["value_is_invalid"]) }
+  end
+
+  context "with text fields of 2 048 bytes" do
+    let(:payload) { signed_siwx(key, statement: statement_filling(2_048)) }
+
+    it { expect(result).to be_success }
+  end
+
+  context "with text fields of 2 049 bytes" do
+    let(:payload) { signed_siwx(key, statement: statement_filling(2_049)) }
+
+    it { expect(result.error.messages).to eq(siwx: ["value_is_invalid"]) }
+  end
+
+  context "with resources of 4 096 bytes" do
+    let(:payload) { signed_siwx(key, resources: Array.new(2) { "😀" * 512 }) }
+
+    it { expect(result.error.messages).to eq(siwx: ["value_is_invalid"]) }
+  end
+
+  context "with an EIP-6492 signature" do
+    let(:payload) { signed_siwx(key).merge("signature" => "0x#{"ab" * 1_100}") }
+
+    it { expect(result.error.messages).to eq(siwx: ["invalid_signature"]) }
   end
 
   context "with resources given as a String" do
