@@ -5,6 +5,7 @@ module Api
     module Customers
       class InvoicesController < Api::V2::BaseController
         include Api::V2::InvoiceIndex
+        include Api::V2::RejectsExpand
 
         def index
           customer = current_organization.customers.find_by(external_id: params[:customer_external_id])
