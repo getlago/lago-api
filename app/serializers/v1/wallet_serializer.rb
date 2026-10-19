@@ -27,6 +27,7 @@ module V1
         last_consumed_credit_at: model.last_consumed_credit_at&.iso8601,
         terminated_at: model.terminated_at,
         invoice_requires_successful_payment: model.invoice_requires_successful_payment?,
+        invoice_usage_on_expiration: model.invoice_usage_on_expiration?,
         paid_top_up_min_amount_cents: model.paid_top_up_min_amount_cents,
         paid_top_up_max_amount_cents: model.paid_top_up_max_amount_cents,
         priority: model.priority

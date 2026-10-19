@@ -46,6 +46,9 @@ module Wallets
         unless params[:invoice_requires_successful_payment].nil?
           wallet.invoice_requires_successful_payment = ActiveModel::Type::Boolean.new.cast(params[:invoice_requires_successful_payment])
         end
+        unless params[:invoice_usage_on_expiration].nil?
+          wallet.invoice_usage_on_expiration = ActiveModel::Type::Boolean.new.cast(params[:invoice_usage_on_expiration])
+        end
         wallet.x402_enabled = x402_enabled_param unless x402_enabled_param.nil?
         wallet.paid_top_up_min_amount_cents = params[:paid_top_up_min_amount_cents] if params.key?(:paid_top_up_min_amount_cents)
         wallet.paid_top_up_max_amount_cents = params[:paid_top_up_max_amount_cents] if params.key?(:paid_top_up_max_amount_cents)

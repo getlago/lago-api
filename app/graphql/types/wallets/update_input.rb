@@ -10,6 +10,7 @@ module Types
       argument :expiration_at, GraphQL::Types::ISO8601DateTime, required: false
       argument :id, ID, required: true
       argument :invoice_requires_successful_payment, Boolean, required: false
+      argument :invoice_usage_on_expiration, Boolean, required: false
       argument :name, String, required: false
       argument :priority, Integer, required: true
       argument :purchase_order_number, String, required: false

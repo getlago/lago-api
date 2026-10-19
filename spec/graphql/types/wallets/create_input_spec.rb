@@ -13,6 +13,7 @@ RSpec.describe Types::Wallets::CreateInput do
     expect(subject).to accept_argument(:expiration_at).of_type("ISO8601DateTime")
     expect(subject).to accept_argument(:granted_credits).of_type("String!")
     expect(subject).to accept_argument(:invoice_requires_successful_payment).of_type("Boolean")
+    expect(subject).to accept_argument(:invoice_usage_on_expiration).of_type("Boolean")
     expect(subject).to accept_argument(:name).of_type("String")
     expect(subject).to accept_argument(:paid_credits).of_type("String!")
     expect(subject).to accept_argument(:priority).of_type("Int!")

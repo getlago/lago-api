@@ -52,6 +52,10 @@ module Wallets
         attributes[:invoice_requires_successful_payment] = ActiveModel::Type::Boolean.new.cast(params[:invoice_requires_successful_payment]) || false
       end
 
+      if params.key?(:invoice_usage_on_expiration)
+        attributes[:invoice_usage_on_expiration] = ActiveModel::Type::Boolean.new.cast(params[:invoice_usage_on_expiration]) || false
+      end
+
       if params.key?(:applies_to)
         attributes[:allowed_fee_types] = params[:applies_to][:fee_types] if params[:applies_to].key?(:fee_types)
       end
