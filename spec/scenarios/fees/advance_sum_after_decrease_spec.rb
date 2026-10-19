@@ -2,26 +2,27 @@
 
 require "rails_helper"
 
-RSpec.describe "Advance recurring SUM billing after a usage decrease" do
+RSpec.describe "Advance SUM billing after a usage decrease" do
   let(:started_at) { Time.zone.parse("2026-10-06 00:00:00") }
+  let(:event_values) { [300, 700, -300, 400] }
   let(:inputs) do
-    [300, 700, -300, 400].each_with_index.map do |value, index|
+    event_values.each_with_index.map do |value, index|
       {transaction_id: "advance-sum-event-#{index + 1}", at: started_at + (index + 1).hours, value: value.to_s}
     end
   end
 
-  shared_examples "billing only newly reached usage" do
-    it "does not charge the decrease and bills only usage above the previous maximum" do
+  shared_examples "billing usage after a decrease" do
+    it "bills the decrease according to the billing source and charges new usage above the maximum" do
       fees = event_fees
 
-      expect(fees.map(&:amount_cents)).to eq([780, 1780, 0, 280])
-      expect(fees.map { |fee| fee.invoice.total_amount_cents }).to eq([780, 1780, 0, 280])
+      expect(fees.map(&:amount_cents)).to eq(expected_amounts)
+      expect(fees.map { |fee| fee.invoice.total_amount_cents }).to eq(expected_amounts)
       expect(fees.third.amount_details).to include(
-        "fixed_fee_total_amount" => "0.0",
-        "paid_events" => "0.0"
+        "fixed_fee_total_amount" => expected_fixed_fee,
+        "paid_events" => expected_paid_events
       )
       expect(fees.map { |fee| fee.invoice.status }).to eq(["finalized"] * 4)
-      expect(fees.sum { |fee| fee.invoice.total_amount_cents }).to eq(2840)
+      expect(fees.sum { |fee| fee.invoice.total_amount_cents }).to eq(expected_amounts.sum)
     end
   end
 
@@ -50,6 +51,9 @@ RSpec.describe "Advance recurring SUM billing after a usage decrease" do
     let(:plan) { create(:plan, organization:, amount_cents: 0, amount_currency: "USD", pay_in_advance: false) }
     let(:subscription) { customer.subscriptions.sole }
     let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:, field_name: "units") }
+    let(:expected_amounts) { [780, 1780, 30, 280] }
+    let(:expected_fixed_fee) { "0.3" }
+    let(:expected_paid_events) { "1.0" }
     let(:charge) do
       create(
         :percentage_charge,
@@ -75,7 +79,27 @@ RSpec.describe "Advance recurring SUM billing after a usage decrease" do
       charge
     end
 
-    it_behaves_like "billing only newly reached usage"
+    it_behaves_like "billing usage after a decrease"
+
+    context "when non-recurring SUM usage rebounds below the billed maximum" do
+      let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "units") }
+      let(:event_values) { [100, -30, 20] }
+
+      it "charges the fixed fee for the decrease and the positive rebound" do
+        fees = event_fees
+
+        expect(fees.map(&:amount_cents)).to eq([280, 30, 30])
+        expect(fees.map { |fee| fee.invoice.total_amount_cents }).to eq([280, 30, 30])
+        expect(fees.map { |fee| fee.invoice.status }).to eq(["finalized"] * 3)
+        expect(fees.last).to have_attributes(units: 20)
+        expect(fees.last.amount_details).to include(
+          "fixed_fee_total_amount" => "0.3",
+          "paid_events" => "1.0"
+        )
+        expect(CachedAggregation.where(charge:, external_subscription_id: subscription.external_id)
+          .order(:timestamp).pluck(:current_aggregation, :max_aggregation)).to eq([[100, 100], [70, 100], [90, 100]])
+      end
+    end
   end
 
   context "with contract product-catalog billing" do
@@ -115,6 +139,9 @@ RSpec.describe "Advance recurring SUM billing after a usage decrease" do
       create(:contract_rate_card, organization:, contract:, rate_card:, effective_date: started_at.to_date,
         billing_anchor_date: started_at.to_date, next_billing_at: started_at)
     end
+    let(:expected_amounts) { [780, 1780, 0, 280] }
+    let(:expected_fixed_fee) { "0.0" }
+    let(:expected_paid_events) { "0.0" }
 
     around do |example|
       travel_to(started_at + 12.hours) { example.run }
@@ -125,6 +152,23 @@ RSpec.describe "Advance recurring SUM billing after a usage decrease" do
       contract_rate_card
     end
 
-    it_behaves_like "billing only newly reached usage"
+    it_behaves_like "billing usage after a decrease"
+
+    context "when non-recurring SUM usage rebounds below the billed maximum" do
+      let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "units") }
+      let(:event_values) { [100, -30, 20] }
+
+      it "keeps the product fixed fee suppressed until the billed maximum is exceeded" do
+        fees = event_fees
+
+        expect(fees.map(&:amount_cents)).to eq([280, 0, 0])
+        expect(fees.map { |fee| fee.invoice.total_amount_cents }).to eq([280, 0, 0])
+        expect(fees.last).to have_attributes(units: 20)
+        expect(fees.last.amount_details).to include(
+          "fixed_fee_total_amount" => "0.0",
+          "paid_events" => "0.0"
+        )
+      end
+    end
   end
 end

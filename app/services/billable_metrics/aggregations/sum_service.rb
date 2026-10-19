@@ -162,7 +162,8 @@ module BillableMetrics
           current_aggregation - old_max
         else
           handle_event_metadata(current_aggregation:, max_aggregation: old_max, units_applied: value)
-          result.pay_in_advance_count_delta = 0 unless BigDecimal(value).zero?
+          # Legacy subscription charges retain their per-event fixed fee below the billed maximum.
+          result.pay_in_advance_count_delta = 0 if metered_item.billing_segment && !BigDecimal(value).zero?
 
           0
         end
