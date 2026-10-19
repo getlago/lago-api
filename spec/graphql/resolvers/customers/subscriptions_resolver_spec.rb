@@ -34,6 +34,7 @@ RSpec.describe Resolvers::Customers::SubscriptionsResolver do
   end
 
   it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "customers:view"
 
   describe "when no status filter is provided" do

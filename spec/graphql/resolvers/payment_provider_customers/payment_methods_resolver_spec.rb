@@ -41,6 +41,7 @@ RSpec.describe Resolvers::PaymentProviderCustomers::PaymentMethodsResolver do
   end
 
   it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "payment_methods:view"
 
   it "returns only the payment methods of the selected connection" do

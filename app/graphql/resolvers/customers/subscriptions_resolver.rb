@@ -4,6 +4,7 @@ module Resolvers
   module Customers
     class SubscriptionsResolver < Resolvers::BaseResolver
       include AuthenticableApiUser
+      include RequiredOrganization
 
       REQUIRED_PERMISSION = "customers:view"
 

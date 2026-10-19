@@ -4,6 +4,7 @@ module Resolvers
   module PaymentProviderCustomers
     class PaymentMethodsResolver < Resolvers::BaseResolver
       include AuthenticableApiUser
+      include RequiredOrganization
 
       REQUIRED_PERMISSION = "payment_methods:view"
 
