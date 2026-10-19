@@ -15,7 +15,8 @@ module Wallets
         subscriptions.find_each { |subscription| invoice_usage(subscription) }
       end
 
-      Wallets::TerminateService.call!(wallet:)
+      # Applying the wallet credits updates its row, which bumps lock_version.
+      Wallets::TerminateService.call!(wallet: wallet.reload)
 
       result.wallet = wallet
       result
