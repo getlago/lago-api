@@ -97,10 +97,6 @@ class SendWebhookJob < ApplicationJob
 
   HIGH_PRIORITY_WEBHOOK_TYPES = %w[alert.triggered].freeze
 
-  # Jobs enqueued by the previous release still use the old names.
-  # TODO: Remove after one release.
-  RENAMED_WEBHOOK_TYPES = {"credit_note.provider_refund_failure" => "credit_note.refund_failure"}.freeze
-
   def self.queue_for(webhook_type = nil)
     if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_WEBHOOK"])
       HIGH_PRIORITY_WEBHOOK_TYPES.include?(webhook_type) ? :webhook_worker_high_priority : :webhook_worker
@@ -124,7 +120,9 @@ class SendWebhookJob < ApplicationJob
   end
 
   def perform(webhook_type, object, options = {}, webhook_id = nil)
-    webhook_type = RENAMED_WEBHOOK_TYPES.fetch(webhook_type, webhook_type)
+    # Jobs enqueued by the previous release still use the former names.
+    # TODO: Remove after one release.
+    webhook_type = WebhookEndpoint::RENAMED_EVENT_TYPES.fetch(webhook_type, webhook_type)
     raise(NotImplementedError) unless WEBHOOK_SERVICES.include?(webhook_type)
 
     # NOTE: This condition is only temporary to handle enqueued jobs
