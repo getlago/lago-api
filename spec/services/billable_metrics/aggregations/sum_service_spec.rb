@@ -125,6 +125,22 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
       expect(result.count).to eq(6)
       expect(result.options).to eq({running_total: [2.5, 5]})
     end
+
+    context "with a recurring watermark" do
+      let(:options) { {recurring_watermark: Time.current + 1.minute} }
+
+      before do
+        create(:event, organization_id: organization.id, code: billable_metric.code, customer:, subscription:,
+          timestamp: to_datetime - 2.days, created_at: Time.current + 1.hour, properties: {total_count: 7})
+      end
+
+      it "only counts the events ingested up to the watermark in the recurring units" do
+        result = sum_service.aggregate(options:)
+
+        expect(result.aggregation).to eq(60)
+        expect(result.recurring_units).to eq(53)
+      end
+    end
   end
 
   context "when a precomputed aggregation is passed" do
