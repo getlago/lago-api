@@ -32,6 +32,14 @@ describe X402::Secp256k1 do
       it { expect("0x#{public_key.unpack1("H*")}").to eq(vector["public_key"]) }
     end
 
+    context "with a signature that recovers the point at infinity" do
+      let(:generator) { OpenSSL::PKey::EC::Group.new("secp256k1").generator.to_octet_string(:uncompressed) }
+      let(:s_of_digest) { [(digest.unpack1("H*").to_i(16) % order.to_i).to_s(16).rjust(64, "0")].pack("H*") }
+      let(:signature) { generator.byteslice(1, 32) + s_of_digest + 27.chr }
+
+      it { is_expected.to be_nil }
+    end
+
     context "with another digest" do
       let(:digest) { eip191_digest("#{vector["message"]}.") }
 
