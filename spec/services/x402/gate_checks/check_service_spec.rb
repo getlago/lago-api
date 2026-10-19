@@ -91,6 +91,34 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
       end
     end
 
+    context "with the agent's address in lowercase" do
+      let(:siwx) { signed_siwx(agent_key, address: agent_address.downcase) }
+
+      it "passes" do
+        expect(result.requirements).to be_nil
+      end
+
+      it "records the nonce under the EIP-55 address" do
+        result
+        expect(X402::SignInNonce.sole).to have_attributes(agent_address:)
+      end
+    end
+
+    context "with a passed proof re-sent with its address in lowercase" do
+      subject(:result) { described_class.call(organization:, params: params.merge(siwx: siwx.merge("address" => agent_address.downcase))) }
+
+      before { described_class.call(organization:, params:) }
+
+      it "refuses with nonce_already_used" do
+        expect(result.error.messages).to eq(siwx: ["nonce_already_used"])
+      end
+
+      it "keeps one nonce" do
+        result
+        expect(X402::SignInNonce.count).to eq(1)
+      end
+    end
+
     context "with a replayed proof whose agent can no longer cover a call" do
       let(:params) { super().merge(estimated_call_cost_cents: 2) }
 
