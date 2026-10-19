@@ -240,6 +240,27 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
           expect(regenerated_invoice.applied_usage_thresholds.pluck(:id))
             .not_to match_array(voided_invoice.applied_usage_thresholds.pluck(:id))
         end
+
+        it "keeps the progressive billing trigger" do
+          expect(regenerate_result.invoice.progressive_billing_trigger).to eq("usage_threshold")
+        end
+
+        context "when the voided invoice was triggered by a wallet expiration" do
+          let(:wallet) { create(:wallet, customer:) }
+
+          before do
+            voided_invoice.update!(progressive_billing_trigger: "wallet_expiration")
+            create(:applied_wallet_expiration, invoice: voided_invoice, wallet:, organization:)
+          end
+
+          it "duplicates the applied wallet expiration to the regenerated invoice" do
+            regenerated_invoice = regenerate_result.invoice
+
+            expect(regenerated_invoice.progressive_billing_trigger).to eq("wallet_expiration")
+            expect(regenerated_invoice.applied_wallet_expiration.wallet).to eq(wallet)
+            expect(voided_invoice.reload.applied_wallet_expiration.wallet).to eq(wallet)
+          end
+        end
       end
 
       context "when voided invoice is one_off type" do
