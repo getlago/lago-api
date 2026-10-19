@@ -4729,11 +4729,11 @@ RSpec.describe Fees::ChargeService, :premium do
         create(:standard_charge, plan: subscription.plan, billable_metric:, prorated: true, properties: {amount: "20"})
       end
 
-      it "persists the units without proration" do
+      it "persists no snapshot, as its units are not bounded by the watermark" do
         result = charge_subscription_service.call
 
         expect(result.fees.sole.precise_amount_cents).to be < 15 * 2_000
-        expect(snapshots.sole.units).to eq(15)
+        expect(snapshots).to be_empty
       end
     end
 
@@ -4744,6 +4744,19 @@ RSpec.describe Fees::ChargeService, :premium do
         charge_subscription_service.call
 
         expect(snapshots.sole.units).to eq(15)
+      end
+
+      context "with an event ingested after the watermark" do
+        before do
+          create(:event, organization:, subscription:, code: billable_metric.code, created_at: now - 1.second,
+            timestamp: Time.zone.parse("2022-03-20"), properties: {value: 7})
+        end
+
+        it "persists it, as its read never counts an event dated in a closed period" do
+          charge_subscription_service.call
+
+          expect(snapshots.sole.units).to eq(22)
+        end
       end
     end
 

@@ -133,17 +133,12 @@ module BillableMetrics
         )
       end
 
-      # A precomputed prorated result carries no snapshot value: its full value is persisted
+      # A precomputed prorated result is not bounded by the watermark, so it persists no snapshot
       def assign_recurring_snapshot(target_result, sum_result)
-        return unless billable_metric.recurring?
+        return unless billable_metric.recurring? && sum_result.respond_to?(:snapshot_value)
 
-        if sum_result.respond_to?(:snapshot_value)
-          target_result.recurring_units = sum_result.snapshot_value
-          target_result.recurring_events_count = sum_result.snapshot_events_count
-        else
-          target_result.recurring_units = sum_result.value
-          target_result.recurring_events_count = sum_result.events_count
-        end
+        target_result.recurring_units = sum_result.snapshot_value
+        target_result.recurring_events_count = sum_result.snapshot_events_count
       end
 
       def compute_precise_total_amount_cents(options: {})
