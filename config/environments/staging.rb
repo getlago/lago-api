@@ -32,7 +32,7 @@ Rails.application.configure do
   end
 
   # NOTE: The WebSocket is opened by the front end, so the browser sends the front end's origin.
-  config.action_cable.allowed_request_origins = [Rails.application.lago_front_origin]
+  config.action_cable.allowed_request_origins = [LagoApi::Application.origin_of(config.lago_front_url)]
 
   config.action_mailer.perform_caching = false
   config.i18n.fallbacks = true

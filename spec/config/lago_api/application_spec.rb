@@ -3,33 +3,18 @@
 require "rails_helper"
 
 RSpec.describe LagoApi::Application do
-  describe "#lago_front_origin" do
-    subject(:lago_front_origin) { Rails.application.lago_front_origin }
-
-    before { allow(Rails.application.config).to receive(:lago_front_url).and_return(lago_front_url) }
-
-    context "with the default port" do
-      let(:lago_front_url) { "https://app.getlago.com/" }
-
-      it { is_expected.to eq("https://app.getlago.com") }
+  describe ".origin_of" do
+    it "drops the path and the default port" do
+      expect(described_class.origin_of("https://app.getlago.com/")).to eq("https://app.getlago.com")
+      expect(described_class.origin_of("https://app.getlago.com:443/customers")).to eq("https://app.getlago.com")
     end
 
-    context "with an explicit default port and a path" do
-      let(:lago_front_url) { "https://app.getlago.com:443/customers" }
-
-      it { is_expected.to eq("https://app.getlago.com") }
+    it "keeps a custom port" do
+      expect(described_class.origin_of("http://localhost:8080")).to eq("http://localhost:8080")
     end
 
-    context "with a custom port" do
-      let(:lago_front_url) { "http://localhost:8080" }
-
-      it { is_expected.to eq("http://localhost:8080") }
-    end
-
-    context "with an uppercase host" do
-      let(:lago_front_url) { "https://App.GetLago.com" }
-
-      it { is_expected.to eq("https://app.getlago.com") }
+    it "lowercases the host as browsers do" do
+      expect(described_class.origin_of("https://App.GetLago.com")).to eq("https://app.getlago.com")
     end
   end
 end
