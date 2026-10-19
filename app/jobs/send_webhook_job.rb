@@ -53,7 +53,7 @@ class SendWebhookJob < ApplicationJob
     "customer.vies_check" => Webhooks::Customers::ViesCheckService,
     "credit_note.created" => Webhooks::CreditNotes::CreatedService,
     "credit_note.generated" => Webhooks::CreditNotes::GeneratedService,
-    "credit_note.provider_refund_failure" => Webhooks::CreditNotes::PaymentProviderRefundFailureService,
+    "credit_note.refund_failure" => Webhooks::CreditNotes::PaymentProviderRefundFailureService,
     "integration.provider_error" => Webhooks::Integrations::ProviderErrorService,
     "order.created" => Webhooks::Orders::CreatedService,
     "order.executed" => Webhooks::Orders::ExecutedService,
@@ -97,6 +97,10 @@ class SendWebhookJob < ApplicationJob
 
   HIGH_PRIORITY_WEBHOOK_TYPES = %w[alert.triggered].freeze
 
+  # Jobs enqueued by the previous release still use the old names.
+  # TODO: Remove after one release.
+  RENAMED_WEBHOOK_TYPES = {"credit_note.provider_refund_failure" => "credit_note.refund_failure"}.freeze
+
   def self.queue_for(webhook_type = nil)
     if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_WEBHOOK"])
       HIGH_PRIORITY_WEBHOOK_TYPES.include?(webhook_type) ? :webhook_worker_high_priority : :webhook_worker
@@ -120,6 +124,7 @@ class SendWebhookJob < ApplicationJob
   end
 
   def perform(webhook_type, object, options = {}, webhook_id = nil)
+    webhook_type = RENAMED_WEBHOOK_TYPES.fetch(webhook_type, webhook_type)
     raise(NotImplementedError) unless WEBHOOK_SERVICES.include?(webhook_type)
 
     # NOTE: This condition is only temporary to handle enqueued jobs

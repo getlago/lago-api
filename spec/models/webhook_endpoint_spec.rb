@@ -180,6 +180,14 @@ RSpec.describe WebhookEndpoint do
         expect(undocumented_types).to be_empty
         expect(handler_types - documented_types).to be_empty
       end
+
+      it "matches the webhook_type each handler delivers" do
+        delivered_types = SendWebhookJob::WEBHOOK_SERVICES.transform_values do |service|
+          service.new(object: nil).send(:webhook_type)
+        end
+
+        expect(delivered_types).to eq(SendWebhookJob::WEBHOOK_SERVICES.to_h { |type, _| [type, type] })
+      end
     end
   end
 

@@ -118,7 +118,7 @@ module CreditNotes
 
       def deliver_error_webhook(message:, code:)
         SendWebhookJob.perform_later(
-          "credit_note.provider_refund_failure",
+          "credit_note.refund_failure",
           credit_note,
           provider_customer_id: payment_provider_customer(payment)&.provider_customer_id,
           provider_error: {

@@ -123,7 +123,7 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
 
         expect(SendWebhookJob).to have_been_enqueued
           .with(
-            "credit_note.provider_refund_failure",
+            "credit_note.refund_failure",
             credit_note,
             provider_customer_id: adyen_customer.provider_customer_id,
             provider_error: {
@@ -349,7 +349,7 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
 
         expect(SendWebhookJob).to have_been_enqueued
           .with(
-            "credit_note.provider_refund_failure",
+            "credit_note.refund_failure",
             credit_note,
             provider_customer_id: adyen_customer.provider_customer_id,
             provider_error: {
