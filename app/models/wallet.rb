@@ -148,6 +148,7 @@ end
 #  depleted_ongoing_balance            :boolean          default(FALSE), not null
 #  expiration_at                       :datetime
 #  invoice_requires_successful_payment :boolean          default(FALSE), not null
+#  invoice_usage_on_expiration         :boolean          default(FALSE), not null
 #  last_balance_sync_at                :datetime
 #  last_consumed_credit_at             :datetime
 #  last_ongoing_balance_sync_at        :datetime
