@@ -84,9 +84,12 @@ module LagoMcpClient
       def strip_untrusted_data_tags(text)
         loop do
           stripped = text.gsub(UNTRUSTED_DATA_TAG_PATTERN, "")
-          break stripped if stripped == text
 
-          text = stripped
+          if stripped == text
+            break stripped
+          else
+            text = stripped
+          end
         end
       end
 
