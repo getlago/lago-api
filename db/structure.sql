@@ -562,6 +562,7 @@ DROP INDEX IF EXISTS public.index_rate_cards_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_rate_cards_taxes_on_rate_card_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_rate_cards_taxes_on_rate_card_id;
 DROP INDEX IF EXISTS public.index_rate_cards_taxes_on_organization_id;
+DROP INDEX IF EXISTS public.index_rate_cards_taxes_by_cursor;
 DROP INDEX IF EXISTS public.index_rate_cards_on_product_id;
 DROP INDEX IF EXISTS public.index_rate_cards_on_product_filter_id;
 DROP INDEX IF EXISTS public.index_rate_cards_on_organization_id_and_code;
@@ -11619,6 +11620,13 @@ CREATE INDEX index_rate_cards_on_product_id ON public.rate_cards USING btree (pr
 
 
 --
+-- Name: index_rate_cards_taxes_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_rate_cards_taxes_by_cursor ON public.rate_cards_taxes USING btree (rate_card_id, created_at DESC, id DESC);
+
+
+--
 -- Name: index_rate_cards_taxes_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -15854,6 +15862,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261020142115'),
 ('20261020074217'),
 ('20261019074555'),
 ('20261014123350'),
