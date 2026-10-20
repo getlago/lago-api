@@ -13,9 +13,10 @@ describe X402::InvoicePaymentsController, :premium do
   end
   let(:payee_address) { "0x94bA479439C2f1bA5f5DaCBD06Ea0c129604B4a5" }
   let(:payment_required) { X402::Wire::V2Codec.decode(response.headers["PAYMENT-REQUIRED"]) }
+  let(:wallet) { create(:wallet, customer:, currency: "USD", x402_enabled: true) }
 
   before do
-    create(:wallet, customer:, currency: "USD", x402_enabled: true)
+    wallet
     stub_cdp_supported
     invoice
   end
@@ -56,9 +57,29 @@ describe X402::InvoicePaymentsController, :premium do
       end
     end
 
+    context "with a null byte in the token" do
+      subject { get("/x402/invoice_payments/ab%00cd") }
+
+      it "answers 404" do
+        subject
+
+        expect(response).to have_http_status(:not_found)
+        expect(json[:code]).to eq("invoice_not_found")
+      end
+    end
+
     context "without x402 payments" do
       let(:organization) { create(:organization, feature_flags: []) }
 
+      it "answers 403" do
+        subject
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:code]).to eq("feature_unavailable")
+      end
+    end
+
+    context "without premium", premium: false do
       it "answers 403" do
         subject
 
@@ -97,6 +118,23 @@ describe X402::InvoicePaymentsController, :premium do
       end
     end
 
+    context "with nothing left to pay" do
+      let(:invoice) do
+        create(
+          :invoice,
+          organization:, customer:, currency: "USD", total_amount_cents: 105, total_paid_amount_cents: 105,
+          x402_payment_token: token, x402_connection:
+        )
+      end
+
+      it "answers 410" do
+        subject
+
+        expect(response).to have_http_status(:gone)
+        expect(json[:code]).to eq("invalid_invoice_status_or_payment_status")
+      end
+    end
+
     context "with a pending attempt" do
       before { create(:x402_settlement, :pending, :invoice_payment, x402_connection:, invoice:, payee_address:) }
 
@@ -122,6 +160,17 @@ describe X402::InvoicePaymentsController, :premium do
       end
     end
 
+    context "without an x402 wallet" do
+      let(:wallet) { create(:wallet, customer:, currency: "USD", x402_enabled: false) }
+
+      it "answers 422 naming the wallet rule" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(base: ["wallet_not_x402_enabled"])
+      end
+    end
+
     context "with a discarded connection" do
       let(:x402_connection) { create(:x402_connection, :discarded, organization:) }
 
@@ -142,11 +191,11 @@ describe X402::InvoicePaymentsController, :premium do
     context "when CDP is unavailable" do
       before { stub_cdp_supported(status: 503) }
 
-      it "answers a third-party error" do
+      it "answers a third-party error without the merchant's failure" do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:code]).to eq("third_party_error")
+        expect(json).to eq(status: 422, error: "Unprocessable Entity", code: "third_party_error")
       end
     end
   end
