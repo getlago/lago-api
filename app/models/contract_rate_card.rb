@@ -10,7 +10,7 @@ class ContractRateCard < ApplicationRecord
 
   belongs_to :organization
   belongs_to :contract
-  belongs_to :rate_card
+  belongs_to :rate_card, -> { with_discarded }
 
   has_one :product, through: :rate_card
 

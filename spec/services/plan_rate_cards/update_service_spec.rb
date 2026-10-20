@@ -23,6 +23,28 @@ RSpec.describe PlanRateCards::UpdateService do
     expect(result.plan_rate_card.units).to eq(12)
   end
 
+  context "when another instance has already destroyed the entry" do
+    subject(:result) { described_class.call(plan_rate_card: stale_plan_rate_card, params:) }
+
+    let(:stale_plan_rate_card) { PlanRateCard.find(plan_rate_card.id) }
+
+    before do
+      allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+      stale_plan_rate_card
+      PlanRateCards::DestroyService.call(plan_rate_card:)
+    end
+
+    it "returns not found without changing units or publishing an update", :capture_kafka_messages do
+      expect do
+        expect(result).not_to be_success
+      end.not_to have_enqueued_job(SendWebhookJob)
+
+      expect(result.error.resource).to eq("applied_rate_card")
+      expect(plan_rate_card.reload.units).to eq(5)
+      expect(kafka_messages.map { |message| JSON.parse(message.fetch(:payload)).fetch("activity_type") }).not_to include("plan_rate_card.updated")
+    end
+  end
+
   it "publishes plan_rate_card.updated with the post-write hierarchy" do
     expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan_rate_card.updated", plan_rate_card)
 

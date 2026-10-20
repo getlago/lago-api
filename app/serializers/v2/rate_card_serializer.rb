@@ -5,7 +5,7 @@ module V2
     def serialize
       payload = {
         lago_id: model.id,
-        product_code: model.product&.code,
+        product_code: model.product.code,
         product_filter_code: model.product_filter&.code,
         name: model.name,
         code: model.code,

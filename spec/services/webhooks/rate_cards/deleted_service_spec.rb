@@ -27,7 +27,7 @@ RSpec.describe Webhooks::RateCards::DeletedService do
       "organization_id" => organization.id,
       "rate_card" => {
         "lago_id" => rate_card.id,
-        "product_code" => nil,
+        "product_code" => deleted_product.code,
         "product_filter_code" => nil,
         "name" => rate_card.name,
         "code" => rate_card.code,

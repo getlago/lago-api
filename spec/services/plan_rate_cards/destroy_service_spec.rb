@@ -19,6 +19,27 @@ RSpec.describe PlanRateCards::DestroyService, :capture_kafka_messages do
     expect(catalog_plan.reload.applied_rate_cards).to be_empty
   end
 
+  context "when another instance has already destroyed the entry" do
+    subject(:result) { described_class.call(plan_rate_card: stale_plan_rate_card) }
+
+    let(:stale_plan_rate_card) { PlanRateCard.find(plan_rate_card.id) }
+
+    before do
+      allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+      stale_plan_rate_card
+      described_class.call(plan_rate_card:)
+    end
+
+    it "returns not found without publishing another event pair", :capture_kafka_messages do
+      expect do
+        expect(result).not_to be_success
+      end.not_to have_enqueued_job(SendWebhookJob)
+
+      expect(result.error.resource).to eq("applied_rate_card")
+      expect(kafka_messages.count { |message| JSON.parse(message.fetch(:payload)).fetch("activity_type") == "plan_rate_card.deleted" }).to eq(1)
+    end
+  end
+
   it "discards the entry's phases and their overrides" do
     rate_override = create(:rate_override, organization:)
     phase = create(:rate_phase, organization:, plan_rate_card:, position: 1, rate_override:)
