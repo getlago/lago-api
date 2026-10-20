@@ -152,18 +152,7 @@ RSpec.describe "templates/credit_notes/credit_note.slim" do
     end
 
     before do
-      # Stub subscription-related queries
-      allow(credit_note).to receive(:subscription_ids).and_return([subscription.id])
-      allow(credit_note).to receive(:subscription_item).with(subscription.id).and_return(subscription_fee_item)
-      allow(credit_note).to receive(:subscription_fixed_charge_items).with(subscription.id).and_return([fixed_charge_item])
-
-      # Create a mock relation for charge items that responds to .where()
-      charge_items_relation = instance_double(ActiveRecord::Relation)
-      allow(charge_items_relation).to receive(:where).and_return([charge_item])
-      allow(credit_note).to receive(:subscription_charge_items).with(subscription.id).and_return(charge_items_relation)
-
-      allow(credit_note).to receive(:add_on_items).and_return(CreditNoteItem.none)
-
+      allow(credit_note).to receive(:items).and_return([subscription_fee_item, fixed_charge_item, charge_item])
       # Stub invoice_name methods (computed methods, not attributes)
       allow(fixed_charge_fee).to receive(:invoice_name).and_return("Setup Fee")
       allow(charge_fee).to receive(:invoice_name).and_return("API Calls")
@@ -279,38 +268,23 @@ RSpec.describe "templates/credit_notes/credit_note.slim" do
     end
 
     before do
-      # Stub subscription-related queries
-      allow(credit_note).to receive(:subscription_ids).and_return([subscription.id])
-      allow(credit_note).to receive(:subscription_item).with(subscription.id).and_return(
-        build_stubbed(:fee, amount_cents: 0, amount_currency: "USD")
-      )
-      allow(credit_note).to receive(:subscription_fixed_charge_items).with(subscription.id).and_return([fixed_charge_item1, fixed_charge_item2])
-      allow(credit_note).to receive(:subscription_charge_items).with(subscription.id).and_return(CreditNoteItem.none)
-      allow(credit_note).to receive(:add_on_items).and_return(CreditNoteItem.none)
-
+      allow(credit_note).to receive(:items).and_return([fixed_charge_item1, fixed_charge_item2])
       # Stub invoice_name methods
       allow(fixed_charge_fee1).to receive(:invoice_name).and_return("Setup Fee")
       allow(fixed_charge_fee2).to receive(:invoice_name).and_return("Installation Fee")
 
-      # Stub applied_taxes for the credit note and items
-      # The TaxHelper calls item.applied_taxes which calls credit_note.applied_taxes.where(...)
-      # Then it calls .order().pluck() on the result
-      item_applied_taxes = instance_double(ActiveRecord::Relation)
-      allow(item_applied_taxes).to receive(:order).with(tax_rate: :desc).and_return(item_applied_taxes)
-      allow(item_applied_taxes).to receive(:pluck).with(:tax_rate).and_return([10.0])
-      allow(item_applied_taxes).to receive(:present?).and_return(true)
-
       applied_taxes_relation = instance_double(ActiveRecord::Relation)
-      allow(applied_taxes_relation).to receive(:where).and_return(item_applied_taxes)
+      allow(applied_taxes_relation).to receive(:to_a).and_return([applied_tax])
       allow(applied_taxes_relation).to receive(:order).with(tax_rate: :desc).and_return([applied_tax])
       allow(applied_taxes_relation).to receive(:present?).and_return(true)
       allow(credit_note).to receive(:applied_taxes).and_return(applied_taxes_relation)
 
-      # Stub applied_taxes on fees (returns empty for the select query)
       fee_applied_taxes = instance_double(ActiveRecord::Relation)
-      allow(fee_applied_taxes).to receive(:select).and_return([])
-      allow(fixed_charge_fee1).to receive(:applied_taxes).and_return(fee_applied_taxes)
-      allow(fixed_charge_fee2).to receive(:applied_taxes).and_return(fee_applied_taxes)
+      allow(fee_applied_taxes).to receive(:present?).and_return(true)
+      allow(fee_applied_taxes).to receive(:order).with(tax_rate: :desc).and_return(fee_applied_taxes)
+      allow(fee_applied_taxes).to receive(:pluck).with(:tax_rate).and_return([10.0])
+      allow(fixed_charge_item1).to receive(:applied_taxes).and_return(fee_applied_taxes)
+      allow(fixed_charge_item2).to receive(:applied_taxes).and_return(fee_applied_taxes)
 
       # Stub sub_total_excluding_taxes_amount
       allow(credit_note).to receive(:sub_total_excluding_taxes_amount).and_return(Money.new(2000, "USD"))
@@ -446,44 +420,23 @@ RSpec.describe "templates/credit_notes/credit_note.slim" do
     end
 
     before do
-      # Stub subscription-related queries
-      allow(credit_note).to receive(:subscription_ids).and_return([subscription.id])
-      allow(credit_note).to receive(:subscription_item).with(subscription.id).and_return(
-        build_stubbed(:fee, amount_cents: 0, amount_currency: "USD")
-      )
-      allow(credit_note).to receive(:subscription_fixed_charge_items).with(subscription.id).and_return([fixed_charge_item1, fixed_charge_item2])
-      allow(credit_note).to receive(:subscription_charge_items).with(subscription.id).and_return(CreditNoteItem.none)
-      allow(credit_note).to receive(:add_on_items).and_return(CreditNoteItem.none)
-
+      allow(credit_note).to receive(:items).and_return([fixed_charge_item1, fixed_charge_item2])
       # Stub invoice_name methods
       allow(fixed_charge_fee1).to receive(:invoice_name).and_return("Setup Fee")
       allow(fixed_charge_fee2).to receive(:invoice_name).and_return("Installation Fee")
 
-      # Stub applied_taxes for items with different tax rates
-      # Item 1 has 10% tax
-      item1_applied_taxes = instance_double(ActiveRecord::Relation)
-      allow(item1_applied_taxes).to receive(:order).with(tax_rate: :desc).and_return(item1_applied_taxes)
-      allow(item1_applied_taxes).to receive(:pluck).with(:tax_rate).and_return([10.0])
-      allow(item1_applied_taxes).to receive(:present?).and_return(true)
-
-      # Item 2 has 20% tax
-      item2_applied_taxes = instance_double(ActiveRecord::Relation)
-      allow(item2_applied_taxes).to receive(:order).with(tax_rate: :desc).and_return(item2_applied_taxes)
-      allow(item2_applied_taxes).to receive(:pluck).with(:tax_rate).and_return([20.0])
-      allow(item2_applied_taxes).to receive(:present?).and_return(true)
-
-      # Credit note applied_taxes returns different results based on item
       applied_taxes_relation = instance_double(ActiveRecord::Relation)
-      allow(applied_taxes_relation).to receive(:where).and_return(item1_applied_taxes, item2_applied_taxes)
+      allow(applied_taxes_relation).to receive(:to_a).and_return([applied_tax1, applied_tax2])
       allow(applied_taxes_relation).to receive(:order).with(tax_rate: :desc).and_return([applied_tax2, applied_tax1]) # Descending order: 20%, 10%
       allow(applied_taxes_relation).to receive(:present?).and_return(true)
       allow(credit_note).to receive(:applied_taxes).and_return(applied_taxes_relation)
 
-      # Stub applied_taxes on fees
       fee_applied_taxes = instance_double(ActiveRecord::Relation)
-      allow(fee_applied_taxes).to receive(:select).and_return([])
-      allow(fixed_charge_fee1).to receive(:applied_taxes).and_return(fee_applied_taxes)
-      allow(fixed_charge_fee2).to receive(:applied_taxes).and_return(fee_applied_taxes)
+      allow(fee_applied_taxes).to receive(:present?).and_return(true)
+      allow(fee_applied_taxes).to receive(:order).with(tax_rate: :desc).and_return(fee_applied_taxes)
+      allow(fee_applied_taxes).to receive(:pluck).with(:tax_rate).and_return([20.0])
+      allow(fixed_charge_item1).to receive(:applied_taxes).and_return(fee_applied_taxes)
+      allow(fixed_charge_item2).to receive(:applied_taxes).and_return(fee_applied_taxes)
 
       # Stub sub_total_excluding_taxes_amount
       allow(credit_note).to receive(:sub_total_excluding_taxes_amount).and_return(Money.new(2000, "USD"))
@@ -574,35 +527,18 @@ RSpec.describe "templates/credit_notes/credit_note.slim" do
     end
 
     before do
-      # Stub subscription-related queries
-      allow(credit_note).to receive(:subscription_ids).and_return([subscription.id])
-      allow(credit_note).to receive(:subscription_item).with(subscription.id).and_return(
-        build_stubbed(:fee, amount_cents: 0, amount_currency: "USD")
-      )
-      allow(credit_note).to receive(:subscription_fixed_charge_items).with(subscription.id).and_return([fixed_charge_item1, fixed_charge_item2])
-      allow(credit_note).to receive(:subscription_charge_items).with(subscription.id).and_return(CreditNoteItem.none)
-      allow(credit_note).to receive(:add_on_items).and_return(CreditNoteItem.none)
-
+      allow(credit_note).to receive(:items).and_return([fixed_charge_item1, fixed_charge_item2])
       # Stub invoice_name methods
       allow(fixed_charge_fee1).to receive(:invoice_name).and_return("Setup Fee")
       allow(fixed_charge_fee2).to receive(:invoice_name).and_return("Onboarding Fee")
 
-      # Stub applied_taxes (no taxes in this scenario)
-      item_applied_taxes = instance_double(ActiveRecord::Relation)
-      allow(item_applied_taxes).to receive(:order).with(tax_rate: :desc).and_return(item_applied_taxes)
-      allow(item_applied_taxes).to receive(:pluck).with(:tax_rate).and_return([0.0])
-      allow(item_applied_taxes).to receive(:present?).and_return(false)
-
       applied_taxes_relation = instance_double(ActiveRecord::Relation)
-      allow(applied_taxes_relation).to receive(:where).and_return(item_applied_taxes)
+      allow(applied_taxes_relation).to receive(:to_a).and_return([])
       allow(applied_taxes_relation).to receive(:present?).and_return(false)
       allow(credit_note).to receive(:applied_taxes).and_return(applied_taxes_relation)
 
-      # Stub applied_taxes on fees
-      fee_applied_taxes = instance_double(ActiveRecord::Relation)
-      allow(fee_applied_taxes).to receive(:select).and_return([])
-      allow(fixed_charge_fee1).to receive(:applied_taxes).and_return(fee_applied_taxes)
-      allow(fixed_charge_fee2).to receive(:applied_taxes).and_return(fee_applied_taxes)
+      allow(fixed_charge_item1).to receive(:applied_taxes).and_return(CreditNote::AppliedTax.none)
+      allow(fixed_charge_item2).to receive(:applied_taxes).and_return(CreditNote::AppliedTax.none)
 
       # Stub coupons_adjustment_amount for display
       allow(credit_note).to receive(:coupons_adjustment_amount).and_return(Money.new(500, "USD"))
@@ -699,20 +635,7 @@ RSpec.describe "templates/credit_notes/credit_note.slim" do
     end
 
     before do
-      # Stub subscription-related queries
-      allow(credit_note).to receive(:subscription_ids).and_return([subscription.id])
-      allow(credit_note).to receive(:subscription_item).with(subscription.id).and_return(
-        build_stubbed(:fee, amount_cents: 0, amount_currency: "USD")
-      )
-      allow(credit_note).to receive(:subscription_fixed_charge_items).with(subscription.id).and_return([])
-
-      # Create a mock relation for charge items that responds to .where()
-      charge_items_relation = instance_double(ActiveRecord::Relation)
-      allow(charge_items_relation).to receive(:where).and_return([charge_item1, charge_item2])
-      allow(credit_note).to receive(:subscription_charge_items).with(subscription.id).and_return(charge_items_relation)
-
-      allow(credit_note).to receive(:add_on_items).and_return(CreditNoteItem.none)
-
+      allow(credit_note).to receive(:items).and_return([charge_item1, charge_item2])
       # Stub invoice_name methods
       allow(charge_fee1).to receive(:invoice_name).and_return("API Calls")
       allow(charge_fee2).to receive(:invoice_name).and_return("Storage")
@@ -723,6 +646,173 @@ RSpec.describe "templates/credit_notes/credit_note.slim" do
 
     it "renders each charge fee correctly" do
       expect(rendered_template).to match_html_snapshot("with_only_charges")
+    end
+  end
+
+  context "with product credit note items" do
+    let(:product) { build_stubbed(:product, organization:, name: "Data Export") }
+    let(:product_fee) do
+      build_stubbed(
+        :fee,
+        invoice:,
+        subscription: nil,
+        fee_type: :product,
+        invoiceable: product,
+        invoice_display_name: "Export Package",
+        amount_cents: 1000,
+        amount_currency: "USD"
+      )
+    end
+    let(:product_item) do
+      build_stubbed(:credit_note_item, organization:, fee: product_fee, amount_cents: 500,
+        amount_currency: "USD", precise_amount_cents: 500)
+    end
+    let(:credit_note) do
+      build_stubbed(:credit_note, organization:, customer:, invoice:, number: "CN-PRODUCT",
+        issuing_date: Date.parse("2025-10-05"), total_amount_currency: "USD", total_amount_cents: 500,
+        taxes_amount_cents: 0, credit_amount_currency: "USD", credit_amount_cents: 500, items: [product_item])
+    end
+
+    before do
+      allow(credit_note).to receive(:items).and_return([product_item])
+      allow(credit_note).to receive(:sub_total_excluding_taxes_amount).and_return(Money.new(500, "USD"))
+    end
+
+    it "renders the product display name and credited partial amount" do
+      expect(rendered_template).to include("Export Package")
+      expect(rendered_template).to include("$5.00")
+    end
+  end
+
+  context "with product, subscription, and add-on credit note items" do
+    let(:product_one) { build_stubbed(:product, organization:, name: "Storage") }
+    let(:product_two) { build_stubbed(:product, organization:, name: "Compute") }
+    let(:product_fee_one) do
+      build_stubbed(:fee, invoice:, subscription: nil, fee_type: :product, invoiceable: product_one,
+        invoice_display_name: "Storage Credit", amount_cents: 1000, amount_currency: "USD")
+    end
+    let(:product_fee_two) do
+      build_stubbed(:fee, invoice:, subscription: nil, fee_type: :product, invoiceable: product_two,
+        invoice_display_name: "Compute Credit", amount_cents: 1000, amount_currency: "USD")
+    end
+    let(:product_items) do
+      [product_fee_one, product_fee_two].map do |fee|
+        build_stubbed(:credit_note_item, organization:, fee:, amount_cents: 250,
+          amount_currency: "USD", precise_amount_cents: 250)
+      end
+    end
+    let(:subscription_fee_item) do
+      fee = build_stubbed(:fee, invoice:, subscription:, fee_type: :subscription,
+        amount_cents: 1000, amount_currency: "USD")
+      build_stubbed(:credit_note_item, organization:, fee:, amount_cents: 300,
+        amount_currency: "USD", precise_amount_cents: 300)
+    end
+    let(:add_on) { build_stubbed(:add_on, organization:, name: "Support") }
+    let(:add_on_fee_item) do
+      fee = build_stubbed(:one_off_fee, invoice:, add_on:, invoice_display_name: "Priority Support",
+        amount_cents: 1000, amount_currency: "USD")
+      build_stubbed(:credit_note_item, organization:, fee:, amount_cents: 200,
+        amount_currency: "USD", precise_amount_cents: 200)
+    end
+    let(:credit_note) do
+      build_stubbed(:credit_note, organization:, customer:, invoice:, number: "CN-MIXED",
+        issuing_date: Date.parse("2025-10-05"), total_amount_currency: "USD", total_amount_cents: 1000,
+        taxes_amount_cents: 0, credit_amount_currency: "USD", credit_amount_cents: 1000,
+        items: product_items + [subscription_fee_item, add_on_fee_item])
+    end
+
+    before do
+      allow(credit_note).to receive(:items).and_return(product_items + [subscription_fee_item, add_on_fee_item])
+      allow(credit_note).to receive(:sub_total_excluding_taxes_amount).and_return(Money.new(1000, "USD"))
+    end
+
+    it "renders product, subscription, and add-on rows without duplicating products" do
+      expect(rendered_template.scan("Storage Credit").size).to eq(1)
+      expect(rendered_template.scan("Compute Credit").size).to eq(1)
+      expect(rendered_template).to include(I18n.t("credit_note.subscription"))
+      expect(rendered_template).to include("Priority Support")
+      expect(rendered_template).to include("$2.50", "$3.00", "$2.00")
+    end
+  end
+
+  context "with product fees using distinct tax rates" do
+    let(:organization) { create(:organization, :with_static_values) }
+    let(:billing_entity) { organization.default_billing_entity }
+    let(:customer) { create(:customer, :with_static_values, organization:) }
+    let(:invoice) { create(:invoice, organization:, billing_entity:, customer:, number: "INV-TAX-RATES", currency: "USD") }
+    let(:credit_note) do
+      create(:credit_note, organization:, customer:, invoice:, number: "CN-TAX-RATES",
+        total_amount_currency: "USD", total_amount_cents: 1500, taxes_amount_cents: 0,
+        credit_amount_currency: "USD", credit_amount_cents: 1500)
+    end
+    let(:product_one) { create(:product, :standalone, organization:, name: "Product at ten") }
+    let(:product_two) { create(:product, :standalone, organization:, name: "Product at twenty") }
+    let(:fee_one) do
+      create(:fee, invoice:, subscription: nil, fee_type: :product, invoiceable: product_one,
+        invoice_display_name: "Ten Percent Product", amount_cents: 1000, precise_amount_cents: 1000,
+        amount_currency: "USD", taxes_amount_cents: 100, taxes_precise_amount_cents: 100)
+    end
+    let(:fee_two) do
+      create(:fee, invoice:, subscription: nil, fee_type: :product, invoiceable: product_two,
+        invoice_display_name: "Twenty Percent Product", amount_cents: 500, precise_amount_cents: 500,
+        amount_currency: "USD", taxes_amount_cents: 100, taxes_precise_amount_cents: 100)
+    end
+    let(:tax_ten) { create(:tax, organization:, code: "product_ten", rate: 10) }
+    let(:tax_twenty) { create(:tax, organization:, code: "product_twenty", rate: 20) }
+
+    before do
+      create(:credit_note_item, credit_note:, fee: fee_one, amount_cents: 1000, precise_amount_cents: 1000,
+        amount_currency: "USD")
+      create(:credit_note_item, credit_note:, fee: fee_two, amount_cents: 500, precise_amount_cents: 500,
+        amount_currency: "USD")
+      create(:fee_applied_tax, fee: fee_one, tax: tax_ten, tax_code: "product_ten", tax_rate: 10)
+      create(:fee_applied_tax, fee: fee_two, tax: tax_twenty, tax_code: "product_twenty", tax_rate: 20)
+      create(:credit_note_applied_tax, credit_note:, tax: tax_ten, tax_code: "product_ten", tax_rate: 10,
+        amount_cents: 100, base_amount_cents: 1000, amount_currency: "USD")
+      create(:credit_note_applied_tax, credit_note:, tax: tax_twenty, tax_code: "product_twenty", tax_rate: 20,
+        amount_cents: 100, base_amount_cents: 500, amount_currency: "USD")
+    end
+
+    it "renders only each product fee's matching tax rate" do
+      document = Nokogiri::HTML(rendered_template)
+      ten_percent_row = document.at_xpath("//tr[td[contains(., 'Ten Percent Product')]]")
+      twenty_percent_row = document.at_xpath("//tr[td[contains(., 'Twenty Percent Product')]]")
+
+      expect(ten_percent_row.css("td")[1].text).to eq("10.0%")
+      expect(twenty_percent_row.css("td")[1].text).to eq("20.0%")
+    end
+  end
+
+  context "when rendering a self-billed credit note" do
+    let(:template) { Rails.root.join("app/views/templates/credit_notes/self_billed.slim") }
+    let(:invoice) do
+      build_stubbed(:invoice, :self_billed, organization:, billing_entity:, customer:, number: "INV-SELF-BILLED")
+    end
+    let(:product) { build_stubbed(:product, organization:, name: "Data Export") }
+    let(:product_fee) do
+      build_stubbed(:fee, invoice:, subscription: nil, fee_type: :product, invoiceable: product,
+        invoice_display_name: "Self-Billed Export", amount_cents: 1000, amount_currency: "USD")
+    end
+    let(:product_item) do
+      build_stubbed(:credit_note_item, organization:, fee: product_fee, amount_cents: 500,
+        amount_currency: "USD", precise_amount_cents: 500)
+    end
+
+    let(:credit_note) do
+      build_stubbed(:credit_note, organization:, customer:, invoice:,
+        number: "CN-SELF-BILLED", issuing_date: Date.parse("2025-10-05"),
+        total_amount_currency: "USD", total_amount_cents: 1000, taxes_amount_cents: 0,
+        credit_amount_currency: "USD", credit_amount_cents: 1000, items: [product_item])
+    end
+
+    before do
+      allow(credit_note).to receive(:items).and_return([product_item])
+    end
+
+    it "renders the self-billed credit note document" do
+      expect(rendered_template).to include("CN-SELF-BILLED")
+      expect(rendered_template).to include(I18n.t("credit_note.self_billed.footer"))
+      expect(rendered_template).to include("Self-Billed Export", "$5.00")
     end
   end
 

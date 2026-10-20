@@ -116,36 +116,6 @@ class CreditNote < ApplicationRecord
     offset_amount_cents.positive?
   end
 
-  def subscription_ids
-    fees.pluck(:subscription_id).uniq
-  end
-
-  def subscription_item(subscription_id)
-    items.joins(:fee)
-      .merge(Fee.subscription)
-      .find_by(fees: {subscription_id:}) || Fee.new(amount_cents: 0, amount_currency: currency)
-  end
-
-  def subscription_charge_items(subscription_id)
-    items.joins(:fee)
-      .merge(Fee.charge)
-      .where(fees: {subscription_id:})
-      .includes(:fee)
-  end
-
-  def subscription_fixed_charge_items(subscription_id)
-    items.joins(:fee)
-      .merge(Fee.fixed_charge)
-      .where(fees: {subscription_id:})
-      .includes(:fee)
-  end
-
-  def add_on_items
-    items.joins(:fee)
-      .merge(Fee.add_on)
-      .includes(:fee)
-  end
-
   def should_sync_credit_note?
     finalized? && customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_credit_notes }
   end

@@ -39,6 +39,42 @@ RSpec.describe CreditNotes::GeneratePdfService do
       expect(Utils::ActivityLog).to have_produced("credit_note.generated").with(result.credit_note)
     end
 
+    context "with a partially credited contract product fee" do
+      let(:product) { create(:product, organization:, name: "Billed contract product") }
+      let(:invoice_display_name) { "Contract product display name" }
+      let(:contract_rate_card) do
+        create(:contract_rate_card, organization:, contract: create(:contract, organization:, customer:),
+          rate_card: create(:rate_card, organization:, product:))
+      end
+      let(:fee) do
+        create(:fee, invoice:, subscription: nil, fee_type: :product, invoiceable: product,
+          invoice_display_name:, contract: contract_rate_card.contract,
+          contract_rate_card:, units: 8, amount_cents: 8000, precise_amount_cents: 8000,
+          precise_unit_amount: 10, taxes_rate: 0, taxes_amount_cents: 0, taxes_precise_amount_cents: 0)
+      end
+      let(:credit_note) { create(:credit_note, invoice:, customer:, total_amount_cents: 2000, taxes_amount_cents: 0) }
+      let(:credit_note_item) do
+        create(:credit_note_item, credit_note:, fee:, amount_cents: 2000, precise_amount_cents: 2000)
+      end
+
+      it "attaches a PDF containing the product display name and credited amount" do
+        result = credit_note_generate_service.call
+
+        expect(result.credit_note.file).to be_attached
+        expect(result.credit_note.file.download.force_encoding(Encoding::UTF_8)).to include("Contract product display name", "€20.00")
+      end
+
+      context "without a fee display name" do
+        let(:invoice_display_name) { nil }
+
+        it "renders the product invoice name in the attached PDF" do
+          result = credit_note_generate_service.call
+
+          expect(result.credit_note.file.download.force_encoding(Encoding::UTF_8)).to include(product.invoice_name, "€20.00")
+        end
+      end
+    end
+
     context "when credit note is for self billed invoice" do
       let(:invoice) { create(:invoice, :self_billed, customer:, organization:) }
       let(:credit_note) { create(:credit_note, invoice:, customer:) }
@@ -105,6 +141,46 @@ RSpec.describe CreditNotes::GeneratePdfService do
             attachment_name: "factur-x.xml"
           )
           expect(result.credit_note.file).to be_present
+        end
+
+        context "with a partially credited contract product fee" do
+          let(:attachment_calls) { [] }
+          let(:product) { create(:product, organization:, name: "Billed contract product") }
+          let(:contract_rate_card) do
+            create(:contract_rate_card, organization:, contract: create(:contract, organization:, customer:),
+              rate_card: create(:rate_card, organization:, product:))
+          end
+          let(:fee) do
+            create(:fee, invoice:, subscription: nil, fee_type: :product, invoiceable: product,
+              contract: contract_rate_card.contract, contract_rate_card:, units: 8,
+              amount_cents: 8000, precise_amount_cents: 8000, precise_unit_amount: 10,
+              taxes_rate: 0, taxes_amount_cents: 0, taxes_precise_amount_cents: 0)
+          end
+          let(:credit_note) { create(:credit_note, invoice:, customer:, total_amount_cents: 2000, taxes_amount_cents: 0) }
+          let(:credit_note_item) do
+            create(:credit_note_item, credit_note:, fee:, amount_cents: 2000, precise_amount_cents: 2000)
+          end
+
+          before do
+            allow(EInvoices::CreditNotes::Cii::CreateService).to receive(:call).and_call_original
+            allow(Utils::PdfAttachmentService).to receive(:call!) do |**arguments|
+              attachment_calls << arguments
+            end
+          end
+
+          it "attaches the real CII XML with full billed quantity and partial credit amount" do
+            described_class.call(credit_note:, context:)
+
+            expect(EInvoices::CreditNotes::Cii::CreateService).to have_received(:call)
+            expect(attachment_calls.first).to include(attachment_name: "factur-x.xml")
+
+            xml = Nokogiri::XML(attachment_calls.first.fetch(:attachment_content))
+            line = xml.at_xpath("//*[local-name()='IncludedSupplyChainTradeLineItem']")
+
+            expect(line.at_xpath(".//*[local-name()='Name']").text).to eq("Billed contract product")
+            expect(line.at_xpath(".//*[local-name()='BilledQuantity']").text).to eq("-8.0")
+            expect(line.at_xpath(".//*[local-name()='LineTotalAmount']").text).to eq("-20.00")
+          end
         end
 
         context "when attaching the CII XML fails" do
