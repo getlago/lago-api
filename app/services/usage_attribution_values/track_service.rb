@@ -54,10 +54,8 @@ module UsageAttributionValues
           value = labels[attribution_type.code]
           next if value.nil?
 
-          # A new value is skipped past the limit, and so is a new value below a skipped one, which no
-          # tree path would reach.
-          if new_value?(customer_id, attribution_type, value) &&
-              (skipped_type_ids.include?(attribution_type.parent_id) || !take_capacity(customer_id, attribution_type))
+          new_value = new_value?(customer_id, attribution_type, value)
+          if new_value && (skipped_type_ids.include?(attribution_type.parent_id) || !capacity_left?(customer_id, attribution_type))
             skipped_type_ids << attribution_type.id
             next
           end
@@ -65,6 +63,7 @@ module UsageAttributionValues
           parent_id = value_ids_by_type[attribution_type.parent_id]
           value_ids_by_type[attribution_type.id] = upsert_value(customer_id, attribution_type, value, parent_id, seen_at)
           existing_values << [customer_id, attribution_type.id, value]
+          remaining_capacity[[customer_id, attribution_type.id]] -= 1 if new_value
         end
       end
 
@@ -111,15 +110,10 @@ module UsageAttributionValues
         .to_set
     end
 
-    # The capacity is read once per customer and type in a call, and only for new values, then
-    # decreased by each of them.
-    def take_capacity(customer_id, attribution_type)
+    def capacity_left?(customer_id, attribution_type)
       key = [customer_id, attribution_type.id]
       remaining_capacity[key] ||= UsageAttributionValue.remaining_capacity(customer_id:, usage_attribution_type_id: attribution_type.id)
-      return false if remaining_capacity[key].zero?
-
-      remaining_capacity[key] -= 1
-      true
+      remaining_capacity[key].positive?
     end
 
     def remaining_capacity
