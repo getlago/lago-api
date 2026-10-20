@@ -382,6 +382,17 @@ describe X402::InvoicePaymentsController, :premium do
       end
     end
 
+    context "when the facilitator is unavailable" do
+      before { stub_cdp_answer("/verify", status: 503, body: {errorType: "internal_server_error"}) }
+
+      it "answers a third-party error without the merchant's failure" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(status: 422, error: "Unprocessable Entity", code: "third_party_error")
+      end
+    end
+
     context "with a blank payment header" do
       let(:header) { "" }
 
