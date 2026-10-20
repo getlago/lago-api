@@ -48,6 +48,7 @@ RSpec.describe ProductCatalogInvoiceHelper do
       invoice_display_name: nil,
       contract:,
       contract_rate_card:,
+      rate_card_rate: create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card),
       product_filter:,
       amount_cents:,
       amount_details:,
@@ -160,6 +161,7 @@ RSpec.describe ProductCatalogInvoiceHelper do
         invoice_display_name: nil,
         contract: unnamed_contract,
         contract_rate_card:,
+        rate_card_rate: create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card),
         amount_cents:,
         properties: {"from_datetime" => "2026-10-01T00:00:00Z", "to_datetime" => "2026-10-31T23:59:59Z"}
       )
