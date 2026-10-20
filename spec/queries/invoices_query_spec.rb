@@ -956,4 +956,22 @@ RSpec.describe InvoicesQuery do
       end
     end
   end
+
+  # The index serializes a wide customer payload. The customer and its
+  # associations must load as separate preload queries, never a single
+  # eager-load JOIN, whose aliased column list crosses RDS Proxy's 16 KB
+  # statement limit and pins the connection.
+  describe "customer loading strategy" do
+    it "does not eager-load the relation" do
+      expect(result.invoices.eager_loading?).to be(false)
+    end
+
+    context "when filtering by customer" do
+      let(:filters) { {customer_external_id: customer_first.external_id} }
+
+      it "still does not eager-load the relation" do
+        expect(result.invoices.eager_loading?).to be(false)
+      end
+    end
+  end
 end

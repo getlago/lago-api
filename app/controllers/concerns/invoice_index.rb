@@ -61,43 +61,43 @@ module InvoiceIndex
     )
 
     if result.success?
-      # Eager-load exceeds RDS Proxy's 16 KB pin threshold — bypass the pooler.
-      ApplicationRecord.connected_to(role: :direct) do
-        invoices = Invoice.preload_offset_amounts(
-          result.invoices.includes(
-            :metadata,
-            :applied_taxes,
+      # Load associations with preload (separate queries) rather than a single
+      # eager-load JOIN: the JOIN's SELECT lists every column of ~15 wide tables
+      # and crosses RDS Proxy's 16 KB statement limit, which pins the connection.
+      invoices = Invoice.preload_offset_amounts(
+        result.invoices.preload(
+          :metadata,
+          :applied_taxes,
+          :billing_entity,
+          :applied_usage_thresholds,
+          customer: [
             :billing_entity,
-            :applied_usage_thresholds,
-            customer: [
-              :billing_entity,
-              :organization,
-              :metadata,
-              :stripe_customer,
-              :gocardless_customer,
-              :cashfree_customer,
-              :adyen_customer,
-              :moneyhash_customer,
-              {integration_customers: :integration}
-            ]
-          )
+            :organization,
+            :metadata,
+            :stripe_customer,
+            :gocardless_customer,
+            :cashfree_customer,
+            :adyen_customer,
+            :moneyhash_customer,
+            {integration_customers: :integration}
+          ]
         )
+      )
 
-        render(
-          json: ::CollectionSerializer.new(
+      render(
+        json: ::CollectionSerializer.new(
+          invoices,
+          ::V1::InvoiceSerializer,
+          collection_name: "invoices",
+          meta: pagination_metadata(
             invoices,
-            ::V1::InvoiceSerializer,
-            collection_name: "invoices",
-            meta: pagination_metadata(
-              invoices,
-              key: "invoices",
-              organization_id: current_organization.id,
-              params: params.permit(*WHITELIST)
-            ),
-            includes: %i[customer integration_customers metadata applied_taxes]
-          )
+            key: "invoices",
+            organization_id: current_organization.id,
+            params: params.permit(*WHITELIST)
+          ),
+          includes: %i[customer integration_customers metadata applied_taxes]
         )
-      end
+      )
     else
       render_error_response(result)
     end

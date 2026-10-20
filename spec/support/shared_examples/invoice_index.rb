@@ -25,6 +25,15 @@ RSpec.shared_examples "an invoice index endpoint" do
       )
     end
 
+    it "keeps every SQL statement under RDS Proxy's 16 KB pin limit" do
+      largest = 0
+      counter = ->(_name, _start, _finish, _id, payload) { largest = [largest, payload[:sql].bytesize].max }
+
+      ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { subject }
+
+      expect(largest).to be < 16_384
+    end
+
     context "when customer has an integration customer" do
       let!(:netsuite_customer) { create(:netsuite_customer, customer:) }
 

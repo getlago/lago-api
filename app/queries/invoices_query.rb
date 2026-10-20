@@ -37,7 +37,7 @@ class InvoicesQuery < BaseQuery
   private
 
   def invoices
-    invoices = base_scope.includes(:customer).preload(file_attachment: :blob, xml_file_attachment: :blob)
+    invoices = base_scope.preload(:customer, file_attachment: :blob, xml_file_attachment: :blob)
 
     invoices = with_billing_entity_ids(invoices) if filters.billing_entity_ids.present?
     invoices = with_currency(invoices) if filters.currency
