@@ -24,6 +24,7 @@ class Invoice < ApplicationRecord
   belongs_to :x402_connection, class_name: "X402::Connection", optional: true
 
   has_many :fees
+  has_many :contract_fees, -> { where.not(contract_id: nil) }, class_name: "Fee"
   has_many :credits
   has_many :wallet_transactions
   has_many :invoice_subscriptions
@@ -503,9 +504,10 @@ class Invoice < ApplicationRecord
 
   def product_catalog?
     return true if contract?
+    return contract_fees.any? if contract_fees.loaded?
     return fees.any? { it.contract_id.present? } if fees.loaded?
 
-    fees.where.not(contract_id: nil).exists?
+    contract_fees.exists?
   end
 
   def subscription_gated?
