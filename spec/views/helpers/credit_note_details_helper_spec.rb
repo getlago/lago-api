@@ -19,12 +19,17 @@ RSpec.describe CreditNoteDetailsHelper do
 
     context "with a contract product fee" do
       let(:contract) { create(:contract, organization:, customer:) }
-      let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
+      let(:contract_rate_card) do
+        create(:contract_rate_card, organization:, contract:).tap do |record|
+          create(:rate_card_rate, organization:, rate_card: record.rate_card)
+        end
+      end
+      let(:rate_card_rate) { contract_rate_card.rate_card.rates.sole }
       let(:product_filter) do
         create(:product_filter, organization:, product: contract_rate_card.rate_card.product, invoice_display_name: "Region")
       end
       let(:fee) do
-        create(:fee, invoice:, subscription: nil, fee_type: :product, contract:, contract_rate_card:,
+        create(:fee, invoice:, subscription: nil, fee_type: :product, contract:, contract_rate_card:, rate_card_rate:,
           invoiceable: contract_rate_card.rate_card.product, product_filter:, invoice_display_name: "Usage",
           amount_cents: 1250, precise_amount_cents: 1250, taxes_amount_cents: 0, taxes_precise_amount_cents: 0)
       end
@@ -52,13 +57,13 @@ RSpec.describe CreditNoteDetailsHelper do
         let(:child_fee_amount_cents) { 7000 }
         let(:credit_amount_cents) { parent_fee_amount_cents }
         let(:fee) do
-          create(:fee, invoice:, subscription: nil, fee_type: :product, contract:, contract_rate_card:,
+          create(:fee, invoice:, subscription: nil, fee_type: :product, contract:, contract_rate_card:, rate_card_rate:,
             invoiceable: contract_rate_card.rate_card.product, product_filter:,
             invoice_display_name: "Usage", amount_cents: parent_fee_amount_cents, precise_amount_cents: parent_fee_amount_cents,
             taxes_amount_cents: 0, taxes_precise_amount_cents: 0)
         end
         let(:true_up_fee) do
-          create(:fee, invoice:, subscription: nil, fee_type: :product, contract:, contract_rate_card:,
+          create(:fee, invoice:, subscription: nil, fee_type: :product, contract:, contract_rate_card:, rate_card_rate:,
             invoiceable: contract_rate_card.rate_card.product, true_up_parent_fee: fee,
             invoice_display_name: "Usage true-up", amount_cents: child_fee_amount_cents, precise_amount_cents: child_fee_amount_cents,
             taxes_amount_cents: 0, taxes_precise_amount_cents: 0)
@@ -103,7 +108,7 @@ RSpec.describe CreditNoteDetailsHelper do
       context "when only a product true-up child is credited" do
         let(:credit_parent) { false }
         let(:true_up_fee) do
-          create(:fee, invoice:, subscription: nil, fee_type: :product, contract:, contract_rate_card:,
+          create(:fee, invoice:, subscription: nil, fee_type: :product, contract:, contract_rate_card:, rate_card_rate:,
             invoiceable: contract_rate_card.rate_card.product, true_up_parent_fee: fee,
             invoice_display_name: "Standalone true-up", amount_cents: 400, precise_amount_cents: 400,
             taxes_amount_cents: 0, taxes_precise_amount_cents: 0)
@@ -120,12 +125,12 @@ RSpec.describe CreditNoteDetailsHelper do
 
       context "when a standalone product true-up shares a rate card with another product" do
         let(:standalone_parent_fee) do
-          create(:fee, invoice:, subscription: nil, fee_type: :product, contract:, contract_rate_card:,
+          create(:fee, invoice:, subscription: nil, fee_type: :product, contract:, contract_rate_card:, rate_card_rate:,
             invoiceable: contract_rate_card.rate_card.product, invoice_display_name: "Uncredited parent",
             amount_cents: 300, precise_amount_cents: 300, taxes_amount_cents: 0, taxes_precise_amount_cents: 0)
         end
         let(:standalone_child_fee) do
-          create(:fee, invoice:, subscription: nil, fee_type: :product, contract:, contract_rate_card:,
+          create(:fee, invoice:, subscription: nil, fee_type: :product, contract:, contract_rate_card:, rate_card_rate:,
             invoiceable: contract_rate_card.rate_card.product, true_up_parent_fee: standalone_parent_fee,
             invoice_display_name: "Standalone child", amount_cents: 200, precise_amount_cents: 200,
             taxes_amount_cents: 0, taxes_precise_amount_cents: 0)
@@ -154,6 +159,7 @@ RSpec.describe CreditNoteDetailsHelper do
         let(:second_fee) do
           create(:fee, invoice:, subscription: nil, fee_type: :product, contract:,
             contract_rate_card: second_contract_rate_card,
+            rate_card_rate: second_contract_rate_card.rate_card.rates.sole,
             invoiceable: second_invoiceable, product_filter: second_product_filter,
             invoice_display_name: "Second usage", amount_cents: 1000, precise_amount_cents: 1000,
             taxes_amount_cents: 0, taxes_precise_amount_cents: 0)
@@ -186,24 +192,24 @@ RSpec.describe CreditNoteDetailsHelper do
             let(:credit_amount_cents) { 8000 }
             let(:second_credit_amount_cents) { 10_500 }
             let(:fee) do
-              create(:fee, invoice:, subscription: nil, fee_type: :product, contract:, contract_rate_card:,
+              create(:fee, invoice:, subscription: nil, fee_type: :product, contract:, contract_rate_card:, rate_card_rate:,
                 invoiceable: contract_rate_card.rate_card.product, product_filter:, invoice_display_name: "Usage",
                 amount_cents: 8000, precise_amount_cents: 8000, taxes_amount_cents: 0, taxes_precise_amount_cents: 0)
             end
             let(:second_fee) do
-              create(:fee, invoice:, subscription: nil, fee_type: :product, contract:, contract_rate_card:,
+              create(:fee, invoice:, subscription: nil, fee_type: :product, contract:, contract_rate_card:, rate_card_rate:,
                 invoiceable: second_invoiceable, product_filter: second_product_filter,
                 invoice_display_name: "Second usage", amount_cents: 10_500, precise_amount_cents: 10_500,
                 taxes_amount_cents: 0, taxes_precise_amount_cents: 0)
             end
             let(:first_true_up_fee) do
-              create(:fee, invoice:, subscription: nil, fee_type: :product, contract:, contract_rate_card:,
+              create(:fee, invoice:, subscription: nil, fee_type: :product, contract:, contract_rate_card:, rate_card_rate:,
                 invoiceable: contract_rate_card.rate_card.product, true_up_parent_fee: fee,
                 invoice_display_name: "Usage true-up", amount_cents: 8000, precise_amount_cents: 8000,
                 taxes_amount_cents: 0, taxes_precise_amount_cents: 0)
             end
             let(:second_true_up_fee) do
-              create(:fee, invoice:, subscription: nil, fee_type: :product, contract:, contract_rate_card:,
+              create(:fee, invoice:, subscription: nil, fee_type: :product, contract:, contract_rate_card:, rate_card_rate:,
                 invoiceable: contract_rate_card.rate_card.product, true_up_parent_fee: second_fee,
                 invoice_display_name: "Second usage true-up", amount_cents: 3500, precise_amount_cents: 3500,
                 taxes_amount_cents: 0, taxes_precise_amount_cents: 0)
@@ -236,8 +242,11 @@ RSpec.describe CreditNoteDetailsHelper do
           let(:second_rate_card) do
             create(:rate_card, organization:, product: contract_rate_card.rate_card.product)
           end
+          let(:second_rate_card_rate) { create(:rate_card_rate, organization:, rate_card: second_rate_card) }
           let(:second_contract_rate_card) do
-            create(:contract_rate_card, organization:, contract:, rate_card: second_rate_card)
+            create(:contract_rate_card, organization:, contract:, rate_card: second_rate_card).tap do
+              second_rate_card_rate
+            end
           end
 
           it "keeps each rate-card group visible" do
@@ -307,18 +316,28 @@ RSpec.describe CreditNoteDetailsHelper do
       end
 
       context "when product identity or contract differs" do
-        let(:different_product_rate_card) { create(:contract_rate_card, organization:, contract:) }
+        let(:different_product_rate_card) do
+          create(:contract_rate_card, organization:, contract:).tap do |record|
+            create(:rate_card_rate, organization:, rate_card: record.rate_card)
+          end
+        end
         let(:other_contract) { create(:contract, organization:, customer:) }
-        let(:other_rate_card) { create(:contract_rate_card, organization:, contract: other_contract) }
+        let(:other_rate_card) do
+          create(:contract_rate_card, organization:, contract: other_contract).tap do |record|
+            create(:rate_card_rate, organization:, rate_card: record.rate_card)
+          end
+        end
         let(:second_fee) do
           create(:fee, invoice:, subscription: nil, fee_type: :product, contract: other_contract,
-            contract_rate_card: other_rate_card, invoiceable: other_rate_card.rate_card.product,
+            contract_rate_card: other_rate_card, rate_card_rate: other_rate_card.rate_card.rates.sole,
+            invoiceable: other_rate_card.rate_card.product,
             invoice_display_name: "Other contract",
             amount_cents: 500, precise_amount_cents: 500, taxes_amount_cents: 0, taxes_precise_amount_cents: 0)
         end
         let(:third_fee) do
           create(:fee, invoice:, subscription: nil, fee_type: :product, contract:,
             contract_rate_card: different_product_rate_card,
+            rate_card_rate: different_product_rate_card.rate_card.rates.sole,
             invoiceable: different_product_rate_card.rate_card.product, invoice_display_name: "Different product",
             amount_cents: 500, precise_amount_cents: 500, taxes_amount_cents: 0, taxes_precise_amount_cents: 0)
         end
@@ -383,10 +402,13 @@ RSpec.describe CreditNoteDetailsHelper do
       context "with multiple product taxes" do
         let(:second_product) { create(:product, organization:) }
         let(:second_contract_rate_card) do
-          create(:contract_rate_card, organization:, contract:, rate_card: create(:rate_card, organization:, product: second_product))
+          create(:contract_rate_card, organization:, contract:, rate_card: create(:rate_card, organization:, product: second_product)).tap do |record|
+            create(:rate_card_rate, organization:, rate_card: record.rate_card)
+          end
         end
         let(:second_fee) do
           create(:fee, invoice:, subscription: nil, fee_type: :product, contract:, contract_rate_card: second_contract_rate_card,
+            rate_card_rate: second_contract_rate_card.rate_card.rates.sole,
             invoiceable: second_product, invoice_display_name: "Other usage",
             amount_cents: 1000, precise_amount_cents: 1000, taxes_amount_cents: 0, taxes_precise_amount_cents: 0)
         end
