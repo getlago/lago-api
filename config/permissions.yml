@@ -82,6 +82,7 @@ customers:
   create:
     - manager
   update:
+    - finance
     - manager
   delete:
     - manager

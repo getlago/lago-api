@@ -3,6 +3,7 @@
 module Resolvers
   class EventTypesResolver < Resolvers::BaseResolver
     include AuthenticableApiUser
+    include RequiredOrganization
 
     REQUIRED_PERMISSION = "developers:manage"
 

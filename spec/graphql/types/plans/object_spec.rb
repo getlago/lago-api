@@ -21,7 +21,7 @@ RSpec.describe Types::Plans::Object do
   it { is_expected.to have_field(:parent).of_type("Plan") }
   it { is_expected.to have_field(:pay_in_advance).of_type("Boolean") }
   it { is_expected.to have_field(:trial_period).of_type("Float") }
-  it { is_expected.to have_field(:activity_logs).of_type("[ActivityLog!]") }
+  it { is_expected.to have_field(:activity_logs).of_type("[ActivityLog!]").with_permission("audit_logs:view") }
   it { is_expected.to have_field(:charges).of_type("[Charge!]") }
   it { is_expected.to have_field(:fixed_charges).of_type("[FixedCharge!]") }
   it { is_expected.to have_field(:taxes).of_type("[Tax!]") }

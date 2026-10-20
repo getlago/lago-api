@@ -174,6 +174,9 @@ RSpec.configure do |config|
 
     ActiveJob::Base.queue_adapter.enqueued_jobs.clear
     allow(Utils::ActivityLog).to receive(:produce).and_call_original
+    # Like Rails.cache, auth attempts are not counted unless a spec sets a store, so that examples
+    # do not share counters through the Redis.
+    Auth::AttemptsThrottle.store = ActiveSupport::Cache::NullStore.new
 
     if (clickhouse = metadata[:clickhouse])
       WebMock.disable_net_connect!(allow: ENV.fetch("LAGO_CLICKHOUSE_HOST", "clickhouse"))

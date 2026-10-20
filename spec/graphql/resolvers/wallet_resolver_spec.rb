@@ -26,10 +26,15 @@ RSpec.describe Resolvers::WalletResolver do
 
   before { wallet }
 
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", %w[customers:view wallets:create wallets:update wallets:top_up wallets:terminate]
+
   it "returns a wallet" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: described_class::REQUIRED_PERMISSION.sample,
       query:,
       variables: {id: wallet.id}
     )
@@ -57,6 +62,7 @@ RSpec.describe Resolvers::WalletResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: described_class::REQUIRED_PERMISSION.sample,
         query:,
         variables: {id: wallet.id}
       )
@@ -92,6 +98,7 @@ RSpec.describe Resolvers::WalletResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: described_class::REQUIRED_PERMISSION.sample,
         query:,
         variables: {id: "foo"}
       )
@@ -120,6 +127,7 @@ RSpec.describe Resolvers::WalletResolver do
         result = execute_graphql(
           current_user: membership.user,
           current_organization: organization,
+          permissions: described_class::REQUIRED_PERMISSION.sample,
           query:,
           variables: {id: wallet.id}
         )
@@ -135,6 +143,7 @@ RSpec.describe Resolvers::WalletResolver do
         result = execute_graphql(
           current_user: membership.user,
           current_organization: organization,
+          permissions: described_class::REQUIRED_PERMISSION.sample,
           query:,
           variables: {id: wallet.id}
         )
@@ -172,6 +181,7 @@ RSpec.describe Resolvers::WalletResolver do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: described_class::REQUIRED_PERMISSION.sample,
         query: connections_query,
         variables: {id: wallet.id}
       )

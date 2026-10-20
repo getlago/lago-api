@@ -112,6 +112,12 @@ RSpec.describe Events::Stores::Clickhouse::AttributedUsageQuery, clickhouse: {cl
       )
     end
 
+    it "lets large scans spread over the replicas" do
+      expect(attributed_usage_query.query).to include(
+        "enable_parallel_replicas = 1, max_parallel_replicas = 8, parallel_replicas_min_number_of_rows_per_replica = 50000000"
+      )
+    end
+
     it "groups the events by the attribution value only" do
       expect(attributed_usage_query.query).to include("GROUP BY node )")
     end

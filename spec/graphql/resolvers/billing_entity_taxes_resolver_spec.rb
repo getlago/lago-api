@@ -32,11 +32,15 @@ RSpec.describe Resolvers::BillingEntityTaxesResolver do
     create(:billing_entity_applied_tax, billing_entity:, tax: tax2, organization:)
   end
 
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", %w[billing_entities:view billing_entities:update invoices:create]
+
   it "returns billing entity taxes" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      permissions: ["billing_entities:view"],
+      permissions: described_class::REQUIRED_PERMISSION.sample,
       query:,
       variables: {billing_entity_id: billing_entity.id}
     )
@@ -50,7 +54,7 @@ RSpec.describe Resolvers::BillingEntityTaxesResolver do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      permissions: ["billing_entities:view"],
+      permissions: described_class::REQUIRED_PERMISSION.sample,
       query:,
       variables: {billing_entity_id: "invalid"}
     )

@@ -126,6 +126,19 @@ RSpec.describe Invoices::SubscriptionService do
 
         expect(result.invoice.fees.subscription.first.billing_entity_id).to eq(subscription_billing_entity.id)
       end
+
+      context "when the billing entity has an invoice grace period" do
+        let(:subscription_billing_entity) { create(:billing_entity, organization:, invoice_grace_period: 3) }
+
+        it "creates a draft invoice using that grace period" do
+          result = invoice_service.call
+
+          expect(result.invoice).to have_attributes(
+            status: "draft",
+            expected_finalization_date: timestamp.to_date + 3.days
+          )
+        end
+      end
     end
 
     context "when a subscription is moved between billing entities mid-lifecycle" do

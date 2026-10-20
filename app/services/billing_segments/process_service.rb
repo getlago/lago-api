@@ -13,7 +13,7 @@ module BillingSegments
       result.invoices = []
 
       acquired = customer.with_advisory_lock("billing_segment_process_customer_#{customer.id}", timeout_seconds: 0) do
-        pending_segments.group_by { |segment| invoice_key(segment) }.each_value do |invoice_segments|
+        pending_segments.group_by { |segment| pending_invoice_key(segment) }.each_value do |invoice_segments|
           result.invoices << build_invoice(invoice_segments)
         end
 
@@ -46,27 +46,36 @@ module BillingSegments
     end
 
     def grouped_segments
-      @grouped_segments ||= BillingSegment.awaiting_invoicing
+      @grouped_segments ||= BillingSegment.ready_for_invoicing
         .where(customer_id: customer.id)
         .includes(:pricing_unit, :rate_override, :contract, contract_rate_card: {rate_card: :product}, rate_card_rate: :rate_card)
-        .group_by { |segment| segment_group(segment) }
-        .except(nil)
+        .sort_by { |segment| [segment.billing_at, segment.id] }
+        .filter_map do |segment|
+          group = segment_group(segment)
+          [group, segment] if group
+        end
+        .group_by(&:first)
+        .transform_values { |grouped_segments| grouped_segments.map(&:last) }
     end
 
     def segment_group(segment)
       advance_metered = segment.contract_rate_card.rate_card.advance? && segment.contract_rate_card.product.metered?
 
       if advance_metered
-        :processing_advance_segments if segment.status_processing?
+        :processing_advance_segments
       elsif segment.status_pending?
         :pending_segments
       end
     end
 
-    def invoice_key(segment)
+    def pending_invoice_key(segment)
+      invoice_key(segment, billing_at: segment.billing_at)
+    end
+
+    def invoice_key(segment, billing_at: segment.cycle_started_at)
       contract = segment.contract
       [
-        segment.cycle_started_at.in_time_zone(customer.applicable_timezone).to_date,
+        billing_at.in_time_zone(customer.applicable_timezone).to_date,
         contract.consolidate_invoice ? :shared : segment.id,
         segment.currency,
         contract.billing_entity_id || customer.billing_entity_id,
@@ -90,11 +99,9 @@ module BillingSegments
     def build_invoice(segments)
       contract = segments.first.contract
       invoice = nil
-      grouped = segments.group_by { |s| s.contract_rate_card.product.product_type }
-      metered_segments = grouped[Product::PRODUCT_TYPES[:metered]] || []
-      fixed_segments = grouped[Product::PRODUCT_TYPES[:fixed]] || []
 
       ActiveRecord::Base.transaction do
+        segments.each { |segment| segment.update!(status: :processing) }
         invoice = Invoices::CreateGeneratingService.call!(
           customer:,
           billing_entity: contract.billing_entity || customer.billing_entity,
@@ -105,20 +112,22 @@ module BillingSegments
           purchase_order_number: contract.purchase_order_number
         ).invoice
 
-        filtered_aggregations = event_filters(metered_segments)
-
-        attach_fixed_fees(fixed_segments, invoice)
-        attach_metered_fees(metered_segments, invoice, filtered_aggregations)
-
-        invoice.fees.reload
-
-        Invoices::ComputeAmountsFromFees.call!(invoice:)
+        context = grace_period?(invoice) ? :draft : :finalize
+        BillingSegments::ComputeInvoiceService.call!(
+          invoice:,
+          billing_segments: segments,
+          context:
+        )
         Invoices::ApplyInvoiceCustomSectionsService.call!(
           invoice:,
           resources: segments.map(&:contract).uniq.map { |contract| Invoices::ApplyInvoiceCustomSectionsService::Resource.from(resource: contract) }
         )
-        invoice.save!
         segments.each { |segment| segment.update!(status: :done, invoice:) }
+
+        if context == :draft
+          invoice.update!(status: :draft)
+          notify_draft_created(invoice)
+        end
       end
 
       invoice
@@ -135,6 +144,7 @@ module BillingSegments
       fee_result = nil
 
       ActiveRecord::Base.transaction do
+        segments.each { |segment| segment.update!(status: :processing) }
         ActiveRecord::Base.transaction(requires_new: true) do
           invoice = create_advance_invoice(segments)
           fee_result = ::Fees::AdvanceChargesService.call!(
@@ -183,45 +193,19 @@ module BillingSegments
       ).invoice
     end
 
-    def attach_fixed_fees(segments, invoice)
-      segments.each do |segment|
-        compute_fixed_fees(segment).each do |fee|
-          fee.invoice = invoice
-          fee.billing_entity = invoice.billing_entity
-          fee.save!
-        end
-      end
+    def grace_period?(invoice)
+      customer.applicable_invoice_grace_period(billing_entity: invoice.billing_entity).positive?
     end
 
-    def attach_metered_fees(segments, invoice, filtered_aggregations)
-      segments.each do |segment|
-        compute_metered_fees(segment, invoice, filtered_aggregations)
-      end
-    end
+    def notify_draft_created(invoice)
+      customer.flag_wallets_for_refresh
+      SendWebhookJob.perform_after_commit("invoice.drafted", invoice)
+      Utils::ActivityLog.produce_after_commit(invoice, "invoice.drafted")
 
-    def compute_fixed_fees(segment)
-      fee_result = BillingSegments::Fees::ComputeService.call!(billing_segment: segment)
-      [fee_result.fee, fee_result.true_up_fee].compact
-    end
+      return if invoice.tax_pending?
 
-    # NOTE: Fees::ChargeService persists and attaches the product fees itself (within this
-    # surrounding transaction), so a failure on any segment rolls back the whole invoice group.
-    def compute_metered_fees(segment, invoice, filtered_aggregations)
-      ::Fees::ChargeService.call!(
-        invoice:,
-        metered_item: ::Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: segment),
-        billing_context: Billing::Context.from(contract: segment.contract),
-        options: ::Fees::ChargeService::Options.new(context: :finalize, skip_adjusted_fees: true),
-        filtered_aggregations: filtered_aggregations[segment.target_key]&.keys || []
-      )
-    end
-
-    def event_filters(metered_segments)
-      return {} if metered_segments.empty?
-
-      Events::BillingPeriodFilterService.for_billing_segments!(
-        billing_segments: metered_segments, with_last_seen_at: false
-      ).filter_targets
+      SendWebhookJob.perform_after_commit("invoice.ready_to_finalize", invoice)
+      Utils::ActivityLog.produce_after_commit(invoice, "invoice.ready_to_finalize")
     end
 
     def finalize_generating_invoices
@@ -232,7 +216,7 @@ module BillingSegments
         .where(invoices: {status: :generating})
         .select(:invoice_id)
 
-      Invoice.where(id: invoice_ids).find_each do |invoice|
+      Invoice.where(id: invoice_ids).order(:issuing_date, :id).each do |invoice|
         if invoice.advance_charges?
           Invoices::FinalizeAndPublishAdvanceChargesService.call!(invoice:)
         else

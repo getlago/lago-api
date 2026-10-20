@@ -91,6 +91,37 @@ RSpec.describe ::V1::PaymentSerializer do
     end
   end
 
+  context "when the payment is an x402 payment" do
+    let(:invoice) { create(:invoice, total_amount_cents: 1000) }
+    let(:payment) { create(:payment, :x402_payment, payable: invoice, amount_cents: 1000) }
+    let(:includes) { [] }
+
+    context "with its settlement" do
+      let(:settlement) { create(:x402_settlement, payment:) }
+
+      before { settlement }
+
+      it "serializes the settlement" do
+        result = JSON.parse(serializer.to_json)
+
+        expect(result["payment"]["x402_settlement"]).to eq(
+          "lago_id" => settlement.id,
+          "network" => "eip155:84532",
+          "transaction_hash" => settlement.transaction_hash,
+          "payer_address" => settlement.payer_address
+        )
+      end
+    end
+
+    context "without a settlement" do
+      it "serializes a null settlement" do
+        result = JSON.parse(serializer.to_json)
+
+        expect(result["payment"]).to include("x402_settlement" => nil)
+      end
+    end
+  end
+
   context "when payable is a payment request" do
     let(:payment) { create(:payment, payable: payment_request) }
     let(:payment_request) { create(:payment_request, payment_status: "succeeded") }

@@ -21,8 +21,8 @@ RSpec.describe Resolvers::RateCardsResolver do
   let(:variables) { {} }
   let(:query) do
     <<~GQL
-      query($searchTerm: String, $productIds: [ID!], $productCategoryIds: [ID!], $withoutProductCategory: Boolean) {
-        rateCards(limit: 5, searchTerm: $searchTerm, productIds: $productIds, productCategoryIds: $productCategoryIds, withoutProductCategory: $withoutProductCategory) {
+      query($searchTerm: String, $productIds: [ID!], $productCategoryIds: [ID!], $withoutProductCategory: Boolean, $currency: CurrencyEnum) {
+        rateCards(limit: 5, searchTerm: $searchTerm, productIds: $productIds, productCategoryIds: $productCategoryIds, withoutProductCategory: $withoutProductCategory, currency: $currency) {
           collection { id name code currency }
           metadata { currentPage totalCount }
         }
@@ -32,8 +32,8 @@ RSpec.describe Resolvers::RateCardsResolver do
 
   let(:product_category) { create(:product_category, organization:) }
   let(:product) { create(:product, organization:, product_category:) }
-  let!(:card_one) { create(:rate_card, organization:, product:, name: "Growth USD", code: "growth_usd") }
-  let!(:card_two) { create(:rate_card, organization:, name: "Standard EUR", code: "standard_eur") }
+  let!(:card_one) { create(:rate_card, organization:, product:, name: "Growth USD", code: "growth_usd", currency: "USD") }
+  let!(:card_two) { create(:rate_card, organization:, name: "Standard EUR", code: "standard_eur", currency: "EUR") }
 
   let_it_be(:membership, refind: true) { create_default(:membership) }
 
@@ -79,6 +79,21 @@ RSpec.describe Resolvers::RateCardsResolver do
 
     it "returns matching cards" do
       expect(execution["data"]["rateCards"]["collection"].map { it["id"] }).to eq([card_one.id])
+    end
+  end
+
+  context "with a currency filter" do
+    let(:variables) { {currency: "USD"} }
+
+    before do
+      5.times { |index| create(:rate_card, organization:, currency: "EUR", code: "other_eur_#{index}") }
+    end
+
+    it "filters before pagination and counts only matching cards" do
+      response = execution["data"]["rateCards"]
+
+      expect(response["collection"].map { it["id"] }).to eq([card_one.id])
+      expect(response["metadata"]["totalCount"]).to eq(1)
     end
   end
 end

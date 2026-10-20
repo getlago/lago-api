@@ -82,6 +82,21 @@ RSpec.describe PaymentProviders::AdyenService do
         expect(result.adyen_provider.success_redirect_url).to eq(success_redirect_url)
       end
 
+      it "keeps the keys when the masked values are sent back" do
+        adyen_provider.update!(hmac_key: "hmac_key_123")
+
+        result = adyen_service.create_or_update(
+          organization:,
+          code:,
+          api_key: "••••••••…789",
+          hmac_key: "••••••••…123"
+        )
+
+        expect(result).to be_success
+        expect(result.adyen_provider.reload.api_key).to eq("api_key_789")
+        expect(result.adyen_provider.hmac_key).to eq("hmac_key_123")
+      end
+
       it_behaves_like "produces a security log", "integration.updated" do
         before do
           adyen_service.create_or_update(
