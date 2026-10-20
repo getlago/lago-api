@@ -23,7 +23,7 @@ module UsageAttributions
     MAX_EXECUTION_TIME = 8
 
     BASES = %w[units amount].freeze
-    ORDERS = %w[amount events_count].freeze
+    ORDERS = %w[amount units events_count].freeze
     SUPPORTED_AGGREGATION_TYPES = %w[count_agg sum_agg].freeze
     PRICED_CHARGE_MODELS = %w[standard].freeze
 
@@ -45,7 +45,7 @@ module UsageAttributions
       @split_filters_offset = split_filters_offset
       @search = search.presence
       @basis = basis.to_s
-      @order_by = (order_by || ((@basis == "amount") ? "amount" : "events_count")).to_s
+      @order_by = (order_by || ((@basis == "amount") ? "amount" : "units")).to_s
       @limit = limit
       @offset = offset
 

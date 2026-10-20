@@ -205,10 +205,10 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
       allow(UsageAttributions::ChargePriceLookupService).to receive(:call!).and_call_original
     end
 
-    it "returns the units ranked by events, without amounts" do
+    it "returns the units ranked by units, without amounts" do
       expect(result.basis).to eq("units")
-      expect(summary(result.rows)).to eq([["eng", nil, 3], ["data", nil, 1]])
-      expect(cells_of(result.rows.first)).to eq(
+      expect(summary(result.rows)).to eq([["data", nil, 1], ["eng", nil, 3]])
+      expect(cells_of(result.rows.find { it.value == "eng" })).to eq(
         [
           [requests_charge.id, nil, 1, nil, 1],
           [tokens_charge.id, nil, 1500, nil, 2]
@@ -226,7 +226,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
       subject(:result) { described_class.call(subscription:, group_by:, split_charge: tokens_charge) }
 
       it "returns the units of each filter" do
-        expect(cells_of(result.rows.first)).to eq(
+        expect(cells_of(result.rows.find { it.value == "eng" })).to eq(
           [
             [requests_charge.id, nil, 1, nil, 1],
             [tokens_charge.id, nil, 500, nil, 1],
@@ -734,7 +734,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     let(:split_charge) { requests_charge }
     let(:search) { "a" * 101 }
     let(:basis) { "euros" }
-    let(:order_by) { "units" }
+    let(:order_by) { "value" }
     let(:limit) { 101 }
     let(:offset) { -1 }
     let(:split_filters_offset) { -1 }

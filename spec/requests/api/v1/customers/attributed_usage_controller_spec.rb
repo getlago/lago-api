@@ -74,11 +74,11 @@ RSpec.describe Api::V1::Customers::AttributedUsageController, clickhouse: {clean
       )
       expect(json[:attributed_usage][:rows].map { it.slice(:value, :rank, :events_count, :amount_cents) }).to eq(
         [
-          {value: "eng", rank: 1, events_count: 3, amount_cents: nil},
-          {value: "data", rank: 2, events_count: 1, amount_cents: nil}
+          {value: "data", rank: 1, events_count: 1, amount_cents: nil},
+          {value: "eng", rank: 2, events_count: 3, amount_cents: nil}
         ]
       )
-      expect(json[:attributed_usage][:rows].first[:charges_usage]).to match_array(
+      expect(json[:attributed_usage][:rows].find { it[:value] == "eng" }[:charges_usage]).to match_array(
         [
           {
             lago_charge_id: tokens_charge.id,
@@ -258,18 +258,18 @@ RSpec.describe Api::V1::Customers::AttributedUsageController, clickhouse: {clean
       it "returns the requested page" do
         subject
 
-        expect(json[:attributed_usage][:rows].map { it.slice(:value, :rank) }).to eq([{value: "data", rank: 2}])
+        expect(json[:attributed_usage][:rows].map { it.slice(:value, :rank) }).to eq([{value: "eng", rank: 2}])
         expect(json[:meta]).to eq(current_page: 2, next_page: nil, prev_page: 1, total_pages: 2, total_count: 2)
       end
     end
 
     context "with a search" do
-      let(:params) { {external_subscription_id: subscription.external_id, group_by: "team", search_term: "a", per_page: 1} }
+      let(:params) { {external_subscription_id: subscription.external_id, group_by: "team", search_term: "e", per_page: 1} }
 
       it "pages through the matching values" do
         subject
 
-        expect(json[:attributed_usage][:rows].map { it.slice(:value, :rank) }).to eq([{value: "data", rank: 2}])
+        expect(json[:attributed_usage][:rows].map { it.slice(:value, :rank) }).to eq([{value: "eng", rank: 2}])
         expect(json[:meta]).to eq(current_page: 1, next_page: nil, prev_page: nil, total_pages: 1, total_count: 1)
       end
     end
