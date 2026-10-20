@@ -44,4 +44,24 @@ RSpec.shared_examples "a payment index endpoint" do
       expect(json[:payments].first[:invoice_ids].first).to eq(invoice.id)
     end
   end
+
+  context "with x402 payments", bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+    let(:x402_connection) { create(:x402_connection, organization:) }
+    let(:settlements) do
+      Array.new(2) do
+        invoice = create(:invoice, organization:, customer:, total_amount_cents: 1000)
+        payment = create(:payment, :x402_payment, payable: invoice, customer:, amount_cents: 1000)
+        create(:x402_settlement, x402_connection:, payment:)
+      end
+    end
+
+    before { settlements }
+
+    it "returns each payment's settlement" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:payments].map { |payment| payment.dig(:x402_settlement, :lago_id) }).to match_array(settlements.map(&:id))
+    end
+  end
 end

@@ -100,6 +100,13 @@ RSpec.describe PaymentProviders::CashfreeService do
         expect(result.cashfree_provider.success_redirect_url).to eq(success_redirect_url)
       end
 
+      it "keeps the client secret when the masked value is sent back" do
+        result = cashfree_service.create_or_update(organization:, code:, name:, client_secret: "••••••••…old")
+
+        expect(result).to be_success
+        expect(result.cashfree_provider.reload.client_secret).to eq("cfsk_ma_prod_abc_123456_old")
+      end
+
       it_behaves_like "produces a security log", "integration.updated" do
         before do
           cashfree_service.create_or_update(

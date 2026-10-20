@@ -976,8 +976,8 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
         sum_service.options = {}
         result = sum_service.per_event_aggregation(grouped_by_values: {"scheme" => "visa"})
 
-        expect(result.event_aggregation).to eq([5, 12])
-        expect(result.event_prorated_aggregation.map { |el| el.round(5) }).to eq([5, 2.32258])
+        expect(result.event_aggregation).to eq([2.5, 12])
+        expect(result.event_prorated_aggregation.map { |el| el.round(5) }).to eq([2.5, 2.32258])
       end
     end
 

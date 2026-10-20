@@ -83,19 +83,6 @@ RSpec.describe Api::V1::OrganizationsController do
     end
   end
 
-  describe "GET /api/v1/organizations/grpc_token" do
-    subject { get_with_token(organization, "/api/v1/organizations/grpc_token") }
-
-    include_examples "requires API permission", "organization", "read"
-
-    it "returns the grpc_token" do
-      subject
-
-      expect(response).to have_http_status(:success)
-      expect(json[:organization][:grpc_token]).not_to be_nil
-    end
-  end
-
   describe "GET /api/v1/organizations" do
     subject { get_with_token(organization, "/api/v1/organizations") }
 

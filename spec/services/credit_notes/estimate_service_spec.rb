@@ -248,6 +248,52 @@ RSpec.describe CreditNotes::EstimateService, :premium do
     end
   end
 
+  context "when estimating a contract product fee" do
+    let(:invoice) do
+      create(:invoice, organization:, customer:, currency: "EUR", fees_amount_cents: 100, status: :finalized,
+        total_amount_cents: 100, total_paid_amount_cents: 100, taxes_amount_cents: 0,
+        payment_status: :succeeded, version_number: 3)
+    end
+    let(:contract) { create(:contract, organization:, customer:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
+    let(:fee) do
+      create(:fee, invoice:, subscription: nil, fee_type: :product, amount_cents: 100, precise_amount_cents: 100, taxes_rate: 0,
+        invoiceable: contract_rate_card.rate_card.product, contract:, contract_rate_card:, taxes_amount_cents: 0,
+        taxes_precise_amount_cents: 0)
+    end
+    let(:items) { [{fee_id: fee.id, amount_cents: 40}] }
+
+    it "estimates a partial credit without assuming a subscription" do
+      result = estimate_service.call
+
+      expect(result).to be_success
+      expect(result.credit_note).to have_attributes(invoice:, total_amount_cents: 40)
+      expect(fee.subscription_id).to be_nil
+      expect(result.credit_note.items.sole).to have_attributes(fee:, amount_cents: 40)
+      expect(invoice.reload).to have_attributes(status: "finalized", total_amount_cents: 100)
+    end
+
+    context "when the fee belongs to another organization" do
+      let(:other_organization) { create(:organization) }
+      let(:other_customer) { create(:customer, organization: other_organization) }
+      let(:other_invoice) { create(:invoice, organization: other_organization, customer: other_customer, version_number: 3) }
+      let(:contract) { create(:contract, organization: other_organization, customer: other_customer) }
+      let(:contract_rate_card) { create(:contract_rate_card, organization: other_organization, contract:) }
+      let(:fee) do
+        create(:fee, invoice: other_invoice, subscription: nil, fee_type: :product, amount_cents: 100, precise_amount_cents: 100,
+          invoiceable: contract_rate_card.rate_card.product, contract:, contract_rate_card:, taxes_amount_cents: 0,
+          taxes_precise_amount_cents: 0)
+      end
+
+      it "rejects the foreign fee" do
+        result = estimate_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+      end
+    end
+  end
+
   context "when invoice is a prepaid credit invoice" do
     let_it_be(:invoice) do
       create(

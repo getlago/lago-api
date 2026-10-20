@@ -8,7 +8,7 @@ class Organization < ApplicationRecord
   include HasFeatureFlags
   include Organizations::Sluggable
 
-  self.ignored_columns += [:clickhouse_aggregation, :pre_filter_events]
+  self.ignored_columns += [:clickhouse_aggregation, :pre_filter_events, :clickhouse_deduplication_enabled]
 
   EMAIL_SETTINGS = [
     "invoice.finalized",

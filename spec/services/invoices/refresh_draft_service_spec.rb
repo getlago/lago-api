@@ -199,6 +199,7 @@ RSpec.describe Invoices::RefreshDraftService do
       it "returns the failure and rolls the whole refresh back" do
         result = refresh_service.call
 
+        expect(result).to be(failed_result)
         expect(result).not_to be_success
         expect(result.error.code).to eq("invoice_applied_tax_not_found")
         expect(invoice.reload.fees.pluck(:id)).to eq([fee.id])
@@ -305,6 +306,168 @@ RSpec.describe Invoices::RefreshDraftService do
       refresh_service.call
 
       expect(subscription.reload.lifetime_usage.recalculate_invoiced_usage).to be(true)
+    end
+
+    context "with a product catalog invoice" do
+      let(:invoice_subscription) { nil }
+      let(:tax) { nil }
+      let(:customer) { create(:customer, currency: "USD") }
+      let(:contract) { create(:contract, organization:, customer:) }
+      let(:product) { create(:product, :fixed, organization:) }
+      let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD") }
+      let(:contract_rate_card) do
+        create(:contract_rate_card, organization:, contract:, rate_card:, units: 5)
+      end
+      let(:rate_card_rate) do
+        create(:rate_card_rate, organization:, rate_card:, rate_properties: {"amount" => "15.00"})
+      end
+      let(:invoice) do
+        create(
+          :invoice,
+          :draft,
+          organization:,
+          customer:,
+          billing_entity: customer.billing_entity,
+          invoice_type: :subscription,
+          currency: "USD",
+          ready_to_be_refreshed: true
+        )
+      end
+      let(:billing_segment) do
+        create(
+          :billing_segment,
+          organization:,
+          customer:,
+          contract:,
+          contract_rate_card:,
+          rate_card_rate:,
+          invoice:,
+          status: :done,
+          currency: "USD"
+        )
+      end
+
+      before { billing_segment }
+
+      it "rebuilds the product fees and totals from the billing segments" do
+        result = refresh_service.call
+
+        expect(result).to be_success
+        expect(invoice.reload).to have_attributes(
+          status: "draft",
+          ready_to_be_refreshed: false,
+          fees_amount_cents: 7_500,
+          total_amount_cents: 7_500
+        )
+        expect(invoice.fees.sole).to have_attributes(invoiceable: product, amount_cents: 7_500)
+      end
+
+      it "hard-deletes the previous draft fees and their applied taxes" do
+        previous_fee = create(
+          :fee,
+          invoice:,
+          organization:,
+          billing_entity: invoice.billing_entity,
+          subscription: nil,
+          contract:,
+          contract_rate_card:,
+          rate_card_rate:,
+          fee_type: :product,
+          invoiceable: product,
+          amount_currency: "USD"
+        )
+        applied_tax = create(:fee_applied_tax, fee: previous_fee, organization:)
+
+        expect(refresh_service.call).to be_success
+        expect(Fee.unscoped.exists?(previous_fee.id)).to be(false)
+        expect(Fee::AppliedTax.exists?(applied_tax.id)).to be(false)
+      end
+
+      it "applies the shared custom section and wallet refresh steps" do
+        invoice_custom_section = create(:invoice_custom_section, organization:)
+        create(
+          :customer_applied_invoice_custom_section,
+          organization:,
+          billing_entity:,
+          customer:,
+          invoice_custom_section:
+        )
+        create(:wallet, organization:, customer:)
+
+        expect { refresh_service.call }
+          .to change { invoice.reload.applied_invoice_custom_sections.count }.from(0).to(1)
+
+        expect(customer.reload.awaiting_wallet_refresh).to be(true)
+      end
+
+      context "when finalizing" do
+        let(:refresh_service) { described_class.new(invoice:, context: :finalize) }
+
+        it "computes the final amounts without changing the invoice status" do
+          result = refresh_service.call
+
+          expect(result).to be_success
+          expect(invoice.reload).to have_attributes(status: "draft", total_amount_cents: 7_500)
+        end
+      end
+
+      context "when the invoice finalization job runs" do
+        subject(:finalization_result) { Invoices::RefreshDraftAndFinalizeService.call(invoice:) }
+
+        it "refreshes the product fees before finalizing the invoice" do
+          expect(finalization_result).to be_success
+          expect(invoice.reload).to have_attributes(status: "finalized", total_amount_cents: 7_500)
+          expect(invoice.fees.sole).to have_attributes(invoiceable: product, amount_cents: 7_500)
+        end
+      end
+
+      context "with a HubSpot integration" do
+        let(:integration) { create(:hubspot_integration, organization:, sync_invoices: true) }
+
+        before { create(:hubspot_customer, integration:, customer:, organization:) }
+
+        it "enqueues the shared invoice update job" do
+          expect { refresh_service.call }
+            .to have_enqueued_job(Integrations::Aggregator::Invoices::Hubspot::UpdateJob)
+            .with(invoice:)
+        end
+      end
+
+      context "when fee recomputation fails" do
+        let(:original_fee) do
+          create(
+            :fee,
+            invoice:,
+            organization:,
+            billing_entity: invoice.billing_entity,
+            amount_cents: 1_000
+          )
+        end
+        let(:compute_result) do
+          BillingSegments::ComputeInvoiceService::Result.new.tap do |service_result|
+            service_result.validation_failure!(errors: {base: ["invalid"]})
+          end
+        end
+
+        before do
+          original_fee
+          invoice.update!(fees_amount_cents: 1_000, total_amount_cents: 1_000)
+          allow(BillingSegments::ComputeInvoiceService).to receive(:call!).and_raise(compute_result.error)
+        end
+
+        it "returns the invoice refresh failure and rolls back the reset" do
+          result = refresh_service.call
+
+          expect(result).to be_a(described_class::Result)
+          expect(result).to be_failure
+          expect(invoice.reload).to have_attributes(
+            ready_to_be_refreshed: true,
+            fees_amount_cents: 1_000,
+            total_amount_cents: 1_000
+          )
+          expect(original_fee.reload).not_to be_discarded
+        end
+      end
     end
   end
 end

@@ -54,6 +54,8 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
 
       decoded = Utils::AuthToken.decode(token: result.token)
       expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::OKTA)
+      expect(decoded["sso_organization_id"]).to eq(okta_integration.organization_id)
+      expect(decoded["sso_issuer"]).to eq("foo.okta.com")
     end
 
     context "when code is not provided" do

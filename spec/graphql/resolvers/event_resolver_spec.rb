@@ -67,10 +67,15 @@ RSpec.describe Resolvers::EventResolver, transaction: false do
 
   before { event }
 
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "developers:manage"
+
   it "returns a single event" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: "developers:manage",
       query:,
       variables: {eventTransactionId: event.transaction_id}
     )
@@ -91,6 +96,7 @@ RSpec.describe Resolvers::EventResolver, transaction: false do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: "developers:manage",
         query:,
         variables: {eventTransactionId: event.transaction_id}
       )
@@ -106,6 +112,7 @@ RSpec.describe Resolvers::EventResolver, transaction: false do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: "developers:manage",
         query:,
         variables: {eventTransactionId: "non_existing"}
       )
@@ -122,6 +129,7 @@ RSpec.describe Resolvers::EventResolver, transaction: false do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: "developers:manage",
         query: keyed_query,
         variables: {}
       )
@@ -138,6 +146,7 @@ RSpec.describe Resolvers::EventResolver, transaction: false do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: "developers:manage",
         query: keyed_query,
         variables: {externalSubscriptionId: event.external_subscription_id}
       )
@@ -167,6 +176,7 @@ RSpec.describe Resolvers::EventResolver, transaction: false do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: "developers:manage",
         query: keyed_query,
         variables: {
           transactionId: event.transaction_id,
@@ -182,6 +192,7 @@ RSpec.describe Resolvers::EventResolver, transaction: false do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
+      permissions: "developers:manage",
       query:,
       variables: {eventTransactionId: event.transaction_id}
     )
@@ -211,6 +222,7 @@ RSpec.describe Resolvers::EventResolver, transaction: false do
         result = execute_graphql(
           current_user: membership.user,
           current_organization: organization,
+          permissions: "developers:manage",
           query: keyed_query,
           variables: {
             transactionId: expected.transaction_id,
@@ -260,6 +272,7 @@ RSpec.describe Resolvers::EventResolver, transaction: false do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
+        permissions: "developers:manage",
         query: keyed_query,
         variables: {transactionId: "tx_same", externalSubscriptionId: subscription.external_id}
       )
@@ -299,6 +312,7 @@ RSpec.describe Resolvers::EventResolver, transaction: false do
         result = execute_graphql(
           current_user: membership.user,
           current_organization: organization,
+          permissions: "developers:manage",
           query: keyed_query,
           variables: {transactionId: "tx_same", externalSubscriptionId: subscription.external_id}
         )
@@ -329,6 +343,7 @@ RSpec.describe Resolvers::EventResolver, transaction: false do
           result = execute_graphql(
             current_user: membership.user,
             current_organization: organization,
+            permissions: "developers:manage",
             query: keyed_query,
             variables: {
               transactionId: "tx_same",
@@ -362,6 +377,7 @@ RSpec.describe Resolvers::EventResolver, transaction: false do
         result = execute_graphql(
           current_user: membership.user,
           current_organization: organization,
+          permissions: "developers:manage",
           query: keyed_query,
           variables: {
             transactionId: "tx/with-slash-and-dash",
@@ -381,6 +397,7 @@ RSpec.describe Resolvers::EventResolver, transaction: false do
         result = execute_graphql(
           current_user: membership.user,
           current_organization: organization,
+          permissions: "developers:manage",
           query: keyed_query,
           variables: {
             transactionId: expected.transaction_id,

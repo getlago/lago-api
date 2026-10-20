@@ -208,6 +208,44 @@ RSpec.describe GraphqlController do
       end
     end
 
+    context "with a customer portal token and merchant credentials of another organization" do
+      let(:membership) { create(:membership, roles: [:admin]) }
+      let(:customer) { create(:customer) }
+      let(:invoice) { create(:invoice, customer:, organization: customer.organization) }
+      let(:portal_token) do
+        ActiveSupport::MessageVerifier.new(ENV["SECRET_KEY_BASE"]).generate(customer.id, expires_in: 12.hours)
+      end
+      let(:query) do
+        <<~GQL
+          query {
+            customerPortalInvoices(limit: 5) {
+              collection {
+                id
+                activityLogs { activityId }
+                metadata { key value }
+              }
+            }
+          }
+        GQL
+      end
+
+      before { create(:invoice_metadata, invoice:) }
+
+      it "does not grant the merchant permissions on the portal data" do
+        post "/graphql",
+          headers: {
+            "customer-portal-token" => portal_token,
+            "Authorization" => "Bearer #{Utils::AuthToken.encode(user: membership.user)}",
+            "x-lago-organization" => membership.organization_id
+          },
+          params: {query:}
+
+        expect(membership.organization_id).not_to eq(customer.organization_id)
+        expect(json[:errors]).to be_nil
+        expect(json[:data][:customerPortalInvoices][:collection]).to eq([{id: invoice.id, activityLogs: nil, metadata: nil}])
+      end
+    end
+
     context "with null bytes in the variables" do
       let(:membership) { create(:membership, roles: [:admin]) }
       let(:token) { Utils::AuthToken.encode(user: membership.user) }
