@@ -5,7 +5,7 @@ module V2
     # The latest effective rate, as RateCard#active_rate selects it.
     expandable(:active_rate, serializer: ::V2::RateCardRateSerializer) { active_rate }
     # As /taxes lists them.
-    expandable(:taxes, serializer: ::V2::TaxSerializer) { model.applied_taxes.listed.filter_map(&:tax) }
+    expandable(:taxes, serializer: ::V2::TaxSerializer) { model.applied_taxes.listed.preload(:tax).filter_map(&:tax) }
     # As /rates lists them, sorted in memory so that each status reads its siblings from the
     # loaded rates rather than querying them.
     expandable(:rates, serializer: ::V2::RateCardRateSerializer) { model.rates.sort_by(&:effective_from).reverse }
