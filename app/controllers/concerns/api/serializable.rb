@@ -36,7 +36,7 @@ module Api
 
         private(define_method(:serialization) { serialization })
         private(define_method(:"render_#{serialization.root}") { |record| render_resource(record) })
-        private(define_method(:"render_#{serialization.collection}") { |records| render_collection(records) })
+        private(define_method(:"render_#{serialization.collection}") { |records, &map| render_collection(records, &map) })
       end
     end
 
@@ -50,13 +50,15 @@ module Api
       render(json: serialization.serializer.new(record, root_name: serialization.root, includes: requested_expansions))
     end
 
-    # One page and its cursors on a cursor-paginated index, the whole list anywhere else.
+    # One page and its cursors on a cursor-paginated index, the whole list anywhere else. A block
+    # maps the records before they render, for a list paged on other rows than it renders.
     def render_collection(records)
       if cursor_paginated_index?
         page = ::CursorPagination::Page.new(records:, cursor:)
         records = page.records
         meta = page.meta
       end
+      records = yield(records) if block_given?
 
       render(json: ::CollectionSerializer.new(records, serialization.serializer, collection_name: serialization.collection, meta:))
     end

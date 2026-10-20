@@ -35,6 +35,7 @@ RSpec.describe Api::Serializable do
             resources :whole_list_tests, only: %i[index show]
             resources :not_serializable_tests, only: %i[show]
             resources :not_expanding_tests, only: %i[show]
+            resources :mapped_list_tests, only: %i[index]
           end
         end
       end
@@ -105,6 +106,24 @@ RSpec.describe Api::Serializable do
 
       def show
         render_product(current_organization.products.find_by(code: params[:id]))
+      end
+
+      private
+
+      def resource_name
+        "product"
+      end
+    end)
+
+    # Paged on the products, rendering their categories: a list paged on other rows than it renders.
+    stub_const("Api::V2::MappedListTestsController", Class.new(Api::V2::BaseController) do
+      cursor_paginated_index(Product)
+      serializable_with(Class.new(ModelSerializer) { def serialize = {code: model.code} }, root: :product_category)
+
+      def index
+        products = ::CursorPagination::Keyset.apply(Product.where(organization: current_organization), cursor)
+
+        render_product_categories(products) { |page| page.map(&:product_category) }
       end
 
       private
@@ -405,6 +424,22 @@ RSpec.describe Api::Serializable do
 
       expect(response).to have_http_status(:success)
       expect(json[:products]).to eq([{code: product.code}])
+      expect(json[:meta]).to eq(next_cursor: CursorPagination::Token.encode(table: "products", record: product), prev_cursor: nil)
+    end
+  end
+
+  context "with a block mapping the page" do
+    subject(:index) { get_with_token(organization, "/api/v2/mapped_list_tests", {limit: 1}) }
+
+    let(:older_product) { create(:product, organization:, created_at: 1.day.ago) }
+
+    before { [product, older_product] }
+
+    it "renders what the block returns for the page, with the cursors of the paged rows" do
+      index
+
+      expect(response).to have_http_status(:success)
+      expect(json[:product_categories]).to eq([{code: product_category.code}])
       expect(json[:meta]).to eq(next_cursor: CursorPagination::Token.encode(table: "products", record: product), prev_cursor: nil)
     end
   end
