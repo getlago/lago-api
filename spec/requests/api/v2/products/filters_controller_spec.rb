@@ -239,14 +239,12 @@ RSpec.describe Api::V2::Products::FiltersController do
 
     include_examples "requires API permission", "product", "write"
 
-    it "soft deletes the filter and echoes its values" do
+    it "soft deletes the filter and returns no values" do
       subject
 
       expect(response).to have_http_status(:success)
       expect(json[:filter][:lago_id]).to eq(filter.id)
-      expect(json[:filter][:values]).to eq(
-        ProductFilterValue.with_discarded.where(product_filter: filter).map { {key: it.key, value: it.value} }
-      )
+      expect(json[:filter][:values]).to eq([])
       expect(filter.reload).to be_discarded
     end
 

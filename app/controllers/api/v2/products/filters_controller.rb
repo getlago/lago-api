@@ -64,11 +64,10 @@ module Api
         end
 
         def destroy
-          values = product_filter.values.to_a
           result = ::ProductFilters::DestroyService.call(product_filter:)
 
           if result.success?
-            render_filter(result.product_filter, values:)
+            render_filter(result.product_filter)
           else
             render_error_response(result)
           end
@@ -110,11 +109,8 @@ module Api
           )
         end
 
-        def render_filter(filter, values: nil)
-          serializer_options = {root_name: "filter"}
-          serializer_options[:values] = values unless values.nil?
-
-          render(json: ::V2::ProductFilterSerializer.new(filter, **serializer_options))
+        def render_filter(filter)
+          render(json: ::V2::ProductFilterSerializer.new(filter, root_name: "filter"))
         end
 
         def resource_name

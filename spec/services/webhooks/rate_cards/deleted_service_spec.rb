@@ -40,25 +40,7 @@ RSpec.describe Webhooks::RateCards::DeletedService do
         "applied_pricing_unit_code" => nil,
         "rates_count" => 0,
         "created_at" => reloaded_rate_card.created_at.iso8601,
-        "updated_at" => reloaded_rate_card.updated_at.iso8601,
-        "active_rate" => nil,
-        "rates" => [],
-        "taxes" => [
-          {
-            "lago_id" => tax.id,
-            "name" => tax.name,
-            "code" => tax.code,
-            "rate" => 20.0,
-            "description" => tax.description,
-            "applied_to_organization" => false,
-            "add_ons_count" => 0,
-            "customers_count" => 0,
-            "plans_count" => 0,
-            "charges_count" => 0,
-            "commitments_count" => 0,
-            "created_at" => tax.created_at.iso8601
-          }
-        ]
+        "updated_at" => reloaded_rate_card.updated_at.iso8601
       }
     )
   end

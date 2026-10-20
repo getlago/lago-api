@@ -19,11 +19,8 @@ module V2
 
     private
 
-    # The destroy response passes its pre-discard values; events use the kept association.
     def values
-      source_values = if options.key?(:values)
-        options[:values]
-      elsif model.discarded?
+      source_values = if model.discarded?
         []
       else
         model.values

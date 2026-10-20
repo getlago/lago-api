@@ -44,18 +44,9 @@ RSpec.describe V2::ProductFilterSerializer do
       product_filter.discard!
     end
 
-    context "with explicitly supplied values" do
-      subject(:serialized_filter) { described_class.new(product_filter, values: [filter_value]).serialize }
-
-      it "preserves the supplied value" do
-        expect(serialized_filter.fetch(:values)).to eq([{key: "region", value: "us"}])
-      end
-    end
-
-    context "without explicitly supplied values" do
-      it "serializes no values" do
-        expect(serialized_filter.fetch(:values)).to eq([])
-      end
+    it "serializes no values even when the filter has a kept value" do
+      expect(filter_value).not_to be_discarded
+      expect(serialized_filter.fetch(:values)).to eq([])
     end
   end
 end
