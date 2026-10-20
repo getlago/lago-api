@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Wallets::Create, :premium do
-  let(:required_permission) { "wallets:create" }
+  let(:required_permission) { %w[wallets:create wallets:update] }
   let(:billable_metric) { create(:billable_metric, organization: membership.organization) }
   let(:expiration_at) { Time.zone.now + 1.year }
   let(:mutation) do
@@ -551,6 +551,73 @@ RSpec.describe Mutations::Wallets::Create, :premium do
       result = create_wallet(connections: {payment: {code: "stripe_us"}})
 
       expect(result["errors"].first["extensions"]["code"]).to eq("feature_unavailable")
+    end
+  end
+
+  context "with wallets:create only" do
+    subject(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: "wallets:create",
+        query: mutation,
+        variables: {input: base_input.merge(extra_input)}
+      )
+    end
+
+    let(:base_input) do
+      {
+        customerId: customer.id,
+        name: "Restricted Wallet",
+        priority: 9,
+        rateAmount: "1",
+        paidCredits: "10.00",
+        grantedCredits: "0",
+        currency: "EUR"
+      }
+    end
+    let(:extra_input) { {} }
+
+    it "creates the wallet with paid credits" do
+      expect { result }.to change(Wallet, :count).by(1)
+      expect(result["data"]["createCustomerWallet"]["name"]).to eq("Restricted Wallet")
+    end
+
+    context "when granting credits" do
+      let(:extra_input) { {grantedCredits: "15.00"} }
+
+      it "returns a forbidden error" do
+        expect { result }.not_to change(Wallet, :count)
+        expect_forbidden_error(result)
+      end
+    end
+
+    context "when ignoring paid top-up limits on creation" do
+      let(:extra_input) { {ignorePaidTopUpLimitsOnCreation: true} }
+
+      it "returns a forbidden error" do
+        expect { result }.not_to change(Wallet, :count)
+        expect_forbidden_error(result)
+      end
+    end
+
+    context "when adding a recurring transaction rule" do
+      let(:extra_input) do
+        {recurringTransactionRules: [{method: "fixed", trigger: "interval", interval: "monthly", paidCredits: "5.00", grantedCredits: "0"}]}
+      end
+
+      it "returns a forbidden error" do
+        expect { result }.not_to change(Wallet, :count)
+        expect_forbidden_error(result)
+      end
+    end
+
+    context "when recurring transaction rules are empty" do
+      let(:extra_input) { {recurringTransactionRules: []} }
+
+      it "creates the wallet" do
+        expect { result }.to change(Wallet, :count).by(1)
+      end
     end
   end
 end
