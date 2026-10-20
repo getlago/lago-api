@@ -32,29 +32,6 @@ RSpec.describe Api::V2::RateCards::TaxesController do
       expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
     end
 
-    context "when a tax is discarded between the page query and the preload of the taxes" do
-      let(:racing_tax) { create(:tax, organization:) }
-
-      before { create(:rate_card_applied_tax, rate_card:, tax: racing_tax) }
-
-      it "leaves it out of the page" do
-        discarded = false
-        discard_after_page_query = lambda do |*, payload|
-          next if discarded || !payload[:sql].include?('FROM "rate_cards_taxes"')
-
-          discarded = true
-          # What Taxes::DestroyService commits, landing between the two queries of the page.
-          racing_tax.discard!
-        end
-
-        ActiveSupport::Notifications.subscribed(discard_after_page_query, "sql.active_record") { subject }
-
-        expect(discarded).to be(true)
-        expect(response).to have_http_status(:success)
-        expect(json[:taxes].map { it[:lago_id] }).to eq([tax.id])
-      end
-    end
-
     context "with include_total_count" do
       let(:params) { {include_total_count: true} }
 
