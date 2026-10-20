@@ -125,7 +125,7 @@ RSpec.describe ModelSerializer do
     end
   end
 
-  describe "#expanded_payload" do
+  describe "#serialize" do
     subject(:payload) { serializer_class.new(model, options).serialize }
 
     let(:model) { Struct.new(:first, :second, :third).new(first_record, nil, first_record) }
@@ -143,12 +143,12 @@ RSpec.describe ModelSerializer do
         expandable :second, serializer: embedded_serializer
         expandable :third, serializer: embedded_serializer
 
-        def serialize = expanded_payload
+        def serialize = {code: "parent"}
       end
     end
 
-    it "renders the included names in their declared order, a missing record as nil" do
-      expect(payload.to_a).to eq([[:first, {code: "first", options: {}}], [:second, nil]])
+    it "adds the included expansions after its own payload, in their declared order, a missing record as nil" do
+      expect(payload.to_a).to eq([[:code, "parent"], [:first, {code: "first", options: {}}], [:second, nil]])
     end
 
     it "renders the embedded record without includes, so that it stays flat" do
@@ -158,8 +158,16 @@ RSpec.describe ModelSerializer do
     context "without includes" do
       let(:options) { {} }
 
-      it "renders nothing" do
-        expect(payload).to eq({})
+      it "renders its own payload only" do
+        expect(payload).to eq(code: "parent")
+      end
+    end
+
+    context "with a serializer that declares no expansion" do
+      let(:serializer_class) { Class.new(described_class) { def serialize = {code: "parent"} } }
+
+      it "renders its own payload only" do
+        expect(payload).to eq(code: "parent")
       end
     end
   end
