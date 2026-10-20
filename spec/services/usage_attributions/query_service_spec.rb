@@ -260,12 +260,12 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
   end
 
   context "when the customer reached the values limit of the type", cache: :memory do
-    let(:team_type) { organization.usage_attribution_types.find_by(code: "team") }
+    let(:limited_type) { organization.usage_attribution_types.find_by(code: "team") }
     let(:limited_customer) { customer }
 
     before do
       stub_const("UsageAttributionValue::MAX_PER_CUSTOMER_AND_TYPE", 1)
-      create(:usage_attribution_value, organization:, customer: limited_customer, usage_attribution_type: team_type, value: "eng")
+      create(:usage_attribution_value, organization:, customer: limited_customer, usage_attribution_type: limited_type, value: "eng")
     end
 
     it "returns a validation failure" do
@@ -285,6 +285,25 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
 
       it "reads the level" do
         expect(result).to be_success
+      end
+    end
+
+    context "when the type is read under a parent filter" do
+      let(:department_type) { create(:usage_attribution_type, organization:, code: "department") }
+      let(:limited_type) { create(:usage_attribution_type, organization:, code: "squad", parent: department_type) }
+      let(:group_by) { "squad" }
+      let(:filters) { {"department" => "rnd"} }
+
+      it "reads the level" do
+        expect(result).to be_success
+      end
+
+      context "without the parent filter" do
+        let(:filters) { {} }
+
+        it "returns a validation failure" do
+          expect(result.error.messages).to eq(group_by: %w[parent_filter_required too_many_values])
+        end
       end
     end
   end

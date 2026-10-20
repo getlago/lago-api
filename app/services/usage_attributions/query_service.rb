@@ -20,7 +20,6 @@ module UsageAttributions
     MAX_CUSTOM_WINDOW = 31.days
     MAX_GROUPS = 250_000
     MAX_EXECUTION_TIME = 8
-    VALUES_LIMIT_CACHE_TTL = 10.minutes
 
     BASES = %w[units amount].freeze
     ORDERS = %w[amount events_count].freeze
@@ -132,13 +131,10 @@ module UsageAttributions
     end
 
     def values_limit_reached?
-      customer_id = subscription.customer_id
-      usage_attribution_type_id = attribution_types[group_by].id
-      cache_key = UsageAttributionValue.limit_reached_cache_key(customer_id:, usage_attribution_type_id:)
+      parent = attribution_types[group_by].parent
+      narrowed = parent.present? && filters.key?(parent.code)
 
-      Rails.cache.fetch(cache_key, expires_in: VALUES_LIMIT_CACHE_TTL) do
-        UsageAttributionValue.limit_reached?(customer_id:, usage_attribution_type_id:)
-      end
+      !narrowed && UsageAttributionValue.limit_reached?(customer_id: subscription.customer_id, usage_attribution_type_id: attribution_types[group_by].id)
     end
 
     def order_by_errors
