@@ -20,7 +20,8 @@ RSpec.describe V2::ProductSerializer do
       product_type: "metered",
       filters_count: 0,
       created_at: product.created_at.iso8601,
-      updated_at: product.updated_at.iso8601
+      updated_at: product.updated_at.iso8601,
+      deleted_at: nil
     }
   end
 
@@ -42,7 +43,8 @@ RSpec.describe V2::ProductSerializer do
             invoice_display_name: product_category.invoice_display_name,
             products_count: 1,
             created_at: product_category.created_at.iso8601,
-            updated_at: product_category.updated_at.iso8601
+            updated_at: product_category.updated_at.iso8601,
+            deleted_at: nil
           }
         )
       )

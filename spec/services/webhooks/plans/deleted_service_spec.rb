@@ -35,7 +35,7 @@ RSpec.describe Webhooks::Plans::DeletedService do
         catalog_plan.discard!
       end
 
-      it "sends the catalog plan payload without its deletion date nor its taxes" do
+      it "sends the catalog plan payload with its deletion date, without its taxes" do
         webhook_service.call
 
         expect(organization.webhooks.sole.payload).to eq(
@@ -50,7 +50,8 @@ RSpec.describe Webhooks::Plans::DeletedService do
             "description" => "Premium description",
             "currency" => "EUR",
             "applied_rate_cards_count" => 0,
-            "created_at" => "2026-03-22T12:00:00Z"
+            "created_at" => "2026-03-22T12:00:00Z",
+            "deleted_at" => "2026-03-22T12:00:00Z"
           }
         )
       end

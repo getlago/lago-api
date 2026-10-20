@@ -18,7 +18,8 @@ module V2
         applied_pricing_unit_code: model.applied_pricing_unit_code,
         rates_count: model.rates.size,
         created_at: model.created_at.iso8601,
-        updated_at: model.updated_at.iso8601
+        updated_at: model.updated_at.iso8601,
+        deleted_at: model.deleted_at&.iso8601
       }
 
       payload[:active_rate] = active_rate if include?(:active_rate)

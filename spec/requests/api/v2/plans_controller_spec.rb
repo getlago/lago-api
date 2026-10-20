@@ -120,6 +120,7 @@ RSpec.describe Api::V2::PlansController do
       expect(response).to have_http_status(:success)
       expect(json[:plan][:lago_id]).to eq(catalog_plan.id)
       expect(json[:plan][:applied_rate_cards_count]).to eq(0)
+      expect(json[:plan]).to include(deleted_at: nil)
       expect(json[:plan]).not_to have_key(:interval)
     end
 
