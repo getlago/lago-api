@@ -9,6 +9,7 @@ module V2
         position: model.position,
         name: model.name,
         billing_interval_cycle_count: model.billing_interval_cycle_count,
+        deleted_at: model.deleted_at&.iso8601,
         rate_override: rate_override
       }
     end

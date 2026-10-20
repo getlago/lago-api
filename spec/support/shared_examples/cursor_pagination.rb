@@ -62,6 +62,17 @@ RSpec.shared_examples "a cursor paginated v2 endpoint" do |collection:, model:|
     expect(backward).to eq(all_ids)
   end
 
+  # A contract is never deleted: DELETE ends its lifecycle instead.
+  if model == Contract
+    it "renders no deleted_at" do
+      expect(fetch_page(limit: 100)[paginated_collection].flat_map(&:keys)).not_to include(:deleted_at)
+    end
+  else
+    it "renders a null deleted_at on every row" do
+      expect(fetch_page(limit: 100)[paginated_collection]).to all(include(deleted_at: nil))
+    end
+  end
+
   it "does not return a total count by default" do
     expect(fetch_page(limit: 2)[:meta].keys).to eq(%i[next_cursor prev_cursor])
   end

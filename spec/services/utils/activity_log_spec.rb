@@ -351,6 +351,7 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               currency: "EUR",
               applied_rate_cards_count: 2,
               created_at: timestamp,
+              deleted_at: nil,
               taxes: [vat_payload]
             )
           end
@@ -379,7 +380,8 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               product_type: "metered",
               filters_count: 2,
               created_at: timestamp,
-              updated_at: timestamp
+              updated_at: timestamp,
+              deleted_at: nil
             )
           end
         end
@@ -390,7 +392,7 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
 
           before { product.discard! }
 
-          it "serializes the product without its deletion date" do
+          it "serializes the product with its deletion date" do
             produce
 
             expect(produced_payload[:activity_object]).to eq(
@@ -404,7 +406,8 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               product_type: "metered",
               filters_count: 0,
               created_at: timestamp,
-              updated_at: timestamp
+              updated_at: timestamp,
+              deleted_at: timestamp
             )
           end
         end
@@ -429,7 +432,8 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               invoice_display_name: "Compute usage",
               products_count: 2,
               created_at: timestamp,
-              updated_at: timestamp
+              updated_at: timestamp,
+              deleted_at: nil
             )
           end
         end
@@ -463,7 +467,8 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
                 {key: "cloud", value: nil}
               ],
               created_at: timestamp,
-              updated_at: timestamp
+              updated_at: timestamp,
+              deleted_at: nil
             )
           end
         end
@@ -521,7 +526,8 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               billing_interval_unit: "month",
               applied_pricing_unit_conversion_rate: nil,
               created_at: timestamp,
-              updated_at: timestamp
+              updated_at: timestamp,
+              deleted_at: nil
             }
           end
 
@@ -544,6 +550,7 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               rates_count: 3,
               created_at: timestamp,
               updated_at: timestamp,
+              deleted_at: nil,
               taxes: match_array([vat_payload, gst_payload]),
               rates: match_array(rate_payloads)
             )

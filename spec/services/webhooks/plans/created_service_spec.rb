@@ -56,6 +56,7 @@ RSpec.describe Webhooks::Plans::CreatedService do
             "currency" => "EUR",
             "applied_rate_cards_count" => 1,
             "created_at" => "2026-03-22T12:00:00Z",
+            "deleted_at" => nil,
             "taxes" => [
               {
                 "lago_id" => tax.id,
