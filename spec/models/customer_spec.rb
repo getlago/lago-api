@@ -168,29 +168,30 @@ RSpec.describe Customer do
       expect(customer).to be_valid
     end
 
-    %i[
-      name firstname lastname legal_name tax_identification_number
-      address_line1 address_line2 zipcode city state
-      shipping_address_line1 shipping_address_line2 shipping_zipcode shipping_city shipping_state
-    ].each do |field|
+    {
+      name: 255, firstname: 255, lastname: 255, legal_name: 255, tax_identification_number: 255,
+      address_line1: 500, address_line2: 500, zipcode: 255, city: 255, state: 255,
+      shipping_address_line1: 500, shipping_address_line2: 500, shipping_zipcode: 255, shipping_city: 255,
+      shipping_state: 255
+    }.each do |field, max_length|
       describe "#{field} length validation" do
-        it "accepts 255 characters" do
-          customer[field] = "a" * 255
+        it "accepts #{max_length} characters" do
+          customer[field] = "a" * max_length
           expect(customer).to be_valid
         end
 
-        it "rejects 256 characters with value_is_too_long" do
-          customer[field] = "a" * 256
+        it "rejects #{max_length + 1} characters with value_is_too_long" do
+          customer[field] = "a" * (max_length + 1)
 
           expect(customer).not_to be_valid
           expect(customer.errors.where(field, :too_long)).to be_present
           expect(customer.errors.messages[field]).to eq(["value_is_too_long"])
         end
 
-        context "when the stored value is already over 255 characters" do
+        context "when the stored value is already over #{max_length} characters" do
           before do
             customer.save!
-            customer.update_column(field, "a" * 256) # rubocop:disable Rails/SkipsModelValidations
+            customer.update_column(field, "a" * (max_length + 1)) # rubocop:disable Rails/SkipsModelValidations
           end
 
           it "stays valid when another attribute changes" do
