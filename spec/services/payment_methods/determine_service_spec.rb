@@ -346,8 +346,8 @@ RSpec.describe PaymentMethods::DetermineService do
             fee_type: :product,
             invoiceable: contract_rate_card.rate_card.product,
             contract:,
-            contract_rate_card:
-            rate_card_rate: create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card),
+            contract_rate_card:,
+            rate_card_rate: create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card)
           )
         end
 
@@ -373,8 +373,8 @@ RSpec.describe PaymentMethods::DetermineService do
             fee_type: :product,
             invoiceable: contract_rate_card.rate_card.product,
             contract:,
-            contract_rate_card:
-            rate_card_rate: create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card),
+            contract_rate_card:,
+            rate_card_rate: create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card)
           )
         end
 
@@ -401,8 +401,8 @@ RSpec.describe PaymentMethods::DetermineService do
               fee_type: :product,
               invoiceable: later_contract_rate_card.rate_card.product,
               contract: later_contract,
-              contract_rate_card: later_contract_rate_card
-              rate_card_rate: create(:rate_card_rate, organization:, rate_card: later_contract_rate_card.rate_card),
+              contract_rate_card: later_contract_rate_card,
+              rate_card_rate: create(:rate_card_rate, organization:, rate_card: later_contract_rate_card.rate_card)
             )
           end
 
