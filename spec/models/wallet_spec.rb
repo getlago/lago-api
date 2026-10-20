@@ -280,6 +280,7 @@ RSpec.describe Wallet do
       depleted_ongoing_balance
       expiration_at
       invoice_requires_successful_payment
+      invoice_usage_on_expiration
       last_balance_sync_at
       last_consumed_credit_at
       last_ongoing_balance_sync_at

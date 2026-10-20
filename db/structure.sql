@@ -5094,7 +5094,8 @@ CREATE TABLE public.wallets (
     billing_entity_id uuid,
     purchase_order_number character varying,
     x402_enabled boolean DEFAULT false NOT NULL,
-    ongoing_billable_metric_amounts jsonb DEFAULT '{}'::jsonb NOT NULL
+    ongoing_billable_metric_amounts jsonb DEFAULT '{}'::jsonb NOT NULL,
+    invoice_usage_on_expiration boolean DEFAULT false NOT NULL
 );
 
 
@@ -15826,6 +15827,7 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20261019185401'),
 ('20261019185400'),
+('20261019174914'),
 ('20261019074555'),
 ('20261014123350'),
 ('20261014123349'),
