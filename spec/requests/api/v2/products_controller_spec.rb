@@ -201,6 +201,7 @@ RSpec.describe Api::V2::ProductsController do
       expect(json[:product][:filters_count]).to eq(1)
       expect(json[:product]).to include(deleted_at: nil)
       expect(json[:product]).not_to have_key(:product_category)
+      expect(json[:product]).not_to have_key(:billable_metric)
     end
 
     context "with expands[]=product_category" do
@@ -230,6 +231,49 @@ RSpec.describe Api::V2::ProductsController do
     context "with expands[]=billable_metric" do
       let(:params) { {expands: %w[billable_metric]} }
 
+      it "embeds the flat billable metric" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:product][:billable_metric]).to eq(V2::BillableMetricSerializer.new(product.billable_metric).serialize)
+        expect(json[:product]).not_to have_key(:product_category)
+      end
+
+      context "when the billable metric is deleted" do
+        before { product.billable_metric.discard! }
+
+        it "embeds it with its deletion date" do
+          subject
+
+          expect(json[:product][:billable_metric]).to eq(V2::BillableMetricSerializer.new(product.billable_metric.reload).serialize)
+          expect(json[:product][:billable_metric][:deleted_at]).to eq(product.billable_metric.deleted_at.iso8601)
+        end
+      end
+    end
+
+    context "with both expansions" do
+      let(:params) { {expands: %w[billable_metric product_category]} }
+
+      it "embeds both records, in the serializer's order" do
+        subject
+
+        expect(json[:product].keys.last(2)).to eq(%i[product_category billable_metric])
+      end
+
+      context "with a standalone fixed product" do
+        let(:product) { create(:product, :fixed, :standalone, organization:) }
+
+        it "renders both as null" do
+          subject
+
+          expect(json[:product]).to include(product_category: nil, billable_metric: nil)
+        end
+      end
+    end
+
+    context "with an unknown expansion" do
+      let(:params) { {expands: %w[filters]} }
+
       it "returns an invalid expand error listing the allowed expansions" do
         subject
 
@@ -238,7 +282,7 @@ RSpec.describe Api::V2::ProductsController do
           status: 400,
           error: "Bad Request",
           code: "invalid_expand",
-          error_details: {expands: {invalid_values: %w[billable_metric], allowed_values: %w[product_category]}}
+          error_details: {expands: {invalid_values: %w[filters], allowed_values: %w[product_category billable_metric]}}
         )
       end
     end
