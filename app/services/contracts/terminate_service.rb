@@ -13,8 +13,9 @@ module Contracts
   class TerminateService < BaseService
     Result = BaseResult[:contract]
 
-    def initialize(contract:)
+    def initialize(contract:, timestamp: Time.current)
       @contract = contract
+      @timestamp = timestamp
       super
     end
 
@@ -35,7 +36,7 @@ module Contracts
         if contract.active?
           terminate
         else
-          contract.update!(status: :canceled, canceled_at: Time.current)
+          contract.update!(status: :canceled, canceled_at: timestamp)
         end
       end
 
@@ -51,10 +52,10 @@ module Contracts
 
     private
 
-    attr_reader :contract
+    attr_reader :contract, :timestamp
 
     def terminate
-      contract.update!(status: :terminated, terminated_at: Time.current)
+      contract.update!(status: :terminated, terminated_at: timestamp)
 
       closing = BillingSegments::ScheduleFinalSegmentsService.call!(contract:, timestamp: contract.terminated_at)
       BillingSegments::ProcessJob.perform_after_commit(contract.customer_id) if closing.billing_segments.any?
