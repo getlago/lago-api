@@ -185,7 +185,7 @@ RSpec.describe CreditNotes::Refunds::StripeService do
 
         expect(SendWebhookJob).to have_been_enqueued
           .with(
-            "credit_note.provider_refund_failure",
+            "credit_note.refund_failure",
             credit_note,
             provider_customer_id: stripe_customer.provider_customer_id,
             provider_error: {
@@ -198,7 +198,7 @@ RSpec.describe CreditNotes::Refunds::StripeService do
       it "produces an activity log" do
         stripe_service.create
 
-        expect(Utils::ActivityLog).to have_produced("credit_note.refund_failure").with(credit_note)
+        expect(Utils::ActivityLog).to have_produced("credit_note.provider_refund_failure").with(credit_note)
       end
 
       [
@@ -217,7 +217,7 @@ RSpec.describe CreditNotes::Refunds::StripeService do
 
             expect(SendWebhookJob).to have_been_enqueued
               .with(
-                "credit_note.provider_refund_failure",
+                "credit_note.refund_failure",
                 credit_note,
                 provider_customer_id: stripe_customer.provider_customer_id,
                 provider_error: {message: error_message, error_code: error_message}
@@ -239,7 +239,7 @@ RSpec.describe CreditNotes::Refunds::StripeService do
 
           expect(SendWebhookJob).to have_been_enqueued
             .with(
-              "credit_note.provider_refund_failure",
+              "credit_note.refund_failure",
               credit_note,
               provider_customer_id: stripe_customer.provider_customer_id,
               provider_error: {
@@ -347,7 +347,7 @@ RSpec.describe CreditNotes::Refunds::StripeService do
 
         expect(SendWebhookJob).to have_been_enqueued
           .with(
-            "credit_note.provider_refund_failure",
+            "credit_note.refund_failure",
             credit_note,
             provider_customer_id: stripe_customer.provider_customer_id,
             provider_error: {
@@ -391,7 +391,7 @@ RSpec.describe CreditNotes::Refunds::StripeService do
 
       it "does not deliver an error webhook" do
         expect { stripe_service.create }
-          .not_to have_enqueued_job(SendWebhookJob).with("credit_note.provider_refund_failure", any_args)
+          .not_to have_enqueued_job(SendWebhookJob).with("credit_note.refund_failure", any_args)
       end
 
       context "when the existing refund belongs to another credit note" do
@@ -436,7 +436,7 @@ RSpec.describe CreditNotes::Refunds::StripeService do
 
         expect(SendWebhookJob).to have_been_enqueued
           .with(
-            "credit_note.provider_refund_failure",
+            "credit_note.refund_failure",
             credit_note,
             provider_customer_id: stripe_customer.provider_customer_id,
             provider_error: {
@@ -654,7 +654,7 @@ RSpec.describe CreditNotes::Refunds::StripeService do
 
         expect(SendWebhookJob).to have_been_enqueued
           .with(
-            "credit_note.provider_refund_failure",
+            "credit_note.refund_failure",
             credit_note,
             provider_customer_id: stripe_customer.provider_customer_id,
             provider_error: {
@@ -670,7 +670,7 @@ RSpec.describe CreditNotes::Refunds::StripeService do
           status: "failed"
         )
 
-        expect(Utils::ActivityLog).to have_produced("credit_note.refund_failure").with(credit_note)
+        expect(Utils::ActivityLog).to have_produced("credit_note.provider_refund_failure").with(credit_note)
       end
     end
   end

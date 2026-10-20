@@ -10,6 +10,7 @@ module Utils
 
     SERIALIZED_INCLUDED_OBJECTS = {
       billing_entity: %i[taxes],
+      catalog_plan: %i[taxes],
       rate_card: %i[rates taxes],
       contract_rate_card: %i[rate_phases],
       credit_note: %i[items applied_taxes error_details],

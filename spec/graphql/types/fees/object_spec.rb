@@ -63,9 +63,10 @@ RSpec.describe Types::Fees::Object do
     context "when the fee comes from a contract product" do
       let(:contract) { create(:contract, organization:, customer:) }
       let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
+      let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card) }
       let(:fee) do
         create(:fee, invoice:, subscription: nil, fee_type: :product,
-          invoiceable: contract_rate_card.rate_card.product, contract:, contract_rate_card:)
+          invoiceable: contract_rate_card.rate_card.product, contract:, contract_rate_card:, rate_card_rate:)
       end
 
       it "resolves the contract and rate card" do

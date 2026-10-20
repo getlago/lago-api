@@ -152,6 +152,14 @@ RSpec.describe Auth::Okta::AcceptInviteService, :premium, cache: :memory do
       end
     end
 
+    context "when okta userinfo email casing differs from the state one" do
+      let(:okta_userinfo_response) { {"email" => "Foo@Bar.com"} }
+
+      it "accepts the invite" do
+        expect(service.call).to be_success
+      end
+    end
+
     context "when the invited email belongs to a member of another organization" do
       let(:user) { create(:user, email: "foo@bar.com") }
 

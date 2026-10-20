@@ -126,6 +126,16 @@ RSpec.describe WebhookEndpoint do
         end
       end
 
+      context "when event_types contains a renamed event type" do
+        let(:event_types) { ["invoice.drafted", "credit_note.provider_refund_failure"] }
+
+        it "replaces it with its current name" do
+          webhook_endpoint.valid?
+          expect(webhook_endpoint).to be_valid
+          expect(webhook_endpoint.event_types).to eq(["invoice.drafted", "credit_note.refund_failure"])
+        end
+      end
+
       context "when event_types is nil" do
         let(:event_types) { nil }
 
@@ -188,6 +198,14 @@ RSpec.describe WebhookEndpoint do
         end
 
         expect(SendWebhookJob::WEBHOOK_SERVICES.slice(*product_catalog_types)).to eq(expected_mappings)
+      end
+
+      it "matches the webhook_type each handler delivers" do
+        delivered_types = SendWebhookJob::WEBHOOK_SERVICES.transform_values do |service|
+          service.new(object: nil).send(:webhook_type)
+        end
+
+        expect(delivered_types).to eq(SendWebhookJob::WEBHOOK_SERVICES.to_h { |type, _| [type, type] })
       end
     end
   end

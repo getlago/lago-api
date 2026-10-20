@@ -13,6 +13,13 @@ module Invoices
     end
 
     def call
+      create_invoice
+      result
+    end
+
+    private
+
+    def create_invoice
       fee_result = generate_fees
       fees = fee_result.fees
       return result if fees.none?
@@ -22,6 +29,7 @@ module Invoices
       ApplicationRecord.transaction do
         create_generating_invoice
         fees.each { |f| f.update!(invoice:) }
+        fee_result.cached_aggregations.each(&:save!)
 
         invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
         invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
@@ -79,8 +87,6 @@ module Invoices
     rescue => e
       result.fail_with_error!(e)
     end
-
-    private
 
     attr_reader :timestamp, :invoice, :metered_item, :billing_context
 

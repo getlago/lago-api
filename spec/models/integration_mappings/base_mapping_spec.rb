@@ -15,7 +15,7 @@ RSpec.describe IntegrationMappings::BaseMapping do
   end
 
   describe "validations" do
-    it { is_expected.to validate_inclusion_of(:mappable_type).in_array(%w[AddOn BillableMetric]) }
+    it { is_expected.to validate_inclusion_of(:mappable_type).in_array(%w[AddOn BillableMetric Product]) }
 
     describe "uniqueness validations" do
       let(:mapping) do

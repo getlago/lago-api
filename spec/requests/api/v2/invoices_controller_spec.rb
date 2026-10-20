@@ -16,10 +16,11 @@ RSpec.describe Api::V2::InvoicesController do
     let(:contract_rate_card) do
       create(:contract_rate_card, organization:, contract: create(:contract, organization:, customer:))
     end
+    let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card) }
 
     before do
       create(:fee, invoice:, subscription: nil, fee_type: :product,
-        invoiceable: contract_rate_card.rate_card.product, contract: contract_rate_card.contract, contract_rate_card:)
+        invoiceable: contract_rate_card.rate_card.product, contract: contract_rate_card.contract, contract_rate_card:, rate_card_rate:)
     end
 
     include_examples "requires API permission", "invoice", "write"

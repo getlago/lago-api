@@ -21,7 +21,7 @@ module BillingSegments
       attach_metered_fees(metered_segments, filtered_aggregations)
 
       invoice.fees.reload
-      Invoices::ComputeAmountsFromFees.call!(invoice:)
+      compute_taxes_and_totals
       invoice.save!
 
       result.invoice = invoice
@@ -38,6 +38,7 @@ module BillingSegments
           fee.invoice = invoice
           fee.billing_entity = invoice.billing_entity
           fee.save!
+          apply_taxes(fee, segment)
         end
       end
     end
@@ -54,13 +55,61 @@ module BillingSegments
     end
 
     def compute_metered_fees(segment, filtered_aggregations)
-      ::Fees::ChargeService.call!(
+      fees_result = ::Fees::ChargeService.call!(
         invoice:,
-        metered_item: ::Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: segment),
+        metered_item: build_metered_item(segment),
         billing_context: Billing::Context.from(contract: segment.contract),
-        options: ::Fees::ChargeService::Options.new(context:, skip_adjusted_fees: true),
+        options: ::Fees::ChargeService::Options.new(
+          context: charge_service_context(segment),
+          skip_adjusted_fees: true
+        ),
         filtered_aggregations: filtered_aggregations[segment.target_key]&.keys || []
       )
+
+      fees_result.fees.each { |fee| apply_taxes(fee, segment) }
+    end
+
+    def apply_taxes(fee, segment)
+      return if customer_provider_taxation?
+
+      ::Fees::ApplyTaxesService.call!(
+        fee:,
+        customer: invoice.customer,
+        plan: segment.contract.catalog_plan
+      )
+      fee.save!
+    end
+
+    def compute_taxes_and_totals
+      invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
+      invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
+
+      totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice:, finalizing: context == :finalize)
+      if totals_result.failure? && !totals_result.error.is_a?(BaseService::UnknownTaxFailure)
+        totals_result.raise_if_error!
+      end
+    end
+
+    def customer_provider_taxation?
+      return @customer_provider_taxation if defined?(@customer_provider_taxation)
+
+      @customer_provider_taxation = invoice.customer.tax_customer.present?
+    end
+
+    def build_metered_item(segment)
+      max_timestamp = if segment.recurring_advance_invoiceable?
+        ::BillingSegment.inclusive_end(segment.started_at)
+      end
+
+      ::Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: segment, max_timestamp:)
+    end
+
+    def charge_service_context(segment)
+      if segment.recurring_advance_invoiceable?
+        :advance_renewal
+      else
+        context
+      end
     end
 
     def event_filters(metered_segments)

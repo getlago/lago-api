@@ -25,7 +25,8 @@ RSpec.describe Webhooks::Plans::CreatedService do
       it_behaves_like "creates webhook", "plan.created", "plan", {
         "code" => String,
         "name" => String,
-        "currency" => String
+        "currency" => String,
+        "taxes" => Array
       }
     end
   end

@@ -117,9 +117,10 @@ RSpec.describe Mutations::CreditNotes::Create, :premium do
     end
     let(:contract) { create(:contract, organization:, customer:) }
     let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
+    let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card) }
     let(:fee1) do
       create(:fee, invoice:, subscription: nil, fee_type: :product, amount_cents: 100, precise_amount_cents: 100, taxes_rate: 0,
-        invoiceable: contract_rate_card.rate_card.product, contract:, contract_rate_card:, taxes_amount_cents: 0,
+        invoiceable: contract_rate_card.rate_card.product, contract:, contract_rate_card:, rate_card_rate:, taxes_amount_cents: 0,
         taxes_precise_amount_cents: 0)
     end
     let(:fee2) { nil }

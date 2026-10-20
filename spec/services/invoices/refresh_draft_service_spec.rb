@@ -362,6 +362,90 @@ RSpec.describe Invoices::RefreshDraftService do
         expect(invoice.fees.sole).to have_attributes(invoiceable: product, amount_cents: 7_500)
       end
 
+      context "with recurring weighted usage" do
+        let(:billable_metric) do
+          create(
+            :billable_metric,
+            organization:,
+            aggregation_type: :weighted_sum_agg,
+            recurring: true,
+            field_name: "value",
+            weighted_interval: :seconds
+          )
+        end
+        let(:product) { create(:product, organization:, billable_metric:) }
+        let(:closing_snapshot) do
+          create(
+            :cached_aggregation,
+            organization:,
+            charge: nil,
+            contract:,
+            product:,
+            external_subscription_id: contract.external_id,
+            event_transaction_id: nil,
+            timestamp: billing_segment.ended_at,
+            current_aggregation: 5
+          )
+        end
+
+        before do
+          create(
+            :event,
+            organization:,
+            customer:,
+            external_subscription_id: contract.external_id,
+            code: billable_metric.code,
+            timestamp: billing_segment.started_at,
+            properties: {value: "10"}
+          )
+          closing_snapshot
+        end
+
+        it "refreshes the existing closing snapshot with late weighted usage" do
+          result = nil
+          expect { result = refresh_service.call }.not_to change(CachedAggregation, :count)
+
+          expect(result).to be_success
+          expect(closing_snapshot.reload.current_aggregation).to eq(10)
+        end
+      end
+
+      context "with an early custom advance renewal" do
+        let(:billable_metric) do
+          create(
+            :custom_billable_metric,
+            organization:,
+            recurring: true,
+            custom_aggregator: <<~RUBY
+              def aggregate(event, previous_state, _aggregation_properties)
+                value = BigDecimal(event.properties['value'].to_s)
+                {total_units: previous_state[:total_units] + value, amount: previous_state[:amount] + value}
+              end
+            RUBY
+          )
+        end
+        let(:product) { create(:product, organization:, billable_metric:) }
+        let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD", billing_timing: :advance) }
+
+        before do
+          create(
+            :event,
+            organization:,
+            customer:,
+            external_subscription_id: contract.external_id,
+            code: billable_metric.code,
+            timestamp: billing_segment.started_at + 1.second,
+            properties: {value: "10"}
+          )
+        end
+
+        it "excludes post-renewal usage without persisting a closing snapshot" do
+          expect(refresh_service.call).to be_success
+          expect(invoice.fees).to be_empty
+          expect(CachedAggregation.where(contract:, product:, timestamp: billing_segment.ended_at)).to be_empty
+        end
+      end
+
       it "hard-deletes the previous draft fees and their applied taxes" do
         previous_fee = create(
           :fee,

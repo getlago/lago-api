@@ -99,7 +99,7 @@ credit_note_generated:
   category: Credit Notes
   deprecated: false
 credit_note_provider_refund_failure:
-  name: credit_note.provider_refund_failure
+  name: credit_note.refund_failure
   description: The refund of a credit note has failed on a payment provider
   category: Credit Notes
   deprecated: false

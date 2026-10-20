@@ -27,7 +27,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
       timestamp: subscription.started_at.end_of_month.to_i
     )
   end
-  let(:agg_result) { BaseService::Result.new }
+  let(:agg_result) { BillableMetrics::Aggregations::BaseService::Result.new }
   let(:subscription_context) { an_instance_of(Billing::Context) }
   let(:metered_item) do
     Fees::ChargeService::MeteredItem.from_charge(
@@ -67,7 +67,9 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
         create(:charge_filter, charge:)
         allow(BillableMetrics::Aggregations::CustomService).to receive(:new).and_return(custom_service)
 
-        agg_service.call
+        result = agg_service.call
+
+        expect(result.pay_in_advance_count_delta).to eq(1)
 
         expect(BillableMetrics::Aggregations::CustomService).to have_received(:new).with(
           event_store: instance_of(Events::Stores::PostgresStore),
@@ -131,7 +133,9 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
       it "delegates to the count aggregation service" do
         allow(BillableMetrics::Aggregations::CountService).to receive(:new).and_return(count_service)
 
-        agg_service.call
+        result = agg_service.call
+
+        expect(result.pay_in_advance_count_delta).to eq(1)
 
         expect(BillableMetrics::Aggregations::CountService).to have_received(:new)
           .with(

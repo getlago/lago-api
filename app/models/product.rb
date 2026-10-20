@@ -5,6 +5,7 @@ class Product < ApplicationRecord
   include Discard::Model
   include CatalogAttachable
   include CatalogCodeFormat
+  include IntegrationMappable
 
   self.discard_column = :deleted_at
 

@@ -43,9 +43,10 @@ RSpec.describe CreditNotes::ValidateItemService do
     context "when the fee is a contract product fee" do
       let(:contract) { create(:contract, customer: invoice.customer, organization: invoice.organization) }
       let(:contract_rate_card) { create(:contract_rate_card, organization: invoice.organization, contract:) }
+      let(:rate_card_rate) { create(:rate_card_rate, organization: invoice.organization, rate_card: contract_rate_card.rate_card) }
       let(:fee) do
         create(:fee, invoice:, subscription: nil, fee_type: :product, amount_cents: 100, precise_amount_cents: 100, taxes_rate: 0,
-          invoiceable: contract_rate_card.rate_card.product, contract:, contract_rate_card:, taxes_amount_cents: 0,
+          invoiceable: contract_rate_card.rate_card.product, contract:, contract_rate_card:, rate_card_rate:, taxes_amount_cents: 0,
           taxes_precise_amount_cents: 0)
       end
 

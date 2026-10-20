@@ -53,7 +53,7 @@ class SendWebhookJob < ApplicationJob
     "customer.vies_check" => Webhooks::Customers::ViesCheckService,
     "credit_note.created" => Webhooks::CreditNotes::CreatedService,
     "credit_note.generated" => Webhooks::CreditNotes::GeneratedService,
-    "credit_note.provider_refund_failure" => Webhooks::CreditNotes::PaymentProviderRefundFailureService,
+    "credit_note.refund_failure" => Webhooks::CreditNotes::PaymentProviderRefundFailureService,
     "integration.provider_error" => Webhooks::Integrations::ProviderErrorService,
     "order.created" => Webhooks::Orders::CreatedService,
     "order.executed" => Webhooks::Orders::ExecutedService,
@@ -146,6 +146,9 @@ class SendWebhookJob < ApplicationJob
   end
 
   def perform(webhook_type, object, options = {}, webhook_id = nil)
+    # Jobs enqueued by the previous release still use the former names.
+    # TODO: Remove after one release.
+    webhook_type = WebhookEndpoint::RENAMED_EVENT_TYPES.fetch(webhook_type, webhook_type)
     raise(NotImplementedError) unless WEBHOOK_SERVICES.include?(webhook_type)
 
     # NOTE: This condition is only temporary to handle enqueued jobs
