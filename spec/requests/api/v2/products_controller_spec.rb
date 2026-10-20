@@ -198,9 +198,10 @@ RSpec.describe Api::V2::ProductsController do
       expect(response).to have_http_status(:success)
       expect(json[:product][:lago_id]).to eq(product.id)
       expect(json[:product][:code]).to eq(product.code)
-      expect(json[:product][:filters_count]).to eq(1)
       expect(json[:product]).to include(deleted_at: nil)
+      expect(json[:product]).not_to have_key(:filters_count)
       expect(json[:product]).not_to have_key(:product_category)
+      expect(json[:product]).not_to have_key(:billable_metric)
     end
 
     context "with expand[]=product_category" do
@@ -230,6 +231,53 @@ RSpec.describe Api::V2::ProductsController do
     context "with expand[]=billable_metric" do
       let(:params) { {expand: %w[billable_metric]} }
 
+      it "embeds the flat billable metric" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:product][:billable_metric]).to eq(
+          JSON.parse(V2::BillableMetricSerializer.new(product.billable_metric).serialize.to_json, symbolize_names: true)
+        )
+        expect(json[:product]).not_to have_key(:product_category)
+      end
+
+      context "when the billable metric is deleted" do
+        before { product.billable_metric.discard! }
+
+        it "embeds it with its deletion date" do
+          subject
+
+          expect(json[:product][:billable_metric]).to include(
+            lago_id: product.billable_metric.id,
+            deleted_at: product.billable_metric.reload.deleted_at.iso8601
+          )
+        end
+      end
+    end
+
+    context "with both expansions" do
+      let(:params) { {expand: %w[billable_metric product_category]} }
+
+      it "embeds both records, in the serializer's order" do
+        subject
+
+        expect(json[:product].keys.last(2)).to eq(%i[product_category billable_metric])
+      end
+
+      context "with a standalone fixed product" do
+        let(:product) { create(:product, :fixed, :standalone, organization:) }
+
+        it "renders both as null" do
+          subject
+
+          expect(json[:product]).to include(product_category: nil, billable_metric: nil)
+        end
+      end
+    end
+
+    context "with an unknown expansion" do
+      let(:params) { {expand: %w[filters]} }
+
       it "returns an invalid expand error listing the allowed expansions" do
         subject
 
@@ -238,7 +286,7 @@ RSpec.describe Api::V2::ProductsController do
           status: 400,
           error: "Bad Request",
           code: "invalid_expand",
-          error_details: {expand: {invalid_values: %w[billable_metric], allowed_values: %w[product_category]}}
+          error_details: {expand: {invalid_values: %w[filters], allowed_values: %w[product_category billable_metric]}}
         )
       end
     end
@@ -299,14 +347,14 @@ RSpec.describe Api::V2::ProductsController do
       end
     end
 
-    it "returns the batched filters counts" do
-      create(:product_filter, organization:, product: usage_item)
-      create(:product_filter, organization:, product: usage_item, code: "second")
+    context "when a product has filters" do
+      before { create(:product_filter, organization:, product: usage_item) }
 
-      subject
+      it "renders no filters count" do
+        subject
 
-      counts = json[:products].to_h { [it[:lago_id], it[:filters_count]] }
-      expect(counts).to eq(usage_item.id => 2, fixed_item.id => 0)
+        expect(json[:products].flat_map(&:keys)).not_to include(:filters_count)
+      end
     end
 
     context "with an product_type filter" do

@@ -18,15 +18,37 @@ RSpec.describe V2::ProductSerializer do
       description: product.description,
       invoice_display_name: product.invoice_display_name,
       product_type: "metered",
-      filters_count: 0,
       created_at: product.created_at.iso8601,
       updated_at: product.updated_at.iso8601,
       deleted_at: nil
     }
   end
 
-  it "serializes the product, without expansions" do
+  it "serializes the product, without counts nor expansions" do
     expect(payload).to eq(flat_payload)
+  end
+
+  context "when the product has filters" do
+    before { create(:product_filter, organization: product.organization, product:) }
+
+    it "renders no filters count" do
+      expect(payload).to eq(flat_payload)
+    end
+  end
+
+  # Passed by the activity log only.
+  context "with the counts option" do
+    let(:options) { {includes: %i[counts]} }
+
+    before do
+      create(:product_filter, organization: product.organization, product:)
+      create(:product_filter, organization: product.organization, product:, deleted_at: Time.current)
+    end
+
+    it "renders the count of the kept filters, right after the product type" do
+      expect(payload).to eq(flat_payload.merge(filters_count: 1))
+      expect(payload.keys.index(:filters_count)).to eq(payload.keys.index(:product_type) + 1)
+    end
   end
 
   context "with the product_category expansion" do
@@ -48,6 +70,14 @@ RSpec.describe V2::ProductSerializer do
           }
         )
       )
+    end
+  end
+
+  context "with the billable_metric expansion" do
+    let(:options) { {includes: %i[billable_metric]} }
+
+    it "embeds the billable metric as V2::BillableMetricSerializer renders it" do
+      expect(payload).to eq(flat_payload.merge(billable_metric: V2::BillableMetricSerializer.new(product.billable_metric).serialize))
     end
   end
 end
