@@ -79,4 +79,32 @@ RSpec.describe Payments::SetPaymentMethodAndCreateReceiptJob do
       expect(payment_method.details).to include("type" => "card", "brand" => "visa", "last4" => "4242")
     end
   end
+
+  context "when payment method creation raises BaseService::LockAcquisitionFailure" do
+    before do
+      allow(PaymentMethods::FindOrCreateFromProviderService)
+        .to receive(:call!)
+        .and_raise(BaseService::LockAcquisitionFailure.new(nil, code: "lock_acquisition_failed", error_message: "Failed to acquire lock"))
+    end
+
+    it "retries the job instead of dying" do
+      expect do
+        described_class.perform_now(payment:, provider_payment_method_id:)
+      end.to have_enqueued_job(described_class)
+    end
+  end
+
+  context "when payment method creation raises ActiveRecord::Deadlocked" do
+    before do
+      allow(PaymentMethods::FindOrCreateFromProviderService)
+        .to receive(:call!)
+        .and_raise(ActiveRecord::Deadlocked)
+    end
+
+    it "retries the job instead of dying" do
+      expect do
+        described_class.perform_now(payment:, provider_payment_method_id:)
+      end.to have_enqueued_job(described_class)
+    end
+  end
 end
