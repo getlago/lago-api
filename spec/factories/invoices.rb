@@ -92,6 +92,7 @@ FactoryBot.define do
 
     trait :progressive_billing_invoice do
       invoice_type { :progressive_billing }
+      progressive_billing_trigger { "usage_threshold" }
       with_subscriptions
       after :create do |invoice|
         create(:applied_usage_threshold, invoice:, organization: invoice.organization)

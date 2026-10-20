@@ -27,6 +27,7 @@ module Invoices
         process_fees
         adjust_fees
         assign_applied_usage_thresholds
+        assign_applied_wallet_expiration
         Invoices::ApplyInvoiceCustomSectionsService.call!(invoice: regenerated_invoice)
         regenerated_invoice.fees_amount_cents = regenerated_invoice.fees.sum(:amount_cents)
         regenerated_invoice.sub_total_excluding_taxes_amount_cents = regenerated_invoice.fees.sum(:amount_cents)
@@ -209,6 +210,10 @@ module Invoices
       end
     end
 
+    def assign_applied_wallet_expiration
+      voided_invoice.applied_wallet_expiration&.dup&.update!(invoice: regenerated_invoice)
+    end
+
     def voided_invoice_fees
       @voided_invoice_fees ||= voided_invoice.fees.where(id: fees_params.map { |fee| fee[:id] }.compact).index_by(&:id)
     end
@@ -287,7 +292,8 @@ module Invoices
         invoice_type: voided_invoice.invoice_type,
         currency: voided_invoice.currency,
         datetime: voided_invoice.created_at,
-        billing_entity: voided_invoice.billing_entity
+        billing_entity: voided_invoice.billing_entity,
+        progressive_billing_trigger: voided_invoice.progressive_billing_trigger
       ).invoice.tap do |invoice|
         invoice.update!(
           voided_invoice_id: voided_invoice.id,
