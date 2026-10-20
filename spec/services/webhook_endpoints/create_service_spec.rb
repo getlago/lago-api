@@ -47,6 +47,22 @@ RSpec.describe WebhookEndpoints::CreateService do
       end
     end
 
+    context "when event_types contains a renamed event type" do
+      let(:create_params) do
+        {
+          webhook_url: "http://foo.bar",
+          event_types: ["credit_note.provider_refund_failure"]
+        }
+      end
+
+      it "stores its current name" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.webhook_endpoint.event_types).to eq(["credit_note.refund_failure"])
+      end
+    end
+
     context "when webhook url is invalid" do
       let(:create_params) do
         {

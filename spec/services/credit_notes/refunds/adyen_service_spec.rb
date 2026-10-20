@@ -137,7 +137,7 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
         expect { adyen_service.create }
           .to raise_error(Adyen::AdyenError)
 
-        expect(Utils::ActivityLog).to have_produced("credit_note.refund_failure").with(credit_note)
+        expect(Utils::ActivityLog).to have_produced("credit_note.provider_refund_failure").with(credit_note)
       end
     end
 
@@ -365,7 +365,7 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
           status: "failed"
         )
 
-        expect(Utils::ActivityLog).to have_produced("credit_note.refund_failure").with(credit_note)
+        expect(Utils::ActivityLog).to have_produced("credit_note.provider_refund_failure").with(credit_note)
       end
     end
   end

@@ -103,6 +103,17 @@ RSpec.describe WebhookEndpoints::UpdateService do
       end
     end
 
+    context "when event_types contains a renamed event type" do
+      let(:update_params) { {event_types: ["customer.updated", "credit_note.provider_refund_failure"]} }
+
+      it "stores its current name" do
+        result = update_service.call
+
+        expect(result).to be_success
+        expect(result.webhook_endpoint.event_types).to eq(["customer.updated", "credit_note.refund_failure"])
+      end
+    end
+
     context "when event_types is explicitly set to null" do
       let(:update_params) { {event_types: nil} }
 

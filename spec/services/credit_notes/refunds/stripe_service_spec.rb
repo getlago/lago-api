@@ -198,7 +198,7 @@ RSpec.describe CreditNotes::Refunds::StripeService do
       it "produces an activity log" do
         stripe_service.create
 
-        expect(Utils::ActivityLog).to have_produced("credit_note.refund_failure").with(credit_note)
+        expect(Utils::ActivityLog).to have_produced("credit_note.provider_refund_failure").with(credit_note)
       end
 
       [
@@ -670,7 +670,7 @@ RSpec.describe CreditNotes::Refunds::StripeService do
           status: "failed"
         )
 
-        expect(Utils::ActivityLog).to have_produced("credit_note.refund_failure").with(credit_note)
+        expect(Utils::ActivityLog).to have_produced("credit_note.provider_refund_failure").with(credit_note)
       end
     end
   end
