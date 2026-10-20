@@ -1,6 +1,14 @@
 # frozen_string_literal: true
 
 class ModelSerializer
+  # Prepended by `expandable`, so that a serializer cannot declare an expansion and forget to
+  # render it.
+  module RendersExpansions
+    def serialize
+      super.merge(expanded_payload)
+    end
+  end
+
   NO_EXPANSIONS = {}.freeze
 
   # Set once per serializer, when its class is loaded, through `expandable`.
@@ -9,9 +17,10 @@ class ModelSerializer
   attr_reader :model, :options
 
   # Lets a native v2 endpoint embed `model.<name>` on `expand[]=<name>`, rendered by `serializer`
-  # without includes, so that the embedded record stays flat. The serializer splats
-  # `expanded_payload` in its payload.
+  # without includes, so that the embedded record stays flat. It comes last in `serialize`.
   def self.expandable(name, serializer:)
+    prepend(RendersExpansions)
+
     self.expansions = expansions.merge(name.to_sym => serializer).freeze
   end
 

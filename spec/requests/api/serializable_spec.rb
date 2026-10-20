@@ -21,7 +21,7 @@ RSpec.describe Api::Serializable do
       expandable :product_category, serializer: ::V2::ProductCategorySerializer
       expandable :billable_metric, serializer: metric_serializer
 
-      def serialize = {code: model.code, **expanded_payload}
+      def serialize = {code: model.code}
     end
   end
 
