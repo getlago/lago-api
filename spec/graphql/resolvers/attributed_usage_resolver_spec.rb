@@ -111,11 +111,11 @@ RSpec.describe Resolvers::AttributedUsageResolver, clickhouse: {clean_before: tr
     )
     expect(rows_summary).to eq(
       [
-        {"value" => "eng", "rank" => 1, "eventsCount" => 3, "amountCents" => nil},
-        {"value" => "data", "rank" => 2, "eventsCount" => 1, "amountCents" => nil}
+        {"value" => "data", "rank" => 1, "eventsCount" => 1, "amountCents" => nil},
+        {"value" => "eng", "rank" => 2, "eventsCount" => 3, "amountCents" => nil}
       ]
     )
-    expect(attributed_usage["rows"].first["chargesUsage"]).to match_array(
+    expect(attributed_usage["rows"].find { it["value"] == "eng" }["chargesUsage"]).to match_array(
       [
         {"charge" => {"id" => tokens_charge.id}, "chargeFilter" => nil, "units" => 1500.0, "amountCents" => nil, "preciseAmountCents" => nil, "eventsCount" => 2},
         {"charge" => {"id" => requests_charge.id}, "chargeFilter" => nil, "units" => 1.0, "amountCents" => nil, "preciseAmountCents" => nil, "eventsCount" => 1}
@@ -189,7 +189,7 @@ RSpec.describe Resolvers::AttributedUsageResolver, clickhouse: {clean_before: tr
     let(:variables) { {subscriptionId: subscription.id, groupBy: "team", page: 2, limit: 1} }
 
     it "returns the requested page" do
-      expect(rows_summary.map { it.slice("value", "rank") }).to eq([{"value" => "data", "rank" => 2}])
+      expect(rows_summary.map { it.slice("value", "rank") }).to eq([{"value" => "eng", "rank" => 2}])
       expect(attributed_usage["metadata"]).to eq("currentPage" => 2, "limitValue" => 1, "totalCount" => 2, "totalPages" => 2)
     end
   end

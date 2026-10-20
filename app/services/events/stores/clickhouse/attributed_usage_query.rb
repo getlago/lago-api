@@ -25,7 +25,7 @@ module Events
         Cell = Data.define(:charge_id, :charge_filter_id, :priced, :column_index, :rank)
 
         SCALE = 12
-        ORDERS = {"amount" => "amount", "events_count" => "events"}.freeze
+        ORDERS = {"amount" => "amount", "units" => "units", "events_count" => "events"}.freeze
 
         def initialize(organization_id:, external_subscription_id:, from_datetime:, to_datetime:, group_key:, label_filters:,
           charge_columns:, order_by:, search:, limit:, offset:, deduplicate:, max_groups:, max_execution_time:)
@@ -85,6 +85,7 @@ module Events
                     node,
                     #{cells_sql.join(", ")},
                     #{amount_sql} AS amount,
+                    #{units_sql} AS units,
                     count() AS events
                   FROM (
                     SELECT #{event_columns_sql.join(", ")}
@@ -178,6 +179,11 @@ module Events
         def amount_sql
           priced = cells.each_index.select { cells[it].priced }
           priced.any? ? priced.map { "amount_#{it}" }.join(" + ") : decimal_sql(0)
+        end
+
+        # The units of every charge, which ranks the values on the units basis.
+        def units_sql
+          cells.each_index.map { "units_#{it}" }.join(" + ")
         end
 
         def level_windows_sql

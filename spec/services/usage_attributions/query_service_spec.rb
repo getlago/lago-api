@@ -184,10 +184,10 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
       allow(UsageAttributions::ChargePriceLookupService).to receive(:call!).and_call_original
     end
 
-    it "returns the units ranked by events, without amounts" do
+    it "returns the units ranked by units, without amounts" do
       expect(result.basis).to eq("units")
-      expect(summary(result.rows)).to eq([["eng", nil, 3], ["data", nil, 1]])
-      expect(cells_of(result.rows.first)).to eq(
+      expect(summary(result.rows)).to eq([["data", nil, 1], ["eng", nil, 3]])
+      expect(cells_of(result.rows.find { it.value == "eng" })).to eq(
         [
           [requests_charge.id, nil, 1, nil, 1],
           [tokens_charge.id, nil, 1500, nil, 2]
@@ -205,7 +205,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
       subject(:result) { described_class.call(subscription:, group_by:, split_charge: tokens_charge) }
 
       it "returns the units of each filter" do
-        expect(cells_of(result.rows.first)).to eq(
+        expect(cells_of(result.rows.find { it.value == "eng" })).to eq(
           [
             [requests_charge.id, nil, 1, nil, 1],
             [tokens_charge.id, nil, 500, nil, 1],
@@ -255,6 +255,55 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
 
       it "reads the level as a top level" do
         expect(result).to be_success
+      end
+    end
+  end
+
+  context "when the customer reached the values limit of the type", cache: :memory do
+    let(:limited_type) { organization.usage_attribution_types.find_by(code: "team") }
+    let(:limited_customer) { customer }
+
+    before do
+      stub_const("UsageAttributionValue::MAX_PER_CUSTOMER_AND_TYPE", 1)
+      create(:usage_attribution_value, organization:, customer: limited_customer, usage_attribution_type: limited_type, value: "eng")
+    end
+
+    it "returns a validation failure" do
+      expect(result.error.messages).to eq(group_by: ["too_many_values"])
+    end
+
+    context "when grouping by another type" do
+      let(:group_by) { "user" }
+
+      it "reads the level" do
+        expect(result).to be_success
+      end
+    end
+
+    context "when another customer reached it" do
+      let(:limited_customer) { create(:customer, organization:) }
+
+      it "reads the level" do
+        expect(result).to be_success
+      end
+    end
+
+    context "when the type is read under a parent filter" do
+      let(:department_type) { create(:usage_attribution_type, organization:, code: "department") }
+      let(:limited_type) { create(:usage_attribution_type, organization:, code: "squad", parent: department_type) }
+      let(:group_by) { "squad" }
+      let(:filters) { {"department" => "rnd"} }
+
+      it "reads the level" do
+        expect(result).to be_success
+      end
+
+      context "without the parent filter" do
+        let(:filters) { {} }
+
+        it "returns a validation failure" do
+          expect(result.error.messages).to eq(group_by: %w[parent_filter_required too_many_values])
+        end
       end
     end
   end
@@ -556,7 +605,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     let(:split_charge) { requests_charge }
     let(:search) { "a" * 101 }
     let(:basis) { "euros" }
-    let(:order_by) { "units" }
+    let(:order_by) { "value" }
     let(:limit) { 101 }
     let(:offset) { -1 }
 
