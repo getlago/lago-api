@@ -2,18 +2,11 @@
 
 module V2
   class RateCardSerializer < ModelSerializer
-    # The latest effective rate, as RateCard#active_rate selects it.
-    expandable(:active_rate, serializer: ::V2::RateCardRateSerializer) { active_rate }
-    # As /taxes lists them.
-    expandable(:taxes, serializer: ::V2::TaxSerializer) { model.applied_taxes.listed.preload(:tax).filter_map(&:tax) }
-    # As /rates lists them, sorted in memory so that each status reads its siblings from the
-    # loaded rates rather than querying them.
-    expandable(:rates, serializer: ::V2::RateCardRateSerializer) { model.rates.sort_by(&:effective_from).reverse }
+    expandable :active_rate, serializer: ::V2::RateCardRateSerializer
+    expandable :taxes, serializer: ::V2::TaxSerializer
+    expandable :rates, serializer: ::V2::RateCardRateSerializer
     expandable :product, serializer: ::V2::ProductSerializer
-    # With the keys of its values, rather than one billable metric filter query per value.
-    expandable(:product_filter, serializer: ::V2::ProductFilterSerializer) do
-      model.product_filter&.tap { ActiveRecord::Associations::Preloader.new(records: [it], associations: {values: :billable_metric_filter}).call }
-    end
+    expandable :product_filter, serializer: ::V2::ProductFilterSerializer
 
     def serialize
       {
@@ -38,12 +31,25 @@ module V2
 
     private
 
-    # From the rates when they are expanded too, so that both expansions read the same rows.
+    # The latest effective rate, as RateCard#active_rate selects it. From the rates when they are
+    # expanded too, so that both expansions read the same rows.
     def active_rate
       return model.active_rate unless include?(:rates)
 
       now = Time.current
       model.rates.select { it.effective_from <= now }.max_by(&:effective_from)
+    end
+
+    # As /taxes lists them.
+    def taxes = model.applied_taxes.listed.preload(:tax).filter_map(&:tax)
+
+    # As /rates lists them, sorted in memory so that each status reads its siblings from the
+    # loaded rates rather than querying them.
+    def rates = model.rates.sort_by(&:effective_from).reverse
+
+    # With the keys of its values, rather than one billable metric filter query per value.
+    def product_filter
+      model.product_filter&.tap { ActiveRecord::Associations::Preloader.new(records: [it], associations: {values: :billable_metric_filter}).call }
     end
   end
 end
