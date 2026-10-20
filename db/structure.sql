@@ -502,6 +502,7 @@ DROP INDEX IF EXISTS public.index_uniq_wallet_code_per_customer;
 DROP INDEX IF EXISTS public.index_uniq_invoice_subscriptions_on_fixed_charges_boundaries;
 DROP INDEX IF EXISTS public.index_uniq_invoice_subscriptions_on_charges_from_to_datetime;
 DROP INDEX IF EXISTS public.index_taxes_on_organization_id;
+DROP INDEX IF EXISTS public.index_taxes_by_cursor;
 DROP INDEX IF EXISTS public.index_subscriptions_on_status;
 DROP INDEX IF EXISTS public.index_subscriptions_on_started_at_and_ending_at;
 DROP INDEX IF EXISTS public.index_subscriptions_on_started_at;
@@ -12039,6 +12040,13 @@ CREATE INDEX index_subscriptions_on_status ON public.subscriptions USING btree (
 
 
 --
+-- Name: index_taxes_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_taxes_by_cursor ON public.taxes USING btree (organization_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_taxes_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -15854,6 +15862,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261020144205'),
 ('20261020074217'),
 ('20261019074555'),
 ('20261014123350'),

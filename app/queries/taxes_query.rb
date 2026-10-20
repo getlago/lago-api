@@ -7,16 +7,16 @@ class TaxesQuery < BaseQuery
   DEFAULT_ORDER = "name"
 
   def call
-    taxes = base_scope.result.preload(:billing_entities)
+    taxes = base_scope.result
+    taxes = taxes.preload(:billing_entities) unless pagination.is_a?(CursorPagination::Cursor)
 
     taxes = with_auto_generated(taxes) if filters.auto_generated.present?
     taxes = with_applied_to_organization(taxes) unless filters.applied_to_organization.nil?
 
-    taxes = paginate(taxes)
     taxes = taxes.order(order)
     taxes = apply_consistent_ordering(taxes)
 
-    result.taxes = taxes
+    result.taxes = paginate(taxes)
     result
   end
 
