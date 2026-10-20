@@ -389,5 +389,24 @@ RSpec.describe EInvoices::CreditNotes::Cii::Builder do
         end
       end
     end
+
+    context "with partially credited subscription fees" do
+      let(:subscription) { create(:subscription, customer:, plan:) }
+      let(:fee) do
+        create(:fee, invoice:, subscription:, fee_type: :subscription, units: 8,
+          amount_cents: 8000, precise_amount_cents: 8000, precise_unit_amount: 10)
+      end
+      let(:credit_note) { create(:credit_note, invoice:, total_amount_cents: 2000) }
+      let(:credit_note_item1) do
+        create(:credit_note_item, credit_note:, fee:, amount_cents: 2000, precise_amount_cents: 2000)
+      end
+      let(:credit_note_item2) { nil }
+
+      it "keeps the full negative quantity and original unit price with the credited line total" do
+        expect(subject).to contains_xml_node("//ram:IncludedSupplyChainTradeLineItem[1]//ram:BilledQuantity").with_value("-8.0")
+        expect(subject).to contains_xml_node("//ram:IncludedSupplyChainTradeLineItem[1]//ram:NetPriceProductTradePrice/ram:ChargeAmount").with_value("10.0")
+        expect(subject).to contains_xml_node("//ram:IncludedSupplyChainTradeLineItem[1]//ram:LineTotalAmount").with_value("-20.00")
+      end
+    end
   end
 end
