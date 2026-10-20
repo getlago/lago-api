@@ -761,10 +761,22 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
 
       before { cached_aggregation }
 
-      it "assigns a pay_in_advance aggregation" do
+      it "keeps the subscription event-count contribution without new billed units" do
         result = sum_service.aggregate
 
         expect(result.pay_in_advance_aggregation).to eq(0)
+        expect(result.pay_in_advance_count_delta).to eq(1)
+      end
+
+      context "when the event value is zero" do
+        let(:properties) { {total_count: 0} }
+
+        it "keeps the event-count contribution" do
+          result = sum_service.aggregate
+
+          expect(result.pay_in_advance_aggregation).to be_zero
+          expect(result.pay_in_advance_count_delta).to eq(1)
+        end
       end
     end
 
