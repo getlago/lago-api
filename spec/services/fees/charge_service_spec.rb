@@ -4742,6 +4742,50 @@ RSpec.describe Fees::ChargeService, :premium do
       end
     end
 
+    context "with presentation group keys" do
+      let(:charge) do
+        create(:standard_charge, plan: subscription.plan, billable_metric:, properties: {amount: "20", presentation_group_keys: [{value: "region"}]})
+      end
+
+      it "persists no breakdowns, as only weighted sum reads them back" do
+        result = charge_subscription_service.call
+
+        expect(result.fees.sole.presentation_breakdowns.map(&:presentation_by)).to eq([{"region" => "eu"}])
+        expect(snapshots.sole.presentation_breakdowns).to eq([])
+      end
+    end
+
+    context "with charge filters read in one scan", clickhouse: {clean_before: true} do
+      let(:organization) { create(:organization, clickhouse_events_store: true, feature_flags: ["charge_filters_single_scan"]) }
+      let(:region) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
+      let(:eu_filter) { create(:charge_filter, charge:, properties: {amount: "20"}) }
+      let(:us_filter) { create(:charge_filter, charge:, properties: {amount: "20"}) }
+
+      before do
+        create(:charge_filter_value, charge_filter: eu_filter, billable_metric_filter: region, values: ["eu"])
+        create(:charge_filter_value, charge_filter: us_filter, billable_metric_filter: region, values: ["us"])
+
+        {"eu" => 10, "us" => 5}.each do |value_region, value|
+          create(:clickhouse_events_enriched, organization:, subscription:, billable_metric:,
+            timestamp: Time.zone.parse("2022-03-16"), enriched_at: now - RecurringAggregationSnapshot::WATERMARK_LAG - 1.minute,
+            properties: {"value" => value.to_s, "region" => value_region}, value: value.to_s, decimal_value: value)
+        end
+
+        # Each filter's aggregation takes time: the watermark must not move between them
+        ticks = 0
+        allow(Time).to receive(:current).and_wrap_original { |original| original.call + (ticks += 1).seconds }
+        allow(Events::Stores::Utils::ClickhouseConnection).to receive(:connection_with_retry).and_call_original
+      end
+
+      it "reads the events of every filter once and persists their snapshots at one watermark" do
+        charge_subscription_service.call
+
+        expect(Events::Stores::Utils::ClickhouseConnection).to have_received(:connection_with_retry).once
+        expect(snapshots.pluck(:charge_filter_id, :units)).to match_array([[eu_filter.id, 10], [us_filter.id, 5], [nil, 0]])
+        expect(snapshots.distinct.pluck(:watermark).size).to eq(1)
+      end
+    end
+
     context "with a prorated charge" do
       let(:charge) do
         create(:standard_charge, plan: subscription.plan, billable_metric:, prorated: true, properties: {amount: "20"})

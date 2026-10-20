@@ -582,6 +582,9 @@ module Fees
 
       # A missing snapshot falls back to a full scan, a partial one would lose the missing groups
       if aggregation_results.none? { it.recurring_units.nil? }
+        # Only weighted sum reads its breakdowns back, and a sum's are not bounded by the watermark
+        breakdowns_by_group = {} unless selected_metered_item.billable_metric.weighted_sum_agg?
+
         recurring_snapshots << {
           charge: selected_metered_item.charge,
           charge_filter: selected_metered_item.charge_filter,
@@ -597,7 +600,8 @@ module Fees
 
     def recurring_watermark(selected_metered_item)
       if selected_metered_item.billable_metric.recurring? && snapshot_recurring_units?(selected_metered_item)
-        (Time.current - RecurringAggregationSnapshot::WATERMARK_LAG).floor(3)
+        # One per charge: the filters share a scan keyed on it (see ChargeFiltersScan#recurring_rows_for)
+        @recurring_watermark ||= (Time.current - RecurringAggregationSnapshot::WATERMARK_LAG).floor(3)
       end
     end
 
