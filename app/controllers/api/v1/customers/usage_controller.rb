@@ -3,7 +3,7 @@
 module Api
   module V1
     module Customers
-      class UsageController < Api::BaseController
+      class UsageController < Api::V1::BaseController
         def current
           apply_taxes = ActiveModel::Type::Boolean.new.cast(params.fetch(:apply_taxes, true))
           usage_filters = UsageFilters.init_from_params(params)

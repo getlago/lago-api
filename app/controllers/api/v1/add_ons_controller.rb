@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class AddOnsController < Api::BaseController
+    class AddOnsController < Api::V1::BaseController
       def create
         result = AddOns::CreateService.call(
           input_params

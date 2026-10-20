@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class FeesController < Api::BaseController
+    class FeesController < Api::V1::BaseController
       def show
         fee = Fee.from_organization(current_organization)
           .find_by(id: params[:id])

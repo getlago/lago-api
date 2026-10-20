@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class SecurityLogsController < Api::BaseController
+    class SecurityLogsController < Api::V1::BaseController
       include PremiumFeatureOnly
 
       skip_audit_logs!

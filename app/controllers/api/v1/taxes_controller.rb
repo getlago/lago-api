@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class TaxesController < Api::BaseController
+    class TaxesController < Api::V1::BaseController
       def create
         result = Taxes::CreateService.call(organization: current_organization, params: input_params)
 

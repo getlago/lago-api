@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class SubscriptionsController < Api::BaseController
+    class SubscriptionsController < Api::V1::BaseController
       include SubscriptionIndex
 
       def create

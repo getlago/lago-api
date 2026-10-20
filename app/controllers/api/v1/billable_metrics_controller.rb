@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class BillableMetricsController < Api::BaseController
+    class BillableMetricsController < Api::V1::BaseController
       def create
         result = ::BillableMetrics::CreateService.call(
           input_params.merge(organization_id: current_organization.id).to_h.deep_symbolize_keys

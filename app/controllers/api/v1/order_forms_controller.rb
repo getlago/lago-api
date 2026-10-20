@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class OrderFormsController < Api::BaseController
+    class OrderFormsController < Api::V1::BaseController
       before_action :ensure_feature_flag!
 
       def index

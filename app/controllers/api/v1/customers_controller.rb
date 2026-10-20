@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class CustomersController < Api::BaseController
+    class CustomersController < Api::V1::BaseController
       def create
         result = ::Customers::UpsertFromApiService.call(
           organization: current_organization,

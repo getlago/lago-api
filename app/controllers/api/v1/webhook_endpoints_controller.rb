@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class WebhookEndpointsController < Api::BaseController
+    class WebhookEndpointsController < Api::V1::BaseController
       def create
         service = ::WebhookEndpoints::CreateService.new(
           organization: current_organization,

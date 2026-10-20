@@ -3,7 +3,7 @@
 module Api
   module V1
     module Customers
-      class AttributedUsageController < Api::BaseController
+      class AttributedUsageController < Api::V1::BaseController
         DEFAULT_PER_PAGE = UsageAttributions::QueryService::DEFAULT_LIMIT
         MAX_PER_PAGE = UsageAttributions::QueryService::MAX_LIMIT
         QUERY_LIMIT_ERRORS = %w[too_many_groups query_timeout memory_limit_exceeded].freeze

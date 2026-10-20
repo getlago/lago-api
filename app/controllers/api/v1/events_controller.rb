@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class EventsController < Api::BaseController
+    class EventsController < Api::V1::BaseController
       skip_audit_logs!
 
       before_action :ensure_organization_uses_clickhouse, only: [:index_enriched]

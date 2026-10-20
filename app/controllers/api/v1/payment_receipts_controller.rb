@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class PaymentReceiptsController < Api::BaseController
+    class PaymentReceiptsController < Api::V1::BaseController
       def index
         result = PaymentReceiptsQuery.call(
           organization: current_organization,

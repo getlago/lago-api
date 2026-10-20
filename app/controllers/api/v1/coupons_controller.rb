@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class CouponsController < Api::BaseController
+    class CouponsController < Api::V1::BaseController
       def create
         result = Coupons::CreateService.call(
           input_params.merge(organization_id: current_organization.id).to_h

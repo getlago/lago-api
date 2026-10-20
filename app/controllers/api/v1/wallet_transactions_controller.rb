@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class WalletTransactionsController < Api::BaseController
+    class WalletTransactionsController < Api::V1::BaseController
       def create
         result = WalletTransactions::CreateFromParamsService.call(
           organization: current_organization,

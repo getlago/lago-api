@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class FeaturesController < Api::BaseController
+    class FeaturesController < Api::V1::BaseController
       def index
         result = ::Entitlement::FeaturesQuery.call(
           organization: current_organization,

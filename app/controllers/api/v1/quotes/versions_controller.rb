@@ -3,7 +3,7 @@
 module Api
   module V1
     module Quotes
-      class VersionsController < Api::BaseController
+      class VersionsController < Api::V1::BaseController
         before_action :ensure_feature_flag!
         before_action :find_quote
 
