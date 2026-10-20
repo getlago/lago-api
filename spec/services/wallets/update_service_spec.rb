@@ -62,6 +62,19 @@ RSpec.describe Wallets::UpdateService do
       end
     end
 
+    context "when an empty rules array is sent without Premium" do
+      let(:params) { super().merge(recurring_transaction_rules: []) }
+      let(:recurring_rule) { create(:recurring_transaction_rule, wallet:) }
+
+      before { recurring_rule }
+
+      it "keeps the existing rules and still updates the wallet" do
+        expect { result }.not_to change { wallet.reload.recurring_transaction_rules.count }
+        expect(result).to be_success
+        expect(wallet.reload.name).to eq("new name")
+      end
+    end
+
     context "when purchase_order_number is present" do
       let(:params) do
         super().merge(purchase_order_number: "PO-WALLET-123")
