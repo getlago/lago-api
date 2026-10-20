@@ -46,10 +46,13 @@ RSpec.describe CreditNotes::GeneratePdfService do
         create(:contract_rate_card, organization:, contract: create(:contract, organization:, customer:),
           rate_card: create(:rate_card, organization:, product:))
       end
+      let(:rate_card_rate) do
+        create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card)
+      end
       let(:fee) do
         create(:fee, invoice:, subscription: nil, fee_type: :product, invoiceable: product,
           invoice_display_name:, contract: contract_rate_card.contract,
-          contract_rate_card:, units: 8, amount_cents: 8000, precise_amount_cents: 8000,
+          contract_rate_card:, rate_card_rate:, units: 8, amount_cents: 8000, precise_amount_cents: 8000,
           precise_unit_amount: 10, taxes_rate: 0, taxes_amount_cents: 0, taxes_precise_amount_cents: 0)
       end
       let(:credit_note) { create(:credit_note, invoice:, customer:, total_amount_cents: 2000, taxes_amount_cents: 0) }
@@ -150,9 +153,12 @@ RSpec.describe CreditNotes::GeneratePdfService do
             create(:contract_rate_card, organization:, contract: create(:contract, organization:, customer:),
               rate_card: create(:rate_card, organization:, product:))
           end
+          let(:rate_card_rate) do
+            create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card)
+          end
           let(:fee) do
             create(:fee, invoice:, subscription: nil, fee_type: :product, invoiceable: product,
-              contract: contract_rate_card.contract, contract_rate_card:, units: 8,
+              contract: contract_rate_card.contract, contract_rate_card:, rate_card_rate:, units: 8,
               amount_cents: 8000, precise_amount_cents: 8000, precise_unit_amount: 10,
               taxes_rate: 0, taxes_amount_cents: 0, taxes_precise_amount_cents: 0)
           end

@@ -747,13 +747,21 @@ RSpec.describe "templates/credit_notes/credit_note.slim" do
     end
     let(:product_one) { create(:product, :standalone, organization:, name: "Product at ten") }
     let(:product_two) { create(:product, :standalone, organization:, name: "Product at twenty") }
+    let(:rate_card_rate_one) do
+      create(:rate_card_rate, organization:, rate_card: create(:rate_card, organization:, product: product_one))
+    end
+    let(:rate_card_rate_two) do
+      create(:rate_card_rate, organization:, rate_card: create(:rate_card, organization:, product: product_two))
+    end
     let(:fee_one) do
       create(:fee, invoice:, subscription: nil, fee_type: :product, invoiceable: product_one,
+        rate_card_rate: rate_card_rate_one,
         invoice_display_name: "Ten Percent Product", amount_cents: 1000, precise_amount_cents: 1000,
         amount_currency: "USD", taxes_amount_cents: 100, taxes_precise_amount_cents: 100)
     end
     let(:fee_two) do
       create(:fee, invoice:, subscription: nil, fee_type: :product, invoiceable: product_two,
+        rate_card_rate: rate_card_rate_two,
         invoice_display_name: "Twenty Percent Product", amount_cents: 500, precise_amount_cents: 500,
         amount_currency: "USD", taxes_amount_cents: 100, taxes_precise_amount_cents: 100)
     end
