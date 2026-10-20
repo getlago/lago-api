@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::Serializable, type: :request do
+RSpec.describe Api::Serializable do
   # A nil expand is left out of the request: a GET would send it as `expand=`, an empty value.
   subject(:show) { get_with_token(organization, "/api/v2/serializable_tests/#{product.code}", {expand:}.compact) }
 
