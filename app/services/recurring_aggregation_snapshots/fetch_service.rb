@@ -41,7 +41,7 @@ module RecurringAggregationSnapshots
         organization_id: subscription.organization_id,
         subscription_id: subscription.id,
         charge_id: charge.id,
-        charge_filter_id: charge_filter&.persisted? ? charge_filter.id : nil
+        charge_filter_id: charge_filter&.id
       ).where(to_datetime: ...from_datetime)
 
       scope.where(to_datetime: scope.select("MAX(to_datetime)"))

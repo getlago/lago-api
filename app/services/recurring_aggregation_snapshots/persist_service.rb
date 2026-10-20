@@ -45,7 +45,7 @@ module RecurringAggregationSnapshots
           organization_id: subscription.organization_id,
           subscription_id: subscription.id,
           charge_id: charge.id,
-          charge_filter_id:,
+          charge_filter_id: charge_filter&.id,
           billable_metric_id: charge.billable_metric_id,
           grouped_by: value[:grouped_by] || {},
           to_datetime:,
@@ -54,11 +54,6 @@ module RecurringAggregationSnapshots
           presentation_breakdowns: value[:presentation_breakdowns] || []
         }
       end
-    end
-
-    # The default bucket of a charge with filters is an unsaved ChargeFilter
-    def charge_filter_id
-      charge_filter&.persisted? ? charge_filter.id : nil
     end
   end
 end
