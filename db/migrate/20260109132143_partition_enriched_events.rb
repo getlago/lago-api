@@ -8,9 +8,11 @@ class PartitionEnrichedEvents < ActiveRecord::Migration[8.0]
         return
       end
 
+      parent_table = connection.quote("#{connection.current_schema}.enriched_events")
+
       execute <<~SQL
         SELECT partman.create_parent(
-          p_parent_table := 'public.enriched_events',
+          p_parent_table := #{parent_table},
           p_control := 'timestamp',
           p_interval := '1 month',
           p_type := 'range',
@@ -24,7 +26,7 @@ class PartitionEnrichedEvents < ActiveRecord::Migration[8.0]
         SET infinite_time_partitions = true,
             retention = '14 months', -- Handle yearly plan with large grace periods
             retention_keep_table = true
-        WHERE parent_table = 'public.enriched_events';
+        WHERE parent_table = #{parent_table};
       SQL
     end
   end

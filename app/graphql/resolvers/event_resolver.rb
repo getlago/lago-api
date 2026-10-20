@@ -5,6 +5,8 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
+    REQUIRED_PERMISSION = "developers:manage"
+
     description "Query a single event of an organization"
 
     argument :code, String, required: false, description: "Billable metric code of the event"

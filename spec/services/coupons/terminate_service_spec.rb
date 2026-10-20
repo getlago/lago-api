@@ -18,6 +18,12 @@ RSpec.describe Coupons::TerminateService do
       expect(result.coupon).to be_terminated
     end
 
+    it "enqueues a coupon.terminated webhook" do
+      terminate_service.call
+
+      expect(SendWebhookJob).to have_been_enqueued.with("coupon.terminated", coupon)
+    end
+
     context "when coupon is already terminated" do
       before { coupon.mark_as_terminated! }
 
@@ -28,6 +34,12 @@ RSpec.describe Coupons::TerminateService do
         expect(result).to be_success
         expect(result.coupon).to be_terminated
         expect(result.coupon.terminated_at).to eq(terminated_at)
+      end
+
+      it "does not enqueue a webhook" do
+        terminate_service.call
+
+        expect(SendWebhookJob).not_to have_been_enqueued
       end
     end
   end
@@ -66,6 +78,13 @@ RSpec.describe Coupons::TerminateService do
 
     it "terminates the expired coupons" do
       expect(Coupon.terminated.count).to eq(3)
+    end
+
+    it "enqueues a coupon.terminated webhook for each expired coupon" do
+      expect(SendWebhookJob).to have_been_enqueued.exactly(3).times
+      to_expire_coupons.each do |coupon|
+        expect(SendWebhookJob).to have_been_enqueued.with("coupon.terminated", coupon)
+      end
     end
   end
 end

@@ -234,4 +234,41 @@ RSpec.describe ::V1::InvoiceSerializer do
       expect(result["invoice"]["applied_taxes"].sole["lago_tax_id"]).to be_present
     end
   end
+
+  context "with an x402 payment link" do
+    subject(:serializer) { described_class.new(x402_invoice, root_name: "invoice") }
+
+    let(:x402_customer) { create(:customer) }
+    let(:x402_invoice) { create(:invoice, customer: x402_customer, x402_payment_token: "ab" * 32) }
+
+    context "without x402 payments" do
+      it "omits x402_payment_url" do
+        expect(JSON.parse(serializer.to_json)["invoice"]).not_to have_key("x402_payment_url")
+      end
+    end
+
+    context "with x402 payments enabled" do
+      let(:x402_customer) { create(:customer, organization: create(:organization, feature_flags: ["x402_payments"])) }
+
+      context "without premium" do
+        it "omits x402_payment_url" do
+          expect(JSON.parse(serializer.to_json)["invoice"]).not_to have_key("x402_payment_url")
+        end
+      end
+
+      context "with premium", :premium do
+        it "serializes x402_payment_url" do
+          expect(JSON.parse(serializer.to_json)["invoice"]["x402_payment_url"]).to eq(x402_invoice.x402_payment_url)
+        end
+
+        context "without a minted link" do
+          let(:x402_invoice) { create(:invoice, customer: x402_customer) }
+
+          it "serializes a null x402_payment_url" do
+            expect(JSON.parse(serializer.to_json)["invoice"]).to include("x402_payment_url" => nil)
+          end
+        end
+      end
+    end
+  end
 end

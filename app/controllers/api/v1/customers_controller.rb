@@ -206,6 +206,11 @@ module Api
       def resource_name
         "customer"
       end
+
+      # The portal token lets its holder update the customer and top up wallets.
+      def mode
+        (action_name == "portal_url") ? "write" : super
+      end
     end
   end
 end

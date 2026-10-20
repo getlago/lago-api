@@ -17,7 +17,7 @@ module Types
       field :executed_at, GraphQL::Types::ISO8601DateTime, null: true
       field :execution_record, Types::Orders::ExecutionRecord, null: false
 
-      field :activity_logs, [Types::ActivityLogs::Object], null: true
+      field :activity_logs, [Types::ActivityLogs::Object], null: true, permission: "audit_logs:view"
       field :customer, Types::Customers::Object, null: false
       field :order_form, Types::OrderForms::Object, null: false
       field :organization, Types::Organizations::OrganizationType, null: false

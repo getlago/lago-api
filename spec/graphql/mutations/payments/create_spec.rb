@@ -39,6 +39,10 @@ RSpec.describe Mutations::Payments::Create do
   let_it_be(:organization) { create_default(:organization) }
   let_it_be(:membership) { create_default(:membership) }
 
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "payments:create"
+
   context "with premium organization", :premium do
     it "creates a manual payment" do
       expect(result["data"]).to include(

@@ -46,7 +46,7 @@ RSpec.describe Types::Subscriptions::Object do
     expect(subject).to have_field(:previous_plan).of_type("Plan")
     expect(subject).to have_field(:previous_subscription).of_type("Subscription")
 
-    expect(subject).to have_field(:activity_logs).of_type("[ActivityLog!]")
+    expect(subject).to have_field(:activity_logs).of_type("[ActivityLog!]").with_permission("audit_logs:view")
     expect(subject).to have_field(:charges).of_type("[Charge!]")
     expect(subject).to have_field(:fees).of_type("[Fee!]")
     expect(subject).to have_field(:fixed_charges).of_type("[FixedCharge!]")

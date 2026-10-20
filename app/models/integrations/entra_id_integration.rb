@@ -27,6 +27,16 @@ module Integrations
       get_from_settings("host").presence || "login.microsoftonline.com"
     end
 
+    # Tenant aliases that accept users of any Entra tenant, so they do not identify one.
+    MULTI_TENANT_IDS = %w[common organizations consumers].freeze
+
+    # The Entra tenant that answers the token request built from `host` and `tenant_id`. A session
+    # it issues can open another organization only if that organization's integration has the same issuer.
+    def sso_issuer
+      single_tenant = tenant_id.present? && MULTI_TENANT_IDS.exclude?(tenant_id.downcase)
+      "#{host.downcase}/#{tenant_id.downcase}" if single_tenant
+    end
+
     def additional_domains
       Array(get_from_settings("additional_domains"))
     end

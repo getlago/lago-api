@@ -309,10 +309,10 @@ module Events
         batch = batch_index.fetch(key)
         to_datetime = store.applicable_to_datetime
 
-        @rows[[:recurring, batch, to_datetime, store.deduplicate, watermark]] ||=
+        @rows[[:recurring, batch, to_datetime, watermark]] ||=
           read_recurring_rows(store, batch, to_datetime:, watermark:)
 
-        @rows[[:recurring, batch, to_datetime, store.deduplicate, watermark]].fetch(key, [])
+        @rows[[:recurring, batch, to_datetime, watermark]].fetch(key, [])
       end
 
       # One read per batch and window: the stores of the batch share it, and recurring metrics
@@ -320,7 +320,7 @@ module Events
       def scan(store, batch)
         from_datetime = (store.from_datetime if store.use_from_boundary)
         to_datetime = store.applicable_to_datetime
-        key = [batch, from_datetime, to_datetime, store.deduplicate]
+        key = [batch, from_datetime, to_datetime]
 
         @rows[key] ||= if incremental
           incremental.rows(
@@ -383,18 +383,9 @@ module Events
       # With a `watermark`, the rows are those of a recurring sum (see #recurring_sum).
       def scan_sql(store, batch:, from_datetime:, to_datetime:, before: nil, watermark: nil)
         columns = %w[decimal_value properties]
-        columns << "timestamp" if aggregation_type == "latest_agg"
         columns << "enriched_at" if watermark
 
-        events_sql = if store.deduplicate
-          store.deduplicated_events_sql(from_datetime:, to_datetime:, deduplicated_columns: columns - %w[timestamp], before:)
-        else
-          <<~SQL.squish
-            SELECT #{columns.join(", ")}
-            FROM events_enriched
-            WHERE #{store.deduplicated_events_where_sql(from_datetime:, to_datetime:, before:)}
-          SQL
-        end
+        events_sql = store.deduplicated_events_sql(from_datetime:, to_datetime:, deduplicated_columns: columns, before:)
 
         group_columns = group_keys.map.with_index do |key, index|
           "#{store.sanitized_property_name(key)} AS g_#{index}"

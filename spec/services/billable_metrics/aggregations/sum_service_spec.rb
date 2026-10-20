@@ -453,7 +453,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
           code: billable_metric.code,
           customer:,
           subscription:,
-          timestamp: to_datetime - 1.day,
+          timestamp: to_datetime - 12.hours,
           properties: {
             total_count: 8,
             region: "europe"
@@ -694,7 +694,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
         code: billable_metric.code,
         customer:,
         subscription:,
-        timestamp: to_datetime - 1.day,
+        timestamp: to_datetime - 12.hours,
         properties: {
           total_count: 8,
           region: "europe"
@@ -762,7 +762,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
         code: billable_metric.code,
         customer:,
         subscription:,
-        timestamp: to_datetime - 1.day,
+        timestamp: to_datetime - 12.hours,
         properties: {
           total_count: 8,
           region: "europe"

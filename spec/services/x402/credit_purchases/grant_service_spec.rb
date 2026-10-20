@@ -85,6 +85,50 @@ describe X402::CreditPurchases::GrantService do
     end
   end
 
+  context "when the purchase is billed", :premium do
+    let(:x402_connection) { create(:x402_connection, organization: create(:organization, premium_integrations: %w[issue_receipts])) }
+    let(:wallet_transaction) { result.settlement.wallet_transaction }
+    let(:invoice) { wallet_transaction.reload.invoice }
+
+    before do
+      result
+      perform_all_enqueued_jobs(
+        only: [BillPaidCreditJob, X402::CreditPurchases::CreatePaymentJob, Invoices::PrepaidCreditJob, PaymentReceipts::CreateJob]
+      )
+    end
+
+    it "issues a paid credit invoice for the purchase" do
+      expect(invoice).to have_attributes(
+        invoice_type: "credit",
+        status: "finalized",
+        payment_status: "succeeded",
+        currency: "USD",
+        total_amount_cents: 1000,
+        total_paid_amount_cents: 1000
+      )
+    end
+
+    it "pays it with an x402 payment linked on the settlement" do
+      expect(settlement.reload.payment).to have_attributes(
+        payable: invoice,
+        payment_type: "x402",
+        amount_cents: 1000,
+        payable_payment_status: "succeeded",
+        payment_provider_id: nil,
+        reference: nil
+      )
+    end
+
+    it "issues the receipt" do
+      expect(settlement.reload.payment.payment_receipt).to be_present
+    end
+
+    it "grants the credits once" do
+      expect(wallet_transaction.wallet.reload).to have_attributes(balance_cents: 1000, credits_balance: BigDecimal("10000"))
+      expect(wallet_transaction.wallet.wallet_transactions.count).to eq(1)
+    end
+  end
+
   context "with $10.00 at rate 0.0007" do
     let(:rate_amount) { "0.0007" }
 

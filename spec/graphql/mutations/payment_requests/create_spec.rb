@@ -31,6 +31,10 @@ RSpec.describe Mutations::PaymentRequests::Create do
     GQL
   end
 
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "payments:create"
+
   it "creates a payment request" do
     result = execute_graphql(
       current_user: membership.user,

@@ -9,6 +9,7 @@ RSpec.describe Resolvers::WalletTransactionResolver do
     execute_graphql(
       current_user: membership.user,
       current_organization:,
+      permissions: described_class::REQUIRED_PERMISSION.sample,
       query:,
       variables: {id: wallet_transaction_id}
     )
@@ -45,6 +46,10 @@ RSpec.describe Resolvers::WalletTransactionResolver do
 
   let_it_be(:membership) { create_default(:membership) }
   let_it_be(:customer) { create_default(:customer, organization:) }
+
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", %w[customers:view wallets:create wallets:update wallets:top_up wallets:terminate]
 
   context "with valid authorization" do
     let(:current_organization) { organization }

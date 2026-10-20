@@ -21,6 +21,19 @@ class LagoApiSchema < GraphQL::Schema
     )
   end
 
+  # The schema is only described to clients (__schema, __type) in development and test, where
+  # the front codegen and the schema dump specs need it. Elsewhere it stays hidden unless
+  # LAGO_GRAPHQL_INTROSPECTION_ENABLED is set, for example on an API booted only to run codegen.
+  def self.introspection_enabled?(env: Rails.env, flag: ENV["LAGO_GRAPHQL_INTROSPECTION_ENABLED"])
+    env.development? || env.test? || ActiveModel::Type::Boolean.new.cast(flag) == true
+  end
+
+  unless introspection_enabled?
+    disable_introspection_entry_points
+    # Field name suggestions ("Did you mean ...?") would let a client rebuild the schema anyway.
+    did_you_mean nil
+  end
+
   # GraphQL-Ruby calls this when something goes wrong while running a query:
 
   # Union and Interface Resolution
