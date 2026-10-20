@@ -18,39 +18,51 @@ RSpec.describe Webhooks::Plans::DeletedService do
         create(
           :catalog_plan,
           organization:,
-          name: "Premium",
-          invoice_display_name: "Premium plan",
-          code: "premium",
-          description: "Premium description",
-          currency: "EUR"
+          name: "Startup",
+          invoice_display_name: "Startup plan",
+          code: "startup",
+          description: "Plan for startups",
+          currency: "USD",
+          deleted_at: Time.current
         )
       end
-      let(:tax) { create(:tax, organization:, name: "VAT", code: "vat", rate: 20.0, description: "French VAT") }
+      let(:tax) { create(:tax, organization:, name: "VAT", code: "vat_20", rate: 20.0, description: "Standard VAT") }
 
-      before do
-        travel_to(Time.zone.parse("2026-03-22 12:00:00"))
-        # As the destroy service leaves them: its rate cards and the plan itself discarded, its taxes kept.
-        create(:plan_rate_card, organization:, catalog_plan:, deleted_at: Time.current)
-        create(:plan_applied_tax, :catalog_plan, organization:, catalog_plan:, tax:)
-        catalog_plan.discard!
-      end
+      before { create(:plan_applied_tax, :catalog_plan, catalog_plan:, tax:, organization:) }
 
-      it "sends the catalog plan payload without its deletion date nor its taxes" do
+      it "creates a webhook with every serialized catalog plan field" do
         webhook_service.call
 
-        expect(organization.webhooks.sole.payload).to eq(
+        webhook = Webhook.order(created_at: :desc).first
+        expect(webhook.payload).to eq(
           "webhook_type" => "plan.deleted",
           "object_type" => "plan",
           "organization_id" => organization.id,
           "plan" => {
             "lago_id" => catalog_plan.id,
-            "name" => "Premium",
-            "invoice_display_name" => "Premium plan",
-            "code" => "premium",
-            "description" => "Premium description",
-            "currency" => "EUR",
+            "name" => "Startup",
+            "invoice_display_name" => "Startup plan",
+            "code" => "startup",
+            "description" => "Plan for startups",
+            "currency" => "USD",
             "applied_rate_cards_count" => 0,
-            "created_at" => "2026-03-22T12:00:00Z"
+            "created_at" => catalog_plan.created_at.iso8601,
+            "taxes" => [
+              {
+                "lago_id" => tax.id,
+                "name" => "VAT",
+                "code" => "vat_20",
+                "rate" => 20.0,
+                "description" => "Standard VAT",
+                "applied_to_organization" => false,
+                "add_ons_count" => 0,
+                "customers_count" => 0,
+                "plans_count" => 0,
+                "charges_count" => 0,
+                "commitments_count" => 0,
+                "created_at" => tax.created_at.iso8601
+              }
+            ]
           }
         )
       end

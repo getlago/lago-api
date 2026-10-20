@@ -428,9 +428,12 @@ RSpec.describe EInvoices::CreditNotes::Ubl::Builder do
       let(:contract_rate_card) do
         create(:contract_rate_card, organization:, contract: create(:contract, organization:, customer:))
       end
+      let(:rate_card_rate) do
+        create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card)
+      end
       let(:fee) do
         create(:fee, invoice:, subscription: nil, fee_type: :product, invoiceable: product,
-          contract: contract_rate_card.contract, contract_rate_card:, units: 8,
+          contract: contract_rate_card.contract, contract_rate_card:, rate_card_rate:, units: 8,
           amount_cents: 8000, precise_amount_cents: 8000, precise_unit_amount: 10,
           taxes_rate: 20, taxes_amount_cents: 1600, taxes_precise_amount_cents: 1600)
       end
