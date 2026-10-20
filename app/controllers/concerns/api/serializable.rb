@@ -10,8 +10,10 @@ module Api
   #
   # `expand` is checked on every action, declared or not, before any lookup. On an `expand_on`
   # action, it embeds the records the serializer declares with `expandable`, one level deep.
-  # Any other value is a 400, never ignored: `expand_not_supported` where nothing expands,
-  # `invalid_expand` for a name the serializer does not declare or a form that cannot be read.
+  # Any other value it receives is a 400, never ignored: `expand_not_supported` where nothing
+  # expands, `invalid_expand` for a name the serializer does not declare or a form that cannot be
+  # read. Rails keeps only the last of a repeated bare key (`expand=a&expand=b`), as for any
+  # other parameter.
   module Serializable
     extend ActiveSupport::Concern
 
