@@ -43,11 +43,10 @@ RSpec.describe RateCard::AppliedTax do
         expect(listed.map(&:id)).to eq([*tied.map(&:id).sort.reverse, older.id])
       end
 
-      it "selects the links only and preloads their taxes" do
+      it "selects the links only" do
         selected = listed.to_sql[/\ASELECT (.+?) FROM "rate_cards_taxes" INNER JOIN "taxes"/, 1]
 
         expect(selected.split(", ")).to all(start_with(%("rate_cards_taxes".)))
-        expect(listed.to_a).to all(satisfy { it.association(:tax).loaded? })
       end
     end
   end

@@ -14,8 +14,9 @@ class RateCardTaxesQuery < BaseQuery
 
   private
 
+  # The endpoint renders the taxes of the links.
   def base_scope
-    RateCard::AppliedTax.where(organization:).listed
+    RateCard::AppliedTax.where(organization:).listed.preload(:tax)
   end
 
   def with_rate_card(scope)
