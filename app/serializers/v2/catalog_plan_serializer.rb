@@ -10,7 +10,7 @@ module V2
         code: model.code,
         description: model.description,
         currency: model.currency,
-        applied_rate_cards_count: model.applied_rate_cards.size,
+        **counts,
         created_at: model.created_at.iso8601,
         deleted_at: model.deleted_at&.iso8601
       }
@@ -20,6 +20,9 @@ module V2
     end
 
     private
+
+    # Only for the plan webhooks, which keep the count they have always sent.
+    def counts = include?(:counts) ? {applied_rate_cards_count: model.applied_rate_cards.size} : {}
 
     def taxes
       ::CollectionSerializer.new(

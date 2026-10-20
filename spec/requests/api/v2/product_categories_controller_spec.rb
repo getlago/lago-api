@@ -4,6 +4,7 @@ require "rails_helper"
 
 RSpec.describe Api::V2::ProductCategoriesController do
   let(:organization) { create(:organization) }
+  let(:flat_keys) { %i[lago_id name code description invoice_display_name created_at updated_at deleted_at] }
 
   describe "POST /api/v2/product_categories" do
     subject { post_with_token(organization, "/api/v2/product_categories", {product_category: create_params}) }
@@ -102,15 +103,13 @@ RSpec.describe Api::V2::ProductCategoriesController do
     include_examples "requires API permission", "product_category", "read"
 
     it "returns the product_category" do
-      create(:product, organization:, product_category:)
-
       subject
 
       expect(response).to have_http_status(:success)
       expect(json[:product_category][:lago_id]).to eq(product_category.id)
       expect(json[:product_category][:code]).to eq(product_category.code)
-      expect(json[:product_category][:products_count]).to eq(1)
       expect(json[:product_category]).to include(deleted_at: nil)
+      expect(json[:product_category].keys).to eq(flat_keys)
     end
 
     context "when the product_category does not exist" do
@@ -157,14 +156,10 @@ RSpec.describe Api::V2::ProductCategoriesController do
       let(:create_paginated_record) { ->(created_at) { create(:product_category, organization:, created_at:) } }
     end
 
-    it "returns the batched products counts" do
-      product_category = create(:product_category, organization:)
-      create(:product, organization:, product_category:)
+    it "returns the flat product_categories" do
+      subject
 
-      get_with_token(organization, "/api/v2/product_categories?limit=10")
-
-      counts = json[:product_categories].to_h { [it[:lago_id], it[:products_count]] }
-      expect(counts[product_category.id]).to eq(1)
+      expect(json[:product_categories].sole.keys).to eq(flat_keys)
     end
 
     it "does not return product_categories from other organizations" do

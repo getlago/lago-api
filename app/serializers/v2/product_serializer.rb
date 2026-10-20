@@ -16,7 +16,6 @@ module V2
         description: model.description,
         invoice_display_name: model.invoice_display_name,
         product_type: model.product_type,
-        filters_count: model.filters.size,
         created_at: model.created_at.iso8601,
         updated_at: model.updated_at.iso8601,
         deleted_at: model.deleted_at&.iso8601

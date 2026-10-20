@@ -4,6 +4,7 @@ require "rails_helper"
 
 RSpec.describe Api::V2::PlansController do
   let_it_be(:organization, refind: true) { create_default(:organization, feature_flags: ["product_catalog"]) }
+  let(:plan_keys) { %i[lago_id name invoice_display_name code description currency created_at deleted_at taxes] }
 
   describe "POST /api/v2/plans" do
     subject { post_with_token(organization, "/api/v2/plans", {plan: create_params}) }
@@ -119,9 +120,8 @@ RSpec.describe Api::V2::PlansController do
 
       expect(response).to have_http_status(:success)
       expect(json[:plan][:lago_id]).to eq(catalog_plan.id)
-      expect(json[:plan][:applied_rate_cards_count]).to eq(0)
       expect(json[:plan]).to include(deleted_at: nil)
-      expect(json[:plan]).not_to have_key(:interval)
+      expect(json[:plan].keys).to eq(plan_keys)
     end
 
     it "returns the assigned taxes" do
@@ -155,15 +155,13 @@ RSpec.describe Api::V2::PlansController do
 
     it "lists the organization catalog plans" do
       create(:catalog_plan)
-      create_list(:plan_rate_card, 2, organization:, catalog_plan:)
 
       subject
 
       expect(response).to have_http_status(:success)
       expect(json[:plans].map { it[:lago_id] }).to eq([catalog_plan.id])
       expect(json[:plans].first[:currency]).to eq(catalog_plan.currency)
-      expect(json[:plans].first[:applied_rate_cards_count]).to eq(2)
-      expect(json[:plans].first).not_to have_key(:interval)
+      expect(json[:plans].first.keys).to eq(plan_keys)
       expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
     end
 

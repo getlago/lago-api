@@ -64,24 +64,7 @@ module Api
         )
 
         if result.success?
-          # Rendered by hand while applied_rate_cards_count stays: its grouped count is an option of the serializer.
-          page = ::CursorPagination::Page.new(records: result.contracts.includes(:catalog_plan, customer: :billing_entity), cursor:)
-
-          # One grouped query instead of one COUNT per row in the serializer.
-          applied_rate_cards_counts = ContractRateCard
-            .where(contract_id: page.records.map(&:id))
-            .group(:contract_id)
-            .count
-
-          render(
-            json: ::CollectionSerializer.new(
-              page.records,
-              ::V2::ContractSerializer,
-              collection_name: "contracts",
-              meta: page.meta,
-              applied_rate_cards_counts:
-            )
-          )
+          render_contracts(result.contracts.includes(:catalog_plan, customer: :billing_entity))
         else
           render_error_response(result)
         end
