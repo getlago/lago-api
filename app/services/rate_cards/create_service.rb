@@ -82,7 +82,7 @@ module RateCards
 
     def create_rates(rate_card)
       (params[:rates] || []).each do |rate_params|
-        RateCardRates::CreateService.call!(rate_card:, params: rate_params, emit_activity_log: false, emit_events: false)
+        RateCardRates::CreateService.call!(rate_card:, params: rate_params, emit_events: false)
       end
     rescue BaseService::ValidationFailure => e
       errors = e.messages.transform_keys { |key| :"rates.#{key}" }

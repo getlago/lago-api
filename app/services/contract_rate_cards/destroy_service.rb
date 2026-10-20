@@ -31,7 +31,6 @@ module ContractRateCards
         # it could lock them in the opposite order and deadlock.
         contract_rate_card.lock!
 
-        contract_rate_card.association(:rate_phases).reset
         phases = contract_rate_card.rate_phases.to_a
         RateOverride.where(id: phases.filter_map(&:rate_override_id)).discard_all!
         contract_rate_card.rate_phases.discard_all!

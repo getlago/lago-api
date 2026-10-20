@@ -55,15 +55,26 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
     expect(SendWebhookJob).to have_been_enqueued.with("contract.started", contract)
     expect(contract.applied_rate_cards.sole.rate_phases.size).to eq(1)
     expect(contract.selected_invoice_custom_sections).to be_present
-    expect(Utils::ActivityLog).to have_received(:produce).with(
-      contract,
-      "contract.created",
-      after_commit: true
-    )
+    expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(contract, "contract.created")
     expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(
       contract,
       "contract.started"
     )
+  end
+
+  it "produces created before started activities", transaction: false do
+    customer
+    catalog_plan
+    allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+    allow(Utils::ActivityLog).to receive(:produce).and_call_original
+    allow(Utils::ActivityLog).to receive(:produce_after_commit).and_call_original
+
+    result
+
+    activity_types = kafka_messages.map do |message|
+      JSON.parse(message[:payload]).fetch("activity_type")
+    end
+    expect(activity_types).to eq(%w[contract.created contract.started])
   end
 
   context "when the surrounding transaction rolls back" do
@@ -143,6 +154,7 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
       expect(result.contract.status).to eq("pending")
       expect(result.contract.started_at).to be_within(5.seconds).of(1.month.from_now)
       expect(SendWebhookJob).not_to have_been_enqueued.with("contract.started", anything, any_args)
+      expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(result.contract, "contract.created")
       expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "contract.started", any_args)
     end
   end

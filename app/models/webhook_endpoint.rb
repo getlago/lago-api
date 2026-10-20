@@ -17,6 +17,12 @@ class WebhookEndpoint < ApplicationRecord
     config[:name].to_s
   end.freeze
 
+  PRODUCT_CATALOG_ONLY_EVENT_TYPES = WEBHOOK_EVENT_TYPE_CONFIG.values
+    .select { |config| config[:product_catalog_only] }
+    .map { |config| config[:name] }
+    .to_set
+    .freeze
+
   belongs_to :organization
   has_many :webhooks, dependent: :delete_all
 

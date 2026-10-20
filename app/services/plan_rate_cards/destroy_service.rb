@@ -26,7 +26,6 @@ module PlanRateCards
           return result.single_validation_failure!(field: :plan, error_code: "plan_locked")
         end
 
-        plan_rate_card.association(:rate_phases).reset
         phases = plan_rate_card.rate_phases.to_a
         RateOverride.where(id: phases.filter_map(&:rate_override_id)).discard_all!
         plan_rate_card.rate_phases.discard_all!

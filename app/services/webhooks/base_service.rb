@@ -49,11 +49,7 @@ module Webhooks
     end
 
     def product_catalog_only_event?
-      event_config = WebhookEndpoint::WEBHOOK_EVENT_TYPE_CONFIG.values.find do |config|
-        config[:name] == webhook_type
-      end
-
-      event_config&.fetch(:product_catalog_only, false)
+      WebhookEndpoint::PRODUCT_CATALOG_ONLY_EVENT_TYPES.include?(webhook_type)
     end
 
     def current_organization

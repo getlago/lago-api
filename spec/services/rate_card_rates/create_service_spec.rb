@@ -99,30 +99,10 @@ RSpec.describe RateCardRates::CreateService do
     expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "rate_card.updated", any_args)
   end
 
-  context "when emit_activity_log is false" do
-    it "retains the legacy option and suppresses both channels" do
-      expect do
-        described_class.call(rate_card:, params:, emit_activity_log: false)
-      end.not_to have_enqueued_job(SendWebhookJob)
-
-      expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "rate_card_rate.created", any_args)
-    end
-  end
-
   context "when emit_events is false" do
     it "suppresses both activity and webhook events" do
       expect do
         described_class.call(rate_card:, params:, emit_events: false)
-      end.not_to have_enqueued_job(SendWebhookJob)
-
-      expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "rate_card_rate.created", any_args)
-    end
-  end
-
-  context "when emit_activity_log is false and emit_events is true" do
-    it "uses the legacy suppression switch for both channels" do
-      expect do
-        described_class.call(rate_card:, params:, emit_activity_log: false, emit_events: true)
       end.not_to have_enqueued_job(SendWebhookJob)
 
       expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "rate_card_rate.created", any_args)

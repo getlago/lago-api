@@ -33,7 +33,6 @@ module RatePhases
           return result.single_validation_failure!(field: :rate_phase, error_code: blocked)
         end
 
-        applied_rate_card.association(:rate_phases).reset
         existing = applied_rate_card.rate_phases.order(:position).to_a
         position = if params[:position].present?
           RatePhase.parse_position(params[:position])

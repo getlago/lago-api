@@ -4,10 +4,10 @@ module RateCardRates
   class CreateService < BaseService
     Result = BaseResult[:rate_card_rate]
 
-    def initialize(rate_card:, params:, emit_activity_log: true, emit_events: true)
+    def initialize(rate_card:, params:, emit_events: true)
       @rate_card = rate_card
       @params = params.to_h.with_indifferent_access
-      @emit_events = emit_activity_log && emit_events
+      @emit_events = emit_events
       super
     end
 
