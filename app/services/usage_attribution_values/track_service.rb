@@ -18,10 +18,11 @@ module UsageAttributionValues
   # in ClickHouse.
   #
   # A customer holds at most UsageAttributionValue::MAX_PER_CUSTOMER_AND_TYPE values per type: past
-  # it, new values are skipped and the existing ones are still refreshed.
+  # it, new values are skipped, and so are the new values below them, which no tree path would reach.
+  # Existing values are still refreshed. Concurrent calls each take the remaining capacity they read,
+  # so the limit can be passed by a batch per consumer.
   class TrackService < BaseService
     UNIQUE_INDEX = :index_usage_attribution_values_on_customer_type_and_value
-    LIMIT_REACHED_CACHE_TTL = 1.hour
 
     # In ON CONFLICT DO UPDATE, every expression reads the stored row as it was before the update.
     ON_DUPLICATE = Arel.sql(<<~SQL.squish)
@@ -47,14 +48,22 @@ module UsageAttributionValues
     def call
       resolved_entries.each do |customer_id, labels, seen_at|
         value_ids_by_type = {}
+        skipped_type_ids = Set.new
 
         types_in_tree_order.each do |attribution_type|
           value = labels[attribution_type.code]
           next if value.nil?
-          next unless trackable?(customer_id, attribution_type, value)
+
+          # A new value below a skipped parent would be stored without a parent, out of reach of the tree.
+          parent_skipped = skipped_type_ids.include?(attribution_type.parent_id)
+          unless trackable?(customer_id, attribution_type, value, parent_skipped)
+            skipped_type_ids << attribution_type.id
+            next
+          end
 
           parent_id = value_ids_by_type[attribution_type.parent_id]
           value_ids_by_type[attribution_type.id] = upsert_value(customer_id, attribution_type, value, parent_id, seen_at)
+          tracked_values << [customer_id, attribution_type.id, value]
         end
       end
 
@@ -86,12 +95,12 @@ module UsageAttributionValues
         .first["id"]
     end
 
-    def trackable?(customer_id, attribution_type, value)
-      existing_values.include?([customer_id, attribution_type.id, value]) || !limit_reached?(customer_id, attribution_type)
+    def trackable?(customer_id, attribution_type, value, parent_skipped)
+      tracked_values.include?([customer_id, attribution_type.id, value]) || (!parent_skipped && take_capacity?(customer_id, attribution_type))
     end
 
-    def existing_values
-      @existing_values ||= UsageAttributionValue
+    def tracked_values
+      @tracked_values ||= UsageAttributionValue
         .where(
           customer_id: resolved_entries.map(&:first).uniq,
           usage_attribution_type_id: attribution_types.map(&:id),
@@ -101,28 +110,15 @@ module UsageAttributionValues
         .to_set
     end
 
-    def limit_reached?(customer_id, attribution_type)
-      @limit_reached ||= {}
-      @limit_reached.fetch([customer_id, attribution_type.id]) do |key|
-        @limit_reached[key] = cached_limit_reached?(customer_id:, usage_attribution_type_id: attribution_type.id)
-      end
-    end
+    # Read once per customer and type in a call, and only for new values, then decreased by each insert.
+    def take_capacity?(customer_id, attribution_type)
+      @remaining_capacity ||= {}
+      key = [customer_id, attribution_type.id]
+      @remaining_capacity[key] ||= UsageAttributionValue.remaining_capacity(customer_id:, usage_attribution_type_id: attribution_type.id)
 
-    def cached_limit_reached?(customer_id:, usage_attribution_type_id:)
-      cache_key = UsageAttributionValue.limit_reached_cache_key(customer_id:, usage_attribution_type_id:)
-      return true if Rails.cache.read(cache_key)
-
-      reached = UsageAttributionValue.limit_reached?(customer_id:, usage_attribution_type_id:)
-
-      if reached
-        Rails.cache.write(cache_key, true, expires_in: LIMIT_REACHED_CACHE_TTL)
-        Rails.logger.warn(
-          "Usage attribution values limit reached: organization #{organization.id}, " \
-          "customer #{customer_id}, usage attribution type #{usage_attribution_type_id}"
-        )
-      end
-
-      reached
+      available = @remaining_capacity[key].positive?
+      @remaining_capacity[key] -= 1 if available
+      available
     end
 
     def attribution_types
