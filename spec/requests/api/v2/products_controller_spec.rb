@@ -68,6 +68,17 @@ RSpec.describe Api::V2::ProductsController do
         expect(json[:error_details][:billable_metric_code]).to eq(["value_is_mandatory"])
       end
     end
+
+    context "with expand" do
+      subject { post_with_token(organization, "/api/v2/products?expand[]=product_category", {product: create_params}) }
+
+      it "creates nothing, as only show expands" do
+        expect { subject }.not_to change(Product, :count)
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:error_details]).to eq(expand: {reason: "action_not_expandable", invalid_values: ["product_category"]})
+      end
+    end
   end
 
   describe "PUT /api/v2/products/:id" do
@@ -172,9 +183,10 @@ RSpec.describe Api::V2::ProductsController do
   end
 
   describe "GET /api/v2/products/:id" do
-    subject { get_with_token(organization, "/api/v2/products/#{product.code}") }
+    subject { get_with_token(organization, "/api/v2/products/#{product.code}", params) }
 
     let(:product) { create(:product, organization:) }
+    let(:params) { {} }
 
     include_examples "requires API permission", "product", "read"
 
@@ -187,6 +199,47 @@ RSpec.describe Api::V2::ProductsController do
       expect(json[:product][:lago_id]).to eq(product.id)
       expect(json[:product][:code]).to eq(product.code)
       expect(json[:product][:filters_count]).to eq(1)
+      expect(json[:product]).not_to have_key(:product_category)
+    end
+
+    context "with expand[]=product_category" do
+      let(:params) { {expand: %w[product_category]} }
+
+      it "embeds the product category as its own show renders it" do
+        subject
+        expanded = json[:product]
+        get_with_token(organization, "/api/v2/product_categories/#{product.product_category.code}")
+
+        expect(expanded[:product_category]).to eq(json[:product_category])
+        expect(expanded[:product_category_code]).to eq(product.product_category.code)
+      end
+
+      context "with a product without product category" do
+        let(:product) { create(:product, :standalone, organization:) }
+
+        it "renders it as null" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:product]).to include(product_category_code: nil, product_category: nil)
+        end
+      end
+    end
+
+    context "with expand[]=billable_metric" do
+      let(:params) { {expand: %w[billable_metric]} }
+
+      it "returns an invalid expand error listing the allowed expansions" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(
+          status: 400,
+          error: "Bad Request",
+          code: "invalid_expand",
+          error_details: {expand: {invalid_values: %w[billable_metric], allowed_values: %w[product_category]}}
+        )
+      end
     end
 
     context "when the product belongs to another organization" do
@@ -325,6 +378,18 @@ RSpec.describe Api::V2::ProductsController do
         subject
 
         expect(response).to be_not_found_error("product_category")
+      end
+    end
+
+    context "with expand" do
+      let(:query_params) { "?expand[]=product_category" }
+
+      it "returns a not supported error, as lists never expand" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:code]).to eq("expand_not_supported")
+        expect(json[:error_details]).to eq(expand: {reason: "action_not_expandable", invalid_values: ["product_category"]})
       end
     end
 
