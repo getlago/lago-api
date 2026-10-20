@@ -4,6 +4,8 @@ module X402
   class InvoicePaymentsController < ApplicationController
     include ApiErrors
 
+    before_action { NullByteGuard.sanitize_params!(request, params) }
+
     REFUSALS = {
       "invalid_invoice_status_or_payment_status" => {status: 410, error: "Gone"},
       "invoice_payment_pending" => {status: 409, error: "Conflict"}
@@ -40,6 +42,8 @@ module X402
 
       if REFUSALS.key?(code)
         render_refusal(code)
+      elsif result.error.is_a?(BaseService::ThirdPartyFailure)
+        render(json: {status: 422, error: "Unprocessable Entity", code: "third_party_error"}, status: :unprocessable_content)
       else
         render_error_response(result)
       end

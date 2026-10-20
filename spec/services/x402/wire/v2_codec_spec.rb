@@ -41,8 +41,8 @@ describe X402::Wire::V2Codec do
       it { is_expected.to be_nil }
     end
 
-    context "with bytes that are not UTF-8" do
-      let(:header) { Base64.strict_encode64("\xFF\xFE".b) }
+    context "with a string that is not UTF-8" do
+      let(:header) { Base64.strict_encode64("{\"from\":\"0x\xFF\"}".b) }
 
       it { is_expected.to be_nil }
     end

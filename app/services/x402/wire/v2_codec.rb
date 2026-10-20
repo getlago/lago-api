@@ -13,7 +13,8 @@ module X402
       end
 
       def self.decode(header)
-        decoded = JSON.parse(Base64.strict_decode64(header.to_s))
+        json = Base64.strict_decode64(header.to_s).force_encoding(Encoding::UTF_8)
+        decoded = JSON.parse(json) if json.valid_encoding?
         decoded if decoded.is_a?(Hash)
       rescue ArgumentError, JSON::ParserError
         nil
