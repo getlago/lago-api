@@ -198,8 +198,8 @@ RSpec.describe Api::V2::ProductsController do
       expect(response).to have_http_status(:success)
       expect(json[:product][:lago_id]).to eq(product.id)
       expect(json[:product][:code]).to eq(product.code)
+      expect(json[:product][:filters_count]).to eq(1)
       expect(json[:product]).to include(deleted_at: nil)
-      expect(json[:product]).not_to have_key(:filters_count)
       expect(json[:product]).not_to have_key(:product_category)
       expect(json[:product]).not_to have_key(:billable_metric)
     end
@@ -347,14 +347,14 @@ RSpec.describe Api::V2::ProductsController do
       end
     end
 
-    context "when a product has filters" do
-      before { create(:product_filter, organization:, product: usage_item) }
+    it "returns the batched filters counts" do
+      create(:product_filter, organization:, product: usage_item)
+      create(:product_filter, organization:, product: usage_item, code: "second")
 
-      it "renders no filters count" do
-        subject
+      subject
 
-        expect(json[:products].flat_map(&:keys)).not_to include(:filters_count)
-      end
+      counts = json[:products].to_h { [it[:lago_id], it[:filters_count]] }
+      expect(counts).to eq(usage_item.id => 2, fixed_item.id => 0)
     end
 
     context "with an product_type filter" do
