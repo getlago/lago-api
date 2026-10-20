@@ -107,23 +107,44 @@ RSpec.describe Mutations::WalletTransactions::Create do
 
   context "with wallets:top_up only" do
     let(:required_permission) { "wallets:top_up" }
-    let(:input) do
-      {
-        walletId: wallet.id,
-        paidCredits: "5.00",
-        grantedCredits: "15.00",
-        voidedCredits: "5.00"
-      }
+
+    context "when granting credits" do
+      let(:input) { {walletId: wallet.id, grantedCredits: "15.00"} }
+
+      it "returns a forbidden error" do
+        expect { result }.not_to change(organization.wallet_transactions, :count)
+        expect_forbidden_error(result)
+      end
     end
 
-    it "creates only the paid wallet transaction" do
-      result_data = result["data"]["createCustomerWalletTransaction"]
+    context "when voiding credits" do
+      let(:input) { {walletId: wallet.id, voidedCredits: "5.00"} }
 
-      expect(result_data["collection"]).to contain_exactly(include(
-        "transactionStatus" => "purchased",
-        "creditAmount" => "5.0"
-      ))
-      expect(wallet.reload.credits_balance).to eq(10)
+      it "returns a forbidden error" do
+        expect { result }.not_to change(organization.wallet_transactions, :count)
+        expect_forbidden_error(result)
+        expect(wallet.reload.credits_balance).to eq(10)
+      end
+    end
+
+    context "when topping up with the default top-up form values" do
+      let(:input) do
+        {
+          walletId: wallet.id,
+          paidCredits: "5.00",
+          grantedCredits: "0",
+          ignorePaidTopUpLimits: false
+        }
+      end
+
+      it "creates the paid wallet transaction" do
+        result_data = result["data"]["createCustomerWalletTransaction"]
+
+        expect(result_data["collection"]).to contain_exactly(include(
+          "transactionStatus" => "purchased",
+          "creditAmount" => "5.0"
+        ))
+      end
     end
   end
 
@@ -156,9 +177,9 @@ RSpec.describe Mutations::WalletTransactions::Create do
       context "with wallets:top_up only" do
         let(:required_permission) { "wallets:top_up" }
 
-        it "enforces the wallet limit" do
+        it "returns a forbidden error" do
           expect { subject }.not_to change(organization.wallet_transactions, :count)
-          expect_unprocessable_entity(result)
+          expect_forbidden_error(result)
         end
       end
     end
