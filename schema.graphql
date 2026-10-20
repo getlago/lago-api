@@ -1911,6 +1911,7 @@ Rate card applied to a contract
 """
 type ContractAppliedRateCard {
   billingAnchorDate: ISO8601Date!
+  contract: Contract!
   createdAt: ISO8601DateTime!
   effectiveDate: ISO8601Date!
   id: ID!
@@ -11875,6 +11876,7 @@ type Plan {
 Rate card applied to a plan
 """
 type PlanAppliedRateCard {
+  catalogPlan: CatalogPlan!
   createdAt: ISO8601DateTime!
   id: ID!
   product: Product!
@@ -12570,6 +12572,16 @@ type Query {
   ): Contract
 
   """
+  Query a single rate card applied to a contract
+  """
+  contractAppliedRateCard(
+    """
+    Uniq ID of the applied rate card
+    """
+    id: ID!
+  ): ContractAppliedRateCard
+
+  """
   Query rate cards applied to a contract
   """
   contractAppliedRateCards(contractId: ID, hasRateOverrides: Boolean, limit: Int, page: Int, productCategoryIds: [ID!], productFilterIds: [ID!], productIds: [ID!], productType: ProductTypeEnum, searchTerm: String, withoutProductCategory: Boolean, withoutProductFilter: Boolean): ContractAppliedRateCardCollection!
@@ -13128,6 +13140,16 @@ type Query {
     """
     id: ID!
   ): Plan
+
+  """
+  Query a single rate card applied to a plan
+  """
+  planAppliedRateCard(
+    """
+    Uniq ID of the applied rate card
+    """
+    id: ID!
+  ): PlanAppliedRateCard
 
   """
   Query rate cards applied to a plan
