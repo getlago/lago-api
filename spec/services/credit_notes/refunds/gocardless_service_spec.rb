@@ -123,7 +123,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
 
         expect(SendWebhookJob).to have_been_enqueued
           .with(
-            "credit_note.provider_refund_failure",
+            "credit_note.refund_failure",
             credit_note,
             provider_customer_id: gocardless_customer.provider_customer_id,
             provider_error: {
@@ -152,7 +152,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
 
         expect(SendWebhookJob).to have_been_enqueued
           .with(
-            "credit_note.provider_refund_failure",
+            "credit_note.refund_failure",
             credit_note,
             provider_customer_id: gocardless_customer.provider_customer_id,
             provider_error: {
@@ -343,7 +343,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
 
         expect(SendWebhookJob).to have_been_enqueued
           .with(
-            "credit_note.provider_refund_failure",
+            "credit_note.refund_failure",
             credit_note,
             provider_customer_id: gocardless_customer.provider_customer_id,
             provider_error: {

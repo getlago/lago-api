@@ -120,8 +120,8 @@ class SendWebhookJob < ApplicationJob
   end
 
   def perform(webhook_type, object, options = {}, webhook_id = nil)
-    # Producers keep enqueuing the former names for one release, so workers of the previous release can run them.
-    # TODO: Next release, enqueue the current names, remove this mapping and rewrite stored event_types again.
+    # Jobs enqueued by the previous release still use the former names.
+    # TODO: Remove after one release.
     webhook_type = WebhookEndpoint::RENAMED_EVENT_TYPES.fetch(webhook_type, webhook_type)
     raise(NotImplementedError) unless WEBHOOK_SERVICES.include?(webhook_type)
 
