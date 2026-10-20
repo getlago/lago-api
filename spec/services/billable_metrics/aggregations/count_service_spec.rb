@@ -28,11 +28,10 @@ RSpec.describe BillableMetrics::Aggregations::CountService do
       )
     )
   end
-  let(:deduplicate) { false }
   let(:boundaries) { {from_datetime:, to_datetime:} }
   let(:billing_context) { Billing::Context.from(subscription:) }
   let(:event_store) do
-    event_store_class.new(code: billable_metric.code, billing_context:, boundaries:, filters:, deduplicate:)
+    event_store_class.new(code: billable_metric.code, billing_context:, boundaries:, filters:)
   end
   let(:grouped_by) { nil }
   let(:presentation_by) { nil }
@@ -493,8 +492,8 @@ RSpec.describe BillableMetrics::Aggregations::CountService do
       expect(result.aggregation).to eq(4)
     end
 
-    context "with deduplication" do
-      let_it_be(:organization) { create(:organization, clickhouse_events_store: true, clickhouse_deduplication_enabled: true) }
+    context "with duplicated events" do
+      let_it_be(:organization) { create(:organization, clickhouse_events_store: true) }
       let_it_be(:billable_metric) do
         create(
           :billable_metric,
@@ -503,7 +502,6 @@ RSpec.describe BillableMetrics::Aggregations::CountService do
         )
       end
       let_it_be(:subscription) { create(:subscription, organization:) }
-      let(:deduplicate) { true }
 
       let(:event_list) do
         create_list(

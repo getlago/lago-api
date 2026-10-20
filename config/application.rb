@@ -31,6 +31,13 @@ module LagoApi
     config.active_storage.variant_processor = :disabled
     config.lago_front_url = ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com"
 
+    # A proxy with a public address (CDN, external load balancer) is not trusted by default, so without it
+    # `request.remote_ip` returns the proxy IP and every client shares the per-IP auth limits.
+    if ENV["LAGO_TRUSTED_PROXIES"].present?
+      config.action_dispatch.trusted_proxies = ActionDispatch::RemoteIp::TRUSTED_PROXIES +
+        ENV["LAGO_TRUSTED_PROXIES"].split(",").map(&:strip).compact_blank.map { IPAddr.new(it) }
+    end
+
     # Configuration for active record encryption
     config.active_record.encryption.hash_digest_class = OpenSSL::Digest::SHA1
     config.active_record.encryption.primary_key = ENV["ENCRYPTION_PRIMARY_KEY"] || ENV["LAGO_ENCRYPTION_PRIMARY_KEY"]

@@ -1,0 +1,18 @@
+# frozen_string_literal: true
+
+class AddContractIdentityToCachedAggregations < ActiveRecord::Migration[8.0]
+  def change
+    add_column :cached_aggregations, :contract_id, :uuid, if_not_exists: true
+    add_column :cached_aggregations, :product_id, :uuid, if_not_exists: true
+    add_column :cached_aggregations, :product_filter_id, :uuid, if_not_exists: true
+    add_check_constraint :cached_aggregations,
+      "charge_id IS NOT NULL OR (contract_id IS NOT NULL AND product_id IS NOT NULL)",
+      name: "cached_aggregations_identity_present",
+      validate: false,
+      if_not_exists: true
+    change_column_null :cached_aggregations, :charge_id, true
+    add_foreign_key :cached_aggregations, :contracts, validate: false, if_not_exists: true
+    add_foreign_key :cached_aggregations, :products, validate: false, if_not_exists: true
+    add_foreign_key :cached_aggregations, :product_filters, validate: false, if_not_exists: true
+  end
+end

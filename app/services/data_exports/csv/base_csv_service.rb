@@ -24,7 +24,7 @@ module DataExports
 
       def with_csv
         tempfile = Tempfile.create([data_export_part.id, ".csv"])
-        yield CSV.new(tempfile, headers: false)
+        yield QuotedWriter.new(tempfile)
 
         tempfile.rewind
         tempfile

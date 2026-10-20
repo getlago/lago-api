@@ -43,18 +43,8 @@ module BillingSegments
         currency: contract_rate_card.rate_card.currency,
         pricing_unit_id: pricing_unit&.id,
         proration_ratio: billable_segment.proration_ratio,
-        status: segment_status
+        status: BillingSegment::STATUSES.fetch(:pending)
       }
-    end
-
-    def segment_status
-      rate_card = contract_rate_card.rate_card
-
-      if rate_card.product.metered? && rate_card.advance?
-        BillingSegment::STATUSES.fetch(:processing)
-      else
-        BillingSegment::STATUSES.fetch(:pending)
-      end
     end
 
     def contract
