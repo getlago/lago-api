@@ -22,7 +22,7 @@ module BillableMetrics
           result.aggregation = sum_result.value
         end
 
-        set_snapshot(result, sum_result) if billable_metric.recurring?
+        assign_recurring_snapshot(result, sum_result)
         result.pay_in_advance_aggregation = compute_pay_in_advance_aggregation
         result.count = sum_result.events_count
 
@@ -67,7 +67,7 @@ module BillableMetrics
             group_result.aggregation = aggregation_value
           end
 
-          set_snapshot(group_result, aggregation) if billable_metric.recurring?
+          assign_recurring_snapshot(group_result, aggregation)
           group_result.count = aggregation.events_count
           group_result.options = {running_total: running_total(options, grouped_by_values: group_result.grouped_by)}
           group_result
@@ -77,13 +77,24 @@ module BillableMetrics
       end
 
       def recurring_sum(options)
-        if snapshot_units?(options)
+        return unless billable_metric.recurring?
+
+        if (snapshot = delta_snapshot(options))
+          with_snapshot(event_store.recurring_sum(watermark: delta_watermark(options), period: snapshot), snapshot)
+        elsif options[:recurring_watermark]
           event_store.recurring_sum(watermark: options[:recurring_watermark])
         end
       end
 
+      # A group only in the snapshot saw no event since: it keeps its units.
       def grouped_recurring_sum(options)
-        if snapshot_units?(options)
+        return unless billable_metric.recurring?
+
+        if (snapshot = delta_snapshot(options))
+          deltas = event_store.grouped_recurring_sum(watermark: delta_watermark(options), period: snapshot).index_by(&:groups)
+
+          initial_value.map { with_snapshot(deltas.delete(it.grouped_by) || empty_grouped_delta(it.grouped_by), it) } + deltas.values
+        elsif options[:recurring_watermark]
           event_store.grouped_recurring_sum(watermark: options[:recurring_watermark])
         end
       end
@@ -104,9 +115,43 @@ module BillableMetrics
         result
       end
 
+      # The snapshots of every group bound one delta read, so they must share their watermark.
+      # Pay in advance and current usage served by the incremental scan keep their own read.
+      def delta_snapshot(options)
+        return if initial_value.blank? || options[:is_pay_in_advance]
+        return if options[:is_current_usage] && event_store.incremental_sum?
+
+        snapshot = initial_value.first
+        snapshot if initial_value.all? { it.watermark == snapshot.watermark }
+      end
+
+      # Current usage persists no snapshot: its delta needs no watermark of its own.
+      def delta_watermark(options)
+        options[:recurring_watermark] || Time.current
+      end
+
+      def with_snapshot(delta, snapshot)
+        delta.with(
+          value: delta.value + snapshot.units,
+          snapshot_value: delta.snapshot_value + snapshot.units,
+          events_count: delta.events_count + snapshot.events_count,
+          snapshot_events_count: delta.snapshot_events_count + snapshot.events_count
+        )
+      end
+
+      def empty_grouped_delta(groups)
+        Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(
+          groups:,
+          value: 0,
+          snapshot_value: 0,
+          events_count: 0,
+          snapshot_events_count: 0
+        )
+      end
+
       # A precomputed prorated result is not bounded by the watermark, so it persists no snapshot
-      def set_snapshot(target_result, sum_result)
-        return unless sum_result.respond_to?(:snapshot_value)
+      def assign_recurring_snapshot(target_result, sum_result)
+        return unless billable_metric.recurring? && sum_result.respond_to?(:snapshot_value)
 
         target_result.recurring_units = sum_result.snapshot_value
         target_result.recurring_events_count = sum_result.snapshot_events_count

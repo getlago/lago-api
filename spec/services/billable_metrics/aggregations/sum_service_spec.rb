@@ -145,6 +145,161 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
     end
   end
 
+  describe "recurring snapshots" do
+    let(:old_events) { nil }
+    let(:latest_events) { nil }
+    let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:, field_name: "total_count") }
+    let(:periods) do
+      Array.new(3) do |index|
+        from = subscription.started_at + (index + 1).months
+        from..(from + 1.month - 1.second)
+      end
+    end
+
+    def watermark(period)
+      period.end + 1.hour
+    end
+
+    def create_event(timestamp:, value:, region:, created_at: timestamp)
+      create(:event, organization_id: organization.id, code: billable_metric.code, customer:, subscription:,
+        timestamp:, created_at:, properties: {total_count: value, region:})
+    end
+
+    def aggregate(period, initial_value:, options: {})
+      period_boundaries = {from_datetime: period.begin, to_datetime: period.end}
+      store = event_store_class.new(code: billable_metric.code, billing_context:, boundaries: period_boundaries, filters:)
+
+      described_class.new(event_store: store, metered_item:, billing_context:, boundaries: period_boundaries, filters:, initial_value:)
+        .aggregate(options: {recurring_watermark: watermark(period)}.merge(options))
+    end
+
+    def snapshot(period, aggregation_result)
+      RecurringAggregationSnapshots::FetchService::Snapshot.new(
+        grouped_by: aggregation_result.grouped_by || {},
+        units: aggregation_result.recurring_units,
+        events_count: aggregation_result.recurring_events_count,
+        to_datetime: period.end,
+        watermark: watermark(period)
+      )
+    end
+
+    def totals(aggregation_result)
+      [
+        aggregation_result.grouped_by,
+        aggregation_result.aggregation,
+        aggregation_result.count,
+        aggregation_result.recurring_units,
+        aggregation_result.recurring_events_count
+      ]
+    end
+
+    before do
+      create_event(timestamp: subscription.started_at + 1.day, value: 3, region: "us")
+      periods.each_with_index do |period, index|
+        create_event(timestamp: period.begin + 1.day, value: 10 * (index + 1), region: "eu")
+      end
+      create_event(timestamp: periods.last.begin + 2.days, value: 4, region: "apac")
+
+      # Dated in the first period, ingested after its snapshot
+      create_event(timestamp: periods.first.begin + 2.days, created_at: watermark(periods.first) + 1.minute, value: 7, region: "eu")
+    end
+
+    it "matches the full scan from one period to the next" do
+      initial_value = nil
+
+      periods.each do |period|
+        full_scan = aggregate(period, initial_value: nil)
+        from_snapshot = aggregate(period, initial_value:)
+
+        expect(totals(from_snapshot)).to eq(totals(full_scan))
+        initial_value = [snapshot(period, from_snapshot)]
+      end
+
+      expect(totals(aggregate(periods.last, initial_value: nil))).to eq([nil, 74, 6, 74, 6])
+    end
+
+    it "adds the events the snapshot did not count to its units" do
+      initial_value = [snapshot(periods.first, aggregate(periods.first, initial_value: nil)).with(units: 1000)]
+
+      result = aggregate(periods.second, initial_value:)
+
+      expect(result.aggregation).to eq(1000 + 7 + 20)
+    end
+
+    context "with pricing group keys" do
+      let(:grouped_by) { %w[region] }
+
+      it "matches the full scan from one period to the next" do
+        initial_value = nil
+
+        periods.each do |period|
+          full_scan = aggregate(period, initial_value: nil)
+          from_snapshot = aggregate(period, initial_value:)
+
+          expect(from_snapshot.aggregations.map { totals(it) }).to match_array(full_scan.aggregations.map { totals(it) })
+          initial_value = from_snapshot.aggregations.map { snapshot(period, it) }
+        end
+
+        expect(aggregate(periods.last, initial_value: nil).aggregations.map { totals(it) }).to match_array([
+          [{"region" => "us"}, 3, 1, 3, 1],
+          [{"region" => "eu"}, 67, 4, 67, 4],
+          [{"region" => "apac"}, 4, 1, 4, 1]
+        ])
+      end
+    end
+
+    context "when the snapshots of the groups have different watermarks" do
+      let(:grouped_by) { %w[region] }
+
+      it "falls back to the full scan" do
+        initial_value = aggregate(periods.first, initial_value: nil).aggregations.map { snapshot(periods.first, it).with(units: 1000) }
+        initial_value[0] = initial_value[0].with(watermark: watermark(periods.first) - 1.second)
+
+        result = aggregate(periods.second, initial_value:)
+
+        expect(result.aggregations.map { [it.grouped_by, it.aggregation] }).to match_array([
+          [{"region" => "us"}, 3],
+          [{"region" => "eu"}, 37]
+        ])
+      end
+    end
+
+    context "when the charge is paid in advance" do
+      it "ignores the snapshot" do
+        initial_value = [snapshot(periods.first, aggregate(periods.first, initial_value: nil)).with(units: 1000)]
+
+        result = aggregate(periods.second, initial_value:, options: {is_pay_in_advance: true})
+
+        expect(result.aggregation).to eq(40)
+      end
+    end
+
+    context "with current usage" do
+      let(:initial_value) { [snapshot(periods.first, aggregate(periods.first, initial_value: nil)).with(units: 1000)] }
+      let(:options) { {recurring_watermark: nil, is_current_usage: true} }
+
+      it "adds the events the snapshot did not count" do
+        result = aggregate(periods.second, initial_value:, options:)
+
+        expect(result.aggregation).to eq(1000 + 7 + 20)
+      end
+
+      context "when the store answers the sum incrementally" do
+        before do
+          allow(event_store_class).to receive(:new).and_wrap_original do |original, **args|
+            original.call(**args).tap { allow(it).to receive(:incremental_sum?).and_return(true) }
+          end
+        end
+
+        it "ignores the snapshot" do
+          result = aggregate(periods.second, initial_value:, options:)
+
+          expect(result.aggregation).to eq(40)
+        end
+      end
+    end
+  end
+
   context "when a precomputed aggregation is passed" do
     let(:precomputed_aggregation) { Events::Stores::BaseStore::AggregationResult.new(value: 999, events_count: 7) }
 
