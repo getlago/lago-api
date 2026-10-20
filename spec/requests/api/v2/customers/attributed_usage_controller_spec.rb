@@ -80,6 +80,20 @@ RSpec.describe Api::V1::Customers::AttributedUsageController, clickhouse: {clean
       end
     end
 
+    context "with per_page above the organization page size limit" do
+      let(:organization) do
+        create(:organization, clickhouse_events_store: true, feature_flags: ["account_tree"], pagination_max_page_size: 50)
+      end
+      let(:params) { {external_subscription_id: subscription.external_id, group_by: "team", per_page: 51} }
+
+      it "returns a validation error on per_page" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(per_page: ["value_is_out_of_range"])
+      end
+    end
+
     context "with an unknown customer and per_page above its own maximum" do
       let(:customer_external_id) { "unknown" }
       let(:params) { {external_subscription_id: subscription.external_id, group_by: "team", per_page: 101} }

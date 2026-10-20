@@ -8,9 +8,9 @@ module Api
         MAX_PER_PAGE = UsageAttributions::QueryService::MAX_LIMIT
         QUERY_LIMIT_ERRORS = %w[too_many_groups query_timeout memory_limit_exceeded].freeze
 
+        self.max_page_size = MAX_PER_PAGE
+
         before_action :ensure_feature_flag!
-        # Its own MAX_PER_PAGE applies, after the customer and subscription lookups.
-        skip_before_action :validate_pagination_params
 
         def show
           return not_found_error(resource: "customer") unless customer
@@ -54,12 +54,14 @@ module Api
           @subscription ||= customer.active_subscriptions.find_by(external_id: params[:external_subscription_id])
         end
 
+        # On /api/v1 the shared check has already rejected bad page params, so the page and
+        # per_page checks here matter for the /api/v2 fallback path, where the shared check does not run.
         def params_errors
           @params_errors ||= {
             from_datetime: datetime_errors(:from_datetime),
             to_datetime: datetime_errors(:to_datetime),
             page: (["value_is_out_of_range"] unless page&.positive?),
-            per_page: (["value_is_out_of_range"] unless per_page&.between?(1, MAX_PER_PAGE))
+            per_page: (["value_is_out_of_range"] unless per_page&.between?(1, max_per_page))
           }.compact_blank
         end
 
@@ -78,7 +80,7 @@ module Api
         end
 
         def per_page
-          Integer(params[:per_page] || DEFAULT_PER_PAGE, exception: false)
+          Integer(params[:per_page] || [DEFAULT_PER_PAGE, max_per_page].min, exception: false)
         end
 
         # filters[team]=eng&filters[model][]=opus&filters[model][]=haiku
