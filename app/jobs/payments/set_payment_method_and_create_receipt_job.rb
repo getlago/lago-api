@@ -24,11 +24,16 @@ module Payments
     private
 
     def set_payment_method(payment:, provider_payment_method_id:)
-      payment_method = payment.customer.payment_methods.find_by(provider_method_id: provider_payment_method_id)
-      if payment_method.present?
-        payment.payment_method = payment_method
-        payment.save!
-      end
+      payment_method = PaymentMethods::FindOrCreateFromProviderService.call!(
+        customer: payment.customer,
+        payment_provider_customer: payment.payment_provider_customer,
+        provider_method_id: provider_payment_method_id,
+        params: {
+          provider_payment_methods: payment.payment_provider_customer.provider_payment_methods
+        }
+      ).payment_method
+
+      payment.update!(payment_method:)
     end
   end
 end
