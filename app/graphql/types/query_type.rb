@@ -116,6 +116,10 @@ module Types
     field :rate_card_rate, resolver: Resolvers::RateCardRateResolver
     field :rate_card_rates, resolver: Resolvers::RateCardRatesResolver
     field :rate_cards, resolver: Resolvers::RateCardsResolver
+    field :realtime_usage_billable_metric, resolver: Resolvers::RealtimeUsage::BillableMetricResolver
+    field :realtime_usage_billable_metrics, resolver: Resolvers::RealtimeUsage::BillableMetricsResolver
+    field :realtime_usage_dimensions, resolver: Resolvers::RealtimeUsage::DimensionsResolver
+    field :realtime_usage_events, resolver: Resolvers::RealtimeUsage::EventsResolver
     field :role, resolver: Resolvers::RoleResolver
     field :roles, resolver: Resolvers::RolesResolver
     field :security_log, resolver: Resolvers::SecurityLogResolver
