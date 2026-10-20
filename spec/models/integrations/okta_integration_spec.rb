@@ -31,6 +31,17 @@ RSpec.describe Integrations::OktaIntegration do
         expect(subject.host).to eq("test.okta.com")
       end
     end
+
+    context "when settings host is blank" do
+      before do
+        subject.organization_name = "test"
+        subject.host = ""
+      end
+
+      it "use the default host" do
+        expect(subject.host).to eq("test.okta.com")
+      end
+    end
   end
 
   describe "#sso_issuer" do
