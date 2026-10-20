@@ -21,8 +21,11 @@ module BillingSegments
       attach_metered_fees(metered_segments, filtered_aggregations)
 
       invoice.fees.reload
-      compute_taxes_and_totals
-      invoice.save!
+      totals_result = compute_taxes_and_totals
+      ActiveRecord::Base.transaction do
+        apply_credit_notes if context == :finalize && totals_result.success?
+        invoice.save!
+      end
 
       result.invoice = invoice
       result
@@ -85,6 +88,14 @@ module BillingSegments
       if totals_result.failure? && !totals_result.error.is_a?(BaseService::UnknownTaxFailure)
         totals_result.raise_if_error!
       end
+
+      totals_result
+    end
+
+    def apply_credit_notes
+      credit_result = Credits::CreditNoteService.call!(invoice:)
+      invoice.total_amount_cents -= Array(credit_result.credits).sum(&:amount_cents)
+      invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
     end
 
     def customer_provider_taxation?
