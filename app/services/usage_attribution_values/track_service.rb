@@ -54,16 +54,17 @@ module UsageAttributionValues
           value = labels[attribution_type.code]
           next if value.nil?
 
-          # A new value below a skipped parent would be stored without a parent, out of reach of the tree.
-          parent_skipped = skipped_type_ids.include?(attribution_type.parent_id)
-          unless trackable?(customer_id, attribution_type, value, parent_skipped)
+          # A new value is skipped past the limit, and so is a new value below a skipped one, which no
+          # tree path would reach.
+          if new_value?(customer_id, attribution_type, value) &&
+              (skipped_type_ids.include?(attribution_type.parent_id) || !take_capacity(customer_id, attribution_type))
             skipped_type_ids << attribution_type.id
             next
           end
 
           parent_id = value_ids_by_type[attribution_type.parent_id]
           value_ids_by_type[attribution_type.id] = upsert_value(customer_id, attribution_type, value, parent_id, seen_at)
-          tracked_values << [customer_id, attribution_type.id, value]
+          existing_values << [customer_id, attribution_type.id, value]
         end
       end
 
@@ -95,12 +96,12 @@ module UsageAttributionValues
         .first["id"]
     end
 
-    def trackable?(customer_id, attribution_type, value, parent_skipped)
-      tracked_values.include?([customer_id, attribution_type.id, value]) || (!parent_skipped && take_capacity?(customer_id, attribution_type))
+    def new_value?(customer_id, attribution_type, value)
+      !existing_values.include?([customer_id, attribution_type.id, value])
     end
 
-    def tracked_values
-      @tracked_values ||= UsageAttributionValue
+    def existing_values
+      @existing_values ||= UsageAttributionValue
         .where(
           customer_id: resolved_entries.map(&:first).uniq,
           usage_attribution_type_id: attribution_types.map(&:id),
@@ -110,15 +111,19 @@ module UsageAttributionValues
         .to_set
     end
 
-    # Read once per customer and type in a call, and only for new values, then decreased by each insert.
-    def take_capacity?(customer_id, attribution_type)
-      @remaining_capacity ||= {}
+    # The capacity is read once per customer and type in a call, and only for new values, then
+    # decreased by each of them.
+    def take_capacity(customer_id, attribution_type)
       key = [customer_id, attribution_type.id]
-      @remaining_capacity[key] ||= UsageAttributionValue.remaining_capacity(customer_id:, usage_attribution_type_id: attribution_type.id)
+      remaining_capacity[key] ||= UsageAttributionValue.remaining_capacity(customer_id:, usage_attribution_type_id: attribution_type.id)
+      return false if remaining_capacity[key].zero?
 
-      available = @remaining_capacity[key].positive?
-      @remaining_capacity[key] -= 1 if available
-      available
+      remaining_capacity[key] -= 1
+      true
+    end
+
+    def remaining_capacity
+      @remaining_capacity ||= {}
     end
 
     def attribution_types
