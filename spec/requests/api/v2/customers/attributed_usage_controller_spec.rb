@@ -2,7 +2,8 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::Customers::AttributedUsageController, clickhouse: {clean_before: true} do
+# The v1 controller serves /api/v2 through the v1 fallback routes.
+RSpec.describe Api::V1::Customers::AttributedUsageController, clickhouse: {clean_before: true} do # rubocop:disable RSpec/SpecFilePathFormat
   include_context "with clickhouse availability"
 
   around { |example| travel_to(Time.zone.parse("2026-09-15 12:00:00")) { example.run } }
