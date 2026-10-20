@@ -155,6 +155,56 @@ RSpec.describe ModelSerializer do
       expect(payload[:first][:options]).to eq({})
     end
 
+    it "renders a Struct as one record, though it is Enumerable" do
+      expect(first_record).to be_a(Enumerable)
+      expect(payload[:first]).to eq(code: "first", options: {})
+    end
+
+    context "with a source block" do
+      let(:options) { {includes: %i[first third], label: "from the options"} }
+
+      let(:serializer_class) do
+        embedded_serializer = self.embedded_serializer
+
+        Class.new(described_class) do
+          expandable(:first, serializer: embedded_serializer) { Struct.new(:code).new("#{model.first.code} #{options[:label]} #{suffix}") }
+          # model.third is a record: the block decides what renders.
+          expandable(:third, serializer: embedded_serializer) { nil }
+
+          def serialize = {code: "parent"}
+
+          private
+
+          def suffix = "and a private method"
+        end
+      end
+
+      it "renders what the block returns, run on the serializer, nil as null" do
+        expect(payload).to eq(
+          code: "parent",
+          first: {code: "first from the options and a private method", options: {}},
+          third: nil
+        )
+      end
+    end
+
+    context "with list sources" do
+      let(:model) { Struct.new(:first, :second, :third).new([first_record, second_record], taxes_relation, Tax.none) }
+      let(:second_record) { Struct.new(:code).new("second") }
+      let(:organization) { create(:organization) }
+      let(:taxes_relation) { Tax.where(id: [create(:tax, organization:, code: "b"), create(:tax, organization:, code: "a")]).order(:code) }
+      let(:options) { {includes: %i[first second third]} }
+
+      it "renders an Array and an ActiveRecord relation as lists of records, each without includes" do
+        expect(payload).to eq(
+          code: "parent",
+          first: [{code: "first", options: {}}, {code: "second", options: {}}],
+          second: [{code: "a", options: {}}, {code: "b", options: {}}],
+          third: []
+        )
+      end
+    end
+
     context "without includes" do
       let(:options) { {} }
 

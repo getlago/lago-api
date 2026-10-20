@@ -2,8 +2,21 @@
 
 module V2
   class RateCardSerializer < ModelSerializer
+    # The latest effective rate, as RateCard#active_rate selects it.
+    expandable(:active_rate, serializer: ::V2::RateCardRateSerializer) { active_rate }
+    # As /taxes lists them.
+    expandable(:taxes, serializer: ::V2::TaxSerializer) { model.applied_taxes.listed.filter_map(&:tax) }
+    # As /rates lists them, sorted in memory so that each status reads its siblings from the
+    # loaded rates rather than querying them.
+    expandable(:rates, serializer: ::V2::RateCardRateSerializer) { model.rates.sort_by(&:effective_from).reverse }
+    expandable :product, serializer: ::V2::ProductSerializer
+    # With the keys of its values, rather than one billable metric filter query per value.
+    expandable(:product_filter, serializer: ::V2::ProductFilterSerializer) do
+      model.product_filter&.tap { ActiveRecord::Associations::Preloader.new(records: [it], associations: {values: :billable_metric_filter}).call }
+    end
+
     def serialize
-      payload = {
+      {
         lago_id: model.id,
         product_code: model.product.code,
         product_filter_code: model.product_filter&.code,
@@ -21,36 +34,16 @@ module V2
         updated_at: model.updated_at.iso8601,
         deleted_at: model.deleted_at&.iso8601
       }
-
-      payload[:active_rate] = active_rate if include?(:active_rate)
-      payload.merge!(taxes) if include?(:taxes)
-      payload.merge!(rates) if include?(:rates)
-      payload
     end
 
     private
 
+    # From the rates when they are expanded too, so that both expansions read the same rows.
     def active_rate
-      rate = model.active_rate
-      return if rate.nil?
+      return model.active_rate unless include?(:rates)
 
-      ::V2::RateCardRateSerializer.new(rate).serialize
-    end
-
-    def rates
-      ::CollectionSerializer.new(
-        model.rates,
-        ::V2::RateCardRateSerializer,
-        collection_name: "rates"
-      ).serialize
-    end
-
-    def taxes
-      ::CollectionSerializer.new(
-        model.taxes,
-        ::V1::TaxSerializer,
-        collection_name: "taxes"
-      ).serialize
+      now = Time.current
+      model.rates.select { it.effective_from <= now }.max_by(&:effective_from)
     end
   end
 end
