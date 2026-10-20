@@ -18,7 +18,6 @@ module Api
           )
 
           if result.success?
-            # A tax discarded between the page query and the preload of its taxes loads as nil.
             render_taxes(result.applied_taxes) { |applied_taxes| applied_taxes.filter_map(&:tax) }
           else
             render_error_response(result)
