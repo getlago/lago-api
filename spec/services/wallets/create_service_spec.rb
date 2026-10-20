@@ -328,6 +328,25 @@ RSpec.describe Wallets::CreateService do
       end
     end
 
+    context "when invoice_usage_on_expiration is set" do
+      let(:params) do
+        {
+          name: "New Wallet",
+          customer:,
+          organization_id: organization.id,
+          currency: "EUR",
+          rate_amount: "1.00",
+          paid_credits:,
+          invoice_usage_on_expiration: true
+        }
+      end
+
+      it "follows the value" do
+        expect(service_result).to be_success
+        expect(service_result.wallet.invoice_usage_on_expiration).to eq(true)
+      end
+    end
+
     context "when customer does not have a currency" do
       let(:customer_currency) { nil }
 

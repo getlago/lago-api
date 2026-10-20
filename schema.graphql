@@ -3670,6 +3670,7 @@ input CreateCustomerWalletInput {
   ignorePaidTopUpLimitsOnCreation: Boolean
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   invoiceRequiresSuccessfulPayment: Boolean
+  invoiceUsageOnExpiration: Boolean
   metadata: [MetadataInput!]
   name: String
   paidCredits: String!
@@ -8006,6 +8007,7 @@ type Invoice {
   prepaidGrantedCreditAmountCents: BigInt
   prepaidPurchasedCreditAmountCents: BigInt
   progressiveBillingCreditAmountCents: BigInt!
+  progressiveBillingTrigger: InvoiceProgressiveBillingTriggerEnum
   purchaseOrderNumber: String
   readyForPaymentProcessing: Boolean!
   refundableAmountCents: BigInt!
@@ -8182,6 +8184,11 @@ enum InvoicePaymentStatusTypeEnum {
   failed
   pending
   succeeded
+}
+
+enum InvoiceProgressiveBillingTriggerEnum {
+  usage_threshold
+  wallet_expiration
 }
 
 enum InvoiceSettlementTypeEnum {
@@ -16028,6 +16035,7 @@ input UpdateCustomerWalletInput {
   id: ID!
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   invoiceRequiresSuccessfulPayment: Boolean
+  invoiceUsageOnExpiration: Boolean
   metadata: [MetadataInput!]
   name: String
   paidTopUpMaxAmountCents: BigInt
@@ -16951,6 +16959,7 @@ type Wallet {
   expirationAt: ISO8601DateTime
   id: ID!
   invoiceRequiresSuccessfulPayment: Boolean!
+  invoiceUsageOnExpiration: Boolean!
   lastBalanceSyncAt: ISO8601DateTime
   lastConsumedCreditAt: ISO8601DateTime
   lastOngoingBalanceSyncAt: ISO8601DateTime

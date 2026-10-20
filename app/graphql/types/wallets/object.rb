@@ -39,6 +39,7 @@ module Types
       field :recurring_transaction_rules, [Types::Wallets::RecurringTransactionRules::Object], null: true
 
       field :invoice_requires_successful_payment, Boolean, null: false
+      field :invoice_usage_on_expiration, Boolean, null: false
 
       field :paid_top_up_max_amount_cents, GraphQL::Types::BigInt, null: true
       field :paid_top_up_max_credits, GraphQL::Types::BigInt, null: true

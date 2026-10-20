@@ -46,6 +46,7 @@ RSpec.describe ::V1::WalletSerializer do
       "ongoing_usage_balance_cents" => wallet.ongoing_usage_balance_cents,
       "consumed_credits" => wallet.consumed_credits.to_s,
       "invoice_requires_successful_payment" => wallet.invoice_requires_successful_payment,
+      "invoice_usage_on_expiration" => wallet.invoice_usage_on_expiration,
       "paid_top_up_min_amount_cents" => wallet.paid_top_up_min_amount_cents,
       "paid_top_up_max_amount_cents" => wallet.paid_top_up_max_amount_cents
     )

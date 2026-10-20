@@ -11,6 +11,7 @@ RSpec.describe Types::Wallets::UpdateInput do
     expect(subject).to accept_argument(:billing_entity_id).of_type("ID")
     expect(subject).to accept_argument(:code).of_type("String")
     expect(subject).to accept_argument(:invoice_requires_successful_payment).of_type("Boolean")
+    expect(subject).to accept_argument(:invoice_usage_on_expiration).of_type("Boolean")
     expect(subject).to accept_argument(:name).of_type("String")
     expect(subject).to accept_argument(:priority).of_type("Int!")
 

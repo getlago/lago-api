@@ -16299,6 +16299,18 @@
               "deprecationReason": null
             },
             {
+              "name": "invoiceUsageOnExpiration",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "name",
               "description": null,
               "type": {
@@ -41870,6 +41882,18 @@
               "deprecationReason": null
             },
             {
+              "name": "progressiveBillingTrigger",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "ENUM",
+                "name": "InvoiceProgressiveBillingTriggerEnum",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "purchaseOrderNumber",
               "description": null,
               "args": [],
@@ -43212,6 +43236,29 @@
             },
             {
               "name": "failed",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "possibleTypes": null
+        },
+        {
+          "kind": "ENUM",
+          "name": "InvoiceProgressiveBillingTriggerEnum",
+          "description": null,
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": [
+            {
+              "name": "usage_threshold",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "wallet_expiration",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -85587,6 +85634,18 @@
               "deprecationReason": null
             },
             {
+              "name": "invoiceUsageOnExpiration",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Boolean",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "name",
               "description": null,
               "type": {
@@ -92034,6 +92093,22 @@
             },
             {
               "name": "invoiceRequiresSuccessfulPayment",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoiceUsageOnExpiration",
               "description": null,
               "args": [],
               "type": {

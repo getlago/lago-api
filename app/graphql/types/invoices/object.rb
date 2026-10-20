@@ -36,6 +36,7 @@ module Types
       field :prepaid_granted_credit_amount_cents, GraphQL::Types::BigInt, null: true
       field :prepaid_purchased_credit_amount_cents, GraphQL::Types::BigInt, null: true
       field :progressive_billing_credit_amount_cents, GraphQL::Types::BigInt, null: false
+      field :progressive_billing_trigger, Types::Invoices::ProgressiveBillingTriggerEnum, null: true
       field :ready_for_payment_processing, Boolean, null: false
       field :sub_total_excluding_taxes_amount_cents, GraphQL::Types::BigInt, null: false
       field :sub_total_including_taxes_amount_cents, GraphQL::Types::BigInt, null: false

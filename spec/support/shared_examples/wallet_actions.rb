@@ -12,6 +12,7 @@ RSpec.shared_examples "a wallet create endpoint" do
       granted_credits: "10",
       expiration_at:,
       invoice_requires_successful_payment: true,
+      invoice_usage_on_expiration: true,
       paid_top_up_min_amount_cents: 5_00,
       paid_top_up_max_amount_cents: 100_00,
       ignore_paid_top_up_limits_on_creation: "true",
@@ -44,6 +45,7 @@ RSpec.shared_examples "a wallet create endpoint" do
     expect(json[:wallet][:external_customer_id]).to eq(customer.external_id)
     expect(json[:wallet][:expiration_at]).to eq(expiration_at)
     expect(json[:wallet][:invoice_requires_successful_payment]).to eq(true)
+    expect(json[:wallet][:invoice_usage_on_expiration]).to eq(true)
     expect(json[:wallet][:paid_top_up_min_amount_cents]).to eq(5_00)
     expect(json[:wallet][:paid_top_up_max_amount_cents]).to eq(100_00)
     expect(json[:wallet][:purchase_order_number]).to eq("PO-123")
@@ -901,6 +903,7 @@ RSpec.shared_examples "a wallet update endpoint" do
       expiration_at:,
       priority: 5,
       invoice_requires_successful_payment: true,
+      invoice_usage_on_expiration: true,
       paid_top_up_min_amount_cents: 6_00,
       paid_top_up_max_amount_cents: 10_00,
       purchase_order_number: "PO-456",
@@ -925,6 +928,7 @@ RSpec.shared_examples "a wallet update endpoint" do
     expect(json[:wallet][:priority]).to eq(update_params[:priority])
     expect(json[:wallet][:expiration_at]).to eq(expiration_at)
     expect(json[:wallet][:invoice_requires_successful_payment]).to eq(true)
+    expect(json[:wallet][:invoice_usage_on_expiration]).to eq(true)
     expect(json[:wallet][:paid_top_up_min_amount_cents]).to eq(6_00)
     expect(json[:wallet][:paid_top_up_max_amount_cents]).to eq(10_00)
     expect(json[:wallet][:purchase_order_number]).to eq("PO-456")
