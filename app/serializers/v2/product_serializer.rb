@@ -16,16 +16,11 @@ module V2
         description: model.description,
         invoice_display_name: model.invoice_display_name,
         product_type: model.product_type,
-        **counts,
+        filters_count: model.filters.size,
         created_at: model.created_at.iso8601,
         updated_at: model.updated_at.iso8601,
         deleted_at: model.deleted_at&.iso8601
       }
     end
-
-    private
-
-    # Only for the activity log: REST clients count the filters with `include_total_count`.
-    def counts = include?(:counts) ? {filters_count: model.filters.size} : {}
   end
 end

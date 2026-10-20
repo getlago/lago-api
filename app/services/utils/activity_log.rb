@@ -11,9 +11,6 @@ module Utils
     SERIALIZED_INCLUDED_OBJECTS = {
       billing_entity: %i[taxes],
       catalog_plan: %i[taxes],
-      # `counts` keeps the counts v2 REST payloads dropped. A request cannot pass it: `expand`
-      # only accepts the names a serializer declares with `expandable`.
-      product: %i[counts],
       rate_card: %i[rates taxes],
       contract_rate_card: %i[rate_phases],
       credit_note: %i[items applied_taxes error_details],
