@@ -36,6 +36,7 @@ RSpec.describe "templates/invoices/product_catalog/contract.slim" do
       invoice_display_name: nil,
       contract:,
       contract_rate_card:,
+      rate_card_rate: create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card),
       amount_cents: 2_800,
       amount_currency: invoice.currency,
       units: 280,
