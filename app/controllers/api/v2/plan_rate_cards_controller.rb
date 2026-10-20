@@ -61,7 +61,7 @@ module Api
         )
 
         if result.success?
-          page = ::CursorPagination::Page.new(records: result.plan_rate_cards.includes(:catalog_plan, :rate_card, :rate_phases), cursor:)
+          page = ::CursorPagination::Page.new(records: result.plan_rate_cards.includes(:catalog_plan, :rate_card), cursor:)
 
           render(
             json: ::CollectionSerializer.new(

@@ -316,14 +316,13 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
           end
 
           before do
-            create_list(:plan_rate_card, 2, organization:, catalog_plan:)
-            create(:plan_rate_card, organization:, catalog_plan:, deleted_at: Time.current)
+            create(:plan_rate_card, organization:, catalog_plan:)
 
             create(:plan_applied_tax, :catalog_plan, organization:, catalog_plan:, tax: vat)
             create(:plan_applied_tax, :catalog_plan, organization:, catalog_plan:, tax: create(:tax, organization:, deleted_at: Time.current))
           end
 
-          it "serializes the plan with the count of its kept rate cards and its kept taxes" do
+          it "serializes the plan with its kept taxes, without the count of its rate cards" do
             produce
 
             expect(produced_payload[:activity_object]).to eq(
@@ -333,7 +332,6 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               code: "premium",
               description: "Premium description",
               currency: "EUR",
-              applied_rate_cards_count: 2,
               created_at: timestamp,
               deleted_at: nil,
               taxes: [vat_payload]
@@ -345,12 +343,9 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
           let(:record) { product }
           let(:activity_type) { "product.created" }
 
-          before do
-            create_list(:product_filter, 2, organization:, product:)
-            create(:product_filter, organization:, product:, deleted_at: Time.current)
-          end
+          before { create(:product_filter, organization:, product:) }
 
-          it "serializes the product with the count of its kept filters" do
+          it "serializes the product, without the count of its filters" do
             produce
 
             expect(produced_payload[:activity_object]).to eq(
@@ -362,7 +357,6 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               description: "API product",
               invoice_display_name: "API calls",
               product_type: "metered",
-              filters_count: 2,
               created_at: timestamp,
               updated_at: timestamp,
               deleted_at: nil
@@ -388,7 +382,6 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               description: "API product",
               invoice_display_name: "API calls",
               product_type: "metered",
-              filters_count: 0,
               created_at: timestamp,
               updated_at: timestamp,
               deleted_at: timestamp
@@ -400,12 +393,9 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
           let(:record) { product_category }
           let(:activity_type) { "product_category.created" }
 
-          before do
-            create_list(:product, 2, organization:, product_category:)
-            create(:product, organization:, product_category:, deleted_at: Time.current)
-          end
+          before { create(:product, organization:, product_category:) }
 
-          it "serializes the category with the count of its kept products" do
+          it "serializes the category, without the count of its products" do
             produce
 
             expect(produced_payload[:activity_object]).to eq(
@@ -414,7 +404,6 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               code: "compute",
               description: "Compute products",
               invoice_display_name: "Compute usage",
-              products_count: 2,
               created_at: timestamp,
               updated_at: timestamp,
               deleted_at: nil
@@ -558,7 +547,6 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               display_on_invoice: true,
               regroup_paid_fees: nil,
               applied_pricing_unit_code: nil,
-              rates_count: 3,
               created_at: timestamp,
               updated_at: timestamp,
               deleted_at: nil,
@@ -577,11 +565,10 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
 
             let(:added_rate) { create(:rate_card_rate, organization:, rate_card:, code: "later", effective_from: Time.zone.parse("2023-05-01")) }
 
-            it "logs the rates count and the rates as the only changes" do
+            it "logs the rates as the only change" do
               produce
 
               expect(produced_payload[:activity_object_changes]).to eq(
-                rates_count: [3, 4],
                 rates: [
                   rate_payloads,
                   [

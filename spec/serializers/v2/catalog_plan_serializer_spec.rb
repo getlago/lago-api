@@ -27,7 +27,6 @@ RSpec.describe V2::CatalogPlanSerializer do
       code: "premium",
       description: "Premium monthly plan",
       currency: "USD",
-      applied_rate_cards_count: 0,
       created_at: "2026-09-01T08:30:00Z",
       deleted_at: nil
     }
@@ -43,8 +42,17 @@ RSpec.describe V2::CatalogPlanSerializer do
       create(:plan_rate_card, organization: catalog_plan.organization, catalog_plan:, deleted_at: Time.current)
     end
 
-    it "counts the kept ones only" do
-      expect(payload).to eq(flat_payload.merge(applied_rate_cards_count: 1))
+    it "renders no count of them" do
+      expect(payload).to eq(flat_payload)
+    end
+
+    # Only the plan webhooks ask for it.
+    context "when counts are included" do
+      let(:options) { {includes: %i[counts]} }
+
+      it "counts the kept ones only" do
+        expect(payload).to eq(flat_payload.merge(applied_rate_cards_count: 1))
+      end
     end
   end
 
