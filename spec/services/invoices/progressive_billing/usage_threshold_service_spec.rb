@@ -67,6 +67,14 @@ RSpec.describe Invoices::ProgressiveBilling::UsageThresholdService, transaction:
         .to eq(lifetime_usage.total_amount_cents)
     end
 
+    it "builds the invoice under the subscription lock" do
+      allow(Subscriptions::LockService).to receive(:call).and_call_original
+
+      create_service.call
+
+      expect(Subscriptions::LockService).to have_received(:call).with(subscription:)
+    end
+
     it "makes sure that only 1 invoice is generated for a given threshold" do
       result = create_service.call
       expect(result).to be_success

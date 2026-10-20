@@ -13,39 +13,8 @@ module Invoices
 
       def call
         Idempotency.transaction do
-          create_generating_invoice
-          create_fees
-          after_fees_created
-
-          Idempotency.unique!(invoice,
-            organization_id: subscription.organization_id,
-            external_subscription_id: subscription.external_id,
-            **idempotency_values)
-
-          invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
-          invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
-
-          credits = Credits::ProgressiveBillingService.call(invoice:).credits
-          after_progressive_billing_credits_applied(credits)
-
-          if nothing_to_invoice?
-            @invoice = nil
-            raise ActiveRecord::Rollback
-          end
-
-          Credits::AppliedCouponsService.call(invoice:)
-          Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
-
-          totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice:)
-          next if !totals_result.success? && totals_result.error.is_a?(::BaseService::UnknownTaxFailure)
-
-          totals_result.raise_if_error!
-
-          create_credit_note_credit
-          create_applied_prepaid_credit
-
-          invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
-          Invoices::FinalizeService.call!(invoice: invoice)
+          Subscriptions::LockService.call(subscription:) { build_invoice }
+          raise ActiveRecord::Rollback unless invoice
         end
 
         if invoice&.finalized?
@@ -92,6 +61,42 @@ module Invoices
 
       def nothing_to_invoice?
         false
+      end
+
+      def build_invoice
+        create_generating_invoice
+        create_fees
+        after_fees_created
+
+        Idempotency.unique!(invoice,
+          organization_id: subscription.organization_id,
+          external_subscription_id: subscription.external_id,
+          **idempotency_values)
+
+        invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
+        invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
+
+        credits = Credits::ProgressiveBillingService.call(invoice:).credits
+        after_progressive_billing_credits_applied(credits)
+
+        if nothing_to_invoice?
+          @invoice = nil
+          return
+        end
+
+        Credits::AppliedCouponsService.call(invoice:)
+        Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
+
+        totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice:)
+        return if !totals_result.success? && totals_result.error.is_a?(::BaseService::UnknownTaxFailure)
+
+        totals_result.raise_if_error!
+
+        create_credit_note_credit
+        create_applied_prepaid_credit
+
+        invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
+        Invoices::FinalizeService.call!(invoice: invoice)
       end
 
       def create_generating_invoice
