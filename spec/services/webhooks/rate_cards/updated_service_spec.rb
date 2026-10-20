@@ -7,54 +7,75 @@ RSpec.describe Webhooks::RateCards::UpdatedService do
 
   let(:organization) { create(:organization) }
   let(:rate_card) { create(:rate_card, organization:) }
-  let(:webhook_endpoint) { create(:webhook_endpoint, organization:) }
-  let(:payload) { Webhook.find_by!(webhook_type: "rate_card.updated").payload.fetch("rate_card") }
-  let(:old_tax) { create(:tax, organization:) }
-  let(:new_tax) { create(:tax, organization:) }
-  let(:active_rate) { create(:rate_card_rate, rate_card:, organization:, effective_from: 1.day.ago) }
-  let(:future_rate) { create(:rate_card_rate, rate_card:, organization:, effective_from: 1.day.from_now) }
-  let(:rates) { [active_rate, future_rate] }
-  let(:taxes_before_update) { [old_tax] }
-  let(:taxes_after_update) { [new_tax] }
-  let(:expected_tax_ids) { [new_tax.id] }
+  let(:active_rate) do
+    create(:rate_card_rate, rate_card:, organization:, code: "current-rate", effective_from: 1.day.ago.beginning_of_day,
+      rate_properties: {"amount" => "31"})
+  end
 
   before do
     allow(organization).to receive(:product_catalog_enabled?).and_return(true)
-    webhook_endpoint
-    rates
-    taxes_before_update.each do |tax|
-      create(:rate_card_applied_tax, rate_card:, tax:, organization:)
-    end
-    rate_card.applied_taxes.destroy_all
-    taxes_after_update.each do |tax|
-      create(:rate_card_applied_tax, rate_card:, tax:, organization:)
-    end
+    create(:webhook_endpoint, organization:)
+    active_rate
   end
 
-  context "when taxes are replaced" do
-    it "includes the rate timeline, active rate, and current replacement taxes" do
-      update_webhook
+  it "serializes the entire updated card and active rate with an empty taxes array" do
+    rate_card.update!(name: "Repriced catalog", description: "Revised")
+    update_webhook
 
-      expect(payload.fetch("active_rate")).to include("lago_id" => active_rate.id, "code" => active_rate.code, "status" => "active")
-      expect(payload.fetch("rates").map { |rate| rate.slice("lago_id", "code") }).to eq(
-        rate_card.rates.map { |rate| {"lago_id" => rate.id, "code" => rate.code} }
-      )
-      expect(payload.fetch("taxes").map { |item| item.fetch("lago_id") }).to eq(expected_tax_ids)
-    end
-  end
-
-  context "when taxes are cleared" do
-    let(:taxes_after_update) { [] }
-    let(:expected_tax_ids) { [] }
-
-    it "includes the rate timeline, active rate, and empty taxes array" do
-      update_webhook
-
-      expect(payload.fetch("active_rate")).to include("lago_id" => active_rate.id, "code" => active_rate.code, "status" => "active")
-      expect(payload.fetch("rates").map { |rate| rate.slice("lago_id", "code") }).to eq(
-        rate_card.rates.map { |rate| {"lago_id" => rate.id, "code" => rate.code} }
-      )
-      expect(payload.fetch("taxes").map { |item| item.fetch("lago_id") }).to eq(expected_tax_ids)
-    end
+    expect(Webhook.order(created_at: :desc).first.payload).to eq(
+      "webhook_type" => "rate_card.updated",
+      "object_type" => "rate_card",
+      "organization_id" => organization.id,
+      "rate_card" => {
+        "lago_id" => rate_card.id,
+        "product_code" => rate_card.product.code,
+        "product_filter_code" => nil,
+        "name" => "Repriced catalog",
+        "code" => rate_card.code,
+        "description" => "Revised",
+        "currency" => "EUR",
+        "billing_timing" => "arrears",
+        "proration" => false,
+        "display_on_invoice" => true,
+        "regroup_paid_fees" => nil,
+        "applied_pricing_unit_code" => nil,
+        "rates_count" => 1,
+        "created_at" => rate_card.created_at.iso8601,
+        "updated_at" => rate_card.updated_at.iso8601,
+        "active_rate" => {
+          "lago_id" => active_rate.id,
+          "code" => "current-rate",
+          "rate_card_code" => rate_card.code,
+          "effective_from" => active_rate.effective_from.iso8601,
+          "status" => "active",
+          "rate_model" => "standard",
+          "rate_properties" => {"amount" => "31"},
+          "min_amount_cents" => 0,
+          "billing_interval_count" => 1,
+          "billing_interval_unit" => "month",
+          "applied_pricing_unit_conversion_rate" => nil,
+          "created_at" => active_rate.created_at.iso8601,
+          "updated_at" => active_rate.updated_at.iso8601
+        },
+        "rates" => [
+          {
+            "lago_id" => active_rate.id,
+            "code" => "current-rate",
+            "rate_card_code" => rate_card.code,
+            "effective_from" => active_rate.effective_from.iso8601,
+            "status" => "active",
+            "rate_model" => "standard",
+            "rate_properties" => {"amount" => "31"},
+            "min_amount_cents" => 0,
+            "billing_interval_count" => 1,
+            "billing_interval_unit" => "month",
+            "applied_pricing_unit_conversion_rate" => nil,
+            "created_at" => active_rate.created_at.iso8601,
+            "updated_at" => active_rate.updated_at.iso8601
+          }
+        ],
+        "taxes" => []
+      }
+    )
   end
 end

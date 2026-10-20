@@ -21,10 +21,45 @@ RSpec.describe Webhooks::RateCards::DeletedService do
     described_class.new(object: reloaded_rate_card).call
 
     webhook = Webhook.find_by!(webhook_type: "rate_card.deleted")
-    payload = webhook.payload.fetch("rate_card")
-    expect(payload.fetch("product_code")).to be_nil
-    expect(payload).to include("active_rate" => nil, "rates" => [])
-    expect(payload.fetch("taxes").map { |item| item.fetch("lago_id") }).to eq([tax.id])
-    expect(payload.fetch("code")).to eq(rate_card.code)
+    expect(webhook.payload).to eq(
+      "webhook_type" => "rate_card.deleted",
+      "object_type" => "rate_card",
+      "organization_id" => organization.id,
+      "rate_card" => {
+        "lago_id" => rate_card.id,
+        "product_code" => nil,
+        "product_filter_code" => nil,
+        "name" => rate_card.name,
+        "code" => rate_card.code,
+        "description" => "test description",
+        "currency" => "EUR",
+        "billing_timing" => "arrears",
+        "proration" => false,
+        "display_on_invoice" => true,
+        "regroup_paid_fees" => nil,
+        "applied_pricing_unit_code" => nil,
+        "rates_count" => 0,
+        "created_at" => reloaded_rate_card.created_at.iso8601,
+        "updated_at" => reloaded_rate_card.updated_at.iso8601,
+        "active_rate" => nil,
+        "rates" => [],
+        "taxes" => [
+          {
+            "lago_id" => tax.id,
+            "name" => tax.name,
+            "code" => tax.code,
+            "rate" => 20.0,
+            "description" => tax.description,
+            "applied_to_organization" => false,
+            "add_ons_count" => 0,
+            "customers_count" => 0,
+            "plans_count" => 0,
+            "charges_count" => 0,
+            "commitments_count" => 0,
+            "created_at" => tax.created_at.iso8601
+          }
+        ]
+      }
+    )
   end
 end
