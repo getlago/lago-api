@@ -124,6 +124,17 @@ RSpec.describe Contracts::TerminateService do
     end
   end
 
+  context "when given the instant it ends at" do
+    subject(:result) { described_class.call(contract:, timestamp:) }
+
+    let(:timestamp) { 1.hour.ago.change(usec: 0) }
+
+    it "terminates it at that instant" do
+      expect(result).to be_success
+      expect(contract.reload.terminated_at).to eq(timestamp)
+    end
+  end
+
   context "when the clock activated the contract since it was loaded" do
     let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:) }
 
