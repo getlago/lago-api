@@ -4,11 +4,11 @@ module Api
   module V1
     module Customers
       class AttributedUsageController < Api::V1::BaseController
-        DEFAULT_PER_PAGE = UsageAttributions::QueryService::DEFAULT_LIMIT
-        MAX_PER_PAGE = UsageAttributions::QueryService::MAX_LIMIT
+        DEFAULT_PAGE_SIZE = UsageAttributions::QueryService::DEFAULT_LIMIT
+        MAX_PAGE_SIZE = UsageAttributions::QueryService::MAX_LIMIT
         QUERY_LIMIT_ERRORS = %w[too_many_groups query_timeout memory_limit_exceeded].freeze
 
-        self.max_page_size = MAX_PER_PAGE
+        self.max_page_size = MAX_PAGE_SIZE
 
         before_action :ensure_feature_flag!
 
@@ -72,7 +72,7 @@ module Api
         end
 
         def default_page_size
-          DEFAULT_PER_PAGE
+          DEFAULT_PAGE_SIZE
         end
 
         # filters[team]=eng&filters[model][]=opus&filters[model][]=haiku
