@@ -697,6 +697,34 @@ RSpec.describe Api::V1::InvoicesController do
         end
       end
 
+      context "when the organization pagination_max_page_size is below the default page size" do
+        let(:organization) { create(:organization, pagination_max_page_size: 50) }
+
+        before { allow(InvoicesQuery).to receive(:call).and_call_original }
+
+        context "without per_page" do
+          let(:params) { {} }
+
+          it "uses the organization limit as the page size" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(InvoicesQuery).to have_received(:call).with(hash_including(pagination: {page: nil, limit: 50}))
+          end
+        end
+
+        context "with a blank per_page" do
+          let(:params) { {per_page: ""} }
+
+          it "uses the organization limit as the page size" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(InvoicesQuery).to have_received(:call).with(hash_including(pagination: {page: nil, limit: 50}))
+          end
+        end
+      end
+
       context "without authorization header" do
         subject { get("/api/v1/invoices", params: {per_page: 1_000_000_000}) }
 

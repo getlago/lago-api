@@ -98,10 +98,11 @@ RSpec.describe Api::V1::Customers::AttributedUsageController, clickhouse: {clean
       let(:customer_external_id) { "unknown" }
       let(:params) { {external_subscription_id: subscription.external_id, group_by: "team", per_page: 101} }
 
-      it "returns a not found error" do
+      it "returns a validation error before the customer lookup" do
         subject
 
-        expect(response).to be_not_found_error("customer")
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(per_page: ["value_is_out_of_range"])
       end
     end
 
@@ -110,15 +111,11 @@ RSpec.describe Api::V1::Customers::AttributedUsageController, clickhouse: {clean
         {external_subscription_id: subscription.external_id, group_by: "team", from_datetime: "yesterday", page: 0, per_page: 101}
       end
 
-      it "returns all the validation errors together" do
+      it "returns the page errors before the datetime check" do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details]).to eq(
-          from_datetime: ["invalid_date"],
-          page: ["value_is_out_of_range"],
-          per_page: ["value_is_out_of_range"]
-        )
+        expect(json[:error_details]).to eq(page: ["value_is_out_of_range"], per_page: ["value_is_out_of_range"])
       end
     end
 

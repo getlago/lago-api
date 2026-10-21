@@ -29,6 +29,28 @@ RSpec.describe Api::V1::BaseController do
     it { expect(max_page_size).to be_nil }
   end
 
+  describe "#max_per_page" do
+    subject(:max_per_page) { controller.send(:max_per_page) }
+
+    let(:controller) { described_class.new }
+
+    before { allow(controller).to receive(:current_organization).and_return(current_organization) }
+
+    context "with an organization limit" do
+      let(:current_organization) { build(:organization, pagination_max_page_size: 50) }
+
+      it { expect(max_per_page).to eq(50) }
+    end
+
+    context "with an organization loaded without the pagination_max_page_size attribute" do
+      let(:current_organization) { Organization.instantiate(build(:organization).attributes.except("pagination_max_page_size")) }
+
+      it "falls back to the global limit" do
+        expect(max_per_page).to eq(Pagination.max_per_page)
+      end
+    end
+  end
+
   describe "callbacks" do
     subject(:filters) { described_class._process_action_callbacks.map(&:filter) }
 
