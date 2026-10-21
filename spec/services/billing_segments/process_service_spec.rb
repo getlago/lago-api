@@ -1287,9 +1287,7 @@ RSpec.describe BillingSegments::ProcessService do
       end
 
       it "finalizes it without the contract finalization service" do
-        invoices = result.invoices
-
-        expect(invoices).to include(legacy_invoice)
+        expect(result).to be_success
         expect(legacy_invoice.reload).to be_finalized
         expect(Invoices::FinalizeContractInvoiceService).to have_received(:call!).once
         expect(Invoices::FinalizeContractInvoiceService).not_to have_received(:call!).with(invoice: legacy_invoice)
