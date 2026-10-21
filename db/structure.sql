@@ -12697,7 +12697,7 @@ CREATE INDEX index_x402_settlements_on_ungranted_id ON public.x402_settlements U
 -- Name: index_x402_settlements_on_unpaid_id; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX index_x402_settlements_on_unpaid_id ON public.x402_settlements USING btree (id) WHERE ((kind = 'invoice_payment'::public.x402_settlement_kind) AND (status = 'settled'::public.x402_settlement_status) AND (payment_id IS NULL));
+CREATE INDEX index_x402_settlements_on_unpaid_id ON public.x402_settlements USING btree (id) WHERE ((kind = 'invoice_payment'::public.x402_settlement_kind) AND (status = 'settled'::public.x402_settlement_status) AND (payment_id IS NULL) AND ((error_reason)::text IS DISTINCT FROM 'payment_not_recorded'::text));
 
 
 --

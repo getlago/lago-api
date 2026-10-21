@@ -10,7 +10,7 @@ class AddUnpaidIndexToX402Settlements < ActiveRecord::Migration[8.0]
 
     add_index :x402_settlements,
       :id,
-      where: "kind = 'invoice_payment' AND status = 'settled' AND payment_id IS NULL",
+      where: "kind = 'invoice_payment' AND status = 'settled' AND payment_id IS NULL AND error_reason IS DISTINCT FROM 'payment_not_recorded'",
       name: :index_x402_settlements_on_unpaid_id,
       algorithm: :concurrently,
       if_not_exists: true

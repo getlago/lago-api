@@ -38,7 +38,11 @@ module X402
 
     scope :pending_reconciliation, -> { pending.where(reconcile_after: ..Time.current) }
     scope :grant_retry_due, -> { credit_purchase.settled.where(wallet_transaction_id: nil, updated_at: ..GRANT_RETRY_DELAY.ago) }
-    scope :payment_retry_due, -> { invoice_payment.settled.where(payment_id: nil, updated_at: ..PAYMENT_RETRY_DELAY.ago) }
+    scope :payment_retry_due, lambda {
+      invoice_payment.settled
+        .where(payment_id: nil, updated_at: ..PAYMENT_RETRY_DELAY.ago)
+        .where(arel_table[:error_reason].is_distinct_from("payment_not_recorded"))
+    }
 
     def self.request_key_digest(key)
       OpenSSL::Digest::SHA256.hexdigest(key) if key
@@ -148,7 +152,7 @@ end
 #  index_x402_settlements_on_pending_invoice_id             (invoice_id) UNIQUE WHERE (status = 'pending'::x402_settlement_status)
 #  index_x402_settlements_on_pending_reconcile_after        (reconcile_after) WHERE (status = 'pending'::x402_settlement_status)
 #  index_x402_settlements_on_ungranted_id                   (id) WHERE ((kind = 'credit_purchase'::x402_settlement_kind) AND (status = 'settled'::x402_settlement_status) AND (wallet_transaction_id IS NULL))
-#  index_x402_settlements_on_unpaid_id                      (id) WHERE ((kind = 'invoice_payment'::x402_settlement_kind) AND (status = 'settled'::x402_settlement_status) AND (payment_id IS NULL))
+#  index_x402_settlements_on_unpaid_id                      (id) WHERE ((kind = 'invoice_payment'::x402_settlement_kind) AND (status = 'settled'::x402_settlement_status) AND (payment_id IS NULL) AND ((error_reason)::text IS DISTINCT FROM 'payment_not_recorded'::text))
 #  index_x402_settlements_on_x402_connection_id             (x402_connection_id)
 #
 # Foreign Keys
