@@ -225,6 +225,26 @@ RSpec.describe Api::V1::TaxesController do
       end
     end
 
+    context "with several taxes applied to a billing entity", :bullet do
+      subject(:request) { get_with_token(organization, "/api/v1/taxes") }
+
+      let!(:tax) { create(:tax, :applied_to_billing_entity, organization:) }
+      let(:other_tax) { create(:tax, :applied_to_billing_entity, organization:) }
+
+      before { other_tax }
+
+      it "returns billing entity assignments without N+1 queries" do
+        request
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:taxes].map { |item| item.slice(:lago_id, :applied_to_organization, :applied_to_billing_entities_codes) }).to match_array(
+          [tax, other_tax].map do |item|
+            {lago_id: item.id, applied_to_organization: true, applied_to_billing_entities_codes: [organization.default_billing_entity.code]}
+          end
+        )
+      end
+    end
+
     context "with pagination" do
       before { create(:tax, organization:) }
 

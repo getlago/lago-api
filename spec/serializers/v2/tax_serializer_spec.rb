@@ -15,7 +15,8 @@ RSpec.describe V2::TaxSerializer do
       code: tax.code,
       rate: tax.rate,
       description: tax.description,
-      created_at: tax.created_at.iso8601
+      created_at: tax.created_at.iso8601,
+      updated_at: tax.updated_at.iso8601
     )
   end
 
@@ -37,6 +38,7 @@ RSpec.describe V2::TaxSerializer do
           rate: tax.rate,
           description: tax.description,
           created_at: tax.created_at.iso8601,
+          updated_at: tax.updated_at.iso8601,
           deleted_at: tax.deleted_at.iso8601
         )
       end
@@ -54,16 +56,9 @@ RSpec.describe V2::TaxSerializer do
         rate: tax.rate,
         description: tax.description,
         created_at: tax.created_at.iso8601,
+        updated_at: tax.updated_at.iso8601,
         deleted_at: nil
       )
-    end
-  end
-
-  context "with the internal counts option" do
-    let(:includes) { [:counts] }
-
-    it "preserves the exact v1 payload for internal callers" do
-      expect(payload).to eq(V1::TaxSerializer.new(tax).serialize)
     end
   end
 end

@@ -159,6 +159,7 @@ RSpec.describe Api::V2::TaxesController do
         rate: tax.rate,
         description: tax.description,
         created_at: tax.created_at.iso8601,
+        updated_at: tax.updated_at.iso8601,
         deleted_at: nil
       )
     end
@@ -202,7 +203,7 @@ RSpec.describe Api::V2::TaxesController do
 
       expect(response).to have_http_status(:ok)
       expect(json[:taxes].pluck(:code)).to eq(["second"])
-      expect(json[:taxes].first.keys).to match_array(%i[lago_id name code rate description created_at deleted_at])
+      expect(json[:taxes].first.keys).to match_array(%i[lago_id name code rate description created_at updated_at deleted_at])
       expect(json[:meta][:next_cursor]).to be_present
       expect(json[:meta][:prev_cursor]).to be_nil
     end
@@ -213,10 +214,11 @@ RSpec.describe Api::V2::TaxesController do
     end
 
     context "without product catalog enabled", product_catalog: false do
-      it "keeps taxes available" do
+      it "requires the product catalog" do
         request
 
-        expect(response).to have_http_status(:ok)
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:code]).to eq("feature_unavailable")
         expect(organization.reload).not_to be_product_catalog_enabled
       end
     end
@@ -227,6 +229,39 @@ RSpec.describe Api::V2::TaxesController do
 
         expect(response).to have_http_status(:unauthorized)
         expect(response.headers["X-Lago-Endpoint-Status"]).to eq("beta")
+      end
+    end
+  end
+
+  describe "when the product catalog is disabled", product_catalog: false do
+    let(:tax) { create(:tax, organization:) }
+
+    before { tax }
+
+    [
+      [:get, "/api/v2/taxes"],
+      [:post, "/api/v2/taxes"],
+      [:get, "/api/v2/taxes/:code"],
+      [:put, "/api/v2/taxes/:code"],
+      [:patch, "/api/v2/taxes/:code"],
+      [:delete, "/api/v2/taxes/:code"]
+    ].each do |http_method, path|
+      context "when using #{http_method.upcase} #{path}" do
+        subject(:request) do
+          public_send(
+            :"#{http_method}_with_token",
+            organization,
+            path.sub(":code", tax.code),
+            {expand: "counts", limit: 0, tax: {name: "Changed tax", code: "changed", rate: 5}}
+          )
+        end
+
+        it "checks the feature before expansion, pagination or writes" do
+          expect { request }.not_to change { tax.reload.attributes }
+
+          expect(response).to have_http_status(:forbidden)
+          expect(json[:code]).to eq("feature_unavailable")
+        end
       end
     end
   end
@@ -287,7 +322,7 @@ RSpec.describe Api::V2::TaxesController do
           request
 
           expect(response).to have_http_status(:ok)
-          expect(json[:tax].keys).to match_array(%i[lago_id name code rate description created_at deleted_at])
+          expect(json[:tax].keys).to match_array(%i[lago_id name code rate description created_at updated_at deleted_at])
         end
       end
     end

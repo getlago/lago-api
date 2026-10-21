@@ -3,10 +3,7 @@
 module Api
   module V2
     class TaxesController < Api::V2::BaseController
-      # Taxes are shared by both billing systems, not restricted to the product catalog.
-      skip_before_action :ensure_product_catalog!
-
-      # Expansion errors must follow authorization but precede cursor validation.
+      # Expansion errors follow authorization and feature checks but precede cursor validation.
       skip_before_action :read_cursor
       before_action :validate_expand!
       before_action :read_cursor, if: :cursor_paginated_index?
