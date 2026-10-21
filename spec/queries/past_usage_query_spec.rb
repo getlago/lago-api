@@ -497,6 +497,36 @@ RSpec.describe PastUsageQuery do
           expect(result.usage_periods.sole.fees).to match_array([paid_fee, free_fee])
         end
       end
+
+      context "when paid fees of the period are also regrouped on an earlier invoice" do
+        let(:pagination) { {page: 1, limit: 1} }
+        let(:earlier_invoice) { create(:invoice, organization:, customer:, invoice_type: :advance_charges) }
+        let!(:earlier_period) do
+          create(:invoice_subscription, organization:, subscription:, invoice: earlier_invoice,
+            invoicing_reason: :in_advance_charge_periodic,
+            charges_from_datetime: invoice_subscription2.charges_from_datetime,
+            charges_to_datetime: invoice_subscription2.charges_to_datetime,
+            created_at: invoice_subscription1.created_at - 1.day)
+        end
+        let!(:earlier_paid_fee) do
+          create(:charge_fee, organization:, subscription:, charge:, invoice: earlier_invoice,
+            units: 10, total_aggregated_units: 10, amount_cents: 500, properties: period_properties)
+        end
+
+        it "does not show the free fees on the later invoice's page" do
+          expect(result.usage_periods.sole.invoice_subscription).to eq(invoice_subscription1)
+          expect(result.usage_periods.sole.fees).to eq([paid_fee])
+        end
+
+        context "when the earlier invoice is on the page" do
+          let(:pagination) { {page: 3, limit: 1} }
+
+          it "shows the free fees with it" do
+            expect(result.usage_periods.sole.invoice_subscription).to eq(earlier_period)
+            expect(result.usage_periods.sole.fees).to match_array([earlier_paid_fee, free_fee])
+          end
+        end
+      end
     end
 
     context "when the plan has no regrouped charge" do

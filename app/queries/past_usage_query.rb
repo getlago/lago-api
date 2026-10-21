@@ -134,18 +134,21 @@ class PastUsageQuery < BaseQuery
     owners
   end
 
-  # Regrouped fees are found both by the periods on the page and by the invoices on
-  # the page, since a fee paid late is regrouped on an invoice stamped with a later period.
+  # A fee paid late is regrouped on an invoice stamped with a later period, so the page's
+  # invoices add periods, whose regrouped fees are then searched on every invoice.
   def regrouped_period_keys(periods, charge_ids)
-    held_on_page = Fee.where(invoice_id: periods.map(&:invoice_id).uniq, subscription_id: periods.map(&:subscription_id).uniq)
-    conditions = fee_period_conditions(periods.map { |period| usage_period_key(period) }).or(held_on_page)
+    regrouped = Fee.where(organization:, charge_id: charge_ids).where.not(invoice_id: nil).charge
+    period_start = Arel.sql("fees.properties ->> 'charges_from_datetime'")
 
-    Fee.where(organization:, charge_id: charge_ids).where.not(invoice_id: nil).charge
-      .merge(conditions)
+    keys = periods.map { |period| usage_period_key(period) } |
+      regrouped.where(invoice_id: periods.map(&:invoice_id).uniq, subscription_id: periods.map(&:subscription_id).uniq)
+        .distinct.pluck(:subscription_id, period_start)
+
+    regrouped.merge(fee_period_conditions(keys))
       .distinct
-      .pluck(:invoice_id, :subscription_id, Arel.sql("fees.properties ->> 'charges_from_datetime'"))
+      .pluck(:invoice_id, :subscription_id, period_start)
       .group_by(&:first)
-      .transform_values { |rows| rows.map { |_, subscription_id, period_start| [subscription_id, period_start] } }
+      .transform_values { |rows| rows.map { |_, subscription_id, start| [subscription_id, start] } }
   end
 
   # Match on the period start only: a fee keeps the period end known when it was
