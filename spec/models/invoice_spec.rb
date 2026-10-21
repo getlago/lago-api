@@ -642,6 +642,17 @@ RSpec.describe Invoice do
 
       it { expect(invoice).not_to be_product_catalog }
     end
+
+    context "when the fees are already loaded" do
+      before { contract_fee }
+
+      it "reads them without querying" do
+        loaded_invoice = described_class.includes(:fees).find(invoice.id)
+
+        expect(capture_sql { loaded_invoice.product_catalog? }).to be_empty
+        expect(loaded_invoice).to be_product_catalog
+      end
+    end
   end
 
   describe "ready_to_be_finalized" do
@@ -811,6 +822,37 @@ RSpec.describe Invoice do
         end
       end
     end
+
+    context "when the invoice is finalized for a customer with an accounting integration" do
+      include_context "with a contract fee"
+
+      let(:invoice) { create(:invoice, customer:, organization:, invoice_type:, status: :finalized) }
+      let(:integration) { create(:netsuite_integration, organization:, sync_invoices: true) }
+
+      before { create(:netsuite_customer, integration:, customer:) }
+
+      context "when the invoice is a contract invoice" do
+        let(:invoice_type) { :contract }
+
+        it "returns false" do
+          expect(method_call).to eq(false)
+        end
+      end
+
+      context "when the invoice holds a contract fee" do
+        before { contract_fee }
+
+        it "returns false" do
+          expect(method_call).to eq(false)
+        end
+      end
+
+      context "when the invoice has no contract fee" do
+        it "returns true" do
+          expect(method_call).to eq(true)
+        end
+      end
+    end
   end
 
   describe "#should_sync_salesforce_invoice?" do
@@ -930,6 +972,18 @@ RSpec.describe Invoice do
             expect(method_call).to eq(false)
           end
         end
+      end
+    end
+
+    context "when a contract invoice is finalized for a customer with a Hubspot integration" do
+      let(:customer) { create(:customer, organization:) }
+      let(:invoice) { create(:invoice, customer:, organization:, invoice_type: :contract, status: :finalized) }
+      let(:integration) { create(:hubspot_integration, organization:, sync_invoices: true) }
+
+      before { create(:hubspot_customer, integration:, customer:) }
+
+      it "returns true" do
+        expect(method_call).to eq(true)
       end
     end
   end
