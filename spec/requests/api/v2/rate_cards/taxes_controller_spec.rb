@@ -27,7 +27,7 @@ RSpec.describe Api::V2::RateCards::TaxesController do
 
       expect(response).to have_http_status(:success)
       expect(json[:taxes].map { it[:lago_id] }).to eq([tax.id])
-      expect(json[:taxes].sole.keys).to eq(%i[lago_id name code rate description created_at deleted_at])
+      expect(json[:taxes].sole.keys).to eq(%i[lago_id name code rate description created_at updated_at deleted_at])
       expect(json[:taxes].sole).to include(code: tax.code, deleted_at: nil)
       expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
     end
