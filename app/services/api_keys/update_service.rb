@@ -18,7 +18,10 @@ module ApiKeys
       end
 
       old_flat_permissions = api_key.flat_permissions
-      api_key.update!(params.slice(:name, :permissions))
+      api_key.assign_attributes(params.slice(:name))
+      # A resource left out keeps its modes: the UI only sends the resources the organization's flags show.
+      api_key.permissions = api_key.permissions.merge(params[:permissions].stringify_keys) if params[:permissions]
+      api_key.save!
       ApiKeys::CacheService.expire_cache(api_key.value)
 
       register_security_log(old_flat_permissions)

@@ -29,6 +29,15 @@ RSpec.describe ApiKeys::UpdateService, :premium do
         it_behaves_like "produces a security log", "api_key.updated" do
           before { service_result }
         end
+
+        context "when permissions hash lists only some resources" do
+          let(:permissions) { {"add_on" => ["read"], "product" => []} }
+
+          it "updates the listed resources and keeps the others" do
+            expect { service_result }.to change { api_key.reload.permissions }
+              .to(ApiKey.default_permissions.merge("add_on" => ["read"], "product" => []))
+          end
+        end
       end
 
       context "when organization has no api permissions addon" do
