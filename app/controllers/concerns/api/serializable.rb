@@ -8,16 +8,13 @@ module Api
   # It generates `render_product(record)` and `render_products(records)`, which build the
   # serializer, the cursor page and the expansions, so that the actions never do.
   #
-  # `expand` is checked on every action, declared or not, before any lookup. On an `expand_on`
-  # action, it embeds the records the serializer declares with `expandable`, one level deep.
-  # Any other value it receives is a 400, never ignored: `expand_not_supported` where nothing
-  # expands, `invalid_expand` for a name the serializer does not declare or a form that cannot be
-  # read. Rails keeps only the last of a repeated bare key (`expand=a&expand=b`), as for any
-  # other parameter.
+  # `expands` is checked on every action, declared or not, before any lookup. On an `expand_on`
+  # action, it embeds the records the serializer declares with `expandable`, one level deep. It is
+  # read as an array only (`expands[]=a&expands[]=b`, or a JSON array), and any other value is a
+  # 400, never ignored: `expand_not_supported` where nothing expands, `invalid_expand` for a name
+  # the serializer does not declare or a form that cannot be read.
   module Serializable
     extend ActiveSupport::Concern
-
-    NUMERIC_INDEX = /\A\d+\z/
 
     Serialization = Data.define(:serializer, :root, :collection, :expand_on)
 
@@ -88,9 +85,8 @@ module Api
     # Symbols taken from the serializer: a request value is never symbolized.
     def requested_expansions = allowed_expansions.select { expand_values.include?(it.to_s) }
 
-    # expand[]=a, expand=a, expand[0]=a: trimmed, without blanks or duplicates; nil when malformed.
-    # Read from `params`, as Rails parses any other parameter: a bare key sent twice keeps its last
-    # value.
+    # expands[]=a: trimmed, without blanks or duplicates; nil when malformed, such as a bare
+    # `expands=a` or an indexed `expands[0]=a`.
     def expand_values
       return @expand_values if defined?(@expand_values)
 
@@ -99,18 +95,16 @@ module Api
     end
 
     def raw_expand_values
-      expand = params[:expand]
+      expands = params[:expands]
 
-      case expand
+      case expands
       when nil then []
-      when String then [expand]
-      when Array then expand
-      when ActionController::Parameters then expand.values if expand.keys.all?(NUMERIC_INDEX)
+      when Array then expands
       end
     end
 
     def invalid_expand_error(details)
-      invalid_request_error(code: "invalid_expand", error_details: {expand: details})
+      invalid_request_error(code: "invalid_expand", error_details: {expands: details})
     end
 
     # `action_not_expandable` where another action of the controller expands, `not_expandable`
@@ -118,7 +112,7 @@ module Api
     def expand_not_supported_error
       reason = expandable_elsewhere? ? "action_not_expandable" : "not_expandable"
 
-      invalid_request_error(code: "expand_not_supported", error_details: {expand: {reason:, invalid_values: expand_values}})
+      invalid_request_error(code: "expand_not_supported", error_details: {expands: {reason:, invalid_values: expand_values}})
     end
 
     def expandable_elsewhere?

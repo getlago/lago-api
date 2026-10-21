@@ -3,14 +3,14 @@
 require "rails_helper"
 
 RSpec.describe Api::Serializable do
-  # A nil expand is left out of the request: a GET would send it as `expand=`, an empty value.
-  subject(:show) { get_with_token(organization, "/api/v2/serializable_tests/#{product.code}", {expand:}.compact) }
+  # A nil value is left out of the request.
+  subject(:show) { get_with_token(organization, "/api/v2/serializable_tests/#{product.code}", {expands:}.compact) }
 
   # Out of spec/requests/api/v2, the catalog flag is not set for the spec.
   let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
   let(:product_category) { create(:product_category, organization:) }
   let(:product) { create(:product, organization:, product_category:) }
-  let(:expand) { nil }
+  let(:expands) { nil }
   let(:product_category_payload) { ::V2::ProductCategorySerializer.new(product_category).serialize }
 
   # Two expansions, so that their order and a repeated key can be told apart.
@@ -135,7 +135,7 @@ RSpec.describe Api::Serializable do
   end
 
   context "with an expansion" do
-    let(:expand) { ["product_category"] }
+    let(:expands) { ["product_category"] }
 
     it "embeds the record as its serializer renders it" do
       show
@@ -155,20 +155,8 @@ RSpec.describe Api::Serializable do
     end
   end
 
-  [["product_category"], "product_category", {"0" => "product_category"}].each do |form|
-    context "with expand sent as #{form.inspect}" do
-      let(:expand) { form }
-
-      it "reads the same expansion" do
-        show
-
-        expect(json).to eq(product: {code: product.code, product_category: product_category_payload})
-      end
-    end
-  end
-
   context "with expansions in another order than the serializer's" do
-    let(:expand) { {"0" => "billable_metric", "1" => "product_category"} }
+    let(:expands) { %w[billable_metric product_category] }
 
     it "renders them in the serializer's order" do
       show
@@ -178,19 +166,31 @@ RSpec.describe Api::Serializable do
     end
   end
 
-  # As Rails parses any other parameter.
-  context "with expand sent as a bare key repeated" do
-    subject(:show) { get_with_token(organization, "/api/v2/serializable_tests/#{product.code}?expand=product_category&expand=billable_metric") }
+  # Rails reads a bare key sent twice as its last value, a string.
+  context "with expands sent as a bare key repeated" do
+    subject(:show) { get_with_token(organization, "/api/v2/serializable_tests/#{product.code}?expands=product_category&expands=billable_metric") }
 
-    it "reads its last value only" do
+    it "returns a malformed error" do
       show
 
-      expect(json[:product].keys).to eq(%i[code billable_metric])
+      expect(response).to have_http_status(:bad_request)
+      expect(json[:error_details]).to eq(expands: {reason: "malformed", allowed_values: %w[product_category billable_metric]})
+    end
+  end
+
+  context "with the singular expand parameter" do
+    subject(:show) { get_with_token(organization, "/api/v2/serializable_tests/#{product.code}", {expand: ["product_category"]}) }
+
+    it "ignores it, as any parameter the endpoint does not read" do
+      show
+
+      expect(response).to have_http_status(:success)
+      expect(json).to eq(product: {code: product.code})
     end
   end
 
   context "with padded, repeated and blank values" do
-    let(:expand) { [" billable_metric ", "billable_metric", "", "  "] }
+    let(:expands) { [" billable_metric ", "billable_metric", "", "  "] }
 
     it "trims them and drops the blanks and duplicates" do
       show
@@ -200,9 +200,9 @@ RSpec.describe Api::Serializable do
     end
   end
 
-  [nil, "", [""]].each do |empty|
-    context "with an empty expand #{empty.inspect}" do
-      let(:expand) { empty }
+  [nil, [], [""]].each do |empty|
+    context "with an empty expands #{empty.inspect}" do
+      let(:expands) { empty }
 
       it "renders no expansion on show" do
         show
@@ -212,7 +212,7 @@ RSpec.describe Api::Serializable do
       end
 
       it "accepts it on an action that does not expand" do
-        post_with_token(organization, "/api/v2/serializable_tests", {expand: empty}.compact)
+        post_with_token(organization, "/api/v2/serializable_tests", {expands: empty}.compact)
 
         expect(response).to have_http_status(:success)
         expect(json).to eq(created: true)
@@ -220,19 +220,8 @@ RSpec.describe Api::Serializable do
     end
   end
 
-  context "with an empty hash" do
-    subject(:create_request) { post_with_token(organization, "/api/v2/serializable_tests", {expand: {}}) }
-
-    it "reads no expansion" do
-      create_request
-
-      expect(response).to have_http_status(:success)
-      expect(json).to eq(created: true)
-    end
-  end
-
   context "with an unknown expansion" do
-    let(:expand) { ["fees"] }
+    let(:expands) { ["fees"] }
 
     it "returns a bad request error listing the allowed values" do
       show
@@ -242,89 +231,87 @@ RSpec.describe Api::Serializable do
         status: 400,
         error: "Bad Request",
         code: "invalid_expand",
-        error_details: {expand: {invalid_values: ["fees"], allowed_values: %w[product_category billable_metric]}}
+        error_details: {expands: {invalid_values: ["fees"], allowed_values: %w[product_category billable_metric]}}
       )
     end
   end
 
   {
-    "a dotted path" => ["product_category.billable_metric", ["product_category.billable_metric"]],
-    "comma-separated names" => ["product_category,billable_metric", ["product_category,billable_metric"]],
+    "a dotted path" => [["product_category.billable_metric"], ["product_category.billable_metric"]],
+    "comma-separated names" => [["product_category,billable_metric"], ["product_category,billable_metric"]],
     "a name in another case" => [["Product_Category"], ["Product_Category"]],
     "valid and invalid names" => [["product_category", " fees ", "billable_metric"], ["fees"]]
   }.each do |description, (value, invalid_values)|
     context "with #{description}" do
-      let(:expand) { value }
+      let(:expands) { value }
 
       it "returns the invalid values" do
         show
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("invalid_expand")
-        expect(json[:error_details]).to eq(expand: {invalid_values:, allowed_values: %w[product_category billable_metric]})
+        expect(json[:error_details]).to eq(expands: {invalid_values:, allowed_values: %w[product_category billable_metric]})
       end
     end
   end
 
   context "with an unknown expansion repeated" do
-    let(:expand) { ["fees", " fees "] }
+    let(:expands) { ["fees", " fees "] }
 
     it "returns it once" do
       show
 
-      expect(json[:error_details]).to eq(expand: {invalid_values: ["fees"], allowed_values: %w[product_category billable_metric]})
+      expect(json[:error_details]).to eq(expands: {invalid_values: ["fees"], allowed_values: %w[product_category billable_metric]})
     end
   end
 
   {
+    "a bare value" => "product_category",
+    "an empty bare value" => "",
+    "an indexed hash" => {"0" => "product_category"},
     "a hash keyed by a name" => {"a" => "product_category"},
-    "a hash keyed by a negative index" => {"-1" => "product_category"},
-    "a hash keyed by a decimal index" => {"1.5" => "product_category"},
-    "a hash mixing numeric and other keys" => {"0" => "product_category", "a" => "billable_metric"},
-    "a nested hash" => {"0" => {"x" => "product_category"}},
-    "a hash nesting an array" => {"0" => ["product_category"]},
     "an array nesting a hash" => [{"x" => "product_category"}]
   }.each do |description, value|
     context "with #{description}" do
-      let(:expand) { value }
+      let(:expands) { value }
 
       it "returns a malformed error" do
         show
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("invalid_expand")
-        expect(json[:error_details]).to eq(expand: {reason: "malformed", allowed_values: %w[product_category billable_metric]})
+        expect(json[:error_details]).to eq(expands: {reason: "malformed", allowed_values: %w[product_category billable_metric]})
       end
     end
   end
 
-  # Sent as a query string, which the test client would flatten into `expand[]=product_category`.
+  # Sent as a query string, which the test client would flatten into `expands[]=product_category`.
   context "with a nested array" do
-    subject(:show) { get_with_token(organization, "/api/v2/serializable_tests/#{product.code}?expand[][]=product_category") }
+    subject(:show) { get_with_token(organization, "/api/v2/serializable_tests/#{product.code}?expands[][]=product_category") }
 
     it "returns a malformed error" do
       show
 
       expect(response).to have_http_status(:bad_request)
-      expect(json[:error_details]).to eq(expand: {reason: "malformed", allowed_values: %w[product_category billable_metric]})
+      expect(json[:error_details]).to eq(expands: {reason: "malformed", allowed_values: %w[product_category billable_metric]})
     end
   end
 
-  [1, false, [1]].each do |value|
+  [1, false, "product_category", {}, [1]].each do |value|
     context "with the JSON value #{value.inspect} on an action that does not expand" do
-      subject(:create_request) { post_with_token(organization, "/api/v2/serializable_tests", {expand: value}) }
+      subject(:create_request) { post_with_token(organization, "/api/v2/serializable_tests", {expands: value}) }
 
       it "returns a malformed error, with nothing allowed" do
         create_request
 
         expect(response).to have_http_status(:bad_request)
-        expect(json[:error_details]).to eq(expand: {reason: "malformed", allowed_values: []})
+        expect(json[:error_details]).to eq(expands: {reason: "malformed", allowed_values: []})
       end
     end
   end
 
   context "with an expansion on index" do
-    subject(:index) { get_with_token(organization, "/api/v2/serializable_tests", {expand: ["product_category"]}) }
+    subject(:index) { get_with_token(organization, "/api/v2/serializable_tests", {expands: ["product_category"]}) }
 
     it "returns a not supported error, as lists never expand" do
       index
@@ -334,25 +321,25 @@ RSpec.describe Api::Serializable do
         status: 400,
         error: "Bad Request",
         code: "expand_not_supported",
-        error_details: {expand: {reason: "action_not_expandable", invalid_values: ["product_category"]}}
+        error_details: {expands: {reason: "action_not_expandable", invalid_values: ["product_category"]}}
       )
     end
   end
 
   context "with an expansion on an action left out of expand_on" do
-    subject(:create_request) { post_with_token(organization, "/api/v2/serializable_tests", {expand: ["product_category"]}) }
+    subject(:create_request) { post_with_token(organization, "/api/v2/serializable_tests", {expands: ["product_category"]}) }
 
     it "returns a not supported error before the action runs" do
       create_request
 
       expect(response).to have_http_status(:bad_request)
       expect(json[:code]).to eq("expand_not_supported")
-      expect(json[:error_details]).to eq(expand: {reason: "action_not_expandable", invalid_values: ["product_category"]})
+      expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: ["product_category"]})
     end
   end
 
   context "with an expansion on another action of expand_on" do
-    subject(:update_request) { put_with_token(organization, "/api/v2/serializable_tests/#{product.code}?expand[]=product_category", {}) }
+    subject(:update_request) { put_with_token(organization, "/api/v2/serializable_tests/#{product.code}?expands[]=product_category", {}) }
 
     it "embeds the record" do
       update_request
@@ -363,30 +350,30 @@ RSpec.describe Api::Serializable do
   end
 
   context "with a serializer that declares no expansion" do
-    subject(:show) { get_with_token(organization, "/api/v2/whole_list_tests/#{product.code}", {expand: ["product_category"]}) }
+    subject(:show) { get_with_token(organization, "/api/v2/whole_list_tests/#{product.code}", {expands: ["product_category"]}) }
 
     it "returns a not supported error, as nothing expands there" do
       show
 
       expect(response).to have_http_status(:bad_request)
       expect(json[:code]).to eq("expand_not_supported")
-      expect(json[:error_details]).to eq(expand: {reason: "not_expandable", invalid_values: ["product_category"]})
+      expect(json[:error_details]).to eq(expands: {reason: "not_expandable", invalid_values: ["product_category"]})
     end
   end
 
   context "with a serializer that declares expansions and an empty expand_on" do
-    subject(:show) { get_with_token(organization, "/api/v2/not_expanding_tests/#{product.code}", {expand: ["product_category"]}) }
+    subject(:show) { get_with_token(organization, "/api/v2/not_expanding_tests/#{product.code}", {expands: ["product_category"]}) }
 
     it "returns a not supported error, as nothing expands there" do
       show
 
       expect(response).to have_http_status(:bad_request)
-      expect(json[:error_details]).to eq(expand: {reason: "not_expandable", invalid_values: ["product_category"]})
+      expect(json[:error_details]).to eq(expands: {reason: "not_expandable", invalid_values: ["product_category"]})
     end
   end
 
   context "without serializable_with" do
-    subject(:show) { get_with_token(organization, "/api/v2/not_serializable_tests/#{product.code}", {expand:}.compact) }
+    subject(:show) { get_with_token(organization, "/api/v2/not_serializable_tests/#{product.code}", {expands:}.compact) }
 
     it "renders on its own" do
       show
@@ -395,13 +382,13 @@ RSpec.describe Api::Serializable do
     end
 
     context "with an expansion" do
-      let(:expand) { ["product_category"] }
+      let(:expands) { ["product_category"] }
 
       it "returns a not supported error, as nothing expands there" do
         show
 
         expect(response).to have_http_status(:bad_request)
-        expect(json[:error_details]).to eq(expand: {reason: "not_expandable", invalid_values: ["product_category"]})
+        expect(json[:error_details]).to eq(expands: {reason: "not_expandable", invalid_values: ["product_category"]})
       end
     end
   end
@@ -439,10 +426,10 @@ RSpec.describe Api::Serializable do
   end
 
   context "with an unknown product" do
-    subject(:show) { get_with_token(organization, "/api/v2/serializable_tests/unknown", {expand:}) }
+    subject(:show) { get_with_token(organization, "/api/v2/serializable_tests/unknown", {expands:}) }
 
     context "with a valid expansion" do
-      let(:expand) { ["product_category"] }
+      let(:expands) { ["product_category"] }
 
       it "returns a not found error" do
         show
@@ -452,7 +439,7 @@ RSpec.describe Api::Serializable do
     end
 
     context "with an invalid expansion" do
-      let(:expand) { ["fees"] }
+      let(:expands) { ["fees"] }
 
       it "rejects the expansion before the lookup" do
         show
@@ -465,7 +452,7 @@ RSpec.describe Api::Serializable do
 
   context "when the organization is not on the product catalog" do
     let(:organization) { create(:organization) }
-    let(:expand) { ["fees"] }
+    let(:expands) { ["fees"] }
 
     it "checks the catalog before the expansion" do
       show
@@ -476,7 +463,7 @@ RSpec.describe Api::Serializable do
   end
 
   context "without a valid API key" do
-    subject(:show) { get("/api/v2/serializable_tests/#{product.code}", params: {expand: ["fees"]}, headers: {"Authorization" => "Bearer invalid"}) }
+    subject(:show) { get("/api/v2/serializable_tests/#{product.code}", params: {expands: ["fees"]}, headers: {"Authorization" => "Bearer invalid"}) }
 
     it "authenticates before checking the expansion" do
       show

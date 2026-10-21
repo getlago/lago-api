@@ -16,7 +16,7 @@ class ModelSerializer
 
   attr_reader :model, :options
 
-  # Lets a native v2 endpoint embed `model.<name>` on `expand[]=<name>`, rendered by `serializer`
+  # Lets a native v2 endpoint embed `model.<name>` on `expands[]=<name>`, rendered by `serializer`
   # without includes, so that the embedded record stays flat. It comes last in `serialize`.
   def self.expandable(name, serializer:)
     prepend(RendersExpansions)

@@ -70,13 +70,13 @@ RSpec.describe Api::V2::ProductsController do
     end
 
     context "with expand" do
-      subject { post_with_token(organization, "/api/v2/products?expand[]=product_category", {product: create_params}) }
+      subject { post_with_token(organization, "/api/v2/products?expands[]=product_category", {product: create_params}) }
 
       it "creates nothing, as only show expands" do
         expect { subject }.not_to change(Product, :count)
 
         expect(response).to have_http_status(:bad_request)
-        expect(json[:error_details]).to eq(expand: {reason: "action_not_expandable", invalid_values: ["product_category"]})
+        expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: ["product_category"]})
       end
     end
   end
@@ -202,8 +202,8 @@ RSpec.describe Api::V2::ProductsController do
       expect(json[:product]).not_to have_key(:product_category)
     end
 
-    context "with expand[]=product_category" do
-      let(:params) { {expand: %w[product_category]} }
+    context "with expands[]=product_category" do
+      let(:params) { {expands: %w[product_category]} }
 
       it "embeds the product category as its own show renders it" do
         subject
@@ -226,8 +226,8 @@ RSpec.describe Api::V2::ProductsController do
       end
     end
 
-    context "with expand[]=billable_metric" do
-      let(:params) { {expand: %w[billable_metric]} }
+    context "with expands[]=billable_metric" do
+      let(:params) { {expands: %w[billable_metric]} }
 
       it "returns an invalid expand error listing the allowed expansions" do
         subject
@@ -237,7 +237,7 @@ RSpec.describe Api::V2::ProductsController do
           status: 400,
           error: "Bad Request",
           code: "invalid_expand",
-          error_details: {expand: {invalid_values: %w[billable_metric], allowed_values: %w[product_category]}}
+          error_details: {expands: {invalid_values: %w[billable_metric], allowed_values: %w[product_category]}}
         )
       end
     end
@@ -382,14 +382,14 @@ RSpec.describe Api::V2::ProductsController do
     end
 
     context "with expand" do
-      let(:query_params) { "?expand[]=product_category" }
+      let(:query_params) { "?expands[]=product_category" }
 
       it "returns a not supported error, as lists never expand" do
         subject
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("expand_not_supported")
-        expect(json[:error_details]).to eq(expand: {reason: "action_not_expandable", invalid_values: ["product_category"]})
+        expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: ["product_category"]})
       end
     end
 
