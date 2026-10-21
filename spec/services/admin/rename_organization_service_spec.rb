@@ -73,5 +73,16 @@ RSpec.describe Admin::RenameOrganizationService do
         expect(organization.reload.name).to eq("Old Name")
       end
     end
+
+    context "when the reason is too long once the rename prefix is added" do
+      let(:reason) { "a" * 480 }
+
+      it "returns a validation failure and changes nothing" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:reason]).to eq(["value_is_too_long"])
+        expect(organization.reload.name).to eq("Old Name")
+        expect(CsAdminAuditLog.count).to eq(0)
+      end
+    end
   end
 end
