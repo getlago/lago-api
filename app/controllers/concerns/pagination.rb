@@ -58,7 +58,7 @@ module Pagination
 
   # The requested page size, or the default page size within the limit when none is given.
   def page_size
-    params[:per_page].presence&.to_i || [default_page_size, page_size_limit].min
+    params[:per_page].presence&.to_i || [default_page_size, effective_max_page_size].min
   end
 
   def default_page_size
@@ -68,7 +68,7 @@ module Pagination
   def validate_pagination_params
     errors = {
       page: pagination_param_error(:page, max: nil),
-      per_page: pagination_param_error(:per_page, max: page_size_limit)
+      per_page: pagination_param_error(:per_page, max: effective_max_page_size)
     }.compact
 
     validation_errors(errors:) if errors.any?
@@ -89,7 +89,7 @@ module Pagination
 
   # The effective page size limit of the controller: its own cap, if any, within the
   # organization or global limit.
-  def page_size_limit
+  def effective_max_page_size
     [self.class.max_page_size, organization_max_page_size || Pagination.max_page_size].compact.min
   end
 
