@@ -11,7 +11,7 @@ RSpec.describe WebhookEndpoints::PurgeExpiredSigningKeysService do
   let!(:expired) { create(:webhook_endpoint_signing_key, :expired, webhook_endpoint:) }
 
   it "deletes only the keys past their expiry" do
-    expect { result }.to change(WebhookEndpointSigningKey, :count).by(-1)
+    expect { result }.to change { WebhookEndpointSigningKey.exists?(expired.id) }.from(true).to(false)
     expect(WebhookEndpointSigningKey.all).to match_array([active, expiring])
   end
 

@@ -12,11 +12,9 @@ class CreateWebhookEndpointSigningKeys < ActiveRecord::Migration[8.0]
       t.string :public_key, null: false
 
       # When set, the key is being rotated out and stops signing once passed.
-      t.datetime :expires_at
+      t.datetime :expires_at, index: true
 
       t.timestamps
     end
-
-    add_index :webhook_endpoint_signing_keys, :expires_at, if_not_exists: true
   end
 end
