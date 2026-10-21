@@ -11,14 +11,8 @@ module V2
         description: model.description,
         created_at: model.created_at.iso8601,
         updated_at: model.updated_at.iso8601,
-        **deleted_at_payload
+        deleted_at: model.deleted_at&.iso8601
       }
-    end
-
-    private
-
-    def deleted_at_payload
-      include?(:deleted_at) ? {deleted_at: model.deleted_at&.iso8601} : {}
     end
   end
 end
