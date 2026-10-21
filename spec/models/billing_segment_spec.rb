@@ -47,7 +47,7 @@ RSpec.describe BillingSegment do
       let(:segment) do
         create(:billing_segment, organization:, contract_rate_card:, contract: contract_rate_card.contract,
           customer: contract_rate_card.contract.customer, status:, cycle_started_at: timestamp - 1.month,
-          started_at: timestamp - 1.month, ended_at:)
+          started_at: timestamp - 1.month, ended_at:, billing_at: timestamp - 1.day)
       end
 
       before { segment }
@@ -64,6 +64,38 @@ RSpec.describe BillingSegment do
         end
       end
 
+      context "with displayed recurring advance-metered usage" do
+        let(:billable_metric) { create(:billable_metric, organization:, aggregation_type:, field_name: "value", recurring: true) }
+        let(:product) { create(:product, :metered, organization:, billable_metric:) }
+        let(:rate_card) do
+          create(:rate_card, organization:, product:, billing_timing:, display_on_invoice: true)
+        end
+
+        context "with sum aggregation" do
+          let(:aggregation_type) { :sum_agg }
+
+          it "selects the segment at its renewal billing time before it ends" do
+            expect(segments).to eq([segment])
+          end
+        end
+
+        context "with unique-count aggregation" do
+          let(:aggregation_type) { :unique_count_agg }
+
+          it "selects the segment at its renewal billing time before it ends" do
+            expect(segments).to eq([segment])
+          end
+        end
+
+        context "with custom aggregation" do
+          let(:billable_metric) { create(:custom_billable_metric, organization:, recurring: true) }
+
+          it "selects the segment at its renewal billing time before it ends" do
+            expect(segments).to eq([segment])
+          end
+        end
+      end
+
       context "when the advance-metered segment is already processing" do
         let(:status) { :processing }
 
@@ -74,8 +106,8 @@ RSpec.describe BillingSegment do
         context "when the segment has ended" do
           let(:ended_at) { timestamp }
 
-          it "selects it for legacy reconciliation" do
-            expect(segments).to eq([segment])
+          it "excludes the processing segment" do
+            expect(segments).to be_empty
           end
         end
       end

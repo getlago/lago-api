@@ -265,6 +265,18 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
   end
 
   describe "#call" do
+    context "when the credit note is on a product catalog invoice" do
+      before do
+        invoice.update!(invoice_type: :contract)
+        allow(lago_client).to receive(:post_with_response)
+      end
+
+      it "does not send it to the integration" do
+        expect(service_call).to be_success
+        expect(lago_client).not_to have_received(:post_with_response)
+      end
+    end
+
     context "when integration_credit_note exists" do
       let(:integration_credit_note) do
         create(:integration_resource, integration:, syncable: credit_note, resource_type: "credit_note")

@@ -22,6 +22,7 @@ module BillableMetrics
         end
 
         result.pay_in_advance_aggregation = BigDecimal(compute_pay_in_advance_aggregation)
+        result.pay_in_advance_count_delta = result.pay_in_advance_aggregation
 
         if presentation_by.present?
           result.breakdowns = event_store.grouped_unique_count(uniq_grouped_by_and_presentation_by).map(&:to_grouped_hash)

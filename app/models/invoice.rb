@@ -24,6 +24,7 @@ class Invoice < ApplicationRecord
   belongs_to :x402_connection, class_name: "X402::Connection", optional: true
 
   has_many :fees
+  has_many :contract_fees, -> { where.not(contract_id: nil) }, class_name: "Fee"
   has_many :credits
   has_many :wallet_transactions
   has_many :invoice_subscriptions
@@ -93,7 +94,7 @@ class Invoice < ApplicationRecord
     allow_nil: true,
     with_model_currency: :currency
 
-  INVOICE_TYPES = %i[subscription add_on credit one_off advance_charges progressive_billing].freeze
+  INVOICE_TYPES = %i[subscription add_on credit one_off advance_charges progressive_billing contract].freeze
   PAYMENT_STATUS = %i[pending succeeded failed].freeze
   TAX_STATUSES = {
     pending: "pending",
@@ -165,6 +166,11 @@ class Invoice < ApplicationRecord
     joins(:contracts)
       .where(contracts: {status: Contract::BILLABLE_STATUSES})
       .distinct
+  }
+
+  scope :product_catalog, -> {
+    where(invoice_type: :contract)
+      .or(where(id: Fee.where.not(contract_id: nil).select(:invoice_id)))
   }
 
   scope :self_billed, -> { where(self_billed: true) }
@@ -496,6 +502,14 @@ class Invoice < ApplicationRecord
     finalized? || voided?
   end
 
+  def product_catalog?
+    return true if contract?
+    return contract_fees.any? if contract_fees.loaded?
+    return fees.any? { it.contract_id.present? } if fees.loaded?
+
+    contract_fees.exists?
+  end
+
   def subscription_gated?
     open? && subscriptions.any?(&:gated?)
   end
@@ -560,7 +574,9 @@ class Invoice < ApplicationRecord
   end
 
   def should_sync_invoice?
-    !self_billed && finalized? && customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_invoices }
+    !self_billed && finalized? &&
+      customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_invoices } &&
+      !product_catalog?
   end
 
   def should_sync_hubspot_invoice?

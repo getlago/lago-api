@@ -25,7 +25,8 @@ module Fees
       # Upgrades, downgrades and terminations may invoice fees before their period ends.
       if regular_periodic_billing?
         relation.where(
-          "(fees.properties ->> 'charges_to_datetime') IS NULL OR (fees.properties ->> 'charges_to_datetime')::timestamp <= ?",
+          "(fees.properties ->> 'charges_to_datetime') IS NULL OR " \
+          "(fees.properties ->> 'charges_to_datetime')::timestamp <= ?",
           billing_at
         )
       else
@@ -57,10 +58,10 @@ module Fees
       ended_at = metered_item.billing_segment.ended_at
 
       Fee.where(product_fee_match_attributes(metered_item))
-        .where("succeeded_at <= ?", ended_at)
-        .where("(properties ->> 'charges_from_datetime')::timestamp >= ?", started_at)
-        .where("(properties ->> 'charges_to_datetime') IS NULL OR " \
-          "(properties ->> 'charges_to_datetime')::timestamp <= ?", ended_at)
+        .where("fees.succeeded_at <= ?", ended_at)
+        .where("(fees.properties ->> 'charges_from_datetime')::timestamp >= ?", started_at)
+        .where("(fees.properties ->> 'charges_to_datetime') IS NULL OR " \
+          "(fees.properties ->> 'charges_to_datetime')::timestamp <= ?", ended_at)
     end
 
     def product_fee_match_attributes(metered_item)
