@@ -9,12 +9,6 @@ class WebhookEndpoint < ApplicationRecord
     :standard_webhooks
   ].freeze
 
-  # Standard Webhooks asymmetric keys (https://www.standardwebhooks.com): an ed25519
-  # key pair. The private key (`whsk_...`) signs and is encrypted at rest, the public
-  # key (`whpk_...`) is shared with consumers so they can verify without a shared secret.
-  STANDARD_WEBHOOKS_SECRET_KEY_PREFIX = "whsk_"
-  STANDARD_WEBHOOKS_PUBLIC_KEY_PREFIX = "whpk_"
-
   WEBHOOK_EVENT_TYPE_CONFIG = YAML.safe_load_file(
     Rails.root.join("config/webhook_event_types.yml"),
     symbolize_names: true
@@ -29,6 +23,7 @@ class WebhookEndpoint < ApplicationRecord
 
   belongs_to :organization
   has_many :webhooks, dependent: :delete_all
+  has_many :signing_keys, class_name: "WebhookEndpointSigningKey", dependent: :delete_all
 
   validates :webhook_url, presence: true, url: {block_private_addresses: true}
   validates :webhook_url, uniqueness: {scope: :organization_id}
@@ -36,9 +31,7 @@ class WebhookEndpoint < ApplicationRecord
   validate :validate_event_types, if: :event_types_changed?
 
   before_validation :normalize_event_types, if: :event_types_changed?
-  before_create :set_standard_webhooks_keys
-
-  encrypts :private_key
+  after_create :create_initial_signing_key
 
   enum :signature_algo, SIGNATURE_ALGOS
 
@@ -48,13 +41,10 @@ class WebhookEndpoint < ApplicationRecord
 
   private
 
-  def set_standard_webhooks_keys
+  def create_initial_signing_key
     return unless standard_webhooks?
-    return if private_key.present?
 
-    key = OpenSSL::PKey.generate_key("ED25519")
-    self.private_key = "#{STANDARD_WEBHOOKS_SECRET_KEY_PREFIX}#{Base64.strict_encode64(key.raw_private_key)}"
-    self.public_key = "#{STANDARD_WEBHOOKS_PUBLIC_KEY_PREFIX}#{Base64.strict_encode64(key.raw_public_key)}"
+    signing_keys.create!(organization:)
   end
 
   def max_webhook_endpoints
@@ -102,8 +92,6 @@ end
 #  id              :uuid             not null, primary key
 #  event_types     :string           is an Array
 #  name            :string
-#  private_key     :string
-#  public_key      :string
 #  signature_algo  :integer          default("jwt"), not null
 #  webhook_url     :string           not null
 #  created_at      :datetime         not null

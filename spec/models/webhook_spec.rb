@@ -230,18 +230,34 @@ RSpec.describe Webhook do
     let(:webhook) { create(:webhook, webhook_endpoint:) }
     let(:webhook_endpoint) { create(:webhook_endpoint, signature_algo: :standard_webhooks) }
     let(:timestamp) { 1_674_087_231 }
+    let(:signed_content) { "#{webhook.id}.#{timestamp}.#{webhook.payload.to_json}" }
 
-    it "signs {id}.{timestamp}.{payload} as a v1a ed25519 signature" do
-      expect(signature).to start_with("v1a,")
+    def verifies?(entry, signing_key)
+      raw_public = Base64.strict_decode64(signing_key.public_key.delete_prefix("whpk_"))
+      public_key = OpenSSL::PKey.new_raw_public_key("ED25519", raw_public)
+      raw_signature = Base64.strict_decode64(entry.delete_prefix("v1a,"))
+      public_key.verify(nil, raw_signature, signed_content)
     end
 
-    it "produces a signature the endpoint public key verifies" do
-      raw_public_key = Base64.strict_decode64(webhook_endpoint.public_key.delete_prefix("whpk_"))
-      public_key = OpenSSL::PKey.new_raw_public_key("ED25519", raw_public_key)
-      raw_signature = Base64.strict_decode64(signature.delete_prefix("v1a,"))
-      signed_content = "#{webhook.id}.#{timestamp}.#{webhook.payload.to_json}"
+    it "signs with the endpoint signing key" do
+      entries = signature.split(" ")
 
-      expect(public_key.verify(nil, raw_signature, signed_content)).to be(true)
+      expect(entries.size).to eq(1)
+      expect(entries.first).to start_with("v1a,")
+      expect(verifies?(entries.first, webhook_endpoint.signing_keys.sole)).to be(true)
+    end
+
+    context "when a key rotation happened" do
+      before { WebhookEndpoints::RotateSigningKeyService.call(webhook_endpoint:) }
+
+      it "emits one signature per usable key, each verified by its own public key" do
+        entries = signature.split(" ")
+        keys = webhook_endpoint.signing_keys.usable.to_a
+
+        expect(entries.size).to eq(2)
+        expect(keys.size).to eq(2)
+        expect(keys).to all(satisfy { |key| entries.any? { |entry| verifies?(entry, key) } })
+      end
     end
   end
 end

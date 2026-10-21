@@ -51,6 +51,7 @@ ALTER TABLE IF EXISTS ONLY public.charge_filters DROP CONSTRAINT IF EXISTS fk_ra
 ALTER TABLE IF EXISTS ONLY public.user_devices DROP CONSTRAINT IF EXISTS fk_rails_e700a96826;
 ALTER TABLE IF EXISTS ONLY public.integration_mappings DROP CONSTRAINT IF EXISTS fk_rails_e4a58fbcac;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_e3cf54daac;
+ALTER TABLE IF EXISTS ONLY public.webhook_endpoint_signing_keys DROP CONSTRAINT IF EXISTS fk_rails_e3094d4148;
 ALTER TABLE IF EXISTS ONLY public.rate_cards_taxes DROP CONSTRAINT IF EXISTS fk_rails_e2dbfbb01e;
 ALTER TABLE IF EXISTS ONLY public.integration_collection_mappings DROP CONSTRAINT IF EXISTS fk_rails_e148d17c1f;
 ALTER TABLE IF EXISTS ONLY public.product_categories DROP CONSTRAINT IF EXISTS fk_rails_e13d306a35;
@@ -145,6 +146,7 @@ ALTER TABLE IF EXISTS ONLY public.quotes DROP CONSTRAINT IF EXISTS fk_rails_a1ab
 ALTER TABLE IF EXISTS ONLY public.rate_cards DROP CONSTRAINT IF EXISTS fk_rails_a026c79cab;
 ALTER TABLE IF EXISTS ONLY public.contracts DROP CONSTRAINT IF EXISTS fk_rails_a00d802491;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_9f724c2094;
+ALTER TABLE IF EXISTS ONLY public.webhook_endpoint_signing_keys DROP CONSTRAINT IF EXISTS fk_rails_9f3c55a8ec;
 ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_9f22076477;
 ALTER TABLE IF EXISTS ONLY public.contracts_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_9ebcef0f5b;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_9ea6759859;
@@ -443,6 +445,9 @@ DROP INDEX IF EXISTS public.index_webhooks_on_endpoint_and_timestamps;
 DROP INDEX IF EXISTS public.index_webhooks_for_query;
 DROP INDEX IF EXISTS public.index_webhook_endpoints_on_webhook_url_and_organization_id;
 DROP INDEX IF EXISTS public.index_webhook_endpoints_on_organization_id;
+DROP INDEX IF EXISTS public.index_webhook_endpoint_signing_keys_on_webhook_endpoint_id;
+DROP INDEX IF EXISTS public.index_webhook_endpoint_signing_keys_on_organization_id;
+DROP INDEX IF EXISTS public.index_webhook_endpoint_signing_keys_on_expires_at;
 DROP INDEX IF EXISTS public.index_wallets_on_ready_to_be_refreshed;
 DROP INDEX IF EXISTS public.index_wallets_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_wallets_on_organization_id_and_customer_id;
@@ -1133,6 +1138,7 @@ ALTER TABLE IF EXISTS ONLY public.x402_settlements DROP CONSTRAINT IF EXISTS x40
 ALTER TABLE IF EXISTS ONLY public.x402_connections DROP CONSTRAINT IF EXISTS x402_connections_pkey;
 ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS webhooks_pkey;
 ALTER TABLE IF EXISTS ONLY public.webhook_endpoints DROP CONSTRAINT IF EXISTS webhook_endpoints_pkey;
+ALTER TABLE IF EXISTS ONLY public.webhook_endpoint_signing_keys DROP CONSTRAINT IF EXISTS webhook_endpoint_signing_keys_pkey;
 ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS wallets_pkey;
 ALTER TABLE IF EXISTS ONLY public.wallets_invoice_custom_sections DROP CONSTRAINT IF EXISTS wallets_invoice_custom_sections_pkey;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS wallet_transactions_pkey;
@@ -1284,6 +1290,7 @@ DROP TABLE IF EXISTS public.x402_settlements;
 DROP TABLE IF EXISTS public.x402_connections;
 DROP TABLE IF EXISTS public.webhooks;
 DROP TABLE IF EXISTS public.webhook_endpoints;
+DROP TABLE IF EXISTS public.webhook_endpoint_signing_keys;
 DROP TABLE IF EXISTS public.wallets_invoice_custom_sections;
 DROP TABLE IF EXISTS public.wallet_transactions_invoice_custom_sections;
 DROP TABLE IF EXISTS public.wallet_targets;
@@ -6326,6 +6333,22 @@ CREATE TABLE public.wallets_invoice_custom_sections (
 
 
 --
+-- Name: webhook_endpoint_signing_keys; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.webhook_endpoint_signing_keys (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    webhook_endpoint_id uuid NOT NULL,
+    private_key character varying NOT NULL,
+    public_key character varying NOT NULL,
+    expires_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: webhook_endpoints; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -6337,9 +6360,7 @@ CREATE TABLE public.webhook_endpoints (
     updated_at timestamp(6) without time zone NOT NULL,
     signature_algo integer DEFAULT 0 NOT NULL,
     event_types character varying[],
-    name character varying,
-    private_key character varying,
-    public_key character varying
+    name character varying
 );
 
 
@@ -7607,6 +7628,14 @@ ALTER TABLE ONLY public.wallets_invoice_custom_sections
 
 ALTER TABLE ONLY public.wallets
     ADD CONSTRAINT wallets_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: webhook_endpoint_signing_keys webhook_endpoint_signing_keys_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.webhook_endpoint_signing_keys
+    ADD CONSTRAINT webhook_endpoint_signing_keys_pkey PRIMARY KEY (id);
 
 
 --
@@ -12476,6 +12505,27 @@ CREATE INDEX index_wallets_on_ready_to_be_refreshed ON public.wallets USING btre
 
 
 --
+-- Name: index_webhook_endpoint_signing_keys_on_expires_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_webhook_endpoint_signing_keys_on_expires_at ON public.webhook_endpoint_signing_keys USING btree (expires_at);
+
+
+--
+-- Name: index_webhook_endpoint_signing_keys_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_webhook_endpoint_signing_keys_on_organization_id ON public.webhook_endpoint_signing_keys USING btree (organization_id);
+
+
+--
+-- Name: index_webhook_endpoint_signing_keys_on_webhook_endpoint_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_webhook_endpoint_signing_keys_on_webhook_endpoint_id ON public.webhook_endpoint_signing_keys USING btree (webhook_endpoint_id);
+
+
+--
 -- Name: index_webhook_endpoints_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -14784,6 +14834,14 @@ ALTER TABLE ONLY public.credit_note_items
 
 
 --
+-- Name: webhook_endpoint_signing_keys fk_rails_9f3c55a8ec; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.webhook_endpoint_signing_keys
+    ADD CONSTRAINT fk_rails_9f3c55a8ec FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: fees fk_rails_9f724c2094; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -15533,6 +15591,14 @@ ALTER TABLE ONLY public.integration_collection_mappings
 
 ALTER TABLE ONLY public.rate_cards_taxes
     ADD CONSTRAINT fk_rails_e2dbfbb01e FOREIGN KEY (rate_card_id) REFERENCES public.rate_cards(id);
+
+
+--
+-- Name: webhook_endpoint_signing_keys fk_rails_e3094d4148; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.webhook_endpoint_signing_keys
+    ADD CONSTRAINT fk_rails_e3094d4148 FOREIGN KEY (webhook_endpoint_id) REFERENCES public.webhook_endpoints(id);
 
 
 --

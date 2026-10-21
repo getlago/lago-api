@@ -5,6 +5,7 @@ require "rails_helper"
 RSpec.describe WebhookEndpoint do
   it { is_expected.to belong_to(:organization) }
   it { is_expected.to have_many(:webhooks).dependent(:delete_all) }
+  it { is_expected.to have_many(:signing_keys).class_name("WebhookEndpointSigningKey").dependent(:delete_all) }
 
   it { is_expected.to validate_presence_of(:webhook_url) }
 
@@ -167,38 +168,22 @@ RSpec.describe WebhookEndpoint do
       end
     end
 
-    describe "#set_standard_webhooks_keys" do
+    describe "#create_initial_signing_key" do
       subject(:webhook_endpoint) { create(:webhook_endpoint, signature_algo:) }
 
       context "when the signature algorithm is standard_webhooks" do
         let(:signature_algo) { :standard_webhooks }
 
-        it "generates a whsk_ prefixed ed25519 private key" do
-          raw = webhook_endpoint.private_key.delete_prefix("whsk_")
-          expect(webhook_endpoint.private_key).to start_with("whsk_")
-          expect(Base64.strict_decode64(raw).bytesize).to eq(32)
-        end
-
-        it "generates a whpk_ prefixed ed25519 public key" do
-          raw = webhook_endpoint.public_key.delete_prefix("whpk_")
-          expect(webhook_endpoint.public_key).to start_with("whpk_")
-          expect(Base64.strict_decode64(raw).bytesize).to eq(32)
-        end
-
-        it "stores the private key encrypted at rest" do
-          ciphertext = described_class.connection.select_value(
-            "SELECT private_key FROM webhook_endpoints WHERE id = '#{webhook_endpoint.id}'"
-          )
-          expect(ciphertext).not_to eq(webhook_endpoint.private_key)
+        it "creates one usable signing key" do
+          expect(webhook_endpoint.signing_keys.usable.count).to eq(1)
         end
       end
 
       context "when the signature algorithm is not standard_webhooks" do
         let(:signature_algo) { :hmac }
 
-        it "does not generate keys" do
-          expect(webhook_endpoint.private_key).to be_nil
-          expect(webhook_endpoint.public_key).to be_nil
+        it "does not create a signing key" do
+          expect(webhook_endpoint.signing_keys).to be_empty
         end
       end
     end

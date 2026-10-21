@@ -85,17 +85,16 @@ class Webhook < ApplicationRecord
     }
   end
 
-  # Asymmetric `v1a` signature: ed25519 over the signed content, base64 encoded. The
-  # consumer verifies it with the endpoint public key, so it never holds a signing secret.
+  # Asymmetric `v1a` signatures: one ed25519 signature per usable signing key, space
+  # separated. During a key rotation the endpoint has more than one usable key, so a
+  # consumer that still holds the previous public key keeps verifying. Each signature is
+  # base64 encoded; the consumer never holds a signing secret.
   def standard_webhooks_signature(timestamp)
-    raw_private_key = Base64.strict_decode64(
-      webhook_endpoint.private_key.to_s.delete_prefix(WebhookEndpoint::STANDARD_WEBHOOKS_SECRET_KEY_PREFIX)
-    )
-    key = OpenSSL::PKey.new_raw_private_key("ED25519", raw_private_key)
     signed_content = "#{id}.#{timestamp}.#{payload.to_json}"
-    signature = key.sign(nil, signed_content)
 
-    "v1a,#{Base64.strict_encode64(signature)}"
+    webhook_endpoint.signing_keys.usable.map do |signing_key|
+      "v1a,#{Base64.strict_encode64(signing_key.sign(signed_content))}"
+    end.join(" ")
   end
 
   def jwt_signature
