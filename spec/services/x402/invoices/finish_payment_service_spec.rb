@@ -17,7 +17,7 @@ describe X402::Invoices::FinishPaymentService do
   end
 
   it "marks the attempt settled" do
-    expect(result.settlement.reload).to have_attributes(status: "settled", transaction_hash:)
+    expect(result.settlement.reload).to have_attributes(status: "settled", transaction_hash:, error_reason: nil)
   end
 
   it "records the x402 payment" do
@@ -55,6 +55,20 @@ describe X402::Invoices::FinishPaymentService do
 
     it "keeps the attempt settled" do
       expect(result.settlement.reload).to have_attributes(status: "settled", payment_id: nil)
+    end
+
+    it "marks the payment as not recorded" do
+      expect(result.settlement.reload.error_reason).to eq("payment_not_recorded")
+    end
+
+    context "with the reason of an unconfirmed settle" do
+      let(:settlement) do
+        create(:x402_settlement, :pending, :invoice_payment, x402_connection:, invoice:, error_reason: "settlement_pending")
+      end
+
+      it "replaces it" do
+        expect(result.settlement.reload.error_reason).to eq("payment_not_recorded")
+      end
     end
 
     it "leaves the invoice unpaid" do

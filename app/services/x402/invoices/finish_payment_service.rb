@@ -35,6 +35,7 @@ module X402
         if payment_result.success?
           result.payment = payment_result.payment
         else
+          settlement.update!(error_reason: "payment_not_recorded")
           report(payment_result.error)
         end
       end
