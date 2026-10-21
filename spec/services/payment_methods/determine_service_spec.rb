@@ -277,6 +277,17 @@ RSpec.describe PaymentMethods::DetermineService do
         end
       end
 
+      context "with a contract invoice" do
+        let(:invoice) { create(:invoice, customer:, organization:, invoice_type: :contract) }
+
+        it "returns no payment method" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.payment_method).to be_nil
+        end
+      end
+
       context "with a one_off invoice" do
         let(:invoice) { create(:invoice, customer:, organization:, invoice_type: :one_off) }
 

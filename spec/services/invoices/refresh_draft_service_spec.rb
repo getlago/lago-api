@@ -328,7 +328,7 @@ RSpec.describe Invoices::RefreshDraftService do
           organization:,
           customer:,
           billing_entity: customer.billing_entity,
-          invoice_type: :subscription,
+          invoice_type: :contract,
           currency: "USD",
           ready_to_be_refreshed: true
         )

@@ -8226,6 +8226,7 @@ enum InvoiceTaxStatusTypeEnum {
 enum InvoiceTypeEnum {
   add_on
   advance_charges
+  contract
   credit
   one_off
   progressive_billing

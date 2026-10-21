@@ -28,6 +28,13 @@ RSpec.describe Invoice do
     end
   end
 
+  describe "enums" do
+    it do
+      expect(invoice).to define_enum_for(:invoice_type)
+        .with_values(subscription: 0, add_on: 1, credit: 2, one_off: 3, advance_charges: 4, progressive_billing: 5, contract: 6)
+    end
+  end
+
   it { is_expected.to have_many(:integration_resources) }
   it { is_expected.to have_many(:error_details) }
 
@@ -548,6 +555,92 @@ RSpec.describe Invoice do
         expect(invoice.billing_entity_sequential_id).to eq(3)
         # expect(invoice.organization_sequential_id).to eq(3)
       end
+    end
+  end
+
+  shared_context "with a contract fee" do
+    let(:customer) { create(:customer, organization:) }
+    let(:invoice) { create(:invoice, customer:, organization:, invoice_type:) }
+    let(:invoice_type) { :advance_charges }
+    let(:contract) { create(:contract, organization:, customer:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
+    let(:contract_fee) do
+      create(
+        :fee,
+        invoice:,
+        subscription: nil,
+        fee_type: :product,
+        invoiceable: contract_rate_card.rate_card.product,
+        contract:,
+        contract_rate_card:,
+        rate_card_rate: create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card),
+        organization:
+      )
+    end
+  end
+
+  describe ".product_catalog" do
+    include_context "with a contract fee"
+
+    context "when the invoice is a contract invoice without fees" do
+      let(:invoice_type) { :contract }
+
+      before { invoice }
+
+      it { expect(described_class.product_catalog).to eq([invoice]) }
+    end
+
+    context "when a contract invoice also holds a contract fee" do
+      let(:invoice_type) { :contract }
+
+      before { contract_fee }
+
+      it "returns the invoice once" do
+        expect(described_class.product_catalog).to eq([invoice])
+      end
+    end
+
+    context "when an invoice of another type holds a contract fee" do
+      before { contract_fee }
+
+      it { expect(described_class.product_catalog).to eq([invoice]) }
+    end
+
+    context "when invoices have no contract fee" do
+      before do
+        invoice
+        create(:invoice, customer:, organization:, invoice_type: :subscription)
+      end
+
+      it { expect(described_class.product_catalog).to be_empty }
+    end
+
+    context "when the contract fee is discarded" do
+      before { contract_fee.discard! }
+
+      it { expect(described_class.product_catalog).to be_empty }
+    end
+  end
+
+  describe "#product_catalog?" do
+    include_context "with a contract fee"
+
+    context "when the invoice is a contract invoice" do
+      let(:invoice_type) { :contract }
+
+      it { expect(invoice).to be_product_catalog }
+    end
+
+    context "when the invoice has a fee attached to a contract" do
+      before { contract_fee }
+
+      it { expect(invoice).to be_product_catalog }
+    end
+
+    context "when the invoice has no contract fee" do
+      before { create(:fee, invoice:, organization:) }
+
+      it { expect(invoice).not_to be_product_catalog }
     end
   end
 

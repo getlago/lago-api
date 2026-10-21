@@ -42,6 +42,8 @@ module PaymentMethods
         determine_subscription_payment_method
       when "credit"
         determine_credit_payment_method
+      when "contract"
+        nil
       else
         customer.default_payment_method
       end
