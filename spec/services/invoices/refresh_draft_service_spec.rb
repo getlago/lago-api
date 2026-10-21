@@ -347,7 +347,27 @@ RSpec.describe Invoices::RefreshDraftService do
         )
       end
 
-      before { billing_segment }
+      let(:original_fee) do
+        create(
+          :fee,
+          invoice:,
+          organization:,
+          billing_entity: invoice.billing_entity,
+          subscription: nil,
+          contract:,
+          contract_rate_card:,
+          rate_card_rate:,
+          fee_type: :product,
+          invoiceable: product,
+          amount_currency: "USD",
+          amount_cents: 1_000
+        )
+      end
+
+      before do
+        billing_segment
+        original_fee
+      end
 
       it "rebuilds the product fees and totals from the billing segments" do
         result = refresh_service.call
@@ -447,24 +467,42 @@ RSpec.describe Invoices::RefreshDraftService do
       end
 
       it "hard-deletes the previous draft fees and their applied taxes" do
-        previous_fee = create(
-          :fee,
-          invoice:,
-          organization:,
-          billing_entity: invoice.billing_entity,
-          subscription: nil,
-          contract:,
-          contract_rate_card:,
-          rate_card_rate:,
-          fee_type: :product,
-          invoiceable: product,
-          amount_currency: "USD"
-        )
-        applied_tax = create(:fee_applied_tax, fee: previous_fee, organization:)
+        applied_tax = create(:fee_applied_tax, fee: original_fee, organization:)
 
         expect(refresh_service.call).to be_success
-        expect(Fee.unscoped.exists?(previous_fee.id)).to be(false)
+        expect(Fee.unscoped.exists?(original_fee.id)).to be(false)
         expect(Fee::AppliedTax.exists?(applied_tax.id)).to be(false)
+      end
+
+      context "without existing fees" do
+        let(:original_fee) { nil }
+
+        it "rebuilds product fees from the billing segments" do
+          expect(invoice.fees).to be_empty
+
+          expect(refresh_service.call).to be_success
+
+          expect(invoice.reload).to have_attributes(status: "draft", total_amount_cents: 7_500)
+          expect(invoice.fees.sole).to have_attributes(invoiceable: product, amount_cents: 7_500)
+          expect(Invoices::CalculateFeesService).not_to have_received(:call)
+        end
+      end
+
+      context "without billing segments" do
+        let(:billing_segment) { nil }
+
+        before do
+          allow(BillingSegments::ComputeInvoiceService).to receive(:call!)
+            .and_return(BillingSegments::ComputeInvoiceService::Result.new)
+        end
+
+        it "uses the product catalog refresh flow for contract-linked fees" do
+          expect(refresh_service.call).to be_success
+
+          expect(BillingSegments::ComputeInvoiceService).to have_received(:call!)
+            .with(invoice:, billing_segments: be_empty, context: :draft)
+          expect(Invoices::CalculateFeesService).not_to have_received(:call)
+        end
       end
 
       it "applies the shared custom section and wallet refresh steps" do
@@ -518,15 +556,6 @@ RSpec.describe Invoices::RefreshDraftService do
       end
 
       context "when fee recomputation fails" do
-        let(:original_fee) do
-          create(
-            :fee,
-            invoice:,
-            organization:,
-            billing_entity: invoice.billing_entity,
-            amount_cents: 1_000
-          )
-        end
         let(:compute_result) do
           BillingSegments::ComputeInvoiceService::Result.new.tap do |service_result|
             service_result.validation_failure!(errors: {base: ["invalid"]})
