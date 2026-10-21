@@ -40,21 +40,21 @@ RSpec.describe Api::V2::ContractsController do
         expect(json[:contract]).to include(external_id: "contract-1", plan_code: catalog_plan.code, status: "active", applied_rate_cards_count: 1)
         expect(json[:contract].keys).to eq(flat_keys)
 
-        get_with_token(organization, "/api/v2/contracts/contract-1", {expand: %w[applied_rate_cards]})
+        get_with_token(organization, "/api/v2/contracts/contract-1", {expands: %w[applied_rate_cards]})
 
         expect(json[:contract][:applied_rate_cards].sole[:rate_card_code]).to eq(rate_card.code)
       end
     end
 
     context "with expand" do
-      subject { post_with_token(organization, "/api/v2/contracts?expand[]=applied_rate_cards", {contract: create_params}) }
+      subject { post_with_token(organization, "/api/v2/contracts?expands[]=applied_rate_cards", {contract: create_params}) }
 
       it "creates nothing, as only show expands" do
         expect { subject }.not_to change(Contract, :count)
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("expand_not_supported")
-        expect(json[:error_details]).to eq(expand: {reason: "action_not_expandable", invalid_values: %w[applied_rate_cards]})
+        expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: %w[applied_rate_cards]})
       end
     end
 
@@ -83,7 +83,7 @@ RSpec.describe Api::V2::ContractsController do
         expect(json[:contract][:skip_invoice_custom_sections]).to be(false)
         expect(json[:contract].keys).to eq(flat_keys)
 
-        get_with_token(organization, "/api/v2/contracts/contract-1", {expand: %w[invoice_custom_sections]})
+        get_with_token(organization, "/api/v2/contracts/contract-1", {expands: %w[invoice_custom_sections]})
 
         expect(json[:contract][:invoice_custom_sections].pluck(:lago_id)).to eq([section.id])
       end
@@ -144,14 +144,14 @@ RSpec.describe Api::V2::ContractsController do
     end
 
     context "with expand" do
-      subject { get_with_token(organization, "/api/v2/contracts?expand[]=applied_rate_cards") }
+      subject { get_with_token(organization, "/api/v2/contracts?expands[]=applied_rate_cards") }
 
       it "returns a not supported error, as lists never expand" do
         subject
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("expand_not_supported")
-        expect(json[:error_details]).to eq(expand: {reason: "action_not_expandable", invalid_values: %w[applied_rate_cards]})
+        expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: %w[applied_rate_cards]})
       end
     end
 
@@ -258,8 +258,8 @@ RSpec.describe Api::V2::ContractsController do
       end
     end
 
-    context "with expand[]=applied_rate_cards" do
-      let(:params) { {expand: %w[applied_rate_cards]} }
+    context "with expands[]=applied_rate_cards" do
+      let(:params) { {expands: %w[applied_rate_cards]} }
       let(:created_at) { Time.zone.parse("2026-09-28T10:00:00.000001Z") }
 
       # Ties to the microsecond, created out of order, the first with rate phases, next to cards that
@@ -298,8 +298,8 @@ RSpec.describe Api::V2::ContractsController do
       end
     end
 
-    context "with expand[]=plan" do
-      let(:params) { {expand: %w[plan]} }
+    context "with expands[]=plan" do
+      let(:params) { {expands: %w[plan]} }
 
       it "embeds the plan as its own show renders it, without its taxes" do
         subject
@@ -335,8 +335,8 @@ RSpec.describe Api::V2::ContractsController do
       end
     end
 
-    context "with expand[]=customer" do
-      let(:params) { {expand: %w[customer]} }
+    context "with expands[]=customer" do
+      let(:params) { {expands: %w[customer]} }
 
       # No v2 endpoint renders a customer of its own, so its serializer is the reference.
       it "embeds the flat customer" do
@@ -360,8 +360,8 @@ RSpec.describe Api::V2::ContractsController do
       end
     end
 
-    context "with expand[]=invoice_custom_sections" do
-      let(:params) { {expand: %w[invoice_custom_sections]} }
+    context "with expands[]=invoice_custom_sections" do
+      let(:params) { {expands: %w[invoice_custom_sections]} }
 
       # The selection of another contract, which the expansion leaves out.
       before { create(:contract_applied_invoice_custom_section, contract: create(:contract, organization:, customer:)) }
@@ -408,7 +408,7 @@ RSpec.describe Api::V2::ContractsController do
     end
 
     context "with every expansion" do
-      let(:params) { {expand: %w[invoice_custom_sections customer plan applied_rate_cards]} }
+      let(:params) { {expands: %w[invoice_custom_sections customer plan applied_rate_cards]} }
 
       before do
         card = create(:contract_rate_card, organization:, contract:)
@@ -454,8 +454,8 @@ RSpec.describe Api::V2::ContractsController do
     end
 
     # /applied_rate_cards lists the cards of the live contract, while a status picks the contract to expand.
-    context "with a status and expand[]=applied_rate_cards" do
-      let(:params) { {status: "terminated", expand: %w[applied_rate_cards]} }
+    context "with a status and expands[]=applied_rate_cards" do
+      let(:params) { {status: "terminated", expands: %w[applied_rate_cards]} }
       let(:contract) { create(:contract, :terminated, organization:, customer:, started_at: 2.months.ago) }
       let(:live_contract) { create(:contract, organization:, customer:, external_id: contract.external_id) }
       let(:terminated_card) { create(:contract_rate_card, organization:, contract:) }
@@ -479,7 +479,7 @@ RSpec.describe Api::V2::ContractsController do
 
     context "with an unknown expansion" do
       # The name under which the show embedded the sections before.
-      let(:params) { {expand: %w[plan applied_invoice_custom_sections]} }
+      let(:params) { {expands: %w[plan applied_invoice_custom_sections]} }
 
       it "returns an invalid expand error listing the allowed expansions" do
         subject
@@ -490,7 +490,7 @@ RSpec.describe Api::V2::ContractsController do
           error: "Bad Request",
           code: "invalid_expand",
           error_details: {
-            expand: {
+            expands: {
               invalid_values: %w[applied_invoice_custom_sections],
               allowed_values: %w[applied_rate_cards plan customer invoice_custom_sections]
             }
@@ -623,7 +623,7 @@ RSpec.describe Api::V2::ContractsController do
         expect(json[:contract]).to include(plan_code: other_plan.code, applied_rate_cards_count: 1)
         expect(json[:contract].keys).to eq(flat_keys)
 
-        get_with_token(organization, "/api/v2/contracts/#{contract.external_id}", {expand: %w[applied_rate_cards]})
+        get_with_token(organization, "/api/v2/contracts/#{contract.external_id}", {expands: %w[applied_rate_cards]})
 
         expect(json[:contract][:applied_rate_cards].sole[:rate_card_code]).to eq(rate_card.code)
       end
