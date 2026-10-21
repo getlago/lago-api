@@ -4,7 +4,7 @@ module Api
   module V2
     class PlansController < Api::V2::BaseController
       cursor_paginated_index(CatalogPlan)
-      serializable_with ::V2::CatalogPlanSerializer, includes: %i[taxes]
+      serializable_with ::V2::CatalogPlanSerializer
 
       def index
         result = ::CatalogPlansQuery.call(
@@ -20,7 +20,7 @@ module Api
         )
 
         if result.success?
-          render_plans(result.catalog_plans.includes(:taxes))
+          render_plans(result.catalog_plans)
         else
           render_error_response(result)
         end
