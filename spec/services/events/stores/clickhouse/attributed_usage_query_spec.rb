@@ -201,6 +201,10 @@ RSpec.describe Events::Stores::Clickhouse::AttributedUsageQuery, clickhouse: {cl
           [["eng", 1, 0], ["data", 2, 1], ["", 1, 0]]
         )
       end
+
+      it "counts the matching values only" do
+        expect(attributed_usage_query.rows.first["groups_count"].to_i).to eq(1)
+      end
     end
 
     context "with label filters" do

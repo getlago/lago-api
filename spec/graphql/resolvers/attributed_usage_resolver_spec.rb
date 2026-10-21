@@ -194,6 +194,15 @@ RSpec.describe Resolvers::AttributedUsageResolver, clickhouse: {clean_before: tr
     end
   end
 
+  context "with a search" do
+    let(:variables) { {subscriptionId: subscription.id, groupBy: "team", searchTerm: "a", limit: 1} }
+
+    it "pages through the matching values" do
+      expect(rows_summary.map { it.slice("value", "rank") }).to eq([{"value" => "data", "rank" => 2}])
+      expect(attributed_usage["metadata"]).to eq("currentPage" => 1, "limitValue" => 1, "totalCount" => 1, "totalPages" => 1)
+    end
+  end
+
   context "with an invalid page" do
     let(:variables) { {subscriptionId: subscription.id, groupBy: "team", page: 0} }
 

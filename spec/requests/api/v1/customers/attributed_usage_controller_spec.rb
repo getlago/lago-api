@@ -201,6 +201,17 @@ RSpec.describe Api::V1::Customers::AttributedUsageController, clickhouse: {clean
       end
     end
 
+    context "with a search" do
+      let(:params) { {external_subscription_id: subscription.external_id, group_by: "team", search_term: "a", per_page: 1} }
+
+      it "pages through the matching values" do
+        subject
+
+        expect(json[:attributed_usage][:rows].map { it.slice(:value, :rank) }).to eq([{value: "data", rank: 2}])
+        expect(json[:meta]).to eq(current_page: 1, next_page: nil, prev_page: nil, total_pages: 1, total_count: 1)
+      end
+    end
+
     context "with invalid parameters" do
       let(:params) do
         {external_subscription_id: subscription.external_id, group_by: "team", from_datetime: "yesterday", page: 0, per_page: 101}
