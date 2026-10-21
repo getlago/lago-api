@@ -9,9 +9,12 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
   let(:customer) { create(:customer, organization:, timezone:) }
   let(:timezone) { "UTC" }
   let(:catalog_plan) { create(:catalog_plan, organization:) }
-  let(:contract) { create(:contract, organization:, customer:, catalog_plan:, started_at: Time.utc(2026, 1, 1), ended_at:) }
+  let(:contract) do
+    create(:contract, organization:, customer:, catalog_plan:, started_at: Time.utc(2026, 1, 1), ended_at:, terminated_at:)
+  end
   let(:rate_card) { create(:rate_card, organization:) }
   let(:ended_at) { nil }
+  let(:terminated_at) { nil }
 
   let(:contract_rate_card) do
     create(
@@ -239,6 +242,31 @@ RSpec.describe Billing::RateCards::BuildScheduleService do
       it "counts the days where the customer is" do
         expect(final_slice.ended_at).to eq(ended_at)
         expect(final_slice.proration_ratio).to eq(6.fdiv(31))
+      end
+    end
+  end
+
+  # A termination stops service the way a planned end does: whichever comes first closes it.
+  context "when the contract is terminated" do
+    let(:rate_card) do
+      create(:rate_card, organization:, proration: true, product: create(:product, :fixed, organization:))
+    end
+    let(:ended_at) { Time.utc(2026, 3, 1) }
+    let(:terminated_at) { Time.utc(2026, 1, 20, 14, 30) }
+
+    def final_slice = result.schedule.segments_due_by(Time.utc(2026, 6, 1)).last
+
+    it "closes where the termination stopped service" do
+      expect(final_slice.ended_at).to eq(terminated_at)
+      expect(final_slice.proration_ratio).to eq(6.fdiv(31))
+    end
+
+    context "when the planned end came first" do
+      let(:ended_at) { Time.utc(2026, 1, 20, 14, 30) }
+      let(:terminated_at) { Time.utc(2026, 3, 1) }
+
+      it "closes at the planned end" do
+        expect(final_slice.ended_at).to eq(ended_at)
       end
     end
   end

@@ -117,10 +117,10 @@ describe Clock::ProcessBillingSegmentsJob, job: true do
         context "when the segment has ended" do
           let(:ended_at) { 1.day.ago }
 
-          it "enqueues that customer for reconciliation" do
+          it "does not enqueue that customer" do
             described_class.perform_now
 
-            expect(BillingSegments::ProcessJob).to have_been_enqueued.with(streaming_customer.id)
+            expect(BillingSegments::ProcessJob).not_to have_been_enqueued.with(streaming_customer.id)
           end
         end
       end

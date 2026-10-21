@@ -11110,6 +11110,22 @@
               "deprecationReason": null
             },
             {
+              "name": "contract",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "Contract",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "createdAt",
               "description": null,
               "args": [],
@@ -43572,6 +43588,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "contract",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ],
           "possibleTypes": null
@@ -59482,6 +59504,22 @@
           "description": "Rate card applied to a plan",
           "fields": [
             {
+              "name": "catalogPlan",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "CatalogPlan",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "createdAt",
               "description": null,
               "args": [],
@@ -65119,6 +65157,35 @@
               "deprecationReason": null
             },
             {
+              "name": "contractAppliedRateCard",
+              "description": "Query a single rate card applied to a contract",
+              "args": [
+                {
+                  "name": "id",
+                  "description": "Uniq ID of the applied rate card",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "OBJECT",
+                "name": "ContractAppliedRateCard",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "contractAppliedRateCards",
               "description": "Query rate cards applied to a contract",
               "args": [
@@ -70492,6 +70559,35 @@
               "type": {
                 "kind": "OBJECT",
                 "name": "Plan",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "planAppliedRateCard",
+              "description": "Query a single rate card applied to a plan",
+              "args": [
+                {
+                  "name": "id",
+                  "description": "Uniq ID of the applied rate card",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "OBJECT",
+                "name": "PlanAppliedRateCard",
                 "ofType": null
               },
               "isDeprecated": false,

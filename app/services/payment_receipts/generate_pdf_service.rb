@@ -25,7 +25,9 @@ module PaymentReceipts
     end
 
     def render_html
-      Utils::PdfGenerator.new(template:, context: payment_receipt).render_html
+      I18n.with_locale(payment_receipt.payment.customer.preferred_document_locale) do
+        Utils::PdfGenerator.new(template:, context: payment_receipt).render_html
+      end
     end
 
     private

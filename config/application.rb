@@ -64,6 +64,14 @@ module LagoApi
     config.active_support.cache_format_version = 7.1
 
     config.api_key_cache_ttl = 1.hour
+
+    # The Origin header a browser sends from a page at this URL, e.g. "https://app.getlago.com".
+    def self.origin_of(url)
+      uri = URI(url)
+      port = ":#{uri.port}" unless uri.port == uri.default_port
+
+      "#{uri.scheme}://#{uri.host&.downcase}#{port}"
+    end
   end
 end
 

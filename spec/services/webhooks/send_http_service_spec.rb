@@ -99,6 +99,19 @@ RSpec.describe Webhooks::SendHttpService do
       expect(SendHttpWebhookJob).to have_been_enqueued.with(webhook)
     end
 
+    context "with an alert webhook" do
+      let(:webhook) { create(:webhook, webhook_endpoint:, webhook_type: "alert.triggered") }
+
+      before { ENV["SIDEKIQ_WEBHOOK"] = "true" }
+      after { ENV.delete("SIDEKIQ_WEBHOOK") }
+
+      it "retries on the high priority queue" do
+        service.call
+
+        expect(SendHttpWebhookJob).to have_been_enqueued.with(webhook).on_queue("webhook_worker_high_priority")
+      end
+    end
+
     context "with a retrying webhook" do
       let(:webhook) { create(:webhook, :retrying, retries: 1) }
 
