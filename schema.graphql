@@ -13317,6 +13317,11 @@ type Query {
   realtimeUsageBillableMetrics(externalCustomerId: String, externalSubscriptionId: String, fromDatetime: ISO8601DateTime, limit: Int, page: Int, toDatetime: ISO8601DateTime): RealtimeUsageBillableMetricCollection!
 
   """
+  Query the dimensions of a billable metric, biggest first, over the longest window by default
+  """
+  realtimeUsageDimensionNames(billableMetricCode: String!, externalCustomerId: String, externalSubscriptionId: String, fromDatetime: ISO8601DateTime, limit: Int, toDatetime: ISO8601DateTime): [RealtimeUsageDimensionName!]!
+
+  """
   Query every dimension of a billable metric, with its real-time usage per period
   """
   realtimeUsageDimensions(billableMetricCode: String!, dimensionKeys: [String!], externalCustomerId: String, externalSubscriptionId: String, fromDatetime: ISO8601DateTime, limit: Int, page: Int, toDatetime: ISO8601DateTime): RealtimeUsageDimensionRowCollection!
@@ -13943,6 +13948,21 @@ type RealtimeUsageDimension {
   other: Boolean!
   units: Float!
   values: JSON!
+}
+
+"""
+A dimension of a billable metric, without its usage
+"""
+type RealtimeUsageDimensionName {
+  """
+  Opaque key, to pass back as a dimension filter
+  """
+  key: String!
+
+  """
+  Null for the usage of no charge filter or pricing group
+  """
+  name: String
 }
 
 """
