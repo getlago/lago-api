@@ -98,10 +98,8 @@ class PastUsageQuery < BaseQuery
       .includes(:charge_filter, :presentation_breakdowns)
   end
 
-  # A free fee is shown next to the regrouped paid fees of its own period, on the
-  # invoice they were regrouped on. When none were regrouped yet, it is shown on the
-  # regular invoice of the period. Owners are resolved for the whole page, including
-  # invoices outside it, so a fee is never counted on two pages.
+  # Free fees are never invoiced, so each period gets a single owner across all pages:
+  # the first invoice regrouping its paid fees, else its regular invoice.
   def free_usage_period_ids(periods, charge_ids)
     regrouped = regrouped_period_keys(periods, charge_ids)
 
@@ -138,8 +136,8 @@ class PastUsageQuery < BaseQuery
     owners
   end
 
-  # A fee paid late is regrouped on an invoice stamped with a later period, so the page's
-  # invoices add periods, whose regrouped fees are then searched on every invoice.
+  # A fee paid late lands on an invoice stamped with a later period, so the page's
+  # invoices can hold periods that are not on the page.
   def regrouped_period_keys(periods, charge_ids)
     regrouped = Fee.where(organization:, charge_id: charge_ids).where.not(invoice_id: nil).charge
     period_start = Arel.sql("fees.properties ->> 'charges_from_datetime'")
@@ -155,9 +153,8 @@ class PastUsageQuery < BaseQuery
       .transform_values { |rows| rows.map { |_, subscription_id, start| [subscription_id, start] } }
   end
 
-  # Match on the period start only: a fee keeps the period end known when it was
-  # created, which outlives the invoice boundaries when the subscription is
-  # terminated mid-period.
+  # Period start only: a mid-period termination shortens the invoice's period end,
+  # not the one stored on the fee.
   def fee_period_conditions(keys)
     keys.map do |subscription_id, period_start|
       Fee.where(subscription_id:).where("fees.properties ->> 'charges_from_datetime' = ?", period_start)
