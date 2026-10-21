@@ -8,6 +8,7 @@ class Invoice < ApplicationRecord
   include Sequenced
   include RansackUuidSearch
   include HasPurchaseOrderNumber
+  include ExpiringDocumentUrl
 
   CREDIT_NOTES_MIN_VERSION = 2
   COUPON_BEFORE_VAT_VERSION = 3
@@ -229,25 +230,19 @@ class Invoice < ApplicationRecord
   end
 
   def file_url
-    return if file.blank?
-
-    blob_path = Rails.application.routes.url_helpers.rails_blob_path(
-      file,
-      host: "void"
-    )
-
-    File.join(ENV["LAGO_API_URL"], blob_path)
+    expiring_document_url(file)
   end
 
   def xml_url
-    return if xml_file.blank?
+    expiring_document_url(xml_file)
+  end
 
-    blob_path = Rails.application.routes.url_helpers.rails_blob_path(
-      xml_file,
-      host: "void"
-    )
+  def file_url_expires_at
+    document_url_expires_at if file.present?
+  end
 
-    File.join(ENV["LAGO_API_URL"], blob_path)
+  def xml_url_expires_at
+    document_url_expires_at if xml_file.present?
   end
 
   def web_url
@@ -642,6 +637,10 @@ class Invoice < ApplicationRecord
   end
 
   private
+
+  def document_url_anchor_date
+    payment_due_date || issuing_date
+  end
 
   def fees_available_to_credit_amount_cents
     booked_tax = booked_tax_by_fee

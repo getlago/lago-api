@@ -2,6 +2,7 @@
 
 class OrderForm < ApplicationRecord
   include Sequenced
+  include ExpiringDocumentUrl
 
   STATUSES = {
     generated: "generated",
@@ -68,10 +69,18 @@ class OrderForm < ApplicationRecord
     return if signed_document.blank?
     return unless signed_document.blob.persisted?
 
-    Rails.application.routes.url_helpers.rails_blob_url(signed_document, host: ENV["LAGO_API_URL"])
+    expiring_document_url(signed_document)
+  end
+
+  def signed_document_url_expires_at
+    document_url_expires_at if signed_document.present? && signed_document.blob.persisted?
   end
 
   private
+
+  def document_url_anchor_date
+    signed_at&.to_date || created_at&.to_date
+  end
 
   def ensure_number
     return if number.present?

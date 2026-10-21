@@ -4,6 +4,7 @@ class CreditNote < ApplicationRecord
   include PaperTrailTraceable
   include Sequenced
   include RansackUuidSearch
+  include ExpiringDocumentUrl
 
   DB_PRECISION_SCALE = 5
 
@@ -89,15 +90,19 @@ class CreditNote < ApplicationRecord
   end
 
   def file_url
-    return if file.blank?
-
-    Rails.application.routes.url_helpers.rails_blob_url(file, host: ENV["LAGO_API_URL"])
+    expiring_document_url(file)
   end
 
   def xml_url
-    return if xml_file.blank?
+    expiring_document_url(xml_file)
+  end
 
-    Rails.application.routes.url_helpers.rails_blob_url(xml_file, host: ENV["LAGO_API_URL"])
+  def file_url_expires_at
+    document_url_expires_at if file.present?
+  end
+
+  def xml_url_expires_at
+    document_url_expires_at if xml_file.present?
   end
 
   def currency
@@ -160,6 +165,10 @@ class CreditNote < ApplicationRecord
   end
 
   private
+
+  def document_url_anchor_date
+    issuing_date
+  end
 
   def ensure_number
     return if number.present? && !status_changed_to_finalized?

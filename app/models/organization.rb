@@ -186,6 +186,7 @@ class Organization < ApplicationRecord
   validates :document_number_prefix, length: {minimum: 1, maximum: 10}, on: :update
   validates :invoice_grace_period, numericality: {greater_than_or_equal_to: 0}
   validates :net_payment_term, numericality: {greater_than_or_equal_to: 0}
+  validates :document_url_expiration_days, numericality: {only_integer: true, greater_than_or_equal_to: 30, less_than_or_equal_to: 120}
   validates :logo,
     image: {authorized_content_type: %w[image/png image/jpg image/jpeg], max_size: 800.kilobytes},
     if: :logo?
@@ -353,45 +354,45 @@ end
 # Table name: organizations
 # Database name: primary
 #
-#  id                               :uuid             not null, primary key
-#  address_line1                    :string
-#  address_line2                    :string
-#  api_key                          :string
-#  audit_logs_period                :integer          default(30)
-#  authentication_methods           :string           default(["email_password", "google_oauth"]), not null, is an Array
-#  city                             :string
-#  clickhouse_deduplication_enabled :boolean          default(FALSE), not null
-#  clickhouse_events_store          :boolean          default(FALSE), not null
-#  country                          :string
-#  custom_aggregation               :boolean          default(FALSE)
-#  default_currency                 :string           default("USD"), not null
-#  document_locale                  :string           default("en"), not null
-#  document_number_prefix           :string
-#  document_numbering               :integer          default("per_customer"), not null
-#  email                            :string
-#  email_settings                   :string           default([]), not null, is an Array
-#  eu_tax_management                :boolean          default(FALSE)
-#  feature_flags                    :string           default([]), not null, is an Array
-#  finalize_zero_amount_invoice     :boolean          default(TRUE), not null
-#  hmac_key                         :string           not null
-#  invoice_footer                   :text
-#  invoice_grace_period             :integer          default(0), not null
-#  legal_name                       :string
-#  legal_number                     :string
-#  logo                             :string
-#  max_wallets                      :integer
-#  name                             :string           not null
-#  net_payment_term                 :integer          default(0), not null
-#  premium_integrations             :string           default([]), not null, is an Array
-#  slug                             :string           not null
-#  state                            :string
-#  tax_identification_number        :string
-#  timezone                         :string           default("UTC"), not null
-#  vat_rate                         :float            default(0.0), not null
-#  webhook_url                      :string
-#  zipcode                          :string
-#  created_at                       :datetime         not null
-#  updated_at                       :datetime         not null
+#  id                           :uuid             not null, primary key
+#  address_line1                :string
+#  address_line2                :string
+#  api_key                      :string
+#  audit_logs_period            :integer          default(30)
+#  authentication_methods       :string           default(["email_password", "google_oauth"]), not null, is an Array
+#  city                         :string
+#  clickhouse_events_store      :boolean          default(FALSE), not null
+#  country                      :string
+#  custom_aggregation           :boolean          default(FALSE)
+#  default_currency             :string           default("USD"), not null
+#  document_locale              :string           default("en"), not null
+#  document_number_prefix       :string
+#  document_numbering           :integer          default("per_customer"), not null
+#  document_url_expiration_days :integer          default(30), not null
+#  email                        :string
+#  email_settings               :string           default([]), not null, is an Array
+#  eu_tax_management            :boolean          default(FALSE)
+#  feature_flags                :string           default([]), not null, is an Array
+#  finalize_zero_amount_invoice :boolean          default(TRUE), not null
+#  hmac_key                     :string           not null
+#  invoice_footer               :text
+#  invoice_grace_period         :integer          default(0), not null
+#  legal_name                   :string
+#  legal_number                 :string
+#  logo                         :string
+#  max_wallets                  :integer
+#  name                         :string           not null
+#  net_payment_term             :integer          default(0), not null
+#  premium_integrations         :string           default([]), not null, is an Array
+#  slug                         :string           not null
+#  state                        :string
+#  tax_identification_number    :string
+#  timezone                     :string           default("UTC"), not null
+#  vat_rate                     :float            default(0.0), not null
+#  webhook_url                  :string
+#  zipcode                      :string
+#  created_at                   :datetime         not null
+#  updated_at                   :datetime         not null
 #
 # Indexes
 #

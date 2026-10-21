@@ -63,7 +63,9 @@ module Types
       field :refundable_amount_cents, GraphQL::Types::BigInt, null: false
 
       field :file_url, String, null: true
+      field :file_url_expires_at, GraphQL::Types::ISO8601DateTime, null: true
       field :xml_url, String, null: true
+      field :xml_url_expires_at, GraphQL::Types::ISO8601DateTime, null: true
 
       field :metadata, [Types::Invoices::Metadata::Object], null: true, permissions: %w[invoices:view invoices:update]
 
