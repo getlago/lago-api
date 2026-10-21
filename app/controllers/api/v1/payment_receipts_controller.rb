@@ -29,14 +29,14 @@ module Api
 
       def show
         payment_receipt = PaymentReceipt.where(organization: current_organization).find_by(id: params[:id])
-        return not_found_error(resource: resource_name) unless payment_receipt
+        return payment_receipt_not_found_error unless payment_receipt
 
         render_payment_receipt(payment_receipt)
       end
 
       def resend_email
         payment_receipt = PaymentReceipt.where(organization: current_organization).find_by(id: params[:id])
-        return not_found_error(resource: resource_name) unless payment_receipt
+        return payment_receipt_not_found_error unless payment_receipt
 
         result = Emails::ResendService.call(
           resource: payment_receipt,
@@ -71,8 +71,13 @@ module Api
         )
       end
 
+      # Clients may match on the code this endpoint has always returned.
+      def payment_receipt_not_found_error
+        not_found_error(resource: "invoice")
+      end
+
       def resource_name
-        "invoice"
+        "payment_receipt"
       end
 
       def serialized_resource_name

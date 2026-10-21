@@ -10,7 +10,7 @@ RSpec.describe Api::V1::PaymentReceiptsController do
 
     let(:params) { {} }
 
-    include_examples "requires API permission", "invoice", "read"
+    include_examples "requires API permission", "payment_receipt", "read"
 
     it "returns organization's payments" do
       invoice = create(:invoice, organization:)
@@ -151,7 +151,7 @@ RSpec.describe Api::V1::PaymentReceiptsController do
     context "when payment receipt exists" do
       let(:id) { payment_receipt.id }
 
-      include_examples "requires API permission", "invoice", "read"
+      include_examples "requires API permission", "payment_receipt", "read"
 
       it "returns the payment receipt" do
         subject
@@ -167,7 +167,7 @@ RSpec.describe Api::V1::PaymentReceiptsController do
       let(:payment_receipt) { create(:payment_receipt, payment:, organization:) }
       let(:id) { payment_receipt.id }
 
-      include_examples "requires API permission", "invoice", "read"
+      include_examples "requires API permission", "payment_receipt", "read"
 
       it "returns the payment receipt" do
         subject
@@ -204,7 +204,7 @@ RSpec.describe Api::V1::PaymentReceiptsController do
 
       it "returns a not found error" do
         subject
-        expect(response).to have_http_status(:not_found)
+        expect(response).to be_not_found_error("invoice")
       end
     end
   end
@@ -216,6 +216,8 @@ RSpec.describe Api::V1::PaymentReceiptsController do
     let(:invoice) { create(:invoice, customer:, organization:) }
     let(:payment) { create(:payment, payable: invoice) }
     let(:payment_receipt) { create(:payment_receipt, payment:, organization:) }
+
+    include_examples "requires API permission", "payment_receipt", "write"
 
     context "when the payment references an invoice that no longer exists" do
       before { payment.update_columns(payable_id: SecureRandom.uuid) } # rubocop:disable Rails/SkipsModelValidations
