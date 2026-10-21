@@ -5,8 +5,13 @@ class WebhookEndpoint < ApplicationRecord
 
   SIGNATURE_ALGOS = [
     :jwt,
-    :hmac
+    :hmac,
+    :standard_webhooks
   ].freeze
+
+  # Standard Webhooks secret: 24 random bytes, base64 encoded, prefixed with `whsec_`.
+  # See https://www.standardwebhooks.com
+  STANDARD_WEBHOOKS_SECRET_PREFIX = "whsec_"
 
   WEBHOOK_EVENT_TYPE_CONFIG = YAML.safe_load_file(
     Rails.root.join("config/webhook_event_types.yml"),
@@ -29,6 +34,7 @@ class WebhookEndpoint < ApplicationRecord
   validate :validate_event_types, if: :event_types_changed?
 
   before_validation :normalize_event_types, if: :event_types_changed?
+  before_create :set_standard_webhooks_secret
 
   enum :signature_algo, SIGNATURE_ALGOS
 
@@ -37,6 +43,13 @@ class WebhookEndpoint < ApplicationRecord
   end
 
   private
+
+  def set_standard_webhooks_secret
+    return unless standard_webhooks?
+    return if secret.present?
+
+    self.secret = "#{STANDARD_WEBHOOKS_SECRET_PREFIX}#{Base64.strict_encode64(SecureRandom.bytes(24))}"
+  end
 
   def max_webhook_endpoints
     errors.add(:base, :exceeded_limit) if organization &&
@@ -83,6 +96,7 @@ end
 #  id              :uuid             not null, primary key
 #  event_types     :string           is an Array
 #  name            :string
+#  secret          :string
 #  signature_algo  :integer          default("jwt"), not null
 #  webhook_url     :string           not null
 #  created_at      :datetime         not null

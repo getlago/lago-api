@@ -166,6 +166,31 @@ RSpec.describe WebhookEndpoint do
         end
       end
     end
+
+    describe "#set_standard_webhooks_secret" do
+      subject(:webhook_endpoint) { create(:webhook_endpoint, signature_algo:) }
+
+      context "when the signature algorithm is standard_webhooks" do
+        let(:signature_algo) { :standard_webhooks }
+
+        it "generates a whsec_ prefixed secret" do
+          expect(webhook_endpoint.secret).to start_with("whsec_")
+        end
+
+        it "decodes to 24 random bytes" do
+          raw = webhook_endpoint.secret.delete_prefix("whsec_")
+          expect(Base64.strict_decode64(raw).bytesize).to eq(24)
+        end
+      end
+
+      context "when the signature algorithm is not standard_webhooks" do
+        let(:signature_algo) { :hmac }
+
+        it "does not generate a secret" do
+          expect(webhook_endpoint.secret).to be_nil
+        end
+      end
+    end
   end
 
   describe "constants" do

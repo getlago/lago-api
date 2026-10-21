@@ -163,6 +163,19 @@ RSpec.describe Webhook do
         )
       end
     end
+
+    context "when signature algorithm is standard_webhooks" do
+      let(:signature_algo) { :standard_webhooks }
+
+      it "returns the standard webhooks headers" do
+        headers = subject
+
+        expect(headers.keys).to match_array(%w[webhook-id webhook-timestamp webhook-signature])
+        expect(headers["webhook-id"]).to eq(webhook.id)
+        expect(headers["webhook-timestamp"]).to match(/\A\d+\z/)
+        expect(headers["webhook-signature"]).to start_with("v1,")
+      end
+    end
   end
 
   describe "#jwt_signature" do
@@ -208,6 +221,22 @@ RSpec.describe Webhook do
 
     it "returns HMAC signature as base 64 encoded string" do
       expect(subject).to eq expected_signature
+    end
+  end
+
+  describe "#standard_webhooks_signature" do
+    subject(:signature) { webhook.standard_webhooks_signature(timestamp) }
+
+    let(:webhook) { create(:webhook, webhook_endpoint:) }
+    let(:webhook_endpoint) { create(:webhook_endpoint, signature_algo: :standard_webhooks) }
+    let(:timestamp) { 1_674_087_231 }
+
+    it "signs {id}.{timestamp}.{payload} with the endpoint secret" do
+      key = Base64.strict_decode64(webhook_endpoint.secret.delete_prefix("whsec_"))
+      signed_content = "#{webhook.id}.#{timestamp}.#{webhook.payload.to_json}"
+      expected = Base64.strict_encode64(OpenSSL::HMAC.digest("SHA256", key, signed_content))
+
+      expect(signature).to eq("v1,#{expected}")
     end
   end
 end

@@ -55,6 +55,10 @@ class Webhook < ApplicationRecord
   end
 
   def generate_headers
+    if webhook_endpoint.signature_algo&.to_sym == :standard_webhooks
+      return standard_webhooks_headers
+    end
+
     signature = case webhook_endpoint.signature_algo&.to_sym
     when :jwt
       jwt_signature
@@ -67,6 +71,27 @@ class Webhook < ApplicationRecord
       "X-Lago-Signature-Algorithm" => webhook_endpoint.signature_algo.to_s,
       "X-Lago-Unique-Key" => id
     }
+  end
+
+  # Standard Webhooks headers (https://www.standardwebhooks.com). The signature covers
+  # `{webhook-id}.{webhook-timestamp}.{body}`, where the body is the exact JSON sent.
+  def standard_webhooks_headers
+    timestamp = Time.current.to_i
+
+    {
+      "webhook-id" => id,
+      "webhook-timestamp" => timestamp.to_s,
+      "webhook-signature" => standard_webhooks_signature(timestamp)
+    }
+  end
+
+  def standard_webhooks_signature(timestamp)
+    secret = webhook_endpoint.secret.to_s.delete_prefix(WebhookEndpoint::STANDARD_WEBHOOKS_SECRET_PREFIX)
+    key = Base64.strict_decode64(secret)
+    signed_content = "#{id}.#{timestamp}.#{payload.to_json}"
+    digest = OpenSSL::HMAC.digest("SHA256", key, signed_content)
+
+    "v1,#{Base64.strict_encode64(digest)}"
   end
 
   def jwt_signature
