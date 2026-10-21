@@ -29,7 +29,9 @@ de:
     credit_notes: Gutschriften
     date_from: Vom
     date_to: Bis
+    description: Beschreibung
     details: "%{resource} Details"
+    details_title: Details
     document_name: Rechnung
     document_tax_name: Steuerrechnung
     due_date: Fälligkeit %{date}
@@ -67,6 +69,7 @@ de:
     paid_invoice: Bezahlte Rechnung
     paid_tax_invoice: Bezahlte Steuerrechnung
     pay_with_bank_transfer: Zahlung per Banküberweisung
+    payment_due_date: Fälligkeitsdatum
     payment_term: Zahlungsfrist
     payment_term_days: "%{net_payment_term} Tage"
     percentage:
@@ -82,6 +85,7 @@ de:
     prepaid_credits_with_value: Prepaid-Guthaben - %{wallet_name}
     progressive_billing_credit: Nutzung bereits abgerechnet
     purchase_order_number: Bestellnummer
+    quantity: Menge
     quarter: quartal
     quarterly: Vierteljährlich
     reached_usage_threshold: Diese progressive Rechnung wird erstellt, da Ihre kumulierte Nutzung %{usage_amount} erreicht hat und den Schwellenwert von %{threshold_amount} überschritten hat.

@@ -1,0 +1,73 @@
+doctype html
+html
+  head
+    meta charset='UTF-8'
+    meta name='viewport' content='width=device-width, initial-scale=1.0'
+    title = document_invoice_name
+  body
+    == SlimHelper.render('templates/invoices/product_catalog/_styles', self)
+
+    - catalog = ProductCatalogInvoiceHelper.new(self)
+    .wrapper
+      == SlimHelper.render('templates/invoices/product_catalog/_header', self)
+
+      .mb-24
+        table.lines
+          thead
+            tr
+              th = I18n.t('invoice.description')
+              th = I18n.t('invoice.amount')
+          tbody
+            - catalog.summary_lines.each do |line|
+              tr
+                td.body-2 = line.name
+                td.body-2 = MoneyHelper.format(Money.new(line.amount_cents, currency))
+        table.totals
+          tr
+            td.body-2 = I18n.t('invoice.sub_total_without_tax')
+            td.body-2 = MoneyHelper.format(sub_total_excluding_taxes_amount)
+          - applied_taxes.order(tax_rate: :desc).each do |applied_tax|
+            tr
+              td.body-2 = I18n.t('invoice.tax_name', name: applied_tax.tax_name, rate: applied_tax.tax_rate, amount: MoneyHelper.format(applied_tax.taxable_amount))
+              td.body-2 = MoneyHelper.format(applied_tax.amount)
+          tr.total
+            td.body-1 = advance_charges? ? I18n.t('invoice.already_paid') : I18n.t('invoice.total')
+            td.body-1 = MoneyHelper.format(total_amount)
+          - unless advance_charges?
+            tr.total
+              td.body-1 = I18n.t('invoice.total_due_amount')
+              td.body-1 = MoneyHelper.format(total_due_amount)
+
+      - if applied_invoice_custom_sections.present?
+        == SlimHelper.render('templates/invoices/v4/_custom_sections', self)
+
+      p.body-3.mb-24 = LineBreakHelper.break_lines(self_billed? ? I18n.t('invoice.self_billed.footer') : billing_entity.invoice_footer)
+
+      == SlimHelper.render('templates/invoices/v4/_powered_by_logo', self)
+
+      - catalog.contract_blocks.each do |block|
+        .details-page
+          .mb-24
+            h1 = I18n.t('invoice.details_title')
+            p.body-3 = block.title
+          - block.sections.each do |section|
+            table.lines.mb-24
+              thead
+                tr
+                  th = I18n.t('invoice.description')
+                  th = I18n.t('invoice.quantity')
+                  th = I18n.t('invoice.unit_price')
+                  th = I18n.t('invoice.amount')
+              tbody
+                - if section.name
+                  tr.category
+                    td.body-1 colspan=3 = section.name
+                    td.body-1 = MoneyHelper.format(Money.new(section.amount_cents, currency))
+                - section.products.each do |product|
+                  tr.product
+                    td.body-1 colspan=4 = product.name
+                  == SlimHelper.render('templates/invoices/product_catalog/_period_rows', self, fees: product.fees, nested: false)
+                  - product.filters.each do |filter|
+                    tr.filter
+                      td.body-1 colspan=4 = filter.name
+                    == SlimHelper.render('templates/invoices/product_catalog/_period_rows', self, fees: filter.fees, nested: true)

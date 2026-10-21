@@ -29,7 +29,9 @@ nb:
     credit_notes: Kreditnotaer
     date_from: Fra
     date_to: til
+    description: Beskrivelse
     details: "%{resource} detaljer"
+    details_title: Detaljer
     document_name: Faktura
     document_tax_name: Skattefaktura
     due_date: Forfallsdato %{date}
@@ -67,6 +69,7 @@ nb:
     paid_invoice: Betalt faktura
     paid_tax_invoice: Betalt skattefaktura
     pay_with_bank_transfer: Betal med bankoverføring
+    payment_due_date: Forfallsdato
     payment_term: Betalingsperiode
     payment_term_days: "%{net_payment_term} dager"
     percentage:
@@ -82,6 +85,7 @@ nb:
     prepaid_credits_with_value: Forhåndsbetalte kreditter - %{wallet_name}
     progressive_billing_credit: Bruk allerede fakturert
     purchase_order_number: Bestillingsnummer
+    quantity: Antall
     quarter: kvartal
     quarterly: Kvartalsvis
     reached_usage_threshold: Denne progressive faktureringen er generert fordi din akkumulerte bruk har nådd %{usage_amount}, og overskredet terskelen på %{threshold_amount}.
