@@ -39,14 +39,14 @@ RSpec.describe Api::V2::RateCardsController do
     end
 
     context "with expand" do
-      subject { post_with_token(organization, "/api/v2/rate_cards?expand[]=taxes", {rate_card: create_params}) }
+      subject { post_with_token(organization, "/api/v2/rate_cards?expands[]=taxes", {rate_card: create_params}) }
 
       it "creates nothing, as only show expands" do
         expect { subject }.not_to change(RateCard, :count)
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("expand_not_supported")
-        expect(json[:error_details]).to eq(expand: {reason: "action_not_expandable", invalid_values: %w[taxes]})
+        expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: %w[taxes]})
       end
     end
 
@@ -62,7 +62,7 @@ RSpec.describe Api::V2::RateCardsController do
         expect(response).to have_http_status(:success)
         expect(json[:rate_card]).not_to have_key(:taxes)
 
-        get_with_token(organization, "/api/v2/rate_cards/standard", {expand: %w[taxes]})
+        get_with_token(organization, "/api/v2/rate_cards/standard", {expands: %w[taxes]})
 
         expect(json[:rate_card][:taxes].pluck(:code)).to match_array([tax1.code, tax2.code])
       end
@@ -359,8 +359,8 @@ RSpec.describe Api::V2::RateCardsController do
       )
     end
 
-    context "with expand[]=active_rate" do
-      let(:params) { {expand: %w[active_rate]} }
+    context "with expands[]=active_rate" do
+      let(:params) { {expands: %w[active_rate]} }
 
       # Pending, so that the rate above stays the active one.
       before { create(:rate_card_rate, organization:, rate_card:, effective_from: 1.month.from_now.beginning_of_day) }
@@ -387,8 +387,8 @@ RSpec.describe Api::V2::RateCardsController do
       end
     end
 
-    context "with expand[]=taxes" do
-      let(:params) { {expand: %w[taxes]} }
+    context "with expands[]=taxes" do
+      let(:params) { {expands: %w[taxes]} }
       let(:created_at) { Time.zone.parse("2026-09-28T10:00:00.000001Z") }
       let(:discarded_tax) { create(:tax, organization:) }
       # Taxes created after `tax` but linked before it, the first two at the same microsecond with
@@ -420,8 +420,8 @@ RSpec.describe Api::V2::RateCardsController do
       end
     end
 
-    context "with expand[]=rates" do
-      let(:params) { {expand: %w[rates]} }
+    context "with expands[]=rates" do
+      let(:params) { {expands: %w[rates]} }
 
       # Appended out of effective_from order after the rate above, which the second one
       # supersedes, next to rates that neither list may show.
@@ -444,8 +444,8 @@ RSpec.describe Api::V2::RateCardsController do
       end
     end
 
-    context "with expand[]=product" do
-      let(:params) { {expand: %w[product]} }
+    context "with expands[]=product" do
+      let(:params) { {expands: %w[product]} }
 
       it "embeds the product as its own show renders it" do
         subject
@@ -457,8 +457,8 @@ RSpec.describe Api::V2::RateCardsController do
       end
     end
 
-    context "with expand[]=product_filter" do
-      let(:params) { {expand: %w[product_filter]} }
+    context "with expands[]=product_filter" do
+      let(:params) { {expands: %w[product_filter]} }
       let(:product_filter) { create(:product_filter, :with_values, organization:, product:) }
 
       it "embeds the product filter as its own show renders it" do
@@ -484,7 +484,7 @@ RSpec.describe Api::V2::RateCardsController do
     end
 
     context "with every expansion" do
-      let(:params) { {expand: %w[product_filter rates product taxes active_rate]} }
+      let(:params) { {expands: %w[product_filter rates product taxes active_rate]} }
       let(:product_filter) { create(:product_filter, :with_values, organization:, product:) }
 
       it "embeds them after the card, in the serializer's order" do
@@ -543,7 +543,7 @@ RSpec.describe Api::V2::RateCardsController do
 
     context "with an unknown expansion" do
       # product_category expands a product, one level below the rate card.
-      let(:params) { {expand: %w[taxes product_category]} }
+      let(:params) { {expands: %w[taxes product_category]} }
 
       it "returns an invalid expand error listing the allowed expansions" do
         subject
@@ -589,14 +589,14 @@ RSpec.describe Api::V2::RateCardsController do
     end
 
     context "with expand" do
-      let(:query_params) { "?expand[]=taxes" }
+      let(:query_params) { "?expands[]=taxes" }
 
       it "returns a not supported error, as lists never expand" do
         subject
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("expand_not_supported")
-        expect(json[:error_details]).to eq(expand: {reason: "action_not_expandable", invalid_values: %w[taxes]})
+        expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: %w[taxes]})
       end
     end
 
