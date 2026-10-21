@@ -3,50 +3,133 @@
 require "rails_helper"
 
 RSpec.describe V2::ProductFilterSerializer do
-  subject(:serialized_filter) { described_class.new(product_filter).serialize }
+  subject(:payload) { described_class.new(product_filter).serialize }
 
-  let(:organization) { create(:organization) }
-  let(:category) { create(:product_category, organization:, code: "category-one") }
-  let(:product) { create(:product, organization:, product_category: category, code: "product-one") }
-  let(:product_filter) { create(:product_filter, organization:, product:) }
-  let(:billable_metric_filter) { create(:billable_metric_filter, organization:, billable_metric: product.billable_metric, key: "region", values: %w[us eu]) }
-  let(:filter_value) { create(:product_filter_value, organization:, product_filter:, billable_metric_filter:, value: "us") }
-
-  it "serializes the owning product and category codes" do
-    expect(serialized_filter).to include(product_code: "product-one", product_category_code: "category-one")
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:product_category, refind: true) { create(:product_category, organization:, code: "compute") }
+  let_it_be(:product, refind: true) { create(:product, organization:, product_category:, code: "api") }
+  let_it_be(:region_filter) do
+    create(:billable_metric_filter, billable_metric: product.billable_metric, key: "region", values: %w[us eu apac])
+  end
+  let_it_be(:tier_filter) do
+    create(:billable_metric_filter, billable_metric: product.billable_metric, key: "tier", values: %w[free pro])
   end
 
-  context "when another filter belongs to a different product and category" do
-    let(:other_category) { create(:product_category, organization:, code: "category-two") }
-    let(:other_product) { create(:product, organization:, product_category: other_category, code: "product-two") }
-    let(:other_filter) { create(:product_filter, organization:, product: other_product) }
+  let(:product_filter) do
+    create(
+      :product_filter,
+      organization:,
+      product:,
+      name: "Europe",
+      code: "europe",
+      description: "Usage in the European region",
+      invoice_display_name: "Europe usage",
+      created_at: Time.zone.parse("2026-01-05T10:00:00Z"),
+      updated_at: Time.zone.parse("2026-01-06T11:30:00Z"),
+      deleted_at:
+    )
+  end
+  let(:deleted_at) { nil }
+  let(:flat_payload) do
+    {
+      lago_id: product_filter.id,
+      product_code: "api",
+      product_category_code: "compute",
+      name: "Europe",
+      code: "europe",
+      description: "Usage in the European region",
+      invoice_display_name: "Europe usage",
+      values: [],
+      created_at: "2026-01-05T10:00:00Z",
+      updated_at: "2026-01-06T11:30:00Z",
+      deleted_at: nil
+    }
+  end
 
-    it "serializes each filter with its own parent codes" do
-      expect(described_class.new(other_filter).serialize).to include(product_code: "product-two", product_category_code: "category-two")
-      expect(serialized_filter).to include(product_code: "product-one", product_category_code: "category-one")
+  it "serializes the filter, with a null deletion timestamp" do
+    expect(payload).to eq(flat_payload)
+  end
+
+  context "with values" do
+    before do
+      create(
+        :product_filter_value,
+        organization:,
+        product_filter:,
+        billable_metric_filter: region_filter,
+        value: "eu",
+        created_at: Time.zone.parse("2026-01-05T10:00:00Z")
+      )
+      # A null value selects every value of the billable metric filter
+      create(
+        :product_filter_value,
+        organization:,
+        product_filter:,
+        billable_metric_filter: tier_filter,
+        value: nil,
+        created_at: Time.zone.parse("2026-01-05T10:01:00Z")
+      )
+    end
+
+    it "renders each value with the key of its billable metric filter" do
+      expect(payload).to eq(
+        flat_payload.merge(
+          values: [
+            {key: "region", value: "eu"},
+            {key: "tier", value: nil}
+          ]
+        )
+      )
     end
   end
 
-  context "when the product and category are discarded" do
+  context "when the filter belongs to another product and category" do
+    let(:product_filter) do
+      other_category = create(:product_category, organization:, code: "storage")
+      other_product = create(:product, organization:, product_category: other_category, code: "s3")
+
+      create(
+        :product_filter,
+        organization:,
+        product: other_product,
+        name: "Europe",
+        code: "europe",
+        description: "Usage in the European region",
+        invoice_display_name: "Europe usage",
+        created_at: Time.zone.parse("2026-01-05T10:00:00Z"),
+        updated_at: Time.zone.parse("2026-01-06T11:30:00Z")
+      )
+    end
+
+    it "renders the codes of its own product and category" do
+      expect(payload).to eq(flat_payload.merge(product_code: "s3", product_category_code: "storage"))
+    end
+  end
+
+  context "when its product and category are deleted" do
     before do
       product.discard!
-      category.discard!
+      product_category.discard!
     end
 
-    it "retains their codes" do
-      expect(serialized_filter).to include(product_code: "product-one", product_category_code: "category-one")
+    it "still renders their codes" do
+      expect(payload).to eq(flat_payload)
     end
   end
 
-  context "when the filter is discarded" do
-    before do
-      filter_value
-      product_filter.discard!
+  context "when the filter is deleted" do
+    let(:deleted_at) { Time.zone.parse("2026-02-01T09:00:00Z") }
+
+    it "includes the deletion timestamp" do
+      expect(payload).to eq(flat_payload.merge(deleted_at: "2026-02-01T09:00:00Z"))
     end
 
-    it "serializes no values even when the filter has a kept value" do
-      expect(filter_value).not_to be_discarded
-      expect(serialized_filter.fetch(:values)).to eq([])
+    context "with a value still kept" do
+      before { create(:product_filter_value, organization:, product_filter:, billable_metric_filter: region_filter, value: "eu") }
+
+      it "renders no value" do
+        expect(payload).to eq(flat_payload.merge(deleted_at: "2026-02-01T09:00:00Z"))
+      end
     end
   end
 end
