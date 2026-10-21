@@ -75,10 +75,19 @@ RSpec.describe BillingSegments::ProcessService do
 
     before do
       billing_segment
+      allow(Invoices::FinalizeContractInvoiceService).to receive(:call!).and_call_original
     end
 
     it "builds the arrears invoice with the contract type" do
       expect(result.invoices.sole.reload).to have_attributes(invoice_type: "contract", status: "finalized")
+    end
+
+    it "publishes the contract invoice through the contract finalization service" do
+      invoice = result.invoices.sole
+
+      expect(Invoices::FinalizeContractInvoiceService).to have_received(:call!).once.with(invoice:)
+      expect(SendWebhookJob).to have_been_enqueued.once.with("invoice.created", invoice)
+      expect(Invoices::GenerateDocumentsJob).to have_been_enqueued.once.with(invoice:, notify: false)
     end
 
     context "when a contract selects invoice custom sections" do
@@ -1265,6 +1274,24 @@ RSpec.describe BillingSegments::ProcessService do
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
       expect { described_class.call!(customer:) }.to not_change(Invoice, :count).and not_change(Fee, :count)
       expect(invoice.reload.status).to eq("finalized")
+      expect(Invoices::FinalizeContractInvoiceService).to have_received(:call!).with(invoice:).twice
+    end
+
+    context "with a generating subscription invoice left by a previous run" do
+      let(:legacy_invoice) do
+        create(:invoice, :generating, organization:, customer:, invoice_type: :subscription, total_amount_cents: 100, fees_amount_cents: 100)
+      end
+
+      before do
+        create(:billing_segment, organization:, customer:, status: :done, invoice: legacy_invoice)
+      end
+
+      it "finalizes it without the contract finalization service" do
+        expect(result).to be_success
+        expect(legacy_invoice.reload).to be_finalized
+        expect(Invoices::FinalizeContractInvoiceService).to have_received(:call!).once
+        expect(Invoices::FinalizeContractInvoiceService).not_to have_received(:call!).with(invoice: legacy_invoice)
+      end
     end
 
     it "does not process another customer's pending segments or generating invoices" do

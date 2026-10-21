@@ -228,6 +228,8 @@ module BillingSegments
       Invoice.where(id: invoice_ids).order(:issuing_date, :id).each do |invoice|
         if invoice.advance_charges?
           Invoices::FinalizeAndPublishAdvanceChargesService.call!(invoice:)
+        elsif invoice.contract?
+          Invoices::FinalizeContractInvoiceService.call!(invoice:)
         else
           Invoices::TransitionToFinalStatusService.call!(invoice:)
           invoice.save! if invoice.changed?
