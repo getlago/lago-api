@@ -493,6 +493,7 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               rate: 20.0,
               description: "French VAT",
               created_at: timestamp,
+              updated_at: timestamp,
               deleted_at: nil
             }
           end
@@ -504,6 +505,7 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               rate: 5.0,
               description: "Canadian GST",
               created_at: timestamp,
+              updated_at: timestamp,
               deleted_at: nil
             }
           end
