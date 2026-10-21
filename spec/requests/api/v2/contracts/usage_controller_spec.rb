@@ -71,9 +71,29 @@ RSpec.describe Api::V2::Contracts::UsageController do
         events_count: 1,
         amount_cents: 200
       )
-      expect(rate_card_entries[fixed_rate_card.code]).to include(
-        product_type: "fixed", product_category_code: nil, billable_metric_code: nil,
-        rate_model: "standard", rate_properties: {amount: "10"}, units: "3.0", amount_cents: 3000
+      expect(rate_card_entries[fixed_rate_card.code]).to eq(
+        rate_card_code: fixed_rate_card.code,
+        rate_card_name: fixed_rate_card.name,
+        product_code: fixed_rate_card.product.code,
+        product_name: fixed_rate_card.product.name,
+        product_category_code: nil,
+        product_category_name: nil,
+        product_filter_code: nil,
+        product_filter_name: nil,
+        invoice_display_name: fixed_rate_card.product.name,
+        product_type: "fixed",
+        billable_metric_code: nil,
+        billing_timing: "arrears",
+        from_datetime: "2027-02-01T00:00:00Z",
+        to_datetime: "2027-02-28T23:59:59Z",
+        rate_phase_code: nil,
+        rate_phase_name: nil,
+        rate_source: "rate",
+        rate_model: "standard",
+        rate_properties: {amount: "10"},
+        units: "3.0",
+        events_count: 0,
+        amount_cents: 3000
       )
     end
 
