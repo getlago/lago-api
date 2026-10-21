@@ -37,7 +37,8 @@ RSpec.describe PreloadableAggregations do
 
         expect(invoice.aggregation_cache).to eq(
           offset_amount_cents: 15_00,
-          refunded_amount_cents: 35_00
+          refunded_amount_cents: 35_00,
+          has_non_voided_credit_notes?: true
         )
         expect(invoice.fees.first.aggregation_cache).to eq(credited_amount_cents: 5_00)
         expect(invoice.fees.last.aggregation_cache).to eq(credited_amount_cents: 25_00)

@@ -2025,6 +2025,43 @@ RSpec.describe Invoice do
     end
   end
 
+  describe "#has_non_voided_credit_notes?" do
+    let(:invoice) { create(:invoice) }
+
+    context "when there are no credit notes" do
+      it "returns false" do
+        expect(invoice.has_non_voided_credit_notes?).to be(false)
+      end
+    end
+
+    context "when there are only voided credit notes" do
+      before { create(:credit_note, invoice:, credit_status: :voided) }
+
+      it "returns false" do
+        expect(invoice.has_non_voided_credit_notes?).to be(false)
+      end
+    end
+
+    context "when there are non-voided credit notes" do
+      before do
+        create(:credit_note, invoice:, credit_status: :available)
+        create(:credit_note, invoice:, credit_status: :voided)
+      end
+
+      it "returns true" do
+        expect(invoice.has_non_voided_credit_notes?).to be(true)
+      end
+    end
+
+    context "when the value is preloaded" do
+      before { invoice.aggregation_cache[:has_non_voided_credit_notes?] = true }
+
+      it "returns the cached value" do
+        expect(invoice.has_non_voided_credit_notes?).to be(true)
+      end
+    end
+  end
+
   describe "#voidable?" do
     subject(:voidable) { invoice.voidable? }
 
