@@ -44,12 +44,14 @@ RSpec.describe RateCards::DestroyService, :capture_kafka_messages do
       allow(Utils::ActivityLog).to receive(:available?).and_return(true)
     end
 
-    it "publishes discarded rates and assigned taxes in the webhook and activity payloads" do
+    it "omits rate and tax snapshots from the deleted webhook while retaining them in activity" do
       perform_enqueued_jobs(only: SendWebhookJob) { result }
 
       webhook_payload = Webhook.find_by!(webhook_type: "rate_card.deleted").payload.fetch("rate_card")
-      expect(webhook_payload).to include("active_rate" => nil, "rates" => [])
-      expect(webhook_payload.fetch("taxes").map { |item| item.fetch("lago_id") }).to eq([tax.id])
+      expect(webhook_payload).to include("rates_count" => 0)
+      expect(webhook_payload).not_to have_key("active_rate")
+      expect(webhook_payload).not_to have_key("rates")
+      expect(webhook_payload).not_to have_key("taxes")
       expect(kafka_messages.size).to eq(1)
 
       activity_payload = JSON.parse(kafka_messages.first.fetch(:payload)).fetch("activity_object")
@@ -61,12 +63,14 @@ RSpec.describe RateCards::DestroyService, :capture_kafka_messages do
     context "when rate associations are preloaded before deletion" do
       before { rate_card.rates.load }
 
-      it "reports zero rates and retains assigned taxes in both post-commit payloads" do
+      it "omits rate and tax snapshots from the deleted webhook while retaining activity details" do
         perform_enqueued_jobs(only: SendWebhookJob) { result }
 
         webhook_payload = Webhook.find_by!(webhook_type: "rate_card.deleted").payload.fetch("rate_card")
-        expect(webhook_payload).to include("rates_count" => 0, "active_rate" => nil, "rates" => [])
-        expect(webhook_payload.fetch("taxes").map { |item| item.fetch("lago_id") }).to eq([tax.id])
+        expect(webhook_payload).to include("rates_count" => 0)
+        expect(webhook_payload).not_to have_key("active_rate")
+        expect(webhook_payload).not_to have_key("rates")
+        expect(webhook_payload).not_to have_key("taxes")
 
         activity_payload = JSON.parse(kafka_messages.first.fetch(:payload)).fetch("activity_object")
         expect(activity_payload).not_to have_key("active_rate")

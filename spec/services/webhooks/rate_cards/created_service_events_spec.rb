@@ -160,7 +160,7 @@ RSpec.describe Webhooks::RateCards::CreatedService do
 
     before { create(:rate_card_applied_tax, rate_card:, tax:, organization:) }
 
-    it "serializes the discarded card with nil active rate, no rates and its taxes" do
+    it "serializes the discarded card without rate or tax snapshots" do
       rate_card.discard
       webhook_service.call
 
@@ -183,10 +183,7 @@ RSpec.describe Webhooks::RateCards::CreatedService do
           "applied_pricing_unit_code" => nil,
           "rates_count" => 0,
           "created_at" => rate_card.created_at.iso8601,
-          "updated_at" => rate_card.updated_at.iso8601,
-          "active_rate" => nil,
-          "rates" => [],
-          "taxes" => [tax_payload]
+          "updated_at" => rate_card.updated_at.iso8601
         }
       )
     end
