@@ -25,14 +25,14 @@ RSpec.describe Api::V2::PlansController do
     end
 
     context "with expand" do
-      subject { post_with_token(organization, "/api/v2/plans?expand[]=taxes", {plan: create_params}) }
+      subject { post_with_token(organization, "/api/v2/plans?expands[]=taxes", {plan: create_params}) }
 
       it "creates nothing, as only show expands" do
         expect { subject }.not_to change(CatalogPlan, :count)
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("expand_not_supported")
-        expect(json[:error_details]).to eq(expand: {reason: "action_not_expandable", invalid_values: %w[taxes]})
+        expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: %w[taxes]})
       end
     end
 
@@ -50,7 +50,7 @@ RSpec.describe Api::V2::PlansController do
         expect(json[:plan].keys).to eq(plan_keys)
         expect(CatalogPlan.find(json[:plan][:lago_id]).taxes).to match_array([tax1, tax2])
 
-        get_with_token(organization, "/api/v2/plans/growth", {expand: %w[taxes]})
+        get_with_token(organization, "/api/v2/plans/growth", {expands: %w[taxes]})
 
         expect(json[:plan][:taxes].pluck(:code)).to match_array([tax1.code, tax2.code])
       end
@@ -155,8 +155,8 @@ RSpec.describe Api::V2::PlansController do
       expect(json[:plan]).to eq(flat_payload)
     end
 
-    context "with expand[]=taxes" do
-      let(:params) { {expand: %w[taxes]} }
+    context "with expands[]=taxes" do
+      let(:params) { {expands: %w[taxes]} }
       let(:created_at) { Time.zone.parse("2026-09-28T10:00:00.000001Z") }
       let(:tax) { create(:tax, organization:, created_at: created_at - 1.day) }
       let(:linked_at) { created_at - 1.second }
@@ -202,14 +202,14 @@ RSpec.describe Api::V2::PlansController do
     end
 
     context "with an unknown expansion" do
-      let(:params) { {expand: %w[taxes applied_rate_cards]} }
+      let(:params) { {expands: %w[taxes applied_rate_cards]} }
 
       it "returns an invalid expand error listing the allowed expansions" do
         subject
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("invalid_expand")
-        expect(json[:error_details]).to eq(expand: {invalid_values: %w[applied_rate_cards], allowed_values: %w[taxes]})
+        expect(json[:error_details]).to eq(expands: {invalid_values: %w[applied_rate_cards], allowed_values: %w[taxes]})
       end
     end
 
@@ -281,15 +281,15 @@ RSpec.describe Api::V2::PlansController do
       expect(json[:plans].sole.keys).to eq(plan_keys)
     end
 
-    context "with expand[]=taxes" do
-      let(:params) { {expand: %w[taxes]} }
+    context "with expands[]=taxes" do
+      let(:params) { {expands: %w[taxes]} }
 
       it "returns an expand error, as only show expands" do
         subject
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("expand_not_supported")
-        expect(json[:error_details]).to eq(expand: {reason: "action_not_expandable", invalid_values: %w[taxes]})
+        expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: %w[taxes]})
       end
     end
 
