@@ -30,7 +30,17 @@ RSpec.describe ProductCatalogInvoiceHelper do
     product_fee(transfer, amount_cents: 700, amount_details: graduated_percentage_details)
   end
 
-  def product_fee(product, amount_cents:, product_filter: nil, amount_details: {}, true_up_parent_fee: nil, hidden: false)
+  def product_fee(
+    product,
+    amount_cents:,
+    product_filter: nil,
+    amount_details: {},
+    true_up_parent_fee: nil,
+    hidden: false,
+    fee_invoice: invoice,
+    pay_in_advance: false,
+    pay_in_advance_event_transaction_id: nil
+  )
     rate_card = if hidden
       create(:rate_card, :advance, organization:, product:, product_filter:, display_on_invoice: false)
     else
@@ -40,7 +50,9 @@ RSpec.describe ProductCatalogInvoiceHelper do
 
     create(
       :fee,
-      invoice:,
+      invoice: fee_invoice,
+      pay_in_advance:,
+      pay_in_advance_event_transaction_id:,
       subscription: nil,
       fee_type: "product",
       invoiceable_type: "Product",
@@ -78,6 +90,7 @@ RSpec.describe ProductCatalogInvoiceHelper do
       expect(category.name).to eq("Infrastructure")
       expect(category.products.map(&:name)).to eq(%w[Analytics Compute])
       expect(category.products.last.filters.map(&:name)).to eq(["Compute EU"])
+      expect(category.products.map(&:amount_cents)).to eq([300, 1_500])
       expect(standalone.name).to be_nil
       expect(standalone.products.map(&:name)).to eq(["Data transfer"])
       expect(standalone.amount_cents).to eq(700)
@@ -121,15 +134,219 @@ RSpec.describe ProductCatalogInvoiceHelper do
     end
   end
 
+  describe ".detail_rows" do
+    subject(:rows) { described_class.detail_rows(section, "EUR") }
+
+    let(:category_section) { described_class.contract_blocks(invoice).sole.sections.first }
+    let(:standalone_section) { described_class.contract_blocks(invoice).sole.sections.last }
+
+    context "with a category section" do
+      let(:section) { category_section }
+
+      it "nests products, periods and filters under the category" do
+        expect(rows.map { [it.kind, it.indent, it.label] }).to eq([
+          [:category, 0, "Infrastructure"],
+          [:product, 1, "Analytics"],
+          [:segment, 2, described_class.period_label(invoice.fees.find_by(amount_cents: 300))],
+          [:product, 1, "Compute"],
+          [:segment, 2, described_class.period_label(invoice.fees.find_by(amount_cents: 1_000))],
+          [:filter, 2, "Compute EU"],
+          [:segment, 3, described_class.period_label(invoice.fees.find_by(amount_cents: 500))]
+        ])
+        expect(rows.first.amount).to eq(MoneyHelper.format(Money.new(1_800, "EUR")))
+        expect(rows.fourth.amount).to eq(MoneyHelper.format(Money.new(1_500, "EUR")))
+      end
+    end
+
+    context "with standalone products" do
+      let(:section) { standalone_section }
+
+      it "starts products at the top level and adds tier lines below their period" do
+        expect(rows.map { [it.kind, it.indent] }).to eq([
+          [:product, 0],
+          [:segment, 1],
+          [:fee_detail, 2],
+          [:fee_detail, 2],
+          [:fee_detail, 2]
+        ])
+      end
+    end
+  end
+
+  describe ".tiers by rate model" do
+    subject(:lines) { described_class.tiers(fee).map { [it.label, it.units.to_s, it.unit_price, it.amount] } }
+
+    let(:fee) do
+      build_stubbed(
+        :fee,
+        amount_currency: "EUR",
+        amount_cents:,
+        units:,
+        amount_details:,
+        rate_card_rate: build_stubbed(:rate_card_rate, rate_model:)
+      )
+    end
+    let(:amount_cents) { 0 }
+    let(:units) { 0 }
+
+    context "with a volume rate" do
+      let(:rate_model) { "volume" }
+      let(:units) { 3 }
+      let(:amount_details) { {"per_unit_amount" => "400.0", "flat_unit_amount" => "100.0", "per_unit_total_amount" => "1200.0"} }
+
+      it "lists the per-unit fee and the flat fee for all units" do
+        expect(lines).to eq([
+          ["Fee per unit", "3", "€400.00", "€1,200.00"],
+          ["Flat fee for all units", "1", "€100.00", "€100.00"]
+        ])
+      end
+
+      context "without a flat fee" do
+        let(:amount_details) { {"per_unit_amount" => "400.0", "flat_unit_amount" => "0.0", "per_unit_total_amount" => "1200.0"} }
+
+        it { is_expected.to be_empty }
+      end
+    end
+
+    context "with a package rate" do
+      let(:rate_model) { "package" }
+      let(:amount_cents) { 18_000 }
+      let(:amount_details) { {"free_units" => "500.0", "paid_units" => "11845.0", "per_package_size" => 1000, "per_package_unit_amount" => "15.0"} }
+
+      it "lists the free units and the fee per package" do
+        expect(lines).to eq([
+          ["Free units for the first 500", "500", "€0.00", "€0.00"],
+          ["Fee per package", "11845", "€15.00 per 1000", "€180.00"]
+        ])
+      end
+    end
+
+    context "with a percentage rate" do
+      let(:rate_model) { "percentage" }
+      let(:amount_details) do
+        {
+          "rate" => "2.9", "paid_units" => "1250.0", "free_units" => "100.0", "free_events" => 2, "paid_events" => 3,
+          "fixed_fee_unit_amount" => "0.3", "fixed_fee_total_amount" => "0.9", "per_unit_total_amount" => "36.25",
+          "min_max_adjustment_total_amount" => "1.5"
+        }
+      end
+
+      it "lists free units, the rate, the fixed fee and the min/max adjustment" do
+        expect(lines).to eq([
+          ["Free units for 2 transactions", "100", "€0.00", "€0.00"],
+          ["Rate on the amount", "1250", "2.9%", "€36.25"],
+          ["Fixed fee per transaction", "3", "€0.30", "€0.90"],
+          ["Adjustment for min/max per transaction", "1", "€1.50", "€1.50"]
+        ])
+      end
+    end
+
+    context "with a standard rate" do
+      let(:rate_model) { "standard" }
+      let(:amount_details) { {} }
+
+      it { is_expected.to be_empty }
+    end
+  end
+
+  describe ".fee_rows" do
+    subject(:rows) { described_class.fee_rows([fee], 2).map { [it.kind, it.indent] } }
+
+    let(:fee) do
+      build_stubbed(
+        :fee,
+        amount_currency: "EUR",
+        units: 3,
+        amount_details: {"per_unit_amount" => "400.0", "flat_unit_amount" => "100.0", "per_unit_total_amount" => "1200.0"},
+        rate_card_rate: build_stubbed(:rate_card_rate, rate_model: "volume"),
+        pricing_unit_usage:,
+        properties: {"from_datetime" => "2026-10-01T00:00:00Z", "to_datetime" => "2026-10-31T23:59:59Z"},
+        invoice: build_stubbed(:invoice, customer: build_stubbed(:customer))
+      )
+    end
+    let(:pricing_unit_usage) { nil }
+
+    it "nests the details one level under the period" do
+      expect(rows).to eq([[:segment, 2], [:fee_detail, 3], [:fee_detail, 3]])
+    end
+
+    context "with a pricing unit" do
+      let(:pricing_unit_usage) { build_stubbed(:pricing_unit_usage, short_name: "CR", conversion_rate: 0.5) }
+
+      it "shows the conversion first and nests the details one level deeper" do
+        expect(rows).to eq([[:segment, 2], [:conversion, 3], [:fee_detail, 4], [:fee_detail, 4]])
+      end
+    end
+  end
+
+  describe "#single_event_fee?" do
+    subject(:single_event_fee) { described_class.new(event_invoice).single_event_fee? }
+
+    let(:event_invoice) { create(:invoice, organization:, customer:, invoice_type:) }
+    let(:invoice_type) { :contract }
+    let(:event_transaction_id) { "evt-1" }
+
+    before do
+      product_fee(compute, amount_cents: 400, fee_invoice: event_invoice, pay_in_advance: true, pay_in_advance_event_transaction_id: event_transaction_id)
+    end
+
+    it { is_expected.to be(true) }
+
+    context "when the fee bills its period in advance" do
+      let(:event_transaction_id) { nil }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when the invoice regroups paid fees" do
+      let(:invoice_type) { :advance_charges }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "with several fees" do
+      before { product_fee(analytics, amount_cents: 100, fee_invoice: event_invoice, pay_in_advance: true, pay_in_advance_event_transaction_id: "evt-2") }
+
+      it { is_expected.to be(false) }
+    end
+  end
+
+  describe ".conversion_row" do
+    subject(:row) { described_class.conversion_row(fee, 2) }
+
+    let(:fee) { build_stubbed(:fee, amount_cents: 150_000, amount_currency: "EUR", pricing_unit_usage:) }
+    let(:pricing_unit_usage) { build_stubbed(:pricing_unit_usage, short_name: "CR", conversion_rate: 0.5) }
+
+    it "shows the conversion rate and the amount in the invoice currency" do
+      expect(row.label).to eq("Conversion rate: 1 CR = €0.50")
+      expect(row.amount).to eq("€1,500.00")
+    end
+
+    context "without a pricing unit" do
+      let(:pricing_unit_usage) { nil }
+
+      it { is_expected.to be_nil }
+    end
+  end
+
+  describe ".range_label" do
+    it "names the first, next and remaining tiers by their upper bound" do
+      expect(described_class.range_label(:fee, {"from_value" => 0, "to_value" => 10})).to eq("Fee for first 10 units")
+      expect(described_class.range_label(:fee, {"from_value" => 10, "to_value" => 50})).to eq("Fee for units up to 50")
+      expect(described_class.range_label(:fee, {"from_value" => 50, "to_value" => nil})).to eq("Fee for remaining units")
+      expect(described_class.range_label(:flat_fee, {"from_value" => 10, "to_value" => 50})).to eq("Flat fee for units up to 50")
+    end
+  end
+
   describe ".tiers" do
     subject(:tiers) { described_class.tiers(invoice.fees.find_by(amount_cents: 700)) }
 
     it "lists per-unit tiers, then flat fees" do
       expect(tiers.map(&:label)).to eq(
         [
-          "Fee per unit for the first 100",
-          "Fee per unit for 100 and above",
-          "Flat fee for first 100"
+          "Fee for first 100 units",
+          "Fee for remaining units",
+          "Flat fee for first 100 units"
         ]
       )
       expect(tiers.map(&:unit_price)).to eq(["2%", "1%", "€1.00"])

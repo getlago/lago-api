@@ -4,9 +4,49 @@ class ProductCatalogInvoiceHelper
   Line = Data.define(:name, :amount_cents)
   ContractBlock = Data.define(:title, :sections)
   Section = Data.define(:name, :amount_cents, :products)
-  ProductNode = Data.define(:name, :fees, :filters)
+  ProductNode = Data.define(:name, :amount_cents, :fees, :filters)
   FilterNode = Data.define(:name, :fees)
   Tier = Data.define(:label, :units, :unit_price, :amount)
+  AmountDetails = Data.define(:attributes) do
+    delegate :blank?, to: :attributes
+
+    def graduated?
+      ranges.present?
+    end
+
+    def percentage_ranges?
+      attributes.key?("graduated_percentage_ranges")
+    end
+
+    def ranges
+      attributes["graduated_ranges"] || attributes["graduated_percentage_ranges"]
+    end
+
+    def decimal(key)
+      attributes[key].to_d
+    end
+
+    delegate :[], to: :attributes
+  end
+
+  Row = Data.define(:kind, :indent, :label, :units, :unit_price, :amount) do
+    def initialize(units: nil, unit_price: nil, amount: nil, **)
+      super
+    end
+  end
+
+  RANGE_LABEL_KEYS = {
+    fee: {
+      first: "invoice.tiers.fee_for_first",
+      next: "invoice.tiers.fee_for_next",
+      remaining: "invoice.tiers.fee_for_remaining"
+    },
+    flat_fee: {
+      first: "invoice.tiers.flat_fee_for_first",
+      next: "invoice.tiers.flat_fee_for_next",
+      remaining: "invoice.tiers.flat_fee_for_remaining"
+    }
+  }.freeze
 
   def self.summary_lines(invoice)
     new(invoice).summary_lines
@@ -33,44 +73,195 @@ class ProductCatalogInvoiceHelper
   end
 
   def self.tiers(fee)
-    return [] if fee.true_up_parent_fee_id
+    details = AmountDetails.new(attributes: fee.amount_details || {})
+    return [] if fee.true_up_parent_fee_id || details.blank?
+    return graduated_tiers(fee, details) if details.graduated?
 
-    percentage = fee.amount_details.key?("graduated_percentage_ranges")
-    ranges = fee.amount_details["graduated_ranges"] || fee.amount_details["graduated_percentage_ranges"] || []
+    case fee.rate_model
+    when "volume" then volume_tiers(fee, details)
+    when "package" then package_tiers(fee, details)
+    when "percentage" then percentage_tiers(fee, details)
+    else []
+    end
+  end
 
-    per_unit = ranges.map do |range|
-      unit_price = if percentage
+  def self.graduated_tiers(fee, details)
+    per_unit = details.ranges.map do |range|
+      unit_price = if details.percentage_ranges?
         FeeDisplayHelper.format_percentage_rate(range["rate"])
       else
         FeeDisplayHelper.format_with_precision(fee, range["per_unit_amount"])
       end
 
       Tier.new(
-        label: range_label("fee_per_unit", range),
+        label: range_label(:fee, range),
         units: RoundingHelper.round_decimal_part(range["units"].to_d),
         unit_price:,
         amount: FeeDisplayHelper.format_as_currency(fee, range["per_unit_total_amount"])
       )
     end
 
-    flat = ranges.select { it["flat_unit_amount"].to_d.positive? }.map do |range|
+    flat = details.ranges.select { it["flat_unit_amount"].to_d.positive? }.map do |range|
       flat_amount = FeeDisplayHelper.format_as_currency(fee, range["flat_unit_amount"])
-      Tier.new(label: range_label("flat_fee", range), units: 1, unit_price: flat_amount, amount: flat_amount)
+      Tier.new(label: range_label(:flat_fee, range), units: 1, unit_price: flat_amount, amount: flat_amount)
     end
 
     per_unit + flat
   end
 
-  def self.range_label(kind, range)
-    position = if range["to_value"].nil?
-      "last"
-    elsif range["from_value"].to_d.zero?
-      "first"
+  # Without a flat fee, the per-unit line would repeat the period line.
+  def self.volume_tiers(fee, details)
+    if details.decimal("flat_unit_amount").positive?
+      flat_amount = FeeDisplayHelper.format_as_currency(fee, details["flat_unit_amount"])
+      [
+        Tier.new(
+          label: I18n.t("invoice.volume.fee_per_unit"),
+          units: RoundingHelper.round_decimal_part(fee.units),
+          unit_price: FeeDisplayHelper.format_with_precision(fee, details["per_unit_amount"]),
+          amount: FeeDisplayHelper.format_as_currency(fee, details["per_unit_total_amount"])
+        ),
+        Tier.new(label: I18n.t("invoice.volume.flat_fee_for_all_units"), units: 1, unit_price: flat_amount, amount: flat_amount)
+      ]
     else
-      "next"
+      []
+    end
+  end
+
+  def self.package_tiers(fee, details)
+    free_units = details.decimal("free_units")
+    tiers = []
+
+    if free_units.positive?
+      rounded_free_units = RoundingHelper.round_decimal_part(free_units)
+      tiers << free_tier(fee, I18n.t("invoice.package.free_units_for_the_first", count: rounded_free_units), rounded_free_units)
     end
 
-    I18n.t("invoice.graduated.#{kind}_for_the_#{position}", from: range["from_value"], to: range["to_value"])
+    tiers << Tier.new(
+      label: I18n.t("invoice.package.fee_per_package"),
+      units: RoundingHelper.round_decimal_part(details.decimal("paid_units")),
+      unit_price: I18n.t(
+        "invoice.package.fee_per_package_unit_price",
+        amount: FeeDisplayHelper.format_with_precision(fee, details["per_package_unit_amount"]),
+        package_size: details["per_package_size"]
+      ),
+      amount: FeeDisplayHelper.format_amount(fee)
+    )
+  end
+
+  def self.percentage_tiers(fee, details)
+    free_units = details.decimal("free_units")
+    tiers = []
+
+    if free_units.positive?
+      label = I18n.t("invoice.percentage.free_units_per_transaction", count: details["free_events"].to_i)
+      tiers << free_tier(fee, label, RoundingHelper.round_decimal_part(free_units))
+    end
+
+    tiers << Tier.new(
+      label: I18n.t("invoice.percentage.percentage_rate_on_amount"),
+      units: RoundingHelper.round_decimal_part(details.decimal("paid_units")),
+      unit_price: FeeDisplayHelper.format_percentage_rate(details["rate"]),
+      amount: FeeDisplayHelper.format_as_currency(fee, details["per_unit_total_amount"])
+    )
+
+    if details.decimal("fixed_fee_unit_amount").positive?
+      tiers << Tier.new(
+        label: I18n.t("invoice.percentage.fee_per_transaction"),
+        units: details["paid_events"].to_i,
+        unit_price: FeeDisplayHelper.format_as_currency(fee, details["fixed_fee_unit_amount"]),
+        amount: FeeDisplayHelper.format_as_currency(fee, details["fixed_fee_total_amount"])
+      )
+    end
+
+    unless details.decimal("min_max_adjustment_total_amount").zero?
+      adjustment = FeeDisplayHelper.format_as_currency(fee, details["min_max_adjustment_total_amount"])
+      tiers << Tier.new(label: I18n.t("invoice.percentage.adjustment_per_transaction"), units: 1, unit_price: adjustment, amount: adjustment)
+    end
+
+    tiers
+  end
+
+  def self.free_tier(fee, label, units)
+    zero = FeeDisplayHelper.format_as_currency(fee, 0)
+    Tier.new(label:, units:, unit_price: zero, amount: zero)
+  end
+
+  def self.detail_rows(section, currency)
+    depth = section.name ? 1 : 0
+    rows = section.name ? [Row.new(kind: :category, indent: 0, label: section.name, amount: format_cents(section.amount_cents, currency))] : []
+
+    section.products.each do |product|
+      rows << Row.new(kind: :product, indent: depth, label: product.name, amount: format_cents(product.amount_cents, currency))
+      rows.concat(fee_rows(product.fees, depth + 1))
+
+      product.filters.each do |filter|
+        rows << Row.new(kind: :filter, indent: depth + 1, label: filter.name)
+        rows.concat(fee_rows(filter.fees, depth + 2))
+      end
+    end
+
+    rows
+  end
+
+  def self.fee_rows(fees, indent)
+    fees.flat_map do |fee|
+      segment = Row.new(
+        kind: :segment,
+        indent:,
+        label: period_label(fee),
+        units: RoundingHelper.round_decimal_part(fee.units),
+        unit_price: unbreakable(FeeDisplayHelper.format_precise_unit_amount(fee)),
+        amount: unbreakable(FeeDisplayHelper.format_amount(fee))
+      )
+      conversion = conversion_row(fee, indent + 1)
+      detail_indent = conversion ? indent + 2 : indent + 1
+      details = tiers(fee).map do |tier|
+        Row.new(
+          kind: :fee_detail,
+          indent: detail_indent,
+          label: tier.label,
+          units: tier.units,
+          unit_price: unbreakable(tier.unit_price),
+          amount: unbreakable(tier.amount)
+        )
+      end
+
+      [segment, conversion, *details].compact
+    end
+  end
+
+  def self.conversion_row(fee, indent)
+    usage = fee.pricing_unit_usage
+
+    if usage
+      rate = MoneyHelper.format_with_precision(usage.conversion_rate, fee.amount_currency)
+      Row.new(
+        kind: :conversion,
+        indent:,
+        label: "#{I18n.t("invoice.conversion_rate")}: 1 #{usage.short_name} = #{rate}",
+        amount: unbreakable(MoneyHelper.format(fee.amount))
+      )
+    end
+  end
+
+  def self.unbreakable(value)
+    value.to_s.tr(" ", "\u00A0")
+  end
+
+  def self.format_cents(amount_cents, currency)
+    MoneyHelper.format(Money.new(amount_cents, currency))
+  end
+
+  def self.range_label(kind, range)
+    position = if range["to_value"].nil?
+      :remaining
+    elsif range["from_value"].to_d.zero?
+      :first
+    else
+      :next
+    end
+
+    I18n.t(RANGE_LABEL_KEYS.fetch(kind).fetch(position), up_to: range["to_value"])
   end
 
   def initialize(invoice)
@@ -89,6 +280,11 @@ class ProductCatalogInvoiceHelper
     sort_by_name(category_lines) + sort_by_name(product_lines)
   end
 
+  # An invoice billed on event reception holds a single pay-in-advance fee.
+  def single_event_fee?
+    !invoice.advance_charges? && product_fees.one? && product_fees.first.pay_in_advance_event_transaction_id.present?
+  end
+
   def contract_blocks
     product_fees.group_by(&:contract).sort_by { |contract, _| contract_name(contract).to_s.downcase }.map do |contract, fees|
       ContractBlock.new(title: contract_title(contract), sections: sections(fees))
@@ -100,7 +296,7 @@ class ProductCatalogInvoiceHelper
   attr_reader :invoice
 
   def product_fees
-    @product_fees ||= invoice.fees.product.includes(:product_filter, :pricing_unit_usage, invoice: :customer, contract: :catalog_plan, true_up_parent_fee: [:product_filter, :invoiceable]).to_a
+    @product_fees ||= invoice.fees.product.includes(:product_filter, :pricing_unit_usage, :rate_card_rate, :rate_override, invoice: :customer, contract: :catalog_plan, true_up_parent_fee: [:product_filter, :invoiceable]).to_a
   end
 
   def products
@@ -138,7 +334,12 @@ class ProductCatalogInvoiceHelper
       unfiltered, filtered = product_fees.partition { filter_for(it).nil? }
       filters = filtered.group_by { filter_for(it) }.map { |filter, filter_fees| FilterNode.new(name: filter.invoice_name, fees: by_period(filter_fees)) }
 
-      ProductNode.new(name: product.invoice_name, fees: by_period(unfiltered), filters: sort_by_name(filters))
+      ProductNode.new(
+        name: product.invoice_name,
+        amount_cents: product_fees.sum(&:amount_cents),
+        fees: by_period(unfiltered),
+        filters: sort_by_name(filters)
+      )
     end
 
     sort_by_name(nodes)
