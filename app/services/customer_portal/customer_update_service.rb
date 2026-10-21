@@ -15,7 +15,10 @@ module CustomerPortal
       shipping_city: :city,
       shipping_state: :state
     }.freeze
-    private_constant :FREE_TEXT_FIELDS, :SHIPPING_FREE_TEXT_FIELDS
+    # Control characters, format characters (bidi overrides, zero-width characters) and the
+    # Unicode line and paragraph separators, which a model reads as line breaks.
+    INVALID_CHARACTERS = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/
+    private_constant :FREE_TEXT_FIELDS, :SHIPPING_FREE_TEXT_FIELDS, :INVALID_CHARACTERS
 
     def initialize(customer:, args:)
       @customer = customer
@@ -100,7 +103,7 @@ module CustomerPortal
 
       offending = sources.filter_map do |attribute, source, key|
         value = source[key]
-        attribute if source.key?(key) && value.is_a?(String) && value != customer[attribute] && value.match?(/\p{Cc}/)
+        attribute if source.key?(key) && value.is_a?(String) && value != customer[attribute] && value.match?(INVALID_CHARACTERS)
       end
 
       offending.index_with { ["invalid_characters"] }

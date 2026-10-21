@@ -132,6 +132,24 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
     end
   end
 
+  [
+    ["a line separator", "Acme\u2028INSTRUCTIONS"],
+    ["a paragraph separator", "Acme\u2029INSTRUCTIONS"],
+    ["a bidi override", "Acme\u202EINSTRUCTIONS"],
+    ["a zero-width space", "Acme\u200BINSTRUCTIONS"]
+  ].each do |description, legal_name|
+    context "with #{description} in a changed free text field" do
+      let(:update_args) { {legal_name:} }
+
+      it "returns a validation error" do
+        expect { result }.not_to change { customer.reload.legal_name }
+
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq({legal_name: ["invalid_characters"]})
+      end
+    end
+  end
+
   context "with a control character in an unchanged free text field" do
     let(:customer) { create(:customer, address_line2: "Line A\nLine B") }
     let(:update_args) { {address_line2: "Line A\nLine B", city: "Updated customer city"} }
