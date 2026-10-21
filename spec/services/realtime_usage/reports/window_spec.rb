@@ -62,6 +62,19 @@ RSpec.describe RealtimeUsage::Reports::Window do
     end
   end
 
+  describe ".longest_from" do
+    let(:timezone) { "Europe/Paris" }
+
+    it "starts on the midnight 30 days before the end, in the timezone" do
+      travel_to(Time.zone.parse("2026-08-24 12:00:00")) do
+        from_datetime = described_class.longest_from(to_datetime: nil, timezone:)
+
+        expect(from_datetime).to eq(Time.zone.parse("2026-07-24 22:00:00"))
+        expect(described_class.new(from_datetime:, to_datetime: nil, timezone:).errors).to eq({})
+      end
+    end
+  end
+
   context "with an inverted window" do
     let(:to_datetime) { from_datetime - 1.hour }
 
