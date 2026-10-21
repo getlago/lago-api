@@ -59,7 +59,7 @@ module X402
       end
 
       def unpaid?
-        settlement.invoice_payment? && settlement.settled? && settlement.payment_id.nil?
+        settlement.invoice_payment? && settlement.settled? && settlement.payment_id.nil? && settlement.error_reason != "payment_not_recorded"
       end
 
       def finish_payment(transaction_hash)
