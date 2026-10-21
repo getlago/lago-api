@@ -20,6 +20,7 @@ module Integrations
           return result unless integration
           return result unless integration.sync_payments
           return result unless invoice.finalized?
+          return result if invoice.product_catalog?
           return result if payload.integration_payment
 
           throttle!(:netsuite, :xero)

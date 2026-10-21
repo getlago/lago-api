@@ -446,11 +446,102 @@ RSpec.describe Fees::ChargeService do
       allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_return(aggregator)
     end
 
-    it "does not persist charge-shaped cached aggregations" do
-      expect { result }.not_to change(CachedAggregation, :count)
+    it "persists the contract closing balance at the segment boundary" do
+      expect { result }.to change(CachedAggregation, :count).by(1)
       expect(result).to be_success
       expect(result.fees.sole.amount_cents).to eq(400)
-      expect(result.cached_aggregations).to be_nil
+      expect(result.cached_aggregations.sole).to have_attributes(
+        contract:, product:, charge_id: nil, product_filter_id: nil,
+        current_aggregation: 2, timestamp: billing_segment.ended_at
+      )
+    end
+
+    context "when the closing snapshot already exists alongside an event cache" do
+      let!(:closing_snapshot) do
+        create(
+          :cached_aggregation,
+          organization:,
+          charge: nil,
+          contract:,
+          product:,
+          external_subscription_id: contract.external_id,
+          event_transaction_id: nil,
+          timestamp: billing_segment.ended_at,
+          current_aggregation: 1,
+          current_amount: 50,
+          presentation_breakdowns: [{groups: {region: "stale"}, units: 1}]
+        )
+      end
+      let!(:event_cache) do
+        create(
+          :cached_aggregation,
+          organization:,
+          charge: nil,
+          contract:,
+          product:,
+          external_subscription_id: contract.external_id,
+          event_transaction_id: "event-cache-entry",
+          timestamp: billing_segment.ended_at,
+          current_aggregation: 100,
+          current_amount: 75,
+          presentation_breakdowns: [{groups: {region: "event"}, units: 100}]
+        )
+      end
+
+      it "updates the closing snapshot without duplicating it or changing the event cache" do
+        expect { result }.not_to change(CachedAggregation, :count)
+        expect(result).to be_success
+        expect(result.cached_aggregations).to eq([closing_snapshot])
+        expect(closing_snapshot.reload).to have_attributes(
+          current_aggregation: 2,
+          current_amount: nil,
+          presentation_breakdowns: []
+        )
+        expect(event_cache.reload).to have_attributes(
+          current_aggregation: 100,
+          current_amount: 75,
+          presentation_breakdowns: [{"groups" => {"region" => "event"}, "units" => 100}]
+        )
+      end
+    end
+
+    context "with an invoice preview" do
+      let(:options) { described_class::Options.new(context: :invoice_preview) }
+
+      it "does not persist a closing snapshot" do
+        expect { result }.not_to change(CachedAggregation, :count)
+        expect(result.cached_aggregations).to be_nil
+      end
+    end
+
+    context "with a renewal cutoff" do
+      let(:metered_item) do
+        described_class::MeteredItem.new(
+          source: described_class::Sources::BillingSegment.new(
+            billing_segment:,
+            max_timestamp: BillingSegment.inclusive_end(billing_segment.started_at)
+          )
+        )
+      end
+
+      it "persists a closing snapshot when the charge context is not an advance renewal" do
+        expect { result }.to change(CachedAggregation, :count).by(1)
+        expect(result).to be_success
+        expect(result.cached_aggregations.sole).to have_attributes(
+          current_aggregation: 2,
+          timestamp: billing_segment.ended_at
+        )
+      end
+
+      context "with an advance-renewal context" do
+        let(:options) { described_class::Options.new(context: :advance_renewal) }
+
+        it "does not persist a closing snapshot" do
+          expect { result }.not_to change(CachedAggregation, :count)
+          expect(result).to be_success
+          expect(result.cached_aggregations).to be_nil
+        end
+      end
     end
   end
 

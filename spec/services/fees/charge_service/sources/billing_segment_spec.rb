@@ -95,6 +95,19 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
         )
       end
 
+      context "with a maximum aggregation timestamp" do
+        let(:max_timestamp) { Time.zone.parse("2027-01-20 23:59:59 UTC") }
+        let(:event) { nil }
+        let(:source) { described_class.new(billing_segment:, max_timestamp:) }
+
+        it "preserves the cutoff through pricing bucket sources and boundaries" do
+          bucket = source.pricing_buckets(event:).sole
+
+          expect(source.boundaries.max_timestamp).to eq(max_timestamp)
+          expect(bucket.boundaries.max_timestamp).to eq(max_timestamp)
+        end
+      end
+
       context "with prorated recurring advance billing" do
         let(:rate_card) { build(:rate_card, :advance, organization:, product:, currency: "USD", proration: true) }
         let(:billable_metric) do

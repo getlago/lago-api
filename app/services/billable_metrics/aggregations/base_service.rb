@@ -24,6 +24,7 @@ module BillableMetrics
         # Pay in advance fields
         :pay_in_advance_event, # Event that is triggering a pay in advance aggregation
         :pay_in_advance_aggregation, # Aggregation result for a single pay in advance event
+        :pay_in_advance_count_delta, # Event-count contribution used to price the triggering event
         :pay_in_advance_breakdowns, # Breakdown result for a single pay in advance event
         :pay_in_advance_precise_total_amount_cents, # Precise total amount in cents when in a pay in advance scenario
         # Cached aggregation fields
@@ -214,7 +215,7 @@ module BillableMetrics
         query = CachedAggregation
           .where(organization_id: billable_metric.organization_id)
           .where(external_subscription_id: billing_context.external_id)
-          .where(charge_id: metered_item.charge_id)
+          .where(metered_item.cached_aggregation_identity)
           .from_datetime(with_from_datetime)
           .to_datetime(with_to_datetime)
           .where(grouped_by: grouped_by.presence || {})
