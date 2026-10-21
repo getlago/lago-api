@@ -23,13 +23,38 @@ html
                 td.body-2 = line.name
                 td.body-2 = MoneyHelper.format(Money.new(line.amount_cents, currency))
         table.totals
+          - credits.coupon_kind.order(created_at: :asc).each do |credit|
+            tr
+              td.body-2 = credit.invoice_coupon_display_name
+              td.body-2 = '-' + MoneyHelper.format(credit.amount)
           tr
             td.body-2 = I18n.t('invoice.sub_total_without_tax')
             td.body-2 = MoneyHelper.format(sub_total_excluding_taxes_amount)
           - applied_taxes.order(tax_rate: :desc).each do |applied_tax|
             tr
-              td.body-2 = I18n.t('invoice.tax_name', name: applied_tax.tax_name, rate: applied_tax.tax_rate, amount: MoneyHelper.format(applied_tax.taxable_amount))
-              td.body-2 = MoneyHelper.format(applied_tax.amount)
+              - if applied_tax.applied_on_whole_invoice?
+                td.body-2 = I18n.t('invoice.tax_name_only.' + applied_tax.tax_code)
+                td.body-2
+              - else
+                td.body-2 = I18n.t('invoice.tax_name', name: applied_tax.tax_name, rate: applied_tax.tax_rate, amount: MoneyHelper.format(applied_tax.taxable_amount))
+                td.body-2 = MoneyHelper.format(applied_tax.amount)
+          - if credit_notes_amount_cents.positive?
+            tr
+              td.body-2 = I18n.t('invoice.credit_notes')
+              td.body-2 = '-' + MoneyHelper.format(credit_notes_amount)
+          - if prepaid_granted_credit_amount_cents.present? || prepaid_purchased_credit_amount_cents.present?
+            - if prepaid_granted_credit_amount_cents&.positive?
+              tr
+                td.body-2 = I18n.t('invoice.free_credits')
+                td.body-2 = '-' + MoneyHelper.format(prepaid_granted_credit_amount)
+            - if prepaid_purchased_credit_amount_cents&.positive?
+              tr
+                td.body-2 = I18n.t('invoice.prepaid_credits')
+                td.body-2 = '-' + MoneyHelper.format(prepaid_purchased_credit_amount)
+          - elsif prepaid_credit_amount_cents.positive?
+            tr
+              td.body-2 = I18n.t('invoice.prepaid_credits')
+              td.body-2 = '-' + MoneyHelper.format(prepaid_credit_amount)
           tr.total
             td.body-1 = advance_charges? ? I18n.t('invoice.already_paid') : I18n.t('invoice.total')
             td.body-1 = MoneyHelper.format(total_amount)
@@ -37,6 +62,8 @@ html
             tr.total
               td.body-1 = I18n.t('invoice.total_due_amount')
               td.body-1 = MoneyHelper.format(total_due_amount)
+
+      == SlimHelper.render('templates/invoices/v4/_eu_tax_management', self)
 
       - if applied_invoice_custom_sections.present?
         == SlimHelper.render('templates/invoices/v4/_custom_sections', self)
