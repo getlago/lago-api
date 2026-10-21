@@ -158,11 +158,18 @@ RSpec.describe Api::V2::PlansController do
     context "with expand[]=taxes" do
       let(:params) { {expand: %w[taxes]} }
       let(:created_at) { Time.zone.parse("2026-09-28T10:00:00.000001Z") }
+      let(:tax) { create(:tax, organization:, created_at: created_at - 1.day) }
       let(:linked_at) { created_at - 1.second }
-      let(:tied_links) { create_list(:plan_applied_tax, 2, :catalog_plan, catalog_plan:, organization:, created_at:) }
+      # Two taxes created before `tax` but linked after it, at the same microsecond with ascending
+      # ids, so that only the link order, then the id tiebreak, gives the list.
+      let(:tied_links) do
+        Array.new(2) { SecureRandom.uuid }.sort.map do |id|
+          create(:plan_applied_tax, :catalog_plan, id:, catalog_plan:, organization:, tax: create(:tax, organization:, created_at: created_at - 2.days), created_at:)
+        end
+      end
       let(:discarded_tax) { create(:tax, organization:) }
 
-      # Two taxes linked at the same time, after `tax`, next to taxes that the plan may not show.
+      # Next to taxes that the plan may not show.
       before do
         tied_links
         create(:plan_applied_tax, :catalog_plan, catalog_plan:, tax: discarded_tax, organization:)
@@ -187,7 +194,7 @@ RSpec.describe Api::V2::PlansController do
       it "embeds its kept taxes, latest linked first" do
         subject
 
-        listed = [*tied_links.sort_by(&:id).reverse.map(&:tax), tax]
+        listed = [*tied_links.reverse.map(&:tax), tax]
 
         expect(response).to have_http_status(:success)
         expect(json[:plan]).to eq(flat_payload.merge(taxes: listed.map { tax_payload(it) }))
