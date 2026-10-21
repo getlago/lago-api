@@ -57,8 +57,7 @@ module Api
             page.records,
             ::V2::TaxSerializer,
             collection_name: "taxes",
-            meta: page.meta,
-            includes: [:deleted_at]
+            meta: page.meta
           ))
         else
           render_error_response(result)
@@ -72,7 +71,7 @@ module Api
       end
 
       def render_tax(tax)
-        render(json: ::V2::TaxSerializer.new(tax, root_name: "tax", includes: [:deleted_at]))
+        render(json: ::V2::TaxSerializer.new(tax, root_name: "tax"))
       end
 
       def resource_name
