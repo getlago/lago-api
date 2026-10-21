@@ -107,6 +107,8 @@ module Invoices
     end
 
     def should_generate_cii_einvoice_xml?
+      return false if invoice.product_catalog?
+
       invoice.billing_entity.eligible_for_einvoicing?
     end
 

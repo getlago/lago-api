@@ -224,6 +224,18 @@ RSpec.describe Invoices::GeneratePdfService do
           expect(result.invoice.file).to be_present
         end
 
+        context "when the invoice is a contract invoice" do
+          let(:invoice) { create(:invoice, customer:, status: :finalized, organization:, invoice_type: :contract) }
+
+          it "does not attach the CII XML" do
+            result = described_class.call(invoice:, context:)
+
+            expect(EInvoices::Invoices::Cii::CreateService).not_to have_received(:call)
+            expect(Utils::PdfAttachmentService).not_to have_received(:call!)
+            expect(result.invoice.file).to be_present
+          end
+        end
+
         context "when attaching the CII XML fails" do
           let(:attachment_error) do
             BaseService::ThirdPartyFailure.new(
