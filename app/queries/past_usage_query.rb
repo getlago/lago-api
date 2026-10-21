@@ -11,11 +11,13 @@ class PastUsageQuery < BaseQuery
     return result if result.error.present?
 
     query_result = apply_consistent_ordering(query)
-    free_usage_fees = free_fees_by_period(query_result.to_a)
-    result.usage_periods = query_result.map do |invoice_subscription|
+    invoice_subscriptions = query_result.to_a
+    invoiced_fees = fees_by_invoice(invoice_subscriptions)
+    free_usage_fees = free_fees_by_period(invoice_subscriptions)
+    result.usage_periods = invoice_subscriptions.map do |invoice_subscription|
       UsagePeriods.new(
         invoice_subscription:,
-        fees: fees_query(invoice_subscription) + free_usage_fees.fetch(invoice_subscription.id, [])
+        fees: invoiced_fees.fetch(invoice_subscription.invoice_id, []) + free_usage_fees.fetch(invoice_subscription.id, [])
       )
     end
 
@@ -46,15 +48,17 @@ class PastUsageQuery < BaseQuery
     base_query
   end
 
-  def fees_query(invoice_subscription)
+  def fees_by_invoice(invoice_subscriptions)
+    return {} if invoice_subscriptions.empty?
+
     scope = Fee.joins(:subscription)
-      .where(subscription: {external_id: filters.external_subscription_id})
+      .where(invoice_id: invoice_subscriptions.map(&:invoice_id).uniq, subscription: {external_id: filters.external_subscription_id})
       .charge.includes(:charge_filter, :presentation_breakdowns)
     if filters.billable_metric_code
       scope = scope.joins(:charge).where(charges: {billable_metric_id: billable_metric.id})
     end
 
-    scope.where(invoice_id: invoice_subscription.invoice_id).to_a
+    scope.group_by(&:invoice_id)
   end
 
   def free_fees_by_period(invoice_subscriptions)

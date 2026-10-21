@@ -383,8 +383,10 @@ RSpec.describe PastUsageQuery do
 
           period_queries = queries.select { |sql| sql.include?('FROM "invoice_subscriptions"') && !sql.include?("COUNT(") }
           free_fee_queries = queries.select { |sql| sql.include?('FROM "fees"') && sql.include?('"fees"."invoice_id" IS NULL') }
+          invoiced_fee_queries = queries.select { |sql| sql.include?('FROM "fees" INNER JOIN "subscriptions"') }
           expect(period_queries.size).to eq(2)
           expect(free_fee_queries.size).to eq(1)
+          expect(invoiced_fee_queries.size).to eq(1)
         end
       end
 
