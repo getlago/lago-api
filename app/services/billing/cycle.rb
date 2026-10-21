@@ -9,5 +9,10 @@ module Billing
   #
   # @example a monthly card anchored Jan 1, cut short by a weekly intro phase
   #   Cycle(index: 0, started_at: Jan 15, ended_at: Jan 22, phase: "intro", calendar: ...)
-  Cycle = Data.define(:index, :started_at, :ended_at, :phase, :calendar)
+  Cycle = Data.define(:index, :started_at, :ended_at, :phase, :calendar) do
+    # Closed by the end of the contract before its calendar would close it.
+    def closed_early?
+      ended_at < calendar.interval_containing(started_at).end
+    end
+  end
 end

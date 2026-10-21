@@ -81,7 +81,7 @@ module Invoices
     def grace_period?
       return false if subscription_gated
 
-      invoice_type.to_sym == :subscription
+      invoice_type.to_sym.in?(%i[subscription contract])
     end
 
     def invoice_billing_entity

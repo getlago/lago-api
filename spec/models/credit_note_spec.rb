@@ -446,6 +446,21 @@ RSpec.describe CreditNote do
         end
       end
     end
+
+    context "when the credit note is on a product catalog invoice" do
+      let(:customer) { create(:customer, organization:) }
+      let(:invoice) { create(:invoice, customer:, organization:, invoice_type: :contract) }
+      let(:credit_note) { create(:credit_note, customer:, organization:, invoice:, status: :finalized) }
+
+      before do
+        integration = create(:netsuite_integration, organization:, sync_credit_notes: true)
+        create(:netsuite_customer, integration:, customer:)
+      end
+
+      it "returns false" do
+        expect(method_call).to eq(false)
+      end
+    end
   end
 
   context "when taxes are not precise" do

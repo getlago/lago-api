@@ -20,7 +20,9 @@ module BillingSegments
 
       ActiveRecord::Base.transaction do
         Customers::LockService.call!(customer:, scope: :billing_schedule) do
-          due_cards.find_each { |card| scheduled.concat(schedule_card(card)) }
+          cards_to_schedule
+            .includes(:rate_card, {rate_phases: :rate_override}, contract: :customer)
+            .find_each { |card| scheduled.concat(schedule_card(card)) }
         end
       end
 
@@ -42,14 +44,9 @@ module BillingSegments
 
     attr_reader :customer, :timestamp
 
-    def due_cards
+    def cards_to_schedule
       ContractRateCard.due_for_billing(timestamp)
         .where(organization_id: customer.organization_id, contracts: {customer_id: customer.id})
-        .includes(
-          :rate_card,
-          {rate_phases: :rate_override},
-          contract: :customer
-        )
     end
 
     def schedule_card(card)
