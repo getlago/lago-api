@@ -32,6 +32,19 @@ RSpec.describe Api::V1::TaxesController do
       expect(json[:tax][:created_at]).to be_present
       expect(json[:tax][:applied_to_organization]).to eq(create_params[:applied_to_organization])
     end
+
+    context "when applied_to_organization is true" do
+      let(:create_params) { super().merge(applied_to_organization: true) }
+
+      it "still assigns the tax to the default billing entity" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        tax = organization.taxes.find_by!(code: create_params[:code])
+        expect(tax.applied_to_organization).to be(true)
+        expect(tax.billing_entities).to eq([organization.default_billing_entity])
+      end
+    end
   end
 
   describe "PUT /api/v1/taxes/:code" do
@@ -65,6 +78,18 @@ RSpec.describe Api::V1::TaxesController do
       expect(json[:tax][:name]).to eq(update_params[:name])
       expect(json[:tax][:rate]).to eq(update_params[:rate])
       expect(json[:tax][:applied_to_organization]).to eq(update_params[:applied_to_organization])
+    end
+
+    context "when applied_to_organization is true" do
+      let(:applied_to_organization) { true }
+
+      it "still assigns the tax to the default billing entity" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(tax.reload.applied_to_organization).to be(true)
+        expect(tax.billing_entities).to eq([organization.default_billing_entity])
+      end
     end
 
     context "when tax does not exist" do
@@ -112,6 +137,20 @@ RSpec.describe Api::V1::TaxesController do
         expect(response).to have_http_status(:success)
         expect(json[:tax][:applied_to_organization]).to eq(true)
         expect(json[:tax][:applied_to_billing_entities_codes]).to eq([organization.default_billing_entity.code])
+      end
+    end
+
+    context "with an expand parameter" do
+      subject(:request) { get_with_token(organization, "/api/v1/taxes/#{tax_code}", {expand: ["counts"]}) }
+
+      it "still ignores the parameter and returns the v1 response" do
+        request
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:tax]).to eq(V1::TaxWithBillingEntitiesSerializer.new(
+          tax,
+          default_billing_entity: organization.default_billing_entity
+        ).serialize)
       end
     end
 
@@ -183,6 +222,26 @@ RSpec.describe Api::V1::TaxesController do
         tax_json = json[:taxes].find { |t| t[:lago_id] == tax.id }
         expect(tax_json[:applied_to_organization]).to eq(true)
         expect(tax_json[:applied_to_billing_entities_codes]).to eq([organization.default_billing_entity.code])
+      end
+    end
+
+    context "with several taxes applied to a billing entity", :bullet do
+      subject(:request) { get_with_token(organization, "/api/v1/taxes") }
+
+      let!(:tax) { create(:tax, :applied_to_billing_entity, organization:) }
+      let(:other_tax) { create(:tax, :applied_to_billing_entity, organization:) }
+
+      before { other_tax }
+
+      it "returns billing entity assignments without N+1 queries" do
+        request
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:taxes].map { |item| item.slice(:lago_id, :applied_to_organization, :applied_to_billing_entities_codes) }).to match_array(
+          [tax, other_tax].map do |item|
+            {lago_id: item.id, applied_to_organization: true, applied_to_billing_entities_codes: [organization.default_billing_entity.code]}
+          end
+        )
       end
     end
 

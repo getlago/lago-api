@@ -209,6 +209,55 @@ RSpec.describe Resolvers::Customers::InvoicesResolver do
     end
   end
 
+  context "when selecting integrationSyncable on product catalog invoices" do
+    subject(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {customerId: customer.id}
+      )
+    end
+
+    let(:query) do
+      <<~GQL
+        query($customerId: ID!) {
+          customerInvoices(customerId: $customerId) {
+            collection { id integrationSyncable }
+          }
+        }
+      GQL
+    end
+
+    before do
+      integration = create(:netsuite_integration, organization:, sync_invoices: true)
+      create(:netsuite_customer, integration:, customer:)
+
+      3.times do
+        invoice = create(:invoice, organization:, customer:, invoice_type: :advance_charges, status: :finalized)
+        contract_rate_card = create(:contract_rate_card, organization:)
+        create(
+          :fee,
+          invoice:,
+          organization:,
+          subscription: nil,
+          fee_type: :product,
+          invoiceable: contract_rate_card.rate_card.product,
+          contract: contract_rate_card.contract,
+          contract_rate_card:,
+          rate_card_rate: create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card)
+        )
+      end
+    end
+
+    it "checks the invoices for contract fees in one query" do
+      contract_fee_queries = capture_sql { result }.grep(/"contract_id" IS NOT NULL/)
+
+      expect(contract_fee_queries.size).to eq(1)
+    end
+  end
+
   context "when preloading offset amounts" do
     subject do
       execute_graphql(

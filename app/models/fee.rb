@@ -166,6 +166,10 @@ class Fee < ApplicationRecord
     subscription.plan.description
   end
 
+  def rate_model
+    (rate_override || rate_card_rate)&.rate_model
+  end
+
   def invoice_name
     return invoice_display_name.presence || invoiceable.invoice_name if product?
     return invoice_display_name if invoice_display_name.present?

@@ -29,7 +29,9 @@ es:
     credit_notes: Notas de crédito
     date_from: Tarifas desde
     date_to: hasta
+    description: Descripción
     details: Detalles de %{resource}
+    details_title: Detalles
     document_name: Factura
     document_tax_name: Factura fiscal
     due_date: Vence el %{date}
@@ -67,6 +69,7 @@ es:
     paid_invoice: Factura pagada
     paid_tax_invoice: Factura fiscal pagada
     pay_with_bank_transfer: Paga con transferencia bancaria
+    payment_due_date: Fecha de vencimiento
     payment_term: Plazo de pago neto
     payment_term_days: "%{net_payment_term} días"
     percentage:
@@ -82,6 +85,7 @@ es:
     prepaid_credits_with_value: Créditos prepagados - %{wallet_name}
     progressive_billing_credit: Uso ya facturado
     purchase_order_number: Número de orden de compra
+    quantity: Cantidad
     quarter: trimestre
     quarterly: Trimestral
     reached_usage_threshold: Esta facturación progresiva se genera porque su uso acumulado ha alcanzado los %{usage_amount}, superando el umbral de %{threshold_amount}.
@@ -115,6 +119,13 @@ es:
       fr_tax_exempt: El cliente está exento de impuestos según el artículo 259-1 del Código General de Impuestos francés.
       reverse_charge: Responsabilidad fiscal transferida al cliente.
       tax_exempt: El cliente está exento de impuestos.
+    tiers:
+      fee_for_first: Tarifa por las primeras %{up_to} unidades
+      fee_for_next: Tarifa por las unidades hasta %{up_to}
+      fee_for_remaining: Tarifa por las unidades restantes
+      flat_fee_for_first: Tarifa fija por las primeras %{up_to} unidades
+      flat_fee_for_next: Tarifa fija por las unidades hasta %{up_to}
+      flat_fee_for_remaining: Tarifa fija por las unidades restantes
     total: Total
     total_credits: Total de créditos
     total_credits_with_value: 'Total de créditos con valor: %{credit_amount} créditos'

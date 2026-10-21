@@ -219,6 +219,24 @@ RSpec.describe Fee do
     end
   end
 
+  describe "#rate_model" do
+    let(:rate_card_rate) { build_stubbed(:rate_card_rate, rate_model: "volume") }
+
+    it "reads the rate card rate" do
+      expect(build_stubbed(:fee, rate_card_rate:).rate_model).to eq("volume")
+    end
+
+    it "prefers the rate override" do
+      rate_override = build_stubbed(:rate_override, rate_model: "package")
+
+      expect(build_stubbed(:fee, rate_card_rate:, rate_override:).rate_model).to eq("package")
+    end
+
+    it "is nil without a rate" do
+      expect(build_stubbed(:fee).rate_model).to be_nil
+    end
+  end
+
   describe "#invoice_name" do
     subject(:fee_invoice_name) { fee.invoice_name }
 
