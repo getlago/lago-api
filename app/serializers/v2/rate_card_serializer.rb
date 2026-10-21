@@ -40,7 +40,7 @@ module V2
       model.rates.select { it.effective_from <= now }.max_by(&:effective_from)
     end
 
-    # As /taxes lists them.
+    # The kept taxes, latest linked first.
     def taxes = model.applied_taxes.listed.preload(:tax).filter_map(&:tax)
 
     # As /rates lists them, sorted in memory so that each status reads its siblings from the

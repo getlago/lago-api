@@ -483,8 +483,7 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               rate_payload(terminated_rate, code: "launch", effective_from: "2023-01-01T00:00:00Z", status: "terminated")
             ]
           end
-          # The V2 shape of the taxes, as /taxes lists them: without applied_to_organization nor
-          # counts, with deleted_at.
+          # The V2 shape of the taxes: without applied_to_organization nor counts, with deleted_at.
           let(:vat_v2_payload) do
             {
               lago_id: vat.id,

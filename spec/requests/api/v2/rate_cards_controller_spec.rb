@@ -391,37 +391,31 @@ RSpec.describe Api::V2::RateCardsController do
       let(:params) { {expand: %w[taxes]} }
       let(:created_at) { Time.zone.parse("2026-09-28T10:00:00.000001Z") }
       let(:discarded_tax) { create(:tax, organization:) }
+      # Taxes created after `tax` but linked before it, the first two at the same microsecond with
+      # ascending ids, so that only the link order, then the id tiebreak, gives the list.
+      let(:links) do
+        tied_ids = Array.new(2) { SecureRandom.uuid }.sort
+        [1, 1, 0].zip([*tied_ids, nil]).map do |age, id|
+          create(:rate_card_applied_tax, **{id:}.compact, rate_card:, created_at: created_at - age.seconds)
+        end
+      end
 
-      # Linked out of order, with ties on created_at, next to taxes that neither list may show.
+      # Next to taxes that the rate card may not show.
       before do
-        [1, 0, 1].each { create(:rate_card_applied_tax, rate_card:, created_at: created_at - it.seconds) }
+        links
         create(:rate_card_applied_tax, rate_card:, tax: discarded_tax)
         # Discarded directly: Taxes::DestroyService would delete the link as well.
         discarded_tax.discard!
         create(:rate_card_applied_tax, rate_card: create(:rate_card, organization:))
       end
 
-      def every_listed_tax
-        taxes = []
-        page_params = {limit: 2}
-
-        while page_params
-          get_with_token(organization, "/api/v2/rate_cards/#{rate_card.code}/taxes", page_params)
-          taxes.concat(json[:taxes])
-          page_params = json[:meta][:next_cursor]&.then { {limit: 2, after: it} }
-        end
-
-        taxes
-      end
-
-      it "embeds every page of /taxes, in its order" do
-        listed = every_listed_tax
-
+      it "embeds its kept taxes, latest linked first" do
         subject
 
-        expect(listed.size).to eq(4)
-        expect(listed.pluck(:lago_id)).not_to include(discarded_tax.id)
-        expect(json[:rate_card][:taxes]).to eq(listed)
+        # `tax` is linked by the outer before, at the current time.
+        listed = [tax, *links.reverse.map(&:tax)]
+
+        expect(json[:rate_card][:taxes]).to eq(listed.map { V2::TaxSerializer.new(it).serialize })
         expect(json[:rate_card].keys).to eq([*flat_keys, :taxes])
       end
     end
