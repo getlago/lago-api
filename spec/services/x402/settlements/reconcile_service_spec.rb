@@ -684,6 +684,24 @@ describe X402::Settlements::ReconcileService do
         expect { result }.not_to change(Payment, :count)
       end
     end
+
+    context "when its payment was not recorded" do
+      let(:settlement) { create(:x402_settlement, :invoice_payment, x402_connection:, invoice:, error_reason: "payment_not_recorded") }
+
+      it "records nothing" do
+        expect { result }.not_to change(Payment, :count)
+      end
+
+      context "with an amount due below the payment" do
+        let(:invoice) { create(:invoice, organization: x402_connection.organization, currency: "USD", total_amount_cents: 50) }
+
+        it "reports nothing again" do
+          result
+
+          expect(Sentry).not_to have_received(:capture_exception)
+        end
+      end
+    end
   end
 
   context "with a failed purchase" do
