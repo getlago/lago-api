@@ -46,7 +46,7 @@ Never edit the schema files or annotations by hand. Revert changes that do not c
 - **Tenancy.** Load tenant data through its organization: `current_organization.customers.find_by(...)` or `Model.where(organization:)`. Every new table has a `NOT NULL` `organization_id` with a foreign key, not an organization reached `through:` another table. `spec/organization_id_column_spec.rb` fails when the column is missing (it does not check `NOT NULL` or the foreign key); never add a table to its skip list.
 - **Money.** Amounts are integer `*_amount_cents` columns next to a currency. Keep unrounded values as `BigDecimal` (`precise_*_amount_cents`) and round once, at the end. Never use `Float` for money.
 - **Dates.** Billing dates follow the customer timezone (`customer.applicable_timezone`, `*_in_customer_timezone` helpers), not `Time.zone`, UTC or a bare `.to_date`. Billing periods come from `Subscriptions::DatesService`.
-- **Compatibility.** SDKs, lago-front and customers rely on the REST API, the webhook payloads and the GraphQL schema. Add optional fields and parameters; do not rename or remove existing ones. A REST change also needs an update of [lago-openapi](https://github.com/getlago/lago-openapi), which the PR mentions.
+- **Compatibility.** SDKs, lago-front and customers rely on the REST API, the webhook payloads and the GraphQL schema. Add optional fields and parameters; do not rename or remove existing ones.
 - **Rolling deploys.** Jobs enqueued by the previous version run on the new one, so a renamed job class or a changed `perform` signature must keep accepting old jobs for one release. A new validation must accept existing rows (`validates :email, ..., if: :email_changed?`).
 - **Input.** Cast and validate input before using it (`ActiveModel::Type::Boolean.new.cast`, enum values). Bad input returns a validation error, never a 500. Never interpolate input into SQL: use bind parameters or `connection.quote`.
 - **Feature gating.** Premium features check `License.premium?`. Premium integrations check `organization.<integration>_enabled?` (`Organization::PREMIUM_INTEGRATIONS`), which includes the license check. A rollout flag is declared in `app/config/feature_flags.yaml`, with a description and owners, and read with `organization.feature_flag_enabled?(:name)`.
@@ -187,6 +187,10 @@ Also check:
 - PRs are squash-merged, so the PR title becomes the commit on `main`. It follows Conventional Commits, `type(scope): summary`, in 72 characters or less. Types: `feat`, `fix`, `perf`, `refactor`, `chore`, `misc`, `docs`, `test`, `ci`, `build`, `revert`, `style`.
 - The PR body follows `PULL_REQUEST_TEMPLATE.md` (`## Context`, `## Description`). It says why the change is needed and what it changes, without a tour of the diff, and it is updated when the approach changes.
 - One concern per PR. An `AGENTS.md` rule that comes from the PR's own review is part of it.
+- A change visible outside this repo also needs an update elsewhere, and the PR description says which:
+  - [lago-openapi](https://github.com/getlago/lago-openapi) for a REST endpoint, parameter, field, error, limit or webhook payload.
+  - [lago-doc](https://github.com/getlago/lago-doc) for a behaviour users see, a new environment variable or setting, or a step self-hosted users must take when upgrading (a page under `guide/migration`).
+- When a change needs one of these updates, an agent says so and asks the user whether to prepare it. It never edits those repositories without that answer.
 
 ## Environment variables
 
