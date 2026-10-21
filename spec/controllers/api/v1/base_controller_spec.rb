@@ -46,7 +46,7 @@ RSpec.describe Api::V1::BaseController do
       let(:current_organization) { Organization.instantiate(build(:organization).attributes.except("pagination_max_page_size")) }
 
       it "falls back to the global limit" do
-        expect(effective_max_page_size).to eq(Pagination.max_page_size)
+        expect(effective_max_page_size).to eq(Pagination::DEFAULT_MAX_PAGE_SIZE)
       end
     end
   end

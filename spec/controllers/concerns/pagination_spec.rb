@@ -181,8 +181,8 @@ RSpec.describe Pagination do
     end
   end
 
-  describe ".max_page_size" do
-    subject(:max_page_size) { described_class.max_page_size }
+  describe "#default_max_page_size" do
+    subject(:default_max_page_size) { instance.send(:default_max_page_size) }
 
     let(:max_page_size_env) { nil }
 
@@ -192,20 +192,20 @@ RSpec.describe Pagination do
     end
 
     context "when the env var is unset" do
-      it { expect(max_page_size).to eq(200) }
+      it { expect(default_max_page_size).to eq(200) }
     end
 
     context "when the env var is a positive integer" do
       let(:max_page_size_env) { "300" }
 
-      it { expect(max_page_size).to eq(300) }
+      it { expect(default_max_page_size).to eq(300) }
     end
 
     %w[0 -5 abc 0x10].each do |invalid_value|
       context "when the env var is #{invalid_value.inspect}" do
         let(:max_page_size_env) { invalid_value }
 
-        it { expect(max_page_size).to eq(200) }
+        it { expect(default_max_page_size).to eq(200) }
       end
     end
   end

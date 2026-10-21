@@ -18,11 +18,6 @@ module Pagination
     # rubocop:enable ThreadSafety/ClassAndModuleAttributes
   end
 
-  def self.max_page_size
-    max_page_size = Integer(ENV["LAGO_API_PAGINATION_MAX_PAGE_SIZE"].to_s, 10, exception: false)
-    max_page_size&.positive? ? max_page_size : DEFAULT_MAX_PAGE_SIZE
-  end
-
   def pagination_metadata(records, **count_params)
     current_page = prev_page = next_page = total_pages = nil
     total_count = _count_total(**count_params) do
@@ -65,6 +60,12 @@ module Pagination
     DEFAULT_PAGE_SIZE
   end
 
+  # The instance-wide limit: LAGO_API_PAGINATION_MAX_PAGE_SIZE, or DEFAULT_MAX_PAGE_SIZE when it is not a positive integer.
+  def default_max_page_size
+    value = Integer(ENV["LAGO_API_PAGINATION_MAX_PAGE_SIZE"].to_s, 10, exception: false)
+    value&.positive? ? value : DEFAULT_MAX_PAGE_SIZE
+  end
+
   def validate_pagination_params
     errors = {
       page: pagination_param_error(:page, max: nil),
@@ -90,7 +91,7 @@ module Pagination
   # The effective page size limit of the controller: its own cap, if any, within the
   # organization or global limit.
   def effective_max_page_size
-    [self.class.max_page_size, organization_max_page_size || Pagination.max_page_size].compact.min
+    [self.class.max_page_size, organization_max_page_size || default_max_page_size].compact.min
   end
 
   # An organization cached by ApiKeys::CacheService before the column existed does not have it.
