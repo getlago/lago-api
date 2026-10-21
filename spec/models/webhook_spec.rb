@@ -173,7 +173,7 @@ RSpec.describe Webhook do
         expect(headers.keys).to match_array(%w[webhook-id webhook-timestamp webhook-signature])
         expect(headers["webhook-id"]).to eq(webhook.id)
         expect(headers["webhook-timestamp"]).to match(/\A\d+\z/)
-        expect(headers["webhook-signature"]).to start_with("v1,")
+        expect(headers["webhook-signature"]).to start_with("v1a,")
       end
     end
   end
@@ -231,12 +231,17 @@ RSpec.describe Webhook do
     let(:webhook_endpoint) { create(:webhook_endpoint, signature_algo: :standard_webhooks) }
     let(:timestamp) { 1_674_087_231 }
 
-    it "signs {id}.{timestamp}.{payload} with the endpoint secret" do
-      key = Base64.strict_decode64(webhook_endpoint.secret.delete_prefix("whsec_"))
-      signed_content = "#{webhook.id}.#{timestamp}.#{webhook.payload.to_json}"
-      expected = Base64.strict_encode64(OpenSSL::HMAC.digest("SHA256", key, signed_content))
+    it "signs {id}.{timestamp}.{payload} as a v1a ed25519 signature" do
+      expect(signature).to start_with("v1a,")
+    end
 
-      expect(signature).to eq("v1,#{expected}")
+    it "produces a signature the endpoint public key verifies" do
+      raw_public_key = Base64.strict_decode64(webhook_endpoint.public_key.delete_prefix("whpk_"))
+      public_key = OpenSSL::PKey.new_raw_public_key("ED25519", raw_public_key)
+      raw_signature = Base64.strict_decode64(signature.delete_prefix("v1a,"))
+      signed_content = "#{webhook.id}.#{timestamp}.#{webhook.payload.to_json}"
+
+      expect(public_key.verify(nil, raw_signature, signed_content)).to be(true)
     end
   end
 end

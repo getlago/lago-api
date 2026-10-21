@@ -6338,7 +6338,8 @@ CREATE TABLE public.webhook_endpoints (
     signature_algo integer DEFAULT 0 NOT NULL,
     event_types character varying[],
     name character varying,
-    secret character varying
+    private_key character varying,
+    public_key character varying
 );
 
 

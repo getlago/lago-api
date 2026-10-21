@@ -167,27 +167,38 @@ RSpec.describe WebhookEndpoint do
       end
     end
 
-    describe "#set_standard_webhooks_secret" do
+    describe "#set_standard_webhooks_keys" do
       subject(:webhook_endpoint) { create(:webhook_endpoint, signature_algo:) }
 
       context "when the signature algorithm is standard_webhooks" do
         let(:signature_algo) { :standard_webhooks }
 
-        it "generates a whsec_ prefixed secret" do
-          expect(webhook_endpoint.secret).to start_with("whsec_")
+        it "generates a whsk_ prefixed ed25519 private key" do
+          raw = webhook_endpoint.private_key.delete_prefix("whsk_")
+          expect(webhook_endpoint.private_key).to start_with("whsk_")
+          expect(Base64.strict_decode64(raw).bytesize).to eq(32)
         end
 
-        it "decodes to 24 random bytes" do
-          raw = webhook_endpoint.secret.delete_prefix("whsec_")
-          expect(Base64.strict_decode64(raw).bytesize).to eq(24)
+        it "generates a whpk_ prefixed ed25519 public key" do
+          raw = webhook_endpoint.public_key.delete_prefix("whpk_")
+          expect(webhook_endpoint.public_key).to start_with("whpk_")
+          expect(Base64.strict_decode64(raw).bytesize).to eq(32)
+        end
+
+        it "stores the private key encrypted at rest" do
+          ciphertext = described_class.connection.select_value(
+            "SELECT private_key FROM webhook_endpoints WHERE id = '#{webhook_endpoint.id}'"
+          )
+          expect(ciphertext).not_to eq(webhook_endpoint.private_key)
         end
       end
 
       context "when the signature algorithm is not standard_webhooks" do
         let(:signature_algo) { :hmac }
 
-        it "does not generate a secret" do
-          expect(webhook_endpoint.secret).to be_nil
+        it "does not generate keys" do
+          expect(webhook_endpoint.private_key).to be_nil
+          expect(webhook_endpoint.public_key).to be_nil
         end
       end
     end
