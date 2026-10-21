@@ -64,13 +64,9 @@ RSpec.describe Webhooks::Plans::CreatedService do
                 "code" => "vat",
                 "rate" => 20.0,
                 "description" => "French VAT",
-                "applied_to_organization" => false,
-                "add_ons_count" => 0,
-                "customers_count" => 0,
-                "plans_count" => 0,
-                "charges_count" => 0,
-                "commitments_count" => 0,
-                "created_at" => "2026-03-22T12:00:00Z"
+                "created_at" => "2026-03-22T12:00:00Z",
+                "updated_at" => "2026-03-22T12:00:00Z",
+                "deleted_at" => nil
               }
             ]
           }
