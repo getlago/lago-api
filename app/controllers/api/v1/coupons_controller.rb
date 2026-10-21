@@ -55,8 +55,8 @@ module Api
         result = CouponsQuery.call(
           organization: current_organization,
           pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
+            page: page_number,
+            limit: page_size
           }
         )
 

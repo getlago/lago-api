@@ -63,8 +63,8 @@ module Api
         result = ::UsageAttributionTypesQuery.call(
           organization: current_organization,
           pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
+            page: page_number,
+            limit: page_size
           },
           filters: {role: params[:role]},
           search_term: params[:search_term]

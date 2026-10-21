@@ -59,8 +59,8 @@ module Api
         result = CustomersQuery.call(
           organization: current_organization,
           pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
+            page: page_number,
+            limit: page_size
           },
           search_term:,
           filters: filter_params.merge(billing_entity_ids: billing_entities&.ids)

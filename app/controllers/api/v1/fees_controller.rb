@@ -28,8 +28,8 @@ module Api
         result = FeesQuery.call(
           organization: current_organization,
           pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
+            page: page_number,
+            limit: page_size
           },
           filters: index_filters
         )
@@ -59,7 +59,7 @@ module Api
                 result.fees,
                 key: "fees",
                 organization_id: current_organization.id,
-                params: index_filters.merge(page: params[:page], per_page: params[:per_page])
+                params: index_filters.merge(page: page_number, per_page: page_size)
               ),
               includes: %i[applied_taxes]
             )

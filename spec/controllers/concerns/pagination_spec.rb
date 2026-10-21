@@ -11,7 +11,14 @@ RSpec.describe Pagination do
     Class.new do
       include Pagination
 
+      attr_writer :params
+
       public :_count_total, :pagination_metadata
+
+      # The request params, which the page_number and page_size helpers read.
+      def params
+        @params || ActionController::Parameters.new(page: "1", per_page: "10")
+      end
     end
   end
   let(:cache) { ActiveSupport::Cache::MemoryStore.new }
@@ -85,6 +92,7 @@ RSpec.describe Pagination do
 
     before do
       instance._count_total(key: "invoices", organization_id:, params: query_params.merge("page" => "1")) { 99 }
+      instance.params = ActionController::Parameters.new(query_params)
     end
 
     it "re-calculates from records" do

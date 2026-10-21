@@ -28,8 +28,8 @@ module Api
             split_charge: selected_split_charge,
             search: params[:search_term],
             basis: params[:basis] || "units",
-            limit: per_page,
-            offset: (page - 1) * per_page
+            limit: page_size,
+            offset: (page_number - 1) * page_size
           )
 
           if result.success?
@@ -54,14 +54,10 @@ module Api
           @subscription ||= customer.active_subscriptions.find_by(external_id: params[:external_subscription_id])
         end
 
-        # On /api/v1 the shared check has already rejected bad page params, so the page and
-        # per_page checks here matter for the /api/v2 fallback path, where the shared check does not run.
         def params_errors
           @params_errors ||= {
             from_datetime: datetime_errors(:from_datetime),
-            to_datetime: datetime_errors(:to_datetime),
-            page: (["value_is_out_of_range"] unless page&.positive?),
-            per_page: (["value_is_out_of_range"] unless per_page&.between?(1, max_per_page))
+            to_datetime: datetime_errors(:to_datetime)
           }.compact_blank
         end
 
@@ -75,12 +71,8 @@ module Api
           Utils::Datetime.parse_iso8601(params[name])&.to_time&.in_time_zone
         end
 
-        def page
-          Integer(params[:page] || 1, exception: false)
-        end
-
-        def per_page
-          Integer(params[:per_page] || [DEFAULT_PER_PAGE, max_per_page].min, exception: false)
+        def default_page_size
+          DEFAULT_PER_PAGE
         end
 
         # filters[team]=eng&filters[model][]=opus&filters[model][]=haiku

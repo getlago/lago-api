@@ -580,7 +580,7 @@ RSpec.describe Api::V1::InvoicesController do
           subject
 
           expect(response).to have_http_status(:success)
-          expect(InvoicesQuery).to have_received(:call).with(hash_including(pagination: {page: nil, limit: 100}))
+          expect(InvoicesQuery).to have_received(:call).with(hash_including(pagination: {page: 1, limit: 100}))
         end
       end
 
@@ -709,7 +709,7 @@ RSpec.describe Api::V1::InvoicesController do
             subject
 
             expect(response).to have_http_status(:success)
-            expect(InvoicesQuery).to have_received(:call).with(hash_including(pagination: {page: nil, limit: 50}))
+            expect(InvoicesQuery).to have_received(:call).with(hash_including(pagination: {page: 1, limit: 50}))
           end
         end
 
@@ -720,7 +720,7 @@ RSpec.describe Api::V1::InvoicesController do
             subject
 
             expect(response).to have_http_status(:success)
-            expect(InvoicesQuery).to have_received(:call).with(hash_including(pagination: {page: nil, limit: 50}))
+            expect(InvoicesQuery).to have_received(:call).with(hash_including(pagination: {page: 1, limit: 50}))
           end
         end
       end

@@ -61,10 +61,8 @@ RSpec.describe Api::V1::BaseController do
     describe klass.name do
       subject(:controller_class) { klass }
 
-      it "does not check the v1 page size" do
+      it "does not check the page size" do
         expect(controller_class._process_action_callbacks.map(&:filter)).not_to include(:validate_pagination_params)
-        expect(controller_class.private_method_defined?(:validate_pagination_params)).to be(false)
-        expect(controller_class.respond_to?(:max_page_size)).to be(false)
       end
     end
   end
