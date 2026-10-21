@@ -331,10 +331,10 @@ RSpec.describe ProductCatalogInvoiceHelper do
 
   describe ".range_label" do
     it "names the first, next and remaining tiers by their upper bound" do
-      expect(described_class.range_label("fee", {"from_value" => 0, "to_value" => 10})).to eq("Fee for first 10 units")
-      expect(described_class.range_label("fee", {"from_value" => 10, "to_value" => 50})).to eq("Fee for units up to 50")
-      expect(described_class.range_label("fee", {"from_value" => 50, "to_value" => nil})).to eq("Fee for remaining units")
-      expect(described_class.range_label("flat_fee", {"from_value" => 10, "to_value" => 50})).to eq("Flat fee for units up to 50")
+      expect(described_class.range_label(:fee, {"from_value" => 0, "to_value" => 10})).to eq("Fee for first 10 units")
+      expect(described_class.range_label(:fee, {"from_value" => 10, "to_value" => 50})).to eq("Fee for units up to 50")
+      expect(described_class.range_label(:fee, {"from_value" => 50, "to_value" => nil})).to eq("Fee for remaining units")
+      expect(described_class.range_label(:flat_fee, {"from_value" => 10, "to_value" => 50})).to eq("Flat fee for units up to 50")
     end
   end
 
