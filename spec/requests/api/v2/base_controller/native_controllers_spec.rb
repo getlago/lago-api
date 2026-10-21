@@ -31,6 +31,13 @@ RSpec.describe "API v2 native controllers" do # rubocop:disable RSpec/DescribeCl
         expect(native_controller).to be < Api::Serializable
       end
 
+      # Invoices void renders a v1 invoice.
+      unless native_controller == Api::V2::InvoicesController
+        it "declares what it renders with serializable_with" do
+          expect(native_controller.new.send(:serialization)).to be_present
+        end
+      end
+
       it "validates expand after the catalog check and before the cursor" do
         expect(callbacks & %i[ensure_product_catalog! validate_expand! read_cursor])
           .to eq(%i[ensure_product_catalog! validate_expand! read_cursor])
