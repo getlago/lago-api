@@ -554,7 +554,7 @@ RSpec.describe Api::V2::RateCardsController do
           error: "Bad Request",
           code: "invalid_expand",
           error_details: {
-            expand: {invalid_values: %w[product_category], allowed_values: %w[active_rate taxes rates product product_filter]}
+            expands: {invalid_values: %w[product_category], allowed_values: %w[active_rate taxes rates product product_filter]}
           }
         )
       end
