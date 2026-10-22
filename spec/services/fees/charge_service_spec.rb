@@ -945,16 +945,13 @@ RSpec.describe Fees::ChargeService, :premium do
               aws_agg = result.cached_aggregations.find { |a| a.grouped_by["cloud"] == "aws" }
               gcp_agg = result.cached_aggregations.find { |a| a.grouped_by["cloud"] == "gcp" }
 
-              expect(aws_agg.presentation_breakdowns.map { |b| b["groups"] }).to match_array(
-                [{"region" => "us-east-1"}, {"region" => "us-central-1"}]
+              # Units active at period end, not the weighted units of the fee
+              expect(aws_agg.presentation_breakdowns.map { [it["groups"], it["value"].to_d] }).to match_array(
+                [[{"region" => "us-east-1"}, 10], [{"region" => "us-central-1"}, 5]]
               )
-              expect(aws_agg.presentation_breakdowns.map { |b| b["value"].to_f.round(5) }).to eq([2.58065, 5.16129])
-
-              expect(gcp_agg.presentation_breakdowns.map { |b| b["groups"] }).to match_array(
-                [{"region" => "eu-west-1"}]
+              expect(gcp_agg.presentation_breakdowns.map { [it["groups"], it["value"].to_d] }).to eq(
+                [[{"region" => "eu-west-1"}, 3]]
               )
-
-              expect(gcp_agg.presentation_breakdowns.map { |b| b["value"].to_f.round(5) }).to eq([1.54839])
             end
           end
         end
@@ -2849,10 +2846,13 @@ RSpec.describe Fees::ChargeService, :premium do
           expect(result).to be_success
 
           cached_aggregation = result.cached_aggregations.first
-          expect(cached_aggregation.presentation_breakdowns.map { |b| b["groups"] }).to match_array(
-            [{"region" => "us-east-1"}, {"region" => "eu-west-1"}]
+          # Units active at period end, not the weighted units of the fee
+          expect(cached_aggregation.presentation_breakdowns.map { [it["groups"], it["value"].to_d] }).to match_array(
+            [[{"region" => "us-east-1"}, 10], [{"region" => "eu-west-1"}, 5]]
           )
-          expect(cached_aggregation.presentation_breakdowns.map { |b| b["value"].to_f.round(5) }).to eq([2.58065, 5.16129])
+          expect(result.fees.sole.presentation_breakdowns.map { [it.presentation_by, it.units.round(5).to_s] }).to match_array(
+            [[{"region" => "us-east-1"}, "5.16129"], [{"region" => "eu-west-1"}, "2.58065"]]
+          )
         end
       end
     end
