@@ -452,6 +452,8 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
 
             expect(produced_payload[:activity_object]).to eq(
               lago_id: product_filter.id,
+              product_code: "api",
+              product_category_code: "compute",
               name: "US",
               code: "us",
               description: "US traffic",
@@ -509,6 +511,7 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
             {
               lago_id: rate.id,
               code:,
+              rate_card_code: "api_us",
               effective_from:,
               status:,
               rate_model: "standard",
