@@ -79,6 +79,7 @@ RSpec.describe V2::RateCardSerializer do
   let(:terminated_rate_payload) do
     {
       lago_id: terminated_rate.id,
+      rate_card_code: rate_card.code,
       code: "launch",
       effective_from: "2026-08-01T00:00:00Z",
       status: "terminated",
@@ -96,6 +97,7 @@ RSpec.describe V2::RateCardSerializer do
   let(:active_rate_payload) do
     {
       lago_id: active_rate.id,
+      rate_card_code: rate_card.code,
       code: "current",
       effective_from: "2026-09-01T00:00:00Z",
       status: "active",
@@ -113,6 +115,7 @@ RSpec.describe V2::RateCardSerializer do
   let(:pending_rate_payload) do
     {
       lago_id: pending_rate.id,
+      rate_card_code: rate_card.code,
       code: "next",
       effective_from: "2026-11-01T00:00:00Z",
       status: "pending",
