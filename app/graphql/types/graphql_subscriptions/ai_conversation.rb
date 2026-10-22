@@ -24,7 +24,7 @@ module Types
       end
 
       def update(id:)
-        # The saved context keeps the permissions of subscribe time, so access is checked again on each chunk.
+        # The saved context keeps the state of subscribe time, so the token and access are checked again on each chunk.
         unsubscribe unless still_allowed?
 
         object
@@ -33,6 +33,8 @@ module Types
       private
 
       def still_allowed?
+        return false if context[:channel].connection.token_expired?
+
         membership = Membership.active.find_by(id: current_membership.id)
         membership.present? && membership.permissions_hash[REQUIRED_PERMISSION]
       end

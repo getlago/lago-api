@@ -73,6 +73,13 @@ RSpec.describe GraphqlChannel, :premium, type: :channel do
         expect(LagoApiSchema.subscriptions.read_subscription(subscription_id)).to be_nil
       end
 
+      it "ends the subscription once the token has expired" do
+        allow(subscription.connection).to receive(:token_expired?).and_return(true)
+
+        expect(stream_chunk.nil?).to be(true)
+        expect(LagoApiSchema.subscriptions.read_subscription(subscription_id)).to be_nil
+      end
+
       it "ends the subscription once the membership is revoked" do
         membership.update!(status: :revoked, revoked_at: Time.current)
 

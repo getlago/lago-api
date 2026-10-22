@@ -23,7 +23,8 @@ module ApplicationCable
       @session_claims || {}
     end
 
-    # Authenticated once, when the socket opens: past expiry, GraphqlChannel makes the client reconnect.
+    # Authenticated once, when the socket opens: past expiry, a new subscription makes the client reconnect
+    # and stream updates end their subscription.
     def token_expired?
       @token_expires_at.present? && Time.current.to_i >= @token_expires_at
     end
