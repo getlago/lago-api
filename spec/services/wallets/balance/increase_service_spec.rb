@@ -53,9 +53,12 @@ RSpec.describe Wallets::Balance::IncreaseService do
         .to have_enqueued_job(SendWebhookJob).with("wallet.updated", Wallet)
     end
 
-    it "enqueues a ProcessWalletAlertsJob" do
-      expect { create_service.call }
-        .to have_enqueued_job(UsageMonitoring::ProcessWalletAlertsJob).at_least(:once)
+    it "dispatches the wallet alerts" do
+      allow(UsageMonitoring::DispatchWalletAlertsService).to receive(:call)
+
+      create_service.call
+
+      expect(UsageMonitoring::DispatchWalletAlertsService).to have_received(:call).with(wallet:)
     end
 
     context "with rounding" do

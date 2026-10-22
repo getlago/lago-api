@@ -32,6 +32,7 @@ RSpec.describe Wallets::Balance::UpdateOngoingService do
   before do
     wallet
     allow(Wallets::ThresholdTopUpService).to receive(:call).and_call_original
+    allow(UsageMonitoring::DispatchWalletAlertsService).to receive(:call).and_call_original
   end
 
   describe "#call" do
@@ -63,8 +64,9 @@ RSpec.describe Wallets::Balance::UpdateOngoingService do
         expect(Wallets::ThresholdTopUpService).to have_received(:call).with(wallet:, state_changed: true)
       end
 
-      it "enqueues a ProcessWalletAlertsJob" do
-        expect { subject }.to have_enqueued_job(UsageMonitoring::ProcessWalletAlertsJob).at_least(:once)
+      it "dispatches the wallet alerts" do
+        subject
+        expect(UsageMonitoring::DispatchWalletAlertsService).to have_received(:call).with(wallet:)
       end
     end
 
@@ -113,6 +115,11 @@ RSpec.describe Wallets::Balance::UpdateOngoingService do
         subject
 
         expect(Wallets::ThresholdTopUpService).to have_received(:call).with(wallet:, state_changed: false)
+      end
+
+      it "does not dispatch the wallet alerts" do
+        subject
+        expect(UsageMonitoring::DispatchWalletAlertsService).not_to have_received(:call)
       end
     end
 
