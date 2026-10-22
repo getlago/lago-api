@@ -4,6 +4,7 @@ module Api
   module V2
     class ProductsController < Api::V2::BaseController
       cursor_paginated_index(Product)
+      serializable_with ::V2::ProductSerializer
 
       ERROR_FIELDS = {billable_metric: :billable_metric_code, product_category: :product_category_code}.freeze
 
@@ -95,16 +96,7 @@ module Api
 
         if result.success?
           # Preloaded so filters_count reads the loaded association.
-          page = ::CursorPagination::Page.new(records: result.products.includes(:filters), cursor:)
-
-          render(
-            json: ::CollectionSerializer.new(
-              page.records,
-              ::V2::ProductSerializer,
-              collection_name: "products",
-              meta: page.meta
-            )
-          )
+          render_products(result.products.includes(:filters))
         else
           render_error_response(result)
         end
@@ -152,10 +144,6 @@ module Api
           :invoice_display_name,
           :product_category_code
         )
-      end
-
-      def render_product(product)
-        render(json: ::V2::ProductSerializer.new(product, root_name: "product"))
       end
 
       def render_item_error(result)

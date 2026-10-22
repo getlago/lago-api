@@ -104,4 +104,71 @@ RSpec.describe ModelSerializer do
       end
     end
   end
+
+  describe ".expandable" do
+    let(:serializer_class) { Class.new(described_class) { expandable :first, serializer: ModelSerializer } }
+
+    it "declares nothing by default" do
+      expect(described_class.expandable_names).to eq([])
+    end
+
+    it "lists the declared names, in their order" do
+      serializer_class.expandable :second, serializer: described_class
+
+      expect(serializer_class.expandable_names).to eq(%i[first second])
+    end
+
+    it "leaves the other serializers' list unchanged" do
+      serializer_class
+
+      expect(described_class.expandable_names).to eq([])
+    end
+  end
+
+  describe "#serialize" do
+    subject(:payload) { serializer_class.new(model, options).serialize }
+
+    let(:model) { Struct.new(:first, :second, :third).new(first_record, nil, first_record) }
+    let(:first_record) { Struct.new(:code).new("first") }
+    let(:options) { {includes: %i[second unlisted first]} }
+
+    # Renders what it was given, so that an embedded record shows the options it received.
+    let(:embedded_serializer) { Class.new(described_class) { def serialize = {code: model.code, options:} } }
+
+    let(:serializer_class) do
+      embedded_serializer = self.embedded_serializer
+
+      Class.new(described_class) do
+        expandable :first, serializer: embedded_serializer
+        expandable :second, serializer: embedded_serializer
+        expandable :third, serializer: embedded_serializer
+
+        def serialize = {code: "parent"}
+      end
+    end
+
+    it "adds the included expansions after its own payload, in their declared order, a missing record as nil" do
+      expect(payload.to_a).to eq([[:code, "parent"], [:first, {code: "first", options: {}}], [:second, nil]])
+    end
+
+    it "renders the embedded record without includes, so that it stays flat" do
+      expect(payload[:first][:options]).to eq({})
+    end
+
+    context "without includes" do
+      let(:options) { {} }
+
+      it "renders its own payload only" do
+        expect(payload).to eq(code: "parent")
+      end
+    end
+
+    context "with a serializer that declares no expansion" do
+      let(:serializer_class) { Class.new(described_class) { def serialize = {code: "parent"} } }
+
+      it "renders its own payload only" do
+        expect(payload).to eq(code: "parent")
+      end
+    end
+  end
 end

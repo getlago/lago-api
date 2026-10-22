@@ -1,7 +1,30 @@
 # frozen_string_literal: true
 
 class ModelSerializer
+  # Prepended by `expandable`, so that a serializer cannot declare an expansion and forget to
+  # render it.
+  module RendersExpansions
+    def serialize
+      super.merge(expanded_payload)
+    end
+  end
+
+  NO_EXPANSIONS = {}.freeze
+
+  # Set once per serializer, when its class is loaded, through `expandable`.
+  class_attribute :expansions, instance_accessor: false, instance_predicate: false, default: NO_EXPANSIONS # rubocop:disable ThreadSafety/ClassAndModuleAttributes
+
   attr_reader :model, :options
+
+  # Lets a native v2 endpoint embed `model.<name>` on `expands[]=<name>`, rendered by `serializer`
+  # without includes, so that the embedded record stays flat. It comes last in `serialize`.
+  def self.expandable(name, serializer:)
+    prepend(RendersExpansions)
+
+    self.expansions = expansions.merge(name.to_sym => serializer).freeze
+  end
+
+  def self.expandable_names = expansions.keys
 
   # The possible values for the options are:
   # - includes: Specify the relation to include in the payload
@@ -58,5 +81,17 @@ class ModelSerializer
     return default if include.is_a?(Symbol) || include.nil?
 
     include[value]
+  end
+
+  private
+
+  # The declared expansions found in `includes`, in their declared order: Api::Serializable
+  # passes the requested ones, and a nil record renders as null.
+  def expanded_payload
+    self.class.expansions.each_with_object({}) do |(name, serializer), payload|
+      next unless include?(name)
+
+      payload[name] = model.public_send(name)&.then { serializer.new(it).serialize }
+    end
   end
 end

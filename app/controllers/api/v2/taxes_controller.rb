@@ -3,11 +3,6 @@
 module Api
   module V2
     class TaxesController < Api::V2::BaseController
-      # Expansion errors follow authorization and feature checks but precede cursor validation.
-      skip_before_action :read_cursor
-      before_action :validate_expand!
-      before_action :read_cursor, if: :cursor_paginated_index?
-
       cursor_paginated_index(Tax)
 
       def create
@@ -71,37 +66,6 @@ module Api
       end
 
       private
-
-      def validate_expand!
-        values = raw_expand_values
-
-        if values.nil? || !values.all?(String)
-          invalid_request_error(
-            code: "invalid_expand",
-            error_details: {expand: {reason: "malformed", allowed_values: []}}
-          )
-        else
-          values = values.map(&:strip).compact_blank.uniq
-
-          if values.any?
-            invalid_request_error(
-              code: "expand_not_supported",
-              error_details: {expand: {reason: "not_expandable", invalid_values: values}}
-            )
-          end
-        end
-      end
-
-      def raw_expand_values
-        expand = params[:expand]
-
-        case expand
-        when nil then []
-        when String then [expand]
-        when Array then expand
-        when ActionController::Parameters then expand.values if expand.keys.all?(/\A\d+\z/)
-        end
-      end
 
       def input_params
         params.require(:tax).permit(:code, :description, :name, :rate)

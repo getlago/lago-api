@@ -2,6 +2,8 @@
 
 module V2
   class ProductSerializer < ModelSerializer
+    expandable :product_category, serializer: ::V2::ProductCategorySerializer
+
     def serialize
       {
         lago_id: model.id,
