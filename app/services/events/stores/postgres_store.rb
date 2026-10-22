@@ -314,16 +314,16 @@ module Events
         prepare_grouped_aggregated_values(results, columns: columns)
       end
 
-      def recurring_sum(watermark:, snapshot: nil)
-        sql = recurring_events(snapshot)
+      def recurring_sum(watermark:, period: nil)
+        sql = recurring_events(period)
           .select(recurring_sum_sql(watermark))
           .to_sql
 
         build_recurring_aggregation_result(select_one(sql))
       end
 
-      def grouped_recurring_sum(watermark:, snapshot: nil)
-        sql = recurring_events(snapshot)
+      def grouped_recurring_sum(watermark:, period: nil)
+        sql = recurring_events(period)
           .group(sanitized_grouped_by)
           .select("#{sanitized_grouped_by.join(", ")}, #{recurring_sum_sql(watermark)}")
           .to_sql
@@ -491,13 +491,13 @@ module Events
         end
       end
 
-      def recurring_events(snapshot)
-        return events if snapshot.nil?
+      def recurring_events(period)
+        return events if period.nil?
 
         events.where(
           "events.timestamp > :to_datetime OR events.created_at > :watermark",
-          to_datetime: snapshot.to_datetime,
-          watermark: snapshot.watermark
+          to_datetime: period.to_datetime,
+          watermark: period.watermark
         )
       end
 
