@@ -14,11 +14,12 @@ RSpec.describe RecurringAggregationSnapshots::AuditService do
 
   let(:billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
   let(:charge) { create(:standard_charge, plan:, billable_metric:) }
+  let(:snapshot_units) { 5 }
   let(:fee_units) { 5 }
 
   before do
     create(:invoice_subscription, subscription:, invoice:, charges_to_datetime: to_datetime)
-    create_snapshot(units: 5, events_count: 2)
+    create_snapshot(units: snapshot_units, events_count: 2)
     create_fee(total_aggregated_units: fee_units, events_count: 2)
   end
 
@@ -59,6 +60,33 @@ RSpec.describe RecurringAggregationSnapshots::AuditService do
 
     it "reports the leaf" do
       expect(result.differences).to eq([row(fee_units: 8)])
+    end
+  end
+
+  context "with a rounding function" do
+    let(:billable_metric) { create(:sum_billable_metric, organization:, recurring: true, rounding_function: :ceil) }
+    let(:snapshot_units) { 4.2 }
+
+    it "compares the snapshot units rounded like the fee" do
+      expect(result.rows).to eq([row])
+    end
+
+    context "when the rounded units differ" do
+      let(:snapshot_units) { 3.2 }
+
+      it "reports the leaf" do
+        expect(result.differences).to eq([row(snapshot_units: 4)])
+      end
+    end
+
+    context "with a weighted sum billable metric" do
+      let(:billable_metric) { create(:weighted_sum_billable_metric, organization:, recurring: true, rounding_function: :ceil) }
+      let(:snapshot_units) { 4.2 }
+      let(:fee_units) { 4.2 }
+
+      it "compares the raw units, as the fee keeps them" do
+        expect(result.rows).to eq([row(snapshot_units: 4.2, fee_units: 4.2, snapshot_events_count: nil, fee_events_count: nil)])
+      end
     end
   end
 

@@ -60,8 +60,9 @@ module RecurringAggregationSnapshots
     attr_reader :subscription
 
     def compare(period, snapshots, fees)
+      billable_metric = snapshots.first.billable_metric
       # A weighted sum snapshot has no events count: its read never counts the events of a closed period
-      with_events_count = !snapshots.first.billable_metric.weighted_sum_agg?
+      with_events_count = !billable_metric.weighted_sum_agg?
 
       stored = snapshots.index_by { key(it) }
       billed = fees.index_by { key(it) }
@@ -75,7 +76,7 @@ module RecurringAggregationSnapshots
           charge_filter_id:,
           grouped_by:,
           to_datetime: period.to_datetime,
-          snapshot_units: snapshot&.units || 0,
+          snapshot_units: billed_units(billable_metric, snapshot&.units || 0),
           fee_units: fee&.total_aggregated_units || 0,
           snapshot_events_count: (snapshot&.events_count || 0 if with_events_count),
           fee_events_count: (fee&.events_count || 0 if with_events_count),
@@ -112,6 +113,15 @@ module RecurringAggregationSnapshots
       else
         # Non-invoiceable fees are created without the period's invoice and may be attached to another one later
         scope.where("(fees.properties->>'charges_to_datetime')::timestamptz = ?", to_datetime.iso8601(3))
+      end
+    end
+
+    # A sum fee bills its units rounded, a weighted sum fee keeps them raw in total_aggregated_units
+    def billed_units(billable_metric, units)
+      if billable_metric.weighted_sum_agg?
+        units
+      else
+        BillableMetrics::Aggregations::ApplyRoundingService.call!(billable_metric:, units:).units
       end
     end
 
