@@ -5217,6 +5217,24 @@ RSpec.describe Fees::ChargeService, :premium do
             .with(hash_including(initial_value: be_present)).twice
         end
       end
+
+      context "with a charge filter without usage before the last period" do
+        let(:region) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us apac]) }
+        let(:apac_filter) { create(:charge_filter, charge:, properties: {amount: "20"}, created_at: Time.zone.parse("2022-03-01")) }
+
+        before { create(:charge_filter_value, charge_filter: apac_filter, billable_metric_filter: region, values: ["apac"]) }
+
+        it "bills what the full scan bills, starting the filter from zero" do
+          expect(bill(march)).to eq([[{}, 18, 3]])
+
+          create_event("2022-03-25", 5, "apac", created_at: Time.zone.parse("2022-04-01T05:00:00"))
+
+          expect(bill(april)).to match_array([[{}, 38, 4], [{}, 5, 1]])
+          expect(bill(may)).to match_array([[{}, 38, 4], [{}, 9, 2]])
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
+            .with(hash_including(metered_item: have_attributes(charge_filter: apac_filter), initial_value: [], initial_period: be_present)).once
+        end
+      end
     end
   end
 
