@@ -235,8 +235,6 @@ module BillingSegments
               invoice.save! if invoice.changed?
             end
 
-            next unless invoice.generating?
-
             Invoices::TransitionToFinalStatusService.call!(invoice:)
             invoice.save! if invoice.changed?
           end
