@@ -331,8 +331,7 @@ RSpec.describe Api::V2::InvoicesController, v2_timestamps: false do
       expect(response).to have_http_status(:success)
       expect(invoice.reload).to be_voided
       expect(json[:invoice]).to include(lago_id: invoice.id, status: "voided", invoice_type: "contract")
-      expect(json[:invoice]).not_to have_key(:subscriptions)
-      expect(json[:invoice][:fees].pluck(:lago_id)).to eq(invoice.fees.ids)
+      expect(json[:invoice]).not_to include(:subscriptions, :fees)
     end
 
     context "when the invoice does not exist" do
@@ -525,7 +524,8 @@ RSpec.describe Api::V2::InvoicesController, v2_timestamps: false do
 
       expect(response).to have_http_status(:success)
       expect(invoice.reload).to be_pending
-      expect(json[:invoice]).to include(lago_id: invoice.id, status: "pending", invoice_type: "contract", fees: [])
+      expect(json[:invoice]).to include(lago_id: invoice.id, status: "pending", invoice_type: "contract")
+      expect(json[:invoice]).not_to have_key(:fees)
       expect(Invoices::ProviderTaxes::PullTaxesAndApplyJob).to have_been_enqueued.with(invoice:)
     end
 
