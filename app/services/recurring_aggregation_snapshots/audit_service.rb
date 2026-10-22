@@ -4,9 +4,10 @@ module RecurringAggregationSnapshots
   # Compares the snapshots of each closed period with the fees its invoice billed, per
   # (charge, charge filter, group). A side without a row counts as zero: groups without units are
   # stored on neither side. A fee whose units or amount were adjusted no longer bills the
-  # aggregated values, so its rows are reported apart and never as a difference.
+  # aggregated values, so its rows are reported apart and never as a difference. A period without
+  # the default bucket marker reads as a full scan, so it is reported even when its rows match.
   class AuditService < BaseService
-    Result = BaseResult[:rows, :differences, :adjusted_rows, :periods_without_invoice]
+    Result = BaseResult[:rows, :differences, :adjusted_rows, :periods_without_invoice, :periods_without_marker]
 
     Row = Data.define(
       :charge_id,
@@ -35,8 +36,11 @@ module RecurringAggregationSnapshots
     def call
       result.rows = []
       result.periods_without_invoice = []
+      result.periods_without_marker = []
 
       snapshots.group_by { Period.new(charge_id: it.charge_id, to_datetime: it.to_datetime) }.each do |period, period_snapshots|
+        result.periods_without_marker << period if period_snapshots.none? { it.charge_filter_id.nil? }
+
         invoice_subscription = invoice_subscription(period.to_datetime)
 
         if invoice_subscription

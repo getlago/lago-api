@@ -37,6 +37,7 @@ namespace :recipes do
       differences = 0
       adjusted_rows = 0
       periods_without_invoice = 0
+      periods_without_marker = 0
 
       CSV.open(csv_path, "w") do |csv|
         csv << RECURRING_SNAPSHOTS_AUDIT_CSV_HEADERS
@@ -46,11 +47,13 @@ namespace :recipes do
           differences += audit.differences.size
           adjusted_rows += audit.adjusted_rows.size
           periods_without_invoice += audit.periods_without_invoice.size
+          periods_without_marker += audit.periods_without_marker.size
 
           puts "  Subscription #{subscription.id} (#{subscription.external_id}): " \
                "#{audit.rows.size} leaf/leaves, #{audit.differences.size} differing, " \
                "#{audit.adjusted_rows.size} adjusted, " \
-               "#{audit.periods_without_invoice.size} period(s) without invoice"
+               "#{audit.periods_without_invoice.size} period(s) without invoice, " \
+               "#{audit.periods_without_marker.size} period(s) without marker"
 
           audit.differences.each do |row|
             csv << [
@@ -71,7 +74,7 @@ namespace :recipes do
 
       puts ""
       puts "Differing leaves: #{differences}, adjusted leaves: #{adjusted_rows}, " \
-           "periods without invoice: #{periods_without_invoice}"
+           "periods without invoice: #{periods_without_invoice}, periods without marker: #{periods_without_marker}"
       puts "Differences: #{csv_path}"
       puts "A sum snapshot stops at its watermark: an event ingested between the watermark and the invoice differs too."
     end

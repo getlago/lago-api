@@ -51,6 +51,7 @@ RSpec.describe RecurringAggregationSnapshots::AuditService do
     expect(result.differences).to be_empty
     expect(result.adjusted_rows).to be_empty
     expect(result.periods_without_invoice).to be_empty
+    expect(result.periods_without_marker).to be_empty
   end
 
   context "when the fee billed other units" do
@@ -182,6 +183,22 @@ RSpec.describe RecurringAggregationSnapshots::AuditService do
     it "compares each bucket with its own fee" do
       expect(result.differences).to be_empty
       expect(result.rows.map(&:charge_filter_id)).to match_array([nil, charge_filter.id])
+    end
+  end
+
+  context "without the default bucket marker" do
+    let(:charge_filter) { create(:charge_filter, charge:) }
+
+    before do
+      Fee.delete_all
+      RecurringAggregationSnapshot.delete_all
+      create_snapshot(charge_filter:, units: 2, events_count: 1)
+      create_fee(charge_filter:, total_aggregated_units: 2, events_count: 1)
+    end
+
+    it "reports the period even when its rows match" do
+      expect(result.differences).to be_empty
+      expect(result.periods_without_marker).to eq([described_class::Period.new(charge_id: charge.id, to_datetime:)])
     end
   end
 
