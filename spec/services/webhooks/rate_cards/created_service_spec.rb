@@ -36,6 +36,7 @@ RSpec.describe Webhooks::RateCards::CreatedService do
         "rates_count" => 0,
         "created_at" => rate_card.created_at.iso8601,
         "updated_at" => rate_card.updated_at.iso8601,
+        "deleted_at" => nil,
         "active_rate" => nil,
         "rates" => [],
         "taxes" => []

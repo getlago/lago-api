@@ -28,7 +28,8 @@ RSpec.describe Webhooks::RateCards::CreatedService do
       "billing_interval_unit" => "month",
       "applied_pricing_unit_conversion_rate" => nil,
       "created_at" => active_rate.created_at.iso8601,
-      "updated_at" => active_rate.updated_at.iso8601
+      "updated_at" => active_rate.updated_at.iso8601,
+      "deleted_at" => nil
     }
   end
   let(:future_rate_payload) do
@@ -45,7 +46,8 @@ RSpec.describe Webhooks::RateCards::CreatedService do
       "billing_interval_unit" => "month",
       "applied_pricing_unit_conversion_rate" => nil,
       "created_at" => future_rate.created_at.iso8601,
-      "updated_at" => future_rate.updated_at.iso8601
+      "updated_at" => future_rate.updated_at.iso8601,
+      "deleted_at" => nil
     }
   end
   let(:tax_payload) do
@@ -102,6 +104,7 @@ RSpec.describe Webhooks::RateCards::CreatedService do
           "rates_count" => 2,
           "created_at" => rate_card.created_at.iso8601,
           "updated_at" => rate_card.updated_at.iso8601,
+          "deleted_at" => nil,
           "active_rate" => active_rate_payload,
           "rates" => [active_rate_payload, future_rate_payload],
           "taxes" => [tax_payload]
@@ -147,6 +150,7 @@ RSpec.describe Webhooks::RateCards::CreatedService do
           "rates_count" => 2,
           "created_at" => rate_card.created_at.iso8601,
           "updated_at" => rate_card.updated_at.iso8601,
+          "deleted_at" => nil,
           "active_rate" => active_rate_payload,
           "rates" => [active_rate_payload, future_rate_payload],
           "taxes" => [tax_payload]
@@ -183,7 +187,8 @@ RSpec.describe Webhooks::RateCards::CreatedService do
           "applied_pricing_unit_code" => nil,
           "rates_count" => 0,
           "created_at" => rate_card.created_at.iso8601,
-          "updated_at" => rate_card.updated_at.iso8601
+          "updated_at" => rate_card.updated_at.iso8601,
+          "deleted_at" => rate_card.deleted_at.iso8601
         }
       )
     end

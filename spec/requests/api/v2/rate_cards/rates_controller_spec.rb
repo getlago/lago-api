@@ -151,6 +151,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
 
       expect(response).to have_http_status(:success)
       expect(json[:rate][:lago_id]).to eq(rate.id)
+      expect(json[:rate]).to include(deleted_at: nil)
     end
   end
 
@@ -220,6 +221,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
       it "deletes the rate" do
         expect { subject }.to change { rate.reload.discarded? }.from(false).to(true)
         expect(response).to have_http_status(:success)
+        expect(json[:rate][:deleted_at]).to eq(rate.deleted_at.iso8601)
       end
     end
 

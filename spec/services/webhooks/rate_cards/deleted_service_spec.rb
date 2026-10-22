@@ -40,7 +40,8 @@ RSpec.describe Webhooks::RateCards::DeletedService do
         "applied_pricing_unit_code" => nil,
         "rates_count" => 0,
         "created_at" => reloaded_rate_card.created_at.iso8601,
-        "updated_at" => reloaded_rate_card.updated_at.iso8601
+        "updated_at" => reloaded_rate_card.updated_at.iso8601,
+        "deleted_at" => reloaded_rate_card.deleted_at.iso8601
       }
     )
   end

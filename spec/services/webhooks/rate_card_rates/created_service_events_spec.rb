@@ -35,7 +35,8 @@ RSpec.describe Webhooks::RateCardRates::CreatedService do
           "billing_interval_unit" => "month",
           "applied_pricing_unit_conversion_rate" => nil,
           "created_at" => rate_card_rate.created_at.iso8601,
-          "updated_at" => rate_card_rate.updated_at.iso8601
+          "updated_at" => rate_card_rate.updated_at.iso8601,
+          "deleted_at" => nil
         }
       )
     end
@@ -66,7 +67,8 @@ RSpec.describe Webhooks::RateCardRates::CreatedService do
           "billing_interval_unit" => "month",
           "applied_pricing_unit_conversion_rate" => nil,
           "created_at" => rate_card_rate.created_at.iso8601,
-          "updated_at" => rate_card_rate.updated_at.iso8601
+          "updated_at" => rate_card_rate.updated_at.iso8601,
+          "deleted_at" => nil
         }
       )
     end
@@ -101,7 +103,8 @@ RSpec.describe Webhooks::RateCardRates::CreatedService do
           "billing_interval_unit" => "month",
           "applied_pricing_unit_conversion_rate" => nil,
           "created_at" => delayed_rate.created_at.iso8601,
-          "updated_at" => delayed_rate.updated_at.iso8601
+          "updated_at" => delayed_rate.updated_at.iso8601,
+          "deleted_at" => delayed_rate.deleted_at.iso8601
         }
       )
       expect(Webhook.order(created_at: :desc).first.payload.dig("rate_card_rate", "rate_card_code")).not_to eq(other_rate_card.code)

@@ -47,7 +47,8 @@ RSpec.describe Webhooks::ProductCategories::CreatedService do
           "invoice_display_name" => "Cloud",
           "products_count" => 1,
           "created_at" => product_category.created_at.iso8601,
-          "updated_at" => product_category.updated_at.iso8601
+          "updated_at" => product_category.updated_at.iso8601,
+          "deleted_at" => nil
         }
       )
     end
@@ -74,7 +75,8 @@ RSpec.describe Webhooks::ProductCategories::CreatedService do
           "invoice_display_name" => "Cloud",
           "products_count" => 1,
           "created_at" => product_category.created_at.iso8601,
-          "updated_at" => product_category.updated_at.iso8601
+          "updated_at" => product_category.updated_at.iso8601,
+          "deleted_at" => nil
         }
       )
     end
@@ -102,7 +104,8 @@ RSpec.describe Webhooks::ProductCategories::CreatedService do
           "invoice_display_name" => "Cloud",
           "products_count" => 1,
           "created_at" => product_category.created_at.iso8601,
-          "updated_at" => product_category.updated_at.iso8601
+          "updated_at" => product_category.updated_at.iso8601,
+          "deleted_at" => product_category.deleted_at.iso8601
         }
       )
     end

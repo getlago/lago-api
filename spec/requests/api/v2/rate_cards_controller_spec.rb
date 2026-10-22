@@ -310,7 +310,8 @@ RSpec.describe Api::V2::RateCardsController do
       expect(response).to have_http_status(:success)
       expect(json[:rate_card][:lago_id]).to eq(rate_card.id)
       expect(json[:rate_card][:rates_count]).to eq(1)
-      expect(json[:rate_card][:active_rate][:status]).to eq("active")
+      expect(json[:rate_card]).to include(deleted_at: nil)
+      expect(json[:rate_card][:active_rate]).to include(status: "active", deleted_at: nil)
       expect(json[:rate_card][:taxes].pluck(:code)).to eq([tax.code])
     end
 
@@ -389,6 +390,7 @@ RSpec.describe Api::V2::RateCardsController do
 
       expect(response).to have_http_status(:success)
       expect(json[:rate_card][:lago_id]).to eq(rate_card.id)
+      expect(json[:rate_card][:deleted_at]).to eq(rate_card.reload.deleted_at.iso8601)
     end
 
     context "when the rate card has assigned taxes" do
