@@ -20,6 +20,7 @@ module Integrations
           return result unless integration
           return result unless integration.sync_credit_notes
           return result unless credit_note.finalized?
+          return result if credit_note.items.joins(:fee).merge(Fee.product).exists?
           return result if payload.integration_credit_note
 
           throttle!(:anrok, :netsuite, :xero)

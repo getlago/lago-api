@@ -65,8 +65,6 @@ module Integrations
               add_on_item(fee)
             elsif fee.fixed_charge?
               fixed_charge_item(fee)
-            elsif fee.product?
-              product_item(fee)
             elsif fee.credit?
               credit_item
             elsif fee.commitment?

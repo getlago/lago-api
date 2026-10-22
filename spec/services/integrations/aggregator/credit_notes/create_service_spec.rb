@@ -265,6 +265,41 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
   end
 
   describe "#call" do
+    context "when credit note contains a product fee" do
+      let(:charge_fee) { create(:product_fee, invoice:) }
+
+      before do
+        allow(lago_client).to receive(:post_with_response)
+      end
+
+      it "does not sync a product-only credit note" do
+        expect(credit_note.items.map { |item| item.fee.fee_type }).to eq(["product"])
+        expect(service_call).to be_success
+        expect(lago_client).not_to have_received(:post_with_response)
+        expect(IntegrationResource.where(syncable: credit_note)).to be_empty
+        expect(SendWebhookJob).not_to have_been_enqueued
+      end
+
+      context "when the credit note also contains a charge fee" do
+        let(:charge_fee) do
+          create(:charge_fee, invoice:, charge:, units: 2, precise_unit_amount: 4.12)
+        end
+        let(:product_fee) { create(:product_fee, invoice:) }
+
+        before do
+          create(:credit_note_item, credit_note:, fee: product_fee, amount_cents: 100)
+        end
+
+        it "does not sync the mixed credit note" do
+          expect(credit_note.items.map { |item| item.fee.fee_type }.sort).to eq(["charge", "product"])
+          expect(service_call).to be_success
+          expect(lago_client).not_to have_received(:post_with_response)
+          expect(IntegrationResource.where(syncable: credit_note)).to be_empty
+          expect(SendWebhookJob).not_to have_been_enqueued
+        end
+      end
+    end
+
     context "when integration_credit_note exists" do
       let(:integration_credit_note) do
         create(:integration_resource, integration:, syncable: credit_note, resource_type: "credit_note")
