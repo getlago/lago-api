@@ -5080,8 +5080,30 @@ RSpec.describe Fees::ChargeService, :premium do
         charge_subscription_service.call
 
         expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(
-          hash_including(initial_value: [have_attributes(grouped_by: {}, units: 12, to_datetime: previous_to_datetime)])
+          hash_including(
+            initial_value: [have_attributes(grouped_by: {}, units: 12, to_datetime: previous_to_datetime)],
+            initial_period: RecurringAggregationSnapshots::FetchService::Period.new(to_datetime: previous_to_datetime, watermark: now)
+          )
         )
+      end
+
+      context "with a charge filter without usage at the end of the previous period" do
+        let(:region) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu]) }
+        let(:eu_filter) { create(:charge_filter, charge:, properties: {amount: "20"}) }
+
+        before { create(:charge_filter_value, charge_filter: eu_filter, billable_metric_filter: region, values: ["eu"]) }
+
+        it "starts the filter's aggregation from zero at the previous period" do
+          charge_subscription_service.call
+
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(
+            hash_including(
+              metered_item: have_attributes(charge_filter: eu_filter),
+              initial_value: [],
+              initial_period: RecurringAggregationSnapshots::FetchService::Period.new(to_datetime: previous_to_datetime, watermark: now)
+            )
+          )
+        end
       end
 
       context "when context is current_usage" do
@@ -5101,7 +5123,7 @@ RSpec.describe Fees::ChargeService, :premium do
         it "falls back to a full scan" do
           charge_subscription_service.call
 
-          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_value: nil))
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_value: nil, initial_period: nil))
         end
       end
 
@@ -5111,7 +5133,7 @@ RSpec.describe Fees::ChargeService, :premium do
         it "falls back to a full scan" do
           charge_subscription_service.call
 
-          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_value: nil))
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_value: nil, initial_period: nil))
         end
       end
 
@@ -5121,7 +5143,7 @@ RSpec.describe Fees::ChargeService, :premium do
         it "reads no snapshot" do
           charge_subscription_service.call
 
-          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_value: nil))
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_value: nil, initial_period: nil))
         end
       end
     end

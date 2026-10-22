@@ -506,6 +506,7 @@ module Fees
     def build_aggregator(selected_metered_item)
       aggregate = true
       aggregate = filtered_aggregations.include?(selected_metered_item.filter_id) unless filtered_aggregations.nil?
+      initial = recurring_initial_value(selected_metered_item)
 
       BillableMetrics::AggregationFactory.new_instance(
         metered_item: selected_metered_item,
@@ -516,7 +517,8 @@ module Fees
         filters: aggregation_filters(selected_metered_item:, bypass_aggregation: !aggregate),
         bypass_aggregation: !aggregate,
         aggregated_filter_ids: aggregated_filter_ids(selected_metered_item),
-        initial_value: recurring_initial_value(selected_metered_item)
+        initial_value: initial&.snapshots,
+        initial_period: initial&.period
       )
     end
 
@@ -653,7 +655,7 @@ module Fees
         charge_filter: selected_metered_item.charge_filter,
         grouped_by_keys: grouped_by_keys(selected_metered_item:),
         from_datetime: selected_metered_item.boundaries.charges_from_datetime
-      ).snapshots
+      )
     end
 
     def recurring_snapshots
