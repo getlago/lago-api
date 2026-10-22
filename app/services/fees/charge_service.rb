@@ -2,7 +2,7 @@
 
 module Fees
   class ChargeService < BaseService
-    Result = BaseResult[:fees, :cached_aggregations, :recurring_snapshots]
+    Result = BaseResult[:fees, :cached_aggregations]
 
     SNAPSHOT_AGGREGATION_TYPES = %w[sum_agg weighted_sum_agg].freeze
 
@@ -46,7 +46,6 @@ module Fees
       return result if !options.current_usage? && already_billed?
 
       init_metered_items_fees
-      result.recurring_snapshots = complete_recurring_snapshots
       return result if options.current_usage?
       return result unless result.success?
 
@@ -464,8 +463,6 @@ module Fees
     end
 
     def already_billed_charge?
-      return false if options.invoice_preview?
-
       existing_fees = if invoice
         invoice.fees.where(charge_id: metered_item.charge.id, subscription_id: billing_context.subscription_id)
       else
@@ -624,7 +621,7 @@ module Fees
     def recurring_watermark(selected_metered_item)
       if selected_metered_item.billable_metric.recurring? && snapshot_recurring_units?(selected_metered_item)
         # One per charge: the filters share a scan keyed on it (see ChargeFiltersScan#recurring_rows_for)
-        @recurring_watermark ||= options.snapshot_watermark || (Time.current - RecurringAggregationSnapshot::WATERMARK_LAG).floor(3)
+        @recurring_watermark ||= (Time.current - RecurringAggregationSnapshot::WATERMARK_LAG).floor(3)
       end
     end
 
@@ -645,13 +642,8 @@ module Fees
     end
 
     # All buckets or none: the marker of the default bucket stands for every filter of the charge
-    def complete_recurring_snapshots
-      (recurring_snapshots.size == metered_item.pricing_buckets.size) ? recurring_snapshots : []
-    end
-
     def persist_recurring_snapshots
-      snapshots = complete_recurring_snapshots
-      return if snapshots.empty?
+      return if recurring_snapshots.empty? || recurring_snapshots.size != metered_item.pricing_buckets.size
 
       RecurringAggregationSnapshots::PersistService.call!(
         subscription:,

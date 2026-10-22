@@ -191,16 +191,6 @@ RSpec.describe Fees::ChargeService, :premium do
         expect(fee_result.fees).to match_array([existing_fee])
         expect(BillableMetrics::AggregationFactory).not_to have_received(:new_instance)
       end
-
-      context "when context is invoice_preview" do
-        let(:context) { :invoice_preview }
-
-        it "computes the fees again" do
-          expect { fee_result }.not_to change(Fee, :count)
-          expect(fee_result.fees).not_to include(existing_fee)
-          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
-        end
-      end
     end
 
     context "without filters" do
@@ -5050,29 +5040,6 @@ RSpec.describe Fees::ChargeService, :premium do
 
         expect(result.fees.sole.units).to eq(15)
         expect(snapshots).to be_empty
-        expect(result.recurring_snapshots).to eq(
-          [
-            {
-              charge:,
-              charge_filter: nil,
-              watermark: now - RecurringAggregationSnapshot::WATERMARK_LAG,
-              values: [{grouped_by: {}, units: 15, events_count: 2, presentation_breakdowns: []}]
-            }
-          ]
-        )
-      end
-
-      context "with a snapshot watermark" do
-        let(:options) { described_class::Options.new(context:, snapshot_watermark: now - 1.hour) }
-
-        it "bounds the values by that watermark" do
-          result = charge_subscription_service.call
-
-          expect(result.recurring_snapshots.sole).to include(
-            watermark: now - 1.hour,
-            values: [{grouped_by: {}, units: 0, events_count: 0, presentation_breakdowns: []}]
-          )
-        end
       end
     end
 

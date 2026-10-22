@@ -1,37 +1,28 @@
 # frozen_string_literal: true
 
 module RecurringAggregationSnapshots
-  # Checks the snapshots of the latest closed period of each recurring charge of a subscription.
-  # The fee computation of that period runs again at the watermark each bucket was written with,
-  # nothing persisted, and its snapshot values are compared with the stored rows per
-  # (charge, charge filter, group). Needs no read path: it only checks what the invoices wrote.
+  # Compares the snapshots of each closed period with the fees its invoice billed, per
+  # (charge, charge filter, group). A side without a row counts as zero: groups without units are
+  # stored on neither side.
   class AuditService < BaseService
-    Result = BaseResult[
-      :rows,
-      :differences,
-      :audited_charges_count,
-      :snapshot_charges_count,
-      :charges_without_marker,
-      :charges_without_invoice
-    ]
-
-    Values = Data.define(:units, :events_count)
+    Result = BaseResult[:rows, :differences, :periods_without_invoice]
 
     Row = Data.define(
       :charge_id,
-      :billable_metric_code,
       :charge_filter_id,
       :grouped_by,
       :to_datetime,
-      :watermark,
-      :bounded,
-      :stored,
-      :recomputed
+      :snapshot_units,
+      :fee_units,
+      :snapshot_events_count,
+      :fee_events_count
     ) do
       def different?
-        stored != recomputed
+        snapshot_units != fee_units || snapshot_events_count != fee_events_count
       end
     end
+
+    Period = Data.define(:charge_id, :to_datetime)
 
     def initialize(subscription:)
       @subscription = subscription
@@ -41,128 +32,75 @@ module RecurringAggregationSnapshots
 
     def call
       result.rows = []
-      result.charges_without_marker = []
-      result.charges_without_invoice = []
-      result.audited_charges_count = audited_charges.size
-      result.snapshot_charges_count = 0
+      result.periods_without_invoice = []
 
-      audited_charges.each { audit_charge(it) }
+      snapshots.group_by { Period.new(charge_id: it.charge_id, to_datetime: it.to_datetime) }.each do |period, period_snapshots|
+        invoice_subscription = invoice_subscription(period.to_datetime)
+
+        if invoice_subscription
+          compare(period, period_snapshots, fees(period.charge_id, invoice_subscription.invoice_id))
+        else
+          result.periods_without_invoice << period
+        end
+      end
 
       result.differences = result.rows.select(&:different?)
       result
-    rescue BaseService::FailedResult => e
-      result.fail_with_error!(e.result.error)
     end
 
     private
 
     attr_reader :subscription
 
-    def audit_charge(charge)
-      snapshots = latest_period_snapshots(charge)
-      return if snapshots.empty?
+    def compare(period, snapshots, fees)
+      # A weighted sum snapshot has no events count: its read never counts the events of a closed period
+      with_events_count = !snapshots.first.billable_metric.weighted_sum_agg?
 
-      result.snapshot_charges_count += 1
-      result.charges_without_marker << charge.id if snapshots.none? { it.charge_filter_id.nil? }
+      stored = snapshots.index_by { key(it) }
+      billed = fees.index_by { key(it) }
 
-      invoice_subscription = period_invoice_subscription(snapshots.first.to_datetime)
-      unless invoice_subscription
-        result.charges_without_invoice << charge.id
-        return
-      end
+      (stored.keys | billed.keys).each do |charge_filter_id, grouped_by|
+        snapshot = stored[[charge_filter_id, grouped_by]]
+        fee = billed[[charge_filter_id, grouped_by]]
 
-      stored_buckets = snapshots.map(&:charge_filter_id).uniq
-      latest_watermark = snapshots.map(&:watermark).max
-
-      # Buckets keep the watermark of the run that wrote them last, so a charge may hold several.
-      # A bucket stored under none is compared at the latest one.
-      snapshots.group_by(&:watermark).each do |watermark, watermark_snapshots|
-        buckets = watermark_snapshots.map(&:charge_filter_id).uniq
-        recomputed = recompute(charge, invoice_subscription, watermark).select do |(charge_filter_id, _), _|
-          buckets.include?(charge_filter_id) || (watermark == latest_watermark && stored_buckets.exclude?(charge_filter_id))
-        end
-
-        stored = watermark_snapshots.to_h do
-          [[it.charge_filter_id, normalized(it.grouped_by)], Values.new(units: it.units, events_count: it.events_count)]
-        end
-
-        (stored.keys | recomputed.keys).each do |key|
-          charge_filter_id, grouped_by = key
-
-          result.rows << Row.new(
-            charge_id: charge.id,
-            billable_metric_code: charge.billable_metric.code,
-            charge_filter_id:,
-            grouped_by:,
-            to_datetime: watermark_snapshots.first.to_datetime,
-            watermark:,
-            bounded: !charge.billable_metric.weighted_sum_agg?,
-            stored: stored[key],
-            recomputed: recomputed[key]
-          )
-        end
+        result.rows << Row.new(
+          charge_id: period.charge_id,
+          charge_filter_id:,
+          grouped_by:,
+          to_datetime: period.to_datetime,
+          snapshot_units: snapshot&.units || 0,
+          fee_units: fee&.total_aggregated_units || 0,
+          snapshot_events_count: (snapshot&.events_count || 0 if with_events_count),
+          fee_events_count: (fee&.events_count || 0 if with_events_count)
+        )
       end
     end
 
-    def latest_period_snapshots(charge)
-      scope = RecurringAggregationSnapshot.where(organization_id: subscription.organization_id, subscription_id: subscription.id, charge_id: charge.id)
-      scope.where(to_datetime: scope.select("MAX(to_datetime)")).to_a
+    def snapshots
+      RecurringAggregationSnapshot
+        .where(organization_id: subscription.organization_id, subscription_id: subscription.id)
+        .includes(:billable_metric)
+        .order(:to_datetime)
     end
 
-    def period_invoice_subscription(to_datetime)
+    def invoice_subscription(to_datetime)
       subscription.invoice_subscriptions.where(charges_to_datetime: to_datetime).order(created_at: :desc).first
     end
 
-    # Weighted sum writes its recurring CachedAggregation rows even in a preview: rolled back.
-    def recompute(charge, invoice_subscription, watermark)
-      recurring_snapshots = nil
-
-      ApplicationRecord.transaction(requires_new: true) do
-        recurring_snapshots = Fees::ChargeService.call!(
-          invoice: nil,
-          metered_item: Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries: boundaries(invoice_subscription)),
-          billing_context: Billing::Context.from(subscription:),
-          options: Fees::ChargeService::Options.new(context: :invoice_preview, snapshot_watermark: watermark)
-        ).recurring_snapshots
-
-        raise ActiveRecord::Rollback
-      end
-
-      recurring_snapshots.each_with_object({}) do |snapshot, values|
-        snapshot[:values].each do |value|
-          key = [snapshot[:charge_filter]&.id, normalized(value[:grouped_by])]
-          values[key] = Values.new(units: value[:units], events_count: value[:events_count])
-        end
-      end
-    end
-
-    def boundaries(invoice_subscription)
-      date_service = Subscriptions::DatesService.new_instance(
-        subscription,
-        invoice_subscription.timestamp,
-        current_usage: subscription.terminated? && subscription.upgraded?
-      )
-
-      BillingPeriodBoundaries.new(
-        from_datetime: invoice_subscription.from_datetime,
-        to_datetime: invoice_subscription.to_datetime,
-        charges_from_datetime: invoice_subscription.charges_from_datetime,
-        charges_to_datetime: invoice_subscription.charges_to_datetime,
-        timestamp: invoice_subscription.timestamp,
-        charges_duration: date_service.charges_duration_in_days
+    def fees(charge_id, invoice_id)
+      Fee.where(
+        organization_id: subscription.organization_id,
+        invoice_id:,
+        subscription_id: subscription.id,
+        charge_id:,
+        pay_in_advance_event_id: nil,
+        true_up_parent_fee_id: nil
       )
     end
 
-    # Stored group values come back from JSON, the recomputed ones from the events
-    def normalized(grouped_by)
-      (grouped_by || {}).transform_values { it&.to_s }
-    end
-
-    def audited_charges
-      @audited_charges ||= subscription.plan.charges.includes(:billable_metric, :filters).select do |charge|
-        charge.billable_metric.recurring? &&
-          Fees::ChargeService::SNAPSHOT_AGGREGATION_TYPES.include?(charge.billable_metric.aggregation_type)
-      end
+    # Group values come back from JSON on both sides, the zero-unit marker with nil values
+    def key(record)
+      [record.charge_filter_id, record.grouped_by.compact.transform_values(&:to_s)]
     end
   end
 end
