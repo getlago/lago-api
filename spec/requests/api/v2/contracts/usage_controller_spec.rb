@@ -191,6 +191,24 @@ RSpec.describe Api::V2::Contracts::UsageController do
       end
     end
 
+    # The error renders no entry, so the eager loading the entries need goes unused.
+    context "when the customer's tax provider cannot resolve the taxes", bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+      let(:integration) { create(:anrok_integration, organization:) }
+
+      before do
+        create(:anrok_customer, integration:, customer:)
+        stub_request(:post, "https://api.nango.dev/v1/anrok/draft_invoices")
+          .to_return(body: File.read(Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")))
+      end
+
+      it "answers with the tax error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to include(code: "validation_errors", error_details: {tax_error: ["taxDateTooFarInFuture: Service failure"]})
+      end
+    end
+
     context "with a pending replacement" do
       before do
         create(:contract, :pending, organization:, customer:, external_id: contract.external_id)
