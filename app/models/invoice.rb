@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Invoice < ApplicationRecord
+  include PreloadableAggregations
+
   self.ignored_columns += [:negative_amount_cents] # TODO: remove when negative_amount_cents is removed from the database
 
   include AASM
@@ -182,7 +184,15 @@ class Invoice < ApplicationRecord
   validates :payment_dispute_lost_at, absence: true, unless: :payment_dispute_losable?
   validate :validate_x402_connection_organization, if: :x402_connection_id_changed?
 
-  attr_writer :precalculated_offset_amount_cents
+  preloadable_aggregation :offset_amount_cents do |ids|
+    CreditNote.where(invoice_id: ids).finalized.group(:invoice_id).sum(:offset_amount_cents)
+  end
+
+  preloadable_aggregation :refunded_amount_cents do |ids|
+    CreditNote.where(invoice_id: ids).group(:invoice_id).sum(:refund_amount_cents)
+  end
+
+  preloadable_associated_aggregation :fees, :credited_amount_cents
 
   def self.ransackable_attributes(_ = nil)
     %w[id number]
@@ -190,30 +200,6 @@ class Invoice < ApplicationRecord
 
   def self.ransackable_associations(_ = nil)
     %w[customer]
-  end
-
-  # Batch-loads offset_amount_cents for a collection of invoices in a single query,
-  # caching the result on each instance to avoid N+1 queries during serialization.
-  # Wrapped in :direct — invoices.map(&:id) fires the eager-load, which exceeds
-  # RDS Proxy's 16 KB pin threshold under the index endpoints' .includes(...) chain.
-  def self.preload_offset_amounts(invoices)
-    return unless invoices
-
-    ApplicationRecord.connected_to(role: :direct) do
-      invoice_ids = invoices.map(&:id).compact
-
-      offset_amounts = CreditNote
-        .where(invoice_id: invoice_ids)
-        .finalized
-        .group(:invoice_id)
-        .sum(:offset_amount_cents)
-
-      invoices.each do |invoice|
-        invoice.precalculated_offset_amount_cents = (offset_amounts[invoice.id] || 0)
-      end
-
-      invoices
-    end
   end
 
   def payment_invoices
@@ -419,12 +405,6 @@ class Invoice < ApplicationRecord
     }
   end
 
-  def offset_amount_cents
-    return @precalculated_offset_amount_cents if instance_variable_defined?(:@precalculated_offset_amount_cents)
-
-    credit_notes.finalized.sum(:offset_amount_cents)
-  end
-
   def total_due_amount_cents
     return 0 if voided?
     total_amount_cents - total_paid_amount_cents - offset_amount_cents
@@ -464,8 +444,7 @@ class Invoice < ApplicationRecord
     return 0 if version_number < CREDIT_NOTES_MIN_VERSION || draft?
     return 0 if !payment_succeeded? && total_paid_amount_cents == total_amount_cents
 
-    already_refunded_cents = credit_notes.sum("refund_amount_cents")
-    remaining_paid_cents = total_paid_amount_cents - already_refunded_cents
+    remaining_paid_cents = total_paid_amount_cents - refunded_amount_cents
 
     # when invoice is for pre paid credits we can issue a credit note only as refund
     # so creditable_amount_cents is always 0 but on that case we should allow to issue a credit note

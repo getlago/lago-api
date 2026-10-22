@@ -63,7 +63,7 @@ module InvoiceIndex
     if result.success?
       # Eager-load exceeds RDS Proxy's 16 KB pin threshold — bypass the pooler.
       ApplicationRecord.connected_to(role: :direct) do
-        invoices = Invoice.preload_offset_amounts(
+        invoices = Invoice.preload_aggregations(
           result.invoices.includes(
             :metadata,
             :applied_taxes,
@@ -80,7 +80,8 @@ module InvoiceIndex
               :moneyhash_customer,
               {integration_customers: :integration}
             ]
-          )
+          ),
+          :offset_amount_cents
         )
 
         render(

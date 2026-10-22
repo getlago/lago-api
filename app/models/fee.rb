@@ -3,6 +3,7 @@
 class Fee < ApplicationRecord
   include Currencies
   include Discard::Model
+  include PreloadableAggregations
 
   self.discard_column = :deleted_at
   self.ignored_columns += %w[duplicated_in_advance]
@@ -101,6 +102,10 @@ class Fee < ApplicationRecord
     to = Arel.sql("(properties->>'to_datetime')::timestamptz NULLS LAST")
 
     order(from, to)
+  end
+
+  preloadable_aggregation :credited_amount_cents do |ids|
+    CreditNoteItem.where(fee_id: ids).group(:fee_id).sum(:amount_cents)
   end
 
   def item_key
@@ -292,7 +297,7 @@ class Fee < ApplicationRecord
   end
 
   def creditable_amount_cents
-    remaining_amount = amount_cents - credit_note_items.sum(:amount_cents)
+    remaining_amount = amount_cents - credited_amount_cents
 
     if credit?
       return [remaining_amount, creditable_from_wallet_amount_cents].min

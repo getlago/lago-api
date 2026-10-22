@@ -95,6 +95,7 @@ Business logic, and every create, update or delete of a model, lives in a servic
 ## Models and queries
 
 - Model schema annotations are generated. Read them and `db/structure.sql` before adding an index or writing a query: avoid duplicate indexes, and remember that a composite index only serves its leftmost columns.
+- Declarative class-level macros stay grouped in the declaration block at the top of the model, before any method definitions, never interleaved with instance or class methods. This covers `include`, `enum`, associations, `monetize`, `validates`, `scope`, and project macros such as `preloadable_aggregation` and `preloadable_associated_aggregation`.
 - Declare enum values in a constant, then `enum :status, STATUSES, validate: true` (`validate: {allow_nil: true}` for a nullable column). New enums are PostgreSQL enums with string values: `STATUSES = {draft: "draft", active: "active"}.freeze`. Older enums use arrays on integer columns.
 - Soft-deletable models use `include Discard::Model` and are never hard deleted. They set `self.discard_column = :deleted_at` and `default_scope -> { kept }`. Bulk deletion is `update_all(deleted_at: Time.current, updated_at: Time.current)` (cop `Lago/DiscardAll`). Discarding a record does not discard its children (`dependent:` does not apply), so the service discards them explicitly. Associations to a parent that can be discarded use `-> { with_discarded }`.
 - `update_all` skips callbacks and `updated_at`: set `updated_at` yourself.
