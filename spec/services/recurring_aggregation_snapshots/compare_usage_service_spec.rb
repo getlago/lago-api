@@ -109,6 +109,16 @@ RSpec.describe RecurringAggregationSnapshots::CompareUsageService do
       expect(result.rows.find { it.charge_filter_id == charge_filter.id }).to have_attributes(snapshot_read: false)
       expect(result.differences).to be_empty
     end
+
+    context "when the filter had no usage at the end of the previous period" do
+      let(:charge_filter) { create(:charge_filter, charge:, properties: {amount: "1"}, created_at: Time.zone.parse("2022-04-01")) }
+
+      it "counts the filter as read from the period" do
+        expect(result.snapshot_charges_count).to eq(1)
+        expect(result.rows.find { it.charge_filter_id == charge_filter.id }).to have_attributes(snapshot_read: true)
+        expect(result.differences).to be_empty
+      end
+    end
   end
 
   context "without a snapshot before the period" do
