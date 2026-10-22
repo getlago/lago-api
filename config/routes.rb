@@ -43,6 +43,7 @@ Rails.application.routes.draw do
       # The constraint mirrors v1: without it, an external id containing a
       # dot is truncated at the format separator.
       resources :contracts, only: %i[index show create update], param: :external_id, constraints: {external_id: /[^\/]+/} do
+        get :current_usage, on: :member, to: "contracts/usage#current"
         resources :applied_rate_cards, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "contract_rate_cards" do
           scope module: :contract_rate_cards do
             resources :rate_phases, param: :code, code: /.*/, only: %i[index create update destroy]
