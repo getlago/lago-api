@@ -115,7 +115,7 @@ module BillableMetrics
         return @latest_value if defined?(@latest_value)
 
         if latest_snapshots
-          return @latest_value = latest_snapshots.first.units
+          return @latest_value = latest_snapshots.sum(BigDecimal(0), &:units)
         end
 
         if latest_cached_aggregation
@@ -133,7 +133,7 @@ module BillableMetrics
         return @latest_breakdowns if defined?(@latest_breakdowns)
 
         if latest_snapshots
-          return @latest_breakdowns = latest_snapshots.first.presentation_breakdowns
+          return @latest_breakdowns = latest_snapshots.flat_map(&:presentation_breakdowns)
         end
 
         if latest_cached_aggregation
@@ -148,10 +148,11 @@ module BillableMetrics
       end
 
       # A snapshot closing an older period misses the events of the periods in between.
+      # Without snapshots, the period still tells that the bucket had no active units.
       def latest_snapshots
         return @latest_snapshots if defined?(@latest_snapshots)
 
-        @latest_snapshots = initial_value if initial_value.present? && initial_value.all? { it.to_datetime >= from_datetime - 1.second }
+        @latest_snapshots = initial_value if initial_period && initial_period.to_datetime >= from_datetime - 1.second
       end
 
       def latest_cached_aggregation
