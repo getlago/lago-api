@@ -110,10 +110,10 @@ RSpec.describe RecurringAggregationSnapshots::PersistService do
             grouped_by: {"region" => "us"}, units: 5, watermark: watermark + 1.minute)
         end
 
-        it "keeps it" do
+        it "keeps the period as the later run left it" do
           persist_service.call
 
-          expect(snapshots.pluck(:grouped_by, :units)).to match_array([[{}, 12], [{"region" => "us"}, 5]])
+          expect(snapshots.pluck(:grouped_by, :units)).to eq([[{"region" => "us"}, 5]])
         end
       end
     end
@@ -131,6 +131,37 @@ RSpec.describe RecurringAggregationSnapshots::PersistService do
 
         expect(snapshots.sole).to have_attributes(units: 15, events_count: 6, watermark: watermark + 1.minute)
       end
+    end
+
+    context "when a run with a later watermark left a group of the values out" do
+      let(:values) do
+        [
+          {grouped_by: {"region" => "eu"}, units: 3, events_count: 2},
+          {grouped_by: {"region" => "us"}, units: 4, events_count: 1}
+        ]
+      end
+
+      before do
+        create(:recurring_aggregation_snapshot, organization:, subscription:, charge:, to_datetime:,
+          grouped_by: {"region" => "eu"}, units: 8, watermark: watermark + 1.minute)
+      end
+
+      it "does not bring the group back" do
+        persist_service.call
+
+        expect(snapshots.pluck(:grouped_by, :units)).to eq([[{"region" => "eu"}, 8]])
+      end
+    end
+
+    it "serializes the runs of the period" do
+      allow(RecurringAggregationSnapshot).to receive(:with_advisory_lock).and_call_original
+
+      persist_service.call
+
+      expect(RecurringAggregationSnapshot).to have_received(:with_advisory_lock).with(
+        "recurring_aggregation_snapshots_#{subscription.id}_#{charge.id}__#{to_datetime.iso8601(6)}",
+        transaction: true
+      )
     end
 
     context "when a snapshot exists for another period" do

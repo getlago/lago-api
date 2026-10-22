@@ -17,22 +17,16 @@ module RecurringAggregationSnapshots
     end
 
     def call
-      # A group missing from a later run of the period dropped to zero units
-      bucket_snapshots.where(watermark: ...watermark).delete_all
+      RecurringAggregationSnapshot.transaction do
+        # Without it, a run with an older watermark could insert a group a newer run left out
+        RecurringAggregationSnapshot.with_advisory_lock(lock_key, transaction: true) do
+          # Overlapping runs of the same period: the latest watermark has seen the most events
+          next if bucket_snapshots.exists?(["watermark > ?", watermark])
 
-      if values.any?
-        # Overlapping runs of the same period: the latest watermark has seen the most events
-        RecurringAggregationSnapshot.upsert_all( # rubocop:disable Rails/SkipsModelValidations
-          rows,
-          unique_by: :idx_recurring_aggregation_snapshots_unique,
-          on_duplicate: Arel.sql(<<~SQL.squish),
-            units = EXCLUDED.units, events_count = EXCLUDED.events_count,
-            presentation_breakdowns = EXCLUDED.presentation_breakdowns,
-            watermark = EXCLUDED.watermark, updated_at = CURRENT_TIMESTAMP
-            WHERE recurring_aggregation_snapshots.watermark <= EXCLUDED.watermark
-          SQL
-          returning: false
-        )
+          # A group missing from a later run of the period dropped to zero units
+          bucket_snapshots.delete_all
+          RecurringAggregationSnapshot.insert_all(rows, returning: false) if values.any? # rubocop:disable Rails/SkipsModelValidations
+        end
       end
 
       result
@@ -50,6 +44,10 @@ module RecurringAggregationSnapshots
         charge_filter_id: charge_filter&.id,
         to_datetime:
       )
+    end
+
+    def lock_key
+      "recurring_aggregation_snapshots_#{subscription.id}_#{charge.id}_#{charge_filter&.id}_#{to_datetime.iso8601(6)}"
     end
 
     def rows
