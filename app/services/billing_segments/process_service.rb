@@ -51,8 +51,8 @@ module BillingSegments
     def grouped_segments
       @grouped_segments ||= BillingSegment.ready_for_invoicing(timestamp)
         .where(customer_id: customer.id)
-        .includes(:pricing_unit, :rate_override, :contract,
-          contract_rate_card: {rate_card: {product: :billable_metric}}, rate_card_rate: :rate_card)
+        .includes(:pricing_unit, :rate_override, :contract, :rate_card_rate,
+          contract_rate_card: {rate_card: {product: :billable_metric}})
         .sort_by { |segment| [segment.billing_at, segment.id] }
         .filter_map do |segment|
           group = segment_group(segment)

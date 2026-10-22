@@ -391,6 +391,19 @@ RSpec.describe Api::V2::RateCardsController do
       expect(json[:rate_card][:lago_id]).to eq(rate_card.id)
     end
 
+    context "when the rate card has assigned taxes" do
+      let(:tax) { create(:tax, organization:) }
+
+      before { create(:rate_card_applied_tax, rate_card:, tax:, organization:) }
+
+      it "keeps the assigned taxes in the REST delete response and persisted record" do
+        subject
+
+        expect(json[:rate_card][:taxes].map { it[:lago_id] }).to eq([tax.id])
+        expect(rate_card.applied_taxes.pluck(:tax_id)).to eq([tax.id])
+      end
+    end
+
     context "when the rate card does not exist" do
       subject { delete_with_token(organization, "/api/v2/rate_cards/unknown") }
 

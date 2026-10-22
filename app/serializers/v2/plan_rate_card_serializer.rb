@@ -9,9 +9,18 @@ module V2
         rate_card_code: model.rate_card.code,
         units: model.units,
         rate_phases_count: model.rate_phases.size,
+        **(include?(:rate_phases) ? {rate_phases: rate_phases} : {}),
         created_at: model.created_at.iso8601,
         updated_at: model.updated_at.iso8601
       }
+    end
+
+    private
+
+    def rate_phases
+      model.rate_phases.order(:position).map do |phase|
+        ::V2::RatePhaseSerializer.new(phase).serialize
+      end
     end
   end
 end

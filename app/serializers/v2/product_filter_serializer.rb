@@ -5,6 +5,8 @@ module V2
     def serialize
       {
         lago_id: model.id,
+        product_code: model.product.code,
+        product_category_code: model.product.product_category&.code,
         name: model.name,
         code: model.code,
         description: model.description,
@@ -17,9 +19,14 @@ module V2
 
     private
 
-    # options[:values] lets the destroy endpoint echo values discarded by the service
     def values
-      (options[:values] || model.values).map do |value|
+      source_values = if model.discarded?
+        []
+      else
+        model.values
+      end
+
+      source_values.map do |value|
         {
           key: value.key,
           value: value.value

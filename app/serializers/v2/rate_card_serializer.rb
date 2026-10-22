@@ -23,7 +23,6 @@ module V2
 
       payload[:active_rate] = active_rate if include?(:active_rate)
       payload.merge!(taxes) if include?(:taxes)
-      # Full timeline for activity-log payloads; API payloads stay lean.
       payload.merge!(rates) if include?(:rates)
       payload
     end

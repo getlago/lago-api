@@ -12,9 +12,26 @@ RSpec.describe V2::RateCardRateSerializer do
 
     expect(payload[:lago_id]).to eq(rate.id)
     expect(payload[:code]).to eq(rate.code)
+    expect(payload[:rate_card_code]).to eq(rate.rate_card.code)
     expect(payload[:effective_from]).to eq(rate.effective_from.iso8601)
     expect(payload[:status]).to eq("active")
     expect(payload[:rate_model]).to eq(rate.rate_model)
+  end
+
+  context "when the rate and its card are discarded before serialization" do
+    let(:organization) { create(:organization) }
+    let(:rate_card) { create(:rate_card, organization:, code: "discarded-card") }
+    let(:rate) { create(:rate_card_rate, organization:, rate_card:) }
+    let(:other_rate_card) { create(:rate_card, organization: rate.organization, code: "other-card") }
+
+    it "serializes the code of its own discarded parent" do
+      other_rate_card
+      rate.discard
+      rate_card.discard
+      delayed_rate = RateCardRate.with_discarded.find(rate.id)
+
+      expect(described_class.new(delayed_rate, root_name: "rate").serialize[:rate_card_code]).to eq("discarded-card")
+    end
   end
 
   context "with graduated tiers" do
