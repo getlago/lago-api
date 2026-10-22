@@ -322,7 +322,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
       end
 
       it "reads the current usage from the snapshot" do
-        result = aggregate(periods.second, initial_value:, options: {recurring_watermark: nil, is_pay_in_advance: true, is_current_usage: true})
+        result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first), options: {recurring_watermark: nil, is_pay_in_advance: true, is_current_usage: true})
 
         expect(result.current_usage_units).to eq(1000 + 7 + 20)
       end
