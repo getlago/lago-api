@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe V2::CustomerSerializer do
-  subject(:payload) { described_class.new(customer).serialize }
+  subject(:payload) { described_class.new(customer, includes:).serialize }
 
   let(:organization) { build_stubbed(:organization, feature_flags:) }
   let(:feature_flags) { [] }
@@ -37,7 +37,6 @@ RSpec.describe V2::CustomerSerializer do
       legal_number: "123456789",
       currency: "EUR",
       tax_identification_number: "FR12345678901",
-      # The applicable timezone then comes from the billing entity.
       timezone: nil,
       net_payment_term: 30,
       external_salesforce_id: "sf_001",
@@ -47,8 +46,8 @@ RSpec.describe V2::CustomerSerializer do
       deleted_at:
     )
   end
+  let(:includes) { [] }
   let(:deleted_at) { nil }
-  # V1's scalar fields in V1 order, without billing_configuration, shipping_address nor metadata.
   let(:expected_payload) do
     {
       lago_id: customer.id,
@@ -79,24 +78,39 @@ RSpec.describe V2::CustomerSerializer do
       tax_identification_number: "FR12345678901",
       timezone: nil,
       applicable_timezone: "America/New_York",
-      net_payment_term: 30,
       external_salesforce_id: "sf_001",
       finalize_zero_amount_invoice: "skip",
       skip_invoice_custom_sections: true,
+      invoice_grace_period: customer.invoice_grace_period,
+      subscription_invoice_issuing_date_anchor: customer.subscription_invoice_issuing_date_anchor,
+      subscription_invoice_issuing_date_adjustment: customer.subscription_invoice_issuing_date_adjustment,
+      payment_provider: nil,
+      payment_provider_code: nil,
+      provider_customer_id: nil,
+      provider_payment_methods: nil,
+      document_locale: customer.document_locale,
       deleted_at: nil
     }
   end
 
-  it "renders V1's scalar fields, in V1 order, then deleted_at" do
+  it "renders flat billing fields without payment terms or nested objects" do
     expect(payload).to eq(expected_payload)
     expect(payload.keys).to eq(expected_payload.keys)
   end
 
-  # A tripwire for a scalar field V1 gains later.
-  it "renders every field of V1 but its nested objects" do
-    v1_keys = V1::CustomerSerializer.new(customer).serialize.keys - %i[billing_configuration shipping_address metadata]
+  it "keeps the other scalar fields of V1" do
+    excluded = %i[billing_configuration shipping_address metadata net_payment_term]
+    v1_payload = V1::CustomerSerializer.new(customer).serialize.except(*excluded)
 
-    expect(payload.keys).to eq([*v1_keys, :deleted_at])
+    expect(payload.slice(*v1_payload.keys)).to eq(v1_payload)
+  end
+
+  context "with shipping details for the customer endpoint" do
+    let(:includes) { [:shipping_address] }
+
+    it "includes the nested shipping address" do
+      expect(payload).to eq(expected_payload.merge(shipping_address: customer.shipping_address))
+    end
   end
 
   context "when the organization takes x402 payments", :premium do
@@ -108,7 +122,6 @@ RSpec.describe V2::CustomerSerializer do
     end
   end
 
-  # x402 payments need a premium license besides the flag.
   context "when the organization has the x402 flag without a premium license" do
     let(:feature_flags) { ["x402_payments"] }
 
@@ -122,6 +135,56 @@ RSpec.describe V2::CustomerSerializer do
 
     it "renders its deleted_at" do
       expect(payload).to eq(expected_payload.merge(deleted_at: "2026-09-30T12:00:00Z"))
+    end
+  end
+
+  context "with expansions" do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+    let(:includes) { %i[metadata taxes integration_customers] }
+    let(:metadata) { create(:customer_metadata, customer:, display_in_invoice: false) }
+    let(:tax) { create(:tax, organization:) }
+
+    before do
+      metadata
+      create(:customer_applied_tax, customer:, tax:)
+    end
+
+    it "uses the v2 metadata name and omits tax assignment counts" do
+      expect(payload[:metadata]).to eq([{
+        lago_id: metadata.id,
+        key: metadata.key,
+        value: metadata.value,
+        display_on_invoice: false,
+        created_at: metadata.created_at.iso8601,
+        updated_at: metadata.updated_at.iso8601
+      }])
+      expect(payload[:taxes]).to eq([{
+        lago_id: tax.id,
+        name: tax.name,
+        code: tax.code,
+        rate: tax.rate,
+        description: tax.description,
+        created_at: tax.created_at.iso8601,
+        updated_at: tax.updated_at.iso8601,
+        deleted_at: nil
+      }])
+      expect(payload[:integration_customers]).to eq([])
+    end
+  end
+
+  context "with a payment provider" do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, :with_stripe_payment_provider, organization:) }
+
+    it "includes its customer id and payment methods at the top level" do
+      expect(payload).to include(
+        payment_provider: "stripe",
+        payment_provider_code: customer.payment_provider_code,
+        provider_customer_id: customer.stripe_customer.provider_customer_id,
+        provider_payment_methods: customer.stripe_customer.provider_payment_methods
+      )
+      expect(payload).not_to have_key(:billing_configuration)
     end
   end
 end

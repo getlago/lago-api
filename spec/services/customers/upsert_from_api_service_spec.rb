@@ -38,6 +38,38 @@ RSpec.describe Customers::UpsertFromApiService do
     allow(CurrentContext).to receive(:source).and_return("api")
   end
 
+  context "with create-only mode" do
+    subject(:result) { described_class.call(organization:, params: create_args, mode: :create) }
+
+    let!(:existing_customer) { create(:customer, organization:, external_id:, name: "Existing") }
+
+    it "rejects an existing external id without upserting" do
+      expect(result).to be_failure
+      expect(result.error.messages[:external_id]).to eq(["value_already_exist"])
+      expect(existing_customer.reload.name).to eq("Existing")
+    end
+  end
+
+  context "with update-only mode" do
+    subject(:result) { described_class.call(organization:, params: {name: "Updated"}, mode: :update, external_id:) }
+
+    it "does not create a missing customer" do
+      expect { result }.not_to change(Customer, :count)
+      expect(result).to be_failure
+      expect(result.error.error_code).to eq("customer_not_found")
+    end
+
+    context "with an existing customer" do
+      let!(:customer) { create(:customer, organization:, external_id:) }
+
+      it "looks up the customer using the path id" do
+        expect(result).to be_success
+        expect(result.customer).to eq(customer)
+        expect(customer.reload.name).to eq("Updated")
+      end
+    end
+  end
+
   it "creates a new customer" do
     expect(result).to be_success
 
