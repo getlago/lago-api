@@ -27,8 +27,8 @@ module BillingEntities
       delegate :organization, to: :billing_entity
 
       def manage_taxes
-        # Remove duplicates and normalize case
-        unique_tax_codes = tax_codes.uniq.map(&:upcase)
+        # Normalize case before removing duplicates, so codes that differ only by case count once
+        unique_tax_codes = tax_codes.map(&:upcase).uniq
         taxes = organization.taxes.where("UPPER(code) IN (?)", unique_tax_codes)
 
         if taxes.count != unique_tax_codes.count

@@ -77,6 +77,18 @@ RSpec.describe BillingEntities::Taxes::ManageTaxesService do
           expect(billing_entity.applied_taxes.pluck(:organization_id).uniq).to eq([organization.id])
         end
       end
+
+      context "when tax codes contain duplicates with different case" do
+        let(:tax_codes) { ["tax_code_1", "TAX_CODE_1"] }
+
+        it "applies the tax once" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.taxes).to match_array([tax1])
+          expect(billing_entity.reload.taxes).to match_array([tax1])
+        end
+      end
     end
 
     context "when sending empty tax codes" do
