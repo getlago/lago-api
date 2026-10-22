@@ -78,7 +78,8 @@ RSpec.describe Webhooks::Contracts::StartedService do
             "next_billing_at" => "2026-02-01T00:00:00Z",
             "rate_phases_count" => 0,
             "created_at" => applied_rate_card.created_at.iso8601,
-            "updated_at" => applied_rate_card.updated_at.iso8601
+            "updated_at" => applied_rate_card.updated_at.iso8601,
+            "deleted_at" => nil
           }]
         }
       )

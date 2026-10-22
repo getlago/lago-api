@@ -65,7 +65,8 @@ RSpec.describe Webhooks::ProductFilters::CreatedService do
           "invoice_display_name" => "Region",
           "values" => [{"key" => "region", "value" => "eu"}],
           "created_at" => product_filter.created_at.iso8601,
-          "updated_at" => product_filter.updated_at.iso8601
+          "updated_at" => product_filter.updated_at.iso8601,
+          "deleted_at" => nil
         }
       )
     end
@@ -95,7 +96,8 @@ RSpec.describe Webhooks::ProductFilters::CreatedService do
           "invoice_display_name" => "Region",
           "values" => [{"key" => "region", "value" => "eu"}],
           "created_at" => product_filter.created_at.iso8601,
-          "updated_at" => product_filter.updated_at.iso8601
+          "updated_at" => product_filter.updated_at.iso8601,
+          "deleted_at" => nil
         }
       )
     end
@@ -126,7 +128,8 @@ RSpec.describe Webhooks::ProductFilters::CreatedService do
           "invoice_display_name" => "Region",
           "values" => [],
           "created_at" => product_filter.created_at.iso8601,
-          "updated_at" => product_filter.updated_at.iso8601
+          "updated_at" => product_filter.updated_at.iso8601,
+          "deleted_at" => product_filter.deleted_at.iso8601
         }
       )
     end

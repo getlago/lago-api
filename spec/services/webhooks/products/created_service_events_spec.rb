@@ -56,7 +56,8 @@ RSpec.describe Webhooks::Products::CreatedService do
           "product_type" => "metered",
           "filters_count" => 1,
           "created_at" => product.created_at.iso8601,
-          "updated_at" => product.updated_at.iso8601
+          "updated_at" => product.updated_at.iso8601,
+          "deleted_at" => nil
         }
       )
     end
@@ -86,7 +87,8 @@ RSpec.describe Webhooks::Products::CreatedService do
           "product_type" => "metered",
           "filters_count" => 1,
           "created_at" => product.created_at.iso8601,
-          "updated_at" => product.updated_at.iso8601
+          "updated_at" => product.updated_at.iso8601,
+          "deleted_at" => nil
         }
       )
     end
@@ -117,7 +119,8 @@ RSpec.describe Webhooks::Products::CreatedService do
           "product_type" => "metered",
           "filters_count" => 1,
           "created_at" => product.created_at.iso8601,
-          "updated_at" => product.updated_at.iso8601
+          "updated_at" => product.updated_at.iso8601,
+          "deleted_at" => product.deleted_at.iso8601
         }
       )
     end

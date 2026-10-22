@@ -42,7 +42,8 @@ RSpec.describe Webhooks::ContractRateCards::CreatedService do
           "next_billing_at" => "2026-02-03T04:05:06Z",
           "rate_phases_count" => 0,
           "created_at" => contract_rate_card.created_at.iso8601,
-          "updated_at" => contract_rate_card.updated_at.iso8601
+          "updated_at" => contract_rate_card.updated_at.iso8601,
+          "deleted_at" => nil
         }
       )
     end

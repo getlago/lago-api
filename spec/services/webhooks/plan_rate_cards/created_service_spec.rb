@@ -27,7 +27,8 @@ RSpec.describe Webhooks::PlanRateCards::CreatedService do
           "units" => "2.5",
           "rate_phases_count" => 0,
           "created_at" => plan_rate_card.created_at.iso8601,
-          "updated_at" => plan_rate_card.updated_at.iso8601
+          "updated_at" => plan_rate_card.updated_at.iso8601,
+          "deleted_at" => nil
         }
       )
     end
