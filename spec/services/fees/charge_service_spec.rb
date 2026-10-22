@@ -4740,6 +4740,63 @@ RSpec.describe Fees::ChargeService, :premium do
 
         expect(snapshots.pluck(:grouped_by, :units)).to match_array([[{"region" => "eu"}, 15], [{"region" => "us"}, 7]])
       end
+
+      context "with a group back to zero units" do
+        before do
+          create(:event, organization:, subscription:, code: billable_metric.code,
+            created_at: now - RecurringAggregationSnapshot::WATERMARK_LAG - 1.minute,
+            timestamp: Time.zone.parse("2022-03-21"), properties: {value: -7, region: "us"})
+        end
+
+        it "persists no snapshot for it" do
+          charge_subscription_service.call
+
+          expect(snapshots.pluck(:grouped_by, :units)).to eq([[{"region" => "eu"}, 15]])
+        end
+      end
+    end
+
+    context "with pricing group keys and no events" do
+      let(:charge) do
+        create(:standard_charge, plan: subscription.plan, billable_metric:, properties: {amount: "20", pricing_group_keys: ["region"]})
+      end
+      let(:event_values) { [] }
+
+      it "persists a zero units snapshot as the marker of the period" do
+        charge_subscription_service.call
+
+        expect(snapshots.pluck(:grouped_by, :units)).to eq([[{"region" => nil}, 0]])
+      end
+    end
+
+    context "with charge filters" do
+      let(:region) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
+      let(:eu_filter) { create(:charge_filter, charge:, properties: {amount: "20"}) }
+      let(:us_filter) { create(:charge_filter, charge:, properties: {amount: "20"}) }
+
+      before do
+        create(:charge_filter_value, charge_filter: eu_filter, billable_metric_filter: region, values: ["eu"])
+        create(:charge_filter_value, charge_filter: us_filter, billable_metric_filter: region, values: ["us"])
+      end
+
+      it "persists the filters with units and the default bucket as the marker of the period" do
+        charge_subscription_service.call
+
+        expect(snapshots.pluck(:charge_filter_id, :units)).to match_array([[eu_filter.id, 15], [nil, 0]])
+      end
+
+      context "when a refresh of the period sees a filter back to zero units" do
+        before do
+          create(:recurring_aggregation_snapshot, organization:, subscription:, charge:, charge_filter: us_filter,
+            to_datetime: boundaries.charges_to_datetime, watermark: now - 1.day, units: 4)
+        end
+
+        it "deletes its snapshot" do
+          charge_subscription_service.call
+
+          expect(snapshots.pluck(:charge_filter_id, :units)).to match_array([[eu_filter.id, 15], [nil, 0]])
+        end
+      end
     end
 
     context "with presentation group keys" do

@@ -43,7 +43,12 @@ module BillableMetrics
         return empty_results if should_bypass_aggregation?
 
         aggregations = event_store.grouped_weighted_sum(initial_values: grouped_latest_values)
-        return empty_results if aggregations.blank?
+        if aggregations.blank?
+          empty_results
+          # No group carried over or in the period: the bucket closes at zero units
+          result.aggregations.each { it.recurring_units = 0 } if billable_metric.recurring?
+          return result
+        end
 
         latest_values = []
         last_events = []

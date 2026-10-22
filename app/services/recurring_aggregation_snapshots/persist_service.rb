@@ -4,8 +4,7 @@ module RecurringAggregationSnapshots
   class PersistService < BaseService
     Result = BaseResult
 
-    # values: one {grouped_by:, units:, presentation_breakdowns:} per group of the charge filter,
-    # zero units included
+    # values: one {grouped_by:, units:, presentation_breakdowns:} per group of the charge filter
     def initialize(subscription:, charge:, charge_filter:, to_datetime:, watermark:, values:)
       @subscription = subscription
       @charge = charge
@@ -18,6 +17,9 @@ module RecurringAggregationSnapshots
     end
 
     def call
+      # A group missing from a later run of the period dropped to zero units
+      bucket_snapshots.where(watermark: ...watermark).delete_all
+
       if values.any?
         # Overlapping runs of the same period: the latest watermark has seen the most events
         RecurringAggregationSnapshot.upsert_all( # rubocop:disable Rails/SkipsModelValidations
@@ -38,6 +40,16 @@ module RecurringAggregationSnapshots
     private
 
     attr_reader :subscription, :charge, :charge_filter, :to_datetime, :watermark, :values
+
+    def bucket_snapshots
+      RecurringAggregationSnapshot.where(
+        organization_id: subscription.organization_id,
+        subscription_id: subscription.id,
+        charge_id: charge.id,
+        charge_filter_id: charge_filter&.id,
+        to_datetime:
+      )
+    end
 
     def rows
       values.map do |value|

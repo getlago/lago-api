@@ -580,22 +580,33 @@ module Fees
     def collect_recurring_snapshot(aggregation_results, selected_metered_item, watermark, breakdowns_by_group)
       return unless snapshot_recurring_units?(selected_metered_item)
 
-      # A missing snapshot falls back to a full scan, a partial one would lose the missing groups
+      # A bucket without recurring_units leaves the charge without snapshots (see persist_recurring_snapshots)
       if aggregation_results.none? { it.recurring_units.nil? }
         # Only weighted sum reads its breakdowns back, and a sum's are not bounded by the watermark
         breakdowns_by_group = {} unless selected_metered_item.billable_metric.weighted_sum_agg?
+
+        values = aggregation_results.map do
+          grouped_by = it.grouped_by || {}
+
+          {grouped_by:, units: it.recurring_units, presentation_breakdowns: breakdowns_by_group.fetch(grouped_by, [])}
+        end
 
         recurring_snapshots << {
           charge: selected_metered_item.charge,
           charge_filter: selected_metered_item.charge_filter,
           watermark:,
-          values: aggregation_results.map do
-            grouped_by = it.grouped_by || {}
-
-            {grouped_by:, units: it.recurring_units, presentation_breakdowns: breakdowns_by_group.fetch(grouped_by, [])}
-          end
+          values: snapshot_values(values, default_bucket: selected_metered_item.charge_filter&.id.nil?)
         }
       end
+    end
+
+    # Zero units are not stored, a charge can have hundreds of filters and groups. The default bucket
+    # keeps one row as the marker of the closed period: without it, a missing row means a full scan.
+    def snapshot_values(values, default_bucket:)
+      used_values = values.reject { it[:units].zero? }
+      return used_values if used_values.any? || !default_bucket
+
+      values.first(1)
     end
 
     def recurring_watermark(selected_metered_item)
@@ -619,7 +630,10 @@ module Fees
       @recurring_snapshots ||= []
     end
 
+    # All buckets or none: the marker of the default bucket stands for every filter of the charge
     def persist_recurring_snapshots
+      return if recurring_snapshots.size != metered_item.pricing_buckets.size
+
       recurring_snapshots.each do |snapshot|
         RecurringAggregationSnapshots::PersistService.call!(
           subscription:,

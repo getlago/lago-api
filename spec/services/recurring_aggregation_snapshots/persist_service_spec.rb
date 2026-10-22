@@ -42,7 +42,7 @@ RSpec.describe RecurringAggregationSnapshots::PersistService do
         ]
       end
 
-      it "persists one snapshot per group, zero units included" do
+      it "persists one snapshot per group" do
         persist_service.call
 
         expect(snapshots.pluck(:grouped_by, :units)).to match_array([[{"region" => "eu"}, 3], [{"region" => "us"}, 0]])
@@ -76,15 +76,42 @@ RSpec.describe RecurringAggregationSnapshots::PersistService do
 
       before { existing }
 
-      it "updates the units, the presentation breakdowns and the watermark" do
+      it "replaces it" do
         persist_service.call
 
         expect(snapshots.sole).to have_attributes(
-          id: existing.id,
           units: 12,
           presentation_breakdowns: [{"groups" => {"region" => "eu"}, "value" => "12.0"}],
           watermark:
         )
+      end
+    end
+
+    context "when the period has a snapshot of a group missing from the values" do
+      let(:existing) do
+        create(:recurring_aggregation_snapshot, organization:, subscription:, charge:, to_datetime:,
+          grouped_by: {"region" => "us"}, units: 5, watermark: watermark - 1.day)
+      end
+
+      before { existing }
+
+      it "deletes it" do
+        persist_service.call
+
+        expect(snapshots.pluck(:grouped_by, :units)).to eq([[{}, 12]])
+      end
+
+      context "with a later watermark" do
+        let(:existing) do
+          create(:recurring_aggregation_snapshot, organization:, subscription:, charge:, to_datetime:,
+            grouped_by: {"region" => "us"}, units: 5, watermark: watermark + 1.minute)
+        end
+
+        it "keeps it" do
+          persist_service.call
+
+          expect(snapshots.pluck(:grouped_by, :units)).to match_array([[{}, 12], [{"region" => "us"}, 5]])
+        end
       end
     end
 
@@ -120,6 +147,18 @@ RSpec.describe RecurringAggregationSnapshots::PersistService do
       it "persists nothing" do
         expect(persist_service.call).to be_success
         expect(snapshots).to be_empty
+      end
+
+      context "when the period has a snapshot" do
+        before do
+          create(:recurring_aggregation_snapshot, organization:, subscription:, charge:, to_datetime:, units: 5, watermark: watermark - 1.day)
+        end
+
+        it "deletes it" do
+          persist_service.call
+
+          expect(snapshots).to be_empty
+        end
       end
     end
   end

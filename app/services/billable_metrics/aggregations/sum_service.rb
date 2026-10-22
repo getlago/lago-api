@@ -49,7 +49,7 @@ module BillableMetrics
         return empty_results if should_bypass_aggregation?
 
         aggregations = options[:precomputed_grouped_aggregations] || grouped_recurring_sum(options) || event_store.grouped_sum
-        return empty_results if aggregations.blank?
+        return empty_recurring_results(options) if aggregations.blank?
 
         if presentation_by.present?
           result.breakdowns = event_store.grouped_sum(uniq_grouped_by_and_presentation_by, with_count: false).map(&:to_grouped_hash)
@@ -86,6 +86,15 @@ module BillableMetrics
         if billable_metric.recurring? && options[:recurring_watermark]
           event_store.grouped_recurring_sum(watermark: options[:recurring_watermark])
         end
+      end
+
+      # No group up to the watermark: the bucket closes at zero units rather than without a snapshot
+      def empty_recurring_results(options)
+        empty_results
+        if billable_metric.recurring? && options[:recurring_watermark] && !options[:precomputed_grouped_aggregations]
+          result.aggregations.each { it.recurring_units = 0 }
+        end
+        result
       end
 
       # A precomputed prorated result is not bounded by the watermark, so it persists no snapshot
