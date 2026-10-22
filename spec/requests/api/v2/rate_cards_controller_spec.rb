@@ -657,10 +657,10 @@ RSpec.describe Api::V2::RateCardsController do
 
       before { create(:rate_card_applied_tax, rate_card:, tax:, organization:) }
 
-      it "keeps the assigned taxes in the REST delete response and persisted record" do
+      it "keeps the assigned taxes on the record, outside the flat delete response" do
         subject
 
-        expect(json[:rate_card][:taxes].map { it[:lago_id] }).to eq([tax.id])
+        expect(json[:rate_card].keys).to eq(flat_keys)
         expect(rate_card.applied_taxes.pluck(:tax_id)).to eq([tax.id])
       end
     end
