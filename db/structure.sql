@@ -6327,8 +6327,7 @@ CREATE TABLE public.webhook_endpoint_signing_keys (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     organization_id uuid NOT NULL,
     webhook_endpoint_id uuid NOT NULL,
-    private_key character varying NOT NULL,
-    public_key character varying NOT NULL,
+    secret character varying NOT NULL,
     expires_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL

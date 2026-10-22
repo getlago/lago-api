@@ -85,15 +85,14 @@ class Webhook < ApplicationRecord
     }
   end
 
-  # Asymmetric `v1a` signatures: one ed25519 signature per usable signing key, space
-  # separated. During a key rotation the endpoint has more than one usable key, so a
-  # consumer that still holds the previous public key keeps verifying. Each signature is
-  # base64 encoded; the consumer never holds a signing secret.
+  # `v1` HMAC-SHA256 signatures: one signature per usable signing key, space separated.
+  # During a key rotation the endpoint has more than one usable secret, so a consumer that
+  # still holds the previous secret keeps verifying. Each signature is base64 encoded.
   def standard_webhooks_signature(timestamp)
     signed_content = "#{id}.#{timestamp}.#{payload.to_json}"
 
     webhook_endpoint.signing_keys.usable.map do |signing_key|
-      "v1a,#{Base64.strict_encode64(signing_key.sign(signed_content))}"
+      "v1,#{Base64.strict_encode64(signing_key.sign(signed_content))}"
     end.join(" ")
   end
 

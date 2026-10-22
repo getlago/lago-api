@@ -14,8 +14,7 @@ RSpec.describe WebhookEndpointSigningKey do
 
   describe "validations" do
     it do
-      expect(subject).to validate_presence_of(:private_key)
-      expect(subject).to validate_presence_of(:public_key)
+      expect(subject).to validate_presence_of(:secret)
     end
   end
 
@@ -38,33 +37,27 @@ RSpec.describe WebhookEndpointSigningKey do
     end
   end
 
-  describe "#generate_key_pair" do
-    it "generates a whsk_ prefixed ed25519 private key" do
-      raw = signing_key.private_key.delete_prefix("whsk_")
-      expect(signing_key.private_key).to start_with("whsk_")
-      expect(Base64.strict_decode64(raw).bytesize).to eq(32)
+  describe "#generate_secret" do
+    it "generates a whsec_ prefixed secret of 24 random bytes" do
+      raw = signing_key.secret.delete_prefix("whsec_")
+      expect(signing_key.secret).to start_with("whsec_")
+      expect(Base64.strict_decode64(raw).bytesize).to eq(24)
     end
 
-    it "generates a whpk_ prefixed ed25519 public key" do
-      raw = signing_key.public_key.delete_prefix("whpk_")
-      expect(signing_key.public_key).to start_with("whpk_")
-      expect(Base64.strict_decode64(raw).bytesize).to eq(32)
-    end
-
-    it "stores the private key encrypted at rest" do
+    it "stores the secret encrypted at rest" do
       ciphertext = described_class.connection.select_value(
-        "SELECT private_key FROM webhook_endpoint_signing_keys WHERE id = '#{signing_key.id}'"
+        "SELECT secret FROM webhook_endpoint_signing_keys WHERE id = '#{signing_key.id}'"
       )
-      expect(ciphertext).not_to eq(signing_key.private_key)
+      expect(ciphertext).not_to eq(signing_key.secret)
     end
   end
 
   describe "#sign" do
-    it "produces a signature the matching public key verifies" do
-      raw_public = Base64.strict_decode64(signing_key.public_key.delete_prefix("whpk_"))
-      public_key = OpenSSL::PKey.new_raw_public_key("ED25519", raw_public)
+    it "produces the HMAC-SHA256 digest of the content under the secret" do
+      key = Base64.strict_decode64(signing_key.secret.delete_prefix("whsec_"))
+      expected = OpenSSL::HMAC.digest("SHA256", key, "a.b.c")
 
-      expect(public_key.verify(nil, signing_key.sign("a.b.c"), "a.b.c")).to be(true)
+      expect(signing_key.sign("a.b.c")).to eq(expected)
     end
   end
 end

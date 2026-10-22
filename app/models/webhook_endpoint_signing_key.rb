@@ -1,39 +1,36 @@
 # frozen_string_literal: true
 
-# A Standard Webhooks signing key (https://www.standardwebhooks.com): one ed25519 key
-# pair for a webhook endpoint. An endpoint keeps several so a rotation can sign with the
-# new and the old key at the same time (a key stays usable until its `expires_at` passes).
+# A Standard Webhooks signing key (https://www.standardwebhooks.com): one `v1` HMAC secret
+# for a webhook endpoint. An endpoint keeps several so a rotation can sign with the new and
+# the old secret at the same time (a secret stays usable until its `expires_at` passes).
 class WebhookEndpointSigningKey < ApplicationRecord
-  PRIVATE_KEY_PREFIX = "whsk_"
-  PUBLIC_KEY_PREFIX = "whpk_"
+  SECRET_PREFIX = "whsec_"
 
   belongs_to :organization
   belongs_to :webhook_endpoint
 
-  encrypts :private_key
+  encrypts :secret
 
-  validates :private_key, presence: true
-  validates :public_key, presence: true
+  validates :secret, presence: true
 
-  before_validation :generate_key_pair, on: :create
+  before_validation :generate_secret, on: :create
 
   scope :usable, -> { where(expires_at: nil).or(where(arel_table[:expires_at].gt(Time.current))) }
   scope :expired, -> { where.not(expires_at: nil).where(arel_table[:expires_at].lteq(Time.current)) }
 
-  # Returns the raw ed25519 signature bytes of `content`.
+  # Returns the raw HMAC-SHA256 digest of `content` under this secret.
   def sign(content)
-    raw = Base64.strict_decode64(private_key.delete_prefix(PRIVATE_KEY_PREFIX))
-    OpenSSL::PKey.new_raw_private_key("ED25519", raw).sign(nil, content)
+    key = Base64.strict_decode64(secret.delete_prefix(SECRET_PREFIX))
+    OpenSSL::HMAC.digest("SHA256", key, content)
   end
 
   private
 
-  def generate_key_pair
-    return if private_key.present?
+  def generate_secret
+    return if secret.present?
 
-    key = OpenSSL::PKey.generate_key("ED25519")
-    self.private_key = "#{PRIVATE_KEY_PREFIX}#{Base64.strict_encode64(key.raw_private_key)}"
-    self.public_key = "#{PUBLIC_KEY_PREFIX}#{Base64.strict_encode64(key.raw_public_key)}"
+    # 24 random bytes, base64 encoded, as the spec defines for a `whsec_` secret.
+    self.secret = "#{SECRET_PREFIX}#{Base64.strict_encode64(SecureRandom.bytes(24))}"
   end
 end
 
@@ -44,8 +41,7 @@ end
 #
 #  id                  :uuid             not null, primary key
 #  expires_at          :datetime
-#  private_key         :string           not null
-#  public_key          :string           not null
+#  secret              :string           not null
 #  created_at          :datetime         not null
 #  updated_at          :datetime         not null
 #  organization_id     :uuid             not null
