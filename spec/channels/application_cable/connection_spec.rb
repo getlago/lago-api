@@ -45,6 +45,21 @@ RSpec.describe ApplicationCable::Connection, type: :channel do
     expect(connection.auth_error_code).to be_nil
   end
 
+  it "keeps the session claims of the token" do
+    sso_token = Utils::AuthToken.encode(user:, login_method: "okta", sso_organization_id: "org-id", sso_issuer: "https://sso.okta.com")
+    connect_with("actioncable-v1-json, lago-token.#{sso_token}")
+
+    expect(connection.session_claims).to eq(login_method: "okta", sso_organization_id: "org-id", sso_issuer: "https://sso.okta.com")
+  end
+
+  it "treats an SSO session without its claims as unauthenticated" do
+    sso_token = Utils::AuthToken.encode(user:, login_method: "okta")
+    connect_with("actioncable-v1-json, lago-token.#{sso_token}")
+
+    expect(connection.current_user).to be_nil
+    expect(connection.session_claims).to eq({})
+  end
+
   it "flags an expired token" do
     expired_token = travel_to(4.hours.ago) { Utils::AuthToken.encode(user:) }
     connect_with("actioncable-v1-json, lago-token.#{expired_token}")

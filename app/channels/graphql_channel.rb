@@ -25,9 +25,12 @@ class GraphqlChannel < ApplicationCable::Channel
       operation_name: data["operationName"],
       context: {
         channel: self,
+        login_method: connection.session_claims[:login_method],
+        session_claims: connection.session_claims,
         current_user:,
         current_organization:,
         current_membership:,
+        organization_refused_for_session: organization_refused_for_session?,
         permissions: current_membership&.permissions_hash || {}
       }
     )
@@ -69,13 +72,24 @@ class GraphqlChannel < ApplicationCable::Channel
     connection.current_user
   end
 
+  # Same rule as AuthenticableUser: the session must be allowed to open the organization.
   def current_membership
     return @current_membership if defined?(@current_membership)
 
+    @current_membership = organization_membership if organization_membership&.organization&.accessible_by_session?(**connection.session_claims)
+  end
+
+  def organization_membership
+    return @organization_membership if defined?(@organization_membership)
+
     organization_id = params["organization_id"]
-    @current_membership = if current_user && organization_id.present?
+    @organization_membership = if current_user && organization_id.present?
       current_user.memberships.active.find_by(organization_id:)
     end
+  end
+
+  def organization_refused_for_session?
+    organization_membership.present? && current_membership.nil?
   end
 
   def current_organization

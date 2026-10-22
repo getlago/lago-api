@@ -10,6 +10,7 @@ RSpec.describe GraphqlChannel, :premium, type: :channel do
   let(:current_user) { membership.user }
   let(:auth_error_code) { nil }
   let(:token_expired) { false }
+  let(:session_claims) { {login_method: Organizations::AuthenticationMethods::EMAIL_PASSWORD} }
 
   let(:subscription_query) do
     <<~GQL
@@ -29,7 +30,7 @@ RSpec.describe GraphqlChannel, :premium, type: :channel do
     ENV["MISTRAL_API_KEY"] = "test_api_key"
     ENV["MISTRAL_AGENT_ID"] = "test_agent_id"
 
-    stub_connection(connection_identifier: SecureRandom.uuid, current_user:, auth_error_code:, token_expired?: token_expired)
+    stub_connection(connection_identifier: SecureRandom.uuid, current_user:, auth_error_code:, token_expired?: token_expired, session_claims:)
   end
 
   context "with an authenticated user and an organization" do
@@ -195,6 +196,51 @@ RSpec.describe GraphqlChannel, :premium, type: :channel do
       expect(last_transmission["more"]).to be(false)
       expect(last_transmission["result"]["errors"].first["extensions"]).to eq("status" => 401, "code" => "expired_jwt_token")
       expect(subscription.streams).to be_empty
+    end
+  end
+
+  context "with a session whose login method the organization does not allow" do
+    let(:membership) { create(:membership, roles: [:admin], organization: create(:organization, authentication_methods: %w[email_password])) }
+    let(:session_claims) { {login_method: Organizations::AuthenticationMethods::GOOGLE_OAUTH} }
+
+    before { subscribe(organization_id: organization.id) }
+
+    it "rejects the subscription" do
+      execute_subscription
+
+      expect(last_transmission["more"]).to be(false)
+      expect(last_transmission["result"]["errors"].first["message"]).to eq("Login method not allowed for this organization")
+      expect(subscription.streams).to be_empty
+    end
+  end
+
+  context "with an SSO session" do
+    let(:okta) { Organizations::AuthenticationMethods::OKTA }
+    let(:membership) { create(:membership, roles: [:admin], organization: create(:organization, authentication_methods: %w[email_password okta])) }
+
+    before { subscribe(organization_id: organization.id) }
+
+    context "when the organization's own integration authenticated the user" do
+      let(:session_claims) { {login_method: okta, sso_organization_id: organization.id, sso_issuer: "https://sso.okta.com"} }
+
+      it "subscribes" do
+        execute_subscription
+
+        expect(last_transmission["result"]["errors"]).to be_nil
+        expect(subscription.streams).not_to be_empty
+      end
+    end
+
+    context "when another organization's identity provider authenticated the user" do
+      let(:session_claims) { {login_method: okta, sso_organization_id: create(:organization).id, sso_issuer: "https://other.okta.com"} }
+
+      it "rejects the subscription" do
+        execute_subscription
+
+        expect(last_transmission["more"]).to be(false)
+        expect(last_transmission["result"]["errors"].first["message"]).to eq("Login method not allowed for this organization")
+        expect(subscription.streams).to be_empty
+      end
     end
   end
 

@@ -19,6 +19,10 @@ module ApplicationCable
       authenticate_user(token)
     end
 
+    def session_claims
+      @session_claims || {}
+    end
+
     # Authenticated once, when the socket opens: past expiry, GraphqlChannel makes the client reconnect.
     def token_expired?
       @token_expires_at.present? && Time.current.to_i >= @token_expires_at
@@ -29,9 +33,11 @@ module ApplicationCable
     def authenticate_user(token)
       decoded_token = Utils::AuthToken.decode(token:)
       return unless decoded_token
+      return if Utils::AuthToken.sso_session_without_claims?(decoded_token)
 
       @current_user = User.find_by(id: decoded_token["sub"])
       @token_expires_at = decoded_token["exp"]
+      @session_claims = Utils::AuthToken.session_claims(decoded_token)
     rescue JWT::ExpiredSignature
       @auth_error_code = "expired_jwt_token"
     rescue JWT::DecodeError
