@@ -49,6 +49,32 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
     end
   end
 
+  context "with CustomersQuery" do
+    let(:filtered_scope) do
+      lambda do |pagination|
+        CustomersQuery.call(
+          organization:,
+          search_term: "a",
+          pagination:,
+          filters: {
+            external_id: "customer",
+            account_type: ["customer"],
+            billing_entity_ids: [organization.default_billing_entity.id],
+            countries: ["FR"],
+            states: ["Paris"],
+            zipcodes: ["75001"],
+            currencies: ["EUR"],
+            has_tax_identification_number: true,
+            customer_type: "individual",
+            metadata: {region: "eu"}
+          }
+        ).customers
+      end
+    end
+
+    it_behaves_like "a keyset-paginated query", table: "customers"
+  end
+
   context "with TaxesQuery" do
     let(:filtered_scope) do
       lambda do |pagination|
