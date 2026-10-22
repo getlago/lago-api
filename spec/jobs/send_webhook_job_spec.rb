@@ -72,7 +72,8 @@ RSpec.describe SendWebhookJob do
       after { ENV.delete("SIDEKIQ_WEBHOOK") }
 
       it "uses the high priority queue for alerts" do
-        expect(described_class.queue_for("alert.triggered")).to eq(:webhook_worker_high_priority)
+        expect([described_class.queue_for("alert.triggered"), described_class.queue_for("alert.resolved")])
+          .to eq(%i[webhook_worker_high_priority webhook_worker_high_priority])
       end
 
       it "uses the webhook_worker queue for other webhook types" do
@@ -541,10 +542,20 @@ RSpec.describe SendWebhookJob do
       end
     end
 
-    context "with not implemented webhook type" do
-      it "raises a NotImplementedError" do
-        expect { send_webhook_job.perform_now(:subscription, invoice) }
-          .to raise_error(NotImplementedError)
+    context "with a webhook type this process does not know" do
+      it "retries the job instead of dropping the event" do
+        expect { send_webhook_job.perform_now("unknown.type", invoice) }
+          .to have_enqueued_job(described_class).with("unknown.type", invoice)
+      end
+
+      context "when the last attempt fails" do
+        let(:job) { described_class.new("unknown.type", invoice) }
+
+        before { job.exception_executions["[SendWebhookJob::UnknownWebhookTypeError]"] = 4 }
+
+        it "gives up" do
+          expect { job.perform_now }.to raise_error(SendWebhookJob::UnknownWebhookTypeError, "unknown.type")
+        end
       end
     end
 
