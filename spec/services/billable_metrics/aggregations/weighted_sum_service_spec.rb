@@ -11,7 +11,8 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
       boundaries:,
       filters:,
       bypass_aggregation:,
-      initial_value:
+      initial_value:,
+      initial_period:
     )
   end
 
@@ -58,6 +59,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
   let(:to_datetime) { Time.zone.parse("2023-08-31 23:59:59.999") }
   let(:charges_duration) { 31 }
   let(:initial_value) { nil }
+  let(:initial_period) { closed_period(initial_value.first&.to_datetime || from_datetime - 1.second) unless initial_value.nil? }
 
   let(:events_values) do
     [
@@ -69,6 +71,10 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
       {timestamp: Time.zone.parse("2023-08-01 05:00:00"), value: 10},
       {timestamp: Time.zone.parse("2023-08-01 05:30:00"), value: -10}
     ]
+  end
+
+  def closed_period(to_datetime)
+    RecurringAggregationSnapshots::FetchService::Period.new(to_datetime:, watermark: to_datetime)
   end
 
   def snapshot(units:, grouped_by: {}, presentation_breakdowns: [], to_datetime: from_datetime - 1.second)
@@ -235,6 +241,25 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
 
         it "uses the persisted recurring value as initial value" do
           expect(aggregator.aggregate.total_aggregated_units).to eq(1000)
+        end
+      end
+
+      context "when the bucket had no active units at the end of the previous period" do
+        let(:initial_value) { [] }
+        let(:presentation_by) { ["region"] }
+
+        it "starts from zero units and breakdowns" do
+          result = aggregator.aggregate
+
+          expect([result.aggregation, result.total_aggregated_units, result.recurring_units, result.breakdowns]).to eq([0, 0, 0, []])
+        end
+
+        context "when the period is older" do
+          let(:initial_period) { closed_period(from_datetime - 1.month) }
+
+          it "uses the persisted recurring value as initial value" do
+            expect(aggregator.aggregate.total_aggregated_units).to eq(1000)
+          end
         end
       end
     end
@@ -798,6 +823,16 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
                 {groups: {"agent_name" => "frodo", "region" => "us"}, value: "600.0"}
               ]
             )
+          end
+        end
+
+        context "when no group had active units at the end of the previous period" do
+          let(:initial_value) { [] }
+          let(:events_values) { [{timestamp: from_datetime, value: 2, agent_name: "aragorn"}] }
+
+          it "starts every group from zero" do
+            expect(aggregator.aggregate.aggregations.map { [it.grouped_by, it.total_aggregated_units, it.recurring_units] })
+              .to eq([[{"agent_name" => "aragorn"}, 2, 2]])
           end
         end
 
