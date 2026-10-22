@@ -18,8 +18,13 @@ RSpec.describe Webhooks::Subscriptions::UsageThresholdsReachedService do
     }
 
     context "when SIDEKIQ_WEBHOOK is true" do
-      before { ENV["SIDEKIQ_WEBHOOK"] = "true" }
-      after { ENV.delete("SIDEKIQ_WEBHOOK") }
+      around do |example|
+        original_value = ENV["SIDEKIQ_WEBHOOK"]
+        ENV["SIDEKIQ_WEBHOOK"] = "true"
+        example.run
+      ensure
+        ENV["SIDEKIQ_WEBHOOK"] = original_value
+      end
 
       it "enqueues the http job on the high priority queue" do
         webhook_service.call
