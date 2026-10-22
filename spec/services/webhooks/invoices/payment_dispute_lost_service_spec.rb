@@ -36,7 +36,8 @@ RSpec.describe Webhooks::Invoices::PaymentDisputeLostService do
         webhook_service.call
 
         payload = Webhook.order(created_at: :desc).first.payload["payment_dispute_lost"]
-        expect(payload["invoice"]).to include("lago_id" => catalog_invoice.id, "invoice_type" => "contract", "contracts" => [], "fees" => [])
+        expect(payload["invoice"]).to include("lago_id" => catalog_invoice.id, "invoice_type" => "contract", "contracts" => [], "applied_taxes" => [])
+        expect(payload["invoice"]).not_to include("fees", "customer")
         expect(payload["invoice"]).not_to have_key("subscriptions")
         expect(payload["invoice"]).not_to have_key("self_billed")
         expect(payload["provider_error"]).to eq("message" => "declined")
