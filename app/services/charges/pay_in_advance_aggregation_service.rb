@@ -12,6 +12,7 @@ module Charges
     end
 
     def call
+      initial_value, initial_period = recurring_initial_value
       aggregator = BillableMetrics::AggregationFactory.new_instance(
         metered_item:,
         billing_context:,
@@ -22,7 +23,8 @@ module Charges
           max_timestamp: metered_item.event.timestamp
         },
         filters: aggregation_filters,
-        initial_value: recurring_initial_value
+        initial_value:,
+        initial_period:
       )
 
       aggregation_result = aggregator.aggregate(options: aggregation_options)
@@ -44,15 +46,15 @@ module Charges
     def recurring_initial_value
       return unless snapshot_readable?
 
-      snapshots = RecurringAggregationSnapshots::FetchService.call!(
+      fetched = RecurringAggregationSnapshots::FetchService.call!(
         subscription: billing_context.subscription,
         charge: metered_item.charge,
         charge_filter: metered_item.charge_filter,
         grouped_by_keys: metered_item.pricing_group_keys,
         from_datetime: metered_item.boundaries.charges_from_datetime
-      ).snapshots
+      )
 
-      event_group_snapshots(snapshots) if snapshots
+      [event_group_snapshots(fetched.snapshots), fetched.period] if fetched.period
     end
 
     def snapshot_readable?
@@ -63,13 +65,11 @@ module Charges
       billing_context.organization.feature_flag_enabled?(:persisted_recurring_values)
     end
 
-    # The aggregation only reads the group of the event. A group without a snapshot reads its
-    # full history rather than assume it had no event before the period.
+    # The aggregation only reads the group of the event. A group without a snapshot had neither
+    # units nor events at the period, so it starts from zero.
     def event_group_snapshots(snapshots)
       grouped_by = metered_item.grouped_by_values.transform_values { it&.to_s }
-      snapshot = snapshots.find { it.grouped_by.transform_values { |value| value&.to_s } == grouped_by }
-
-      [snapshot] if snapshot
+      snapshots.select { it.grouped_by.transform_values { |value| value&.to_s } == grouped_by }
     end
 
     def aggregation_filters
