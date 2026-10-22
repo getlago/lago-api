@@ -39,7 +39,6 @@ RSpec.describe Webhooks::RateCards::UpdatedService do
         "display_on_invoice" => true,
         "regroup_paid_fees" => nil,
         "applied_pricing_unit_code" => nil,
-        "rates_count" => 1,
         "created_at" => rate_card.created_at.iso8601,
         "updated_at" => rate_card.updated_at.iso8601,
         "deleted_at" => nil,

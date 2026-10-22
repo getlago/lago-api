@@ -44,7 +44,7 @@ RSpec.describe ProductCategories::DestroyService, :capture_kafka_messages do
     perform_enqueued_jobs(only: SendWebhookJob) { result }
 
     webhook = Webhook.find_by!(webhook_type: "product_category.deleted")
-    expect(webhook.payload.fetch("product_category").fetch("products_count")).to eq(0)
+    expect(webhook.payload.fetch("product_category")).not_to have_key("products_count")
     expect(webhook.payload.fetch("product_category")).not_to have_key("products")
     activity = JSON.parse(kafka_messages.find { |message| JSON.parse(message[:payload]).fetch("activity_type") == "product_category.deleted" }.fetch(:payload))
     expect(activity.fetch("activity_object")).not_to have_key("products")
