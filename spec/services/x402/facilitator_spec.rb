@@ -57,6 +57,19 @@ describe X402::Facilitator do
     it "has no fee payer on EVM" do
       expect(supported.fee_payer(network: "eip155:84532")).to be_nil
     end
+
+    context "with another scheme listed first for the network" do
+      subject(:supported) do
+        described_class.new(response: {}, kinds: [
+          {"x402Version" => 2, "scheme" => "upto", "network" => "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1", "extra" => {"feePayer" => "HHU1aLQQCbCzW9ebjFTntq2vkvsQsxkDyPjMsW2WtiLG"}},
+          {"x402Version" => 2, "scheme" => "exact", "network" => "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1", "extra" => {"feePayer" => "GVJJ7rdGiXr5xaYbRwRbjfaJL7fmwRygFi1H6aGqDveb"}}
+        ])
+      end
+
+      it "reads the exact v2 kind's fee payer" do
+        expect(supported.fee_payer(network: "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1")).to eq("GVJJ7rdGiXr5xaYbRwRbjfaJL7fmwRygFi1H6aGqDveb")
+      end
+    end
   end
 
   describe X402::Facilitator::Error do

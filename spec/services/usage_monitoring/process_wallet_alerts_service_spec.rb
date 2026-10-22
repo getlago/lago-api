@@ -6,8 +6,8 @@ RSpec.describe UsageMonitoring::ProcessWalletAlertsService do
   describe "#call" do
     subject(:result) { described_class.call(wallet:) }
 
-    let(:organization) { create(:organization) }
-    let(:customer) { create(:customer, organization:) }
+    let_it_be(:organization) { create(:organization) }
+    let_it_be(:customer) { create(:customer, organization:) }
     let(:wallet) { create(:wallet, organization:, customer:, balance_cents: 400, ongoing_balance_cents: 400, credits_balance: 4.0, credits_ongoing_balance: 4.0) }
 
     context "when wallet has no alerts" do

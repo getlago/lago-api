@@ -14,7 +14,8 @@ module Events
           external_subscription_id: source["external_subscription_id"],
           timestamp: Events::Common.timestamp_from_source(source),
           code: source["code"],
-          properties: source["properties"]
+          properties: source["properties"],
+          created_at: created_at_from_source(source)
         )
 
         if source["precise_total_amount_cents"].present?
@@ -31,7 +32,8 @@ module Events
           timestamp: source.timestamp,
           code: source.code,
           properties: source.properties,
-          precise_total_amount_cents: source.precise_total_amount_cents
+          precise_total_amount_cents: source.precise_total_amount_cents,
+          created_at: source.created_at
         )
       when "Clickhouse::EventsRaw"
         Events::Common.new(
@@ -42,9 +44,19 @@ module Events
           timestamp: source.timestamp,
           code: source.code,
           properties: source.properties,
-          precise_total_amount_cents: source.precise_total_amount_cents
+          precise_total_amount_cents: source.precise_total_amount_cents,
+          created_at: source.created_at
         )
       end
+    end
+
+    def self.created_at_from_source(source)
+      value = source["created_at"]
+      return if value.nil?
+
+      Time.zone.iso8601(value)
+    rescue ArgumentError, TypeError
+      nil
     end
   end
 end

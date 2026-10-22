@@ -21,6 +21,7 @@ nb:
     breakdown: Oversikt
     breakdown_for_days: "%{breakdown_duration} av %{breakdown_total_duration} dager"
     breakdown_of: Fordeling av %{fee_filter_display_name}
+    charges_paid_in_advance: Gebyrer betalt på forskudd
     clabe: CLABE
     conversion_rate: Valutakurs
     country: Land
@@ -28,7 +29,9 @@ nb:
     credit_notes: Kreditnotaer
     date_from: Fra
     date_to: til
+    description: Beskrivelse
     details: "%{resource} detaljer"
+    details_title: Detaljer
     document_name: Faktura
     document_tax_name: Skattefaktura
     due_date: Forfallsdato %{date}
@@ -58,7 +61,7 @@ nb:
     month: måned
     monthly: Månedlig
     notice_full: Uavhengig av når en hendelse mottas, blir enheten ikke forholdsmessig priset, vi belaster full pris.
-    notice_prorated: Hvis en enhet legges til eller fjernes i løpet av faktureringsperioden, beregner vi den proporsjonale prisen basert på forholdet mellom gjenværende eller brukte dager og det totale antallet dager i planen. For eksempel, hvis det er 15 dager igjen i planen, multipliserer vi prisen med 15/%{days_in_month}, og hvis en enhet ble brukt i 10 dager, multipliserer vi prisen med 10/%{days_in_month}.
+    notice_prorated: Hvis en enhet legges til eller fjernes i løpet av faktureringsperioden, beregner vi den proporsjonale prisen basert på forholdet mellom gjenværende eller brukte dager og det totale antallet dager i planen. For eksempel, hvis det er 15 dager igjen i en periode på %{days_in_month} dager, multipliserer vi prisen med 15/%{days_in_month}, og hvis en enhet ble brukt i 10 dager, multipliserer vi prisen med 10/%{days_in_month}.
     package:
       fee_per_package: Gebyr per pakke
       fee_per_package_unit_price: "%{amount} per %{package_size}"
@@ -66,6 +69,7 @@ nb:
     paid_invoice: Betalt faktura
     paid_tax_invoice: Betalt skattefaktura
     pay_with_bank_transfer: Betal med bankoverføring
+    payment_due_date: Forfallsdato
     payment_term: Betalingsperiode
     payment_term_days: "%{net_payment_term} dager"
     percentage:
@@ -81,6 +85,7 @@ nb:
     prepaid_credits_with_value: Forhåndsbetalte kreditter - %{wallet_name}
     progressive_billing_credit: Bruk allerede fakturert
     purchase_order_number: Bestillingsnummer
+    quantity: Antall
     quarter: kvartal
     quarterly: Kvartalsvis
     reached_usage_threshold: Denne progressive faktureringen er generert fordi din akkumulerte bruk har nådd %{usage_amount}, og overskredet terskelen på %{threshold_amount}.
@@ -114,6 +119,13 @@ nb:
       fr_tax_exempt: Kunden er skattefri i henhold til artikkel 259-1 i den franske skatteforvaltningsloven.
       reverse_charge: Skatteansvar overført til kunden.
       tax_exempt: Kunden er skattefri.
+    tiers:
+      fee_for_first: Avgift for de første %{up_to} enhetene
+      fee_for_next: Avgift for enheter opptil %{up_to}
+      fee_for_remaining: Avgift for gjenværende enheter
+      flat_fee_for_first: Fast avgift for de første %{up_to} enhetene
+      flat_fee_for_next: Fast avgift for enheter opptil %{up_to}
+      flat_fee_for_remaining: Fast avgift for gjenværende enheter
     total: Totalt
     total_credits: Antall kreditter
     total_credits_with_value: 'Antall kreditter: %{credit_amount} kreditter'

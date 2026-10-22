@@ -19,6 +19,7 @@ module Invoices
 
     def call
       return result.not_found_failure!(resource: "invoice") unless voided_invoice
+      return result.not_allowed_failure!(code: "product_catalog_invoice_not_regenerable") if voided_invoice.product_catalog?
 
       ActiveRecord::Base.transaction do
         create_regenerated_invoice

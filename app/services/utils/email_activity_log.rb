@@ -62,6 +62,7 @@ module Utils
       }
       KafkaProducer.produce_async(
         topic: TOPIC,
+        invalid_message_level: :warning,
         key: "#{organization_id}--#{activity_id}",
         payload: payload.to_json
       )

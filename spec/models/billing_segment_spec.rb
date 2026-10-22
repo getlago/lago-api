@@ -32,6 +32,104 @@ RSpec.describe BillingSegment do
     end
   end
 
+  describe "Scopes" do
+    describe ".ready_for_invoicing" do
+      subject(:segments) { described_class.ready_for_invoicing(timestamp) }
+
+      let(:timestamp) { Time.zone.parse("2026-10-01") }
+      let(:organization) { create(:organization) }
+      let(:product) { create(:product, organization:) }
+      let(:billing_timing) { :advance }
+      let(:rate_card) { create(:rate_card, organization:, product:, billing_timing:) }
+      let(:contract_rate_card) { create(:contract_rate_card, organization:, rate_card:) }
+      let(:status) { :pending }
+      let(:ended_at) { timestamp + 1.day }
+      let(:segment) do
+        create(:billing_segment, organization:, contract_rate_card:, contract: contract_rate_card.contract,
+          customer: contract_rate_card.contract.customer, status:, cycle_started_at: timestamp - 1.month,
+          started_at: timestamp - 1.month, ended_at:, billing_at: timestamp - 1.day)
+      end
+
+      before { segment }
+
+      it "excludes active pending advance-metered usage" do
+        expect(segments).to be_empty
+      end
+
+      context "when pending advance-metered usage has ended" do
+        let(:ended_at) { timestamp }
+
+        it "selects it for reconciliation" do
+          expect(segments).to eq([segment])
+        end
+      end
+
+      context "with displayed recurring advance-metered usage" do
+        let(:billable_metric) { create(:billable_metric, organization:, aggregation_type:, field_name: "value", recurring: true) }
+        let(:product) { create(:product, :metered, organization:, billable_metric:) }
+        let(:rate_card) do
+          create(:rate_card, organization:, product:, billing_timing:, display_on_invoice: true)
+        end
+
+        context "with sum aggregation" do
+          let(:aggregation_type) { :sum_agg }
+
+          it "selects the segment at its renewal billing time before it ends" do
+            expect(segments).to eq([segment])
+          end
+        end
+
+        context "with unique-count aggregation" do
+          let(:aggregation_type) { :unique_count_agg }
+
+          it "selects the segment at its renewal billing time before it ends" do
+            expect(segments).to eq([segment])
+          end
+        end
+
+        context "with custom aggregation" do
+          let(:billable_metric) { create(:custom_billable_metric, organization:, recurring: true) }
+
+          it "selects the segment at its renewal billing time before it ends" do
+            expect(segments).to eq([segment])
+          end
+        end
+      end
+
+      context "when the advance-metered segment is already processing" do
+        let(:status) { :processing }
+
+        it "excludes it while active" do
+          expect(segments).to be_empty
+        end
+
+        context "when the segment has ended" do
+          let(:ended_at) { timestamp }
+
+          it "excludes the processing segment" do
+            expect(segments).to be_empty
+          end
+        end
+      end
+
+      context "when the segment bills in arrears" do
+        let(:billing_timing) { :arrears }
+
+        it "selects it while pending" do
+          expect(segments).to eq([segment])
+        end
+
+        context "when the segment is processing" do
+          let(:status) { :processing }
+
+          it "excludes it" do
+            expect(segments).to be_empty
+          end
+        end
+      end
+    end
+  end
+
   describe "validations" do
     it do
       expect(subject).to validate_presence_of(:billing_at)

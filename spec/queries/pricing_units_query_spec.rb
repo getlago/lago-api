@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe PricingUnitsQuery do
   subject(:result) { described_class.call(organization:, search_term:, pagination:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:pagination) { nil }
   let(:search_term) { nil }
 

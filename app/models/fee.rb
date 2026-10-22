@@ -64,6 +64,7 @@ class Fee < ApplicationRecord
   validates :true_up_fee_id, presence: false, unless: :charge?
   validates :total_aggregated_units, presence: true, if: :charge?
   validate :validate_contract_provenance
+  validates :rate_card_rate, presence: true, if: :product?
 
   scope :positive_units, -> { where("fees.units > ?", 0) }
 
@@ -165,10 +166,14 @@ class Fee < ApplicationRecord
     subscription.plan.description
   end
 
+  def rate_model
+    (rate_override || rate_card_rate)&.rate_model
+  end
+
   def invoice_name
+    return invoice_display_name.presence || invoiceable.invoice_name if product?
     return invoice_display_name if invoice_display_name.present?
     return charge.invoice_display_name.presence || billable_metric.name if charge?
-    return invoiceable.invoice_name if product?
     return add_on.invoice_name if add_on?
     return invoiceable&.name.presence || fee_type if credit?
     return fixed_charge.invoice_display_name.presence || fixed_charge_add_on.invoice_name if fixed_charge?

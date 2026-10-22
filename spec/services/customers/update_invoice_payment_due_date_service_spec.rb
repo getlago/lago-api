@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Customers::UpdateInvoicePaymentDueDateService do
   subject(:update_service) { described_class.new(customer:, net_payment_term:) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
   let(:billing_entity) { create(:billing_entity, organization:, net_payment_term: 15) }
   let(:customer) { create(:customer, organization:, billing_entity:, net_payment_term: customer_net_payment_term) }
   let(:net_payment_term) { 30 }

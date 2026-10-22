@@ -5,9 +5,8 @@ require "rails_helper"
 RSpec.describe RateOverrides::CreateService do
   subject(:result) { described_class.call(rate_card:, params:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:rate_card) { create(:rate_card, organization:) }
-
   let(:params) do
     {
       rate_model: "standard",
@@ -16,6 +15,10 @@ RSpec.describe RateOverrides::CreateService do
       billing_interval_count: 1,
       billing_interval_unit: "month"
     }
+  end
+
+  before_all do
+    create_default(:billable_metric)
   end
 
   it "creates a rate override" do

@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Invoices::GeneratePdfService do
+  subject(:generate_pdf) { described_class.call(invoice:, context:) }
+
   let(:context) { "graphql" }
   let(:organization) { create(:organization, name: "LAGO") }
   let(:customer) { create(:customer, organization:) }
@@ -130,6 +132,33 @@ RSpec.describe Invoices::GeneratePdfService do
       end
     end
 
+    context "when invoice comes from the product catalog" do
+      let(:invoice) do
+        create(:invoice, :self_billed, invoice_type: :contract, customer:, status: :finalized, organization:)
+      end
+
+      let(:pdf_generator) { instance_double(Utils::PdfGenerator, call_with_middlewares: pdf_response) }
+
+      let(:pdf_response) do
+        Utils::PdfGenerator::Result.new.tap { |r| r.io = StringIO.new(File.read(blank_pdf_path)) }
+      end
+
+      before do
+        allow(Utils::PdfGenerator).to receive(:new).and_return(pdf_generator)
+      end
+
+      it "calls the product catalog template and footer, even when self billed" do
+        described_class.call(invoice:, context:)
+
+        expect(Utils::PdfGenerator).to have_received(:new).with(
+          template: "invoices/product_catalog/contract",
+          context: invoice,
+          footer: "invoices/product_catalog/footer",
+          margin_bottom: "1.0167"
+        )
+      end
+    end
+
     context "when in API context" do
       let(:context) { "api" }
 
@@ -156,7 +185,7 @@ RSpec.describe Invoices::GeneratePdfService do
       end
     end
 
-    context "when create temp files" do
+    context "when creating temp files" do
       let(:pdf_tempfile) { instance_double(Tempfile).as_null_object }
 
       before do
@@ -170,24 +199,6 @@ RSpec.describe Invoices::GeneratePdfService do
 
         expect(pdf_tempfile).to have_received(:unlink)
       end
-
-      context "with einvoicing enabled" do
-        let(:xml_tempfile) { instance_double(Tempfile).as_null_object }
-
-        before do
-          invoice.billing_entity.update(country: "FR", einvoicing: true)
-
-          allow(Tempfile).to receive(:new).with([invoice.number, ".xml"]).and_return(xml_tempfile)
-          allow(Utils::PdfAttachmentService).to receive(:call)
-        end
-
-        it "unlink all files at the end" do
-          described_class.call(invoice:, context:)
-
-          expect(pdf_tempfile).to have_received(:unlink)
-          expect(xml_tempfile).to have_received(:unlink)
-        end
-      end
     end
 
     context "when einvoicing is enabled" do
@@ -199,7 +210,7 @@ RSpec.describe Invoices::GeneratePdfService do
         invoice.billing_entity.update(country:, einvoicing: true)
 
         allow(EInvoices::Invoices::Cii::CreateService).to receive(:call).and_return(create_xml_result)
-        allow(Utils::PdfAttachmentService).to receive(:call)
+        allow(Utils::PdfAttachmentService).to receive(:call!)
       end
 
       context "with FR country" do
@@ -208,11 +219,62 @@ RSpec.describe Invoices::GeneratePdfService do
         it "generates the invoice with attached cii xml synchronously" do
           result = described_class.call(invoice:, context:)
 
-          expect(Utils::PdfAttachmentService).to have_received(:call)
+          expect(Utils::PdfAttachmentService).to have_received(:call!).with(
+            file: kind_of(Tempfile),
+            attachment_content: fake_xml,
+            attachment_name: "factur-x.xml"
+          )
           expect(EInvoices::Invoices::Cii::CreateService).to have_received(:call)
           expect(result.invoice.file).to be_present
         end
+
+        context "when the invoice is a contract invoice" do
+          let(:invoice) { create(:invoice, customer:, status: :finalized, organization:, invoice_type: :contract) }
+
+          it "does not attach the CII XML" do
+            result = described_class.call(invoice:, context:)
+
+            expect(EInvoices::Invoices::Cii::CreateService).not_to have_received(:call)
+            expect(Utils::PdfAttachmentService).not_to have_received(:call!)
+            expect(result.invoice.file).to be_present
+          end
+        end
+
+        context "when attaching the CII XML fails" do
+          let(:attachment_error) do
+            BaseService::ThirdPartyFailure.new(
+              Utils::PdfAttachmentService::Result.new,
+              third_party: "pdfcpu",
+              error_code: "failed",
+              error_message: ""
+            )
+          end
+
+          before do
+            allow(Utils::PdfAttachmentService).to receive(:call!).and_raise(attachment_error)
+          end
+
+          it "fails PDF generation" do
+            expect { generate_pdf }.to raise_error(BaseService::ThirdPartyFailure)
+          end
+        end
       end
+    end
+  end
+
+  describe "#render_html" do
+    subject(:html) { described_class.new(invoice:).render_html }
+
+    let(:customer) { create(:customer, organization:, document_locale: "fr") }
+    let(:pdf_generator) { instance_double(Utils::PdfGenerator) }
+
+    before do
+      allow(Utils::PdfGenerator).to receive(:new).and_return(pdf_generator)
+      allow(pdf_generator).to receive(:render_html) { I18n.locale.to_s }
+    end
+
+    it "renders in the customer document locale" do
+      expect(html).to eq("fr")
     end
   end
 end

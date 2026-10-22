@@ -12,6 +12,14 @@ RSpec.describe ContractRateCards::CreateService do
   let(:rate_card) { create(:rate_card, organization:, currency: "EUR") }
   let(:params) { {rate_card_code: rate_card.code, units: "10"} }
 
+  let(:activity_log_calls) { [] }
+
+  before do
+    allow(Utils::ActivityLog).to receive(:produce) do |*args, **kwargs, &block|
+      activity_log_calls << {args:, kwargs:, block:}
+    end
+  end
+
   it "attaches the rate card with a default terminal phase" do
     expect(result).to be_success
 
@@ -23,6 +31,22 @@ RSpec.describe ContractRateCards::CreateService do
     expect(card.billing_anchor_date).to eq(contract.effective_billing_anchor_date)
     expect(card.next_billing_at).to eq(contract.started_at)
     expect(card.rate_phases.sole.code).to eq("default")
+  end
+
+  it "publishes one contract_rate_card.created pair after creating its phase" do
+    expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with do |*args|
+      expect(args).to eq(["contract_rate_card.created", result.contract_rate_card])
+    end
+
+    card = result.contract_rate_card
+    expect(Utils::ActivityLog).to have_received(:produce).with(
+      card,
+      "contract_rate_card.created",
+      after_commit: true
+    )
+    activity_call = activity_log_calls.find { |call| call[:args] == [card, "contract_rate_card.created"] }
+    expect(activity_call.fetch(:block)).to be_a(Proc)
+    expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "contract_rate_card.updated", any_args)
   end
 
   context "when a billing_anchor_date is provided" do
@@ -53,6 +77,29 @@ RSpec.describe ContractRateCards::CreateService do
     it "materializes the provided sequence" do
       expect(result).to be_success
       expect(result.contract_rate_card.rate_phases.order(:position).map(&:code)).to eq(%w[ramp steady])
+    end
+
+    it "emits only the owning card pair for nested phase creation" do
+      expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).exactly(1).times
+      expect(Utils::ActivityLog).to have_received(:produce).with(
+        result.contract_rate_card,
+        "contract_rate_card.created",
+        after_commit: true
+      )
+      expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "contract_rate_card.updated", any_args)
+    end
+  end
+
+  context "with a priced metered advance rate card" do
+    let(:rate_card) { create(:rate_card, :advance, organization:, currency: "EUR") }
+
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: contract.started_at.beginning_of_day)
+    end
+
+    it "creates the card without persisting an event-pricing segment" do
+      expect { result }.not_to change(BillingSegment, :count)
+      expect(result.contract_rate_card.billing_segments).to be_empty
     end
   end
 

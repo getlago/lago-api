@@ -4,6 +4,11 @@ module RateCardRates
   class UpdateService < BaseService
     Result = BaseResult[:rate_card_rate]
 
+    activity_loggable(
+      action: "rate_card_rate.updated",
+      record: -> { rate_card_rate }
+    )
+
     # Terminated rates are frozen, active rates only accept new pricing values,
     # pending rates are fully editable. Frozen fields are rejected on presence:
     # sending one on an active rate is an error even with an unchanged value.
@@ -14,11 +19,6 @@ module RateCardRates
       @params = params.to_h.with_indifferent_access
       super
     end
-
-    activity_loggable(
-      action: "rate_card.updated",
-      record: -> { rate_card_rate&.rate_card }
-    )
 
     def call
       return result.not_found_failure!(resource: "rate_card_rate") unless rate_card_rate
@@ -57,8 +57,12 @@ module RateCardRates
         params[:rate_properties] = normalized.rate_properties
       end
 
-      assign_attributes
-      rate_card_rate.save!
+      ActiveRecord::Base.transaction do
+        assign_attributes
+        rate_card_rate.save!
+
+        SendWebhookJob.perform_after_commit("rate_card_rate.updated", rate_card_rate)
+      end
 
       result.rate_card_rate = rate_card_rate
       result

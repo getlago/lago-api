@@ -3,9 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyJob do
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, customer:) }
-  let(:customer) { create(:customer, organization:) }
 
   let(:result) { Invoices::ProviderTaxes::PullTaxesAndApplyService::Result.new }
 

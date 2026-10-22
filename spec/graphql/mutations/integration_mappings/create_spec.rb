@@ -4,10 +4,6 @@ require "rails_helper"
 
 RSpec.describe Mutations::IntegrationMappings::Create do
   let(:required_permission) { "organization:integrations:update" }
-  let(:integration) { create(:netsuite_integration, organization:) }
-  let(:mappable) { create(:add_on, organization:) }
-  let(:organization) { membership.organization }
-  let(:membership) { create(:membership) }
   let(:external_account_code) { Faker::Barcode.ean }
   let(:external_id) { SecureRandom.uuid }
   let(:external_name) { Faker::Commerce.department }
@@ -39,6 +35,11 @@ RSpec.describe Mutations::IntegrationMappings::Create do
     }
   end
   let(:billing_entity_id) { nil }
+  let(:integration) { create(:netsuite_integration, organization:) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:mappable) { create_default(:add_on, organization:) }
+  let_it_be(:membership) { create_default(:membership) }
 
   def create_integration_mapping(input:, raw: false)
     result = execute_query(query: mutation, input:)
@@ -62,6 +63,44 @@ RSpec.describe Mutations::IntegrationMappings::Create do
       "externalId" => external_id,
       "externalName" => external_name
     )
+  end
+
+  context "with a Product" do
+    let(:integration) { create(:anrok_integration, organization:) }
+    let(:mappable) { create(:product, organization:) }
+    let(:input) { super().merge(mappableType: "Product") }
+
+    it "creates a Product integration mapping" do
+      result = create_integration_mapping(input:)
+
+      expect(result).to include(
+        "integrationId" => integration.id,
+        "mappableId" => mappable.id,
+        "mappableType" => "Product"
+      )
+    end
+
+    context "when the Product belongs to another organization" do
+      let(:other_organization) { create(:organization) }
+      let(:mappable) { create(:product, organization: other_organization) }
+
+      it "returns an error" do
+        result = create_integration_mapping(input:, raw: true)
+
+        expect_graphql_error(result:, message: "Resource not found")
+      end
+    end
+  end
+
+  context "when the integration belongs to another organization" do
+    let(:other_organization) { create(:organization) }
+    let(:integration) { create(:netsuite_integration, organization: other_organization) }
+
+    it "returns an error" do
+      result = create_integration_mapping(input:, raw: true)
+
+      expect_graphql_error(result:, message: "Resource not found")
+    end
   end
 
   context "with billing entity" do

@@ -184,6 +184,7 @@ module WalletActions
       :paid_top_up_max_amount_cents,
       :billing_entity_code,
       :purchase_order_number,
+      :x402_enabled,
       metadata: {},
       recurring_transaction_rules: [
         :lago_id,

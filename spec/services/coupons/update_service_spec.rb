@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Coupons::UpdateService do
   subject(:update_service) { described_class.new(coupon:, params:) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
 
   let(:coupon) { create(:coupon, organization:) }
 
@@ -48,6 +48,12 @@ RSpec.describe Coupons::UpdateService do
       expect(Utils::ActivityLog).to have_produced("coupon.updated").after_commit.with(coupon)
     end
 
+    it "enqueues a coupon.updated webhook" do
+      result = update_service.call
+
+      expect(SendWebhookJob).to have_been_enqueued.with("coupon.updated", result.coupon)
+    end
+
     context "with validation error" do
       let(:name) { nil }
 
@@ -83,8 +89,8 @@ RSpec.describe Coupons::UpdateService do
     end
 
     context "with new plan limitations" do
-      let(:plan) { create(:plan, organization:) }
-      let(:plan_second) { create(:plan, organization:) }
+      let_it_be(:plan) { create(:plan, organization:) }
+      let_it_be(:plan_second) { create(:plan, organization:) }
       let(:coupon_plan) { create(:coupon_plan, coupon:, plan:) }
       let(:applies_to) { {plan_ids: [plan.id, plan_second.id]} }
 
@@ -127,8 +133,8 @@ RSpec.describe Coupons::UpdateService do
     end
 
     context "with new billable metric limitations" do
-      let(:billable_metric) { create(:billable_metric, organization:) }
-      let(:billable_metric_second) { create(:billable_metric, organization:) }
+      let_it_be(:billable_metric) { create(:billable_metric, organization:) }
+      let_it_be(:billable_metric_second) { create(:billable_metric, organization:) }
       let(:coupon_billable_metric) { create(:coupon_billable_metric, coupon:, billable_metric:) }
       let(:applies_to) { {billable_metric_ids: [billable_metric.id, billable_metric_second.id]} }
 

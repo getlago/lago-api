@@ -3,25 +3,30 @@
 module Events
   module Stores
     class Provider
+      # `incremental_charge_cache` lets the single scan keep the rows of past events between
+      # computations (see ChargeFiltersScan::IncrementalCache). Only current usage asks for it:
+      # an invoice reads its events once.
       def initialize(organization:, billing_context:, serve_current_usage_from_buckets: false,
-        boundaries: nil, usage_filters: UsageFilters::NONE, charges: [])
+        boundaries: nil, usage_filters: UsageFilters::NONE, charges: [], incremental_charge_cache: false)
         @organization = organization
         @billing_context = billing_context
         @serve_current_usage_from_buckets = serve_current_usage_from_buckets
         @boundaries = boundaries
         @usage_filters = usage_filters
         @charges = charges
+        @incremental_charge_cache = incremental_charge_cache
       end
 
       attr_reader :billing_context
 
-      def store_for(metered_item:, boundaries:, filters: {})
+      # `aggregated_filter_ids` are the filters of the charge the caller will aggregate, when it
+      # knows them (see ChargeFiltersScan).
+      def store_for(metered_item:, boundaries:, filters: {}, aggregated_filter_ids: nil)
         store = store_class.new(
           code: metered_item.billable_metric.code,
           billing_context:,
           boundaries:,
-          filters:,
-          deduplicate:
+          filters:
         )
         if served_from_buckets?(metered_item:, boundaries:, filters:)
           UsageBucketStore.new(
@@ -30,6 +35,8 @@ module Events
             charge_id: metered_item.charge.id,
             charge_filter_id: filters[:charge_filter]&.id || "" # clickhouse stores an empty string instead of nil
           )
+        elsif (scan = charge_filters_scan(metered_item:, filters:, aggregated_filter_ids:))
+          ChargeFiltersScanStore.new(store, scan:)
         else
           store
         end
@@ -78,20 +85,10 @@ module Events
         @store_class ||= Events::Stores::StoreFactory.store_class(organization:)
       end
 
-      def deduplicate
-        return @deduplicate if defined?(@deduplicate)
-
-        override = Events::Stores::StoreFactory.override
-        @deduplicate = if override
-          override[:deduplicate]
-        else
-          organization.clickhouse_events_store? && organization.clickhouse_deduplication_enabled?
-        end
-      end
-
       private
 
-      attr_reader :organization, :serve_current_usage_from_buckets, :boundaries, :usage_filters, :charges
+      attr_reader :organization, :serve_current_usage_from_buckets, :boundaries, :usage_filters, :charges,
+        :incremental_charge_cache
 
       # A full usage window opens on `subscription.started_at`, which `same_window_as_prefetch?`
       # cannot tell apart from a first billing period.
@@ -118,6 +115,53 @@ module Events
         return values if values.blank?
 
         values & (usage_filters.filter_by_presentation || values)
+      end
+
+      # One scan per charge, shared by the stores of all its filters so that the first one to
+      # aggregate reads the events for every other. The incremental charge cache lives in the scan,
+      # so it takes every count, sum, max and latest charge, with or without filters.
+      def charge_filters_scan(metered_item:, filters:, aggregated_filter_ids:)
+        return unless scan_available?
+        return unless incremental_charge_cache || charge_filters_single_scan?
+        return if metered_item.billing_segment
+        # A pay-in-advance event and its group narrow the store to themselves.
+        return unless filters[:event].blank? && filters[:grouped_by_values].blank?
+
+        charge = metered_item.charge
+        return if charge.nil?
+        # The stores of a charge with filters always name theirs, the default bucket included.
+        return if filters[:charge_filter].nil? && charge.filters.any?
+
+        # A charge the scan cannot answer is remembered too: telling costs a count of its filters.
+        @charge_filters_scans ||= {}
+        key = [charge.id, aggregated_filter_ids]
+        return @charge_filters_scans[key] if @charge_filters_scans.key?(key)
+
+        @charge_filters_scans[key] = if ChargeFiltersScan.supported_charge?(charge, incremental: incremental_charge_cache)
+          ChargeFiltersScan.new(charge:, filter_ids: aggregated_filter_ids, incremental: incremental_cache(charge))
+        end
+      end
+
+      def incremental_cache(charge)
+        subscription = billing_context.subscription
+        return if !incremental_charge_cache || subscription.nil?
+
+        ChargeFiltersScan::IncrementalCache.new(subscription:, charge:)
+      end
+
+      # The override belongs to the ClickHouse migration comparison, which has to keep comparing
+      # the stores themselves.
+      def scan_available?
+        return @scan_available if defined?(@scan_available)
+
+        @scan_available = Events::Stores::StoreFactory.override.nil? &&
+          store_class == Events::Stores::ClickhouseStore
+      end
+
+      def charge_filters_single_scan?
+        return @charge_filters_single_scan if defined?(@charge_filters_single_scan)
+
+        @charge_filters_single_scan = organization.feature_flag_enabled?(:charge_filters_single_scan)
       end
 
       def same_window_as_prefetch?(window)

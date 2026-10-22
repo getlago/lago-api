@@ -24,6 +24,7 @@ class Invoice < ApplicationRecord
   belongs_to :x402_connection, class_name: "X402::Connection", optional: true
 
   has_many :fees
+  has_many :contract_fees, -> { where.not(contract_id: nil) }, class_name: "Fee"
   has_many :credits
   has_many :wallet_transactions
   has_many :invoice_subscriptions
@@ -93,7 +94,7 @@ class Invoice < ApplicationRecord
     allow_nil: true,
     with_model_currency: :currency
 
-  INVOICE_TYPES = %i[subscription add_on credit one_off advance_charges progressive_billing].freeze
+  INVOICE_TYPES = %i[subscription add_on credit one_off advance_charges progressive_billing contract].freeze
   PAYMENT_STATUS = %i[pending succeeded failed].freeze
   TAX_STATUSES = {
     pending: "pending",
@@ -159,6 +160,17 @@ class Invoice < ApplicationRecord
     joins(:subscriptions)
       .where(subscriptions: {status: "active"})
       .distinct
+  }
+
+  scope :with_active_contracts, -> {
+    joins(:contracts)
+      .where(contracts: {status: Contract::BILLABLE_STATUSES})
+      .distinct
+  }
+
+  scope :product_catalog, -> {
+    where(invoice_type: :contract)
+      .or(where(id: Fee.where.not(contract_id: nil).select(:invoice_id)))
   }
 
   scope :self_billed, -> { where(self_billed: true) }
@@ -490,6 +502,14 @@ class Invoice < ApplicationRecord
     finalized? || voided?
   end
 
+  def product_catalog?
+    return true if contract?
+    return contract_fees.any? if contract_fees.loaded?
+    return fees.any? { it.contract_id.present? } if fees.loaded?
+
+    contract_fees.exists?
+  end
+
   def subscription_gated?
     open? && subscriptions.any?(&:gated?)
   end
@@ -554,7 +574,9 @@ class Invoice < ApplicationRecord
   end
 
   def should_sync_invoice?
-    !self_billed && finalized? && customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_invoices }
+    !self_billed && finalized? &&
+      customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_invoices } &&
+      !product_catalog?
   end
 
   def should_sync_hubspot_invoice?
@@ -591,6 +613,26 @@ class Invoice < ApplicationRecord
 
   def allow_manual_payment?
     MANUALLY_PAYABLE_INVOICE_STATUS.include?(status.to_sym)
+  end
+
+  def x402_payment_eligible?
+    x402_payment_refusal.nil?
+  end
+
+  def x402_payment_refusal
+    if !finalized? || payment_succeeded? || !total_due_amount_cents.positive?
+      "invalid_invoice_status_or_payment_status"
+    elsif currency != X402::Settlements::SettleService::INVOICE_CURRENCY
+      "invoice_currency_not_supported"
+    elsif !customer.wallets.active.exists?(x402_enabled: true)
+      "wallet_not_x402_enabled"
+    elsif x402_payment_in_progress?
+      "invoice_payment_pending"
+    end
+  end
+
+  def x402_payment_url
+    File.join(ENV["LAGO_API_URL"], "x402/invoice_payments", x402_payment_token) if x402_payment_token.present?
   end
 
   # A safeguard while we're populating the expected finalization date.
@@ -835,6 +877,11 @@ class Invoice < ApplicationRecord
     if connection && connection.organization_id != organization_id
       errors.add(:x402_connection, :must_belong_to_same_organization)
     end
+  end
+
+  def x402_payment_in_progress?
+    x402_settlements.where(payment_id: nil).where.not(status: :failed).exists? ||
+      (credit? && wallet_transactions.x402.exists?)
   end
 end
 

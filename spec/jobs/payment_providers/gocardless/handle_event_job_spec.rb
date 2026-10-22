@@ -6,16 +6,15 @@ RSpec.describe PaymentProviders::Gocardless::HandleEventJob do
   subject(:handle_event_job) { described_class }
 
   let(:gocardless_service) { instance_double(PaymentProviders::GocardlessService) }
-  let(:result) { BaseService::Result.new }
-  let(:organization) { create(:organization) }
   let(:payment_provider) { create(:gocardless_provider, organization:) }
-
   let(:event_json) do
     path = Rails.root.join("spec/fixtures/gocardless/events.json")
     JSON.parse(File.read(path))["events"].first.to_json
   end
-
   let(:service_result) { PaymentProviders::Gocardless::HandleEventService::Result.new }
+  let(:result) { BaseService::Result.new }
+
+  let_it_be(:organization) { create(:organization) }
 
   it_behaves_like "a unique job" do
     let(:job_args) { [{payment_provider:, event_json:}] }

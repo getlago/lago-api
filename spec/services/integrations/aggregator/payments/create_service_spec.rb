@@ -6,16 +6,11 @@ RSpec.describe Integrations::Aggregator::Payments::CreateService do
   subject(:service_call) { described_class.call(payment:) }
 
   let(:service) { described_class.new(payment:) }
-  let(:integration) { create(:netsuite_integration, organization:) }
-  let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
-  let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { "https://api.nango.dev/v1/netsuite/payments" }
   let(:payment) { create(:payment, payable: invoice) }
   let(:invoice) { create(:invoice, customer:, organization:) }
   let(:integration_invoice) { create(:integration_resource, syncable: invoice, integration:) }
-
   let(:headers) do
     {
       "Connection-Id" => integration.connection_id,
@@ -23,7 +18,6 @@ RSpec.describe Integrations::Aggregator::Payments::CreateService do
       "Provider-Config-Key" => "netsuite-tba"
     }
   end
-
   let(:params) do
     {
       "isDynamic" => true,
@@ -49,6 +43,11 @@ RSpec.describe Integrations::Aggregator::Payments::CreateService do
       ]
     }
   end
+  let(:integration) { create(:netsuite_integration, organization:) }
+  let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before do
     allow(LagoHttpClient::Client).to receive(:new)
@@ -84,6 +83,18 @@ RSpec.describe Integrations::Aggregator::Payments::CreateService do
   end
 
   describe "#call" do
+    context "when the payment is for a product catalog invoice" do
+      before do
+        invoice.update!(invoice_type: :contract, status: :finalized)
+        allow(lago_client).to receive(:post_with_response)
+      end
+
+      it "does not send it to the integration" do
+        expect(service_call).to be_success
+        expect(lago_client).not_to have_received(:post_with_response)
+      end
+    end
+
     context "when integration_payment exists" do
       let(:integration_payment) do
         create(:integration_resource, integration:, syncable: payment, resource_type: "payment")

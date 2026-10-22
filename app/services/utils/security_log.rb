@@ -68,6 +68,7 @@ module Utils
 
       KafkaProducer.produce_async(
         topic: self.class.topic,
+        invalid_message_level: :warning,
         key: @key,
         payload: {
           organization_id: @organization.id,

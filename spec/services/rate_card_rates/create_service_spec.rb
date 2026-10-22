@@ -5,9 +5,8 @@ require "rails_helper"
 RSpec.describe RateCardRates::CreateService do
   subject(:result) { described_class.call(rate_card:, params:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization, refind: true) { create(:organization, feature_flags: ["product_catalog"]) }
   let(:rate_card) { create(:rate_card, organization:) }
-
   let(:params) do
     {
       code: "standard_price",
@@ -17,6 +16,18 @@ RSpec.describe RateCardRates::CreateService do
       billing_interval_count: 1,
       billing_interval_unit: "month"
     }
+  end
+
+  let(:activity_log_calls) { [] }
+
+  before do
+    allow(Utils::ActivityLog).to receive(:produce) do |*args, **kwargs, &block|
+      activity_log_calls << {args:, kwargs:, block:}
+    end
+  end
+
+  before_all do
+    create_default(:billable_metric)
   end
 
   it "creates an active rate when effective now" do
@@ -66,11 +77,52 @@ RSpec.describe RateCardRates::CreateService do
       expect(result).not_to be_success
       expect(result.error.messages[:code]).to be_present
     end
+
+    it "does not enqueue a webhook" do
+      expect { result }.not_to have_enqueued_job(SendWebhookJob)
+    end
   end
 
-  it "produces a rate_card.updated activity log" do
-    result
-    expect(Utils::ActivityLog).to have_produced("rate_card.updated").after_commit.with(rate_card)
+  it "publishes rate_card_rate.created to both channels" do
+    expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with do |*args|
+      expect(args).to eq(["rate_card_rate.created", result.rate_card_rate])
+    end
+
+    rate = result.rate_card_rate
+    expect(Utils::ActivityLog).to have_received(:produce).with(
+      rate,
+      "rate_card_rate.created",
+      after_commit: true
+    )
+    activity_call = activity_log_calls.find { |call| call[:args] == [rate, "rate_card_rate.created"] }
+    expect(activity_call.fetch(:block)).to be_a(Proc)
+    expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "rate_card.updated", any_args)
+  end
+
+  context "when emit_events is false" do
+    it "suppresses both activity and webhook events" do
+      expect do
+        described_class.call(rate_card:, params:, emit_events: false)
+      end.not_to have_enqueued_job(SendWebhookJob)
+
+      expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "rate_card_rate.created", any_args)
+    end
+  end
+
+  context "when the catalog flag is disabled" do
+    let(:organization) { create(:organization) }
+
+    it "still schedules the webhook and activity for an unguarded direct service call" do
+      expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with do |*args|
+        expect(args).to eq(["rate_card_rate.created", result.rate_card_rate])
+      end
+      expect(result).to be_success
+      expect(Utils::ActivityLog).to have_received(:produce).with(
+        result.rate_card_rate,
+        "rate_card_rate.created",
+        after_commit: true
+      )
+    end
   end
 
   context "when effective_from is in the future" do
@@ -137,6 +189,25 @@ RSpec.describe RateCardRates::CreateService do
         expect(result).not_to be_success
         expect(result.error.messages[:effective_from]).to eq(["must_be_after_active_rate"])
       end
+    end
+  end
+
+  context "when an attached metered advance card receives its first rate" do
+    let(:customer) { create(:customer, organization:) }
+    let(:contract) { create(:contract, :pending, organization:, customer:) }
+    let(:rate_card) { create(:rate_card, :advance, organization:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+
+    before do
+      contract_rate_card
+      create(:rate_phase, :contract_level, organization:, contract_rate_card:, position: 1)
+    end
+
+    it "adds the rate without persisting an event-pricing segment" do
+      expect { result }.not_to change(BillingSegment, :count)
+      expect(result).to be_success
+      expect(result.rate_card_rate).to be_persisted
+      expect(contract_rate_card.billing_segments).to be_empty
     end
   end
 

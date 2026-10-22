@@ -21,6 +21,7 @@ it:
     breakdown: Ripartizione
     breakdown_for_days: Utilizzati %{breakdown_duration} su %{breakdown_total_duration} giorni
     breakdown_of: Ripartizione di %{fee_filter_display_name}
+    charges_paid_in_advance: Addebiti pagati in anticipo
     clabe: CLABE
     conversion_rate: Tasso di conversione
     country: Paese
@@ -28,7 +29,9 @@ it:
     credit_notes: Note di Credito
     date_from: Dal
     date_to: al
+    description: Descrizione
     details: Dettagli %{resource}
+    details_title: Dettagli
     document_name: Fattura
     document_tax_name: Fattura fiscale
     due_date: Scadenza %{date}
@@ -58,7 +61,7 @@ it:
     month: mese
     monthly: Mensile
     notice_full: Indipendentemente da quando un evento viene ricevuto, l'unità non è prorata, addebitiamo il prezzo intero.
-    notice_prorated: Se un'unità viene aggiunta o rimossa durante il piano mensile, calcoliamo il prezzo proporzionato in base al rapporto tra i giorni rimanenti o utilizzati e il numero totale di giorni nel piano. Ad esempio, se restano 15 giorni nel piano, moltiplichiamo il prezzo per 15/%{days_in_month}, e se un'unità è stata utilizzata per 10 giorni, moltiplichiamo il prezzo per 10/%{days_in_month}.
+    notice_prorated: Se un'unità viene aggiunta o rimossa durante il piano mensile, calcoliamo il prezzo proporzionato in base al rapporto tra i giorni rimanenti o utilizzati e il numero totale di giorni nel piano. Ad esempio, se restano 15 giorni in un periodo di %{days_in_month} giorni, moltiplichiamo il prezzo per 15/%{days_in_month}, e se un'unità è stata utilizzata per 10 giorni, moltiplichiamo il prezzo per 10/%{days_in_month}.
     package:
       fee_per_package: Tassa per pacchetto
       fee_per_package_unit_price: "%{amount} per %{package_size}"
@@ -66,6 +69,7 @@ it:
     paid_invoice: Fattura pagata
     paid_tax_invoice: Fattura fiscale pagata
     pay_with_bank_transfer: Paga con bonifico bancario
+    payment_due_date: Data di scadenza
     payment_term: Termine di pagamento
     payment_term_days: "%{net_payment_term} giorni"
     percentage:
@@ -81,6 +85,7 @@ it:
     prepaid_credits_with_value: Crediti prepagati - %{wallet_name}
     progressive_billing_credit: Uso già fatturato
     purchase_order_number: Numero d'ordine d'acquisto
+    quantity: Quantità
     quarter: trimestre
     quarterly: Trimestrale
     reached_usage_threshold: Questa fatturazione progressiva è generata poiché il tuo utilizzo cumulato ha raggiunto %{usage_amount}, superando la soglia di %{threshold_amount}.
@@ -114,6 +119,13 @@ it:
       fr_tax_exempt: Il cliente è esente da tasse secondo l'articolo 259-1 del Codice Generale delle Imposte francese.
       reverse_charge: Responsabilità fiscale trasferita al cliente.
       tax_exempt: Il cliente è esente da tasse.
+    tiers:
+      fee_for_first: Tariffa per le prime %{up_to} unità
+      fee_for_next: Tariffa per le unità fino a %{up_to}
+      fee_for_remaining: Tariffa per le unità rimanenti
+      flat_fee_for_first: Tariffa fissa per le prime %{up_to} unità
+      flat_fee_for_next: Tariffa fissa per le unità fino a %{up_to}
+      flat_fee_for_remaining: Tariffa fissa per le unità rimanenti
     total: Totale
     total_credits: Crediti totali
     total_credits_with_value: 'Crediti totali: %{credit_amount} crediti'

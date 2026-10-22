@@ -5,8 +5,6 @@ RSpec.describe Coupons::ValidateService do
   subject(:validate_service) { described_class.new(result, **args) }
 
   let(:result) { BaseService::Result.new }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
   let(:expiration_at) { Time.current + 10.days }
   let(:args) do
     {
@@ -21,6 +19,9 @@ RSpec.describe Coupons::ValidateService do
       expiration_at:
     }
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
 
   describe "#valid?" do
     it "returns true" do

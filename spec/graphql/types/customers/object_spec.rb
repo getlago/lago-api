@@ -5,6 +5,9 @@ require "rails_helper"
 RSpec.describe Types::Customers::Object do
   subject { described_class }
 
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:organization) { create_default(:organization) }
+
   it do
     expect(subject).to have_field(:id).of_type("ID!")
     expect(subject).to have_field(:billing_entity).of_type("BillingEntity!")
@@ -62,7 +65,7 @@ RSpec.describe Types::Customers::Object do
 
     expect(subject).to have_field(:invoices).of_type("[Invoice!]")
 
-    expect(subject).to have_field(:activity_logs).of_type("[ActivityLog!]")
+    expect(subject).to have_field(:activity_logs).of_type("[ActivityLog!]").with_permission("audit_logs:view")
     expect(subject).to have_field(:applied_add_ons).of_type("[AppliedAddOn!]")
     expect(subject).to have_field(:applied_coupons).of_type("[AppliedCoupon!]")
     expect(subject).to have_field(:taxes).of_type("[Tax!]")
@@ -96,12 +99,6 @@ RSpec.describe Types::Customers::Object do
 
   describe "credit_notes_balances grouping" do
     let(:required_permission) { "customers:view" }
-    let(:membership) { create(:membership) }
-    let(:organization) { membership.organization }
-    let(:customer) { create(:customer, organization:) }
-    let(:billing_entity_a) { create(:billing_entity, organization:) }
-    let(:billing_entity_b) { create(:billing_entity, organization:) }
-
     let(:query) do
       <<~GQL
         query($customerId: ID!) {
@@ -116,6 +113,11 @@ RSpec.describe Types::Customers::Object do
         }
       GQL
     end
+
+    let_it_be(:membership) { create_default(:membership) }
+    let_it_be(:customer) { create_default(:customer, organization:) }
+    let_it_be(:billing_entity_a) { create(:billing_entity, organization:) }
+    let_it_be(:billing_entity_b) { create(:billing_entity, organization:) }
 
     def execute
       execute_graphql(

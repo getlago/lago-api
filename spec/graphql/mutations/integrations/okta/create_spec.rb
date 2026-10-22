@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Mutations::Integrations::Okta::Create, :premium do
   include_context "with mocked security logger"
 
-  let(:required_permission) { "organization:integrations:create" }
+  let(:required_permission) { "authentication_methods:update" }
   let(:membership) { create(:membership) }
 
   let(:mutation) do
@@ -27,7 +27,7 @@ RSpec.describe Mutations::Integrations::Okta::Create, :premium do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "organization:integrations:create"
+  it_behaves_like "requires permission", "authentication_methods:update"
 
   context "with valid input" do
     let!(:result) do

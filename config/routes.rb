@@ -21,9 +21,10 @@ Rails.application.routes.draw do
       draw(:shared_api)
     end
 
-    # Drawn first so catalog routes win recognition; everything else on /api/v2
+    # Drawn first so version-specific routes win recognition; everything else on /api/v2
     # falls through to v1.
     namespace :v2 do
+      resources :taxes, param: :code, code: /.*/, only: %i[index show create update destroy]
       resources :products, param: :code, code: /.*/, only: %i[index show create update destroy] do
         resources :filters, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "products/filters"
       end
@@ -42,6 +43,7 @@ Rails.application.routes.draw do
       # The constraint mirrors v1: without it, an external id containing a
       # dot is truncated at the format separator.
       resources :contracts, only: %i[index show create update], param: :external_id, constraints: {external_id: /[^\/]+/} do
+        get :current_usage, on: :member, to: "contracts/usage#current"
         resources :applied_rate_cards, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "contract_rate_cards" do
           scope module: :contract_rate_cards do
             resources :rate_phases, param: :code, code: /.*/, only: %i[index create update destroy]
@@ -51,6 +53,9 @@ Rails.application.routes.draw do
       # A contract is never destroyed — DELETE ends its lifecycle, the same
       # idiom subscriptions follow.
       delete "/contracts/:external_id", to: "contracts#terminate", constraints: {external_id: /[^\/]+/}
+      resources :invoices, only: [] do
+        post :void, on: :member
+      end
     end
 
     namespace :v2, module: :v1 do

@@ -28,6 +28,30 @@ RSpec.describe Mutations::AddOns::Create do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "addons:create"
 
+  context "when amountCents is larger than a bigint" do
+    it "returns a validation error instead of a 500" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        query: mutation,
+        permissions: required_permission,
+        variables: {
+          input: {
+            name: "Oversized Add-on",
+            code: "oversized",
+            amountCents: (10**20).to_s,
+            amountCurrency: "EUR"
+          }
+        }
+      )
+
+      error = result["errors"].first
+      expect(error["extensions"]["status"]).to eq(422)
+      expect(error["extensions"]["details"]["base"]).to eq(["value_is_out_of_range"])
+      expect(AddOn.where(code: "oversized")).not_to exist
+    end
+  end
+
   it "creates an add-on" do
     result = execute_graphql(
       current_user: membership.user,

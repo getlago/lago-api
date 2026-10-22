@@ -6,13 +6,18 @@ RSpec.describe PaymentReceipts::GeneratePdfService do
   subject(:payment_receipt_generate_service) { described_class.new(payment_receipt:, context:) }
 
   let(:context) { "graphql" }
-  let(:organization) { create(:organization, name: "LAGO") }
-  let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, organization:, customer:) }
   let(:invoice) { create(:invoice, customer:, status: :finalized, organization:) }
   let(:payment) { create(:payment, payable: invoice) }
   let(:payment_receipt) { create(:payment_receipt, payment:, organization:) }
   let(:blank_pdf_path) { Rails.root.join("spec/fixtures/blank.pdf") }
+
+  let_it_be(:organization) { create_default(:organization, name: "LAGO") }
+  let_it_be(:customer) { create_default(:customer, organization:) }
+
+  before_all do
+    create_default(:plan)
+  end
 
   before do
     billing_entity = organization.default_billing_entity
@@ -112,7 +117,7 @@ RSpec.describe PaymentReceipts::GeneratePdfService do
       end
     end
 
-    context "when create temp files" do
+    context "when creating temp files" do
       let(:pdf_tempfile) { instance_double(Tempfile).as_null_object }
 
       before do
@@ -126,24 +131,6 @@ RSpec.describe PaymentReceipts::GeneratePdfService do
 
         expect(pdf_tempfile).to have_received(:unlink)
       end
-
-      context "with einvoicing enabled" do
-        let(:xml_tempfile) { instance_double(Tempfile).as_null_object }
-
-        before do
-          payment_receipt.billing_entity.update(country: "FR", einvoicing: true)
-
-          allow(Tempfile).to receive(:new).with([payment_receipt.number, ".xml"]).and_return(xml_tempfile)
-          allow(Utils::PdfAttachmentService).to receive(:call)
-        end
-
-        it "unlink all files at the end" do
-          described_class.call(payment_receipt:, context:)
-
-          expect(pdf_tempfile).to have_received(:unlink)
-          expect(xml_tempfile).to have_received(:unlink)
-        end
-      end
     end
 
     context "when einvoicing is enabled" do
@@ -155,7 +142,7 @@ RSpec.describe PaymentReceipts::GeneratePdfService do
         payment_receipt.billing_entity.update(country:, einvoicing: true)
 
         allow(EInvoices::Payments::Cii::CreateService).to receive(:call).and_return(create_xml_result)
-        allow(Utils::PdfAttachmentService).to receive(:call)
+        allow(Utils::PdfAttachmentService).to receive(:call!)
       end
 
       context "with FR country" do
@@ -164,11 +151,50 @@ RSpec.describe PaymentReceipts::GeneratePdfService do
         it "generates the payment_receipt with attached cii xml synchronously" do
           result = described_class.call(payment_receipt:, context:)
 
-          expect(Utils::PdfAttachmentService).to have_received(:call)
+          expect(Utils::PdfAttachmentService).to have_received(:call!).with(
+            file: kind_of(Tempfile),
+            attachment_content: fake_xml,
+            attachment_name: "factur-x.xml"
+          )
           expect(EInvoices::Payments::Cii::CreateService).to have_received(:call)
           expect(result.payment_receipt.file).to be_present
         end
+
+        context "when attaching the CII XML fails" do
+          let(:attachment_error) do
+            BaseService::ThirdPartyFailure.new(
+              Utils::PdfAttachmentService::Result.new,
+              third_party: "pdfcpu",
+              error_code: "failed",
+              error_message: ""
+            )
+          end
+
+          before do
+            allow(Utils::PdfAttachmentService).to receive(:call!).and_raise(attachment_error)
+          end
+
+          it "fails PDF generation" do
+            expect { payment_receipt_generate_service.call }.to raise_error(BaseService::ThirdPartyFailure)
+          end
+        end
       end
+    end
+  end
+
+  describe "#render_html" do
+    subject(:html) { payment_receipt_generate_service.render_html }
+
+    let(:invoice) { create(:invoice, customer: create(:customer, organization:, document_locale: "fr"), status: :finalized, organization:) }
+    let(:pdf_generator) { instance_double(Utils::PdfGenerator) }
+
+    before do
+      allow(Utils::PdfGenerator).to receive(:new).and_return(pdf_generator)
+      allow(pdf_generator).to receive(:render_html) { I18n.locale.to_s }
+    end
+
+    it "renders in the customer document locale" do
+      expect(html).to eq("fr")
     end
   end
 end

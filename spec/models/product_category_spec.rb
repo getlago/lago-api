@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe ProductCategory do
   subject(:product_category) { build(:product_category) }
 
+  let_it_be(:organization) { create_default(:organization) }
+
   it_behaves_like "paper_trail traceable"
 
   it_behaves_like "a catalog code", :product_category
@@ -12,7 +14,7 @@ RSpec.describe ProductCategory do
   describe "associations" do
     it do
       expect(product_category).to belong_to(:organization)
-      expect(product_category).to have_many(:products)
+      expect(product_category).to have_many(:products).inverse_of(:product_category)
       expect(product_category).to have_many(:contract_applied_rate_cards).through(:products)
     end
   end

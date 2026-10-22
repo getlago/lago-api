@@ -6,13 +6,11 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
   subject(:service_call) { described_class.call(invoice:) }
 
   let(:integration) { create(:anrok_integration, organization:) }
-  let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+  let(:fee) { create(:fee, invoice:, amount_cents: 1000) }
   let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { "https://api.nango.dev/v1/anrok/void_invoices" }
   let(:current_time) { Time.current }
-
   let(:integration_collection_mapping1) do
     create(
       :netsuite_collection_mapping,
@@ -21,7 +19,6 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
       settings: {external_id: "1", external_account_code: "11", external_name: ""}
     )
   end
-
   let(:invoice) do
     create(
       :invoice,
@@ -29,7 +26,6 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
       organization:
     )
   end
-
   let(:headers) do
     {
       "Connection-Id" => integration.connection_id,
@@ -37,7 +33,6 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
       "Provider-Config-Key" => "anrok"
     }
   end
-
   let(:params) do
     [
       {
@@ -45,8 +40,9 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
       }
     ]
   end
+  let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
 
-  let(:fee) { create(:fee, invoice:, amount_cents: 1000) }
+  let_it_be(:organization) { create_default(:organization) }
 
   before do
     allow(LagoHttpClient::Client).to receive(:new)

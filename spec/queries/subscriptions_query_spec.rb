@@ -6,15 +6,14 @@ RSpec.describe SubscriptionsQuery do
   subject(:result) { described_class.call(organization:, pagination:, filters:, search_term:) }
 
   let(:returned_ids) { result.subscriptions.pluck(:id) }
-
-  let(:organization) { create(:organization) }
   let(:pagination) { nil }
   let(:filters) { {} }
   let(:search_term) { nil }
-
-  let(:customer) { create(:customer, organization:) }
-  let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, customer:, plan:) }
+
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:plan) { create(:plan, organization:) }
 
   before { subscription }
 
@@ -76,11 +75,12 @@ RSpec.describe SubscriptionsQuery do
   end
 
   context "with search_term" do
-    let(:plan) { create(:plan, organization:, name: "Test Plan") }
+    let_it_be(:plan) { create(:plan, organization:, name: "Test Plan") }
     let(:subscription) { create(:subscription, customer:, plan:, name: "Test Subscription") }
-    let(:subscription_2) { create(:subscription, customer:, plan:, name: "Test Subscription 2") }
-    let(:other_plan) { create(:plan, organization:, name: "Other Plan") }
     let(:other_subscription) { create(:subscription, customer:, plan: other_plan, name: "Other Subscription") }
+    let(:subscription_2) { create(:subscription, customer:, plan:, name: "Test Subscription 2") }
+
+    let_it_be(:other_plan) { create(:plan, organization:, name: "Other Plan") }
 
     before { subscription_2 }
 
@@ -331,9 +331,10 @@ RSpec.describe SubscriptionsQuery do
   context "with overriden filter" do
     let(:filters) { {} }
     let(:plan) { create(:plan, organization:, parent: parent_plan) }
+    let(:subscription_2) { create(:subscription, customer:, plan: parent_plan) }
+
     let(:parent_plan) { create(:plan, organization:) }
     let(:subscription) { create(:subscription, customer:, plan:) }
-    let(:subscription_2) { create(:subscription, customer:, plan: parent_plan) }
 
     before { [subscription, subscription_2] }
 
@@ -367,8 +368,8 @@ RSpec.describe SubscriptionsQuery do
   end
 
   context "with billing_entity_ids filter" do
-    let(:us_entity) { create(:billing_entity, organization:, code: "us") }
-    let(:eu_entity) { create(:billing_entity, organization:, code: "eu") }
+    let_it_be(:us_entity) { create(:billing_entity, organization:, code: "us") }
+    let_it_be(:eu_entity) { create(:billing_entity, organization:, code: "eu") }
     let(:subscription) { create(:subscription, customer:, plan:, billing_entity: us_entity) }
     let(:us_subscription) { subscription }
     let(:eu_subscription) { create(:subscription, customer:, plan:, billing_entity: eu_entity) }
@@ -406,8 +407,8 @@ RSpec.describe SubscriptionsQuery do
     end
 
     context "when a subscription has NULL billing_entity_id inherits from customer" do
-      let(:us_customer) { create(:customer, organization:, billing_entity: us_entity) }
-      let(:eu_customer) { create(:customer, organization:, billing_entity: eu_entity) }
+      let_it_be(:us_customer) { create(:customer, organization:, billing_entity: us_entity) }
+      let_it_be(:eu_customer) { create(:customer, organization:, billing_entity: eu_entity) }
 
       let!(:inherits_eu) { create(:subscription, customer: eu_customer, plan:, billing_entity: nil) }
       let!(:inherits_us) { create(:subscription, customer: us_customer, plan:, billing_entity: nil) }
@@ -440,8 +441,8 @@ RSpec.describe SubscriptionsQuery do
   end
 
   context "with currency filter" do
-    let(:eur_plan) { create(:plan, organization:, amount_currency: "EUR") }
-    let(:usd_plan) { create(:plan, organization:, amount_currency: "USD") }
+    let_it_be(:eur_plan) { create(:plan, organization:, amount_currency: "EUR") }
+    let_it_be(:usd_plan) { create(:plan, organization:, amount_currency: "USD") }
     let(:eur_subscription) { create(:subscription, customer:, plan: eur_plan) }
     let(:usd_subscription) { create(:subscription, customer:, plan: usd_plan) }
     let(:subscription) { nil }

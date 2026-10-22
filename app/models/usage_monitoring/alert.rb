@@ -161,29 +161,31 @@ module UsageMonitoring
     def find_recurring_thresholds_crossed_increasing(previous, current, step, initial)
       return [] unless step
 
-      previous_steps = ((previous - initial) / step).ceil
-      previous_recurring = initial + [previous_steps, 1].max * step
+      # The recurring threshold equal to `previous` was already crossed, so the first one to cross is strictly above it
+      first_step = [((previous - initial) / step).floor + 1, 1].max
+      first_threshold = initial + first_step * step
 
-      current_steps = ((current - initial) / step).floor
-      current_recurring = initial + current_steps * step
+      last_step = ((current - initial) / step).floor
+      last_threshold = initial + last_step * step
 
-      return [] if previous_recurring > current_recurring # Shouldn't happen
+      return [] if first_threshold > last_threshold
 
-      (previous_recurring..current_recurring).step(step).to_a
+      (first_threshold..last_threshold).step(step).to_a
     end
 
     def find_recurring_thresholds_crossed_decreasing(previous, current, step, initial)
       return [] unless step
 
-      previous_steps = ((initial - previous) / step).ceil
-      previous_recurring = initial - [previous_steps, 1].max * step
+      # The recurring threshold equal to `previous` was already crossed, so the first one to cross is strictly below it
+      first_step = [((initial - previous) / step).floor + 1, 1].max
+      first_threshold = initial - first_step * step
 
-      current_steps = ((initial - current) / step).floor
-      current_recurring = initial - current_steps * step
+      last_step = ((initial - current) / step).floor
+      last_threshold = initial - last_step * step
 
-      return [] if previous_recurring < current_recurring # Shouldn't happen
+      return [] if first_threshold < last_threshold
 
-      current_recurring.step(previous_recurring, step).to_a
+      last_threshold.step(first_threshold, step).to_a
     end
   end
 end
@@ -211,6 +213,7 @@ end
 # Indexes
 #
 #  idx_alerts_code_unique_per_subscription                    (code,subscription_external_id,organization_id) UNIQUE WHERE (deleted_at IS NULL)
+#  idx_alerts_code_unique_per_wallet                          (code,wallet_id,organization_id) UNIQUE WHERE ((deleted_at IS NULL) AND (wallet_id IS NOT NULL))
 #  idx_alerts_unique_per_type_per_subscription                (subscription_external_id,organization_id,alert_type) UNIQUE WHERE ((billable_metric_id IS NULL) AND (deleted_at IS NULL))
 #  idx_alerts_unique_per_type_per_subscription_with_bm        (subscription_external_id,organization_id,alert_type,billable_metric_id) UNIQUE WHERE ((billable_metric_id IS NOT NULL) AND (deleted_at IS NULL))
 #  idx_alerts_unique_per_type_per_wallet                      (wallet_id,organization_id,alert_type) UNIQUE WHERE ((billable_metric_id IS NULL) AND (deleted_at IS NULL))

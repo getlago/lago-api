@@ -59,13 +59,14 @@ RSpec.describe Fees::ChargeService::MeteredItem do
         rate_card_rate:,
         currency: "USD",
         rate_properties: {"amount" => "24"},
-        proration_ratio: 0.5,
+        proration_ratio: 1.0,
         billing_at: Time.zone.parse("2026-10-01"),
         cycle_started_at: Time.zone.parse("2026-09-01"),
         started_at: Time.zone.parse("2026-09-01"),
         ended_at: Time.zone.parse("2026-09-30").end_of_day
       )
     end
+    let(:max_timestamp) { Time.zone.parse("2026-09-15 12:34:56") }
 
     describe "#filtered_for_charge_boundaries" do
       subject(:properties) { described_class.from_billing_segment(billing_segment: billing_segment).filtered_for_charge_boundaries.as_json }
@@ -99,6 +100,13 @@ RSpec.describe Fees::ChargeService::MeteredItem do
         charges_duration: 30,
         timestamp: billing_segment.billing_at
       )
+    end
+
+    it "passes the optional max timestamp to the billing segment source" do
+      metered_item = described_class.from_billing_segment(billing_segment:, max_timestamp:)
+
+      expect(metered_item.source.max_timestamp).to eq(max_timestamp)
+      expect(metered_item.boundaries.max_timestamp).to eq(max_timestamp)
     end
 
     it "defaults absent attributes without masking segment references" do
@@ -155,6 +163,106 @@ RSpec.describe Fees::ChargeService::MeteredItem do
         is_current_usage: false,
         is_pay_in_advance: true
       )
+    end
+
+    describe "#boundaries" do
+      subject(:boundaries) { metered_item.boundaries }
+
+      let(:metered_item) { described_class.from_billing_segment(billing_segment:, event:) }
+      let(:event) do
+        build(:common_event, organization:, billable_metric:, timestamp: Time.zone.parse("2027-01-20"))
+      end
+      let(:billable_metric) do
+        build(:billable_metric, organization:, aggregation_type: :sum_agg, field_name: "amount", recurring: false)
+      end
+      let(:rate_card) { build(:rate_card, :advance, organization:, product:, currency: "USD", proration: false) }
+      let(:rate_model) { "standard" }
+      let(:rate_card_rate) do
+        build(:rate_card_rate, organization:, rate_card:, rate_model:, rate_properties: {"amount" => "2"})
+      end
+      let(:rate_override) { nil }
+      let(:billing_segment) do
+        build(:billing_segment, organization:, contract_rate_card:, rate_card_rate:, rate_override:,
+          cycle_started_at: Time.zone.parse("2027-01-01"),
+          started_at: Time.zone.parse("2027-01-15"),
+          ended_at: Time.zone.parse("2027-01-31 23:59:59.999999"))
+      end
+
+      it "keeps standard pricing within the rate segment" do
+        expect(boundaries).to have_attributes(
+          from_datetime: billing_segment.started_at,
+          charges_from_datetime: billing_segment.started_at,
+          to_datetime: billing_segment.ended_at
+        )
+      end
+
+      context "with a graduated model" do
+        let(:rate_model) { "graduated" }
+
+        it "resets nonrecurring advance aggregation at the rate segment" do
+          expect(metered_item).to be_graduated
+          expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
+          expect(metered_item.aggregation_boundaries[:from_datetime]).to eq(billing_segment.started_at)
+          expect(boundaries.from_datetime).to eq(billing_segment.started_at)
+        end
+
+        context "with a recurring metric" do
+          let(:billable_metric) do
+            build(:billable_metric, organization:, aggregation_type: :sum_agg, field_name: "amount", recurring: true)
+          end
+
+          it "does not widen the recurring aggregation window" do
+            expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
+          end
+        end
+
+        context "with an arrears card" do
+          let(:rate_card) { build(:rate_card, organization:, product:, currency: "USD", proration: false) }
+
+          it "keeps the segment start" do
+            expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
+          end
+        end
+      end
+
+      context "with a graduated percentage model" do
+        let(:rate_model) { "graduated_percentage" }
+
+        it "keeps aggregation within the rate segment" do
+          expect(metered_item).to be_graduated_percentage
+          expect(metered_item).not_to be_graduated
+          expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
+        end
+      end
+
+      %w[package percentage custom dynamic].each do |model|
+        context "with a #{model} model" do
+          let(:rate_model) { model }
+
+          it "keeps aggregation within the rate segment" do
+            expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
+          end
+        end
+      end
+
+      context "with a graduated rate override on a standard rate" do
+        let(:rate_override) { build(:rate_override, organization:, rate_model: "graduated") }
+
+        it "keeps the segment start with a graduated override" do
+          expect(metered_item).to be_graduated
+          expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
+        end
+      end
+
+      context "with a standard rate override on a graduated rate" do
+        let(:rate_model) { "graduated" }
+        let(:rate_override) { build(:rate_override, organization:, rate_model: "standard") }
+
+        it "keeps the segment start for the effective standard model" do
+          expect(metered_item).not_to be_graduated
+          expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
+        end
+      end
     end
   end
 

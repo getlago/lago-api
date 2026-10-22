@@ -30,6 +30,12 @@ module Clockwork
       .perform_later
   end
 
+  every(5.minutes, "schedule:terminate_ended_contracts") do
+    Clock::TerminateEndedContractsJob
+      .set(sentry: {"slug" => "lago_terminate_ended_contracts", "cron" => "*/5 * * * *"})
+      .perform_later
+  end
+
   every(5.minutes, "schedule:refresh_draft_invoices") do
     Clock::RefreshDraftInvoicesJob
       .set(sentry: {"slug" => "lago_refresh_draft_invoices", "cron" => "*/5 * * * *"})
@@ -235,6 +241,12 @@ module Clockwork
   every(15.minutes, "schedule:retry_inbound_webhooks") do
     Clock::InboundWebhooksRetryJob
       .set(sentry: {"slug" => "lago_retry_inbound_webhooks", "cron" => "*/15 * * * *"})
+      .perform_later
+  end
+
+  every(1.minute, "schedule:reconcile_x402_settlements") do
+    Clock::ReconcileX402SettlementsJob
+      .set(sentry: {"slug" => "lago_reconcile_x402_settlements", "cron" => "* * * * *"})
       .perform_later
   end
 

@@ -35,6 +35,7 @@ module Types
     field :catalog_plan, resolver: Resolvers::CatalogPlanResolver
     field :catalog_plans, resolver: Resolvers::CatalogPlansResolver
     field :contract, resolver: Resolvers::ContractResolver
+    field :contract_applied_rate_card, resolver: Resolvers::ContractAppliedRateCardResolver
     field :contract_applied_rate_cards, resolver: Resolvers::ContractAppliedRateCardsResolver
     field :contracts, resolver: Resolvers::ContractsResolver
     field :coupon, resolver: Resolvers::CouponResolver
@@ -99,6 +100,7 @@ module Types
     field :payment_requests, resolver: Resolvers::PaymentRequestsResolver
     field :payments, resolver: Resolvers::PaymentsResolver
     field :plan, resolver: Resolvers::PlanResolver
+    field :plan_applied_rate_card, resolver: Resolvers::PlanAppliedRateCardResolver
     field :plan_applied_rate_cards, resolver: Resolvers::PlanAppliedRateCardsResolver
     field :plans, resolver: Resolvers::PlansResolver
     field :pricing_unit, resolver: Resolvers::PricingUnitResolver
@@ -127,6 +129,7 @@ module Types
     field :subscription_alerts, resolver: Resolvers::Subscriptions::AlertsResolver
     field :subscription_entitlement, resolver: Resolvers::Entitlement::SubscriptionEntitlementResolver
     field :subscription_entitlements, resolver: Resolvers::Entitlement::SubscriptionEntitlementsResolver
+    field :subscription_hourly_usage, resolver: Resolvers::Subscriptions::HourlyUsageResolver
     field :subscriptions, resolver: Resolvers::SubscriptionsResolver
     field :tax, resolver: Resolvers::TaxResolver
     field :taxes, resolver: Resolvers::TaxesResolver

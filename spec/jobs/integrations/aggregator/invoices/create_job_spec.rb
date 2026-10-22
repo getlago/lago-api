@@ -5,15 +5,26 @@ require "rails_helper"
 RSpec.describe Integrations::Aggregator::Invoices::CreateJob do
   subject(:create_job) { described_class }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
-  let(:invoice) { create(:invoice, customer:, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
+  let_it_be(:invoice) { create(:invoice, customer:, organization:) }
   let(:result) { Integrations::Aggregator::Invoices::CreateService::Result.new }
   let(:reconcile_result) { Integrations::Aggregator::Invoices::ReconcileService::Result.new }
 
   before do
     allow(Integrations::Aggregator::Invoices::CreateService).to receive(:call).and_return(result)
     allow(Integrations::Aggregator::Invoices::ReconcileService).to receive(:call).and_return(reconcile_result)
+  end
+
+  context "when the invoice is a product catalog invoice" do
+    let(:catalog_invoice) { create(:invoice, customer:, organization:, invoice_type: :contract) }
+
+    it "neither looks it up upstream nor sends it" do
+      described_class.perform_now(invoice: catalog_invoice, find_first: true)
+
+      expect(Integrations::Aggregator::Invoices::ReconcileService).not_to have_received(:call)
+      expect(Integrations::Aggregator::Invoices::CreateService).not_to have_received(:call)
+    end
   end
 
   context "when find_first: true" do

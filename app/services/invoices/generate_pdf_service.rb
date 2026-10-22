@@ -26,7 +26,9 @@ module Invoices
     end
 
     def render_html
-      Utils::PdfGenerator.new(template:, context: invoice).render_html
+      I18n.with_locale(invoice.customer.preferred_document_locale) do
+        Utils::PdfGenerator.new(template:, context: invoice, **page_layout).render_html
+      end
     end
 
     private
@@ -36,16 +38,16 @@ module Invoices
     def generate_pdf
       I18n.with_locale(invoice.customer.preferred_document_locale) do
         pdf_file = build_pdf_file
-        xml_file = attach_cii(pdf_file) if should_generate_cii_einvoice_xml?
+        attach_cii(pdf_file) if should_generate_cii_einvoice_xml?
         attach_pdf_to_invoice(pdf_file)
         invoice.save!
       ensure
-        cleanup_tempfiles(pdf_file, xml_file)
+        cleanup_tempfile(pdf_file)
       end
     end
 
     def build_pdf_file
-      pdf_content = Utils::PdfGenerator.call(template:, context: invoice).io.read
+      pdf_content = Utils::PdfGenerator.call(template:, context: invoice, **page_layout).io.read
 
       pdf_file = Tempfile.new([invoice.number, ".pdf"])
       pdf_file.binmode
@@ -56,12 +58,13 @@ module Invoices
     end
 
     def attach_cii(pdf_file)
-      xml_file = Tempfile.new([invoice.number, ".xml"])
-      xml_file.write(EInvoices::Invoices::Cii::CreateService.call(invoice:).xml)
-      xml_file.flush
+      xml = EInvoices::Invoices::Cii::CreateService.call(invoice:).xml
 
-      Utils::PdfAttachmentService.call(file: pdf_file, attachment: xml_file)
-      xml_file
+      Utils::PdfAttachmentService.call!(
+        file: pdf_file,
+        attachment_content: xml,
+        attachment_name: "factur-x.xml"
+      )
     end
 
     def attach_pdf_to_invoice(pdf_file)
@@ -72,13 +75,22 @@ module Invoices
       )
     end
 
-    def cleanup_tempfiles(pdf_file, xml_file)
+    def cleanup_tempfile(pdf_file)
       pdf_file&.unlink
-      xml_file&.unlink
+    end
+
+    def page_layout
+      if invoice.product_catalog?
+        {footer: "invoices/product_catalog/footer", margin_bottom: "1.0167"}
+      else
+        {}
+      end
     end
 
     def template
-      if invoice.self_billed?
+      if invoice.product_catalog?
+        "invoices/product_catalog/contract"
+      elsif invoice.self_billed?
         "invoices/v#{invoice.version_number}/self_billed"
 
       elsif invoice.one_off?
@@ -103,6 +115,8 @@ module Invoices
     end
 
     def should_generate_cii_einvoice_xml?
+      return false if invoice.product_catalog?
+
       invoice.billing_entity.eligible_for_einvoicing?
     end
 

@@ -74,6 +74,70 @@ RSpec.describe Api::V1::PaymentReceiptsController do
         expect(json[:payment_receipts].first[:payment][:invoice_ids].first).to eq(invoice.id)
       end
     end
+
+    context "when an older receipt's payment references an invoice that no longer exists" do
+      let(:customer) { create(:customer, organization:) }
+      let(:valid_invoice) { create(:invoice, customer:, organization:) }
+      let(:valid_payment) { create(:payment, payable: valid_invoice) }
+      let!(:valid_receipt) { create(:payment_receipt, payment: valid_payment, organization:) }
+
+      let(:missing_invoice_id) { SecureRandom.uuid }
+      let(:orphan_payment) { create(:payment, payable: create(:invoice, customer:, organization:)) }
+      let!(:orphan_receipt) do
+        create(:payment_receipt, payment: orphan_payment, organization:, created_at: 2.days.ago)
+      end
+
+      before { orphan_payment.update_columns(payable_id: missing_invoice_id) } # rubocop:disable Rails/SkipsModelValidations
+
+      context "without pagination params" do
+        it "returns both receipts" do
+          subject
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:payment_receipts].map { |r| r[:lago_id] }).to eq([valid_receipt.id, orphan_receipt.id])
+        end
+
+        it "serializes the payment from its own data" do
+          subject
+
+          orphan = json[:payment_receipts].find { |r| r[:lago_id] == orphan_receipt.id }
+          expect(orphan[:number]).to eq(orphan_receipt.number)
+          expect(orphan[:payment]).to include(
+            lago_id: orphan_payment.id,
+            lago_customer_id: customer.id,
+            external_customer_id: customer.external_id,
+            invoice_ids: [],
+            invoice_numbers: [],
+            lago_payable_id: missing_invoice_id,
+            payable_type: "Invoice",
+            amount_cents: orphan_payment.amount_cents,
+            amount_currency: orphan_payment.amount_currency
+          )
+        end
+      end
+
+      context "with per_page=1" do
+        let(:params) { {per_page: 1} }
+
+        it "returns the most recent receipt" do
+          subject
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:payment_receipts].map { |r| r[:lago_id] }).to eq([valid_receipt.id])
+        end
+      end
+
+      context "with per_page=5" do
+        let(:params) { {per_page: 5} }
+
+        it "returns both receipts" do
+          subject
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:payment_receipts].map { |r| r[:lago_id] }).to eq([valid_receipt.id, orphan_receipt.id])
+        end
+      end
+    end
   end
 
   describe "GET /api/v1/payment_receipts/:id" do
@@ -113,12 +177,54 @@ RSpec.describe Api::V1::PaymentReceiptsController do
       end
     end
 
+    context "when the payment references an invoice that no longer exists" do
+      let(:missing_invoice_id) { SecureRandom.uuid }
+      let(:id) { payment_receipt.id }
+
+      before { payment.update_columns(payable_id: missing_invoice_id) } # rubocop:disable Rails/SkipsModelValidations
+
+      it "returns the payment receipt" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:payment_receipt][:lago_id]).to eq(payment_receipt.id)
+        expect(json[:payment_receipt][:payment]).to include(
+          lago_id: payment.id,
+          lago_customer_id: customer.id,
+          external_customer_id: customer.external_id,
+          invoice_ids: [],
+          invoice_numbers: [],
+          lago_payable_id: missing_invoice_id
+        )
+      end
+    end
+
     context "when payment does not exist" do
       let(:id) { SecureRandom.uuid }
 
       it "returns a not found error" do
         subject
         expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
+
+  describe "POST /api/v1/payment_receipts/:id/resend_email" do
+    subject { post_with_token(organization, "/api/v1/payment_receipts/#{payment_receipt.id}/resend_email", {}) }
+
+    let(:customer) { create(:customer, organization:) }
+    let(:invoice) { create(:invoice, customer:, organization:) }
+    let(:payment) { create(:payment, payable: invoice) }
+    let(:payment_receipt) { create(:payment_receipt, payment:, organization:) }
+
+    context "when the payment references an invoice that no longer exists" do
+      before { payment.update_columns(payable_id: SecureRandom.uuid) } # rubocop:disable Rails/SkipsModelValidations
+
+      it "returns a controlled error without enqueueing the email" do
+        expect { subject }.not_to have_enqueued_mail(PaymentReceiptMailer, :created)
+
+        expect(response).to have_http_status(:method_not_allowed)
+        expect(json[:code]).to eq("payable_not_found")
       end
     end
   end

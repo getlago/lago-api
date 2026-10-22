@@ -5,10 +5,14 @@ require "rails_helper"
 RSpec.describe RateCards::UpdateService do
   subject(:result) { described_class.call(rate_card:, params:) }
 
-  let(:organization) { create(:organization) }
+  let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
   let(:rate_card) { create(:rate_card, organization:, name: "Before", currency: "EUR") }
-
   let(:params) { {name: "After", description: "new", billing_timing: "advance"} }
+
+  before {
+    allow(Utils::ActivityLog).to receive(:produce).and_call_original
+    create_default(:billable_metric)
+  }
 
   it "updates the attributes" do
     expect(result).to be_success
@@ -74,9 +78,43 @@ RSpec.describe RateCards::UpdateService do
     end
   end
 
-  it "produces an activity log" do
-    result
-    expect(Utils::ActivityLog).to have_produced("rate_card.updated").after_commit.with(rate_card)
+  it "publishes rate_card.updated to both channels" do
+    expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("rate_card.updated", rate_card)
+
+    expect(Utils::ActivityLog).to have_received(:produce).with(rate_card, "rate_card.updated", after_commit: true)
+  end
+
+  context "when the update does not change persisted data" do
+    let(:params) { {} }
+
+    it "publishes both event channels" do
+      expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("rate_card.updated", rate_card)
+      expect(result).to be_success
+      expect(Utils::ActivityLog).to have_received(:produce).with(rate_card, "rate_card.updated", after_commit: true)
+    end
+  end
+
+  context "when resending the current tax codes" do
+    let(:tax) { create(:tax, organization:) }
+    let(:params) { {tax_codes: [tax.code]} }
+
+    before { create(:rate_card_applied_tax, rate_card:, tax:, organization:) }
+
+    it "publishes both event channels" do
+      expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("rate_card.updated", rate_card)
+      expect(result).to be_success
+      expect(Utils::ActivityLog).to have_received(:produce).with(rate_card, "rate_card.updated", after_commit: true)
+    end
+  end
+
+  context "when the catalog flag is disabled" do
+    let(:organization) { create(:organization) }
+
+    it "still schedules the pair for an unguarded direct service call" do
+      expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("rate_card.updated", rate_card)
+      expect(result).to be_success
+      expect(Utils::ActivityLog).to have_received(:produce).with(rate_card, "rate_card.updated", after_commit: true)
+    end
   end
 
   context "when a boolean field is not a boolean" do
@@ -85,6 +123,25 @@ RSpec.describe RateCards::UpdateService do
     it "returns a validation failure instead of coercing" do
       expect(result).not_to be_success
       expect(result.error.messages[:display_on_invoice]).to eq(["value_is_invalid"])
+    end
+  end
+
+  context "when the surrounding transaction rolls back" do
+    before do
+      rate_card
+      allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+    end
+
+    it "suppresses both event channels", :capture_kafka_messages, transaction: false do
+      expect do
+        ActiveRecord::Base.transaction do
+          expect(result).to be_success
+          raise ActiveRecord::Rollback
+        end
+      end.not_to have_enqueued_job(SendWebhookJob)
+
+      expect(rate_card.reload.name).to eq("Before")
+      expect(kafka_messages).to be_empty
     end
   end
 
@@ -252,12 +309,16 @@ RSpec.describe RateCards::UpdateService do
       let(:other_tax) { create(:tax) }
       let(:params) { {name: "Should roll back", tax_codes: [other_tax.code]} }
 
-      it "returns a tax not found failure and rolls back other changes" do
+      before { allow(Utils::ActivityLog).to receive(:available?).and_return(true) }
+
+      it "returns a tax not found failure and rolls back other changes", :capture_kafka_messages do
+        expect { result }.not_to have_enqueued_job(SendWebhookJob)
         expect(result).to be_a(described_class::Result)
         expect(result).not_to be_success
         expect(result.error.resource).to eq("tax")
         expect(rate_card.reload.name).to eq("Before")
         expect(rate_card.taxes).to eq([tax1])
+        expect(kafka_messages).to be_empty
       end
     end
   end

@@ -9,7 +9,9 @@ RSpec.describe EInvoices::Cii::TradeSettlementPayment do
     end
   end
 
-  let(:resource) { create(:invoice, currency: "USD") }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:resource) { create_default(:invoice, currency: "USD") }
   let(:type) { described_class::STANDARD_PAYMENT }
   let(:amount) { Money.new(1000) }
 

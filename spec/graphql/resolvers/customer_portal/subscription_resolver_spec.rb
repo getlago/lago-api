@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::CustomerPortal::SubscriptionResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:query) do
     <<~GQL
       query($subscriptionId: ID!) {
@@ -19,11 +21,11 @@ RSpec.describe Resolvers::CustomerPortal::SubscriptionResolver do
       }
     GQL
   end
-
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:) }
+
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before do
     customer
@@ -133,6 +135,30 @@ RSpec.describe Resolvers::CustomerPortal::SubscriptionResolver do
       )
 
       expect_graphql_error(result:, message: "Resource not found")
+    end
+  end
+
+  context "when requesting the activity logs" do
+    let(:query) do
+      <<~GQL
+        query($subscriptionId: ID!) {
+          customerPortalSubscription(id: $subscriptionId) {
+            id
+            activityLogs { activityId }
+          }
+        }
+      GQL
+    end
+
+    it "returns null" do
+      result = execute_graphql(
+        customer_portal_user: customer,
+        query:,
+        variables: {subscriptionId: subscription.id}
+      )
+
+      expect(result["errors"]).to be_nil
+      expect(result["data"]["customerPortalSubscription"]).to eq("id" => subscription.id, "activityLogs" => nil)
     end
   end
 end

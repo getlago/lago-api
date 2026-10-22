@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Taxes::DestroyService do
   subject(:destroy_service) { described_class.new(tax:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:billing_entity) { organization.default_billing_entity }
   let(:tax) { create(:tax, :applied_to_billing_entity, organization:) }
   let(:customer) { create(:customer, organization:) }
@@ -21,6 +21,23 @@ RSpec.describe Taxes::DestroyService do
       draft_invoice = create(:invoice, :draft, organization:, customer:)
 
       expect { destroy_service.call }.to change { draft_invoice.reload.ready_to_be_refreshed }.to(true)
+    end
+
+    context "when the tax is applied only to a Rate Card" do
+      let(:tax) { create(:tax, organization:) }
+      let(:rate_card) { create(:rate_card, organization:) }
+      let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card:) }
+      let(:draft_invoice) { create(:invoice, :draft, organization:, customer:) }
+
+      before do
+        create(:rate_card_applied_tax, rate_card:, tax:, organization:)
+        fee = create(:product_fee, invoice: draft_invoice, rate_card_rate:)
+        create(:fee_applied_tax, fee:, tax:)
+      end
+
+      it "marks the draft invoice as ready to be refreshed" do
+        expect { destroy_service.call }.to change { draft_invoice.reload.ready_to_be_refreshed }.to(true)
+      end
     end
 
     it "does not remove the other tax from the default billing entity" do

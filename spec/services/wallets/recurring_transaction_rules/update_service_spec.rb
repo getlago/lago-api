@@ -21,10 +21,22 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
   end
   let(:transaction_metadata) { [] }
 
-  describe "#call" do
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
+
+  describe "#call", :premium do
     subject(:result) { described_class.call(wallet:, params:) }
 
     before { recurring_transaction_rule }
+
+    context "when freemium", premium: false do
+      it "does not update the recurring transaction rules" do
+        expect { result }.not_to change { recurring_transaction_rule.reload.paid_credits }
+        expect(result).to be_success
+      end
+    end
 
     it "updates an existing active recurring transaction rule" do
       rule = result.wallet.reload.recurring_transaction_rules.active.first

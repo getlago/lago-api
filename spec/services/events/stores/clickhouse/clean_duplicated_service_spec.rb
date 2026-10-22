@@ -3,10 +3,15 @@
 require "spec_helper"
 
 RSpec.describe Events::Stores::Clickhouse::CleanDuplicatedService, :clickhouse do
+  before_all do
+    create_default(:customer)
+    create_default(:plan)
+  end
+
   subject(:clean_service) { described_class.new(subscription:, timestamp:) }
 
-  let(:organization) { create(:organization, clickhouse_events_store: true) }
-  let(:subscription) { create(:subscription, organization:) }
+  let_it_be(:organization) { create_default(:organization, clickhouse_events_store: true) }
+  let_it_be(:subscription) { create(:subscription, organization:) }
   let(:timestamp) { Time.current }
 
   # ReplacingMergeTree dedupes rows sharing the ORDER BY tuple at merge time, which prevents

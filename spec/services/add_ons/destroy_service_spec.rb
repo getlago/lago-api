@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe AddOns::DestroyService do
   subject(:destroy_service) { described_class.new(add_on:) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
   let(:add_on) { create(:add_on, organization:) }
 
   describe "#call" do
@@ -15,6 +15,12 @@ RSpec.describe AddOns::DestroyService do
     it "soft deletes the add-on" do
       expect { destroy_service.call }.to change(AddOn, :count).by(-1)
         .and change { add_on.reload.deleted_at }.from(nil)
+    end
+
+    it "enqueues an add_on.deleted webhook" do
+      result = destroy_service.call
+
+      expect(SendWebhookJob).to have_been_enqueued.with("add_on.deleted", result.add_on)
     end
 
     context "when there are fixed charges associated with the add-on" do

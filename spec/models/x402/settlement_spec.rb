@@ -63,6 +63,30 @@ describe X402::Settlement do
         expect(described_class.pending_reconciliation).to eq([due])
       end
     end
+
+    describe ".grant_retry_due" do
+      let(:due) { create(:x402_settlement, updated_at: 3.minutes.ago) }
+      let(:recorded) { create(:x402_settlement, :merchant, updated_at: 3.minutes.ago) }
+      let(:customer) { create(:customer) }
+
+      before do
+        due
+        recorded
+        create(:x402_settlement, updated_at: 1.minute.ago)
+        create(:x402_settlement, :pending, updated_at: 3.minutes.ago)
+        create(:x402_settlement, :failed, updated_at: 3.minutes.ago)
+        create(:x402_settlement, :invoice_payment, updated_at: 3.minutes.ago)
+        create(
+          :x402_settlement,
+          customer:, updated_at: 3.minutes.ago,
+          wallet_transaction: create(:wallet_transaction, wallet: create(:wallet, customer:)), subscription: create(:subscription, customer:)
+        )
+      end
+
+      it "returns settled credit purchases left without a grant for two minutes" do
+        expect(described_class.grant_retry_due).to match_array([due, recorded])
+      end
+    end
   end
 
   describe "validations" do
@@ -74,11 +98,41 @@ describe X402::Settlement do
     end
 
     describe "invoice validation" do
-      subject(:settlement) { build(:x402_settlement, :invoice_payment, invoice: nil) }
+      subject(:settlement) { build(:x402_settlement, :invoice_payment, invoice:) }
+
+      let(:invoice) { nil }
 
       before { settlement.valid? }
 
       it { expect(settlement.errors.where(:invoice, :blank)).to be_present }
+
+      context "with an invoice of another organization" do
+        let(:invoice) { create(:invoice) }
+
+        it { expect(settlement.errors.where(:invoice, :must_belong_to_same_organization)).to be_present }
+      end
+    end
+
+    describe "purchase settings validation" do
+      subject(:settlement) { build(:x402_settlement, purchase_settings:) }
+
+      let(:purchase_settings) { nil }
+
+      before { settlement.valid? }
+
+      it { expect(settlement.errors.where(:purchase_settings, :blank)).to be_present }
+
+      context "with empty purchase settings" do
+        let(:purchase_settings) { {} }
+
+        it { expect(settlement.errors.where(:purchase_settings, :blank)).to be_present }
+      end
+
+      context "with an invoice payment" do
+        subject(:settlement) { build(:x402_settlement, :invoice_payment) }
+
+        it { expect(settlement.errors.where(:purchase_settings)).to be_empty }
+      end
     end
 
     describe "network validation" do
@@ -201,6 +255,11 @@ describe X402::Settlement do
 
   describe "read-only attributes" do
     let(:settlement) { create(:x402_settlement) }
+    let(:other_invoice) { create(:invoice) }
+
+    it "refuses to move the settlement to another invoice" do
+      expect { settlement.invoice = other_invoice }.to raise_error(ActiveRecord::ReadonlyAttributeError)
+    end
 
     it "refuses to rewrite a verified fact" do
       expect { settlement.payer_address = "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed" }.to raise_error(ActiveRecord::ReadonlyAttributeError)
@@ -286,7 +345,7 @@ describe X402::Settlement do
       context "when a settled attempt holds the digest" do
         before { create(:x402_settlement, organization:, x402_connection: connection, payment_digest: "digest") }
 
-        it { expect { insert }.to raise_error(ActiveRecord::RecordNotUnique, /index_x402_settlements_on_organization_id_and_payment_digest/) }
+        it { expect { insert }.to raise_error(ActiveRecord::RecordNotUnique, /index_x402_settlements_on_payment_digest/) }
       end
 
       context "when only a failed attempt holds the digest" do
@@ -298,7 +357,7 @@ describe X402::Settlement do
       context "when another organization holds the digest" do
         before { create(:x402_settlement, payment_digest: "digest") }
 
-        it { expect(insert).to be(true) }
+        it { expect { insert }.to raise_error(ActiveRecord::RecordNotUnique, /index_x402_settlements_on_payment_digest/) }
       end
     end
 
@@ -335,17 +394,24 @@ describe X402::Settlement do
     end
 
     describe "transaction hash" do
-      let(:duplicate) { build(:x402_settlement, organization:, x402_connection: connection, network:, transaction_hash: "0xabc") }
+      let(:duplicate) { build(:x402_settlement, organization: duplicate_connection.organization, x402_connection: duplicate_connection, network:, transaction_hash: "0xabc") }
+      let(:duplicate_connection) { connection }
       let(:network) { "eip155:84532" }
 
       before { create(:x402_settlement, organization:, x402_connection: connection, transaction_hash: "0xabc") }
 
-      it { expect { insert }.to raise_error(ActiveRecord::RecordNotUnique, /index_x402_settlements_on_organization_network_and_hash/) }
+      it { expect { insert }.to raise_error(ActiveRecord::RecordNotUnique, /index_x402_settlements_on_network_and_transaction_hash/) }
 
       context "with another network" do
         let(:network) { "eip155:8453" }
 
         it { expect(insert).to be(true) }
+      end
+
+      context "with another organization" do
+        let(:duplicate_connection) { create(:x402_connection) }
+
+        it { expect { insert }.to raise_error(ActiveRecord::RecordNotUnique, /index_x402_settlements_on_network_and_transaction_hash/) }
       end
     end
 

@@ -7,8 +7,8 @@ RSpec.describe PaymentProviders::DestroyService do
 
   include_context "with mocked security logger"
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
 
   let(:payment_provider) { create(:stripe_provider, organization:) }
 
@@ -25,7 +25,7 @@ RSpec.describe PaymentProviders::DestroyService do
     end
 
     context "with attached payment provider customers" do
-      let(:customer) { create(:customer, organization:) }
+      let_it_be(:customer) { create(:customer, organization:) }
       let(:payment_provider_customer) { create(:stripe_customer, customer:, organization:, payment_provider:) }
 
       before { payment_provider_customer }

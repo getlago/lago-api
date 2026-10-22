@@ -3,6 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::ProductsResolver do
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   subject(:execution) do
     execute_graphql(
       current_user: membership.user,
@@ -14,10 +17,8 @@ RSpec.describe Resolvers::ProductsResolver do
   end
 
   let(:required_permission) { "products:view" }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:variables) { {} }
-
   let(:query) do
     <<~GQL
       query($searchTerm: String, $productType: ProductTypeEnum, $productCategoryIds: [ID!], $withoutProductCategory: Boolean) {
@@ -28,10 +29,11 @@ RSpec.describe Resolvers::ProductsResolver do
       }
     GQL
   end
-
   let(:product_category) { create(:product_category, organization:) }
   let!(:usage_item) { create(:product, organization:, product_category:, name: "Storage", code: "storage") }
   let!(:fixed_item) { create(:product, :fixed, :standalone, organization:, name: "Seats", code: "seats") }
+
+  let_it_be(:membership, refind: true) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
@@ -42,6 +44,42 @@ RSpec.describe Resolvers::ProductsResolver do
 
     expect(response["collection"].map { it["id"] }).to match_array([usage_item.id, fixed_item.id])
     expect(response["metadata"]["totalCount"]).to eq(2)
+  end
+
+  context "with integration mappings" do
+    let(:integration) { create(:anrok_integration, organization:) }
+    let(:other_integration) { create(:xero_integration, organization:) }
+    let!(:usage_mapping) { create(:anrok_mapping, integration:, organization:, mappable: usage_item) }
+    let!(:fixed_mapping) { create(:anrok_mapping, integration:, organization:, mappable: fixed_item) }
+    let(:variables) { {integrationId: integration.id} }
+
+    let(:query) do
+      <<~GQL
+        query($integrationId: ID) {
+          products(limit: 5) {
+            collection { id integrationMappings(integrationId: $integrationId) { id } }
+          }
+        }
+      GQL
+    end
+
+    before do
+      create(:xero_mapping, integration: other_integration, organization:, mappable: usage_item)
+    end
+
+    it "loads filtered mappings for all Products in one query" do
+      query_count = 0
+      counter = lambda do |_name, _start, _finish, _id, payload|
+        query_count += 1 if payload[:sql]&.include?('FROM "integration_mappings"')
+      end
+
+      ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { execution }
+
+      products = execution.dig("data", "products", "collection").index_by { it["id"] }
+      expect(products[usage_item.id]["integrationMappings"].pluck("id")).to eq([usage_mapping.id])
+      expect(products[fixed_item.id]["integrationMappings"].pluck("id")).to eq([fixed_mapping.id])
+      expect(query_count).to eq(1)
+    end
   end
 
   context "with an item type filter" do

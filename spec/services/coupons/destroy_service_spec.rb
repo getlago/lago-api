@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Coupons::DestroyService do
   subject(:destroy_service) { described_class.new(coupon:) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
   let(:coupon) { create(:coupon, organization:) }
   let(:coupon_plan) { create(:coupon_plan, coupon:) }
 
@@ -33,6 +33,12 @@ RSpec.describe Coupons::DestroyService do
       described_class.call(coupon:)
 
       expect(Utils::ActivityLog).to have_produced("coupon.deleted").after_commit.with(coupon)
+    end
+
+    it "enqueues a coupon.deleted webhook" do
+      result = destroy_service.call
+
+      expect(SendWebhookJob).to have_been_enqueued.with("coupon.deleted", result.coupon)
     end
 
     context "with applied coupons" do

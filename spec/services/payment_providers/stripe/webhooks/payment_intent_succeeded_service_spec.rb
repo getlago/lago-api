@@ -6,7 +6,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
   subject(:event_service) { described_class.new(organization_id: organization.id, event:) }
 
   let(:event) { ::Stripe::Event.construct_from(JSON.parse(event_json)) }
-  let(:organization) { create(:organization) }
+  let(:organization) { create_default(:organization) }
 
   ["2020-08-27", "2024-09-30.acacia", "2025-04-30.basil"].each do |version|
     context "when payment intent event (api_version: #{version})" do
@@ -68,6 +68,10 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
     end
 
     context "when payment intent event for a payment request" do
+      before_all do
+        create_default(:customer)
+      end
+
       let(:event_json) do
         get_stripe_fixtures("webhooks/payment_intent_succeeded.json", version:) do |h|
           h["data"]["object"]["id"] = "pi_12345"

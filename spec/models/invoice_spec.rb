@@ -5,7 +5,9 @@ require "rails_helper"
 RSpec.describe Invoice do
   subject(:invoice) { create(:invoice, organization:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:add_on) { create_default(:add_on) }
 
   it_behaves_like "paper_trail traceable"
   it_behaves_like "a model with a purchase order number"
@@ -23,6 +25,13 @@ RSpec.describe Invoice do
       create_list(:billing_segment, 2, contract:, invoice:, organization:, customer: invoice.customer)
 
       expect(invoice.contracts).to eq([contract])
+    end
+  end
+
+  describe "enums" do
+    it do
+      expect(invoice).to define_enum_for(:invoice_type)
+        .with_values(subscription: 0, add_on: 1, credit: 2, one_off: 3, advance_charges: 4, progressive_billing: 5, contract: 6)
     end
   end
 
@@ -157,13 +166,13 @@ RSpec.describe Invoice do
       it { expect(invoice.errors.messages[:x402_connection]).to be_empty }
 
       context "with a connection of another organization" do
-        let(:connection) { create(:x402_connection) }
+        let(:connection) { create(:x402_connection, organization: create(:organization)) }
 
         it { expect(invoice.errors.messages[:x402_connection]).to eq(["must_belong_to_same_organization"]) }
       end
 
       context "with a discarded connection of another organization" do
-        let(:connection) { create(:x402_connection, :discarded) }
+        let(:connection) { create(:x402_connection, :discarded, organization: create(:organization)) }
 
         it { expect(invoice.errors.messages[:x402_connection]).to eq(["must_belong_to_same_organization"]) }
       end
@@ -206,6 +215,158 @@ RSpec.describe Invoice do
       let(:existing_token) { nil }
 
       it { expect(duplicate.save).to be(true) }
+    end
+  end
+
+  describe "#x402_payment_refusal" do
+    subject(:x402_payment_refusal) { invoice.x402_payment_refusal }
+
+    let(:customer) { create(:customer, organization:) }
+    let(:invoice) { create(:invoice, organization:, customer:, currency: "USD", total_amount_cents: 1_000) }
+    let(:wallet) { create(:wallet, customer:, currency: "USD", x402_enabled: true) }
+
+    before { wallet }
+
+    it { is_expected.to be_nil }
+
+    context "with an open credit invoice" do
+      let(:invoice) { create(:invoice, :open, :credit, organization:, customer:, currency: "USD", total_amount_cents: 1_000) }
+
+      it { is_expected.to eq("invalid_invoice_status_or_payment_status") }
+    end
+
+    context "with a draft invoice" do
+      let(:invoice) { create(:invoice, :draft, organization:, customer:, currency: "USD", total_amount_cents: 1_000) }
+
+      it { is_expected.to eq("invalid_invoice_status_or_payment_status") }
+    end
+
+    context "with a voided invoice" do
+      let(:invoice) { create(:invoice, :voided, organization:, customer:, currency: "USD", total_amount_cents: 1_000) }
+
+      it { is_expected.to eq("invalid_invoice_status_or_payment_status") }
+    end
+
+    context "with a paid invoice" do
+      let(:invoice) do
+        create(:invoice, organization:, customer:, currency: "USD", total_amount_cents: 1_000, payment_status: "succeeded")
+      end
+
+      it { is_expected.to eq("invalid_invoice_status_or_payment_status") }
+    end
+
+    context "with a failed payment" do
+      let(:invoice) do
+        create(:invoice, organization:, customer:, currency: "USD", total_amount_cents: 1_000, payment_status: "failed")
+      end
+
+      it { is_expected.to be_nil }
+    end
+
+    context "with nothing left to pay" do
+      let(:invoice) do
+        create(:invoice, organization:, customer:, currency: "USD", total_amount_cents: 1_000, total_paid_amount_cents: 1_000)
+      end
+
+      it { is_expected.to eq("invalid_invoice_status_or_payment_status") }
+    end
+
+    context "with a non-USD invoice" do
+      let(:invoice) { create(:invoice, organization:, customer:, currency: "EUR", total_amount_cents: 1_000) }
+
+      it { is_expected.to eq("invoice_currency_not_supported") }
+    end
+
+    context "without an x402 wallet" do
+      let(:wallet) { create(:wallet, customer:, currency: "USD") }
+
+      it { is_expected.to eq("wallet_not_x402_enabled") }
+    end
+
+    context "with a terminated x402 wallet" do
+      let(:wallet) { create(:wallet, :terminated, customer:, currency: "USD", x402_enabled: true) }
+
+      it { is_expected.to eq("wallet_not_x402_enabled") }
+    end
+
+    context "with a pending x402 attempt" do
+      before { create(:x402_settlement, :invoice_payment, :pending, invoice:) }
+
+      it { is_expected.to eq("invoice_payment_pending") }
+    end
+
+    context "with a failed x402 attempt" do
+      before { create(:x402_settlement, :invoice_payment, :failed, invoice:) }
+
+      it { is_expected.to be_nil }
+    end
+
+    context "with a settled x402 attempt" do
+      before { create(:x402_settlement, :invoice_payment, invoice:) }
+
+      it { is_expected.to eq("invoice_payment_pending") }
+    end
+
+    context "with a settled x402 attempt recorded as a payment" do
+      before { create(:x402_settlement, :invoice_payment, invoice:, payment: create(:payment, payable: invoice)) }
+
+      it { is_expected.to be_nil }
+    end
+
+    context "with the credit invoice of an x402 credit purchase" do
+      let(:invoice) { create(:invoice, :credit, organization:, customer:, currency: "USD", total_amount_cents: 1_000) }
+
+      before { create(:wallet_transaction, wallet:, invoice:, source: :x402) }
+
+      it { is_expected.to eq("invoice_payment_pending") }
+    end
+
+    context "with the credit invoice of a manual credit purchase" do
+      let(:invoice) { create(:invoice, :credit, organization:, customer:, currency: "USD", total_amount_cents: 1_000) }
+
+      before { create(:wallet_transaction, wallet:, invoice:, source: :manual) }
+
+      it { is_expected.to be_nil }
+    end
+  end
+
+  describe "#x402_payment_eligible?" do
+    subject(:x402_payment_eligible?) { invoice.x402_payment_eligible? }
+
+    let(:customer) { create(:customer, organization:) }
+    let(:invoice) { create(:invoice, organization:, customer:, currency: "USD", total_amount_cents: 1_000) }
+
+    before { create(:wallet, customer:, currency: "USD", x402_enabled: true) }
+
+    it { is_expected.to be(true) }
+
+    context "with a non-USD invoice" do
+      let(:invoice) { create(:invoice, organization:, customer:, currency: "EUR", total_amount_cents: 1_000) }
+
+      it { is_expected.to be(false) }
+    end
+  end
+
+  describe "#x402_payment_url" do
+    subject(:x402_payment_url) { invoice.x402_payment_url }
+
+    let(:invoice) { build(:invoice, organization:, x402_payment_token: "ab" * 32) }
+    let(:api_url) { "https://api.example.com" }
+
+    before { stub_const("ENV", ENV.to_hash.merge("LAGO_API_URL" => api_url)) }
+
+    it { is_expected.to eq("https://api.example.com/x402/invoice_payments/#{"ab" * 32}") }
+
+    context "with a trailing slash on LAGO_API_URL" do
+      let(:api_url) { "https://api.example.com/" }
+
+      it { is_expected.to eq("https://api.example.com/x402/invoice_payments/#{"ab" * 32}") }
+    end
+
+    context "without a token" do
+      let(:invoice) { build(:invoice, organization:) }
+
+      it { is_expected.to be_nil }
     end
   end
 
@@ -353,8 +514,16 @@ RSpec.describe Invoice do
     end
 
     context "with invoices on other organization" do
+      let(:other_organization) { create(:organization) }
+
       before do
-        create(:invoice, sequential_id: 1, organization_sequential_id: 0)
+        create(
+          :invoice,
+          organization: other_organization,
+          customer: create(:customer, organization: other_organization),
+          sequential_id: 1,
+          organization_sequential_id: 0
+        )
       end
 
       it "scopes the sequence to the organization" do
@@ -385,6 +554,103 @@ RSpec.describe Invoice do
         expect(invoice.sequential_id).to eq(3)
         expect(invoice.billing_entity_sequential_id).to eq(3)
         # expect(invoice.organization_sequential_id).to eq(3)
+      end
+    end
+  end
+
+  shared_context "with a contract fee" do
+    let(:customer) { create(:customer, organization:) }
+    let(:invoice) { create(:invoice, customer:, organization:, invoice_type:) }
+    let(:invoice_type) { :advance_charges }
+    let(:contract) { create(:contract, organization:, customer:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
+    let(:contract_fee) do
+      create(
+        :fee,
+        invoice:,
+        subscription: nil,
+        fee_type: :product,
+        invoiceable: contract_rate_card.rate_card.product,
+        contract:,
+        contract_rate_card:,
+        rate_card_rate: create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card),
+        organization:
+      )
+    end
+  end
+
+  describe ".product_catalog" do
+    include_context "with a contract fee"
+
+    context "when the invoice is a contract invoice without fees" do
+      let(:invoice_type) { :contract }
+
+      before { invoice }
+
+      it { expect(described_class.product_catalog).to eq([invoice]) }
+    end
+
+    context "when a contract invoice also holds a contract fee" do
+      let(:invoice_type) { :contract }
+
+      before { contract_fee }
+
+      it "returns the invoice once" do
+        expect(described_class.product_catalog).to eq([invoice])
+      end
+    end
+
+    context "when an invoice of another type holds a contract fee" do
+      before { contract_fee }
+
+      it { expect(described_class.product_catalog).to eq([invoice]) }
+    end
+
+    context "when invoices have no contract fee" do
+      before do
+        invoice
+        create(:invoice, customer:, organization:, invoice_type: :subscription)
+      end
+
+      it { expect(described_class.product_catalog).to be_empty }
+    end
+
+    context "when the contract fee is discarded" do
+      before { contract_fee.discard! }
+
+      it { expect(described_class.product_catalog).to be_empty }
+    end
+  end
+
+  describe "#product_catalog?" do
+    include_context "with a contract fee"
+
+    context "when the invoice is a contract invoice" do
+      let(:invoice_type) { :contract }
+
+      it { expect(invoice).to be_product_catalog }
+    end
+
+    context "when the invoice has a fee attached to a contract" do
+      before { contract_fee }
+
+      it { expect(invoice).to be_product_catalog }
+    end
+
+    context "when the invoice has no contract fee" do
+      before { create(:fee, invoice:, organization:) }
+
+      it { expect(invoice).not_to be_product_catalog }
+    end
+
+    context "when the fees are already loaded" do
+      before { contract_fee }
+
+      it "reads them without querying" do
+        loaded_invoice = described_class.includes(:fees).find(invoice.id)
+
+        expect(capture_sql { loaded_invoice.product_catalog? }).to be_empty
+        expect(loaded_invoice).to be_product_catalog
       end
     end
   end
@@ -428,6 +694,26 @@ RSpec.describe Invoice do
 
     it "returns only the invoices that are ready for refresh" do
       expect(described_class.ready_to_be_refreshed.pluck(:id)).to include(invoices[0].id)
+    end
+  end
+
+  describe ".with_active_contracts" do
+    let(:customer) { create(:customer, organization:) }
+    let(:active_invoice) { create(:invoice, organization:, customer:) }
+    let(:pending_invoice) { create(:invoice, organization:, customer:) }
+    let(:terminated_invoice) { create(:invoice, organization:, customer:) }
+
+    before do
+      active_contract = create(:contract, organization:, customer:)
+      pending_contract = create(:contract, :pending, organization:, customer:)
+      terminated_contract = create(:contract, :terminated, organization:, customer:)
+      create(:billing_segment, organization:, customer:, contract: active_contract, invoice: active_invoice)
+      create(:billing_segment, organization:, customer:, contract: pending_contract, invoice: pending_invoice)
+      create(:billing_segment, organization:, customer:, contract: terminated_contract, invoice: terminated_invoice)
+    end
+
+    it "returns invoices related to active contracts" do
+      expect(described_class.with_active_contracts).to eq([active_invoice])
     end
   end
 
@@ -533,6 +819,37 @@ RSpec.describe Invoice do
           it "returns false" do
             expect(method_call).to eq(false)
           end
+        end
+      end
+    end
+
+    context "when the invoice is finalized for a customer with an accounting integration" do
+      include_context "with a contract fee"
+
+      let(:invoice) { create(:invoice, customer:, organization:, invoice_type:, status: :finalized) }
+      let(:integration) { create(:netsuite_integration, organization:, sync_invoices: true) }
+
+      before { create(:netsuite_customer, integration:, customer:) }
+
+      context "when the invoice is a contract invoice" do
+        let(:invoice_type) { :contract }
+
+        it "returns false" do
+          expect(method_call).to eq(false)
+        end
+      end
+
+      context "when the invoice holds a contract fee" do
+        before { contract_fee }
+
+        it "returns false" do
+          expect(method_call).to eq(false)
+        end
+      end
+
+      context "when the invoice has no contract fee" do
+        it "returns true" do
+          expect(method_call).to eq(true)
         end
       end
     end
@@ -655,6 +972,18 @@ RSpec.describe Invoice do
             expect(method_call).to eq(false)
           end
         end
+      end
+    end
+
+    context "when a contract invoice is finalized for a customer with a Hubspot integration" do
+      let(:customer) { create(:customer, organization:) }
+      let(:invoice) { create(:invoice, customer:, organization:, invoice_type: :contract, status: :finalized) }
+      let(:integration) { create(:hubspot_integration, organization:, sync_invoices: true) }
+
+      before { create(:hubspot_customer, integration:, customer:) }
+
+      it "returns true" do
+        expect(method_call).to eq(true)
       end
     end
   end

@@ -3,8 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::WalletsController do
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:, currency: "EUR") }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:customer) { create(:customer, organization:, currency: "EUR") }
+  let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, customer:) }
   let(:expiration_at) { (Time.current + 1.year).iso8601 }
   let(:section_1) { create(:invoice_custom_section, organization:, code: "section_code_1") }
@@ -27,6 +28,21 @@ RSpec.describe Api::V1::WalletsController do
           expect(json[:error_details][:customer]).to eq ["customer_not_found"]
         end
       end
+
+      context "when recurring transaction rules are requested without Premium" do
+        let(:create_params) do
+          super().merge(recurring_transaction_rules: [
+            {trigger: "threshold", method: "fixed", threshold_credits: "1", paid_credits: "10"}
+          ])
+        end
+
+        it "creates the wallet and ignores the recurring transaction rules" do
+          expect { subject }.to change(Wallet, :count).by(1)
+
+          expect(response).to have_http_status(:success)
+          expect(Wallet.find(json[:wallet][:lago_id]).recurring_transaction_rules).to be_empty
+        end
+      end
     end
 
     it_behaves_like "a wallet create endpoint with billing_entity_id" do
@@ -47,6 +63,22 @@ RSpec.describe Api::V1::WalletsController do
       end
 
       let(:id) { wallet.id }
+
+      context "when recurring transaction rules are requested without Premium" do
+        let(:update_params) do
+          super().merge(recurring_transaction_rules: [
+            {trigger: "threshold", method: "fixed", threshold_credits: "1", paid_credits: "10"}
+          ])
+        end
+
+        it "updates the wallet and ignores the recurring transaction rules" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(wallet.reload.name).to eq("wallet1")
+          expect(wallet.recurring_transaction_rules).to be_empty
+        end
+      end
     end
   end
 
@@ -62,6 +94,9 @@ RSpec.describe Api::V1::WalletsController do
     it_behaves_like "a wallet terminate endpoint" do
       subject { delete_with_token(organization, "/api/v1/wallets/#{id}") }
 
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:, currency: "EUR") }
+
       let(:id) { wallet.id }
     end
   end
@@ -71,6 +106,9 @@ RSpec.describe Api::V1::WalletsController do
       subject do
         get_with_token(organization, "/api/v1/wallets?external_customer_id=#{external_id}", params)
       end
+
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:, currency: "EUR") }
 
       context "when external_customer_id does not belong to the current organization" do
         let(:other_org_customer) { create(:customer) }

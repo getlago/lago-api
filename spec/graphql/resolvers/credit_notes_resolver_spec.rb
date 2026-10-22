@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::CreditNotesResolver do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   subject(:result) do
     execute_graphql(
       current_user: membership.user,
@@ -13,6 +15,9 @@ RSpec.describe Resolvers::CreditNotesResolver do
   end
 
   let(:required_permission) { "credit_notes:view" }
+  let(:organization) { membership.organization }
+  let(:arguments) { "" }
+  let(:response_collection) { result["data"]["creditNotes"]["collection"] }
   let(:query) do
     <<~GQL
       query {
@@ -24,18 +29,55 @@ RSpec.describe Resolvers::CreditNotesResolver do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
-  let(:arguments) { "" }
-
-  let(:response_collection) { result["data"]["creditNotes"]["collection"] }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
 
   before { create(:credit_note, :draft, customer:) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "credit_notes:view"
+
+  context "when selecting integrationSyncable on product catalog credit notes" do
+    let(:query) do
+      <<~GQL
+        query {
+          creditNotes(limit: 5) {
+            collection { id integrationSyncable }
+          }
+        }
+      GQL
+    end
+
+    before do
+      integration = create(:netsuite_integration, organization:, sync_credit_notes: true)
+      create(:netsuite_customer, integration:, customer:)
+
+      3.times do
+        invoice = create(:invoice, organization:, customer:, invoice_type: :advance_charges)
+        contract_rate_card = create(:contract_rate_card, organization:)
+        create(
+          :fee,
+          invoice:,
+          organization:,
+          subscription: nil,
+          fee_type: :product,
+          invoiceable: contract_rate_card.rate_card.product,
+          contract: contract_rate_card.contract,
+          contract_rate_card:,
+          rate_card_rate: create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card)
+        )
+        create(:credit_note, invoice:, customer:, organization:, status: :finalized)
+      end
+    end
+
+    it "checks the invoices for contract fees in one query" do
+      contract_fee_queries = capture_sql { result }.grep(/"contract_id" IS NOT NULL/)
+
+      expect(contract_fee_queries.size).to eq(1)
+      expect(response_collection.pluck("integrationSyncable").compact.uniq).to eq([false])
+    end
+  end
 
   context "with no arguments" do
     let!(:credit_note) { create(:credit_note, customer:) }

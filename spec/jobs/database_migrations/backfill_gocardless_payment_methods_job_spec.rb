@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe DatabaseMigrations::BackfillGocardlessPaymentMethodsJob do
   subject(:perform_job) { described_class.perform_now }
 
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization) { create(:organization) }
+  let_it_be(:customer) { create(:customer, organization:) }
   let(:gocardless_provider) { create(:gocardless_provider, organization:) }
   let(:gocardless_customer) do
     create(:gocardless_customer, customer:, payment_provider: gocardless_provider).tap do |c|

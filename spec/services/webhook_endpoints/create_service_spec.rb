@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe WebhookEndpoints::CreateService do
   subject(:create_service) { described_class.new(organization:, params: create_params) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization, refind: true) { create(:organization) }
   let(:create_params) do
     {
       webhook_url: "http://foo.bar",
@@ -44,6 +44,22 @@ RSpec.describe WebhookEndpoints::CreateService do
         # default fields
         expect(result.webhook_endpoint.name).to be_nil
         expect(result.webhook_endpoint.event_types).to be_nil
+      end
+    end
+
+    context "when event_types contains a renamed event type" do
+      let(:create_params) do
+        {
+          webhook_url: "http://foo.bar",
+          event_types: ["credit_note.provider_refund_failure"]
+        }
+      end
+
+      it "stores its current name" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.webhook_endpoint.event_types).to eq(["credit_note.refund_failure"])
       end
     end
 

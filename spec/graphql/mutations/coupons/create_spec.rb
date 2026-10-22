@@ -3,8 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Coupons::Create do
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "coupons:create" }
-  let(:membership) { create(:membership) }
   let(:expiration_at) { Time.current + 3.days }
   let(:plan) { create(:plan, organization: membership.organization) }
   let(:billable_metric) { create(:billable_metric, organization: membership.organization) }
@@ -30,6 +31,8 @@ RSpec.describe Mutations::Coupons::Create do
       }
     GQL
   end
+
+  let_it_be(:membership) { create_default(:membership) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"

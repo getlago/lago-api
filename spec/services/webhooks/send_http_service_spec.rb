@@ -6,6 +6,11 @@ require "aws-sdk-s3"
 RSpec.describe Webhooks::SendHttpService do
   subject(:service) { described_class.new(webhook:) }
 
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
+
   let(:webhook_endpoint) { create(:webhook_endpoint, webhook_url: "https://wh.test.com") }
   let(:webhook) { create(:webhook, webhook_endpoint:) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
@@ -92,6 +97,19 @@ RSpec.describe Webhooks::SendHttpService do
       expect(webhook).to be_retrying
       expect(webhook.http_status).to eq(403)
       expect(SendHttpWebhookJob).to have_been_enqueued.with(webhook)
+    end
+
+    context "with an alert webhook" do
+      let(:webhook) { create(:webhook, webhook_endpoint:, webhook_type: "alert.triggered") }
+
+      before { ENV["SIDEKIQ_WEBHOOK"] = "true" }
+      after { ENV.delete("SIDEKIQ_WEBHOOK") }
+
+      it "retries on the high priority queue" do
+        service.call
+
+        expect(SendHttpWebhookJob).to have_been_enqueued.with(webhook).on_queue("webhook_worker_high_priority")
+      end
     end
 
     context "with a retrying webhook" do

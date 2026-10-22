@@ -14,7 +14,8 @@ module Api
               organization_id: current_organization.id,
               apply_taxes:,
               usage_filters:,
-              use_usage_buckets: true
+              use_usage_buckets: true,
+              cache_prefilter: true
             ).call
 
           if result.success?

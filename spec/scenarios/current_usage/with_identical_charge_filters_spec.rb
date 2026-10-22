@@ -12,11 +12,12 @@ require "rails_helper"
 #   bucket (tie-break on [created_at, id]).
 describe "Current Usage - Overlapping charge filters", transaction: false do
   [
-    :postgres,
-    :clickhouse
-  ].each do |store|
-    context "with #{store} store", clickhouse: store == :clickhouse do
-      let(:organization) { create(:organization, webhook_url: nil, clickhouse_events_store: store == :clickhouse) }
+    [:postgres, []],
+    [:clickhouse, []],
+    [:clickhouse, ["charge_filters_single_scan"]]
+  ].each do |store, feature_flags|
+    context "with #{store} store#{" and #{feature_flags.join(", ")}" if feature_flags.any?}", clickhouse: store == :clickhouse do
+      let(:organization) { create(:organization, webhook_url: nil, clickhouse_events_store: store == :clickhouse, feature_flags:) }
       let(:customer) { create(:customer, organization:) }
       let(:plan) { create(:plan, organization:, amount_cents: 0, pay_in_advance: false, interval: "monthly") }
       let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "value") }

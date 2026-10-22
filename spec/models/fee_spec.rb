@@ -5,6 +5,12 @@ require "rails_helper"
 RSpec.describe Fee do
   subject { build(:fee) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:add_on) { create_default(:add_on) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:customer) { create_default(:customer) }
+
   describe "associations" do
     it do
       expect(subject).to belong_to(:invoice).optional
@@ -101,6 +107,16 @@ RSpec.describe Fee do
 
     it "resolves a discarded pricing attachment" do
       expect(fee.reload.contract_rate_card).to eq(contract_rate_card)
+    end
+  end
+
+  describe "validations" do
+    it "requires a Rate Card Rate for Product fees" do
+      fee = build(:fee, fee_type: :product, rate_card_rate: nil)
+
+      fee.validate
+
+      expect(fee.errors.of_kind?(:rate_card_rate, :blank)).to be(true)
     end
   end
 
@@ -203,6 +219,24 @@ RSpec.describe Fee do
     end
   end
 
+  describe "#rate_model" do
+    let(:rate_card_rate) { build_stubbed(:rate_card_rate, rate_model: "volume") }
+
+    it "reads the rate card rate" do
+      expect(build_stubbed(:fee, rate_card_rate:).rate_model).to eq("volume")
+    end
+
+    it "prefers the rate override" do
+      rate_override = build_stubbed(:rate_override, rate_model: "package")
+
+      expect(build_stubbed(:fee, rate_card_rate:, rate_override:).rate_model).to eq("package")
+    end
+
+    it "is nil without a rate" do
+      expect(build_stubbed(:fee).rate_model).to be_nil
+    end
+  end
+
   describe "#invoice_name" do
     subject(:fee_invoice_name) { fee.invoice_name }
 
@@ -211,6 +245,27 @@ RSpec.describe Fee do
 
       it "returns fee invoice display name" do
         expect(fee_invoice_name).to eq(fee.invoice_display_name)
+      end
+    end
+
+    context "when it is a product fee" do
+      let(:product) { build(:product, invoice_display_name: "Product invoice name") }
+
+      context "when fee invoice display name is present" do
+        let(:fee) { build(:fee, fee_type: :product, invoiceable: product, invoice_display_name: "Billed product name") }
+
+        it "returns fee invoice display name" do
+          expect(fee_invoice_name).to eq("Billed product name")
+        end
+      end
+
+      context "when fee invoice display name is blank" do
+        let(:invoice_display_name) { [nil, ""].sample }
+        let(:fee) { build(:fee, fee_type: :product, invoiceable: product, invoice_display_name:) }
+
+        it "returns product invoice name" do
+          expect(fee_invoice_name).to eq("Product invoice name")
+        end
       end
     end
 

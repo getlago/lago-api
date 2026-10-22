@@ -5,6 +5,10 @@ require "rails_helper"
 RSpec.describe BillableMetricFilters::CreateOrUpdateBatchService do
   subject(:service) { described_class.call(billable_metric:, filters_params:) }
 
+  before_all do
+    create_default(:organization)
+  end
+
   let(:billable_metric) { create(:billable_metric) }
 
   context "when filter params is empty" do

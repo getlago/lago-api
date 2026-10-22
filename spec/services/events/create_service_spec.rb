@@ -121,6 +121,45 @@ RSpec.describe Events::CreateService do
       end
     end
 
+    context "when timestamp is outside what the event stores can hold" do
+      [-1, 99_999_999_999].each do |value|
+        context "with #{value}" do
+          let(:timestamp) { value }
+
+          it "returns an error and does not create the event" do
+            result = nil
+
+            expect { result = create_service.call }.not_to change(Event, :count)
+            expect(result).not_to be_success
+            expect(result.error.messages).to eq({timestamp: ["value_is_out_of_range"]})
+          end
+        end
+      end
+    end
+
+    context "when a maximum future window is configured" do
+      before { stub_const("Events::TimestampWindow::MAX_FUTURE_HOURS", 24) }
+
+      context "with a timestamp beyond it" do
+        let(:timestamp) { 2.days.from_now.to_f }
+
+        it "returns an error" do
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages).to eq({timestamp: ["value_is_out_of_range"]})
+        end
+      end
+
+      context "with a timestamp within it" do
+        let(:timestamp) { 1.hour.from_now.to_f }
+
+        it "creates the event" do
+          expect(create_service.call).to be_success
+        end
+      end
+    end
+
     context "when timestamp is not present in the payload" do
       let(:timestamp) { nil }
 
@@ -184,6 +223,19 @@ RSpec.describe Events::CreateService do
 
         expect(result).not_to be_success
         expect(result.error.messages).to include({timestamp: ["invalid_format"]})
+      end
+    end
+
+    %w[Infinity -Infinity NaN].each do |value|
+      context "when timestamp is #{value}" do
+        let(:timestamp) { value }
+
+        it "returns an error instead of raising" do
+          result = create_service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages).to include({timestamp: ["invalid_format"]})
+        end
       end
     end
 

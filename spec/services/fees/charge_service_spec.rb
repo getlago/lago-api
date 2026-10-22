@@ -23,7 +23,7 @@ RSpec.describe Fees::ChargeService, :premium do
 
   let(:customer) { create(:customer, organization:) }
   let(:billing_context) { Billing::Context.from(subscription:) }
-  let(:organization) { create(:organization) }
+  let(:organization) { create_default(:organization) }
   let(:context) { :finalize }
   let(:apply_taxes) { false }
   let(:filtered_aggregations) { nil }
@@ -764,6 +764,24 @@ RSpec.describe Fees::ChargeService, :premium do
               precise_unit_amount: 20,
               grouped_by: {"cloud" => "gcp"}
             )
+          end
+
+          context "when events omit the group or send it blank" do
+            before do
+              [{value: 3}, {value: 4, cloud: ""}].each do |properties|
+                create(:event, organization: subscription.organization, subscription:, code: charge.billable_metric.code,
+                  timestamp: Time.zone.parse("2022-03-16"), properties:)
+              end
+            end
+
+            it "creates a single fee for both" do
+              result = charge_subscription_service.call
+
+              expect(result).to be_success
+              expect(result.fees.map { [it.grouped_by, it.units] }).to match_array([
+                [{"cloud" => "aws"}, 15], [{"cloud" => "gcp"}, 10], [{"cloud" => nil}, 7]
+              ])
+            end
           end
 
           context "with adjusted fee" do
@@ -4109,6 +4127,32 @@ RSpec.describe Fees::ChargeService, :premium do
           # Zero-amount fees are filtered out by default
           expect(asia_fee).to be_nil
           expect(default_fee).to be_nil
+        end
+
+        context "when aggregating the filters" do
+          before { allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_call_original }
+
+          it "gives the events store the filters it aggregates" do
+            charge_subscription_service.call
+
+            expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
+              .with(hash_including(aggregated_filter_ids: [eu_charge_filter.id, us_charge_filter.id])).at_least(:once)
+            expect(BillableMetrics::AggregationFactory).not_to have_received(:new_instance)
+              .with(hash_including(aggregated_filter_ids: nil))
+          end
+
+          context "with a recurring metric" do
+            let(:billable_metric) do
+              create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value", recurring: true)
+            end
+
+            it "gives the events store no filters, every one of them being aggregated" do
+              charge_subscription_service.call
+
+              expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
+                .with(hash_including(aggregated_filter_ids: nil)).at_least(:once)
+            end
+          end
         end
       end
 

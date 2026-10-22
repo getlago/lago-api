@@ -2,11 +2,17 @@
 
 require "rails_helper"
 
-RSpec.describe RateCardRates::DestroyService do
+RSpec.describe RateCardRates::DestroyService, :capture_kafka_messages do
   subject(:result) { described_class.call(rate_card_rate:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization, refind: true) { create(:organization, feature_flags: ["product_catalog"]) }
   let(:rate_card) { create(:rate_card, organization:) }
+
+  before { allow(Utils::ActivityLog).to receive(:produce).and_call_original }
+
+  before_all do
+    create_default(:billable_metric)
+  end
 
   context "with a pending rate" do
     let(:rate_card_rate) do
@@ -18,9 +24,47 @@ RSpec.describe RateCardRates::DestroyService do
       expect(rate_card_rate.reload).to be_discarded
     end
 
-    it "produces a rate_card.updated activity log" do
-      result
-      expect(Utils::ActivityLog).to have_produced("rate_card.updated").after_commit.with(rate_card)
+    it "publishes rate_card_rate.deleted on the discarded rate without a snapshot" do
+      expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("rate_card_rate.deleted", rate_card_rate)
+      expect(Utils::ActivityLog).to have_received(:produce).with(
+        rate_card_rate,
+        "rate_card_rate.deleted",
+        after_commit: true
+      )
+      expect(rate_card.rates).not_to include(rate_card_rate)
+      expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "rate_card.updated", any_args)
+    end
+
+    context "when the catalog flag is disabled" do
+      let(:organization) { create(:organization) }
+
+      it "still schedules the pair for an unguarded direct service call" do
+        expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("rate_card_rate.deleted", rate_card_rate)
+        expect(result).to be_success
+        expect(Utils::ActivityLog).to have_received(:produce).with(
+          rate_card_rate,
+          "rate_card_rate.deleted",
+          after_commit: true
+        )
+        expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "rate_card.updated", any_args)
+      end
+    end
+
+    context "when the surrounding transaction rolls back" do
+      it "rolls back the deletion and suppresses both event channels" do
+        rate_card_rate
+        allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+
+        expect do
+          ActiveRecord::Base.transaction(requires_new: true) do
+            result
+            raise ActiveRecord::Rollback
+          end
+        end.not_to have_enqueued_job(SendWebhookJob)
+
+        expect(rate_card_rate.reload).not_to be_discarded
+        expect(kafka_messages).to be_empty
+      end
     end
   end
 
@@ -32,6 +76,10 @@ RSpec.describe RateCardRates::DestroyService do
     it "returns a validation failure" do
       expect(result).not_to be_success
       expect(result.error.messages[:status]).to eq(["only_pending_rates_can_be_deleted"])
+    end
+
+    it "does not publish catalog events" do
+      expect { result }.not_to have_enqueued_job(SendWebhookJob)
     end
   end
 

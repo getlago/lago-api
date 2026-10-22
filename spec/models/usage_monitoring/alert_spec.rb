@@ -5,6 +5,10 @@ require "rails_helper"
 RSpec.describe UsageMonitoring::Alert do
   let(:alert) { create(:alert, code: "my-code", thresholds: [10, 30, 50], recurring_threshold: 100) }
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:customer) { create_default(:customer) }
+
   describe "enums" do
     it do
       expect(subject).to define_enum_for(:direction)
@@ -129,6 +133,22 @@ RSpec.describe UsageMonitoring::Alert do
         alert.previous_value = 33
         expect(alert.find_thresholds_crossed(351)).to eq([50, 150, 250, 350])
       end
+
+      it "does not return again a recurring threshold equal to previous_value" do
+        alert.previous_value = 150
+        expect(alert.find_thresholds_crossed(260)).to eq([250])
+      end
+
+      it "returns one-time and recurring thresholds crossed together" do
+        alert.previous_value = 20
+        expect(alert.find_thresholds_crossed(150)).to eq([30, 50, 150])
+        alert.previous_value = 50
+        expect(alert.find_thresholds_crossed(150)).to eq([150])
+        alert.previous_value = 30
+        expect(alert.find_thresholds_crossed(50)).to eq([50])
+        alert.previous_value = 0
+        expect(alert.find_thresholds_crossed(10)).to eq([10])
+      end
     end
 
     context "when direction is decreasing" do
@@ -155,6 +175,22 @@ RSpec.describe UsageMonitoring::Alert do
       it "returns recurring thresholds if crossed" do
         alert.previous_value = 600
         expect(alert.find_thresholds_crossed(-100)).to eq([-100, 0, 100, 200, 500])
+      end
+
+      it "does not return again a recurring threshold equal to previous_value" do
+        alert.previous_value = 100
+        expect(alert.find_thresholds_crossed(-50)).to eq([0])
+      end
+
+      it "returns one-time and recurring thresholds crossed together" do
+        alert.previous_value = 900
+        expect(alert.find_thresholds_crossed(100)).to eq([100, 200, 500, 800])
+        alert.previous_value = 200
+        expect(alert.find_thresholds_crossed(0)).to eq([0, 100])
+        alert.previous_value = 500
+        expect(alert.find_thresholds_crossed(200)).to eq([200])
+        alert.previous_value = 50
+        expect(alert.find_thresholds_crossed(0)).to eq([0])
       end
     end
   end

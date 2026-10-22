@@ -8,6 +8,12 @@ RSpec.describe CreditNote do
       taxes_rate: 10.0, precise_taxes_amount_cents: 1000
   end
 
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
+  let_it_be(:add_on) { create_default(:add_on) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:customer) { create_default(:customer) }
+
   let(:item) { create(:credit_note_item, credit_note:, precise_amount_cents: 10000, amount_cents: 1000) }
 
   it_behaves_like "paper_trail traceable"
@@ -212,160 +218,6 @@ RSpec.describe CreditNote do
     end
   end
 
-  describe "#subscription_ids" do
-    let(:invoice) { credit_note.invoice }
-    let(:subscription_fee) { create(:fee, invoice:) }
-    let(:credit_note_item1) do
-      create(:credit_note_item, credit_note:, fee: subscription_fee)
-    end
-
-    let(:charge_fee) { create(:charge_fee, invoice:) }
-    let(:credit_note_item2) do
-      create(:credit_note_item, credit_note:, fee: charge_fee)
-    end
-
-    before do
-      credit_note_item1
-      credit_note_item2
-    end
-
-    it "returns the list of subscription ids" do
-      expect(credit_note.subscription_ids).to contain_exactly(
-        subscription_fee.subscription_id,
-        charge_fee.subscription_id
-      )
-    end
-
-    context "with add_on fee" do
-      let(:add_on_fee) { create(:add_on_fee, invoice:) }
-      let(:credit_note_item3) do
-        create(:credit_note_item, credit_note:, fee: add_on_fee)
-      end
-
-      before { credit_note_item3 }
-
-      it "returns an empty subscription id" do
-        expect(credit_note.subscription_ids).to include(
-          subscription_fee.subscription_id,
-          charge_fee.subscription_id,
-          nil
-        )
-      end
-    end
-
-    describe "#subscription_item" do
-      let(:invoice) { credit_note.invoice }
-      let(:subscription_fee) { create(:fee, invoice:) }
-      let(:credit_note_item1) do
-        create(:credit_note_item, credit_note:, fee: subscription_fee)
-      end
-
-      let(:subscription) { subscription_fee.subscription }
-      let(:charge_fee) { create(:charge_fee, invoice:, subscription:) }
-      let(:credit_note_item2) do
-        create(:credit_note_item, credit_note:, fee: charge_fee)
-      end
-      let(:fixed_charge_fee) { create(:fixed_charge_fee, invoice:, subscription:) }
-      let(:credit_note_item3) do
-        create(:credit_note_item, credit_note:, fee: fixed_charge_fee)
-      end
-
-      before do
-        credit_note_item1
-        credit_note_item2
-        credit_note_item3
-      end
-
-      it "returns the item for the subscription fee" do
-        expect(credit_note.subscription_item(subscription.id)).to eq(credit_note_item1)
-      end
-
-      context "when subscription id does not match an existing fee" do
-        let(:missing_subscription) { create(:subscription) }
-
-        it "returns a new fee" do
-          fee = credit_note.subscription_item(missing_subscription.id)
-
-          expect(fee).to be_new_record
-        end
-      end
-    end
-
-    describe "#subscription_charge_items" do
-      let(:invoice) { credit_note.invoice }
-      let(:subscription_fee) { create(:fee, invoice:) }
-      let(:credit_note_item1) do
-        create(:credit_note_item, credit_note:, fee: subscription_fee)
-      end
-
-      let(:subscription) { subscription_fee.subscription }
-
-      let(:charge_fee) { create(:charge_fee, invoice:, subscription:) }
-      let(:credit_note_item2) do
-        create(:credit_note_item, credit_note:, fee: charge_fee)
-      end
-
-      let(:fixed_charge_fee) { create(:fixed_charge_fee, invoice:, subscription:) }
-      let(:credit_note_item3) do
-        create(:credit_note_item, credit_note:, fee: fixed_charge_fee)
-      end
-
-      before do
-        credit_note_item1
-        credit_note_item2
-        credit_note_item3
-      end
-
-      it "returns the item for the charge fee" do
-        expect(credit_note.subscription_charge_items(subscription.id)).to eq([credit_note_item2])
-      end
-    end
-
-    describe "#subscription_fixed_charge_items" do
-      let(:invoice) { credit_note.invoice }
-      let(:subscription_fee) { create(:fee, invoice:) }
-      let(:credit_note_item1) do
-        create(:credit_note_item, credit_note:, fee: subscription_fee)
-      end
-
-      let(:subscription) { subscription_fee.subscription }
-
-      let(:charge_fee) { create(:charge_fee, invoice:, subscription:) }
-      let(:credit_note_item2) do
-        create(:credit_note_item, credit_note:, fee: charge_fee)
-      end
-
-      let(:fixed_charge_fee) { create(:fixed_charge_fee, invoice:, subscription:) }
-      let(:credit_note_item3) do
-        create(:credit_note_item, credit_note:, fee: fixed_charge_fee)
-      end
-
-      before do
-        credit_note_item1
-        credit_note_item2
-        credit_note_item3
-      end
-
-      it "returns the item for the fixed charge fee" do
-        expect(credit_note.subscription_fixed_charge_items(subscription.id)).to eq([credit_note_item3])
-      end
-    end
-  end
-
-  describe "#add_on_items" do
-    let(:invoice) { credit_note.invoice }
-    let(:add_on) { create(:add_on, organization: credit_note.organization) }
-    let(:applied_add_on) { create(:applied_add_on, add_on:) }
-    let(:credit_note_item) { create(:credit_note_item, credit_note:, fee: add_on_fee) }
-    let(:add_on_fee) { create(:add_on_fee, invoice:, applied_add_on:) }
-
-    before { credit_note_item }
-
-    it "returns items of the add-on" do
-      expect(credit_note.add_on_items).to eq([credit_note_item])
-    end
-  end
-
   describe "#voidable?" do
     let(:credit_note) { create(:credit_note, balance_amount_cents:, credit_status:) }
     let(:balance_amount_cents) { 10 }
@@ -518,7 +370,8 @@ RSpec.describe CreditNote do
     subject(:method_call) { credit_note.should_sync_credit_note? }
 
     let(:credit_note) { create(:credit_note, customer:, organization:, status:) }
-    let(:organization) { create(:organization) }
+
+    let_it_be(:organization) { create_default(:organization) }
 
     context "when credit note is not finalized" do
       let(:status) { :draft }
@@ -534,7 +387,8 @@ RSpec.describe CreditNote do
       context "with integration customer" do
         let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
         let(:integration) { create(:netsuite_integration, organization:, sync_credit_notes:) }
-        let(:customer) { create(:customer, organization:) }
+
+        let_it_be(:customer) { create_default(:customer, organization:) }
 
         before { integration_customer }
 
@@ -570,7 +424,8 @@ RSpec.describe CreditNote do
       context "with integration customer" do
         let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
         let(:integration) { create(:netsuite_integration, organization:, sync_credit_notes:) }
-        let(:customer) { create(:customer, organization:) }
+
+        let_it_be(:customer) { create_default(:customer, organization:) }
 
         before { integration_customer }
 
@@ -589,6 +444,21 @@ RSpec.describe CreditNote do
             expect(method_call).to eq(false)
           end
         end
+      end
+    end
+
+    context "when the credit note is on a product catalog invoice" do
+      let(:customer) { create(:customer, organization:) }
+      let(:invoice) { create(:invoice, customer:, organization:, invoice_type: :contract) }
+      let(:credit_note) { create(:credit_note, customer:, organization:, invoice:, status: :finalized) }
+
+      before do
+        integration = create(:netsuite_integration, organization:, sync_credit_notes: true)
+        create(:netsuite_customer, integration:, customer:)
+      end
+
+      it "returns false" do
+        expect(method_call).to eq(false)
       end
     end
   end

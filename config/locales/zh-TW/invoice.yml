@@ -29,7 +29,9 @@ zh-TW:
     credit_notes: 折讓單
     date_from: 自
     date_to: 至
+    description: 描述
     details: "%{resource} 詳細資訊"
+    details_title: 明細
     document_name: 發票
     document_tax_name: 稅務發票
     due_date: 繳款期限 %{date}
@@ -41,6 +43,7 @@ zh-TW:
       standard_payment: 標準付款
     fee_prorated: 費用依期間按比例計算，顯示的單價為平均值
     fees_from_to_date: 費用期間：%{from_date} 至 %{to_date}
+    free_credits: 免費點數
     from_to_date: "%{from_date} 至 %{to_date}"
     graduated:
       fee_per_unit_for_the_first: 前 %{to} 單位的每單位費用
@@ -66,6 +69,7 @@ zh-TW:
     paid_invoice: 已付款發票
     paid_tax_invoice: 已付款稅務發票
     pay_with_bank_transfer: 使用銀行轉帳付款
+    payment_due_date: 到期日
     payment_term: 付款條件
     payment_term_days: "%{net_payment_term} 天"
     percentage:
@@ -81,6 +85,7 @@ zh-TW:
     prepaid_credits_with_value: 預付點數 - %{wallet_name}
     progressive_billing_credit: 已計費的使用量
     purchase_order_number: 採購訂單編號
+    quantity: 數量
     quarter: 季
     quarterly: 每季
     reached_usage_threshold: 此累進計費因您的累積使用量已達到 %{usage_amount}，超過 %{threshold_amount} 的門檻而產生。
@@ -114,6 +119,13 @@ zh-TW:
       fr_tax_exempt: 依據法國稅法總則第 259-1 條，客戶免稅。
       reverse_charge: 反向課稅 - 稅負轉由客戶承擔。
       tax_exempt: 客戶免稅。
+    tiers:
+      fee_for_first: 前 %{up_to} 單位的費用
+      fee_for_next: 最多 %{up_to} 單位的費用
+      fee_for_remaining: 其餘單位的費用
+      flat_fee_for_first: 前 %{up_to} 單位的固定費用
+      flat_fee_for_next: 最多 %{up_to} 單位的固定費用
+      flat_fee_for_remaining: 其餘單位的固定費用
     total: 總計
     total_credits: 點數總計
     total_credits_with_value: 點數總計：%{credit_amount} 點
@@ -130,6 +142,7 @@ zh-TW:
     units: 單位
     units_prorated_per_period: 每 %{period} 每秒按比例計算的單位
     usage_based_fees: 依使用量計費的費用
+    usage_breakdown_by: 依 %{keys} 的用量明細
     volume:
       fee_per_unit: 每單位費用
       flat_fee_for_all_units: 所有單位的固定費用

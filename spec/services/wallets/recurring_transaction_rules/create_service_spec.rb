@@ -5,6 +5,11 @@ require "rails_helper"
 RSpec.describe Wallets::RecurringTransactionRules::CreateService do
   subject(:create_service) { described_class.new(wallet:, wallet_params:) }
 
+  before_all do
+    create_default(:organization)
+    create_default(:customer)
+  end
+
   let(:wallet) { create(:wallet, paid_top_up_min_amount_cents: 15_00) }
   let(:wallet_params) do
     {
@@ -31,6 +36,7 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
     context "when freemium" do
       it "does not create any recurring transaction rule" do
         expect { create_service.call }.not_to change { wallet.reload.recurring_transaction_rules.count }
+        expect(create_service.call).to be_success
       end
     end
 

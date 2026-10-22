@@ -50,10 +50,10 @@ describe BillingSegments::ScheduleJob, job: true do
       let(:contract_rate_card) { create(:contract_rate_card, organization: customer.organization, contract:, rate_card:) }
 
       before do
-        create(:billing_segment, customer:, organization: customer.organization, contract:, contract_rate_card:, status: :processing)
+        create(:billing_segment, customer:, organization: customer.organization, contract:, contract_rate_card:, status: :pending)
       end
 
-      it "does not invoice it" do
+      it "waits until the segment ends" do
         described_class.perform_now(customer.id)
 
         expect(BillingSegments::ProcessJob).not_to have_been_enqueued

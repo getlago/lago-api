@@ -52,6 +52,244 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
     end
   end
 
+  describe "#boundaries" do
+    subject(:boundaries) { source.boundaries }
+
+    let(:billable_metric) do
+      build(:billable_metric, organization:, aggregation_type: :sum_agg, field_name: "amount", recurring: false)
+    end
+    let(:rate_model) { "standard" }
+    let(:rate_card_rate) do
+      build(:rate_card_rate, organization:, rate_card:, rate_model:, rate_properties: {"amount" => "2"})
+    end
+    let(:rate_override) { nil }
+    let(:billing_segment) do
+      build(
+        :billing_segment,
+        organization:,
+        contract_rate_card:,
+        rate_card_rate:,
+        rate_override:,
+        cycle_started_at: Time.zone.parse("2027-01-01"),
+        started_at: Time.zone.parse("2027-01-15"),
+        ended_at: Time.zone.parse("2027-01-31 23:59:59.999999")
+      )
+    end
+
+    it "uses the segment period for arrears" do
+      expect(boundaries).to have_attributes(
+        from_datetime: billing_segment.started_at,
+        charges_from_datetime: billing_segment.started_at,
+        charges_to_datetime: billing_segment.ended_at
+      )
+    end
+
+    context "with an advance card" do
+      let(:rate_card) { build(:rate_card, :advance, organization:, product:, currency: "USD", proration: false) }
+
+      it "keeps the segment start for standard pricing" do
+        expect(boundaries).to have_attributes(
+          from_datetime: billing_segment.started_at,
+          charges_from_datetime: billing_segment.started_at,
+          charges_to_datetime: billing_segment.ended_at
+        )
+      end
+
+      context "with a maximum aggregation timestamp" do
+        let(:max_timestamp) { Time.zone.parse("2027-01-20 23:59:59 UTC") }
+        let(:event) { nil }
+        let(:source) { described_class.new(billing_segment:, max_timestamp:) }
+
+        it "preserves the cutoff through pricing bucket sources and boundaries" do
+          bucket = source.pricing_buckets(event:).sole
+
+          expect(source.boundaries.max_timestamp).to eq(max_timestamp)
+          expect(bucket.boundaries.max_timestamp).to eq(max_timestamp)
+        end
+      end
+
+      context "with prorated recurring advance billing" do
+        let(:rate_card) { build(:rate_card, :advance, organization:, product:, currency: "USD", proration: true) }
+        let(:billable_metric) do
+          build(:billable_metric, organization:, aggregation_type: :unique_count_agg, field_name: "user_id", recurring: true)
+        end
+        let(:proration_ratio) { 25.fdiv(31) }
+        let(:billing_segment) do
+          build(
+            :billing_segment,
+            organization:,
+            contract_rate_card:,
+            rate_card_rate:,
+            cycle_started_at: Time.zone.parse("2026-10-01"),
+            started_at: Time.zone.parse("2026-10-07"),
+            ended_at: Time.zone.parse("2026-10-31 23:59:59.999999"),
+            proration_ratio:
+          )
+        end
+
+        it "uses the full anchored cycle duration without changing the segment window" do
+          expect(boundaries).to have_attributes(
+            from_datetime: billing_segment.started_at,
+            to_datetime: billing_segment.ended_at,
+            charges_from_datetime: billing_segment.started_at,
+            charges_to_datetime: billing_segment.ended_at,
+            charges_duration: 31
+          )
+        end
+
+        context "with a nonrecurring metric" do
+          let(:billable_metric) do
+            build(:billable_metric, organization:, aggregation_type: :unique_count_agg, field_name: "user_id", recurring: false)
+          end
+
+          it "keeps the segment duration" do
+            expect(boundaries.charges_duration).to eq(billing_segment.duration_in_days)
+          end
+        end
+
+        context "without proration" do
+          let(:rate_card) { build(:rate_card, :advance, organization:, product:, currency: "USD", proration: false) }
+
+          it "keeps the segment duration" do
+            expect(boundaries.charges_duration).to eq(billing_segment.duration_in_days)
+          end
+        end
+
+        context "with a zero proration ratio" do
+          let(:proration_ratio) { 0 }
+
+          it "safely keeps the segment duration" do
+            expect(boundaries.charges_duration).to eq(billing_segment.duration_in_days)
+          end
+        end
+      end
+
+      context "with graduated pricing" do
+        let(:rate_model) { "graduated" }
+
+        it "resets aggregation at the rate segment while retaining its service period and duration" do
+          expect(boundaries).to have_attributes(
+            from_datetime: billing_segment.started_at,
+            to_datetime: billing_segment.ended_at,
+            charges_from_datetime: billing_segment.started_at,
+            charges_to_datetime: billing_segment.ended_at,
+            charges_duration: billing_segment.duration_in_days,
+            timestamp: billing_segment.billing_at
+          )
+        end
+
+        context "with a recurring metric" do
+          let(:billable_metric) do
+            build(:billable_metric, organization:, aggregation_type: :sum_agg, field_name: "amount", recurring: true)
+          end
+
+          it "keeps the segment start" do
+            expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
+          end
+        end
+      end
+
+      context "with graduated percentage pricing" do
+        let(:rate_model) { "graduated_percentage" }
+
+        it "keeps aggregation within the rate segment" do
+          expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
+        end
+      end
+
+      %w[package percentage custom dynamic].each do |model|
+        context "with #{model} pricing" do
+          let(:rate_model) { model }
+
+          it "keeps aggregation within the rate segment" do
+            expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
+          end
+        end
+      end
+
+      context "with a graduated rate override on a standard rate" do
+        let(:rate_override) { build(:rate_override, organization:, rate_model: "graduated") }
+
+        it "keeps the segment start with a graduated override" do
+          expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
+        end
+      end
+
+      context "with a standard rate override on a graduated rate" do
+        let(:rate_model) { "graduated" }
+        let(:rate_override) { build(:rate_override, organization:, rate_model: "standard") }
+
+        it "keeps the segment start for the effective standard model" do
+          expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
+        end
+      end
+    end
+
+    context "with graduated arrears pricing" do
+      let(:rate_model) { "graduated" }
+
+      it "keeps the full-segment aggregation window" do
+        expect(boundaries.charges_from_datetime).to eq(billing_segment.started_at)
+      end
+    end
+
+    context "with prorated recurring arrears billing" do
+      let(:rate_card) { build(:rate_card, organization:, product:, currency: "USD", proration: true) }
+      let(:billable_metric) do
+        build(:billable_metric, organization:, aggregation_type: :unique_count_agg, field_name: "user_id", recurring: true)
+      end
+      let(:proration_ratio) { 25.fdiv(31) }
+      let(:billing_segment) do
+        build(
+          :billing_segment,
+          organization:,
+          contract_rate_card:,
+          rate_card_rate:,
+          cycle_started_at: Time.zone.parse("2026-10-01"),
+          started_at: Time.zone.parse("2026-10-07"),
+          ended_at: Time.zone.parse("2026-10-31 23:59:59.999999"),
+          proration_ratio:
+        )
+      end
+
+      it "uses the full anchored cycle duration without changing the segment window" do
+        expect(boundaries).to have_attributes(
+          from_datetime: billing_segment.started_at,
+          to_datetime: billing_segment.ended_at,
+          charges_from_datetime: billing_segment.started_at,
+          charges_to_datetime: billing_segment.ended_at,
+          charges_duration: 31
+        )
+      end
+
+      context "with a nonrecurring metric" do
+        let(:billable_metric) do
+          build(:billable_metric, organization:, aggregation_type: :unique_count_agg, field_name: "user_id", recurring: false)
+        end
+
+        it "keeps the segment duration" do
+          expect(boundaries.charges_duration).to eq(billing_segment.duration_in_days)
+        end
+      end
+
+      context "without proration" do
+        let(:rate_card) { build(:rate_card, organization:, product:, currency: "USD", proration: false) }
+
+        it "keeps the segment duration" do
+          expect(boundaries.charges_duration).to eq(billing_segment.duration_in_days)
+        end
+      end
+
+      context "with a zero proration ratio" do
+        let(:proration_ratio) { 0 }
+
+        it "safely keeps the segment duration" do
+          expect(boundaries.charges_duration).to eq(billing_segment.duration_in_days)
+        end
+      end
+    end
+  end
+
   describe "fee identity" do
     it "exposes product fee attributes individually" do
       expect(source).to have_attributes(

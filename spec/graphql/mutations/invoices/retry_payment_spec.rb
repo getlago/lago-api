@@ -4,9 +4,6 @@ require "rails_helper"
 
 RSpec.describe Mutations::Invoices::RetryPayment do
   let(:required_permission) { "invoices:update" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:, payment_provider: "gocardless") }
   let(:gocardless_payment_provider) { create(:gocardless_provider, organization:) }
   let(:gocardless_customer) { create(:gocardless_customer, customer:) }
   let(:user) { membership.user }
@@ -30,6 +27,11 @@ RSpec.describe Mutations::Invoices::RetryPayment do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:customer) { create_default(:customer, organization:, payment_provider: "gocardless") }
 
   before do
     gocardless_payment_provider

@@ -199,6 +199,7 @@ RSpec.describe Invoices::RefreshDraftService do
       it "returns the failure and rolls the whole refresh back" do
         result = refresh_service.call
 
+        expect(result).to be(failed_result)
         expect(result).not_to be_success
         expect(result.error.code).to eq("invoice_applied_tax_not_found")
         expect(invoice.reload.fees.pluck(:id)).to eq([fee.id])
@@ -305,6 +306,252 @@ RSpec.describe Invoices::RefreshDraftService do
       refresh_service.call
 
       expect(subscription.reload.lifetime_usage.recalculate_invoiced_usage).to be(true)
+    end
+
+    context "with a product catalog invoice" do
+      let(:invoice_subscription) { nil }
+      let(:tax) { nil }
+      let(:customer) { create(:customer, currency: "USD") }
+      let(:contract) { create(:contract, organization:, customer:) }
+      let(:product) { create(:product, :fixed, organization:) }
+      let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD") }
+      let(:contract_rate_card) do
+        create(:contract_rate_card, organization:, contract:, rate_card:, units: 5)
+      end
+      let(:rate_card_rate) do
+        create(:rate_card_rate, organization:, rate_card:, rate_properties: {"amount" => "15.00"})
+      end
+      let(:invoice) do
+        create(
+          :invoice,
+          :draft,
+          organization:,
+          customer:,
+          billing_entity: customer.billing_entity,
+          invoice_type: :contract,
+          currency: "USD",
+          ready_to_be_refreshed: true
+        )
+      end
+      let(:billing_segment) do
+        create(
+          :billing_segment,
+          organization:,
+          customer:,
+          contract:,
+          contract_rate_card:,
+          rate_card_rate:,
+          invoice:,
+          status: :done,
+          currency: "USD"
+        )
+      end
+
+      before { billing_segment }
+
+      it "rebuilds the product fees and totals from the billing segments" do
+        result = refresh_service.call
+
+        expect(result).to be_success
+        expect(invoice.reload).to have_attributes(
+          status: "draft",
+          ready_to_be_refreshed: false,
+          fees_amount_cents: 7_500,
+          total_amount_cents: 7_500
+        )
+        expect(invoice.fees.sole).to have_attributes(invoiceable: product, amount_cents: 7_500)
+      end
+
+      context "with recurring weighted usage" do
+        let(:billable_metric) do
+          create(
+            :billable_metric,
+            organization:,
+            aggregation_type: :weighted_sum_agg,
+            recurring: true,
+            field_name: "value",
+            weighted_interval: :seconds
+          )
+        end
+        let(:product) { create(:product, organization:, billable_metric:) }
+        let(:closing_snapshot) do
+          create(
+            :cached_aggregation,
+            organization:,
+            charge: nil,
+            contract:,
+            product:,
+            external_subscription_id: contract.external_id,
+            event_transaction_id: nil,
+            timestamp: billing_segment.ended_at,
+            current_aggregation: 5
+          )
+        end
+
+        before do
+          create(
+            :event,
+            organization:,
+            customer:,
+            external_subscription_id: contract.external_id,
+            code: billable_metric.code,
+            timestamp: billing_segment.started_at,
+            properties: {value: "10"}
+          )
+          closing_snapshot
+        end
+
+        it "refreshes the existing closing snapshot with late weighted usage" do
+          result = nil
+          expect { result = refresh_service.call }.not_to change(CachedAggregation, :count)
+
+          expect(result).to be_success
+          expect(closing_snapshot.reload.current_aggregation).to eq(10)
+        end
+      end
+
+      context "with an early custom advance renewal" do
+        let(:billable_metric) do
+          create(
+            :custom_billable_metric,
+            organization:,
+            recurring: true,
+            custom_aggregator: <<~RUBY
+              def aggregate(event, previous_state, _aggregation_properties)
+                value = BigDecimal(event.properties['value'].to_s)
+                {total_units: previous_state[:total_units] + value, amount: previous_state[:amount] + value}
+              end
+            RUBY
+          )
+        end
+        let(:product) { create(:product, organization:, billable_metric:) }
+        let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD", billing_timing: :advance) }
+
+        before do
+          create(
+            :event,
+            organization:,
+            customer:,
+            external_subscription_id: contract.external_id,
+            code: billable_metric.code,
+            timestamp: billing_segment.started_at + 1.second,
+            properties: {value: "10"}
+          )
+        end
+
+        it "excludes post-renewal usage without persisting a closing snapshot" do
+          expect(refresh_service.call).to be_success
+          expect(invoice.fees).to be_empty
+          expect(CachedAggregation.where(contract:, product:, timestamp: billing_segment.ended_at)).to be_empty
+        end
+      end
+
+      it "hard-deletes the previous draft fees and their applied taxes" do
+        previous_fee = create(
+          :fee,
+          invoice:,
+          organization:,
+          billing_entity: invoice.billing_entity,
+          subscription: nil,
+          contract:,
+          contract_rate_card:,
+          rate_card_rate:,
+          fee_type: :product,
+          invoiceable: product,
+          amount_currency: "USD"
+        )
+        applied_tax = create(:fee_applied_tax, fee: previous_fee, organization:)
+
+        expect(refresh_service.call).to be_success
+        expect(Fee.unscoped.exists?(previous_fee.id)).to be(false)
+        expect(Fee::AppliedTax.exists?(applied_tax.id)).to be(false)
+      end
+
+      it "applies the shared custom section and wallet refresh steps" do
+        invoice_custom_section = create(:invoice_custom_section, organization:)
+        create(
+          :customer_applied_invoice_custom_section,
+          organization:,
+          billing_entity:,
+          customer:,
+          invoice_custom_section:
+        )
+        create(:wallet, organization:, customer:)
+
+        expect { refresh_service.call }
+          .to change { invoice.reload.applied_invoice_custom_sections.count }.from(0).to(1)
+
+        expect(customer.reload.awaiting_wallet_refresh).to be(true)
+      end
+
+      context "when finalizing" do
+        let(:refresh_service) { described_class.new(invoice:, context: :finalize) }
+
+        it "computes the final amounts without changing the invoice status" do
+          result = refresh_service.call
+
+          expect(result).to be_success
+          expect(invoice.reload).to have_attributes(status: "draft", total_amount_cents: 7_500)
+        end
+      end
+
+      context "when the invoice finalization job runs" do
+        subject(:finalization_result) { Invoices::RefreshDraftAndFinalizeService.call(invoice:) }
+
+        it "refreshes the product fees before finalizing the invoice" do
+          expect(finalization_result).to be_success
+          expect(invoice.reload).to have_attributes(status: "finalized", total_amount_cents: 7_500)
+          expect(invoice.fees.sole).to have_attributes(invoiceable: product, amount_cents: 7_500)
+        end
+      end
+
+      context "with a HubSpot integration" do
+        let(:integration) { create(:hubspot_integration, organization:, sync_invoices: true) }
+
+        before { create(:hubspot_customer, integration:, customer:, organization:) }
+
+        it "enqueues the shared invoice update job" do
+          expect { refresh_service.call }
+            .to have_enqueued_job(Integrations::Aggregator::Invoices::Hubspot::UpdateJob)
+            .with(invoice:)
+        end
+      end
+
+      context "when fee recomputation fails" do
+        let(:original_fee) do
+          create(
+            :fee,
+            invoice:,
+            organization:,
+            billing_entity: invoice.billing_entity,
+            amount_cents: 1_000
+          )
+        end
+        let(:compute_result) do
+          BillingSegments::ComputeInvoiceService::Result.new.tap do |service_result|
+            service_result.validation_failure!(errors: {base: ["invalid"]})
+          end
+        end
+
+        before do
+          original_fee
+          invoice.update!(fees_amount_cents: 1_000, total_amount_cents: 1_000)
+          allow(BillingSegments::ComputeInvoiceService).to receive(:call!).and_raise(compute_result.error)
+        end
+
+        it "returns the invoice refresh failure and rolls back the reset" do
+          result = refresh_service.call
+
+          expect(result).to be_a(described_class::Result)
+          expect(result).to be_failure
+          expect(invoice.reload).to have_attributes(
+            ready_to_be_refreshed: true,
+            fees_amount_cents: 1_000,
+            total_amount_cents: 1_000
+          )
+          expect(original_fee.reload).not_to be_discarded
+        end
+      end
     end
   end
 end

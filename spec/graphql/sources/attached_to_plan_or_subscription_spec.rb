@@ -3,7 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Sources::AttachedToPlanOrSubscription do
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:billable_metric) { create_default(:billable_metric) }
   let(:product) { create(:product, organization:) }
 
   describe "#fetch" do
@@ -26,6 +27,18 @@ RSpec.describe Sources::AttachedToPlanOrSubscription do
         create(:plan_rate_card, organization:, rate_card: create(:rate_card, organization:, product:)).rate_card.discard!
 
         expect(source.fetch([product.id])).to eq([false])
+      end
+
+      context "when the discarded card is attached to a contract" do
+        let(:contract_rate_card) do
+          create(:contract_rate_card, organization:, rate_card: create(:rate_card, organization:, product:))
+        end
+
+        before { contract_rate_card.rate_card.discard! }
+
+        it "ignores the discarded rate card" do
+          expect(source.fetch([product.id])).to eq([false])
+        end
       end
     end
 
@@ -60,6 +73,26 @@ RSpec.describe Sources::AttachedToPlanOrSubscription do
         result = source.fetch([attached_category.id, empty_category.id])
 
         expect(result).to eq([true, false])
+      end
+
+      context "when the card or product is discarded" do
+        let(:discarded_card_category) { create(:product_category, organization:) }
+        let(:discarded_product_category) { create(:product_category, organization:) }
+        let(:discarded_card_product) { create(:product, organization:, product_category: discarded_card_category) }
+        let(:discarded_product) { create(:product, organization:, product_category: discarded_product_category) }
+        let(:discarded_card) { create(:rate_card, organization:, product: discarded_card_product) }
+        let(:kept_card) { create(:rate_card, organization:, product: discarded_product) }
+
+        before do
+          create(:plan_rate_card, organization:, rate_card: discarded_card)
+          discarded_card.discard!
+          create(:contract_rate_card, organization:, rate_card: kept_card)
+          discarded_product.discard!
+        end
+
+        it "does not flag their categories as attached" do
+          expect(source.fetch([discarded_card_category.id, discarded_product_category.id])).to eq([false, false])
+        end
       end
     end
   end

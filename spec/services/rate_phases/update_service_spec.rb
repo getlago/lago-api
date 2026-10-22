@@ -5,19 +5,43 @@ require "rails_helper"
 RSpec.describe RatePhases::UpdateService do
   subject(:result) { described_class.call(rate_phase:, params:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization) { create(:organization) }
   let(:plan_rate_card) { create(:plan_rate_card, organization:) }
   let!(:launch) { create(:rate_phase, plan_rate_card:, organization:, position: 1, billing_interval_cycle_count: 3, name: "Before", code: "launch") }
   let(:rate_phase) { launch }
   let(:terminal_position) { 2 }
   let!(:terminal) { create(:rate_phase, plan_rate_card:, organization:, position: terminal_position, billing_interval_cycle_count: nil, code: "forever") }
-
   let(:params) { {name: "After", billing_interval_cycle_count: 6} }
+
+  before {
+    allow(Utils::ActivityLog).to receive(:produce_after_commit).and_yield
+    create_default(:billable_metric)
+  }
+
+  def activity_payload(owner, event_type)
+    expect(kafka_messages.size).to eq(1)
+    payload = JSON.parse(kafka_messages.first.fetch(:payload))
+    expect(payload).to include(
+      "activity_type" => event_type,
+      "resource_id" => owner.id,
+      "resource_type" => owner.class.name
+    )
+    payload
+  end
 
   it "updates the phase" do
     expect(result).to be_success
     expect(rate_phase.reload.name).to eq("After")
     expect(rate_phase.billing_interval_cycle_count).to eq(6)
+  end
+
+  it "publishes one owning plan_rate_card.updated pair with the hierarchy diff" do
+    expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan_rate_card.updated", plan_rate_card)
+
+    expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(
+      plan_rate_card,
+      "plan_rate_card.updated"
+    )
   end
 
   it "locks the parent entry like the other sequence mutations" do
@@ -145,9 +169,11 @@ RSpec.describe RatePhases::UpdateService do
     context "when the position does not change" do
       let(:params) { {position: 1} }
 
-      it "leaves the sequence as it is" do
+      it "publishes the successful operation even though the serialized state is unchanged" do
+        expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan_rate_card.updated", plan_rate_card)
         expect(result).to be_success
         expect(positions).to eq(%w[launch ramp forever])
+        expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(plan_rate_card, "plan_rate_card.updated")
       end
     end
 
@@ -277,6 +303,201 @@ RSpec.describe RatePhases::UpdateService do
     it "returns a not found failure" do
       expect(result).not_to be_success
       expect(result.error).to be_a(BaseService::NotFoundFailure)
+    end
+  end
+
+  context "when the phase belongs to a contract rate card" do
+    let(:customer) { create(:customer, organization:) }
+    let(:contract) { create(:contract, :pending, organization:, customer:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
+    let(:rate_phase) do
+      create(:rate_phase, :contract_level, organization:, contract_rate_card:, position: 1, billing_interval_cycle_count: nil)
+    end
+    let(:params) { {name: "Contract phase"} }
+
+    it "publishes one contract_rate_card.updated pair" do
+      rate_phase
+      expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("contract_rate_card.updated", contract_rate_card)
+
+      expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(
+        contract_rate_card,
+        "contract_rate_card.updated"
+      )
+    end
+  end
+
+  context "when logging phase changes", :capture_kafka_messages, transaction: false do
+    let(:organization) { create(:organization) }
+    let!(:ramp) { create(:rate_phase, plan_rate_card:, organization:, position: 2, billing_interval_cycle_count: 6, code: "ramp") }
+    let!(:terminal) { create(:rate_phase, plan_rate_card:, organization:, position: 3, billing_interval_cycle_count: nil, code: "forever") }
+    let(:params) { {position: 2, code: "intro-v2", name: "New intro", billing_interval_cycle_count: 4} }
+
+    before do
+      allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+      allow(Utils::ActivityLog).to receive(:produce_after_commit).and_call_original
+    end
+
+    it "includes the ordered before/after phases and changed fields" do
+      expect(result).to be_success
+      payload = activity_payload(plan_rate_card, "plan_rate_card.updated")
+      before_phases, after_phases = payload.fetch("activity_object_changes").fetch("rate_phases")
+      expect([before_phases.map { |phase| phase.fetch("code") }, after_phases.map { |phase| phase.fetch("code") }])
+        .to eq([%w[launch ramp forever], %w[ramp intro-v2 forever]])
+      expect(after_phases.first.fetch("lago_id")).to eq(ramp.id)
+      old_phase = before_phases.find { |phase| phase.fetch("lago_id") == launch.id }
+      new_phase = after_phases.find { |phase| phase.fetch("lago_id") == launch.id }
+      expect(old_phase).to include("name" => "Before", "billing_interval_cycle_count" => 3)
+      expect(new_phase).to include("name" => "New intro", "position" => 2, "billing_interval_cycle_count" => 4)
+      expect(payload.fetch("activity_object_changes")).not_to have_key("rate_phases_count")
+    end
+  end
+
+  context "when an update leaves the phase unchanged", :capture_kafka_messages, transaction: false do
+    let(:organization) { create(:organization) }
+    let(:params) { {name: "Before"} }
+
+    before do
+      allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+      allow(Utils::ActivityLog).to receive(:produce_after_commit).and_call_original
+    end
+
+    it "still emits the owner update with an empty diff" do
+      expect(result).to be_success
+      expect(activity_payload(plan_rate_card, "plan_rate_card.updated").fetch("activity_object_changes")).to eq({})
+    end
+  end
+
+  context "when an update is rejected", :capture_kafka_messages, transaction: false do
+    let(:organization) { create(:organization) }
+    let(:params) { {position: 99} }
+
+    before do
+      allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+      allow(Utils::ActivityLog).to receive(:produce_after_commit).and_call_original
+    end
+
+    it "does not emit an owner event" do
+      expect(result).not_to be_success
+      expect(kafka_messages).to be_empty
+    end
+  end
+
+  context "when logging a contract phase update", :capture_kafka_messages, transaction: false do
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+    let(:contract) { create(:contract, :pending, organization:, customer:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
+    let(:rate_phase) do
+      create(:rate_phase, :contract_level, organization:, contract_rate_card:, code: "forever", name: "Forever", position: 1, billing_interval_cycle_count: nil)
+    end
+    let(:params) { {name: "Contract forever"} }
+
+    before do
+      allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+      allow(Utils::ActivityLog).to receive(:produce_after_commit).and_call_original
+    end
+
+    it "links one phase diff to the contract rate card" do
+      expect(result).to be_success
+      payload = activity_payload(contract_rate_card, "contract_rate_card.updated")
+      before_phases, after_phases = payload.fetch("activity_object_changes").fetch("rate_phases")
+      expect([before_phases.map { |phase| phase.fetch("code") }, after_phases.map { |phase| phase.fetch("code") }])
+        .to eq([["forever"], ["forever"]])
+      expect(after_phases.first).to include("name" => "Contract forever")
+    end
+  end
+
+  context "when the override is omitted", :capture_kafka_messages, transaction: false do
+    let(:organization) { create(:organization) }
+    let(:previous_override) { create(:rate_override, organization:, rate_model: "standard", rate_properties: {amount: "2"}) }
+    let!(:launch) do
+      create(:rate_phase, plan_rate_card:, organization:, position: 1, billing_interval_cycle_count: 3, code: "launch", rate_override: previous_override)
+    end
+    let(:params) { {name: "Still here"} }
+
+    before do
+      allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+      allow(Utils::ActivityLog).to receive(:produce_after_commit).and_call_original
+    end
+
+    it "keeps the same override in both snapshots" do
+      expect(result).to be_success
+      payload = activity_payload(plan_rate_card, "plan_rate_card.updated")
+      before_phase, after_phase = payload.fetch("activity_object_changes").fetch("rate_phases").map(&:first)
+      expect(before_phase.fetch("rate_override")).to include("lago_id" => previous_override.id, "rate_properties" => {"amount" => "2"})
+      expect(after_phase.fetch("rate_override")).to eq(before_phase.fetch("rate_override"))
+    end
+  end
+
+  context "when the override is cleared", :capture_kafka_messages, transaction: false do
+    let(:organization) { create(:organization) }
+    let(:previous_override) { create(:rate_override, organization:, rate_model: "standard", rate_properties: {amount: "2"}) }
+    let!(:launch) do
+      create(:rate_phase, plan_rate_card:, organization:, position: 1, billing_interval_cycle_count: 3, code: "launch", rate_override: previous_override)
+    end
+    let(:params) { {rate_override: nil} }
+
+    before do
+      allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+      allow(Utils::ActivityLog).to receive(:produce_after_commit).and_call_original
+    end
+
+    it "includes the previous override ID and a null after value" do
+      expect(result).to be_success
+      payload = activity_payload(plan_rate_card, "plan_rate_card.updated")
+      before_phase, after_phase = payload.fetch("activity_object_changes").fetch("rate_phases").map(&:first)
+      expect(before_phase.fetch("rate_override")).to include("lago_id" => previous_override.id)
+      expect(after_phase.fetch("rate_override")).to be_nil
+    end
+  end
+
+  context "when override pricing changes", :capture_kafka_messages, transaction: false do
+    let(:organization) { create(:organization) }
+    let(:previous_override) { create(:rate_override, organization:, rate_model: "standard", rate_properties: {amount: "2"}) }
+    let!(:launch) do
+      create(:rate_phase, plan_rate_card:, organization:, position: 1, billing_interval_cycle_count: 3, code: "launch", rate_override: previous_override)
+    end
+    let(:params) { {rate_override: {rate_model: "standard", rate_properties: {amount: "5"}}} }
+
+    before do
+      allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+      allow(Utils::ActivityLog).to receive(:produce_after_commit).and_call_original
+    end
+
+    it "records both override IDs and their pricing values" do
+      expect(result).to be_success
+      payload = activity_payload(plan_rate_card, "plan_rate_card.updated")
+      before_phase, after_phase = payload.fetch("activity_object_changes").fetch("rate_phases").map(&:first)
+      old_value = before_phase.fetch("rate_override")
+      new_value = after_phase.fetch("rate_override")
+      expect(old_value).to include("lago_id" => previous_override.id, "rate_properties" => {"amount" => "2"})
+      expect(new_value).to include("rate_properties" => {"amount" => "5"})
+      expect(new_value.fetch("lago_id")).not_to eq(previous_override.id)
+    end
+  end
+
+  context "when override pricing is equal but the ID changes", :capture_kafka_messages, transaction: false do
+    let(:organization) { create(:organization) }
+    let(:previous_override) { create(:rate_override, organization:, rate_model: "standard", rate_properties: {amount: "5"}) }
+    let!(:launch) do
+      create(:rate_phase, plan_rate_card:, organization:, position: 1, billing_interval_cycle_count: 3, code: "launch", rate_override: previous_override)
+    end
+    let(:params) { {rate_override: {rate_model: "standard", rate_properties: {amount: "5"}}} }
+
+    before do
+      allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+      allow(Utils::ActivityLog).to receive(:produce_after_commit).and_call_original
+    end
+
+    it "retains the equal pricing values and exposes the replacement ID" do
+      expect(result).to be_success
+      payload = activity_payload(plan_rate_card, "plan_rate_card.updated")
+      before_phase, after_phase = payload.fetch("activity_object_changes").fetch("rate_phases").map(&:first)
+      old_value = before_phase.fetch("rate_override")
+      new_value = after_phase.fetch("rate_override")
+      expect(old_value).to include("rate_properties" => {"amount" => "5"})
+      expect(new_value).to include("rate_properties" => {"amount" => "5"})
+      expect(new_value.fetch("lago_id")).not_to eq(old_value.fetch("lago_id"))
     end
   end
 end

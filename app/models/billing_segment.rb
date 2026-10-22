@@ -30,20 +30,22 @@ class BillingSegment < ApplicationRecord
 
   enum :status, STATUSES, validate: true, prefix: true
 
-  # What the periodic consumer still owes an invoice for. One name for both ends of the pipe:
-  # the clock selects customers by it and the consumer selects their segments by it, so
-  # neither can drift into offering work the other will not do.
-  #
-  # Metered usage billed in advance is priced per event rather than on the tick, so its
-  # segments are never invoiced here and never leave their state. Selecting them would
-  # enqueue that customer every hour for a run with nothing to do.
-  scope :awaiting_invoicing, -> {
-    where(status: [:pending, :processing])
+  # Pending periodic segments are ready immediately. Advance-metered usage is reconciled
+  # after its segment ends, except displayed recurring usage, which bills at renewal.
+  scope :ready_for_invoicing, ->(timestamp = Time.current) {
+    status_pending
       .joins(contract_rate_card: {rate_card: :product})
+      .joins("LEFT OUTER JOIN billable_metrics ON billable_metrics.id = products.billable_metric_id")
       .where(
-        "products.product_type != :metered OR rate_cards.billing_timing != :advance",
+        "(NOT (rate_cards.billing_timing = :advance AND products.product_type = :metered) OR " \
+        "(rate_cards.billing_timing = :advance AND products.product_type = :metered AND " \
+        "billing_segments.ended_at <= :timestamp) OR " \
+        "(rate_cards.billing_timing = :advance AND products.product_type = :metered AND " \
+        "rate_cards.display_on_invoice = TRUE AND " \
+        "billable_metrics.recurring = TRUE AND billing_segments.billing_at <= :timestamp))",
+        advance: RateCard::BILLING_TIMINGS[:advance],
         metered: Product::PRODUCT_TYPES[:metered],
-        advance: RateCard::BILLING_TIMINGS[:advance]
+        timestamp:
       )
   }
 
@@ -60,6 +62,14 @@ class BillingSegment < ApplicationRecord
 
   def rate
     rate_override || rate_card_rate
+  end
+
+  def recurring_advance_invoiceable?
+    rate_card = contract_rate_card.rate_card
+    product = rate_card.product
+    metric = product.billable_metric
+
+    rate_card.advance? && product.metered? && rate_card.display_on_invoice? && metric&.recurring?
   end
 
   def target_key

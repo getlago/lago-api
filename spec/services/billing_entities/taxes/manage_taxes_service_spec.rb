@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe BillingEntities::Taxes::ManageTaxesService do
   subject(:service) { described_class.new(billing_entity:, tax_codes:) }
 
-  let(:organization) { create(:organization) }
+  let(:organization) { create_default(:organization) }
   let(:billing_entity) { organization.default_billing_entity }
   let(:tax1) { create(:tax, organization:, code: "TAX_CODE_1") }
   let(:tax2) { create(:tax, organization:, code: "TAX_CODE_2") }
@@ -22,7 +22,7 @@ RSpec.describe BillingEntities::Taxes::ManageTaxesService do
       it "applies taxes to the billing entity" do
         service.call
 
-        expect(billing_entity.reload.taxes).to eq([tax1, tax2])
+        expect(billing_entity.reload.taxes).to match_array([tax1, tax2])
       end
 
       context "when some tax codes do not exist" do
@@ -45,7 +45,7 @@ RSpec.describe BillingEntities::Taxes::ManageTaxesService do
         it "removes the other tax and applies the new ones" do
           service.call
 
-          expect(billing_entity.taxes).to eq([tax1, tax2])
+          expect(billing_entity.taxes).to match_array([tax1, tax2])
         end
       end
 
@@ -60,7 +60,7 @@ RSpec.describe BillingEntities::Taxes::ManageTaxesService do
         it "applies each tax only once" do
           service.call
 
-          expect(billing_entity.taxes).to eq([tax1, tax2])
+          expect(billing_entity.taxes).to match_array([tax1, tax2])
         end
       end
 
@@ -71,10 +71,22 @@ RSpec.describe BillingEntities::Taxes::ManageTaxesService do
           result = service.call
 
           expect(result).to be_success
-          expect(result.taxes).to eq([tax1, tax2])
+          expect(result.taxes).to match_array([tax1, tax2])
           expect(result.applied_taxes.count).to eq(2)
 
           expect(billing_entity.applied_taxes.pluck(:organization_id).uniq).to eq([organization.id])
+        end
+      end
+
+      context "when tax codes contain duplicates with different case" do
+        let(:tax_codes) { ["tax_code_1", "TAX_CODE_1"] }
+
+        it "applies the tax once" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.taxes).to match_array([tax1])
+          expect(billing_entity.reload.taxes).to match_array([tax1])
         end
       end
     end

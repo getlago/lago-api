@@ -3,8 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::WalletTransactionsController do
-  let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
+  let_it_be(:plan, refind: true) { create_default(:plan, organization:) }
+  let_it_be(:customer) { create_default(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:) }
   let(:wallet) { create(:wallet, customer:, credits_balance: 10, balance_cents: 1000) }
   let(:wallet_id) { wallet.id }

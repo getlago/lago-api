@@ -48,7 +48,7 @@ module CreditNotes
       rescue GoCardlessPro::Error, GoCardlessPro::ValidationError => e
         deliver_error_webhook(message: e.message, code: e.code)
         update_credit_note_status(:failed)
-        Utils::ActivityLog.produce(credit_note, "credit_note.refund_failure")
+        Utils::ActivityLog.produce(credit_note, "credit_note.provider_refund_failure")
 
         if e.is_a?(GoCardlessPro::ValidationError)
           result
@@ -71,7 +71,7 @@ module CreditNotes
 
         if FAILED_STATUSES.include?(status.to_s)
           deliver_error_webhook(message: "Payment refund failed", code: nil)
-          Utils::ActivityLog.produce(credit_note, "credit_note.refund_failure")
+          Utils::ActivityLog.produce(credit_note, "credit_note.provider_refund_failure")
           result.service_failure!(code: "refund_failed", message: "Refund failed to perform")
         end
 
@@ -130,7 +130,7 @@ module CreditNotes
 
       def deliver_error_webhook(message:, code:)
         SendWebhookJob.perform_later(
-          "credit_note.provider_refund_failure",
+          "credit_note.refund_failure",
           credit_note,
           provider_customer_id: payment_provider_customer(payment)&.provider_customer_id,
           provider_error: {

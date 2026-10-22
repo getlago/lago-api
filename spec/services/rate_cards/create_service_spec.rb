@@ -5,9 +5,9 @@ require "rails_helper"
 RSpec.describe RateCards::CreateService do
   subject(:result) { described_class.call(product:, params:) }
 
-  let(:organization) { create(:organization) }
+  let_it_be(:organization, refind: true) { create(:organization, feature_flags: ["product_catalog"]) }
   # The shared params set proration: true, which requires a recurring metric.
-  let(:metric) { create(:billable_metric, organization:, aggregation_type: "sum_agg", recurring: true, field_name: "amount") }
+  let_it_be(:metric) { create(:billable_metric, organization:, aggregation_type: "sum_agg", recurring: true, field_name: "amount") }
   let(:product) { create(:product, organization:, billable_metric: metric) }
 
   let(:params) do
@@ -19,6 +19,14 @@ RSpec.describe RateCards::CreateService do
       billing_timing: "arrears",
       proration: true
     }
+  end
+
+  let(:activity_log_calls) { [] }
+
+  before do
+    allow(Utils::ActivityLog).to receive(:produce) do |*args, **kwargs, &block|
+      activity_log_calls << {args:, kwargs:, block:}
+    end
   end
 
   it "creates a rate card" do
@@ -84,14 +92,24 @@ RSpec.describe RateCards::CreateService do
     end
   end
 
-  it "produces an activity log" do
+  it "publishes rate_card.created to both channels" do
+    expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with do |*args|
+      expect(args).to eq(["rate_card.created", result.rate_card])
+    end
+
     rate_card = result.rate_card
-    expect(Utils::ActivityLog).to have_produced("rate_card.created").after_commit.with(rate_card)
+    expect(Utils::ActivityLog).to have_received(:produce).with(
+      rate_card,
+      "rate_card.created",
+      after_commit: true
+    )
+    activity_call = activity_log_calls.find { |call| call[:args] == [rate_card, "rate_card.created"] }
+    expect(activity_call.fetch(:block)).to be_a(Proc)
   end
 
   context "with nested rates" do
     # A prorated card requires a recurring metric for its rates to be valid.
-    let(:product) do
+    let_it_be(:product) do
       metric = create(:billable_metric, organization:, aggregation_type: "sum_agg", recurring: true, field_name: "amount")
       create(:product, organization:, billable_metric: metric)
     end
@@ -125,7 +143,20 @@ RSpec.describe RateCards::CreateService do
 
     it "does not produce per-rate activity logs" do
       result
-      expect(Utils::ActivityLog).not_to have_produced("rate_card.updated")
+      expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "rate_card.updated", any_args)
+      expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "rate_card_rate.created", any_args)
+    end
+
+    it "only enqueues the parent rate_card.created event for nested rates" do
+      expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with do |*args|
+        expect(args).to eq(["rate_card.created", result.rate_card])
+      end
+      expect(Utils::ActivityLog).to have_received(:produce).with(
+        result.rate_card,
+        "rate_card.created",
+        after_commit: true
+      )
+      expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "rate_card_rate.created", any_args)
     end
 
     context "when a nested rate is invalid" do
@@ -137,6 +168,26 @@ RSpec.describe RateCards::CreateService do
         expect(result).not_to be_success
         expect(result.error.messages[:"rates.rate_properties"]).to be_present
       end
+
+      it "does not enqueue a webhook" do
+        expect { result }.not_to have_enqueued_job(SendWebhookJob)
+      end
+    end
+  end
+
+  context "when the catalog flag is disabled" do
+    let(:organization) { create(:organization) }
+
+    it "still schedules the webhook and activity for an unguarded direct service call" do
+      expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with do |*args|
+        expect(args).to eq(["rate_card.created", result.rate_card])
+      end
+      expect(result).to be_success
+      expect(Utils::ActivityLog).to have_received(:produce).with(
+        result.rate_card,
+        "rate_card.created",
+        after_commit: true
+      )
     end
   end
 

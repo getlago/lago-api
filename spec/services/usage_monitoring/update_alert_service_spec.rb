@@ -5,9 +5,14 @@ require "rails_helper"
 RSpec.describe UsageMonitoring::UpdateAlertService do
   subject(:result) { described_class.call(alert:, params:) }
 
-  let(:organization) { create(:organization, premium_integrations:) }
-  let(:premium_integrations) { [] }
+  let_it_be(:premium_integrations) { [] }
+  let_it_be(:organization) { create_default(:organization, premium_integrations:) }
   let(:alert) { create(:alert, thresholds: [1, 50], organization: organization) }
+
+  before_all do
+    create_default(:customer)
+    create_default(:plan)
+  end
 
   describe "#call" do
     let(:params) do
@@ -36,7 +41,7 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
 
     context "with a billable_metric_id" do
       let(:alert) { create(:billable_metric_current_usage_amount_alert, thresholds: [50]) }
-      let(:billable_metric) { create(:billable_metric, organization: alert.organization) }
+      let(:billable_metric) { create_default(:billable_metric) }
       let(:params) do
         {code: "new_code", name: "Renamed", billable_metric_id: billable_metric.id, thresholds: [
           {value: 40},
@@ -266,6 +271,19 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
 
           expect(result).to be_failure
           expect(alert).not_to have_received(:save!)
+        end
+
+        context "when another request takes the code between the check and the save" do
+          subject(:result) { service.call }
+
+          let(:service) { described_class.new(alert:, params:) }
+
+          before { allow(service).to receive(:wallet_alert_code_taken?).and_return(false) }
+
+          it "reports the wallet index violation on the code field" do
+            expect(result).to be_failure
+            expect(result.error.messages).to eq(code: ["value_already_exist"])
+          end
         end
       end
 

@@ -18,10 +18,12 @@ module Lago
     SEP = "=" * 72
     LINE = "-" * 72
 
+    # `rpc` covers node provider endpoints, which carry their API key in the
+    # host or the path where `mask_value` cannot see it.
     SECRET_PATTERN = /
       key|secret|password|passwd|passphrase|token|dsn|salt|private|credential|
       auth|api_key|access_key|signing|signature|webhook|client_secret|client_id|
-      license|cert|master\.key
+      license|cert|master\.key|rpc
     /xi
 
     # Matches URL userinfo credentials (`scheme://user:pass@` or `scheme://user@`).
@@ -362,7 +364,7 @@ module Lago
         output.puts "  ## Settings"
         setting("DATABASE_URL", "DATABASE_URL")
 
-        pool_size = safe { ApplicationRecord.connection_pool.db_config.pool }
+        pool_size = safe { ApplicationRecord.connection_pool.db_config.max_connections }
         if pool_size.to_s.start_with?("error:")
           pool_size = ENV["DATABASE_POOL"].presence || "(unset)"
         end
@@ -468,12 +470,16 @@ module Lago
         setting("REDIS_URL", "REDIS_URL")
         setting("REDIS_PASSWORD", "REDIS_PASSWORD")
         fact("Sidekiq sentinels", ENV["LAGO_REDIS_SIDEKIQ_SENTINELS"].present? ? "configured" : "(none)")
+        setting("Sidekiq sentinel username", "LAGO_REDIS_SIDEKIQ_SENTINEL_USERNAME")
+        setting("Sidekiq sentinel password", "LAGO_REDIS_SIDEKIQ_SENTINEL_PASSWORD")
         fact("Sidekiq master name", ENV["LAGO_REDIS_SIDEKIQ_MASTER_NAME"].presence || "master (default)")
         fact("Sidekiq retry window s", ENV["LAGO_REDIS_SIDEKIQ_RETRY_WINDOW_SECONDS"].presence || "5 (default)")
         fact("Cache enabled", ENV["LAGO_REDIS_CACHE_URL"].present?)
         setting("Cache URL", "LAGO_REDIS_CACHE_URL")
         setting("Cache pool size", "LAGO_REDIS_CACHE_POOL_SIZE")
         fact("Cache sentinels", ENV["LAGO_REDIS_CACHE_SENTINELS"].present? ? "configured" : "(none)")
+        setting("Cache sentinel username", "LAGO_REDIS_CACHE_SENTINEL_USERNAME")
+        setting("Cache sentinel password", "LAGO_REDIS_CACHE_SENTINEL_PASSWORD")
         fact("SSL verify mode", "VERIFY_NONE")
         fact("Connection timeout", "1s")
 
@@ -560,6 +566,8 @@ module Lago
           fact("Client id", "Lago")
           setting("Raw events topic", "LAGO_KAFKA_RAW_EVENTS_TOPIC")
           setting("Enriched events topic", "LAGO_KAFKA_ENRICHED_EVENTS_TOPIC")
+          setting("Product raw events topic", "LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC")
+          setting("Product enriched events topic", "LAGO_KAFKA_PRODUCT_ENRICHED_EVENTS_TOPIC")
           setting("API logs topic", "LAGO_KAFKA_API_LOGS_TOPIC")
           setting("Activity logs topic", "LAGO_KAFKA_ACTIVITY_LOGS_TOPIC")
           setting("Security logs topic", "LAGO_KAFKA_SECURITY_LOGS_TOPIC")

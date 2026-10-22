@@ -21,6 +21,7 @@ de:
     breakdown: Aufschlüsselung
     breakdown_for_days: "%{breakdown_duration} für %{breakdown_total_duration} Tage"
     breakdown_of: Aufschlüsselung für %{fee_filter_display_name}
+    charges_paid_in_advance: Im Voraus bezahlte Gebühren
     clabe: CLABE
     conversion_rate: Umrechnungskurs
     country: Land
@@ -28,7 +29,9 @@ de:
     credit_notes: Gutschriften
     date_from: Vom
     date_to: Bis
+    description: Beschreibung
     details: "%{resource} Details"
+    details_title: Details
     document_name: Rechnung
     document_tax_name: Steuerrechnung
     due_date: Fälligkeit %{date}
@@ -58,7 +61,7 @@ de:
     month: monat
     monthly: Monatlich
     notice_full: Unabhängig davon, wann ein Ereignis empfangen wird, wird die Einheit nicht anteilig berechnet, wir berechnen den vollen Preis.
-    notice_prorated: Wenn eine Einheit während des Abrechnungszeitraums hinzugefügt oder entfernt wird, berechnen wir den anteiligen Preis basierend auf dem Verhältnis der verbleibenden oder genutzten Tage zur Gesamtzahl der Tage im Plan. Zum Beispiel, wenn noch 15 Tage im Plan verbleiben, multiplizieren wir den Preis mit 15/%{days_in_month}, und wenn eine Einheit für 10 Tage genutzt wurde, multiplizieren wir den Preis mit 10/%{days_in_month}.
+    notice_prorated: Wenn eine Einheit während des Abrechnungszeitraums hinzugefügt oder entfernt wird, berechnen wir den anteiligen Preis basierend auf dem Verhältnis der verbleibenden oder genutzten Tage zur Gesamtzahl der Tage im Plan. Zum Beispiel, wenn in einem Zeitraum von %{days_in_month} Tagen noch 15 Tage verbleiben, multiplizieren wir den Preis mit 15/%{days_in_month}, und wenn eine Einheit für 10 Tage genutzt wurde, multiplizieren wir den Preis mit 10/%{days_in_month}.
     package:
       fee_per_package: Gebühr pro Paket
       fee_per_package_unit_price: "%{amount} pro %{package_size}"
@@ -66,6 +69,7 @@ de:
     paid_invoice: Bezahlte Rechnung
     paid_tax_invoice: Bezahlte Steuerrechnung
     pay_with_bank_transfer: Zahlung per Banküberweisung
+    payment_due_date: Fälligkeitsdatum
     payment_term: Zahlungsfrist
     payment_term_days: "%{net_payment_term} Tage"
     percentage:
@@ -81,6 +85,7 @@ de:
     prepaid_credits_with_value: Prepaid-Guthaben - %{wallet_name}
     progressive_billing_credit: Nutzung bereits abgerechnet
     purchase_order_number: Bestellnummer
+    quantity: Menge
     quarter: quartal
     quarterly: Vierteljährlich
     reached_usage_threshold: Diese progressive Rechnung wird erstellt, da Ihre kumulierte Nutzung %{usage_amount} erreicht hat und den Schwellenwert von %{threshold_amount} überschritten hat.
@@ -114,6 +119,13 @@ de:
       fr_tax_exempt: Kunde ist gemäß Artikel 259-1 des französischen Allgemeinen Steuergesetzbuchs von der Steuer befreit.
       reverse_charge: Steuerschuld auf Kunden übertragen.
       tax_exempt: Kunde ist von der Steuer befreit.
+    tiers:
+      fee_for_first: Gebühr für die ersten %{up_to} Einheiten
+      fee_for_next: Gebühr für Einheiten bis %{up_to}
+      fee_for_remaining: Gebühr für die verbleibenden Einheiten
+      flat_fee_for_first: Pauschalgebühr für die ersten %{up_to} Einheiten
+      flat_fee_for_next: Pauschalgebühr für Einheiten bis %{up_to}
+      flat_fee_for_remaining: Pauschalgebühr für die verbleibenden Einheiten
     total: Gesamt
     total_credits: Gesamtguthaben
     total_credits_with_value: 'Gesamtguthaben: %{credit_amount} Credits'

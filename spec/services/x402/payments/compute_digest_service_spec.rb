@@ -90,8 +90,15 @@ describe X402::Payments::ComputeDigestService do
   context "with a Solana payment" do
     let(:network) { "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1" }
     let(:asset) { nil }
-    let(:transaction) { Base64.strict_encode64("\x01".b + ("\x00".b * 64) + ("\x80".b * 40)) }
+    let(:signatures) { ["\x00".b * 64, "\x11".b * 64] }
+    let(:message) { "\x80".b * 40 }
+    let(:transaction) { Base64.strict_encode64([signatures.size].pack("C") + signatures.join + message) }
     let(:payment) { {"x402Version" => 2, "accepted" => {"network" => network}, "payload" => {"transaction" => transaction}} }
+
+    def digest_of_transaction(other_signatures: signatures, other_message: message)
+      bytes = [other_signatures.size].pack("C") + other_signatures.join + other_message
+      digest_of({"payload" => {"transaction" => Base64.strict_encode64(bytes)}})
+    end
 
     it "returns a digest" do
       expect(result.digest).to match(/\A\h{64}\z/)
@@ -101,8 +108,36 @@ describe X402::Payments::ComputeDigestService do
       expect(digest_of({"payload" => {"transaction" => transaction}})).to eq(result.digest)
     end
 
-    it "gives another digest for other bytes" do
-      expect(digest_of({"payload" => {"transaction" => Base64.strict_encode64("other".b)}})).not_to eq(result.digest)
+    it "ignores what the fee payer's signature slot holds" do
+      expect(digest_of_transaction(other_signatures: ["\xAB".b * 64, signatures.last])).to eq(result.digest)
+    end
+
+    it "gives another digest for another message" do
+      expect(digest_of_transaction(other_message: "\x81".b * 40)).not_to eq(result.digest)
+    end
+
+    context "without a message after the signatures" do
+      let(:message) { "".b }
+
+      it "fails on the transaction" do
+        expect(result.error.messages).to eq(payment: ["invalid_transaction"])
+      end
+    end
+
+    context "without a signature" do
+      let(:signatures) { [] }
+
+      it "fails on the transaction" do
+        expect(result.error.messages).to eq(payment: ["invalid_transaction"])
+      end
+    end
+
+    context "when the signature count does not fit in one byte" do
+      let(:transaction) { Base64.strict_encode64("\x80\x01".b + ("\x11".b * 64) + message) }
+
+      it "fails on the transaction" do
+        expect(result.error.messages).to eq(payment: ["invalid_transaction"])
+      end
     end
 
     context "when the transaction is not base64" do

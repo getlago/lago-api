@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Utils::AuthToken do
-  let(:user) { create(:user) }
+  let_it_be(:user) { create_default(:user) }
   let(:user_id) { user.id }
   let(:extra) { {login_method: Organizations::AuthenticationMethods::EMAIL_PASSWORD} }
   let(:token) { described_class.encode(user:, **extra) }

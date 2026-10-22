@@ -17,6 +17,15 @@ class WebhookEndpoint < ApplicationRecord
     config[:name].to_s
   end.freeze
 
+  PRODUCT_CATALOG_ONLY_EVENT_TYPES = WEBHOOK_EVENT_TYPE_CONFIG.values
+    .select { |config| config[:product_catalog_only] }
+    .map { |config| config[:name] }
+    .to_set
+    .freeze
+
+  # Former names, still accepted from API clients and mapped to the current one.
+  RENAMED_EVENT_TYPES = {"credit_note.provider_refund_failure" => "credit_note.refund_failure"}.freeze
+
   belongs_to :organization
   has_many :webhooks, dependent: :delete_all
 
@@ -60,6 +69,7 @@ class WebhookEndpoint < ApplicationRecord
     normalized = event_types
       .map { |event_type| event_type&.to_s&.strip&.downcase }
       .reject(&:blank?)
+      .map { |event_type| RENAMED_EVENT_TYPES.fetch(event_type, event_type) }
       .uniq
 
     # special case: convert ["*"] to nil to disable filtering

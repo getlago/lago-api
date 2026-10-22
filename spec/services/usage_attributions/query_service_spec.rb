@@ -264,7 +264,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
 
     it "returns the matching values with their rank in the level" do
       expect(result.rows.map { [it.value, it.rank] }).to eq([["eng", 2]])
-      expect(result.groups_count).to eq(2)
+      expect(result.groups_count).to eq(1)
     end
   end
 
@@ -451,18 +451,13 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     end
   end
 
-  context "with deduplication enabled" do
-    let(:organization) do
-      create(:organization, clickhouse_events_store: true, clickhouse_deduplication_enabled: true, feature_flags: ["account_tree"])
-    end
+  context "when reading the events" do
+    before { allow(Events::Stores::Clickhouse::AttributedUsageQuery).to receive(:new).and_call_original }
 
-    before do
-      create_event(code: "tokens", value: 50, labels: {"team" => "ops"}, transaction_id: "tr_dup")
-      create_event(code: "tokens", value: 50, labels: {"team" => "ops"}, transaction_id: "tr_dup")
-    end
+    it "reads without FINAL" do
+      result
 
-    it "counts duplicated events once" do
-      expect(result.rows.find { it.value == "ops" }.events_count).to eq(1)
+      expect(Events::Stores::Clickhouse::AttributedUsageQuery).to have_received(:new).with(hash_including(deduplicate: false))
     end
   end
 

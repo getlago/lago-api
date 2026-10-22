@@ -54,7 +54,7 @@ module Api
         if result.success?
           render(
             json: ::CollectionSerializer.new(
-              result.taxes,
+              result.taxes.preload(:billing_entities),
               ::V1::TaxWithBillingEntitiesSerializer,
               collection_name: "taxes",
               meta: pagination_metadata(result.taxes),

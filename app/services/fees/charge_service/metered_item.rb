@@ -23,8 +23,8 @@ module Fees
         )
       end
 
-      def self.from_billing_segment(billing_segment:, product_filter: nil, event: nil)
-        new(source: Sources::BillingSegment.new(billing_segment:, product_filter:), event:)
+      def self.from_billing_segment(billing_segment:, product_filter: nil, max_timestamp: nil, event: nil)
+        new(source: Sources::BillingSegment.new(billing_segment:, product_filter:, max_timestamp:), event:)
       end
 
       delegate :charge,
@@ -65,6 +65,10 @@ module Fees
         charge_model == "dynamic"
       end
 
+      def graduated?
+        charge_model == "graduated"
+      end
+
       def percentage?
         charge_model == "percentage"
       end
@@ -75,6 +79,16 @@ module Fees
 
       def filter_id
         selected_filter&.id
+      end
+
+      # Rate changes reset advance state through the segment's aggregation window;
+      # recurring closing balances remain available across those windows.
+      def cached_aggregation_identity
+        if billing_segment
+          {contract_id: contract.id, product_id: invoiceable.id, product_filter_id: product_filter&.id}
+        else
+          {charge_id:, charge_filter_id: charge_filter&.id}
+        end
       end
 
       # Charge sources resolve the event's matching filter before selecting the bucket.

@@ -5,10 +5,11 @@ require "rails_helper"
 RSpec.describe AddOns::CreateService do
   subject(:create_service) { described_class.new(create_args) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
   let(:add_on_code) { "free-beer-for-us" }
-  let(:tax) { create(:tax, organization:) }
+
+  let_it_be(:tax) { create(:tax, organization:) }
 
   describe "create" do
     let(:create_args) do
@@ -45,6 +46,12 @@ RSpec.describe AddOns::CreateService do
           organization_id: add_on.organization_id
         }
       )
+    end
+
+    it "enqueues an add_on.created webhook" do
+      result = create_service.call
+
+      expect(SendWebhookJob).to have_been_enqueued.with("add_on.created", result.add_on)
     end
 
     context "with code already used by a deleted add_on" do

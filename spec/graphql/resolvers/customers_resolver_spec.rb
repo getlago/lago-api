@@ -4,10 +4,8 @@ require "rails_helper"
 
 RSpec.describe Resolvers::CustomersResolver do
   let(:required_permission) { "customers:view" }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:billing_entity1) { organization.default_billing_entity }
-  let(:billing_entity2) { create(:billing_entity, organization:) }
   let(:query) do
     <<~GQL
       query(
@@ -54,6 +52,10 @@ RSpec.describe Resolvers::CustomersResolver do
       }
     GQL
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create_default(:membership) }
+  let_it_be(:billing_entity2) { create_default(:billing_entity, organization:) }
 
   def test_customers_resolver(expected_customers, variables: {})
     variables = {page: 1, limit: 5}.merge(variables)
@@ -244,7 +246,7 @@ RSpec.describe Resolvers::CustomersResolver do
   end
 
   context "when filtering by search_term" do
-    let!(:john_doe) { create(:customer, organization:, name: "John, Doe", email: "john@doe.com", legal_name: "John-Doe", firstname: "Johnnas", lastname: "Doefe", external_id: "1234567890") }
+    let(:john_doe) { create(:customer, organization:, name: "John, Doe", email: "john@doe.com", legal_name: "John-Doe", firstname: "Johnnas", lastname: "Doefe", external_id: "1234567890") }
 
     before do
       create(:customer, organization:, name: "Jane Doe", email: "jane@doe.com", legal_name: "Jane-Doe", firstname: "Janenas", lastname: "Doefae", external_id: "1234567891")

@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe IntegrationCollectionMappings::BaseCollectionMapping do
   subject(:mapping) { build(:netsuite_collection_mapping, settings: {}) }
 
+  let_it_be(:organization) { create_default(:organization) }
+
   let(:mapping_types) do
     %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit credit_note account currencies]
   end
@@ -20,11 +22,13 @@ RSpec.describe IntegrationCollectionMappings::BaseCollectionMapping do
   describe "validations" do
     describe "of mapping type uniqueness" do
       let(:mapping_type) { :fallback_item }
-      let(:organization) { create(:organization) }
       let(:integration) { create(:netsuite_integration, organization:) }
       let(:other_integration) { create(:netsuite_integration, organization: organization) }
-      let(:billing_entity) { create(:billing_entity, organization: organization) }
-      let(:other_billing_entity) { create(:billing_entity, organization: organization) }
+
+      let_it_be(:organization) { create_default(:organization) }
+
+      let_it_be(:billing_entity) { create_default(:billing_entity, organization: organization) }
+      let_it_be(:other_billing_entity) { create_default(:billing_entity, organization: organization) }
 
       context "when billing entity is nil" do
         subject(:mapping) do

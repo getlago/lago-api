@@ -63,6 +63,7 @@ module Coupons
       end
 
       result.coupon = coupon
+      SendWebhookJob.perform_after_commit("coupon.created", coupon)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)

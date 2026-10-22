@@ -6,12 +6,13 @@ RSpec.describe ::V1::InvoiceSerializer do
   subject(:serializer) { described_class.new(invoice, root_name: "invoice", includes:) }
 
   let(:includes) { %i[metadata error_details] }
-
-  let(:invoice) { create(:invoice) }
-
   let(:metadata) { create(:invoice_metadata, invoice:) }
   let(:error_details1) { create(:error_detail, owner: invoice) }
   let(:error_details2) { create(:error_detail, owner: invoice, deleted_at: Time.current) }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:invoice, refind: true) { create_default(:invoice) }
 
   before do
     metadata
@@ -100,15 +101,12 @@ RSpec.describe ::V1::InvoiceSerializer do
 
   context "when including subscriptions with multiple subscriptions" do
     let(:includes) { %i[subscriptions billing_periods] }
-    let(:organization) { invoice.organization }
-    let(:customer) { invoice.customer }
-
-    let(:plan_zebra) { create(:plan, organization:, name: "Zebra Plan", invoice_display_name: nil) }
-    let(:plan_alpha) { create(:plan, organization:, name: "Alpha Plan", invoice_display_name: nil) }
-
     let(:subscription_zebra) { create(:subscription, customer:, plan: plan_zebra, name: nil) }
     let(:subscription_alpha) { create(:subscription, customer:, plan: plan_alpha, name: nil) }
     let(:subscription_custom) { create(:subscription, customer:, plan: plan_zebra, name: "AAA Custom") }
+
+    let_it_be(:plan_zebra) { create_default(:plan, organization:, name: "Zebra Plan", invoice_display_name: nil) }
+    let_it_be(:plan_alpha) { create_default(:plan, organization:, name: "Alpha Plan", invoice_display_name: nil) }
 
     before do
       create(:invoice_subscription, :boundaries, invoice:, subscription: subscription_zebra)
@@ -234,6 +232,43 @@ RSpec.describe ::V1::InvoiceSerializer do
       result = JSON.parse(serializer.to_json)
 
       expect(result["invoice"]["applied_taxes"].sole["lago_tax_id"]).to be_present
+    end
+  end
+
+  context "with an x402 payment link" do
+    subject(:serializer) { described_class.new(x402_invoice, root_name: "invoice") }
+
+    let(:x402_customer) { create(:customer) }
+    let(:x402_invoice) { create(:invoice, customer: x402_customer, x402_payment_token: "ab" * 32) }
+
+    context "without x402 payments" do
+      it "omits x402_payment_url" do
+        expect(JSON.parse(serializer.to_json)["invoice"]).not_to have_key("x402_payment_url")
+      end
+    end
+
+    context "with x402 payments enabled" do
+      let(:x402_customer) { create(:customer, organization: create(:organization, feature_flags: ["x402_payments"])) }
+
+      context "without premium" do
+        it "omits x402_payment_url" do
+          expect(JSON.parse(serializer.to_json)["invoice"]).not_to have_key("x402_payment_url")
+        end
+      end
+
+      context "with premium", :premium do
+        it "serializes x402_payment_url" do
+          expect(JSON.parse(serializer.to_json)["invoice"]["x402_payment_url"]).to eq(x402_invoice.x402_payment_url)
+        end
+
+        context "without a minted link" do
+          let(:x402_invoice) { create(:invoice, customer: x402_customer) }
+
+          it "serializes a null x402_payment_url" do
+            expect(JSON.parse(serializer.to_json)["invoice"]).to include("x402_payment_url" => nil)
+          end
+        end
+      end
     end
   end
 end

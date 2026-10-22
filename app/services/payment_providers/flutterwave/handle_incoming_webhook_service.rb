@@ -24,7 +24,7 @@ module PaymentProviders
         webhook_secret = payment_provider_result.payment_provider.webhook_secret
         return result.service_failure!(code: "webhook_error", message: "Webhook secret is missing") if webhook_secret.blank?
 
-        unless webhook_secret == secret
+        unless ActiveSupport::SecurityUtils.secure_compare(webhook_secret, secret.to_s)
           return result.service_failure!(code: "webhook_error", message: "Invalid webhook secret")
         end
 

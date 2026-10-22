@@ -10,7 +10,11 @@ RSpec.describe EInvoices::CreditNotes::Ubl::Builder do
   end
 
   let(:credit_note) { create(:credit_note, invoice:, total_amount_currency: "EUR", credit_amount: 1) }
-  let(:invoice) { create(:invoice, number: "LAGO-TEST-123") }
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:customer) { create_default(:customer) }
+  let_it_be(:plan) { create_default(:plan) }
+  let_it_be(:invoice, refind: true) { create_default(:invoice, number: "LAGO-TEST-123") }
 
   before do
     credit_note.reload
@@ -165,6 +169,7 @@ RSpec.describe EInvoices::CreditNotes::Ubl::Builder do
 
     context "when AllowanceCharge tags" do
       let(:root) { "//cac:AllowanceCharge" }
+      let(:credit_note) { create(:credit_note, invoice:, precise_coupons_adjustment_amount_cents: 100) }
 
       let(:invoice_fee1) { create(:fee, invoice:, taxes_rate: 0.0, precise_coupons_amount_cents: 100, precise_amount_cents: 2000, taxes_precise_amount_cents: 0) }
       let(:invoice_fee2) { create(:fee, invoice:, taxes_rate: 5.0, precise_coupons_amount_cents: 10, precise_amount_cents: 100, taxes_precise_amount_cents: 4.75) }
@@ -174,8 +179,8 @@ RSpec.describe EInvoices::CreditNotes::Ubl::Builder do
       let(:credit_note_item2) { create(:credit_note_item, credit_note:, fee: invoice_fee2, precise_amount_cents: 100) }
       let(:credit_note_item3) { create(:credit_note_item, credit_note:, fee: invoice_fee3, precise_amount_cents: 300) }
       let(:credit_note_item4) { create(:credit_note_item, credit_note:, fee: invoice_fee4, precise_amount_cents: 600) }
-      let(:invoice) { create(:invoice, coupons_amount_cents: 100) }
-      let(:credit_note) { create(:credit_note, invoice:, precise_coupons_adjustment_amount_cents: 100) }
+
+      let_it_be(:invoice) { create_default(:invoice, coupons_amount_cents: 100) }
 
       before do
         credit_note_item1
@@ -296,7 +301,7 @@ RSpec.describe EInvoices::CreditNotes::Ubl::Builder do
       end
 
       context "when credit invoice" do
-        let(:invoice) { create(:invoice, invoice_type: :credit) }
+        let_it_be(:invoice) { create_default(:invoice, invoice_type: :credit) }
         let(:credit_note) { create(:credit_note, invoice:) }
         let(:fee0) { create(:fee, invoice:, fee_type: :credit, taxes_rate: 0.0, precise_amount_cents: 500, taxes_precise_amount_cents: 0) }
         let(:credit_note_item0) { create(:credit_note_item, credit_note:, fee: fee0, precise_amount_cents: 500) }
@@ -414,6 +419,61 @@ RSpec.describe EInvoices::CreditNotes::Ubl::Builder do
           expect(subject).to contains_xml_node("#{root}[2]/cbc:ID").with_value("2")
           expect(subject).to contains_xml_node("#{root}[2]/cbc:CreditedQuantity").with_value("-1.00").with_attribute("unitCode", described_class::UNIT_CODE)
           expect(subject).to contains_xml_node("#{root}[2]/cbc:LineExtensionAmount").with_value("-25.00").with_attribute("currencyID", "EUR")
+        end
+      end
+    end
+
+    context "with contract product fees" do
+      let(:product) { create(:product, organization:, name: "Contract product billed") }
+      let(:contract_rate_card) do
+        create(:contract_rate_card, organization:, contract: create(:contract, organization:, customer:))
+      end
+      let(:rate_card_rate) do
+        create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card)
+      end
+      let(:fee) do
+        create(:fee, invoice:, subscription: nil, fee_type: :product, invoiceable: product,
+          contract: contract_rate_card.contract, contract_rate_card:, rate_card_rate:, units: 8,
+          amount_cents: 8000, precise_amount_cents: 8000, precise_unit_amount: 10,
+          taxes_rate: 20, taxes_amount_cents: 1600, taxes_precise_amount_cents: 1600)
+      end
+      let(:credit_note) do
+        create(:credit_note, invoice:, total_amount_cents: credit_total_cents,
+          taxes_amount_cents: credit_tax_cents, precise_taxes_amount_cents: credit_tax_cents)
+      end
+      let(:credit_note_item1) do
+        create(:credit_note_item, credit_note:, fee:, amount_cents: credit_total_cents - credit_tax_cents,
+          precise_amount_cents: credit_total_cents - credit_tax_cents)
+      end
+      let(:credit_note_item2) { nil }
+
+      before { credit_note_item1 }
+
+      context "when fully credited" do
+        let(:credit_total_cents) { 9600 }
+        let(:credit_tax_cents) { 1600 }
+
+        it "serializes full negative quantity, billed product details, tax and totals without a subscription" do
+          expect(fee.subscription).to be_nil
+          expect(subject).to contains_xml_node("//cac:CreditNoteLine[1]/cbc:CreditedQuantity").with_value("-8.00")
+          expect(subject).to contains_xml_node("//cac:CreditNoteLine[1]/cac:Item/cbc:Name").with_value("Contract product billed")
+          expect(subject).to contains_xml_node("//cac:CreditNoteLine[1]/cac:Item/cac:ClassifiedTaxCategory/cbc:Percent").with_value("20.0")
+          expect(subject).to contains_xml_node("//cac:CreditNoteLine[1]/cbc:LineExtensionAmount").with_value("-80.00")
+          expect(subject).to contains_xml_node("//cac:LegalMonetaryTotal/cbc:PayableAmount").with_value("-96.00")
+        end
+      end
+
+      context "when partially credited" do
+        let(:credit_total_cents) { 2400 }
+        let(:credit_tax_cents) { 400 }
+
+        it "serializes the prorated negative quantity and credited amount without a subscription" do
+          expect(fee.subscription).to be_nil
+          expect(subject).to contains_xml_node("//cac:CreditNoteLine[1]/cbc:CreditedQuantity").with_value("-2.00")
+          expect(subject).to contains_xml_node("//cac:CreditNoteLine[1]/cac:Item/cbc:Name").with_value("Contract product billed")
+          expect(subject).to contains_xml_node("//cac:CreditNoteLine[1]/cac:Item/cac:ClassifiedTaxCategory/cbc:Percent").with_value("20.0")
+          expect(subject).to contains_xml_node("//cac:CreditNoteLine[1]/cbc:LineExtensionAmount").with_value("-20.00")
+          expect(subject).to contains_xml_node("//cac:LegalMonetaryTotal/cbc:PayableAmount").with_value("-24.00")
         end
       end
     end

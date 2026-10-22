@@ -13,7 +13,13 @@ module Events
       #
       # Ranking and level totals are window functions over every group, computed before paging. The
       # unattributed usage (empty value) is ranked in its own partition, and the query returns it
-      # along with the page and the first ranked row, which always carries the level totals.
+      # along with the page and the first ranked row, which always carries the level totals. With a
+      # search, the groups count and the page only cover the matching values, as the client pages
+      # through them, while the totals stay those of the whole level.
+      #
+      # The scan may be split across replicas (ClickHouse Cloud): one replica per 50M rows estimated
+      # to be read, up to 8, so a small subscription stays on one replica, where coordination would
+      # cost more than it saves. A server without replicas ignores these settings.
       class AttributedUsageQuery
         include Events::Stores::Utils::ClickhouseSqlHelpers
 
@@ -73,7 +79,7 @@ module Events
               FROM (
                 SELECT *,
                   row_number() OVER ranked AS rank,
-                  count() OVER level AS groups_count,
+                  #{groups_count_sql} OVER level AS groups_count,
                   #{search_rank_sql}
                   #{level_windows_sql}
                 FROM (
@@ -100,7 +106,10 @@ module Events
               max_rows_to_group_by = #{Integer(max_groups)},
               group_by_overflow_mode = 'throw',
               max_execution_time = #{Integer(max_execution_time)},
-              timeout_overflow_mode = 'throw'
+              timeout_overflow_mode = 'throw',
+              enable_parallel_replicas = 1,
+              max_parallel_replicas = 8,
+              parallel_replicas_min_number_of_rows_per_replica = 50000000
           SQL
         end
 
@@ -177,6 +186,10 @@ module Events
           %w[amount events].concat(cell_names).map { |name| "sum(#{name}) OVER level AS total_#{name}" }.join(", ")
         end
 
+        def groups_count_sql
+          search ? "sum(#{search_match_sql})" : "count()"
+        end
+
         def search_rank_sql
           return "" unless search
 
@@ -226,8 +239,7 @@ module Events
         end
 
         # Values coming from the API or the organization's configuration are quoted by the ClickHouse
-        # adapter: unlike `sql_condition`, which applies the PostgreSQL rules, it escapes backslashes,
-        # that ClickHouse reads as escape characters inside a string.
+        # adapter, which escapes backslashes that ClickHouse reads as escape characters inside a string.
         def quote_list(values)
           values.map { quote(it) }.join(", ")
         end

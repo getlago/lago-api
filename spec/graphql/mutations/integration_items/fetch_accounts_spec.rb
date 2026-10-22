@@ -4,16 +4,13 @@ require "rails_helper"
 
 RSpec.describe Mutations::IntegrationItems::FetchAccounts do
   let(:required_permission) { "organization:integrations:update" }
-  let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:integration_item) { create(:integration_item, integration:) }
   let(:sync_service) { instance_double(Integrations::Aggregator::SyncService) }
-
   let(:accounts_response) do
     File.read(Rails.root.join("spec/fixtures/integration_aggregator/accounts_response.json"))
   end
-
   let(:mutation) do
     <<~GQL
       mutation($input: FetchIntegrationAccountsInput!) {
@@ -23,10 +20,13 @@ RSpec.describe Mutations::IntegrationItems::FetchAccounts do
       }
     GQL
   end
-
   let(:account_ids) do
     %w[12ec4c59-ad56-4a4f-93eb-fb0a7740f4e2 6317441d-6547-417c-89e2-6e43ece791d8 80701036-73b5-4468-a4b3-a139262035b4]
   end
+
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:user) { create_default(:user) }
+  let_it_be(:membership) { create_default(:membership) }
 
   before do
     allow(Integrations::Aggregator::SyncService).to receive(:call).and_return(BaseResult.new)

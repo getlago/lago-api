@@ -6,7 +6,7 @@ RSpec.describe Types::Organizations::UpdateOrganizationInput do
   subject { described_class }
 
   it do
-    expect(subject).to accept_argument(:authentication_methods).of_type("[AuthenticationMethodsEnum!]")
+    expect(subject).to accept_argument(:authentication_methods).of_type("[AuthenticationMethodsEnum!]").with_permission("authentication_methods:update")
     expect(subject).to accept_argument(:default_currency).of_type("CurrencyEnum")
     expect(subject).to accept_argument(:email).of_type("String")
     expect(subject).to accept_argument(:slug).of_type("String")
@@ -29,9 +29,10 @@ RSpec.describe Types::Organizations::UpdateOrganizationInput do
     expect(subject).to accept_argument(:webhook_url).of_type("String").with_permission("developers:manage")
 
     expect(subject).to accept_argument(:timezone).of_type("TimezoneEnum")
+    expect(subject).to accept_argument(:eu_tax_management).of_type("Boolean")
 
-    expect(subject).to accept_argument(:billing_configuration).of_type("OrganizationBillingConfigurationInput").with_permission("organization:invoices:view")
-    expect(subject).to accept_argument(:email_settings).of_type("[EmailSettingsEnum!]").with_permission("organization:emails:view")
+    expect(subject).to accept_argument(:billing_configuration).of_type("OrganizationBillingConfigurationInput").with_permission("organization:invoices:update")
+    expect(subject).to accept_argument(:email_settings).of_type("[EmailSettingsEnum!]").with_permission("organization:emails:update")
     expect(subject).to accept_argument(:finalize_zero_amount_invoice).of_type("Boolean")
   end
 end

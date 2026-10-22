@@ -81,10 +81,11 @@ class ApiLogsQuery < BaseQuery
     scope.where(
       filters.request_paths.map do |path|
         if path.include?("*")
-          like_pattern = path.tr("*", "%")
-          ActiveRecord::Base.send(:sanitize_sql_array, ["request_path LIKE ?", like_pattern])
+          # Backslash, % and _ are LIKE metacharacters in ClickHouse: only * is a wildcard here.
+          like_pattern = path.gsub(/[\\%_]/) { "\\#{it}" }.tr("*", "%")
+          Clickhouse::ApiLog.send(:sanitize_sql_array, ["request_path LIKE ?", like_pattern])
         else
-          ActiveRecord::Base.send(:sanitize_sql_array, ["request_path = ?", path])
+          Clickhouse::ApiLog.send(:sanitize_sql_array, ["request_path = ?", path])
         end
       end.join(" OR ")
     )

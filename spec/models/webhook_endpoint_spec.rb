@@ -126,6 +126,16 @@ RSpec.describe WebhookEndpoint do
         end
       end
 
+      context "when event_types contains a renamed event type" do
+        let(:event_types) { ["invoice.drafted", "credit_note.provider_refund_failure"] }
+
+        it "replaces it with its current name" do
+          webhook_endpoint.valid?
+          expect(webhook_endpoint).to be_valid
+          expect(webhook_endpoint.event_types).to eq(["invoice.drafted", "credit_note.refund_failure"])
+        end
+      end
+
       context "when event_types is nil" do
         let(:event_types) { nil }
 
@@ -160,8 +170,62 @@ RSpec.describe WebhookEndpoint do
 
   describe "constants" do
     describe "WEBHOOK_EVENT_TYPES" do
-      it "matches SendWebhookJob::WEBHOOK_SERVICES" do
-        expect(WebhookEndpoint::WEBHOOK_EVENT_TYPES).to match_array(SendWebhookJob::WEBHOOK_SERVICES.keys.map(&:to_s))
+      it "matches configured event names to registered webhook handlers" do
+        event_types = YAML.safe_load_file(Rails.root.join("config/webhook_event_types.yml")).values
+        documented_types = event_types.map { |event| event.fetch("name") }
+        product_catalog_types = event_types.filter_map do |event|
+          event.fetch("name") if event["product_catalog_only"]
+        end
+        handler_types = SendWebhookJob::WEBHOOK_SERVICES.keys
+
+        expect(handler_types.sort).to eq(documented_types.sort)
+
+        resource_namespaces = {
+          "product_category" => Webhooks::ProductCategories,
+          "product" => Webhooks::Products,
+          "product_filter" => Webhooks::ProductFilters,
+          "rate_card" => Webhooks::RateCards,
+          "rate_card_rate" => Webhooks::RateCardRates,
+          "plan_rate_card" => Webhooks::PlanRateCards,
+          "contract_rate_card" => Webhooks::ContractRateCards,
+          "contract" => Webhooks::Contracts
+        }
+
+        expected_mappings = product_catalog_types.to_h do |event_type|
+          resource, action = event_type.split(".")
+          service_class = resource_namespaces.fetch(resource).const_get("#{action.camelize}Service")
+          [event_type, service_class]
+        end
+
+        expect(SendWebhookJob::WEBHOOK_SERVICES.slice(*product_catalog_types)).to eq(expected_mappings)
+      end
+
+      it "matches the webhook_type each handler delivers" do
+        delivered_types = SendWebhookJob::WEBHOOK_SERVICES.transform_values do |service|
+          service.new(object: nil).send(:webhook_type)
+        end
+
+        expect(delivered_types).to eq(SendWebhookJob::WEBHOOK_SERVICES.to_h { |type, _| [type, type] })
+      end
+    end
+  end
+
+  describe "product catalog event type validation" do
+    subject(:webhook_endpoint) { build(:webhook_endpoint, event_types:) }
+
+    context "when selecting a documented product catalog event" do
+      let(:event_types) { ["product.created"] }
+
+      it "is valid regardless of catalog feature enablement" do
+        expect(webhook_endpoint).to be_valid
+      end
+    end
+
+    context "when selecting an unknown event" do
+      let(:event_types) { ["product.unknown"] }
+
+      it "is invalid" do
+        expect(webhook_endpoint).not_to be_valid
       end
     end
   end

@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Coupons::CreateService do
   subject(:create_service) { described_class.new(create_args) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:membership) { create(:membership) }
   let(:coupon_code) { "free-beer" }
 
   describe "create" do
@@ -36,6 +36,12 @@ RSpec.describe Coupons::CreateService do
       coupon = described_class.call(create_args).coupon
 
       expect(Utils::ActivityLog).to have_produced("coupon.created").after_commit.with(coupon)
+    end
+
+    it "enqueues a coupon.created webhook" do
+      result = create_service.call
+
+      expect(SendWebhookJob).to have_been_enqueued.with("coupon.created", result.coupon)
     end
 
     context "with code already used by a deleted coupon" do
@@ -143,7 +149,7 @@ RSpec.describe Coupons::CreateService do
     end
 
     context "with plan limitations in graphql context" do
-      let(:plan) { create(:plan, organization:) }
+      let_it_be(:plan) { create(:plan, organization:) }
       let(:create_args) do
         {
           name: "Super Coupon",
@@ -176,7 +182,7 @@ RSpec.describe Coupons::CreateService do
     end
 
     context "with plan limitations in api context" do
-      let(:plan) { create(:plan, organization:) }
+      let_it_be(:plan) { create(:plan, organization:) }
       let(:create_args) do
         {
           name: "Super Coupon",
@@ -208,7 +214,7 @@ RSpec.describe Coupons::CreateService do
       end
 
       context "when a parent plan has childs" do
-        let(:child_plan) { create(:plan, organization:, parent: plan, code: plan.code) }
+        let_it_be(:child_plan) { create(:plan, organization:, parent: plan, code: plan.code) }
 
         before { child_plan }
 
@@ -225,7 +231,7 @@ RSpec.describe Coupons::CreateService do
     end
 
     context "with billable metric limitations in graphql context" do
-      let(:billable_metric) { create(:billable_metric, organization:) }
+      let_it_be(:billable_metric) { create(:billable_metric, organization:) }
       let(:create_args) do
         {
           name: "Super Coupon",
@@ -316,7 +322,7 @@ RSpec.describe Coupons::CreateService do
     end
 
     context "with billable metric limitations in api context" do
-      let(:billable_metric) { create(:billable_metric, organization:) }
+      let_it_be(:billable_metric) { create(:billable_metric, organization:) }
       let(:create_args) do
         {
           name: "Super Coupon",

@@ -11,65 +11,28 @@ module Events
       CLICKHOUSE_MERGE_DELAY = 15.seconds
 
       DEDUP_KEY_COLUMNS = %w[code organization_id external_subscription_id transaction_id timestamp].freeze
+      # ClickHouse escapes quotes and backslashes in strings: 'a\\b''c'
+      SQL_STRING_LITERAL = /'(?:[^'\\]|\\.|'')*'/
 
       def events(force_from: false, ordered: false)
         Events::Stores::Utils::ClickhouseConnection.with_retry do
-          scope = if deduplicate
-            events_from = (from_datetime if force_from || use_from_boundary)
-            events_to = (applicable_to_datetime if applicable_to_datetime)
+          events_from = (from_datetime if force_from || use_from_boundary)
+          events_to = (applicable_to_datetime if applicable_to_datetime)
 
-            deduplicated_subquery = deduplicated_events_sql(
-              from_datetime: events_from,
-              to_datetime: events_to,
-              deduplicated_columns: %w[value decimal_value properties precise_total_amount_cents]
-            )
+          deduplicated_subquery = deduplicated_events_sql(
+            from_datetime: events_from,
+            to_datetime: events_to,
+            deduplicated_columns: %w[value decimal_value properties precise_total_amount_cents]
+          )
 
-            ::Clickhouse::EventsEnriched.from("(#{deduplicated_subquery}) AS events_enriched")
-          else
-            query = ::Clickhouse::EventsEnriched
-              .where(external_subscription_id: billing_context.external_id)
-              .where(organization_id: billing_context.organization_id)
-              .where(code:)
-
-            query = query.where("events_enriched.timestamp >= ?", from_datetime) if force_from || use_from_boundary
-            query = query.where(upper_timestamp_boundary_sql(applicable_to_datetime, prefix: "events_enriched.")) if applicable_to_datetime
-            query
-          end
-
+          scope = ::Clickhouse::EventsEnriched.from("(#{deduplicated_subquery}) AS events_enriched")
           scope = scope.order(timestamp: :asc) if ordered
           scope = apply_grouped_by_values(scope) if grouped_by_values?
           filters_scope(scope)
         end
       end
 
-      def events_cte_queries(**args)
-        return events_cte_queries_with_deduplication(**args) if deduplicate
-
-        events_cte_queries_without_deduplication(**args)
-      end
-
-      def events_cte_queries_without_deduplication(force_from: false, ordered: false, select: arel_table[Arel.star], deduplicated_columns: [])
-        query = arel_table.where(
-          arel_table[:external_subscription_id].eq(billing_context.external_id)
-          .and(arel_table[:organization_id].eq(billing_context.organization.id)
-          .and(arel_table[:code].eq(code)))
-        )
-
-        query = query.order(arel_table[:timestamp].desc, arel_table[:value].asc) if ordered
-
-        query = with_timestamp_boundaries(
-          query,
-          (from_datetime if force_from || use_from_boundary),
-          applicable_to_datetime
-        )
-
-        query = arel_filters_scope(query)
-        query = apply_arel_grouped_by_values(query) if grouped_by_values?
-
-        {"events" => query.project(select).to_sql}
-      end
-
-      def events_cte_queries_with_deduplication(force_from: false, ordered: false, select: arel_table[Arel.star], deduplicated_columns: [])
+      def events_cte_queries(force_from: false, ordered: false, select: arel_table[Arel.star], deduplicated_columns: [])
         # Ensure presence of one of value or decimal_value for the ordering
         order_column = deduplicated_columns.include?("decimal_value") ? "decimal_value" : "value"
         deduplicated_columns << order_column if ordered
@@ -85,7 +48,7 @@ module Events
 
         {
           "events_enriched" => deduplicated_events_sql(from_datetime: events_from, to_datetime: events_to, deduplicated_columns:),
-          "events" => query.project(select).to_sql
+          "events" => query.project(select).to_sql(::Clickhouse::EventsEnriched)
         }
       end
 
@@ -96,7 +59,9 @@ module Events
       # This replaces a previous two-pass implementation (`GROUP BY` the dedup key +
       # `INNER ANY JOIN`) which was dominating the ClickHouse cluster CPU, and an even
       # earlier `argMax` version which caused ClickHouse OOM on large subscriptions.
-      def deduplicated_events_sql(from_datetime:, to_datetime:, deduplicated_columns: [])
+      # `before` excludes its own timestamp, unlike `to_datetime`: a window cut in two at the same
+      # instant counts each event once (see ChargeFiltersScan::IncrementalCache).
+      def deduplicated_events_sql(from_datetime:, to_datetime:, deduplicated_columns: [], before: nil)
         columns = deduplicated_columns.dup
 
         # Grouping and filtering is made based on the properties
@@ -109,13 +74,13 @@ module Events
         <<~SQL.squish
           SELECT #{selected_columns}
           FROM events_enriched FINAL
-          WHERE #{deduplicated_events_where_sql(from_datetime:, to_datetime:)}
+          WHERE #{deduplicated_events_where_sql(from_datetime:, to_datetime:, before:)}
         SQL
       end
 
-      def deduplicated_events_where_sql(from_datetime:, to_datetime:)
+      def deduplicated_events_where_sql(from_datetime:, to_datetime:, before: nil)
         conditions = [
-          ActiveRecord::Base.sanitize_sql_for_conditions(
+          sanitize_clickhouse_sql(
             [
               "organization_id = ? AND code = ? AND external_subscription_id = ?",
               billing_context.organization_id,
@@ -125,8 +90,9 @@ module Events
           )
         ]
 
-        conditions << ActiveRecord::Base.sanitize_sql_for_conditions(["timestamp >= ?", from_datetime]) if from_datetime
+        conditions << sanitize_clickhouse_sql(["timestamp >= ?", from_datetime]) if from_datetime
         conditions << upper_timestamp_boundary_sql(to_datetime) if to_datetime
+        conditions << sanitize_clickhouse_sql(["timestamp < ?", before]) if before
         conditions.join(" AND ")
       end
 
@@ -140,7 +106,7 @@ module Events
       #
       # ClickHouse stores properties as a Map(String, String); a missing key reads back as an
       # empty string, so blank values are dropped to mirror the Postgres jsonb behaviour.
-      def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false, with_last_seen_at: true)
+      def distinct_codes_and_property_combinations(codes:, filter_keys:, include_all_history: false, with_last_seen_at: true, ingested_after: nil)
         return [] if codes.empty?
 
         Events::Stores::Utils::ClickhouseConnection.with_retry do
@@ -150,11 +116,14 @@ module Events
             .where(code: codes)
             .where("events_enriched.timestamp <= ?", applicable_to_datetime)
           scope = scope.where("events_enriched.timestamp >= ?", from_datetime) unless include_all_history
+          # Only the properties of the rows passing this condition are read, which is what makes an
+          # incremental read cheap: the properties map is most of the bytes of a row.
+          scope = scope.where("events_enriched.enriched_at > ?", ingested_after) if ingested_after
 
           selects = ["code AS code"]
           group_columns = ["code"]
           filter_keys.each_with_index do |key, index|
-            selects << ActiveRecord::Base.sanitize_sql_array(["properties[?] AS prop_#{index}", key.to_s])
+            selects << sanitize_clickhouse_sql(["properties[?] AS prop_#{index}", key.to_s])
             group_columns << "prop_#{index}"
           end
           selects << (with_last_seen_at ? "MAX(enriched_at) AS last_seen_at" : "NULL AS last_seen_at")
@@ -236,7 +205,7 @@ module Events
       def count_query
         filtered = grouped_by_values? || matching_filters.present? || ignored_filters.present?
 
-        if !deduplicate || filtered
+        if filtered
           return with_ctes(events_cte_queries(deduplicated_columns: %w[value]), <<-SQL)
             SELECT count()
             FROM events
@@ -277,11 +246,23 @@ module Events
       #       unique property
       def active_unique_property?(event)
         previous_event = Events::Stores::Utils::ClickhouseConnection.with_retry do
-          events
+          query = events
             .where("events_enriched.properties[?] = ?", aggregation_property, event.properties[aggregation_property])
-            .where("events_enriched.timestamp < ?", event.timestamp)
-            .order(timestamp: :desc)
-            .first
+
+          if event.persisted? && event.transaction_id.present?
+            query
+              .where(
+                "events_enriched.timestamp < ? OR (events_enriched.timestamp = ? AND events_enriched.transaction_id < ?)",
+                event.timestamp,
+                event.timestamp,
+                event.transaction_id
+              )
+              .order(timestamp: :desc, transaction_id: :desc)
+          else
+            query
+              .where("events_enriched.timestamp < ?", event.timestamp)
+              .order(timestamp: :desc)
+          end.first
         end
 
         previous_event && (
@@ -293,7 +274,7 @@ module Events
       def unique_count
         result = Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
-          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+          sql = sanitize_clickhouse_sql(
             [
               sanitize_colon(query.query),
               {decimal_date_scale: DECIMAL_DATE_SCALE}
@@ -311,7 +292,7 @@ module Events
           query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
 
           connection.select_all(
-            ActiveRecord::Base.sanitize_sql_for_conditions(
+            sanitize_clickhouse_sql(
               [
                 sanitize_colon(query.breakdown_query),
                 {decimal_date_scale: DECIMAL_DATE_SCALE}
@@ -324,7 +305,7 @@ module Events
       def prorated_unique_count
         result = Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
-          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+          sql = sanitize_clickhouse_sql(
             [
               sanitize_colon(query.prorated_query),
               {
@@ -344,7 +325,7 @@ module Events
       def prorated_unique_count_breakdown(with_remove: false)
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
-          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+          sql = sanitize_clickhouse_sql(
             [
               sanitize_colon(query.prorated_breakdown_query(with_remove:)),
               {
@@ -366,7 +347,7 @@ module Events
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: duplicated_unique_count_store)
-          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+          sql = sanitize_clickhouse_sql(
             [
               sanitize_colon(query.grouped_query),
               {
@@ -385,7 +366,7 @@ module Events
       def grouped_prorated_unique_count
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Events::Stores::Clickhouse::UniqueCountQuery.new(store: self)
-          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+          sql = sanitize_clickhouse_sql(
             [
               sanitize_colon(query.grouped_prorated_query),
               {
@@ -665,7 +646,7 @@ module Events
         result = Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Events::Stores::Clickhouse::WeightedSumQuery.new(store: self)
 
-          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+          sql = sanitize_clickhouse_sql(
             [
               sanitize_colon(query.query),
               {
@@ -706,7 +687,7 @@ module Events
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
           query = Clickhouse::WeightedSumQuery.new(store: duplicated_weighted_sum_store)
 
-          sql = ActiveRecord::Base.sanitize_sql_for_conditions(
+          sql = sanitize_clickhouse_sql(
             [
               sanitize_colon(query.grouped_query(initial_values: formatted_initial_values)),
               {
@@ -727,7 +708,7 @@ module Events
           query = Events::Stores::Clickhouse::WeightedSumQuery.new(store: self)
 
           rows = connection.select_all(
-            ActiveRecord::Base.sanitize_sql_for_conditions(
+            sanitize_clickhouse_sql(
               [
                 sanitize_colon(query.breakdown_query),
                 {
@@ -754,31 +735,13 @@ module Events
         end
       end
 
-      def with_timestamp_boundaries(query, from_datetime, to_datetime)
-        query = query.where(arel_table[:timestamp].gteq(from_datetime)) if from_datetime
-        query = query.where(Arel.sql(upper_timestamp_boundary_sql(to_datetime, prefix: "events_enriched."))) if to_datetime
-        query
-      end
-
       def filters_scope(scope)
         matching_filters.each do |key, values|
           scope = scope.where("events_enriched.properties[?] IN (?)", key.to_s, values)
         end
 
-        conditions = ignored_filters.filter_map do |filters|
-          next if filters.empty?
-
-          clause = filters.filter_map do |key, values|
-            next if values.empty?
-
-            ActiveRecord::Base.sanitize_sql_for_conditions(
-              ["(coalesce(events_enriched.properties[?], '') IN (?))", key.to_s, values.map(&:to_s)]
-            )
-          end.join(" AND ")
-          clause.presence
-        end
-        sql = conditions.map { "(#{it})" }.join(" OR ")
-        scope = scope.where.not(sql) if sql.present?
+        sql = ignored_filters_sql
+        scope = scope.where.not(sql) if sql
 
         scope
       end
@@ -790,22 +753,45 @@ module Events
           )
         end
 
+        sql = ignored_filters_sql
+        scope = scope.where(Arel::Nodes::Not.new(Arel::Nodes::SqlLiteral.new(sql))) if sql
+
+        scope
+      end
+
+      # The condition the filters above apply, as one boolean expression, so that
+      # Events::Stores::ChargeFiltersScan can evaluate it for every filter of a charge in one read.
+      def filters_condition_sql(matching_filters: self.matching_filters, ignored_filters: self.ignored_filters)
+        conditions = matching_filters.map do |key, values|
+          sanitize_clickhouse_sql(
+            ["events_enriched.properties[?] IN (?)", key.to_s, values.map(&:to_s)]
+          )
+        end
+
+        ignored_sql = ignored_filters_sql(ignored_filters)
+        conditions << "NOT (#{ignored_sql})" if ignored_sql
+
+        return "1" if conditions.empty?
+
+        conditions.map { "(#{it})" }.join(" AND ")
+      end
+
+      # An event is left out when it matches every key of one of the ignored filters.
+      def ignored_filters_sql(ignored_filters = self.ignored_filters)
         conditions = ignored_filters.filter_map do |filters|
           next if filters.empty?
 
           clause = filters.filter_map do |key, values|
             next if values.empty?
 
-            ActiveRecord::Base.sanitize_sql_for_conditions(
+            sanitize_clickhouse_sql(
               ["(coalesce(events_enriched.properties[?], '') IN (?))", key.to_s, values.map(&:to_s)]
             )
           end.join(" AND ")
           clause.presence
         end
-        sql = conditions.map { "(#{it})" }.join(" OR ")
-        scope = scope.where(Arel::Nodes::Not.new(Arel::Nodes::SqlLiteral.new(sql))) if conditions.present?
 
-        scope
+        conditions.map { "(#{it})" }.join(" OR ").presence
       end
 
       def apply_grouped_by_values(scope)
@@ -841,7 +827,7 @@ module Events
       end
 
       def sanitized_property_name(property = aggregation_property)
-        ActiveRecord::Base.sanitize_sql_for_conditions(
+        sanitize_clickhouse_sql(
           ["events_enriched.properties[?]", property]
         )
       end
