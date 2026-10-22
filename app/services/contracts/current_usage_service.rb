@@ -6,7 +6,7 @@ module Contracts
   class CurrentUsageService < BaseService
     Filters = BaseFilters[:rate_card_code, :product_code, :product_filter_code, :product_type]
 
-    Result = BaseResult[:rate_card_usages, :amount_cents, :taxes_amount_cents, :total_amount_cents]
+    Result = BaseResult[:contract, :rate_card_usages, :amount_cents, :taxes_amount_cents, :total_amount_cents]
 
     def initialize(contract:, timestamp: Time.current, apply_taxes: true, filters: {})
       @contract = contract
@@ -20,6 +20,8 @@ module Contracts
       if filters[:product_type].present? && !Product::PRODUCT_TYPES.value?(filters[:product_type])
         return result.single_validation_failure!(field: :product_type, error_code: "value_is_invalid")
       end
+
+      result.contract = contract
 
       # A pending contract has not started billing, so it has no usage yet.
       result.rate_card_usages = if contract.pending?

@@ -46,7 +46,7 @@ RSpec.describe Contracts::CurrentUsageService do
     )
     expect(usage.fees.sole).to be_new_record
     expect(usage.fees.sole).to have_attributes(fee_type: "product", contract_rate_card:, units: 1, amount_cents: 200)
-    expect(result).to have_attributes(amount_cents: 200, taxes_amount_cents: 0, total_amount_cents: 200)
+    expect(result).to have_attributes(contract:, amount_cents: 200, taxes_amount_cents: 0, total_amount_cents: 200)
   end
 
   it "persists nothing" do
@@ -170,9 +170,9 @@ RSpec.describe Contracts::CurrentUsageService do
   context "when the contract is pending" do
     let(:contract) { create(:contract, :pending, organization:, customer:, started_at: Time.zone.parse("2027-01-01")) }
 
-    it "returns no window" do
+    it "returns the contract with no window" do
       expect(result.rate_card_usages).to eq([])
-      expect(result).to have_attributes(amount_cents: 0, taxes_amount_cents: 0, total_amount_cents: 0)
+      expect(result).to have_attributes(contract:, amount_cents: 0, taxes_amount_cents: 0, total_amount_cents: 0)
     end
   end
 
