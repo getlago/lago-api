@@ -297,22 +297,6 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
             created_at: timestamp
           }
         end
-        let(:gst_payload) do
-          {
-            lago_id: gst.id,
-            name: "GST",
-            code: "gst",
-            rate: 5.0,
-            description: "Canadian GST",
-            applied_to_organization: false,
-            add_ons_count: 0,
-            customers_count: 0,
-            plans_count: 0,
-            charges_count: 0,
-            commitments_count: 0,
-            created_at: timestamp
-          }
-        end
 
         let_it_be(:billable_metric) { create(:billable_metric, organization:, code: "api_calls") }
 
@@ -491,12 +475,38 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
           let(:terminated_rate) { create(:rate_card_rate, organization:, rate_card:, code: "launch", effective_from: Time.zone.parse("2023-01-01")) }
           let(:active_rate) { create(:rate_card_rate, organization:, rate_card:, code: "current", effective_from: Time.zone.parse("2023-02-01")) }
           let(:pending_rate) { create(:rate_card_rate, organization:, rate_card:, code: "next", effective_from: Time.zone.parse("2023-04-01")) }
+          # As /rates lists them, the latest effective_from first.
           let(:rate_payloads) do
             [
-              rate_payload(terminated_rate, code: "launch", effective_from: "2023-01-01T00:00:00Z", status: "terminated"),
+              rate_payload(pending_rate, code: "next", effective_from: "2023-04-01T00:00:00Z", status: "pending"),
               rate_payload(active_rate, code: "current", effective_from: "2023-02-01T00:00:00Z", status: "active"),
-              rate_payload(pending_rate, code: "next", effective_from: "2023-04-01T00:00:00Z", status: "pending")
+              rate_payload(terminated_rate, code: "launch", effective_from: "2023-01-01T00:00:00Z", status: "terminated")
             ]
+          end
+          # The V2 shape of the taxes: without applied_to_organization nor counts, with deleted_at.
+          let(:vat_v2_payload) do
+            {
+              lago_id: vat.id,
+              name: "VAT",
+              code: "vat",
+              rate: 20.0,
+              description: "French VAT",
+              created_at: timestamp,
+              updated_at: timestamp,
+              deleted_at: nil
+            }
+          end
+          let(:gst_v2_payload) do
+            {
+              lago_id: gst.id,
+              name: "GST",
+              code: "gst",
+              rate: 5.0,
+              description: "Canadian GST",
+              created_at: timestamp,
+              updated_at: timestamp,
+              deleted_at: nil
+            }
           end
 
           before do
@@ -507,8 +517,9 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
             # Discarded where it would otherwise be the active rate.
             create(:rate_card_rate, organization:, rate_card:, code: "dropped", effective_from: Time.zone.parse("2023-03-01"), deleted_at: Time.current)
 
-            create(:rate_card_applied_tax, organization:, rate_card:, tax: vat)
-            create(:rate_card_applied_tax, organization:, rate_card:, tax: gst)
+            # Linked oldest first: listed by their links, the latest first.
+            create(:rate_card_applied_tax, organization:, rate_card:, tax: gst, created_at: 2.minutes.ago)
+            create(:rate_card_applied_tax, organization:, rate_card:, tax: vat, created_at: 1.minute.ago)
             create(:rate_card_applied_tax, organization:, rate_card:, tax: create(:tax, organization:, deleted_at: Time.current))
           end
 
@@ -534,7 +545,7 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
           it "serializes the card with its kept rates and its kept taxes" do
             produce
 
-            expect(produced_payload[:activity_object]).to match(
+            expect(produced_payload[:activity_object]).to eq(
               lago_id: rate_card.id,
               product_code: "api",
               product_filter_code: "us",
@@ -551,8 +562,8 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               created_at: timestamp,
               updated_at: timestamp,
               deleted_at: nil,
-              taxes: match_array([vat_payload, gst_payload]),
-              rates: match_array(rate_payloads)
+              taxes: [vat_v2_payload, gst_v2_payload],
+              rates: rate_payloads
             )
           end
 
@@ -569,14 +580,14 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
             it "logs the rates count and the rates as the only changes" do
               produce
 
-              expect(produced_payload[:activity_object_changes]).to match(
+              expect(produced_payload[:activity_object_changes]).to eq(
                 rates_count: [3, 4],
                 rates: [
-                  match_array(rate_payloads),
-                  match_array([
-                    *rate_payloads,
-                    rate_payload(added_rate, code: "later", effective_from: "2023-05-01T00:00:00Z", status: "pending")
-                  ])
+                  rate_payloads,
+                  [
+                    rate_payload(added_rate, code: "later", effective_from: "2023-05-01T00:00:00Z", status: "pending"),
+                    *rate_payloads
+                  ]
                 ]
               )
             end

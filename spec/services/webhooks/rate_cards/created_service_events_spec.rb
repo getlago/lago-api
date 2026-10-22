@@ -57,13 +57,9 @@ RSpec.describe Webhooks::RateCards::CreatedService do
       "code" => "sales-tax",
       "rate" => 8.25,
       "description" => "Local tax",
-      "applied_to_organization" => false,
-      "add_ons_count" => 0,
-      "customers_count" => 0,
-      "plans_count" => 0,
-      "charges_count" => 0,
-      "commitments_count" => 0,
-      "created_at" => tax.created_at.iso8601
+      "created_at" => tax.created_at.iso8601,
+      "updated_at" => tax.updated_at.iso8601,
+      "deleted_at" => nil
     }
   end
 
@@ -106,7 +102,7 @@ RSpec.describe Webhooks::RateCards::CreatedService do
           "updated_at" => rate_card.updated_at.iso8601,
           "deleted_at" => nil,
           "active_rate" => active_rate_payload,
-          "rates" => [active_rate_payload, future_rate_payload],
+          "rates" => [future_rate_payload, active_rate_payload],
           "taxes" => [tax_payload]
         }
       )
@@ -152,7 +148,7 @@ RSpec.describe Webhooks::RateCards::CreatedService do
           "updated_at" => rate_card.updated_at.iso8601,
           "deleted_at" => nil,
           "active_rate" => active_rate_payload,
-          "rates" => [active_rate_payload, future_rate_payload],
+          "rates" => [future_rate_payload, active_rate_payload],
           "taxes" => [tax_payload]
         }
       )
