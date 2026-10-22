@@ -71,8 +71,9 @@ RSpec.describe SendWebhookJob do
       before { ENV["SIDEKIQ_WEBHOOK"] = "true" }
       after { ENV.delete("SIDEKIQ_WEBHOOK") }
 
-      it "uses the high priority queue for alerts" do
-        expect(described_class.queue_for("alert.triggered")).to eq(:webhook_worker_high_priority)
+      it "uses the high priority queue for usage webhooks" do
+        expect(%w[alert.triggered subscription.usage_threshold_reached wallet.depleted_ongoing_balance].map { described_class.queue_for(it) })
+          .to eq(%i[webhook_worker_high_priority webhook_worker_high_priority webhook_worker_high_priority])
       end
 
       it "uses the webhook_worker queue for other webhook types" do
