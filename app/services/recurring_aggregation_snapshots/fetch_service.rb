@@ -8,7 +8,9 @@ module RecurringAggregationSnapshots
       end
     end
 
-    Result = BaseResult[:snapshots]
+    Period = Data.define(:to_datetime, :watermark)
+
+    Result = BaseResult[:snapshots, :period]
 
     def initialize(subscription:, charge:, charge_filter:, grouped_by_keys:, from_datetime:)
       @subscription = subscription
@@ -20,15 +22,17 @@ module RecurringAggregationSnapshots
       super
     end
 
-    # Returns the snapshots of the latest period closed before from_datetime, one per group,
-    # or nil when the aggregation must fall back to a full scan.
+    # Returns the snapshots of the latest period closed before from_datetime, one per group with
+    # units or events, and that period. Both are nil when the aggregation must fall back to a full scan.
     def call
-      records = latest_records.to_a
+      marker = latest_marker
+      return result unless marker && same_grouped_by_keys?(marker) && !filter_created_since?(marker)
 
-      result.snapshots = if records.any? && records.all? { |record| same_grouped_by_keys?(record) }
-        records.map { |record| to_snapshot(record) }
-      end
+      records = period_records(marker).to_a
+      return result unless records.all? { same_grouped_by_keys?(it) }
 
+      result.period = Period.new(to_datetime: marker.to_datetime, watermark: marker.watermark)
+      result.snapshots = records.map { to_snapshot(it) }
       result
     end
 
@@ -36,15 +40,31 @@ module RecurringAggregationSnapshots
 
     attr_reader :subscription, :charge, :charge_filter, :grouped_by_keys, :from_datetime
 
-    def latest_records
-      scope = RecurringAggregationSnapshot.where(
+    def charge_snapshots
+      RecurringAggregationSnapshot.where(
         organization_id: subscription.organization_id,
         subscription_id: subscription.id,
-        charge_id: charge.id,
-        charge_filter_id: charge_filter&.id
-      ).where(to_datetime: ...from_datetime)
+        charge_id: charge.id
+      )
+    end
 
-      scope.where(to_datetime: scope.select("MAX(to_datetime)"))
+    # The default bucket keeps a row for every closed period, other buckets only for groups with
+    # units or events: the marker tells a bucket without usage from a period never closed.
+    def latest_marker
+      charge_snapshots
+        .where(charge_filter_id: nil, to_datetime: ...from_datetime)
+        .order(to_datetime: :desc, watermark: :desc)
+        .first
+    end
+
+    # Rows of an older watermark belong to an overlapping run of the period, not to the marker's
+    def period_records(marker)
+      charge_snapshots.where(charge_filter_id: charge_filter&.id, to_datetime: marker.to_datetime, watermark: marker.watermark)
+    end
+
+    # The marker cannot vouch for a filter it never computed, as the filter can match older events
+    def filter_created_since?(marker)
+      charge_filter&.created_at.present? && charge_filter.created_at > marker.watermark
     end
 
     # Snapshots grouped on other keys cannot be regrouped, only a full scan can
