@@ -109,23 +109,20 @@ module RecurringAggregationSnapshots
       Aggregation.from(Charges::PayInAdvanceAggregationService.call!(metered_item:, billing_context:))
     end
 
-    # Charges::PayInAdvanceAggregationService#snapshot_readable? and #event_group_snapshots. The
-    # subscription is the one the event resolves to, which an upgrade can make another one.
+    # Charges::PayInAdvanceAggregationService#snapshot_readable?: with a period, the event group
+    # starts from its snapshot, or from zero without one. The subscription is the one the event
+    # resolves to, which an upgrade can make another one.
     def snapshot_read?(metered_item, billing_context)
       return false if metered_item.billing_segment
       return false unless billing_context.subscription?
 
-      snapshots = RecurringAggregationSnapshots::FetchService.call!(
+      RecurringAggregationSnapshots::FetchService.call!(
         subscription: billing_context.subscription,
         charge: metered_item.charge,
         charge_filter: metered_item.charge_filter,
         grouped_by_keys: metered_item.pricing_group_keys,
         from_datetime: metered_item.boundaries.charges_from_datetime
-      ).snapshots
-      return false if snapshots.blank?
-
-      grouped_by = metered_item.grouped_by_values.transform_values { it&.to_s }
-      snapshots.any? { it.grouped_by.transform_values { |value| value&.to_s } == grouped_by }
+      ).period.present?
     end
 
     # The latest events of the period put max_timestamp late in it, where the delta is the largest.
