@@ -126,6 +126,16 @@ RSpec.describe WebhookEndpoint do
         end
       end
 
+      context "when event_types contains a renamed event type" do
+        let(:event_types) { ["invoice.drafted", "credit_note.provider_refund_failure"] }
+
+        it "replaces it with its current name" do
+          webhook_endpoint.valid?
+          expect(webhook_endpoint).to be_valid
+          expect(webhook_endpoint.event_types).to eq(["invoice.drafted", "credit_note.refund_failure"])
+        end
+      end
+
       context "when event_types is nil" do
         let(:event_types) { nil }
 
@@ -160,25 +170,42 @@ RSpec.describe WebhookEndpoint do
 
   describe "constants" do
     describe "WEBHOOK_EVENT_TYPES" do
-      it "documents exactly the pending product catalog handlers" do
-        temporary_product_catalog_types = %w[
-          product_category.created product_category.updated product_category.deleted
-          product.created product.updated product.deleted
-          product_filter.created product_filter.updated product_filter.deleted
-          rate_card.created rate_card.updated rate_card.deleted
-          rate_card_rate.created rate_card_rate.updated rate_card_rate.deleted
-          plan_rate_card.created plan_rate_card.updated plan_rate_card.deleted
-          contract_rate_card.created contract_rate_card.updated contract_rate_card.deleted
-          contract.created contract.updated contract.started contract.terminated contract.canceled
-        ]
-        documented_types = WebhookEndpoint::WEBHOOK_EVENT_TYPES
-        handler_types = SendWebhookJob::WEBHOOK_SERVICES.keys.map(&:to_s)
-        pending_types = documented_types - handler_types
-        undocumented_types = documented_types - handler_types - temporary_product_catalog_types
+      it "matches configured event names to registered webhook handlers" do
+        event_types = YAML.safe_load_file(Rails.root.join("config/webhook_event_types.yml")).values
+        documented_types = event_types.map { |event| event.fetch("name") }
+        product_catalog_types = event_types.filter_map do |event|
+          event.fetch("name") if event["product_catalog_only"]
+        end
+        handler_types = SendWebhookJob::WEBHOOK_SERVICES.keys
 
-        expect(pending_types).to match_array(temporary_product_catalog_types)
-        expect(undocumented_types).to be_empty
-        expect(handler_types - documented_types).to be_empty
+        expect(handler_types.sort).to eq(documented_types.sort)
+
+        resource_namespaces = {
+          "product_category" => Webhooks::ProductCategories,
+          "product" => Webhooks::Products,
+          "product_filter" => Webhooks::ProductFilters,
+          "rate_card" => Webhooks::RateCards,
+          "rate_card_rate" => Webhooks::RateCardRates,
+          "plan_rate_card" => Webhooks::PlanRateCards,
+          "contract_rate_card" => Webhooks::ContractRateCards,
+          "contract" => Webhooks::Contracts
+        }
+
+        expected_mappings = product_catalog_types.to_h do |event_type|
+          resource, action = event_type.split(".")
+          service_class = resource_namespaces.fetch(resource).const_get("#{action.camelize}Service")
+          [event_type, service_class]
+        end
+
+        expect(SendWebhookJob::WEBHOOK_SERVICES.slice(*product_catalog_types)).to eq(expected_mappings)
+      end
+
+      it "matches the webhook_type each handler delivers" do
+        delivered_types = SendWebhookJob::WEBHOOK_SERVICES.transform_values do |service|
+          service.new(object: nil).send(:webhook_type)
+        end
+
+        expect(delivered_types).to eq(SendWebhookJob::WEBHOOK_SERVICES.to_h { |type, _| [type, type] })
       end
     end
   end

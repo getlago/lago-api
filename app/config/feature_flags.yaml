@@ -61,3 +61,7 @@ usage_prefilter_incremental:
 incremental_charge_cache:
   description: "Keep the count, sum, max and latest totals of past events between current usage computations and only read the events of the last half hour, instead of every event of the billing period"
   owners: ["@jdenquin"]
+
+sso_cross_organization_sessions:
+  description: "Keep the former Okta and Entra ID scope between flagged organizations: each accepts SSO sessions from the others' integrations, and its own integration signs in users who are not members yet, even when it does not allow the login method itself"
+  owners: ["@jdenquin", "@vincent-pochet"]

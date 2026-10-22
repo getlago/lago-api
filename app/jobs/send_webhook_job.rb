@@ -11,10 +11,17 @@ class SendWebhookJob < ApplicationJob
   retry_on "Aws::S3::Errors::SlowDown", wait: :polynomially_longer, attempts: 6
 
   WEBHOOK_SERVICES = {
+    "add_on.created" => Webhooks::AddOns::CreatedService,
+    "add_on.updated" => Webhooks::AddOns::UpdatedService,
+    "add_on.deleted" => Webhooks::AddOns::DeletedService,
     "alert.triggered" => Webhooks::UsageMonitoring::AlertTriggeredService,
     "billable_metric.created" => Webhooks::BillableMetrics::CreatedService,
     "billable_metric.updated" => Webhooks::BillableMetrics::UpdatedService,
     "billable_metric.deleted" => Webhooks::BillableMetrics::DeletedService,
+    "coupon.created" => Webhooks::Coupons::CreatedService,
+    "coupon.updated" => Webhooks::Coupons::UpdatedService,
+    "coupon.deleted" => Webhooks::Coupons::DeletedService,
+    "coupon.terminated" => Webhooks::Coupons::TerminatedService,
     "dunning_campaign.finished" => Webhooks::DunningCampaigns::FinishedService,
     "invoice.created" => Webhooks::Invoices::CreatedService,
     "invoice.one_off_created" => Webhooks::Invoices::OneOffCreatedService,
@@ -46,7 +53,7 @@ class SendWebhookJob < ApplicationJob
     "customer.vies_check" => Webhooks::Customers::ViesCheckService,
     "credit_note.created" => Webhooks::CreditNotes::CreatedService,
     "credit_note.generated" => Webhooks::CreditNotes::GeneratedService,
-    "credit_note.provider_refund_failure" => Webhooks::CreditNotes::PaymentProviderRefundFailureService,
+    "credit_note.refund_failure" => Webhooks::CreditNotes::PaymentProviderRefundFailureService,
     "integration.provider_error" => Webhooks::Integrations::ProviderErrorService,
     "order.created" => Webhooks::Orders::CreatedService,
     "order.executed" => Webhooks::Orders::ExecutedService,
@@ -65,6 +72,32 @@ class SendWebhookJob < ApplicationJob
     "plan.created" => Webhooks::Plans::CreatedService,
     "plan.deleted" => Webhooks::Plans::DeletedService,
     "plan.updated" => Webhooks::Plans::UpdatedService,
+    "product_category.created" => Webhooks::ProductCategories::CreatedService,
+    "product_category.updated" => Webhooks::ProductCategories::UpdatedService,
+    "product_category.deleted" => Webhooks::ProductCategories::DeletedService,
+    "product.created" => Webhooks::Products::CreatedService,
+    "product.updated" => Webhooks::Products::UpdatedService,
+    "product.deleted" => Webhooks::Products::DeletedService,
+    "product_filter.created" => Webhooks::ProductFilters::CreatedService,
+    "product_filter.updated" => Webhooks::ProductFilters::UpdatedService,
+    "product_filter.deleted" => Webhooks::ProductFilters::DeletedService,
+    "rate_card.created" => Webhooks::RateCards::CreatedService,
+    "rate_card.updated" => Webhooks::RateCards::UpdatedService,
+    "rate_card.deleted" => Webhooks::RateCards::DeletedService,
+    "rate_card_rate.created" => Webhooks::RateCardRates::CreatedService,
+    "rate_card_rate.updated" => Webhooks::RateCardRates::UpdatedService,
+    "rate_card_rate.deleted" => Webhooks::RateCardRates::DeletedService,
+    "plan_rate_card.created" => Webhooks::PlanRateCards::CreatedService,
+    "plan_rate_card.updated" => Webhooks::PlanRateCards::UpdatedService,
+    "plan_rate_card.deleted" => Webhooks::PlanRateCards::DeletedService,
+    "contract_rate_card.created" => Webhooks::ContractRateCards::CreatedService,
+    "contract_rate_card.updated" => Webhooks::ContractRateCards::UpdatedService,
+    "contract_rate_card.deleted" => Webhooks::ContractRateCards::DeletedService,
+    "contract.created" => Webhooks::Contracts::CreatedService,
+    "contract.updated" => Webhooks::Contracts::UpdatedService,
+    "contract.started" => Webhooks::Contracts::StartedService,
+    "contract.terminated" => Webhooks::Contracts::TerminatedService,
+    "contract.canceled" => Webhooks::Contracts::CanceledService,
     "feature.created" => Webhooks::Features::CreatedService,
     "feature.updated" => Webhooks::Features::UpdatedService,
     "feature.deleted" => Webhooks::Features::DeletedService,
@@ -88,7 +121,11 @@ class SendWebhookJob < ApplicationJob
     "wallet_transaction.payment_failure" => Webhooks::PaymentProviders::WalletTransactionPaymentFailureService
   }.freeze
 
-  HIGH_PRIORITY_WEBHOOK_TYPES = %w[alert.triggered].freeze
+  HIGH_PRIORITY_WEBHOOK_TYPES = %w[
+    alert.triggered
+    subscription.usage_threshold_reached
+    wallet.depleted_ongoing_balance
+  ].freeze
 
   def self.queue_for(webhook_type = nil)
     if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_WEBHOOK"])
@@ -113,6 +150,9 @@ class SendWebhookJob < ApplicationJob
   end
 
   def perform(webhook_type, object, options = {}, webhook_id = nil)
+    # Jobs enqueued by the previous release still use the former names.
+    # TODO: Remove after one release.
+    webhook_type = WebhookEndpoint::RENAMED_EVENT_TYPES.fetch(webhook_type, webhook_type)
     raise(NotImplementedError) unless WEBHOOK_SERVICES.include?(webhook_type)
 
     # NOTE: This condition is only temporary to handle enqueued jobs

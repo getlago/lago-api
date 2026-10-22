@@ -144,6 +144,26 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
       it_behaves_like "the filter stores"
     end
 
+    context "with a backslash in a filter key and its values" do
+      let(:region) { create(:billable_metric_filter, billable_metric:, key: "region\\", values: ["us\\", "eu", "apac"]) }
+      let(:filter_values) { super().merge(us: {region => ["us\\"]}, us_a: {region => ["us\\"], model => %w[a]}) }
+      let(:events) do
+        super().map do |properties, value|
+          properties = properties.transform_keys("region" => "region\\")
+          properties["region\\"] = "us\\" if properties["region\\"] == "us"
+          [properties, value]
+        end
+      end
+
+      it_behaves_like "the filter stores"
+
+      it "counts an event in the one filter it is billed on" do
+        totals = pricing_buckets.to_h { [it.charge_filter.id, scanned_store(it).sum.value] }
+
+        expect(totals.values).to match_array([4, 3, 32, 72, 144 + 256])
+      end
+    end
+
     context "with a duplicated event" do
       before do
         Clickhouse::EventsEnriched.create!(

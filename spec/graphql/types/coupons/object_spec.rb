@@ -21,7 +21,7 @@ RSpec.describe Types::Coupons::Object do
     expect(subject).to have_field(:status).of_type("CouponStatusEnum!")
     expect(subject).to have_field(:expiration).of_type("CouponExpiration!")
     expect(subject).to have_field(:expiration_at).of_type("ISO8601DateTime")
-    expect(subject).to have_field(:activity_logs).of_type("[ActivityLog!]")
+    expect(subject).to have_field(:activity_logs).of_type("[ActivityLog!]").with_permission("audit_logs:view")
     expect(subject).to have_field(:billable_metrics).of_type("[BillableMetric!]")
     expect(subject).to have_field(:limited_billable_metrics).of_type("Boolean!")
     expect(subject).to have_field(:limited_plans).of_type("Boolean!")

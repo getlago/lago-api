@@ -167,6 +167,7 @@ RSpec.describe Api::V2::Products::FiltersController do
       expect(response).to have_http_status(:success)
       expect(json[:filter][:lago_id]).to eq(filter.id)
       expect(json[:filter][:values].count).to eq(1)
+      expect(json[:filter]).to include(deleted_at: nil)
     end
   end
 
@@ -186,6 +187,20 @@ RSpec.describe Api::V2::Products::FiltersController do
       expect(response).to have_http_status(:success)
       expect(json[:filters].count).to eq(1)
       expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
+    end
+
+    context "with multiple filters on the product" do
+      before { create(:product_filter, organization:, product:) }
+
+      it "serializes parent codes without N+1 queries", bullet: {unused_eager_loading: false} do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:filters].size).to eq(2)
+        expect(json[:filters].map { [it[:product_code], it[:product_category_code]] }).to eq(
+          Array.new(2) { [product.code, product.product_category.code] }
+        )
+      end
     end
 
     context "with an invalid limit and an unknown product" do
@@ -225,13 +240,14 @@ RSpec.describe Api::V2::Products::FiltersController do
 
     include_examples "requires API permission", "product", "write"
 
-    it "soft deletes the filter and echoes its values" do
+    it "soft deletes the filter and returns no values" do
       subject
 
       expect(response).to have_http_status(:success)
       expect(json[:filter][:lago_id]).to eq(filter.id)
-      expect(json[:filter][:values].count).to eq(1)
+      expect(json[:filter][:values]).to eq([])
       expect(filter.reload).to be_discarded
+      expect(json[:filter][:deleted_at]).to eq(filter.deleted_at.iso8601)
     end
 
     context "when the item is attached to a plan" do

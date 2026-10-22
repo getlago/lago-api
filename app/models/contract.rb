@@ -65,6 +65,9 @@ class Contract < ApplicationRecord
   # timezone expression, so the bound stays on index_contracts_on_started_at_pending.
   scope :due_for_activation, ->(timestamp) { pending.where(started_at: ..timestamp) }
 
+  # Active contracts whose planned end has arrived, compared as an instant like the start.
+  scope :due_for_termination, ->(timestamp) { active.where(ended_at: ..timestamp) }
+
   def self.live_by_external_id(external_id)
     # Prefer the pending contract over an active sibling — the replacement
     # being authored is the target every consumer wants; started_at/created_at

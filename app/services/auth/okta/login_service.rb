@@ -20,15 +20,12 @@ module Auth
         query_okta_access_token
         check_userinfo(result.email)
 
-        find_or_create_user
-        find_or_create_membership
+        return login_method_not_authorized_failure unless integration_organization_allows_login_method?
 
-        unless result.user.active_organizations.pluck(:authentication_methods).flatten.uniq.include?(Organizations::AuthenticationMethods::OKTA)
-          return result.single_validation_failure!(
-            error_code: "login_method_not_authorized",
-            field: Organizations::AuthenticationMethods::OKTA
-          )
-        end
+        find_or_create_user
+        return login_method_not_authorized_failure unless user_trusted_by_integration?(result.user)
+
+        find_or_create_membership
 
         UserDevices::RegisterService.call!(user: result.user)
         generate_token
@@ -42,17 +39,25 @@ module Auth
       attr_reader :code, :state
 
       def generate_token
-        result.token = Utils::AuthToken.encode(user: result.user, login_method: Organizations::AuthenticationMethods::OKTA)
+        result.token = Utils::AuthToken.encode(
+          user: result.user,
+          login_method: Organizations::AuthenticationMethods::OKTA,
+          **sso_token_claims
+        )
         result
       rescue => e
         result.service_failure!(code: "token_encoding_error", message: e.message)
       end
 
+      # NOTE: Okta compares the typed email case-insensitively (see #check_userinfo), so the Lago
+      #       user is found the same way, or another casing creates a second user. An exact match
+      #       wins, then the oldest case-insensitive match.
       def find_or_create_user
-        user = User.find_or_initialize_by(email: result.email)
+        user = User.find_by(email: result.email) ||
+          User.where("LOWER(email) = ?", result.email.downcase).order(:created_at).first
 
-        if user.new_record?
-          user.password = SecureRandom.hex(16)
+        if user.nil?
+          user = User.new(email: result.email, password: SecureRandom.hex(16))
           user.save!
         end
 

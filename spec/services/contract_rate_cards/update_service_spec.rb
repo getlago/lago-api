@@ -11,9 +11,42 @@ RSpec.describe ContractRateCards::UpdateService do
   let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, units: 5) }
   let(:params) { {units: "20"} }
 
+  before { allow(Utils::ActivityLog).to receive(:produce).and_call_original }
+
   it "updates the units while the contract is pending" do
     expect(result).to be_success
     expect(result.contract_rate_card.reload.units).to eq(20)
+  end
+
+  it "publishes contract_rate_card.updated with the post-write hierarchy" do
+    expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("contract_rate_card.updated", contract_rate_card)
+
+    expect(Utils::ActivityLog).to have_received(:produce).with(
+      contract_rate_card,
+      "contract_rate_card.updated",
+      after_commit: true
+    )
+  end
+
+  context "when the submitted units are unchanged" do
+    let(:params) { {units: "5"} }
+
+    it "publishes the update even when its serialized state is unchanged" do
+      expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("contract_rate_card.updated", contract_rate_card)
+      expect(Utils::ActivityLog).to have_received(:produce).with(contract_rate_card, "contract_rate_card.updated", after_commit: true)
+    end
+  end
+
+  context "when the contract is active" do
+    let(:contract) { create(:contract, organization:, customer:) }
+
+    before { allow(Utils::ActivityLog).to receive(:available?).and_return(true) }
+
+    it "does not deliver either event when the edit is rejected", :capture_kafka_messages do
+      expect { result }.not_to have_enqueued_job(SendWebhookJob)
+      expect(result.error.messages[:contract]).to eq(["contract_locked"])
+      expect(kafka_messages).to be_empty
+    end
   end
 
   context "when a billing_anchor_date is provided" do

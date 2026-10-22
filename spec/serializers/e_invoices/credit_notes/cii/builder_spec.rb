@@ -336,5 +336,58 @@ RSpec.describe EInvoices::CreditNotes::Cii::Builder do
         expect(subject).to contains_xml_node("#{root}/ram:DuePayableAmount").with_value("-10.00")
       end
     end
+
+    context "with contract product fees" do
+      let(:product) { create(:product, organization:, name: "Contract product billed") }
+      let(:contract_rate_card) do
+        create(:contract_rate_card, organization:, contract: create(:contract, organization:, customer:))
+      end
+      let(:rate_card_rate) do
+        create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card)
+      end
+      let(:fee) do
+        create(:fee, invoice:, subscription: nil, fee_type: :product, invoiceable: product,
+          contract: contract_rate_card.contract, contract_rate_card:, rate_card_rate:, units: 8,
+          amount_cents: 8000, precise_amount_cents: 8000, precise_unit_amount: 10,
+          taxes_rate: 20, taxes_amount_cents: 1600, taxes_precise_amount_cents: 1600)
+      end
+      let(:credit_note) do
+        create(:credit_note, invoice:, total_amount_cents: credit_total_cents,
+          taxes_amount_cents: credit_tax_cents, precise_taxes_amount_cents: credit_tax_cents)
+      end
+      let(:credit_note_item1) do
+        create(:credit_note_item, credit_note:, fee:, amount_cents: credit_total_cents - credit_tax_cents,
+          precise_amount_cents: credit_total_cents - credit_tax_cents)
+      end
+      let(:credit_note_item2) { nil }
+
+      context "when fully credited" do
+        let(:credit_total_cents) { 9600 }
+        let(:credit_tax_cents) { 1600 }
+
+        it "serializes full negative quantity, billed product details, tax and totals without a subscription" do
+          expect(fee.subscription).to be_nil
+          expect(subject).to contains_xml_node("//ram:IncludedSupplyChainTradeLineItem[1]//ram:BilledQuantity").with_value("-8.0")
+          expect(subject).to contains_xml_node("//ram:IncludedSupplyChainTradeLineItem[1]//ram:SpecifiedTradeProduct/ram:Name").with_value("Contract product billed")
+          expect(subject).to contains_xml_node("//ram:IncludedSupplyChainTradeLineItem[1]//ram:ApplicableTradeTax/ram:RateApplicablePercent").with_value("20.0")
+          expect(subject).to contains_xml_node("//ram:IncludedSupplyChainTradeLineItem[1]//ram:LineTotalAmount").with_value("-80.00")
+          expect(subject).to contains_xml_node("//ram:SpecifiedTradeSettlementHeaderMonetarySummation/ram:GrandTotalAmount").with_value("-96.00")
+        end
+      end
+
+      context "when partially credited" do
+        let(:credit_total_cents) { 2400 }
+        let(:credit_tax_cents) { 400 }
+
+        it "keeps the full negative quantity and serializes the credited amount without a subscription" do
+          expect(fee.subscription).to be_nil
+          expect(subject).to contains_xml_node("//ram:IncludedSupplyChainTradeLineItem[1]//ram:BilledQuantity").with_value("-8.0")
+          expect(subject).to contains_xml_node("//ram:IncludedSupplyChainTradeLineItem[1]//ram:SpecifiedTradeProduct/ram:Name").with_value("Contract product billed")
+          expect(subject).to contains_xml_node("//ram:IncludedSupplyChainTradeLineItem[1]//ram:ApplicableTradeTax/ram:RateApplicablePercent").with_value("20.0")
+          expect(subject).to contains_xml_node("//ram:IncludedSupplyChainTradeLineItem[1]//ram:LineTotalAmount").with_value("-20.00")
+          expect(subject).to contains_xml_node("//ram:SpecifiedTradeSettlementHeaderMonetarySummation/ram:GrandTotalAmount").with_value("-24.00")
+        end
+      end
+    end
   end
 end

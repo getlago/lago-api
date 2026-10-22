@@ -22,6 +22,11 @@ module Contracts
 
     Result = BaseResult[:contract, :payment_method]
 
+    activity_loggable(
+      action: "contract.updated",
+      record: -> { contract }
+    )
+
     def initialize(contract:, params:)
       @contract = contract
       @params = params.to_h.with_indifferent_access
@@ -114,7 +119,7 @@ module Contracts
       # discard_all! would orphan.
       if plan_changed
         contract.applied_rate_cards.to_a.each do |card|
-          ContractRateCards::DestroyService.call!(contract_rate_card: card)
+          ContractRateCards::DestroyService.call!(contract_rate_card: card, emit_events: false)
         end
         Contracts::MaterializeRateCardsService.call!(contract:) if contract.catalog_plan
       elsif lifecycle_moved
@@ -127,6 +132,7 @@ module Contracts
       Contracts::ActivateService.call!(contract:) if start_moved && contract.pending?
 
       result.contract = contract
+      SendWebhookJob.perform_after_commit("contract.updated", contract)
     end
 
     # The cards were seeded from the previous start and anchor: an inherited

@@ -10,6 +10,8 @@ RSpec.describe Types::Fees::Object do
 
     expect(subject).to have_field(:add_on).of_type("AddOn")
     expect(subject).to have_field(:charge).of_type("Charge")
+    expect(subject).to have_field(:contract).of_type("Contract")
+    expect(subject).to have_field(:contract_rate_card).of_type("ContractAppliedRateCard")
     expect(subject).to have_field(:currency).of_type("CurrencyEnum!")
     expect(subject).to have_field(:description).of_type("String")
     expect(subject).to have_field(:grouped_by).of_type("JSON!")
@@ -51,6 +53,37 @@ RSpec.describe Types::Fees::Object do
     expect(subject).to have_field(:presentation_breakdowns).of_type("[PresentationBreakdownUsage!]")
     expect(subject).to have_field(:pricing_unit_usage).of_type("PricingUnitUsage")
     expect(subject).to have_field(:properties).of_type("FeeProperties")
+  end
+
+  describe "contract provenance" do
+    let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
+    let(:customer) { create(:customer, organization:) }
+    let(:invoice) { create(:invoice, organization:, customer:) }
+
+    context "when the fee comes from a contract product" do
+      let(:contract) { create(:contract, organization:, customer:) }
+      let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
+      let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card) }
+      let(:fee) do
+        create(:fee, invoice:, subscription: nil, fee_type: :product,
+          invoiceable: contract_rate_card.rate_card.product, contract:, contract_rate_card:, rate_card_rate:)
+      end
+
+      it "resolves the contract and rate card" do
+        expect(run_graphql_field("Fee.contract", fee)).to eq(contract)
+        expect(run_graphql_field("Fee.contractRateCard", fee)).to eq(contract_rate_card)
+      end
+    end
+
+    context "when the fee comes from a legacy subscription" do
+      let(:subscription) { create(:subscription, customer:, organization:) }
+      let(:fee) { create(:fee, invoice:, subscription:, organization:) }
+
+      it "returns nil for contract provenance" do
+        expect(run_graphql_field("Fee.contract", fee)).to be_nil
+        expect(run_graphql_field("Fee.contractRateCard", fee)).to be_nil
+      end
+    end
   end
 
   describe "#wallet_transaction" do

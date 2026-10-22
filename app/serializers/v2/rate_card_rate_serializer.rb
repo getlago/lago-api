@@ -6,6 +6,7 @@ module V2
       {
         lago_id: model.id,
         code: model.code,
+        rate_card_code: model.rate_card&.code,
         effective_from: model.effective_from.iso8601,
         status: model.status,
         rate_model: model.rate_model,
@@ -15,7 +16,8 @@ module V2
         billing_interval_unit: model.billing_interval_unit,
         applied_pricing_unit_conversion_rate: model.applied_pricing_unit_conversion_rate,
         created_at: model.created_at.iso8601,
-        updated_at: model.updated_at.iso8601
+        updated_at: model.updated_at.iso8601,
+        deleted_at: model.deleted_at&.iso8601
       }
     end
   end

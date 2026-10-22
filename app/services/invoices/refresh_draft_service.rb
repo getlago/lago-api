@@ -28,7 +28,7 @@ module Invoices
     end
 
     def call
-      return result.forbidden_failure! unless invoice.subscription?
+      return result.forbidden_failure! unless invoice.subscription? || invoice.contract?
 
       result.invoice = invoice
       return result unless invoice.draft?
@@ -80,7 +80,7 @@ module Invoices
     def product_catalog_invoice?
       return @product_catalog_invoice if defined?(@product_catalog_invoice)
 
-      @product_catalog_invoice = invoice.billing_segments.exists?
+      @product_catalog_invoice = invoice.product_catalog?
     end
 
     def billing_segment_context

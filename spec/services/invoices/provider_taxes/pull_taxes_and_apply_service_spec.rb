@@ -239,6 +239,78 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         expect(result.invoice.total_amount_cents).to eq(3_350)
       end
 
+      context "when the invoice contains Product fees" do
+        let(:fixed_product) { create(:product, :fixed, organization:) }
+        let(:usage_product) { create(:product, organization:) }
+        let(:fixed_rate_card) { create(:rate_card, organization:, product: fixed_product) }
+        let(:usage_rate_card) { create(:rate_card, organization:, product: usage_product) }
+        let(:fixed_rate) { create(:rate_card_rate, organization:, rate_card: fixed_rate_card) }
+        let(:usage_rate) { create(:rate_card_rate, organization:, rate_card: usage_rate_card) }
+        let(:local_tax) { create(:tax, organization:, rate: 42) }
+        let(:fixed_product_fee) do
+          create(
+            :product_fee,
+            invoice:,
+            subscription:,
+            rate_card_rate: fixed_rate,
+            amount_cents: 2_000,
+            precise_amount_cents: 2_000
+          )
+        end
+        let(:usage_product_fee) do
+          create(
+            :product_fee,
+            invoice:,
+            subscription:,
+            rate_card_rate: usage_rate,
+            amount_cents: 1_000,
+            precise_amount_cents: 1_000
+          )
+        end
+        let(:fee_subscription) { fixed_product_fee }
+        let(:fee_charge) { usage_product_fee }
+
+        before do
+          create(:rate_card_applied_tax, rate_card: fixed_rate_card, tax: local_tax, organization:)
+          create(:rate_card_applied_tax, rate_card: usage_rate_card, tax: local_tax, organization:)
+        end
+
+        it "applies provider taxes to the Product fees and finalizes the invoice" do
+          result = pull_taxes_service.call
+
+          expect(result).to be_success
+          expect(result.invoice).to be_finalized
+          expect(fixed_product_fee.reload.applied_taxes.sole).to have_attributes(
+            tax: nil,
+            tax_code: "gst_hst",
+            tax_rate: 10,
+            amount_cents: 200
+          )
+          expect(usage_product_fee.reload.applied_taxes.sole).to have_attributes(
+            tax: nil,
+            tax_code: "gst_hst",
+            tax_rate: 15,
+            amount_cents: 150
+          )
+          expect(result.invoice).to have_attributes(taxes_amount_cents: 350, total_amount_cents: 3_350)
+          expect(result.invoice.applied_taxes.count).to eq(2)
+        end
+
+        context "when the invoice is a draft" do
+          before { invoice.update!(status: :draft) }
+
+          it "applies provider taxes and keeps the invoice as a draft" do
+            result = pull_taxes_service.call
+
+            expect(result).to be_success
+            expect(result.invoice).to be_draft
+            expect(fixed_product_fee.reload.applied_taxes.sole.tax).to be_nil
+            expect(usage_product_fee.reload.applied_taxes.sole.tax).to be_nil
+            expect(result.invoice).to have_attributes(taxes_amount_cents: 350, total_amount_cents: 3_350)
+          end
+        end
+      end
+
       it_behaves_like "syncs invoice" do
         let(:service_call) { pull_taxes_service.call }
       end
@@ -545,6 +617,57 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
       let(:body) do
         path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")
         File.read(path)
+      end
+
+      context "when one Product has no mapping and no fallback" do
+        let(:integration_collection_mapping) { nil }
+        let(:mapped_product) { create(:product, :fixed, organization:) }
+        let(:unmapped_product) { create(:product, :fixed, organization:) }
+        let(:mapped_rate_card) { create(:rate_card, organization:, product: mapped_product) }
+        let(:unmapped_rate_card) { create(:rate_card, organization:, product: unmapped_product) }
+        let(:mapped_rate) { create(:rate_card_rate, organization:, rate_card: mapped_rate_card) }
+        let(:unmapped_rate) { create(:rate_card_rate, organization:, rate_card: unmapped_rate_card) }
+        let(:fee_subscription) do
+          create(:product_fee, invoice:, subscription:, rate_card_rate: mapped_rate, amount_cents: 2_000)
+        end
+        let(:fee_charge) do
+          create(:product_fee, invoice:, subscription:, rate_card_rate: unmapped_rate, amount_cents: 1_000)
+        end
+        let(:body) do
+          path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")
+          response = JSON.parse(File.read(path))
+          response["failedInvoices"].first["validation_errors"] =
+            "Request body: lineItems: productExternalId must contain at least one character"
+          response.to_json
+        end
+
+        before do
+          create(
+            :anrok_mapping,
+            integration: integration_tax,
+            organization:,
+            billing_entity:,
+            mappable: mapped_product,
+            settings: {external_id: "mapped-product"}
+          )
+        end
+
+        it "fails the invoice instead of finalizing it without provider taxes" do
+          result = pull_taxes_service.call
+
+          expect(result).to be_success
+          expect(invoice.reload).to have_attributes(status: "failed", tax_status: "failed")
+          expect(invoice).not_to be_finalized
+          expect(invoice.error_details.tax_error.sole.details).to include("tax_error" => "validationError")
+          expect(fee_subscription.reload.applied_taxes).to be_empty
+          expect(fee_charge.reload.applied_taxes).to be_empty
+          expect(lago_client).to have_received(:post_with_response) do |payload, _headers|
+            expect(payload.first["fees"]).to contain_exactly(
+              hash_including("item_id" => fee_subscription.id, "item_code" => "mapped-product"),
+              hash_including("item_id" => fee_charge.id, "item_code" => nil)
+            )
+          end
+        end
       end
 
       it "puts invoice in failed status" do

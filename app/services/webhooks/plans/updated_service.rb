@@ -8,7 +8,9 @@ module Webhooks
       def object_serializer
         # A catalog plan is a plan to the end user: same webhook type, its own
         # (leaner) payload.
-        return ::V2::CatalogPlanSerializer.new(object, root_name: "plan") if object.is_a?(CatalogPlan)
+        if object.is_a?(CatalogPlan)
+          return ::V2::CatalogPlanSerializer.new(object, root_name: "plan", includes: %i[taxes])
+        end
 
         ::V1::PlanSerializer.new(
           object,
