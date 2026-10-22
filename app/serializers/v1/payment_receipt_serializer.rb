@@ -5,7 +5,7 @@ module V1
     def serialize
       {
         lago_id: model.id,
-        number: model.reload.number,
+        number:,
         file_url: model.file_url,
         file_url_expires_at: model.file_url_expires_at&.iso8601,
         xml_url: model.xml_url,
@@ -16,6 +16,12 @@ module V1
     end
 
     private
+
+    # NOTE: The number is set by a database trigger on insert, so a new receipt has none in memory.
+    #       Fetch only that column to keep the preloaded associations.
+    def number
+      model.number || PaymentReceipt.where(id: model.id).pick(:number)
+    end
 
     def payment
       ::V1::PaymentSerializer.new(model.payment).serialize
