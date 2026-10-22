@@ -59,7 +59,7 @@ module Events
 
       # The rows of a recurring sum, which also hold the value of the events ingested up to the
       # watermark of the snapshot the computation persists (see BaseStore#recurring_sum).
-      RecurringRow = Data.define(:groups, :value, :snapshot_value, :events_count)
+      RecurringRow = Data.define(:groups, :value, :snapshot_value, :events_count, :snapshot_events_count)
 
       # A charge without filters only has the default bucket, which its own store reads as cheaply.
       # The scan only takes one when it keeps its rows between computations (see IncrementalCache).
@@ -158,7 +158,8 @@ module Events
         BaseStore::RecurringAggregationResult.new(
           value: rows.sum(BigDecimal(0), &:value),
           snapshot_value: rows.sum(BigDecimal(0), &:snapshot_value),
-          events_count: rows.sum(0, &:events_count)
+          events_count: rows.sum(0, &:events_count),
+          snapshot_events_count: rows.sum(0, &:snapshot_events_count)
         )
       end
 
@@ -168,7 +169,8 @@ module Events
             groups:,
             value: rows.sum(BigDecimal(0), &:value),
             snapshot_value: rows.sum(BigDecimal(0), &:snapshot_value),
-            events_count: rows.sum(0, &:events_count)
+            events_count: rows.sum(0, &:events_count),
+            snapshot_events_count: rows.sum(0, &:snapshot_events_count)
           )
         end
       end
@@ -342,12 +344,13 @@ module Events
       def read_recurring_rows(store, batch, to_datetime:, watermark:)
         sql = scan_sql(store, batch:, from_datetime: nil, to_datetime:, watermark:)
 
-        select_rows(sql, batch) do |groups, (value, snapshot_value, events_count)|
+        select_rows(sql, batch) do |groups, (value, snapshot_value, events_count, snapshot_events_count)|
           RecurringRow.new(
             groups:,
             value: row_value(value),
             snapshot_value: row_value(snapshot_value),
-            events_count: events_count.to_i
+            events_count: events_count.to_i,
+            snapshot_events_count: snapshot_events_count.to_i
           )
         end
       end
@@ -416,7 +419,8 @@ module Events
         <<~SQL.squish
           sum(events_enriched.decimal_value),
           #{ActiveRecord::Base.sanitize_sql_for_conditions(["sumIf(events_enriched.decimal_value, events_enriched.enriched_at <= ?)", watermark])},
-          count()
+          count(),
+          #{ActiveRecord::Base.sanitize_sql_for_conditions(["countIf(events_enriched.enriched_at <= ?)", watermark])}
         SQL
       end
 

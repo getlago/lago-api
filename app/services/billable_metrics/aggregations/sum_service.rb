@@ -22,7 +22,7 @@ module BillableMetrics
           result.aggregation = sum_result.value
         end
 
-        result.recurring_units = snapshot_units(sum_result) if billable_metric.recurring?
+        set_snapshot(result, sum_result) if billable_metric.recurring?
         result.pay_in_advance_aggregation = compute_pay_in_advance_aggregation
         result.count = sum_result.events_count
 
@@ -67,7 +67,7 @@ module BillableMetrics
             group_result.aggregation = aggregation_value
           end
 
-          group_result.recurring_units = snapshot_units(aggregation) if billable_metric.recurring?
+          set_snapshot(group_result, aggregation) if billable_metric.recurring?
           group_result.count = aggregation.events_count
           group_result.options = {running_total: running_total(options, grouped_by_values: group_result.grouped_by)}
           group_result
@@ -92,14 +92,20 @@ module BillableMetrics
       def empty_recurring_results(options)
         empty_results
         if billable_metric.recurring? && options[:recurring_watermark] && !options[:precomputed_grouped_aggregations]
-          result.aggregations.each { it.recurring_units = 0 }
+          result.aggregations.each do
+            it.recurring_units = 0
+            it.recurring_events_count = 0
+          end
         end
         result
       end
 
       # A precomputed prorated result is not bounded by the watermark, so it persists no snapshot
-      def snapshot_units(sum_result)
-        sum_result.snapshot_value if sum_result.respond_to?(:snapshot_value)
+      def set_snapshot(target_result, sum_result)
+        return unless sum_result.respond_to?(:snapshot_value)
+
+        target_result.recurring_units = sum_result.snapshot_value
+        target_result.recurring_events_count = sum_result.snapshot_events_count
       end
 
       def compute_precise_total_amount_cents(options: {})

@@ -350,11 +350,11 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
       end
     end
 
-    it "leaves the events ingested after the watermark out of the snapshot value" do
+    it "leaves the events ingested after the watermark out of the snapshot value and count" do
       item = pricing_buckets.find { it.charge_filter.persisted? && it.charge_filter.to_h == {"region" => ["us"]} }
 
       expect(recurring(scanned_store(item)).recurring_sum(watermark:)).to eq(
-        Events::Stores::BaseStore::RecurringAggregationResult.new(value: 4 + 512, snapshot_value: 4, events_count: 2)
+        Events::Stores::BaseStore::RecurringAggregationResult.new(value: 4 + 512, snapshot_value: 4, events_count: 2, snapshot_events_count: 1)
       )
     end
 

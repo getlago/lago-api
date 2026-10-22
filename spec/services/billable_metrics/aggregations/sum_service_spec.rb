@@ -138,7 +138,9 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
         result = sum_service.aggregate(options:)
 
         expect(result.aggregation).to eq(60)
+        expect(result.count).to eq(7)
         expect(result.recurring_units).to eq(53)
+        expect(result.recurring_events_count).to eq(6)
       end
     end
   end

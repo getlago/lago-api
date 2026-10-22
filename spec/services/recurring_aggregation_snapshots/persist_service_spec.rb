@@ -14,7 +14,7 @@ RSpec.describe RecurringAggregationSnapshots::PersistService do
   let(:to_datetime) { Time.zone.parse("2026-09-30T23:59:59") }
   let(:watermark) { Time.zone.parse("2026-10-01T00:05:00") }
   let(:presentation_breakdowns) { [{groups: {"region" => "eu"}, value: BigDecimal(12)}] }
-  let(:values) { [{grouped_by: {}, units: 12, presentation_breakdowns:}] }
+  let(:values) { [{grouped_by: {}, units: 12, events_count: 4, presentation_breakdowns:}] }
 
   let(:snapshots) { RecurringAggregationSnapshot.where(subscription:, charge:) }
 
@@ -30,6 +30,7 @@ RSpec.describe RecurringAggregationSnapshots::PersistService do
         to_datetime:,
         watermark:,
         units: 12,
+        events_count: 4,
         presentation_breakdowns: [{"groups" => {"region" => "eu"}, "value" => "12.0"}]
       )
     end
@@ -37,15 +38,15 @@ RSpec.describe RecurringAggregationSnapshots::PersistService do
     context "with groups" do
       let(:values) do
         [
-          {grouped_by: {"region" => "eu"}, units: 3},
-          {grouped_by: {"region" => "us"}, units: 0}
+          {grouped_by: {"region" => "eu"}, units: 3, events_count: 2},
+          {grouped_by: {"region" => "us"}, units: 0, events_count: 1}
         ]
       end
 
       it "persists one snapshot per group" do
         persist_service.call
 
-        expect(snapshots.pluck(:grouped_by, :units)).to match_array([[{"region" => "eu"}, 3], [{"region" => "us"}, 0]])
+        expect(snapshots.pluck(:grouped_by, :units, :events_count)).to match_array([[{"region" => "eu"}, 3, 2], [{"region" => "us"}, 0, 1]])
       end
     end
 
@@ -71,7 +72,8 @@ RSpec.describe RecurringAggregationSnapshots::PersistService do
 
     context "when the snapshot of the period already exists" do
       let(:existing) do
-        create(:recurring_aggregation_snapshot, organization:, subscription:, charge:, to_datetime:, units: 5, watermark: watermark - 1.day)
+        create(:recurring_aggregation_snapshot, organization:, subscription:, charge:, to_datetime:, units: 5, events_count: 1,
+          watermark: watermark - 1.day)
       end
 
       before { existing }
@@ -81,6 +83,7 @@ RSpec.describe RecurringAggregationSnapshots::PersistService do
 
         expect(snapshots.sole).to have_attributes(
           units: 12,
+          events_count: 4,
           presentation_breakdowns: [{"groups" => {"region" => "eu"}, "value" => "12.0"}],
           watermark:
         )
@@ -117,7 +120,8 @@ RSpec.describe RecurringAggregationSnapshots::PersistService do
 
     context "when the snapshot of the period has a later watermark" do
       let(:existing) do
-        create(:recurring_aggregation_snapshot, organization:, subscription:, charge:, to_datetime:, units: 15, watermark: watermark + 1.minute)
+        create(:recurring_aggregation_snapshot, organization:, subscription:, charge:, to_datetime:, units: 15, events_count: 6,
+          watermark: watermark + 1.minute)
       end
 
       before { existing }
@@ -125,7 +129,7 @@ RSpec.describe RecurringAggregationSnapshots::PersistService do
       it "keeps the snapshot" do
         persist_service.call
 
-        expect(snapshots.sole).to have_attributes(units: 15, watermark: watermark + 1.minute)
+        expect(snapshots.sole).to have_attributes(units: 15, events_count: 6, watermark: watermark + 1.minute)
       end
     end
 

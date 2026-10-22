@@ -587,6 +587,7 @@ module Fees
 
         results = snapshot_results(aggregation_results, default_bucket: selected_metered_item.charge_filter&.id.nil?)
 
+        # A weighted sum has no events count: its read never counts the events of a closed period
         recurring_snapshots << {
           charge: selected_metered_item.charge,
           charge_filter: selected_metered_item.charge_filter,
@@ -594,7 +595,12 @@ module Fees
           values: results.map do
             grouped_by = it.grouped_by || {}
 
-            {grouped_by:, units: it.recurring_units, presentation_breakdowns: breakdowns_by_group.fetch(grouped_by, [])}
+            {
+              grouped_by:,
+              units: it.recurring_units,
+              events_count: it.recurring_events_count || 0,
+              presentation_breakdowns: breakdowns_by_group.fetch(grouped_by, [])
+            }
           end
         }
       end
@@ -604,7 +610,7 @@ module Fees
     # The default bucket keeps one row as the marker of the closed period: without it, a missing row
     # means a full scan.
     def snapshot_results(aggregation_results, default_bucket:)
-      used_results = aggregation_results.reject { it.recurring_units.zero? && it.count.to_i.zero? }
+      used_results = aggregation_results.reject { it.recurring_units.zero? && it.recurring_events_count.to_i.zero? }
       return used_results if used_results.any? || !default_bucket
 
       aggregation_results.first(1)

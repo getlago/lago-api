@@ -35,7 +35,8 @@ module BillableMetrics
         :recurring_updated_at, # Date when the recurring cached aggregation was updated
         :recurring_breakdowns, # Units of each presentation group at the end of the period, only set for a weighted sum
         # Recurring aggregation snapshot fields
-        :recurring_units # Cumulative units of a recurring metric at the end of the period, before rounding
+        :recurring_units, # Cumulative units of a recurring metric at the end of the period, before rounding
+        :recurring_events_count # Number of events behind recurring_units, only set for a sum
       ]
       PerEventAggregationResult = BaseResult[:event_aggregation]
 

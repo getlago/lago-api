@@ -1780,9 +1780,9 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         create_event(timestamp: subscription_started_at + 2.days, value: 1000, created_at: Time.current + 1.hour)
       end
 
-      it "sums the full history and bounds the snapshot value by the watermark" do
+      it "sums the full history and bounds the snapshot value and count by the watermark" do
         expect(result).to eq(
-          Events::Stores::BaseStore::RecurringAggregationResult.new(value: 1115, snapshot_value: 115, events_count: 7)
+          Events::Stores::BaseStore::RecurringAggregationResult.new(value: 1115, snapshot_value: 115, events_count: 7, snapshot_events_count: 6)
         )
       end
     end
@@ -1801,10 +1801,10 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         create_event(timestamp: subscription_started_at + 2.days, value: 1000, properties: {"region" => "europe"}, created_at: Time.current + 1.hour)
       end
 
-      it "sums the full history per group and bounds the snapshot value by the watermark" do
+      it "sums the full history per group and bounds the snapshot value and count by the watermark" do
         expect(result).to match_array([
-          Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(groups: {"region" => nil}, value: 6, snapshot_value: 6, events_count: 2),
-          Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(groups: {"region" => "europe"}, value: 1009, snapshot_value: 9, events_count: 4)
+          Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(groups: {"region" => nil}, value: 6, snapshot_value: 6, events_count: 2, snapshot_events_count: 2),
+          Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(groups: {"region" => "europe"}, value: 1009, snapshot_value: 9, events_count: 4, snapshot_events_count: 3)
         ])
       end
     end
