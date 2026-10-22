@@ -50,4 +50,12 @@ RSpec.describe V2::ProductSerializer do
       )
     end
   end
+
+  context "with the billable_metric expansion" do
+    let(:options) { {includes: %i[billable_metric]} }
+
+    it "embeds the billable metric as V2::BillableMetricSerializer renders it" do
+      expect(payload).to eq(flat_payload.merge(billable_metric: V2::BillableMetricSerializer.new(product.billable_metric).serialize))
+    end
+  end
 end

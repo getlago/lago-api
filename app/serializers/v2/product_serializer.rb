@@ -3,6 +3,8 @@
 module V2
   class ProductSerializer < ModelSerializer
     expandable :product_category, serializer: ::V2::ProductCategorySerializer
+    # Read with_discarded, so that a deleted metric expands with its deleted_at.
+    expandable :billable_metric, serializer: ::V2::BillableMetricSerializer
 
     def serialize
       {
