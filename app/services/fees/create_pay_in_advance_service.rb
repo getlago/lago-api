@@ -211,7 +211,12 @@ module Fees
     def with_advance_state_lock(&)
       return yield if estimate || !metered_item.billing_segment
 
-      Contracts::AdvanceStateLockService.call(contract: metered_item.contract, product: metered_item.invoiceable, &)
+      Contracts::AdvanceStateLockService.call(
+        contract: metered_item.contract,
+        product: metered_item.invoiceable,
+        product_filter: metered_item.contract_rate_card.rate_card.product_filter,
+        &
+      )
     end
   end
 end

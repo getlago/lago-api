@@ -3,11 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Contracts::AdvanceStateLockService do
-  subject(:lock_service) { described_class.new(contract:, product:, timeout_seconds: 0.seconds) }
+  subject(:lock_service) { described_class.new(contract:, product:, product_filter:, timeout_seconds: 0.seconds) }
 
   let(:organization) { create(:organization) }
   let(:contract) { create(:contract, organization:) }
   let(:product) { create(:product, :metered, organization:) }
+  let(:product_filter) { create(:product_filter, organization:, product:) }
 
   describe "#call" do
     context "when no transaction is open", transaction: false do
@@ -25,26 +26,51 @@ RSpec.describe Contracts::AdvanceStateLockService do
       end
     end
 
-    context "when the contract product is already locked", transaction: false do
+    context "when the contract product filter is already locked", transaction: false do
+      let(:lock_key) { "contract-#{contract.id}-product-#{product.id}-filter-#{product_filter.id}-advance-state" }
+
       around do |test|
-        with_advisory_lock("contract-#{contract.id}-product-#{product.id}-advance-state", lock_released_after: 2.seconds) do
-          test.run
-        end
+        with_advisory_lock(lock_key, lock_released_after: 2.seconds) { test.run }
       end
 
       it "raises a BaseLockService::FailedToAcquireLock error" do
-        expect { lock_service.call { nil } }.to raise_error(
-          BaseLockService::FailedToAcquireLock,
-          "Failed to acquire lock contract-#{contract.id}-product-#{product.id}-advance-state"
-        )
+        expect { lock_service.call { nil } }
+          .to raise_error(BaseLockService::FailedToAcquireLock, "Failed to acquire lock #{lock_key}")
+      end
+
+      it "does not block another filter of the product" do
+        other_filter = create(:product_filter, organization:, product:)
+
+        expect(lock_for(product_filter: other_filter).call { :priced }.value).to eq(:priced)
+      end
+
+      it "does not block the product's card without a filter" do
+        expect(lock_for(product_filter: nil).call { :priced }.value).to eq(:priced)
       end
 
       it "does not block another product of the contract" do
         other_product = create(:product, :metered, organization:)
 
-        expect(described_class.new(contract:, product: other_product, timeout_seconds: 0.seconds).call { :priced }.value)
-          .to eq(:priced)
+        expect(lock_for(product: other_product, product_filter: nil).call { :priced }.value).to eq(:priced)
       end
     end
+
+    context "when the product's card without a filter is already locked", transaction: false do
+      let(:product_filter) { nil }
+      let(:lock_key) { "contract-#{contract.id}-product-#{product.id}-filter-default-advance-state" }
+
+      around do |test|
+        with_advisory_lock(lock_key, lock_released_after: 2.seconds) { test.run }
+      end
+
+      it "raises a BaseLockService::FailedToAcquireLock error" do
+        expect { lock_service.call { nil } }
+          .to raise_error(BaseLockService::FailedToAcquireLock, "Failed to acquire lock #{lock_key}")
+      end
+    end
+  end
+
+  def lock_for(product_filter:, product: self.product)
+    described_class.new(contract:, product:, product_filter:, timeout_seconds: 0.seconds)
   end
 end
