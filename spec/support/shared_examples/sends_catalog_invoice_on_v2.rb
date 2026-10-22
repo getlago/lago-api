@@ -17,7 +17,8 @@ RSpec.shared_examples "sends the catalog invoice on v2" do
       described_class.new(object: catalog_invoice).call
 
       payload = Webhook.order(created_at: :desc).first.payload["invoice"]
-      expect(payload).to include("lago_id" => catalog_invoice.id, "invoice_type" => "contract", "contracts" => [], "fees" => [])
+      expect(payload).to include("lago_id" => catalog_invoice.id, "invoice_type" => "contract", "contracts" => [], "applied_taxes" => [])
+      expect(payload).not_to include("fees", "customer")
       expect(payload).not_to have_key("subscriptions")
       expect(payload).not_to have_key("self_billed")
     end
