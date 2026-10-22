@@ -75,14 +75,14 @@ RSpec.describe Api::V2::Customers::InvoicesController do
       end
     end
 
-    context "with an expand parameter" do
-      let(:params) { {expand: "fees", limit: 0} }
+    context "with expands" do
+      let(:params) { {expands: %w[fees], limit: 0} }
 
-      it "rejects it before validating pagination" do
+      it "rejects them before validating pagination, as a list never expands" do
         subject
 
         expect(response).to have_http_status(:bad_request)
-        expect(json[:error_details]).to eq(expand: {reason: "not_expandable", invalid_values: ["fees"]})
+        expect(json[:error_details]).to eq(expands: {reason: "not_expandable", invalid_values: ["fees"]})
       end
     end
 
