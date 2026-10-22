@@ -10,7 +10,8 @@ RSpec.describe Fees::ChargeService::Options do
         apply_taxes: false,
         with_zero_units_filters: true,
         usage_filters: UsageFilters::NONE,
-        skip_adjusted_fees: false
+        skip_adjusted_fees: false,
+        snapshot_watermark: nil
       )
     end
   end
@@ -38,6 +39,12 @@ RSpec.describe Fees::ChargeService::Options do
         .to raise_error(ArgumentError, "with_zero_units_filters must be a boolean")
       expect { described_class.new(skip_adjusted_fees: nil) }
         .to raise_error(ArgumentError, "skip_adjusted_fees must be a boolean")
+    end
+
+    it "validates the snapshot watermark" do
+      expect { described_class.new(snapshot_watermark: Time.current) }.not_to raise_error
+      expect { described_class.new(snapshot_watermark: "2026-10-01") }
+        .to raise_error(ArgumentError, "snapshot_watermark must be a time")
     end
   end
 

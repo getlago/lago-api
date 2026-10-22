@@ -11,7 +11,8 @@ module Fees
       :apply_taxes,
       :with_zero_units_filters,
       :usage_filters,
-      :skip_adjusted_fees
+      :skip_adjusted_fees,
+      :snapshot_watermark # Replays a closed period at the watermark its snapshot was written with
     ) do
       def self.default
         new
@@ -22,13 +23,15 @@ module Fees
         apply_taxes: false,
         with_zero_units_filters: true,
         usage_filters: UsageFilters::NONE,
-        skip_adjusted_fees: false
+        skip_adjusted_fees: false,
+        snapshot_watermark: nil
       )
         validate_context!(context)
         validate_usage_filters!(usage_filters)
         validate_boolean!(:apply_taxes, apply_taxes)
         validate_boolean!(:with_zero_units_filters, with_zero_units_filters)
         validate_boolean!(:skip_adjusted_fees, skip_adjusted_fees)
+        validate_snapshot_watermark!(snapshot_watermark)
 
         super
       end
@@ -66,6 +69,12 @@ module Fees
         return if usage_filters.is_a?(UsageFilters)
 
         raise ArgumentError, "usage_filters must be a UsageFilters"
+      end
+
+      def validate_snapshot_watermark!(snapshot_watermark)
+        return if snapshot_watermark.nil? || snapshot_watermark.is_a?(Time) || snapshot_watermark.is_a?(ActiveSupport::TimeWithZone)
+
+        raise ArgumentError, "snapshot_watermark must be a time"
       end
 
       def validate_boolean!(name, value)
