@@ -2,8 +2,7 @@
 
 require "rails_helper"
 
-# Void renders a v1 invoice until a V2 serializer exists, so with v1 timestamps.
-RSpec.describe Api::V2::InvoicesController, v2_timestamps: false do
+RSpec.describe Api::V2::InvoicesController do
   let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
   let(:customer) { create(:customer, organization:) }
   let(:contract_invoice) { create(:invoice, organization:, customer:, invoice_type: :contract) }
@@ -720,7 +719,8 @@ RSpec.describe Api::V2::InvoicesController, v2_timestamps: false do
 
       expect(response).to have_http_status(:success)
       expect(invoice.reload).to be_payment_succeeded
-      expect(json[:invoice]).to include(lago_id: invoice.id, invoice_type: "contract", payment_status: "succeeded", fees: [])
+      expect(json[:invoice]).to include(lago_id: invoice.id, invoice_type: "contract", payment_status: "succeeded")
+      expect(json[:invoice]).not_to have_key(:fees)
     end
 
     context "when the invoice is voided" do
