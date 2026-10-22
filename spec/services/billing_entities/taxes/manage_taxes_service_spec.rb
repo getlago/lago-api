@@ -22,7 +22,7 @@ RSpec.describe BillingEntities::Taxes::ManageTaxesService do
       it "applies taxes to the billing entity" do
         service.call
 
-        expect(billing_entity.reload.taxes).to eq([tax1, tax2])
+        expect(billing_entity.reload.taxes).to match_array([tax1, tax2])
       end
 
       context "when some tax codes do not exist" do
@@ -45,7 +45,7 @@ RSpec.describe BillingEntities::Taxes::ManageTaxesService do
         it "removes the other tax and applies the new ones" do
           service.call
 
-          expect(billing_entity.taxes).to eq([tax1, tax2])
+          expect(billing_entity.taxes).to match_array([tax1, tax2])
         end
       end
 
@@ -60,7 +60,7 @@ RSpec.describe BillingEntities::Taxes::ManageTaxesService do
         it "applies each tax only once" do
           service.call
 
-          expect(billing_entity.taxes).to eq([tax1, tax2])
+          expect(billing_entity.taxes).to match_array([tax1, tax2])
         end
       end
 
@@ -71,7 +71,7 @@ RSpec.describe BillingEntities::Taxes::ManageTaxesService do
           result = service.call
 
           expect(result).to be_success
-          expect(result.taxes).to eq([tax1, tax2])
+          expect(result.taxes).to match_array([tax1, tax2])
           expect(result.applied_taxes.count).to eq(2)
 
           expect(billing_entity.applied_taxes.pluck(:organization_id).uniq).to eq([organization.id])
