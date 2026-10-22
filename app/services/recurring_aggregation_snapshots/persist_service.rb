@@ -17,17 +17,16 @@ module RecurringAggregationSnapshots
     end
 
     def call
-      RecurringAggregationSnapshot.transaction do
-        # Without it, a run with an older watermark could insert a group a newer run left out
-        RecurringAggregationSnapshot.with_advisory_lock(lock_key, transaction: true) do
-          # Overlapping runs of the same period: the latest watermark has seen the most events.
-          # Checked on the whole charge, as an empty filter leaves no row holding the watermark of its run.
-          next if period_snapshots.exists?(["watermark > ?", watermark])
+      # Without it, a run with an older watermark could insert a group a newer run left out.
+      # Held until the outer transaction commits: the whole invoice when called while invoicing.
+      LockService.call!(subscription:, charge:, to_datetime:) do
+        # Overlapping runs of the same period: the latest watermark has seen the most events.
+        # Checked on the whole charge, as an empty filter leaves no row holding the watermark of its run.
+        next if period_snapshots.exists?(["watermark > ?", watermark])
 
-          # A group or filter missing from a later run of the period dropped to zero units
-          period_snapshots.delete_all
-          RecurringAggregationSnapshot.insert_all(rows, returning: false) if rows.any? # rubocop:disable Rails/SkipsModelValidations
-        end
+        # A group or filter missing from a later run of the period dropped to zero units
+        period_snapshots.delete_all
+        RecurringAggregationSnapshot.insert_all(rows, returning: false) if rows.any? # rubocop:disable Rails/SkipsModelValidations
       end
 
       result
@@ -44,10 +43,6 @@ module RecurringAggregationSnapshots
         charge_id: charge.id,
         to_datetime:
       )
-    end
-
-    def lock_key
-      "recurring_aggregation_snapshots_#{subscription.id}_#{charge.id}_#{to_datetime.iso8601(6)}"
     end
 
     def rows

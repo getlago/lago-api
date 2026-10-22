@@ -193,14 +193,11 @@ RSpec.describe RecurringAggregationSnapshots::PersistService do
     end
 
     it "serializes the runs of the period" do
-      allow(RecurringAggregationSnapshot).to receive(:with_advisory_lock).and_call_original
+      allow(RecurringAggregationSnapshots::LockService).to receive(:call!).and_call_original
 
       result
 
-      expect(RecurringAggregationSnapshot).to have_received(:with_advisory_lock).with(
-        "recurring_aggregation_snapshots_#{subscription.id}_#{charge.id}_#{to_datetime.iso8601(6)}",
-        transaction: true
-      )
+      expect(RecurringAggregationSnapshots::LockService).to have_received(:call!).with(subscription:, charge:, to_datetime:)
     end
 
     context "when a snapshot exists for another period" do
