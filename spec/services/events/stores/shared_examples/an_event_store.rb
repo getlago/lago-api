@@ -1785,6 +1785,33 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           Events::Stores::BaseStore::RecurringAggregationResult.new(value: 1115, snapshot_value: 115, events_count: 7, snapshot_events_count: 6)
         )
       end
+
+      context "with events ingested at the watermark" do
+        let(:watermark) { (Time.current + 1.minute).floor(3) }
+
+        before do
+          create_event(timestamp: subscription_started_at + 3.days, value: 10_000, created_at: watermark)
+          create_event(timestamp: subscription_started_at + 3.days, value: 100_000, created_at: watermark + 0.001)
+        end
+
+        it "keeps the event ingested at the watermark in the snapshot value and count" do
+          expect(result).to eq(
+            Events::Stores::BaseStore::RecurringAggregationResult.new(value: 111_115, snapshot_value: 10_115, events_count: 9, snapshot_events_count: 7)
+          )
+        end
+      end
+
+      context "with an event dated after to_datetime and ingested before the watermark" do
+        before do
+          create_event(timestamp: boundaries[:to_datetime] + 1.second, value: 10_000, created_at: Time.current - 1.hour)
+        end
+
+        it "leaves the event out of the value and the snapshot value" do
+          expect(result).to eq(
+            Events::Stores::BaseStore::RecurringAggregationResult.new(value: 1115, snapshot_value: 115, events_count: 7, snapshot_events_count: 6)
+          )
+        end
+      end
     end
 
     describe "#grouped_recurring_sum" do

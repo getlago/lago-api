@@ -358,6 +358,30 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
       )
     end
 
+    context "with an event ingested at the watermark" do
+      before do
+        Clickhouse::EventsEnriched.create!(
+          transaction_id: "tr_at_watermark",
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: boundaries[:from_datetime] - 5.days,
+          properties: {"region" => "us", "user" => "u1", "value" => "64"},
+          value: "64",
+          decimal_value: 64,
+          enriched_at: watermark
+        )
+      end
+
+      it "keeps the event in the snapshot value and count" do
+        item = pricing_buckets.find { it.charge_filter.persisted? && it.charge_filter.to_h == {"region" => ["us"]} }
+
+        expect(recurring(scanned_store(item)).recurring_sum(watermark:)).to eq(
+          Events::Stores::BaseStore::RecurringAggregationResult.new(value: 4 + 512 + 64, snapshot_value: 4 + 64, events_count: 3, snapshot_events_count: 2)
+        )
+      end
+    end
+
     it "reads the events once for every filter of the charge" do
       allow(Events::Stores::Utils::ClickhouseConnection).to receive(:connection_with_retry).and_call_original
 
