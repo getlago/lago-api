@@ -5,7 +5,8 @@ class WebhookEndpoint < ApplicationRecord
 
   SIGNATURE_ALGOS = [
     :jwt,
-    :hmac
+    :hmac,
+    :standard_webhooks
   ].freeze
 
   WEBHOOK_EVENT_TYPE_CONFIG = YAML.safe_load_file(
@@ -22,6 +23,7 @@ class WebhookEndpoint < ApplicationRecord
 
   belongs_to :organization
   has_many :webhooks, dependent: :delete_all
+  has_many :signing_keys, class_name: "WebhookEndpointSigningKey", dependent: :delete_all
 
   validates :webhook_url, presence: true, url: {block_private_addresses: true}
   validates :webhook_url, uniqueness: {scope: :organization_id}
@@ -29,6 +31,7 @@ class WebhookEndpoint < ApplicationRecord
   validate :validate_event_types, if: :event_types_changed?
 
   before_validation :normalize_event_types, if: :event_types_changed?
+  after_create :create_initial_signing_key
 
   enum :signature_algo, SIGNATURE_ALGOS
 
@@ -37,6 +40,12 @@ class WebhookEndpoint < ApplicationRecord
   end
 
   private
+
+  def create_initial_signing_key
+    return unless standard_webhooks?
+
+    signing_keys.create!(organization:)
+  end
 
   def max_webhook_endpoints
     errors.add(:base, :exceeded_limit) if organization &&

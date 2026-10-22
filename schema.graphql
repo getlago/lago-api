@@ -17247,6 +17247,7 @@ input WebhookEndpointCreateInput {
 enum WebhookEndpointSignatureAlgoEnum {
   hmac
   jwt
+  standard_webhooks
 }
 
 """

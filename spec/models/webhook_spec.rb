@@ -163,6 +163,19 @@ RSpec.describe Webhook do
         )
       end
     end
+
+    context "when signature algorithm is standard_webhooks" do
+      let(:signature_algo) { :standard_webhooks }
+
+      it "returns the standard webhooks headers" do
+        headers = subject
+
+        expect(headers.keys).to match_array(%w[webhook-id webhook-timestamp webhook-signature])
+        expect(headers["webhook-id"]).to eq(webhook.id)
+        expect(headers["webhook-timestamp"]).to match(/\A\d+\z/)
+        expect(headers["webhook-signature"]).to start_with("v1,")
+      end
+    end
   end
 
   describe "#jwt_signature" do
@@ -208,6 +221,42 @@ RSpec.describe Webhook do
 
     it "returns HMAC signature as base 64 encoded string" do
       expect(subject).to eq expected_signature
+    end
+  end
+
+  describe "#standard_webhooks_signature" do
+    subject(:signature) { webhook.standard_webhooks_signature(timestamp) }
+
+    let(:webhook) { create(:webhook, webhook_endpoint:) }
+    let(:webhook_endpoint) { create(:webhook_endpoint, signature_algo: :standard_webhooks) }
+    let(:timestamp) { 1_674_087_231 }
+    let(:signed_content) { "#{webhook.id}.#{timestamp}.#{webhook.payload.to_json}" }
+
+    def verifies?(entry, signing_key)
+      key = Base64.strict_decode64(signing_key.secret.delete_prefix("whsec_"))
+      expected = "v1,#{Base64.strict_encode64(OpenSSL::HMAC.digest("SHA256", key, signed_content))}"
+      ActiveSupport::SecurityUtils.secure_compare(entry, expected)
+    end
+
+    it "signs with the endpoint signing key" do
+      entries = signature.split(" ")
+
+      expect(entries.size).to eq(1)
+      expect(entries.first).to start_with("v1,")
+      expect(verifies?(entries.first, webhook_endpoint.signing_keys.sole)).to be(true)
+    end
+
+    context "when a key rotation happened" do
+      before { WebhookEndpoints::RotateSigningKeyService.call(webhook_endpoint:) }
+
+      it "emits one signature per usable key, each verified by its own secret" do
+        entries = signature.split(" ")
+        keys = webhook_endpoint.signing_keys.usable.to_a
+
+        expect(entries.size).to eq(2)
+        expect(keys.size).to eq(2)
+        expect(keys).to all(satisfy { |key| entries.any? { |entry| verifies?(entry, key) } })
+      end
     end
   end
 end

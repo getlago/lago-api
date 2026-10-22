@@ -55,6 +55,10 @@ class Webhook < ApplicationRecord
   end
 
   def generate_headers
+    if webhook_endpoint.signature_algo&.to_sym == :standard_webhooks
+      return standard_webhooks_headers
+    end
+
     signature = case webhook_endpoint.signature_algo&.to_sym
     when :jwt
       jwt_signature
@@ -67,6 +71,29 @@ class Webhook < ApplicationRecord
       "X-Lago-Signature-Algorithm" => webhook_endpoint.signature_algo.to_s,
       "X-Lago-Unique-Key" => id
     }
+  end
+
+  # Standard Webhooks headers (https://www.standardwebhooks.com). The signature covers
+  # `{webhook-id}.{webhook-timestamp}.{body}`, where the body is the exact JSON sent.
+  def standard_webhooks_headers
+    timestamp = Time.current.to_i
+
+    {
+      "webhook-id" => id,
+      "webhook-timestamp" => timestamp.to_s,
+      "webhook-signature" => standard_webhooks_signature(timestamp)
+    }
+  end
+
+  # `v1` HMAC-SHA256 signatures: one signature per usable signing key, space separated.
+  # During a key rotation the endpoint has more than one usable secret, so a consumer that
+  # still holds the previous secret keeps verifying. Each signature is base64 encoded.
+  def standard_webhooks_signature(timestamp)
+    signed_content = "#{id}.#{timestamp}.#{payload.to_json}"
+
+    webhook_endpoint.signing_keys.usable.map do |signing_key|
+      "v1,#{Base64.strict_encode64(signing_key.sign(signed_content))}"
+    end.join(" ")
   end
 
   def jwt_signature

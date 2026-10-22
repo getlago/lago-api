@@ -5,6 +5,7 @@ require "rails_helper"
 RSpec.describe WebhookEndpoint do
   it { is_expected.to belong_to(:organization) }
   it { is_expected.to have_many(:webhooks).dependent(:delete_all) }
+  it { is_expected.to have_many(:signing_keys).class_name("WebhookEndpointSigningKey").dependent(:delete_all) }
 
   it { is_expected.to validate_presence_of(:webhook_url) }
 
@@ -163,6 +164,26 @@ RSpec.describe WebhookEndpoint do
           webhook_endpoint.valid?
           expect(webhook_endpoint).not_to be_valid
           expect(webhook_endpoint.event_types).to eq(["*", "customer.created"])
+        end
+      end
+    end
+
+    describe "#create_initial_signing_key" do
+      subject(:webhook_endpoint) { create(:webhook_endpoint, signature_algo:) }
+
+      context "when the signature algorithm is standard_webhooks" do
+        let(:signature_algo) { :standard_webhooks }
+
+        it "creates one usable signing key" do
+          expect(webhook_endpoint.signing_keys.usable.count).to eq(1)
+        end
+      end
+
+      context "when the signature algorithm is not standard_webhooks" do
+        let(:signature_algo) { :hmac }
+
+        it "does not create a signing key" do
+          expect(webhook_endpoint.signing_keys).to be_empty
         end
       end
     end
