@@ -6,6 +6,14 @@ RSpec.describe Api::V2::ContractsController do
   let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
   let(:customer) { create(:customer, organization:) }
   let(:catalog_plan) { create(:catalog_plan, organization:) }
+  # A contract is never deleted, so it renders no deleted_at.
+  let(:flat_keys) do
+    %i[
+      lago_id external_id lago_customer_id external_customer_id name plan_code status billing_time
+      consolidate_invoice purchase_order_number billing_anchor_date effective_billing_anchor_date started_at
+      ended_at terminated_at canceled_at skip_invoice_custom_sections created_at updated_at applied_rate_cards_count
+    ]
+  end
 
   describe "POST /api/v2/contracts" do
     subject { post_with_token(organization, "/api/v2/contracts", {contract: create_params}) }
@@ -20,18 +28,34 @@ RSpec.describe Api::V2::ContractsController do
 
     include_examples "requires API permission", "contract", "write"
 
-    it "creates the contract and returns it with its materialized rate cards" do
-      rate_card = create(:rate_card, organization:)
-      create(:plan_rate_card, organization:, catalog_plan:, rate_card:, units: 2)
+    context "with a rate card on the plan" do
+      let(:rate_card) { create(:rate_card, organization:) }
 
-      subject
+      before { create(:plan_rate_card, organization:, catalog_plan:, rate_card:, units: 2) }
 
-      expect(response).to have_http_status(:success)
-      expect(json[:contract][:external_id]).to eq("contract-1")
-      expect(json[:contract][:plan_code]).to eq(catalog_plan.code)
-      expect(json[:contract][:status]).to eq("active")
-      expect(json[:contract][:applied_rate_cards_count]).to eq(1)
-      expect(json[:contract][:applied_rate_cards].sole[:rate_card_code]).to eq(rate_card.code)
+      it "creates the contract with its materialized rate cards, which a show then expands" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract]).to include(external_id: "contract-1", plan_code: catalog_plan.code, status: "active", applied_rate_cards_count: 1)
+        expect(json[:contract].keys).to eq(flat_keys)
+
+        get_with_token(organization, "/api/v2/contracts/contract-1", {expands: %w[applied_rate_cards]})
+
+        expect(json[:contract][:applied_rate_cards].sole[:rate_card_code]).to eq(rate_card.code)
+      end
+    end
+
+    context "with expand" do
+      subject { post_with_token(organization, "/api/v2/contracts?expands[]=applied_rate_cards", {contract: create_params}) }
+
+      it "creates nothing, as only show expands" do
+        expect { subject }.not_to change(Contract, :count)
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:code]).to eq("expand_not_supported")
+        expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: %w[applied_rate_cards]})
+      end
     end
 
     context "with invoicing settings" do
@@ -52,24 +76,28 @@ RSpec.describe Api::V2::ContractsController do
       let(:section) { create(:invoice_custom_section, organization:) }
       let(:create_params) { super().merge(invoice_custom_section: {invoice_custom_section_codes: [section.code]}) }
 
-      it "attaches the sections and returns them" do
+      it "attaches the sections, which a show then expands" do
         subject
 
         expect(response).to have_http_status(:success)
         expect(json[:contract][:skip_invoice_custom_sections]).to be(false)
-        expect(json[:contract][:applied_invoice_custom_sections].map { |s| s[:invoice_custom_section_id] }).to eq([section.id])
+        expect(json[:contract].keys).to eq(flat_keys)
+
+        get_with_token(organization, "/api/v2/contracts/contract-1", {expands: %w[invoice_custom_sections]})
+
+        expect(json[:contract][:invoice_custom_sections].pluck(:lago_id)).to eq([section.id])
       end
     end
 
     context "without a plan" do
       let(:create_params) { {external_customer_id: customer.external_id, external_id: "contract-1"} }
 
-      it "creates a plan-less contract" do
+      it "creates a plan-less contract, without rate cards" do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:contract][:plan_code]).to be_nil
-        expect(json[:contract][:applied_rate_cards]).to be_empty
+        expect(json[:contract]).to include(plan_code: nil, applied_rate_cards_count: 0)
+        expect(organization.contracts.find_by!(external_id: "contract-1").applied_rate_cards).to be_empty
       end
     end
 
@@ -109,9 +137,22 @@ RSpec.describe Api::V2::ContractsController do
 
       expect(response).to have_http_status(:success)
       result = json[:contracts].sole
+      expect(result.keys).to eq(flat_keys)
       expect(result[:lago_id]).to eq(contract.id)
       expect(result[:applied_rate_cards_count]).to eq(1)
       expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
+    end
+
+    context "with expand" do
+      subject { get_with_token(organization, "/api/v2/contracts?expands[]=applied_rate_cards") }
+
+      it "returns a not supported error, as lists never expand" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:code]).to eq("expand_not_supported")
+        expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: %w[applied_rate_cards]})
+      end
     end
 
     it_behaves_like "a cursor paginated v2 endpoint", collection: :contracts, model: Contract do
@@ -175,23 +216,287 @@ RSpec.describe Api::V2::ContractsController do
   end
 
   describe "GET /api/v2/contracts/:external_id" do
-    subject { get_with_token(organization, "/api/v2/contracts/#{contract.external_id}") }
+    subject { get_with_token(organization, "/api/v2/contracts/#{contract.external_id}", params) }
 
     let!(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
+    let(:params) { {} }
 
     include_examples "requires API permission", "contract", "read"
 
-    it "returns the contract with its rate cards" do
-      card = create(:contract_rate_card, organization:, contract:)
+    context "with an applied rate card and a section" do
+      before do
+        create(:contract_rate_card, organization:, contract:)
+        create(:contract_applied_invoice_custom_section, organization:, contract:)
+      end
 
-      subject
+      it "returns the flat contract, without its rate cards nor its sections" do
+        subject
 
-      expect(response).to have_http_status(:success)
-      expect(json[:contract][:lago_id]).to eq(contract.id)
-      expect(json[:contract][:applied_rate_cards].sole[:lago_id]).to eq(card.id)
-      # A contract is never deleted, while its applied rate cards are.
-      expect(json[:contract]).not_to have_key(:deleted_at)
-      expect(json[:contract][:applied_rate_cards].sole).to include(deleted_at: nil)
+        expect(response).to have_http_status(:success)
+        expect(json[:contract]).to eq(
+          lago_id: contract.id,
+          external_id: contract.external_id,
+          lago_customer_id: customer.id,
+          external_customer_id: customer.external_id,
+          name: nil,
+          plan_code: catalog_plan.code,
+          status: "active",
+          billing_time: "calendar",
+          consolidate_invoice: true,
+          purchase_order_number: nil,
+          billing_anchor_date: nil,
+          effective_billing_anchor_date: contract.effective_billing_anchor_date.iso8601,
+          started_at: contract.started_at.iso8601,
+          ended_at: nil,
+          terminated_at: nil,
+          canceled_at: nil,
+          skip_invoice_custom_sections: false,
+          created_at: contract.created_at.iso8601,
+          updated_at: contract.updated_at.iso8601,
+          applied_rate_cards_count: 1
+        )
+      end
+    end
+
+    context "with expands[]=applied_rate_cards" do
+      let(:params) { {expands: %w[applied_rate_cards]} }
+      let(:created_at) { Time.zone.parse("2026-09-28T10:00:00.000001Z") }
+
+      # Ties to the microsecond, created out of order, the first with rate phases, next to cards that
+      # neither list may show.
+      before do
+        cards = [1, 0, 2, 1, 0, 1].map { create(:contract_rate_card, organization:, contract:, created_at: created_at - it.seconds) }
+        [1, 2].each { create(:rate_phase, organization:, plan_rate_card: nil, contract_rate_card: cards.first, position: it) }
+        create(:contract_rate_card, organization:, contract:, created_at:).discard!
+        create(:contract_rate_card, organization:, created_at:)
+        sibling = create(:contract, :terminated, organization:, customer:, external_id: contract.external_id, started_at: 2.months.ago)
+        create(:contract_rate_card, organization:, contract: sibling, created_at:)
+      end
+
+      def every_listed_applied_rate_card
+        cards = []
+        page_params = {limit: 2}
+
+        while page_params
+          get_with_token(organization, "/api/v2/contracts/#{contract.external_id}/applied_rate_cards", page_params)
+          cards.concat(json[:applied_rate_cards])
+          page_params = json[:meta][:next_cursor]&.then { {limit: 2, after: it} }
+        end
+
+        cards
+      end
+
+      it "embeds every page of /applied_rate_cards, in its order" do
+        listed = every_listed_applied_rate_card
+
+        subject
+
+        expect(listed.size).to eq(6)
+        expect(listed.sum { it[:rate_phases_count] }).to eq(2)
+        expect(json[:contract][:applied_rate_cards]).to eq(listed)
+        expect(json[:contract].keys).to eq([*flat_keys, :applied_rate_cards])
+      end
+    end
+
+    context "with expands[]=plan" do
+      let(:params) { {expands: %w[plan]} }
+
+      it "embeds the plan as its own show renders it, without its taxes" do
+        subject
+        expanded = json[:contract]
+        get_with_token(organization, "/api/v2/plans/#{catalog_plan.code}")
+
+        # The show of a plan still embeds its taxes, which a flat plan leaves out.
+        expect(expanded[:plan]).to eq(json[:plan].except(:taxes))
+        expect(expanded[:plan]).to include(lago_id: catalog_plan.id, deleted_at: nil)
+        expect(expanded.keys).to eq([*flat_keys, :plan])
+      end
+
+      context "when the plan is discarded" do
+        before { catalog_plan.discard! }
+
+        it "embeds it with its deleted_at" do
+          subject
+
+          expect(json[:contract][:plan]).to eq(V2::CatalogPlanSerializer.new(catalog_plan).serialize)
+          expect(json[:contract][:plan]).to include(lago_id: catalog_plan.id, deleted_at: catalog_plan.deleted_at.iso8601)
+        end
+      end
+
+      context "without a plan" do
+        let(:catalog_plan) { nil }
+
+        it "renders it as null" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:contract]).to include(plan_code: nil, plan: nil)
+        end
+      end
+    end
+
+    context "with expands[]=customer" do
+      let(:params) { {expands: %w[customer]} }
+
+      # No v2 endpoint renders a customer of its own, so its serializer is the reference.
+      it "embeds the flat customer" do
+        subject
+
+        expect(json[:contract][:customer]).to eq(V2::CustomerSerializer.new(customer).serialize)
+        expect(json[:contract][:customer]).to include(lago_id: customer.id, external_id: customer.external_id, deleted_at: nil)
+        expect(json[:contract][:customer]).not_to include(:billing_configuration, :shipping_address, :metadata)
+        expect(json[:contract].keys).to eq([*flat_keys, :customer])
+      end
+
+      context "when the customer is discarded" do
+        before { customer.discard! }
+
+        it "embeds it with its deleted_at" do
+          subject
+
+          expect(json[:contract][:customer]).to eq(V2::CustomerSerializer.new(customer).serialize)
+          expect(json[:contract][:customer]).to include(lago_id: customer.id, deleted_at: customer.deleted_at.iso8601)
+        end
+      end
+    end
+
+    context "with expands[]=invoice_custom_sections" do
+      let(:params) { {expands: %w[invoice_custom_sections]} }
+
+      # The selection of another contract, which the expansion leaves out.
+      before { create(:contract_applied_invoice_custom_section, contract: create(:contract, organization:, customer:)) }
+
+      it "renders an empty list without selected sections" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract]).to include(invoice_custom_sections: [])
+      end
+
+      context "with selected sections" do
+        let(:sections) { create_list(:invoice_custom_section, 3, organization:) }
+
+        # Selected in another order than their creation: the second first, then the first and the third.
+        before do
+          {sections.second => 3, sections.first => 2, sections.third => 1}.each do |invoice_custom_section, minutes|
+            create(:contract_applied_invoice_custom_section, contract:, invoice_custom_section:, created_at: minutes.minutes.ago)
+          end
+        end
+
+        it "embeds the flat sections, the last selected first" do
+          subject
+
+          expect(json[:contract][:invoice_custom_sections]).to eq(
+            [sections.third, sections.first, sections.second].map { V2::InvoiceCustomSectionSerializer.new(it).serialize }
+          )
+          expect(json[:contract][:invoice_custom_sections]).to all(include(deleted_at: nil))
+          expect(json[:contract].keys).to eq([*flat_keys, :invoice_custom_sections])
+        end
+
+        context "with a section deleted while the contract still selects it" do
+          # Discarded directly: InvoiceCustomSections::DestroyService would delete the selection as well.
+          before { sections.first.discard! }
+
+          it "leaves it out" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:contract][:invoice_custom_sections].pluck(:lago_id)).to eq([sections.third.id, sections.second.id])
+          end
+        end
+      end
+    end
+
+    context "with every expansion" do
+      let(:params) { {expands: %w[invoice_custom_sections customer plan applied_rate_cards]} }
+
+      before do
+        card = create(:contract_rate_card, organization:, contract:)
+        create(:rate_phase, organization:, plan_rate_card: nil, contract_rate_card: card)
+        create(:contract_applied_invoice_custom_section, contract:)
+      end
+
+      it "embeds them after the contract, in the serializer's order" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:contract].keys).to eq([*flat_keys, :applied_rate_cards, :plan, :customer, :invoice_custom_sections])
+      end
+
+      context "with a contract of 3 cards, each with rate phases, and 3 sections" do
+        let(:larger_contract) { create(:contract, organization:, customer:, catalog_plan:) }
+
+        before do
+          create_list(:contract_rate_card, 3, organization:, contract: larger_contract).each do |card|
+            [1, 2].each { create(:rate_phase, organization:, plan_rate_card: nil, contract_rate_card: card, position: it) }
+          end
+          create_list(:contract_applied_invoice_custom_section, 3, contract: larger_contract)
+        end
+
+        def select_count(contract)
+          statements = capture_sql { get_with_token(organization, "/api/v2/contracts/#{contract.external_id}", params) }
+          statements.count { it.start_with?("SELECT") }
+        end
+
+        it "runs as many queries as for the contract of 1 card and 1 section" do
+          # A first request can run lookups that the process then caches.
+          select_count(contract)
+
+          one_of_each = select_count(contract)
+          larger = select_count(larger_contract)
+
+          expect(response).to have_http_status(:success)
+          expect(json[:contract].values_at(:applied_rate_cards, :invoice_custom_sections).map(&:size)).to eq([3, 3])
+          expect(json[:contract][:applied_rate_cards].pluck(:rate_phases_count)).to eq([2, 2, 2])
+          expect(larger).to eq(one_of_each)
+        end
+      end
+    end
+
+    # /applied_rate_cards lists the cards of the live contract, while a status picks the contract to expand.
+    context "with a status and expands[]=applied_rate_cards" do
+      let(:params) { {status: "terminated", expands: %w[applied_rate_cards]} }
+      let(:contract) { create(:contract, :terminated, organization:, customer:, started_at: 2.months.ago) }
+      let(:live_contract) { create(:contract, organization:, customer:, external_id: contract.external_id) }
+      let(:terminated_card) { create(:contract_rate_card, organization:, contract:) }
+      let(:live_card) { create(:contract_rate_card, organization:, contract: live_contract) }
+
+      before do
+        terminated_card
+        live_card
+      end
+
+      it "embeds the cards of the terminated contract, not those of the live one" do
+        subject
+        expanded = json[:contract]
+        get_with_token(organization, "/api/v2/contracts/#{contract.external_id}/applied_rate_cards")
+
+        expect(expanded).to include(lago_id: contract.id, status: "terminated")
+        expect(expanded[:applied_rate_cards].pluck(:lago_id)).to eq([terminated_card.id])
+        expect(json[:applied_rate_cards].pluck(:lago_id)).to eq([live_card.id])
+      end
+    end
+
+    context "with an unknown expansion" do
+      # The name under which the show embedded the sections before.
+      let(:params) { {expands: %w[plan applied_invoice_custom_sections]} }
+
+      it "returns an invalid expand error listing the allowed expansions" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(
+          status: 400,
+          error: "Bad Request",
+          code: "invalid_expand",
+          error_details: {
+            expands: {
+              invalid_values: %w[applied_invoice_custom_sections],
+              allowed_values: %w[applied_rate_cards plan customer invoice_custom_sections]
+            }
+          }
+        )
+      end
     end
 
     context "with invoicing settings" do
@@ -213,22 +518,6 @@ RSpec.describe Api::V2::ContractsController do
         subject
 
         expect(json[:contract]).to include(billing_anchor_date: nil, effective_billing_anchor_date: "2026-10-01")
-      end
-    end
-
-    context "with a section deleted while the contract still links it" do
-      let(:section) { create(:invoice_custom_section, organization:) }
-
-      before do
-        create(:contract_applied_invoice_custom_section, organization:, contract:, invoice_custom_section: section)
-        section.discard!
-      end
-
-      it "returns the contract without the deleted section" do
-        subject
-
-        expect(response).to have_http_status(:success)
-        expect(json[:contract][:applied_invoice_custom_sections]).to be_empty
       end
     end
 
@@ -296,12 +585,13 @@ RSpec.describe Api::V2::ContractsController do
 
     include_examples "requires API permission", "contract", "write"
 
-    it "updates the contract and returns it" do
+    it "updates the contract and returns it flat" do
       subject
 
       expect(response).to have_http_status(:success)
       expect(json[:contract][:external_id]).to eq(contract.external_id)
       expect(json[:contract][:name]).to eq("Renamed")
+      expect(json[:contract].keys).to eq(flat_keys)
     end
 
     context "when skipping invoice custom sections" do
@@ -314,22 +604,27 @@ RSpec.describe Api::V2::ContractsController do
 
         expect(response).to have_http_status(:success)
         expect(json[:contract][:skip_invoice_custom_sections]).to be(true)
-        expect(json[:contract][:applied_invoice_custom_sections]).to be_empty
+        expect(json[:contract].keys).to eq(flat_keys)
+        expect(contract.reload.applied_invoice_custom_sections).to be_empty
       end
     end
 
     context "when changing the plan" do
       let(:other_plan) { create(:catalog_plan, organization:) }
       let(:update_params) { {plan_code: other_plan.code} }
+      let(:rate_card) { create(:rate_card, organization:) }
 
-      it "re-materializes the rate cards from the new plan" do
-        rate_card = create(:rate_card, organization:)
-        create(:plan_rate_card, organization:, catalog_plan: other_plan, rate_card:, units: 4)
+      before { create(:plan_rate_card, organization:, catalog_plan: other_plan, rate_card:, units: 4) }
 
+      it "re-materializes the rate cards from the new plan, which a show then expands" do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:contract][:plan_code]).to eq(other_plan.code)
+        expect(json[:contract]).to include(plan_code: other_plan.code, applied_rate_cards_count: 1)
+        expect(json[:contract].keys).to eq(flat_keys)
+
+        get_with_token(organization, "/api/v2/contracts/#{contract.external_id}", {expands: %w[applied_rate_cards]})
+
         expect(json[:contract][:applied_rate_cards].sole[:rate_card_code]).to eq(rate_card.code)
       end
     end
@@ -399,13 +694,13 @@ RSpec.describe Api::V2::ContractsController do
 
     include_examples "requires API permission", "contract", "write"
 
-    it "terminates the active contract and returns it" do
+    it "terminates the active contract and returns it flat" do
       subject
 
       expect(response).to have_http_status(:success)
       expect(json[:contract][:external_id]).to eq(contract.external_id)
       expect(json[:contract][:status]).to eq("terminated")
-      expect(json[:contract]).not_to have_key(:deleted_at)
+      expect(json[:contract].keys).to eq(flat_keys)
     end
 
     context "when the contract is pending" do
