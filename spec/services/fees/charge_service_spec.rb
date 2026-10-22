@@ -4741,17 +4741,17 @@ RSpec.describe Fees::ChargeService, :premium do
         expect(snapshots.pluck(:grouped_by, :units)).to match_array([[{"region" => "eu"}, 15], [{"region" => "us"}, 7]])
       end
 
-      context "with a group back to zero units" do
+      context "with a group whose units net to zero" do
         before do
           create(:event, organization:, subscription:, code: billable_metric.code,
             created_at: now - RecurringAggregationSnapshot::WATERMARK_LAG - 1.minute,
             timestamp: Time.zone.parse("2022-03-21"), properties: {value: -7, region: "us"})
         end
 
-        it "persists no snapshot for it" do
+        it "keeps its snapshot, as it holds events" do
           charge_subscription_service.call
 
-          expect(snapshots.pluck(:grouped_by, :units)).to eq([[{"region" => "eu"}, 15]])
+          expect(snapshots.pluck(:grouped_by, :units)).to match_array([[{"region" => "eu"}, 15], [{"region" => "us"}, 0]])
         end
       end
     end

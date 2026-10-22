@@ -585,28 +585,29 @@ module Fees
         # Only weighted sum reads its breakdowns back, and a sum's are not bounded by the watermark
         breakdowns_by_group = {} unless selected_metered_item.billable_metric.weighted_sum_agg?
 
-        values = aggregation_results.map do
-          grouped_by = it.grouped_by || {}
-
-          {grouped_by:, units: it.recurring_units, presentation_breakdowns: breakdowns_by_group.fetch(grouped_by, [])}
-        end
+        results = snapshot_results(aggregation_results, default_bucket: selected_metered_item.charge_filter&.id.nil?)
 
         recurring_snapshots << {
           charge: selected_metered_item.charge,
           charge_filter: selected_metered_item.charge_filter,
           watermark:,
-          values: snapshot_values(values, default_bucket: selected_metered_item.charge_filter&.id.nil?)
+          values: results.map do
+            grouped_by = it.grouped_by || {}
+
+            {grouped_by:, units: it.recurring_units, presentation_breakdowns: breakdowns_by_group.fetch(grouped_by, [])}
+          end
         }
       end
     end
 
-    # Zero units are not stored, a charge can have hundreds of filters and groups. The default bucket
-    # keeps one row as the marker of the closed period: without it, a missing row means a full scan.
-    def snapshot_values(values, default_bucket:)
-      used_values = values.reject { it[:units].zero? }
-      return used_values if used_values.any? || !default_bucket
+    # Groups without units nor events are not stored, a charge can have hundreds of filters and groups.
+    # The default bucket keeps one row as the marker of the closed period: without it, a missing row
+    # means a full scan.
+    def snapshot_results(aggregation_results, default_bucket:)
+      used_results = aggregation_results.reject { it.recurring_units.zero? && it.count.to_i.zero? }
+      return used_results if used_results.any? || !default_bucket
 
-      values.first(1)
+      aggregation_results.first(1)
     end
 
     def recurring_watermark(selected_metered_item)
