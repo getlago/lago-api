@@ -4,8 +4,15 @@ module V2
   # A fee billed from the product catalog: it names the contract, product and
   # rate card it was priced from, not the v1 subscription and charge.
   class FeeSerializer < ModelSerializer
+    expandable :applied_taxes, serializer: ::V2::Fees::AppliedTaxSerializer
+    expandable :product, serializer: ::V2::ProductSerializer
+    expandable :product_filter, serializer: ::V2::ProductFilterSerializer
+    expandable :rate_card, serializer: ::V2::RateCardSerializer
+    expandable :rate, serializer: ::V2::RateCardRateSerializer
+    expandable :contract, serializer: ::V2::ContractSerializer
+    expandable :customer, serializer: ::V2::CustomerSerializer
+
     PRELOADS = [
-      :applied_taxes,
       {pricing_unit_usage: :pricing_unit},
       :true_up_fee,
       :rate_card_rate,
@@ -69,7 +76,6 @@ module V2
         succeeded_at: model.succeeded_at&.iso8601,
         failed_at: model.failed_at&.iso8601,
         refunded_at: model.refunded_at&.iso8601,
-        applied_taxes:,
         created_at: model.created_at.iso8601,
         updated_at: model.updated_at.iso8601,
         deleted_at: model.deleted_at&.iso8601
@@ -129,11 +135,9 @@ module V2
     end
 
     def applied_taxes
-      ::CollectionSerializer.new(
-        model.applied_taxes.sort_by { [it.created_at, it.id] },
-        ::V2::Fees::AppliedTaxSerializer,
-        collection_name: "applied_taxes"
-      ).serialize[:applied_taxes]
+      model.applied_taxes.sort_by { [it.created_at, it.id] }
     end
+
+    def rate = model.rate_card_rate
   end
 end
