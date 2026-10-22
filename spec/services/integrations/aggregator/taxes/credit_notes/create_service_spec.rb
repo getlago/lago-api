@@ -226,4 +226,25 @@ RSpec.describe Integrations::Aggregator::Taxes::CreditNotes::CreateService do
       end
     end
   end
+
+  describe "Nango action" do
+    let(:response) do
+      path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")
+      instance_double(Net::HTTPOK, body: File.read(path))
+    end
+
+    before { allow(lago_client).to receive(:post_with_response).and_return(response) }
+
+    context "with an Avalara integration" do
+      let(:integration) { create(:avalara_integration, organization:) }
+      let(:integration_customer) { create(:avalara_customer, integration:, customer:, external_customer_id: nil) }
+
+      it "triggers the request-tax-finalized-invoice action" do
+        service_call
+
+        expect(lago_client).to have_received(:post_with_response)
+          .with(hash_including(action_name: "request-tax-finalized-invoice"), anything)
+      end
+    end
+  end
 end

@@ -245,4 +245,22 @@ RSpec.describe Integrations::Aggregator::Payments::CreateService do
       end
     end
   end
+
+  describe "Nango action" do
+    let(:response) { instance_double(Net::HTTPOK, body: '"1"') }
+
+    before { allow(lago_client).to receive(:post_with_response).and_return(response) }
+
+    context "with a Xero integration" do
+      let(:integration) { create(:xero_integration, organization:) }
+      let(:integration_customer) { create(:xero_customer, integration:, customer:) }
+
+      it "triggers the xero-create-payment action" do
+        service_call
+
+        expect(lago_client).to have_received(:post_with_response)
+          .with(hash_including(action_name: "xero-create-payment"), anything)
+      end
+    end
+  end
 end

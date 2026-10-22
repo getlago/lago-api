@@ -465,4 +465,24 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
       end
     end
   end
+
+  describe "Nango action" do
+    context "with an Avalara integration" do
+      let(:integration) { create(:avalara_integration, organization:) }
+      let(:integration_customer) { create(:avalara_customer, integration:, customer:) }
+      let(:body) { File.read(Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")) }
+
+      before do
+        stub_request(:post, endpoint)
+          .with(body: hash_including(action_name: "request-tax-draft-invoice"))
+          .and_return(status: 200, body:)
+      end
+
+      it "triggers the request-tax-draft-invoice action" do
+        expect(service_call).to be_success
+        expect(WebMock).to have_requested(:post, endpoint)
+          .with(body: hash_including(action_name: "request-tax-draft-invoice"))
+      end
+    end
+  end
 end

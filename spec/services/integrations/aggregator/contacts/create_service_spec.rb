@@ -473,4 +473,32 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
       end
     end
   end
+
+  describe "Nango action" do
+    let(:response) { instance_double(Net::HTTPOK, body: '"1"') }
+
+    before { allow(lago_client).to receive(:post_with_response).and_return(response) }
+
+    context "with a HubSpot integration" do
+      let(:integration) { create(:hubspot_integration, organization:) }
+
+      it "triggers the create-contact action" do
+        service_call
+
+        expect(lago_client).to have_received(:post_with_response)
+          .with(hash_including(action_name: "create-contact"), anything)
+      end
+    end
+
+    context "with an Avalara integration" do
+      let(:integration) { create(:avalara_integration, organization:) }
+
+      it "triggers the create-customer action" do
+        service_call
+
+        expect(lago_client).to have_received(:post_with_response)
+          .with(hash_including(action_name: "create-customer"), anything)
+      end
+    end
+  end
 end
