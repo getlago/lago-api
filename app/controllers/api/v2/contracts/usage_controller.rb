@@ -4,6 +4,8 @@ module Api
   module V2
     module Contracts
       class UsageController < Api::V2::BaseController
+        serializable_with ::V2::ContractUsageSerializer, root: :current_usage
+
         def current
           # The active contract first; a pending one has no usage yet, so it answers an empty list.
           contract = current_organization.contracts.terminatable_by_external_id(params[:external_id])
@@ -16,7 +18,7 @@ module Api
           )
 
           if result.success?
-            render(json: ::V2::ContractUsageSerializer.new(result, root_name: "current_usage", contract:))
+            render_current_usage(result)
           else
             render_error_response(result)
           end
