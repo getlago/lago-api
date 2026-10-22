@@ -575,6 +575,16 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
             expect(agg_service.call.aggregation).to eq(2 + 5)
           end
         end
+
+        context "when the event sends a blank group value" do
+          let(:event) { create_event(timestamp: period_start + 2.days, value: 5, region: "") }
+
+          before { create_snapshot(units: 40, grouped_by: {"region" => nil}) }
+
+          it "starts from the snapshot of the missing value, as the stores group them together" do
+            expect(agg_service.call.aggregation).to eq(40 + 5)
+          end
+        end
       end
     end
   end

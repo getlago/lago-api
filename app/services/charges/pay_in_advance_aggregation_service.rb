@@ -68,8 +68,13 @@ module Charges
     # The aggregation only reads the group of the event. A group without a snapshot had neither
     # units nor events at the period, so it starts from zero.
     def event_group_snapshots(snapshots)
-      grouped_by = metered_item.grouped_by_values.transform_values { it&.to_s }
-      snapshots.select { it.grouped_by.transform_values { |value| value&.to_s } == grouped_by }
+      grouped_by = normalized_group(metered_item.grouped_by_values)
+      snapshots.select { normalized_group(it.grouped_by) == grouped_by }
+    end
+
+    # The stores group a blank value with a missing one, so a snapshot holds an event's "" as nil
+    def normalized_group(grouped_by)
+      grouped_by.transform_values { it&.to_s.presence }
     end
 
     def aggregation_filters
