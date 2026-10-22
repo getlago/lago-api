@@ -165,12 +165,23 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
         timestamp:, created_at:, properties: {total_count: value, region:})
     end
 
-    def aggregate(period, initial_value:, options: {})
+    def aggregate(period, initial_value:, initial_period: nil, options: {})
       period_boundaries = {from_datetime: period.begin, to_datetime: period.end}
       store = event_store_class.new(code: billable_metric.code, billing_context:, boundaries: period_boundaries, filters:)
 
-      described_class.new(event_store: store, metered_item:, billing_context:, boundaries: period_boundaries, filters:, initial_value:)
+      described_class.new(event_store: store, metered_item:, billing_context:, boundaries: period_boundaries, filters:, initial_value:, initial_period:)
         .aggregate(options: {recurring_watermark: watermark(period)}.merge(options))
+    end
+
+    def closed(period)
+      RecurringAggregationSnapshots::FetchService::Period.new(to_datetime: period.end, watermark: watermark(period))
+    end
+
+    # As persisted: a group without units nor events has no snapshot
+    def snapshots(period, aggregation_results)
+      aggregation_results
+        .reject { it.recurring_units.zero? && it.recurring_events_count.zero? }
+        .map { snapshot(period, it) }
     end
 
     def snapshot(period, aggregation_result)
@@ -205,14 +216,14 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
     end
 
     it "matches the full scan from one period to the next" do
-      initial_value = nil
+      initial_value = initial_period = nil
 
       periods.each do |period|
         full_scan = aggregate(period, initial_value: nil)
-        from_snapshot = aggregate(period, initial_value:)
+        from_snapshot = aggregate(period, initial_value:, initial_period:)
 
         expect(totals(from_snapshot)).to eq(totals(full_scan))
-        initial_value = [snapshot(period, from_snapshot)]
+        initial_value, initial_period = snapshots(period, [from_snapshot]), closed(period)
       end
 
       expect(totals(aggregate(periods.last, initial_value: nil))).to eq([nil, 74, 6, 74, 6])
@@ -221,23 +232,49 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
     it "adds the events the snapshot did not count to its units" do
       initial_value = [snapshot(periods.first, aggregate(periods.first, initial_value: nil)).with(units: 1000)]
 
-      result = aggregate(periods.second, initial_value:)
+      result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first))
 
       expect(result.aggregation).to eq(1000 + 7 + 20)
+    end
+
+    context "when the bucket had no usage at the end of the previous period" do
+      it "starts from zero and only reads the events the period did not count" do
+        result = aggregate(periods.second, initial_value: [], initial_period: closed(periods.first))
+
+        expect(totals(result)).to eq([nil, 7 + 20, 2, 7 + 20, 2])
+      end
+
+      context "with a filter matching events of the last period only" do
+        let(:matching_filters) { {"region" => ["apac"]} }
+
+        it "matches the full scan from one period to the next" do
+          initial_value = initial_period = nil
+
+          periods.each do |period|
+            full_scan = aggregate(period, initial_value: nil)
+            from_snapshot = aggregate(period, initial_value:, initial_period:)
+
+            expect(totals(from_snapshot)).to eq(totals(full_scan))
+            initial_value, initial_period = snapshots(period, [from_snapshot]), closed(period)
+          end
+
+          expect(totals(aggregate(periods.last, initial_value: nil))).to eq([nil, 4, 1, 4, 1])
+        end
+      end
     end
 
     context "with pricing group keys" do
       let(:grouped_by) { %w[region] }
 
       it "matches the full scan from one period to the next" do
-        initial_value = nil
+        initial_value = initial_period = nil
 
         periods.each do |period|
           full_scan = aggregate(period, initial_value: nil)
-          from_snapshot = aggregate(period, initial_value:)
+          from_snapshot = aggregate(period, initial_value:, initial_period:)
 
           expect(from_snapshot.aggregations.map { totals(it) }).to match_array(full_scan.aggregations.map { totals(it) })
-          initial_value = from_snapshot.aggregations.map { snapshot(period, it) }
+          initial_value, initial_period = snapshots(period, from_snapshot.aggregations), closed(period)
         end
 
         expect(aggregate(periods.last, initial_value: nil).aggregations.map { totals(it) }).to match_array([
@@ -248,19 +285,13 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
       end
     end
 
-    context "when the snapshots of the groups have different watermarks" do
+    context "when no group had usage at the end of the previous period" do
       let(:grouped_by) { %w[region] }
 
-      it "falls back to the full scan" do
-        initial_value = aggregate(periods.first, initial_value: nil).aggregations.map { snapshot(periods.first, it).with(units: 1000) }
-        initial_value[0] = initial_value[0].with(watermark: watermark(periods.first) - 1.second)
+      it "starts every group from zero and only reads the events the period did not count" do
+        result = aggregate(periods.second, initial_value: [], initial_period: closed(periods.first))
 
-        result = aggregate(periods.second, initial_value:)
-
-        expect(result.aggregations.map { [it.grouped_by, it.aggregation] }).to match_array([
-          [{"region" => "us"}, 3],
-          [{"region" => "eu"}, 37]
-        ])
+        expect(result.aggregations.map { totals(it) }).to eq([[{"region" => "eu"}, 7 + 20, 2, 7 + 20, 2]])
       end
     end
 
@@ -268,7 +299,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
       it "ignores the snapshot" do
         initial_value = [snapshot(periods.first, aggregate(periods.first, initial_value: nil)).with(units: 1000)]
 
-        result = aggregate(periods.second, initial_value:, options: {is_pay_in_advance: true})
+        result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first), options: {is_pay_in_advance: true})
 
         expect(result.aggregation).to eq(40)
       end
@@ -279,7 +310,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
       let(:options) { {recurring_watermark: nil, is_current_usage: true} }
 
       it "adds the events the snapshot did not count" do
-        result = aggregate(periods.second, initial_value:, options:)
+        result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first), options:)
 
         expect(result.aggregation).to eq(1000 + 7 + 20)
       end
@@ -292,7 +323,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
         end
 
         it "ignores the snapshot" do
-          result = aggregate(periods.second, initial_value:, options:)
+          result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first), options:)
 
           expect(result.aggregation).to eq(40)
         end
