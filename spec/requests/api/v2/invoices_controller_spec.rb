@@ -615,7 +615,8 @@ RSpec.describe Api::V2::InvoicesController do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:invoice]).to include(lago_id: invoice.id, invoice_type: "contract", fees: [])
+      expect(json[:invoice]).to include(lago_id: invoice.id, invoice_type: "contract")
+      expect(json[:invoice]).not_to have_key(:fees)
       expect(Invoices::RefreshDraftAndFinalizeService).to have_received(:call).with(invoice:)
     end
 
@@ -668,7 +669,8 @@ RSpec.describe Api::V2::InvoicesController do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:invoice]).to include(lago_id: invoice.id, invoice_type: "contract", status: "draft", fees: [])
+      expect(json[:invoice]).to include(lago_id: invoice.id, invoice_type: "contract", status: "draft")
+      expect(json[:invoice]).not_to have_key(:fees)
       expect(Invoices::RefreshDraftService).to have_received(:call).with(invoice:)
     end
 
