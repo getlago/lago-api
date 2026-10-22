@@ -3,8 +3,9 @@
 require "rails_helper"
 
 # Terminating on Aug 21 at 22:00 in New York, already Aug 22 in UTC: the termination day is
-# served and paid, so the arrears cards close on 21 of August's 31 days in the customer's time,
-# and the advance card, paid on Aug 1, owes nothing more.
+# served and paid, so a prorating arrears card bills 21 of August's 31 days in the customer's
+# time, one that does not prorate its whole month, and the advance card, paid on Aug 1, owes
+# nothing more.
 describe "A contract terminated mid-period is invoiced for the period it served", :premium do
   let(:organization) { create(:organization, feature_flags: ["product_catalog"], webhook_url: nil) }
   let(:customer) { organization.customers.find_by!(external_id: "terminated-customer") }
@@ -12,11 +13,12 @@ describe "A contract terminated mid-period is invoiced for the period it served"
   let(:zone) { Time.find_zone("America/New_York") }
   let(:started_at) { zone.parse("2026-08-01 00:00:00") }
   let(:terminated_at) { zone.parse("2026-08-21 22:00:00") }
+  let(:platform_proration) { true }
 
-  def add_rate_card(code:, product_code:, billing_timing:, amount:)
+  def add_rate_card(code:, product_code:, billing_timing:, amount:, proration: false)
     api_call do
       post_with_token(organization, "/api/v2/rate_cards", {rate_card: {
-        name: code, code:, product_code:, currency: "USD", billing_timing:, proration: false,
+        name: code, code:, product_code:, currency: "USD", billing_timing:, proration:,
         rates: [{
           code: "#{code}-rate", effective_from: started_at.iso8601, rate_model: "standard",
           billing_interval_unit: "month", rate_properties: {amount:}
@@ -73,7 +75,8 @@ describe "A contract terminated mid-period is invoiced for the period it served"
       post_with_token(organization, "/api/v2/plans", {plan: {name: "Terminated plan", code: "terminated-plan", currency: "USD"}})
     end
 
-    add_rate_card(code: "platform-arrears", product_code: "platform", billing_timing: "arrears", amount: "100")
+    add_rate_card(code: "platform-arrears", product_code: "platform", billing_timing: "arrears", amount: "100",
+      proration: platform_proration)
     add_rate_card(code: "support-advance", product_code: "support", billing_timing: "advance", amount: "15")
     add_rate_card(code: "api-calls-arrears", product_code: "api-calls", billing_timing: "arrears", amount: "0.01")
 
@@ -102,6 +105,17 @@ describe "A contract terminated mid-period is invoiced for the period it served"
     expect(fees_by_rate_card(opening)).to eq([["support-advance", 1_500]])
     expect(fees_by_rate_card(closing)).to eq([["api-calls-arrears", 50_500], ["platform-arrears", 6_774]])
     expect(closing).to have_attributes(status: "finalized", total_amount_cents: 57_274)
+  end
+
+  context "when the arrears card does not prorate" do
+    let(:platform_proration) { false }
+
+    it "bills its whole month on the closing invoice" do
+      closing = Invoice.where(customer:).order(:created_at).last
+
+      expect(fees_by_rate_card(closing)).to eq([["api-calls-arrears", 50_500], ["platform-arrears", 10_000]])
+      expect(closing).to have_attributes(status: "finalized", total_amount_cents: 60_500)
+    end
   end
 
   it "bills nothing for usage or periods after the termination" do

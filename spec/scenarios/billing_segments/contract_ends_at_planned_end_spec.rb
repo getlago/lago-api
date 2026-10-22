@@ -3,7 +3,8 @@
 require "rails_helper"
 
 # A contract created with an end terminates on its own once the end passes, through the same
-# close-out as a manual termination: Aug 21 at 14:00 in Tokyo bills 21 of August's 31 days.
+# close-out as a manual termination: Aug 21 at 14:00 in Tokyo bills a prorating card 21 of
+# August's 31 days.
 describe "A contract terminates at its planned end", :premium do
   let(:organization) { create(:organization, feature_flags: ["product_catalog"], webhook_url: nil) }
   let(:customer) { organization.customers.find_by!(external_id: "ending-customer") }
@@ -11,6 +12,7 @@ describe "A contract terminates at its planned end", :premium do
   let(:zone) { Time.find_zone("Asia/Tokyo") }
   let(:started_at) { zone.parse("2026-08-01 00:00:00") }
   let(:ended_at) { zone.parse("2026-08-21 14:00:00") }
+  let(:proration) { true }
 
   around do |example|
     travel_to(started_at - 1.day)
@@ -29,7 +31,7 @@ describe "A contract terminates at its planned end", :premium do
     api_call do
       post_with_token(organization, "/api/v2/rate_cards", {rate_card: {
         name: "Platform", code: "platform-arrears", product_code: "platform", currency: "USD",
-        billing_timing: "arrears", proration: false,
+        billing_timing: "arrears", proration:,
         rates: [{
           code: "platform-rate", effective_from: started_at.iso8601, rate_model: "standard",
           billing_interval_unit: "month", rate_properties: {amount: "100"}
@@ -66,6 +68,15 @@ describe "A contract terminates at its planned end", :premium do
   it "terminates at the end and bills the days served" do
     expect(contract).to have_attributes(status: "terminated", terminated_at: ended_at)
     expect(Invoice.where(customer:).sole.total_amount_cents).to eq(6_774)
+  end
+
+  context "when the card does not prorate" do
+    let(:proration) { false }
+
+    it "bills the whole period" do
+      expect(contract).to have_attributes(status: "terminated", terminated_at: ended_at)
+      expect(Invoice.where(customer:).sole.total_amount_cents).to eq(10_000)
+    end
   end
 
   context "when the end falls on a period boundary" do
