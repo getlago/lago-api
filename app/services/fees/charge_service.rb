@@ -639,15 +639,15 @@ module Fees
 
     # All buckets or none: the marker of the default bucket stands for every filter of the charge
     def persist_recurring_snapshots
-      return if recurring_snapshots.size != metered_item.pricing_buckets.size
+      return if recurring_snapshots.empty? || recurring_snapshots.size != metered_item.pricing_buckets.size
 
-      recurring_snapshots.each do |snapshot|
-        RecurringAggregationSnapshots::PersistService.call!(
-          subscription:,
-          to_datetime: metered_item.boundaries.charges_to_datetime,
-          **snapshot
-        )
-      end
+      RecurringAggregationSnapshots::PersistService.call!(
+        subscription:,
+        charge: metered_item.charge,
+        to_datetime: metered_item.boundaries.charges_to_datetime,
+        watermark: recurring_snapshots.first[:watermark],
+        buckets: recurring_snapshots.map { it.slice(:charge_filter, :values) }
+      )
     end
 
     def grouped_by_keys(selected_metered_item:)
