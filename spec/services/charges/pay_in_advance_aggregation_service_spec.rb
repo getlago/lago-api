@@ -77,6 +77,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
           billing_context: subscription_context,
           boundaries: aggregation_boundaries,
           initial_value: nil,
+          initial_period: nil,
           filters: anything
         )
       end
@@ -124,6 +125,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
           billing_context: have_attributes(contract:),
           boundaries: aggregation_boundaries,
           initial_value: nil,
+          initial_period: nil,
           filters: anything
         )
       end
@@ -146,6 +148,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
             billing_context: subscription_context,
             boundaries: aggregation_boundaries,
             initial_value: nil,
+            initial_period: nil,
             filters: {
               event: common_event,
               charge_id: charge.id
@@ -189,6 +192,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
               billing_context: subscription_context,
               boundaries: aggregation_boundaries,
               initial_value: nil,
+              initial_period: nil,
               filters: {
                 event: common_event,
                 charge_id: charge.id,
@@ -233,6 +237,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
               billing_context: subscription_context,
               boundaries: aggregation_boundaries,
               initial_value: nil,
+              initial_period: nil,
               filters: {
                 event: common_event,
                 charge_id: charge.id,
@@ -280,6 +285,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
                 billing_context: subscription_context,
                 boundaries: aggregation_boundaries,
                 initial_value: nil,
+                initial_period: nil,
                 filters: {
                   event: common_event,
                   charge_id: charge.id,
@@ -322,6 +328,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
               billing_context: subscription_context,
               boundaries: aggregation_boundaries,
               initial_value: nil,
+              initial_period: nil,
               filters: {
                 event: common_event,
                 charge_id: charge.id,
@@ -366,6 +373,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
               billing_context: subscription_context,
               boundaries: aggregation_boundaries,
               initial_value: nil,
+              initial_period: nil,
               filters: {
                 event: common_event,
                 charge_id: charge.id,
@@ -406,6 +414,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
               billing_context: subscription_context,
               boundaries: aggregation_boundaries,
               initial_value: nil,
+              initial_period: nil,
               filters: {
                 event: common_event,
                 charge_id: charge.id,
@@ -442,6 +451,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
             billing_context: subscription_context,
             boundaries: aggregation_boundaries,
             initial_value: nil,
+            initial_period: nil,
             filters: {
               event: common_event,
               charge_id: charge.id
@@ -473,6 +483,7 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
             billing_context: subscription_context,
             boundaries: aggregation_boundaries,
             initial_value: nil,
+            initial_period: nil,
             filters: {
               event: common_event,
               charge_id: charge.id
@@ -551,13 +562,17 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
           expect(agg_service.call.aggregation).to eq(100 + 7 + 5)
         end
 
-        context "when the event group has no snapshot" do
+        context "when the event group had no usage at the end of the previous period" do
           let(:event) { create_event(timestamp: period_start + 2.days, value: 5, region: "apac") }
 
-          before { create_event(timestamp: subscription.started_at + 1.day, value: 3, region: "apac") }
+          before do
+            # Only a full scan counts it: the snapshots of the period hold every group with usage
+            create_event(timestamp: subscription.started_at + 1.day, value: 3, region: "apac")
+            create_event(timestamp: subscription.started_at + 2.days, value: 2, region: "apac", created_at: snapshot_watermark + 1.minute)
+          end
 
-          it "reads the full history of the group" do
-            expect(agg_service.call.aggregation).to eq(3 + 5)
+          it "starts the group from zero and only reads the events the period did not count" do
+            expect(agg_service.call.aggregation).to eq(2 + 5)
           end
         end
       end
