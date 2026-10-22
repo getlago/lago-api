@@ -77,21 +77,25 @@ module BillableMetrics
       end
 
       def recurring_sum(options)
-        if billable_metric.recurring? && options[:recurring_watermark]
+        if snapshot_units?(options)
           event_store.recurring_sum(watermark: options[:recurring_watermark])
         end
       end
 
       def grouped_recurring_sum(options)
-        if billable_metric.recurring? && options[:recurring_watermark]
+        if snapshot_units?(options)
           event_store.grouped_recurring_sum(watermark: options[:recurring_watermark])
         end
+      end
+
+      def snapshot_units?(options)
+        billable_metric.recurring? && options[:recurring_watermark].present?
       end
 
       # No group up to the watermark: the bucket closes at zero units rather than without a snapshot
       def empty_recurring_results(options)
         empty_results
-        if billable_metric.recurring? && options[:recurring_watermark] && !options[:precomputed_grouped_aggregations]
+        if snapshot_units?(options) && !options[:precomputed_grouped_aggregations]
           result.aggregations.each do
             it.recurring_units = 0
             it.recurring_events_count = 0

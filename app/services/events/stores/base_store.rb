@@ -350,18 +350,16 @@ module Events
         )
       end
 
-      # NOTE: the last four columns of each row are the value, the snapshot value, the events count
-      #       and the snapshot events count.
       def prepare_grouped_recurring_values(rows, columns: grouped_by)
         rows.map do |row|
-          flat = row.flatten
+          *groups, value, snapshot_value, events_count, snapshot_events_count = row.flatten
 
           GroupedRecurringAggregationResult.new(
-            groups: build_groups(flat[...-4], columns:),
-            value: flat[-4] || 0,
-            snapshot_value: flat[-3] || 0,
-            events_count: flat[-2].to_i,
-            snapshot_events_count: flat[-1].to_i
+            groups: build_groups(groups, columns:),
+            value: value || 0,
+            snapshot_value: snapshot_value || 0,
+            events_count: events_count.to_i,
+            snapshot_events_count: snapshot_events_count.to_i
           )
         end
       end
