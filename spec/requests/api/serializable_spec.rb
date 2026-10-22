@@ -33,7 +33,6 @@ RSpec.describe Api::Serializable do
           namespace :v2 do
             resources :serializable_tests, only: %i[index show create update]
             resources :whole_list_tests, only: %i[index show]
-            resources :option_tests, only: %i[show]
             resources :not_serializable_tests, only: %i[show]
             resources :not_expanding_tests, only: %i[show]
           end
@@ -76,26 +75,6 @@ RSpec.describe Api::Serializable do
       def product
         @product ||= current_organization.products.find_by(code: params[:id])
       end
-
-      def resource_name
-        "product"
-      end
-    end)
-
-    # A show that passes an option of its own to the serializer.
-    stub_const("Api::V2::OptionTestsController", Class.new(Api::V2::BaseController) do
-      serializer = Class.new(ModelSerializer) do
-        expandable :product_category, serializer: ::V2::ProductCategorySerializer
-
-        def serialize = {code: model.code, **options.slice(:label)}
-      end
-      serializable_with(serializer, root: :product)
-
-      def show
-        render_product(current_organization.products.find_by(code: params[:id]), label: "from the action")
-      end
-
-      private
 
       def resource_name
         "product"
@@ -427,21 +406,6 @@ RSpec.describe Api::Serializable do
       expect(response).to have_http_status(:success)
       expect(json[:products]).to eq([{code: product.code}])
       expect(json[:meta]).to eq(next_cursor: CursorPagination::Token.encode(table: "products", record: product), prev_cursor: nil)
-    end
-  end
-
-  context "with options of the action" do
-    it "passes them to the serializer" do
-      get_with_token(organization, "/api/v2/option_tests/#{product.code}")
-
-      expect(response).to have_http_status(:success)
-      expect(json).to eq(product: {code: product.code, label: "from the action"})
-    end
-
-    it "passes them next to a requested expansion" do
-      get_with_token(organization, "/api/v2/option_tests/#{product.code}", {expands: ["product_category"]})
-
-      expect(json).to eq(product: {code: product.code, label: "from the action", product_category: product_category_payload})
     end
   end
 

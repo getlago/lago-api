@@ -35,7 +35,7 @@ module Api
         serialization = Serialization.new(serializer:, root: root.to_s, collection: root.to_s.pluralize, expand_on:)
 
         private(define_method(:serialization) { serialization })
-        private(define_method(:"render_#{serialization.root}") { |record, **options| render_resource(record, **options) })
+        private(define_method(:"render_#{serialization.root}") { |record| render_resource(record) })
         private(define_method(:"render_#{serialization.collection}") { |records| render_collection(records) })
       end
     end
@@ -45,10 +45,9 @@ module Api
     # Without `serializable_with`, a controller renders on its own and expands nothing.
     def serialization = nil
 
-    # With the expansions the request asked for, on an `expand_on` action. Other `options` reach the
-    # serializer, such as the values of a destroyed product filter.
-    def render_resource(record, **options)
-      render(json: serialization.serializer.new(record, **options, root_name: serialization.root, includes: requested_expansions))
+    # With the expansions the request asked for, on an `expand_on` action.
+    def render_resource(record)
+      render(json: serialization.serializer.new(record, root_name: serialization.root, includes: requested_expansions))
     end
 
     # One page and its cursors on a cursor-paginated index, the whole list anywhere else.
