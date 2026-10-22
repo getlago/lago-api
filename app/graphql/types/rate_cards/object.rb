@@ -28,6 +28,15 @@ module Types
       field :attached_to_plan_or_subscription, Boolean, null: false
       field :attached_to_subscriptions, Boolean, null: false
 
+      # The plan or contract already holds a card for this card's product and
+      # product filter: applying this one fails with `*_already_priced`.
+      field :already_priced, Boolean, null: false do
+        argument :contract_id, ID, required: false
+        argument :plan_id, ID, required: false
+
+        validates required: {one_of: [:plan_id, :contract_id]}
+      end
+
       field :product, Types::Products::Object, null: false
       field :product_filter, Types::ProductFilters::Object, null: true
       field :taxes, [Types::Taxes::Object], null: false
@@ -48,6 +57,10 @@ module Types
 
       def attached_to_subscriptions
         dataloader.with(Sources::AttachedToSubscriptions).load(object.id)
+      end
+
+      def already_priced(plan_id: nil, contract_id: nil)
+        dataloader.with(Sources::RateCardAlreadyPriced, context[:current_organization], plan_id:, contract_id:).load(object)
       end
 
       def active_rate
