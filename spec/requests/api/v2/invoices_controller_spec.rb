@@ -710,7 +710,8 @@ RSpec.describe Api::V2::InvoicesController do
 
       expect(response).to have_http_status(:success)
       expect(invoice.reload).to be_payment_succeeded
-      expect(json[:invoice]).to include(lago_id: invoice.id, invoice_type: "contract", payment_status: "succeeded", fees: [])
+      expect(json[:invoice]).to include(lago_id: invoice.id, invoice_type: "contract", payment_status: "succeeded")
+      expect(json[:invoice]).not_to have_key(:fees)
     end
 
     context "when the invoice is voided" do
