@@ -31,7 +31,7 @@ module Contracts
       end
 
       fees = result.rate_card_usages.flat_map(&:fees)
-      if apply_taxes && customer.tax_customer
+      if apply_taxes && customer_provider_taxation?
         taxes_result = apply_provider_taxes(fees.select(&:taxable?))
         return result.validation_failure!(errors: {tax_error: [taxes_result.error.message]}) unless taxes_result.success?
       elsif apply_taxes
@@ -121,6 +121,12 @@ module Contracts
       else
         [BillingSegments::Fees::ComputeService.call!(billing_segment:).fee]
       end
+    end
+
+    def customer_provider_taxation?
+      return @customer_provider_taxation if defined?(@customer_provider_taxation)
+
+      @customer_provider_taxation = customer.tax_customer.present?
     end
 
     # A customer linked to a tax provider is taxed by the provider alone, never by local taxes.
