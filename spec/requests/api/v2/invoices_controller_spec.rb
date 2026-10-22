@@ -124,12 +124,12 @@ RSpec.describe Api::V2::InvoicesController do
 
     include_examples "requires API permission", "invoice", "read"
 
-    it "returns the invoice with its details" do
+    it "returns the flat invoice" do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:invoice]).to include(lago_id: contract_invoice.id, invoice_type: "contract", contracts: [], fees: [])
-      expect(json[:invoice]).not_to have_key(:customer)
+      expect(json[:invoice]).to include(lago_id: contract_invoice.id, invoice_type: "contract")
+      expect(json[:invoice]).not_to include(:fees, :applied_taxes, :customer, :contracts)
     end
 
     context "when the invoice is a legacy one" do
@@ -153,36 +153,121 @@ RSpec.describe Api::V2::InvoicesController do
     end
   end
 
-  describe "expansion parameters" do
-    subject { get_with_token(organization, "/api/v2/invoices/#{contract_invoice.id}", {expand: "fees"}) }
+  describe "expansions" do
+    subject { get_with_token(organization, "/api/v2/invoices/#{invoice_id}", {expands: names}) }
 
-    it "rejects expansions because invoices have no expandable relationships" do
-      subject
+    let(:invoice_id) { contract_invoice.id }
+    let(:names) { %w[fees applied_taxes customer contracts applied_invoice_custom_sections error_details] }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract: create(:contract, organization:, customer:)) }
+    let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card) }
+    let(:fee_attributes) do
+      {
+        invoice: contract_invoice,
+        subscription: nil,
+        fee_type: :product,
+        invoiceable: contract_rate_card.rate_card.product,
+        contract: contract_rate_card.contract,
+        contract_rate_card:,
+        rate_card_rate:
+      }
+    end
+    let(:fee) { create(:fee, fee_attributes) }
+    let(:applied_tax) { create(:invoice_applied_tax, invoice: contract_invoice) }
 
-      expect(response).to have_http_status(:bad_request)
-      expect(json).to eq(
-        status: 400,
-        error: "Bad Request",
-        code: "expand_not_supported",
-        error_details: {expand: {reason: "not_expandable", invalid_values: ["fees"]}}
-      )
+    before do
+      fee
+      applied_tax
     end
 
-    context "when listing invoices with invalid pagination" do
-      subject { get_with_token(organization, "/api/v2/invoices", {expand: "fees", limit: 0}) }
+    it "embeds each requested record after the invoice" do
+      subject
 
-      it "validates expansion before pagination" do
+      expect(response).to have_http_status(:ok)
+      expect(json[:invoice].keys.last(6)).to eq(names.map(&:to_sym))
+      expect(json[:invoice][:fees].map { it[:lago_id] }).to eq([fee.id])
+      expect(json[:invoice][:fees].sole).not_to have_key(:applied_taxes)
+      expect(json[:invoice][:applied_taxes].map { it[:lago_id] }).to eq([applied_tax.id])
+      expect(json[:invoice][:customer]).to include(lago_id: customer.id, external_id: customer.external_id)
+      expect(json[:invoice][:contracts].map { it[:lago_id] }).to eq([contract_rate_card.contract_id])
+      expect(json[:invoice]).to include(applied_invoice_custom_sections: [], error_details: [])
+    end
+
+    context "with more fees than an expansion holds" do
+      let(:names) { %w[fees] }
+
+      before do
+        stub_const("#{described_class}::MAX_EXPANDED_FEES", 1)
+        create(:fee, fee_attributes)
+      end
+
+      it "points to the fee list instead" do
         subject
 
         expect(response).to have_http_status(:bad_request)
-        expect(json[:code]).to eq("expand_not_supported")
+        expect(json).to eq(
+          status: 400,
+          error: "Bad Request",
+          code: "expansion_too_large",
+          error_details: {expands: {fees: {count: 2, max: 1}}}
+        )
+      end
+
+      context "when the fees are not requested" do
+        let(:names) { %w[applied_taxes] }
+
+        it "returns the invoice" do
+          subject
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:invoice]).not_to have_key(:fees)
+        end
+      end
+    end
+
+    context "when a catalog invoice of another type also holds a legacy fee" do
+      let(:contract_invoice) { create(:invoice, organization:, customer:, invoice_type: :subscription) }
+      let(:names) { %w[fees] }
+
+      before do
+        stub_const("#{described_class}::MAX_EXPANDED_FEES", 1)
+        create(:fee, invoice: contract_invoice)
+      end
+
+      it "counts and expands its product fees only" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:invoice][:fees].map { it[:lago_id] }).to eq([fee.id])
+      end
+    end
+
+    context "with a name the invoice does not declare" do
+      let(:names) { %w[fees subscriptions] }
+
+      it "returns an invalid_expand error listing the invoice expansions" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:code]).to eq("invalid_expand")
+        expect(json[:error_details][:expands]).to include(invalid_values: %w[subscriptions])
+      end
+    end
+
+    context "when listing invoices" do
+      subject { get_with_token(organization, "/api/v2/invoices", {expands: %w[fees], limit: 0}) }
+
+      it "refuses the expansion before reading the pagination" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: %w[fees]})
       end
     end
 
     context "when voiding the invoice" do
-      subject { post_with_token(organization, "/api/v2/invoices/#{contract_invoice.id}/void", {expand: "fees"}) }
+      subject { post_with_token(organization, "/api/v2/invoices/#{contract_invoice.id}/void?expands[]=fees") }
 
-      it "rejects expansion before voiding it" do
+      it "refuses the expansion before voiding it" do
         subject
 
         expect(response).to have_http_status(:bad_request)
@@ -192,13 +277,14 @@ RSpec.describe Api::V2::InvoicesController do
     end
 
     context "when the invoice is a legacy one" do
-      subject { get_with_token(organization, "/api/v2/invoices/#{legacy_invoice.id}", {expand: "fees"}) }
+      let(:invoice_id) { legacy_invoice.id }
+      let(:names) { %w[bogus] }
 
-      it "validates expansion before looking up the invoice" do
+      it "validates the expansion before looking up the invoice" do
         subject
 
         expect(response).to have_http_status(:bad_request)
-        expect(json[:code]).to eq("expand_not_supported")
+        expect(json[:code]).to eq("invalid_expand")
       end
     end
   end
