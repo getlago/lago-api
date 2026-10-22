@@ -80,17 +80,19 @@ RSpec.describe RecurringAggregationSnapshots::ComparePayInAdvanceService do
     end
   end
 
-  context "when the snapshot holds another group" do
+  context "when the snapshots of the period miss the event group" do
     let(:charge) do
       create(:standard_charge, :pay_in_advance, plan:, billable_metric:, properties: {amount: "1", pricing_group_keys: ["region"]})
     end
-    let(:snapshot_units) { 20 }
 
     before { RecurringAggregationSnapshot.update_all(grouped_by: {region: "us"}, updated_at: Time.current) } # rubocop:disable Rails/SkipsModelValidations
 
-    it "does not count it as read from a snapshot nor report its difference" do
-      expect(result.rows.sole).to have_attributes(snapshot_read: false)
-      expect(result.differences).to be_empty
+    it "counts it as read from the period and reports its difference" do
+      expect(result.differences.sole).to have_attributes(
+        snapshot_read: true,
+        snapshot: have_attributes(aggregation: 3),
+        full_scan: have_attributes(aggregation: 8)
+      )
     end
   end
 
