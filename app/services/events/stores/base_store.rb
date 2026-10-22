@@ -56,9 +56,8 @@ module Events
         :events_count
       )
 
-      # NOTE: result of a recurring sum. `value` and `events_count` cover every event the period sees,
-      #       while the `snapshot_*` fields only cover the events ingested up to the watermark of the
-      #       snapshot closing the period, as events ingested later are counted by the next period.
+      # NOTE: result of a recurring sum. The `snapshot_*` fields only cover the events ingested up to
+      #       the watermark, as the next period counts the later ones.
       RecurringAggregationResult = Data.define(
         :value,
         :snapshot_value,

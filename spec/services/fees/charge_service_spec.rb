@@ -4926,9 +4926,10 @@ RSpec.describe Fees::ChargeService, :premium do
     context "when context is invoice_preview" do
       let(:context) { :invoice_preview }
 
-      it "persists no snapshot" do
-        charge_subscription_service.call
+      it "bills every event and persists no snapshot" do
+        result = charge_subscription_service.call
 
+        expect(result.fees.sole.units).to eq(15)
         expect(snapshots).to be_empty
       end
     end

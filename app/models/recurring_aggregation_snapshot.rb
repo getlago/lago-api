@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
 class RecurringAggregationSnapshot < ApplicationRecord
-  # An event ingested just before the aggregation may not be readable yet (open transaction,
-  # ClickHouse insert in progress): the snapshot stops short of it and the next period counts it.
+  # An event ingested just before the aggregation may not be readable yet, so the next period counts it.
   # Same margin as the other enriched_at readers (ChargeFiltersScan::IncrementalCache::INGESTION_MARGIN).
   WATERMARK_LAG = 5.minutes
 

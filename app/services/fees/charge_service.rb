@@ -187,7 +187,6 @@ module Fees
         collect_recurring_snapshot(
           aggregation_result.aggregations || [aggregation_result],
           selected_metered_item,
-          watermark,
           recurring_breakdowns_by_group
         )
       end
@@ -581,7 +580,7 @@ module Fees
       end
     end
 
-    def collect_recurring_snapshot(aggregation_results, selected_metered_item, watermark, breakdowns_by_group)
+    def collect_recurring_snapshot(aggregation_results, selected_metered_item, breakdowns_by_group)
       return unless snapshot_recurring_units?(selected_metered_item)
 
       # A bucket without recurring_units leaves the charge without snapshots (see persist_recurring_snapshots)
@@ -593,9 +592,7 @@ module Fees
 
         # A weighted sum has no events count: its read never counts the events of a closed period
         recurring_snapshots << {
-          charge: selected_metered_item.charge,
           charge_filter: selected_metered_item.charge_filter,
-          watermark:,
           values: results.map do
             grouped_by = it.grouped_by || {}
 
@@ -610,14 +607,16 @@ module Fees
       end
     end
 
-    # Groups without units nor events are not stored, a charge can have hundreds of filters and groups.
-    # The default bucket keeps one row as the marker of the closed period: without it, a missing row
-    # means a full scan.
+    # Empty groups are not stored, as a charge can have hundreds of filters and groups.
+    # The default bucket keeps one row to mark the period closed, a missing row means a full scan.
     def snapshot_results(aggregation_results, default_bucket:)
       used_results = aggregation_results.reject { it.recurring_units.zero? && it.recurring_events_count.to_i.zero? }
-      return used_results if used_results.any? || !default_bucket
 
-      aggregation_results.first(1)
+      if used_results.none? && default_bucket
+        aggregation_results.first(1)
+      else
+        used_results
+      end
     end
 
     def recurring_watermark(selected_metered_item)
@@ -628,7 +627,7 @@ module Fees
     end
 
     def snapshot_recurring_units?(selected_metered_item)
-      return false if options.current_usage?
+      return false if options.current_usage? || options.invoice_preview?
       return false if selected_metered_item.billing_segment
       return false unless billing_context.subscription?
 
@@ -649,8 +648,8 @@ module Fees
         subscription:,
         charge: metered_item.charge,
         to_datetime: metered_item.boundaries.charges_to_datetime,
-        watermark: recurring_snapshots.first[:watermark],
-        buckets: recurring_snapshots.map { it.slice(:charge_filter, :values) }
+        watermark: @recurring_watermark,
+        buckets: recurring_snapshots
       )
     end
 
