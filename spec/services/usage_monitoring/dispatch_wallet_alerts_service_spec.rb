@@ -5,7 +5,9 @@ require "rails_helper"
 RSpec.describe UsageMonitoring::DispatchWalletAlertsService do
   subject(:result) { described_class.call(wallet:) }
 
-  let_it_be(:organization) { create(:organization) }
+  include_context "with realtime usage availability"
+
+  let_it_be(:organization) { create(:organization, clickhouse_events_store: true, feature_flags: ["realtime_usage"]) }
   let_it_be(:customer) { create(:customer, organization:) }
   let_it_be(:wallet) { create(:wallet, organization:, customer:) }
 
@@ -58,6 +60,21 @@ RSpec.describe UsageMonitoring::DispatchWalletAlertsService do
           end
         end
 
+        context "when the organization does not have the realtime usage flag" do
+          subject(:result) { described_class.call(wallet: other_wallet) }
+
+          let(:other_organization) { create(:organization, clickhouse_events_store: true) }
+          let(:other_wallet) { create(:wallet, organization: other_organization, customer: create(:customer, organization: other_organization)) }
+
+          before { create(:wallet_ongoing_balance_amount_alert, organization: other_organization, wallet: other_wallet) }
+
+          it "enqueues the alerts job" do
+            expect { result }.to have_enqueued_job(UsageMonitoring::ProcessWalletAlertsJob).with(other_wallet)
+            expect(karafka.produced_messages).to be_empty
+            expect(dispatched).to have_received(:increment).with({via: "job"})
+          end
+        end
+
         context "when called inside a transaction" do
           it "produces once the transaction commits" do
             ApplicationRecord.transaction do
@@ -95,6 +112,8 @@ RSpec.describe UsageMonitoring::DispatchWalletAlertsService do
   end
 
   context "when freemium" do
+    let(:premium_license) { false }
+
     before { create(:wallet_ongoing_balance_amount_alert, organization:, wallet:) }
 
     it "dispatches nothing" do

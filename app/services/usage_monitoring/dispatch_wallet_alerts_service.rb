@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 module UsageMonitoring
-  # Hands a wallet whose balance moved to alert evaluation. With the wallet alerts topic configured,
-  # WalletAlertsConsumer evaluates it as soon as the message lands, off the Sidekiq queues; without
-  # it (self-hosted without Kafka) ProcessWalletAlertsJob does, as before.
+  # Hands a wallet whose balance moved to alert evaluation. For an organization on realtime usage,
+  # with the wallet alerts topic configured, WalletAlertsConsumer evaluates it as soon as the message
+  # lands, off the Sidekiq queues. Everywhere else ProcessWalletAlertsJob does, as before.
   class DispatchWalletAlertsService < BaseService
     Result = BaseResult
 
@@ -28,16 +28,21 @@ module UsageMonitoring
     attr_reader :wallet
 
     def dispatch
-      if topic.blank?
-        ProcessWalletAlertsJob.perform_later(wallet)
-        report(:job)
-      elsif produce
+      if kafka? && produce
         report(:kafka)
       else
-        # The producer already reported the error: the job keeps the evaluation from being lost.
+        # When a produce fails the producer has already reported it: the job keeps the evaluation.
         ProcessWalletAlertsJob.perform_later(wallet)
-        report(:job_fallback)
+        report(kafka? ? :job_fallback : :job)
       end
+    end
+
+    # The lane follows the realtime wallet refresh: off it, the ongoing balance is only as fresh as
+    # the refresh sweep, which the job keeps up with.
+    def kafka?
+      return @kafka if defined?(@kafka)
+
+      @kafka = topic.present? && RealtimeUsage.enabled?(wallet.organization)
     end
 
     def produce
