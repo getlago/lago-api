@@ -5,6 +5,7 @@ module V2
   # rate card it was priced from, not the v1 subscription and charge.
   class FeeSerializer < ModelSerializer
     expandable :applied_taxes, serializer: ::V2::Fees::AppliedTaxSerializer
+    expandable :invoice, serializer: ::V2::InvoiceSerializer
     expandable :product, serializer: ::V2::ProductSerializer
     expandable :product_filter, serializer: ::V2::ProductFilterSerializer
     expandable :rate_card, serializer: ::V2::RateCardSerializer

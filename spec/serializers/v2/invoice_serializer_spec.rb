@@ -72,8 +72,8 @@ RSpec.describe V2::InvoiceSerializer do
     end
   end
 
-  context "with the detail includes" do
-    let(:includes) { described_class::DETAIL_INCLUDES }
+  context "with every expansion" do
+    let(:includes) { described_class.expandable_names }
     let(:tax) { create(:tax, organization:) }
     let(:other_contract) { create(:contract, organization:, customer:) }
     let(:rate_card) { create(:rate_card, organization:, product:) }
@@ -110,7 +110,12 @@ RSpec.describe V2::InvoiceSerializer do
       error_detail
     end
 
-    it "serializes the fees in creation order with the v2 fee shape" do
+    it "adds the expansions after the invoice, in their declared order" do
+      expect(result.keys.last(6)).to eq(%w[fees applied_taxes customer contracts applied_invoice_custom_sections error_details])
+      expect(result["customer"]).to eq(JSON.parse(V2::CustomerSerializer.new(customer).serialize.to_json))
+    end
+
+    it "serializes the fees in creation order with the flat v2 fee shape" do
       expect(result["fees"].map { it["lago_id"] }).to eq([earlier_fee.id, later_fee.id, event_fee.id])
       expect(result["fees"].first).to include(
         "lago_invoice_id" => invoice.id,
@@ -119,19 +124,34 @@ RSpec.describe V2::InvoiceSerializer do
         "product_code" => product.code
       )
       expect(result["fees"].first).not_to have_key("lago_subscription_id")
+      expect(result["fees"].first).not_to have_key("applied_taxes")
+    end
+
+    context "with the contracts only" do
+      let(:includes) { %i[contracts] }
+      let(:contract) { create(:contract, organization:, customer:, catalog_plan: create(:catalog_plan, organization:)) }
+      let(:other_contract) { create(:contract, organization:, customer: create(:customer, organization:), catalog_plan: create(:catalog_plan, organization:)) }
+
+      it "loads the customers, plans and rate cards of all the contracts at once" do
+        create(:contract_rate_card, organization:, contract: other_contract)
+        tables = []
+        callback = ->(*, payload) { tables << payload[:sql][/FROM "(customers|contract_rate_cards|#{CatalogPlan.table_name})"/, 1] }
+
+        ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { result }
+
+        expect(result["contracts"].map { it["applied_rate_cards_count"] }).to eq([contract, other_contract].map { it.applied_rate_cards.count })
+        expect(tables.compact.tally).to eq("customers" => 1, "contract_rate_cards" => 1, CatalogPlan.table_name => 1)
+      end
     end
 
     it "lists the distinct contracts the fees were billed from" do
       expect(invoice.contracts).to eq([contract])
       expect(result["contracts"]).to eq(
-        [
-          {"lago_id" => contract.id, "external_id" => contract.external_id},
-          {"lago_id" => other_contract.id, "external_id" => other_contract.external_id}
-        ]
+        [contract, other_contract].map { JSON.parse(V2::ContractSerializer.new(it).serialize.to_json) }
       )
     end
 
-    it "serializes the applied taxes without a currency" do
+    it "serializes the tax lines without a currency" do
       expect(result["applied_taxes"]).to eq(
         [
           {
@@ -149,6 +169,16 @@ RSpec.describe V2::InvoiceSerializer do
           }
         ]
       )
+    end
+
+    context "when the invoice also holds a legacy fee" do
+      let(:includes) { %i[fees] }
+
+      before { create(:fee, invoice:) }
+
+      it "expands its product fees only" do
+        expect(result["fees"].map { it["lago_id"] }).to eq([earlier_fee.id, later_fee.id, event_fee.id])
+      end
     end
 
     context "with several applied taxes, custom sections and error details" do
@@ -195,6 +225,14 @@ RSpec.describe V2::InvoiceSerializer do
           }
         ]
       )
+    end
+
+    context "with the webhook includes" do
+      let(:includes) { described_class::WEBHOOK_INCLUDES }
+
+      it "leaves the fees and the customer out" do
+        expect(result.keys.last(4)).to eq(%w[applied_taxes contracts applied_invoice_custom_sections error_details])
+      end
     end
   end
 end

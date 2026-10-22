@@ -280,7 +280,7 @@ RSpec.describe V2::FeeSerializer do
     let(:as_json) { ->(serializer) { JSON.parse(serializer.serialize.to_json) } }
 
     it "renders each related record flat after the fee" do
-      expect(result.keys.last(7)).to eq(%w[applied_taxes product product_filter rate_card rate contract customer])
+      expect(result.keys.last(8)).to eq(%w[applied_taxes invoice product product_filter rate_card rate contract customer])
       expect(result).to include(
         "applied_taxes" => [
           {
@@ -296,6 +296,7 @@ RSpec.describe V2::FeeSerializer do
             "updated_at" => applied_tax.updated_at.iso8601
           }
         ],
+        "invoice" => as_json.call(V2::InvoiceSerializer.new(invoice)),
         "product" => as_json.call(V2::ProductSerializer.new(product)),
         "product_filter" => as_json.call(V2::ProductFilterSerializer.new(product_filter)),
         "rate_card" => as_json.call(V2::RateCardSerializer.new(rate_card)),
@@ -327,6 +328,14 @@ RSpec.describe V2::FeeSerializer do
       it "still expands them" do
         expect(result["product"]).to include("lago_id" => product.id, "code" => product.code)
         expect(result["rate_card"]).to include("lago_id" => rate_card.id, "code" => rate_card.code)
+      end
+    end
+
+    context "when the fee is billed on an event and has no invoice yet" do
+      let(:fee) { create(:fee, fee_attributes.merge(invoice: nil, organization:, billing_entity: customer.billing_entity)) }
+
+      it "renders the invoice as null" do
+        expect(result).to include("invoice" => nil)
       end
     end
 
