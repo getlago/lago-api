@@ -206,11 +206,22 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
       end
 
       context "when the edit opts the line out of resolutions" do
-        let(:params) { {thresholds: [{code: "low", value: 30}]} }
+        let(:params) { {thresholds: [{code: "low", value: 30, notify_on: %w[triggered]}]} }
 
         it "does not announce a resolution" do
           expect(result).to be_success
           expect(alert.all_triggered_alerts.where(kind: :resolved)).to be_empty
+        end
+      end
+
+      context "when the edit leaves notify_on out" do
+        let(:params) { {thresholds: [{code: "low", value: 30}]} }
+
+        it "keeps the opt-in and announces the resolution" do
+          expect(result).to be_success
+
+          resolved = alert.all_triggered_alerts.find_by(kind: :resolved)
+          expect(resolved).to have_attributes(resolution_reason: "threshold_updated")
         end
       end
 
@@ -221,6 +232,73 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
           expect(result).to be_success
           expect(alert.all_triggered_alerts.where(kind: :resolved)).to be_empty
         end
+      end
+    end
+
+    context "when a threshold already opted in to resolution" do
+      let(:alert) { create(:alert, organization:, thresholds: nil) }
+      let(:params) { {thresholds: [{code: "warn", value: 20}]} }
+
+      before do
+        create(:alert_threshold, alert:, code: "warn", value: 10, notify_on: %w[triggered resolved])
+      end
+
+      it "keeps notify_on when the update leaves it out" do
+        expect(result).to be_success
+        expect(alert.reload.thresholds.sole).to have_attributes(value: 20, notify_on: %w[triggered resolved])
+      end
+
+      context "when the update opts the threshold out" do
+        let(:params) { {thresholds: [{code: "warn", value: 20, notify_on: %w[triggered]}]} }
+
+        it "honors the explicit value" do
+          expect(result).to be_success
+          expect(alert.reload.thresholds.sole.notify_on).to eq(%w[triggered])
+        end
+      end
+
+      context "when the update renames the threshold" do
+        let(:params) { {thresholds: [{code: "renamed", value: 20}]} }
+
+        it "falls back to the default" do
+          expect(result).to be_success
+          expect(alert.reload.thresholds.sole.notify_on).to eq(%w[triggered])
+        end
+      end
+
+      context "when the update turns the threshold into a recurring one" do
+        let(:params) { {thresholds: [{code: "warn", value: 20, recurring: true}]} }
+
+        it "falls back to the default instead of failing on an unsupported combination" do
+          expect(result).to be_success
+          expect(alert.reload.thresholds.sole).to have_attributes(recurring: true, notify_on: %w[triggered])
+        end
+      end
+
+      context "when the update sends the opted-in code on two thresholds" do
+        let(:params) { {thresholds: [{code: "warn", value: 10}, {code: "warn", value: 20}]} }
+
+        it "keeps the default on both instead of rejecting a field the caller never sent" do
+          expect(result).to be_success
+          expect(alert.reload.thresholds.map(&:notify_on)).to eq([%w[triggered], %w[triggered]])
+        end
+      end
+    end
+
+    context "when a line keeps its opt-in through its code while already past" do
+      let(:alert) { create(:wallet_balance_amount_alert, thresholds: nil, organization:, previous_value: 0) }
+      let(:params) { {thresholds: [{code: "critical", value: 150}]} }
+
+      before do
+        create(:alert_threshold, alert:, organization:, code: "critical", value: 100, notify_on: %w[triggered resolved])
+      end
+
+      it "records a silent alarm for the inherited opt-in" do
+        expect(result).to be_success
+
+        seeded = alert.all_triggered_alerts.sole
+        expect(seeded).to be_seeded
+        expect(seeded.crossed_thresholds.map { it["code"] }).to eq(%w[critical])
       end
     end
 

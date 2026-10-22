@@ -19,24 +19,24 @@ module UsageMonitoring
         return result.single_validation_failure!(field: :thresholds, error_code: "too_many_thresholds")
       end
 
-      if params[:thresholds].present?
-        if duplicate_threshold_values?(params[:thresholds])
+      if thresholds_params.present?
+        if duplicate_threshold_values?(thresholds_params)
           return result.single_validation_failure!(field: :thresholds, error_code: "duplicate_threshold_values")
         end
 
-        if !all_threshold_values_present?(params[:thresholds])
+        if !all_threshold_values_present?(thresholds_params)
           return result.single_validation_failure!(field: "thresholds:value", error_code: "value_is_mandatory")
         end
 
-        if !all_threshold_values_numeric?(params[:thresholds])
+        if !all_threshold_values_numeric?(thresholds_params)
           return result.single_validation_failure!(field: "thresholds:value", error_code: "value_is_invalid")
         end
 
-        if !all_recurring_threshold_values_positive?(params[:thresholds])
+        if !all_recurring_threshold_values_positive?(thresholds_params)
           return result.single_validation_failure!(field: "thresholds:value", error_code: "recurring_value_is_negative")
         end
 
-        validate_notify_on!(params[:thresholds])
+        validate_notify_on!(thresholds_params)
         return result unless result.success?
       end
 
@@ -55,10 +55,10 @@ module UsageMonitoring
         alert.billable_metric = billable_metric if billable_metric
         alert.save!
 
-        if params[:thresholds].present?
+        if thresholds_params.present?
           lines_before = announced_lines_in_alarm(alert)
           alert.thresholds.delete_all
-          alert.thresholds.create!(prepare_thresholds(params[:thresholds], alert.organization_id))
+          alert.thresholds.create!(prepare_thresholds(thresholds_params, alert.organization_id))
           alert.reload_thresholds
           seed_alarms_already_past(alert, alertable)
           resolve_alarms_closed_by_edit(alert, alertable, lines_before)
@@ -84,6 +84,38 @@ module UsageMonitoring
 
     attr_reader :alert, :params
     delegate :organization, to: :alert
+
+    def thresholds_params
+      return @thresholds_params if defined?(@thresholds_params)
+
+      @thresholds_params = if params[:thresholds].blank?
+        params[:thresholds]
+      else
+        params[:thresholds].map { keep_previous_notify_on(it.to_h.with_indifferent_access) }
+      end
+    end
+
+    # Thresholds are replaced wholesale, so an update that leaves notify_on out would otherwise
+    # revert an opted-in threshold to the column default and silently stop the resolved webhook
+    def keep_previous_notify_on(threshold)
+      return threshold if threshold.key?(:notify_on)
+      return threshold if recurring_param?(threshold)
+      # A code sent twice cannot tell which threshold the stored opt-in belongs to
+      return threshold if incoming_code_count(threshold[:code]) > 1
+
+      previous = previous_notify_on[threshold[:code].to_s]
+      return threshold if previous.blank?
+
+      threshold.merge(notify_on: previous)
+    end
+
+    def incoming_code_count(code)
+      params[:thresholds].count { it.to_h.with_indifferent_access[:code].to_s == code.to_s }
+    end
+
+    def previous_notify_on
+      @previous_notify_on ||= alert.thresholds.where.not(code: nil).pluck(:code, :notify_on).to_h
+    end
 
     def alertable
       if alert.wallet_id?
