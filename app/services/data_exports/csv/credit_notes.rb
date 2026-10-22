@@ -93,7 +93,7 @@ module DataExports
       end
 
       def collection
-        CreditNote.includes(:customer).find(data_export_part.object_ids)
+        CreditNote.includes(:customer, :organization).find(data_export_part.object_ids)
       end
 
       def organization

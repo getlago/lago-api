@@ -91,6 +91,9 @@ module Types
       field :voided_at, GraphQL::Types::ISO8601DateTime, null: true
       field :voided_invoice_id, String, null: true
 
+      # NOTE: Document urls read the organization expiry window
+      dataload_association_for :organization, :file_url, :file_url_expires_at, :xml_url, :xml_url_expires_at
+
       def payable_type
         "Invoice"
       end

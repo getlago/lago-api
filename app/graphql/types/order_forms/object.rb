@@ -31,6 +31,9 @@ module Types
       dataload_association :order
       dataload_association :organization
       dataload_association :quote
+
+      # NOTE: Document urls read the organization expiry window
+      dataload_association_for :organization, :signed_document_url, :signed_document_url_expires_at
     end
   end
 end

@@ -58,6 +58,9 @@ module Types
       field :tax_provider_id, String, null: true
       field :tax_provider_syncable, GraphQL::Types::Boolean, null: false
 
+      # NOTE: Document urls read the organization expiry window
+      dataload_association_for :organization, :file_url, :file_url_expires_at, :xml_url, :xml_url_expires_at
+
       def metadata
         object.metadata&.value
       end
