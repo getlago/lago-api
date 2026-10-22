@@ -85,15 +85,15 @@ describe "Operate a contract invoice through API v2" do
       travel_to(february + 1.day)
     end
 
-    it "reads the invoice in the v2 shape" do
-      api_call { get_with_token(organization, "/api/v2/invoices/#{invoice.id}") }
+    it "reads the invoice in the v2 shape, with its fees and contracts on request" do
+      api_call { get_with_token(organization, "/api/v2/invoices/#{invoice.id}", {expands: %w[fees contracts]}) }
 
       expect(json[:invoice]).to include(
         lago_id: invoice.id, number: invoice.number, invoice_type: "contract", status: "finalized",
         payment_status: "pending", external_customer_id: "v2-customer", currency: "USD",
-        fees_amount_cents: 8_000, total_amount_cents: 8_000,
-        contracts: [{lago_id: contract.id, external_id: "v2-contract"}]
+        fees_amount_cents: 8_000, total_amount_cents: 8_000
       )
+      expect(json[:invoice][:contracts].sole).to include(lago_id: contract.id, external_id: "v2-contract")
       expect(json[:invoice][:fees].sole).to include(
         fee_type: "product", product_code: "v2-product", rate_card_code: "v2-card", rate_code: "r1",
         external_contract_id: "v2-contract", billing_timing: "arrears", units: "80.0", amount_cents: 8_000
@@ -178,7 +178,7 @@ describe "Operate a contract invoice through API v2" do
       api_call { put_with_token(organization, "/api/v2/invoices/#{invoice.id}/refresh") }
 
       expect(json[:invoice]).to include(lago_id: invoice.id, status: "draft", fees_amount_cents: 10_000)
-      expect(json[:invoice][:fees].sole).to include(units: "100.0", amount_cents: 10_000)
+      expect(invoice.reload.fees.sole).to have_attributes(units: 100, amount_cents: 10_000)
 
       api_call { put_with_token(organization, "/api/v2/invoices/#{invoice.id}/finalize") }
 
