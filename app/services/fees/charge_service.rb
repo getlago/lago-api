@@ -175,16 +175,20 @@ module Fees
       breakdowns_by_group = breakdowns_by_grouped_by(aggregation_result.breakdowns, charge_model_result)
 
       if selected_metered_item.billable_metric.recurring?
+        recurring_breakdowns_by_group = breakdowns_by_grouped_by(
+          aggregation_result.recurring_breakdowns || aggregation_result.breakdowns,
+          charge_model_result
+        )
         persist_recurring_value(
           aggregation_result.aggregations || [aggregation_result],
           selected_metered_item,
-          breakdowns_by_grouped_by(aggregation_result.recurring_breakdowns || aggregation_result.breakdowns, charge_model_result)
+          recurring_breakdowns_by_group
         )
         collect_recurring_snapshot(
           aggregation_result.aggregations || [aggregation_result],
           selected_metered_item,
           watermark,
-          breakdowns_by_group
+          recurring_breakdowns_by_group
         )
       end
 

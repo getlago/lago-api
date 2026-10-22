@@ -2855,10 +2855,10 @@ RSpec.describe Fees::ChargeService, :premium do
           expect(cached_aggregation.presentation_breakdowns.map { [it["groups"], it["value"].to_d] }).to match_array(
             [[{"region" => "us-east-1"}, 10], [{"region" => "eu-west-1"}, 5]]
           )
+          expect(RecurringAggregationSnapshot.sole.presentation_breakdowns).to eq(cached_aggregation.presentation_breakdowns)
           expect(result.fees.sole.presentation_breakdowns.map { [it.presentation_by, it.units.round(5).to_s] }).to match_array(
             [[{"region" => "us-east-1"}, "5.16129"], [{"region" => "eu-west-1"}, "2.58065"]]
           )
-          expect(RecurringAggregationSnapshot.sole.presentation_breakdowns).to eq(cached_aggregation.presentation_breakdowns)
         end
       end
     end
