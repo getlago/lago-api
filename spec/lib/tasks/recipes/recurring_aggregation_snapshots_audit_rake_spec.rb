@@ -33,14 +33,14 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:audit" do # rubocop:disa
     )
   end
 
-  def audit_result(rows:, snapshot_charges_count: 1, charges_without_marker: [])
+  def audit_result(rows:, snapshot_charges_count: 1, charges_without_marker: [], charges_without_invoice: [])
     RecurringAggregationSnapshots::AuditService::Result.new.tap do
       it.rows = rows
       it.differences = rows.select(&:different?)
       it.audited_charges_count = 1
       it.snapshot_charges_count = snapshot_charges_count
       it.charges_without_marker = charges_without_marker
-      it.charges_without_invoice = []
+      it.charges_without_invoice = charges_without_invoice
     end
   end
 
@@ -108,6 +108,16 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:audit" do # rubocop:disa
 
       it "reports the mismatch" do
         expect { task.invoke }.to output(/no default bucket row.*Mismatches detected/m).to_stdout
+      end
+    end
+
+    context "when a charge has no invoice for its period" do
+      let(:audit) { audit_result(rows: [], charges_without_invoice: [charge.id]) }
+
+      it "reports the subscription as incomplete" do
+        expect { task.invoke }.to output(
+          /\[INCOMPLETE\].*no invoice for its latest period.*charges without period invoice: 1.*were not audited/m
+        ).to_stdout
       end
     end
 

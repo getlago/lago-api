@@ -464,6 +464,8 @@ module Fees
     end
 
     def already_billed_charge?
+      return false if options.invoice_preview?
+
       existing_fees = if invoice
         invoice.fees.where(charge_id: metered_item.charge.id, subscription_id: billing_context.subscription_id)
       else

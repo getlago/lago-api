@@ -48,6 +48,7 @@ namespace :recipes do
       mismatching = 0
       unbounded_differences = 0
       without_marker = 0
+      without_invoice = 0
 
       subscriptions.each do |subscription|
         audit = RecurringAggregationSnapshots::AuditService.call(subscription:)
@@ -59,13 +60,15 @@ namespace :recipes do
         end
 
         audited += 1
-        without_snapshot += 1 if audit.snapshot_charges_count.zero?
-        mismatching += 1 if audit.differences.any?(&:bounded) || audit.charges_without_marker.any?
+        status = recurring_snapshots_audit_status(audit)
+        without_snapshot += 1 if status == "NO SNAPSHOT"
+        mismatching += 1 if status == "DIFF"
         unbounded_differences += audit.differences.count { !it.bounded }
         without_marker += audit.charges_without_marker.size
+        without_invoice += audit.charges_without_invoice.size
 
         csv_rows.concat(recurring_snapshots_audit_csv_rows(subscription, audit))
-        recurring_snapshots_audit_print(subscription, audit)
+        recurring_snapshots_audit_print(subscription, audit, status)
       end
 
       CSV.open(csv_path, "w") do |csv|
@@ -79,6 +82,7 @@ namespace :recipes do
       puts "  subscriptions without snapshot: #{without_snapshot}"
       puts "  subscriptions mismatching:      #{mismatching}"
       puts "  charges without period marker:  #{without_marker}"
+      puts "  charges without period invoice: #{without_invoice} (not audited)"
       puts "  weighted sum differences:       #{unbounded_differences} (not bounded by the watermark, see below)"
       puts "  per-leaf CSV: #{csv_path}"
       puts ""
@@ -89,24 +93,30 @@ namespace :recipes do
         "No subscription could be audited."
       elsif audited == without_snapshot
         "No subscription has a snapshot: this run says nothing about the write path."
-      elsif mismatching.zero?
-        "The stored snapshots match their events."
-      else
+      elsif mismatching.positive?
         "Mismatches detected, investigate the write path."
+      elsif without_invoice.positive?
+        "Some snapshots have no invoice for their period and were not audited, investigate the write path."
+      else
+        "The stored snapshots match their events."
       end)
     end
   end
 end
 
-def recurring_snapshots_audit_print(subscription, audit)
-  status = if audit.snapshot_charges_count.zero?
+def recurring_snapshots_audit_status(audit)
+  if audit.snapshot_charges_count.zero?
     "NO SNAPSHOT"
   elsif audit.differences.any?(&:bounded) || audit.charges_without_marker.any?
     "DIFF"
+  elsif audit.charges_without_invoice.any?
+    "INCOMPLETE"
   else
     "OK"
   end
+end
 
+def recurring_snapshots_audit_print(subscription, audit, status)
   puts "  Subscription #{subscription.id} (#{subscription.external_id}): " \
        "#{audit.snapshot_charges_count}/#{audit.audited_charges_count} charges with a snapshot, " \
        "#{audit.differences.size} differing leaf/leaves [#{status}]"

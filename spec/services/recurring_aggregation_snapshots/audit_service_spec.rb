@@ -176,6 +176,26 @@ RSpec.describe RecurringAggregationSnapshots::AuditService do
     end
   end
 
+  context "with a fee of the period outside an invoice" do
+    let(:charge) do
+      create(:standard_charge, :pay_in_advance, plan:, billable_metric:, invoiceable: false, properties: {amount: "1"})
+    end
+
+    before do
+      create(:charge_fee, invoice: nil, subscription:, organization:, charge:,
+        properties: {
+          charges_from_datetime: started_at.iso8601(3),
+          charges_to_datetime: to_datetime.iso8601(3)
+        })
+    end
+
+    it "computes the period again" do
+      expect(result).to be_success
+      expect(result.differences).to be_empty
+      expect(result.rows.sole.recomputed).to eq(described_class::Values.new(units: 5, events_count: 1))
+    end
+  end
+
   context "without an invoice for the period" do
     before { InvoiceSubscription.delete_all }
 
