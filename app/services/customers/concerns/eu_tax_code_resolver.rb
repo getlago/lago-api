@@ -3,7 +3,22 @@
 module Customers
   module Concerns
     module EuTaxCodeResolver
+      EU_TAX_CODE_PREFIX = "lago_eu"
+      EU_TAX_EXEMPT_CODE = "lago_eu_tax_exempt"
+
       private
+
+      # Custom taxes set on these customers take precedence over the EU exemption (e.g. a B2C VAT outside the EU).
+      def non_eu_customer_without_tax_id?
+        customer.billing_entity.eu_tax_management &&
+          customer.tax_identification_number.blank? &&
+          customer.country.present? &&
+          !eu_countries_code.include?(customer.country.upcase)
+      end
+
+      def custom_tax_code?(code)
+        !code.downcase.start_with?(EU_TAX_CODE_PREFIX)
+      end
 
       def billing_country_code
         @billing_country_code ||= customer.billing_entity.country

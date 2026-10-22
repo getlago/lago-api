@@ -2,11 +2,13 @@
 
 module Customers
   class ApplyTaxesService < BaseService
+    include Customers::Concerns::EuTaxCodeResolver
+
     Result = BaseResult[:applied_taxes]
 
     def initialize(customer:, tax_codes:)
       @customer = customer
-      @tax_codes = tax_codes
+      @requested_tax_codes = tax_codes
 
       super
     end
@@ -34,7 +36,20 @@ module Customers
 
     private
 
-    attr_reader :customer, :tax_codes
+    attr_reader :customer, :requested_tax_codes
+
+    # Custom taxes replace the EU exemption on these customers, which fall back to it when none is left.
+    def tax_codes
+      @tax_codes ||= if !non_eu_customer_without_tax_id?
+        requested_tax_codes
+      elsif requested_tax_codes.any? { |code| custom_tax_code?(code) }
+        requested_tax_codes - [EU_TAX_EXEMPT_CODE]
+      elsif requested_tax_codes.empty? && customer.organization.taxes.exists?(code: EU_TAX_EXEMPT_CODE)
+        [EU_TAX_EXEMPT_CODE]
+      else
+        requested_tax_codes
+      end
+    end
 
     def taxes
       @taxes ||= customer.organization.taxes.where(code: tax_codes)

@@ -60,6 +60,46 @@ RSpec.describe Customers::EuAutoTaxesService do
       end
     end
 
+    context "when a non EU customer without tax identification number has a custom tax" do
+      let(:new_record) { false }
+      let(:tax_identification_number) { nil }
+      let(:customer) { create(:customer, organization:, billing_entity:, tax_identification_number:, zipcode: nil) }
+      let(:custom_tax) { create(:tax, organization:, code: "uk_vat") }
+
+      before do
+        customer.update!(country: "GB")
+        create(:customer_applied_tax, customer:, tax: custom_tax)
+      end
+
+      it "returns not applicable" do
+        result = eu_tax_service.call
+
+        expect(result).not_to be_success
+        expect(result.error.code).to eq("eu_tax_not_applicable")
+      end
+
+      context "when the customer has a tax identification number" do
+        let(:tax_identification_number) { "GB123456789" }
+
+        it "schedules a VIES check" do
+          result = eu_tax_service.call
+
+          expect(result.error.code).to eq("vies_check_pending")
+          expect(Customers::ViesCheckJob).to have_been_enqueued.with(customer)
+        end
+      end
+
+      context "when the customer moves to an EU country" do
+        before { customer.update!(country: "DE") }
+
+        it "returns the customer country tax code" do
+          result = eu_tax_service.call
+
+          expect(result.tax_code).to eq("lago_eu_de_standard")
+        end
+      end
+    end
+
     context "when tax_identification_number is blank" do
       let_it_be(:tax_identification_number) { nil }
       let_it_be(:customer, refind: true) { create(:customer, organization:, billing_entity:, tax_identification_number:, zipcode: nil) }

@@ -23,10 +23,7 @@ module Customers
       if vies_check_result.success?
         Customers::ApplyTaxesService.call(
           customer: customer,
-          tax_codes: Customers::MergeEuTaxCodesService.call!(
-            customer:,
-            eu_tax_code: vies_check_result.tax_code
-          ).tax_codes
+          tax_codes: [vies_check_result.tax_code]
         )
 
         # Finalize any invoices that were blocked by VIES

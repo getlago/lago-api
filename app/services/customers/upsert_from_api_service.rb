@@ -112,11 +112,8 @@ module Customers
         )
 
         if eu_tax_code_result.success?
-          params[:tax_codes] = Customers::MergeEuTaxCodesService.call!(
-            customer:,
-            eu_tax_code: eu_tax_code_result.tax_code,
-            tax_codes: params[:tax_codes]
-          ).tax_codes
+          params[:tax_codes] ||= []
+          params[:tax_codes] = (params[:tax_codes] + [eu_tax_code_result.tax_code]).uniq
         end
 
         # NOTE: EU-managed taxes (lago_eu_*) belong to the previous billing entity. When the

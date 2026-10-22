@@ -57,12 +57,7 @@ module CustomerPortal
           new_record: false,
           tax_attributes_changed: original_tax_values.any? { |key, value| args.key?(key) && args[key] != value }
         )
-        if eu_tax_code_result.success?
-          tax_codes = Customers::MergeEuTaxCodesService.call!(
-            customer:,
-            eu_tax_code: eu_tax_code_result.tax_code
-          ).tax_codes
-        end
+        tax_codes << eu_tax_code_result.tax_code if eu_tax_code_result.success?
 
         if tax_codes.present?
           taxes_result = Customers::ApplyTaxesService.call(customer:, tax_codes:)

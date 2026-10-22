@@ -92,11 +92,8 @@ module Customers
         eu_tax_code_result = Customers::EuAutoTaxesService.call(customer:, new_record: true, tax_attributes_changed: true)
 
         if eu_tax_code_result.success?
-          args[:tax_codes] = Customers::MergeEuTaxCodesService.call!(
-            customer:,
-            eu_tax_code: eu_tax_code_result.tax_code,
-            tax_codes: args[:tax_codes] || []
-          ).tax_codes
+          args[:tax_codes] ||= []
+          args[:tax_codes] = (args[:tax_codes] + [eu_tax_code_result.tax_code]).uniq
         end
 
         if args[:tax_codes].present?
