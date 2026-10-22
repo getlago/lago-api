@@ -5,8 +5,13 @@ module Integrations
     module Taxes
       module Invoices
         class CreateDraftService < BaseService
-          def action_path
-            "v1/#{provider}/draft_invoices"
+          def action_name
+            case provider
+            when "anrok"
+              "anrok-create-ephemeral-transaction"
+            when "avalara"
+              "request-tax-draft-invoice"
+            end
           end
 
           def call
@@ -45,7 +50,7 @@ module Integrations
           def request_taxes
             throttle!(:anrok, :avalara)
 
-            response = http_client.post_with_response(payload, headers)
+            response = trigger_action(payload)
             parse_response(response)
           end
 

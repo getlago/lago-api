@@ -7,7 +7,8 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
 
   let(:integration) { create(:anrok_integration, organization:) }
   let(:customer) { create(:customer, organization:) }
-  let(:endpoint) { "https://api.nango.dev/v1/anrok/finalized_invoices" }
+  let(:endpoint) { "https://api.nango.dev/action/trigger" }
+  let(:action_name) { "anrok-create-or-update-transaction" }
   let(:current_time) { Time.current }
   let(:integration_collection_mapping1) do
     create(
@@ -109,7 +110,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
     fee_add_on
     fee_add_on_two
 
-    stub_request(:post, endpoint).with(body: params.to_json, headers:)
+    stub_request(:post, endpoint).with(body: {action_name:, input: params}.to_json, headers:)
       .and_return(status: response_status, body:)
   end
 
@@ -157,7 +158,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
           it "excludes it from the request" do
             service_call
 
-            expect(WebMock).to have_requested(:post, endpoint).with(body: params.to_json)
+            expect(WebMock).to have_requested(:post, endpoint).with(body: {action_name:, input: params}.to_json)
           end
         end
 
@@ -186,7 +187,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
           it "still reports the invoice, standing it on a single fee" do
             service_call
 
-            expect(WebMock).to have_requested(:post, endpoint).with(body: params.to_json)
+            expect(WebMock).to have_requested(:post, endpoint).with(body: {action_name:, input: params}.to_json)
           end
         end
       end
@@ -194,7 +195,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
       context "when Avalara taxes are successfully fetched for finalized invoice" do
         let(:integration) { create(:avalara_integration, organization:) }
         let(:integration_customer) { create(:avalara_customer, integration:, customer:, external_customer_id: "123") }
-        let(:endpoint) { "https://api.nango.dev/v1/avalara/finalized_invoices" }
+        let(:action_name) { "request-tax-finalized-invoice" }
         let(:params) do
           [
             {
@@ -281,7 +282,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
           it "excludes it from the request" do
             service_call
 
-            expect(WebMock).to have_requested(:post, endpoint).with(body: params.to_json)
+            expect(WebMock).to have_requested(:post, endpoint).with(body: {action_name:, input: params}.to_json)
           end
         end
 

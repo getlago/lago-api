@@ -7,7 +7,8 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
 
   let(:integration) { create(:anrok_integration, organization:) }
   let(:customer) { create(:customer, :with_shipping_address, organization:) }
-  let(:endpoint) { "https://api.nango.dev/v1/anrok/draft_invoices" }
+  let(:endpoint) { "https://api.nango.dev/action/trigger" }
+  let(:action_name) { "anrok-create-ephemeral-transaction" }
   let(:current_time) { Time.current }
   let(:integration_collection_mapping1) do
     create(
@@ -108,7 +109,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
     fee_add_on
     fee_add_on_two
 
-    stub_request(:post, endpoint).with(body: params.to_json, headers:)
+    stub_request(:post, endpoint).with(body: {action_name:, input: params}.to_json, headers:)
       .and_return(status: response_status, body:)
   end
 
@@ -147,7 +148,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
           it "excludes it from the request" do
             service_call
 
-            expect(WebMock).to have_requested(:post, endpoint).with(body: params.to_json)
+            expect(WebMock).to have_requested(:post, endpoint).with(body: {action_name:, input: params}.to_json)
           end
         end
 
@@ -176,7 +177,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
           it "still reports the invoice, standing it on a single fee" do
             service_call
 
-            expect(WebMock).to have_requested(:post, endpoint).with(body: params.to_json)
+            expect(WebMock).to have_requested(:post, endpoint).with(body: {action_name:, input: params}.to_json)
           end
         end
 
@@ -324,7 +325,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
 
           before do
             params.first["fees"].each { |fee| fee["item_code"] = nil }
-            stub_request(:post, endpoint).with(body: params.to_json, headers:)
+            stub_request(:post, endpoint).with(body: {action_name:, input: params}.to_json, headers:)
               .and_return(status: response_status, body:)
           end
 

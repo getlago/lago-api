@@ -11,15 +11,20 @@ module Integrations
             super()
           end
 
-          def action_path
-            "v1/#{provider}/finalized_invoices"
+          def action_name
+            case provider
+            when "anrok"
+              "anrok-create-or-update-transaction"
+            when "avalara"
+              "request-tax-finalized-invoice"
+            end
           end
 
           def call
             return result unless integration
             return result unless ::Integrations::BaseIntegration::INTEGRATION_TAX_TYPES.include?(integration.type)
 
-            response = http_client.post_with_response(payload, headers)
+            response = trigger_action(payload)
             body = JSON.parse(response.body)
 
             process_response(body)

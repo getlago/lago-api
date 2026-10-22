@@ -7,7 +7,8 @@ RSpec.describe Integrations::Aggregator::Payments::CreateService do
 
   let(:service) { described_class.new(payment:) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
-  let(:endpoint) { "https://api.nango.dev/v1/netsuite/payments" }
+  let(:endpoint) { "https://api.nango.dev/action/trigger" }
+  let(:action_name) { "netsuite-create-payment" }
   let(:payment) { create(:payment, payable: invoice) }
   let(:invoice) { create(:invoice, customer:, organization:) }
   let(:integration_invoice) { create(:integration_resource, syncable: invoice, integration:) }
@@ -103,7 +104,7 @@ RSpec.describe Integrations::Aggregator::Payments::CreateService do
       let(:response) { instance_double(Net::HTTPOK) }
 
       before do
-        allow(lago_client).to receive(:post_with_response).with(params, headers).and_return(response)
+        allow(lago_client).to receive(:post_with_response).with({action_name:, input: params}, headers).and_return(response)
         integration_payment
       end
 
@@ -120,7 +121,7 @@ RSpec.describe Integrations::Aggregator::Payments::CreateService do
       let(:response) { instance_double(Net::HTTPOK) }
 
       before do
-        allow(lago_client).to receive(:post_with_response).with(params, headers).and_return(response)
+        allow(lago_client).to receive(:post_with_response).with({action_name:, input: params}, headers).and_return(response)
         allow(response).to receive(:body).and_return(body)
       end
 
@@ -208,7 +209,7 @@ RSpec.describe Integrations::Aggregator::Payments::CreateService do
       let(:http_error) { LagoHttpClient::HttpError.new(error_code, body, nil) }
 
       before do
-        allow(lago_client).to receive(:post_with_response).with(params, headers).and_raise(http_error)
+        allow(lago_client).to receive(:post_with_response).with({action_name:, input: params}, headers).and_raise(http_error)
       end
 
       context "when it is a server error" do

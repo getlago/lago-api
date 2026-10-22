@@ -10,7 +10,7 @@ RSpec.describe Integrations::Aggregator::CustomObjectService do
 
   describe ".call" do
     let(:lago_client) { instance_double(LagoHttpClient::Client) }
-    let(:endpoint) { "https://api.nango.dev/v1/hubspot/custom-object" }
+    let(:endpoint) { "https://api.nango.dev/action/trigger" }
 
     let(:headers) do
       {
@@ -28,14 +28,16 @@ RSpec.describe Integrations::Aggregator::CustomObjectService do
 
     let(:aggregator_response) do
       path = Rails.root.join("spec/fixtures/integration_aggregator/custom_object_response.json")
-      JSON.parse(File.read(path))
+      instance_double(Net::HTTPOK, body: File.read(path))
     end
 
     before do
       allow(LagoHttpClient::Client).to receive(:new)
         .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
         .and_return(lago_client)
-      allow(lago_client).to receive(:get).with(headers:, body:).and_return(aggregator_response)
+      allow(lago_client).to receive(:post_with_response)
+        .with({action_name: "fetch-custom-object", input: body}, headers)
+        .and_return(aggregator_response)
     end
 
     it "successfully fetches custom object" do
@@ -43,7 +45,7 @@ RSpec.describe Integrations::Aggregator::CustomObjectService do
       custom_object = result.custom_object
 
       expect(LagoHttpClient::Client).to have_received(:new).with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
-      expect(lago_client).to have_received(:get)
+      expect(lago_client).to have_received(:post_with_response)
       expect(custom_object.id).to eq("35482707")
       expect(custom_object.object_type_id).to eq("2-35482707")
     end

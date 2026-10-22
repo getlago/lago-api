@@ -28,7 +28,7 @@ RSpec.describe Mutations::IntegrationItems::FetchItems do
   before do
     allow(Integrations::Aggregator::SyncService).to receive(:call).and_return(true)
 
-    stub_request(:get, "https://api.nango.dev/v1/netsuite/items?limit=450")
+    stub_request(:get, "https://api.nango.dev/records?model=Item&limit=450")
       .to_return(status: 200, body: items_response, headers: {})
 
     integration_item

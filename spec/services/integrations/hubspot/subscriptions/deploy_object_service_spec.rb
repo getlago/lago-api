@@ -13,9 +13,7 @@ RSpec.describe Integrations::Hubspot::Subscriptions::DeployObjectService do
 
   describe ".call" do
     let(:http_client) { instance_double(LagoHttpClient::Client) }
-    let(:http_client_get) { instance_double(LagoHttpClient::Client) }
-    let(:endpoint) { "https://api.nango.dev/v1/hubspot/object" }
-    let(:customer_object_endpoint) { "https://api.nango.dev/v1/hubspot/custom-object" }
+    let(:endpoint) { "https://api.nango.dev/action/trigger" }
     let(:response) { instance_double("Response", success?: true) }
 
     let(:get_response) do
@@ -27,11 +25,10 @@ RSpec.describe Integrations::Hubspot::Subscriptions::DeployObjectService do
       allow(LagoHttpClient::Client).to receive(:new)
         .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
         .and_return(http_client)
-      allow(LagoHttpClient::Client).to receive(:new)
-        .with(customer_object_endpoint, retries_on: [OpenSSL::SSL::SSLError])
-        .and_return(http_client_get)
       allow(http_client).to receive(:post_with_response).and_return(response)
-      allow(http_client_get).to receive(:get).and_raise LagoHttpClient::HttpError.new("error", "error", nil)
+      allow(http_client).to receive(:post_with_response)
+        .with(hash_including(action_name: "fetch-custom-object"), anything)
+        .and_raise LagoHttpClient::HttpError.new("error", "error", nil)
       allow(response).to receive(:body).and_return({"objectTypeId" => "123"}.to_json)
 
       integration.subscriptions_properties_version = nil
@@ -41,9 +38,10 @@ RSpec.describe Integrations::Hubspot::Subscriptions::DeployObjectService do
     it "successfully deploys subscription custom object and updates the subscriptions_properties_version" do
       deploy_object_service.call
 
-      expect(LagoHttpClient::Client).to have_received(:new).with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
-      expect(http_client).to have_received(:post_with_response) do |payload, headers|
-        expect(payload[:name]).to eq("LagoSubscriptions")
+      expect(LagoHttpClient::Client).to have_received(:new).with(endpoint, retries_on: [OpenSSL::SSL::SSLError]).twice
+      expect(http_client).to have_received(:post_with_response)
+        .with(hash_including(action_name: "create-object"), anything) do |payload, headers|
+        expect(payload[:input][:name]).to eq("LagoSubscriptions")
         expect(headers["Authorization"]).to include("Bearer")
       end
       expect(integration.reload.subscriptions_properties_version).to eq(described_class::VERSION)
