@@ -19,22 +19,24 @@ module Fees
       fees = []
       result.cached_aggregations = []
 
-      ActiveRecord::Base.transaction(**isolation_mode) do
-        metered_item.pricing_buckets.each do |selected_metered_item|
-          fees << init_fee(selected_metered_item:)
+      with_advance_state_lock do
+        ActiveRecord::Base.transaction(**isolation_mode) do
+          metered_item.pricing_buckets.each do |selected_metered_item|
+            fees << init_fee(selected_metered_item:)
 
-          return result unless result.success?
+            return result unless result.success?
+          end
         end
-      end
 
-      ActiveRecord::Base.transaction do
-        result.fees = persist_fees(fees.compact)
-        result.cached_aggregations.each(&:save!) unless estimate
+        ActiveRecord::Base.transaction do
+          result.fees = persist_fees(fees.compact)
+          result.cached_aggregations.each(&:save!) unless estimate
 
-        if !metered_item.invoiceable? && customer_provider_taxation?
-          Fees::ApplyProviderTaxesToStandaloneFeesService.call!(
-            customer: billing_context.customer, fees: result.fees, currency: metered_item.currency
-          )
+          if !metered_item.invoiceable? && customer_provider_taxation?
+            Fees::ApplyProviderTaxesToStandaloneFeesService.call!(
+              customer: billing_context.customer, fees: result.fees, currency: metered_item.currency
+            )
+          end
         end
       end
 
@@ -203,6 +205,13 @@ module Fees
       return {} if ActiveRecord::Base.connection.transaction_open?
 
       {isolation: :repeatable_read}
+    end
+
+    # An estimate saves no state, and subscription charges are not serialized yet.
+    def with_advance_state_lock(&)
+      return yield if estimate || !metered_item.billing_segment
+
+      Contracts::AdvanceStateLockService.call(contract: metered_item.contract, product: metered_item.invoiceable, &)
     end
   end
 end
