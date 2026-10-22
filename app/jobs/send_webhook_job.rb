@@ -121,7 +121,11 @@ class SendWebhookJob < ApplicationJob
     "wallet_transaction.payment_failure" => Webhooks::PaymentProviders::WalletTransactionPaymentFailureService
   }.freeze
 
-  HIGH_PRIORITY_WEBHOOK_TYPES = %w[alert.triggered].freeze
+  HIGH_PRIORITY_WEBHOOK_TYPES = %w[
+    alert.triggered
+    subscription.usage_threshold_reached
+    wallet.depleted_ongoing_balance
+  ].freeze
 
   def self.queue_for(webhook_type = nil)
     if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_WEBHOOK"])
