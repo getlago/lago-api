@@ -32,6 +32,14 @@ module Contracts
           .sort_by { |usage| usage_order(usage) }
       end
 
+      fees = result.rate_card_usages.flat_map(&:fees)
+      if apply_taxes && customer_provider_taxation?
+        taxes_result = apply_provider_taxes(fees.select(&:taxable?))
+        return result.validation_failure!(errors: {tax_error: [taxes_result.error.message]}) unless taxes_result.success?
+      elsif apply_taxes
+        fees.each { |fee| Fees::ApplyTaxesService.call!(fee:, customer:) }
+      end
+
       result.amount_cents = result.rate_card_usages.sum(&:amount_cents)
       result.taxes_amount_cents = result.rate_card_usages.sum(&:taxes_amount_cents)
       result.total_amount_cents = result.amount_cents + result.taxes_amount_cents
@@ -95,7 +103,7 @@ module Contracts
         contract_rate_card: card,
         billing_segment:,
         rate_phase: card.rate_phases.find { |phase| phase.code == billable_segment.rate_phase_code },
-        fees: taxed(compute_fees(billing_segment))
+        fees: compute_fees(billing_segment)
       )
     end
 
@@ -117,12 +125,34 @@ module Contracts
       end
     end
 
-    def taxed(fees)
-      if apply_taxes
-        fees.each { |fee| Fees::ApplyTaxesService.call!(fee:, customer:) }
+    def customer_provider_taxation?
+      return @customer_provider_taxation if defined?(@customer_provider_taxation)
+
+      @customer_provider_taxation = customer.tax_customer.present?
+    end
+
+    # A customer linked to a tax provider is taxed by the provider alone, never by local taxes.
+    def apply_provider_taxes(taxable_fees)
+      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice: draft_invoice, fees: taxable_fees)
+      return taxes_result unless taxes_result.success?
+
+      taxable_fees.each do |fee|
+        fee_taxes = taxes_result.fees.find { |item| item.item_key == fee.item_key }
+        Fees::ApplyProviderTaxesService.call!(fee:, fee_taxes:)
       end
 
-      fees
+      taxes_result
+    end
+
+    # Never saved: it only carries what the provider prices a draft with.
+    def draft_invoice
+      Invoice.new(
+        organization: contract.organization,
+        billing_entity: contract.applicable_billing_entity,
+        customer:,
+        currency: contract.currency,
+        issuing_date: timestamp.in_time_zone(customer.applicable_timezone).to_date
+      )
     end
 
     def billing_context

@@ -332,6 +332,58 @@ RSpec.describe Contracts::CurrentUsageService do
     end
   end
 
+  context "when the customer is linked to a tax provider" do
+    let(:apply_taxes) { true }
+    let(:integration) { create(:anrok_integration, organization:) }
+    let(:endpoint) { "https://api.nango.dev/v1/anrok/draft_invoices" }
+
+    before do
+      create(:anrok_customer, integration:, customer:)
+      create(:netsuite_collection_mapping, integration:, mapping_type: :fallback_item,
+        settings: {external_id: "1", external_account_code: "11", external_name: ""})
+      create(:rate_card_applied_tax, rate_card:, tax: create(:tax, organization:, rate: 20))
+
+      stub_request(:post, endpoint).to_return do |request|
+        response = JSON.parse(File.read(Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")))
+        provider_fee = response["succeededInvoices"].first["fees"].last
+        provider_fee["item_key"] = JSON.parse(request.body).first["fees"].last["item_key"]
+        provider_fee["amount_cents"] = 200
+        provider_fee["tax_amount_cents"] = 17
+        provider_fee["tax_breakdown"].first["tax_amount"] = 17
+
+        {body: response.to_json}
+      end
+    end
+
+    it "takes the taxes from the provider instead of the local ones" do
+      expect(result.rate_card_usages.sole.fees.sole).to have_attributes(taxes_amount_cents: 17)
+      expect(result).to have_attributes(amount_cents: 200, taxes_amount_cents: 17, total_amount_cents: 217)
+    end
+
+    context "when the provider cannot resolve the taxes" do
+      subject(:result) { described_class.call(contract:, timestamp:, apply_taxes:, filters:) }
+
+      before do
+        stub_request(:post, endpoint)
+          .to_return(body: File.read(Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")))
+      end
+
+      it "returns a tax error instead of usage" do
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq(tax_error: ["taxDateTooFarInFuture: Service failure"])
+      end
+    end
+
+    context "when taxes are skipped" do
+      let(:apply_taxes) { false }
+
+      it "does not call the provider" do
+        expect(result).to have_attributes(amount_cents: 200, taxes_amount_cents: 0, total_amount_cents: 200)
+        expect(WebMock).not_to have_requested(:post, endpoint)
+      end
+    end
+  end
+
   context "with a fixed card" do
     let(:product) { create(:product, :fixed, organization:) }
     let(:units) { 3 }
