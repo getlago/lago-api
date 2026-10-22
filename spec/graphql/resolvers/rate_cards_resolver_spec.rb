@@ -108,6 +108,7 @@ RSpec.describe Resolvers::RateCardsResolver do
       GQL
     end
 
+    let(:required_permission) { %w[rate_cards:view plans:view contracts:view] }
     let(:product_filter) { create(:product_filter, organization:, product:) }
     let!(:filtered_card) { create(:rate_card, organization:, product:, product_filter:, code: "filtered_usd") }
     let(:catalog_plan) { create(:catalog_plan, organization:) }
@@ -197,6 +198,28 @@ RSpec.describe Resolvers::RateCardsResolver do
         price_slice(other_contract)
 
         expect(already_priced.values).to all(be(false))
+      end
+    end
+
+    context "with a planId but without the plans:view permission" do
+      let(:required_permission) { %w[rate_cards:view contracts:view] }
+      let(:variables) { {planId: catalog_plan.id} }
+
+      it "answers nothing" do
+        price_slice(catalog_plan)
+
+        expect(already_priced.values).to all(be_nil)
+      end
+    end
+
+    context "with a contractId but without the contracts:view permission" do
+      let(:required_permission) { %w[rate_cards:view plans:view] }
+      let(:variables) { {contractId: contract.id} }
+
+      it "answers nothing" do
+        price_slice(contract)
+
+        expect(already_priced.values).to all(be_nil)
       end
     end
 

@@ -13607,7 +13607,7 @@ Base rate card
 """
 type RateCard {
   activeRate: RateCardRate
-  alreadyPriced(contractId: ID, planId: ID): Boolean!
+  alreadyPriced(contractId: ID, planId: ID): Boolean
   appliedPricingUnitCode: String
   attachedToPlanOrSubscription: Boolean!
   attachedToSubscriptions: Boolean!
