@@ -40,6 +40,7 @@ RSpec.describe RecurringAggregationSnapshots::AuditService do
       fee_units: 5,
       snapshot_events_count: 2,
       fee_events_count: 2,
+      adjusted: false,
       **attributes
     )
   end
@@ -48,6 +49,7 @@ RSpec.describe RecurringAggregationSnapshots::AuditService do
     expect(result).to be_success
     expect(result.rows).to eq([row])
     expect(result.differences).to be_empty
+    expect(result.adjusted_rows).to be_empty
     expect(result.periods_without_invoice).to be_empty
   end
 
@@ -67,6 +69,76 @@ RSpec.describe RecurringAggregationSnapshots::AuditService do
 
     it "ignores them" do
       expect(result.differences).to be_empty
+    end
+  end
+
+  context "with an adjusted fee" do
+    let(:fee_units) { 8 }
+    let(:adjusted_units) { true }
+
+    before do
+      create(
+        :adjusted_fee,
+        organization:,
+        invoice:,
+        subscription:,
+        charge:,
+        fee: Fee.sole,
+        fee_type: :charge,
+        adjusted_units:,
+        adjusted_amount: false
+      )
+    end
+
+    it "reports the leaf as adjusted, not as a difference" do
+      expect(result.differences).to be_empty
+      expect(result.adjusted_rows).to eq([row(fee_units: 8, adjusted: true)])
+    end
+
+    context "when only its display name was adjusted" do
+      let(:adjusted_units) { false }
+
+      it "reports the difference" do
+        expect(result.differences).to eq([row(fee_units: 8)])
+        expect(result.adjusted_rows).to be_empty
+      end
+    end
+  end
+
+  context "with a non-invoiceable charge" do
+    let(:charge) { create(:standard_charge, plan:, billable_metric:, invoiceable: false, pay_in_advance: true) }
+    let(:fee_invoice) { nil }
+    let(:fee_to_datetime) { to_datetime }
+
+    before do
+      Fee.delete_all
+      create_fee(
+        invoice: fee_invoice,
+        total_aggregated_units: 5,
+        events_count: 2,
+        properties: {"charges_to_datetime" => fee_to_datetime.iso8601(3)}
+      )
+    end
+
+    it "compares the snapshot with the fee of its period, without an invoice" do
+      expect(result.rows).to eq([row])
+      expect(result.differences).to be_empty
+    end
+
+    context "when the fee is attached to another invoice" do
+      let(:fee_invoice) { create(:invoice, organization:, customer:) }
+
+      it "compares the snapshot with it" do
+        expect(result.rows).to eq([row])
+      end
+    end
+
+    context "when the fee belongs to another period" do
+      let(:fee_to_datetime) { to_datetime + 1.month }
+
+      it "ignores it" do
+        expect(result.differences).to eq([row(fee_units: 0, fee_events_count: 0)])
+      end
     end
   end
 

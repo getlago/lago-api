@@ -36,7 +36,7 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:audit" do # rubocop:disa
     before { stub_stdin(organization.id, "y", subscription.id, csv_path) }
 
     it "writes one CSV row per differing leaf" do
-      expect { task.invoke }.to output(/1 leaf\/leaves, 1 differing, 0 period\(s\) without invoice/).to_stdout
+      expect { task.invoke }.to output(/1 leaf\/leaves, 1 differing, 0 adjusted, 0 period\(s\) without invoice/).to_stdout
 
       expect(CSV.read(csv_path)).to eq(
         [
