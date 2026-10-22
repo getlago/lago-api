@@ -90,6 +90,24 @@ RSpec.describe RecurringAggregationSnapshots::AuditService do
     end
   end
 
+  context "with negative units" do
+    let(:snapshot_units) { -3 }
+    let(:fee_units) { 0 }
+
+    it "compares the snapshot units clamped at zero like the fee" do
+      expect(result.rows).to eq([row(snapshot_units: 0, fee_units: 0)])
+    end
+
+    context "with a weighted sum billable metric" do
+      let(:billable_metric) { create(:weighted_sum_billable_metric, organization:, recurring: true) }
+      let(:fee_units) { -3 }
+
+      it "compares the raw units, as the fee keeps them" do
+        expect(result.rows).to eq([row(snapshot_units: -3, fee_units: -3, snapshot_events_count: nil, fee_events_count: nil)])
+      end
+    end
+  end
+
   context "with fees outside the period's billing" do
     before do
       create_fee(total_aggregated_units: 3, pay_in_advance_event_id: SecureRandom.uuid)

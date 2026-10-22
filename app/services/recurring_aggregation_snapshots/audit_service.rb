@@ -116,12 +116,13 @@ module RecurringAggregationSnapshots
       end
     end
 
-    # A sum fee bills its units rounded, a weighted sum fee keeps them raw in total_aggregated_units
+    # A sum fee bills its units rounded and clamped at zero (see Fees::ChargeService#init_fee),
+    # a weighted sum fee keeps them raw in total_aggregated_units
     def billed_units(billable_metric, units)
       if billable_metric.weighted_sum_agg?
         units
       else
-        BillableMetrics::Aggregations::ApplyRoundingService.call!(billable_metric:, units:).units
+        [BillableMetrics::Aggregations::ApplyRoundingService.call!(billable_metric:, units:).units, 0].max
       end
     end
 
