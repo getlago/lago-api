@@ -12,6 +12,8 @@ RSpec.describe V2::BillableMetricSerializer do
       rounding_function: "round",
       rounding_precision: 2,
       expression: "round(event.properties.value)",
+      created_at: Time.zone.parse("2026-01-05T10:00:00Z"),
+      updated_at: Time.zone.parse("2026-01-06T11:30:00Z"),
       deleted_at:
     )
   end
@@ -28,14 +30,15 @@ RSpec.describe V2::BillableMetricSerializer do
       recurring: true,
       rounding_function: "round",
       rounding_precision: 2,
-      created_at: billable_metric.created_at.iso8601,
+      created_at: "2026-01-05T10:00:00Z",
       field_name: "value",
       expression: "round(event.properties.value)",
+      updated_at: "2026-01-06T11:30:00Z",
       deleted_at: nil
     }
   end
 
-  it "renders the scalar fields of V1, without filters nor counters" do
+  it "renders the scalar fields of V1 and updated_at, without filters nor counters" do
     expect(payload).to eq(scalar_payload)
   end
 
