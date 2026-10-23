@@ -281,20 +281,29 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
         end
         let(:vat) { create(:tax, organization:, name: "VAT", code: "vat", rate: 20.0, description: "French VAT") }
         let(:gst) { create(:tax, organization:, name: "GST", code: "gst", rate: 5.0, description: "Canadian GST") }
-        let(:vat_payload) do
+        # The V2 shape of the taxes: without applied_to_organization nor counts, with deleted_at.
+        let(:vat_v2_payload) do
           {
             lago_id: vat.id,
             name: "VAT",
             code: "vat",
             rate: 20.0,
             description: "French VAT",
-            applied_to_organization: false,
-            add_ons_count: 0,
-            customers_count: 0,
-            plans_count: 0,
-            charges_count: 0,
-            commitments_count: 0,
-            created_at: timestamp
+            created_at: timestamp,
+            updated_at: timestamp,
+            deleted_at: nil
+          }
+        end
+        let(:gst_v2_payload) do
+          {
+            lago_id: gst.id,
+            name: "GST",
+            code: "gst",
+            rate: 5.0,
+            description: "Canadian GST",
+            created_at: timestamp,
+            updated_at: timestamp,
+            deleted_at: nil
           }
         end
 
@@ -334,7 +343,7 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               currency: "EUR",
               created_at: timestamp,
               deleted_at: nil,
-              taxes: [vat_payload]
+              taxes: [vat_v2_payload]
             )
           end
 
@@ -356,7 +365,7 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
                 currency: "EUR",
                 created_at: timestamp,
                 deleted_at: timestamp,
-                taxes: [vat_payload]
+                taxes: [vat_v2_payload]
               )
             end
           end
@@ -494,31 +503,6 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               rate_payload(active_rate, code: "current", effective_from: "2023-02-01T00:00:00Z", status: "active"),
               rate_payload(terminated_rate, code: "launch", effective_from: "2023-01-01T00:00:00Z", status: "terminated")
             ]
-          end
-          # The V2 shape of the taxes: without applied_to_organization nor counts, with deleted_at.
-          let(:vat_v2_payload) do
-            {
-              lago_id: vat.id,
-              name: "VAT",
-              code: "vat",
-              rate: 20.0,
-              description: "French VAT",
-              created_at: timestamp,
-              updated_at: timestamp,
-              deleted_at: nil
-            }
-          end
-          let(:gst_v2_payload) do
-            {
-              lago_id: gst.id,
-              name: "GST",
-              code: "gst",
-              rate: 5.0,
-              description: "Canadian GST",
-              created_at: timestamp,
-              updated_at: timestamp,
-              deleted_at: nil
-            }
           end
 
           before do

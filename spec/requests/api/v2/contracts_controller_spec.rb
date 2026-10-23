@@ -294,13 +294,12 @@ RSpec.describe Api::V2::ContractsController do
     context "with expands[]=plan" do
       let(:params) { {expands: %w[plan]} }
 
-      it "embeds the plan as its own show renders it, without its taxes" do
+      it "embeds the plan as its own show renders it" do
         subject
         expanded = json[:contract]
         get_with_token(organization, "/api/v2/plans/#{catalog_plan.code}")
 
-        # The show of a plan still embeds its taxes, which a flat plan leaves out.
-        expect(expanded[:plan]).to eq(json[:plan].except(:taxes))
+        expect(expanded[:plan]).to eq(json[:plan])
         expect(expanded[:plan]).to include(lago_id: catalog_plan.id, deleted_at: nil)
         expect(expanded.keys).to eq([*flat_keys, :plan])
       end
