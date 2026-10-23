@@ -3,14 +3,12 @@
 module Webhooks
   module Invoices
     class PaymentOverdueService < Webhooks::BaseService
+      include Webhooks::Invoices::ProductCatalogPayload
+
       private
 
-      def object_serializer
-        ::V1::InvoiceSerializer.new(
-          object,
-          root_name: "invoice",
-          includes: %i[customer fees applied_taxes]
-        )
+      def v1_includes
+        %i[customer fees applied_taxes]
       end
 
       def webhook_type
