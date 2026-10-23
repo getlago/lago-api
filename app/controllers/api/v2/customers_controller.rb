@@ -15,7 +15,7 @@ module Api
       ].freeze
 
       cursor_paginated_index(Customer)
-      serializable_with ::V2::Customers::DetailsSerializer
+      serializable_with ::V2::CustomerSerializer, serializer_options: {include_shipping_address: true}
 
       def index
         filters = index_filters.to_h.symbolize_keys
@@ -23,13 +23,13 @@ module Api
         billing_entity_codes = filters.delete(:billing_entity_codes)
 
         if billing_entity_codes.present?
-          billing_entities = current_organization.all_billing_entities.where(code: billing_entity_codes)
+          billing_entity_ids = current_organization.all_billing_entities.where(code: billing_entity_codes).ids
 
-          if billing_entities.count != billing_entity_codes.uniq.count
+          if billing_entity_ids.size != billing_entity_codes.uniq.size
             return not_found_error(resource: "billing_entity")
           end
 
-          filters[:billing_entity_ids] = billing_entities.ids
+          filters[:billing_entity_ids] = billing_entity_ids
         end
 
         result = ::CustomersQuery.call(

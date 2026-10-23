@@ -7,7 +7,7 @@ module V2
     expandable :integration_customers, serializer: ::V1::IntegrationCustomerSerializer
 
     def serialize
-      {
+      payload = {
         lago_id: model.id,
         billing_entity_code: model.billing_entity.code,
         external_id: model.external_id,
@@ -41,14 +41,17 @@ module V2
         skip_invoice_custom_sections: model.skip_invoice_custom_sections,
         **billing_fields,
         **x402_payload,
-        deleted_at: format_time(model.deleted_at),
-        **shipping_address_payload
+        deleted_at: format_time(model.deleted_at)
       }
+
+      if options[:include_shipping_address]
+        payload[:shipping_address] = model.shipping_address
+      end
+
+      payload
     end
 
     private
-
-    def shipping_address_payload = {}
 
     def billing_fields
       provider_customer = model.provider_customer

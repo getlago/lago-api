@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe V2::CustomerSerializer do
-  subject(:payload) { described_class.new(customer, includes:).serialize }
+  subject(:payload) { described_class.new(customer, includes:, **serializer_options).serialize }
 
   let(:organization) { build_stubbed(:organization, feature_flags:) }
   let(:feature_flags) { [] }
@@ -11,6 +11,7 @@ RSpec.describe V2::CustomerSerializer do
   let(:customer) do
     build_stubbed(
       :customer,
+      :with_shipping_address,
       organization:,
       billing_entity:,
       external_id: "cus_001",
@@ -47,6 +48,7 @@ RSpec.describe V2::CustomerSerializer do
     )
   end
   let(:includes) { [] }
+  let(:serializer_options) { {} }
   let(:deleted_at) { nil }
   let(:expected_payload) do
     {
@@ -103,6 +105,21 @@ RSpec.describe V2::CustomerSerializer do
     v1_payload = V1::CustomerSerializer.new(customer).serialize.except(*excluded)
 
     expect(payload.slice(*v1_payload.keys)).to eq(v1_payload)
+  end
+
+  context "with the shipping address enabled" do
+    let(:serializer_options) { {include_shipping_address: true} }
+
+    it "includes the shipping address with the customer fields" do
+      expect(payload).to eq(expected_payload.merge(shipping_address: {
+        address_line1: customer.shipping_address_line1,
+        address_line2: customer.shipping_address_line2,
+        city: customer.shipping_city,
+        zipcode: customer.shipping_zipcode,
+        state: customer.shipping_state,
+        country: customer.shipping_country
+      }))
+    end
   end
 
   context "when the organization takes x402 payments", :premium do
