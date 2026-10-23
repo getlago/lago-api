@@ -56,7 +56,7 @@ RSpec.describe V2::InvoiceSerializer do
       "total_offsetted_credit_note_amount_cents" => 0,
       "total_paid_amount_cents" => 80,
       "total_due_amount_cents" => 1_000,
-      "file_url" => nil,
+      "pdf_url" => nil,
       "xml_url" => nil,
       "voided_at" => nil,
       "created_at" => invoice.created_at.iso8601,

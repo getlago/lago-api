@@ -41,7 +41,7 @@ module V2
         total_offsetted_credit_note_amount_cents: model.offset_amount_cents,
         total_paid_amount_cents: model.total_paid_amount_cents,
         total_due_amount_cents: model.total_due_amount_cents,
-        file_url: model.file_url,
+        pdf_url: model.file_url,
         xml_url: model.xml_url,
         voided_at: model.voided_at&.iso8601,
         created_at: model.created_at.iso8601,
