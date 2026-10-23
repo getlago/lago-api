@@ -7,6 +7,8 @@ class ProductFeesQuery < BaseQuery
     :payment_status,
     :external_customer_id,
     :external_contract_id,
+    :product_code,
+    :rate_card_code,
     :currency,
     :event_transaction_id,
     :created_at_from,
@@ -29,6 +31,8 @@ class ProductFeesQuery < BaseQuery
     fees = with_payment_status(fees) if filters.payment_status.present?
     fees = with_external_customer(fees) if filters.external_customer_id.present?
     fees = with_external_contract(fees) if filters.external_contract_id.present?
+    fees = with_product_code(fees) if filters.product_code.present?
+    fees = with_rate_card_code(fees) if filters.rate_card_code.present?
     fees = with_currency(fees) if filters.currency.present?
     fees = fees.where(pay_in_advance_event_transaction_id: filters.event_transaction_id) if filters.event_transaction_id.present?
 
@@ -75,6 +79,20 @@ class ProductFeesQuery < BaseQuery
 
   def with_external_contract(scope)
     scope.where(contract_id: organization.contracts.where(external_id: filters.external_contract_id).select(:id))
+  end
+
+  # Discarded records keep their code, so fees billed before a product or rate card was deleted stay findable.
+  def with_product_code(scope)
+    products = Product.with_discarded.where(organization:, code: filters.product_code)
+
+    scope.where(invoiceable_type: "Product", invoiceable_id: products.select(:id))
+  end
+
+  # Through the rate rather than the contract rate card, which product fees billed before contracts do not have.
+  def with_rate_card_code(scope)
+    rate_cards = RateCard.with_discarded.where(organization:, code: filters.rate_card_code)
+
+    scope.where(rate_card_rate_id: RateCardRate.with_discarded.where(rate_card_id: rate_cards.select(:id)).select(:id))
   end
 
   def invalid_filter!(field)
