@@ -13,7 +13,7 @@ module BillableMetrics
       def compute_aggregation(*)
         return empty_result if should_bypass_aggregation?
 
-        weighted_result = event_store.weighted_sum(initial_value:)
+        weighted_result = event_store.weighted_sum(initial_value: period_initial_value)
 
         result.aggregation = weighted_result.value.ceil(20)
         result.count = weighted_result.events_count
@@ -105,7 +105,7 @@ module BillableMetrics
         end
       end
 
-      def initial_value
+      def period_initial_value
         return 0 unless billable_metric.recurring?
 
         latest_value
@@ -113,6 +113,10 @@ module BillableMetrics
 
       def latest_value
         return @latest_value if defined?(@latest_value)
+
+        if latest_snapshots
+          return @latest_value = latest_snapshots.sum(BigDecimal(0), &:units)
+        end
 
         if latest_cached_aggregation
           return @latest_value = latest_cached_aggregation.current_aggregation
@@ -128,6 +132,10 @@ module BillableMetrics
       def latest_breakdowns
         return @latest_breakdowns if defined?(@latest_breakdowns)
 
+        if latest_snapshots
+          return @latest_breakdowns = latest_snapshots.flat_map(&:presentation_breakdowns)
+        end
+
         if latest_cached_aggregation
           return @latest_breakdowns = latest_cached_aggregation.presentation_breakdowns
         end
@@ -137,6 +145,14 @@ module BillableMetrics
         end
 
         @latest_breakdowns = []
+      end
+
+      # A snapshot closing an older period misses the events of the periods in between.
+      # Without snapshots, the period still tells that the bucket had no active units.
+      def latest_snapshots
+        return @latest_snapshots if defined?(@latest_snapshots)
+
+        @latest_snapshots = initial_value if initial_period && initial_period.to_datetime >= from_datetime - 1.second
       end
 
       def latest_cached_aggregation
@@ -178,6 +194,10 @@ module BillableMetrics
       def grouped_latest_values
         return @grouped_latest_values if defined?(@grouped_latest_values)
 
+        if latest_snapshots
+          return @grouped_latest_values = latest_snapshots.map { {groups: it.grouped_by, value: it.units} }
+        end
+
         if grouped_latest_cached_aggregations.any?
           return @grouped_latest_values = grouped_latest_cached_aggregations.map do |cached_aggregation|
             {
@@ -197,13 +217,15 @@ module BillableMetrics
       def grouped_latest_breakdowns
         return @grouped_latest_breakdowns if defined?(@grouped_latest_breakdowns)
 
+        if latest_snapshots
+          return @grouped_latest_breakdowns = latest_snapshots.flat_map do
+            with_grouped_by_keys(it.grouped_by, it.presentation_breakdowns)
+          end
+        end
+
         if grouped_latest_cached_aggregations.any?
-          # Fees::ChargeService stores the breakdowns without the grouped_by keys of their group
-          return @grouped_latest_breakdowns = grouped_latest_cached_aggregations.flat_map do |cached_aggregation|
-            cached_aggregation.presentation_breakdowns.map do |breakdown|
-              breakdown = breakdown.with_indifferent_access
-              {groups: cached_aggregation.grouped_by.merge(breakdown[:groups]), value: breakdown[:value]}
-            end
+          return @grouped_latest_breakdowns = grouped_latest_cached_aggregations.flat_map do
+            with_grouped_by_keys(it.grouped_by, it.presentation_breakdowns)
           end
         end
 
@@ -212,6 +234,14 @@ module BillableMetrics
         end
 
         @grouped_latest_breakdowns = []
+      end
+
+      # Fees::ChargeService stores the breakdowns without the grouped_by keys of their group
+      def with_grouped_by_keys(grouped_by, breakdowns)
+        breakdowns.map do |breakdown|
+          breakdown = breakdown.with_indifferent_access
+          {groups: grouped_by.merge(breakdown[:groups]), value: breakdown[:value]}
+        end
       end
 
       def grouped_latest_cached_aggregations
