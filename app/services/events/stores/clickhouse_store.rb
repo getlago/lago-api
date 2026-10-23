@@ -542,11 +542,12 @@ module Events
         end
       end
 
-      def recurring_sum(watermark:)
+      def recurring_sum(watermark:, period: nil)
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          ctes_sql = events_cte_queries(
+          ctes_sql = recurring_events_cte_queries(
+            period,
             select: [arel_table[:decimal_value].as("property"), arel_table[:enriched_at]],
-            deduplicated_columns: %w[decimal_value enriched_at]
+            deduplicated_columns: %w[decimal_value]
           )
 
           sql = with_ctes(ctes_sql, <<-SQL)
@@ -558,13 +559,14 @@ module Events
         end
       end
 
-      def grouped_recurring_sum(watermark:)
+      def grouped_recurring_sum(watermark:, period: nil)
         groups, column_names = grouped_arel_columns
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          ctes_sql = events_cte_queries(
+          ctes_sql = recurring_events_cte_queries(
+            period,
             select: groups + [arel_table[:decimal_value].as("property"), arel_table[:enriched_at]],
-            deduplicated_columns: %w[decimal_value properties enriched_at]
+            deduplicated_columns: %w[decimal_value properties]
           )
 
           sql = with_ctes(ctes_sql, <<-SQL)
@@ -768,6 +770,32 @@ module Events
             [timestamp, difference, cumul, second_duration.to_i, period_ratio]
           end
         end
+      end
+
+      def recurring_events_cte_queries(period, select:, deduplicated_columns:)
+        return events_cte_queries(select:, deduplicated_columns: deduplicated_columns + %w[enriched_at]) if period.nil?
+
+        query = arel_table
+        query = apply_arel_grouped_by_values(query) if grouped_by_values?
+        query = arel_filters_scope(query)
+
+        {
+          "events_enriched" => snapshot_delta_events_sql(period, deduplicated_columns:),
+          "events" => query.project(select).to_sql
+        }
+      end
+
+      # The events dated after the period and the late ones are read in two branches rather than
+      # one OR, so that the first is pruned by the primary key and the second by the enriched_at index.
+      # The branches cannot share a deduplication key, as the timestamp is part of it.
+      def snapshot_delta_events_sql(period, deduplicated_columns:)
+        columns = (DEDUP_KEY_COLUMNS + deduplicated_columns + %w[properties enriched_at]).uniq.join(", ")
+        where_sql = deduplicated_events_where_sql(from_datetime: nil, to_datetime: applicable_to_datetime)
+
+        [
+          sql_condition("timestamp > ?", period.to_datetime),
+          sql_condition("timestamp <= ? AND enriched_at > ?", period.to_datetime, period.watermark)
+        ].map { "SELECT #{columns} FROM events_enriched FINAL WHERE #{where_sql} AND #{it}" }.join(" UNION ALL ")
       end
 
       def recurring_sum_sql(watermark)

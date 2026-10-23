@@ -189,13 +189,15 @@ module Events
         raise NotImplementedError
       end
 
-      # NOTE: sum of a recurring metric over its full history. `watermark` bounds the snapshot_value
-      #       of the snapshot to persist for this period.
-      def recurring_sum(watermark:)
+      # NOTE: sum of a recurring metric. Without a period, it covers the full history. With the period
+      #       of the latest snapshots, it only covers what they did not count: the events dated after
+      #       it, and the late events dated before it but ingested after its watermark.
+      #       `watermark` bounds the snapshot_value of the snapshot to persist for this period.
+      def recurring_sum(watermark:, period: nil)
         raise NotImplementedError
       end
 
-      def grouped_recurring_sum(watermark:)
+      def grouped_recurring_sum(watermark:, period: nil)
         raise NotImplementedError
       end
 

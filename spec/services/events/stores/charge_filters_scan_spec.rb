@@ -390,6 +390,22 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
       expect(Events::Stores::Utils::ClickhouseConnection).to have_received(:connection_with_retry).once
     end
 
+    context "with the period of the latest snapshots" do
+      let(:period) do
+        RecurringAggregationSnapshots::FetchService::Period.new(
+          to_datetime: boundaries[:from_datetime] + 2.hours,
+          watermark: Time.current - 1.minute
+        )
+      end
+
+      it "leaves the delta to the filter stores" do
+        pricing_buckets.each do |item|
+          expect(recurring(scanned_store(item)).recurring_sum(watermark:, period:))
+            .to eq(recurring(filter_store(item)).recurring_sum(watermark:, period:))
+        end
+      end
+    end
+
     context "with a count charge" do
       let(:billable_metric) { create(:billable_metric, organization:) }
 
