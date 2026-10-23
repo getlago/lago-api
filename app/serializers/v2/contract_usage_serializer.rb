@@ -12,7 +12,7 @@ module V2
         amount_cents: model.amount_cents,
         taxes_amount_cents: model.taxes_amount_cents,
         total_amount_cents: model.total_amount_cents,
-        rate_cards: model.rate_card_usages.map { |usage| ::V2::RateCardUsageSerializer.new(usage).serialize }
+        rate_cards: model.rate_card_usages.map { |usage| ::V2::RateCardUsageSerializer.new(usage, nested_options).serialize }
       }
     end
   end

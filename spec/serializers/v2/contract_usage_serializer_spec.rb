@@ -55,5 +55,14 @@ RSpec.describe V2::ContractUsageSerializer do
         )
       )
     end
+
+    context "with the usec_timestamps include of a v2 render" do
+      subject(:payload) { described_class.new(usage, includes: %i[usec_timestamps]).serialize }
+
+      it "renders each card's window to the microsecond too" do
+        expect(payload[:rate_cards]).to eq([V2::RateCardUsageSerializer.new(rate_card_usage, includes: %i[usec_timestamps]).serialize])
+        expect(payload[:rate_cards].sole.values_at(:from_datetime, :to_datetime)).to all(match(/\.\d{6}Z\z/))
+      end
+    end
   end
 end
