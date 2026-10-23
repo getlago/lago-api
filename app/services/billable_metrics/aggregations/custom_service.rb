@@ -99,7 +99,7 @@ module BillableMetrics
           .where(external_subscription_id: billing_context.external_id)
           .where(metered_item.cached_aggregation_identity)
           .where("cached_aggregations.timestamp < ?", truncated_datetime)
-          .where(grouped_by: grouped_by_values.presence || {})
+          .where(grouped_by: cached_grouped_by_keys(grouped_by_values))
           .order(timestamp: :desc, created_at: :desc)
 
         query = query.where(charge_filter_id: charge_filter.id) if charge_filter

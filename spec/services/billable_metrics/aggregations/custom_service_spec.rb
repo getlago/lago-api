@@ -35,6 +35,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService do
   end
   let(:bypass_aggregation) { false }
   let(:grouped_by) { nil }
+  let(:grouped_by_values) { nil }
   let(:matching_filters) { nil }
   let(:ignored_filters) { nil }
   let(:event) { nil }
@@ -132,7 +133,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService do
       )
     ]
   end
-  let(:filters) { {grouped_by:, matching_filters:, ignored_filters:, event:} }
+  let(:filters) { {grouped_by:, grouped_by_values:, matching_filters:, ignored_filters:, event:} }
 
   let_it_be(:organization) { create_default(:organization) }
 
@@ -244,6 +245,43 @@ RSpec.describe BillableMetrics::Aggregations::CustomService do
         expect(result.current_amount).to eq(0.5)
       end
     end
+
+    context "with a group value cached as blank" do
+      let(:grouped_by_values) { {"region" => nil} }
+      let(:cached_group_value) { "" }
+
+      before do
+        create(
+          :cached_aggregation,
+          organization:,
+          charge:,
+          external_subscription_id: subscription.external_id,
+          timestamp: Time.zone.now - 4.days,
+          current_aggregation: 11.0,
+          max_aggregation: 11.0,
+          current_amount: 0.1,
+          grouped_by: {"region" => cached_group_value}
+        )
+      end
+
+      it "aggregates the events with the cached aggregation" do
+        result = custom_service.aggregate
+
+        expect(result.current_aggregation).to eq(22.0)
+        expect(result.current_amount).to eq(0.5)
+      end
+
+      context "when the cached group value is another value" do
+        let(:cached_group_value) { "eu" }
+
+        it "ignores the cached aggregation" do
+          result = custom_service.aggregate
+
+          expect(result.current_aggregation).to eq(11.0)
+          expect(result.current_amount).to eq(0.1)
+        end
+      end
+    end
   end
 
   context "when the charge is a standard with grouped by properties" do
@@ -341,6 +379,30 @@ RSpec.describe BillableMetrics::Aggregations::CustomService do
         expect(result.aggregation).to eq(57)
         expect(result.count).to eq(3)
         expect(result.options).to eq({})
+        expect(result.custom_aggregation).to eq({total_units: 57.0, amount: 11.5})
+      end
+    end
+
+    context "with a group value cached as blank in a previous period" do
+      let(:grouped_by_values) { {"region" => nil} }
+
+      before do
+        create(
+          :cached_aggregation,
+          organization:,
+          charge:,
+          external_subscription_id: subscription.external_id,
+          timestamp: from_datetime - 1.day,
+          current_aggregation: 11.0,
+          max_aggregation: 11.0,
+          current_amount: 0.1,
+          grouped_by: {"region" => ""}
+        )
+      end
+
+      it "aggregates the events with the cached aggregation" do
+        result = custom_service.aggregate
+
         expect(result.custom_aggregation).to eq({total_units: 57.0, amount: 11.5})
       end
     end
