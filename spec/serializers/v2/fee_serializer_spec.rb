@@ -106,7 +106,6 @@ RSpec.describe V2::FeeSerializer do
       "precise_unit_amount_cents" => "1050.0",
       "amount_cents" => 126,
       "precise_amount_cents" => "126.0",
-      "precise_coupons_amount_cents" => "6.0",
       "sub_total_excluding_taxes_amount_cents" => 120,
       "sub_total_excluding_taxes_precise_amount_cents" => "120.0",
       "taxes_amount_cents" => 24,
