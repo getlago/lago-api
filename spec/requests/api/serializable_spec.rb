@@ -11,6 +11,7 @@ RSpec.describe Api::Serializable do
   let(:product_category) { create(:product_category, organization:) }
   let(:product) { create(:product, organization:, product_category:) }
   let(:expands) { nil }
+  let(:serializer_options) { {} }
   let(:product_category_payload) { ::V2::ProductCategorySerializer.new(product_category).serialize }
 
   # Two expansions, so that their order and a repeated key can be told apart.
@@ -45,11 +46,12 @@ RSpec.describe Api::Serializable do
 
   before do
     serializer = self.serializer
+    serializer_options = self.serializer_options
 
     stub_const("Api::V2::SerializableTestsController", Class.new(Api::V2::BaseController) do
       cursor_paginated_index(Product)
       # An anonymous class has no controller name to take the root from.
-      serializable_with(serializer, root: :product, expand_on: %i[show update])
+      serializable_with(serializer, root: :product, expand_on: %i[show update], serializer_options:)
 
       # A lookup of the controller's own, like those of the v2 controllers.
       before_action(only: %i[show update]) { not_found_error(resource: "product") unless product }
@@ -132,6 +134,35 @@ RSpec.describe Api::Serializable do
 
     expect(response).to have_http_status(:success)
     expect(json).to eq(product: {code: product.code})
+  end
+
+  context "with serializer options" do
+    let(:serializer_options) { {include_name: true} }
+    let(:serializer) do
+      Class.new(ModelSerializer) do
+        def serialize
+          payload = {code: model.code}
+          payload[:name] = model.name if options[:include_name]
+          payload
+        end
+      end
+    end
+
+    it "passes the options when rendering a record" do
+      show
+
+      expect(response).to have_http_status(:success)
+      expect(json).to eq(product: {code: product.code, name: product.name})
+    end
+
+    it "passes the options when rendering a collection" do
+      product
+
+      get_with_token(organization, "/api/v2/serializable_tests")
+
+      expect(response).to have_http_status(:success)
+      expect(json).to eq(products: [{code: product.code, name: product.name}], meta: {next_cursor: nil, prev_cursor: nil})
+    end
   end
 
   context "with an expansion" do
