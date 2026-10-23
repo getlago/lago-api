@@ -2,8 +2,12 @@
 
 module V2
   class CustomerSerializer < ModelSerializer
+    expandable :metadata, serializer: ::V2::Customers::MetadataSerializer
+    expandable :taxes, serializer: ::V2::TaxSerializer
+    expandable :integration_customers, serializer: ::V1::IntegrationCustomerSerializer
+
     def serialize
-      payload = {
+      {
         lago_id: model.id,
         billing_entity_code: model.billing_entity.code,
         external_id: model.external_id,
@@ -37,17 +41,14 @@ module V2
         skip_invoice_custom_sections: model.skip_invoice_custom_sections,
         **billing_fields,
         **x402_payload,
-        deleted_at: model.deleted_at&.iso8601
+        deleted_at: model.deleted_at&.iso8601,
+        **shipping_address_payload
       }
-
-      payload[:shipping_address] = model.shipping_address if include?(:shipping_address)
-      payload[:metadata] = collection(model.metadata.order(:created_at, :id), V2::Customers::MetadataSerializer) if include?(:metadata)
-      payload[:taxes] = collection(model.taxes.order(:created_at, :id), V2::TaxSerializer, includes: [:deleted_at]) if include?(:taxes)
-      payload[:integration_customers] = collection(model.integration_customers.order(:created_at, :id), V1::IntegrationCustomerSerializer) if include?(:integration_customers)
-      payload
     end
 
     private
+
+    def shipping_address_payload = {}
 
     def billing_fields
       provider_customer = model.provider_customer
@@ -63,9 +64,11 @@ module V2
       }
     end
 
-    def collection(records, serializer, **options)
-      CollectionSerializer.new(records, serializer, collection_name: :records, **options).serialize[:records]
-    end
+    def metadata = model.metadata.order(:created_at, :id)
+
+    def taxes = model.taxes.order(:created_at, :id)
+
+    def integration_customers = model.integration_customers.preload(:integration).order(:created_at, :id)
 
     # As V1, only for an organization that takes x402 payments.
     def x402_payload
