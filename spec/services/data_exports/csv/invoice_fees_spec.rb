@@ -59,6 +59,14 @@ RSpec.describe DataExports::Csv::InvoiceFees do
     end
   end
 
+  describe "collection" do
+    it "preloads the organization used to build document urls" do
+      invoices = described_class.new(data_export_part:).send(:collection)
+
+      expect(invoices.map { |invoice| invoice.association(:organization).loaded? }).to all(be(true))
+    end
+  end
+
   describe "#call" do
     subject(:result) do
       described_class.new(data_export_part:, invoice_serializer_klass:, fee_serializer_klass:).call

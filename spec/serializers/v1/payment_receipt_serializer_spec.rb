@@ -17,7 +17,9 @@ RSpec.describe ::V1::PaymentReceiptSerializer do
       "number" => payment_receipt.number,
       "created_at" => payment_receipt.created_at.iso8601,
       "file_url" => payment_receipt.file_url,
-      "xml_url" => payment_receipt.xml_url
+      "file_url_expires_at" => nil,
+      "xml_url" => payment_receipt.xml_url,
+      "xml_url_expires_at" => nil
     )
 
     expect(result["payment_receipt"]["payment"]).to include(
@@ -44,5 +46,20 @@ RSpec.describe ::V1::PaymentReceiptSerializer do
     queries = capture_sql { described_class.new(receipt, root_name: "payment_receipt").serialize }
 
     expect(queries.grep(/FROM "organizations"/)).to be_empty
+  end
+
+  context "with attached documents" do
+    before do
+      payment_receipt.file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.pdf")), filename: "receipt.pdf")
+      payment_receipt.xml_file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.xml")), filename: "receipt.xml")
+    end
+
+    it "serializes expiring urls with their expiry" do
+      result = JSON.parse(serializer.to_json)["payment_receipt"]
+      expires_at = payment_receipt.document_url_expires_at.iso8601
+
+      expect(result["file_url"]).to include("/documents/")
+      expect(result).to include("file_url_expires_at" => expires_at, "xml_url_expires_at" => expires_at)
+    end
   end
 end

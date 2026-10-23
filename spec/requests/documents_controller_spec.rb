@@ -47,6 +47,30 @@ RSpec.describe DocumentsController do
 
       expect(response).to be_not_found_error("resource")
     end
+
+    it "returns not found for a link signed for another purpose" do
+      get "/documents/#{invoice.file.blob.signed_id}/invoice.pdf"
+
+      expect(response).to be_not_found_error("resource")
+    end
+
+    it "returns not found for an expired link whose file is gone" do
+      path = document_path_for(invoice.file_url)
+      invoice.file.purge
+
+      travel_to(1.year.from_now) { get path, headers: {"Accept" => "application/json"} }
+
+      expect(response).to be_not_found_error("resource")
+    end
+
+    it "returns not found for a valid link whose file is gone" do
+      path = document_path_for(invoice.file_url)
+      invoice.file.purge
+
+      get path
+
+      expect(response).to be_not_found_error("resource")
+    end
   end
 
   describe "legacy Active Storage links" do
@@ -59,7 +83,12 @@ RSpec.describe DocumentsController do
     end
 
     context "when the cutoff has passed" do
-      before { stub_const("ENV", ENV.to_h.merge("LAGO_LEGACY_DOCUMENT_URLS_EXPIRE_AT" => "2026-01-01")) }
+      around do |test|
+        Rails.application.config.x.legacy_document_urls_expire_at = Time.zone.parse("2026-01-01")
+        test.run
+      ensure
+        Rails.application.config.x.legacy_document_urls_expire_at = nil
+      end
 
       it "refuses document blobs" do
         get legacy_path, headers: {"Accept" => "application/json"}
@@ -80,6 +109,29 @@ RSpec.describe DocumentsController do
 
         expect(response).to have_http_status(:redirect)
       end
+    end
+  end
+
+  describe "legacy cutoff configuration" do
+    def load_initializer(value)
+      stub_const("ENV", ENV.to_h.merge("LAGO_LEGACY_DOCUMENT_URLS_EXPIRE_AT" => value))
+      load Rails.root.join("config/initializers/legacy_document_urls.rb")
+    ensure
+      Rails.application.config.x.legacy_document_urls_expire_at = nil
+    end
+
+    it "fails at boot on a malformed date" do
+      expect { load_initializer("2026-13-01") }.to raise_error(ArgumentError, /LAGO_LEGACY_DOCUMENT_URLS_EXPIRE_AT/)
+      expect { load_initializer("not a date") }.to raise_error(ArgumentError, /LAGO_LEGACY_DOCUMENT_URLS_EXPIRE_AT/)
+    end
+
+    it "parses a valid date" do
+      stub_const("ENV", ENV.to_h.merge("LAGO_LEGACY_DOCUMENT_URLS_EXPIRE_AT" => "2027-01-01"))
+      load Rails.root.join("config/initializers/legacy_document_urls.rb")
+
+      expect(Rails.application.config.x.legacy_document_urls_expire_at).to eq(Time.utc(2027, 1, 1))
+    ensure
+      Rails.application.config.x.legacy_document_urls_expire_at = nil
     end
   end
 end
