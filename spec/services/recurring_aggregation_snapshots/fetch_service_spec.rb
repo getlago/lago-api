@@ -16,6 +16,10 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
   let(:previous_to_datetime) { Time.zone.parse("2026-09-30T23:59:59") }
   let(:watermark) { Time.zone.parse("2026-10-01T00:05:00") }
 
+  def create_filter(**attributes)
+    create(:charge_filter, charge:, created_at: watermark - 1.month, **attributes)
+  end
+
   def create_snapshot(**attributes)
     create(:recurring_aggregation_snapshot, organization:, subscription:, charge:, watermark:, **attributes)
   end
@@ -69,12 +73,12 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
     end
 
     context "with a charge filter" do
-      let(:charge_filter) { create(:charge_filter, charge:, created_at: watermark - 1.month) }
+      let(:charge_filter) { create_filter }
 
       before do
         create_snapshot(to_datetime: previous_to_datetime, units: 10)
         create_snapshot(to_datetime: previous_to_datetime, charge_filter:, units: 4)
-        create_snapshot(to_datetime: previous_to_datetime, charge_filter: create(:charge_filter, charge:), units: 6)
+        create_snapshot(to_datetime: previous_to_datetime, charge_filter: create_filter, units: 6)
       end
 
       it "returns the snapshot of the charge filter" do
@@ -93,13 +97,51 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
       end
 
       context "when created after the latest period" do
-        let(:charge_filter) { create(:charge_filter, charge:, created_at: watermark + 1.minute) }
+        let(:charge_filter) { create_filter(created_at: watermark + 1.minute) }
 
         it "returns no snapshot, as the snapshots of the period did not compute it" do
           result = fetch_service.call
 
           expect(result.snapshots).to be_nil
           expect(result.period).to be_nil
+        end
+      end
+
+      context "when another filter of the charge was created after the latest period" do
+        before { create_filter(created_at: watermark + 1.minute) }
+
+        it "returns no snapshot, as the new filter can take events counted in this one" do
+          result = fetch_service.call
+
+          expect(result.snapshots).to be_nil
+          expect(result.period).to be_nil
+        end
+      end
+
+      context "when another filter of the charge was removed after the latest period" do
+        before { create_filter(deleted_at: watermark + 1.minute) }
+
+        it "returns no snapshot, as this filter can now match events counted in the removed one" do
+          result = fetch_service.call
+
+          expect(result.snapshots).to be_nil
+          expect(result.period).to be_nil
+        end
+      end
+
+      context "when another filter of the charge was removed before the latest period" do
+        before { create_filter(deleted_at: watermark - 1.minute) }
+
+        it "returns the snapshot of the charge filter" do
+          expect(fetch_service.call.snapshots.map(&:units)).to eq([4])
+        end
+      end
+
+      context "when a filter of another charge was created after the latest period" do
+        before { create(:charge_filter, created_at: watermark + 1.minute) }
+
+        it "returns the snapshot of the charge filter" do
+          expect(fetch_service.call.snapshots.map(&:units)).to eq([4])
         end
       end
 
@@ -127,11 +169,30 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
 
       before do
         create_snapshot(to_datetime: previous_to_datetime, units: 10)
-        create_snapshot(to_datetime: previous_to_datetime, charge_filter: create(:charge_filter, charge:), units: 4)
+        create_snapshot(to_datetime: previous_to_datetime, charge_filter: create_filter, units: 4)
       end
 
       it "returns the snapshot without charge filter" do
         expect(fetch_service.call.snapshots.map(&:units)).to eq([10])
+      end
+
+      context "when a filter was created after the latest period" do
+        before { create_filter(created_at: watermark + 1.minute) }
+
+        it "returns no snapshot, as the new filter takes events counted in the default bucket" do
+          result = fetch_service.call
+
+          expect(result.snapshots).to be_nil
+          expect(result.period).to be_nil
+        end
+      end
+
+      context "when a filter was removed after the latest period" do
+        before { create_filter(deleted_at: watermark + 1.minute) }
+
+        it "returns no snapshot, as the default bucket now matches events counted in the removed filter" do
+          expect(fetch_service.call.snapshots).to be_nil
+        end
       end
     end
 

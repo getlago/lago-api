@@ -26,7 +26,7 @@ module RecurringAggregationSnapshots
     # units or events, and that period. Both are nil when the aggregation must fall back to a full scan.
     def call
       marker = latest_marker
-      return result unless marker && same_grouped_by_keys?(marker) && !filter_created_since?(marker)
+      return result unless marker && same_grouped_by_keys?(marker) && !filters_changed_since?(marker)
 
       records = period_records(marker).to_a
       return result unless records.all? { same_grouped_by_keys?(it) }
@@ -62,9 +62,13 @@ module RecurringAggregationSnapshots
       charge_snapshots.where(charge_filter_id: charge_filter&.id, to_datetime: marker.to_datetime, watermark: marker.watermark)
     end
 
-    # The marker cannot vouch for a filter it never computed, as the filter can match older events
-    def filter_created_since?(marker)
-      charge_filter&.created_at.present? && charge_filter.created_at > marker.watermark
+    # A filter created or removed since the marker moves older events between buckets, so the
+    # snapshots of every bucket of the charge are stale, not only the one of that filter
+    def filters_changed_since?(marker)
+      ChargeFilter.with_discarded.unscope(:order)
+        .where(organization_id: subscription.organization_id, charge_id: charge.id)
+        .where("created_at > :watermark OR deleted_at > :watermark", watermark: marker.watermark)
+        .exists?
     end
 
     # Snapshots grouped on other keys cannot be regrouped, only a full scan can
