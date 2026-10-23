@@ -22,6 +22,15 @@ class PaymentTerm < Data.define(:term_type, :days, :day_of_month, :month_offset)
     )
   end
 
+  # Backward compatibility for the legacy net_payment_term_field
+  def self.from_net_payment_term(days)
+    if days.nil?
+      nil
+    else
+      new(term_type: "net", days:)
+    end
+  end
+
   def initialize(term_type:, days: nil, day_of_month: nil, month_offset: nil)
     # Data freezes the object, not its members: copy so the caller's string cannot change the term
     term_type = term_type.to_s.dup.freeze
