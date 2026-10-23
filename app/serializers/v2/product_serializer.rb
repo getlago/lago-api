@@ -16,9 +16,9 @@ module V2
         description: model.description,
         invoice_display_name: model.invoice_display_name,
         product_type: model.product_type,
-        created_at: model.created_at.iso8601,
-        updated_at: model.updated_at.iso8601,
-        deleted_at: model.deleted_at&.iso8601
+        created_at: format_time(model.created_at),
+        updated_at: format_time(model.updated_at),
+        deleted_at: format_time(model.deleted_at)
       }
     end
   end

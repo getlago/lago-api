@@ -167,7 +167,7 @@ RSpec.describe Api::V2::Products::FiltersController do
       expect(response).to have_http_status(:success)
       expect(json[:filter][:lago_id]).to eq(filter.id)
       expect(json[:filter][:values].count).to eq(1)
-      expect(json[:filter]).to include(deleted_at: nil)
+      expect(json[:filter]).to include(created_at: filter.created_at.iso8601(6), updated_at: filter.updated_at.iso8601(6), deleted_at: nil)
     end
   end
 
@@ -263,7 +263,7 @@ RSpec.describe Api::V2::Products::FiltersController do
       expect(json[:filter][:lago_id]).to eq(filter.id)
       expect(json[:filter][:values]).to eq([])
       expect(filter.reload).to be_discarded
-      expect(json[:filter][:deleted_at]).to eq(filter.deleted_at.iso8601)
+      expect(json[:filter][:deleted_at]).to eq(filter.deleted_at.iso8601(6))
     end
 
     context "when the item is attached to a plan" do
