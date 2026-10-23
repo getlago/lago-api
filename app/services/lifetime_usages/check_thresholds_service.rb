@@ -16,7 +16,7 @@ module LifetimeUsages
       passed_thresholds = LifetimeUsages::UsageThresholds::CheckService.call!(lifetime_usage:, progressive_billed_amount:).passed_thresholds
 
       if passed_thresholds.any?
-        invoice_result = Invoices::ProgressiveBillingService.call(sorted_usage_thresholds: passed_thresholds, lifetime_usage:)
+        invoice_result = Invoices::ProgressiveBilling::UsageThresholdService.call(sorted_usage_thresholds: passed_thresholds, lifetime_usage:)
         # If there is tax error, invoice is marked as failed and it can be retried manually
         invoice_result.raise_if_error! unless tax_error?(invoice_result)
         result.invoice = invoice_result.invoice
