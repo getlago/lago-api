@@ -111,9 +111,10 @@ RSpec.describe Mutations::WalletTransactions::Create do
     context "when granting credits" do
       let(:input) { {walletId: wallet.id, grantedCredits: "15.00"} }
 
-      it "returns a forbidden error" do
+      it "returns a forbidden error requiring wallets:update" do
         expect { result }.not_to change(organization.wallet_transactions, :count)
         expect_forbidden_error(result)
+        expect(result["errors"].first["extensions"]["required_permissions"]).to eq(["wallets:update"])
       end
     end
 
