@@ -199,6 +199,18 @@ describe X402::SignInWithX::VerifyService do
     it { expect(result.error.messages).to eq(siwx: ["value_is_invalid"]) }
   end
 
+  context "with an issuedAt offset of 60 minutes" do
+    let(:payload) { signed_siwx(key, issuedAt: (Time.current.utc + 1.hour).strftime("%Y-%m-%dT%H:%M:%S+00:60")) }
+
+    it { expect(result.error.messages).to eq(siwx: ["value_is_invalid"]) }
+  end
+
+  context "with an issuedAt offset of 23 hours 59 minutes" do
+    let(:payload) { signed_siwx(key, issuedAt: (Time.current.utc + 23.hours + 59.minutes).strftime("%Y-%m-%dT%H:%M:%S+23:59")) }
+
+    it { expect(result).to be_success }
+  end
+
   context "with a space instead of T in issuedAt" do
     let(:payload) { signed_siwx(key, issuedAt: Time.current.utc.strftime("%Y-%m-%d %H:%M:%SZ")) }
 

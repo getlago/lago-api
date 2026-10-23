@@ -17,7 +17,7 @@ module X402
       REQUIRED_FIELDS = %w[domain address uri version chainId type nonce issuedAt signature].freeze
       OPTIONAL_FIELDS = %w[statement expirationTime notBefore requestId signatureScheme].freeze
       TIMESTAMP_FIELDS = %w[issuedAt expirationTime notBefore].freeze
-      TIMESTAMP_FORMAT = /\A(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\z/
+      TIMESTAMP_FORMAT = /\A(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)\z/
       SIGNATURE_TYPES = {"eip155" => "eip191", "solana" => "ed25519"}.freeze
       EVM_SIGNATURE = /\A0x\h{130}\z/
       SVM_SIGNATURE_MAX_LENGTH = 88
