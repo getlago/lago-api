@@ -33,6 +33,9 @@ module BillableMetrics
         :max_aggregation_with_proration, # Similar to max_aggregation but with proration on billing period applied
         :units_applied, # Number of units applied by the event and cached in a pay in advance scenario (billing and current usage)
         :recurring_updated_at, # Date when the recurring cached aggregation was updated
+        # Recurring aggregation snapshot fields
+        :recurring_units, # Cumulative units of a recurring metric at the end of the period, before rounding
+        :recurring_events_count, # Number of events behind recurring_units, only set for a sum
         :recurring_breakdowns # Units of each presentation group at the end of the period, only set for a weighted sum
       ]
       PerEventAggregationResult = BaseResult[:event_aggregation]

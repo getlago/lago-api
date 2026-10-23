@@ -21,6 +21,29 @@ RSpec.describe Fees::ChargeService, :premium do
     )
   end
 
+  # Bills April 2022, the period after `boundaries`, starting from what that period cached
+  def call_next_period
+    from_datetime = Time.zone.parse("2022-04-01")
+    to_datetime = Time.zone.parse("2022-04-30").end_of_day
+    next_boundaries = BillingPeriodBoundaries.new(
+      from_datetime:,
+      to_datetime:,
+      charges_from_datetime: from_datetime,
+      charges_to_datetime: to_datetime,
+      timestamp: to_datetime + 1.second,
+      charges_duration: 30
+    )
+
+    described_class.call(
+      invoice: create(:invoice, customer:, organization:),
+      metered_item: described_class::MeteredItem.from_charge(charge:, boundaries: next_boundaries),
+      billing_context:,
+      options:,
+      plan: subscription.plan,
+      customer:
+    )
+  end
+
   let(:customer) { create(:customer, organization:) }
   let(:billing_context) { Billing::Context.from(subscription:) }
   let(:organization) { create_default(:organization) }
@@ -935,6 +958,7 @@ RSpec.describe Fees::ChargeService, :premium do
           end
 
           context "with recurring weighted sum aggregation" do
+            let(:organization) { create_default(:organization, feature_flags: ["recurring_aggregation_snapshots"]) }
             let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
 
             it "stores presentation_breakdowns on each cached aggregation scoped to its group" do
@@ -952,6 +976,45 @@ RSpec.describe Fees::ChargeService, :premium do
               expect(gcp_agg.presentation_breakdowns.map { [it["groups"], it["value"].to_d] }).to eq(
                 [[{"region" => "eu-west-1"}, 3]]
               )
+
+              snapshots = RecurringAggregationSnapshot.where(subscription:)
+              expect(snapshots.map { [it.grouped_by, it.presentation_breakdowns] }).to match_array(
+                [[aws_agg.grouped_by, aws_agg.presentation_breakdowns], [gcp_agg.grouped_by, gcp_agg.presentation_breakdowns]]
+              )
+            end
+
+            context "when the next period is billed" do
+              before do
+                charge_subscription_service.call
+                create(
+                  :event,
+                  organization: subscription.organization,
+                  subscription:,
+                  code: charge.billable_metric.code,
+                  timestamp: Time.zone.parse("2022-04-16"),
+                  properties: {cloud: "aws", region: "us-east-1", value: 10}
+                )
+              end
+
+              it "starts each group's breakdowns from the units active at the end of the previous period" do
+                result = call_next_period
+                expect(result).to be_success
+
+                aws_fee = result.fees.find { it.grouped_by["cloud"] == "aws" }
+                gcp_fee = result.fees.find { it.grouped_by["cloud"] == "gcp" }
+
+                expect(aws_fee.presentation_breakdowns.map { [it.presentation_by, it.units.round(5)] }).to match_array(
+                  [[{"region" => "us-east-1"}, 15], [{"region" => "us-central-1"}, 5]]
+                )
+                expect(gcp_fee.presentation_breakdowns.map { [it.presentation_by, it.units.round(5)] }).to eq(
+                  [[{"region" => "eu-west-1"}, 3]]
+                )
+
+                aws_agg = result.cached_aggregations.find { it.grouped_by["cloud"] == "aws" }
+                expect(aws_agg.presentation_breakdowns.map { [it["groups"], it["value"].to_d] }).to match_array(
+                  [[{"region" => "us-east-1"}, 20], [{"region" => "us-central-1"}, 5]]
+                )
+              end
             end
           end
         end
@@ -2791,6 +2854,7 @@ RSpec.describe Fees::ChargeService, :premium do
     end
 
     context "with recurring weighted sum aggregation" do
+      let(:organization) { create_default(:organization, feature_flags: ["recurring_aggregation_snapshots"]) }
       let(:context) { :recurring }
       let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
 
@@ -2850,9 +2914,30 @@ RSpec.describe Fees::ChargeService, :premium do
           expect(cached_aggregation.presentation_breakdowns.map { [it["groups"], it["value"].to_d] }).to match_array(
             [[{"region" => "us-east-1"}, 10], [{"region" => "eu-west-1"}, 5]]
           )
+          expect(RecurringAggregationSnapshot.sole.presentation_breakdowns).to eq(cached_aggregation.presentation_breakdowns)
           expect(result.fees.sole.presentation_breakdowns.map { [it.presentation_by, it.units.round(5).to_s] }).to match_array(
             [[{"region" => "us-east-1"}, "5.16129"], [{"region" => "eu-west-1"}, "2.58065"]]
           )
+        end
+
+        context "when the next period is billed" do
+          before do
+            charge_subscription_service.call
+            create(:event, organization: subscription.organization, subscription:, code: billable_metric.code,
+              timestamp: Time.zone.parse("2022-04-16"), properties: {region: "us-east-1", value: 10})
+          end
+
+          it "starts the breakdowns from the units active at the end of the previous period" do
+            result = call_next_period
+            expect(result).to be_success
+
+            expect(result.fees.sole.presentation_breakdowns.map { [it.presentation_by, it.units.round(5)] }).to match_array(
+              [[{"region" => "us-east-1"}, 15], [{"region" => "eu-west-1"}, 5]]
+            )
+            expect(result.cached_aggregations.sole.presentation_breakdowns.map { [it["groups"], it["value"].to_d] }).to match_array(
+              [[{"region" => "us-east-1"}, 20], [{"region" => "eu-west-1"}, 5]]
+            )
+          end
         end
       end
     end
@@ -3594,7 +3679,7 @@ RSpec.describe Fees::ChargeService, :premium do
             Subscriptions::ChargeCacheMiddleware.new(
               subscription:,
               charge:,
-              to_datetime: boundaries.charges_to_datetime,
+              to_datetime: boundaries.charges_to_datetime.floor(6),
               cache: true
             )
           end
@@ -4303,7 +4388,7 @@ RSpec.describe Fees::ChargeService, :premium do
           Subscriptions::ChargeCacheMiddleware.new(
             subscription:,
             charge:,
-            to_datetime: boundaries.charges_to_datetime,
+            to_datetime: boundaries.charges_to_datetime.floor(6),
             cache: true
           )
         end
@@ -4661,6 +4746,328 @@ RSpec.describe Fees::ChargeService, :premium do
     end
   end
 
+  describe "recurring aggregation snapshots" do
+    let(:organization) { create_default(:organization, feature_flags: ["recurring_aggregation_snapshots"]) }
+    let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:, field_name: "value") }
+    let(:snapshots) { RecurringAggregationSnapshot.where(subscription:, charge:) }
+    let(:event_values) { [10, 5] }
+    let(:now) { Time.zone.parse("2022-04-01T01:00:00") }
+
+    around { |example| travel_to(now) { example.run } }
+
+    before do
+      event_values.each_with_index do |value, index|
+        create(:event, organization:, subscription:, code: billable_metric.code,
+          created_at: now - RecurringAggregationSnapshot::WATERMARK_LAG - 1.minute,
+          timestamp: Time.zone.parse("2022-03-16") + index.days, properties: {value:, region: "eu"})
+      end
+    end
+
+    it "persists the cumulative units at the end of the period" do
+      charge_subscription_service.call
+
+      expect(snapshots.sole).to have_attributes(
+        charge_filter_id: nil,
+        billable_metric_id: billable_metric.id,
+        grouped_by: {},
+        to_datetime: boundaries.charges_to_datetime.floor(6),
+        watermark: now - RecurringAggregationSnapshot::WATERMARK_LAG,
+        units: 15,
+        events_count: 2
+      )
+    end
+
+    context "without the recurring_aggregation_snapshots feature flag" do
+      let(:organization) { create_default(:organization) }
+
+      it "bills the units without persisting snapshots" do
+        result = charge_subscription_service.call
+
+        expect(result.fees.sole).to have_attributes(units: 15, events_count: 2)
+        expect(snapshots).to be_empty
+      end
+    end
+
+    context "with an event ingested after the watermark" do
+      before do
+        create(:event, organization:, subscription:, code: billable_metric.code, created_at: now - 1.second,
+          timestamp: Time.zone.parse("2022-03-20"), properties: {value: 7})
+      end
+
+      it "bills the event but leaves it to the next period's snapshot" do
+        result = charge_subscription_service.call
+
+        expect(result.fees.sole).to have_attributes(units: 22, events_count: 3)
+        expect(snapshots.sole).to have_attributes(units: 15, events_count: 2)
+      end
+    end
+
+    context "with a rounding function" do
+      let(:billable_metric) do
+        create(:sum_billable_metric, :recurring, organization:, field_name: "value", rounding_function: "round", rounding_precision: 0)
+      end
+      let(:event_values) { [1.4, 1.4] }
+
+      it "persists the units before rounding" do
+        result = charge_subscription_service.call
+
+        expect(result.fees.sole.units).to eq(3)
+        expect(snapshots.sole.units).to eq(2.8)
+      end
+    end
+
+    context "with pricing group keys" do
+      let(:charge) do
+        create(:standard_charge, plan: subscription.plan, billable_metric:, properties: {amount: "20", pricing_group_keys: ["region"]})
+      end
+
+      before do
+        create(:event, organization:, subscription:, code: billable_metric.code,
+          created_at: now - RecurringAggregationSnapshot::WATERMARK_LAG - 1.minute,
+          timestamp: Time.zone.parse("2022-03-20"), properties: {value: 7, region: "us"})
+      end
+
+      it "persists one snapshot per group" do
+        charge_subscription_service.call
+
+        expect(snapshots.pluck(:grouped_by, :units, :events_count)).to match_array([[{"region" => "eu"}, 15, 2], [{"region" => "us"}, 7, 1]])
+      end
+
+      context "with a group whose units net to zero" do
+        before do
+          create(:event, organization:, subscription:, code: billable_metric.code,
+            created_at: now - RecurringAggregationSnapshot::WATERMARK_LAG - 1.minute,
+            timestamp: Time.zone.parse("2022-03-21"), properties: {value: -7, region: "us"})
+        end
+
+        it "keeps its snapshot, as it holds events" do
+          charge_subscription_service.call
+
+          expect(snapshots.pluck(:grouped_by, :units, :events_count)).to match_array([[{"region" => "eu"}, 15, 2], [{"region" => "us"}, 0, 2]])
+        end
+      end
+
+      context "with blank group values" do
+        before do
+          ["", " "].each do |region|
+            create(:event, organization:, subscription:, code: billable_metric.code,
+              created_at: now - RecurringAggregationSnapshot::WATERMARK_LAG - 1.minute,
+              timestamp: Time.zone.parse("2022-03-21"), properties: {value: 2, region:})
+          end
+        end
+
+        it "persists them as one null group" do
+          result = charge_subscription_service.call
+
+          expect(result).to be_success
+          expect(snapshots.pluck(:grouped_by, :units, :events_count)).to match_array(
+            [[{"region" => "eu"}, 15, 2], [{"region" => "us"}, 7, 1], [{"region" => nil}, 4, 2]]
+          )
+        end
+      end
+
+      context "with a group only ingested after the watermark" do
+        before do
+          create(:event, organization:, subscription:, code: billable_metric.code, created_at: now - 1.second,
+            timestamp: Time.zone.parse("2022-03-21"), properties: {value: 3, region: "fr"})
+        end
+
+        it "leaves it to the next period's snapshot" do
+          charge_subscription_service.call
+
+          expect(snapshots.pluck(:grouped_by, :units, :events_count)).to match_array([[{"region" => "eu"}, 15, 2], [{"region" => "us"}, 7, 1]])
+        end
+      end
+    end
+
+    context "with pricing group keys and no events" do
+      let(:charge) do
+        create(:standard_charge, plan: subscription.plan, billable_metric:, properties: {amount: "20", pricing_group_keys: ["region"]})
+      end
+      let(:event_values) { [] }
+
+      it "persists a zero units snapshot as the marker of the period" do
+        charge_subscription_service.call
+
+        expect(snapshots.pluck(:grouped_by, :units)).to eq([[{"region" => nil}, 0]])
+      end
+    end
+
+    context "with charge filters" do
+      let(:region) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
+      let(:eu_filter) { create(:charge_filter, charge:, properties: {amount: "20"}) }
+      let(:us_filter) { create(:charge_filter, charge:, properties: {amount: "20"}) }
+
+      before do
+        create(:charge_filter_value, charge_filter: eu_filter, billable_metric_filter: region, values: ["eu"])
+        create(:charge_filter_value, charge_filter: us_filter, billable_metric_filter: region, values: ["us"])
+      end
+
+      it "persists the filters with units and the default bucket as the marker of the period" do
+        charge_subscription_service.call
+
+        expect(snapshots.pluck(:charge_filter_id, :units, :events_count)).to match_array([[eu_filter.id, 15, 2], [nil, 0, 0]])
+      end
+
+      context "when a refresh of the period sees a filter back to zero units" do
+        before do
+          create(:recurring_aggregation_snapshot, organization:, subscription:, charge:, charge_filter: us_filter,
+            to_datetime: boundaries.charges_to_datetime, watermark: now - 1.day, units: 4)
+        end
+
+        it "deletes its snapshot" do
+          charge_subscription_service.call
+
+          expect(snapshots.pluck(:charge_filter_id, :units)).to match_array([[eu_filter.id, 15], [nil, 0]])
+        end
+      end
+    end
+
+    context "with presentation group keys" do
+      let(:charge) do
+        create(:standard_charge, plan: subscription.plan, billable_metric:, properties: {amount: "20", presentation_group_keys: [{value: "region"}]})
+      end
+
+      it "persists no breakdowns, as only weighted sum reads them back" do
+        result = charge_subscription_service.call
+
+        expect(result.fees.sole.presentation_breakdowns.map(&:presentation_by)).to eq([{"region" => "eu"}])
+        expect(snapshots.sole.presentation_breakdowns).to eq([])
+      end
+    end
+
+    context "with charge filters read in one scan", clickhouse: {clean_before: true} do
+      let(:organization) { create(:organization, clickhouse_events_store: true, feature_flags: %w[charge_filters_single_scan recurring_aggregation_snapshots]) }
+      let(:region) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
+      let(:eu_filter) { create(:charge_filter, charge:, properties: {amount: "20"}) }
+      let(:us_filter) { create(:charge_filter, charge:, properties: {amount: "20"}) }
+
+      before do
+        create(:charge_filter_value, charge_filter: eu_filter, billable_metric_filter: region, values: ["eu"])
+        create(:charge_filter_value, charge_filter: us_filter, billable_metric_filter: region, values: ["us"])
+
+        {"eu" => 10, "us" => 5}.each do |value_region, value|
+          create(:clickhouse_events_enriched, organization:, subscription:, billable_metric:,
+            timestamp: Time.zone.parse("2022-03-16"), enriched_at: now - RecurringAggregationSnapshot::WATERMARK_LAG - 1.minute,
+            properties: {"value" => value.to_s, "region" => value_region}, value: value.to_s, decimal_value: value)
+        end
+
+        # Each filter's aggregation takes time: the watermark must not move between them
+        ticks = 0
+        allow(Time).to receive(:current).and_wrap_original { |original| original.call + (ticks += 1).seconds }
+        allow(Events::Stores::Utils::ClickhouseConnection).to receive(:connection_with_retry).and_call_original
+      end
+
+      it "reads the events of every filter once and persists their snapshots at one watermark" do
+        charge_subscription_service.call
+
+        expect(Events::Stores::Utils::ClickhouseConnection).to have_received(:connection_with_retry).once
+        expect(snapshots.pluck(:charge_filter_id, :units, :events_count)).to match_array([[eu_filter.id, 10, 1], [us_filter.id, 5, 1], [nil, 0, 0]])
+        expect(snapshots.distinct.pluck(:watermark).size).to eq(1)
+      end
+    end
+
+    context "with a prorated charge" do
+      let(:charge) do
+        create(:standard_charge, plan: subscription.plan, billable_metric:, prorated: true, properties: {amount: "20"})
+      end
+
+      it "persists no snapshot" do
+        result = charge_subscription_service.call
+
+        expect(result.fees.sole.precise_amount_cents).to be < 15 * 2_000
+        expect(snapshots).to be_empty
+      end
+
+      context "when paid in advance" do
+        let(:charge) do
+          create(:standard_charge, plan: subscription.plan, billable_metric:, prorated: true, pay_in_advance: true, properties: {amount: "20"})
+        end
+
+        it "persists no snapshot" do
+          result = charge_subscription_service.call
+
+          expect(result.fees.sole.precise_amount_cents).to eq(15 * 2_000)
+          expect(snapshots).to be_empty
+        end
+      end
+    end
+
+    context "with a weighted sum billable metric" do
+      let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
+
+      it "persists the active units at the end of the period, without events count" do
+        charge_subscription_service.call
+
+        expect(snapshots.sole).to have_attributes(units: 15, events_count: 0)
+      end
+
+      context "with an event ingested after the watermark" do
+        before do
+          create(:event, organization:, subscription:, code: billable_metric.code, created_at: now - 1.second,
+            timestamp: Time.zone.parse("2022-03-20"), properties: {value: 7})
+        end
+
+        it "persists it, as its read never counts an event dated in a closed period" do
+          charge_subscription_service.call
+
+          expect(snapshots.sole.units).to eq(22)
+        end
+      end
+    end
+
+    context "with a non recurring billable metric" do
+      let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "value") }
+
+      it "persists no snapshot" do
+        charge_subscription_service.call
+
+        expect(snapshots).to be_empty
+      end
+    end
+
+    context "with a recurring unique count billable metric" do
+      let(:billable_metric) { create(:unique_count_billable_metric, :recurring, organization:, field_name: "value") }
+
+      it "persists no snapshot" do
+        charge_subscription_service.call
+
+        expect(snapshots).to be_empty
+      end
+    end
+
+    context "with a progressive billing invoice" do
+      let(:invoice) { create(:invoice, :progressive_billing_invoice, customer:, organization:) }
+
+      it "persists no snapshot" do
+        charge_subscription_service.call
+
+        expect(snapshots).to be_empty
+      end
+    end
+
+    context "when context is invoice_preview" do
+      let(:context) { :invoice_preview }
+
+      it "bills every event and persists no snapshot" do
+        result = charge_subscription_service.call
+
+        expect(result.fees.sole.units).to eq(15)
+        expect(snapshots).to be_empty
+      end
+    end
+
+    context "when context is current_usage" do
+      let(:context) { :current_usage }
+
+      it "persists no snapshot" do
+        charge_subscription_service.call
+
+        expect(snapshots).to be_empty
+      end
+    end
+  end
+
   describe "presentation_breakdowns interaction with adjusted fees" do
     let(:billable_metric) do
       create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value")
@@ -4816,7 +5223,7 @@ RSpec.describe Fees::ChargeService, :premium do
       Subscriptions::ChargeCacheMiddleware.new(
         subscription:,
         charge:,
-        to_datetime: boundaries.charges_to_datetime,
+        to_datetime: boundaries.charges_to_datetime.floor(6),
         cache: true
       )
     end

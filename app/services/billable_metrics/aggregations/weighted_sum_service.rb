@@ -25,6 +25,7 @@ module BillableMetrics
 
         if billable_metric.recurring?
           result.total_aggregated_units = latest_value + result.variation
+          result.recurring_units = result.total_aggregated_units
           result.recurring_updated_at = event_store.last_event&.timestamp || from_datetime
           if result.breakdowns.blank?
             result.breakdowns = latest_breakdowns
@@ -42,7 +43,12 @@ module BillableMetrics
         return empty_results if should_bypass_aggregation?
 
         aggregations = event_store.grouped_weighted_sum(initial_values: grouped_latest_values)
-        return empty_results if aggregations.blank?
+        if aggregations.blank?
+          empty_results
+          # No group carried over or in the period: the bucket closes at zero units
+          result.aggregations.each { it.recurring_units = 0 } if billable_metric.recurring?
+          return result
+        end
 
         latest_values = []
         last_events = []
@@ -73,6 +79,7 @@ module BillableMetrics
             last_event = last_events.find { |c| c[:groups] == aggregation.groups }
 
             group_result.total_aggregated_units = latest_value + group_result.variation
+            group_result.recurring_units = group_result.total_aggregated_units
             group_result.recurring_updated_at = last_event&.[](:timestamp) || from_datetime
           end
 
