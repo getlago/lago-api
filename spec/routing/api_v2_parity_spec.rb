@@ -50,6 +50,21 @@ RSpec.describe "API v2 routing parity" do
     expect(Rails.application.routes.recognize_path("/api/v1/customers", method: :post)[:controller]).to eq("api/v1/customers")
   end
 
+  it "routes billing entity endpoints to v2 without changing v1" do
+    {
+      get: %w[/billing_entities /billing_entities/entity.eu],
+      post: %w[/billing_entities],
+      put: %w[/billing_entities/entity.eu],
+      patch: %w[/billing_entities/entity.eu]
+    }.each do |method, paths|
+      paths.each do |path|
+        expect(Rails.application.routes.recognize_path("/api/v2#{path}", method:)[:controller]).to eq("api/v2/billing_entities")
+      end
+    end
+
+    expect(Rails.application.routes.recognize_path("/api/v1/billing_entities", method: :post)[:controller]).to eq("api/v1/billing_entities")
+  end
+
   it "routes organization endpoints to v2 without changing v1" do
     %i[get put].each do |method|
       expect(Rails.application.routes.recognize_path("/api/v2/organizations", method:)[:controller]).to eq("api/v2/organizations")
