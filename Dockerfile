@@ -13,8 +13,12 @@
 # The bases carry no shell history, no apt, no distro cruft; every package
 # has an SBOM and is signed. This Dockerfile just bundles gems and copies code.
 
-ARG BUILD_IMAGE=ghcr.io/getlago/lago-api-build:latest
-ARG RUNTIME_IMAGE=ghcr.io/getlago/lago-api-base:latest
+# BASE PIN: `:latest@sha256:<index digest>`. Docker builds from the digest,
+# so a build is reproducible. Renovate (getlago/lago-packages
+# renovate/lago-bases) opens a PR when `latest` moves; the base refresh
+# rebuilds deployed tags with a newer RUNTIME_IMAGE in between.
+ARG BUILD_IMAGE=ghcr.io/getlago/lago-api-build:latest@sha256:1be707d0b9d93d10f8bab391bb030dc2d9e048566ce6137e5ba7800aa16c9b88
+ARG RUNTIME_IMAGE=ghcr.io/getlago/lago-api-base:latest@sha256:5848809572ac6168901c318af2dc85b121cc74b75901a06a51d9d7eacbd2fbfc
 
 FROM ${BUILD_IMAGE} AS build
 
