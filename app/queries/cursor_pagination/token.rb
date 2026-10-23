@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 module CursorPagination
-  # Opaque cursor: Base64URL of `{"v": version, "o": {"t": table, "s": sort}, "k": [created_at, id]}`.
+  # Opaque cursor: Base64URL of `{"v": version, "o": {"t": table, "s": sort}, "k": key}`,
+  # the key holding one value per sort column, in the order of the sort.
   #
   # It is not signed. Every query is scoped to the organization of the API key, so a
   # forged cursor only repositions its caller within their own data. It is validated
@@ -10,7 +11,10 @@ module CursorPagination
     VERSION = 1
     MAX_LENGTH = 512
     ENCODED_FORMAT = /\A[A-Za-z0-9_-]+\z/
-    TIMESTAMP_FORMAT = /\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z\z/
+    # PostgreSQL has no year 0, which Ruby parses: a key in that year is malformed rather than
+    # a failing query.
+    TIMESTAMP_FORMAT = /\A(?!0000)\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z\z/
+    DATE_FORMAT = /\A(?!0000)\d{4}-\d{2}-\d{2}\z/
 
     def self.encode(table:, record:, sort: DEFAULT_SORT)
       CursorPagination.validate_sort!(sort)
@@ -18,14 +22,14 @@ module CursorPagination
       payload = {
         v: VERSION,
         o: {t: table, s: CursorPagination.signature(sort)},
-        k: [record.created_at.utc.iso8601(6), record.id]
+        k: sort.keys.map { |column| written_value(column, record.public_send(column)) }
       }
 
       Base64.urlsafe_encode64(payload.to_json, padding: false)
     end
 
-    # Returns the `[created_at, id]` key of the anchor row. `param` names the request
-    # parameter the value came from, to key the error details.
+    # Returns the key of the anchor row, one typed value per sort column. `param` names
+    # the request parameter the value came from, to key the error details.
     def self.decode(value, table:, param:, sort: DEFAULT_SORT)
       CursorPagination.validate_sort!(sort)
       invalid = ->(reason) { raise Error.new(code: Error::INVALID_CURSOR, details: {param => {reason:}}) }
@@ -47,7 +51,7 @@ module CursorPagination
         raise Error.new(code: Error::CURSOR_EXPIRED, details: {param => {reason: "sort_changed"}})
       end
 
-      key(payload["k"]) || invalid.call("malformed_key")
+      key(payload["k"], sort) || invalid.call("malformed_key")
     end
 
     def self.parse(value)
@@ -57,17 +61,37 @@ module CursorPagination
     end
     private_class_method :parse
 
-    def self.key(values)
-      return unless values.is_a?(Array) && values.size == 2
+    def self.key(values, sort)
+      return unless values.is_a?(Array) && values.size == sort.size
 
-      created_at, id = values
-      if created_at.is_a?(String) && created_at.match?(TIMESTAMP_FORMAT) && id.is_a?(String) && id.match?(BaseQuery::UUID_REGEX)
-        [Time.iso8601(created_at), id]
-      end
+      key = sort.keys.zip(values).map { |column, value| read_value(column, value) }
+      key unless key.include?(nil)
     rescue ArgumentError
-      # A well-shaped but impossible timestamp, like month 13.
+      # A well-shaped but impossible date or timestamp, like month 13.
       nil
     end
     private_class_method :key
+
+    def self.written_value(column, value)
+      case column
+      when :issuing_date then value.iso8601
+      when :created_at then value.utc.iso8601(6)
+      when :id then value
+      end
+    end
+    private_class_method :written_value
+
+    # Read back as the type the column compares with: a date stays a `Date`, so that a
+    # timestamp is never resumed in its place. Nil when the value is not of that format.
+    def self.read_value(column, value)
+      return unless value.is_a?(String)
+
+      case column
+      when :issuing_date then Date.iso8601(value) if value.match?(DATE_FORMAT)
+      when :created_at then Time.iso8601(value) if value.match?(TIMESTAMP_FORMAT)
+      when :id then value if value.match?(BaseQuery::UUID_REGEX)
+      end
+    end
+    private_class_method :read_value
   end
 end

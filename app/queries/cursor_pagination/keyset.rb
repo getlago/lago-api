@@ -1,9 +1,7 @@
 # frozen_string_literal: true
 
 module CursorPagination
-  # Positions a scope on a cursor. The sort of a cursor runs in a single direction, so a
-  # single row-value comparison bounds the page and an index on the tuple serves it (read
-  # backward for an ascending sort on a descending index).
+  # Positions a scope on a cursor: keeps the rows past the anchor, in the order of the sort.
   module Keyset
     # Must be the last scope operation of a query: `reorder` drops any ordering applied
     # before it, and a later `order` would be appended after the tuple.
@@ -12,15 +10,7 @@ module CursorPagination
         raise ArgumentError, "cursor minted for #{cursor.table} applied to #{scope.table_name}"
       end
 
-      sort = cursor.sort
-      scope = case cursor.direction
-      when :forward
-        scope.where("#{row(scope, sort)} #{operator(sort, :forward)} (?, ?)", *cursor.key)
-      when :backward
-        scope.where("#{row(scope, sort)} #{operator(sort, :backward)} (?, ?)", *cursor.key)
-      else
-        scope
-      end
+      scope = scope.where(*past_anchor(scope, cursor)) unless cursor.direction == :first
 
       # One extra row tells whether the list continues in the direction being paged.
       scope.reorder(order(cursor)).limit(cursor.limit + 1)
@@ -32,18 +22,48 @@ module CursorPagination
       cursor.backward? ? reversed(cursor.sort) : cursor.sort
     end
 
-    def self.row(scope, sort)
-      columns = sort.keys.map { |column| "#{scope.quoted_table_name}.#{scope.connection.quote_column_name(column)}" }
-      "(#{columns.join(", ")})"
-    end
-    private_class_method :row
+    # The condition, with its values, that keeps the rows past the anchor.
+    def self.past_anchor(scope, cursor)
+      columns = cursor.sort.keys.map { "#{scope.quoted_table_name}.#{scope.connection.quote_column_name(it)}" }
+      operators = cursor.sort.values.map { operator(it, cursor.direction) }
 
-    # The rows past the anchor, in the direction being paged: lower values when walking
-    # forward a descending sort, higher ones when walking it backward, and the other way
-    # around for an ascending sort.
-    def self.operator(sort, direction)
-      descending = sort.values.first == :desc
-      (descending == (direction == :forward)) ? "<" : ">"
+      if operators.uniq.one?
+        row_comparison(columns, operators.first, cursor.key)
+      else
+        column_by_column(columns, operators, cursor.key)
+      end
+    end
+    private_class_method :past_anchor
+
+    # Every column runs in the same direction: `(a, b) < (x, y)`, which an index on the
+    # tuple serves (read backward for an ascending sort on a descending index).
+    def self.row_comparison(columns, operator, key)
+      ["(#{columns.join(", ")}) #{operator} (#{columns.map { "?" }.join(", ")})", *key]
+    end
+    private_class_method :row_comparison
+
+    # The columns run in different directions, which one row comparison cannot express. A
+    # row is past the anchor on its first column, or ties on it and is past it on the next:
+    #
+    #   a < x OR (a = x AND b < y) OR (a = x AND b = y AND c > z)
+    #
+    # `a <= x` comes first: the OR implies it, and it gives an index on the tuple a place to
+    # start, where the OR alone would filter the whole list.
+    def self.column_by_column(columns, operators, key)
+      branches = columns.each_index.map do |position|
+        ties = columns.first(position).map { "#{it} = ?" }
+        "(#{[*ties, "#{columns[position]} #{operators[position]} ?"].join(" AND ")})"
+      end
+      branch_values = columns.each_index.flat_map { key.first(it + 1) }
+
+      ["#{columns.first} #{operators.first}= ? AND (#{branches.join(" OR ")})", key.first, *branch_values]
+    end
+    private_class_method :column_by_column
+
+    # Past the anchor means lower values when paging a descending column forward, or an
+    # ascending one backward, and higher values otherwise.
+    def self.operator(direction, paging)
+      ((direction == :desc) == (paging == :forward)) ? "<" : ">"
     end
     private_class_method :operator
 

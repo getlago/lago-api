@@ -4,6 +4,7 @@ require "rails_helper"
 
 RSpec.describe CursorPagination::Token do
   let(:record) { build_stubbed(:product, created_at: Time.zone.parse("2026-09-28T10:11:12.123456Z")) }
+  let(:invoice_sort) { {issuing_date: :desc, created_at: :desc, id: :asc} }
 
   def encode_payload(payload)
     Base64.urlsafe_encode64(payload.to_json, padding: false)
@@ -28,15 +29,29 @@ RSpec.describe CursorPagination::Token do
       subject(:token) { described_class.encode(table: "products", record:, sort: {name: :asc, id: :asc}) }
 
       it "raises an argument error, since the cursor could not be resumed" do
-        expect { token }.to raise_error(ArgumentError, /created_at then id/)
+        expect { token }.to raise_error(ArgumentError, /columns among issuing_date, created_at, id/)
       end
     end
 
-    context "with a sort mixing directions" do
-      subject(:token) { described_class.encode(table: "products", record:, sort: {created_at: :desc, id: :asc}) }
+    context "with a sort not ending with id" do
+      subject(:token) { described_class.encode(table: "products", record:, sort: {id: :asc, created_at: :asc}) }
 
       it "raises an argument error" do
-        expect { token }.to raise_error(ArgumentError, /single direction/)
+        expect { token }.to raise_error(ArgumentError, /id last/)
+      end
+    end
+
+    context "with a sort on the issuing date, mixing directions" do
+      subject(:token) { described_class.encode(table: "invoices", record: invoice, sort: invoice_sort) }
+
+      let(:invoice) { build_stubbed(:invoice, issuing_date: Date.new(2026, 9, 27), created_at: record.created_at) }
+
+      it "writes the date, the timestamp and the id in the order of the sort" do
+        expect(JSON.parse(Base64.urlsafe_decode64(token))).to eq(
+          "v" => 1,
+          "o" => {"t" => "invoices", "s" => "issuing_date:desc,created_at:desc,id:asc"},
+          "k" => ["2026-09-27", "2026-09-28T10:11:12.123456Z", invoice.id]
+        )
       end
     end
   end
@@ -174,7 +189,56 @@ RSpec.describe CursorPagination::Token do
       subject(:decode) { described_class.decode(value, table: "products", param: :after, sort: {name: :asc, id: :asc}) }
 
       it "raises an argument error" do
-        expect { decode }.to raise_error(ArgumentError, /created_at then id/)
+        expect { decode }.to raise_error(ArgumentError, /columns among issuing_date, created_at, id/)
+      end
+    end
+
+    context "with a sort on the issuing date, mixing directions" do
+      subject(:decode) { described_class.decode(value, table: "invoices", param: :after, sort: invoice_sort) }
+
+      let(:invoice) { build_stubbed(:invoice, issuing_date: Date.new(2026, 9, 27), created_at: record.created_at) }
+      let(:payload) { {v: 1, o: {t: "invoices", s: "issuing_date:desc,created_at:desc,id:asc"}, k: ["2026-09-27", "2026-09-28T10:11:12.123456Z", invoice.id]} }
+
+      it "returns the key with the date as a Date" do
+        expect(decode).to eq([Date.new(2026, 9, 27), Time.utc(2026, 9, 28, 10, 11, Rational(12_123_456, 1_000_000)), invoice.id])
+        expect(decode.first).to be_a(Date)
+      end
+
+      it "round-trips an encoded token" do
+        token = described_class.encode(table: "invoices", record: invoice, sort: invoice_sort)
+
+        expect(described_class.decode(token, table: "invoices", param: :after, sort: invoice_sort))
+          .to eq([invoice.issuing_date, invoice.created_at.utc, invoice.id])
+      end
+
+      context "with a key of the default sort" do
+        let(:payload) { super().merge(k: ["2026-09-28T10:11:12.123456Z", invoice.id]) }
+
+        it_behaves_like "an invalid cursor", "malformed_key"
+      end
+
+      context "with a timestamp in place of the date" do
+        let(:payload) { super().merge(k: ["2026-09-27T00:00:00.000000Z", "2026-09-28T10:11:12.123456Z", invoice.id]) }
+
+        it_behaves_like "an invalid cursor", "malformed_key"
+      end
+
+      context "with an impossible date" do
+        let(:payload) { super().merge(k: ["2026-13-27", "2026-09-28T10:11:12.123456Z", invoice.id]) }
+
+        it_behaves_like "an invalid cursor", "malformed_key"
+      end
+
+      context "with a date in year zero, which PostgreSQL rejects" do
+        let(:payload) { super().merge(k: ["0000-01-01", "2026-09-28T10:11:12.123456Z", invoice.id]) }
+
+        it_behaves_like "an invalid cursor", "malformed_key"
+      end
+
+      context "with a timestamp in year zero" do
+        let(:payload) { super().merge(k: ["2026-09-27", "0000-01-01T00:00:00.000000Z", invoice.id]) }
+
+        it_behaves_like "an invalid cursor", "malformed_key"
       end
     end
 
