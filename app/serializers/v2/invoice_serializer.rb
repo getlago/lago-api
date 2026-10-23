@@ -70,7 +70,7 @@ module V2
     def contracts
       Contract
         .where(organization_id: model.organization_id, id: model.fees.where.not(contract_id: nil).select(:contract_id))
-        .preload(:customer, :catalog_plan, :applied_rate_cards)
+        .preload({customer: :billing_entity}, :catalog_plan, :applied_rate_cards)
         .order(:created_at, :id)
     end
 
