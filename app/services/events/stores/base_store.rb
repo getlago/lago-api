@@ -205,6 +205,11 @@ module Events
         raise NotImplementedError
       end
 
+      # A store keeping its rows between computations answers a sum cheaper than a snapshot delta.
+      def incremental_sum?
+        false
+      end
+
       def grouped_prorated_sum(period_duration:, persisted_duration: nil)
         raise NotImplementedError
       end
