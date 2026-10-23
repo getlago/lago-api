@@ -271,7 +271,7 @@ module UsageAttributions
         max_execution_time: MAX_EXECUTION_TIME
       )
       @cells = query.cells
-      query.rows
+      RowsCacheService.call!(subscription:, query:).rows
     end
 
     def charge_column(charge)
