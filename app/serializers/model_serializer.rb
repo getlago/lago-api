@@ -18,8 +18,8 @@ class ModelSerializer
 
   # Lets a native v2 endpoint embed `model.<name>` on `expands[]=<name>`, or what a private method
   # of the serializer with that name returns, for records that are ordered or computed. One record
-  # or a list, each rendered by `serializer` without includes, so that it stays flat. It comes last
-  # in `serialize`.
+  # or a list, each rendered by `serializer` with `nested_options` only, so that it stays flat. It
+  # comes last in `serialize`.
   def self.expandable(name, serializer:)
     prepend(RendersExpansions)
 
@@ -87,6 +87,23 @@ class ModelSerializer
 
   private
 
+  # At the microsecond precision the columns store when the render passes `:usec_timestamps`, as
+  # the native v2 endpoints do. At whole seconds otherwise, so webhooks and activity logs keep theirs.
+  def format_time(value)
+    value&.iso8601(include?(:usec_timestamps) ? 6 : 0)
+  end
+
+  # A date column renders as a calendar day: it has no time of day, so no precision to choose.
+  def format_date(value)
+    value&.iso8601
+  end
+
+  # Options of a record rendered inside this one: the timestamp precision it was given, never an
+  # expansion, so that the record stays flat.
+  def nested_options
+    include?(:usec_timestamps) ? {includes: %i[usec_timestamps]} : {}
+  end
+
   # The declared expansions found in `includes`, in their declared order: Api::Serializable
   # passes the requested ones, and a nil record renders as null.
   def expanded_payload
@@ -110,8 +127,8 @@ class ModelSerializer
   def render_expansion(records, serializer)
     case records
     when nil then nil
-    when Array, ActiveRecord::Relation then records.map { serializer.new(it).serialize }
-    else serializer.new(records).serialize
+    when Array, ActiveRecord::Relation then records.map { serializer.new(it, nested_options).serialize }
+    else serializer.new(records, nested_options).serialize
     end
   end
 end

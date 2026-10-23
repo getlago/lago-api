@@ -112,6 +112,23 @@ RSpec.describe Api::V2::ProductCategoriesController do
       expect(json[:product_category].keys).to eq(flat_keys)
     end
 
+    context "with timestamps between two seconds" do
+      let(:product_category) do
+        create(
+          :product_category,
+          organization:,
+          created_at: Time.zone.parse("2026-10-01T08:30:00.123456Z"),
+          updated_at: Time.zone.parse("2026-10-20T17:45:00.654321Z")
+        )
+      end
+
+      it "returns them to the microsecond" do
+        subject
+
+        expect(json[:product_category]).to include(created_at: "2026-10-01T08:30:00.123456Z", updated_at: "2026-10-20T17:45:00.654321Z")
+      end
+    end
+
     context "when the product_category does not exist" do
       subject { get_with_token(organization, "/api/v2/product_categories/unknown") }
 
@@ -204,7 +221,7 @@ RSpec.describe Api::V2::ProductCategoriesController do
       expect(response).to have_http_status(:success)
       expect(json[:product_category][:lago_id]).to eq(product_category.id)
       expect(product_category.reload).to be_discarded
-      expect(json[:product_category][:deleted_at]).to eq(product_category.deleted_at.iso8601)
+      expect(json[:product_category][:deleted_at]).to eq(product_category.deleted_at.iso8601(6))
     end
 
     context "when the product_category does not exist" do
