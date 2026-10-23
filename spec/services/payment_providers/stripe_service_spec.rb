@@ -78,6 +78,20 @@ RSpec.describe PaymentProviders::StripeService do
         expect(result).to be_success
         expect(result.stripe_provider.customers.first.payment_provider_code).to eq(new_code)
       end
+
+      it "updates the payment provider code of the agent storefronts using it" do
+        storefront = create(:agent_storefront_integration, organization:, stripe_provider: payment_provider)
+
+        result = stripe_service.create_or_update(
+          id: payment_provider.id,
+          organization_id: organization.id,
+          code: new_code,
+          name:
+        )
+
+        expect(result).to be_success
+        expect(storefront.reload.payment_provider_code).to eq(new_code)
+      end
     end
 
     context "when organization already have a stripe provider" do
