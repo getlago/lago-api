@@ -352,8 +352,8 @@ RSpec.describe Api::V2::RateCardsController do
         display_on_invoice: true,
         regroup_paid_fees: nil,
         applied_pricing_unit_code: nil,
-        created_at: rate_card.created_at.iso8601,
-        updated_at: rate_card.updated_at.iso8601,
+        created_at: rate_card.created_at.iso8601(6),
+        updated_at: rate_card.updated_at.iso8601(6),
         deleted_at: nil
       )
     end
@@ -647,7 +647,7 @@ RSpec.describe Api::V2::RateCardsController do
 
       expect(response).to have_http_status(:success)
       expect(json[:rate_card][:lago_id]).to eq(rate_card.id)
-      expect(json[:rate_card][:deleted_at]).to eq(rate_card.reload.deleted_at.iso8601)
+      expect(json[:rate_card][:deleted_at]).to eq(rate_card.reload.deleted_at.iso8601(6))
       expect(json[:rate_card].keys).to eq(flat_keys)
     end
 
