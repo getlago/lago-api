@@ -101,6 +101,7 @@ Business logic, and every create, update or delete of a model, lives in a servic
 - `update_all` skips callbacks and `updated_at`: set `updated_at` yourself.
 - Give every list query a deterministic order. `.first` and `.last` order by the UUID `id`, not by creation, and `find_by` and `take` have no order: add an explicit order whenever the record picked matters. `find_each` iterates by id, and raises in tests when the relation has an order.
 - Query objects live in `app/queries` (`< BaseQuery`, `Filters = BaseFilters[...]`, `paginate` last). See `app/queries/contracts_query.rb`. Ransack attributes must be listed in `ransackable_attributes`.
+- Native `Api::V2` controllers reuse the existing v1 `*Query` object with cursor pagination instead of an inline scope: declare `cursor_paginated_index(Model, sort:)`, call `::<Resource>Query.call(organization:, pagination: cursor, filters:)`, then render `::CursorPagination::Page.new(records:, cursor:)`. `BaseQuery#paginate` routes a `CursorPagination::Cursor` to the keyset, so the query only needs `paginate` as its last scope operation. See `app/controllers/api/v2/contracts_controller.rb`.
 
 ## Migrations
 
@@ -119,6 +120,7 @@ Business logic, and every create, update or delete of a model, lives in a servic
 - Self-hosted migrations live in `db/clickhouse_migrate/`. ClickHouse Cloud DDL lives in `db/clickhouse_migrate/cloud/NN_*.sql`, run by hand in order when a cluster is created, so a change to an existing Cloud table is a new numbered `ALTER` script, not an edit.
 - ClickHouse DDL is not transactional: one DDL change per migration, explicit `up` and `down`, `IF NOT EXISTS` and `IF EXISTS` guards.
 - Kafka engine tables cannot be altered: drop and recreate the queue table and its materialized view.
+- A cursor keyset over a ClickHouse `DateTime64` column (e.g. `logged_at`) must bind the anchor time with explicit sub-second precision. The Rails ClickHouse adapter's `quoted_date` serializes a bound time with `to_fs(:db)` (second precision), so a `(logged_at, id) < (?, ?)` keyset truncates the anchor to the whole second and drops every row tied in that second. Log timestamps are themselves written at second precision (`Time.current.iso8601`), so the `DateTime64(3)` milliseconds are usually 0.
 
 ## Specs
 
