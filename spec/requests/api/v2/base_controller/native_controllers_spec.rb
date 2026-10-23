@@ -3,13 +3,17 @@
 require "rails_helper"
 
 RSpec.describe "API v2 native controllers" do # rubocop:disable RSpec/DescribeClass
-  # The controllers the native v2 routes reach, nested ones included. The v1 controllers that
-  # serve the rest of /api/v2 are left out.
-  native_controllers = Rails.application.routes.routes
-    .filter_map { it.defaults[:controller] }
-    .select { it.start_with?("api/v2/") }
-    .uniq
-    .map { "#{it}_controller".camelize.constantize }
+  # The controllers the native v2 routes reach, nested ones included, with their routed actions.
+  # The v1 controllers that serve the rest of /api/v2 are left out.
+  native_actions = Rails.application.routes.routes
+    .map(&:defaults)
+    .select { it[:controller]&.start_with?("api/v2/") }
+    .group_by { "#{it[:controller]}_controller".camelize.constantize }
+    .transform_values { |defaults| defaults.map { it[:action] }.uniq }
+  native_controllers = native_actions.keys
+
+  # Invoices void renders a v1 invoice. Any other action of the same controller needs the macro.
+  hand_rendered_actions = {Api::V2::InvoicesController => %w[void]}
 
   let(:base_callbacks) { before_callbacks(Api::V2::BaseController) }
 
@@ -31,8 +35,7 @@ RSpec.describe "API v2 native controllers" do # rubocop:disable RSpec/DescribeCl
         expect(native_controller).to be < Api::Serializable
       end
 
-      # Invoices void renders a v1 invoice.
-      unless native_controller == Api::V2::InvoicesController
+      if (native_actions[native_controller] - hand_rendered_actions.fetch(native_controller, [])).any?
         it "declares what it renders with serializable_with" do
           expect(native_controller.new.send(:serialization)).to be_present
         end
