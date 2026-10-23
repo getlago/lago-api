@@ -22,9 +22,9 @@ module V2
         display_on_invoice: model.display_on_invoice,
         regroup_paid_fees: model.regroup_paid_fees,
         applied_pricing_unit_code: model.applied_pricing_unit_code,
-        created_at: model.created_at.iso8601,
-        updated_at: model.updated_at.iso8601,
-        deleted_at: model.deleted_at&.iso8601
+        created_at: format_time(model.created_at),
+        updated_at: format_time(model.updated_at),
+        deleted_at: format_time(model.deleted_at)
       }
     end
 
