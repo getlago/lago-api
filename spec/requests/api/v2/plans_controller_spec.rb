@@ -139,7 +139,7 @@ RSpec.describe Api::V2::PlansController do
         code: catalog_plan.code,
         description: catalog_plan.description,
         currency: catalog_plan.currency,
-        created_at: catalog_plan.created_at.iso8601,
+        created_at: catalog_plan.created_at.iso8601(6),
         deleted_at: nil
       }
     end

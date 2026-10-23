@@ -310,8 +310,8 @@ RSpec.describe Api::V2::ContractsController do
         it "embeds it with its deleted_at" do
           subject
 
-          expect(json[:contract][:plan]).to eq(V2::CatalogPlanSerializer.new(catalog_plan).serialize)
-          expect(json[:contract][:plan]).to include(lago_id: catalog_plan.id, deleted_at: catalog_plan.deleted_at.iso8601)
+          expect(json[:contract][:plan]).to eq(V2::CatalogPlanSerializer.new(catalog_plan, includes: %i[usec_timestamps]).serialize)
+          expect(json[:contract][:plan]).to include(lago_id: catalog_plan.id, deleted_at: catalog_plan.deleted_at.iso8601(6))
         end
       end
 
