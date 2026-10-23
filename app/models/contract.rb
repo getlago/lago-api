@@ -8,7 +8,6 @@ class Contract < ApplicationRecord
   include BillingPeriodDateDiff
   include HasPurchaseOrderNumber
   include PaperTrailTraceable
-  include RateCardSlicePricing
   include Terminatable
 
   STATUSES = {

@@ -50,7 +50,7 @@ module ContractRateCards
 
         # One card per pricing slice: a contract may hold several cards of the
         # same item only when they cover different filter slices (default + EU).
-        if contract.rate_card_slice_priced?(rate_card)
+        if slice_already_priced?(rate_card)
           return result.single_validation_failure!(field: :rate_card, error_code: slice_error_code(rate_card))
         end
 
@@ -98,6 +98,15 @@ module ContractRateCards
       else
         "product_already_priced"
       end
+    end
+
+    def slice_already_priced?(rate_card)
+      contract.applied_rate_cards.joins(:rate_card).exists?(
+        rate_cards: {
+          product_id: rate_card.product_id,
+          product_filter_id: rate_card.product_filter_id
+        }
+      )
     end
 
     def organization

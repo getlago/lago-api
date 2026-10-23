@@ -8,7 +8,6 @@ class CatalogPlan < ApplicationRecord
   include Currencies
   include Discard::Model
   include CatalogCodeFormat
-  include RateCardSlicePricing
 
   self.discard_column = :deleted_at
 
