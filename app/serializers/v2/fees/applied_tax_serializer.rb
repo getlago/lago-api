@@ -13,8 +13,8 @@ module V2
           tax_rate: model.tax_rate,
           tax_description: model.tax_description,
           amount_cents: model.amount_cents,
-          created_at: model.created_at.iso8601,
-          updated_at: model.updated_at.iso8601
+          created_at: format_time(model.created_at),
+          updated_at: format_time(model.updated_at)
         }
       end
     end
