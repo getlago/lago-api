@@ -104,5 +104,38 @@ RSpec.describe Resolvers::AiConversationsResolver do
         expect(ai_conversations_response.count).to eq(2)
       end
     end
+
+    context "without limit parameter" do
+      before { create_list(:ai_conversation, 2, organization:, membership:) }
+
+      it "returns the latest conversations" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query:
+        )
+
+        expect(result["data"]["aiConversations"]["collection"].count).to eq(3)
+      end
+    end
+
+    context "with a limit over the maximum" do
+      before { stub_const("#{described_class}::MAX_LIMIT", 2) }
+
+      it "caps the number of returned conversations" do
+        create_list(:ai_conversation, 2, organization:, membership:)
+
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query:,
+          variables: {limit: 1_000}
+        )
+
+        expect(result["data"]["aiConversations"]["collection"].count).to eq(2)
+      end
+    end
   end
 end
