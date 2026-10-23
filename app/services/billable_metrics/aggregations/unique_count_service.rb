@@ -21,7 +21,7 @@ module BillableMetrics
           result.aggregation = aggregation
         end
 
-        result.pay_in_advance_aggregation = BigDecimal(compute_pay_in_advance_aggregation)
+        result.pay_in_advance_aggregation = BigDecimal(compute_pay_in_advance_aggregation(aggregation:))
         result.pay_in_advance_count_delta = result.pay_in_advance_aggregation
 
         if presentation_by.present?
@@ -70,7 +70,7 @@ module BillableMetrics
         result
       end
 
-      def compute_pay_in_advance_aggregation
+      def compute_pay_in_advance_aggregation(aggregation:)
         return 0 unless event
         return 0 if event.properties.blank?
 
@@ -90,9 +90,15 @@ module BillableMetrics
         )
 
         unless cached_aggregation
+          max_aggregation = if operation_type == :remove && active_unique_property
+            aggregation + 1
+          else
+            aggregation
+          end
+
           handle_event_metadata(
-            current_aggregation: newly_applied_units,
-            max_aggregation: newly_applied_units,
+            current_aggregation: aggregation,
+            max_aggregation:,
             units_applied: newly_applied_units
           )
 
