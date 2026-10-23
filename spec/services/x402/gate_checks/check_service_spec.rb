@@ -6,12 +6,15 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
   subject(:result) { described_class.call(organization:, params:) }
 
   include_context "with an x402 payment"
+  include SignInWithXSigner
 
   let(:organization) { create(:organization, premium_integrations: ["events_targeting_wallets"]) }
   let(:connection) { create(:x402_connection, organization:) }
   let(:plan) { create(:plan, organization:, amount_cents: 0, amount_currency: "USD") }
   let(:billable_metric) { create(:billable_metric, organization:) }
-  let(:agent_address) { "0xf4a43B9cc729c9E4E139CB86808f48e3eD09Dcb2" }
+  let(:agent_key) { siwx_evm_key }
+  let(:agent_address) { siwx_address(agent_key) }
+  let(:siwx) { signed_siwx(agent_key) }
   let(:customer) { create(:customer, organization:, x402_agent_address: agent_address) }
   let(:wallet) do
     create(:wallet, customer:, code: "agent_credits", currency: "USD", x402_enabled: true, ongoing_balance_cents: 0,
@@ -20,7 +23,7 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
   let(:subscription) { create(:subscription, customer:, plan:, external_id: "x402_#{agent_address}_#{plan.code}") }
   let(:params) do
     {
-      connection_code: connection.code, wallet_code: "agent_credits", agent_address:, resource: "POST /v1/generate",
+      connection_code: connection.code, wallet_code: "agent_credits", siwx:, resource: "POST /v1/generate",
       plan_code: plan.code, billable_metric_code: billable_metric.code, amount_cents: 1_000, estimated_call_cost_cents: 1
     }
   end
@@ -41,28 +44,19 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
     end
 
     it "passes on the computed base while the stored ongoing balance is stale" do
-      expect(result).to have_attributes(requirements: nil, external_subscription_id: subscription.external_id, balance_credits: 13)
+      expect(result).to have_attributes(
+        requirements: nil, sign_in_chains: nil, external_subscription_id: subscription.external_id, balance_credits: 13
+      )
+    end
+
+    it "records the nonce" do
+      result
+      expect(X402::SignInNonce.sole).to have_attributes(organization:, agent_address:, nonce: siwx["nonce"])
     end
 
     it "makes no facilitator call" do
       result
       expect(a_request(:any, /api\.cdp\.coinbase\.com/)).not_to have_been_made
-    end
-
-    context "with the agent address claimed in lowercase" do
-      let(:params) { super().merge(agent_address: agent_address.downcase) }
-
-      it "passes with the checksummed external subscription id" do
-        expect(result).to have_attributes(requirements: nil, external_subscription_id: subscription.external_id)
-      end
-    end
-
-    context "with the agent address claimed in uppercase hex" do
-      let(:params) { super().merge(agent_address: "0x#{agent_address.delete_prefix("0x").upcase}") }
-
-      it "passes with the checksummed external subscription id" do
-        expect(result).to have_attributes(requirements: nil, external_subscription_id: subscription.external_id)
-      end
     end
 
     context "with a wallet restricted to other fee types" do
@@ -83,6 +77,222 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
         expect(result.requirements).to be_nil
       end
     end
+
+    context "with a replayed proof" do
+      before { described_class.call(organization:, params:) }
+
+      it "refuses with nonce_already_used" do
+        expect(result.error.messages).to eq(siwx: ["nonce_already_used"])
+      end
+
+      it "keeps one nonce" do
+        result
+        expect(X402::SignInNonce.count).to eq(1)
+      end
+    end
+
+    context "with the agent's address in lowercase" do
+      let(:siwx) { signed_siwx(agent_key, address: agent_address.downcase) }
+
+      it "passes" do
+        expect(result.requirements).to be_nil
+      end
+
+      it "records the nonce under the EIP-55 address" do
+        result
+        expect(X402::SignInNonce.sole).to have_attributes(agent_address:)
+      end
+    end
+
+    context "with a passed proof re-sent with its address in lowercase" do
+      subject(:result) { described_class.call(organization:, params: params.merge(siwx: siwx.merge("address" => agent_address.downcase))) }
+
+      before { described_class.call(organization:, params:) }
+
+      it "refuses with nonce_already_used" do
+        expect(result.error.messages).to eq(siwx: ["nonce_already_used"])
+      end
+
+      it "keeps one nonce" do
+        result
+        expect(X402::SignInNonce.count).to eq(1)
+      end
+    end
+
+    context "with a replayed proof whose agent can no longer cover a call" do
+      let(:params) { super().merge(estimated_call_cost_cents: 2) }
+
+      before { described_class.call(organization:, params: params.merge(estimated_call_cost_cents: 1)) }
+
+      it "refuses with nonce_already_used instead of challenging" do
+        expect(result.error.messages).to eq(siwx: ["nonce_already_used"])
+      end
+    end
+
+    context "with the proof already used on another connection of the organization" do
+      let(:other_connection) { create(:x402_connection, organization:) }
+
+      before { described_class.call(organization:, params: params.merge(connection_code: other_connection.code)) }
+
+      it "refuses with nonce_already_used" do
+        expect(result.error.messages).to eq(siwx: ["nonce_already_used"])
+      end
+    end
+
+    context "with the same nonce recorded for another address" do
+      before { create(:x402_sign_in_nonce, organization:, nonce: siwx["nonce"]) }
+
+      it "passes" do
+        expect(result.requirements).to be_nil
+      end
+    end
+
+    context "with the same nonce recorded in another organization" do
+      before { create(:x402_sign_in_nonce, agent_address:, nonce: siwx["nonce"]) }
+
+      it "passes" do
+        expect(result.requirements).to be_nil
+      end
+    end
+
+    context "with a proof that got a challenge first" do
+      let(:first_result) { described_class.call(organization:, params: params.merge(wallet_code: "other_wallet")) }
+
+      before { first_result }
+
+      it "challenged the first call" do
+        expect(first_result.requirements).to eq([evm_requirement])
+      end
+
+      it "passes on the proof the challenge left unrecorded" do
+        expect { result }.to change(X402::SignInNonce, :count).from(0).to(1)
+        expect(result.requirements).to be_nil
+      end
+    end
+
+    context "when the insert hits an unknown unique index" do
+      before do
+        allow(organization.x402_sign_in_nonces).to receive(:create!)
+          .and_raise(ActiveRecord::RecordNotUnique.new('duplicate key value violates unique constraint "some_other_index"'))
+      end
+
+      it "re-raises" do
+        expect { result }.to raise_error(ActiveRecord::RecordNotUnique)
+      end
+    end
+  end
+
+  context "with a proof 6 minutes old", cache: :redis do
+    let(:siwx) { signed_siwx(agent_key, issuedAt: 6.minutes.ago.utc.iso8601(3)) }
+    let(:key) { "x402:reserved:#{wallet.id}" }
+
+    before do
+      wallet
+      subscription
+    end
+
+    it "refuses with issued_at_too_old" do
+      expect(result.error.messages).to eq(siwx: ["issued_at_too_old"])
+    end
+
+    it "records no nonce" do
+      expect { result }.not_to change(X402::SignInNonce, :count)
+    end
+
+    it "leaves the reservation counter untouched" do
+      result
+      expect(Rails.cache.redis.then { it.exists?(key) }).to be(false)
+    end
+  end
+
+  context "with a connection saved without allowed origins" do
+    let(:connection) { create(:x402_connection, :without_allowed_origins, organization:) }
+
+    before do
+      wallet
+      subscription
+    end
+
+    it "refuses with allowed_origins_not_configured" do
+      expect(result.error.messages).to eq(base: ["allowed_origins_not_configured"])
+    end
+
+    it "records no nonce" do
+      expect { result }.not_to change(X402::SignInNonce, :count)
+    end
+
+    context "without siwx" do
+      let(:params) { super().except(:siwx) }
+
+      it "challenges" do
+        expect(result.requirements).to eq([evm_requirement])
+      end
+    end
+  end
+
+  context "with a lost insert race" do
+    before do
+      wallet
+      subscription
+      create(:x402_sign_in_nonce, organization:, agent_address:, nonce: siwx["nonce"])
+      allow(organization.x402_sign_in_nonces).to receive(:exists?).and_return(false)
+      allow(Sentry).to receive(:capture_exception)
+    end
+
+    context "with the reservation counter", cache: :redis do
+      let(:key) { "x402:reserved:#{wallet.id}" }
+
+      before { Rails.cache.redis.then { it.set(key, 5, ex: 60) } }
+
+      it "refuses with nonce_already_used" do
+        expect(result.error.messages).to eq(siwx: ["nonce_already_used"])
+      end
+
+      it "restores the held reservation" do
+        result
+        expect(Rails.cache.read(key, raw: true)).to eq("5")
+      end
+    end
+
+    context "when Redis is unreachable", cache: :redis do
+      before { allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::RedisCacheStore.new(url: "redis://localhost:1")) }
+
+      it "refuses with nonce_already_used" do
+        expect(result.error.messages).to eq(siwx: ["nonce_already_used"])
+      end
+    end
+
+    context "when the counter is switched off", cache: :redis do
+      let(:organization) do
+        create(:organization, premium_integrations: ["events_targeting_wallets"], feature_flags: ["x402_reservation_counter_disabled"])
+      end
+      let(:key) { "x402:reserved:#{wallet.id}" }
+
+      it "refuses with nonce_already_used" do
+        expect(result.error.messages).to eq(siwx: ["nonce_already_used"])
+      end
+
+      it "leaves the counter untouched" do
+        result
+        expect(Rails.cache.redis.then { it.exists?(key) }).to be(false)
+      end
+    end
+  end
+
+  context "when the nonce insert fails", cache: :redis do
+    let(:key) { "x402:reserved:#{wallet.id}" }
+
+    before do
+      wallet
+      subscription
+      Rails.cache.redis.then { it.set(key, 5, ex: 60) }
+      allow(organization.x402_sign_in_nonces).to receive(:create!).and_raise(ActiveRecord::StatementInvalid)
+    end
+
+    it "re-raises after restoring the held reservation" do
+      expect { result }.to raise_error(ActiveRecord::StatementInvalid)
+      expect(Rails.cache.read(key, raw: true)).to eq("5")
+    end
   end
 
   context "when the computed base is below the floor" do
@@ -98,6 +308,10 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
 
     it "challenges for the route's top-up" do
       expect(result).to have_attributes(requirements: [evm_requirement], external_subscription_id: subscription.external_id, balance_credits: 9)
+    end
+
+    it "records no nonce" do
+      expect { result }.not_to change(X402::SignInNonce, :count)
     end
   end
 
@@ -145,11 +359,14 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
 
   context "with a stranger" do
     it "challenges at a zero balance" do
-      expect(result).to have_attributes(requirements: [evm_requirement], external_subscription_id: nil, balance_credits: 0)
+      expect(result).to have_attributes(
+        requirements: [evm_requirement], external_subscription_id: nil, balance_credits: 0,
+        sign_in_chains: ["eip155:84532", "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"]
+      )
     end
 
     it "creates nothing" do
-      expect { result }.not_to change { [Customer.count, Wallet.count, Subscription.count, X402::Settlement.count] }
+      expect { result }.not_to change { [Customer.count, Wallet.count, Subscription.count, X402::Settlement.count, X402::SignInNonce.count] }
     end
 
     context "when the connection refuses strangers" do
@@ -161,19 +378,47 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
     end
   end
 
-  context "without an agent address" do
-    let(:params) { super().except(:agent_address) }
+  context "without siwx" do
+    let(:params) { super().except(:siwx) }
 
-    it "challenges as a stranger" do
-      expect(result.requirements).to eq([evm_requirement])
+    before do
+      wallet
+      subscription
     end
+
+    it "challenges the funded agent's address as a stranger" do
+      expect(result).to have_attributes(
+        requirements: [evm_requirement], balance_credits: 0, external_subscription_id: nil,
+        sign_in_chains: ["eip155:84532", "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"]
+      )
+    end
+
+    it("records no nonce") { expect { result }.not_to change(X402::SignInNonce, :count) }
 
     context "when the connection refuses strangers" do
       let(:connection) { create(:x402_connection, organization:, auto_create_customers: false) }
 
-      it "refuses with buyer_not_recognized" do
-        expect(result.error.messages).to eq(base: ["buyer_not_recognized"])
-      end
+      it("still challenges") { expect(result.requirements).to eq([evm_requirement]) }
+    end
+  end
+
+  context "with a null siwx" do
+    let(:params) { super().merge(siwx: nil) }
+
+    it("challenges") { expect(result.requirements).to eq([evm_requirement]) }
+  end
+
+  context "with an empty siwx" do
+    let(:params) { super().merge(siwx: {}) }
+
+    it { expect(result.error.messages).to eq(siwx: ["value_is_invalid"]) }
+  end
+
+  context "with a siwx that is not an object" do
+    let(:params) { super().merge(siwx: "token", amount_cents: 0) }
+
+    it "reports it among the input errors" do
+      expect(result.error.messages).to eq(siwx: ["value_is_invalid"], amount_cents: ["invalid_value"])
     end
   end
 
@@ -189,45 +434,6 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
       it "passes" do
         expect(result.requirements).to be_nil
       end
-    end
-  end
-
-  {
-    "truncated hex" => "0xf4a43B9cc729c9E4E139CB86808f48e3eD09Dc",
-    "hex without the 0x prefix" => "f4a43B9cc729c9E4E139CB86808f48e3eD09Dcb2",
-    "a wrong EIP-55 checksum" => "0xF4a43B9cc729c9E4E139CB86808f48e3eD09Dcb2",
-    "a CAIP-10 account id" => "eip155:8453:0xf4a43B9cc729c9E4E139CB86808f48e3eD09Dcb2",
-    "an empty string" => ""
-  }.each do |shape, address|
-    context "with an agent address given as #{shape}" do
-      let(:agent_address) { address }
-
-      it "refuses the field as invalid_format" do
-        expect(result.error.messages).to eq(agent_address: ["invalid_format"])
-      end
-    end
-  end
-
-  context "with an agent address longer than any address" do
-    let(:agent_address) { "1" * 45 }
-
-    before { allow(X402::Base58).to receive(:decode).and_call_original }
-
-    it "refuses the field as invalid_format" do
-      expect(result.error.messages).to eq(agent_address: ["invalid_format"])
-    end
-
-    it "never decodes it" do
-      result
-      expect(X402::Base58).not_to have_received(:decode).with("1" * 45)
-    end
-  end
-
-  context "with a Solana transaction signature as the agent address" do
-    let(:agent_address) { X402::Base58.encode(SecureRandom.random_bytes(64)) }
-
-    it "refuses the field as invalid_format" do
-      expect(result.error.messages).to eq(agent_address: ["invalid_format"])
     end
   end
 
@@ -323,7 +529,7 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
     context "with several calls in a row" do
       let(:params) { super().merge(estimated_call_cost_cents: 300) }
 
-      before { 2.times { described_class.call(organization:, params:) } }
+      before { 2.times { described_class.call(organization:, params: params.merge(siwx: signed_siwx(agent_key))) } }
 
       it "challenges the third and holds only the first two" do
         expect(result.requirements).to eq([evm_requirement])
@@ -628,7 +834,7 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
 
   context "with a funded Solana agent" do
     let(:connection) { create(:x402_connection, :solana, organization:) }
-    let(:agent_address) { "HHU1aLQQCbCzW9ebjFTntq2vkvsQsxkDyPjMsW2WtiLG" }
+    let(:agent_key) { siwx_svm_key }
 
     before do
       wallet
@@ -639,15 +845,60 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
       expect(result).to have_attributes(requirements: nil, external_subscription_id: "x402_#{agent_address}_#{plan.code}")
     end
 
+    it "records the nonce under its base58 address" do
+      result
+      expect(X402::SignInNonce.sole).to have_attributes(organization:, agent_address:, nonce: siwx["nonce"])
+    end
+
     it "makes no facilitator call" do
       result
       expect(a_request(:any, /api\.cdp\.coinbase\.com/)).not_to have_been_made
     end
+
+    context "with a replayed proof" do
+      before { described_class.call(organization:, params:) }
+
+      it "refuses with nonce_already_used" do
+        expect(result.error.messages).to eq(siwx: ["nonce_already_used"])
+      end
+    end
   end
 
-  context "without an agent address on a Solana-only connection" do
+  context "with a mainnet connection" do
+    let(:connection) { create(:x402_connection, organization:, networks: ["eip155:8453"]) }
+    let(:siwx) { signed_siwx(agent_key, chainId: "eip155:8453") }
+
+    context "with a funded agent" do
+      before do
+        wallet
+        subscription
+      end
+
+      it "passes" do
+        expect(result).to have_attributes(requirements: nil, sign_in_chains: nil)
+      end
+    end
+
+    context "with a testnet proof" do
+      let(:siwx) { signed_siwx(agent_key) }
+
+      it "refuses with unsupported_chain" do
+        expect(result.error.messages).to eq(siwx: ["unsupported_chain"])
+      end
+    end
+
+    context "without siwx" do
+      let(:params) { super().except(:siwx) }
+
+      it "lists the mainnet chains" do
+        expect(result.sign_in_chains).to eq(["eip155:8453", "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"])
+      end
+    end
+  end
+
+  context "without siwx on a Solana-only connection" do
     let(:connection) { create(:x402_connection, :solana, organization:, cdp_api_key_id:, cdp_api_key_secret:) }
-    let(:params) { super().except(:agent_address) }
+    let(:params) { super().except(:siwx) }
 
     before { stub_request(:get, "#{cdp_facilitator_url}/supported").to_return(status: 200, body: cdp_fixture("supported")) }
 
