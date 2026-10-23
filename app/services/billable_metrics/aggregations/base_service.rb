@@ -222,22 +222,13 @@ module BillableMetrics
           .where(metered_item.cached_aggregation_identity)
           .from_datetime(with_from_datetime)
           .to_datetime(with_to_datetime)
-          .where(grouped_by: cached_grouped_by_keys(grouped_by))
+          .where(grouped_by: grouped_by.presence || {})
           .order(timestamp: :desc, created_at: :desc)
 
         query = query.where.not(event_transaction_id: event.transaction_id) if event.present?
         query = query.where(charge_filter_id: charge_filter.id) if charge_filter
 
         query.first
-      end
-
-      # Rows cached before blank group values were stored as nil can hold "" for any of them
-      def cached_grouped_by_keys(grouped_by)
-        return [{}] if grouped_by.blank?
-
-        grouped_by.select { |_, value| value.nil? }.keys.reduce([grouped_by]) do |keys, blank_key|
-          keys + keys.map { it.merge(blank_key => "") }
-        end
       end
 
       def apply_rounding(result)
