@@ -105,6 +105,113 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
       end
     end
 
+    context "when a line is opted in while already past" do
+      let(:alert) { create(:wallet_balance_amount_alert, thresholds: [100], organization:, previous_value: 0) }
+      let(:params) { {thresholds: [{code: "critical", value: 100, notify_on: %w[triggered resolved]}]} }
+
+      it "records a silent alarm so the next recovery can announce" do
+        expect(described_class.call(alert:, params:)).to be_success
+
+        seeded = alert.all_triggered_alerts.sole
+        expect(seeded).to be_seeded
+        expect(seeded.crossed_thresholds.map { it["code"] }).to eq(%w[critical])
+      end
+
+      context "when an alarm is already on record" do
+        before do
+          create(:triggered_alert, alert:, organization:, subscription: nil, wallet: alert.wallet,
+            crossed_thresholds: [{code: "critical", value: "100.0", recurring: false}])
+        end
+
+        it "does not record a second one" do
+          expect { described_class.call(alert:, params:) }
+            .not_to change { alert.all_triggered_alerts.where(kind: :seeded).count }
+        end
+      end
+
+      context "when the alert watches a subscription" do
+        let(:alert) { create(:alert, thresholds: [10], organization:, previous_value: 50) }
+        let(:params) { {thresholds: [{code: "warn", value: 10, notify_on: %w[triggered resolved]}]} }
+        let(:subscription) { organization.subscriptions.find_by(external_id: alert.subscription_external_id) }
+
+        it "records the silent alarm on the active subscription" do
+          expect(result).to be_success
+
+          seeded = alert.all_triggered_alerts.sole
+          expect(seeded).to have_attributes(kind: "seeded", subscription:, wallet: nil)
+        end
+
+        context "without an active subscription" do
+          before { subscription.update!(status: :terminated) }
+
+          it "records nothing and still updates the alert" do
+            expect(result).to be_success
+            expect(alert.all_triggered_alerts).to be_empty
+            expect(alert.reload.thresholds.sole.code).to eq("warn")
+          end
+        end
+      end
+    end
+
+    context "when an edit moves an announced line out of alarm" do
+      let(:alert) { create(:wallet_balance_amount_alert, thresholds: nil, organization:, previous_value: 50) }
+      let(:params) { {thresholds: [{code: "low", value: 30, notify_on: %w[triggered resolved]}]} }
+      let(:announced_code) { "low" }
+
+      before do
+        create(:alert_threshold, alert:, organization:, code: "low", value: 100, notify_on: %w[triggered resolved])
+        create(:triggered_alert, alert:, organization:, subscription: nil, wallet: alert.wallet,
+          crossed_thresholds: [{code: announced_code, value: "100.0", recurring: false}])
+      end
+
+      it "records the resolution of the alarm the customer was told about" do
+        expect(result).to be_success
+
+        resolved = alert.all_triggered_alerts.find_by(kind: :resolved)
+        expect(resolved).to have_attributes(resolution_reason: "threshold_updated", fully_resolved: true, in_alarm_thresholds: [])
+        expect(resolved.crossed_thresholds.map { it["code"] }).to eq(%w[low])
+      end
+
+      context "when the edit removes the line" do
+        let(:params) { {thresholds: [{code: "empty", value: 10, notify_on: %w[triggered resolved]}]} }
+
+        it "records the resolution of the removed line" do
+          expect(result).to be_success
+
+          resolved = alert.all_triggered_alerts.find_by(kind: :resolved)
+          expect(resolved).to have_attributes(resolution_reason: "threshold_removed", fully_resolved: true)
+          expect(resolved.crossed_thresholds.map { it["code"] }).to eq(%w[low])
+        end
+      end
+
+      context "when the edit keeps the line in alarm" do
+        let(:params) { {thresholds: [{code: "low", value: 80, notify_on: %w[triggered resolved]}]} }
+
+        it "keeps the alarm open" do
+          expect(result).to be_success
+          expect(alert.all_triggered_alerts.where(kind: :resolved)).to be_empty
+        end
+      end
+
+      context "when the edit opts the line out of resolutions" do
+        let(:params) { {thresholds: [{code: "low", value: 30}]} }
+
+        it "does not announce a resolution" do
+          expect(result).to be_success
+          expect(alert.all_triggered_alerts.where(kind: :resolved)).to be_empty
+        end
+      end
+
+      context "when no alarm was announced for the line" do
+        let(:announced_code) { "other" }
+
+        it "does not announce a resolution" do
+          expect(result).to be_success
+          expect(alert.all_triggered_alerts.where(kind: :resolved)).to be_empty
+        end
+      end
+    end
+
     context "with too many thresholds" do
       let(:params) do
         {
