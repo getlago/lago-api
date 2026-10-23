@@ -414,7 +414,7 @@ RSpec.describe Api::V2::RateCardsController do
         # `tax` is linked by the outer before, at the current time.
         listed = [tax, *links.reverse.map(&:tax)]
 
-        expect(json[:rate_card][:taxes]).to eq(listed.map { V2::TaxSerializer.new(it).serialize })
+        expect(json[:rate_card][:taxes]).to eq(listed.map { V2::TaxSerializer.new(it, includes: %i[usec_timestamps]).serialize })
         expect(json[:rate_card].keys).to eq([*flat_keys, :taxes])
       end
     end
