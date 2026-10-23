@@ -13,7 +13,7 @@ RSpec.describe Api::V2::CustomersController do
         external_id: "customer.eu",
         name: "Example customer",
         currency: "EUR",
-        billing_configuration: {document_locale: "fr"},
+        document_locale: "fr",
         shipping_address: {city: "Paris", country: "fr"},
         metadata: [{key: "reference", value: "123", display_on_invoice: true}]
       }
@@ -21,7 +21,7 @@ RSpec.describe Api::V2::CustomersController do
 
     include_examples "requires API permission", "customer", "write"
 
-    it "accepts nested settings and returns flat billing fields without expanded relationships" do
+    it "accepts flat billing fields and returns them without expanded relationships" do
       expect { request }.to change(organization.customers, :count).by(1)
 
       expect(response).to have_http_status(:ok)
@@ -108,16 +108,25 @@ RSpec.describe Api::V2::CustomersController do
       end
     end
 
-    %i[billing_configuration shipping_address].each do |key|
-      context "with an array instead of a #{key} object" do
-        let(:attributes) { super().merge(key => [{city: "Paris"}]) }
+    context "with an array instead of a shipping address object" do
+      let(:attributes) { super().merge(shipping_address: [{city: "Paris"}]) }
 
-        it "returns a parameter error without creating a customer" do
-          expect { request }.not_to change(organization.customers, :count)
+      it "returns a parameter error without creating a customer" do
+        expect { request }.not_to change(organization.customers, :count)
 
-          expect(response).to have_http_status(:bad_request)
-          expect(json[:code]).to eq("missing_parameter")
-        end
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:code]).to eq("missing_parameter")
+      end
+    end
+
+    context "with the old billing configuration wrapper" do
+      let(:attributes) { super().merge(billing_configuration: {document_locale: "de", payment_provider: "stripe"}) }
+
+      it "ignores the wrapper and uses the flat fields" do
+        request
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:customer]).to include(document_locale: "fr", payment_provider: nil)
       end
     end
 
@@ -135,14 +144,14 @@ RSpec.describe Api::V2::CustomersController do
     context "with payment provider settings" do
       let(:provider) { create(:stripe_provider, organization:) }
       let(:attributes) do
-        super().merge(billing_configuration: {
+        super().merge(
           payment_provider: "stripe",
           payment_provider_code: provider.code,
           sync_with_provider: true
-        })
+        )
       end
 
-      it "accepts nested provider settings and returns flat fields" do
+      it "accepts flat provider settings and returns flat fields" do
         request
 
         expect(response).to have_http_status(:ok)
@@ -155,11 +164,12 @@ RSpec.describe Api::V2::CustomersController do
     context "with a provider customer id" do
       let(:provider) { create(:stripe_provider, organization:) }
       let(:attributes) do
-        super().merge(billing_configuration: {
+        super().merge(
           payment_provider: "stripe",
           payment_provider_code: provider.code,
-          provider_customer_id: "cus_example"
-        })
+          provider_customer_id: "cus_example",
+          provider_payment_methods: %w[card]
+        )
       end
 
       it "returns the provider customer id at the top level" do
@@ -167,6 +177,7 @@ RSpec.describe Api::V2::CustomersController do
 
         expect(response).to have_http_status(:ok)
         expect(json[:customer][:provider_customer_id]).to eq("cus_example")
+        expect(json[:customer][:provider_payment_methods]).to eq(%w[card])
       end
     end
 
@@ -195,21 +206,26 @@ RSpec.describe Api::V2::CustomersController do
       end
     end
 
-    context "with nested invoice issuing settings", :premium do
+    context "with flat invoice issuing settings", :premium do
       let(:attributes) do
-        super().merge(billing_configuration: {
+        super().merge(
           invoice_grace_period: 3,
           document_locale: "fr",
           subscription_invoice_issuing_date_anchor: "current_period_end",
           subscription_invoice_issuing_date_adjustment: "keep_anchor"
-        })
+        )
       end
 
-      it "persists nested settings and returns their fields at the top level" do
+      it "persists the flat settings and returns them at the top level" do
         request
 
         expect(response).to have_http_status(:ok)
-        expect(json[:customer]).to include(attributes[:billing_configuration])
+        expect(json[:customer]).to include(attributes.slice(
+          :invoice_grace_period,
+          :document_locale,
+          :subscription_invoice_issuing_date_anchor,
+          :subscription_invoice_issuing_date_adjustment
+        ))
         expect(json[:customer]).not_to have_key(:billing_configuration)
       end
     end
@@ -313,14 +329,50 @@ RSpec.describe Api::V2::CustomersController do
       end
 
       context "with billing configuration changes", :premium do
-        let(:attributes) { {billing_configuration: {invoice_grace_period: 4}} }
+        let(:attributes) { {invoice_grace_period: 4} }
 
-        it "changes only the supplied nested setting" do
+        it "changes only the supplied flat setting" do
           request
 
           expect(response).to have_http_status(:ok)
           expect(customer.reload).to have_attributes(invoice_grace_period: 4, document_locale: "fr")
           expect(json[:customer][:invoice_grace_period]).to eq(4)
+        end
+
+        context "when clearing the grace period" do
+          let(:customer) { create(:customer, organization:, invoice_grace_period: 4, document_locale: "fr") }
+          let(:attributes) { {invoice_grace_period: nil} }
+
+          it "preserves the explicit null" do
+            request
+
+            expect(response).to have_http_status(:ok)
+            expect(customer.reload).to have_attributes(invoice_grace_period: nil, document_locale: "fr")
+            expect(json[:customer][:invoice_grace_period]).to be_nil
+          end
+        end
+      end
+
+      context "with a flat document locale" do
+        let(:attributes) { {document_locale: "de"} }
+
+        it "updates the locale" do
+          request
+
+          expect(response).to have_http_status(:ok)
+          expect(customer.reload.document_locale).to eq("de")
+          expect(json[:customer][:document_locale]).to eq("de")
+        end
+      end
+
+      context "with only the old billing configuration wrapper" do
+        let(:attributes) { {billing_configuration: {document_locale: "de"}} }
+
+        it "ignores the nested fields" do
+          request
+
+          expect(response).to have_http_status(:ok)
+          expect(customer.reload.document_locale).to eq("fr")
         end
       end
 

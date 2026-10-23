@@ -14,6 +14,18 @@ module Api
         moneyhash_customer
       ].freeze
 
+      BILLING_CONFIGURATION_FIELDS = %i[
+        invoice_grace_period
+        subscription_invoice_issuing_date_anchor
+        subscription_invoice_issuing_date_adjustment
+        payment_provider
+        payment_provider_code
+        provider_customer_id
+        sync
+        sync_with_provider
+        document_locale
+      ].freeze
+
       cursor_paginated_index(Customer)
       serializable_with ::V2::CustomerSerializer, serializer_options: {include_shipping_address: true}
 
@@ -101,10 +113,8 @@ module Api
           raise ActionController::ParameterMissing, :customer
         end
 
-        %i[billing_configuration shipping_address].each do |key|
-          if payload[key].is_a?(Array)
-            raise ActionController::ParameterMissing, key
-          end
+        if payload[:shipping_address].is_a?(Array)
+          raise ActionController::ParameterMissing, :shipping_address
         end
 
         payload
@@ -137,18 +147,8 @@ module Api
           :skip_invoice_custom_sections,
           :external_salesforce_id,
           :billing_entity_code,
-          billing_configuration: [
-            :invoice_grace_period,
-            :subscription_invoice_issuing_date_anchor,
-            :subscription_invoice_issuing_date_adjustment,
-            :payment_provider,
-            :payment_provider_code,
-            :provider_customer_id,
-            :sync,
-            :sync_with_provider,
-            :document_locale,
-            provider_payment_methods: []
-          ],
+          *BILLING_CONFIGURATION_FIELDS,
+          provider_payment_methods: [],
           shipping_address: [
             :address_line1,
             :address_line2,
@@ -177,6 +177,8 @@ module Api
           invoice_custom_section_codes: []
         ).to_h.deep_symbolize_keys
 
+        # The existing service still expects billing fields under billing_configuration.
+        input[:billing_configuration] = input.extract!(*BILLING_CONFIGURATION_FIELDS, :provider_payment_methods)
         normalize_metadata!(input[:metadata])
         input
       end
