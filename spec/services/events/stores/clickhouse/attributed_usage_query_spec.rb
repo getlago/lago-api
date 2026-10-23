@@ -55,7 +55,7 @@ RSpec.describe Events::Stores::Clickhouse::AttributedUsageQuery, clickhouse: {cl
     ]
   end
 
-  def create_event(code:, value:, labels:, properties: {}, timestamp: Time.zone.parse("2026-09-10"), transaction_id: SecureRandom.uuid)
+  def create_event(code:, value:, labels:, properties: {}, timestamp: Time.zone.parse("2026-09-10"), transaction_id: SecureRandom.uuid, enriched_at: Time.current)
     Clickhouse::EventsEnriched.create!(
       organization_id:,
       external_subscription_id:,
@@ -65,7 +65,8 @@ RSpec.describe Events::Stores::Clickhouse::AttributedUsageQuery, clickhouse: {cl
       properties:,
       attribution_labels: labels,
       value: value.to_s,
-      decimal_value: value
+      decimal_value: value,
+      enriched_at:
     )
   end
 
@@ -131,6 +132,33 @@ RSpec.describe Events::Stores::Clickhouse::AttributedUsageQuery, clickhouse: {cl
 
       it "reads the events with FINAL" do
         expect(attributed_usage_query.query).to include("FROM events_enriched FINAL")
+      end
+    end
+  end
+
+  describe "#ingested_since?" do
+    subject(:ingested) { attributed_usage_query.ingested_since?(Time.zone.parse("2026-10-20 12:00:00")) }
+
+    let(:label_filters) { {"team" => ["eng"]} }
+
+    before do
+      create_event(code: "tokens", value: 1, labels: {"team" => "eng"}, enriched_at: Time.zone.parse("2026-10-20 11:00:00"))
+      create_event(code: "other", value: 1, labels: {"team" => "eng"}, enriched_at: Time.zone.parse("2026-10-20 13:00:00"))
+      create_event(code: "tokens", value: 1, labels: {"team" => "data"}, enriched_at: Time.zone.parse("2026-10-20 13:00:00"))
+      create_event(code: "tokens", value: 1, labels: {"team" => "eng"}, timestamp: Time.zone.parse("2026-10-01"), enriched_at: Time.zone.parse("2026-10-20 13:00:00"))
+    end
+
+    it "ignores the events the query does not read" do
+      expect(ingested).to be(false)
+    end
+
+    context "when an event of the query was ingested since" do
+      before do
+        create_event(code: "tokens", value: 1, labels: {"team" => "eng"}, timestamp: Time.zone.parse("2026-09-02"), enriched_at: Time.zone.parse("2026-10-20 12:00:01"))
+      end
+
+      it "returns true" do
+        expect(ingested).to be(true)
       end
     end
   end

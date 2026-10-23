@@ -70,8 +70,15 @@ module Events
           end
         end
 
+        # The skip index on enriched_at keeps this to the granules ingested since, whatever the window.
+        def ingested_since?(time)
+          sql = "SELECT 1 FROM events_enriched WHERE #{where_sql} AND #{sql_condition("enriched_at > ?", time)} LIMIT 1"
+
+          ::Clickhouse::BaseRecord.with_connection { |connection| connection.select_value(sql).present? }
+        end
+
         def query
-          <<~SQL.squish
+          @query ||= <<~SQL.squish
             SELECT
               node, rank, in_page, groups_count,
               #{value_names.join(", ")},
