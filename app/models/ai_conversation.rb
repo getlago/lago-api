@@ -1,12 +1,22 @@
 # frozen_string_literal: true
 
 class AiConversation < ApplicationRecord
+  # Bounds how long an unfinished resume keeps the conversation closed to new messages,
+  # in case its job never runs. Covers the job's retries.
+  RESUME_TIMEOUT = 15.minutes
+
   belongs_to :membership
   belongs_to :organization
 
   has_many :tool_calls, class_name: "AiConversationToolCall"
 
   validates :name, presence: true
+
+  # Between the member's last answer and the end of the resume, the model is still working on
+  # the batch: its results, then maybe another round of tool calls.
+  def resuming?
+    resuming_at.present? && resuming_at > RESUME_TIMEOUT.ago
+  end
 end
 
 # == Schema Information
@@ -16,6 +26,7 @@ end
 #
 #  id                      :uuid             not null, primary key
 #  name                    :string           not null
+#  resuming_at             :datetime
 #  created_at              :datetime         not null
 #  updated_at              :datetime         not null
 #  membership_id           :uuid             not null

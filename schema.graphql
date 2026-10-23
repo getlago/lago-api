@@ -910,6 +910,7 @@ enum AiConversationToolCallStatusEnum {
   cancelled
   completed
   confirmed
+  executing
   pending
 }
 

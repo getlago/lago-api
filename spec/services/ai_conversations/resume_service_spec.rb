@@ -9,7 +9,7 @@ RSpec.describe AiConversations::ResumeService do
   let(:permissions) { %w[ai_conversations:create ai_conversations:view coupons:view coupons:create] }
   let(:role) { create(:role, organization:, permissions:) }
   let(:membership) { create(:membership, organization:, role:) }
-  let(:ai_conversation) { create(:ai_conversation, organization:, membership:) }
+  let(:ai_conversation) { create(:ai_conversation, organization:, membership:, resuming_at: 1.minute.ago) }
 
   let(:mcp_client) { instance_double(LagoMcpClient::Client, setup!: nil, list_tools: tools) }
   let(:tools) { [LagoMcpClient::Tool.new(name: "create_coupon", description: "Creates a coupon", input_schema: {})] }
@@ -53,6 +53,38 @@ RSpec.describe AiConversations::ResumeService do
       )
       expect(LagoApiSchema.subscriptions).to have_received(:trigger).with(:ai_conversation_streamed, {id: ai_conversation.id}, {chunk: "Done", done: false})
       expect(LagoApiSchema.subscriptions).to have_received(:trigger).with(:ai_conversation_streamed, {id: ai_conversation.id}, {chunk: nil, done: true})
+      expect(ai_conversation.reload.resuming_at).to be_nil
+    end
+  end
+
+  context "when an earlier attempt stopped after sending the write" do
+    let(:write_status) { "executing" }
+
+    it "does not send the write again and tells the model its outcome is unknown" do
+      service.call
+
+      expect(mcp_client).not_to have_received(:call_tool)
+      expect(write_call.reload).to have_attributes(status: "completed", result: described_class::INTERRUPTED_RESULT)
+      expect(mistral_client).to have_received(:append_to_conversation).with(
+        conversation_id: ai_conversation.mistral_conversation_id,
+        inputs: include(
+          {tool_call_id: write_call.tool_call_id, result: described_class::INTERRUPTED_RESULT, type: "function.result", object: "entry"}
+        )
+      )
+    end
+  end
+
+  context "when the attempt stops while the write is in flight" do
+    before { allow(mcp_client).to receive(:call_tool).and_raise(Net::ReadTimeout) }
+
+    it "never sends the write twice" do
+      expect(service.call).to be_failure
+      expect(write_call.reload.status).to eq("executing")
+
+      described_class.new(ai_conversation:).call
+
+      expect(mcp_client).to have_received(:call_tool).once
+      expect(write_call.reload).to have_attributes(status: "completed", result: described_class::INTERRUPTED_RESULT)
     end
   end
 
@@ -69,6 +101,17 @@ RSpec.describe AiConversations::ResumeService do
       described_class.new(ai_conversation:).call
 
       expect(mcp_client).to have_received(:call_tool).once
+      expect(ai_conversation.reload.resuming_at).to be_present
+    end
+  end
+
+  context "when the results already reached the model in an earlier attempt" do
+    before { AiConversationToolCall.update_all(status: "completed", submitted_at: Time.current) } # rubocop:disable Rails/SkipsModelValidations
+
+    it "only ends the resume" do
+      expect(service.call).to be_success
+      expect(mistral_client).not_to have_received(:append_to_conversation)
+      expect(ai_conversation.reload.resuming_at).to be_nil
     end
   end
 

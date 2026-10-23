@@ -3505,6 +3505,12 @@
               "deprecationReason": null
             },
             {
+              "name": "executing",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "cancelled",
               "description": null,
               "isDeprecated": false,

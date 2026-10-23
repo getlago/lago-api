@@ -2,7 +2,7 @@
 
 class CreateAiConversationToolCalls < ActiveRecord::Migration[8.1]
   def change
-    create_enum :ai_conversation_tool_call_status, %w[pending confirmed cancelled completed]
+    create_enum :ai_conversation_tool_call_status, %w[pending confirmed executing cancelled completed]
 
     create_table :ai_conversation_tool_calls, id: :uuid, if_not_exists: true do |t|
       t.references :organization, null: false, foreign_key: true, type: :uuid, index: true

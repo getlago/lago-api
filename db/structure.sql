@@ -1593,6 +1593,7 @@ CREATE EXTENSION IF NOT EXISTS unaccent WITH SCHEMA public;
 CREATE TYPE public.ai_conversation_tool_call_status AS ENUM (
     'pending',
     'confirmed',
+    'executing',
     'cancelled',
     'completed'
 );
@@ -2382,7 +2383,8 @@ CREATE TABLE public.ai_conversations (
     name character varying NOT NULL,
     mistral_conversation_id character varying,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    resuming_at timestamp(6) without time zone
 );
 
 
@@ -15968,6 +15970,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261023180000'),
 ('20261023090000'),
 ('20261022090030'),
 ('20261020144205'),

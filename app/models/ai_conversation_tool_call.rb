@@ -7,6 +7,7 @@ class AiConversationToolCall < ApplicationRecord
   STATUSES = {
     pending: "pending",
     confirmed: "confirmed",
+    executing: "executing",
     cancelled: "cancelled",
     completed: "completed"
   }.freeze

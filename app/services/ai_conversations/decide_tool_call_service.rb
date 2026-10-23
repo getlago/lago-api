@@ -20,6 +20,7 @@ module AiConversations
       return result.not_found_failure!(resource: "ai_conversation_tool_call") unless tool_call
 
       decided = false
+      resume = false
       ai_conversation.with_lock do
         tool_call.reload
 
@@ -30,12 +31,17 @@ module AiConversations
             decided_at: Time.current
           )
           decided = true
+
+          unless ai_conversation.tool_calls.unsubmitted.pending.exists?
+            ai_conversation.update!(resuming_at: Time.current)
+            resume = true
+          end
         end
       end
 
       return result.not_allowed_failure!(code: "tool_call_already_decided") unless decided
 
-      AiConversations::ResumeJob.perform_later(ai_conversation) unless ai_conversation.tool_calls.unsubmitted.pending.exists?
+      AiConversations::ResumeJob.perform_later(ai_conversation) if resume
 
       result.tool_call = tool_call
       result
