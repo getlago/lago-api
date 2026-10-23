@@ -102,7 +102,7 @@ module Subscriptions
       #       or to miss some. To prevent it, we have to ensure that invoice bounds does not overlap or that there is no
       #       hole between a charges_from_datetime and the charges_to_datetime of the previous period
       if timezone_has_changed? && previous_charge_to_datetime
-        new_datetime = previous_charge_to_datetime + Rational(1, 1_000_000)
+        new_datetime = next_boundary_after(previous_charge_to_datetime)
 
         # NOTE: Ensure that the invoice is really the previous one
         #       26 hours is the maximum time difference between two places in the world
@@ -135,7 +135,7 @@ module Subscriptions
       #       or to miss some. To prevent it, we have to ensure that invoice bounds does not overlap or that there is no
       #       hole between a fixed_charges_from_datetime and the fixed_charges_to_datetime of the previous period
       if timezone_has_changed? && previous_fixed_charge_to_datetime
-        new_datetime = previous_fixed_charge_to_datetime + Rational(1, 1_000_000)
+        new_datetime = next_boundary_after(previous_fixed_charge_to_datetime)
 
         # NOTE: Ensure that the invoice is really the previous one
         #       26 hours is the maximum time difference between two places in the world
@@ -268,6 +268,10 @@ module Subscriptions
       return if last_invoice_subscription.blank?
 
       last_invoice_subscription.fixed_charges_to_datetime
+    end
+
+    def next_boundary_after(datetime)
+      datetime + (datetime.usec.zero? ? 1.second : Rational(1, 1_000_000))
     end
 
     def terminated_pay_in_arrears?
