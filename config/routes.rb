@@ -56,6 +56,7 @@ Rails.application.routes.draw do
       resources :invoices, only: [] do
         post :void, on: :member
       end
+      resources :fees, only: %i[index show update destroy]
     end
 
     namespace :v2, module: :v1 do

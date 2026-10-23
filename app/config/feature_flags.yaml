@@ -65,3 +65,7 @@ incremental_charge_cache:
 sso_cross_organization_sessions:
   description: "Keep the former Okta and Entra ID scope between flagged organizations: each accepts SSO sessions from the others' integrations, and its own integration signs in users who are not members yet, even when it does not allow the login method itself"
   owners: ["@jdenquin", "@vincent-pochet"]
+
+recurring_aggregation_snapshots:
+  description: "Persist the units of recurring sum and weighted sum charges at the end of each billed period, so later periods can start from them instead of the full event history"
+  owners: ["@vincent-pochet"]

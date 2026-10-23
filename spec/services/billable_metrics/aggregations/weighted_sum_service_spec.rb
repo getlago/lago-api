@@ -219,6 +219,45 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
         result = aggregator.aggregate
 
         expect(result.breakdowns).to eq([{groups: {"region" => "eu"}, value: 100.to_d}])
+        expect(result.recurring_breakdowns).to eq([{groups: {"region" => "eu"}, value: 100.to_d}])
+      end
+    end
+
+    context "when using presentation_by with events and cached presentation breakdowns" do
+      let(:presentation_by) { ["region"] }
+      let(:events_values) do
+        [
+          {timestamp: Time.zone.parse("2023-08-16 00:00:00"), value: 10, region: "eu"},
+          {timestamp: Time.zone.parse("2023-08-16 00:00:00"), value: 4, region: "us"}
+        ]
+      end
+      let(:cached_aggregation) do
+        create(
+          :cached_aggregation,
+          charge:,
+          organization:,
+          external_subscription_id: subscription.external_id,
+          timestamp: from_datetime - 1.day,
+          current_aggregation: 100,
+          presentation_breakdowns: [{"groups" => {"region" => "eu"}, "value" => "100.0"}]
+        )
+      end
+
+      it "returns the weighted breakdowns and the units active at period end" do
+        result = aggregator.aggregate
+
+        expect(result.breakdowns.map { {groups: it[:groups], value: it[:value].round(5).to_s} }).to match_array(
+          [
+            {groups: {"region" => "eu"}, value: "105.16129"},
+            {groups: {"region" => "us"}, value: "2.06452"}
+          ]
+        )
+        expect(result.recurring_breakdowns).to match_array(
+          [
+            {groups: {"region" => "eu"}, value: 110},
+            {groups: {"region" => "us"}, value: 4}
+          ]
+        )
       end
     end
 
@@ -600,6 +639,12 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
               {groups: {"agent_name" => "frodo", "region" => "us"}, value: "2.99597"}
             ]
           )
+          expect(result.recurring_breakdowns).to match_array(
+            [
+              {groups: {"agent_name" => "aragorn", "region" => "eu"}, value: 2},
+              {groups: {"agent_name" => "frodo", "region" => "us"}, value: 3}
+            ]
+          )
         end
 
         context "when frodo has cached presentation breakdowns" do
@@ -616,6 +661,37 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
               [
                 {groups: {"agent_name" => "aragorn", "region" => "eu"}, value: "2.0"},
                 {groups: {"agent_name" => "frodo", "region" => "us"}, value: "102.99597"}
+              ]
+            )
+            expect(result.recurring_breakdowns).to match_array(
+              [
+                {groups: {"agent_name" => "aragorn", "region" => "eu"}, value: 2},
+                {groups: {"agent_name" => "frodo", "region" => "us"}, value: 103}
+              ]
+            )
+          end
+        end
+
+        context "when the cached presentation breakdowns are stored without the grouped_by keys" do
+          let(:frodo_presentation_breakdowns) do
+            [
+              {"groups" => {"region" => "us"}, "value" => "100.0"}
+            ]
+          end
+
+          it "matches them to their group" do
+            result = aggregator.aggregate
+
+            expect(result.breakdowns.map { |breakdown| {groups: breakdown[:groups], value: breakdown[:value].round(5).to_s} }).to match_array(
+              [
+                {groups: {"agent_name" => "aragorn", "region" => "eu"}, value: "2.0"},
+                {groups: {"agent_name" => "frodo", "region" => "us"}, value: "102.99597"}
+              ]
+            )
+            expect(result.recurring_breakdowns).to match_array(
+              [
+                {groups: {"agent_name" => "aragorn", "region" => "eu"}, value: 2},
+                {groups: {"agent_name" => "frodo", "region" => "us"}, value: 103}
               ]
             )
           end
@@ -789,6 +865,12 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
               [
                 {groups: {"agent_name" => "aragorn", "region" => "eu"}, value: "100.02218"},
                 {groups: {"agent_name" => "frodo", "region" => "us"}, value: "200.02218"}
+              ]
+            )
+            expect(result.recurring_breakdowns).to match_array(
+              [
+                {groups: {"agent_name" => "aragorn", "region" => "eu"}, value: 100},
+                {groups: {"agent_name" => "frodo", "region" => "us"}, value: 200}
               ]
             )
           end
