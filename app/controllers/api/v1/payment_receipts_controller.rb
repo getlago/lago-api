@@ -16,7 +16,7 @@ module Api
         if result.success?
           render(
             json: ::CollectionSerializer.new(
-              result.payment_receipts,
+              result.payment_receipts.includes(:organization),
               ::V1::PaymentReceiptSerializer,
               collection_name: serialized_resource_name.pluralize,
               meta: pagination_metadata(result.payment_receipts)

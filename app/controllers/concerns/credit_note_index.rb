@@ -12,6 +12,7 @@ module CreditNoteIndex
       :applied_taxes,
       :error_details,
       :metadata,
+      :organization,
       invoice: :billing_entity,
       file_attachment: :blob,
       xml_file_attachment: :blob,

@@ -66,6 +66,7 @@ module InvoiceIndex
           :metadata,
           :applied_taxes,
           :billing_entity,
+          :organization,
           :applied_usage_thresholds,
           customer: [
             :billing_entity,

@@ -12,6 +12,7 @@ module V1
         signed_at: model.signed_at&.iso8601,
         voided_at: model.voided_at&.iso8601,
         signed_document_url: model.signed_document_url,
+        signed_document_url_expires_at: model.signed_document_url_expires_at&.iso8601,
         lago_organization_id: model.organization_id,
         lago_customer_id: model.customer_id,
         lago_quote_id: model.quote_version.quote_id,
