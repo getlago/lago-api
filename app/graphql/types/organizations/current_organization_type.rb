@@ -45,6 +45,7 @@ module Types
       field :premium_integrations, [Types::Integrations::PremiumIntegrationTypeEnum], null: false
 
       field :feature_flags, [Types::Organizations::FeatureFlagEnum], null: false
+      field :realtime_usage_enabled, Boolean, null: false, description: "True when usage reports can be served from the real-time usage buckets"
 
       field :billing_configuration, Types::Organizations::BillingConfiguration, permission: "organization:invoices:view"
       field :email_settings, [Types::Organizations::EmailSettingsEnum], permission: "organization:emails:view"
@@ -65,6 +66,10 @@ module Types
 
       def feature_flags
         object.feature_flags.select { |flag| FeatureFlag.valid?(flag) }
+      end
+
+      def realtime_usage_enabled
+        ::RealtimeUsage.enabled?(object)
       end
 
       def webhook_url
