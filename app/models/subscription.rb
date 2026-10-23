@@ -170,6 +170,12 @@ class Subscription < ApplicationRecord
     plan.yearly_amount_cents > next_subscription.plan.yearly_amount_cents
   end
 
+  # Memoized on the instance, which every charge of one usage or invoice computation shares.
+  # A stale copy is still correct: the delta is read from the bounds of the snapshot it returns.
+  def previous_recurring_aggregation_snapshots
+    @previous_recurring_aggregation_snapshots ||= RecurringAggregationSnapshots::PreviousSubscriptionSnapshots.new(self)
+  end
+
   # The anchor a rate card inherits when it is created without one: the
   # subscription's explicit anchor, else the day the subscription started.
   def effective_billing_anchor_date
