@@ -804,23 +804,29 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
               snapshot(
                 units: 400,
                 grouped_by: {"agent_name" => "aragorn"},
-                presentation_breakdowns: [{groups: {"agent_name" => "aragorn", "region" => "eu"}, value: "400.0"}]
+                presentation_breakdowns: [{"groups" => {"region" => "eu"}, "value" => "400.0"}]
               ),
               snapshot(
                 units: 600,
                 grouped_by: {"agent_name" => "frodo"},
-                presentation_breakdowns: [{groups: {"agent_name" => "frodo", "region" => "us"}, value: "600.0"}]
+                presentation_breakdowns: [{"groups" => {"region" => "us"}, "value" => "600.0"}]
               )
             ]
           end
 
-          it "uses the snapshot presentation breakdowns as initial values" do
+          it "matches the snapshot presentation breakdowns to their group" do
             result = aggregator.aggregate
 
             expect(result.breakdowns.map { |breakdown| {groups: breakdown[:groups], value: breakdown[:value].round(5).to_s} }).to match_array(
               [
                 {groups: {"agent_name" => "aragorn", "region" => "eu"}, value: "400.0"},
                 {groups: {"agent_name" => "frodo", "region" => "us"}, value: "600.0"}
+              ]
+            )
+            expect(result.recurring_breakdowns).to match_array(
+              [
+                {groups: {"agent_name" => "aragorn", "region" => "eu"}, value: 400},
+                {groups: {"agent_name" => "frodo", "region" => "us"}, value: 600}
               ]
             )
           end
