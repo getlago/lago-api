@@ -61,15 +61,13 @@ module V2
         total_aggregated_units: model.total_aggregated_units,
         events_count: model.events_count,
         unit_amount_cents: model.unit_amount_cents,
+        # The one precise amount kept: a blended unit price, such as a volume price with a flat
+        # fee, is fractional, and unit_amount_cents rounds it.
         precise_unit_amount_cents: model.precise_unit_amount * model.amount.currency.subunit_to_unit,
         amount_cents: model.amount_cents,
-        precise_amount_cents: model.precise_amount_cents,
         sub_total_excluding_taxes_amount_cents: model.sub_total_excluding_taxes_amount_cents.round,
-        sub_total_excluding_taxes_precise_amount_cents: model.sub_total_excluding_taxes_precise_amount_cents,
         taxes_amount_cents: model.taxes_amount_cents,
-        taxes_precise_amount_cents: model.taxes_precise_amount_cents,
         total_amount_cents: model.total_amount_cents,
-        precise_total_amount_cents: model.precise_total_amount_cents,
         amount_details: ::RateProperties.present(model.amount_details),
         pricing_unit_details:,
         payment_status: model.payment_status,
