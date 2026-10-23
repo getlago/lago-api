@@ -60,6 +60,7 @@ Rails.application.routes.draw do
       # pagination, v2 error body). Param names mirror config/routes/shared_api.rb.
       resources :activity_logs, param: :activity_id, only: %i[index show]
       resources :api_logs, param: :request_id, only: %i[index show]
+      resources :security_logs, param: :log_id, only: %i[index show]
     end
 
     namespace :v2, module: :v1 do

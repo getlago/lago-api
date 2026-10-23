@@ -15,7 +15,8 @@ RSpec.describe "API v2 log routes" do
 
   {
     "activity_logs" => :activity_id,
-    "api_logs" => :request_id
+    "api_logs" => :request_id,
+    "security_logs" => :log_id
   }.each do |resource, param|
     it "routes the #{resource} index to the native v2 controller" do
       route = first_get_route("/api/v2/#{resource}(")
