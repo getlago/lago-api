@@ -73,6 +73,16 @@ RSpec.describe ::V1::InvoiceSerializer do
     )
   end
 
+  context "when the payment dispute is lost" do
+    let(:invoice) { create(:invoice, payment_dispute_lost_at: Time.zone.parse("2026-10-15T10:00:00.123456Z")) }
+
+    it "serializes payment_dispute_lost_at at second precision" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["invoice"]["payment_dispute_lost_at"]).to eq("2026-10-15T10:00:00Z")
+    end
+  end
+
   context "when invoice is a progressive_billing invoice" do
     let(:invoice) { create(:invoice, invoice_type: :progressive_billing) }
     let(:applied_usage_threshold) { create(:applied_usage_threshold, invoice:) }
