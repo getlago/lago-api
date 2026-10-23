@@ -626,6 +626,7 @@ module Fees
     end
 
     def snapshot_recurring_units?(selected_metered_item)
+      return false unless billing_context.organization.feature_flag_enabled?(:recurring_aggregation_snapshots)
       return false if options.current_usage? || options.invoice_preview?
       return false if selected_metered_item.billing_segment
       return false unless billing_context.subscription?
