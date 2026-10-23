@@ -115,6 +115,28 @@ RSpec.describe RecurringAggregationSnapshots::AuditService do
       end
     end
 
+    context "without a fee" do
+      before do
+        Fee.sole.destroy!
+        [2, 3].each do |item_id|
+          create(
+            :event,
+            organization_id: organization.id,
+            subscription:,
+            code: billable_metric.code,
+            timestamp: to_datetime - 1.minute,
+            created_at: watermark - 1.minute,
+            properties: {"item_id" => item_id}
+          )
+        end
+      end
+
+      it "reports the difference" do
+        expect(result.differences).to eq([row(fee_units: 0, fee_events_count: 0)])
+        expect(result.watermark_gap_rows).to be_empty
+      end
+    end
+
     context "with the ClickHouse event store", clickhouse: {clean_before: true} do
       subject(:result) do
         Events::Stores::StoreFactory.with_override(store_class: Events::Stores::ClickhouseStore) do

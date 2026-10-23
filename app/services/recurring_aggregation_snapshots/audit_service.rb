@@ -91,7 +91,8 @@ module RecurringAggregationSnapshots
           watermark_gap: false
         )
 
-        if row.different? && billable_metric.sum_agg?
+        # Without any fee, no event ingested late can explain the snapshot
+        if row.different? && billable_metric.sum_agg? && fees.any?
           ingested_late[charge_filter_id] ||= ingested_after_watermark(snapshots.first, charge_filter_id, fees)
           late_units, late_events_count = ingested_late[charge_filter_id].fetch(grouped_by, [0, 0])
 
