@@ -155,6 +155,25 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
     end
   end
 
+  context "when a non EU customer without tax identification number has a custom tax" do
+    let(:billing_entity) { create(:billing_entity, country: "FR", eu_tax_management: true) }
+    let(:customer) do
+      create(:customer, organization: billing_entity.organization, billing_entity:, country: "GB", zipcode: "SW1A 1AA", tax_identification_number: nil)
+    end
+    let(:update_args) { {zipcode: "EC1A 1BB"} }
+
+    before do
+      create(:tax, organization: customer.organization, code: "lago_eu_tax_exempt", rate: 0.0)
+      custom_tax = create(:tax, organization: customer.organization, code: "uk_vat", rate: 20.0)
+      create(:customer_applied_tax, organization: customer.organization, customer:, tax: custom_tax)
+    end
+
+    it "keeps the custom tax" do
+      expect(result).to be_success
+      expect(result.customer.taxes.pluck(:code)).to eq(["uk_vat"])
+    end
+  end
+
   context "when customer is not found" do
     let(:customer) { nil }
 

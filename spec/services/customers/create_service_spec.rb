@@ -403,4 +403,31 @@ RSpec.describe Customers::CreateService do
       end
     end
   end
+
+  context "when a non EU customer without tax identification number is created" do
+    let(:billing_entity) { create(:billing_entity, country: "FR", eu_tax_management: true) }
+    let(:create_args) do
+      {organization_id: organization.id, external_id:, name: "Foo Bar", currency: "EUR", country: "GB", tax_codes:}
+    end
+    let(:tax_codes) { ["uk_vat"] }
+
+    before do
+      create(:tax, organization:, code: "lago_eu_tax_exempt", rate: 0.0)
+      create(:tax, organization:, code: "uk_vat", rate: 20.0)
+    end
+
+    it "applies the custom tax only" do
+      expect(result).to be_success
+      expect(result.customer.taxes.pluck(:code)).to eq(["uk_vat"])
+    end
+
+    context "without tax codes" do
+      let(:tax_codes) { nil }
+
+      it "applies the EU exemption" do
+        expect(result).to be_success
+        expect(result.customer.taxes.pluck(:code)).to eq(["lago_eu_tax_exempt"])
+      end
+    end
+  end
 end

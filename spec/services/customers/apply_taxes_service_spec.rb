@@ -56,6 +56,96 @@ RSpec.describe Customers::ApplyTaxesService do
       end
     end
 
+    context "when the EU exemption is applied with a custom tax" do
+      let(:billing_entity) { create(:billing_entity, organization:, country: "FR", eu_tax_management:) }
+      let(:tax_codes) { [exempt_tax.code, tax1.code] }
+      let(:customer) { create(:customer, organization:, billing_entity:, country:, tax_identification_number:) }
+      let(:eu_tax_management) { true }
+      let(:country) { "GB" }
+      let(:tax_identification_number) { nil }
+
+      let_it_be(:exempt_tax) { create(:tax, organization:, code: "lago_eu_tax_exempt", rate: 0.0) }
+
+      it "applies the custom tax only" do
+        result = apply_service.call
+
+        expect(result).to be_success
+        expect(customer.reload.taxes.pluck(:code)).to eq(["tax1"])
+      end
+
+      context "when an EU rate is sent with the custom tax" do
+        let(:tax_codes) { [create(:tax, organization:, code: "lago_eu_fr_standard").code, tax1.code] }
+
+        it "applies the custom tax only" do
+          apply_service.call
+
+          expect(customer.reload.taxes.pluck(:code)).to eq(["tax1"])
+        end
+      end
+
+      context "when a tax code is nil" do
+        let(:tax_codes) { [nil] }
+
+        it "returns an error" do
+          result = apply_service.call
+
+          expect(result).not_to be_success
+          expect(result.error.error_code).to eq("tax_not_found")
+        end
+      end
+
+      context "when no tax is left" do
+        let(:tax_codes) { [] }
+
+        it "applies the EU exemption" do
+          apply_service.call
+
+          expect(customer.reload.taxes.pluck(:code)).to eq(["lago_eu_tax_exempt"])
+        end
+
+        context "when the organization has no EU exemption tax" do
+          let(:organization) { create(:organization) }
+
+          it "applies no tax" do
+            result = apply_service.call
+
+            expect(result).to be_success
+            expect(customer.reload.taxes).to be_empty
+          end
+        end
+      end
+
+      context "when the customer has a tax identification number" do
+        let(:tax_identification_number) { "GB123456789" }
+
+        it "applies both taxes" do
+          apply_service.call
+
+          expect(customer.reload.taxes.pluck(:code)).to match_array(%w[lago_eu_tax_exempt tax1])
+        end
+      end
+
+      context "when the customer is in the EU" do
+        let(:country) { "DE" }
+
+        it "applies both taxes" do
+          apply_service.call
+
+          expect(customer.reload.taxes.pluck(:code)).to match_array(%w[lago_eu_tax_exempt tax1])
+        end
+      end
+
+      context "when the billing entity does not manage EU taxes" do
+        let(:eu_tax_management) { false }
+
+        it "applies both taxes" do
+          apply_service.call
+
+          expect(customer.reload.taxes.pluck(:code)).to match_array(%w[lago_eu_tax_exempt tax1])
+        end
+      end
+    end
+
     context "when trying to apply twice the same tax" do
       let(:tax_codes) { [tax1.code, tax1.code] }
 
