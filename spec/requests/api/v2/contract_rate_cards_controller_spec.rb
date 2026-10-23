@@ -94,6 +94,22 @@ RSpec.describe Api::V2::ContractRateCardsController do
       expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
     end
 
+    context "with include_total_count" do
+      subject { get_with_token(organization, "/api/v2/contracts/#{external_id}/applied_rate_cards", {include_total_count: true}) }
+
+      before do
+        create(:contract_rate_card, organization:, contract:)
+        create(:contract_rate_card, organization:, contract:, deleted_at: Time.current)
+      end
+
+      it "counts the kept rate cards of the contract" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil, total_count: 2)
+      end
+    end
+
     context "with an invalid limit and an unknown contract" do
       subject { get_with_token(organization, "/api/v2/contracts/unknown/applied_rate_cards", {limit: 0}) }
 

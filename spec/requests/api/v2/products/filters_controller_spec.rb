@@ -189,6 +189,22 @@ RSpec.describe Api::V2::Products::FiltersController do
       expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
     end
 
+    context "with include_total_count" do
+      subject { get_with_token(organization, "/api/v2/products/#{product.code}/filters", {include_total_count: true}) }
+
+      before do
+        create(:product_filter, organization:, product:)
+        create(:product_filter, organization:, product:, deleted_at: Time.current)
+      end
+
+      it "counts the kept filters of the product" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil, total_count: 2)
+      end
+    end
+
     context "with multiple filters on the product" do
       before { create(:product_filter, organization:, product:) }
 
