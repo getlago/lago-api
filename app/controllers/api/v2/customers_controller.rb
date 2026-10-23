@@ -15,15 +15,16 @@ module Api
       ].freeze
 
       BILLING_CONFIGURATION_FIELDS = %i[
-        invoice_grace_period
         subscription_invoice_issuing_date_anchor
         subscription_invoice_issuing_date_adjustment
-        payment_provider
-        payment_provider_code
+        document_locale
+      ].freeze
+
+      PROVIDER_CUSTOMER_FIELDS = %i[
         provider_customer_id
         sync
         sync_with_provider
-        document_locale
+        provider_payment_methods
       ].freeze
 
       cursor_paginated_index(Customer)
@@ -66,11 +67,11 @@ module Api
       end
 
       def create
-        result = ::Customers::UpsertFromApiService.call(
-          organization: current_organization,
-          params: input_params,
-          mode: :create
-        )
+        input = input_params
+        validation = ::Customers::ValidateApiInputService.call(params: input)
+        return render_error_response(validation) unless validation.success?
+
+        result = ::Customers::CreateService.call(**input, organization_id: current_organization.id)
 
         if result.success?
           render_customer(result.customer)
@@ -80,12 +81,14 @@ module Api
       end
 
       def update
-        result = ::Customers::UpsertFromApiService.call(
-          organization: current_organization,
-          params: input_params,
-          mode: :update,
-          external_id: params[:external_id]
-        )
+        customer = current_organization.customers.find_by(external_id: params[:external_id])
+        return not_found_error(resource: "customer") unless customer
+
+        input = input_params
+        validation = ::Customers::ValidateApiInputService.call(params: input)
+        return render_error_response(validation) unless validation.success?
+
+        result = ::Customers::UpdateService.call(customer:, args: input)
 
         if result.success?
           render_customer(result.customer)
@@ -147,6 +150,12 @@ module Api
           :skip_invoice_custom_sections,
           :external_salesforce_id,
           :billing_entity_code,
+          :invoice_grace_period,
+          :payment_provider,
+          :payment_provider_code,
+          :provider_customer_id,
+          :sync,
+          :sync_with_provider,
           *BILLING_CONFIGURATION_FIELDS,
           provider_payment_methods: [],
           shipping_address: [
@@ -177,8 +186,17 @@ module Api
           invoice_custom_section_codes: []
         ).to_h.deep_symbolize_keys
 
-        # The existing service still expects billing fields under billing_configuration.
-        input[:billing_configuration] = input.extract!(*BILLING_CONFIGURATION_FIELDS, :provider_payment_methods)
+        %i[sync sync_with_provider skip_invoice_custom_sections].each do |key|
+          input[key] = ActiveModel::Type::Boolean.new.cast(input[key]) if input.key?(key)
+        end
+        if input.key?(:finalize_zero_amount_invoice) && input[:finalize_zero_amount_invoice].nil?
+          input[:finalize_zero_amount_invoice] = "inherit"
+        end
+
+        # Adapt the flat REST fields to the shared customer services.
+        input[:billing_configuration] = input.extract!(*BILLING_CONFIGURATION_FIELDS)
+        provider_customer = input.extract!(*PROVIDER_CUSTOMER_FIELDS)
+        input[:provider_customer] = provider_customer if provider_customer.any?
         normalize_metadata!(input[:metadata])
         input
       end

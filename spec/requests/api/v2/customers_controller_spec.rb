@@ -5,6 +5,57 @@ require "rails_helper"
 RSpec.describe Api::V2::CustomersController do
   let_it_be(:organization, refind: true) { create_default(:organization) }
 
+  shared_examples "payment provider synchronization" do
+    let(:provider) { create(:stripe_provider, organization:) }
+    let(:sync) { true }
+    let(:attributes) do
+      super().merge(payment_provider: "stripe", payment_provider_code: provider.code, sync_with_provider: true, sync:)
+    end
+    let(:provider_request) do
+      stub_request(:post, "https://api.stripe.com/v1/customers")
+        .to_return(status: 200, body: {id: "cus_sync"}.to_json, headers: {"Content-Type" => "application/json"})
+    end
+
+    before { provider_request }
+
+    it "waits for the provider and returns its customer id" do
+      request
+
+      expect(response).to have_http_status(:ok)
+      expect(provider_request).to have_been_requested.once
+      expect(json[:customer][:provider_customer_id]).to eq("cus_sync")
+      expect(SendWebhookJob).to have_been_enqueued.with("customer.payment_provider_created", an_instance_of(Customer))
+      expect(PaymentProviderCustomers::StripeCreateJob).not_to have_been_enqueued
+    end
+
+    [false, "false"].each do |value|
+      context "with sync set to #{value.inspect}" do
+        let(:sync) { value }
+
+        it "queues provider creation without calling the provider" do
+          request
+
+          expect(response).to have_http_status(:ok)
+          expect(provider_request).not_to have_been_requested
+          expect(json[:customer][:provider_customer_id]).to be_nil
+          expect(PaymentProviderCustomers::StripeCreateJob).to have_been_enqueued.with(an_instance_of(PaymentProviderCustomers::StripeCustomer))
+        end
+      end
+    end
+
+    context "without sync" do
+      let(:attributes) { super().except(:sync) }
+
+      it "keeps background creation as the default" do
+        request
+
+        expect(response).to have_http_status(:ok)
+        expect(provider_request).not_to have_been_requested
+        expect(PaymentProviderCustomers::StripeCreateJob).to have_been_enqueued
+      end
+    end
+  end
+
   describe "POST /api/v2/customers" do
     subject(:request) { post_with_token(organization, "/api/v2/customers", {customer: attributes}) }
 
@@ -20,6 +71,8 @@ RSpec.describe Api::V2::CustomersController do
     end
 
     include_examples "requires API permission", "customer", "write"
+
+    it_behaves_like "payment provider synchronization"
 
     it "accepts flat billing fields and returns them without expanded relationships" do
       expect { request }.to change(organization.customers, :count).by(1)
@@ -94,6 +147,17 @@ RSpec.describe Api::V2::CustomersController do
 
         expect(response).to have_http_status(:unprocessable_content)
         expect(json[:error_details][:finalize_zero_amount_invoice]).to eq(["invalid_value"])
+      end
+    end
+
+    context "with repeated integration types" do
+      let(:attributes) { super().merge(integration_customers: [{integration_type: "anrok"}, {integration_type: "anrok"}]) }
+
+      it "rejects the request without creating a customer" do
+        expect { request }.not_to change(organization.customers, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details][:integration_customers]).to eq(["invalid_count_per_integration_type"])
       end
     end
 
@@ -178,6 +242,45 @@ RSpec.describe Api::V2::CustomersController do
         expect(response).to have_http_status(:ok)
         expect(json[:customer][:provider_customer_id]).to eq("cus_example")
         expect(json[:customer][:provider_payment_methods]).to eq(%w[card])
+      end
+    end
+
+    context "with an invalid provider configuration" do
+      let(:attributes) { super().merge(payment_provider: "stripe", payment_provider_code: "unknown-provider", sync_with_provider: true) }
+      let(:error_code) { "payment_provider_not_found" }
+
+      it "returns 422 without creating a customer" do
+        expect { request }.not_to change(organization.customers, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(base: [error_code])
+        expect(PaymentProviderCustomers::StripeCreateJob).not_to have_been_enqueued
+      end
+
+      context "when the code belongs to another organization" do
+        let(:foreign_provider) { create(:stripe_provider, organization: create(:organization)) }
+        let(:attributes) { super().merge(payment_provider_code: foreign_provider.code) }
+
+        it "does not use the foreign provider" do
+          expect { request }.not_to change(organization.customers, :count)
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq(base: ["payment_provider_not_found"])
+        end
+      end
+
+      context "when the provider code is required but omitted" do
+        let(:attributes) { super().except(:payment_provider_code) }
+        let(:error_code) { "payment_provider_code_missing" }
+
+        before { create_list(:stripe_provider, 2, organization:) }
+
+        it "returns a validation error before creating a customer" do
+          expect { request }.not_to change(organization.customers, :count)
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq(base: [error_code])
+        end
       end
     end
 
@@ -273,6 +376,8 @@ RSpec.describe Api::V2::CustomersController do
 
       include_examples "requires API permission", "customer", "write"
 
+      it_behaves_like "payment provider synchronization"
+
       it "updates without requiring external_id in the body or changing omitted settings" do
         request
 
@@ -282,6 +387,175 @@ RSpec.describe Api::V2::CustomersController do
         expect(json[:customer]).not_to have_key(:billing_configuration)
         expect(json[:customer]).not_to have_key(:net_payment_term)
         expect(SendWebhookJob).to have_been_enqueued.with("customer.updated", customer)
+      end
+
+      context "with a foreign tax and other changes", :premium do
+        let(:tax) { create(:tax, organization: create(:organization)) }
+        let(:invoice) { create(:invoice, :draft, customer:, expected_finalization_date: 1.week.from_now) }
+        let(:attributes) { {name: "Must not change", invoice_grace_period: 3, document_locale: "de", tax_codes: [tax.code]} }
+
+        before { invoice }
+
+        it "rolls back the whole update" do
+          original_invoice_attributes = invoice.attributes
+
+          expect { request }.not_to change { customer.reload.attributes }
+
+          expect(response).to be_not_found_error("tax")
+          expect(invoice.reload.attributes).to eq(original_invoice_attributes)
+          expect(Invoices::FinalizeJob).not_to have_been_enqueued.with(invoice)
+          expect(SendWebhookJob).not_to have_been_enqueued.with("customer.updated", customer)
+        end
+      end
+
+      context "when replacing the payment provider" do
+        let(:customer) { create(:customer, :with_stripe_payment_provider, organization:) }
+        let(:old_provider_customer) { customer.stripe_customer }
+        let(:payment_method) { create(:payment_method, payment_provider_customer: old_provider_customer) }
+        let(:provider) { create(:gocardless_provider, organization:) }
+        let(:attributes) { {payment_provider: "gocardless", payment_provider_code: provider.code, sync_with_provider: true} }
+
+        before { payment_method }
+
+        it "uses the new provider and discards the old payment methods" do
+          request
+
+          expect(response).to have_http_status(:ok)
+          expect(customer.reload).to have_attributes(payment_provider: "gocardless", payment_provider_code: provider.code)
+          expect(customer.gocardless_customer.payment_provider_id).to eq(provider.id)
+          expect(PaymentProviderCustomers::GocardlessCreateJob).to have_been_enqueued.with(customer.gocardless_customer)
+          expect(payment_method.reload).to be_discarded
+          expect(payment_method).not_to be_is_default
+          expect(old_provider_customer.reload).not_to be_discarded
+        end
+
+        context "when keeping the same provider" do
+          let(:attributes) { {payment_provider: "stripe", payment_provider_code: old_provider_customer.payment_provider.code} }
+
+          it "keeps the existing payment methods" do
+            request
+
+            expect(response).to have_http_status(:ok)
+            expect(payment_method.reload).not_to be_discarded
+            expect(payment_method).to be_is_default
+          end
+        end
+
+        context "when only updating the name" do
+          let(:attributes) { {name: "Updated"} }
+
+          it "keeps the existing payment methods" do
+            request
+
+            expect(response).to have_http_status(:ok)
+            expect(payment_method.reload).not_to be_discarded
+            expect(payment_method).to be_is_default
+          end
+        end
+      end
+
+      context "when removing the payment provider" do
+        let(:customer) { create(:customer, :with_stripe_payment_provider, organization:) }
+        let(:provider_customer) { customer.stripe_customer }
+        let(:payment_method) { create(:payment_method, customer:, payment_provider_customer: provider_customer) }
+        let(:attributes) { {payment_provider: nil} }
+
+        before { payment_method }
+
+        it "removes the provider and its payment methods" do
+          request
+
+          expect(response).to have_http_status(:ok)
+          expect(customer.reload).to have_attributes(payment_provider: nil, payment_provider_code: nil)
+          expect(provider_customer.reload).to be_discarded
+          expect(payment_method.reload).to be_discarded
+        end
+      end
+
+      context "with an invalid provider configuration" do
+        let(:attributes) { {name: "Must not change", payment_provider: "stripe", payment_provider_code: "unknown-provider", sync_with_provider: true} }
+        let(:error_code) { "payment_provider_not_found" }
+
+        it "returns 422 without changing the customer" do
+          expect { request }.not_to change { customer.reload.attributes }
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq(base: [error_code])
+          expect(PaymentProviderCustomers::StripeCreateJob).not_to have_been_enqueued
+          expect(SendWebhookJob).not_to have_been_enqueued.with("customer.updated", customer)
+        end
+
+        context "when the provider code is required but omitted" do
+          let(:attributes) { super().except(:payment_provider_code) }
+          let(:error_code) { "payment_provider_code_missing" }
+
+          before { create_list(:stripe_provider, 2, organization:) }
+
+          it "returns a validation error without modifying the customer" do
+            expect { request }.not_to change { customer.reload.attributes }
+
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json[:error_details]).to eq(base: [error_code])
+          end
+        end
+      end
+
+      context "with an invalid finalize setting" do
+        let(:attributes) { {name: "Must not change", finalize_zero_amount_invoice: false} }
+
+        it "returns a validation error without modifying the customer" do
+          expect { request }.not_to change { customer.reload.attributes }
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details][:finalize_zero_amount_invoice]).to eq(["invalid_value"])
+        end
+      end
+
+      context "with repeated integration types" do
+        let(:attributes) { {name: "Must not change", integration_customers: [{integration_type: "anrok"}, {integration_type: "anrok"}]} }
+
+        it "rejects the request before modifying the customer" do
+          expect { request }.not_to change { customer.reload.attributes }
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details][:integration_customers]).to eq(["invalid_count_per_integration_type"])
+        end
+      end
+
+      context "with invoice custom section codes" do
+        let(:section) { create(:invoice_custom_section, organization:) }
+        let(:attributes) { {invoice_custom_section_codes: [section.code]} }
+
+        it "assigns the organization's sections by code" do
+          request
+
+          expect(response).to have_http_status(:ok)
+          expect(customer.reload.manual_selected_invoice_custom_sections).to eq([section])
+        end
+
+        context "with an empty array" do
+          let(:attributes) { {invoice_custom_section_codes: []} }
+
+          before { create(:customer_applied_invoice_custom_section, organization:, customer:, invoice_custom_section: section) }
+
+          it "removes the manual selections" do
+            request
+
+            expect(response).to have_http_status(:ok)
+            expect(customer.reload.manual_selected_invoice_custom_sections).to be_empty
+          end
+        end
+
+        context "with a foreign section" do
+          let(:section) { create(:invoice_custom_section, organization: create(:organization)) }
+
+          it "does not assign the foreign section" do
+            request
+
+            expect(response).to have_http_status(:ok)
+            expect(customer.reload.manual_selected_invoice_custom_sections).to be_empty
+          end
+        end
       end
 
       context "when the customer does not exist" do

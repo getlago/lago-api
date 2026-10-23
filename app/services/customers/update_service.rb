@@ -76,6 +76,12 @@ module Customers
 
         customer.payment_provider = args[:payment_provider] if args.key?(:payment_provider)
         customer.payment_provider_code = args[:payment_provider_code] if args.key?(:payment_provider_code)
+
+        if api_context? && customer.payment_provider.present? && !args.key?(:payment_provider_customers) &&
+            %i[payment_provider payment_provider_code provider_customer].any? { |key| args.key?(key) }
+          customer.payment_provider_code = required_payment_provider(customer).code
+        end
+
         customer.invoice_footer = args[:invoice_footer] if args.key?(:invoice_footer)
 
         if billing_configuration.key?(:document_locale)
@@ -83,55 +89,53 @@ module Customers
         end
 
         @address_changed = customer.address_changed?
-      end
 
-      if args.key?(:billing_configuration)
-        billing = args[:billing_configuration]
-        customer.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
-      end
-
-      Customers::UpdateInvoiceIssuingDateSettingsService.call(customer:, params: args)
-
-      if args.key?(:net_payment_term)
-        Customers::UpdateInvoicePaymentDueDateService.call(customer:, net_payment_term: args[:net_payment_term])
-      end
-
-      # NOTE: Some fields are not editable if customer is attached to subscriptions:
-      #       external_id, account_type
-      billing_entity_changed = false
-      if args.key?(:billing_entity_code)
-        customer.billing_entity = billing_entity
-        billing_entity_changed = customer.billing_entity_id_changed?
-      end
-
-      if customer.editable?
-        customer.external_id = args[:external_id] if args.key?(:external_id)
-
-        if organization.revenue_share_enabled?
-          customer.account_type = args[:account_type] if args.key?(:account_type)
-        end
-      end
-
-      if organization.auto_dunning_enabled?
-        if args.key?(:applied_dunning_campaign_id)
-          customer.applied_dunning_campaign = applied_dunning_campaign
-          customer.exclude_from_dunning_campaign = false
+        if args.key?(:billing_configuration)
+          billing = args[:billing_configuration]
+          customer.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
         end
 
-        # NOTE: exclude_from_dunning_campaign has higher priority than applied campaign
-        if args.key?(:exclude_from_dunning_campaign)
-          customer.exclude_from_dunning_campaign = args[:exclude_from_dunning_campaign]
-          customer.applied_dunning_campaign = nil if args[:exclude_from_dunning_campaign]
+        Customers::UpdateInvoiceIssuingDateSettingsService.call(customer:, params: args)
+
+        if args.key?(:net_payment_term)
+          Customers::UpdateInvoicePaymentDueDateService.call(customer:, net_payment_term: args[:net_payment_term])
         end
-      end
 
-      # NOTE: partner accounts are excluded from dunning campaigns
-      if customer.partner_account?
-        customer.exclude_from_dunning_campaign = true
-        customer.applied_dunning_campaign = nil
-      end
+        # NOTE: Some fields are not editable if customer is attached to subscriptions:
+        #       external_id, account_type
+        billing_entity_changed = false
+        if args.key?(:billing_entity_code)
+          customer.billing_entity = billing_entity
+          billing_entity_changed = customer.billing_entity_id_changed?
+        end
 
-      ActiveRecord::Base.transaction do
+        if customer.editable?
+          customer.external_id = args[:external_id] if args.key?(:external_id)
+
+          if organization.revenue_share_enabled?
+            customer.account_type = args[:account_type] if args.key?(:account_type)
+          end
+        end
+
+        if organization.auto_dunning_enabled?
+          if args.key?(:applied_dunning_campaign_id)
+            customer.applied_dunning_campaign = applied_dunning_campaign
+            customer.exclude_from_dunning_campaign = false
+          end
+
+          # NOTE: exclude_from_dunning_campaign has higher priority than applied campaign
+          if args.key?(:exclude_from_dunning_campaign)
+            customer.exclude_from_dunning_campaign = args[:exclude_from_dunning_campaign]
+            customer.applied_dunning_campaign = nil if args[:exclude_from_dunning_campaign]
+          end
+        end
+
+        # NOTE: partner accounts are excluded from dunning campaigns
+        if customer.partner_account?
+          customer.exclude_from_dunning_campaign = true
+          customer.applied_dunning_campaign = nil
+        end
+
         if old_provider_customer && payment_provider_removed?
           old_provider_customer.discard!
           customer.payment_provider_code = nil
@@ -147,7 +151,8 @@ module Customers
         Customers::ManageInvoiceCustomSectionsService.call(
           customer:,
           skip_invoice_custom_sections: args[:skip_invoice_custom_sections],
-          section_ids: args[:configurable_invoice_custom_section_ids]
+          section_ids: args[:configurable_invoice_custom_section_ids],
+          section_codes: args[:invoice_custom_section_codes]
         ).raise_if_error!
 
         customer.save!
@@ -183,7 +188,7 @@ module Customers
           taxes_result = Customers::ApplyTaxesService.call(customer:, tax_codes: args[:tax_codes])
           taxes_result.raise_if_error!
         end
-        Customers::Metadata::UpdateService.call(customer:, params: args[:metadata]) if args[:metadata]
+        Customers::Metadata::UpdateService.call(customer:, params: args[:metadata]).raise_if_error! if args[:metadata]
       end
 
       # NOTE: the payment_provider_customers array (new shape) takes precedence over the singular
@@ -195,13 +200,21 @@ module Customers
         ).raise_if_error!
       else
         if args.key?(:provider_customer) || args.key?(:payment_provider)
-          payment_provider = old_payment_provider || customer.payment_provider
+          payment_provider = customer.payment_provider || old_payment_provider
           create_or_update_provider_customer(customer, payment_provider, args[:provider_customer])
         end
 
         if args.dig(:provider_customer, :provider_customer_id)
           update_result = PaymentProviderCustomers::UpdateService.call(customer)
           update_result.raise_if_error!
+        end
+
+        # Match v1 REST cleanup without changing GraphQL provider switches.
+        if api_context? && old_provider_customer && customer.payment_provider.present? &&
+            old_payment_provider != customer.payment_provider
+          old_provider_customer.payment_methods.find_each do |payment_method|
+            PaymentMethods::DestroyService.call!(payment_method:)
+          end
         end
       end
 
@@ -218,6 +231,13 @@ module Customers
       result.record_validation_failure!(record: e.record)
     rescue ActiveRecord::RecordNotFound => e
       result.not_found_failure!(resource: e.model.underscore)
+    rescue ActiveRecord::RecordNotUnique => e
+      if e.cause.is_a?(PG::UniqueViolation) &&
+          e.cause.result&.error_field(PG::Result::PG_DIAG_CONSTRAINT_NAME) == "index_customers_on_external_id_and_organization_id"
+        result.single_validation_failure!(field: :external_id, error_code: "value_already_exist")
+      else
+        raise
+      end
     rescue BaseService::FailedResult => e
       e.result
     end
@@ -260,7 +280,8 @@ module Customers
         provider: payment_provider,
         customer:,
         payment_provider_id: payment_provider(customer)&.id,
-        params: billing_configuration
+        params: billing_configuration,
+        async: !(billing_configuration || {})[:sync]
       ).call.raise_if_error!
 
       # NOTE: Create service is modifying an other instance of the provider customer

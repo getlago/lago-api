@@ -7,11 +7,9 @@ module Customers
 
     Result = BaseResult[:customer]
 
-    def initialize(organization:, params:, mode: :upsert, external_id: nil)
+    def initialize(organization:, params:)
       @organization = organization
       @params = params
-      @mode = mode
-      @external_id = external_id
       super
     end
 
@@ -20,9 +18,7 @@ module Customers
         organization:, billing_entity_code: params[:billing_entity_code]
       ).raise_if_error!.billing_entity
 
-      customer = find_customer
-      return result.not_found_failure!(resource: "customer") unless customer
-
+      customer = organization.customers.find_or_initialize_by(external_id: params[:external_id])
       new_customer = customer.new_record?
       original_searchable_values = customer.slice(*Customer::SEARCHABLE_CUSTOMER_FIELDS)
       shipping_address = params[:shipping_address] ||= {}
@@ -57,9 +53,6 @@ module Customers
           billing_entity_changed = !new_customer && customer.billing_entity_id_changed?
         end
         customer.name = params[:name] if params.key?(:name)
-        if mode == :update && params.key?(:external_id) && customer.editable?
-          customer.external_id = params[:external_id]
-        end
         customer.country = params[:country]&.upcase if params.key?(:country)
         customer.address_line1 = params[:address_line1] if params.key?(:address_line1)
         customer.address_line2 = params[:address_line2] if params.key?(:address_line2)
@@ -181,28 +174,11 @@ module Customers
 
     private
 
-    attr_reader :organization, :params, :mode, :external_id
-
-    def find_customer
-      case mode
-      when :create
-        organization.customers.new(external_id: params[:external_id])
-      when :update
-        organization.customers.find_by(external_id:)
-      when :upsert
-        organization.customers.find_or_initialize_by(external_id: params[:external_id])
-      else
-        raise ArgumentError, "unsupported customer write mode: #{mode}"
-      end
-    end
+    attr_reader :organization, :params
 
     def valid_finalize_zero_amount_invoice?(value)
       return true if value.nil?
-      if mode == :upsert || value.respond_to?(:to_sym)
-        Customer::FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS.include?(value.to_sym)
-      else
-        false
-      end
+      Customer::FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS.include?(value.to_sym)
     end
 
     def valid_metadata_count?(metadata:)
