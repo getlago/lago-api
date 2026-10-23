@@ -19,7 +19,7 @@ module Mutations
       type Types::Wallets::Object
 
       def resolve(**args)
-        raise privileged_permission_error if privileged_params?(args) && !context.dig(:permissions, PRIVILEGED_PERMISSION)
+        raise not_enough_permissions_error(PRIVILEGED_PERMISSION) if privileged_params?(args) && !context.dig(:permissions, PRIVILEGED_PERMISSION)
 
         result = ::Wallets::CreateService.call(
           params: args.merge(organization_id: current_organization.id)
@@ -48,13 +48,6 @@ module Mutations
         return false if value.nil?
 
         BigDecimal(value, exception: false) != 0
-      end
-
-      def privileged_permission_error
-        GraphQL::ExecutionError.new(
-          "Missing permissions",
-          extensions: {status: :forbidden, code: "forbidden", required_permissions: [PRIVILEGED_PERMISSION]}
-        )
       end
     end
   end

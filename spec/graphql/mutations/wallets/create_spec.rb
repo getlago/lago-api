@@ -586,9 +586,10 @@ RSpec.describe Mutations::Wallets::Create, :premium do
     context "when granting credits" do
       let(:extra_input) { {grantedCredits: "15.00"} }
 
-      it "returns a forbidden error" do
+      it "returns a forbidden error requiring wallets:update" do
         expect { result }.not_to change(Wallet, :count)
         expect_forbidden_error(result)
+        expect(result["errors"].first["extensions"]["required_permissions"]).to eq(["wallets:update"])
       end
     end
 
