@@ -47,7 +47,6 @@ RSpec.describe V2::InvoiceSerializer do
       "payment_dispute_lost_at" => nil,
       "purchase_order_number" => "PO-42",
       "fees_amount_cents" => 1_000,
-      "coupons_amount_cents" => 100,
       "sub_total_excluding_taxes_amount_cents" => 900,
       "taxes_amount_cents" => 180,
       "sub_total_including_taxes_amount_cents" => 1_080,

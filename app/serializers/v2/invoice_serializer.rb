@@ -32,7 +32,6 @@ module V2
         payment_dispute_lost_at: model.payment_dispute_lost_at&.iso8601,
         purchase_order_number: model.purchase_order_number,
         fees_amount_cents: model.fees_amount_cents,
-        coupons_amount_cents: model.coupons_amount_cents,
         sub_total_excluding_taxes_amount_cents: model.sub_total_excluding_taxes_amount_cents,
         taxes_amount_cents: model.taxes_amount_cents,
         sub_total_including_taxes_amount_cents: model.sub_total_including_taxes_amount_cents,

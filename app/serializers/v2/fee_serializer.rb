@@ -64,7 +64,6 @@ module V2
         precise_unit_amount_cents: model.precise_unit_amount * model.amount.currency.subunit_to_unit,
         amount_cents: model.amount_cents,
         precise_amount_cents: model.precise_amount_cents,
-        precise_coupons_amount_cents: model.precise_coupons_amount_cents,
         sub_total_excluding_taxes_amount_cents: model.sub_total_excluding_taxes_amount_cents.round,
         sub_total_excluding_taxes_precise_amount_cents: model.sub_total_excluding_taxes_precise_amount_cents,
         taxes_amount_cents: model.taxes_amount_cents,
