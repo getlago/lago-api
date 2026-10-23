@@ -4,7 +4,19 @@ module X402
   class SignInNonce < ApplicationRecord
     belongs_to :organization
 
+    before_validation :normalize_agent_address
+
     validates :agent_address, :nonce, presence: true
+
+    private
+
+    def normalize_agent_address
+      family = X402::Network.family_of_address(agent_address)
+
+      if family
+        self.agent_address = X402::Network.normalize_address(agent_address, family:)
+      end
+    end
   end
 end
 

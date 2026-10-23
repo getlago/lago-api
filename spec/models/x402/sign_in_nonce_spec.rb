@@ -14,6 +14,28 @@ describe X402::SignInNonce do
       expect(sign_in_nonce).to validate_presence_of(:agent_address)
       expect(sign_in_nonce).to validate_presence_of(:nonce)
     end
+
+    describe "agent_address normalization" do
+      subject(:sign_in_nonce) { build(:x402_sign_in_nonce, agent_address:) }
+
+      before { sign_in_nonce.valid? }
+
+      context "with a lowercase EVM address" do
+        let(:agent_address) { "0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed" }
+
+        it "stores the checksummed address" do
+          expect(sign_in_nonce.agent_address).to eq("0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed")
+        end
+      end
+
+      context "with a Solana address" do
+        let(:agent_address) { "2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4" }
+
+        it "stores the address verbatim" do
+          expect(sign_in_nonce.agent_address).to eq("2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4")
+        end
+      end
+    end
   end
 
   describe "unique nonce index" do
@@ -26,6 +48,15 @@ describe X402::SignInNonce do
 
     it "refuses the same nonce for the same address" do
       expect { insert }.to raise_error(ActiveRecord::RecordNotUnique, /index_x402_sign_in_nonces_on_organization_address_nonce/)
+    end
+
+    context "with the same EVM address in lowercase" do
+      let(:existing) { create(:x402_sign_in_nonce, agent_address: "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed") }
+      let(:agent_address) { "0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed" }
+
+      it "refuses the same nonce" do
+        expect { insert }.to raise_error(ActiveRecord::RecordNotUnique, /index_x402_sign_in_nonces_on_organization_address_nonce/)
+      end
     end
 
     context "with another address" do
