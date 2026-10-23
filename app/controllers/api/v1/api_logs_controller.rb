@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class ApiLogsController < Api::BaseController
+    class ApiLogsController < Api::V1::BaseController
       include PremiumFeatureOnly
 
       skip_audit_logs!
@@ -11,8 +11,8 @@ module Api
         result = ApiLogsQuery.call(
           organization: current_organization,
           pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
+            page: page_number,
+            limit: page_size
           },
           filters: index_filters
         )

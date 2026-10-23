@@ -25,8 +25,8 @@ module Api
               subscription_external_id: subscription.external_id
             },
             pagination: {
-              page: params[:page],
-              limit: params[:per_page] || PER_PAGE
+              page: page_number,
+              limit: page_size
             }
           )
 

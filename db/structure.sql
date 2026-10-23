@@ -3738,6 +3738,7 @@ CREATE TABLE public.organizations (
     feature_flags character varying[] DEFAULT '{}'::character varying[] NOT NULL,
     max_wallets integer,
     slug character varying NOT NULL,
+    pagination_max_page_size integer,
     customer_portal_editable_fields character varying[] DEFAULT '{customer_type,document_locale,email,firstname,lastname,legal_name,name,address_line1,address_line2,city,state,shipping_address}'::character varying[] NOT NULL,
     CONSTRAINT check_organizations_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
@@ -15877,6 +15878,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261020144205'),
 ('20261020074217'),
 ('20261019074555'),
+('20261016153657'),
 ('20261014180403'),
 ('20261014123350'),
 ('20261014123349'),
