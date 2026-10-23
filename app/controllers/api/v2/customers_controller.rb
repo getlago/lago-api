@@ -3,7 +3,6 @@
 module Api
   module V2
     class CustomersController < Api::V2::BaseController
-      EXPANSIONS = %w[metadata taxes integration_customers].freeze
       PRELOADS = %i[
         organization
         billing_entity
@@ -15,11 +14,8 @@ module Api
         moneyhash_customer
       ].freeze
 
-      skip_before_action :read_cursor
-      before_action :validate_expand!
-      before_action :read_cursor, if: :cursor_paginated_index?
-
       cursor_paginated_index(Customer)
+      serializable_with ::V2::Customers::DetailsSerializer
 
       def index
         filters = index_filters.to_h.symbolize_keys
@@ -44,17 +40,7 @@ module Api
         )
 
         if result.success?
-          page = ::CursorPagination::Page.new(records: result.customers.preload(PRELOADS), cursor:)
-
-          render(
-            json: ::CollectionSerializer.new(
-              page.records,
-              ::V2::CustomerSerializer,
-              collection_name: "customers",
-              includes: [:shipping_address],
-              meta: page.meta
-            )
-          )
+          render_customers(result.customers.preload(PRELOADS))
         else
           render_error_response(result)
         end
@@ -217,51 +203,6 @@ module Api
           billing_entity_codes: [],
           account_type: [],
           metadata: {}
-        )
-      end
-
-      def validate_expand!
-        values = raw_expand_values
-        allowed_values = (action_name == "show") ? EXPANSIONS : []
-
-        if values.nil? || !values.all?(String)
-          return invalid_request_error(
-            code: "invalid_expand",
-            error_details: {expand: {reason: "malformed", allowed_values:}}
-          )
-        end
-
-        @expansions = values.map(&:strip).compact_blank.uniq
-        invalid_values = @expansions - allowed_values
-        if invalid_values.any?
-          invalid_request_error(
-            code: "expand_not_supported",
-            error_details: {expand: {reason: "not_expandable", invalid_values:}}
-          )
-        end
-      end
-
-      def raw_expand_values
-        expand = params[:expand]
-
-        case expand
-        when nil then []
-        when String then [expand]
-        when Array then expand
-        when ActionController::Parameters
-          if expand.keys.all?(/\A\d+\z/)
-            expand.values
-          end
-        end
-      end
-
-      def render_customer(customer)
-        render(
-          json: ::V2::CustomerSerializer.new(
-            customer,
-            root_name: "customer",
-            includes: [:shipping_address, *@expansions.map(&:to_sym)]
-          )
         )
       end
 

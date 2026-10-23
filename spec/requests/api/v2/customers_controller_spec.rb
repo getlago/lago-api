@@ -29,6 +29,7 @@ RSpec.describe Api::V2::CustomersController do
       expect(customer).to have_attributes(name: "Example customer", document_locale: "fr", shipping_city: "Paris", shipping_country: "FR")
       expect(customer.metadata.sole).to have_attributes(key: "reference", value: "123", display_in_invoice: true)
       expect(json[:customer][:document_locale]).to eq("fr")
+      expect(json[:customer][:shipping_address][:city]).to eq("Paris")
       expect(json[:customer]).not_to have_key(:billing_configuration)
       expect(json[:customer].keys & %i[metadata taxes integration_customers net_payment_term]).to eq([])
       expect(response.headers["X-Lago-Endpoint-Status"]).to eq("beta")
@@ -221,6 +222,19 @@ RSpec.describe Api::V2::CustomersController do
       end
     end
 
+    context "with expansions on create" do
+      subject(:request) do
+        post_with_token(organization, "/api/v2/customers?expands[]=metadata", {customer: attributes})
+      end
+
+      it "rejects the request before creating a customer" do
+        expect { request }.not_to change(organization.customers, :count)
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: ["metadata"]})
+      end
+    end
+
     context "without authentication" do
       subject(:request) { post "/api/v2/customers", params: {customer: attributes}, as: :json }
 
@@ -345,6 +359,19 @@ RSpec.describe Api::V2::CustomersController do
           expect(json[:code]).to eq("missing_parameter")
         end
       end
+
+      context "with expansions on update" do
+        subject(:request) do
+          public_send(:"#{method}_with_token", organization, "/api/v2/customers/#{customer.external_id}?expands[]=taxes", {customer: attributes})
+        end
+
+        it "rejects the request before changing the customer" do
+          expect { request }.not_to change { customer.reload.attributes }
+
+          expect(response).to have_http_status(:bad_request)
+          expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: ["taxes"]})
+        end
+      end
     end
   end
 
@@ -362,12 +389,13 @@ RSpec.describe Api::V2::CustomersController do
       expect(response).to have_http_status(:ok)
       expect(json[:customer][:lago_id]).to eq(customer.id)
       expect(json[:customer][:document_locale]).to eq(customer.document_locale)
+      expect(json[:customer][:shipping_address]).to eq(customer.shipping_address)
       expect(json[:customer]).not_to have_key(:billing_configuration)
       expect(json[:customer].keys & %i[taxes metadata integration_customers]).to eq([])
     end
 
     context "with expansions" do
-      let(:parameters) { {expand: %w[taxes metadata integration_customers]} }
+      let(:parameters) { {expands: %w[taxes metadata integration_customers]} }
       let(:tax) { create(:tax, organization:) }
       let(:metadata) { create(:customer_metadata, customer:) }
       let(:integration_customer) { create(:anrok_customer, customer:) }
@@ -386,28 +414,71 @@ RSpec.describe Api::V2::CustomersController do
         expect(json[:customer][:metadata].map { it[:display_on_invoice] }).to eq([true])
         expect(json[:customer][:metadata].first).not_to have_key(:display_in_invoice)
         expect(json[:customer][:integration_customers].map { it[:lago_id] }).to eq([integration_customer.id])
+        expect(json[:customer][:shipping_address]).to eq(customer.shipping_address)
+        expect(json[:customer].keys.last(3)).to eq(%i[metadata taxes integration_customers])
       end
     end
 
     context "with an unknown expansion" do
-      let(:parameters) { {expand: ["unknown"]} }
+      let(:parameters) { {expands: ["unknown"]} }
 
       it "rejects it" do
         request
 
         expect(response).to have_http_status(:bad_request)
-        expect(json[:code]).to eq("expand_not_supported")
+        expect(json[:code]).to eq("invalid_expand")
+        expect(json[:error_details]).to eq(expands: {invalid_values: ["unknown"], allowed_values: %w[metadata taxes integration_customers]})
       end
     end
 
     context "with malformed expansions" do
-      let(:parameters) { {expand: {taxes: "yes"}} }
+      let(:parameters) { {expands: {taxes: "yes"}} }
 
       it "rejects them" do
         request
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("invalid_expand")
+      end
+    end
+
+    ["metadata", {"0" => "metadata"}].each do |expands|
+      context "with expansions in the form #{expands.inspect}" do
+        let(:parameters) { {expands:} }
+
+        it "rejects a value that is not an array of strings" do
+          request
+
+          expect(response).to have_http_status(:bad_request)
+          expect(json[:code]).to eq("invalid_expand")
+          expect(json[:error_details]).to eq(expands: {reason: "malformed", allowed_values: %w[metadata taxes integration_customers]})
+        end
+      end
+    end
+
+    context "with whitespace and duplicate expansion names" do
+      let(:parameters) { {expands: [" metadata ", "metadata", ""]} }
+      let(:metadata) { create(:customer_metadata, customer:) }
+
+      before { metadata }
+
+      it "returns only the requested relationship once" do
+        request
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:customer][:metadata].pluck(:lago_id)).to eq([metadata.id])
+        expect(json[:customer].keys & %i[taxes integration_customers]).to eq([])
+      end
+    end
+
+    context "with an empty expansion list" do
+      let(:parameters) { {expands: []} }
+
+      it "keeps the response free of relationships" do
+        request
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:customer].keys & %i[metadata taxes integration_customers]).to eq([])
       end
     end
 
@@ -457,6 +528,7 @@ RSpec.describe Api::V2::CustomersController do
 
         expect(json[:customers].map { it[:lago_id] }).to eq([customer.id])
         expect(json[:customers].sole[:document_locale]).to eq(customer.document_locale)
+        expect(json[:customers].sole[:shipping_address]).to eq(customer.shipping_address)
         expect(json[:customers].sole).not_to have_key(:billing_configuration)
         expect(json[:customers].sole.keys & %i[taxes metadata integration_customers net_payment_term]).to eq([])
       end
@@ -489,7 +561,7 @@ RSpec.describe Api::V2::CustomersController do
     end
 
     context "with expansions" do
-      let(:parameters) { {expand: ["taxes"], after: "invalid"} }
+      let(:parameters) { {expands: ["taxes"], after: "invalid"} }
 
       it "rejects expansions before reading the cursor" do
         request
@@ -514,6 +586,18 @@ RSpec.describe Api::V2::CustomersController do
       expect(customer.reload).to be_discarded
       expect(json[:customer]).not_to have_key(:billing_configuration)
       expect(json[:customer][:deleted_at]).to eq(customer.deleted_at.iso8601)
+      expect(json[:customer][:shipping_address]).to eq(customer.shipping_address)
+    end
+
+    context "with expansions on delete" do
+      subject(:request) { delete_with_token(organization, "/api/v2/customers/#{customer.external_id}?expands[]=taxes") }
+
+      it "rejects the request without discarding the customer" do
+        expect { request }.not_to change { customer.reload.deleted_at }
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: ["taxes"]})
+      end
     end
 
     context "with a foreign customer" do

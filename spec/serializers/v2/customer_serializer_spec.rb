@@ -105,14 +105,6 @@ RSpec.describe V2::CustomerSerializer do
     expect(payload.slice(*v1_payload.keys)).to eq(v1_payload)
   end
 
-  context "with shipping details for the customer endpoint" do
-    let(:includes) { [:shipping_address] }
-
-    it "includes the nested shipping address" do
-      expect(payload).to eq(expected_payload.merge(shipping_address: customer.shipping_address))
-    end
-  end
-
   context "when the organization takes x402 payments", :premium do
     let(:feature_flags) { ["x402_payments"] }
 
