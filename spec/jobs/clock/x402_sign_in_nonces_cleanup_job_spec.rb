@@ -10,17 +10,16 @@ describe Clock::X402SignInNoncesCleanupJob do
   end
 
   describe ".perform" do
-    context "with nonces two days and two hours old" do
-      let(:recent) { create(:x402_sign_in_nonce, created_at: 2.hours.ago) }
-
+    context "with nonces on both sides of the retention period" do
       before do
-        create_list(:x402_sign_in_nonce, 2, created_at: 2.days.ago)
-        recent
+        freeze_time
+        create(:x402_sign_in_nonce, created_at: 1.day.ago - 1.second)
+        create(:x402_sign_in_nonce, created_at: 1.day.ago)
       end
 
       it "removes only the ones older than a day" do
         cleanup_job.perform_now
-        expect(X402::SignInNonce.pluck(:id)).to eq([recent.id])
+        expect(X402::SignInNonce.pluck(:created_at)).to eq([1.day.ago])
       end
     end
 
