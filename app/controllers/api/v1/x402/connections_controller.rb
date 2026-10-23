@@ -64,8 +64,8 @@ module Api
           connections = current_organization.x402_connections
             .order(created_at: :desc)
             .order(id: :asc)
-            .page(params[:page])
-            .per(params[:per_page] || PER_PAGE)
+            .page(page_number)
+            .per(page_size)
 
           render(
             json: ::CollectionSerializer.new(

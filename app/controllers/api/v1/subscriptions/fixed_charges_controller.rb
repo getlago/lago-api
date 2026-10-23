@@ -12,8 +12,8 @@ module Api
           fixed_charges = subscription.plan.fixed_charges
             .includes(:add_on, :taxes)
             .order(created_at: :desc)
-            .page(params[:page])
-            .per(params[:per_page] || PER_PAGE)
+            .page(page_number)
+            .per(page_size)
 
           render(
             json: ::CollectionSerializer.new(

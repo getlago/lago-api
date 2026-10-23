@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class InvoicesController < Api::BaseController
+    class InvoicesController < Api::V1::BaseController
       include InvoiceIndex
 
       before_action :ensure_x402_payments_enabled, only: [:x402_payment_url]

@@ -34,7 +34,7 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
       before do
         create_snapshot(to_datetime: previous_to_datetime - 1.month, units: 4)
         create_snapshot(
-          to_datetime: previous_to_datetime, units: 10, watermark:,
+          to_datetime: previous_to_datetime, units: 10, events_count: 3, watermark:,
           presentation_breakdowns: [{"groups" => {"region" => "eu"}, "value" => "10.0"}]
         )
         create_snapshot(to_datetime: from_datetime + 1.month - 1.second, units: 20)
@@ -46,6 +46,7 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
             described_class::Snapshot.new(
               grouped_by: {},
               units: 10,
+              events_count: 3,
               presentation_breakdowns: [{groups: {"region" => "eu"}, value: "10.0"}],
               to_datetime: previous_to_datetime,
               watermark:

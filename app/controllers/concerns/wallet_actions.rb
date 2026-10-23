@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 module WalletActions
-  include Pagination
   extend ActiveSupport::Concern
 
   def wallet_create(customer)
@@ -56,8 +55,8 @@ module WalletActions
     result = WalletsQuery.call(
       organization: current_organization,
       pagination: {
-        page: params[:page],
-        limit: params[:per_page] || PER_PAGE
+        page: page_number,
+        limit: page_size
       },
       filters: {
         external_customer_id: external_customer_id,

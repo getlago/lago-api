@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 class RecurringAggregationSnapshot < ApplicationRecord
+  # An event ingested just before the aggregation may not be readable yet, so the next period counts it.
+  # Same margin as the other enriched_at readers (ChargeFiltersScan::IncrementalCache::INGESTION_MARGIN).
+  WATERMARK_LAG = 5.minutes
+
   belongs_to :organization
   belongs_to :subscription
   belongs_to :charge, -> { with_discarded }
