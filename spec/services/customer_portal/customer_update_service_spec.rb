@@ -162,6 +162,7 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
   context "with the default editable fields" do
     before do
       customer.organization.update!(customer_portal_editable_fields: Organization::DEFAULT_CUSTOMER_PORTAL_EDITABLE_FIELDS)
+      customer.update!(country: "FR", zipcode: "75001", tax_identification_number: nil)
     end
 
     it "refuses the tax determining fields" do
@@ -176,6 +177,74 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
 
     it "does not update the customer" do
       expect { result }.not_to change { customer.reload.attributes }
+    end
+
+    context "when the locked fields are sent with their current values" do
+      let(:update_args) do
+        {
+          name: "Updated customer name",
+          country: "fr",
+          zipcode: "75001",
+          tax_identification_number: ""
+        }
+      end
+
+      it "ignores them and updates the editable fields" do
+        expect(result).to be_success
+        expect(result.customer).to have_attributes(
+          name: "Updated customer name",
+          country: "FR",
+          zipcode: "75001",
+          tax_identification_number: nil
+        )
+      end
+    end
+
+    context "when only one locked field changes" do
+      let(:update_args) { {name: "Updated customer name", country: "LU", zipcode: "75001"} }
+
+      it "refuses only that field" do
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq(country: ["value_is_not_editable"])
+        expect(customer.reload.name).not_to eq("Updated customer name")
+      end
+    end
+
+    context "when the locked shipping address is sent unchanged" do
+      let(:update_args) do
+        {
+          name: "Updated customer name",
+          shipping_address: {city: customer.shipping_city, country: customer.shipping_country&.downcase}
+        }
+      end
+
+      before do
+        customer.update!(shipping_city: "Lyon", shipping_country: "FR")
+        customer.organization.update!(
+          customer_portal_editable_fields: Organization::DEFAULT_CUSTOMER_PORTAL_EDITABLE_FIELDS - ["shipping_address"]
+        )
+      end
+
+      it "updates the editable fields" do
+        expect(result).to be_success
+        expect(result.customer).to have_attributes(name: "Updated customer name", shipping_city: "Lyon")
+      end
+    end
+
+    context "when the locked shipping address changes" do
+      let(:update_args) { {shipping_address: {city: "Paris"}} }
+
+      before do
+        customer.update!(shipping_city: "Lyon")
+        customer.organization.update!(
+          customer_portal_editable_fields: Organization::DEFAULT_CUSTOMER_PORTAL_EDITABLE_FIELDS - ["shipping_address"]
+        )
+      end
+
+      it "refuses it" do
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq(shipping_address: ["value_is_not_editable"])
+      end
     end
 
     context "when only editable fields are sent" do

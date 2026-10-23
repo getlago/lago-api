@@ -353,6 +353,7 @@ class Organization < ApplicationRecord
   end
 
   def validate_customer_portal_editable_fields
+    return errors.add(:customer_portal_editable_fields, "value_is_mandatory") if customer_portal_editable_fields.nil?
     return if customer_portal_editable_fields.all? { |v| CUSTOMER_PORTAL_EDITABLE_FIELDS.include?(v) }
 
     errors.add(:customer_portal_editable_fields, :unsupported_value)
