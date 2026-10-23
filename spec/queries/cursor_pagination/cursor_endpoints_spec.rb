@@ -49,6 +49,13 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
     end
   end
 
+  context "with BillingEntitiesQuery" do
+    let(:organization) { create(:organization, billing_entities: []) }
+    let(:filtered_scope) { ->(pagination) { BillingEntitiesQuery.call(organization:, pagination:).billing_entities } }
+
+    it_behaves_like "a keyset-paginated query", table: "billing_entities"
+  end
+
   context "with TaxesQuery" do
     let(:filtered_scope) do
       lambda do |pagination|
