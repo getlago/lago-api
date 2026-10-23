@@ -56,6 +56,10 @@ Rails.application.routes.draw do
       resources :invoices, only: [] do
         post :void, on: :member
       end
+      # Native v2 log endpoints win recognition over the v1 fallback below, so
+      # /api/v2/{activity,api,security}_logs get the v2 response shape (cursor
+      # pagination, v2 error body). Param names mirror config/routes/shared_api.rb.
+      resources :activity_logs, param: :activity_id, only: %i[index show]
     end
 
     namespace :v2, module: :v1 do
