@@ -40,12 +40,12 @@ module V2
     private
 
     # The index passes one grouped count for the whole page; show falls back
-    # to a count on the single record.
+    # to a count on the single record, or the cards a caller preloaded.
     def applied_rate_cards_count
       counts = options[:applied_rate_cards_counts]
       return counts.fetch(model.id, 0) if counts
 
-      model.applied_rate_cards.count
+      model.applied_rate_cards.size
     end
 
     # As /applied_rate_cards lists them, with what each card renders.

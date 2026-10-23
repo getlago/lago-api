@@ -5,6 +5,7 @@ module V2
   # rate card it was priced from, not the v1 subscription and charge.
   class FeeSerializer < ModelSerializer
     expandable :applied_taxes, serializer: ::V2::Fees::AppliedTaxSerializer
+    expandable :invoice, serializer: ::V2::InvoiceSerializer
     expandable :product, serializer: ::V2::ProductSerializer
     expandable :product_filter, serializer: ::V2::ProductFilterSerializer
     expandable :rate_card, serializer: ::V2::RateCardSerializer
@@ -20,7 +21,7 @@ module V2
       {invoice: :customer},
       {contract: :customer},
       {contract_rate_card: :rate_card},
-      {invoiceable: :product_category}
+      {billed_product: :product_category}
     ].freeze
 
     def serialize
@@ -60,16 +61,13 @@ module V2
         total_aggregated_units: model.total_aggregated_units,
         events_count: model.events_count,
         unit_amount_cents: model.unit_amount_cents,
+        # The one precise amount kept: a blended unit price, such as a volume price with a flat
+        # fee, is fractional, and unit_amount_cents rounds it.
         precise_unit_amount_cents: model.precise_unit_amount * model.amount.currency.subunit_to_unit,
         amount_cents: model.amount_cents,
-        precise_amount_cents: model.precise_amount_cents,
-        precise_coupons_amount_cents: model.precise_coupons_amount_cents,
         sub_total_excluding_taxes_amount_cents: model.sub_total_excluding_taxes_amount_cents.round,
-        sub_total_excluding_taxes_precise_amount_cents: model.sub_total_excluding_taxes_precise_amount_cents,
         taxes_amount_cents: model.taxes_amount_cents,
-        taxes_precise_amount_cents: model.taxes_precise_amount_cents,
         total_amount_cents: model.total_amount_cents,
-        precise_total_amount_cents: model.precise_total_amount_cents,
         amount_details: ::RateProperties.present(model.amount_details),
         pricing_unit_details:,
         payment_status: model.payment_status,
@@ -92,7 +90,7 @@ module V2
     def product
       return @product if defined?(@product)
 
-      @product = record_or_discarded(model.invoiceable, Product, model.invoiceable_id)
+      @product = record_or_discarded(model.billed_product, Product, model.invoiceable_id)
     end
 
     def product_category
