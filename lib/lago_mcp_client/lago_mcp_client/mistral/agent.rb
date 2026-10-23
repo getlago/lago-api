@@ -5,11 +5,14 @@ module LagoMcpClient
     class Agent
       MAX_ITERATIONS = 2
 
-      attr_reader :conversation_id
+      # Set when the last turn stopped on tool calls that wait for a confirmation:
+      # {results: [...], pending: [...]}. The results of the other calls of the same batch
+      # are kept, as the model expects every result of a batch together.
+      attr_reader :conversation_id, :pending_tool_calls
 
-      def initialize(client:, conversation_id:)
+      def initialize(client:, conversation_id:, tool_guard: nil)
         @mistral_client = LagoMcpClient::Mistral::Client.new
-        @mcp_context = LagoMcpClient::RunContext.new(client:)
+        @mcp_context = LagoMcpClient::RunContext.new(client:, tool_guard:)
         @conversation_id = conversation_id
         @mutex = Mutex.new
       end
@@ -25,6 +28,21 @@ module LagoMcpClient
         process_conversation(user_message, max_tool_iterations) { |chunk| yield chunk }
       end
 
+      # Sends the results of a batch that waited for a confirmation, then carries on
+      # the conversation as #chat does. on_submitted is called once the model has the results.
+      def submit_tool_results(tool_results, max_tool_iterations: MAX_ITERATIONS, on_submitted: nil)
+        raise ArgumentError, "Block required for streaming" unless block_given?
+
+        response = send_tool_results(tool_results) { |chunk| yield chunk }
+        on_submitted&.call
+        follow_tool_calls(response, max_tool_iterations) { |chunk| yield chunk }
+      end
+
+      def run_confirmed_tool_call(tool_call_id:, name:, arguments:)
+        result = mcp_context.process_confirmed_tool_call(tool_call_id:, name:, arguments:)
+        format_tool_result(result)
+      end
+
       private
 
       attr_reader :mistral_client, :mcp_context, :mutex
@@ -32,11 +50,23 @@ module LagoMcpClient
 
       def process_conversation(user_message, max_iterations)
         response = send_message(user_message) { |chunk| yield chunk }
+        follow_tool_calls(response, max_iterations) { |chunk| yield chunk }
+      end
+
+      def follow_tool_calls(response, max_iterations)
+        @pending_tool_calls = nil
 
         max_iterations.times do |i|
           break unless has_tool_calls?(response)
 
-          tool_results = execute_tools(response["tool_calls"])
+          outcome = mcp_context.process_tool_calls(response["tool_calls"])
+          tool_results = outcome.results.map { |result| format_tool_result(result) }
+
+          if outcome.pending.any?
+            @pending_tool_calls = {results: tool_results, pending: outcome.pending}
+            return nil
+          end
+
           response = send_tool_results(tool_results) { |chunk| yield chunk }
         end
 
@@ -76,13 +106,12 @@ module LagoMcpClient
         response["tool_calls"]&.any?
       end
 
-      def execute_tools(tool_calls)
-        mcp_context.process_tool_calls(tool_calls).map do |result|
-          {
-            tool_call_id: result[:tool_call_id] || result["tool_call_id"],
-            content: parse_tool_content(result[:content] || result["content"])
-          }
-        end
+      def format_tool_result(result)
+        {
+          tool_call_id: result[:tool_call_id] || result["tool_call_id"],
+          name: result[:name] || result["name"],
+          content: parse_tool_content(result[:content] || result["content"])
+        }
       end
 
       def parse_tool_content(content)

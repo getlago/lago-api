@@ -31,6 +31,12 @@ module Mutations
           )
         end
 
+        # The model expects the results of its last tool calls before any new message. They stay
+        # unsubmitted until the member answers every write, and the resume may then start another round.
+        if ai_conversation.resuming? || ai_conversation.tool_calls.unsubmitted.exists?
+          raise not_allowed_error(code: "ai_conversation_tool_calls_pending")
+        end
+
         ::AiConversations::StreamJob.perform_later(ai_conversation:, message:)
 
         ai_conversation

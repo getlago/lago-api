@@ -9,7 +9,7 @@ RSpec.describe Mutations::FinanceAssistant::Ask do
     execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      permissions: required_permission,
+      permissions:,
       query:,
       variables: {input: {question:, sessionId: session_id}}
     )
@@ -47,6 +47,7 @@ RSpec.describe Mutations::FinanceAssistant::Ask do
   end
 
   let(:required_permission) { "ai_conversations:create" }
+  let(:permissions) { [required_permission, *AiConversations::ToolPolicy::FINANCE_ASSISTANT_PERMISSIONS] }
 
   let_it_be(:membership) { create_default(:membership) }
 
@@ -65,6 +66,17 @@ RSpec.describe Mutations::FinanceAssistant::Ask do
   end
 
   context "with premium feature", :premium do
+    context "when the member cannot view the billing data" do
+      let(:permissions) { [required_permission, "analytics:view"] }
+
+      it "returns a forbidden error without calling the finance assistant" do
+        expect(result["data"]["askFinanceAssistant"]).to be_nil
+        expect_forbidden_error(result)
+        expect(result["errors"].first["extensions"]["required_permissions"]).to include("invoices:view", "customers:view")
+        expect(FinanceAssistant::AskService).not_to have_received(:call)
+      end
+    end
+
     it "returns a finance assistant answer" do
       data = result["data"]["askFinanceAssistant"]
 
