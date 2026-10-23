@@ -1,7 +1,32 @@
 # frozen_string_literal: true
 
 class ModelSerializer
+  # Prepended by `expandable`, so that a serializer cannot declare an expansion and forget to
+  # render it.
+  module RendersExpansions
+    def serialize
+      super.merge(expanded_payload)
+    end
+  end
+
+  NO_EXPANSIONS = {}.freeze
+
+  # Set once per serializer, when its class is loaded, through `expandable`.
+  class_attribute :expansions, instance_accessor: false, instance_predicate: false, default: NO_EXPANSIONS # rubocop:disable ThreadSafety/ClassAndModuleAttributes
+
   attr_reader :model, :options
+
+  # Lets a native v2 endpoint embed `model.<name>` on `expands[]=<name>`, or what a private method
+  # of the serializer with that name returns, for records that are ordered or computed. One record
+  # or a list, each rendered by `serializer` without includes, so that it stays flat. It comes last
+  # in `serialize`.
+  def self.expandable(name, serializer:)
+    prepend(RendersExpansions)
+
+    self.expansions = expansions.merge(name.to_sym => serializer).freeze
+  end
+
+  def self.expandable_names = expansions.keys
 
   # The possible values for the options are:
   # - includes: Specify the relation to include in the payload
@@ -58,5 +83,35 @@ class ModelSerializer
     return default if include.is_a?(Symbol) || include.nil?
 
     include[value]
+  end
+
+  private
+
+  # The declared expansions found in `includes`, in their declared order: Api::Serializable
+  # passes the requested ones, and a nil record renders as null.
+  def expanded_payload
+    self.class.expansions.each_with_object({}) do |(name, serializer), payload|
+      next unless include?(name)
+
+      payload[name] = render_expansion(expanded_records(name), serializer)
+    end
+  end
+
+  # Only a method the serializer defines itself overrides the model: one inherited from
+  # ModelSerializer or Kernel never does.
+  def expanded_records(name)
+    if respond_to?(name, true) && method(name).owner < ModelSerializer
+      send(name)
+    else
+      model.public_send(name)
+    end
+  end
+
+  def render_expansion(records, serializer)
+    case records
+    when nil then nil
+    when Array, ActiveRecord::Relation then records.map { serializer.new(it).serialize }
+    else serializer.new(records).serialize
+    end
   end
 end

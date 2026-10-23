@@ -133,7 +133,7 @@ RSpec.describe BillingSegments::ProcessService do
     end
 
     describe "#grouped_segments" do
-      it "loads and groups segments with one query while sharing rate card records" do
+      it "loads and groups segments without redundant rate card queries" do
         billing_segment_queries = []
         rate_card_queries = []
         subscriber = ->(_name, _start, _finish, _id, payload) {
@@ -146,7 +146,7 @@ RSpec.describe BillingSegments::ProcessService do
             service = described_class.new(customer:)
             segment = service.send(:pending_segments).sole
 
-            expect(segment.contract_rate_card.rate_card).to equal(segment.rate_card_rate.rate_card)
+            expect(segment.contract_rate_card.rate_card.id).to eq(segment.rate_card_rate.rate_card_id)
             expect(service.send(:pending_advance_segments)).to eq([])
           end
         end

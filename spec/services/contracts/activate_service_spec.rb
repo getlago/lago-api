@@ -11,9 +11,23 @@ RSpec.describe Contracts::ActivateService do
   let(:contract) { create(:contract, :pending, organization:, customer:, started_at:) }
   let(:timestamp) { started_at }
 
+  before do
+    allow(Utils::ActivityLog).to receive(:produce)
+    allow(Utils::ActivityLog).to receive(:produce_after_commit)
+  end
+
   it "activates a pending contract whose start has arrived" do
+    expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("contract.started", contract)
     expect(result).to be_success
     expect(contract.reload).to be_active
+    expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(contract, "contract.started")
+  end
+
+  it "publishes started only once across repeated activation attempts" do
+    expect { described_class.call(contract:, timestamp:) }.to have_enqueued_job_after_commit(SendWebhookJob).with("contract.started", contract)
+
+    expect { described_class.call(contract:, timestamp:) }.not_to have_enqueued_job(SendWebhookJob)
+    expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(contract, "contract.started").once
   end
 
   it "schedules the customer's billing" do
@@ -121,9 +135,11 @@ RSpec.describe Contracts::ActivateService do
     let(:timestamp) { started_at - 1.second }
 
     it "keeps the contract pending" do
+      expect { result }.not_to have_enqueued_job(SendWebhookJob)
       expect(result).to be_success
       expect(contract.reload).to be_pending
       expect(BillingSegments::ScheduleJob).not_to have_been_enqueued
+      expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "contract.started", any_args)
     end
   end
 
@@ -131,9 +147,11 @@ RSpec.describe Contracts::ActivateService do
     before { customer.discard! }
 
     it "keeps the contract pending without scheduling billing" do
+      expect { result }.not_to have_enqueued_job(SendWebhookJob)
       expect(result).to be_success
       expect(contract.reload).to be_pending
       expect(BillingSegments::ScheduleJob).not_to have_been_enqueued
+      expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "contract.started", any_args)
     end
   end
 
@@ -141,9 +159,11 @@ RSpec.describe Contracts::ActivateService do
     before { Contract.where(id: contract.id).update_all(status: :canceled) } # rubocop:disable Rails/SkipsModelValidations
 
     it "leaves it canceled" do
+      expect { result }.not_to have_enqueued_job(SendWebhookJob)
       expect(result).to be_success
       expect(contract.reload).to be_canceled
       expect(BillingSegments::ScheduleJob).not_to have_been_enqueued
+      expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "contract.started", any_args)
     end
   end
 
@@ -151,10 +171,12 @@ RSpec.describe Contracts::ActivateService do
     before { create(:contract, organization:, customer:, external_id: contract.external_id) }
 
     it "fails instead of leaving the replacement waiting unnoticed" do
+      expect { result }.not_to have_enqueued_job(SendWebhookJob)
       expect(result).not_to be_success
       expect(result.error.messages[:external_id]).to eq(["active_contract_exists"])
       expect(contract.reload).to be_pending
       expect(BillingSegments::ScheduleJob).not_to have_been_enqueued
+      expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "contract.started", any_args)
     end
   end
 

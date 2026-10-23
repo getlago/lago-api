@@ -14,7 +14,7 @@ RSpec.describe ProductCategory do
   describe "associations" do
     it do
       expect(product_category).to belong_to(:organization)
-      expect(product_category).to have_many(:products)
+      expect(product_category).to have_many(:products).inverse_of(:product_category)
       expect(product_category).to have_many(:contract_applied_rate_cards).through(:products)
     end
   end

@@ -252,7 +252,7 @@ RSpec.describe Api::V2::TaxesController do
             :"#{http_method}_with_token",
             organization,
             path.sub(":code", tax.code),
-            {expand: "counts", limit: 0, tax: {name: "Changed tax", code: "changed", rate: 5}}
+            {expands: ["counts"], limit: 0, tax: {name: "Changed tax", code: "changed", rate: 5}}
           )
         end
 
@@ -270,7 +270,7 @@ RSpec.describe Api::V2::TaxesController do
     subject(:request) { get_with_token(organization, "/api/v2/taxes/#{tax.code}", request_params) }
 
     let(:tax) { create(:tax, organization:) }
-    let(:request_params) { {expand: "billing_entities"} }
+    let(:request_params) { {expands: ["billing_entities"]} }
 
     before { tax }
 
@@ -282,41 +282,39 @@ RSpec.describe Api::V2::TaxesController do
         status: 400,
         error: "Bad Request",
         code: "expand_not_supported",
-        error_details: {expand: {reason: "not_expandable", invalid_values: ["billing_entities"]}}
+        error_details: {expands: {reason: "not_expandable", invalid_values: ["billing_entities"]}}
       )
       expect(response.headers["X-Lago-Endpoint-Status"]).to eq("beta")
     end
 
     ["counts", "deleted_at", "billing_entities.taxes", "counts,deleted_at"].each do |value|
-      context "with expand=#{value}" do
-        let(:request_params) { {expand: value} }
+      context "with expands[]=#{value}" do
+        let(:request_params) { {expands: [value]} }
 
         it "rejects the value without exposing internal options or nested expansions" do
           request
 
           expect(response).to have_http_status(:bad_request)
           expect(json[:code]).to eq("expand_not_supported")
-          expect(json[:error_details]).to eq(expand: {reason: "not_expandable", invalid_values: [value]})
+          expect(json[:error_details]).to eq(expands: {reason: "not_expandable", invalid_values: [value]})
         end
       end
     end
 
-    [[" counts ", "counts", "", "deleted_at"], {"0" => " counts ", "1" => "counts", "2" => "", "3" => "deleted_at"}].each do |value|
-      context "with expand in #{value.class} form" do
-        let(:request_params) { {expand: value} }
+    context "with padded, repeated and blank values" do
+      let(:request_params) { {expands: [" counts ", "counts", "", "deleted_at"]} }
 
-        it "trims and deduplicates the rejected values" do
-          request
+      it "trims and deduplicates the rejected values" do
+        request
 
-          expect(response).to have_http_status(:bad_request)
-          expect(json[:error_details]).to eq(expand: {reason: "not_expandable", invalid_values: %w[counts deleted_at]})
-        end
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:error_details]).to eq(expands: {reason: "not_expandable", invalid_values: %w[counts deleted_at]})
       end
     end
 
-    [nil, " ", [], ["", " "], {"0" => " "}].each do |value|
-      context "with an empty expand #{value.inspect}" do
-        let(:request_params) { {expand: value} }
+    [nil, [], ["", " "]].each do |value|
+      context "with an empty expands #{value.inspect}" do
+        let(:request_params) { {expands: value} }
 
         it "returns the normal flat response" do
           request
@@ -327,9 +325,9 @@ RSpec.describe Api::V2::TaxesController do
       end
     end
 
-    [{"name" => "taxes"}, [{"name" => "taxes"}], {"0" => {"name" => "taxes"}}, {"0" => ["taxes"]}].each do |value|
-      context "with malformed expand #{value.inspect}" do
-        let(:request_params) { {expand: value} }
+    ["counts", " ", {"0" => "counts"}, {"name" => "taxes"}, [{"name" => "taxes"}], {"0" => ["taxes"]}].each do |value|
+      context "with malformed expands #{value.inspect}" do
+        let(:request_params) { {expands: value} }
 
         it "returns an invalid_expand error" do
           request
@@ -339,7 +337,7 @@ RSpec.describe Api::V2::TaxesController do
             status: 400,
             error: "Bad Request",
             code: "invalid_expand",
-            error_details: {expand: {reason: "malformed", allowed_values: []}}
+            error_details: {expands: {reason: "malformed", allowed_values: []}}
           )
         end
       end
@@ -352,7 +350,7 @@ RSpec.describe Api::V2::TaxesController do
           public_send(:"#{http_method}_with_token", organization, path, request_params)
         end
 
-        let(:request_params) { {expand: "counts", tax: {name: "Changed tax", code: "changed", rate: 5}} }
+        let(:request_params) { {expands: ["counts"], tax: {name: "Changed tax", code: "changed", rate: 5}} }
 
         it "rejects expansion before performing the write" do
           expect { request }.not_to change { tax.reload.attributes }
@@ -362,7 +360,7 @@ RSpec.describe Api::V2::TaxesController do
         end
 
         context "with a non-string JSON value" do
-          let(:request_params) { {expand: [true]} }
+          let(:request_params) { {expands: [true]} }
 
           it "rejects the malformed value" do
             request
@@ -377,7 +375,7 @@ RSpec.describe Api::V2::TaxesController do
     context "when listing taxes with invalid pagination" do
       subject(:request) { get_with_token(organization, "/api/v2/taxes", request_params) }
 
-      let(:request_params) { {expand: "counts", limit: 0} }
+      let(:request_params) { {expands: ["counts"], limit: 0} }
 
       it "validates expansion before pagination" do
         request
@@ -388,7 +386,7 @@ RSpec.describe Api::V2::TaxesController do
     end
 
     context "with a scalar non-string JSON value" do
-      subject(:request) { post_with_token(organization, "/api/v2/taxes", {expand: false}) }
+      subject(:request) { post_with_token(organization, "/api/v2/taxes", {expands: false}) }
 
       it "returns an invalid_expand error before checking the tax wrapper" do
         request

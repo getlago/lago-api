@@ -4,16 +4,16 @@ module ProductFilters
   class CreateService < BaseService
     Result = BaseResult[:product_filter]
 
+    activity_loggable(
+      action: "product_filter.created",
+      record: -> { result.product_filter }
+    )
+
     def initialize(product:, params:)
       @product = product
       @params = params.to_h.with_indifferent_access
       super
     end
-
-    activity_loggable(
-      action: "product_filter.created",
-      record: -> { result.product_filter }
-    )
 
     def call
       return result.not_found_failure!(resource: "product") unless product
@@ -39,6 +39,7 @@ module ProductFilters
         create_values(product_filter)
 
         result.product_filter = product_filter
+        SendWebhookJob.perform_after_commit("product_filter.created", product_filter)
       end
 
       result

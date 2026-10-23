@@ -318,6 +318,87 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
     end
   end
 
+  describe "a recurring sum" do
+    let(:charge_properties) { {"amount" => "1", "pricing_group_keys" => ["user"]} }
+    let(:watermark) { (Time.current + 1.minute).floor(3) }
+
+    before do
+      Clickhouse::EventsEnriched.create!(
+        transaction_id: "tr_late",
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        code: billable_metric.code,
+        timestamp: boundaries[:from_datetime] - 10.days,
+        properties: {"region" => "us", "user" => "u1", "value" => "512"},
+        value: "512",
+        decimal_value: 512,
+        enriched_at: watermark + 1.minute
+      )
+    end
+
+    def recurring(store)
+      store.tap { it.use_from_boundary = false }
+    end
+
+    it "answers every filter as its own store does" do
+      pricing_buckets.each do |item|
+        scanned = recurring(scanned_store(item))
+        store = recurring(filter_store(item))
+
+        expect(scanned.recurring_sum(watermark:)).to eq(store.recurring_sum(watermark:))
+        expect(sorted(scanned.grouped_recurring_sum(watermark:))).to eq(sorted(store.grouped_recurring_sum(watermark:)))
+      end
+    end
+
+    it "leaves the events ingested after the watermark out of the snapshot value and count" do
+      item = pricing_buckets.find { it.charge_filter.persisted? && it.charge_filter.to_h == {"region" => ["us"]} }
+
+      expect(recurring(scanned_store(item)).recurring_sum(watermark:)).to eq(
+        Events::Stores::BaseStore::RecurringAggregationResult.new(value: 4 + 512, snapshot_value: 4, events_count: 2, snapshot_events_count: 1)
+      )
+    end
+
+    context "with an event ingested at the watermark" do
+      before do
+        Clickhouse::EventsEnriched.create!(
+          transaction_id: "tr_at_watermark",
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          code: billable_metric.code,
+          timestamp: boundaries[:from_datetime] - 5.days,
+          properties: {"region" => "us", "user" => "u1", "value" => "64"},
+          value: "64",
+          decimal_value: 64,
+          enriched_at: watermark
+        )
+      end
+
+      it "keeps the event in the snapshot value and count" do
+        item = pricing_buckets.find { it.charge_filter.persisted? && it.charge_filter.to_h == {"region" => ["us"]} }
+
+        expect(recurring(scanned_store(item)).recurring_sum(watermark:)).to eq(
+          Events::Stores::BaseStore::RecurringAggregationResult.new(value: 4 + 512 + 64, snapshot_value: 4 + 64, events_count: 3, snapshot_events_count: 2)
+        )
+      end
+    end
+
+    it "reads the events once for every filter of the charge" do
+      allow(Events::Stores::Utils::ClickhouseConnection).to receive(:connection_with_retry).and_call_original
+
+      pricing_buckets.each { recurring(scanned_store(it)).recurring_sum(watermark:) }
+
+      expect(Events::Stores::Utils::ClickhouseConnection).to have_received(:connection_with_retry).once
+    end
+
+    context "with a count charge" do
+      let(:billable_metric) { create(:billable_metric, organization:) }
+
+      it "leaves the recurring sum to the filter stores" do
+        expect(pricing_buckets.map { scan.covers?(filter_store(it), :recurring_sum) }).to all(be(false))
+      end
+    end
+  end
+
   describe "a max charge" do
     let(:billable_metric) { create(:max_billable_metric, organization:, field_name: "value") }
     let(:charge_properties) { {"amount" => "1", "pricing_group_keys" => ["user"]} }

@@ -104,4 +104,150 @@ RSpec.describe ModelSerializer do
       end
     end
   end
+
+  describe ".expandable" do
+    let(:serializer_class) { Class.new(described_class) { expandable :first, serializer: ModelSerializer } }
+
+    it "declares nothing by default" do
+      expect(described_class.expandable_names).to eq([])
+    end
+
+    it "lists the declared names, in their order" do
+      serializer_class.expandable :second, serializer: described_class
+
+      expect(serializer_class.expandable_names).to eq(%i[first second])
+    end
+
+    it "leaves the other serializers' list unchanged" do
+      serializer_class
+
+      expect(described_class.expandable_names).to eq([])
+    end
+  end
+
+  describe "#serialize" do
+    subject(:payload) { serializer_class.new(model, options).serialize }
+
+    let(:model) { Struct.new(:first, :second, :third).new(first_record, nil, first_record) }
+    let(:first_record) { Struct.new(:code).new("first") }
+    let(:options) { {includes: %i[second unlisted first]} }
+
+    # Renders what it was given, so that an embedded record shows the options it received.
+    let(:embedded_serializer) { Class.new(described_class) { def serialize = {code: model.code, options:} } }
+
+    let(:serializer_class) do
+      embedded_serializer = self.embedded_serializer
+
+      Class.new(described_class) do
+        expandable :first, serializer: embedded_serializer
+        expandable :second, serializer: embedded_serializer
+        expandable :third, serializer: embedded_serializer
+
+        def serialize = {code: "parent"}
+      end
+    end
+
+    it "adds the included expansions after its own payload, in their declared order, a missing record as nil" do
+      expect(payload.to_a).to eq([[:code, "parent"], [:first, {code: "first", options: {}}], [:second, nil]])
+    end
+
+    it "renders the embedded record without includes, so that it stays flat" do
+      expect(payload[:first][:options]).to eq({})
+    end
+
+    it "renders a Struct as one record, though it is Enumerable" do
+      expect(first_record).to be_a(Enumerable)
+      expect(payload[:first]).to eq(code: "first", options: {})
+    end
+
+    context "with a private method named after an expansion" do
+      let(:options) { {includes: %i[first third], label: "from the options"} }
+
+      let(:serializer_class) do
+        embedded_serializer = self.embedded_serializer
+
+        Class.new(described_class) do
+          expandable :first, serializer: embedded_serializer
+          expandable :third, serializer: embedded_serializer
+
+          def serialize = {code: "parent"}
+
+          private
+
+          def first = Struct.new(:code).new("#{model.first.code} #{options[:label]}")
+
+          # model.third is a record: the method decides what renders.
+          def third = nil
+        end
+      end
+
+      it "renders what the method returns instead of the model's record, nil as null" do
+        expect(payload).to eq(
+          code: "parent",
+          first: {code: "first from the options", options: {}},
+          third: nil
+        )
+      end
+    end
+
+    # `test` and `format` are private methods of Kernel, and `options` a method of ModelSerializer.
+    context "with an expansion named after an inherited method" do
+      let(:model) { Struct.new(:test, :format, :options).new(first_record, first_record, first_record) }
+      let(:options) { {includes: %i[test format options]} }
+
+      let(:serializer_class) do
+        embedded_serializer = self.embedded_serializer
+
+        Class.new(described_class) do
+          expandable :test, serializer: embedded_serializer
+          expandable :format, serializer: embedded_serializer
+          expandable :options, serializer: embedded_serializer
+
+          def serialize = {code: "parent"}
+        end
+      end
+
+      it "renders the model's record" do
+        expect(payload).to eq(
+          code: "parent",
+          test: {code: "first", options: {}},
+          format: {code: "first", options: {}},
+          options: {code: "first", options: {}}
+        )
+      end
+    end
+
+    context "with list sources" do
+      let(:model) { Struct.new(:first, :second, :third).new([first_record, second_record], taxes_relation, Tax.none) }
+      let(:second_record) { Struct.new(:code).new("second") }
+      let(:organization) { create(:organization) }
+      let(:taxes_relation) { Tax.where(id: [create(:tax, organization:, code: "b"), create(:tax, organization:, code: "a")]).order(:code) }
+      let(:options) { {includes: %i[first second third]} }
+
+      it "renders an Array and an ActiveRecord relation as lists of records, each without includes" do
+        expect(payload).to eq(
+          code: "parent",
+          first: [{code: "first", options: {}}, {code: "second", options: {}}],
+          second: [{code: "a", options: {}}, {code: "b", options: {}}],
+          third: []
+        )
+      end
+    end
+
+    context "without includes" do
+      let(:options) { {} }
+
+      it "renders its own payload only" do
+        expect(payload).to eq(code: "parent")
+      end
+    end
+
+    context "with a serializer that declares no expansion" do
+      let(:serializer_class) { Class.new(described_class) { def serialize = {code: "parent"} } }
+
+      it "renders its own payload only" do
+        expect(payload).to eq(code: "parent")
+      end
+    end
+  end
 end

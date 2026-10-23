@@ -16,6 +16,14 @@ RSpec.describe PlanRateCards::CreateService do
 
   let(:params) { {rate_card_code: rate_card.code, units: "10"} }
 
+  let(:activity_log_calls) { [] }
+
+  before do
+    allow(Utils::ActivityLog).to receive(:produce) do |*args, **kwargs, &block|
+      activity_log_calls << {args:, kwargs:, block:}
+    end
+  end
+
   it "creates a plan product" do
     expect { result }.to change(PlanRateCard, :count).by(1)
 
@@ -32,6 +40,22 @@ RSpec.describe PlanRateCards::CreateService do
     expect(rate_phase.position).to eq(1)
     expect(rate_phase.billing_interval_cycle_count).to be_nil
     expect(rate_phase.contract_rate_card_id).to be_nil
+  end
+
+  it "publishes one plan_rate_card.created pair after creating its phase" do
+    expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with do |*args|
+      expect(args).to eq(["plan_rate_card.created", result.plan_rate_card])
+    end
+
+    card = result.plan_rate_card
+    expect(Utils::ActivityLog).to have_received(:produce).with(
+      card,
+      "plan_rate_card.created",
+      after_commit: true
+    )
+    activity_call = activity_log_calls.find { |call| call[:args] == [card, "plan_rate_card.created"] }
+    expect(activity_call.fetch(:block)).to be_a(Proc)
+    expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "plan_rate_card.updated", any_args)
   end
 
   context "when the plan already prices the whole item" do
@@ -94,6 +118,17 @@ RSpec.describe PlanRateCards::CreateService do
     it "creates the entry with the provided phases instead of the default" do
       expect(result).to be_success
       expect(result.plan_rate_card.rate_phases.order(:position).pluck(:name)).to eq(%w[Launch Standard])
+      expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "plan_rate_card.updated", any_args)
+    end
+
+    it "emits only the owning card pair for nested phase creation" do
+      expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).exactly(1).times
+      expect(Utils::ActivityLog).to have_received(:produce).with(
+        result.plan_rate_card,
+        "plan_rate_card.created",
+        after_commit: true
+      )
+      expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "plan_rate_card.updated", any_args)
     end
   end
 
@@ -109,9 +144,13 @@ RSpec.describe PlanRateCards::CreateService do
     end
 
     it "fails and rolls the whole create back" do
-      expect { result }.not_to change(PlanRateCard, :count)
+      existing_count = PlanRateCard.count
+      expect { result }.not_to have_enqueued_job(SendWebhookJob)
+      expect(PlanRateCard.count).to eq(existing_count)
       expect(result).not_to be_success
       expect(result.error.messages[:rate_phases]).to eq(["positions_must_be_contiguous"])
+      activity_call = activity_log_calls.find { |call| call[:args].last == "plan_rate_card.created" }
+      expect(activity_call.fetch(:block).call).not_to be_success
     end
   end
 

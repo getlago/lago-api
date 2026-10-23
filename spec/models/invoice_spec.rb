@@ -2025,6 +2025,43 @@ RSpec.describe Invoice do
     end
   end
 
+  describe "#has_non_voided_credit_notes?" do
+    let(:invoice) { create(:invoice) }
+
+    context "when there are no credit notes" do
+      it "returns false" do
+        expect(invoice.has_non_voided_credit_notes?).to be(false)
+      end
+    end
+
+    context "when there are only voided credit notes" do
+      before { create(:credit_note, invoice:, credit_status: :voided) }
+
+      it "returns false" do
+        expect(invoice.has_non_voided_credit_notes?).to be(false)
+      end
+    end
+
+    context "when there are non-voided credit notes" do
+      before do
+        create(:credit_note, invoice:, credit_status: :available)
+        create(:credit_note, invoice:, credit_status: :voided)
+      end
+
+      it "returns true" do
+        expect(invoice.has_non_voided_credit_notes?).to be(true)
+      end
+    end
+
+    context "when the value is preloaded" do
+      before { invoice.aggregation_cache[:has_non_voided_credit_notes?] = true }
+
+      it "returns the cached value" do
+        expect(invoice.has_non_voided_credit_notes?).to be(true)
+      end
+    end
+  end
+
   describe "#voidable?" do
     subject(:voidable) { invoice.voidable? }
 
@@ -3074,6 +3111,37 @@ RSpec.describe Invoice do
     end
   end
 
+  describe "#refunded_amount_cents" do
+    let(:invoice) { create(:invoice) }
+
+    context "when there are no credit notes" do
+      it "returns 0" do
+        expect(invoice.refunded_amount_cents).to eq(0)
+      end
+    end
+
+    context "when there are credit notes" do
+      before do
+        create(:credit_note, invoice:, refund_amount_cents: 100)
+        create(:credit_note, invoice:, refund_amount_cents: 200)
+      end
+
+      it "sums all the credit notes refund_amount_cents" do
+        expect(invoice.refunded_amount_cents).to eq(300)
+      end
+    end
+
+    context "when the value is cached by a preloader" do
+      before do
+        invoice.aggregation_cache[:refunded_amount_cents] = 100
+      end
+
+      it "returns the cached value" do
+        expect(invoice.refunded_amount_cents).to eq(100)
+      end
+    end
+  end
+
   describe "#offset_amount_cents" do
     let(:invoice) { create(:invoice) }
 
@@ -3091,6 +3159,16 @@ RSpec.describe Invoice do
       create(:credit_note, invoice:, status: :draft, offset_amount_cents: 200)
       create(:credit_note, invoice:, status: :finalized, offset_amount_cents: 400)
       expect(invoice.offset_amount_cents).to eq(400)
+    end
+
+    context "when the value is cached by a preloader" do
+      before do
+        invoice.aggregation_cache[:offset_amount_cents] = 100
+      end
+
+      it "returns the cached value" do
+        expect(invoice.offset_amount_cents).to eq(100)
+      end
     end
   end
 

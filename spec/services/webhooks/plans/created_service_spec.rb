@@ -20,14 +20,62 @@ RSpec.describe Webhooks::Plans::CreatedService do
     context "when the object is a catalog plan" do
       subject(:webhook_service) { described_class.new(object: catalog_plan) }
 
-      let(:catalog_plan) { create(:catalog_plan, organization:) }
+      let(:catalog_plan) do
+        create(
+          :catalog_plan,
+          organization:,
+          name: "Premium",
+          invoice_display_name: "Premium plan",
+          code: "premium",
+          description: "Premium description",
+          currency: "EUR"
+        )
+      end
+      let(:tax) { create(:tax, organization:, name: "VAT", code: "vat", rate: 20.0, description: "French VAT") }
 
-      it_behaves_like "creates webhook", "plan.created", "plan", {
-        "code" => String,
-        "name" => String,
-        "currency" => String,
-        "taxes" => Array
-      }
+      before do
+        travel_to(Time.zone.parse("2026-03-22 12:00:00"))
+        create(:plan_rate_card, organization:, catalog_plan:)
+        create(:plan_rate_card, organization:, catalog_plan:, deleted_at: Time.current)
+        create(:plan_applied_tax, :catalog_plan, organization:, catalog_plan:, tax:)
+      end
+
+      it "sends the catalog plan payload with the count of its kept rate cards and its taxes" do
+        webhook_service.call
+
+        expect(organization.webhooks.sole.payload).to eq(
+          "webhook_type" => "plan.created",
+          "object_type" => "plan",
+          "organization_id" => organization.id,
+          "plan" => {
+            "lago_id" => catalog_plan.id,
+            "name" => "Premium",
+            "invoice_display_name" => "Premium plan",
+            "code" => "premium",
+            "description" => "Premium description",
+            "currency" => "EUR",
+            "applied_rate_cards_count" => 1,
+            "created_at" => "2026-03-22T12:00:00Z",
+            "deleted_at" => nil,
+            "taxes" => [
+              {
+                "lago_id" => tax.id,
+                "name" => "VAT",
+                "code" => "vat",
+                "rate" => 20.0,
+                "description" => "French VAT",
+                "applied_to_organization" => false,
+                "add_ons_count" => 0,
+                "customers_count" => 0,
+                "plans_count" => 0,
+                "charges_count" => 0,
+                "commitments_count" => 0,
+                "created_at" => "2026-03-22T12:00:00Z"
+              }
+            ]
+          }
+        )
+      end
     end
   end
 end
