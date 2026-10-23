@@ -83,6 +83,18 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
     )
   end
 
+  def create_previous_event(value:, **properties)
+    create(
+      :event,
+      organization_id: organization.id,
+      code: billable_metric.code,
+      subscription:,
+      customer:,
+      timestamp: Time.zone.parse("2023-06-15 10:00:00"),
+      properties: {value:, **properties}
+    )
+  end
+
   before do
     events_values.each do |values|
       properties = {value: values[:value]}
@@ -190,21 +202,9 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
     let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
 
     let(:events_values) { [] }
+    let(:initial_value) { [snapshot(units: 1000)] }
 
-    let(:cached_aggregation) do
-      create(
-        :cached_aggregation,
-        charge:,
-        organization:,
-        external_subscription_id: subscription.external_id,
-        timestamp: from_datetime - 1.day,
-        current_aggregation: 1000
-      )
-    end
-
-    before { cached_aggregation }
-
-    it "uses the persisted recurring value as initial value" do
+    it "uses the snapshot as initial value" do
       result = aggregator.aggregate
 
       expect(result.aggregation.to_s).to eq("1000.0")
@@ -225,28 +225,21 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
         expect(result.recurring_units).to eq(400)
       end
 
-      context "when using presentation_by" do
-        let(:presentation_by) { ["region"] }
-        let(:initial_value) do
-          [snapshot(units: 400, presentation_breakdowns: [{groups: {"region" => "eu"}, value: "400.0"}])]
-        end
-
-        it "uses the snapshot presentation breakdowns as initial values" do
-          expect(aggregator.aggregate.breakdowns).to eq([{groups: {"region" => "eu"}, value: 400.to_d}])
-        end
-      end
-
       context "when the snapshot closes an older period" do
         let(:initial_value) { [snapshot(units: 400, to_datetime: from_datetime - 1.month)] }
 
-        it "uses the persisted recurring value as initial value" do
-          expect(aggregator.aggregate.total_aggregated_units).to eq(1000)
+        before { create_previous_event(value: 10) }
+
+        it "reads the units carried over from the events" do
+          expect(aggregator.aggregate.total_aggregated_units).to eq(10)
         end
       end
 
       context "when the bucket had no active units at the end of the previous period" do
         let(:initial_value) { [] }
         let(:presentation_by) { ["region"] }
+
+        before { create_previous_event(value: 10, region: "eu") }
 
         it "starts from zero units and breakdowns" do
           result = aggregator.aggregate
@@ -257,8 +250,8 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
         context "when the period is older" do
           let(:initial_period) { closed_period(from_datetime - 1.month) }
 
-          it "uses the persisted recurring value as initial value" do
-            expect(aggregator.aggregate.total_aggregated_units).to eq(1000)
+          it "reads the units carried over from the events" do
+            expect(aggregator.aggregate.total_aggregated_units).to eq(10)
           end
         end
       end
@@ -267,19 +260,11 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
     context "when using presentation_by with no current events and zero initial value" do
       let(:presentation_by) { ["region"] }
       let(:events_values) { [] }
-      let(:cached_aggregation) do
-        create(
-          :cached_aggregation,
-          charge:,
-          organization:,
-          external_subscription_id: subscription.external_id,
-          timestamp: from_datetime - 1.day,
-          current_aggregation: 0,
-          presentation_breakdowns: [{"groups" => {"region" => "eu"}, "value" => "100.0"}]
-        )
+      let(:initial_value) do
+        [snapshot(units: 0, presentation_breakdowns: [{groups: {"region" => "eu"}, value: "100.0"}])]
       end
 
-      it "falls back to cached presentation breakdowns" do
+      it "falls back to the snapshot presentation breakdowns" do
         result = aggregator.aggregate
 
         expect(result.breakdowns).to eq([{groups: {"region" => "eu"}, value: 100.to_d}])
@@ -287,7 +272,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
       end
     end
 
-    context "when using presentation_by with events and cached presentation breakdowns" do
+    context "when using presentation_by with events and snapshot presentation breakdowns" do
       let(:presentation_by) { ["region"] }
       let(:events_values) do
         [
@@ -295,16 +280,8 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
           {timestamp: Time.zone.parse("2023-08-16 00:00:00"), value: 4, region: "us"}
         ]
       end
-      let(:cached_aggregation) do
-        create(
-          :cached_aggregation,
-          charge:,
-          organization:,
-          external_subscription_id: subscription.external_id,
-          timestamp: from_datetime - 1.day,
-          current_aggregation: 100,
-          presentation_breakdowns: [{"groups" => {"region" => "eu"}, "value" => "100.0"}]
-        )
+      let(:initial_value) do
+        [snapshot(units: 100, presentation_breakdowns: [{"groups" => {"region" => "eu"}, "value" => "100.0"}])]
       end
 
       it "returns the weighted breakdowns and the units active at period end" do
@@ -325,8 +302,8 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
       end
     end
 
-    context "without cached_aggregation" do
-      let(:cached_aggregation) {}
+    context "without a snapshot" do
+      let(:initial_value) { nil }
 
       it "falls back on 0" do
         result = aggregator.aggregate
@@ -336,6 +313,22 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
         expect(result.variation).to eq(0)
         expect(result.total_aggregated_units).to eq(0)
         expect(result.recurring_updated_at).to eq(from_datetime)
+      end
+
+      context "with events before the period" do
+        before { create_previous_event(value: 10) }
+
+        it "reads the units carried over from the events" do
+          expect(aggregator.aggregate.total_aggregated_units).to eq(10)
+        end
+
+        context "when the period is the first of the subscription" do
+          let(:subscription) { create(:subscription, started_at: from_datetime) }
+
+          it "carries no units over" do
+            expect(aggregator.aggregate.total_aggregated_units).to eq(0)
+          end
+        end
       end
 
       context "with events attached to a previous subcription" do
@@ -631,45 +624,14 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
       let(:aragorn_presentation_breakdowns) { [] }
       let(:frodo_presentation_breakdowns) { [] }
 
-      let(:cached_aggregations) do
+      let(:initial_value) do
         [
-          create(
-            :cached_aggregation,
-            organization:,
-            charge:,
-            external_subscription_id: subscription.external_id,
-            timestamp: from_datetime - 1.day,
-            current_aggregation: 1000,
-            grouped_by: {"agent_name" => "aragorn"},
-            presentation_breakdowns: aragorn_presentation_breakdowns
-          ),
-
-          create(
-            :cached_aggregation,
-            organization:,
-            charge:,
-            external_subscription_id: subscription.external_id,
-            timestamp: from_datetime - 1.day,
-            current_aggregation: 1000,
-            grouped_by: {"agent_name" => "frodo"},
-            presentation_breakdowns: frodo_presentation_breakdowns
-          ),
-
-          create(
-            :cached_aggregation,
-            organization:,
-            charge:,
-            external_subscription_id: subscription.external_id,
-            timestamp: from_datetime - 2.days,
-            current_aggregation: 2000,
-            grouped_by: {"agent_name" => "aragorn"}
-          )
+          snapshot(units: 1000, grouped_by: {"agent_name" => "aragorn"}, presentation_breakdowns: aragorn_presentation_breakdowns),
+          snapshot(units: 1000, grouped_by: {"agent_name" => "frodo"}, presentation_breakdowns: frodo_presentation_breakdowns)
         ]
       end
 
-      before { cached_aggregations }
-
-      it "uses the persisted recurring value as initial value" do
+      it "uses the snapshots as initial values" do
         result = aggregator.aggregate
 
         expect(result.aggregations.count).to eq(2)
@@ -711,14 +673,14 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
           )
         end
 
-        context "when frodo has cached presentation breakdowns" do
+        context "when frodo has snapshot presentation breakdowns" do
           let(:frodo_presentation_breakdowns) do
             [
-              {"groups" => {"agent_name" => "frodo", "region" => "us"}, "value" => "100.0"}
+              {groups: {"agent_name" => "frodo", "region" => "us"}, value: "100.0"}
             ]
           end
 
-          it "uses frodo cached presentation breakdowns as initial values" do
+          it "uses frodo snapshot presentation breakdowns as initial values" do
             result = aggregator.aggregate
 
             expect(result.breakdowns.map { |breakdown| {groups: breakdown[:groups], value: breakdown[:value].round(5).to_s} }).to match_array(
@@ -736,7 +698,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
           end
         end
 
-        context "when the cached presentation breakdowns are stored without the grouped_by keys" do
+        context "when the snapshot presentation breakdowns are stored without the grouped_by keys" do
           let(:frodo_presentation_breakdowns) do
             [
               {"groups" => {"region" => "us"}, "value" => "100.0"}
@@ -761,14 +723,14 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
           end
         end
 
-        context "when aragorn has cached presentation breakdowns" do
+        context "when aragorn has snapshot presentation breakdowns" do
           let(:aragorn_presentation_breakdowns) do
             [
-              {"groups" => {"agent_name" => "aragorn", "region" => "eu"}, "value" => "100.0"}
+              {groups: {"agent_name" => "aragorn", "region" => "eu"}, value: "100.0"}
             ]
           end
 
-          it "uses aragorn cached presentation breakdowns as initial values" do
+          it "uses aragorn snapshot presentation breakdowns as initial values" do
             result = aggregator.aggregate
 
             expect(result.breakdowns.map { |breakdown| {groups: breakdown[:groups], value: breakdown[:value].round(5).to_s} }).to match_array(
@@ -797,44 +759,11 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
           )
         end
 
-        context "when using presentation_by" do
-          let(:presentation_by) { ["region"] }
-          let(:initial_value) do
-            [
-              snapshot(
-                units: 400,
-                grouped_by: {"agent_name" => "aragorn"},
-                presentation_breakdowns: [{"groups" => {"region" => "eu"}, "value" => "400.0"}]
-              ),
-              snapshot(
-                units: 600,
-                grouped_by: {"agent_name" => "frodo"},
-                presentation_breakdowns: [{"groups" => {"region" => "us"}, "value" => "600.0"}]
-              )
-            ]
-          end
-
-          it "matches the snapshot presentation breakdowns to their group" do
-            result = aggregator.aggregate
-
-            expect(result.breakdowns.map { |breakdown| {groups: breakdown[:groups], value: breakdown[:value].round(5).to_s} }).to match_array(
-              [
-                {groups: {"agent_name" => "aragorn", "region" => "eu"}, value: "400.0"},
-                {groups: {"agent_name" => "frodo", "region" => "us"}, value: "600.0"}
-              ]
-            )
-            expect(result.recurring_breakdowns).to match_array(
-              [
-                {groups: {"agent_name" => "aragorn", "region" => "eu"}, value: 400},
-                {groups: {"agent_name" => "frodo", "region" => "us"}, value: 600}
-              ]
-            )
-          end
-        end
-
         context "when no group had active units at the end of the previous period" do
           let(:initial_value) { [] }
           let(:events_values) { [{timestamp: from_datetime, value: 2, agent_name: "aragorn"}] }
+
+          before { create_previous_event(value: 10, agent_name: "aragorn") }
 
           it "starts every group from zero" do
             expect(aggregator.aggregate.aggregations.map { [it.grouped_by, it.total_aggregated_units, it.recurring_units] })
@@ -847,14 +776,21 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
             [snapshot(units: 400, grouped_by: {"agent_name" => "aragorn"}, to_datetime: from_datetime - 1.month)]
           end
 
-          it "uses the persisted recurring values as initial values" do
-            expect(aggregator.aggregate.aggregations.map(&:total_aggregated_units)).to eq([1000, 1000])
+          before do
+            create_previous_event(value: 10, agent_name: "aragorn")
+            create_previous_event(value: 20, agent_name: "frodo")
+          end
+
+          it "reads the units carried over from the events" do
+            expect(aggregator.aggregate.aggregations.map { [it.grouped_by, it.total_aggregated_units] }).to match_array(
+              [[{"agent_name" => "aragorn"}, 10], [{"agent_name" => "frodo"}, 20]]
+            )
           end
         end
       end
 
-      context "without cached aggregation events" do
-        let(:cached_aggregations) {}
+      context "without a snapshot" do
+        let(:initial_value) { nil }
 
         it "returns an empty result" do
           result = aggregator.aggregate
@@ -985,16 +921,16 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
           let(:presentation_by) { ["region"] }
           let(:aragorn_presentation_breakdowns) do
             [
-              {"groups" => {"agent_name" => "aragorn", "region" => "eu"}, "value" => "100.0"}
+              {groups: {"agent_name" => "aragorn", "region" => "eu"}, value: "100.0"}
             ]
           end
           let(:frodo_presentation_breakdowns) do
             [
-              {"groups" => {"agent_name" => "frodo", "region" => "us"}, "value" => "200.0"}
+              {groups: {"agent_name" => "frodo", "region" => "us"}, value: "200.0"}
             ]
           end
 
-          it "uses cached presentation breakdowns as initial values" do
+          it "uses the snapshot presentation breakdowns as initial values" do
             result = aggregator.aggregate
 
             expect(result.breakdowns.map { |breakdown| {groups: breakdown[:groups], value: breakdown[:value].round(5).to_s} }).to match_array(
@@ -1011,7 +947,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
             )
           end
 
-          context "when cached presentation breakdowns are empty" do
+          context "when the snapshot presentation breakdowns are empty" do
             let(:aragorn_presentation_breakdowns) { [] }
             let(:frodo_presentation_breakdowns) { [] }
 
