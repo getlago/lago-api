@@ -10,6 +10,7 @@ module Types
         field :id, ID, null: false
 
         field :billing_configuration, Types::Organizations::BillingConfiguration, null: true
+        field :customer_portal_editable_fields, [Types::Organizations::CustomerPortalEditableFieldEnum], null: false
         field :default_currency, Types::CurrencyEnum, null: false
         field :logo_url, String
         field :name, String, null: false

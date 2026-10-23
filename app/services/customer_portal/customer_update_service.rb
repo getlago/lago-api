@@ -13,6 +13,7 @@ module CustomerPortal
 
     def call
       return result.not_found_failure!(resource: "customer") unless customer
+      return result.validation_failure!(errors: non_editable_fields_errors) if non_editable_fields_errors.present?
 
       ActiveRecord::Base.transaction do
         original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
@@ -76,5 +77,12 @@ module CustomerPortal
     private
 
     attr_reader :customer, :args
+
+    def non_editable_fields_errors
+      @non_editable_fields_errors ||= begin
+        editable_fields = customer.organization.customer_portal_editable_fields
+        (args.keys.map(&:to_s) - editable_fields).to_h { |field| [field.to_sym, ["value_is_not_editable"]] }
+      end
+    end
   end
 end

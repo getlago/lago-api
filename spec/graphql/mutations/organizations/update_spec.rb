@@ -24,6 +24,7 @@ RSpec.describe Mutations::Organizations::Update do
           netPaymentTerm
           timezone
           emailSettings
+          customerPortalEditableFields
           webhookUrl
           euTaxManagement,
           documentNumbering
@@ -68,6 +69,7 @@ RSpec.describe Mutations::Organizations::Update do
           webhookUrl: "https://app.test.dev",
           documentNumberPrefix: "ORG-2",
           finalizeZeroAmountInvoice: false,
+          customerPortalEditableFields: %w[name country],
           billingConfiguration: {
             invoiceFooter: "invoice footer",
             documentLocale: "fr"
@@ -99,6 +101,7 @@ RSpec.describe Mutations::Organizations::Update do
     expect(result_data["euTaxManagement"]).to be_truthy
     expect(result_data["timezone"]).to eq("TZ_UTC")
     expect(result_data["finalizeZeroAmountInvoice"]).to be false
+    expect(result_data["customerPortalEditableFields"]).to eq(%w[name country])
   end
 
   context "without organization:update" do

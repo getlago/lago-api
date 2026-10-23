@@ -52,6 +52,7 @@ module Api
           :finalize_zero_amount_invoice,
           :slug,
           email_settings: [],
+          customer_portal_editable_fields: [],
           billing_configuration: [
             :invoice_footer,
             :invoice_grace_period,
