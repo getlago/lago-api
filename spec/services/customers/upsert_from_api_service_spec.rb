@@ -395,13 +395,9 @@ RSpec.describe Customers::UpsertFromApiService do
   end
 
   context "when a non EU customer without tax identification number has a custom tax" do
-    let(:eu_billing_entity) { create(:billing_entity, organization:, country: "FR", eu_tax_management: true) }
-    let(:custom_tax) { create(:tax, organization:, code: "uk_vat", rate: 20.0) }
-
-    before do
-      create(:tax, organization:, code: "lago_eu_tax_exempt", rate: 0.0)
-      custom_tax
-    end
+    let_it_be(:eu_billing_entity) { create(:billing_entity, organization:, country: "FR", eu_tax_management: true) }
+    let_it_be(:exempt_tax) { create(:tax, organization:, code: "lago_eu_tax_exempt", rate: 0.0) }
+    let_it_be(:custom_tax) { create(:tax, organization:, code: "uk_vat", rate: 20.0) }
 
     context "when the customer is created with the custom tax" do
       let(:create_args) { {external_id:, country: "GB", billing_entity_code: eu_billing_entity.code, tax_codes: ["uk_vat"]} }
@@ -444,7 +440,7 @@ RSpec.describe Customers::UpsertFromApiService do
       end
       let(:create_args) { {external_id:, tax_codes: ["uk_vat"]} }
 
-      before { create(:customer_applied_tax, organization:, customer:, tax: Tax.find_by!(organization:, code: "lago_eu_tax_exempt")) }
+      before { create(:customer_applied_tax, organization:, customer:, tax: exempt_tax) }
 
       it "replaces the exemption with the custom tax" do
         expect(result).to be_success

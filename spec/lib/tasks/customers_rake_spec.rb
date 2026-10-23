@@ -63,6 +63,24 @@ RSpec.describe "customers:backfill_eu_auto_taxes" do # rubocop:disable RSpec/Des
       end
     end
 
+    context "when a customer outside the EU without tax identification number has a stale EU rate and a custom tax" do
+      let(:customer) do
+        create(:customer, organization:, billing_entity:, country: "GB", zipcode: "SW1A 1AA", tax_identification_number: nil)
+      end
+
+      before do
+        create(:tax, organization:, code: "lago_eu_tax_exempt")
+        apply_tax(customer, fr_standard)
+        apply_tax(customer, create(:tax, organization:, code: "uk_vat"))
+      end
+
+      it "replaces the EU rate and keeps the custom tax without the exemption" do
+        task.invoke(organization.id)
+
+        expect(customer.reload.taxes.pluck(:code)).to eq(["uk_vat"])
+      end
+    end
+
     context "when customer country matches the currently applied EU standard tax" do
       let(:customer) { create(:customer, organization:, billing_entity:, country: "FR") }
 

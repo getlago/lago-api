@@ -64,7 +64,8 @@ RSpec.describe Customers::EuAutoTaxesService do
       let(:new_record) { false }
       let(:tax_identification_number) { nil }
       let(:customer) { create(:customer, organization:, billing_entity:, tax_identification_number:, zipcode: nil) }
-      let(:custom_tax) { create(:tax, organization:, code: "uk_vat") }
+
+      let_it_be(:custom_tax) { create(:tax, organization:, code: "uk_vat") }
 
       before do
         customer.update!(country: "GB")

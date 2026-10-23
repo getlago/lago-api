@@ -743,16 +743,14 @@ RSpec.describe Customers::UpdateService do
     end
 
     context "when a non EU customer without tax identification number has a custom tax" do
-      let(:eu_billing_entity) { create(:billing_entity, organization:, country: "FR", eu_tax_management: true) }
+      let_it_be(:eu_billing_entity) { create(:billing_entity, organization:, country: "FR", eu_tax_management: true) }
+      let_it_be(:exempt_tax) { create(:tax, organization:, code: "lago_eu_tax_exempt", rate: 0.0) }
+      let_it_be(:custom_tax) { create(:tax, organization:, code: "uk_vat", rate: 20.0) }
       let(:customer) do
         create(:customer, organization:, billing_entity: eu_billing_entity, country: "GB", zipcode: "SW1A 1AA", tax_identification_number: nil)
       end
-      let(:custom_tax) { create(:tax, organization:, code: "uk_vat", rate: 20.0) }
 
-      before do
-        create(:tax, organization:, code: "lago_eu_tax_exempt", rate: 0.0)
-        create(:customer_applied_tax, organization:, customer:, tax: custom_tax)
-      end
+      before { create(:customer_applied_tax, organization:, customer:, tax: custom_tax) }
 
       context "when the name changes" do
         let(:update_args) { {id: customer.id, name: "New name"} }

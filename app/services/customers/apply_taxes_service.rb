@@ -2,7 +2,7 @@
 
 module Customers
   class ApplyTaxesService < BaseService
-    include Customers::Concerns::EuTaxCodeResolver
+    include Customers::Concerns::EuExemptionOverride
 
     Result = BaseResult[:applied_taxes]
 
@@ -40,7 +40,7 @@ module Customers
 
     # Custom taxes replace the EU exemption on these customers, which fall back to it when none is left.
     def tax_codes
-      @tax_codes ||= if !non_eu_customer_without_tax_id?
+      @tax_codes ||= if !eu_exemption_overridable?
         requested_tax_codes
       elsif requested_tax_codes.any? { |code| custom_tax_code?(code) }
         requested_tax_codes - [EU_TAX_EXEMPT_CODE]
