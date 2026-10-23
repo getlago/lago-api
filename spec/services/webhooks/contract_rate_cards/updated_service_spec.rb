@@ -50,7 +50,6 @@ RSpec.describe Webhooks::ContractRateCards::UpdatedService do
           "effective_date" => "2026-02-04",
           "billing_anchor_date" => "2026-02-05",
           "next_billing_at" => "2026-03-06T07:08:09Z",
-          "rate_phases_count" => 1,
           "created_at" => contract_rate_card.created_at.iso8601,
           "updated_at" => contract_rate_card.updated_at.iso8601,
           "deleted_at" => nil

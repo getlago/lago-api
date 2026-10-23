@@ -254,13 +254,13 @@ RSpec.describe RatePhases::ReplaceService, :capture_kafka_messages do
       allow(Utils::ActivityLog).to receive(:produce_after_commit).and_call_original
     end
 
-    it "emits one owner update with complete ordered before/after phases and count change" do
+    it "emits one owner update with complete ordered before/after phases" do
       expect(result).to be_success
       payload = activity_payload(plan_rate_card, "plan_rate_card.updated")
       before_phases, after_phases = payload.fetch("activity_object_changes").fetch("rate_phases")
       expect([before_phases.map { |phase| phase.fetch("code") }, after_phases.map { |phase| phase.fetch("code") }])
         .to eq([%w[intro forever], %w[new-intro new-middle new-forever]])
-      expect(payload.fetch("activity_object_changes").fetch("rate_phases_count")).to eq([2, 3])
+      expect(payload.fetch("activity_object_changes")).not_to have_key("rate_phases_count")
       expect(after_phases.map { |phase| phase.fetch("lago_id") } & before_phases.map { |phase| phase.fetch("lago_id") }).to be_empty
     end
   end

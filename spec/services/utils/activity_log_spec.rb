@@ -239,9 +239,9 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
         end
       end
 
-      # The v2 REST endpoints render catalog records through the same serializers, so a key
-      # that a REST change adds, drops or renames fails here.
-      context "when the object is a catalog record" do
+      # The v2 REST endpoints render catalog records and contracts through the same serializers, so
+      # a key that a REST change adds, drops or renames fails here.
+      context "when the object is a v2 record" do
         subject(:produce) { activity_log.produce(record, activity_type) { BaseService::Result.new } }
 
         let(:produced_payload) { JSON.parse(kafka_messages.sole[:payload], symbolize_names: true) }
@@ -316,14 +316,13 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
           end
 
           before do
-            create_list(:plan_rate_card, 2, organization:, catalog_plan:)
-            create(:plan_rate_card, organization:, catalog_plan:, deleted_at: Time.current)
+            create(:plan_rate_card, organization:, catalog_plan:)
 
             create(:plan_applied_tax, :catalog_plan, organization:, catalog_plan:, tax: vat)
             create(:plan_applied_tax, :catalog_plan, organization:, catalog_plan:, tax: create(:tax, organization:, deleted_at: Time.current))
           end
 
-          it "serializes the plan with the count of its kept rate cards and its kept taxes" do
+          it "serializes the plan with its kept taxes, without the count of its rate cards" do
             produce
 
             expect(produced_payload[:activity_object]).to eq(
@@ -333,11 +332,33 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               code: "premium",
               description: "Premium description",
               currency: "EUR",
-              applied_rate_cards_count: 2,
               created_at: timestamp,
               deleted_at: nil,
               taxes: [vat_payload]
             )
+          end
+
+          # The plan.deleted webhook keeps the count of its rate cards, its log does not.
+          context "when the plan is deleted" do
+            let(:activity_type) { "plan.deleted" }
+
+            before { catalog_plan.discard! }
+
+            it "serializes the plan with its deletion date, without the count of its rate cards" do
+              produce
+
+              expect(produced_payload[:activity_object]).to eq(
+                lago_id: catalog_plan.id,
+                name: "Premium",
+                invoice_display_name: "Premium plan",
+                code: "premium",
+                description: "Premium description",
+                currency: "EUR",
+                created_at: timestamp,
+                deleted_at: timestamp,
+                taxes: [vat_payload]
+              )
+            end
           end
         end
 
@@ -345,12 +366,9 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
           let(:record) { product }
           let(:activity_type) { "product.created" }
 
-          before do
-            create_list(:product_filter, 2, organization:, product:)
-            create(:product_filter, organization:, product:, deleted_at: Time.current)
-          end
+          before { create(:product_filter, organization:, product:) }
 
-          it "serializes the product with the count of its kept filters" do
+          it "serializes the product, without the count of its filters" do
             produce
 
             expect(produced_payload[:activity_object]).to eq(
@@ -362,7 +380,6 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               description: "API product",
               invoice_display_name: "API calls",
               product_type: "metered",
-              filters_count: 2,
               created_at: timestamp,
               updated_at: timestamp,
               deleted_at: nil
@@ -388,7 +405,6 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               description: "API product",
               invoice_display_name: "API calls",
               product_type: "metered",
-              filters_count: 0,
               created_at: timestamp,
               updated_at: timestamp,
               deleted_at: timestamp
@@ -400,12 +416,9 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
           let(:record) { product_category }
           let(:activity_type) { "product_category.created" }
 
-          before do
-            create_list(:product, 2, organization:, product_category:)
-            create(:product, organization:, product_category:, deleted_at: Time.current)
-          end
+          before { create(:product, organization:, product_category:) }
 
-          it "serializes the category with the count of its kept products" do
+          it "serializes the category, without the count of its products" do
             produce
 
             expect(produced_payload[:activity_object]).to eq(
@@ -414,7 +427,6 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               code: "compute",
               description: "Compute products",
               invoice_display_name: "Compute usage",
-              products_count: 2,
               created_at: timestamp,
               updated_at: timestamp,
               deleted_at: nil
@@ -558,7 +570,6 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
               display_on_invoice: true,
               regroup_paid_fees: nil,
               applied_pricing_unit_code: nil,
-              rates_count: 3,
               created_at: timestamp,
               updated_at: timestamp,
               deleted_at: nil,
@@ -577,11 +588,10 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
 
             let(:added_rate) { create(:rate_card_rate, organization:, rate_card:, code: "later", effective_from: Time.zone.parse("2023-05-01")) }
 
-            it "logs the rates count and the rates as the only changes" do
+            it "logs the rates as the only change" do
               produce
 
               expect(produced_payload[:activity_object_changes]).to eq(
-                rates_count: [3, 4],
                 rates: [
                   rate_payloads,
                   [
@@ -591,6 +601,83 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
                 ]
               )
             end
+          end
+        end
+
+        context "with a contract" do
+          let(:record) { contract }
+          let(:activity_type) { "contract.created" }
+          let(:customer) { create(:customer, organization:, external_id: "acme") }
+          let(:contract) do
+            create(
+              :contract,
+              organization:,
+              customer:,
+              external_id: "acme-2023",
+              name: "Acme 2023",
+              purchase_order_number: "PO-42",
+              started_at: Time.current
+            )
+          end
+
+          before { create(:contract_rate_card, organization:, contract:) }
+
+          it "serializes the contract, without the count of its rate cards" do
+            produce
+
+            expect(produced_payload[:activity_object]).to eq(
+              lago_id: contract.id,
+              external_id: "acme-2023",
+              lago_customer_id: customer.id,
+              external_customer_id: "acme",
+              name: "Acme 2023",
+              plan_code: nil,
+              status: "active",
+              billing_time: "calendar",
+              consolidate_invoice: true,
+              purchase_order_number: "PO-42",
+              billing_anchor_date: nil,
+              effective_billing_anchor_date: "2023-03-22",
+              started_at: timestamp,
+              ended_at: nil,
+              terminated_at: nil,
+              canceled_at: nil,
+              skip_invoice_custom_sections: false,
+              created_at: timestamp,
+              updated_at: timestamp
+            )
+          end
+        end
+
+        context "with a contract applied rate card" do
+          let(:record) { contract_rate_card }
+          let(:activity_type) { "contract_rate_card.created" }
+          let(:contract_rate_card) do
+            create(
+              :contract_rate_card,
+              organization:,
+              contract: create(:contract, organization:, external_id: "acme-2023"),
+              rate_card: create(:rate_card, organization:, code: "api_eu")
+            )
+          end
+
+          before { create(:rate_phase, organization:, plan_rate_card: nil, contract_rate_card:) }
+
+          it "serializes the card, without the count of its rate phases" do
+            produce
+
+            expect(produced_payload[:activity_object]).to eq(
+              lago_id: contract_rate_card.id,
+              external_contract_id: "acme-2023",
+              rate_card_code: "api_eu",
+              units: nil,
+              effective_date: "2023-03-22",
+              billing_anchor_date: "2023-03-22",
+              next_billing_at: timestamp,
+              created_at: timestamp,
+              updated_at: timestamp,
+              deleted_at: nil
+            )
           end
         end
       end

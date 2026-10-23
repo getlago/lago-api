@@ -34,7 +34,6 @@ RSpec.describe V2::ContractAppliedRateCardSerializer do
       effective_date: "2026-10-01",
       billing_anchor_date: "2026-10-15",
       next_billing_at: "2026-10-15T00:00:00Z",
-      rate_phases_count: 0,
       created_at: "2026-09-30T08:00:00Z",
       updated_at: "2026-10-01T09:30:00Z",
       deleted_at: nil
@@ -60,8 +59,8 @@ RSpec.describe V2::ContractAppliedRateCardSerializer do
       create(:rate_phase, :contract_level, organization:, contract_rate_card:, position: 3, deleted_at: Time.current)
     end
 
-    it "counts the kept phases only" do
-      expect(payload).to eq(flat_payload.merge(rate_phases_count: 2))
+    it "renders no count of them" do
+      expect(payload).to eq(flat_payload)
     end
   end
 

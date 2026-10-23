@@ -39,7 +39,6 @@ RSpec.describe V2::RateCardSerializer do
       display_on_invoice: true,
       regroup_paid_fees: nil,
       applied_pricing_unit_code: nil,
-      rates_count: 4,
       created_at: "2026-09-01T08:00:00Z",
       updated_at: "2026-09-02T09:00:00Z",
       deleted_at: nil
@@ -101,7 +100,7 @@ RSpec.describe V2::RateCardSerializer do
       let(:active_rate) { nil }
 
       it "renders it as null" do
-        expect(payload).to eq(flat_payload.merge(rates_count: 2, active_rate: nil))
+        expect(payload).to eq(flat_payload.merge(active_rate: nil))
       end
     end
   end
@@ -140,8 +139,8 @@ RSpec.describe V2::RateCardSerializer do
       it "reads the statuses from the rates it loads once" do
         statements = capture_sql { payload }
 
-        # Besides the count of rates_count: no query per status.
-        expect(statements.grep(/FROM "rate_card_rates"/).grep_v(/\ASELECT COUNT/).size).to eq(1)
+        # No query per status.
+        expect(statements.grep(/FROM "rate_card_rates"/).size).to eq(1)
       end
     end
   end
@@ -180,8 +179,8 @@ RSpec.describe V2::RateCardSerializer do
 
     it "reads the active rate and the statuses from the rates it loads once" do
       statements = capture_sql { payload }
-      # Besides the count of rates_count: no query of the active rate, nor one per status.
-      rate_reads = statements.grep(/FROM "rate_card_rates"/).grep_v(/\ASELECT COUNT/)
+      # No query of the active rate, nor one per status.
+      rate_reads = statements.grep(/FROM "rate_card_rates"/)
 
       expect(payload.keys.last(2)).to eq(%i[active_rate rates])
       expect(payload[:active_rate]).to eq(V2::RateCardRateSerializer.new(active_rate).serialize)
