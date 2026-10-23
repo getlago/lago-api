@@ -91,16 +91,22 @@ RSpec.describe Fees::CreatePayInAdvanceJob do
   end
 
   describe "retry_on" do
-    before do
-      allow(Fees::CreatePayInAdvanceService).to receive(:call)
-        .and_raise(Events::Stores::Clickhouse::MemoryLimitError)
-    end
+    [
+      Events::Stores::Clickhouse::MemoryLimitError.new,
+      BaseLockService::FailedToAcquireLock.new("contract-1-product-1-advance-state")
+    ].each do |error|
+      context "when a #{error.class} is raised" do
+        before do
+          allow(Fees::CreatePayInAdvanceService).to receive(:call).and_raise(error)
+        end
 
-    it "retries on a Clickhouse memory limit error" do
-      assert_performed_jobs(25, only: [described_class]) do
-        expect do
-          described_class.perform_later(charge:, event:)
-        end.to raise_error(Events::Stores::Clickhouse::MemoryLimitError)
+        it "retries" do
+          assert_performed_jobs(25, only: [described_class]) do
+            expect do
+              described_class.perform_later(charge:, event:)
+            end.to raise_error(error.class)
+          end
+        end
       end
     end
   end
