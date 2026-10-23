@@ -403,8 +403,10 @@ RSpec.describe Api::V2::ContractsController do
     context "with every expansion" do
       let(:params) { {expands: %w[invoice_custom_sections customer plan applied_rate_cards]} }
 
+      # Cards with rate phases, so that reading them in the expansion would show as more queries.
       before do
-        create(:contract_rate_card, organization:, contract:)
+        card = create(:contract_rate_card, organization:, contract:)
+        create(:rate_phase, organization:, plan_rate_card: nil, contract_rate_card: card)
         create(:contract_applied_invoice_custom_section, contract:)
       end
 
@@ -415,11 +417,13 @@ RSpec.describe Api::V2::ContractsController do
         expect(json[:contract].keys).to eq([*flat_keys, :applied_rate_cards, :plan, :customer, :invoice_custom_sections])
       end
 
-      context "with a contract of 3 cards and 3 sections" do
+      context "with a contract of 3 cards, each with rate phases, and 3 sections" do
         let(:larger_contract) { create(:contract, organization:, customer:, catalog_plan:) }
 
         before do
-          create_list(:contract_rate_card, 3, organization:, contract: larger_contract)
+          create_list(:contract_rate_card, 3, organization:, contract: larger_contract).each do |card|
+            [1, 2].each { create(:rate_phase, organization:, plan_rate_card: nil, contract_rate_card: card, position: it) }
+          end
           create_list(:contract_applied_invoice_custom_section, 3, contract: larger_contract)
         end
 
