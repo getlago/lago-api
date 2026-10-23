@@ -5161,7 +5161,7 @@ RSpec.describe Fees::ChargeService, :premium do
     end
 
     describe "billing from the snapshots over several periods" do
-      let(:organization) { create(:organization, feature_flags: ["persisted_recurring_values"]) }
+      let(:organization) { create(:organization, feature_flags: ["recurring_aggregation_snapshots", "persisted_recurring_values"]) }
       let(:march) { [subscription.started_at, Time.zone.parse("2022-03-31").end_of_day] }
       let(:april) { [Time.zone.parse("2022-04-01"), Time.zone.parse("2022-04-30").end_of_day] }
       let(:may) { [Time.zone.parse("2022-05-01"), Time.zone.parse("2022-05-31").end_of_day] }
