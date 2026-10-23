@@ -590,16 +590,15 @@ module Fees
 
         results = snapshot_results(aggregation_results, default_bucket: selected_metered_item.charge_filter&.id.nil?)
 
-        # A weighted sum has no events count: its read never counts the events of a closed period
+        # A weighted sum has no events count: its read never counts the events of a closed period.
+        # Blank group values ("" and " ") are stored as one null group, so their units add up.
         recurring_snapshots << {
           charge_filter: selected_metered_item.charge_filter,
-          values: results.map do
-            grouped_by = it.grouped_by || {}
-
+          values: results.group_by { it.grouped_by || {} }.map do |grouped_by, group_results|
             {
               grouped_by:,
-              units: it.recurring_units,
-              events_count: it.recurring_events_count || 0,
+              units: group_results.sum(&:recurring_units),
+              events_count: group_results.sum { it.recurring_events_count || 0 },
               presentation_breakdowns: breakdowns_by_group.fetch(grouped_by, [])
             }
           end

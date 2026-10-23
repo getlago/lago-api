@@ -4756,6 +4756,25 @@ RSpec.describe Fees::ChargeService, :premium do
         end
       end
 
+      context "with blank group values" do
+        before do
+          ["", " "].each do |region|
+            create(:event, organization:, subscription:, code: billable_metric.code,
+              created_at: now - RecurringAggregationSnapshot::WATERMARK_LAG - 1.minute,
+              timestamp: Time.zone.parse("2022-03-21"), properties: {value: 2, region:})
+          end
+        end
+
+        it "persists them as one null group" do
+          result = charge_subscription_service.call
+
+          expect(result).to be_success
+          expect(snapshots.pluck(:grouped_by, :units, :events_count)).to match_array(
+            [[{"region" => "eu"}, 15, 2], [{"region" => "us"}, 7, 1], [{"region" => nil}, 4, 2]]
+          )
+        end
+      end
+
       context "with a group only ingested after the watermark" do
         before do
           create(:event, organization:, subscription:, code: billable_metric.code, created_at: now - 1.second,
