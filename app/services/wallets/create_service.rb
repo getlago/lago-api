@@ -80,7 +80,7 @@ module Wallets
 
         validate_wallet_initial_amount! wallet
 
-        if params[:recurring_transaction_rules].present?
+        if params[:recurring_transaction_rules].present? && License.premium?
           recurring_transaction_rule = Wallets::RecurringTransactionRules::CreateService
             .call!(wallet:, wallet_params: params)
             .recurring_transaction_rule

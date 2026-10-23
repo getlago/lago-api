@@ -7170,6 +7170,7 @@ enum FeatureFlagEnum {
   postgres_enriched_events
   product_catalog
   realtime_usage
+  recurring_aggregation_snapshots
   skip_credit_invoice_auto_payment_delay
   sso_cross_organization_sessions
   stripe_shared_payment_token
@@ -8226,6 +8227,7 @@ enum InvoiceTaxStatusTypeEnum {
 enum InvoiceTypeEnum {
   add_on
   advance_charges
+  contract
   credit
   one_off
   progressive_billing

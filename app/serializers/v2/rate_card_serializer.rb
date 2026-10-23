@@ -2,8 +2,14 @@
 
 module V2
   class RateCardSerializer < ModelSerializer
+    expandable :active_rate, serializer: ::V2::RateCardRateSerializer
+    expandable :taxes, serializer: ::V2::TaxSerializer
+    expandable :rates, serializer: ::V2::RateCardRateSerializer
+    expandable :product, serializer: ::V2::ProductSerializer
+    expandable :product_filter, serializer: ::V2::ProductFilterSerializer
+
     def serialize
-      payload = {
+      {
         lago_id: model.id,
         product_code: model.product.code,
         product_filter_code: model.product_filter&.code,
@@ -18,39 +24,32 @@ module V2
         applied_pricing_unit_code: model.applied_pricing_unit_code,
         rates_count: model.rates.size,
         created_at: model.created_at.iso8601,
-        updated_at: model.updated_at.iso8601
+        updated_at: model.updated_at.iso8601,
+        deleted_at: model.deleted_at&.iso8601
       }
-
-      payload[:active_rate] = active_rate if include?(:active_rate)
-      payload.merge!(taxes) if include?(:taxes)
-      # Full timeline for activity-log payloads; API payloads stay lean.
-      payload.merge!(rates) if include?(:rates)
-      payload
     end
 
     private
 
+    # The latest effective rate, as RateCard#active_rate selects it. From the rates when they are
+    # expanded too, so that both expansions read the same rows.
     def active_rate
-      rate = model.active_rate
-      return if rate.nil?
+      return model.active_rate unless include?(:rates)
 
-      ::V2::RateCardRateSerializer.new(rate).serialize
+      now = Time.current
+      model.rates.select { it.effective_from <= now }.max_by(&:effective_from)
     end
 
-    def rates
-      ::CollectionSerializer.new(
-        model.rates,
-        ::V2::RateCardRateSerializer,
-        collection_name: "rates"
-      ).serialize
-    end
+    # The kept taxes, latest linked first.
+    def taxes = model.applied_taxes.listed.preload(:tax).filter_map(&:tax)
 
-    def taxes
-      ::CollectionSerializer.new(
-        model.taxes,
-        ::V1::TaxSerializer,
-        collection_name: "taxes"
-      ).serialize
+    # As /rates lists them, sorted in memory so that each status reads its siblings from the
+    # loaded rates rather than querying them.
+    def rates = model.rates.sort_by(&:effective_from).reverse
+
+    # With the keys of its values, rather than one billable metric filter query per value.
+    def product_filter
+      model.product_filter&.tap { ActiveRecord::Associations::Preloader.new(records: [it], associations: {values: :billable_metric_filter}).call }
     end
   end
 end

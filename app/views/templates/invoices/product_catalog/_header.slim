@@ -1,0 +1,49 @@
+- issuer, recipient = self_billed? ? %w[_customer _billing_entity] : %w[_billing_entity _customer]
+
+.document-section
+  - if billing_entity.logo.present? && !self_billed?
+    img.header-logo src="data:#{billing_entity.logo.content_type};base64,#{billing_entity.base64_logo}"
+  h1.title = document_invoice_name
+.document-section.document-columns
+  div
+    table.info-table
+      tbody
+        tr
+          td.body-1-emphasis
+            span.info-label = I18n.t('invoice.invoice_number')
+          td.body-1 data-document-reference=true = number
+        - if purchase_order_number.present?
+          tr
+            td.body-1-emphasis
+              span.info-label = I18n.t('invoice.purchase_order_number')
+            td.body-1 = purchase_order_number
+        tr
+          td.body-1-emphasis
+            span.info-label = I18n.t('invoice.issue_date')
+          td.body-1 = I18n.l(issuing_date, format: :default)
+        tr
+          td.body-1-emphasis
+            span.info-label = I18n.t('invoice.payment_term')
+          td.body-1 = I18n.t('invoice.payment_term_days', net_payment_term:)
+        - unless advance_charges?
+          tr
+            td.body-1-emphasis
+              span.info-label = I18n.t('invoice.payment_due_date')
+            td.body-1 = I18n.l(payment_due_date, format: :default)
+  div
+    - metadata = customer.metadata.displayable.order(created_at: :asc).to_a
+    - if metadata.any?
+      table.info-table
+        tbody
+          - metadata.each do |item|
+            tr
+              td.body-1-emphasis
+                span.info-label = item.key
+              td.body-1 = item.value
+.document-section.document-columns
+  div
+    .body-1-emphasis = I18n.t('invoice.bill_from')
+    == SlimHelper.render("templates/invoices/product_catalog/#{issuer}", self)
+  div
+    .body-1-emphasis = I18n.t('invoice.bill_to')
+    == SlimHelper.render("templates/invoices/product_catalog/#{recipient}", self)

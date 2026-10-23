@@ -47,6 +47,7 @@ RSpec.describe Webhooks::Plans::DeletedService do
             "currency" => "USD",
             "applied_rate_cards_count" => 0,
             "created_at" => catalog_plan.created_at.iso8601,
+            "deleted_at" => catalog_plan.deleted_at.iso8601,
             "taxes" => [
               {
                 "lago_id" => tax.id,

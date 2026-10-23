@@ -21,13 +21,13 @@ RSpec.describe Product do
   describe "associations" do
     it do
       expect(product).to belong_to(:organization)
-      expect(product).to belong_to(:product_category).optional
+      expect(product).to belong_to(:product_category).optional.inverse_of(:products)
       # The subject must be a fixed item: metered items validate billable_metric presence,
       # which the optional matcher would read as a non-optional association.
       expect(build(:product, :fixed, :standalone)).to belong_to(:billable_metric).optional
       expect(product).to belong_to(:add_on).optional
       expect(product).to belong_to(:charge).optional
-      expect(product).to have_many(:filters).class_name("ProductFilter")
+      expect(product).to have_many(:filters).class_name("ProductFilter").inverse_of(:product)
       expect(product).to have_many(:rate_cards)
       expect(product).to have_many(:integration_mappings)
         .class_name("IntegrationMappings::BaseMapping")

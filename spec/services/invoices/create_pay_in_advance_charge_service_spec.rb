@@ -216,7 +216,8 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
           customer:,
           billing_entity:,
           currency: "EUR",
-          purchase_order_number: "PO-CONTRACT-123"
+          purchase_order_number: "PO-CONTRACT-123",
+          invoice_type: "contract"
         )
         expect(result.invoice.invoice_subscriptions).to be_empty
         expect(result.invoice.fees.sole).to have_attributes(subscription: nil, charge: nil, fee_type: "product")

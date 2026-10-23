@@ -1,0 +1,8 @@
+- city_line = [billing_entity.zipcode, billing_entity.city].compact_blank.join(", ")
+- country = ISO3166::Country.new(billing_entity.country)&.common_name if billing_entity.country.present?
+.body-1 = billing_entity.legal_name.presence || billing_entity.name
+- [billing_entity.legal_number, billing_entity.address_line1, billing_entity.address_line2, city_line, billing_entity.state, country, billing_entity.email].each do |line|
+  - if line.present?
+    .body-1 = line
+- if billing_entity.tax_identification_number.present?
+  .body-1 = I18n.t('invoice.tax_identification_number', tax_identification_number: billing_entity.tax_identification_number)

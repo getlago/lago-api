@@ -51,8 +51,8 @@ module BillingSegments
     def grouped_segments
       @grouped_segments ||= BillingSegment.ready_for_invoicing(timestamp)
         .where(customer_id: customer.id)
-        .includes(:pricing_unit, :rate_override, :contract,
-          contract_rate_card: {rate_card: {product: :billable_metric}}, rate_card_rate: :rate_card)
+        .includes(:pricing_unit, :rate_override, :contract, :rate_card_rate,
+          contract_rate_card: {rate_card: {product: :billable_metric}})
         .sort_by { |segment| [segment.billing_at, segment.id] }
         .filter_map do |segment|
           group = segment_group(segment)
@@ -109,7 +109,7 @@ module BillingSegments
           invoice = Invoices::CreateGeneratingService.call!(
             customer:,
             billing_entity: contract.billing_entity || customer.billing_entity,
-            invoice_type: :subscription,
+            invoice_type: :contract,
             invoicing_reason: :subscription_periodic,
             currency: segments.first.currency,
             datetime: segments.first.billing_at,
@@ -228,6 +228,8 @@ module BillingSegments
       Invoice.where(id: invoice_ids).order(:issuing_date, :id).each do |invoice|
         if invoice.advance_charges?
           Invoices::FinalizeAndPublishAdvanceChargesService.call!(invoice:)
+        elsif invoice.contract?
+          Invoices::FinalizeContractInvoiceService.call!(invoice:)
         else
           Invoices::TransitionToFinalStatusService.call!(invoice:)
           invoice.save! if invoice.changed?

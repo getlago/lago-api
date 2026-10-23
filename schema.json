@@ -35195,6 +35195,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "recurring_aggregation_snapshots",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ],
           "possibleTypes": null
@@ -43585,6 +43591,12 @@
             },
             {
               "name": "progressive_billing",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

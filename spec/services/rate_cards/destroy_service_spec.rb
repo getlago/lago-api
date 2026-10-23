@@ -2,18 +2,17 @@
 
 require "rails_helper"
 
-RSpec.describe RateCards::DestroyService do
+RSpec.describe RateCards::DestroyService, :capture_kafka_messages do
   subject(:result) { described_class.call(rate_card:) }
 
-  let_it_be(:organization) { create(:organization) }
+  let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
   let(:rate_card) { create(:rate_card, organization:) }
-
-  before_all do
-    create_default(:billable_metric)
-  end
+  let(:active_rate) { create(:rate_card_rate, organization:, rate_card:, effective_from: Time.current.beginning_of_day) }
 
   before do
-    create(:rate_card_rate, organization:, rate_card:) if rate_card
+    create_default(:billable_metric)
+    allow(Utils::ActivityLog).to receive(:produce).and_call_original
+    active_rate if rate_card
   end
 
   it "soft deletes the card and its rates" do
@@ -24,9 +23,91 @@ RSpec.describe RateCards::DestroyService do
     expect(RateCardRate.with_discarded.where(id: rate_ids).map(&:discarded?)).to all(be(true))
   end
 
-  it "produces an activity log" do
-    result
-    expect(Utils::ActivityLog).to have_produced("rate_card.deleted").after_commit.with(rate_card)
+  it "publishes rate_card.deleted on the discarded card without a snapshot" do
+    expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("rate_card.deleted", rate_card)
+    expect(Utils::ActivityLog).to have_received(:produce).with(
+      rate_card,
+      "rate_card.deleted",
+      after_commit: true
+    )
+    expect(rate_card.reload.rates).to be_empty
+    expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "rate_card_rate.deleted", any_args)
+  end
+
+  context "when delivering deletion events", transaction: false do
+    let(:tax) { create(:tax, organization:) }
+    let(:webhook_endpoint) { create(:webhook_endpoint, organization:) }
+
+    before do
+      webhook_endpoint
+      create(:rate_card_applied_tax, rate_card:, tax:, organization:)
+      allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+    end
+
+    it "omits rate and tax snapshots from the deleted webhook while retaining them in activity" do
+      perform_enqueued_jobs(only: SendWebhookJob) { result }
+
+      webhook_payload = Webhook.find_by!(webhook_type: "rate_card.deleted").payload.fetch("rate_card")
+      expect(webhook_payload).to include("rates_count" => 0)
+      expect(webhook_payload).not_to have_key("active_rate")
+      expect(webhook_payload).not_to have_key("rates")
+      expect(webhook_payload).not_to have_key("taxes")
+      expect(kafka_messages.size).to eq(1)
+
+      activity_payload = JSON.parse(kafka_messages.first.fetch(:payload)).fetch("activity_object")
+      expect(activity_payload).not_to have_key("active_rate")
+      expect(activity_payload).to include("rates" => [])
+      expect(activity_payload.fetch("taxes").map { |item| item.fetch("lago_id") }).to eq([tax.id])
+    end
+
+    context "when rate associations are preloaded before deletion" do
+      before { rate_card.rates.load }
+
+      it "omits rate and tax snapshots from the deleted webhook while retaining activity details" do
+        perform_enqueued_jobs(only: SendWebhookJob) { result }
+
+        webhook_payload = Webhook.find_by!(webhook_type: "rate_card.deleted").payload.fetch("rate_card")
+        expect(webhook_payload).to include("rates_count" => 0)
+        expect(webhook_payload).not_to have_key("active_rate")
+        expect(webhook_payload).not_to have_key("rates")
+        expect(webhook_payload).not_to have_key("taxes")
+
+        activity_payload = JSON.parse(kafka_messages.first.fetch(:payload)).fetch("activity_object")
+        expect(activity_payload).not_to have_key("active_rate")
+        expect(activity_payload).to include("rates_count" => 0, "rates" => [])
+        expect(activity_payload.fetch("taxes").map { |item| item.fetch("lago_id") }).to eq([tax.id])
+      end
+    end
+  end
+
+  context "when the catalog flag is disabled" do
+    let(:organization) { create(:organization) }
+
+    it "still schedules the pair for an unguarded direct service call" do
+      expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("rate_card.deleted", rate_card)
+      expect(result).to be_success
+      expect(Utils::ActivityLog).to have_received(:produce).with(
+        rate_card,
+        "rate_card.deleted",
+        after_commit: true
+      )
+    end
+  end
+
+  context "when the surrounding transaction rolls back" do
+    before { allow(Utils::ActivityLog).to receive(:available?).and_return(true) }
+
+    it "rolls back the deletion and suppresses both event channels" do
+      expect do
+        ActiveRecord::Base.transaction do
+          result
+          raise ActiveRecord::Rollback
+        end
+      end.not_to have_enqueued_job(SendWebhookJob)
+
+      expect(rate_card.reload).not_to be_discarded
+      expect(kafka_messages).to be_empty
+    end
   end
 
   context "when rate_card is nil" do

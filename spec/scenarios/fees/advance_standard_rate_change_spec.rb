@@ -120,7 +120,7 @@ RSpec.describe "Advance standard pricing across rate changes" do
     )
     expect(BillingSegment.where(contract:, cycle_started_at:)).to be_empty
     expect(fees.sole.invoice).to be_finalized
-    expect(Invoice.where(customer:, invoice_type: :subscription).count).to eq(1)
+    expect(Invoice.where(customer:, invoice_type: :contract).count).to eq(1)
   end
 
   context "when the first rate begins after the event" do
@@ -130,7 +130,7 @@ RSpec.describe "Advance standard pricing across rate changes" do
     it "accepts the event without a priced product fee or invoice" do
       expect(fees).to eq([])
       expect(Event.where(organization:, external_subscription_id: contract.external_id).count).to eq(1)
-      expect(Invoice.where(customer:, invoice_type: :subscription).count).to eq(0)
+      expect(Invoice.where(customer:, invoice_type: :contract).count).to eq(0)
       expect(rate_card.rates.pluck(:id)).to eq([first_rate.id])
     end
   end
@@ -153,7 +153,7 @@ RSpec.describe "Advance standard pricing across rate changes" do
         "to_datetime" => BillingSegment.inclusive_end(cycle_ended_at).iso8601(6)
       )
       expect(fees.sole.invoice).to be_finalized
-      expect(Invoice.where(customer:, invoice_type: :subscription).count).to eq(1)
+      expect(Invoice.where(customer:, invoice_type: :contract).count).to eq(1)
     end
   end
 
@@ -179,7 +179,7 @@ RSpec.describe "Advance standard pricing across rate changes" do
       ])
       expect(fees.map(&:invoice_id).uniq.size).to eq(2)
       expect(fees.map { |fee| fee.invoice.status }).to eq(%w[finalized finalized])
-      expect(Invoice.where(customer:, invoice_type: :subscription).count).to eq(2)
+      expect(Invoice.where(customer:, invoice_type: :contract).count).to eq(2)
     end
   end
 
@@ -202,7 +202,7 @@ RSpec.describe "Advance standard pricing across rate changes" do
       ])
       expect(fees.map(&:invoice_id).uniq.size).to eq(2)
       expect(fees.map { |fee| fee.invoice.status }).to eq(%w[finalized finalized])
-      expect(Invoice.where(customer:, invoice_type: :subscription).count).to eq(2)
+      expect(Invoice.where(customer:, invoice_type: :contract).count).to eq(2)
     end
   end
 
@@ -223,7 +223,7 @@ RSpec.describe "Advance standard pricing across rate changes" do
         "to_datetime" => BillingSegment.inclusive_end(third_rate_start).iso8601(6)
       )
       expect(fees.sole.invoice).to be_finalized
-      expect(Invoice.where(customer:, invoice_type: :subscription).count).to eq(1)
+      expect(Invoice.where(customer:, invoice_type: :contract).count).to eq(1)
     end
 
     context "when events arrive in all three rate windows" do
@@ -248,7 +248,7 @@ RSpec.describe "Advance standard pricing across rate changes" do
         expect(fees.map { |fee| [fee.invoice&.status, fee.invoice&.fees&.count] }).to eq([
           ["finalized", 1], ["finalized", 1], ["finalized", 1]
         ])
-        expect(Invoice.where(customer:, invoice_type: :subscription).count).to eq(3)
+        expect(Invoice.where(customer:, invoice_type: :contract).count).to eq(3)
         expect(BillingSegment.where(contract:, cycle_started_at:)).to be_empty
       end
     end
@@ -277,7 +277,7 @@ RSpec.describe "Advance standard pricing across rate changes" do
       expect(fees.map { |fee| [fee.invoice&.status, fee.invoice&.fees&.count] }).to eq([
         ["finalized", 1], ["finalized", 1], ["finalized", 1]
       ])
-      expect(Invoice.where(customer:, invoice_type: :subscription).count).to eq(3)
+      expect(Invoice.where(customer:, invoice_type: :contract).count).to eq(3)
       expect(fees.first.reload.amount_cents).to eq(8_000)
     end
   end

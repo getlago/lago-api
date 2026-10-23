@@ -245,6 +245,12 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           create(:product_filter_value, organization:, product_filter:, billable_metric_filter: metric_filter, value: "eu")
         end
 
+        it "stores the selected filter values on the fee" do
+          fee = fee_service.call.fees.sole
+
+          expect(fee.reload.properties["product_filter_values"]).to eq("region" => ["eu"])
+        end
+
         it "returns a validation failure on retry for a filtered fee" do
           fee = fee_service.call.fees.sole
           retry_result = fee_service.call

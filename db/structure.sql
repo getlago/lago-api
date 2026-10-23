@@ -502,6 +502,7 @@ DROP INDEX IF EXISTS public.index_uniq_wallet_code_per_customer;
 DROP INDEX IF EXISTS public.index_uniq_invoice_subscriptions_on_fixed_charges_boundaries;
 DROP INDEX IF EXISTS public.index_uniq_invoice_subscriptions_on_charges_from_to_datetime;
 DROP INDEX IF EXISTS public.index_taxes_on_organization_id;
+DROP INDEX IF EXISTS public.index_taxes_by_cursor;
 DROP INDEX IF EXISTS public.index_subscriptions_on_status;
 DROP INDEX IF EXISTS public.index_subscriptions_on_started_at_and_ending_at;
 DROP INDEX IF EXISTS public.index_subscriptions_on_started_at;
@@ -824,6 +825,7 @@ DROP INDEX IF EXISTS public.index_fees_on_charge_filter_id;
 DROP INDEX IF EXISTS public.index_fees_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_fees_on_applied_add_on_id;
 DROP INDEX IF EXISTS public.index_fees_on_add_on_id;
+DROP INDEX IF EXISTS public.index_fees_by_product_cursor;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_transaction_id;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_timestamp;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_created_at;
@@ -4420,6 +4422,7 @@ CREATE VIEW public.exports_invoices AS
             WHEN 3 THEN 'one_off'::text
             WHEN 4 THEN 'advance_charges'::text
             WHEN 5 THEN 'progressive_billing'::text
+            WHEN 6 THEN 'contract'::text
             ELSE NULL::text
         END AS invoice_type,
         CASE i.status
@@ -9785,6 +9788,13 @@ CREATE INDEX index_events_on_organization_id_and_transaction_id ON public.events
 
 
 --
+-- Name: index_fees_by_product_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fees_by_product_cursor ON public.fees USING btree (organization_id, created_at DESC, id DESC) WHERE ((deleted_at IS NULL) AND (fee_type = 6));
+
+
+--
 -- Name: index_fees_on_add_on_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12036,6 +12046,13 @@ CREATE INDEX index_subscriptions_on_started_at_and_ending_at ON public.subscript
 --
 
 CREATE INDEX index_subscriptions_on_status ON public.subscriptions USING btree (status);
+
+
+--
+-- Name: index_taxes_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_taxes_by_cursor ON public.taxes USING btree (organization_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL);
 
 
 --
@@ -15854,8 +15871,11 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261022090030'),
+('20261020144205'),
 ('20261020074217'),
 ('20261019074555'),
+('20261014180403'),
 ('20261014123350'),
 ('20261014123349'),
 ('20261014123348'),

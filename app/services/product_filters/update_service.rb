@@ -4,16 +4,16 @@ module ProductFilters
   class UpdateService < BaseService
     Result = BaseResult[:product_filter]
 
+    activity_loggable(
+      action: "product_filter.updated",
+      record: -> { product_filter }
+    )
+
     def initialize(product_filter:, params:)
       @product_filter = product_filter
       @params = params.to_h.with_indifferent_access
       super
     end
-
-    activity_loggable(
-      action: "product_filter.updated",
-      record: -> { product_filter }
-    )
 
     def call
       return result.not_found_failure!(resource: "product_filter") unless product_filter
@@ -42,15 +42,17 @@ module ProductFilters
           return values_validation unless values_validation.success?
         end
 
+        changed_values = params.key?(:values) && values_changed?
         product_filter.name = params[:name] if params.key?(:name)
         product_filter.description = params[:description] if params.key?(:description)
         product_filter.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
         product_filter.code = params[:code]&.strip if params.key?(:code)
         product_filter.save!
 
-        replace_values if params.key?(:values) && values_changed?
+        replace_values if changed_values
 
         result.product_filter = product_filter
+        SendWebhookJob.perform_after_commit("product_filter.updated", product_filter)
       end
 
       result

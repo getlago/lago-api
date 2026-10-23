@@ -10,7 +10,7 @@ class ProductCategory < ApplicationRecord
 
   belongs_to :organization
 
-  has_many :products
+  has_many :products, inverse_of: :product_category
   has_many :plan_applied_rate_cards, through: :products
   has_many :contract_applied_rate_cards, through: :products
 
