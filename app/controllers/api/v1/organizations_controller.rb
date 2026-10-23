@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class OrganizationsController < Api::BaseController
+    class OrganizationsController < Api::V1::BaseController
       def show
         render(
           json: ::V1::OrganizationSerializer.new(

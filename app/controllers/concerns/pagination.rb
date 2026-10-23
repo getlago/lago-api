@@ -4,9 +4,19 @@ module Pagination
   extend ActiveSupport::Concern
 
   # Default number of records per page
-  PER_PAGE = 100
+  DEFAULT_PAGE_SIZE = 100
+  # Largest per_page accepted on /api/v1 lists when LAGO_API_PAGINATION_MAX_PAGE_SIZE is not a positive integer
+  DEFAULT_MAX_PAGE_SIZE = 200
   # The TTL for caching the number of records
   DEFAULT_TTL = 30.minutes.freeze
+
+  included do
+    # A controller sets `self.max_page_size = n` to cap its own page size below the organization
+    # or global limit.
+    # rubocop:disable ThreadSafety/ClassAndModuleAttributes
+    class_attribute :max_page_size, instance_writer: false
+    # rubocop:enable ThreadSafety/ClassAndModuleAttributes
+  end
 
   def pagination_metadata(records, **count_params)
     current_page = prev_page = next_page = total_pages = nil
@@ -37,6 +47,58 @@ module Pagination
 
   private
 
+  def page_number
+    params[:page].presence&.to_i || 1
+  end
+
+  # The requested page size, or the default page size within the limit when none is given.
+  def page_size
+    params[:per_page].presence&.to_i || [default_page_size, effective_max_page_size].min
+  end
+
+  def default_page_size
+    DEFAULT_PAGE_SIZE
+  end
+
+  # The instance-wide limit: LAGO_API_PAGINATION_MAX_PAGE_SIZE, or DEFAULT_MAX_PAGE_SIZE when it is not a positive integer.
+  def default_max_page_size
+    value = Integer(ENV["LAGO_API_PAGINATION_MAX_PAGE_SIZE"].to_s, 10, exception: false)
+    value&.positive? ? value : DEFAULT_MAX_PAGE_SIZE
+  end
+
+  def validate_pagination_params
+    errors = {
+      page: pagination_param_error(:page, max: nil),
+      per_page: pagination_param_error(:per_page, max: effective_max_page_size)
+    }.compact
+
+    validation_errors(errors:) if errors.any?
+  end
+
+  # A blank value is treated as absent. Only plain positive decimals are valid: Integer() would also
+  # accept forms such as 010, +5, 1_000 or a leading space.
+  def pagination_param_error(name, max:)
+    return if params[name].blank?
+
+    value = params[name].to_s
+    if value.match?(/\A[1-9]\d*\z/) && (max.nil? || value.to_i <= max)
+      nil
+    else
+      ["value_is_out_of_range"]
+    end
+  end
+
+  # The effective page size limit of the controller: its own cap, if any, within the
+  # organization or global limit.
+  def effective_max_page_size
+    [self.class.max_page_size, organization_max_page_size || default_max_page_size].compact.min
+  end
+
+  # An organization cached by ApiKeys::CacheService before the column existed does not have it.
+  def organization_max_page_size
+    current_organization.pagination_max_page_size if current_organization.has_attribute?(:pagination_max_page_size)
+  end
+
   def clickhouse_relation?(records)
     records.respond_to?(:klass) && records.klass < Clickhouse::BaseRecord
   end
@@ -54,9 +116,6 @@ module Pagination
     # backward-compatibility: skip caching if it is not requested explicitly
     return yield unless key && organization_id && params
 
-    page = (params[:page] || 1).to_i
-    per_page = (params[:per_page] || PER_PAGE).to_i
-
     # prepare the key for caching
     hash_data = _deep_sort(params.except(:page).merge(organization_id:))
     hash = Digest::SHA256.hexdigest(hash_data.to_json)
@@ -65,7 +124,7 @@ module Pagination
     # Re-calculate on the last page because the number of records could have changed.
     # If the count is small (less than the page size), caching is useless but re-querying is acceptable.
     cached = Rails.cache.read(cache_key)
-    return cached if cached.to_i > per_page * page
+    return cached if cached.to_i > page_size * page_number
 
     yield.tap { |count| Rails.cache.write(cache_key, count, expires_in: ttl) }
   end

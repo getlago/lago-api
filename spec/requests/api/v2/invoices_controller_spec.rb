@@ -68,4 +68,30 @@ RSpec.describe Api::V2::InvoicesController do
       end
     end
   end
+
+  describe "GET /api/v2/invoices" do
+    subject { get_with_token(organization, "/api/v2/invoices", params) }
+
+    context "with per_page above the v1 maximum page size" do
+      let(:params) { {per_page: 1_000_000_000} }
+
+      it "returns a validation error on per_page" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(per_page: ["value_is_out_of_range"])
+      end
+    end
+
+    context "with page=0" do
+      let(:params) { {page: 0} }
+
+      it "returns a validation error on page" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(page: ["value_is_out_of_range"])
+      end
+    end
+  end
 end
