@@ -629,6 +629,8 @@ module Fees
       return false if options.current_usage? || options.invoice_preview?
       return false if selected_metered_item.billing_segment
       return false unless billing_context.subscription?
+      # Prorated sums have no snapshot read yet
+      return false if selected_metered_item.charge.prorated?
 
       # A progressive billing invoice stops mid-period, its units do not close the period
       !invoice&.progressive_billing? &&

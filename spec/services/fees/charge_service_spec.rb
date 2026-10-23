@@ -4881,11 +4881,24 @@ RSpec.describe Fees::ChargeService, :premium do
         create(:standard_charge, plan: subscription.plan, billable_metric:, prorated: true, properties: {amount: "20"})
       end
 
-      it "persists no snapshot, as its units are not bounded by the watermark" do
+      it "persists no snapshot" do
         result = charge_subscription_service.call
 
         expect(result.fees.sole.precise_amount_cents).to be < 15 * 2_000
         expect(snapshots).to be_empty
+      end
+
+      context "when paid in advance" do
+        let(:charge) do
+          create(:standard_charge, plan: subscription.plan, billable_metric:, prorated: true, pay_in_advance: true, properties: {amount: "20"})
+        end
+
+        it "persists no snapshot" do
+          result = charge_subscription_service.call
+
+          expect(result.fees.sole.precise_amount_cents).to eq(15 * 2_000)
+          expect(snapshots).to be_empty
+        end
       end
     end
 
