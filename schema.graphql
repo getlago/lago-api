@@ -5260,6 +5260,7 @@ type CurrentOrganization {
   city: String
   country: CountryCode
   createdAt: ISO8601DateTime!
+  customerPortalEditableFields: [CustomerPortalEditableFieldEnum!]!
   defaultCurrency: CurrencyEnum!
   documentNumberPrefix: String!
   documentNumbering: DocumentNumberingEnum!
@@ -5550,10 +5551,32 @@ type CustomerPortalCustomer {
 }
 
 """
+Customer fields that can be edited from the customer portal
+"""
+enum CustomerPortalEditableFieldEnum {
+  address_line1
+  address_line2
+  city
+  country
+  customer_type
+  document_locale
+  email
+  firstname
+  lastname
+  legal_name
+  name
+  shipping_address
+  state
+  tax_identification_number
+  zipcode
+}
+
+"""
 CustomerPortalOrganization
 """
 type CustomerPortalOrganization {
   billingConfiguration: OrganizationBillingConfiguration
+  customerPortalEditableFields: [CustomerPortalEditableFieldEnum!]!
   defaultCurrency: CurrencyEnum!
   id: ID!
   logoUrl: String
@@ -16373,6 +16396,7 @@ input UpdateOrganizationInput {
   """
   clientMutationId: String
   country: CountryCode
+  customerPortalEditableFields: [CustomerPortalEditableFieldEnum!]
   defaultCurrency: CurrencyEnum
   documentNumberPrefix: String
   documentNumbering: DocumentNumberingEnum

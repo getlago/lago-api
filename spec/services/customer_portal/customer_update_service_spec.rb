@@ -34,6 +34,10 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
     }
   end
 
+  before do
+    customer&.organization&.update!(customer_portal_editable_fields: Organization::CUSTOMER_PORTAL_EDITABLE_FIELDS)
+  end
+
   it "updates the customer" do
     expect(result).to be_success
 
@@ -152,6 +156,128 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("tax_not_found")
       end
+    end
+  end
+
+  context "with the default editable fields" do
+    before do
+      customer.organization.update!(customer_portal_editable_fields: Organization::DEFAULT_CUSTOMER_PORTAL_EDITABLE_FIELDS)
+      customer.update!(country: "FR", zipcode: "75001", tax_identification_number: nil)
+    end
+
+    it "refuses the tax determining fields" do
+      expect(result).not_to be_success
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+      expect(result.error.messages).to eq(
+        country: ["value_is_not_editable"],
+        tax_identification_number: ["value_is_not_editable"],
+        zipcode: ["value_is_not_editable"]
+      )
+    end
+
+    it "does not update the customer" do
+      expect { result }.not_to change { customer.reload.attributes }
+    end
+
+    context "when the locked fields are sent with their current values" do
+      let(:update_args) do
+        {
+          name: "Updated customer name",
+          country: "fr",
+          zipcode: "75001",
+          tax_identification_number: ""
+        }
+      end
+
+      it "ignores them and updates the editable fields" do
+        expect(result).to be_success
+        expect(result.customer).to have_attributes(
+          name: "Updated customer name",
+          country: "FR",
+          zipcode: "75001",
+          tax_identification_number: nil
+        )
+      end
+    end
+
+    context "when only one locked field changes" do
+      let(:update_args) { {name: "Updated customer name", country: "LU", zipcode: "75001"} }
+
+      it "refuses only that field" do
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq(country: ["value_is_not_editable"])
+        expect(customer.reload.name).not_to eq("Updated customer name")
+      end
+    end
+
+    context "when the locked shipping address is sent unchanged" do
+      let(:update_args) do
+        {
+          name: "Updated customer name",
+          shipping_address: {city: customer.shipping_city, country: customer.shipping_country&.downcase}
+        }
+      end
+
+      before do
+        customer.update!(shipping_city: "Lyon", shipping_country: "FR")
+        customer.organization.update!(
+          customer_portal_editable_fields: Organization::DEFAULT_CUSTOMER_PORTAL_EDITABLE_FIELDS - ["shipping_address"]
+        )
+      end
+
+      it "updates the editable fields" do
+        expect(result).to be_success
+        expect(result.customer).to have_attributes(name: "Updated customer name", shipping_city: "Lyon")
+      end
+    end
+
+    context "when the locked shipping address changes" do
+      let(:update_args) { {shipping_address: {city: "Paris"}} }
+
+      before do
+        customer.update!(shipping_city: "Lyon")
+        customer.organization.update!(
+          customer_portal_editable_fields: Organization::DEFAULT_CUSTOMER_PORTAL_EDITABLE_FIELDS - ["shipping_address"]
+        )
+      end
+
+      it "refuses it" do
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq(shipping_address: ["value_is_not_editable"])
+      end
+    end
+
+    context "when only editable fields are sent" do
+      let(:update_args) { {name: "Updated customer name", city: "Updated customer city"} }
+
+      it "updates the customer" do
+        expect(result).to be_success
+        expect(result.customer.name).to eq("Updated customer name")
+        expect(result.customer.city).to eq("Updated customer city")
+      end
+    end
+  end
+
+  context "when a portal user tries to change the applied eu tax" do
+    let_it_be(:organization, refind: true) { create(:organization, eu_tax_management: true) }
+    let_it_be(:billing_entity) { create(:billing_entity, organization:, eu_tax_management: true) }
+    let_it_be(:customer, refind: true) { create(:customer, organization:, billing_entity:, country: "FR", zipcode: "75001") }
+    let_it_be(:fr_tax) { create(:tax, organization:, code: "lago_eu_fr_standard", rate: 20.0) }
+
+    let(:update_args) { {country: "US", zipcode: "10001"} }
+
+    before do
+      organization.update!(customer_portal_editable_fields: Organization::DEFAULT_CUSTOMER_PORTAL_EDITABLE_FIELDS)
+      create(:customer_applied_tax, customer:, tax: fr_tax)
+      allow(Customers::EuAutoTaxesService).to receive(:call).and_call_original
+    end
+
+    it "does not change the applied tax codes" do
+      expect { result }.not_to change { customer.reload.taxes.pluck(:code) }.from(["lago_eu_fr_standard"])
+
+      expect(result).not_to be_success
+      expect(customer.reload).to have_attributes(country: "FR", zipcode: "75001")
+      expect(Customers::EuAutoTaxesService).not_to have_received(:call)
     end
   end
 

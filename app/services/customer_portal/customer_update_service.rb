@@ -13,6 +13,9 @@ module CustomerPortal
 
     def call
       return result.not_found_failure!(resource: "customer") unless customer
+      return result.validation_failure!(errors: locked_fields_errors) if locked_fields_errors.present?
+
+      @args = args.except(*locked_fields)
 
       ActiveRecord::Base.transaction do
         original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
@@ -76,5 +79,37 @@ module CustomerPortal
     private
 
     attr_reader :customer, :args
+
+    def locked_fields
+      @locked_fields ||= begin
+        editable_fields = customer.organization.customer_portal_editable_fields
+        args.keys.reject { |field| editable_fields.include?(field.to_s) }
+      end
+    end
+
+    # NOTE: Portal versions released before the editable fields setting send the whole form,
+    #       so a locked field sent with its current value is ignored and only an actual change is refused.
+    def locked_fields_errors
+      @locked_fields_errors ||= locked_fields
+        .reject { |field| unchanged_value?(field) }
+        .to_h { |field| [field.to_sym, ["value_is_not_editable"]] }
+    end
+
+    def unchanged_value?(field)
+      case field.to_sym
+      when :shipping_address
+        (args[field]&.to_h || {}).all? do |key, value|
+          same_value?(customer.public_send(:"shipping_#{key}"), value, upcase: key.to_sym == :country)
+        end
+      else
+        same_value?(customer.public_send(field), args[field], upcase: field.to_sym == :country)
+      end
+    end
+
+    def same_value?(current_value, new_value, upcase: false)
+      current_value, new_value = [current_value, new_value].map { |value| value&.upcase } if upcase
+
+      current_value.presence == new_value.presence
+    end
   end
 end
