@@ -73,12 +73,20 @@ module Customers
 
     def should_apply_eu_taxes?
       return false unless customer.billing_entity.eu_tax_management
-      return false if non_eu_customer_without_tax_id? && customer.taxes.where.not("code ILIKE ?", "#{EU_TAX_CODE_PREFIX}%").exists?
+      return false if non_eu_customer_without_tax_id? && custom_taxes_without_eu_rate?
       return true if new_record
 
       non_existing_eu_taxes = customer.taxes.where("code ILIKE ?", "lago_eu%").none?
 
       non_existing_eu_taxes || tax_attributes_changed
+    end
+
+    # An EU rate left from a previous country must still be replaced by the exemption.
+    def custom_taxes_without_eu_rate?
+      eu_taxes = customer.taxes.where("code ILIKE ?", "#{EU_TAX_CODE_PREFIX}%")
+
+      customer.taxes.where.not("code ILIKE ?", "#{EU_TAX_CODE_PREFIX}%").exists? &&
+        !eu_taxes.where.not(code: EU_TAX_EXEMPT_CODE).exists?
     end
 
     def schedule_async_vies_check

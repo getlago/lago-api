@@ -89,6 +89,16 @@ RSpec.describe Customers::EuAutoTaxesService do
         end
       end
 
+      context "when the customer still has an EU rate from a previous country" do
+        before { create(:customer_applied_tax, customer:, tax: create(:tax, organization:, code: "lago_eu_fr_standard")) }
+
+        it "returns the EU exemption" do
+          result = eu_tax_service.call
+
+          expect(result.tax_code).to eq("lago_eu_tax_exempt")
+        end
+      end
+
       context "when the customer moves to an EU country" do
         before { customer.update!(country: "DE") }
 

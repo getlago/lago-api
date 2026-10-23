@@ -813,6 +813,22 @@ RSpec.describe Customers::UpdateService do
         end
       end
 
+      context "when the customer leaves an EU country" do
+        let(:customer) do
+          create(:customer, organization:, billing_entity: eu_billing_entity, country: "FR", zipcode: "75001", tax_identification_number: nil)
+        end
+        let(:update_args) { {id: customer.id, country: "GB", zipcode: "SW1A 1AA"} }
+
+        before { create(:customer_applied_tax, organization:, customer:, tax: create(:tax, organization:, code: "lago_eu_fr_standard", rate: 20.0)) }
+
+        it "replaces the EU rate with the EU exemption" do
+          result = customers_service.call
+
+          expect(result).to be_success
+          expect(result.customer.taxes.pluck(:code)).to eq(["lago_eu_tax_exempt"])
+        end
+      end
+
       context "when the exemption is sent with the custom tax" do
         let(:update_args) { {id: customer.id, tax_codes: %w[lago_eu_tax_exempt uk_vat]} }
 
