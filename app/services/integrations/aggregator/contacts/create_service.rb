@@ -11,12 +11,25 @@ module Integrations
           super(integration:)
         end
 
+        def action_name
+          case provider
+          when "netsuite"
+            "netsuite-create-contact"
+          when "xero"
+            "xero-create-contact"
+          when "hubspot"
+            "create-contact"
+          when "avalara"
+            "create-customer"
+          end
+        end
+
         def call
           Integrations::Hubspot::Contacts::DeployPropertiesService.call(integration:)
 
           throttle!(:anrok, :hubspot, :netsuite, :xero)
 
-          response = http_client.post_with_response(params, headers)
+          response = trigger_action(params)
           body = JSON.parse(response.body)
 
           if body.is_a?(Hash)

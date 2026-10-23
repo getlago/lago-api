@@ -39,7 +39,7 @@ RSpec.describe Mutations::Invoices::RetryAll do
   let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
   let(:response) { instance_double(Net::HTTPOK) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
-  let(:endpoint) { "https://api.nango.dev/v1/anrok/finalized_invoices" }
+  let(:endpoint) { "https://api.nango.dev/action/trigger" }
   let(:body) do
     path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")
     json = File.read(path)

@@ -9,7 +9,7 @@ RSpec.describe Integrations::Aggregator::SubsidiariesService do
 
   describe ".call" do
     let(:lago_client) { instance_double(LagoHttpClient::Client) }
-    let(:subsidiaries_endpoint) { "https://api.nango.dev/v1/netsuite/subsidiaries" }
+    let(:subsidiaries_endpoint) { "https://api.nango.dev/records" }
     let(:headers) do
       {
         "Connection-Id" => integration.connection_id,
@@ -28,7 +28,7 @@ RSpec.describe Integrations::Aggregator::SubsidiariesService do
         .with(subsidiaries_endpoint, retries_on: [OpenSSL::SSL::SSLError])
         .and_return(lago_client)
       allow(lago_client).to receive(:get)
-        .with(headers:)
+        .with(headers:, params: {model: "Subsidiary"})
         .and_return(aggregator_response)
     end
 

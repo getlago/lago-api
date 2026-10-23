@@ -9,7 +9,7 @@ RSpec.describe Mutations::Integrations::FetchDraftInvoiceTaxes do
   let(:currency) { "EUR" }
   let(:response) { instance_double(Net::HTTPOK) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
-  let(:endpoint) { "https://api.nango.dev/v1/anrok/draft_invoices" }
+  let(:endpoint) { "https://api.nango.dev/action/trigger" }
   let(:current_time) { DateTime.new(2023, 7, 19, 12, 12) }
   let(:fees) do
     [
@@ -140,7 +140,7 @@ RSpec.describe Mutations::Integrations::FetchDraftInvoiceTaxes do
     expect(breakdown2["enumedTaxCode"]).to eq("reverse_charge")
 
     expect(lago_client).to have_received(:post_with_response) do |payload, _headers|
-      expect(payload.first["fees"].map { |item| item["item_id"] }).to eq([add_on_first.id, add_on_second.id])
+      expect(payload[:input].first["fees"].map { |item| item["item_id"] }).to eq([add_on_first.id, add_on_second.id])
     end
   end
 
@@ -184,7 +184,7 @@ RSpec.describe Mutations::Integrations::FetchDraftInvoiceTaxes do
       )
 
       expect(lago_client).to have_received(:post_with_response) do |payload, _headers|
-        expect(payload.first["fees"].map { |fee| fee["item_id"] }).to eq([add_on_first.id])
+        expect(payload[:input].first["fees"].map { |fee| fee["item_id"] }).to eq([add_on_first.id])
       end
     end
   end
@@ -220,7 +220,7 @@ RSpec.describe Mutations::Integrations::FetchDraftInvoiceTaxes do
       )
 
       expect(lago_client).to have_received(:post_with_response) do |payload, _headers|
-        expect(payload.first["fees"].map { |fee| fee["item_id"] }).to eq([add_on_first.id])
+        expect(payload[:input].first["fees"].map { |fee| fee["item_id"] }).to eq([add_on_first.id])
       end
     end
   end

@@ -6,8 +6,8 @@ module Integrations
       class ReconcileService < BaseService
         Result = BaseResult[:external_id, :integration_resource]
 
-        def action_path
-          "v1/#{provider}/invoices/by-tranid"
+        def action_name
+          "netsuite-find-invoice"
         end
 
         def call
@@ -17,7 +17,8 @@ module Integrations
 
           throttle!(:netsuite)
 
-          external_id = http_client.get(headers:, body: {tranid: invoice.number}, content_type: "application/json")
+          response = trigger_action({tranid: invoice.number})
+          external_id = JSON.parse(response.body.presence || "null")
 
           return result if external_id.blank?
 

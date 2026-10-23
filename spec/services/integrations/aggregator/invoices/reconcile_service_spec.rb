@@ -12,7 +12,7 @@ RSpec.describe Integrations::Aggregator::Invoices::ReconcileService do
   let(:invoice) { create(:invoice, customer:, organization:, number: "INV-001") }
 
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
-  let(:endpoint) { "https://api.nango.dev/v1/netsuite/invoices/by-tranid" }
+  let(:endpoint) { "https://api.nango.dev/action/trigger" }
   let(:headers) do
     {
       "Connection-Id" => integration.connection_id,
@@ -34,7 +34,8 @@ RSpec.describe Integrations::Aggregator::Invoices::ReconcileService do
       let(:service) { described_class.new(invoice:) }
 
       before do
-        allow(lago_client).to receive(:get).with(headers:, body: request_body, content_type: "application/json").and_return("12345")
+        allow(lago_client).to receive(:post_with_response).with({action_name: "netsuite-find-invoice", input: request_body}, headers)
+          .and_return(instance_double(Net::HTTPOK, body: '"12345"'))
       end
 
       it_behaves_like "throttles!", :netsuite
@@ -65,7 +66,8 @@ RSpec.describe Integrations::Aggregator::Invoices::ReconcileService do
       let(:service) { described_class.new(invoice:) }
 
       before do
-        allow(lago_client).to receive(:get).with(headers:, body: request_body, content_type: "application/json").and_return(nil)
+        allow(lago_client).to receive(:post_with_response).with({action_name: "netsuite-find-invoice", input: request_body}, headers)
+          .and_return(instance_double(Net::HTTPOK, body: "null"))
       end
 
       it_behaves_like "throttles!", :netsuite
@@ -86,12 +88,12 @@ RSpec.describe Integrations::Aggregator::Invoices::ReconcileService do
     context "when an IntegrationResource already exists for the invoice" do
       before do
         create(:integration_resource, integration:, syncable: invoice, resource_type: :invoice)
-        allow(lago_client).to receive(:get)
+        allow(lago_client).to receive(:post_with_response)
       end
 
       it "does not call the HTTP client" do
         service_call
-        expect(lago_client).not_to have_received(:get)
+        expect(lago_client).not_to have_received(:post_with_response)
       end
 
       it "returns a successful result" do
@@ -111,11 +113,11 @@ RSpec.describe Integrations::Aggregator::Invoices::ReconcileService do
       let(:integration) { create(:xero_integration, organization:) }
       let(:integration_customer) { create(:xero_customer, integration:, customer:) }
 
-      before { allow(lago_client).to receive(:get) }
+      before { allow(lago_client).to receive(:post_with_response) }
 
       it "does not call the HTTP client" do
         service_call
-        expect(lago_client).not_to have_received(:get)
+        expect(lago_client).not_to have_received(:post_with_response)
       end
 
       it "returns a successful result" do
@@ -146,7 +148,7 @@ RSpec.describe Integrations::Aggregator::Invoices::ReconcileService do
       let(:http_error) { LagoHttpClient::HttpError.new(error_code, body, nil) }
 
       before do
-        allow(lago_client).to receive(:get).with(headers:, body: request_body, content_type: "application/json").and_raise(http_error)
+        allow(lago_client).to receive(:post_with_response).with({action_name: "netsuite-find-invoice", input: request_body}, headers).and_raise(http_error)
       end
 
       context "with a server error" do
@@ -181,7 +183,7 @@ RSpec.describe Integrations::Aggregator::Invoices::ReconcileService do
       let(:http_error) { LagoHttpClient::HttpError.new(429, body, nil) }
 
       before do
-        allow(lago_client).to receive(:get).with(headers:, body: request_body, content_type: "application/json").and_raise(http_error)
+        allow(lago_client).to receive(:post_with_response).with({action_name: "netsuite-find-invoice", input: request_body}, headers).and_raise(http_error)
       end
 
       it "raises a RequestLimitError" do

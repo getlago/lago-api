@@ -13,8 +13,8 @@ RSpec.describe Integrations::Aggregator::AccountsService do
 
   describe ".call" do
     let(:lago_client) { instance_double(LagoHttpClient::Client) }
-    let(:accounts_endpoint) { "https://api.nango.dev/v1/netsuite/accounts" }
-    let(:params) { {limit: 450} }
+    let(:accounts_endpoint) { "https://api.nango.dev/records" }
+    let(:params) { {model: "Account", limit: 450} }
 
     let(:headers) do
       {
@@ -51,35 +51,43 @@ RSpec.describe Integrations::Aggregator::AccountsService do
     end
   end
 
-  describe "#params" do
-    subject(:method_call) { accounts_service.send(:params) }
+  describe "#fetch_records" do
+    subject(:method_call) { accounts_service.send(:fetch_records, limit: described_class::LIMIT, cursor:) }
 
-    before { accounts_service.instance_variable_set(:@cursor, cursor) }
+    let(:lago_client) { instance_double(LagoHttpClient::Client, get: {}) }
+
+    before { allow(LagoHttpClient::Client).to receive(:new).and_return(lago_client) }
 
     context "when cursor is nil" do
       let(:cursor) { nil }
-      let(:params) { {limit: described_class::LIMIT} }
 
-      it "returns params without cursor" do
-        expect(subject).to eq(params)
+      it "requests the Account records without cursor" do
+        method_call
+
+        expect(lago_client).to have_received(:get)
+          .with(headers: anything, params: {model: "Account", limit: described_class::LIMIT})
       end
     end
 
     context "when cursor is blank" do
       let(:cursor) { "" }
-      let(:params) { {limit: described_class::LIMIT} }
 
-      it "returns params without cursor" do
-        expect(subject).to eq(params)
+      it "requests the Account records without cursor" do
+        method_call
+
+        expect(lago_client).to have_received(:get)
+          .with(headers: anything, params: {model: "Account", limit: described_class::LIMIT})
       end
     end
 
     context "when cursor is present" do
       let(:cursor) { "next_cursor_value" }
-      let(:params) { {limit: described_class::LIMIT, cursor: "next_cursor_value"} }
 
-      it "returns params with cursor" do
-        expect(subject).to eq(params)
+      it "requests the Account records with cursor" do
+        method_call
+
+        expect(lago_client).to have_received(:get)
+          .with(headers: anything, params: {model: "Account", limit: described_class::LIMIT, cursor: "next_cursor_value"})
       end
     end
   end

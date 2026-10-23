@@ -8,8 +8,8 @@ module Integrations
 
         VERSION = 3
 
-        def action_path
-          "v1/hubspot/object"
+        def action_name
+          "create-object"
         end
 
         def call
@@ -26,7 +26,7 @@ module Integrations
 
           throttle!(:hubspot)
 
-          response = http_client.post_with_response(payload, headers)
+          response = trigger_action(payload)
           ActiveRecord::Base.transaction do
             save_object_type_id(JSON.parse(response.body)["objectTypeId"])
           end

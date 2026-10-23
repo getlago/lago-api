@@ -27,8 +27,13 @@ module Integrations
         super
       end
 
-      def action_path
+      # NOTE: Name of the Nango action script triggered through POST /action/trigger
+      def action_name
         raise NotImplementedError
+      end
+
+      def action_path
+        "action/trigger"
       end
 
       private
@@ -98,8 +103,13 @@ module Integrations
       def headers
         {
           "Connection-Id" => integration.connection_id,
-          "Authorization" => "Bearer #{secret_key}"
+          "Authorization" => "Bearer #{secret_key}",
+          "Provider-Config-Key" => provider_key
         }
+      end
+
+      def trigger_action(input)
+        http_client.post_with_response({action_name:, input:}, headers)
       end
 
       def deliver_error_webhook(customer:, code:, message:)

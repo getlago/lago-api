@@ -8,8 +8,8 @@ module Integrations
 
         VERSION = 1
 
-        def action_path
-          "v1/hubspot/properties"
+        def action_name
+          "create-properties"
         end
 
         def call
@@ -18,7 +18,7 @@ module Integrations
 
           throttle!(:hubspot)
 
-          response = http_client.post_with_response(payload, headers)
+          response = trigger_action(payload)
           ActiveRecord::Base.transaction do
             integration.settings = integration.reload.settings
             integration.companies_properties_version = VERSION

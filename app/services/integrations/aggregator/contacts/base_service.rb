@@ -6,19 +6,7 @@ module Integrations
       class BaseService < Integrations::Aggregator::BaseService
         Result = BaseResult[:contact_id, :email]
 
-        def action_path
-          "v1/#{provider}/contacts"
-        end
-
         private
-
-        def headers
-          {
-            "Connection-Id" => integration.connection_id,
-            "Authorization" => "Bearer #{secret_key}",
-            "Provider-Config-Key" => provider_key
-          }
-        end
 
         def deliver_success_webhook(customer:, webhook_code:)
           SendWebhookJob.perform_later(

@@ -2,17 +2,13 @@
 
 module Integrations
   module Aggregator
-    class SubsidiariesService < BaseService
+    class SubsidiariesService < BaseRecordsService
       Result = BaseResult[:subsidiaries]
 
       Subsidiary = Data.define(:external_id, :external_name)
 
-      def action_path
-        "v1/#{provider}/subsidiaries"
-      end
-
       def call
-        response = http_client.get(headers:)
+        response = fetch_records
 
         result.subsidiaries = handle_subsidiaries(response["records"])
 
@@ -21,12 +17,8 @@ module Integrations
 
       private
 
-      def headers
-        {
-          "Connection-Id" => integration.connection_id,
-          "Authorization" => "Bearer #{secret_key}",
-          "Provider-Config-Key" => provider_key
-        }
+      def model
+        "Subsidiary"
       end
 
       def handle_subsidiaries(subsidiaries)

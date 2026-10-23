@@ -7,27 +7,18 @@ module Integrations
 
       AccountInformation = Data.define(:id)
 
-      def action_path
-        "v1/account-information"
+      # NOTE: Nango HubSpot template, v1 returns the portal id as `id`
+      def action_name
+        "fetch-account-information"
       end
 
       def call
         throttle!(:hubspot)
 
-        response = http_client.get(headers:)
+        response = JSON.parse(trigger_action({}).body)
 
         result.account_information = AccountInformation.new(id: response["id"])
         result
-      end
-
-      private
-
-      def headers
-        {
-          "Connection-Id" => integration.connection_id,
-          "Authorization" => "Bearer #{secret_key}",
-          "Provider-Config-Key" => provider_key
-        }
       end
     end
   end

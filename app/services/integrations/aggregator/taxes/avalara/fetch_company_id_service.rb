@@ -7,14 +7,14 @@ module Integrations
         class FetchCompanyIdService < Integrations::Aggregator::BaseService
           Result = BaseResult[:company]
 
-          def action_path
-            "v1/#{provider}/companies"
+          def action_name
+            "get-company"
           end
 
           def call
             throttle!(:avalara)
 
-            response = http_client.post_with_response(payload, headers)
+            response = trigger_action(payload)
             body = JSON.parse(response.body)
 
             received_company = body["companies"]&.first
@@ -48,14 +48,6 @@ module Integrations
                 "company_code" => integration.company_code
               }
             ]
-          end
-
-          def headers
-            {
-              "Connection-Id" => integration.connection_id,
-              "Authorization" => "Bearer #{secret_key}",
-              "Provider-Config-Key" => provider_key
-            }
           end
         end
       end
