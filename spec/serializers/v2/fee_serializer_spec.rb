@@ -119,20 +119,6 @@ RSpec.describe V2::FeeSerializer do
       "succeeded_at" => nil,
       "failed_at" => nil,
       "refunded_at" => nil,
-      "applied_taxes" => [
-        {
-          "lago_id" => applied_tax.id,
-          "lago_fee_id" => fee.id,
-          "lago_tax_id" => tax.id,
-          "tax_name" => "VAT",
-          "tax_code" => tax.code,
-          "tax_rate" => 20.0,
-          "tax_description" => "French Standard VAT",
-          "amount_cents" => 200,
-          "created_at" => applied_tax.created_at.iso8601,
-          "updated_at" => applied_tax.updated_at.iso8601
-        }
-      ],
       "created_at" => fee.created_at.iso8601,
       "updated_at" => fee.updated_at.iso8601,
       "deleted_at" => nil
@@ -288,13 +274,68 @@ RSpec.describe V2::FeeSerializer do
     end
   end
 
-  context "with several applied taxes" do
-    let(:earlier_applied_tax) { create(:fee_applied_tax, fee:, tax: create(:tax, organization:), created_at: 1.day.ago) }
+  context "with every expansion" do
+    subject(:serializer) { described_class.new(fee, root_name: "fee", includes: described_class.expandable_names) }
 
-    before { earlier_applied_tax }
+    let(:as_json) { ->(serializer) { JSON.parse(serializer.serialize.to_json) } }
 
-    it "lists them in creation order" do
-      expect(result["applied_taxes"].map { it["lago_id"] }).to eq([earlier_applied_tax.id, applied_tax.id])
+    it "renders each related record flat after the fee" do
+      expect(result.keys.last(7)).to eq(%w[applied_taxes product product_filter rate_card rate contract customer])
+      expect(result).to include(
+        "applied_taxes" => [
+          {
+            "lago_id" => applied_tax.id,
+            "lago_fee_id" => fee.id,
+            "lago_tax_id" => tax.id,
+            "tax_name" => "VAT",
+            "tax_code" => tax.code,
+            "tax_rate" => 20.0,
+            "tax_description" => "French Standard VAT",
+            "amount_cents" => 200,
+            "created_at" => applied_tax.created_at.iso8601,
+            "updated_at" => applied_tax.updated_at.iso8601
+          }
+        ],
+        "product" => as_json.call(V2::ProductSerializer.new(product)),
+        "product_filter" => as_json.call(V2::ProductFilterSerializer.new(product_filter)),
+        "rate_card" => as_json.call(V2::RateCardSerializer.new(rate_card)),
+        "rate" => as_json.call(V2::RateCardRateSerializer.new(rate)),
+        "contract" => as_json.call(V2::ContractSerializer.new(contract)),
+        "customer" => as_json.call(V2::CustomerSerializer.new(customer))
+      )
+      expect(result["product"]).not_to have_key("product_category")
+    end
+
+    context "with several applied taxes" do
+      let(:earlier_applied_tax) { create(:fee_applied_tax, fee:, tax: create(:tax, organization:), created_at: 1.day.ago) }
+
+      before { earlier_applied_tax }
+
+      it "lists them in creation order" do
+        expect(result["applied_taxes"].map { it["lago_id"] }).to eq([earlier_applied_tax.id, applied_tax.id])
+      end
+    end
+
+    context "when the product and the rate card are discarded" do
+      before do
+        fee
+        product.discard!
+        rate_card.discard!
+        fee.reload
+      end
+
+      it "still expands them" do
+        expect(result["product"]).to include("lago_id" => product.id, "code" => product.code)
+        expect(result["rate_card"]).to include("lago_id" => rate_card.id, "code" => rate_card.code)
+      end
+    end
+
+    context "when the fee has no filter" do
+      let(:fee) { create(:fee, fee_attributes.merge(product_filter: nil)) }
+
+      it "renders it as null" do
+        expect(result["product_filter"]).to be_nil
+      end
     end
   end
 
