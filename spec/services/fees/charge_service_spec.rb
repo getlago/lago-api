@@ -21,6 +21,29 @@ RSpec.describe Fees::ChargeService, :premium do
     )
   end
 
+  # Bills April 2022, the period after `boundaries`, starting from what that period cached
+  def call_next_period
+    from_datetime = Time.zone.parse("2022-04-01")
+    to_datetime = Time.zone.parse("2022-04-30").end_of_day
+    next_boundaries = BillingPeriodBoundaries.new(
+      from_datetime:,
+      to_datetime:,
+      charges_from_datetime: from_datetime,
+      charges_to_datetime: to_datetime,
+      timestamp: to_datetime + 1.second,
+      charges_duration: 30
+    )
+
+    described_class.call(
+      invoice: create(:invoice, customer:, organization:),
+      metered_item: described_class::MeteredItem.from_charge(charge:, boundaries: next_boundaries),
+      billing_context:,
+      options:,
+      plan: subscription.plan,
+      customer:
+    )
+  end
+
   let(:customer) { create(:customer, organization:) }
   let(:billing_context) { Billing::Context.from(subscription:) }
   let(:organization) { create_default(:organization) }
@@ -957,6 +980,40 @@ RSpec.describe Fees::ChargeService, :premium do
               expect(snapshots.map { [it.grouped_by, it.presentation_breakdowns] }).to match_array(
                 [[aws_agg.grouped_by, aws_agg.presentation_breakdowns], [gcp_agg.grouped_by, gcp_agg.presentation_breakdowns]]
               )
+            end
+
+            context "when the next period is billed" do
+              before do
+                charge_subscription_service.call
+                create(
+                  :event,
+                  organization: subscription.organization,
+                  subscription:,
+                  code: charge.billable_metric.code,
+                  timestamp: Time.zone.parse("2022-04-16"),
+                  properties: {cloud: "aws", region: "us-east-1", value: 10}
+                )
+              end
+
+              it "starts each group's breakdowns from the units active at the end of the previous period" do
+                result = call_next_period
+                expect(result).to be_success
+
+                aws_fee = result.fees.find { it.grouped_by["cloud"] == "aws" }
+                gcp_fee = result.fees.find { it.grouped_by["cloud"] == "gcp" }
+
+                expect(aws_fee.presentation_breakdowns.map { [it.presentation_by, it.units.round(5)] }).to match_array(
+                  [[{"region" => "us-east-1"}, 15], [{"region" => "us-central-1"}, 5]]
+                )
+                expect(gcp_fee.presentation_breakdowns.map { [it.presentation_by, it.units.round(5)] }).to eq(
+                  [[{"region" => "eu-west-1"}, 3]]
+                )
+
+                aws_agg = result.cached_aggregations.find { it.grouped_by["cloud"] == "aws" }
+                expect(aws_agg.presentation_breakdowns.map { [it["groups"], it["value"].to_d] }).to match_array(
+                  [[{"region" => "us-east-1"}, 20], [{"region" => "us-central-1"}, 5]]
+                )
+              end
             end
           end
         end
@@ -2859,6 +2916,26 @@ RSpec.describe Fees::ChargeService, :premium do
           expect(result.fees.sole.presentation_breakdowns.map { [it.presentation_by, it.units.round(5).to_s] }).to match_array(
             [[{"region" => "us-east-1"}, "5.16129"], [{"region" => "eu-west-1"}, "2.58065"]]
           )
+        end
+
+        context "when the next period is billed" do
+          before do
+            charge_subscription_service.call
+            create(:event, organization: subscription.organization, subscription:, code: billable_metric.code,
+              timestamp: Time.zone.parse("2022-04-16"), properties: {region: "us-east-1", value: 10})
+          end
+
+          it "starts the breakdowns from the units active at the end of the previous period" do
+            result = call_next_period
+            expect(result).to be_success
+
+            expect(result.fees.sole.presentation_breakdowns.map { [it.presentation_by, it.units.round(5)] }).to match_array(
+              [[{"region" => "us-east-1"}, 15], [{"region" => "eu-west-1"}, 5]]
+            )
+            expect(result.cached_aggregations.sole.presentation_breakdowns.map { [it["groups"], it["value"].to_d] }).to match_array(
+              [[{"region" => "us-east-1"}, 20], [{"region" => "eu-west-1"}, 5]]
+            )
+          end
         end
       end
     end
