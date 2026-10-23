@@ -60,6 +60,7 @@ Rails.application.routes.draw do
       # /api/v2/{activity,api,security}_logs get the v2 response shape (cursor
       # pagination, v2 error body). Param names mirror config/routes/shared_api.rb.
       resources :activity_logs, param: :activity_id, only: %i[index show]
+      resources :api_logs, param: :request_id, only: %i[index show]
     end
 
     namespace :v2, module: :v1 do
