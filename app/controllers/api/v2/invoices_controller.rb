@@ -86,6 +86,67 @@ module Api
         end
       end
 
+      def retry_payment
+        invoice = find_invoice(:visible)
+        return not_found_error(resource: "invoice") unless invoice
+
+        result = ::Invoices::Payments::RetryService.call(
+          invoice:,
+          payment_method_params: retry_payment_params[:payment_method]
+        )
+
+        if result.success?
+          head(:ok)
+        else
+          render_error_response(result)
+        end
+      end
+
+      def payment_url
+        invoice = find_invoice(:visible)
+        return not_found_error(resource: "invoice") unless invoice
+
+        result = ::Invoices::Payments::GeneratePaymentUrlService.call(invoice:)
+
+        if result.success?
+          render(
+            json: ::V2::Invoices::PaymentUrlSerializer.new(
+              invoice,
+              root_name: "invoice_payment_details",
+              payment_url: result.payment_url
+            )
+          )
+        else
+          render_error_response(result)
+        end
+      end
+
+      def finalize
+        invoice = find_invoice(:draft)
+        return not_found_error(resource: "invoice") unless invoice
+
+        result = ::Invoices::RefreshDraftAndFinalizeService.call(invoice:)
+
+        if result.success?
+          render_invoice(result.invoice)
+        else
+          render_error_response(result)
+        end
+      end
+
+      def refresh
+        invoice = find_invoice(:visible)
+        return not_found_error(resource: "invoice") unless invoice
+
+        result = ::Invoices::RefreshDraftService.call(invoice:)
+
+        if result.success?
+          render_invoice(result.invoice)
+        else
+          render_error_response(result)
+        end
+      end
+
       private
 
       def find_invoice(status_scope)
@@ -94,6 +155,10 @@ module Api
 
       def resend_email_params
         params.permit(to: [], cc: [], bcc: [])
+      end
+
+      def retry_payment_params
+        params.permit(payment_method: [:payment_method_type, :payment_method_id]).to_h.deep_symbolize_keys
       end
 
       def resource_name

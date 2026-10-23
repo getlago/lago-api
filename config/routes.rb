@@ -58,6 +58,10 @@ Rails.application.routes.draw do
         post :download_pdf, on: :member
         post :resend_email, on: :member
         post :retry, on: :member
+        post :retry_payment, on: :member
+        post :payment_url, on: :member
+        put :refresh, on: :member
+        put :finalize, on: :member
       end
       resources :fees, only: %i[index show update destroy]
       resources :customers, only: [], param: :external_id, constraints: {external_id: /[^\/]+/} do
