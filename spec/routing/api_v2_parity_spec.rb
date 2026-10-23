@@ -48,4 +48,19 @@ RSpec.describe "API v2 routing parity" do
       end
     end
   end
+
+  it "routes fee endpoints to the v2 controller" do
+    id = SecureRandom.uuid
+
+    {
+      get: ["/api/v2/fees", "/api/v2/fees/#{id}"],
+      put: ["/api/v2/fees/#{id}"],
+      patch: ["/api/v2/fees/#{id}"],
+      delete: ["/api/v2/fees/#{id}"]
+    }.each do |method, paths|
+      paths.each do |path|
+        expect(Rails.application.routes.recognize_path(path, method:)[:controller]).to eq("api/v2/fees")
+      end
+    end
+  end
 end

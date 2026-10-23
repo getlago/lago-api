@@ -60,7 +60,16 @@ RSpec.describe BillingSegments::Fees::ComputeService do
           "fixed_charges_duration" => nil
         )
         expect(result.fee.subscription).to be_nil
+        expect(result.fee.pay_in_advance).to be(false)
         expect(result.true_up_fee).to be_nil
+      end
+
+      context "with an advance rate card" do
+        let(:rate_card) { create(:rate_card, :advance, organization:, product: fixed_product, currency: "USD") }
+
+        it "stores the advance billing timing on the fee" do
+          expect(result.fee.pay_in_advance).to be(true)
+        end
       end
 
       context "with a minimum amount above the fee amount" do

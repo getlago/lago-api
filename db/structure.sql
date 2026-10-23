@@ -825,6 +825,7 @@ DROP INDEX IF EXISTS public.index_fees_on_charge_filter_id;
 DROP INDEX IF EXISTS public.index_fees_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_fees_on_applied_add_on_id;
 DROP INDEX IF EXISTS public.index_fees_on_add_on_id;
+DROP INDEX IF EXISTS public.index_fees_by_product_cursor;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_transaction_id;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_timestamp;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_created_at;
@@ -9788,6 +9789,13 @@ CREATE INDEX index_events_on_organization_id_and_transaction_id ON public.events
 
 
 --
+-- Name: index_fees_by_product_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fees_by_product_cursor ON public.fees USING btree (organization_id, created_at DESC, id DESC) WHERE ((deleted_at IS NULL) AND (fee_type = 6));
+
+
+--
 -- Name: index_fees_on_add_on_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -15865,6 +15873,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20261023090000'),
+('20261022090030'),
 ('20261020144205'),
 ('20261020074217'),
 ('20261019074555'),
