@@ -218,16 +218,14 @@ module BillableMetrics
         return @grouped_latest_breakdowns if defined?(@grouped_latest_breakdowns)
 
         if latest_snapshots
-          return @grouped_latest_breakdowns = latest_snapshots.flat_map(&:presentation_breakdowns)
+          return @grouped_latest_breakdowns = latest_snapshots.flat_map do
+            with_grouped_by_keys(it.grouped_by, it.presentation_breakdowns)
+          end
         end
 
         if grouped_latest_cached_aggregations.any?
-          # Fees::ChargeService stores the breakdowns without the grouped_by keys of their group
-          return @grouped_latest_breakdowns = grouped_latest_cached_aggregations.flat_map do |cached_aggregation|
-            cached_aggregation.presentation_breakdowns.map do |breakdown|
-              breakdown = breakdown.with_indifferent_access
-              {groups: cached_aggregation.grouped_by.merge(breakdown[:groups]), value: breakdown[:value]}
-            end
+          return @grouped_latest_breakdowns = grouped_latest_cached_aggregations.flat_map do
+            with_grouped_by_keys(it.grouped_by, it.presentation_breakdowns)
           end
         end
 
@@ -236,6 +234,14 @@ module BillableMetrics
         end
 
         @grouped_latest_breakdowns = []
+      end
+
+      # Fees::ChargeService stores the breakdowns without the grouped_by keys of their group
+      def with_grouped_by_keys(grouped_by, breakdowns)
+        breakdowns.map do |breakdown|
+          breakdown = breakdown.with_indifferent_access
+          {groups: grouped_by.merge(breakdown[:groups]), value: breakdown[:value]}
+        end
       end
 
       def grouped_latest_cached_aggregations
