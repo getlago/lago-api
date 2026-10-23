@@ -3,7 +3,7 @@
 module PaymentRequestIndex
   extend ActiveSupport::Concern
 
-  def payment_request_index(external_customer_id:)
+  def payment_request_index(external_customer_id:, serializer: ::V1::PaymentRequestSerializer, preloads: [:customer, :invoices])
     filters = params.permit(:payment_status, :currency, billing_entity_codes: []).to_h
     billing_entity_codes = filters.delete(:billing_entity_codes)
 
@@ -25,10 +25,13 @@ module PaymentRequestIndex
     )
 
     if result.success?
+      payment_requests = result.payment_requests.preload(*preloads)
+      serializer.preload_collection(payment_requests) if serializer.respond_to?(:preload_collection)
+
       render(
         json: ::CollectionSerializer.new(
-          result.payment_requests.preload(:customer, :invoices),
-          ::V1::PaymentRequestSerializer,
+          payment_requests,
+          serializer,
           collection_name: "payment_requests",
           meta: pagination_metadata(result.payment_requests),
           includes: %i[customer invoices]

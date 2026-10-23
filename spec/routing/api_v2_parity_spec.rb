@@ -100,4 +100,17 @@ RSpec.describe "API v2 routing parity" do
 
     expect(recognized[:controller]).to eq("api/v2/customers/invoices")
   end
+
+  it "routes customer payment endpoints to their controllers" do
+    {
+      [:get, "/api/v2/customers/cus_1/payments"] => "api/v2/customers/payments",
+      [:get, "/api/v2/customers/cus_1/payment_requests"] => "api/v2/customers/payment_requests",
+      [:post, "/api/v2/customers/cus_1/checkout_url"] => "api/v2/customers",
+      [:get, "/api/v2/customers/cus_1/payment_methods"] => "api/v2/customers/payment_methods",
+      [:delete, "/api/v2/customers/cus_1/payment_methods/pm_1"] => "api/v2/customers/payment_methods",
+      [:put, "/api/v2/customers/cus_1/payment_methods/pm_1/set_as_default"] => "api/v2/customers/payment_methods"
+    }.each do |(method, path), controller|
+      expect(Rails.application.routes.recognize_path(path, method:)[:controller]).to eq(controller)
+    end
+  end
 end
