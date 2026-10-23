@@ -192,6 +192,21 @@ class Invoice < ApplicationRecord
     CreditNote.where(invoice_id: ids).group(:invoice_id).sum(:refund_amount_cents)
   end
 
+  # For each requested id, check existence without re-scanning the invoices
+  # table: unnest feeds the ids straight into a correlated EXISTS that stops at
+  # the first non-voided credit note.
+  preloadable_aggregation :has_non_voided_credit_notes?, default: false do |ids|
+    sql = sanitize_sql_array([<<~SQL.squish, ids, CreditNote.credit_statuses[:voided]])
+      SELECT invoice_ids.id
+      FROM unnest(ARRAY[?]::uuid[]) AS invoice_ids(id)
+      WHERE EXISTS (
+        SELECT 1 FROM credit_notes
+        WHERE credit_notes.invoice_id = invoice_ids.id AND credit_notes.credit_status <> ?
+      )
+    SQL
+    connection.select_values(sql).index_with(true)
+  end
+
   preloadable_associated_aggregation :fees, :credited_amount_cents
 
   def self.ransackable_attributes(_ = nil)
@@ -498,7 +513,7 @@ class Invoice < ApplicationRecord
   end
 
   def voidable?
-    if payment_dispute_lost_at? || total_paid_amount_cents > 0 || credit_notes.where.not(credit_status: :voided).any?
+    if payment_dispute_lost_at? || total_paid_amount_cents > 0 || has_non_voided_credit_notes?
       return false
     end
 
