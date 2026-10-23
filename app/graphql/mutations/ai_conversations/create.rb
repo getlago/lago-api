@@ -31,6 +31,11 @@ module Mutations
           )
         end
 
+        # The model expects the results of its pending tool calls before any new message
+        if ai_conversation.tool_calls.unsubmitted.pending.exists?
+          raise not_allowed_error(code: "ai_conversation_tool_calls_pending")
+        end
+
         ::AiConversations::StreamJob.perform_later(ai_conversation:, message:)
 
         ai_conversation

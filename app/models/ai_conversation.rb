@@ -4,6 +4,8 @@ class AiConversation < ApplicationRecord
   belongs_to :membership
   belongs_to :organization
 
+  has_many :tool_calls, class_name: "AiConversationToolCall"
+
   validates :name, presence: true
 end
 

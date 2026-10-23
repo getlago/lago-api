@@ -37,6 +37,12 @@ RSpec.describe Resolvers::AiConversationResolver do
             createdAt
             type
           }
+          pendingToolCalls {
+            id
+            name
+            arguments
+            status
+          }
           createdAt
           updatedAt
         }
@@ -106,6 +112,24 @@ RSpec.describe Resolvers::AiConversationResolver do
       expect(ai_conversation_response["messages"][0]["content"]).to eq("Hello")
       expect(ai_conversation_response["messages"][0]["type"]).to eq("message.output")
       expect(ai_conversation_response["messages"][1]["content"]).to eq("Hi there!")
+    end
+
+    it "returns the writes waiting for the member's confirmation" do
+      pending = create(:ai_conversation_tool_call, ai_conversation:)
+      create(:ai_conversation_tool_call, ai_conversation:, name: "get_coupon", status: "completed", requires_confirmation: false)
+      create(:ai_conversation_tool_call, ai_conversation:, status: "completed", submitted_at: Time.current)
+
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {id: ai_conversation.id}
+      )
+
+      expect(result["data"]["aiConversation"]["pendingToolCalls"]).to eq([
+        {"id" => pending.id, "name" => "create_coupon", "arguments" => {"coupon" => {"code" => "SPRING"}}, "status" => "pending"}
+      ])
     end
 
     context "when ai conversation is not found" do

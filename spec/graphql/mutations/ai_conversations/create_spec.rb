@@ -65,5 +65,27 @@ RSpec.describe Mutations::AiConversations::Create do
         message:
       ).on_queue("default")
     end
+
+    context "when a write of the conversation waits for the member's confirmation" do
+      subject(:result) do
+        execute_graphql(
+          current_user: membership.user,
+          current_organization: membership.organization,
+          permissions: required_permission,
+          query:,
+          variables: {input: {message:, conversationId: ai_conversation.id}}
+        )
+      end
+
+      let(:ai_conversation) { create(:ai_conversation, organization: membership.organization, membership:) }
+
+      before { create(:ai_conversation_tool_call, ai_conversation:) }
+
+      it "refuses the message" do
+        expect { result }.not_to have_enqueued_job(AiConversations::StreamJob)
+        expect_graphql_error(result:, message: "Method Not Allowed")
+        expect(result["errors"].first["extensions"]["code"]).to eq("ai_conversation_tool_calls_pending")
+      end
+    end
   end
 end
