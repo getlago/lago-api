@@ -1818,15 +1818,53 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         let(:period) do
           RecurringAggregationSnapshots::FetchService::Period.new(
             to_datetime: subscription_started_at + 3.days,
-            watermark: Time.current + 1.minute
+            watermark: period_watermark
           )
         end
+        let(:period_watermark) { (Time.current + 1.minute).floor(3) }
         let(:watermark) { Time.current + 2.hours }
 
         it "sums the events dated after the period and the late events" do
           expect(result).to eq(
             Events::Stores::BaseStore::RecurringAggregationResult.new(value: 1009, snapshot_value: 1009, events_count: 3, snapshot_events_count: 3)
           )
+        end
+
+        context "with late events ingested at the period watermark" do
+          before do
+            create_event(timestamp: subscription_started_at + 2.days, value: 10_000, created_at: period_watermark)
+            create_event(timestamp: subscription_started_at + 2.days, value: 100_000, created_at: period_watermark + 0.001)
+          end
+
+          it "leaves the event ingested at the period watermark to the snapshots" do
+            expect(result).to eq(
+              Events::Stores::BaseStore::RecurringAggregationResult.new(value: 101_009, snapshot_value: 101_009, events_count: 4, snapshot_events_count: 4)
+            )
+          end
+        end
+
+        context "with an event dated at the end of the period and ingested before its watermark" do
+          before do
+            create_event(timestamp: period.to_datetime, value: 10_000, created_at: Time.current - 1.hour)
+          end
+
+          it "leaves the event to the snapshots" do
+            expect(result).to eq(
+              Events::Stores::BaseStore::RecurringAggregationResult.new(value: 1009, snapshot_value: 1009, events_count: 3, snapshot_events_count: 3)
+            )
+          end
+        end
+
+        context "with an event dated after the period and ingested before its watermark" do
+          before do
+            create_event(timestamp: period.to_datetime + 1.second, value: 10_000, created_at: Time.current - 1.hour)
+          end
+
+          it "counts the event once" do
+            expect(result).to eq(
+              Events::Stores::BaseStore::RecurringAggregationResult.new(value: 11_009, snapshot_value: 11_009, events_count: 4, snapshot_events_count: 4)
+            )
+          end
         end
 
         context "when the late event is ingested after the watermark" do
