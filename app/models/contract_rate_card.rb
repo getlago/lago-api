@@ -50,6 +50,9 @@ class ContractRateCard < ApplicationRecord
       .where(customers: {deleted_at: nil})
   }
 
+  # The attachments the calendar can build a schedule for at all, due or not: what a preview reads.
+  scope :schedulable, -> { priced.starting_before_contract_end }
+
   # A card seeded from its contract carries the contract's explicit anchor, or
   # its own start day when the contract set none: an anchor matching what it
   # would have inherited follows the contract, any other was set on the card.
