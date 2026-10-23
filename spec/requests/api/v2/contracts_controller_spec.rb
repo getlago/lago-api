@@ -243,13 +243,41 @@ RSpec.describe Api::V2::ContractsController do
           purchase_order_number: nil,
           billing_anchor_date: nil,
           effective_billing_anchor_date: contract.effective_billing_anchor_date.iso8601,
-          started_at: contract.started_at.iso8601,
+          started_at: contract.started_at.iso8601(6),
           ended_at: nil,
           terminated_at: nil,
           canceled_at: nil,
           skip_invoice_custom_sections: false,
-          created_at: contract.created_at.iso8601,
-          updated_at: contract.updated_at.iso8601
+          created_at: contract.created_at.iso8601(6),
+          updated_at: contract.updated_at.iso8601(6)
+        )
+      end
+    end
+
+    context "with dates and datetimes" do
+      let(:params) { {status: "terminated"} }
+      let(:contract) do
+        create(
+          :contract,
+          :terminated,
+          organization:,
+          customer:,
+          catalog_plan:,
+          billing_anchor_date: Date.new(2026, 10, 5),
+          started_at: Time.zone.parse("2026-10-01T08:30:00.123456Z"),
+          terminated_at: Time.zone.parse("2026-10-20T17:45:00.654321Z")
+        )
+      end
+
+      it "returns the datetimes to the microsecond and the dates as days" do
+        subject
+
+        expect(json[:contract]).to include(
+          billing_anchor_date: "2026-10-05",
+          effective_billing_anchor_date: "2026-10-05",
+          started_at: "2026-10-01T08:30:00.123456Z",
+          terminated_at: "2026-10-20T17:45:00.654321Z",
+          created_at: contract.created_at.iso8601(6)
         )
       end
     end
@@ -334,7 +362,7 @@ RSpec.describe Api::V2::ContractsController do
       it "embeds the flat customer" do
         subject
 
-        expect(json[:contract][:customer]).to eq(V2::CustomerSerializer.new(customer).serialize)
+        expect(json[:contract][:customer]).to eq(V2::CustomerSerializer.new(customer, includes: %i[usec_timestamps]).serialize)
         expect(json[:contract][:customer]).to include(lago_id: customer.id, external_id: customer.external_id, deleted_at: nil)
         expect(json[:contract][:customer]).not_to include(:billing_configuration, :shipping_address, :metadata)
         expect(json[:contract].keys).to eq([*flat_keys, :customer])
@@ -346,8 +374,8 @@ RSpec.describe Api::V2::ContractsController do
         it "embeds it with its deleted_at" do
           subject
 
-          expect(json[:contract][:customer]).to eq(V2::CustomerSerializer.new(customer).serialize)
-          expect(json[:contract][:customer]).to include(lago_id: customer.id, deleted_at: customer.deleted_at.iso8601)
+          expect(json[:contract][:customer]).to eq(V2::CustomerSerializer.new(customer, includes: %i[usec_timestamps]).serialize)
+          expect(json[:contract][:customer]).to include(lago_id: customer.id, deleted_at: customer.deleted_at.iso8601(6))
         end
       end
     end
@@ -379,9 +407,13 @@ RSpec.describe Api::V2::ContractsController do
           subject
 
           expect(json[:contract][:invoice_custom_sections]).to eq(
-            [sections.third, sections.first, sections.second].map { V2::InvoiceCustomSectionSerializer.new(it).serialize }
+            [sections.third, sections.first, sections.second].map { V2::InvoiceCustomSectionSerializer.new(it, includes: %i[usec_timestamps]).serialize }
           )
           expect(json[:contract][:invoice_custom_sections]).to all(include(deleted_at: nil))
+          expect(json[:contract][:invoice_custom_sections].first).to include(
+            created_at: sections.third.created_at.iso8601(6),
+            updated_at: sections.third.updated_at.iso8601(6)
+          )
           expect(json[:contract].keys).to eq([*flat_keys, :invoice_custom_sections])
         end
 
