@@ -35,13 +35,14 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
   end
   let(:bypass_aggregation) { false }
   let(:filters) do
-    {event: pay_in_advance_event, grouped_by:, presentation_by:, charge_filter:, matching_filters:, ignored_filters:}
+    {event: pay_in_advance_event, grouped_by:, grouped_by_values:, presentation_by:, charge_filter:, matching_filters:, ignored_filters:}
   end
 
   let(:subscription) { create(:subscription, started_at: Time.current.beginning_of_month - 6.months) }
   let(:organization) { subscription.organization }
   let(:customer) { subscription.customer }
   let(:grouped_by) { nil }
+  let(:grouped_by_values) { nil }
   let(:presentation_by) { nil }
   let(:charge_filter) { nil }
   let(:matching_filters) { nil }
@@ -745,6 +746,52 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
         result = sum_service.aggregate
 
         expect(result.pay_in_advance_aggregation).to eq(4)
+      end
+    end
+
+    context "with a group value cached as blank" do
+      let(:grouped_by_values) { {"region" => nil} }
+      let(:cached_grouped_by) { {"region" => ""} }
+
+      before do
+        create(
+          :cached_aggregation,
+          organization:,
+          charge:,
+          external_subscription_id: subscription.external_id,
+          timestamp: to_datetime - 3.days,
+          current_aggregation: "4",
+          max_aggregation: "10",
+          grouped_by: cached_grouped_by
+        )
+      end
+
+      it "starts from the cached aggregation" do
+        result = sum_service.aggregate
+
+        expect(result.pay_in_advance_aggregation).to eq(4)
+        expect(result.current_aggregation).to eq(14)
+      end
+
+      context "when the cached group value is another value" do
+        let(:cached_grouped_by) { {"region" => "eu"} }
+
+        it "ignores the cached aggregation" do
+          result = sum_service.aggregate
+
+          expect(result.pay_in_advance_aggregation).to eq(10)
+        end
+      end
+
+      context "with several blank group values" do
+        let(:grouped_by_values) { {"region" => nil, "cloud" => nil} }
+        let(:cached_grouped_by) { {"region" => "", "cloud" => nil} }
+
+        it "starts from the cached aggregation" do
+          result = sum_service.aggregate
+
+          expect(result.pay_in_advance_aggregation).to eq(4)
+        end
       end
     end
 
