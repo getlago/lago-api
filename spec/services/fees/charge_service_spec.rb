@@ -980,7 +980,6 @@ RSpec.describe Fees::ChargeService, :premium do
               expect(gcp_agg.presentation_breakdowns.map { [it["groups"], it["value"].to_d] }).to eq(
                 [[{"region" => "eu-west-1"}, 3]]
               )
-
             end
 
             context "when the next period is billed" do
@@ -1010,8 +1009,8 @@ RSpec.describe Fees::ChargeService, :premium do
                   [[{"region" => "eu-west-1"}, 3]]
                 )
 
-                aws_agg = result.cached_aggregations.find { it.grouped_by["cloud"] == "aws" }
-                expect(aws_agg.presentation_breakdowns.map { [it["groups"], it["value"].to_d] }).to match_array(
+                aws_snapshot = RecurringAggregationSnapshot.where(subscription:).order(:to_datetime).select { it.grouped_by["cloud"] == "aws" }.last
+                expect(aws_snapshot.presentation_breakdowns.map { [it["groups"], it["value"].to_d] }).to match_array(
                   [[{"region" => "us-east-1"}, 20], [{"region" => "us-central-1"}, 5]]
                 )
               end
@@ -2934,7 +2933,7 @@ RSpec.describe Fees::ChargeService, :premium do
             expect(result.fees.sole.presentation_breakdowns.map { [it.presentation_by, it.units.round(5)] }).to match_array(
               [[{"region" => "us-east-1"}, 15], [{"region" => "eu-west-1"}, 5]]
             )
-            expect(result.cached_aggregations.sole.presentation_breakdowns.map { [it["groups"], it["value"].to_d] }).to match_array(
+            expect(RecurringAggregationSnapshot.where(subscription:).order(:to_datetime).last.presentation_breakdowns.map { [it["groups"], it["value"].to_d] }).to match_array(
               [[{"region" => "us-east-1"}, 20], [{"region" => "eu-west-1"}, 5]]
             )
           end
