@@ -18,7 +18,7 @@ RSpec.describe RecurringAggregationSnapshots::AuditService do
   let(:fee_units) { 5 }
 
   before do
-    create(:invoice_subscription, subscription:, invoice:, charges_to_datetime: to_datetime)
+    create(:invoice_subscription, subscription:, invoice:, charges_to_datetime: to_datetime, invoicing_reason: :subscription_periodic)
     create_snapshot(units: snapshot_units, events_count: 2)
     create_fee(total_aggregated_units: fee_units, events_count: 2)
   end
@@ -42,6 +42,7 @@ RSpec.describe RecurringAggregationSnapshots::AuditService do
       snapshot_events_count: 2,
       fee_events_count: 2,
       adjusted: false,
+      watermark_gap: false,
       **attributes
     )
   end
@@ -51,6 +52,7 @@ RSpec.describe RecurringAggregationSnapshots::AuditService do
     expect(result.rows).to eq([row])
     expect(result.differences).to be_empty
     expect(result.adjusted_rows).to be_empty
+    expect(result.watermark_gap_rows).to be_empty
     expect(result.periods_without_invoice).to be_empty
     expect(result.periods_without_marker).to be_empty
   end
@@ -60,6 +62,113 @@ RSpec.describe RecurringAggregationSnapshots::AuditService do
 
     it "reports the leaf" do
       expect(result.differences).to eq([row(fee_units: 8)])
+    end
+  end
+
+  context "with events ingested after the watermark" do
+    let(:watermark) { Time.zone.parse("2022-04-01T00:02:00") }
+    let(:fee_created_at) { Time.zone.parse("2022-04-01T00:07:00") }
+    let(:event_created_at) { watermark + 1.minute }
+    let(:fee_units) { 8 }
+
+    before do
+      RecurringAggregationSnapshot.update_all(watermark:) # rubocop:disable Rails/SkipsModelValidations
+      Fee.sole.update!(created_at: fee_created_at, events_count: 3)
+      create(
+        :event,
+        organization_id: organization.id,
+        subscription:,
+        code: billable_metric.code,
+        timestamp: to_datetime - 1.minute,
+        created_at: event_created_at,
+        properties: {"item_id" => 3}
+      )
+    end
+
+    it "reports the leaf as a watermark gap, not as a difference" do
+      expect(result.differences).to be_empty
+      expect(result.watermark_gap_rows).to eq([row(fee_units: 8, fee_events_count: 3, watermark_gap: true)])
+    end
+
+    context "when the event was ingested before the watermark" do
+      let(:event_created_at) { watermark - 1.minute }
+
+      it "reports the difference" do
+        expect(result.differences).to eq([row(fee_units: 8, fee_events_count: 3)])
+        expect(result.watermark_gap_rows).to be_empty
+      end
+    end
+
+    context "when the event was ingested after the fee" do
+      let(:event_created_at) { fee_created_at + 1.minute }
+
+      it "reports the difference" do
+        expect(result.differences).to eq([row(fee_units: 8, fee_events_count: 3)])
+      end
+    end
+
+    context "when the fee billed other units" do
+      let(:fee_units) { 9 }
+
+      it "reports the difference" do
+        expect(result.differences).to eq([row(fee_units: 9, fee_events_count: 3)])
+      end
+    end
+
+    context "with the ClickHouse event store", clickhouse: {clean_before: true} do
+      subject(:result) do
+        Events::Stores::StoreFactory.with_override(store_class: Events::Stores::ClickhouseStore) do
+          described_class.call(subscription:)
+        end
+      end
+
+      before do
+        Event.delete_all
+        create(
+          :clickhouse_events_enriched,
+          organization:,
+          subscription:,
+          billable_metric:,
+          timestamp: to_datetime - 1.minute,
+          enriched_at: event_created_at,
+          properties: {"item_id" => "3"},
+          value: "3",
+          decimal_value: 3
+        )
+      end
+
+      it "reports the leaf as a watermark gap, not as a difference" do
+        expect(result.differences).to be_empty
+        expect(result.watermark_gap_rows).to eq([row(fee_units: 8, fee_events_count: 3, watermark_gap: true)])
+      end
+
+      context "when the event was ingested before the watermark" do
+        let(:event_created_at) { watermark - 1.minute }
+
+        it "reports the difference" do
+          expect(result.differences).to eq([row(fee_units: 8, fee_events_count: 3)])
+        end
+      end
+    end
+
+    context "with pricing groups" do
+      let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {"amount" => "1", "pricing_group_keys" => ["region"]}) }
+
+      before do
+        RecurringAggregationSnapshot.delete_all
+        Fee.delete_all
+        create_snapshot(grouped_by: {"region" => nil}, units: 0, events_count: 0, watermark:)
+        create_snapshot(grouped_by: {"region" => "eu"}, units: 5, events_count: 2, watermark:)
+        create_fee(grouped_by: {"region" => "eu"}, total_aggregated_units: 8, events_count: 3, created_at: fee_created_at)
+        Event.update_all(properties: {"item_id" => 3, "region" => "eu"}) # rubocop:disable Rails/SkipsModelValidations
+      end
+
+      it "measures the gap of the event's group" do
+        expect(result.differences).to be_empty
+        expect(result.watermark_gap_rows).to eq(
+          [row(grouped_by: {"region" => "eu"}, fee_units: 8, fee_events_count: 3, watermark_gap: true)]
+        )
+      end
     end
   end
 
@@ -253,6 +362,23 @@ RSpec.describe RecurringAggregationSnapshots::AuditService do
 
     it "compares the units only" do
       expect(result.rows).to eq([row(snapshot_events_count: nil, fee_events_count: nil)])
+    end
+  end
+
+  context "with a later invoice of another reason on the same boundary" do
+    before do
+      create(
+        :invoice_subscription,
+        subscription:,
+        invoice: create(:invoice, organization:, customer:),
+        charges_to_datetime: to_datetime,
+        invoicing_reason: :in_advance_charge_periodic,
+        created_at: 1.hour.from_now
+      )
+    end
+
+    it "compares the snapshot with the fees of the periodic invoice" do
+      expect(result.rows).to eq([row])
     end
   end
 

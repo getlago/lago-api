@@ -25,7 +25,7 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:audit" do # rubocop:disa
     Rake::Task.define_task(:environment)
     task.reenable
 
-    create(:invoice_subscription, subscription:, invoice:, charges_to_datetime: to_datetime)
+    create(:invoice_subscription, subscription:, invoice:, charges_to_datetime: to_datetime, invoicing_reason: :subscription_periodic)
     create(:recurring_aggregation_snapshot, organization:, subscription:, charge:, to_datetime:, units: 10, events_count: 4)
     create(:charge_fee, organization:, invoice:, subscription:, charge:, total_aggregated_units: 12, events_count: 4)
   end
@@ -36,7 +36,7 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:audit" do # rubocop:disa
     before { stub_stdin(organization.id, "y", subscription.id, csv_path) }
 
     it "writes one CSV row per differing leaf" do
-      expect { task.invoke }.to output(/1 leaf\/leaves, 1 differing, 0 adjusted, 0 period\(s\) without invoice, 0 period\(s\) without marker/).to_stdout
+      expect { task.invoke }.to output(/1 leaf\/leaves, 1 differing, 0 adjusted, 0 explained by events ingested after the watermark, 0 period\(s\) without invoice, 0 period\(s\) without marker/).to_stdout
 
       expect(CSV.read(csv_path)).to eq(
         [

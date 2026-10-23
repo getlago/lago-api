@@ -36,6 +36,7 @@ namespace :recipes do
 
       differences = 0
       adjusted_rows = 0
+      watermark_gap_rows = 0
       periods_without_invoice = 0
       periods_without_marker = 0
 
@@ -46,12 +47,14 @@ namespace :recipes do
           audit = RecurringAggregationSnapshots::AuditService.call!(subscription:)
           differences += audit.differences.size
           adjusted_rows += audit.adjusted_rows.size
+          watermark_gap_rows += audit.watermark_gap_rows.size
           periods_without_invoice += audit.periods_without_invoice.size
           periods_without_marker += audit.periods_without_marker.size
 
           puts "  Subscription #{subscription.id} (#{subscription.external_id}): " \
                "#{audit.rows.size} leaf/leaves, #{audit.differences.size} differing, " \
                "#{audit.adjusted_rows.size} adjusted, " \
+               "#{audit.watermark_gap_rows.size} explained by events ingested after the watermark, " \
                "#{audit.periods_without_invoice.size} period(s) without invoice, " \
                "#{audit.periods_without_marker.size} period(s) without marker"
 
@@ -74,9 +77,9 @@ namespace :recipes do
 
       puts ""
       puts "Differing leaves: #{differences}, adjusted leaves: #{adjusted_rows}, " \
+           "leaves explained by events ingested after the watermark: #{watermark_gap_rows}, " \
            "periods without invoice: #{periods_without_invoice}, periods without marker: #{periods_without_marker}"
       puts "Differences: #{csv_path}"
-      puts "A sum snapshot stops at its watermark: an event ingested between the watermark and the invoice differs too."
     end
   end
 end
