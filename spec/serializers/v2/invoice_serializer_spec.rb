@@ -132,15 +132,31 @@ RSpec.describe V2::InvoiceSerializer do
       let(:contract) { create(:contract, organization:, customer:, catalog_plan: create(:catalog_plan, organization:)) }
       let(:other_contract) { create(:contract, organization:, customer: create(:customer, organization:), catalog_plan: create(:catalog_plan, organization:)) }
 
-      it "loads the customers, plans and rate cards of all the contracts at once" do
+      it "loads the customers, billing entities, plans and rate cards of all the contracts at once" do
         create(:contract_rate_card, organization:, contract: other_contract)
         tables = []
-        callback = ->(*, payload) { tables << payload[:sql][/FROM "(customers|contract_rate_cards|#{CatalogPlan.table_name})"/, 1] }
+        callback = ->(*, payload) { tables << payload[:sql][/FROM "(customers|billing_entities|contract_rate_cards|#{CatalogPlan.table_name})"/, 1] }
 
         ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { result }
 
         expect(result["contracts"].map { it["applied_rate_cards_count"] }).to eq([contract, other_contract].map { it.applied_rate_cards.count })
-        expect(tables.compact.tally).to eq("customers" => 1, "contract_rate_cards" => 1, CatalogPlan.table_name => 1)
+        expect(tables.compact.tally).to eq("customers" => 1, "billing_entities" => 1, "contract_rate_cards" => 1, CatalogPlan.table_name => 1)
+      end
+    end
+
+    context "with the fees of a deleted product" do
+      let(:includes) { %i[fees] }
+
+      before { Product.find(product.id).discard! }
+
+      it "loads the product and its category once for all the fees" do
+        tables = []
+        callback = ->(*, payload) { tables << payload[:sql][/FROM "(products|product_categories)"/, 1] }
+
+        ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { result }
+
+        expect(result["fees"].map { it["product_code"] }).to eq([product.code] * 3)
+        expect(tables.compact.tally).to eq("products" => 1, "product_categories" => 1)
       end
     end
 

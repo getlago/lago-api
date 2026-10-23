@@ -21,7 +21,7 @@ module V2
       {invoice: :customer},
       {contract: :customer},
       {contract_rate_card: :rate_card},
-      {invoiceable: :product_category}
+      {billed_product: :product_category}
     ].freeze
 
     def serialize
@@ -93,7 +93,7 @@ module V2
     def product
       return @product if defined?(@product)
 
-      @product = record_or_discarded(model.invoiceable, Product, model.invoiceable_id)
+      @product = record_or_discarded(model.billed_product, Product, model.invoiceable_id)
     end
 
     def product_category
