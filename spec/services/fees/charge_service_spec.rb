@@ -5249,6 +5249,30 @@ RSpec.describe Fees::ChargeService, :premium do
         end
       end
 
+      context "with a pay in advance charge" do
+        let(:charge) do
+          create(:standard_charge, plan: subscription.plan, billable_metric:, pay_in_advance: true, invoiceable: true, properties: {amount: "20"})
+        end
+
+        it "bills what the full scan bills" do
+          expect(bill(march)).to eq([[{}, 18, 3]])
+
+          create_event("2022-03-25", 7, "eu", created_at: Time.zone.parse("2022-04-01T05:00:00"))
+
+          expect(bill(april)).to eq([[{}, 45, 5]])
+          expect(bill(may)).to eq([[{}, 49, 6]])
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
+            .with(hash_including(initial_value: [have_attributes(grouped_by: {})])).twice
+        end
+
+        it "starts from the snapshot of the previous period" do
+          bill(march)
+          RecurringAggregationSnapshot.update_all(units: 1000, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+
+          expect(bill(april)).to eq([[{}, 1000 + 20, 4]])
+        end
+      end
+
       context "with a weighted sum billable metric" do
         let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
 
