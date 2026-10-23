@@ -365,7 +365,7 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
                 currency: "EUR",
                 created_at: timestamp,
                 deleted_at: timestamp,
-                taxes: [vat_payload]
+                taxes: [vat_v2_payload]
               )
             end
           end
