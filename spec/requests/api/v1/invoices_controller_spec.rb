@@ -305,8 +305,6 @@ RSpec.describe Api::V1::InvoicesController do
     end
 
     context "when the invoice has a product fee" do
-      subject { get_with_token(organization, "/api/v2/invoices/#{invoice_id}") }
-
       let(:product) do
         create(:product, organization:, code: "compute", name: "Compute", description: "Compute usage")
       end
