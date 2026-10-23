@@ -24,8 +24,10 @@ module Wallets
           end
 
           ::Wallets::ThresholdTopUpService.call(wallet:, state_changed:)
-          UsageMonitoring::ProcessWalletAlertsJob.perform_later(wallet)
         end
+
+        # This update only moves the ongoing balances: when they stay put, no alert can cross a threshold.
+        UsageMonitoring::DispatchWalletAlertsService.call(wallet:) if state_changed
 
         result.wallet = wallet
         result
