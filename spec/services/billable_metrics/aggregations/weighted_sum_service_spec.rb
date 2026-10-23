@@ -282,7 +282,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
       end
     end
 
-    context "when using presentation_by with events and cached presentation breakdowns" do
+    context "when using presentation_by with events and snapshot presentation breakdowns" do
       let(:presentation_by) { ["region"] }
       let(:events_values) do
         [
@@ -290,16 +290,8 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
           {timestamp: Time.zone.parse("2023-08-16 00:00:00"), value: 4, region: "us"}
         ]
       end
-      let(:cached_aggregation) do
-        create(
-          :cached_aggregation,
-          charge:,
-          organization:,
-          external_subscription_id: subscription.external_id,
-          timestamp: from_datetime - 1.day,
-          current_aggregation: 100,
-          presentation_breakdowns: [{"groups" => {"region" => "eu"}, "value" => "100.0"}]
-        )
+      let(:initial_value) do
+        [snapshot(units: 100, presentation_breakdowns: [{"groups" => {"region" => "eu"}, "value" => "100.0"}])]
       end
 
       it "returns the weighted breakdowns and the units active at period end" do
@@ -716,7 +708,7 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
           end
         end
 
-        context "when the cached presentation breakdowns are stored without the grouped_by keys" do
+        context "when the snapshot presentation breakdowns are stored without the grouped_by keys" do
           let(:frodo_presentation_breakdowns) do
             [
               {"groups" => {"region" => "us"}, "value" => "100.0"}
