@@ -66,22 +66,24 @@ describe "Free Trial Billing Subscriptions Scenario" do
         expect(customer.reload.invoices.count).to eq(0)
       end
 
-      # NOTE: The subscription was started at 12:12:00, so the trial period ends exactly at 12:12:00
-      #       This ensure that Subscriptions::FreeTrialBillingService grabs subscriptions that
-      #       ended in the last hour.
-      travel_to(Time.zone.parse("2024-03-15T12:02:00")) do
+      # NOTE: Trial expiry is date-based in the customer timezone: the subscription is billed
+      #       at the first clock tick of the trial end date (Mar 15), not once the exact signup
+      #       time of day (12:12:00) has passed. The fee already treats the whole trial end date
+      #       as the first paid day, so billing happens on that same date.
+      travel_to(Time.zone.parse("2024-03-15T00:02:00")) do
         expect(subscription).to be_in_trial_period
-        perform_billing
-        expect(customer.reload.invoices.count).to eq(0)
-      end
-
-      travel_to(Time.zone.parse("2024-03-15T13:02:00")) do
-        expect(subscription).not_to be_in_trial_period
         perform_billing
         expect(customer.reload.invoices.count).to eq(1)
         invoice = customer.reload.invoices.sole
         expect(invoice.fees.count).to eq(1)
         expect(invoice.fees.subscription.first.amount_cents).to eq(2_741_935) # (31 - 4 - 10) / 31 * 5000000 = 2741935
+        expect(subscription.reload).not_to be_in_trial_period
+      end
+
+      # Later ticks on the trial end date do not bill again
+      travel_to(Time.zone.parse("2024-03-15T13:02:00")) do
+        perform_billing
+        expect(customer.reload.invoices.count).to eq(1)
       end
     end
 
@@ -430,8 +432,10 @@ describe "Free Trial Billing Subscriptions Scenario" do
 
       expect(customer.reload.invoices.count).to eq(0)
 
-      # NOTE: Subscriptions::OrganizationBillingService will bill the subscription because it's billing day
-      #       Subscriptions::FreeTrialBillingService will ignore it because the trial ends at 12:12:00
+      # NOTE: Subscriptions::OrganizationBillingService will bill the subscription because it's billing day.
+      #       Subscriptions::FreeTrialBillingService also selects it (the trial end date is today in the
+      #       customer timezone) but defers billing to the periodic biller to avoid a duplicate fee, and
+      #       only marks the trial as ended.
       #
       #   Time.current:                         31 Mar 2024 22:01:00 UTC +00:00
       #   Time.current.in_time_zone(timezone):  01 Apr 2024 00:01:00 CEST +02:00
@@ -444,8 +448,8 @@ describe "Free Trial Billing Subscriptions Scenario" do
         expect(invoice.fees.charge.first.amount_cents).to eq(1000)
       end
 
-      # NOTE: After the trial ends, we don't invoice again because it was done above
-      #       but we terminate the trial and send the webhook
+      # NOTE: The trial was already marked ended on billing day; later ticks neither
+      #       invoice again nor reprocess the subscription
       travel_to(Time.zone.parse("2024-04-01T13:11:00")) do
         perform_billing
         expect(customer.reload.invoices.count).to eq(1)
@@ -510,23 +514,23 @@ describe "Free Trial Billing Subscriptions Scenario" do
           Clock::FreeTrialSubscriptionsBillerJob.perform_later
           perform_all_enqueued_jobs
 
-          invoice = customer.invoices.order(created_at: :desc).sole
+          # NOTE: The trial end date is also the billing day. Billing is deferred to the periodic
+          #       biller (it runs every hour at :10) to avoid a duplicate subscription fee; the
+          #       trial biller only marks the trial as ended.
+          expect(customer.reload.invoices.count).to eq(0)
           expect(customer.subscriptions.sole.trial_ended_at).to match_datetime(start_time + trial_period.days)
-          # NOTE: The charge are not billed because FreeTrialBillingService use `skip_charges: true`
-          expect(invoice.fees.count).to eq(1)
-          expect(invoice.fees.subscription.first.amount_cents).to eq(5_000_000) # full fee, trial is over
         end
 
-        # NOTE: A new invoice is created because the end of trial invoice is created with `recurring: false`
-        #       Only the usage-based is charged because subscription was already billed
-        #       see Invoices::CalculateFeesService.should_create_subscription_fee?
+        # NOTE: The periodic biller then bills the full period in a single invoice:
+        #       full subscription fee (the trial is over) plus the usage-based charges
         travel_to(Time.zone.parse("2024-04-01T15:11:00")) do
           Clock::SubscriptionsBillerJob.perform_later
           perform_all_enqueued_jobs
 
-          expect(customer.reload.invoices.count).to eq(2)
-          invoice = customer.invoices.order(created_at: :desc).first
-          expect(invoice.fees.count).to eq(1)
+          expect(customer.reload.invoices.count).to eq(1)
+          invoice = customer.invoices.sole
+          expect(invoice.fees.count).to eq(2)
+          expect(invoice.fees.subscription.sole.amount_cents).to eq(5_000_000) # full fee, trial is over
           expect(invoice.fees.charge.sole.amount_cents).to eq(1000)
         end
       end
