@@ -260,6 +260,32 @@ RSpec.describe LagoMcpClient::Mistral::Agent do
       )
     end
 
+    it "calls on_submitted once the model has the results" do
+      calls = []
+      allow(mistral_client).to receive(:append_to_conversation) do |**_args, &block|
+        calls << :append
+        {"outputs" => [{"content" => "The coupon was created"}]}
+      end
+
+      agent.submit_tool_results(tool_results, on_submitted: -> { calls << :submitted }) { |_chunk| }
+
+      expect(calls).to eq(%i[append submitted])
+    end
+
+    context "when the model does not accept the results" do
+      before do
+        allow(mistral_client).to receive(:append_to_conversation).and_raise(LagoMcpClient::Mistral::ApiError.new(503, "unavailable"))
+      end
+
+      it "does not call on_submitted" do
+        submitted = false
+
+        expect { agent.submit_tool_results(tool_results, on_submitted: -> { submitted = true }) { |_chunk| } }
+          .to raise_error(LagoMcpClient::Mistral::ApiError)
+        expect(submitted).to be(false)
+      end
+    end
+
     it "requires a block" do
       expect { agent.submit_tool_results(tool_results) }.to raise_error(ArgumentError)
     end

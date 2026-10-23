@@ -37,7 +37,7 @@ RSpec.describe Mutations::AiConversations::ConfirmToolCall do
 
     expect(data).to include("id" => tool_call.id, "name" => "create_coupon", "status" => "confirmed")
     expect(tool_call.reload.status).to eq("confirmed")
-    expect(AiConversations::ResumeJob).to have_been_enqueued.with(ai_conversation:)
+    expect(AiConversations::ResumeJob).to have_been_enqueued.with(ai_conversation)
   end
 
   context "when the conversation belongs to another member" do

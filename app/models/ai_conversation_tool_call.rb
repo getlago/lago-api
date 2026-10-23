@@ -4,7 +4,12 @@
 # until the member confirms or cancels every write, then all its results go back to the model.
 # The row records the member the agent acted for.
 class AiConversationToolCall < ApplicationRecord
-  STATUSES = %w[pending confirmed cancelled completed].freeze
+  STATUSES = {
+    pending: "pending",
+    confirmed: "confirmed",
+    cancelled: "cancelled",
+    completed: "completed"
+  }.freeze
 
   belongs_to :organization
   belongs_to :ai_conversation
@@ -29,7 +34,7 @@ end
 #  position              :integer          default(0), not null
 #  requires_confirmation :boolean          default(FALSE), not null
 #  result                :text
-#  status                :integer          default("pending"), not null
+#  status                :enum             default("pending"), not null
 #  submitted_at          :datetime
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null

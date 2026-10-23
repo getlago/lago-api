@@ -35,7 +35,7 @@ module AiConversations
 
       return result.not_allowed_failure!(code: "tool_call_already_decided") unless decided
 
-      AiConversations::ResumeJob.perform_later(ai_conversation:) unless ai_conversation.tool_calls.unsubmitted.pending.exists?
+      AiConversations::ResumeJob.perform_later(ai_conversation) unless ai_conversation.tool_calls.unsubmitted.pending.exists?
 
       result.tool_call = tool_call
       result

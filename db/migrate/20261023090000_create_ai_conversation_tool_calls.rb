@@ -2,6 +2,8 @@
 
 class CreateAiConversationToolCalls < ActiveRecord::Migration[8.1]
   def change
+    create_enum :ai_conversation_tool_call_status, %w[pending confirmed cancelled completed]
+
     create_table :ai_conversation_tool_calls, id: :uuid, if_not_exists: true do |t|
       t.references :organization, null: false, foreign_key: true, type: :uuid, index: true
       t.references :ai_conversation, null: false, foreign_key: true, type: :uuid, index: false
@@ -9,7 +11,7 @@ class CreateAiConversationToolCalls < ActiveRecord::Migration[8.1]
       t.string :tool_call_id, null: false
       t.string :name, null: false
       t.jsonb :arguments, null: false, default: {}
-      t.integer :status, null: false, default: 0
+      t.enum :status, enum_type: :ai_conversation_tool_call_status, null: false, default: "pending"
       t.boolean :requires_confirmation, null: false, default: false
       t.integer :position, null: false, default: 0
       t.text :result

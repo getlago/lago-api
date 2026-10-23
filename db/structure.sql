@@ -1529,6 +1529,7 @@ DROP TYPE IF EXISTS public.billing_segment_status;
 DROP TYPE IF EXISTS public.billing_object_connection_behavior;
 DROP TYPE IF EXISTS public.billable_metric_weighted_interval;
 DROP TYPE IF EXISTS public.billable_metric_rounding_function;
+DROP TYPE IF EXISTS public.ai_conversation_tool_call_status;
 DROP EXTENSION IF EXISTS unaccent;
 DROP EXTENSION IF EXISTS pgcrypto;
 DROP EXTENSION IF EXISTS pg_trgm;
@@ -1583,6 +1584,18 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
 --
 
 CREATE EXTENSION IF NOT EXISTS unaccent WITH SCHEMA public;
+
+
+--
+-- Name: ai_conversation_tool_call_status; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.ai_conversation_tool_call_status AS ENUM (
+    'pending',
+    'confirmed',
+    'cancelled',
+    'completed'
+);
 
 
 --
@@ -2347,7 +2360,7 @@ CREATE TABLE public.ai_conversation_tool_calls (
     tool_call_id character varying NOT NULL,
     name character varying NOT NULL,
     arguments jsonb DEFAULT '{}'::jsonb NOT NULL,
-    status integer DEFAULT 0 NOT NULL,
+    status public.ai_conversation_tool_call_status DEFAULT 'pending'::public.ai_conversation_tool_call_status NOT NULL,
     requires_confirmation boolean DEFAULT false NOT NULL,
     "position" integer DEFAULT 0 NOT NULL,
     result text,

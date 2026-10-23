@@ -31,8 +31,9 @@ module Mutations
           )
         end
 
-        # The model expects the results of its pending tool calls before any new message
-        if ai_conversation.tool_calls.unsubmitted.pending.exists?
+        # The model expects the results of its last tool calls before any new message. They stay
+        # unsubmitted until the member answers every write and the conversation resumes.
+        if ai_conversation.tool_calls.unsubmitted.exists?
           raise not_allowed_error(code: "ai_conversation_tool_calls_pending")
         end
 

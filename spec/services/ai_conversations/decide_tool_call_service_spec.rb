@@ -14,7 +14,7 @@ RSpec.describe AiConversations::DecideToolCallService do
       freeze_time do
         expect(result).to be_success
         expect(tool_call.reload).to have_attributes(status: "confirmed", decided_at: Time.current, result: nil)
-        expect(AiConversations::ResumeJob).to have_been_enqueued.with(ai_conversation:)
+        expect(AiConversations::ResumeJob).to have_been_enqueued.with(ai_conversation)
       end
     end
   end
@@ -25,7 +25,7 @@ RSpec.describe AiConversations::DecideToolCallService do
     it "marks the call as cancelled with a result for the model" do
       expect(result).to be_success
       expect(tool_call.reload).to have_attributes(status: "cancelled", result: described_class::CANCELLED_RESULT)
-      expect(AiConversations::ResumeJob).to have_been_enqueued.with(ai_conversation:)
+      expect(AiConversations::ResumeJob).to have_been_enqueued.with(ai_conversation)
     end
   end
 

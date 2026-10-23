@@ -56,6 +56,22 @@ RSpec.describe AiConversations::ResumeService do
     end
   end
 
+  context "when Mistral does not accept the results" do
+    before do
+      allow(mistral_client).to receive(:append_to_conversation).and_raise(LagoMcpClient::Mistral::ApiError.new(503, "unavailable"))
+    end
+
+    it "keeps the batch for the next attempt without running the write again" do
+      expect(service.call).to be_failure
+      expect(write_call.reload).to have_attributes(status: "completed", submitted_at: nil)
+      expect(read_call.reload.submitted_at).to be_nil
+
+      described_class.new(ai_conversation:).call
+
+      expect(mcp_client).to have_received(:call_tool).once
+    end
+  end
+
   context "when the member lost the permission after confirming" do
     let(:permissions) { %w[ai_conversations:create ai_conversations:view coupons:view] }
 

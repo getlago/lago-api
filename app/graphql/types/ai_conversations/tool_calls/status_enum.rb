@@ -6,7 +6,7 @@ module Types
       class StatusEnum < Types::BaseEnum
         graphql_name "AiConversationToolCallStatusEnum"
 
-        AiConversationToolCall::STATUSES.each do |status|
+        AiConversationToolCall::STATUSES.each_value do |status|
           value status
         end
       end

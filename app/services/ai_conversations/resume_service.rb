@@ -23,10 +23,16 @@ module AiConversations
     def stream_response
       tool_results = tool_calls.map { |tool_call| tool_result(tool_call) }
 
-      # Marked before the results are sent, so a retry never runs a confirmed write twice.
-      AiConversationToolCall.where(id: tool_calls.map(&:id)).update_all(submitted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      mistral_agent.submit_tool_results(tool_results, on_submitted: -> { mark_submitted! }) do |chunk|
+        stream_chunk(chunk)
+      end
+    end
 
-      mistral_agent.submit_tool_results(tool_results) { |chunk| stream_chunk(chunk) }
+    # Only once the model has the results: a failure before that leaves the batch to the next
+    # attempt, which does not run the writes again as they are already completed.
+    def mark_submitted!
+      AiConversationToolCall.where(id: tool_calls.map(&:id))
+        .update_all(submitted_at: Time.current, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
     end
 
     def tool_result(tool_call)

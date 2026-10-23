@@ -29,11 +29,12 @@ module LagoMcpClient
       end
 
       # Sends the results of a batch that waited for a confirmation, then carries on
-      # the conversation as #chat does.
-      def submit_tool_results(tool_results, max_tool_iterations: MAX_ITERATIONS)
+      # the conversation as #chat does. on_submitted is called once the model has the results.
+      def submit_tool_results(tool_results, max_tool_iterations: MAX_ITERATIONS, on_submitted: nil)
         raise ArgumentError, "Block required for streaming" unless block_given?
 
         response = send_tool_results(tool_results) { |chunk| yield chunk }
+        on_submitted&.call
         follow_tool_calls(response, max_tool_iterations) { |chunk| yield chunk }
       end
 
