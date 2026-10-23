@@ -173,7 +173,7 @@ module Fees
         persist_recurring_value(
           aggregation_result.aggregations || [aggregation_result],
           selected_metered_item,
-          breakdowns_by_group
+          breakdowns_by_grouped_by(aggregation_result.recurring_breakdowns || aggregation_result.breakdowns, charge_model_result)
         )
       end
 
