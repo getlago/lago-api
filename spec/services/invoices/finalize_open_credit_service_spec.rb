@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Invoices::FinalizeOpenCreditService do
+  subject(:service_result) { service.call }
+
   let(:service) { described_class.new(invoice:) }
 
   let(:organization) { create(:organization, email_settings: Organization::EMAIL_SETTINGS) }
@@ -45,6 +47,21 @@ RSpec.describe Invoices::FinalizeOpenCreditService do
         expect(Invoices::GenerateDocumentsJob).not_to have_been_enqueued
         expect(Integrations::Aggregator::Invoices::CreateJob).not_to have_been_enqueued
         expect(SegmentTrackJob).not_to have_been_enqueued
+      end
+    end
+
+    context "when the invoice has a succeeded payment" do
+      let(:payment) do
+        create(:payment, payable: invoice, organization:, customer: invoice.customer,
+          payable_payment_status: :succeeded, provider_payment_id: "pi_123")
+      end
+
+      before { payment }
+
+      it "enqueues a reference update with the finalized invoice number" do
+        service_result
+
+        expect(PaymentProviders::UpdatePaymentReferenceJob).to have_been_enqueued.with(payment)
       end
     end
 
