@@ -10,6 +10,9 @@ module Types
 
       REQUIRED_PERMISSION = "ai_conversations:view"
 
+      # Each socket runs its own update, so the token and access checks below apply per socket.
+      broadcastable(false)
+
       argument :id, ID, required: true
       type Types::AiConversations::Stream, null: false
 
@@ -36,7 +39,9 @@ module Types
         return false if context[:channel].connection.token_expired?
 
         membership = Membership.active.find_by(id: current_membership.id)
-        membership.present? && membership.permissions_hash[REQUIRED_PERMISSION]
+        return false unless membership&.organization&.accessible_by_session?(**context[:session_claims])
+
+        membership.permissions_hash[REQUIRED_PERMISSION]
       end
     end
   end

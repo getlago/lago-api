@@ -18,20 +18,30 @@ class GraphqlChannel < ApplicationCable::Channel
       return transmit_error(code: "query_is_too_large", status: 413)
     end
 
+    variables = begin
+      ensure_hash(data["variables"])
+    rescue JSON::ParserError, ArgumentError
+      return transmit_error(code: "invalid_variables", status: 422)
+    end
+
+    # Looked up for each operation, so a membership revoked since the last one is not reused.
+    organization_membership = find_organization_membership
+    membership = organization_membership if session_allowed_in?(organization_membership&.organization)
+
     query = GraphQL::Query.new(
       LagoApiSchema,
       data["query"],
-      variables: ensure_hash(data["variables"]),
+      variables:,
       operation_name: data["operationName"],
       context: {
         channel: self,
         login_method: connection.session_claims[:login_method],
         session_claims: connection.session_claims,
         current_user:,
-        current_organization:,
-        current_membership:,
-        organization_refused_for_session: organization_refused_for_session?,
-        permissions: current_membership&.permissions_hash || {}
+        current_organization: membership&.organization,
+        current_membership: membership,
+        organization_refused_for_session: organization_membership.present? && membership.nil?,
+        permissions: membership&.permissions_hash || {}
       }
     )
 
@@ -72,28 +82,16 @@ class GraphqlChannel < ApplicationCable::Channel
     connection.current_user
   end
 
-  # Same rule as AuthenticableUser: the session must be allowed to open the organization.
-  def current_membership
-    return @current_membership if defined?(@current_membership)
-
-    @current_membership = organization_membership if organization_membership&.organization&.accessible_by_session?(**connection.session_claims)
-  end
-
-  def organization_membership
-    return @organization_membership if defined?(@organization_membership)
-
+  def find_organization_membership
     organization_id = params["organization_id"]
-    @organization_membership = if current_user && organization_id.present?
-      current_user.memberships.active.find_by(organization_id:)
-    end
+    return if current_user.nil? || organization_id.blank?
+
+    current_user.memberships.active.find_by(organization_id:)
   end
 
-  def organization_refused_for_session?
-    organization_membership.present? && current_membership.nil?
-  end
-
-  def current_organization
-    current_membership&.organization
+  # Same rule as AuthenticableUser: the session must be allowed to open the organization.
+  def session_allowed_in?(organization)
+    organization.present? && organization.accessible_by_session?(**connection.session_claims)
   end
 
   def ensure_hash(ambiguous_param)

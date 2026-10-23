@@ -11,6 +11,7 @@ RSpec.describe GraphqlChannel, :premium, type: :channel do
   let(:auth_error_code) { nil }
   let(:token_expired) { false }
   let(:session_claims) { {login_method: Organizations::AuthenticationMethods::EMAIL_PASSWORD} }
+  let(:mistral_api_key) { "test_api_key" }
 
   let(:subscription_query) do
     <<~GQL
@@ -27,8 +28,9 @@ RSpec.describe GraphqlChannel, :premium, type: :channel do
   end
 
   before do
-    ENV["MISTRAL_API_KEY"] = "test_api_key"
-    ENV["MISTRAL_AGENT_ID"] = "test_agent_id"
+    allow(ENV).to receive(:[]).and_call_original
+    allow(ENV).to receive(:[]).with("MISTRAL_API_KEY").and_return(mistral_api_key)
+    allow(ENV).to receive(:[]).with("MISTRAL_AGENT_ID").and_return("test_agent_id")
 
     stub_connection(connection_identifier: SecureRandom.uuid, current_user:, auth_error_code:, token_expired?: token_expired, session_claims:)
   end
@@ -80,6 +82,12 @@ RSpec.describe GraphqlChannel, :premium, type: :channel do
         expect(LagoApiSchema.subscriptions.read_subscription(subscription_id)).to be_nil
       end
 
+      it "ends the subscription once the organization no longer allows the session's login method" do
+        organization.update!(authentication_methods: [Organizations::AuthenticationMethods::GOOGLE_OAUTH])
+
+        expect(stream_chunk.nil?).to be(true)
+      end
+
       it "ends the subscription once the membership is revoked" do
         membership.update!(status: :revoked, revoked_at: Time.current)
 
@@ -115,6 +123,35 @@ RSpec.describe GraphqlChannel, :premium, type: :channel do
         expect(last_transmission["result"]["errors"].first["message"]).to eq("Missing permissions")
         expect(subscription.streams).to be_empty
       end
+    end
+
+    it "registers the subscription of each socket on its own" do
+      execute_subscription
+      stub_connection(connection_identifier: SecureRandom.uuid, current_user:, auth_error_code:, token_expired?: false, session_claims:)
+      subscribe(organization_id: organization.id)
+      execute_subscription
+
+      # Updates run once per fingerprint: one per subscription means each socket gets its own token and access checks.
+      field = LagoApiSchema.subscription.fields["aiConversationStreamed"]
+      topic = GraphQL::Subscriptions::Event.new(name: field.name, arguments: {"id" => conversation_id}, field:, context: LagoApiSchema.null_context).topic
+      events_by_fingerprint = LagoApiSchema.subscriptions.instance_variable_get(:@events)[topic]
+      expect(events_by_fingerprint.values.map(&:size)).to eq([1, 1])
+    end
+
+    it "checks the membership again for each operation on the channel" do
+      execute_subscription
+      membership.update!(status: :revoked, revoked_at: Time.current)
+      execute_subscription
+
+      expect(last_transmission["more"]).to be(false)
+      expect(last_transmission["result"]["errors"]).to be_present
+    end
+
+    it "returns an error for malformed variables" do
+      perform :execute, query: subscription_query, variables: "{bad"
+
+      expect(last_transmission["more"]).to be(false)
+      expect(last_transmission["result"]["errors"].first["extensions"]).to eq("status" => 422, "code" => "invalid_variables")
     end
 
     it "returns the parse error of a malformed query" do
@@ -159,10 +196,9 @@ RSpec.describe GraphqlChannel, :premium, type: :channel do
   end
 
   context "without the Mistral configuration" do
-    before do
-      ENV["MISTRAL_API_KEY"] = nil
-      subscribe(organization_id: organization.id)
-    end
+    let(:mistral_api_key) { nil }
+
+    before { subscribe(organization_id: organization.id) }
 
     it "rejects the subscription" do
       execute_subscription
