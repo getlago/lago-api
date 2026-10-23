@@ -16,8 +16,12 @@ module Customers
           LagoEuVat::Rate.country_codes.exclude?(customer.country.upcase)
       end
 
+      def eu_tax_code?(code)
+        code.to_s.downcase.start_with?(EU_TAX_CODE_PREFIX)
+      end
+
       def custom_tax_code?(code)
-        !code.downcase.start_with?(EU_TAX_CODE_PREFIX)
+        code.present? && !eu_tax_code?(code)
       end
     end
   end

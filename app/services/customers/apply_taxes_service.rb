@@ -38,12 +38,12 @@ module Customers
 
     attr_reader :customer, :requested_tax_codes
 
-    # Custom taxes replace the EU exemption on these customers, which fall back to it when none is left.
+    # Custom taxes replace the EU taxes on these customers, which fall back to the exemption when none is left.
     def tax_codes
       @tax_codes ||= if !eu_exemption_overridable?
         requested_tax_codes
       elsif requested_tax_codes.any? { |code| custom_tax_code?(code) }
-        requested_tax_codes - [EU_TAX_EXEMPT_CODE]
+        requested_tax_codes.reject { |code| eu_tax_code?(code) }
       elsif requested_tax_codes.empty? && customer.organization.taxes.exists?(code: EU_TAX_EXEMPT_CODE)
         [EU_TAX_EXEMPT_CODE]
       else

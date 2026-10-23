@@ -77,15 +77,16 @@ module Customers
       return false if eu_exemption_overridable? && custom_taxes_without_eu_rate?
       return true if new_record
 
-      non_existing_eu_taxes = customer_tax_codes.all? { |code| custom_tax_code?(code) }
+      non_existing_eu_taxes = customer_tax_codes.none? { |code| eu_tax_code?(code) }
 
       non_existing_eu_taxes || tax_attributes_changed
     end
 
     # An EU rate left from a previous country must still be replaced by the exemption.
     def custom_taxes_without_eu_rate?
-      customer_tax_codes.any? { |code| custom_tax_code?(code) } &&
-        customer_tax_codes.all? { |code| custom_tax_code?(code) || code == EU_TAX_EXEMPT_CODE }
+      codes = customer_tax_codes - [EU_TAX_EXEMPT_CODE]
+
+      codes.any? && codes.none? { |code| eu_tax_code?(code) }
     end
 
     def customer_tax_codes

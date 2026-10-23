@@ -73,6 +73,27 @@ RSpec.describe Customers::ApplyTaxesService do
         expect(customer.reload.taxes.pluck(:code)).to eq(["tax1"])
       end
 
+      context "when an EU rate is sent with the custom tax" do
+        let(:tax_codes) { [create(:tax, organization:, code: "lago_eu_fr_standard").code, tax1.code] }
+
+        it "applies the custom tax only" do
+          apply_service.call
+
+          expect(customer.reload.taxes.pluck(:code)).to eq(["tax1"])
+        end
+      end
+
+      context "when a tax code is nil" do
+        let(:tax_codes) { [nil] }
+
+        it "returns an error" do
+          result = apply_service.call
+
+          expect(result).not_to be_success
+          expect(result.error.error_code).to eq("tax_not_found")
+        end
+      end
+
       context "when no tax is left" do
         let(:tax_codes) { [] }
 
