@@ -11,18 +11,15 @@ RSpec.describe RatePhases::CreateService do
   let!(:terminal) { create(:rate_phase, plan_rate_card:, organization:, position: terminal_position, billing_interval_cycle_count: nil) }
   let(:params) { {code: "trial", position: 1, billing_interval_cycle_count: 6, name: "Trial period"} }
 
-  before {
-    allow(Utils::ActivityLog).to receive(:produce_after_commit).and_yield
-    create_default(:billable_metric)
-  }
+  before { create_default(:billable_metric) }
 
-  def activity_payload(owner, event_type)
+  def activity_payload(record, event_type)
     expect(kafka_messages.size).to eq(1)
     payload = JSON.parse(kafka_messages.first.fetch(:payload))
     expect(payload).to include(
       "activity_type" => event_type,
-      "resource_id" => owner.id,
-      "resource_type" => owner.class.name
+      "resource_id" => record.id,
+      "resource_type" => record.class.name
     )
     payload
   end
@@ -39,13 +36,20 @@ RSpec.describe RatePhases::CreateService do
     expect(rate_phase.code).to eq("trial")
   end
 
-  it "publishes one owning plan_rate_card.updated pair with the hierarchy diff" do
+  it "logs the phase and publishes the owning plan_rate_card.updated webhook" do
     expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan_rate_card.updated", plan_rate_card)
 
-    expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(
-      plan_rate_card,
-      "plan_rate_card.updated"
-    )
+    expect(Utils::ActivityLog).to have_produced("rate_phase.created").after_commit.with(result.rate_phase)
+    expect(Utils::ActivityLog).not_to have_received(:produce).with(plan_rate_card, any_args)
+  end
+
+  context "when the owner events are suppressed" do
+    subject(:result) { described_class.call(plan_rate_card:, params:, emit_events: false) }
+
+    it "still logs the phase without the owner webhook" do
+      expect { result }.not_to have_enqueued_job(SendWebhookJob)
+      expect(Utils::ActivityLog).to have_produced("rate_phase.created").after_commit.with(result.rate_phase)
+    end
   end
 
   it "locks the parent entry while renumbering" do
@@ -138,7 +142,7 @@ RSpec.describe RatePhases::CreateService do
       expect { result }.not_to have_enqueued_job(SendWebhookJob)
       expect(result).not_to be_success
       expect(result.error.messages[:position]).to eq(["positions_must_be_contiguous"])
-      expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "plan_rate_card.updated", any_args)
+      expect(Utils::ActivityLog).not_to have_received(:produce)
     end
   end
 
@@ -199,13 +203,11 @@ RSpec.describe RatePhases::CreateService do
       create(:rate_phase, :contract_level, contract_rate_card:, organization:, position: 1, billing_interval_cycle_count: nil)
     end
 
-    it "publishes one contract_rate_card.updated pair" do
+    it "logs the phase and publishes the contract_rate_card.updated webhook" do
       expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("contract_rate_card.updated", contract_rate_card)
 
-      expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(
-        contract_rate_card,
-        "contract_rate_card.updated"
-      )
+      expect(Utils::ActivityLog).to have_produced("rate_phase.created").after_commit.with(result.rate_phase)
+      expect(Utils::ActivityLog).not_to have_received(:produce).with(contract_rate_card, any_args)
     end
   end
 
@@ -215,18 +217,21 @@ RSpec.describe RatePhases::CreateService do
     let!(:intro) { create(:rate_phase, plan_rate_card:, organization:, code: "intro", position: 1, billing_interval_cycle_count: 3) }
     let(:params) { {code: "trial", name: "Trial", position: 1, billing_interval_cycle_count: 1} }
 
-    before do
-      allow(Utils::ActivityLog).to receive(:available?).and_return(true)
-      allow(Utils::ActivityLog).to receive(:produce_after_commit).and_call_original
-    end
+    before { allow(Utils::ActivityLog).to receive(:available?).and_return(true) }
 
-    it "emits one owner update with the ordered phase and count changes" do
+    it "emits one log for the new phase" do
       expect(result).to be_success
-      payload = activity_payload(plan_rate_card, "plan_rate_card.updated")
-      before_phases, after_phases = payload.fetch("activity_object_changes").fetch("rate_phases")
-      expect([before_phases.map { |phase| phase.fetch("code") }, after_phases.map { |phase| phase.fetch("code") }])
-        .to eq([%w[intro forever], %w[trial intro forever]])
-      expect(payload.fetch("activity_object_changes").fetch("rate_phases_count")).to eq([2, 3])
+      payload = activity_payload(result.rate_phase, "rate_phase.created")
+      expect(payload.fetch("activity_object")).to eq(
+        "lago_id" => result.rate_phase.id,
+        "code" => "trial",
+        "position" => 1,
+        "name" => "Trial",
+        "billing_interval_cycle_count" => 1,
+        "deleted_at" => nil,
+        "rate_override" => nil
+      )
+      expect(payload.fetch("activity_object_changes")).to eq({})
       expect(intro.reload.position).to eq(2)
     end
   end

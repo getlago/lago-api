@@ -34,14 +34,15 @@ module RatePhases
           return result.single_validation_failure!(field: :rate_phase, error_code: "cannot_delete_last_phase")
         end
 
-        publish_owner_update do
-          rate_phase.discard!
-          rate_phase.rate_override&.discard!
+        rate_phase.discard!
+        rate_phase.rate_override&.discard!
 
-          siblings.select { |phase| phase.position > rate_phase.position }.each do |phase|
-            phase.update!(position: phase.position - 1)
-          end
+        siblings.select { |phase| phase.position > rate_phase.position }.each do |phase|
+          phase.update!(position: phase.position - 1)
         end
+
+        Utils::ActivityLog.produce_after_commit(rate_phase, "rate_phase.deleted")
+        publish_owner_update
       end
 
       result.rate_phase = rate_phase
@@ -57,16 +58,10 @@ module RatePhases
     end
 
     def publish_owner_update
+      return unless emit_events
+
       event_type = rate_phase.plan_rate_card_id ? "plan_rate_card.updated" : "contract_rate_card.updated"
-      if emit_events
-        Utils::ActivityLog.produce_after_commit(applied_rate_card, event_type) do
-          yield
-          SendWebhookJob.perform_after_commit(event_type, applied_rate_card)
-          result
-        end
-      else
-        yield
-      end
+      SendWebhookJob.perform_after_commit(event_type, applied_rate_card)
     end
   end
 end

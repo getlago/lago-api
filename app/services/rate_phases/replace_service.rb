@@ -28,23 +28,26 @@ module RatePhases
 
         overrides = ordered_params.map { |phase| build_override(phase) }
 
-        publish_owner_update do
-          applied_rate_card.association(:rate_phases).reset
-          discard_existing_phases
+        applied_rate_card.association(:rate_phases).reset
+        discard_existing_phases
 
-          result.rate_phases = ordered_params.each_with_index.map do |phase, index|
-            applied_rate_card.rate_phases.create!(
-              organization:,
-              plan_rate_card:,
-              contract_rate_card:,
-              code: phase[:code],
-              position: phase[:position],
-              name: phase[:name],
-              billing_interval_cycle_count: phase[:billing_interval_cycle_count],
-              rate_override: overrides[index]
-            )
-          end
+        result.rate_phases = ordered_params.each_with_index.map do |phase, index|
+          applied_rate_card.rate_phases.create!(
+            organization:,
+            plan_rate_card:,
+            contract_rate_card:,
+            code: phase[:code],
+            position: phase[:position],
+            name: phase[:name],
+            billing_interval_cycle_count: phase[:billing_interval_cycle_count],
+            rate_override: overrides[index]
+          )
         end
+
+        # Logged even when the card is created with its phases: the card's
+        # created log does not list them.
+        result.rate_phases.each { |rate_phase| Utils::ActivityLog.produce_after_commit(rate_phase, "rate_phase.created") }
+        publish_owner_update
       end
 
       result
@@ -63,16 +66,10 @@ module RatePhases
     end
 
     def publish_owner_update
+      return unless emit_events
+
       event_type = plan_rate_card ? "plan_rate_card.updated" : "contract_rate_card.updated"
-      if emit_events
-        Utils::ActivityLog.produce_after_commit(applied_rate_card, event_type) do
-          yield
-          SendWebhookJob.perform_after_commit(event_type, applied_rate_card)
-          result
-        end
-      else
-        yield
-      end
+      SendWebhookJob.perform_after_commit(event_type, applied_rate_card)
     end
 
     def organization
@@ -80,9 +77,12 @@ module RatePhases
     end
 
     def discard_existing_phases
-      existing_phases = applied_rate_card.rate_phases.to_a
-      RateOverride.where(id: existing_phases.filter_map(&:rate_override_id)).discard_all!
-      applied_rate_card.rate_phases.discard_all!
+      existing_phases = applied_rate_card.rate_phases.includes(:rate_override).to_a
+      existing_phases.each do |rate_phase|
+        rate_phase.discard!
+        rate_phase.rate_override&.discard!
+        Utils::ActivityLog.produce_after_commit(rate_phase, "rate_phase.deleted")
+      end
     end
 
     def build_override(phase)

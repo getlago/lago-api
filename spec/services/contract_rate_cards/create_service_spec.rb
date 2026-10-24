@@ -49,6 +49,15 @@ RSpec.describe ContractRateCards::CreateService do
     expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "contract_rate_card.updated", any_args)
   end
 
+  it "logs the creation of its default phase" do
+    expect(result).to be_success
+    expect(Utils::ActivityLog).to have_received(:produce).with(
+      result.contract_rate_card.rate_phases.sole,
+      "rate_phase.created",
+      after_commit: true
+    )
+  end
+
   context "when a billing_anchor_date is provided" do
     let(:params) { super().merge(billing_anchor_date: "2026-03-01") }
 
@@ -87,6 +96,14 @@ RSpec.describe ContractRateCards::CreateService do
         after_commit: true
       )
       expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "contract_rate_card.updated", any_args)
+    end
+
+    it "logs the creation of each nested phase" do
+      rate_phases = result.contract_rate_card.rate_phases.to_a
+      expect(rate_phases.size).to eq(2)
+      rate_phases.each do |rate_phase|
+        expect(Utils::ActivityLog).to have_received(:produce).with(rate_phase, "rate_phase.created", after_commit: true)
+      end
     end
   end
 

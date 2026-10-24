@@ -15,8 +15,19 @@ module Types
       field :position, Integer, null: false
       field :rate_override, Types::RateOverrides::Object, null: true
 
+      field :contract_applied_rate_card, Types::ContractAppliedRateCards::Object, null: true
+      field :plan_applied_rate_card, Types::PlanAppliedRateCards::Object, null: true
+
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+
+      def contract_applied_rate_card
+        dataloader.with(Sources::ActiveRecordAssociation, :contract_rate_card).load(object)
+      end
+
+      def plan_applied_rate_card
+        dataloader.with(Sources::ActiveRecordAssociation, :plan_rate_card).load(object)
+      end
     end
   end
 end

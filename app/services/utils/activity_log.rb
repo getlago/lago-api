@@ -211,6 +211,7 @@ module Utils
       return nil if IGNORED_EXTERNAL_CUSTOMER_ID_CLASSES.include?(object.class.name)
       return object.external_id if object.is_a?(Customer)
       return object.contract.customer&.external_id if object.is_a?(ContractRateCard)
+      return object.contract_rate_card&.contract&.customer&.external_id if object.is_a?(RatePhase)
 
       object.customer&.external_id
     end

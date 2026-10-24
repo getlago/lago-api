@@ -12,18 +12,17 @@ RSpec.describe RatePhases::DestroyService do
   let!(:terminal) { create(:rate_phase, plan_rate_card:, organization:, position: 3, billing_interval_cycle_count: nil) }
 
   before {
-    allow(Utils::ActivityLog).to receive(:produce_after_commit).and_yield
     create_default(:plan)
     create_default(:billable_metric)
   }
 
-  def activity_payload(owner, event_type)
+  def activity_payload(record, event_type)
     expect(kafka_messages.size).to eq(1)
     payload = JSON.parse(kafka_messages.first.fetch(:payload))
     expect(payload).to include(
       "activity_type" => event_type,
-      "resource_id" => owner.id,
-      "resource_type" => owner.class.name
+      "resource_id" => record.id,
+      "resource_type" => record.class.name
     )
     payload
   end
@@ -38,13 +37,11 @@ RSpec.describe RatePhases::DestroyService do
       expect(terminal.reload.position).to eq(2)
     end
 
-    it "publishes one owning plan_rate_card.updated pair with the post-delete hierarchy" do
+    it "logs the phase deletion and publishes the owning plan_rate_card.updated webhook" do
       expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan_rate_card.updated", plan_rate_card)
 
-      expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(
-        plan_rate_card,
-        "plan_rate_card.updated"
-      )
+      expect(Utils::ActivityLog).to have_produced("rate_phase.deleted").after_commit.with(ramp)
+      expect(Utils::ActivityLog).not_to have_received(:produce).with(plan_rate_card, any_args)
     end
 
     it "discards the phase's override with it" do
@@ -74,7 +71,7 @@ RSpec.describe RatePhases::DestroyService do
       expect(result.error.messages[:rate_phase]).to eq(["indefinite_phase_not_deletable"])
       expect(terminal.reload).not_to be_discarded
       expect(ramp.reload.billing_interval_cycle_count).to eq(6)
-      expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "plan_rate_card.updated", any_args)
+      expect(Utils::ActivityLog).not_to have_received(:produce)
     end
   end
 
@@ -146,15 +143,13 @@ RSpec.describe RatePhases::DestroyService do
       create(:rate_phase, :contract_level, organization:, contract_rate_card:, position: 2, billing_interval_cycle_count: nil)
     end
 
-    it "publishes one contract_rate_card.updated pair" do
+    it "logs the phase deletion and publishes the contract_rate_card.updated webhook" do
       rate_phase
       contract_terminal
       expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("contract_rate_card.updated", contract_rate_card)
 
-      expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(
-        contract_rate_card,
-        "contract_rate_card.updated"
-      )
+      expect(Utils::ActivityLog).to have_produced("rate_phase.deleted").after_commit.with(rate_phase)
+      expect(Utils::ActivityLog).not_to have_received(:produce).with(contract_rate_card, any_args)
     end
   end
 
@@ -165,18 +160,16 @@ RSpec.describe RatePhases::DestroyService do
     let!(:terminal) { create(:rate_phase, plan_rate_card:, organization:, code: "forever", position: 3, billing_interval_cycle_count: nil) }
     let(:rate_phase) { ramp }
 
-    before do
-      allow(Utils::ActivityLog).to receive(:available?).and_return(true)
-      allow(Utils::ActivityLog).to receive(:produce_after_commit).and_call_original
-    end
+    before { allow(Utils::ActivityLog).to receive(:available?).and_return(true) }
 
-    it "emits one owner update with ordered phases and the count delta" do
+    it "emits one log for the discarded phase" do
       expect(result).to be_success
-      payload = activity_payload(plan_rate_card, "plan_rate_card.updated")
-      before_phases, after_phases = payload.fetch("activity_object_changes").fetch("rate_phases")
-      expect([before_phases.map { |phase| phase.fetch("code") }, after_phases.map { |phase| phase.fetch("code") }])
-        .to eq([%w[launch ramp forever], %w[launch forever]])
-      expect(payload.fetch("activity_object_changes").fetch("rate_phases_count")).to eq([3, 2])
+      payload = activity_payload(ramp, "rate_phase.deleted")
+      expect(payload.fetch("activity_object")).to include(
+        "lago_id" => ramp.id,
+        "code" => "ramp",
+        "deleted_at" => ramp.reload.deleted_at.iso8601
+      )
     end
   end
 end

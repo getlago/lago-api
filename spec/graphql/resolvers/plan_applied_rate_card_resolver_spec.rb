@@ -27,7 +27,7 @@ RSpec.describe Resolvers::PlanAppliedRateCardResolver do
           catalogPlan { id name }
           product { id }
           rateCard { id }
-          ratePhases { id rateOverride { id } }
+          ratePhases { id rateOverride { id } planAppliedRateCard { id } contractAppliedRateCard { id } }
           ratePhasesCount
         }
       }
@@ -48,7 +48,14 @@ RSpec.describe Resolvers::PlanAppliedRateCardResolver do
       "catalogPlan" => {"id" => catalog_plan.id, "name" => catalog_plan.name},
       "product" => {"id" => plan_rate_card.rate_card.product_id},
       "rateCard" => {"id" => plan_rate_card.rate_card_id},
-      "ratePhases" => [{"id" => rate_phase.id, "rateOverride" => {"id" => rate_override.id}}],
+      "ratePhases" => [
+        {
+          "id" => rate_phase.id,
+          "rateOverride" => {"id" => rate_override.id},
+          "planAppliedRateCard" => {"id" => plan_rate_card.id},
+          "contractAppliedRateCard" => nil
+        }
+      ],
       "ratePhasesCount" => 1
     )
   end

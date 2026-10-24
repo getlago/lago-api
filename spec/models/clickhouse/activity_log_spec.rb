@@ -23,6 +23,7 @@ RSpec.describe Clickhouse::ActivityLog, clickhouse: true do
         :rate_card_rate_created, :rate_card_rate_updated, :rate_card_rate_deleted,
         :plan_rate_card_created, :plan_rate_card_updated, :plan_rate_card_deleted,
         :contract_rate_card_created, :contract_rate_card_updated, :contract_rate_card_deleted,
+        :rate_phase_created, :rate_phase_updated, :rate_phase_deleted,
         :contract_created, :contract_updated, :contract_started, :contract_terminated, :contract_canceled
       )).to eq(
         rate_card_rate_created: "rate_card_rate.created",
@@ -34,6 +35,9 @@ RSpec.describe Clickhouse::ActivityLog, clickhouse: true do
         contract_rate_card_created: "contract_rate_card.created",
         contract_rate_card_updated: "contract_rate_card.updated",
         contract_rate_card_deleted: "contract_rate_card.deleted",
+        rate_phase_created: "rate_phase.created",
+        rate_phase_updated: "rate_phase.updated",
+        rate_phase_deleted: "rate_phase.deleted",
         contract_created: "contract.created",
         contract_updated: "contract.updated",
         contract_started: "contract.started",
@@ -41,13 +45,14 @@ RSpec.describe Clickhouse::ActivityLog, clickhouse: true do
         contract_canceled: "contract.canceled"
       )
 
-      expect(described_class::RESOURCE_TYPES.slice(:rate_card_rate, :plan_rate_card, :contract_rate_card, :contract)).to eq(
+      expect(described_class::RESOURCE_TYPES.slice(:rate_card_rate, :plan_rate_card, :contract_rate_card, :rate_phase, :contract)).to eq(
         rate_card_rate: "RateCardRate",
         plan_rate_card: "PlanRateCard",
         contract_rate_card: "ContractRateCard",
+        rate_phase: "RatePhase",
         contract: "Contract"
       )
-      expect(described_class::RESOURCE_TYPES_WITH_DISCARDED).to include("RateCardRate", "PlanRateCard", "ContractRateCard")
+      expect(described_class::RESOURCE_TYPES_WITH_DISCARDED).to include("RateCardRate", "PlanRateCard", "ContractRateCard", "RatePhase")
     end
   end
 
@@ -75,6 +80,20 @@ RSpec.describe Clickhouse::ActivityLog, clickhouse: true do
     it "finds a discarded resource only in the activity log organization" do
       expect(activity_log.resource).to eq(rate_card_rate)
       expect(other_organization_log.resource).to be_nil
+    end
+
+    context "when the resource is a discarded rate phase" do
+      subject(:activity_log) do
+        build(:clickhouse_activity_log, organization:, resource_type: "RatePhase", resource_id: rate_phase.id)
+      end
+
+      let(:rate_phase) { create(:rate_phase, organization:) }
+
+      before { rate_phase.discard }
+
+      it "finds it" do
+        expect(activity_log.resource).to eq(rate_phase)
+      end
     end
   end
 

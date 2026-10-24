@@ -237,6 +237,37 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
             expect(payload.fetch("activity_object")).to include("lago_id" => contract_rate_card.id)
           end
         end
+
+        it "serializes a plan rate phase without a customer" do
+          rate_phase = create(:rate_phase, organization:, plan_rate_card:, code: "trial", name: "Trial", billing_interval_cycle_count: 3)
+
+          activity_log.produce(rate_phase, "rate_phase.created")
+
+          expect(karafka_producer).to have_received(:produce_async) do |args|
+            payload = JSON.parse(args[:payload])
+            expect(payload).to include("resource_type" => "RatePhase", "resource_id" => rate_phase.id, "external_customer_id" => nil)
+            expect(payload.fetch("activity_object")).to eq(
+              "lago_id" => rate_phase.id,
+              "code" => "trial",
+              "position" => 1,
+              "name" => "Trial",
+              "billing_interval_cycle_count" => 3,
+              "deleted_at" => nil,
+              "rate_override" => nil
+            )
+          end
+        end
+
+        it "resolves the customer of a contract rate phase through its contract" do
+          rate_phase = create(:rate_phase, :contract_level, organization:, contract_rate_card:)
+
+          activity_log.produce(rate_phase, "rate_phase.created")
+
+          expect(karafka_producer).to have_received(:produce_async) do |args|
+            payload = JSON.parse(args[:payload])
+            expect(payload).to include("resource_type" => "RatePhase", "external_customer_id" => contract_rate_card.contract.customer.external_id)
+          end
+        end
       end
 
       # The v2 REST endpoints render catalog records through the same serializers, so a key

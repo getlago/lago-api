@@ -16,21 +16,7 @@ RSpec.describe RatePhases::ReplaceService, :capture_kafka_messages do
   end
   let(:plan_rate_card) { create(:plan_rate_card, organization:, catalog_plan:, rate_card:) }
 
-  before {
-    create_default(:billable_metric)
-    allow(Utils::ActivityLog).to receive(:produce_after_commit).and_yield
-  }
-
-  def activity_payload(owner, event_type)
-    expect(kafka_messages.size).to eq(1)
-    payload = JSON.parse(kafka_messages.first.fetch(:payload))
-    expect(payload).to include(
-      "activity_type" => event_type,
-      "resource_id" => owner.id,
-      "resource_type" => owner.class.name
-    )
-    payload
-  end
+  before { create_default(:billable_metric) }
 
   it "replaces the phase sequence and discards the superseded overrides" do
     previous_override = create(:rate_override, organization:)
@@ -46,30 +32,33 @@ RSpec.describe RatePhases::ReplaceService, :capture_kafka_messages do
     expect(result.rate_phases.map(&:billing_interval_cycle_count)).to eq([3, nil])
   end
 
-  it "publishes one owning plan_rate_card.updated pair for the replacement" do
+  it "logs each new phase and publishes the owning plan_rate_card.updated webhook" do
     expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan_rate_card.updated", plan_rate_card)
 
-    expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(
-      plan_rate_card,
-      "plan_rate_card.updated"
-    )
+    expect(result.rate_phases.size).to eq(2)
+    result.rate_phases.each do |rate_phase|
+      expect(Utils::ActivityLog).to have_produced("rate_phase.created").after_commit.with(rate_phase)
+    end
+    expect(Utils::ActivityLog).not_to have_received(:produce).with(plan_rate_card, any_args)
   end
 
-  it "suppresses the owner pair when invoked as part of a larger write" do
-    expect do
-      described_class.call(plan_rate_card:, phases_params:, emit_events: false)
-    end.not_to have_enqueued_job(SendWebhookJob)
-    expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "plan_rate_card.updated", any_args)
+  context "when the owner events are suppressed" do
+    subject(:result) { described_class.call(plan_rate_card:, phases_params:, emit_events: false) }
+
+    it "still logs each new phase without the owner webhook" do
+      expect { result }.not_to have_enqueued_job(SendWebhookJob)
+
+      expect(result.rate_phases.size).to eq(2)
+      result.rate_phases.each do |rate_phase|
+        expect(Utils::ActivityLog).to have_produced("rate_phase.created").after_commit.with(rate_phase)
+      end
+    end
   end
 
   context "when an outer transaction rolls back" do
-    before do
-      allow(Utils::ActivityLog).to receive(:produce_after_commit).and_call_original
-      allow(Utils::ActivityLog).to receive(:produce).and_call_original
-      allow(Utils::ActivityLog).to receive(:available?).and_return(true)
-    end
+    before { allow(Utils::ActivityLog).to receive(:available?).and_return(true) }
 
-    it "does not deliver either owner event", transaction: false do
+    it "delivers neither the webhook nor the phase logs", transaction: false do
       plan_rate_card
       expect do
         ActiveRecord::Base.transaction do
@@ -144,7 +133,7 @@ RSpec.describe RatePhases::ReplaceService, :capture_kafka_messages do
         expect(RatePhase.count).to eq(existing_count)
         expect(result).not_to be_success
         expect(result.error.messages[:pricing_unit_conversion_rate]).to include("value_is_mandatory")
-        expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "plan_rate_card.updated", any_args)
+        expect(Utils::ActivityLog).not_to have_received(:produce)
       end
     end
   end
@@ -247,21 +236,25 @@ RSpec.describe RatePhases::ReplaceService, :capture_kafka_messages do
       ]
     end
 
-    before do
-      previous_intro
-      previous_terminal
-      allow(Utils::ActivityLog).to receive(:available?).and_return(true)
-      allow(Utils::ActivityLog).to receive(:produce_after_commit).and_call_original
-    end
+    before { allow(Utils::ActivityLog).to receive(:available?).and_return(true) }
 
-    it "emits one owner update with complete ordered before/after phases and count change" do
+    it "logs the deletion of each previous phase and the creation of each new one" do
       expect(result).to be_success
-      payload = activity_payload(plan_rate_card, "plan_rate_card.updated")
-      before_phases, after_phases = payload.fetch("activity_object_changes").fetch("rate_phases")
-      expect([before_phases.map { |phase| phase.fetch("code") }, after_phases.map { |phase| phase.fetch("code") }])
-        .to eq([%w[intro forever], %w[new-intro new-middle new-forever]])
-      expect(payload.fetch("activity_object_changes").fetch("rate_phases_count")).to eq([2, 3])
-      expect(after_phases.map { |phase| phase.fetch("lago_id") } & before_phases.map { |phase| phase.fetch("lago_id") }).to be_empty
+
+      payloads = kafka_messages.map { |message| JSON.parse(message.fetch(:payload)) }
+      expect(payloads.map { |payload| [payload.fetch("activity_type"), payload.fetch("activity_object").fetch("code")] })
+        .to match_array([
+          ["rate_phase.deleted", "intro"],
+          ["rate_phase.deleted", "forever"],
+          ["rate_phase.created", "new-intro"],
+          ["rate_phase.created", "new-middle"],
+          ["rate_phase.created", "new-forever"]
+        ])
+      expect(payloads.map { |payload| payload.fetch("resource_type") }.uniq).to eq(["RatePhase"])
+
+      deleted = payloads.select { |payload| payload.fetch("activity_type") == "rate_phase.deleted" }
+      expect(deleted.map { |payload| payload.fetch("resource_id") }).to match_array([previous_intro.id, previous_terminal.id])
+      expect(deleted.map { |payload| payload.fetch("activity_object").fetch("deleted_at") }).to all(be_present)
     end
   end
 end

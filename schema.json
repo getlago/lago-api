@@ -507,6 +507,11 @@
             },
             {
               "kind": "OBJECT",
+              "name": "RatePhase",
+              "ofType": null
+            },
+            {
+              "kind": "OBJECT",
               "name": "Subscription",
               "ofType": null
             },
@@ -983,6 +988,24 @@
             {
               "name": "contract_rate_card_deleted",
               "description": "contract_rate_card.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "rate_phase_created",
+              "description": "rate_phase.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "rate_phase_updated",
+              "description": "rate_phase.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "rate_phase_deleted",
+              "description": "rate_phase.deleted",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -75315,6 +75338,18 @@
               "deprecationReason": null
             },
             {
+              "name": "contractAppliedRateCard",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "OBJECT",
+                "name": "ContractAppliedRateCard",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "createdAt",
               "description": null,
               "args": [],
@@ -75353,6 +75388,18 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "planAppliedRateCard",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "OBJECT",
+                "name": "PlanAppliedRateCard",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -77431,6 +77478,12 @@
             {
               "name": "contract_rate_card",
               "description": "ContractRateCard",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "rate_phase",
+              "description": "RatePhase",
               "isDeprecated": false,
               "deprecationReason": null
             },

@@ -57,7 +57,7 @@ module RatePhases
 
         rate_override = build_override if params.key?(:rate_override)
 
-        publish_owner_update do
+        Utils::ActivityLog.produce_after_commit(rate_phase, "rate_phase.updated") do
           move_to(target, siblings) if params.key?(:position)
 
           rate_phase.name = params[:name] if params.key?(:name)
@@ -77,6 +77,9 @@ module RatePhases
           if superseded_override_id && superseded_override_id != rate_phase.rate_override_id
             RateOverride.find_by(id: superseded_override_id)&.discard!
           end
+
+          publish_owner_update
+          result
         end
       end
 
@@ -97,16 +100,10 @@ module RatePhases
     end
 
     def publish_owner_update
+      return unless emit_events
+
       event_type = rate_phase.plan_rate_card_id ? "plan_rate_card.updated" : "contract_rate_card.updated"
-      if emit_events
-        Utils::ActivityLog.produce_after_commit(applied_rate_card, event_type) do
-          yield
-          SendWebhookJob.perform_after_commit(event_type, applied_rate_card)
-          result
-        end
-      else
-        yield
-      end
+      SendWebhookJob.perform_after_commit(event_type, applied_rate_card)
     end
 
     # A provided rate_override replaces the phase's override; null clears it.

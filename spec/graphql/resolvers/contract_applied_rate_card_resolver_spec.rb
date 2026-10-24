@@ -38,7 +38,7 @@ RSpec.describe Resolvers::ContractAppliedRateCardResolver do
           contract { id name }
           product { id }
           rateCard { id }
-          ratePhases { id rateOverride { id } }
+          ratePhases { id rateOverride { id } planAppliedRateCard { id } contractAppliedRateCard { id } }
           ratePhasesCount
         }
       }
@@ -62,7 +62,14 @@ RSpec.describe Resolvers::ContractAppliedRateCardResolver do
       "contract" => {"id" => contract.id, "name" => "Platform contract"},
       "product" => {"id" => contract_rate_card.rate_card.product_id},
       "rateCard" => {"id" => contract_rate_card.rate_card_id},
-      "ratePhases" => [{"id" => rate_phase.id, "rateOverride" => {"id" => rate_override.id}}],
+      "ratePhases" => [
+        {
+          "id" => rate_phase.id,
+          "rateOverride" => {"id" => rate_override.id},
+          "planAppliedRateCard" => nil,
+          "contractAppliedRateCard" => {"id" => contract_rate_card.id}
+        }
+      ],
       "ratePhasesCount" => 1
     )
   end

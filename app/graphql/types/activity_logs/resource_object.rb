@@ -27,6 +27,7 @@ module Types
         Types::RateCardRates::Object,
         Types::PlanAppliedRateCards::Object,
         Types::ContractAppliedRateCards::Object,
+        Types::RatePhases::Object,
         Types::Contracts::Object,
         Types::Quotes::Object,
         Types::OrderForms::Object,
@@ -74,6 +75,8 @@ module Types
           Types::PlanAppliedRateCards::Object
         when "ContractRateCard"
           Types::ContractAppliedRateCards::Object
+        when "RatePhase"
+          Types::RatePhases::Object
         when "Contract"
           Types::Contracts::Object
         when "Quote"

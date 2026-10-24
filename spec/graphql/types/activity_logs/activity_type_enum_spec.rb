@@ -77,6 +77,9 @@ RSpec.describe Types::ActivityLogs::ActivityTypeEnum do
         contract_rate_card_created
         contract_rate_card_updated
         contract_rate_card_deleted
+        rate_phase_created
+        rate_phase_updated
+        rate_phase_deleted
         contract_created
         contract_updated
         contract_started

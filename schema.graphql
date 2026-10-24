@@ -72,7 +72,7 @@ type ActivityLogCollection {
 """
 Activity log resource
 """
-union ActivityLogResourceObject = BillableMetric | BillingEntity | CatalogPlan | Contract | ContractAppliedRateCard | Coupon | CreditNote | Customer | FeatureObject | Invoice | Order | OrderForm | PaymentReceipt | PaymentRequest | Plan | PlanAppliedRateCard | Product | ProductCategory | ProductFilter | Quote | RateCard | RateCardRate | Subscription | Wallet
+union ActivityLogResourceObject = BillableMetric | BillingEntity | CatalogPlan | Contract | ContractAppliedRateCard | Coupon | CreditNote | Customer | FeatureObject | Invoice | Order | OrderForm | PaymentReceipt | PaymentRequest | Plan | PlanAppliedRateCard | Product | ProductCategory | ProductFilter | Quote | RateCard | RateCardRate | RatePhase | Subscription | Wallet
 
 """
 Activity Logs source enums
@@ -481,6 +481,21 @@ enum ActivityTypeEnum {
   rate_card.updated
   """
   rate_card_updated
+
+  """
+  rate_phase.created
+  """
+  rate_phase_created
+
+  """
+  rate_phase.deleted
+  """
+  rate_phase_deleted
+
+  """
+  rate_phase.updated
+  """
+  rate_phase_updated
 
   """
   subscription.canceled
@@ -13776,9 +13791,11 @@ A phase in the ordered rate schedule of a plan product
 type RatePhase {
   billingIntervalCycleCount: Int
   code: String!
+  contractAppliedRateCard: ContractAppliedRateCard
   createdAt: ISO8601DateTime!
   id: ID!
   name: String
+  planAppliedRateCard: PlanAppliedRateCard
   position: Int!
   rateOverride: RateOverride
   updatedAt: ISO8601DateTime!
@@ -14202,6 +14219,11 @@ enum ResourceTypeEnum {
   RateCardRate
   """
   rate_card_rate
+
+  """
+  RatePhase
+  """
+  rate_phase
 
   """
   Subscription
