@@ -24,7 +24,7 @@ module Clickhouse
 
     RESOURCE_TYPES_WITH_DISCARDED = %w[
       BillableMetric Plan CatalogPlan Customer BillingEntity Coupon ProductCategory Product ProductFilter RateCard
-      RateCardRate PlanRateCard ContractRateCard
+      RateCardRate PlanRateCard ContractRateCard RatePhase
     ].freeze
 
     RESOURCE_TYPES = {
@@ -48,6 +48,7 @@ module Clickhouse
       rate_card_rate: "RateCardRate",
       plan_rate_card: "PlanRateCard",
       contract_rate_card: "ContractRateCard",
+      rate_phase: "RatePhase",
       contract: "Contract",
       quote: "Quote",
       order_form: "OrderForm",
@@ -127,6 +128,9 @@ module Clickhouse
       contract_rate_card_created: "contract_rate_card.created",
       contract_rate_card_updated: "contract_rate_card.updated",
       contract_rate_card_deleted: "contract_rate_card.deleted",
+      rate_phase_created: "rate_phase.created",
+      rate_phase_updated: "rate_phase.updated",
+      rate_phase_deleted: "rate_phase.deleted",
       contract_created: "contract.created",
       contract_updated: "contract.updated",
       contract_started: "contract.started",

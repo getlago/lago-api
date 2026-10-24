@@ -58,6 +58,15 @@ RSpec.describe PlanRateCards::CreateService do
     expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "plan_rate_card.updated", any_args)
   end
 
+  it "logs the creation of its default phase" do
+    expect(result).to be_success
+    expect(Utils::ActivityLog).to have_received(:produce).with(
+      result.plan_rate_card.rate_phases.sole,
+      "rate_phase.created",
+      after_commit: true
+    )
+  end
+
   context "when the plan already prices the whole item" do
     before { create(:plan_rate_card, organization:, catalog_plan:, rate_card: create(:rate_card, organization:, product: rate_card.product)) }
 
@@ -129,6 +138,14 @@ RSpec.describe PlanRateCards::CreateService do
         after_commit: true
       )
       expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "plan_rate_card.updated", any_args)
+    end
+
+    it "logs the creation of each nested phase" do
+      rate_phases = result.plan_rate_card.rate_phases.to_a
+      expect(rate_phases.size).to eq(2)
+      rate_phases.each do |rate_phase|
+        expect(Utils::ActivityLog).to have_received(:produce).with(rate_phase, "rate_phase.created", after_commit: true)
+      end
     end
   end
 

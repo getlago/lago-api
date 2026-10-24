@@ -31,6 +31,7 @@ RSpec.describe Types::ActivityLogs::ResourceObject do
       Types::RateCardRates::Object,
       Types::PlanAppliedRateCards::Object,
       Types::ContractAppliedRateCards::Object,
+      Types::RatePhases::Object,
       Types::Contracts::Object,
       Types::Quotes::Object,
       Types::OrderForms::Object,
@@ -58,6 +59,7 @@ RSpec.describe Types::ActivityLogs::ResourceObject do
     let(:rate_card_rate) { create(:rate_card_rate) }
     let(:plan_rate_card) { create(:plan_rate_card) }
     let(:contract_rate_card) { create(:contract_rate_card) }
+    let(:rate_phase) { create(:rate_phase) }
     let(:contract) { create(:contract) }
     let(:quote) { create(:quote) }
     let(:order_form) { create(:order_form) }
@@ -136,6 +138,10 @@ RSpec.describe Types::ActivityLogs::ResourceObject do
       expect(subject.resolve_type(plan_rate_card, {})).to eq(Types::PlanAppliedRateCards::Object)
       expect(subject.resolve_type(contract_rate_card, {})).to eq(Types::ContractAppliedRateCards::Object)
       expect(subject.resolve_type(contract, {})).to eq(Types::Contracts::Object)
+    end
+
+    it "returns Types::RatePhases::Object for RatePhase objects" do
+      expect(subject.resolve_type(rate_phase, {})).to eq(Types::RatePhases::Object)
     end
 
     it "returns Types::Quotes::Object for Quote objects" do

@@ -57,24 +57,27 @@ module RatePhases
 
         rate_override = build_override
 
-        publish_owner_update do
-          # Highest positions first so the unique (card, position) index never
-          # sees a duplicate mid-shift.
-          existing.select { |phase| phase.position >= position }.reverse_each do |phase|
-            phase.update!(position: phase.position + 1)
-          end
-
-          result.rate_phase = RatePhase.create!(
-            organization: applied_rate_card.organization,
-            plan_rate_card:,
-            contract_rate_card:,
-            code: params[:code].presence,
-            position:,
-            billing_interval_cycle_count: params[:billing_interval_cycle_count],
-            name: params[:name],
-            rate_override:
-          )
+        # Highest positions first so the unique (card, position) index never
+        # sees a duplicate mid-shift.
+        existing.select { |phase| phase.position >= position }.reverse_each do |phase|
+          phase.update!(position: phase.position + 1)
         end
+
+        result.rate_phase = RatePhase.create!(
+          organization: applied_rate_card.organization,
+          plan_rate_card:,
+          contract_rate_card:,
+          code: params[:code].presence,
+          position:,
+          billing_interval_cycle_count: params[:billing_interval_cycle_count],
+          name: params[:name],
+          rate_override:
+        )
+
+        # Logged even when the card is created with its phases: the card's
+        # created log does not list them.
+        Utils::ActivityLog.produce_after_commit(result.rate_phase, "rate_phase.created")
+        publish_owner_update
       end
 
       result
@@ -93,16 +96,10 @@ module RatePhases
     end
 
     def publish_owner_update
+      return unless emit_events
+
       event_type = plan_rate_card ? "plan_rate_card.updated" : "contract_rate_card.updated"
-      if emit_events
-        Utils::ActivityLog.produce_after_commit(applied_rate_card, event_type) do
-          yield
-          SendWebhookJob.perform_after_commit(event_type, applied_rate_card)
-          result
-        end
-      else
-        yield
-      end
+      SendWebhookJob.perform_after_commit(event_type, applied_rate_card)
     end
 
     def build_override
