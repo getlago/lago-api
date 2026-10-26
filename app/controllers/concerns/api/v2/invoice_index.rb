@@ -57,17 +57,12 @@ module Api
         )
 
         if result.success?
-          page = ::CursorPagination::Page.new(records: result.invoices.preload(:billing_entity), cursor:)
-          Invoice.preload_aggregations(page.records, :offset_amount_cents)
+          invoices = result.invoices.preload(:billing_entity)
+          # Loads the page with the credit note offsets of all its invoices; the render reads the
+          # rows the relation already holds.
+          Invoice.preload_aggregations(invoices, :offset_amount_cents)
 
-          render(
-            json: ::CollectionSerializer.new(
-              page.records,
-              ::V2::InvoiceSerializer,
-              collection_name: "invoices",
-              meta: page.meta
-            )
-          )
+          render_invoices(invoices)
         else
           render_error_response(result)
         end

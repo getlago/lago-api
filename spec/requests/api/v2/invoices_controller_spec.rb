@@ -21,6 +21,12 @@ RSpec.describe Api::V2::InvoicesController, v2_timestamps: false do
 
     include_examples "requires API permission", "invoice", "read"
 
+    it "renders the list timestamps to the microsecond" do
+      subject
+
+      expect(json[:invoices].sole.values_at(:created_at, :updated_at)).to all(match(/\.\d{6}Z\z/))
+    end
+
     it "lists the catalog invoices only" do
       subject
 
@@ -124,6 +130,16 @@ RSpec.describe Api::V2::InvoicesController, v2_timestamps: false do
     let(:invoice_id) { contract_invoice.id }
 
     include_examples "requires API permission", "invoice", "read"
+
+    context "with timestamps between two seconds" do
+      let(:contract_invoice) { create(:invoice, organization:, customer:, invoice_type: :contract, created_at: Time.zone.parse("2026-10-01T08:30:00.123456Z")) }
+
+      it "returns them to the microsecond" do
+        subject
+
+        expect(json[:invoice][:created_at]).to eq("2026-10-01T08:30:00.123456Z")
+      end
+    end
 
     it "returns the flat invoice" do
       subject
