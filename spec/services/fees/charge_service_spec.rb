@@ -5232,9 +5232,15 @@ RSpec.describe Fees::ChargeService, :premium do
 
       context "with a charge filter without usage before the last period" do
         let(:region) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us apac]) }
-        let(:apac_filter) { create(:charge_filter, charge:, properties: {amount: "20"}, created_at: Time.zone.parse("2022-03-01")) }
+        let(:filter_created_at) { Time.zone.parse("2022-03-01") }
+        let(:apac_filter) do
+          create(:charge_filter, charge:, properties: {amount: "20"}, created_at: filter_created_at, updated_at: filter_created_at)
+        end
 
-        before { create(:charge_filter_value, charge_filter: apac_filter, billable_metric_filter: region, values: ["apac"]) }
+        before do
+          create(:charge_filter_value, charge_filter: apac_filter, billable_metric_filter: region, values: ["apac"],
+            created_at: filter_created_at, updated_at: filter_created_at)
+        end
 
         it "bills what the full scan bills, starting the filter from zero" do
           expect(bill(march)).to eq([[{}, 18, 3]])
