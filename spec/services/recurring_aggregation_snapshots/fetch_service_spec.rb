@@ -17,7 +17,7 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
   let(:watermark) { Time.zone.parse("2026-10-01T00:05:00") }
 
   def create_filter(**attributes)
-    create(:charge_filter, charge:, created_at: watermark - 1.month, **attributes)
+    create(:charge_filter, charge:, created_at: watermark - 1.month, updated_at: watermark - 1.month, **attributes)
   end
 
   def create_filter_value(charge_filter, **attributes)
@@ -98,6 +98,25 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
 
           expect(result.snapshots).to eq([])
           expect(result.period).to eq(described_class::Period.new(to_datetime: previous_to_datetime, watermark:))
+        end
+
+        context "when the charge filter was edited after the latest period" do
+          before { charge_filter.update!(updated_at: watermark + 1.minute) }
+
+          it "returns no snapshot, as its grouping keys can have changed" do
+            result = fetch_service.call
+
+            expect(result.snapshots).to be_nil
+            expect(result.period).to be_nil
+          end
+        end
+      end
+
+      context "when the charge filter was edited after the latest period" do
+        before { charge_filter.update!(updated_at: watermark + 1.minute) }
+
+        it "returns the snapshot of the charge filter, as its rows show their grouping keys" do
+          expect(fetch_service.call.snapshots.map(&:units)).to eq([4])
         end
       end
 
