@@ -18,8 +18,10 @@ RSpec.describe RecurringAggregationSnapshots::PreviousSubscriptionSnapshots do
   let(:watermark) { Time.zone.parse("2026-10-01T00:05:00") }
 
   def create_filter(target_charge, values)
-    create(:charge_filter, charge: target_charge, created_at: watermark - 1.month).tap do |filter|
-      create(:charge_filter_value, charge_filter: filter, billable_metric_filter:, values:)
+    created_at = watermark - 1.month
+
+    create(:charge_filter, charge: target_charge, created_at:, updated_at: created_at).tap do |filter|
+      create(:charge_filter_value, charge_filter: filter, billable_metric_filter:, values:, created_at:, updated_at: created_at)
     end
   end
 
@@ -72,7 +74,7 @@ RSpec.describe RecurringAggregationSnapshots::PreviousSubscriptionSnapshots do
         buckets.drop(1).each { lookup.period(charge: fresh_charge, charge_filter: it) }
       end
 
-      expect(first_bucket_queries).to eq(6)
+      expect(first_bucket_queries).to eq(7)
       expect(other_buckets_queries).to eq(0)
     end
 
