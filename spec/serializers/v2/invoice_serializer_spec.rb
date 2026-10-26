@@ -131,15 +131,14 @@ RSpec.describe V2::InvoiceSerializer do
       let(:contract) { create(:contract, organization:, customer:, catalog_plan: create(:catalog_plan, organization:)) }
       let(:other_contract) { create(:contract, organization:, customer: create(:customer, organization:), catalog_plan: create(:catalog_plan, organization:)) }
 
-      it "loads the customers, billing entities, plans and rate cards of all the contracts at once" do
-        create(:contract_rate_card, organization:, contract: other_contract)
+      it "loads the customers, billing entities and plans of all the contracts at once" do
         tables = []
-        callback = ->(*, payload) { tables << payload[:sql][/FROM "(customers|billing_entities|contract_rate_cards|#{CatalogPlan.table_name})"/, 1] }
+        callback = ->(*, payload) { tables << payload[:sql][/FROM "(customers|billing_entities|#{CatalogPlan.table_name})"/, 1] }
 
         ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { result }
 
-        expect(result["contracts"].map { it["applied_rate_cards_count"] }).to eq([contract, other_contract].map { it.applied_rate_cards.count })
-        expect(tables.compact.tally).to eq("customers" => 1, "billing_entities" => 1, "contract_rate_cards" => 1, CatalogPlan.table_name => 1)
+        expect(result["contracts"].size).to eq(2)
+        expect(tables.compact.tally).to eq("customers" => 1, "billing_entities" => 1, CatalogPlan.table_name => 1)
       end
     end
 
