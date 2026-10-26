@@ -164,20 +164,13 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
         expect(first_result.requirements).to eq([evm_requirement])
       end
 
-      it "passes on the proof the challenge left unrecorded" do
-        expect { result }.to change(X402::SignInNonce, :count).from(0).to(1)
-        expect(result.requirements).to be_nil
-      end
-    end
-
-    context "when the insert hits an unknown unique index" do
-      before do
-        allow(organization.x402_sign_in_nonces).to receive(:create!)
-          .and_raise(ActiveRecord::RecordNotUnique.new('duplicate key value violates unique constraint "some_other_index"'))
+      it "refuses the proof the challenge recorded with nonce_already_used" do
+        expect(result.error.messages).to eq(siwx: ["nonce_already_used"])
       end
 
-      it "re-raises" do
-        expect { result }.to raise_error(ActiveRecord::RecordNotUnique)
+      it "keeps one nonce" do
+        result
+        expect(X402::SignInNonce.count).to eq(1)
       end
     end
   end
@@ -230,52 +223,23 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
     end
   end
 
-  context "with a lost insert race" do
+  context "with the nonce recorded by a concurrent call", cache: :redis do
+    let(:key) { "x402:reserved:#{wallet.id}" }
+
     before do
       wallet
       subscription
       create(:x402_sign_in_nonce, organization:, agent_address:, nonce: siwx["nonce"])
-      allow(organization.x402_sign_in_nonces).to receive(:exists?).and_return(false)
-      allow(Sentry).to receive(:capture_exception)
+      Rails.cache.redis.then { it.set(key, 5, ex: 60) }
     end
 
-    context "with the reservation counter", cache: :redis do
-      let(:key) { "x402:reserved:#{wallet.id}" }
-
-      before { Rails.cache.redis.then { it.set(key, 5, ex: 60) } }
-
-      it "refuses with nonce_already_used" do
-        expect(result.error.messages).to eq(siwx: ["nonce_already_used"])
-      end
-
-      it "restores the held reservation" do
-        result
-        expect(Rails.cache.read(key, raw: true)).to eq("5")
-      end
+    it "refuses with nonce_already_used" do
+      expect(result.error.messages).to eq(siwx: ["nonce_already_used"])
     end
 
-    context "when Redis is unreachable", cache: :redis do
-      before { allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::RedisCacheStore.new(url: "redis://localhost:1")) }
-
-      it "refuses with nonce_already_used" do
-        expect(result.error.messages).to eq(siwx: ["nonce_already_used"])
-      end
-    end
-
-    context "when the counter is switched off", cache: :redis do
-      let(:organization) do
-        create(:organization, premium_integrations: ["events_targeting_wallets"], feature_flags: ["x402_reservation_counter_disabled"])
-      end
-      let(:key) { "x402:reserved:#{wallet.id}" }
-
-      it "refuses with nonce_already_used" do
-        expect(result.error.messages).to eq(siwx: ["nonce_already_used"])
-      end
-
-      it "leaves the counter untouched" do
-        result
-        expect(Rails.cache.redis.then { it.exists?(key) }).to be(false)
-      end
+    it "holds no reservation" do
+      result
+      expect(Rails.cache.read(key, raw: true)).to eq("5")
     end
   end
 
@@ -285,13 +249,12 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
     before do
       wallet
       subscription
-      Rails.cache.redis.then { it.set(key, 5, ex: 60) }
-      allow(organization.x402_sign_in_nonces).to receive(:create!).and_raise(ActiveRecord::StatementInvalid)
+      allow(organization.x402_sign_in_nonces).to receive(:insert).and_raise(ActiveRecord::StatementInvalid)
     end
 
-    it "re-raises after restoring the held reservation" do
+    it "re-raises before reserving" do
       expect { result }.to raise_error(ActiveRecord::StatementInvalid)
-      expect(Rails.cache.read(key, raw: true)).to eq("5")
+      expect(Rails.cache.redis.then { it.exists?(key) }).to be(false)
     end
   end
 
@@ -310,8 +273,9 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
       expect(result).to have_attributes(requirements: [evm_requirement], external_subscription_id: subscription.external_id, balance_credits: 9)
     end
 
-    it "records no nonce" do
-      expect { result }.not_to change(X402::SignInNonce, :count)
+    it "records the nonce" do
+      result
+      expect(X402::SignInNonce.sole).to have_attributes(organization:, agent_address:, nonce: siwx["nonce"])
     end
   end
 
@@ -365,8 +329,9 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
       )
     end
 
-    it "creates nothing" do
-      expect { result }.not_to change { [Customer.count, Wallet.count, Subscription.count, X402::Settlement.count, X402::SignInNonce.count] }
+    it "creates nothing but the nonce" do
+      expect { result }.not_to change { [Customer.count, Wallet.count, Subscription.count, X402::Settlement.count] }
+      expect(X402::SignInNonce.sole).to have_attributes(organization:, agent_address:, nonce: siwx["nonce"])
     end
 
     context "when the connection refuses strangers" do

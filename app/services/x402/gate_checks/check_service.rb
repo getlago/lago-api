@@ -5,7 +5,6 @@ module X402
     class CheckService < BaseService
       DEGRADED_CALL_HEADROOM = 1_000
       MAX_ESTIMATED_CALL_COST_CENTS = 2**53 - 1
-      NONCE_INDEX = "index_x402_sign_in_nonces_on_organization_address_nonce"
 
       Result = BaseResult[:balance_credits, :requirements, :external_subscription_id, :sign_in_chains]
 
@@ -25,7 +24,7 @@ module X402
 
         return refuse("allowed_origins_not_configured") if siwx && connection.allowed_origins.empty?
         return result.fail_with_error!(sign_in.error) if sign_in&.failure?
-        return nonce_already_used if agent_address && organization.x402_sign_in_nonces.exists?(agent_address:, nonce:)
+        return nonce_already_used if agent_address && !record_nonce
         return refuse("buyer_not_recognized") if agent_address && customer.nil? && !connection.auto_create_customers
         return refuse("wallet_not_x402_enabled") if wallet && !wallet.x402_enabled
         return refuse("customer_not_refreshable") if customer && customer.error_details.tax_error.exists?
@@ -35,7 +34,7 @@ module X402
         result.balance_credits = balance_credits
 
         if active_subscription && wallet && covered?
-          record_nonce
+          result
         else
           challenge
         end
@@ -111,16 +110,9 @@ module X402
       end
 
       def record_nonce
-        organization.x402_sign_in_nonces.create!(agent_address:, nonce:)
-        result
-      rescue => e
-        reservation_counter.release(estimated_call_cost_cents) if @reserved
-
-        if e.is_a?(ActiveRecord::RecordNotUnique) && e.message.include?(NONCE_INDEX)
-          nonce_already_used
-        else
-          raise
-        end
+        organization.x402_sign_in_nonces
+          .insert({agent_address:, nonce:}, unique_by: %i[organization_id agent_address nonce]) # rubocop:disable Rails/SkipsModelValidations
+          .any?
       end
 
       def nonce_already_used
@@ -169,11 +161,11 @@ module X402
       end
 
       def covered?
-        @reserved = reserve
+        reserved = reserve
 
-        if @reserved.nil?
+        if reserved.nil?
           computed_base >= DEGRADED_CALL_HEADROOM * estimated_call_cost_cents
-        elsif computed_base - @reserved >= estimated_call_cost_cents
+        elsif computed_base - reserved >= estimated_call_cost_cents
           true
         else
           reservation_counter.release(estimated_call_cost_cents)
