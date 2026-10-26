@@ -35,8 +35,8 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
         email_settings: ["invoice.finalized"],
         invoice_footer: "Payment information",
         invoice_grace_period: 3,
-        subscription_invoice_issuing_date_anchor: "current_period_end",
-        subscription_invoice_issuing_date_adjustment: "keep_anchor",
+        periodic_invoice_issuing_date_anchor: "current_period_end",
+        periodic_invoice_issuing_date_adjustment: "keep_anchor",
         document_locale: "fr"
       }
     end
@@ -48,17 +48,32 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
 
       expect(response).to have_http_status(:ok)
       billing_entity = organization.all_billing_entities.find_by!(code: "entity.eu")
-      expect(billing_entity).to have_attributes(**attributes)
+      expect(billing_entity).to have_attributes(
+        **attributes.except(:periodic_invoice_issuing_date_anchor, :periodic_invoice_issuing_date_adjustment),
+        subscription_invoice_issuing_date_anchor: "current_period_end",
+        subscription_invoice_issuing_date_adjustment: "keep_anchor"
+      )
       expect(json[:billing_entity][:lago_id]).to eq(billing_entity.id)
-      expect(json[:billing_entity][:invoice_grace_period]).to eq(3)
-      expect(json[:billing_entity][:document_locale]).to eq("fr")
+      expect(json[:billing_entity]).to include(
+        invoice_grace_period: 3,
+        document_locale: "fr",
+        periodic_invoice_issuing_date_anchor: "current_period_end",
+        periodic_invoice_issuing_date_adjustment: "keep_anchor"
+      )
       expect(json[:billing_entity].keys & %i[billing_configuration net_payment_term taxes selected_invoice_custom_sections]).to eq([])
       expect(response.headers["X-Lago-Endpoint-Status"]).to eq("beta")
     end
 
     context "with removed, unknown and update-only parameters" do
       let(:attributes) do
-        super().merge(net_payment_term: 99, unknown: "ignored", tax_codes: ["unknown"], invoice_custom_section_codes: ["unknown"])
+        super().merge(
+          net_payment_term: 99,
+          unknown: "ignored",
+          tax_codes: ["unknown"],
+          invoice_custom_section_codes: ["unknown"],
+          subscription_invoice_issuing_date_anchor: "next_period_start",
+          subscription_invoice_issuing_date_adjustment: "align_with_finalization_date"
+        )
       end
 
       it "does not persist them" do
@@ -66,7 +81,12 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
 
         expect(response).to have_http_status(:ok)
         billing_entity = organization.all_billing_entities.find_by!(code: "entity.eu")
-        expect(billing_entity.net_payment_term).to eq(0)
+        expect(billing_entity).to have_attributes(
+          net_payment_term: 0,
+          subscription_invoice_issuing_date_anchor: "current_period_end",
+          subscription_invoice_issuing_date_adjustment: "keep_anchor"
+        )
+        expect(json[:billing_entity].keys).not_to include(:subscription_invoice_issuing_date_anchor, :subscription_invoice_issuing_date_adjustment)
         expect(billing_entity.taxes).to be_empty
         expect(billing_entity.selected_invoice_custom_sections).to be_empty
       end
@@ -282,12 +302,13 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
       end
 
       context "with an invalid enum" do
-        let(:attributes) { {name: "Must not change", subscription_invoice_issuing_date_anchor: "invalid"} }
+        let(:attributes) { {name: "Must not change", periodic_invoice_issuing_date_anchor: "invalid"} }
 
-        it "returns a validation error without updating the entity" do
+        it "returns a validation error under the REST field name without updating the entity" do
           expect { request }.not_to change { billing_entity.reload.attributes }
 
           expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq(periodic_invoice_issuing_date_anchor: ["value_is_invalid"])
         end
       end
 
@@ -306,8 +327,8 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
         let(:attributes) do
           {
             invoice_grace_period: 5,
-            subscription_invoice_issuing_date_anchor: "current_period_end",
-            subscription_invoice_issuing_date_adjustment: "keep_anchor"
+            periodic_invoice_issuing_date_anchor: "current_period_end",
+            periodic_invoice_issuing_date_adjustment: "keep_anchor"
           }
         end
 
@@ -315,7 +336,13 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
           request
 
           expect(response).to have_http_status(:ok)
-          expect(billing_entity.reload).to have_attributes(**attributes, name: "Existing", net_payment_term: 30)
+          expect(billing_entity.reload).to have_attributes(
+            invoice_grace_period: 5,
+            subscription_invoice_issuing_date_anchor: "current_period_end",
+            subscription_invoice_issuing_date_adjustment: "keep_anchor",
+            name: "Existing",
+            net_payment_term: 30
+          )
           expect(json[:billing_entity]).to include(attributes)
         end
       end
@@ -485,7 +512,8 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
       expect(response).to have_http_status(:ok)
       expect(json[:billing_entity][:lago_id]).to eq(billing_entity.id)
       expect(json[:billing_entity].keys & %i[billing_configuration net_payment_term taxes selected_invoice_custom_sections]).to eq([])
-      expect(json[:billing_entity]).to have_key(:updated_at)
+      expect(json[:billing_entity][:created_at]).to eq(billing_entity.created_at.iso8601(6))
+      expect(json[:billing_entity][:updated_at]).to eq(billing_entity.updated_at.iso8601(6))
       expect(json[:billing_entity][:deleted_at]).to be_nil
     end
 

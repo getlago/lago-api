@@ -3,13 +3,14 @@
 module Api
   module V2
     class BillingEntitiesController < Api::V2::BaseController
-      BILLING_CONFIGURATION_FIELDS = %i[
-        invoice_footer
-        invoice_grace_period
-        subscription_invoice_issuing_date_anchor
-        subscription_invoice_issuing_date_adjustment
-        document_locale
-      ].freeze
+      # REST names of the settings the shared services read from `billing_configuration`.
+      BILLING_CONFIGURATION_FIELDS = {
+        invoice_footer: :invoice_footer,
+        invoice_grace_period: :invoice_grace_period,
+        periodic_invoice_issuing_date_anchor: :subscription_invoice_issuing_date_anchor,
+        periodic_invoice_issuing_date_adjustment: :subscription_invoice_issuing_date_adjustment,
+        document_locale: :document_locale
+      }.freeze
 
       cursor_paginated_index(BillingEntity)
       serializable_with ::V2::BillingEntitySerializer
@@ -20,7 +21,7 @@ module Api
       end
 
       def show
-        billing_entity = current_organization.all_billing_entities.find_by(code: params[:code])
+        billing_entity = find_billing_entity
         return not_found_error(resource: "billing_entity") unless billing_entity
 
         render_billing_entity(billing_entity)
@@ -41,7 +42,7 @@ module Api
       end
 
       def update
-        billing_entity = current_organization.all_billing_entities.find_by(code: params[:code])
+        billing_entity = find_billing_entity
         return not_found_error(resource: "billing_entity") unless billing_entity
 
         input = update_params
@@ -91,7 +92,7 @@ module Api
           :document_number_prefix,
           :eu_tax_management,
           :einvoicing,
-          *BILLING_CONFIGURATION_FIELDS,
+          *BILLING_CONFIGURATION_FIELDS.keys,
           email_settings: [],
           tax_codes: [],
           invoice_custom_section_codes: []
@@ -102,7 +103,7 @@ module Api
         end
 
         # The shared write services still expect nested billing fields.
-        input[:billing_configuration] = input.extract!(*BILLING_CONFIGURATION_FIELDS)
+        input[:billing_configuration] = input.extract!(*BILLING_CONFIGURATION_FIELDS.keys).transform_keys(BILLING_CONFIGURATION_FIELDS)
         input
       end
 
@@ -115,6 +116,10 @@ module Api
         end
 
         input
+      end
+
+      def find_billing_entity
+        current_organization.all_billing_entities.find_by(code: params[:code])
       end
 
       def resource_name
