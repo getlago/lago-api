@@ -5,63 +5,83 @@ require "rails_helper"
 RSpec.describe ::V2::ActivityLogSerializer, clickhouse: true do
   subject(:serializer) { described_class.new(activity_log, root_name: "activity_log") }
 
+  let(:user) { create(:user, email: "user@example.test") }
+  let(:membership) { create(:membership, user:) }
   let(:activity_log) do
     create(
       :clickhouse_activity_log,
-      activity_object: {"foo" => '{"a": 1}', "baz" => "qux"},
-      activity_object_changes: {"foo" => '{"old": "bar", "new": "baz"}'}
+      membership:,
+      activity_id: "activity-1",
+      activity_type: "billable_metric.created",
+      activity_source: "api",
+      external_customer_id: "customer-1",
+      external_subscription_id: "subscription-1",
+      activity_object:,
+      activity_object_changes:
     )
   end
 
-  it "serializes the object" do
-    result = JSON.parse(serializer.to_json)
+  let(:result) { JSON.parse(serializer.to_json)["activity_log"] }
 
-    expect(result["activity_log"]["activity_id"]).to eq(activity_log.activity_id)
-    expect(result["activity_log"]["activity_type"]).to eq(activity_log.activity_type)
-    expect(result["activity_log"]["activity_source"]).to eq(activity_log.activity_source)
-    expect(result["activity_log"]["user_email"]).to eq(activity_log.user.email)
-    expect(result["activity_log"]["resource_id"]).to eq(activity_log.resource_id)
-    expect(result["activity_log"]["resource_type"]).to eq(activity_log.resource_type)
-    expect(result["activity_log"]["external_customer_id"]).to eq(activity_log.external_customer_id)
-    expect(result["activity_log"]["external_subscription_id"]).to eq(activity_log.external_subscription_id)
-    expect(result["activity_log"]["logged_at"]).to eq(activity_log.logged_at.iso8601)
-    expect(result["activity_log"]["created_at"]).to eq(activity_log.created_at.iso8601)
+  # Constant fields with the two JSON maps passed in. `resource_id` and the timestamps are read
+  # from the record: the model requires the resource to reference a real record, and the timestamps
+  # are assigned at creation. The serializer renders the timestamps at whole seconds by default.
+  def expected_payload(activity_object:, activity_object_changes:)
+    {
+      "activity_id" => "activity-1",
+      "activity_type" => "billable_metric.created",
+      "activity_source" => "api",
+      "activity_object" => activity_object,
+      "activity_object_changes" => activity_object_changes,
+      "user_email" => "user@example.test",
+      "resource_id" => activity_log.resource_id,
+      "resource_type" => "BillableMetric",
+      "external_customer_id" => "customer-1",
+      "external_subscription_id" => "subscription-1",
+      "logged_at" => activity_log.logged_at.iso8601,
+      "created_at" => activity_log.created_at.iso8601
+    }
   end
 
-  it "parses JSON-encoded values one level deep (AC1)" do
-    result = JSON.parse(serializer.to_json)
+  context "when the map values are JSON-encoded" do
+    let(:activity_object) { {"foo" => '{"a": 1}', "baz" => "qux"} }
+    let(:activity_object_changes) { {"foo" => '{"old": "bar", "new": "baz"}'} }
 
-    expect(result["activity_log"]["activity_object"]["foo"]).to eq({"a" => 1})
-    expect(result["activity_log"]["activity_object_changes"]["foo"]).to eq({"old" => "bar", "new" => "baz"})
-  end
-
-  it "returns non-JSON values unchanged (AC4)" do
-    result = JSON.parse(serializer.to_json)
-
-    expect(result["activity_log"]["activity_object"]["baz"]).to eq("qux")
-  end
-
-  context "when activity_object_changes holds a non-JSON value (AC4)" do
-    let(:activity_log) do
-      create(:clickhouse_activity_log, activity_object_changes: {"foo" => "not json"})
+    it "serializes the object and parses the JSON values one level deep" do
+      expect(result).to eq(
+        expected_payload(
+          activity_object: {"foo" => {"a" => 1}, "baz" => "qux"},
+          activity_object_changes: {"foo" => {"old" => "bar", "new" => "baz"}}
+        )
+      )
     end
+  end
+
+  context "when a map holds a non-JSON value" do
+    let(:activity_object) { {"foo" => "bar"} }
+    let(:activity_object_changes) { {"foo" => "not json"} }
 
     it "returns the raw value" do
-      result = JSON.parse(serializer.to_json)
-
-      expect(result["activity_log"]["activity_object_changes"]["foo"]).to eq("not json")
+      expect(result).to eq(
+        expected_payload(
+          activity_object: {"foo" => "bar"},
+          activity_object_changes: {"foo" => "not json"}
+        )
+      )
     end
   end
 
-  context "when a value parses to a valid JSON scalar" do
-    let(:activity_log) do
-      create(:clickhouse_activity_log, activity_object: {"n" => "5"})
-    end
+  context "when a map value parses to a JSON scalar" do
+    let(:activity_object) { {"n" => "5"} }
+    let(:activity_object_changes) { {"foo" => "bar"} }
 
     it "keeps the original string instead of coercing it" do
-      result = JSON.parse(serializer.to_json)
-
-      expect(result["activity_log"]["activity_object"]["n"]).to eq("5")
+      expect(result).to eq(
+        expected_payload(
+          activity_object: {"n" => "5"},
+          activity_object_changes: {"foo" => "bar"}
+        )
+      )
     end
   end
 end

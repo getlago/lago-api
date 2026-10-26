@@ -5,9 +5,50 @@ require "rails_helper"
 RSpec.describe Api::V2::ActivityLogsController, clickhouse: true do
   # `organization` stays a plain Postgres record: the product-catalog before hook forces it
   # during setup, before the clickhouse net-connect is allowed, so it must not touch ClickHouse.
-  let(:membership) { create(:membership) }
+  let(:user) { create(:user, email: "user@example.test") }
+  let(:membership) { create(:membership, user:) }
   let(:organization) { membership.organization }
-  let(:activity_log) { create(:clickhouse_activity_log, membership:) }
+  let(:activity_object) { {"foo" => "bar", "baz" => "qux"} }
+  let(:activity_object_changes) { {"foo" => '{"old": "bar", "new": "baz"}'} }
+  let(:activity_log) do
+    create(
+      :clickhouse_activity_log,
+      membership:,
+      activity_id: "activity-1",
+      activity_type: "billable_metric.created",
+      activity_source: "api",
+      external_customer_id: "customer-1",
+      external_subscription_id: "subscription-1",
+      activity_object:,
+      activity_object_changes:
+    )
+  end
+
+  # The full serialized object the endpoint returns. `json` symbolizes keys, so the parsed map
+  # values are symbol-keyed too. `resource_id` and the timestamps are read from the stored record:
+  # the model requires the resource to reference a real record, and ClickHouse keeps millisecond
+  # precision while the in-memory factory time has microseconds (the v2 render path emits
+  # microseconds). The two map fields are this serializer's parsed output.
+  def expected_payload(record, activity_object:, activity_object_changes:)
+    {
+      activity_id: "activity-1",
+      activity_type: "billable_metric.created",
+      activity_source: "api",
+      activity_object:,
+      activity_object_changes:,
+      user_email: "user@example.test",
+      resource_id: record.resource_id,
+      resource_type: "BillableMetric",
+      external_customer_id: "customer-1",
+      external_subscription_id: "subscription-1",
+      logged_at: record.logged_at.iso8601(6),
+      created_at: record.created_at.iso8601(6)
+    }
+  end
+
+  def stored_activity_log
+    organization.activity_logs.find_by(activity_id: activity_log.activity_id)
+  end
 
   describe "GET /api/v2/activity_logs" do
     subject { get_with_token(organization, "/api/v2/activity_logs", params) }
@@ -28,42 +69,42 @@ RSpec.describe Api::V2::ActivityLogsController, clickhouse: true do
     context "with premium organization", :premium do
       include_examples "requires API permission", "activity_log", "read"
 
-      context "with JSON-encoded fields (AC1)" do
-        let(:activity_log) do
-          create(
-            :clickhouse_activity_log,
-            membership:,
-            activity_object: {"foo" => '{"a": 1}', "baz" => "qux"},
-            activity_object_changes: {"foo" => '{"old": "bar", "new": "baz"}'}
-          )
-        end
+      context "with JSON-encoded fields" do
+        let(:activity_object) { {"foo" => '{"a": 1}', "baz" => "qux"} }
+        let(:activity_object_changes) { {"foo" => '{"old": "bar", "new": "baz"}'} }
 
-        it "returns the parsed JSON values" do
+        it "returns the full object with the JSON values parsed one level deep" do
           subject
 
           expect(response).to have_http_status(:success)
-          returned = json[:activity_logs].find { |l| l[:activity_id] == activity_log.activity_id }
-          expect(returned[:activity_object][:foo]).to eq({a: 1})
-          expect(returned[:activity_object][:baz]).to eq("qux")
-          expect(returned[:activity_object_changes][:foo]).to eq({old: "bar", new: "baz"})
+          expect(json[:activity_logs].sole).to eq(
+            expected_payload(
+              stored_activity_log,
+              activity_object: {foo: {a: 1}, baz: "qux"},
+              activity_object_changes: {foo: {old: "bar", new: "baz"}}
+            )
+          )
         end
       end
 
-      context "when a parsed field holds a non-JSON value (AC4)" do
-        let(:activity_log) do
-          create(:clickhouse_activity_log, membership:, activity_object_changes: {"foo" => "not json"})
-        end
+      context "when a parsed field holds a non-JSON value" do
+        let(:activity_object_changes) { {"foo" => "not json"} }
 
         it "returns the raw value" do
           subject
 
           expect(response).to have_http_status(:success)
-          returned = json[:activity_logs].find { |l| l[:activity_id] == activity_log.activity_id }
-          expect(returned[:activity_object_changes][:foo]).to eq("not json")
+          expect(json[:activity_logs].sole).to eq(
+            expected_payload(
+              stored_activity_log,
+              activity_object: {foo: "bar", baz: "qux"},
+              activity_object_changes: {foo: "not json"}
+            )
+          )
         end
       end
 
-      context "with cursor pagination over rows sharing a second-precision logged_at (AC5)" do
+      context "with cursor pagination over rows sharing a second-precision logged_at" do
         # Production data: producers emit logged_at as Time.current.iso8601 with no fractional
         # second, so every row in the same second shares an identical logged_at and the page can
         # only break on the activity_id tiebreak. This must page without dropping a row.
@@ -106,7 +147,7 @@ RSpec.describe Api::V2::ActivityLogsController, clickhouse: true do
         end
       end
 
-      context "with cursor pagination over rows sharing a second but differing by milliseconds (AC5)" do
+      context "with cursor pagination over rows sharing a second but differing by milliseconds" do
         # Proves the keyset binds the time with sub-second precision: the rows share a whole second
         # but each has a distinct millisecond, so a cursor bound truncated to the second would drop
         # the rows in the anchor's second. Each row must still be returned exactly once.
@@ -149,7 +190,7 @@ RSpec.describe Api::V2::ActivityLogsController, clickhouse: true do
         end
       end
 
-      context "with an invalid cursor parameter (AC5)" do
+      context "with an invalid cursor parameter" do
         let(:params) { {after: "not-a-cursor!"} }
 
         it "returns the v2 error body" do
@@ -177,7 +218,7 @@ RSpec.describe Api::V2::ActivityLogsController, clickhouse: true do
       end
 
       context "without product catalog enabled", product_catalog: false do
-        it "requires the product catalog (AC5)" do
+        it "requires the product catalog" do
           subject
 
           expect(response).to have_http_status(:forbidden)
@@ -207,14 +248,16 @@ RSpec.describe Api::V2::ActivityLogsController, clickhouse: true do
     context "with premium organization", :premium do
       include_examples "requires API permission", "activity_log", "read"
 
-      it "returns one activity log" do
+      it "returns the full activity log object" do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:activity_log]).to include(
-          activity_id: activity_log.activity_id,
-          activity_source: activity_log.activity_source,
-          logged_at: activity_log.logged_at.iso8601
+        expect(json[:activity_log]).to eq(
+          expected_payload(
+            stored_activity_log,
+            activity_object: {foo: "bar", baz: "qux"},
+            activity_object_changes: {foo: {old: "bar", new: "baz"}}
+          )
         )
       end
 

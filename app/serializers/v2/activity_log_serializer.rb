@@ -14,8 +14,8 @@ module V2
         resource_type: model.resource_type,
         external_customer_id: model.external_customer_id,
         external_subscription_id: model.external_subscription_id,
-        logged_at: model.logged_at.iso8601,
-        created_at: model.created_at.iso8601
+        logged_at: format_time(model.logged_at),
+        created_at: format_time(model.created_at)
       }
     end
 
