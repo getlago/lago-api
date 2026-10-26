@@ -626,7 +626,6 @@ module Fees
     end
 
     def snapshot_recurring_units?(selected_metered_item)
-      return false unless billing_context.organization.feature_flag_enabled?(:recurring_aggregation_snapshots)
       return false if options.current_usage? || options.invoice_preview?
 
       # A progressive billing invoice stops mid-period, its units do not close the period
@@ -710,7 +709,7 @@ module Fees
       if selected_metered_item.billing_segment || selected_metered_item.charge_filter.present?
         if selected_metered_item.charge_filter
           # Aggregations::BaseService retains this object for charge_filter_id cache lookups;
-          # CustomService also scopes cached state by it and reads
+          # WeightedSumService and CustomService also scope cached state by it. CustomService reads
           # its custom_properties, while BaseStore extracts its ID for enriched-event queries.
           filters[:charge_filter] = selected_metered_item.charge_filter
         end
