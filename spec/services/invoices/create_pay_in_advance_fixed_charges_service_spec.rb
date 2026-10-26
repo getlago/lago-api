@@ -107,20 +107,6 @@ RSpec.describe Invoices::CreatePayInAdvanceFixedChargesService do
       end
     end
 
-    it "calls SegmentTrackJob" do
-      invoice = invoice_service.call.invoice
-
-      expect(SegmentTrackJob).to have_been_enqueued.with(
-        membership_id: CurrentContext.membership,
-        event: "invoice_created",
-        properties: {
-          organization_id: invoice.organization.id,
-          invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type
-        }
-      )
-    end
-
     it "creates a payment" do
       allow(Invoices::Payments::CreateService).to receive(:call_async)
 

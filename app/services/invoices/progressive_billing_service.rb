@@ -48,7 +48,6 @@ module Invoices
       end
 
       if invoice.finalized?
-        Utils::SegmentTrack.invoice_created(invoice)
         SendWebhookJob.perform_later("invoice.created", invoice)
         Utils::ActivityLog.produce(invoice, "invoice.created")
         Invoices::GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?)

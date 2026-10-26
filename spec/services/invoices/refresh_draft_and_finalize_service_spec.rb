@@ -231,20 +231,6 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
       end
     end
 
-    it "calls SegmentTrackJob" do
-      invoice = finalize_service.call.invoice
-
-      expect(SegmentTrackJob).to have_been_enqueued.with(
-        membership_id: CurrentContext.membership,
-        event: "invoice_created",
-        properties: {
-          organization_id: invoice.organization.id,
-          invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type
-        }
-      )
-    end
-
     it "creates a payment" do
       allow(Invoices::Payments::CreateService).to receive(:call_async)
 
@@ -326,7 +312,6 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
 
         allow(Invoices::ApplyProviderTaxesService).to receive(:call).and_call_original
         allow(Invoices::Payments::CreateService).to receive(:new).and_call_original
-        allow(Utils::SegmentTrack).to receive(:invoice_created).and_call_original
       end
 
       context "when taxes are unknown" do
@@ -351,7 +336,6 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService do
           expect(Invoices::GenerateDocumentsJob).not_to have_been_enqueued
           expect(Integrations::Aggregator::Invoices::CreateJob).not_to have_been_enqueued
           expect(Invoices::Payments::CreateService).not_to have_received(:new)
-          expect(Utils::SegmentTrack).not_to have_received(:invoice_created)
         end
 
         it "does not change issuing_date on the invoice" do
