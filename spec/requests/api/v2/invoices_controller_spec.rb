@@ -360,9 +360,22 @@ RSpec.describe Api::V2::InvoicesController do
       it "returns a not voidable error" do
         subject
 
-        expect(response).to have_http_status(:method_not_allowed)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(json).to eq(code: "not_voidable", details: [])
         expect(invoice.reload).to be_draft
+      end
+    end
+
+    context "when the invoice is already voided" do
+      let(:status) { :voided }
+
+      it "returns a not voidable error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "not_voidable", details: [])
+        expect(invoice.reload).to be_voided
+        expect(invoice.credit_notes).to be_empty
       end
     end
 
@@ -388,11 +401,11 @@ RSpec.describe Api::V2::InvoicesController do
           .and_return(CreditNotes::VoidService::Result.new.not_allowed_failure!(code: "no_voidable_amount"))
       end
 
-      it "returns a method not allowed error and keeps the invoice finalized" do
+      it "returns a not allowed error and keeps the invoice finalized" do
         subject
 
-        expect(response).to have_http_status(:method_not_allowed)
-        expect(json).to eq(status: 405, error: "Method Not Allowed", code: "no_voidable_amount")
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "no_voidable_amount", details: [])
         expect(invoice.reload).to be_finalized
         expect(invoice.credit_notes).to be_empty
       end

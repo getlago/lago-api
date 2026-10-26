@@ -225,7 +225,7 @@ RSpec.describe Api::V2::FeesController do
       it "returns a not allowed error" do
         subject
 
-        expect(response).to have_http_status(:method_not_allowed)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(json).to eq(code: "invoiced_fee", details: [])
         expect(fee.reload).to be_payment_pending
       end
@@ -301,7 +301,7 @@ RSpec.describe Api::V2::FeesController do
       it "returns a not allowed error" do
         subject
 
-        expect(response).to have_http_status(:method_not_allowed)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(json).to eq(code: "invoiced_fee", details: [])
         expect(fee.reload).to be_kept
       end

@@ -132,13 +132,13 @@ RSpec.describe Api::V2Errors do
     end
   end
 
-  context "with a method not allowed failure" do
+  context "with a not allowed failure" do
     let(:failure) { "not_allowed" }
 
-    it "returns a method not allowed error" do
+    it "returns an unprocessable error with the code of the failure" do
       show
 
-      expect(response).to have_http_status(:method_not_allowed)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(json).to eq(code: "not_voidable", details: [])
     end
   end

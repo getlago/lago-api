@@ -19,7 +19,9 @@ module Api
 
     def not_found_error(resource:) = render_v2_error(404, code: "#{resource}_not_found")
 
-    def method_not_allowed_error(code:) = render_v2_error(405, code:)
+    # A record whose state refuses the action, a 422 like the catalog's own refusals. The v1 405
+    # would need an Allow header, and the method is supported.
+    def method_not_allowed_error(code:) = render_v2_error(422, code:)
 
     def lock_acquisition_error(code:) = render_v2_error(422, code:)
 
