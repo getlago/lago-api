@@ -332,6 +332,17 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
           expect(aggregator.aggregate.total_aggregated_units).to eq(10)
         end
 
+        context "with a cached aggregation persisted before the snapshots" do
+          before do
+            create(:cached_aggregation, organization:, charge:, external_subscription_id: subscription.external_id,
+              current_aggregation: 99, timestamp: from_datetime - 1.day)
+          end
+
+          it "ignores it and reads the units carried over from the events" do
+            expect(aggregator.aggregate.total_aggregated_units).to eq(10)
+          end
+        end
+
         context "when the period is the first of the subscription" do
           let(:subscription) { create(:subscription, started_at: from_datetime) }
 
