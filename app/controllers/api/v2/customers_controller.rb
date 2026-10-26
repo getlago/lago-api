@@ -14,12 +14,6 @@ module Api
         moneyhash_customer
       ].freeze
 
-      BILLING_CONFIGURATION_FIELDS = %i[
-        subscription_invoice_issuing_date_anchor
-        subscription_invoice_issuing_date_adjustment
-        document_locale
-      ].freeze
-
       PROVIDER_CUSTOMER_FIELDS = %i[
         provider_customer_id
         sync
@@ -60,7 +54,7 @@ module Api
       end
 
       def show
-        customer = current_organization.customers.find_by(external_id: params[:external_id])
+        customer = find_customer
         return not_found_error(resource: "customer") unless customer
 
         render_customer(customer)
@@ -81,7 +75,7 @@ module Api
       end
 
       def update
-        customer = current_organization.customers.find_by(external_id: params[:external_id])
+        customer = find_customer
         return not_found_error(resource: "customer") unless customer
 
         input = input_params
@@ -98,7 +92,7 @@ module Api
       end
 
       def destroy
-        customer = current_organization.customers.find_by(external_id: params[:external_id])
+        customer = find_customer
         result = ::Customers::DestroyService.call(customer:)
 
         if result.success?
@@ -156,7 +150,7 @@ module Api
           :provider_customer_id,
           :sync,
           :sync_with_provider,
-          *BILLING_CONFIGURATION_FIELDS,
+          :document_locale,
           provider_payment_methods: [],
           shipping_address: [
             :address_line1,
@@ -194,7 +188,7 @@ module Api
         end
 
         # Adapt the flat REST fields to the shared customer services.
-        input[:billing_configuration] = input.extract!(*BILLING_CONFIGURATION_FIELDS)
+        input[:billing_configuration] = input.extract!(:document_locale)
         provider_customer = input.extract!(*PROVIDER_CUSTOMER_FIELDS)
         input[:provider_customer] = provider_customer if provider_customer.any?
         normalize_metadata!(input[:metadata])
@@ -224,6 +218,10 @@ module Api
           account_type: [],
           metadata: {}
         )
+      end
+
+      def find_customer
+        current_organization.customers.find_by(external_id: params[:external_id])
       end
 
       def resource_name

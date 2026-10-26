@@ -57,8 +57,6 @@ module V2
       provider_customer = model.provider_customer
       {
         invoice_grace_period: model.invoice_grace_period,
-        subscription_invoice_issuing_date_anchor: model.subscription_invoice_issuing_date_anchor,
-        subscription_invoice_issuing_date_adjustment: model.subscription_invoice_issuing_date_adjustment,
         payment_provider: model.payment_provider,
         payment_provider_code: model.payment_provider_code,
         provider_customer_id: provider_customer&.provider_customer_id,

@@ -115,7 +115,12 @@ RSpec.describe Api::V2::CustomersController do
 
     context "with removed parameters" do
       let(:attributes) do
-        super().merge(net_payment_term: 60, metadata: [{key: "reference", value: "123", display_in_invoice: true}])
+        super().merge(
+          net_payment_term: 60,
+          metadata: [{key: "reference", value: "123", display_in_invoice: true}],
+          subscription_invoice_issuing_date_anchor: "current_period_end",
+          subscription_invoice_issuing_date_adjustment: "keep_anchor"
+        )
       end
 
       it "ignores removed fields" do
@@ -123,8 +128,13 @@ RSpec.describe Api::V2::CustomersController do
 
         expect(response).to have_http_status(:ok)
         customer = organization.customers.find_by!(external_id: attributes[:external_id])
-        expect(customer.net_payment_term).to be_nil
+        expect(customer).to have_attributes(
+          net_payment_term: nil,
+          subscription_invoice_issuing_date_anchor: nil,
+          subscription_invoice_issuing_date_adjustment: nil
+        )
         expect(customer.metadata.sole.display_in_invoice).to be(false)
+        expect(json[:customer].keys).not_to include(:subscription_invoice_issuing_date_anchor, :subscription_invoice_issuing_date_adjustment)
       end
     end
 
@@ -313,9 +323,7 @@ RSpec.describe Api::V2::CustomersController do
       let(:attributes) do
         super().merge(
           invoice_grace_period: 3,
-          document_locale: "fr",
-          subscription_invoice_issuing_date_anchor: "current_period_end",
-          subscription_invoice_issuing_date_adjustment: "keep_anchor"
+          document_locale: "fr"
         )
       end
 
@@ -323,12 +331,7 @@ RSpec.describe Api::V2::CustomersController do
         request
 
         expect(response).to have_http_status(:ok)
-        expect(json[:customer]).to include(attributes.slice(
-          :invoice_grace_period,
-          :document_locale,
-          :subscription_invoice_issuing_date_anchor,
-          :subscription_invoice_issuing_date_adjustment
-        ))
+        expect(json[:customer]).to include(attributes.slice(:invoice_grace_period, :document_locale))
         expect(json[:customer]).not_to have_key(:billing_configuration)
       end
     end
@@ -689,13 +692,13 @@ RSpec.describe Api::V2::CustomersController do
       end
 
       context "with only removed parameters" do
-        let(:attributes) { {net_payment_term: 60} }
+        let(:attributes) { {net_payment_term: 60, subscription_invoice_issuing_date_anchor: "current_period_end"} }
 
         it "ignores the parameters instead of reporting a missing customer wrapper" do
           request
 
           expect(response).to have_http_status(:ok)
-          expect(customer.reload.net_payment_term).to eq(30)
+          expect(customer.reload).to have_attributes(net_payment_term: 30, subscription_invoice_issuing_date_anchor: nil)
         end
       end
 

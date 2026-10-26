@@ -84,8 +84,6 @@ RSpec.describe V2::CustomerSerializer do
       finalize_zero_amount_invoice: "skip",
       skip_invoice_custom_sections: true,
       invoice_grace_period: customer.invoice_grace_period,
-      subscription_invoice_issuing_date_anchor: customer.subscription_invoice_issuing_date_anchor,
-      subscription_invoice_issuing_date_adjustment: customer.subscription_invoice_issuing_date_adjustment,
       payment_provider: nil,
       payment_provider_code: nil,
       provider_customer_id: nil,
