@@ -29,7 +29,7 @@ module V2
         issuing_date: format_date(model.issuing_date),
         payment_due_date: format_date(model.payment_due_date),
         payment_overdue: model.payment_overdue,
-        payment_dispute_lost_at: model.payment_dispute_lost_at&.iso8601,
+        payment_dispute_lost_at: format_time(model.payment_dispute_lost_at),
         purchase_order_number: model.purchase_order_number,
         fees_amount_cents: model.fees_amount_cents,
         sub_total_excluding_taxes_amount_cents: model.sub_total_excluding_taxes_amount_cents,
@@ -42,9 +42,9 @@ module V2
         total_due_amount_cents: model.total_due_amount_cents,
         pdf_url: model.file_url,
         xml_url: model.xml_url,
-        voided_at: model.voided_at&.iso8601,
-        created_at: model.created_at.iso8601,
-        updated_at: model.updated_at.iso8601
+        voided_at: format_time(model.voided_at),
+        created_at: format_time(model.created_at),
+        updated_at: format_time(model.updated_at)
       }
     end
 

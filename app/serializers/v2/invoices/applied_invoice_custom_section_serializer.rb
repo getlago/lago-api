@@ -10,8 +10,8 @@ module V2
           code: model.code,
           details: model.details,
           display_name: model.display_name,
-          created_at: model.created_at.iso8601,
-          updated_at: model.updated_at.iso8601
+          created_at: format_time(model.created_at),
+          updated_at: format_time(model.updated_at)
         }
       end
     end
