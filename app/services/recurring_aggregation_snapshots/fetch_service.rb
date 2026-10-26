@@ -31,6 +31,7 @@ module RecurringAggregationSnapshots
 
       records = period_records.select { it.charge_filter_id == charge_filter&.id }
       return result unless records.all? { same_grouped_by_keys?(it) }
+      return result if records.empty? && filter_edited_since?(marker)
 
       result.period = Period.new(to_datetime: marker.to_datetime, watermark: marker.watermark)
       result.snapshots = records.map { to_snapshot(it) }
@@ -79,6 +80,12 @@ module RecurringAggregationSnapshots
     # bucket's own rows, as a filter can group on other keys than the default bucket holding the marker.
     def same_grouped_by_keys?(record)
       record.grouped_by.keys.sort == Array(grouped_by_keys).map(&:to_s).sort
+    end
+
+    # An empty bucket has no row to compare grouping keys with, and an edit of the filter's
+    # properties can regroup units that netted to zero into non-zero groups
+    def filter_edited_since?(marker)
+      charge_filter.present? && charge_filter.updated_at > marker.watermark
     end
 
     def to_snapshot(record)
