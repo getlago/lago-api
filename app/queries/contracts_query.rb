@@ -8,7 +8,9 @@ class ContractsQuery < BaseQuery
     :external_id,
     :status,
     :billing_entity_ids,
-    :has_rate_overrides
+    :has_rate_overrides,
+    :created_at_from,
+    :created_at_to
   ]
 
   def call
@@ -21,8 +23,11 @@ class ContractsQuery < BaseQuery
     contracts = with_status(contracts) if filters.status.present?
     contracts = with_billing_entity_ids(contracts) if filters.billing_entity_ids.present?
     contracts = with_rate_overrides(contracts) unless has_rate_overrides_filter.nil?
+    contracts = with_date_range(contracts, :created_at)
 
     result.contracts = paginate(contracts)
+    result
+  rescue BaseService::FailedResult
     result
   end
 

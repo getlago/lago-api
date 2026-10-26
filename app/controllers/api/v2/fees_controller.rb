@@ -67,15 +67,13 @@ module Api
           :rate_card_code,
           :currency,
           :event_transaction_id,
-          :created_at_from,
-          :created_at_to,
           :succeeded_at_from,
           :succeeded_at_to,
           :failed_at_from,
           :failed_at_to,
           :refunded_at_from,
           :refunded_at_to
-        )
+        ).to_h.merge(created_at_filters)
       end
 
       def resource_name

@@ -58,7 +58,7 @@ module Api
         result = ::PlanRateCardsQuery.call(
           organization: current_organization,
           pagination: cursor,
-          filters: {plan_id: find_catalog_plan.id}
+          filters: {plan_id: find_catalog_plan.id, **created_at_filters}
         )
 
         if result.success?

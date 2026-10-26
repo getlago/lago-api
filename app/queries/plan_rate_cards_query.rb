@@ -5,12 +5,13 @@ class PlanRateCardsQuery < BaseQuery
   include RateCardListFiltering
 
   Result = BaseResult[:plan_rate_cards]
-  Filters = BaseFilters[:plan_id, *RateCardListFiltering::FILTERS]
+  Filters = BaseFilters[:plan_id, *RateCardListFiltering::FILTERS, :created_at_from, :created_at_to]
 
   def call
     plan_rate_cards = base_scope
     plan_rate_cards = with_plan(plan_rate_cards) if filters.plan_id.present?
     plan_rate_cards = apply_rate_card_filters(plan_rate_cards, phase_parent: :plan_rate_card_id)
+    plan_rate_cards = with_date_range(plan_rate_cards, :created_at)
     plan_rate_cards = if order == :product_category
       order_by_product_category(plan_rate_cards).order(:id)
     else
@@ -18,6 +19,8 @@ class PlanRateCardsQuery < BaseQuery
     end
 
     result.plan_rate_cards = paginate(plan_rate_cards)
+    result
+  rescue BaseService::FailedResult
     result
   end
 

@@ -2,7 +2,7 @@
 
 class ProductsQuery < BaseQuery
   Result = BaseResult[:products]
-  Filters = BaseFilters[:product_category_ids, :without_product_category, :product_type]
+  Filters = BaseFilters[:product_category_ids, :without_product_category, :product_type, :created_at_from, :created_at_to]
 
   def call
     products = base_scope.result.includes(:product_category, :billable_metric)
@@ -12,8 +12,11 @@ class ProductsQuery < BaseQuery
       products = with_product_category(products)
     end
     products = with_product_type(products) if filters.product_type.present?
+    products = with_date_range(products, :created_at)
 
     result.products = paginate(products)
+    result
+  rescue BaseService::FailedResult
     result
   end
 

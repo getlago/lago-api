@@ -65,7 +65,8 @@ module Api
             product_filter_ids: Array(params[:product_filter_id]).presence,
             code: params[:code],
             product_code: params[:product_code],
-            product_filter_code: params[:product_filter_code]
+            product_filter_code: params[:product_filter_code],
+            **created_at_filters
           }
         )
 

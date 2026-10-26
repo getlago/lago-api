@@ -90,7 +90,8 @@ module Api
           filters: {
             product_category_ids: index_product_categories.map(&:id).presence,
             without_product_category: ActiveModel::Type::Boolean.new.cast(params[:without_product_category]),
-            product_type: params[:product_type]
+            product_type: params[:product_type],
+            **created_at_filters
           }
         )
 

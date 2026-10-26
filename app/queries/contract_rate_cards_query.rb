@@ -5,13 +5,14 @@ class ContractRateCardsQuery < BaseQuery
   include RateCardListFiltering
 
   Result = BaseResult[:contract_rate_cards]
-  Filters = BaseFilters[:contract_id, :external_id, *RateCardListFiltering::FILTERS]
+  Filters = BaseFilters[:contract_id, :external_id, *RateCardListFiltering::FILTERS, :created_at_from, :created_at_to]
 
   def call
     contract_rate_cards = base_scope
     contract_rate_cards = with_contract(contract_rate_cards) if filters.contract_id.present?
     contract_rate_cards = with_external_id(contract_rate_cards) if filters.external_id.present?
     contract_rate_cards = apply_rate_card_filters(contract_rate_cards, phase_parent: :contract_rate_card_id)
+    contract_rate_cards = with_date_range(contract_rate_cards, :created_at)
     contract_rate_cards = if order == :product_category
       order_by_product_category(contract_rate_cards).order(:effective_date, :id)
     else
@@ -20,6 +21,8 @@ class ContractRateCardsQuery < BaseQuery
     end
 
     result.contract_rate_cards = paginate(contract_rate_cards)
+    result
+  rescue BaseService::FailedResult
     result
   end
 

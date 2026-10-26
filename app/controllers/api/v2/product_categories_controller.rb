@@ -53,7 +53,8 @@ module Api
         result = ::ProductCategoriesQuery.call(
           organization: current_organization,
           search_term: params[:search_term],
-          pagination: cursor
+          pagination: cursor,
+          filters: created_at_filters
         )
 
         if result.success?

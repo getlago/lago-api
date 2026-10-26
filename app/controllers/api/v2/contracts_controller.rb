@@ -50,6 +50,7 @@ module Api
 
       def index
         filters = params.permit(:plan_code, :external_customer_id, :external_id, :has_rate_overrides, billing_entity_ids: [])
+          .to_h.merge(created_at_filters)
         # Accept both ?status=pending and ?status[]=pending — strong params
         # would silently drop the scalar form and hand back active contracts
         # to a caller who believes they filtered.

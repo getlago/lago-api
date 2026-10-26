@@ -60,7 +60,7 @@ module Api
         result = ::ContractRateCardsQuery.call(
           organization: current_organization,
           pagination: cursor,
-          filters: {contract_id: find_contract.id}
+          filters: {contract_id: find_contract.id, **created_at_filters}
         )
 
         if result.success?

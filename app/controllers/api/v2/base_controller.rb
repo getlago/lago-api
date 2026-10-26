@@ -44,6 +44,12 @@ module Api
         ::CursorPagination::Cursor.from_params(params, table: model.table_name, sort:)
       end
 
+      # The creation range every cursor paginated list filters on. Read raw rather than
+      # permitted, so that a non scalar value is an `invalid_date` error, not an ignored filter.
+      def created_at_filters
+        {created_at_from: params[:created_at_from], created_at_to: params[:created_at_to]}
+      end
+
       # For a list returned whole: it still rejects `page` and `per_page`, which a
       # client paging until an empty page would otherwise send forever.
       def reject_offset_pagination!

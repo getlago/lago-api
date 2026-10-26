@@ -2,12 +2,16 @@
 
 class ProductCategoriesQuery < BaseQuery
   Result = BaseResult[:product_categories]
+  Filters = BaseFilters[:created_at_from, :created_at_to]
 
   def call
     product_categories = base_scope.result
     product_categories = apply_consistent_ordering(product_categories)
+    product_categories = with_date_range(product_categories, :created_at)
 
     result.product_categories = paginate(product_categories)
+    result
+  rescue BaseService::FailedResult
     result
   end
 

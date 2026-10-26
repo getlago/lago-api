@@ -139,6 +139,17 @@ class BaseQuery < BaseService
       .raise_if_error!
   end
 
+  # Narrows `scope` on the `<column>_from` and `<column>_to` filters, both bounds included.
+  # An invalid bound raises the `invalid_date` failure: the query rescues it to return its result.
+  def with_date_range(scope, column)
+    from = filters[:"#{column}_from"]
+    to = filters[:"#{column}_to"]
+
+    scope = scope.where(column => parse_datetime_filter(:"#{column}_from")..) if from.present?
+    scope = scope.where(column => ..parse_datetime_filter(:"#{column}_to")) if to.present?
+    scope
+  end
+
   # Apply consistent ordering across query objects
   def apply_consistent_ordering(scope, default_order: DEFAULT_ORDER)
     scope.order(default_order).order(id: :asc)

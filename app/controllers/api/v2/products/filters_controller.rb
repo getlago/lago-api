@@ -15,7 +15,7 @@ module Api
             organization: current_organization,
             search_term: params[:search_term],
             pagination: cursor,
-            filters: {product_id: product.id}
+            filters: {product_id: product.id, **created_at_filters}
           )
 
           if result.success?

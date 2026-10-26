@@ -49,7 +49,7 @@ module Api
       end
 
       def index
-        result = ::TaxesQuery.call(organization: current_organization, pagination: cursor)
+        result = ::TaxesQuery.call(organization: current_organization, pagination: cursor, filters: created_at_filters)
 
         if result.success?
           render_taxes(result.taxes)
