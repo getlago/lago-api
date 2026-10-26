@@ -781,7 +781,7 @@ module Events
 
         {
           "events_enriched" => snapshot_delta_events_sql(period, deduplicated_columns:),
-          "events" => query.project(select).to_sql
+          "events" => query.project(select).to_sql(::Clickhouse::EventsEnriched)
         }
       end
 
