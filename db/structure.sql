@@ -475,6 +475,7 @@ DROP INDEX IF EXISTS public.index_usage_thresholds_on_subscription_id;
 DROP INDEX IF EXISTS public.index_usage_thresholds_on_plan_id;
 DROP INDEX IF EXISTS public.index_usage_thresholds_on_organization_id;
 DROP INDEX IF EXISTS public.index_usage_monitoring_triggered_alerts_on_wallet_id;
+DROP INDEX IF EXISTS public.index_usage_monitoring_triggered_alerts_on_triggered_at;
 DROP INDEX IF EXISTS public.index_usage_monitoring_triggered_alerts_on_subscription_id;
 DROP INDEX IF EXISTS public.index_usage_monitoring_triggered_alerts_on_organization_id;
 DROP INDEX IF EXISTS public.index_usage_monitoring_alerts_on_wallet_id;
@@ -12391,6 +12392,13 @@ CREATE INDEX index_usage_monitoring_triggered_alerts_on_subscription_id ON publi
 
 
 --
+-- Name: index_usage_monitoring_triggered_alerts_on_triggered_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_usage_monitoring_triggered_alerts_on_triggered_at ON public.usage_monitoring_triggered_alerts USING btree (triggered_at);
+
+
+--
 -- Name: index_usage_monitoring_triggered_alerts_on_wallet_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -16021,6 +16029,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261026150420'),
 ('20261023180000'),
 ('20261023090000'),
 ('20261022090030'),
