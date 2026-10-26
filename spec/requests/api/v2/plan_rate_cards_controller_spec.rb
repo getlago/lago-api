@@ -6,6 +6,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
   let(:organization) { create(:organization) }
   let(:catalog_plan) { create(:catalog_plan, organization:) }
   let(:rate_card) { create(:rate_card, organization:) }
+  let(:flat_keys) { %i[lago_id plan_code rate_card_code units created_at updated_at deleted_at] }
 
   describe "POST /api/v2/plans/:plan_code/applied_rate_cards" do
     subject { post_with_token(organization, "/api/v2/plans/#{plan_code}/applied_rate_cards", {applied_rate_card: create_params}) }
@@ -24,7 +25,8 @@ RSpec.describe Api::V2::PlanRateCardsController do
       expect(json[:applied_rate_card][:lago_id]).to be_present
       expect(json[:applied_rate_card][:plan_code]).to eq(catalog_plan.code)
       expect(json[:applied_rate_card][:rate_card_code]).to eq(rate_card.code)
-      expect(json[:applied_rate_card][:rate_phases_count]).to eq(1)
+      expect(json[:applied_rate_card].keys).to eq(flat_keys)
+      expect(PlanRateCard.find(json[:applied_rate_card][:lago_id]).rate_phases.count).to eq(1)
     end
 
     context "when the plan does not exist" do
@@ -63,7 +65,24 @@ RSpec.describe Api::V2::PlanRateCardsController do
 
       expect(response).to have_http_status(:success)
       expect(json[:applied_rate_cards].map { |i| i[:lago_id] }).to eq([plan_rate_card.id])
+      expect(json[:applied_rate_cards].sole.keys).to eq(flat_keys)
       expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
+    end
+
+    context "with include_total_count" do
+      subject { get_with_token(organization, "/api/v2/plans/#{plan_code}/applied_rate_cards", {include_total_count: true}) }
+
+      before do
+        create(:plan_rate_card, organization:, catalog_plan:)
+        create(:plan_rate_card, organization:, catalog_plan:, deleted_at: Time.current)
+      end
+
+      it "counts the kept rate cards of the plan" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil, total_count: 2)
+      end
     end
 
     context "with an invalid limit and an unknown plan" do
@@ -111,7 +130,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:applied_rate_card][:rate_phases_count]).to eq(2)
+      expect(PlanRateCard.find(json[:applied_rate_card][:lago_id]).rate_phases.pluck(:code)).to eq(%w[launch standard])
       expect(RateOverride.count).to eq(1)
     end
 
@@ -163,6 +182,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
       expect(response).to have_http_status(:success)
       expect(json[:applied_rate_card][:lago_id]).to eq(plan_rate_card.id)
       expect(json[:applied_rate_card]).to include(deleted_at: nil)
+      expect(json[:applied_rate_card].keys).to eq(flat_keys)
     end
 
     context "when it does not exist" do
@@ -223,7 +243,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
 
       expect(response).to have_http_status(:success)
       expect(catalog_plan.reload.applied_rate_cards).to be_empty
-      expect(json[:applied_rate_card][:deleted_at]).to eq(plan_rate_card.reload.deleted_at.iso8601)
+      expect(json[:applied_rate_card][:deleted_at]).to eq(plan_rate_card.reload.deleted_at.iso8601(6))
     end
 
     context "when the plan has contracts" do

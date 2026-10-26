@@ -128,7 +128,9 @@ class SendWebhookJob < ApplicationJob
   ].freeze
 
   def self.queue_for(webhook_type = nil)
-    if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_WEBHOOK"])
+    if HIGH_PRIORITY_WEBHOOK_TYPES.include?(webhook_type) && ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_WEBHOOK_ALERT"])
+      :webhook_alert_worker
+    elsif ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_WEBHOOK"])
       HIGH_PRIORITY_WEBHOOK_TYPES.include?(webhook_type) ? :webhook_worker_high_priority : :webhook_worker
     else
       :webhook

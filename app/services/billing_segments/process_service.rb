@@ -231,8 +231,24 @@ module BillingSegments
         elsif invoice.contract?
           Invoices::FinalizeContractInvoiceService.call!(invoice:)
         else
-          Invoices::TransitionToFinalStatusService.call!(invoice:)
-          invoice.save! if invoice.changed?
+          ActiveRecord::Base.transaction do
+            invoice.lock!
+            next unless invoice.generating?
+
+            unless invoice.tax_pending?
+              credit_result = Credits::CreditNoteService.call!(invoice:)
+              if credit_result.credits.present?
+                invoice.total_amount_cents -= credit_result.credits.sum(&:amount_cents)
+              else
+                invoice.reload
+              end
+              invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
+              invoice.save! if invoice.changed?
+            end
+
+            Invoices::TransitionToFinalStatusService.call!(invoice:)
+            invoice.save! if invoice.changed?
+          end
         end
       end
     end

@@ -67,6 +67,34 @@ RSpec.describe ActivityLogsQuery, clickhouse: true do
     end
   end
 
+  context "with a cursor pagination" do
+    let(:pagination) do
+      CursorPagination::Cursor.new(
+        table: Clickhouse::ActivityLog.table_name,
+        sort: {logged_at: :desc, activity_id: :desc},
+        limit: 10
+      )
+    end
+
+    # Two rows that share logged_at, so the page breaks on the activity_id tiebreak.
+    let(:logged_at) { Time.current.change(usec: 0) }
+    let(:activity_log) { create(:clickhouse_activity_log, logged_at:) }
+    let(:other_activity_log) do
+      create(:clickhouse_activity_log, organization:, resource: activity_log.resource, logged_at:)
+    end
+
+    before { other_activity_log }
+
+    it "paginates via keyset, ordered by logged_at desc then activity_id desc" do
+      expect(result).to be_success
+
+      page = CursorPagination::Page.new(records: result.activity_logs, cursor: pagination)
+      expected_ids = [activity_log.activity_id, other_activity_log.activity_id].sort.reverse
+
+      expect(page.records.map(&:activity_id)).to eq(expected_ids)
+    end
+  end
+
   context "with from_date and to_date filters" do
     it "returns expected activity logs" do
       filters = {from_date: activity_log.logged_at + 1.day}

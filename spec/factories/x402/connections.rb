@@ -7,6 +7,7 @@ FactoryBot.define do
     name { "Coinbase CDP" }
     networks { ["eip155:84532"] }
     payout_addresses { {"evm" => "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed"} }
+    allowed_origins { ["https://api.example.com"] }
     cdp_api_key_id { "test-key-id" }
     cdp_api_key_secret { "test-key-secret" }
 
@@ -17,6 +18,11 @@ FactoryBot.define do
     trait :solana do
       networks { ["solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"] }
       payout_addresses { {"svm" => "2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4"} }
+    end
+
+    trait :without_allowed_origins do
+      allowed_origins { [] }
+      to_create { |connection| connection.save!(validate: false) }
     end
   end
 end

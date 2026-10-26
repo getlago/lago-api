@@ -536,27 +536,43 @@ RSpec.describe Api::V1::InvoicesController do
       end
 
       [
-        [{page: 0}, {page: ["value_is_out_of_range"]}],
-        [{page: -1}, {page: ["value_is_out_of_range"]}],
-        [{page: "1.5"}, {page: ["value_is_out_of_range"]}],
-        [{per_page: 0}, {per_page: ["value_is_out_of_range"]}],
-        [{per_page: "abc"}, {per_page: ["value_is_out_of_range"]}],
-        [{per_page: "0x10"}, {per_page: ["value_is_out_of_range"]}],
-        [{per_page: "010"}, {per_page: ["value_is_out_of_range"]}],
-        [{per_page: "+5"}, {per_page: ["value_is_out_of_range"]}],
-        [{per_page: "1_0"}, {per_page: ["value_is_out_of_range"]}],
-        [{per_page: " 5"}, {per_page: ["value_is_out_of_range"]}],
-        [{page: "01"}, {page: ["value_is_out_of_range"]}],
-        [{page: 0, per_page: -1}, {page: ["value_is_out_of_range"], per_page: ["value_is_out_of_range"]}]
-      ].each do |invalid_params, error_details|
-        context "with #{invalid_params}" do
-          let(:params) { invalid_params }
+        [{page: 0}, {page: 1, limit: 100}],
+        [{page: -1}, {page: 1, limit: 100}],
+        [{page: "null"}, {page: 1, limit: 100}],
+        [{page: "1.5"}, {page: 1, limit: 100}],
+        [{page: "02"}, {page: 2, limit: 100}],
+        [{per_page: 0}, {page: 1, limit: 100}],
+        [{per_page: -1}, {page: 1, limit: 100}],
+        [{per_page: "abc"}, {page: 1, limit: 100}],
+        [{per_page: "0x10"}, {page: 1, limit: 100}],
+        [{per_page: "010"}, {page: 1, limit: 10}],
+        [{per_page: "+5"}, {page: 1, limit: 5}],
+        [{per_page: " 5"}, {page: 1, limit: 5}],
+        [{page: 0, per_page: 0}, {page: 1, limit: 100}]
+      ].each do |given_params, pagination|
+        context "with #{given_params}" do
+          let(:params) { given_params }
+
+          before { allow(InvoicesQuery).to receive(:call).and_call_original }
+
+          it "falls back to a valid page and page size" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(InvoicesQuery).to have_received(:call).with(hash_including(pagination:))
+          end
+        end
+      end
+
+      [{per_page: "+1000000000"}, {per_page: "1_000_000_000"}, {per_page: " 1000000000"}].each do |large_params|
+        context "with #{large_params}" do
+          let(:params) { large_params }
 
           it "returns a validation error" do
             subject
 
             expect(response).to have_http_status(:unprocessable_content)
-            expect(json[:error_details]).to eq(error_details)
+            expect(json[:error_details]).to eq(per_page: ["value_is_out_of_range"])
           end
         end
       end

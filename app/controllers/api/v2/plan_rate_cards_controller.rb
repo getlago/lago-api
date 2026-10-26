@@ -4,6 +4,7 @@ module Api
   module V2
     class PlanRateCardsController < Api::V2::BaseController
       cursor_paginated_index(PlanRateCard)
+      serializable_with ::V2::PlanRateCardSerializer, root: :applied_rate_card
 
       def create
         result = ::PlanRateCards::CreateService.call(
@@ -12,7 +13,7 @@ module Api
         )
 
         if result.success?
-          render_plan_rate_card(result.plan_rate_card)
+          render_applied_rate_card(result.plan_rate_card)
         else
           render_error_response(result)
         end
@@ -23,7 +24,7 @@ module Api
 
         return not_found_error(resource: "applied_rate_card") unless plan_rate_card
 
-        render_plan_rate_card(plan_rate_card)
+        render_applied_rate_card(plan_rate_card)
       end
 
       def update
@@ -34,7 +35,7 @@ module Api
         )
 
         if result.success?
-          render_plan_rate_card(result.plan_rate_card)
+          render_applied_rate_card(result.plan_rate_card)
         else
           render_error_response(result)
         end
@@ -45,7 +46,7 @@ module Api
         result = ::PlanRateCards::DestroyService.call(plan_rate_card:)
 
         if result.success?
-          render_plan_rate_card(result.plan_rate_card)
+          render_applied_rate_card(result.plan_rate_card)
         else
           render_error_response(result)
         end
@@ -61,16 +62,7 @@ module Api
         )
 
         if result.success?
-          page = ::CursorPagination::Page.new(records: result.plan_rate_cards.includes(:catalog_plan, :rate_card, :rate_phases), cursor:)
-
-          render(
-            json: ::CollectionSerializer.new(
-              page.records,
-              ::V2::PlanRateCardSerializer,
-              collection_name: "applied_rate_cards",
-              meta: page.meta
-            )
-          )
+          render_applied_rate_cards(result.plan_rate_cards.includes(:catalog_plan, :rate_card))
         else
           render_error_response(result)
         end
@@ -121,10 +113,6 @@ module Api
 
       def update_params
         params.require(:applied_rate_card).permit(:units)
-      end
-
-      def render_plan_rate_card(plan_rate_card)
-        render(json: ::V2::PlanRateCardSerializer.new(plan_rate_card, root_name: "applied_rate_card"))
       end
 
       def resource_name

@@ -48,12 +48,12 @@ module Pagination
   private
 
   def page_number
-    params[:page].presence&.to_i || 1
+    positive_integer_param(:page) || 1
   end
 
   # The requested page size, or the default page size within the limit when none is given.
   def page_size
-    params[:per_page].presence&.to_i || [default_page_size, effective_max_page_size].min
+    positive_integer_param(:per_page) || [default_page_size, effective_max_page_size].min
   end
 
   def default_page_size
@@ -66,26 +66,19 @@ module Pagination
     value&.positive? ? value : DEFAULT_MAX_PAGE_SIZE
   end
 
+  # Only a per_page above the limit is rejected. Any other value that is not a positive integer
+  # (page=0, page=null, per_page=0) falls back to the first page or the default page size, as
+  # these lists did before the limit existed: API users send such values today.
   def validate_pagination_params
-    errors = {
-      page: pagination_param_error(:page, max: nil),
-      per_page: pagination_param_error(:per_page, max: effective_max_page_size)
-    }.compact
+    per_page = positive_integer_param(:per_page)
+    return if per_page.nil? || per_page <= effective_max_page_size
 
-    validation_errors(errors:) if errors.any?
+    validation_errors(errors: {per_page: ["value_is_out_of_range"]})
   end
 
-  # A blank value is treated as absent. Only plain positive decimals are valid: Integer() would also
-  # accept forms such as 010, +5, 1_000 or a leading space.
-  def pagination_param_error(name, max:)
-    return if params[name].blank?
-
-    value = params[name].to_s
-    if value.match?(/\A[1-9]\d*\z/) && (max.nil? || value.to_i <= max)
-      nil
-    else
-      ["value_is_out_of_range"]
-    end
+  def positive_integer_param(name)
+    value = Integer(params[name].to_s, 10, exception: false)
+    value if value&.positive?
   end
 
   # The effective page size limit of the controller: its own cap, if any, within the

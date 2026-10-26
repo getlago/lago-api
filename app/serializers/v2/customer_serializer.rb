@@ -16,8 +16,8 @@ module V2
         customer_type: model.customer_type,
         sequential_id: model.sequential_id,
         slug: model.slug,
-        created_at: model.created_at.iso8601,
-        updated_at: model.updated_at.iso8601,
+        created_at: format_time(model.created_at),
+        updated_at: format_time(model.updated_at),
         country: model.country,
         address_line1: model.address_line1,
         address_line2: model.address_line2,
@@ -39,7 +39,7 @@ module V2
         finalize_zero_amount_invoice: model.finalize_zero_amount_invoice,
         skip_invoice_custom_sections: model.skip_invoice_custom_sections,
         **x402_payload,
-        deleted_at: model.deleted_at&.iso8601
+        deleted_at: format_time(model.deleted_at)
       }
     end
 

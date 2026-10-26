@@ -159,6 +159,7 @@ ALTER TABLE IF EXISTS ONLY public.memberships DROP CONSTRAINT IF EXISTS fk_rails
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_98980b326b;
 ALTER TABLE IF EXISTS ONLY public.fixed_charge_events DROP CONSTRAINT IF EXISTS fk_rails_9881e28151;
 ALTER TABLE IF EXISTS ONLY public.pending_vies_checks DROP CONSTRAINT IF EXISTS fk_rails_96fc54cd9a;
+ALTER TABLE IF EXISTS ONLY public.x402_sign_in_nonces DROP CONSTRAINT IF EXISTS fk_rails_96e2978f7d;
 ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS fk_rails_95df3194c5;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_94cc21031f;
 ALTER TABLE IF EXISTS ONLY public.rate_cards_taxes DROP CONSTRAINT IF EXISTS fk_rails_9457f0d2da;
@@ -420,6 +421,8 @@ SELECT
     NULL::json AS filters,
     NULL::jsonb AS filters_grouped_by;
 DROP INDEX IF EXISTS public.unique_default_payment_method_per_customer;
+DROP INDEX IF EXISTS public.index_x402_sign_in_nonces_on_organization_address_nonce;
+DROP INDEX IF EXISTS public.index_x402_sign_in_nonces_on_created_at;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_x402_connection_id;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_ungranted_id;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_pending_reconcile_after;
@@ -1130,6 +1133,7 @@ DROP INDEX IF EXISTS public.idx_billing_on_enriched_events;
 DROP INDEX IF EXISTS public.idx_lookup_on_enriched_events;
 DROP INDEX IF EXISTS public.idx_unique_on_enriched_events;
 DROP INDEX IF EXISTS public.index_enriched_events_on_event_id;
+ALTER TABLE IF EXISTS ONLY public.x402_sign_in_nonces DROP CONSTRAINT IF EXISTS x402_sign_in_nonces_pkey;
 ALTER TABLE IF EXISTS ONLY public.x402_settlements DROP CONSTRAINT IF EXISTS x402_settlements_pkey;
 ALTER TABLE IF EXISTS ONLY public.x402_connections DROP CONSTRAINT IF EXISTS x402_connections_pkey;
 ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS webhooks_pkey;
@@ -1281,6 +1285,7 @@ ALTER TABLE IF EXISTS ONLY public.active_storage_attachments DROP CONSTRAINT IF 
 ALTER TABLE IF EXISTS public.versions ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.usage_monitoring_subscription_activities ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.quote_owners ALTER COLUMN id DROP DEFAULT;
+DROP TABLE IF EXISTS public.x402_sign_in_nonces;
 DROP TABLE IF EXISTS public.x402_settlements;
 DROP TABLE IF EXISTS public.x402_connections;
 DROP TABLE IF EXISTS public.webhooks;
@@ -6373,7 +6378,8 @@ CREATE TABLE public.x402_connections (
     auto_create_customers boolean DEFAULT true NOT NULL,
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    allowed_origins character varying[] DEFAULT '{}'::character varying[] NOT NULL
 );
 
 
@@ -6414,6 +6420,20 @@ CREATE TABLE public.x402_settlements (
     CONSTRAINT check_x402_settlements_merchant_settled_credit_purchase CHECK (((settled_by = 'lago'::public.x402_settlement_settled_by) OR ((kind = 'credit_purchase'::public.x402_settlement_kind) AND (status = 'settled'::public.x402_settlement_status)))),
     CONSTRAINT check_x402_settlements_pending_has_reconcile_after CHECK (((status <> 'pending'::public.x402_settlement_status) OR (reconcile_after IS NOT NULL))),
     CONSTRAINT check_x402_settlements_settled_has_hash CHECK (((status <> 'settled'::public.x402_settlement_status) OR (transaction_hash IS NOT NULL)))
+);
+
+
+--
+-- Name: x402_sign_in_nonces; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.x402_sign_in_nonces (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    agent_address character varying NOT NULL,
+    nonce character varying NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -7627,6 +7647,14 @@ ALTER TABLE ONLY public.x402_connections
 
 ALTER TABLE ONLY public.x402_settlements
     ADD CONSTRAINT x402_settlements_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: x402_sign_in_nonces x402_sign_in_nonces_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.x402_sign_in_nonces
+    ADD CONSTRAINT x402_sign_in_nonces_pkey PRIMARY KEY (id);
 
 
 --
@@ -12632,6 +12660,20 @@ CREATE INDEX index_x402_settlements_on_x402_connection_id ON public.x402_settlem
 
 
 --
+-- Name: index_x402_sign_in_nonces_on_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_x402_sign_in_nonces_on_created_at ON public.x402_sign_in_nonces USING btree (created_at);
+
+
+--
+-- Name: index_x402_sign_in_nonces_on_organization_address_nonce; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_x402_sign_in_nonces_on_organization_address_nonce ON public.x402_sign_in_nonces USING btree (organization_id, agent_address, nonce);
+
+
+--
 -- Name: unique_default_payment_method_per_customer; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -14667,6 +14709,14 @@ ALTER TABLE ONLY public.entitlement_subscription_feature_removals
 
 
 --
+-- Name: x402_sign_in_nonces fk_rails_96e2978f7d; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.x402_sign_in_nonces
+    ADD CONSTRAINT fk_rails_96e2978f7d FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: pending_vies_checks fk_rails_96fc54cd9a; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -15878,6 +15928,8 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261020144205'),
 ('20261020074217'),
 ('20261019074555'),
+('20261016163945'),
+('20261016163943'),
 ('20261016153657'),
 ('20261014180403'),
 ('20261014123350'),

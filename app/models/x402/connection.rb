@@ -10,6 +10,7 @@ module X402
     FACILITATORS = {coinbase_cdp: "coinbase_cdp"}.freeze
     ASSETS = {usdc: "usdc"}.freeze
     PAYOUT_FAMILIES = {"evm" => :evm, "svm" => :svm}.freeze
+    MAX_ALLOWED_ORIGINS = 10
 
     belongs_to :organization
     has_many :settlements, class_name: "X402::Settlement", foreign_key: :x402_connection_id, inverse_of: :x402_connection
@@ -20,12 +21,14 @@ module X402
     secrets_accessors :cdp_api_key_id, :cdp_api_key_secret
 
     before_validation :normalize_payout_addresses
+    before_validation :normalize_allowed_origins
 
     validates :code, presence: true, uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id}
     validates :name, :networks, :cdp_api_key_id, :cdp_api_key_secret, presence: true
     validates :auto_create_customers, inclusion: {in: [true, false]}
     validate :validate_networks
     validate :validate_payout_addresses
+    validate :validate_allowed_origins
 
     default_scope -> { kept }
 
@@ -48,6 +51,26 @@ module X402
     def normalize_payout_addresses
       if payout_addresses.is_a?(Hash) && payout_addresses.key?("evm")
         self.payout_addresses = payout_addresses.merge("evm" => X402::Network.normalize_address(payout_addresses["evm"], family: :evm))
+      end
+    end
+
+    def normalize_allowed_origins
+      if allowed_origins.is_a?(Array)
+        self.allowed_origins = allowed_origins.map { |origin| X402::Origin.normalize(origin) || origin }.uniq
+      end
+    end
+
+    def validate_allowed_origins
+      origins = Array(allowed_origins)
+
+      errors.add(:allowed_origins, :blank) if origins.empty?
+
+      if origins.any? { |origin| !(origin.is_a?(String) && X402::Origin.normalize(origin) == origin) }
+        errors.add(:allowed_origins, :invalid_format)
+      end
+
+      if origins.size > MAX_ALLOWED_ORIGINS
+        errors.add(:allowed_origins, :too_long)
       end
     end
 
@@ -99,6 +122,7 @@ end
 # Database name: primary
 #
 #  id                    :uuid             not null, primary key
+#  allowed_origins       :string           default([]), not null, is an Array
 #  asset                 :enum             default("usdc"), not null
 #  auto_create_customers :boolean          default(TRUE), not null
 #  code                  :string           not null

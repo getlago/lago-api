@@ -4,6 +4,8 @@ module Api
   module V2
     module ContractRateCards
       class RatePhasesController < Api::V2::BaseController
+        serializable_with ::V2::RatePhaseSerializer
+
         def index
           return not_found_error(resource: "applied_rate_card") unless contract_rate_card
 
@@ -122,20 +124,6 @@ module Api
               :applied_pricing_unit_code,
               {rate_properties: {}}
             ]
-          )
-        end
-
-        def render_rate_phase(rate_phase)
-          render(json: ::V2::RatePhaseSerializer.new(rate_phase, root_name: "rate_phase"))
-        end
-
-        def render_rate_phases(rate_phases)
-          render(
-            json: ::CollectionSerializer.new(
-              rate_phases,
-              ::V2::RatePhaseSerializer,
-              collection_name: "rate_phases"
-            )
           )
         end
 

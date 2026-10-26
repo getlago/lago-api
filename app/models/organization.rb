@@ -123,6 +123,7 @@ class Organization < ApplicationRecord
 
   has_many :x402_connections, class_name: "X402::Connection"
   has_many :x402_settlements, class_name: "X402::Settlement"
+  has_many :x402_sign_in_nonces, class_name: "X402::SignInNonce"
 
   has_many :subscription_activities, class_name: "UsageMonitoring::SubscriptionActivity"
   has_many :alerts, class_name: "UsageMonitoring::Alert"

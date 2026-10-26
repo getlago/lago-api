@@ -55,13 +55,9 @@ RSpec.describe Webhooks::Plans::DeletedService do
                 "code" => "vat_20",
                 "rate" => 20.0,
                 "description" => "Standard VAT",
-                "applied_to_organization" => false,
-                "add_ons_count" => 0,
-                "customers_count" => 0,
-                "plans_count" => 0,
-                "charges_count" => 0,
-                "commitments_count" => 0,
-                "created_at" => tax.created_at.iso8601
+                "created_at" => tax.created_at.iso8601,
+                "updated_at" => tax.updated_at.iso8601,
+                "deleted_at" => nil
               }
             ]
           }

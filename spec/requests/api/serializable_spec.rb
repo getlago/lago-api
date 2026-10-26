@@ -11,7 +11,7 @@ RSpec.describe Api::Serializable do
   let(:product_category) { create(:product_category, organization:) }
   let(:product) { create(:product, organization:, product_category:) }
   let(:expands) { nil }
-  let(:product_category_payload) { ::V2::ProductCategorySerializer.new(product_category).serialize }
+  let(:product_category_payload) { ::V2::ProductCategorySerializer.new(product_category, includes: %i[usec_timestamps]).serialize }
 
   # Two expansions, so that their order and a repeated key can be told apart.
   let(:serializer) do
@@ -155,6 +155,38 @@ RSpec.describe Api::Serializable do
     end
   end
 
+  # Webhooks and activity logs build the same serializers without it, and keep whole seconds.
+  context "with a serializer that reads the timestamp precision" do
+    let(:expands) { ["product_category"] }
+    let(:serializer) do
+      category_serializer = Class.new(ModelSerializer) { def serialize = {usec_timestamps: include?(:usec_timestamps)} }
+
+      Class.new(ModelSerializer) do
+        expandable :product_category, serializer: category_serializer
+
+        def serialize = {code: model.code, usec_timestamps: include?(:usec_timestamps)}
+      end
+    end
+
+    it "passes usec_timestamps to the record and to its expansion" do
+      show
+
+      expect(json).to eq(product: {code: product.code, usec_timestamps: true, product_category: {usec_timestamps: true}})
+    end
+
+    context "with a list" do
+      subject(:index) { get_with_token(organization, "/api/v2/serializable_tests") }
+
+      before { product }
+
+      it "passes usec_timestamps to every record" do
+        index
+
+        expect(json[:products]).to eq([{code: product.code, usec_timestamps: true}])
+      end
+    end
+  end
+
   context "with expansions in another order than the serializer's" do
     let(:expands) { %w[billable_metric product_category] }
 
@@ -240,6 +272,7 @@ RSpec.describe Api::Serializable do
     "a dotted path" => [["product_category.billable_metric"], ["product_category.billable_metric"]],
     "comma-separated names" => [["product_category,billable_metric"], ["product_category,billable_metric"]],
     "a name in another case" => [["Product_Category"], ["Product_Category"]],
+    "the internal usec_timestamps include" => [["usec_timestamps"], ["usec_timestamps"]],
     "valid and invalid names" => [["product_category", " fees ", "billable_metric"], ["fees"]]
   }.each do |description, (value, invalid_values)|
     context "with #{description}" do

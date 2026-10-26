@@ -4,6 +4,22 @@ module CustomerPortal
   class CustomerUpdateService < BaseService
     Result = BaseResult[:customer]
 
+    FREE_TEXT_FIELDS = %i[
+      name firstname lastname legal_name tax_identification_number
+      address_line1 address_line2 zipcode city state
+    ].freeze
+    SHIPPING_FREE_TEXT_FIELDS = {
+      shipping_address_line1: :address_line1,
+      shipping_address_line2: :address_line2,
+      shipping_zipcode: :zipcode,
+      shipping_city: :city,
+      shipping_state: :state
+    }.freeze
+    # Control characters, format characters (bidi overrides, zero-width characters) and the
+    # Unicode line and paragraph separators, which a model reads as line breaks.
+    INVALID_CHARACTERS = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/
+    private_constant :FREE_TEXT_FIELDS, :SHIPPING_FREE_TEXT_FIELDS, :INVALID_CHARACTERS
+
     def initialize(customer:, args:)
       @customer = customer
       @args = args
@@ -16,6 +32,9 @@ module CustomerPortal
       return result.validation_failure!(errors: locked_fields_errors) if locked_fields_errors.present?
 
       @args = args.except(*locked_fields)
+
+      errors = invalid_character_errors
+      return result.validation_failure!(errors:) if errors.present?
 
       ActiveRecord::Base.transaction do
         original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
@@ -110,6 +129,19 @@ module CustomerPortal
       current_value, new_value = [current_value, new_value].map { |value| value&.upcase } if upcase
 
       current_value.presence == new_value.presence
+    end
+
+    def invalid_character_errors
+      shipping_address = args[:shipping_address]&.to_h || {}
+      sources = FREE_TEXT_FIELDS.map { |attribute| [attribute, args, attribute] } +
+        SHIPPING_FREE_TEXT_FIELDS.map { |attribute, key| [attribute, shipping_address, key] }
+
+      offending = sources.filter_map do |attribute, source, key|
+        value = source[key]
+        attribute if source.key?(key) && value.is_a?(String) && value != customer[attribute] && value.match?(INVALID_CHARACTERS)
+      end
+
+      offending.index_with { ["invalid_characters"] }
     end
   end
 end
