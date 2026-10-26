@@ -2,7 +2,8 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V2::InvoicesController do
+# Void renders a v1 invoice until a V2 serializer exists, so with v1 timestamps.
+RSpec.describe Api::V2::InvoicesController, v2_timestamps: false do
   let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
   let(:customer) { create(:customer, organization:) }
 
