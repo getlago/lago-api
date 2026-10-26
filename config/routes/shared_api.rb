@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-resources :api_logs, param: :request_id, only: %i[index show]
 resources :security_logs, param: :log_id, only: %i[index show]
 
 namespace :analytics do
