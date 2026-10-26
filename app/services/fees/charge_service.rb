@@ -506,7 +506,6 @@ module Fees
     def build_aggregator(selected_metered_item)
       aggregate = true
       aggregate = filtered_aggregations.include?(selected_metered_item.filter_id) unless filtered_aggregations.nil?
-      initial = recurring_initial_value(selected_metered_item)
 
       BillableMetrics::AggregationFactory.new_instance(
         metered_item: selected_metered_item,
@@ -517,8 +516,7 @@ module Fees
         filters: aggregation_filters(selected_metered_item:, bypass_aggregation: !aggregate),
         bypass_aggregation: !aggregate,
         aggregated_filter_ids: aggregated_filter_ids(selected_metered_item),
-        initial_value: initial&.snapshots,
-        initial_period: initial&.period
+        initial_snapshots: recurring_initial_snapshots(selected_metered_item)
       )
     end
 
@@ -643,18 +641,32 @@ module Fees
       SNAPSHOT_AGGREGATION_TYPES.include?(selected_metered_item.billable_metric.aggregation_type)
     end
 
-    def recurring_initial_value(selected_metered_item)
+    # Fetched once the aggregation reads them: a fee served from the cache or the usage buckets needs none
+    def recurring_initial_snapshots(selected_metered_item)
       return unless selected_metered_item.billable_metric.recurring? && snapshot_eligible?(selected_metered_item)
 
       if RecurringAggregationSnapshots.read_enabled?(billing_context.organization)
-        RecurringAggregationSnapshots::FetchService.call!(
-          subscription:,
-          charge: selected_metered_item.charge,
-          charge_filter: selected_metered_item.charge_filter,
-          grouped_by_keys: grouped_by_keys(selected_metered_item:),
-          from_datetime: selected_metered_item.boundaries.charges_from_datetime
-        )
+        from_datetime = selected_metered_item.boundaries.charges_from_datetime
+
+        lambda do
+          RecurringAggregationSnapshots::FetchService.call!(
+            subscription:,
+            charge: selected_metered_item.charge,
+            charge_filter: selected_metered_item.charge_filter,
+            grouped_by_keys: grouped_by_keys(selected_metered_item:),
+            from_datetime:,
+            charge_period: recurring_charge_period(selected_metered_item.charge, from_datetime)
+          )
+        end
       end
+    end
+
+    # One per charge, as the marker and the filter check are the same for all its charge filters
+    def recurring_charge_period(charge, from_datetime)
+      @recurring_charge_periods ||= {}
+      @recurring_charge_periods[[charge.id, from_datetime]] ||= RecurringAggregationSnapshots::ChargePeriod.new(
+        subscription:, charge:, from_datetime:
+      )
     end
 
     def recurring_snapshots
