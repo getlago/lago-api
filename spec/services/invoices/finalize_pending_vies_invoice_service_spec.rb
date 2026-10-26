@@ -553,6 +553,32 @@ RSpec.describe Invoices::FinalizePendingViesInvoiceService do
         expect(SendWebhookJob).not_to have_been_enqueued.with("invoice.created", anything)
       end
 
+      context "when the payment rule has a timeout" do
+        before { freeze_time }
+
+        it "restarts the timeout from the VIES resolution" do
+          finalize_service.call
+
+          rule = subscription.activation_rules.payment.sole
+          expect(rule).to be_pending
+          expect(rule.expires_at).to eq(48.hours.from_now)
+        end
+      end
+
+      context "when the payment rule never expires" do
+        let(:subscription) do
+          create(:subscription, :incomplete, :with_activation_rules,
+            activation_rules_config: [{type: :payment, timeout_hours: 0, status: :pending}],
+            customer:, organization:)
+        end
+
+        it "keeps the rule without expiry" do
+          finalize_service.call
+
+          expect(subscription.activation_rules.payment.sole.expires_at).to be_nil
+        end
+      end
+
       context "when invoice total is zero after tax computation" do
         let(:rule) { subscription.activation_rules.payment.sole }
         let(:fee_subscription) do

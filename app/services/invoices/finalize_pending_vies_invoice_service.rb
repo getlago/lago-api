@@ -31,6 +31,7 @@ module Invoices
         invoice.tax_status = "succeeded"
 
         skip_payment_gating_for_zero_amount if invoice.subscription_payment_gated? && invoice.total_amount_cents.zero?
+        restart_payment_gating_timeout if invoice.total_amount_cents.positive? && invoice.subscription_payment_gated?
 
         Invoices::TransitionToFinalStatusService.call(invoice:)
 
@@ -72,6 +73,16 @@ module Invoices
         status: :satisfied
       )
       Subscriptions::ActivationRules::ResolveSubscriptionStatusService.call!(subscription: gated)
+    end
+
+    # The timeout started at activation, while VIES held the payment back:
+    # the customer only gets a full window to pay from now on.
+    def restart_payment_gating_timeout
+      gated = invoice.subscriptions.find(&:payment_gated?)
+      return unless gated
+
+      rule = gated.activation_rules.payment.sole
+      rule.update!(expires_at: rule.compute_expires_at)
     end
 
     def customer
