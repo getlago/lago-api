@@ -75,24 +75,6 @@ module Api
           DEFAULT_PAGE_SIZE
         end
 
-        # Unlike the other lists, this endpoint has always rejected a page or per_page that is not a
-        # positive integer.
-        def validate_pagination_params
-          errors = {
-            page: pagination_param_error(:page, max: nil),
-            per_page: pagination_param_error(:per_page, max: effective_max_page_size)
-          }.compact
-
-          validation_errors(errors:) if errors.any?
-        end
-
-        def pagination_param_error(name, max:)
-          return if params[name].blank?
-
-          value = positive_integer_param(name)
-          ["value_is_out_of_range"] if value.nil? || (max && value > max)
-        end
-
         # filters[team]=eng&filters[model][]=opus&filters[model][]=haiku
         def filters_params
           params.permit(filters: {})[:filters]&.to_h || {}

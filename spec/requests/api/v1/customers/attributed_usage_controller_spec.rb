@@ -212,16 +212,16 @@ RSpec.describe Api::V1::Customers::AttributedUsageController, clickhouse: {clean
       end
     end
 
-    context "with invalid page params and an invalid datetime" do
+    context "with page=0, per_page above its own maximum and an invalid datetime" do
       let(:params) do
         {external_subscription_id: subscription.external_id, group_by: "team", from_datetime: "yesterday", page: 0, per_page: 101}
       end
 
-      it "returns the page params errors only" do
+      it "returns the per_page error only" do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details]).to eq(page: ["value_is_out_of_range"], per_page: ["value_is_out_of_range"])
+        expect(json[:error_details]).to eq(per_page: ["value_is_out_of_range"])
       end
     end
 
@@ -268,14 +268,14 @@ RSpec.describe Api::V1::Customers::AttributedUsageController, clickhouse: {clean
       end
     end
 
-    context "with a per_page that is not an integer" do
-      let(:params) { {external_subscription_id: subscription.external_id, group_by: "team", per_page: "abc"} }
+    context "with page=0 and a per_page that is not an integer" do
+      let(:params) { {external_subscription_id: subscription.external_id, group_by: "team", page: 0, per_page: "abc"} }
 
-      it "returns a validation error on per_page" do
+      it "returns the first page with the default page size" do
         subject
 
-        expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details]).to eq(per_page: ["value_is_out_of_range"])
+        expect(response).to have_http_status(:success)
+        expect(json[:meta]).to include(current_page: 1, prev_page: nil)
       end
     end
 
