@@ -151,6 +151,7 @@ module Api
           :sync,
           :sync_with_provider,
           :document_locale,
+          :periodic_invoice_adjustment,
           provider_payment_methods: [],
           shipping_address: [
             :address_line1,
@@ -188,7 +189,11 @@ module Api
         end
 
         # Adapt the flat REST fields to the shared customer services.
-        input[:billing_configuration] = input.extract!(:document_locale)
+        billing_configuration = input.extract!(:document_locale)
+        if input.key?(:periodic_invoice_adjustment)
+          billing_configuration[:subscription_invoice_issuing_date_adjustment] = input.delete(:periodic_invoice_adjustment)
+        end
+        input[:billing_configuration] = billing_configuration
         provider_customer = input.extract!(*PROVIDER_CUSTOMER_FIELDS)
         input[:provider_customer] = provider_customer if provider_customer.any?
         normalize_metadata!(input[:metadata])

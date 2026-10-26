@@ -43,6 +43,7 @@ RSpec.describe V2::CustomerSerializer do
       external_salesforce_id: "sf_001",
       finalize_zero_amount_invoice: "skip",
       skip_invoice_custom_sections: true,
+      subscription_invoice_issuing_date_adjustment: "keep_anchor",
       x402_agent_address: "0x1111111111111111111111111111111111111111",
       deleted_at:
     )
@@ -84,6 +85,7 @@ RSpec.describe V2::CustomerSerializer do
       finalize_zero_amount_invoice: "skip",
       skip_invoice_custom_sections: true,
       invoice_grace_period: customer.invoice_grace_period,
+      periodic_invoice_adjustment: "keep_anchor",
       payment_provider: nil,
       payment_provider_code: nil,
       provider_customer_id: nil,

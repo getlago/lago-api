@@ -323,7 +323,8 @@ RSpec.describe Api::V2::CustomersController do
       let(:attributes) do
         super().merge(
           invoice_grace_period: 3,
-          document_locale: "fr"
+          document_locale: "fr",
+          periodic_invoice_adjustment: "keep_anchor"
         )
       end
 
@@ -331,8 +332,23 @@ RSpec.describe Api::V2::CustomersController do
         request
 
         expect(response).to have_http_status(:ok)
-        expect(json[:customer]).to include(attributes.slice(:invoice_grace_period, :document_locale))
+        expect(json[:customer]).to include(attributes.slice(:invoice_grace_period, :document_locale, :periodic_invoice_adjustment))
         expect(json[:customer]).not_to have_key(:billing_configuration)
+        customer = organization.customers.find_by!(external_id: attributes[:external_id])
+        expect(customer.subscription_invoice_issuing_date_adjustment).to eq("keep_anchor")
+      end
+    end
+
+    ["unknown", false].each do |value|
+      context "with a periodic invoice adjustment set to #{value.inspect}" do
+        let(:attributes) { super().merge(periodic_invoice_adjustment: value) }
+
+        it "returns a validation error under the REST field name" do
+          expect { request }.not_to change(organization.customers, :count)
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq(periodic_invoice_adjustment: ["value_is_invalid"])
+        end
       end
     end
 
@@ -529,6 +545,17 @@ RSpec.describe Api::V2::CustomersController do
         end
       end
 
+      context "with an invalid periodic invoice adjustment" do
+        let(:attributes) { {name: "Must not change", periodic_invoice_adjustment: "unknown"} }
+
+        it "returns a validation error under the REST field name without modifying the customer" do
+          expect { request }.not_to change { customer.reload.attributes }
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq(periodic_invoice_adjustment: ["value_is_invalid"])
+        end
+      end
+
       context "with an invalid finalize setting" do
         let(:attributes) { {name: "Must not change", finalize_zero_amount_invoice: false} }
 
@@ -652,6 +679,31 @@ RSpec.describe Api::V2::CustomersController do
             expect(response).to have_http_status(:ok)
             expect(customer.reload).to have_attributes(invoice_grace_period: nil, document_locale: "fr")
             expect(json[:customer][:invoice_grace_period]).to be_nil
+          end
+        end
+      end
+
+      context "with a periodic invoice adjustment" do
+        let(:attributes) { {periodic_invoice_adjustment: "keep_anchor"} }
+
+        it "updates the adjustment" do
+          request
+
+          expect(response).to have_http_status(:ok)
+          expect(customer.reload.subscription_invoice_issuing_date_adjustment).to eq("keep_anchor")
+          expect(json[:customer][:periodic_invoice_adjustment]).to eq("keep_anchor")
+        end
+
+        context "when clearing it" do
+          let(:customer) { create(:customer, organization:, subscription_invoice_issuing_date_adjustment: "keep_anchor") }
+          let(:attributes) { {periodic_invoice_adjustment: nil} }
+
+          it "falls back to the billing entity setting" do
+            request
+
+            expect(response).to have_http_status(:ok)
+            expect(customer.reload.subscription_invoice_issuing_date_adjustment).to be_nil
+            expect(json[:customer][:periodic_invoice_adjustment]).to be_nil
           end
         end
       end
