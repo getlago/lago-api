@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-# Contract of a cursor-paginated v2 list, which also filters on `created_at_from` and
-# `created_at_to`. `sort` is the one the endpoint declares. The including group provides:
+# Contract of a cursor-paginated v2 list. `sort` is the one the endpoint declares. The
+# including group provides:
 # - `organization`
 # - `paginated_path`: the list path
 # - `create_paginated_record`: a lambda creating one listed record at the given `created_at`
@@ -116,33 +116,6 @@ RSpec.shared_examples "a cursor paginated v2 endpoint" do |collection:, model:, 
 
     expect(response).to have_http_status(:bad_request)
     expect(json[:code]).to eq("invalid_pagination_cursor")
-  end
-
-  it "filters the rows on created_at_from and created_at_to, both included" do
-    bound = created_at - 1.second
-    ids = listed_ids(created_at_from: bound.iso8601(6), created_at_to: bound.iso8601(6))
-
-    expect(ids.size).to eq(3)
-    expect(model.unscoped.where(id: ids).pluck(:created_at)).to all(eq(bound))
-  end
-
-  it "rejects a created_at bound that is not a datetime" do
-    fetch_page(created_at_from: "2026-13-01")
-
-    expect(response).to have_http_status(:unprocessable_content)
-    expect(json).to eq(
-      status: 422,
-      error: "Unprocessable Entity",
-      code: "validation_errors",
-      error_details: {created_at_from: ["invalid_date"]}
-    )
-  end
-
-  it "rejects a created_at bound that is not a string, rather than ignoring it" do
-    fetch_page(created_at_to: {lte: created_at.iso8601})
-
-    expect(response).to have_http_status(:unprocessable_content)
-    expect(json[:error_details]).to eq(created_at_to: ["invalid_date"])
   end
 
   it "rejects a cursor minted for another table" do

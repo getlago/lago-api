@@ -53,6 +53,11 @@ RSpec.describe Api::V2::FeesController do
       let(:create_paginated_record) { ->(created_at) { create(:fee, fee_attributes.merge(created_at:)) } }
     end
 
+    it_behaves_like "a v2 list filtered on created_at", collection: :fees do
+      let(:filtered_path) { "/api/v2/fees" }
+      let(:create_filtered_record) { ->(created_at) { create(:fee, fee_attributes.merge(created_at:)) } }
+    end
+
     context "with catalog code filters" do
       let(:params) { {product_code: fee.invoiceable.code, rate_card_code: contract_rate_card.rate_card.code} }
       let(:other_contract_rate_card) { create(:contract_rate_card, organization:, contract:) }

@@ -103,6 +103,11 @@ RSpec.describe Api::V2::PlanRateCardsController do
       let(:other_table_record) { create(:contract_rate_card, organization:) }
     end
 
+    it_behaves_like "a v2 list filtered on created_at", collection: :applied_rate_cards do
+      let(:filtered_path) { "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards" }
+      let(:create_filtered_record) { ->(created_at) { create(:plan_rate_card, organization:, catalog_plan:, created_at:) } }
+    end
+
     context "when the plan does not exist" do
       let(:plan_code) { "unknown" }
 

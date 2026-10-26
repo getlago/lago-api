@@ -173,6 +173,11 @@ RSpec.describe Api::V2::ProductCategoriesController do
       let(:create_paginated_record) { ->(created_at) { create(:product_category, organization:, created_at:) } }
     end
 
+    it_behaves_like "a v2 list filtered on created_at", collection: :product_categories do
+      let(:filtered_path) { "/api/v2/product_categories" }
+      let(:create_filtered_record) { ->(created_at) { create(:product_category, organization:, created_at:) } }
+    end
+
     it "returns the flat product_categories" do
       subject
 
