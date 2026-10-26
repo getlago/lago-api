@@ -185,8 +185,8 @@ RSpec.describe Api::V2::PlansController do
           code: tax.code,
           rate: tax.rate,
           description: tax.description,
-          created_at: tax.created_at.iso8601,
-          updated_at: tax.updated_at.iso8601,
+          created_at: tax.created_at.iso8601(6),
+          updated_at: tax.updated_at.iso8601(6),
           deleted_at: nil
         }
       end
