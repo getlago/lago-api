@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-resources :security_logs, param: :log_id, only: %i[index show]
-
 namespace :analytics do
   get :gross_revenue, to: "gross_revenues#index", as: :gross_revenue
   get :invoiced_usage, to: "invoiced_usages#index", as: :invoiced_usage

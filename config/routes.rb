@@ -20,6 +20,7 @@ Rails.application.routes.draw do
     namespace :v1 do
       resources :activity_logs, param: :activity_id, only: %i[index show]
       resources :api_logs, param: :request_id, only: %i[index show]
+      resources :security_logs, param: :log_id, only: %i[index show]
       draw(:shared_api)
     end
 
@@ -64,6 +65,7 @@ Rails.application.routes.draw do
       # controller (v2 for the cursor pagination and v2 error body).
       resources :activity_logs, param: :activity_id, only: %i[index show]
       resources :api_logs, param: :request_id, only: %i[index show]
+      resources :security_logs, param: :log_id, only: %i[index show]
     end
 
     namespace :v2, module: :v1 do
