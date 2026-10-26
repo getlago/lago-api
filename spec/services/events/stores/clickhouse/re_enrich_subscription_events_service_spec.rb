@@ -55,6 +55,14 @@ RSpec.describe Events::Stores::Clickhouse::ReEnrichSubscriptionEventsService, :c
       expect(RecurringAggregationSnapshots::InvalidateService).to have_received(:call!).with(subscription:, codes:)
     end
 
+    it "invalidates the snapshots again once the messages are enriched" do
+      freeze_time do
+        expect { service.call }.to have_enqueued_job(RecurringAggregationSnapshots::InvalidateJob)
+          .with(subscription, codes)
+          .at(described_class::SNAPSHOT_REINVALIDATION_DELAY.from_now)
+      end
+    end
+
     it "produces Kafka messages with expected payload structure" do
       result = service.call
 
