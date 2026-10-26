@@ -125,8 +125,37 @@ RSpec.describe Events::BillingPeriodFilters::EventMatchingService do
         create(:product_filter_value, value: "card", billable_metric_filter: payment_method, product_filter: card_filter)
       end
 
-      it "keeps the first loaded filter" do
+      it "selects the filter allowing fewer values" do
         expect(service_result.matching_filters).to eq([product_filter, card_filter])
+        expect(service_result.filter).to eq(card_filter)
+      end
+    end
+
+    context "when matching filters allow equal values and have the same creation time" do
+      let(:created_at) { 2.days.ago }
+      let(:first_filter) { create(:product_filter, organization:, product:, created_at:) }
+      let(:second_filter) { create(:product_filter, organization:, product:, created_at:) }
+
+      before do
+        product_filter.values.destroy_all
+        create(:product_filter_value, value: "card", billable_metric_filter: payment_method, product_filter: first_filter)
+        create(:product_filter_value, value: "card", billable_metric_filter: payment_method, product_filter: second_filter)
+        product.association(:filters).target = [first_filter, second_filter].sort_by(&:id).reverse
+        product.association(:filters).loaded!
+      end
+
+      it "selects by id instead of loading order" do
+        expect(service_result.filter).to eq([first_filter, second_filter].min_by(&:id))
+      end
+    end
+
+    context "when a filter has no values" do
+      let(:empty_filter) { create(:product_filter, organization:, product:) }
+
+      before { empty_filter }
+
+      it "does not match the empty filter" do
+        expect(service_result.matching_filters).to eq([product_filter])
         expect(service_result.filter).to eq(product_filter)
       end
     end
