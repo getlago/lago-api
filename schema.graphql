@@ -1911,6 +1911,7 @@ Rate card applied to a contract
 """
 type ContractAppliedRateCard {
   billingAnchorDate: ISO8601Date!
+  contract: Contract!
   createdAt: ISO8601DateTime!
   effectiveDate: ISO8601Date!
   id: ID!
@@ -7169,6 +7170,7 @@ enum FeatureFlagEnum {
   postgres_enriched_events
   product_catalog
   realtime_usage
+  recurring_aggregation_snapshots
   skip_credit_invoice_auto_payment_delay
   sso_cross_organization_sessions
   stripe_shared_payment_token
@@ -8225,6 +8227,7 @@ enum InvoiceTaxStatusTypeEnum {
 enum InvoiceTypeEnum {
   add_on
   advance_charges
+  contract
   credit
   one_off
   progressive_billing
@@ -11875,6 +11878,7 @@ type Plan {
 Rate card applied to a plan
 """
 type PlanAppliedRateCard {
+  catalogPlan: CatalogPlan!
   createdAt: ISO8601DateTime!
   id: ID!
   product: Product!
@@ -12570,6 +12574,16 @@ type Query {
   ): Contract
 
   """
+  Query a single rate card applied to a contract
+  """
+  contractAppliedRateCard(
+    """
+    Uniq ID of the applied rate card
+    """
+    id: ID!
+  ): ContractAppliedRateCard
+
+  """
   Query rate cards applied to a contract
   """
   contractAppliedRateCards(contractId: ID, hasRateOverrides: Boolean, limit: Int, page: Int, productCategoryIds: [ID!], productFilterIds: [ID!], productIds: [ID!], productType: ProductTypeEnum, searchTerm: String, withoutProductCategory: Boolean, withoutProductFilter: Boolean): ContractAppliedRateCardCollection!
@@ -13128,6 +13142,16 @@ type Query {
     """
     id: ID!
   ): Plan
+
+  """
+  Query a single rate card applied to a plan
+  """
+  planAppliedRateCard(
+    """
+    Uniq ID of the applied rate card
+    """
+    id: ID!
+  ): PlanAppliedRateCard
 
   """
   Query rate cards applied to a plan

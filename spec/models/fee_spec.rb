@@ -219,6 +219,24 @@ RSpec.describe Fee do
     end
   end
 
+  describe "#rate_model" do
+    let(:rate_card_rate) { build_stubbed(:rate_card_rate, rate_model: "volume") }
+
+    it "reads the rate card rate" do
+      expect(build_stubbed(:fee, rate_card_rate:).rate_model).to eq("volume")
+    end
+
+    it "prefers the rate override" do
+      rate_override = build_stubbed(:rate_override, rate_model: "package")
+
+      expect(build_stubbed(:fee, rate_card_rate:, rate_override:).rate_model).to eq("package")
+    end
+
+    it "is nil without a rate" do
+      expect(build_stubbed(:fee).rate_model).to be_nil
+    end
+  end
+
   describe "#invoice_name" do
     subject(:fee_invoice_name) { fee.invoice_name }
 
@@ -1037,6 +1055,39 @@ RSpec.describe Fee do
         it "returns the reduced remaining amount" do
           expect(subject).to eq(700)
         end
+      end
+    end
+  end
+
+  describe "#credited_amount_cents" do
+    subject(:fee) { create(:fee) }
+
+    context "when there are no credit note items" do
+      it "returns 0" do
+        expect(fee.credited_amount_cents).to eq(0)
+      end
+    end
+
+    context "when there are credit note items" do
+      let(:credit_note) { create(:credit_note) }
+
+      before do
+        create(:credit_note_item, credit_note:, fee:, amount_cents: 100)
+        create(:credit_note_item, credit_note:, fee:, amount_cents: 200)
+      end
+
+      it "sums all the credit note items amount_cents" do
+        expect(fee.credited_amount_cents).to eq(300)
+      end
+    end
+
+    context "when the value is cached by a preloader" do
+      before do
+        fee.aggregation_cache[:credited_amount_cents] = 100
+      end
+
+      it "returns the cached value" do
+        expect(fee.credited_amount_cents).to eq(100)
       end
     end
   end

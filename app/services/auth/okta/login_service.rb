@@ -49,11 +49,15 @@ module Auth
         result.service_failure!(code: "token_encoding_error", message: e.message)
       end
 
+      # NOTE: Okta compares the typed email case-insensitively (see #check_userinfo), so the Lago
+      #       user is found the same way, or another casing creates a second user. An exact match
+      #       wins, then the oldest case-insensitive match.
       def find_or_create_user
-        user = User.find_or_initialize_by(email: result.email)
+        user = User.find_by(email: result.email) ||
+          User.where("LOWER(email) = ?", result.email.downcase).order(:created_at).first
 
-        if user.new_record?
-          user.password = SecureRandom.hex(16)
+        if user.nil?
+          user = User.new(email: result.email, password: SecureRandom.hex(16))
           user.save!
         end
 

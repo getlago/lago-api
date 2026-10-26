@@ -29,7 +29,9 @@ sv:
     credit_notes: Kreditfakturor
     date_from: Avser period
     date_to: till och med
+    description: Beskrivning
     details: "%{resource} specifikation”"
+    details_title: Detaljer
     document_name: Faktura
     document_tax_name: Skattefaktura
     due_date: Förfaller %{date}
@@ -67,6 +69,7 @@ sv:
     paid_invoice: Betald faktura
     paid_tax_invoice: Betald skattefaktura
     pay_with_bank_transfer: Betala med banköverföring
+    payment_due_date: Förfallodatum
     payment_term: Betalningsvillkor
     payment_term_days: "%{net_payment_term} dagar"
     percentage:
@@ -82,6 +85,7 @@ sv:
     prepaid_credits_with_value: Förbetald kontobalans - %{wallet_name}
     progressive_billing_credit: Redan fakturerad användning
     purchase_order_number: Inköpsordernummer
+    quantity: Antal
     quarter: kvartal
     quarterly: Kvartalsvis
     reached_usage_threshold: Denna progressiva fakturering skapas eftersom din ackumulerade användning har nått %{usage_amount} och överstiger %{threshold_amount} tröskeln.
@@ -115,6 +119,13 @@ sv:
       fr_tax_exempt: Kunden är skattebefriad enligt artikel 259-1 i den franska skatteförvaltningskoden.
       reverse_charge: Skattskyldighet överförd till kunden.
       tax_exempt: Kunden är skattebefriad.
+    tiers:
+      fee_for_first: Avgift för de första %{up_to} enheterna
+      fee_for_next: Avgift för enheter upp till %{up_to}
+      fee_for_remaining: Avgift för återstående enheter
+      flat_fee_for_first: Fast avgift för de första %{up_to} enheterna
+      flat_fee_for_next: Fast avgift för enheter upp till %{up_to}
+      flat_fee_for_remaining: Fast avgift för återstående enheter
     total: Totalt
     total_credits: Totalt antal krediter
     total_credits_with_value: 'Totalt antal krediter med värde: %{credit_amount} krediter'

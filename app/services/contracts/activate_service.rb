@@ -34,6 +34,8 @@ module Contracts
 
         contract.update!(status: :active)
         BillingSegments::ScheduleJob.perform_after_commit(contract.customer_id)
+        SendWebhookJob.perform_after_commit("contract.started", contract)
+        Utils::ActivityLog.produce_after_commit(contract, "contract.started")
       end
 
       result.contract = contract

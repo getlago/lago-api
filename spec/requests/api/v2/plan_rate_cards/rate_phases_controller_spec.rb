@@ -291,7 +291,8 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
     end
 
     let(:phase_code) { launch.code }
-    let!(:launch) { create(:rate_phase, organization:, plan_rate_card:, position: 1, billing_interval_cycle_count: 3) }
+    let(:launch_override) { nil }
+    let!(:launch) { create(:rate_phase, organization:, plan_rate_card:, position: 1, billing_interval_cycle_count: 3, rate_override: launch_override) }
     let!(:terminal) { create(:rate_phase, organization:, plan_rate_card:, position: 2, billing_interval_cycle_count: nil) }
 
     include_examples "requires API permission", "plan_rate_card", "write"
@@ -302,6 +303,18 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
       expect(response).to have_http_status(:success)
       expect(launch.reload).to be_discarded
       expect(terminal.reload.position).to eq(1)
+      expect(json[:rate_phase][:deleted_at]).to eq(launch.deleted_at.iso8601(6))
+    end
+
+    context "with a rate override" do
+      let(:launch_override) { create(:rate_override, organization:) }
+
+      it "returns the override with its deletion date" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:rate_phase][:rate_override][:deleted_at]).to eq(launch_override.reload.deleted_at.iso8601(6))
+      end
     end
 
     context "when deleting the indefinite tail" do

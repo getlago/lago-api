@@ -2,13 +2,13 @@
 
 module Api
   module V1
-    class PaymentReceiptsController < Api::BaseController
+    class PaymentReceiptsController < Api::V1::BaseController
       def index
         result = PaymentReceiptsQuery.call(
           organization: current_organization,
           pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
+            page: page_number,
+            limit: page_size
           },
           filters: index_filters
         )

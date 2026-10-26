@@ -53,6 +53,21 @@ RSpec.describe Wallets::CreateService do
       expect(wallet.paid_top_up_max_amount_cents).to eq(1_000_00)
     end
 
+    context "when recurring transaction rules are requested without Premium" do
+      let(:params) do
+        super().merge(recurring_transaction_rules: [
+          {trigger: "threshold", method: "fixed", threshold_credits: "1", paid_credits: "2"}
+        ])
+      end
+
+      it "creates the wallet and ignores the recurring transaction rules" do
+        expect { service_result }.to change(Wallet, :count).by(1)
+
+        expect(service_result).to be_success
+        expect(service_result.wallet.recurring_transaction_rules).to be_empty
+      end
+    end
+
     it "sends `wallet.created` webhook" do
       expect { service_result }.to have_enqueued_job_after_commit(SendWebhookJob).with("wallet.created", Wallet)
     end

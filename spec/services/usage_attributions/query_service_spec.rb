@@ -264,7 +264,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
 
     it "returns the matching values with their rank in the level" do
       expect(result.rows.map { [it.value, it.rank] }).to eq([["eng", 2]])
-      expect(result.groups_count).to eq(2)
+      expect(result.groups_count).to eq(1)
     end
   end
 

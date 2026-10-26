@@ -117,7 +117,12 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
     let(:phase_code) { "extra" }
     let(:default_position) { 2 }
 
-    before { create(:rate_phase, :contract_level, organization:, contract_rate_card:, code: "extra", position: 1, billing_interval_cycle_count: 2) }
+    let(:extra_override) { nil }
+    let(:extra) do
+      create(:rate_phase, :contract_level, organization:, contract_rate_card:, code: "extra", position: 1, billing_interval_cycle_count: 2, rate_override: extra_override)
+    end
+
+    before { extra }
 
     include_examples "requires API permission", "contract_rate_card", "write"
 
@@ -126,6 +131,18 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
 
       expect(response).to have_http_status(:success)
       expect(contract_rate_card.rate_phases.order(:position).map(&:code)).to eq(%w[default])
+      expect(json[:rate_phase][:deleted_at]).to eq(extra.reload.deleted_at.iso8601(6))
+    end
+
+    context "with a rate override" do
+      let(:extra_override) { create(:rate_override, organization:) }
+
+      it "returns the override with its deletion date" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:rate_phase][:rate_override][:deleted_at]).to eq(extra_override.reload.deleted_at.iso8601(6))
+      end
     end
 
     context "when deleting the indefinite tail" do

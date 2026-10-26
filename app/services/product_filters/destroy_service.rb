@@ -4,15 +4,15 @@ module ProductFilters
   class DestroyService < BaseService
     Result = BaseResult[:product_filter]
 
+    activity_loggable(
+      action: "product_filter.deleted",
+      record: -> { product_filter }
+    )
+
     def initialize(product_filter:)
       @product_filter = product_filter
       super
     end
-
-    activity_loggable(
-      action: "product_filter.deleted",
-      record: -> { result.product_filter }
-    )
 
     def call
       return result.not_found_failure!(resource: "product_filter") unless product_filter
@@ -33,6 +33,7 @@ module ProductFilters
 
         product_filter.values.discard_all!
         product_filter.discard!
+        SendWebhookJob.perform_after_commit("product_filter.deleted", product_filter)
       end
 
       result.product_filter = product_filter

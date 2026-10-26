@@ -21,18 +21,16 @@ module BillableMetrics
         result.total_aggregated_units = result.variation
         result.options = {}
 
-        if presentation_by.present?
-          initial_breakdowns = billable_metric.recurring? ? latest_breakdowns : []
-          result.breakdowns = event_store.grouped_weighted_sum(
-            uniq_grouped_by_and_presentation_by,
-            initial_values: initial_breakdowns.map(&:with_indifferent_access)
-          ).map(&:to_grouped_hash)
-        end
+        compute_breakdowns(billable_metric.recurring? ? latest_breakdowns : []) if presentation_by.present?
 
         if billable_metric.recurring?
           result.total_aggregated_units = latest_value + result.variation
+          result.recurring_units = result.total_aggregated_units
           result.recurring_updated_at = event_store.last_event&.timestamp || from_datetime
-          result.breakdowns = latest_breakdowns if result.breakdowns.blank?
+          if result.breakdowns.blank?
+            result.breakdowns = latest_breakdowns
+            result.recurring_breakdowns = latest_breakdowns
+          end
         end
 
         result
@@ -45,7 +43,12 @@ module BillableMetrics
         return empty_results if should_bypass_aggregation?
 
         aggregations = event_store.grouped_weighted_sum(initial_values: grouped_latest_values)
-        return empty_results if aggregations.blank?
+        if aggregations.blank?
+          empty_results
+          # No group carried over or in the period: the bucket closes at zero units
+          result.aggregations.each { it.recurring_units = 0 } if billable_metric.recurring?
+          return result
+        end
 
         latest_values = []
         last_events = []
@@ -55,12 +58,11 @@ module BillableMetrics
         end
 
         if presentation_by.present?
-          initial_breakdowns = billable_metric.recurring? ? grouped_latest_breakdowns : []
-          result.breakdowns = event_store.grouped_weighted_sum(
-            uniq_grouped_by_and_presentation_by,
-            initial_values: initial_breakdowns.map(&:with_indifferent_access)
-          ).map(&:to_grouped_hash)
-          result.breakdowns = grouped_latest_breakdowns if result.breakdowns.empty?
+          compute_breakdowns(billable_metric.recurring? ? grouped_latest_breakdowns : [])
+          if result.breakdowns.empty?
+            result.breakdowns = grouped_latest_breakdowns
+            result.recurring_breakdowns = grouped_latest_breakdowns if billable_metric.recurring?
+          end
         end
 
         result.aggregations = aggregations.map do |aggregation|
@@ -77,6 +79,7 @@ module BillableMetrics
             last_event = last_events.find { |c| c[:groups] == aggregation.groups }
 
             group_result.total_aggregated_units = latest_value + group_result.variation
+            group_result.recurring_units = group_result.total_aggregated_units
             group_result.recurring_updated_at = last_event&.[](:timestamp) || from_datetime
           end
 
@@ -87,6 +90,20 @@ module BillableMetrics
       end
 
       private
+
+      def compute_breakdowns(previous_breakdowns)
+        initial_values = previous_breakdowns.map(&:with_indifferent_access)
+        grouped_results = event_store.grouped_weighted_sum(uniq_grouped_by_and_presentation_by, initial_values:)
+
+        result.breakdowns = grouped_results.map(&:to_grouped_hash)
+        return unless billable_metric.recurring?
+
+        # The fee shows the weighted units, the next period starts from the units active at period end
+        result.recurring_breakdowns = grouped_results.map do |grouped_result|
+          initial_value = initial_values.find { it[:groups] == grouped_result.groups }&.[](:value)
+          {groups: grouped_result.groups, value: (initial_value || 0).to_d + grouped_result.variation}
+        end
+      end
 
       def initial_value
         return 0 unless billable_metric.recurring?
@@ -136,7 +153,7 @@ module BillableMetrics
         query = CachedAggregation
           .where(organization_id: billable_metric.organization_id)
           .where(external_subscription_id: billing_context.external_id)
-          .where(charge_id: metered_item.charge_id)
+          .where(metered_item.cached_aggregation_identity)
           .where(timestamp: ...from_datetime)
           .order(timestamp: :desc, created_at: :desc)
 
@@ -181,7 +198,13 @@ module BillableMetrics
         return @grouped_latest_breakdowns if defined?(@grouped_latest_breakdowns)
 
         if grouped_latest_cached_aggregations.any?
-          return @grouped_latest_breakdowns = grouped_latest_cached_aggregations.flat_map(&:presentation_breakdowns)
+          # Fees::ChargeService stores the breakdowns without the grouped_by keys of their group
+          return @grouped_latest_breakdowns = grouped_latest_cached_aggregations.flat_map do |cached_aggregation|
+            cached_aggregation.presentation_breakdowns.map do |breakdown|
+              breakdown = breakdown.with_indifferent_access
+              {groups: cached_aggregation.grouped_by.merge(breakdown[:groups]), value: breakdown[:value]}
+            end
+          end
         end
 
         if billing_context.previous_subscription_id?

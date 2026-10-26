@@ -14,8 +14,8 @@ module Api
                 wallet_id: wallet.id
               },
               pagination: {
-                page: params[:page],
-                limit: params[:per_page] || PER_PAGE
+                page: page_number,
+                limit: page_size
               }
             )
 

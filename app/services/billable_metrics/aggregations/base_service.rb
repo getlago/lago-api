@@ -24,6 +24,7 @@ module BillableMetrics
         # Pay in advance fields
         :pay_in_advance_event, # Event that is triggering a pay in advance aggregation
         :pay_in_advance_aggregation, # Aggregation result for a single pay in advance event
+        :pay_in_advance_count_delta, # Event-count contribution used to price the triggering event
         :pay_in_advance_breakdowns, # Breakdown result for a single pay in advance event
         :pay_in_advance_precise_total_amount_cents, # Precise total amount in cents when in a pay in advance scenario
         # Cached aggregation fields
@@ -31,7 +32,11 @@ module BillableMetrics
         :max_aggregation, # Maximum aggregation result cached in a pay in advance scenario (billing and current usage)
         :max_aggregation_with_proration, # Similar to max_aggregation but with proration on billing period applied
         :units_applied, # Number of units applied by the event and cached in a pay in advance scenario (billing and current usage)
-        :recurring_updated_at # Date when the recurring cached aggregation was updated
+        :recurring_updated_at, # Date when the recurring cached aggregation was updated
+        # Recurring aggregation snapshot fields
+        :recurring_units, # Cumulative units of a recurring metric at the end of the period, before rounding
+        :recurring_events_count, # Number of events behind recurring_units, only set for a sum
+        :recurring_breakdowns # Units of each presentation group at the end of the period, only set for a weighted sum
       ]
       PerEventAggregationResult = BaseResult[:event_aggregation]
 
@@ -214,7 +219,7 @@ module BillableMetrics
         query = CachedAggregation
           .where(organization_id: billable_metric.organization_id)
           .where(external_subscription_id: billing_context.external_id)
-          .where(charge_id: metered_item.charge_id)
+          .where(metered_item.cached_aggregation_identity)
           .from_datetime(with_from_datetime)
           .to_datetime(with_to_datetime)
           .where(grouped_by: grouped_by.presence || {})

@@ -2,7 +2,8 @@
 
 require "rails_helper"
 
-RSpec.describe "API v2 fallback to v1" do
+# v1 controllers serve these routes, so with v1 timestamps.
+RSpec.describe "API v2 fallback to v1", v2_timestamps: false do
   let(:organization) { create(:organization) }
 
   it "serves a v1-backed resource under /api/v2" do
@@ -12,5 +13,11 @@ RSpec.describe "API v2 fallback to v1" do
 
     expect(response).to have_http_status(:success)
     expect(json[:billable_metrics].map { it[:lago_id] }).to include(billable_metric.id)
+  end
+
+  it "ignores expands, which only the native v2 controllers validate" do
+    get_with_token(organization, "/api/v2/billable_metrics?expands[]=__nope__")
+
+    expect(response).to have_http_status(:success)
   end
 end

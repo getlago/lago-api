@@ -71,8 +71,9 @@ RSpec.describe SendWebhookJob do
       before { ENV["SIDEKIQ_WEBHOOK"] = "true" }
       after { ENV.delete("SIDEKIQ_WEBHOOK") }
 
-      it "uses the high priority queue for alerts" do
-        expect(described_class.queue_for("alert.triggered")).to eq(:webhook_worker_high_priority)
+      it "uses the high priority queue for usage webhooks" do
+        expect(%w[alert.triggered subscription.usage_threshold_reached wallet.depleted_ongoing_balance].map { described_class.queue_for(it) })
+          .to eq(%i[webhook_worker_high_priority webhook_worker_high_priority webhook_worker_high_priority])
       end
 
       it "uses the webhook_worker queue for other webhook types" do
@@ -87,6 +88,35 @@ RSpec.describe SendWebhookJob do
       it "enqueues other webhooks on the webhook_worker queue" do
         expect { described_class.perform_later("invoice.created", invoice) }
           .to have_enqueued_job(described_class).on_queue("webhook_worker")
+      end
+    end
+
+    context "when SIDEKIQ_WEBHOOK_ALERT is true" do
+      before { ENV["SIDEKIQ_WEBHOOK_ALERT"] = "true" }
+      after { ENV.delete("SIDEKIQ_WEBHOOK_ALERT") }
+
+      it "uses the webhook_alert_worker queue for usage webhooks" do
+        expect(%w[alert.triggered subscription.usage_threshold_reached wallet.depleted_ongoing_balance].map { described_class.queue_for(it) })
+          .to eq(%i[webhook_alert_worker webhook_alert_worker webhook_alert_worker])
+      end
+
+      it "uses the webhook queue for other webhook types" do
+        expect(described_class.queue_for("invoice.created")).to eq(:webhook)
+      end
+
+      context "when SIDEKIQ_WEBHOOK is true" do
+        before { ENV["SIDEKIQ_WEBHOOK"] = "true" }
+        after { ENV.delete("SIDEKIQ_WEBHOOK") }
+
+        it "keeps usage webhooks on the webhook_alert_worker queue" do
+          expect([described_class.queue_for("alert.triggered"), described_class.queue_for("invoice.created")])
+            .to eq(%i[webhook_alert_worker webhook_worker])
+        end
+      end
+
+      it "enqueues alert webhooks on the webhook_alert_worker queue" do
+        expect { described_class.perform_later("alert.triggered", triggered_alert) }
+          .to have_enqueued_job(described_class).on_queue("webhook_alert_worker")
       end
     end
   end
@@ -900,6 +930,44 @@ RSpec.describe SendWebhookJob do
 
         expect(Webhooks::DunningCampaigns::FinishedService).to have_received(:new)
         expect(webhook_service).to have_received(:call)
+      end
+    end
+
+    context "with product catalog deletion" do
+      let(:product) { create(:product, :standalone, organization:) }
+
+      before do
+        product.discard
+      end
+
+      context "when product catalog is enabled" do
+        let(:organization) { create(:organization, feature_flags: ["product_catalog"], webhook_url: "http://foo.bar") }
+
+        before { allow(V2::ProductSerializer).to receive(:new).and_call_original }
+
+        it "serializes the discarded product with its current state at delivery time" do
+          expect do
+            described_class.perform_later("product.deleted", product)
+            product.update!(name: "Changed before delivery")
+            perform_enqueued_jobs(only: described_class)
+          end.to change(Webhook, :count).by(1)
+
+          webhook = Webhook.order(created_at: :desc).first
+          expect(webhook.object_id).to eq(product.id)
+          expect(V2::ProductSerializer).to have_received(:new).with(product, root_name: "product")
+          expect(webhook.payload.fetch("product")).to include("name" => "Changed before delivery")
+        end
+      end
+
+      context "when product catalog is disabled" do
+        let(:organization) { create(:organization, webhook_url: "http://foo.bar") }
+
+        it "does not create a webhook for the wildcard endpoint" do
+          expect do
+            described_class.perform_later("product.deleted", product)
+            perform_enqueued_jobs(only: described_class)
+          end.not_to change(Webhook, :count)
+        end
       end
     end
   end

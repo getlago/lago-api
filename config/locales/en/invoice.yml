@@ -29,7 +29,9 @@ en:
     credit_notes: Credit notes
     date_from: From
     date_to: to
+    description: Description
     details: "%{resource} details"
+    details_title: Details
     document_name: Invoice
     document_tax_name: Tax invoice
     due_date: Due %{date}
@@ -67,6 +69,7 @@ en:
     paid_invoice: Paid invoice
     paid_tax_invoice: Paid tax invoice
     pay_with_bank_transfer: Pay with a bank transfer
+    payment_due_date: Due date
     payment_term: Payment term
     payment_term_days: "%{net_payment_term} days"
     percentage:
@@ -82,6 +85,7 @@ en:
     prepaid_credits_with_value: Prepaid credits - %{wallet_name}
     progressive_billing_credit: Usage already billed
     purchase_order_number: Purchase Order Number
+    quantity: Quantity
     quarter: quarter
     quarterly: Quarterly
     reached_usage_threshold: This progressive billing is generated because your cumulative usage has reached %{usage_amount}, exceeding the %{threshold_amount} threshold.
@@ -115,6 +119,13 @@ en:
       fr_tax_exempt: Customer is tax exempt according to article 259-1 of the French Tax General Code.
       reverse_charge: Reverse charge - Tax liability shifted to customer.
       tax_exempt: Customer is tax exempt.
+    tiers:
+      fee_for_first: Fee for first %{up_to} units
+      fee_for_next: Fee for units up to %{up_to}
+      fee_for_remaining: Fee for remaining units
+      flat_fee_for_first: Flat fee for first %{up_to} units
+      flat_fee_for_next: Flat fee for units up to %{up_to}
+      flat_fee_for_remaining: Flat fee for remaining units
     total: Total
     total_credits: Total credits
     total_credits_with_value: 'Total credits: %{credit_amount} credits'

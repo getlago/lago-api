@@ -166,6 +166,55 @@ RSpec.describe Fees::CreatePayInAdvanceService do
         end
       end
 
+      context "with aggregation state" do
+        let(:aggregation_result) do
+          super().tap do |result|
+            result.current_aggregation = 7
+            result.max_aggregation = 10
+          end
+        end
+
+        it "persists the decrease and billed maximum with the fee" do
+          expect(fee_service.call).to be_success
+          expect(CachedAggregation.where(contract:, product:).sole).to have_attributes(
+            charge_id: nil, product_filter_id: nil, current_aggregation: 7, max_aggregation: 10,
+            external_subscription_id: contract.external_id, event_transaction_id: event.transaction_id
+          )
+        end
+
+        it "rolls back the snapshot when retrying an already billed event" do
+          fee_service.call
+
+          expect { fee_service.call }.not_to change(CachedAggregation, :count)
+        end
+
+        context "when estimating" do
+          let(:estimate) { true }
+
+          it "leaves both billing state and fees untouched" do
+            expect { fee_service.call }.to not_change(CachedAggregation, :count)
+              .and not_change(Fee, :count)
+          end
+
+          it "returns unsaved aggregation state for the invoice transaction" do
+            expect(fee_service.call.cached_aggregations.sole).to have_attributes(
+              new_record?: true, current_aggregation: 7, max_aggregation: 10
+            )
+          end
+        end
+
+        context "when saving the fee fails" do
+          before do
+            allow(Fees::ApplyTaxesService).to receive(:call!).and_raise("tax failure")
+          end
+
+          it "rolls back the snapshot so a retry starts from the same state" do
+            expect { fee_service.call }.to raise_error("tax failure")
+            expect(CachedAggregation.where(contract:, product:)).to be_empty
+          end
+        end
+      end
+
       context "with a legacy add-on linked to the product" do
         let(:add_on) { create(:add_on, organization:) }
         let(:product) { create(:product, :metered, organization:, billable_metric:, add_on:) }
@@ -194,6 +243,12 @@ RSpec.describe Fees::CreatePayInAdvanceService do
 
         before do
           create(:product_filter_value, organization:, product_filter:, billable_metric_filter: metric_filter, value: "eu")
+        end
+
+        it "stores the selected filter values on the fee" do
+          fee = fee_service.call.fees.sole
+
+          expect(fee.reload.properties["product_filter_values"]).to eq("region" => ["eu"])
         end
 
         it "returns a validation failure on retry for a filtered fee" do

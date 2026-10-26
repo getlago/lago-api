@@ -91,6 +91,7 @@ end
 # Indexes
 #
 #  idx_unique_tax_code_per_organization  (code,organization_id) UNIQUE WHERE (deleted_at IS NULL)
+#  index_taxes_by_cursor                 (organization_id,created_at DESC,id DESC) WHERE (deleted_at IS NULL)
 #  index_taxes_on_organization_id        (organization_id)
 #
 # Foreign Keys

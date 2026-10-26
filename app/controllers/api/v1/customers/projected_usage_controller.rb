@@ -3,7 +3,7 @@
 module Api
   module V1
     module Customers
-      class ProjectedUsageController < Api::BaseController
+      class ProjectedUsageController < Api::V1::BaseController
         def current
           apply_taxes = ActiveModel::Type::Boolean.new.cast(params.fetch(:apply_taxes, true))
           result = ::Invoices::CustomerUsageService
