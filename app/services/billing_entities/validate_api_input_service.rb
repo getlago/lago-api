@@ -33,8 +33,8 @@ module BillingEntities
         errors[:tax_codes] = ["value_is_invalid"]
       end
 
-      if params.key?(:eu_tax_management) && ![true, false].include?(params[:eu_tax_management])
-        errors[:eu_tax_management] = ["value_is_invalid"]
+      %i[eu_tax_management einvoicing finalize_zero_amount_invoice].each do |field|
+        errors[field] = ["value_is_invalid"] if params.key?(field) && ![true, false].include?(params[field])
       end
 
       if params[:logo].present? && (!params[:logo].is_a?(String) || !params[:logo].match?(%r{\Adata:image/(png|jpe?g);base64,[A-Za-z0-9+/=\s]+\z}))

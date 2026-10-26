@@ -68,22 +68,24 @@ RSpec.describe BillingEntities::ValidateApiInputService do
     end
   end
 
-  [true, false].each do |eu_tax_management|
-    context "with EU tax management set to #{eu_tax_management}" do
-      let(:params) { {eu_tax_management:} }
+  %i[eu_tax_management einvoicing finalize_zero_amount_invoice].each do |field|
+    [true, false].each do |value|
+      context "with #{field} set to #{value}" do
+        let(:params) { {field => value} }
 
-      it "accepts the boolean" do
-        expect(result).to be_success
+        it "accepts the boolean" do
+          expect(result).to be_success
+        end
       end
     end
-  end
 
-  context "with null EU tax management" do
-    let(:params) { {eu_tax_management: nil} }
+    context "with null #{field}" do
+      let(:params) { {field => nil} }
 
-    it "returns a validation error" do
-      expect(result).to be_failure
-      expect(result.error.messages).to eq(eu_tax_management: ["value_is_invalid"])
+      it "returns a validation error" do
+        expect(result).to be_failure
+        expect(result.error.messages).to eq(field => ["value_is_invalid"])
+      end
     end
   end
 
