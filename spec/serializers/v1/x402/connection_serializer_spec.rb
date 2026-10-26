@@ -12,32 +12,21 @@ describe V1::X402::ConnectionSerializer do
   end
   let(:result) { JSON.parse(serializer.to_json)["x402_connection"] }
 
-  it "serializes exactly the documented keys" do
-    expect(result.keys).to match_array(
-      %w[lago_id lago_organization_id code name facilitator asset networks payout_addresses auto_create_customers allowed_origins created_at updated_at]
-    )
-  end
-
   it "serializes the connection" do
-    expect(result).to include(
+    expect(result).to eq(
       "lago_id" => connection.id,
       "lago_organization_id" => connection.organization_id,
       "code" => connection.code,
       "name" => connection.name,
       "facilitator" => "coinbase_cdp",
       "asset" => "usdc",
+      "networks" => ["eip155:84532", "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"],
+      "payout_addresses" => payout_addresses,
       "auto_create_customers" => true,
+      "allowed_origins" => allowed_origins,
       "created_at" => connection.created_at.iso8601,
       "updated_at" => connection.updated_at.iso8601
     )
-  end
-
-  it "renders networks and payout addresses as stored" do
-    expect(result).to include("networks" => connection.networks, "payout_addresses" => payout_addresses)
-  end
-
-  it "renders allowed origins as stored" do
-    expect(result).to include("allowed_origins" => allowed_origins)
   end
 
   it "renders no secret" do
