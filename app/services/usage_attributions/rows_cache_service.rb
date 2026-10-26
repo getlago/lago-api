@@ -10,7 +10,7 @@ module UsageAttributions
   class RowsCacheService < BaseService
     CACHE_KEY_VERSION = "1"
     INGESTION_MARGIN = 5.seconds
-    MAX_TTL = 6.hours
+    MAX_TTL = 12.hours
     FAILURE_TTL = 10.seconds
 
     Result = BaseResult[:rows]
