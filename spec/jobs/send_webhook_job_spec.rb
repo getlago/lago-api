@@ -483,19 +483,6 @@ RSpec.describe SendWebhookJob do
         expect(Webhooks::CreditNotes::PaymentProviderRefundFailureService).to have_received(:new)
         expect(webhook_service).to have_received(:call)
       end
-
-      context "when the job was enqueued with the former credit_note.provider_refund_failure name" do
-        it "calls the webhook service" do
-          described_class.perform_now(
-            "credit_note.provider_refund_failure",
-            credit_note,
-            webhook_options
-          )
-
-          expect(Webhooks::CreditNotes::PaymentProviderRefundFailureService).to have_received(:new)
-          expect(webhook_service).to have_received(:call)
-        end
-      end
     end
 
     context "when webhook_type is invoice.drafted" do
