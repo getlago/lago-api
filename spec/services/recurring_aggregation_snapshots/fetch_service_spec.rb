@@ -426,8 +426,8 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
         let(:previous_charge_filter) { create_filter(previous_charge, %w[eu]) }
 
         def create_filter(target_charge, values)
-          create(:charge_filter, charge: target_charge, created_at: watermark - 1.month).tap do |filter|
-            create(:charge_filter_value, charge_filter: filter, billable_metric_filter:, values:)
+          create(:charge_filter, charge: target_charge, created_at: watermark - 1.month, updated_at: watermark - 1.month).tap do |filter|
+            create_filter_value(filter, billable_metric_filter:, values:)
           end
         end
 
