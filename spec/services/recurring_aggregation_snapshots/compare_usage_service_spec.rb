@@ -97,26 +97,29 @@ RSpec.describe RecurringAggregationSnapshots::CompareUsageService do
 
   context "with a charge filter" do
     let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
-    let(:charge_filter) { create(:charge_filter, charge:, properties: {amount: "1"}) }
-
-    before do
-      create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ["eu"])
+    let(:filter_created_at) { Time.zone.parse("2022-04-01") }
+    let(:charge_filter) do
+      create(:charge_filter, charge:, properties: {amount: "1"}, created_at: filter_created_at, updated_at: filter_created_at)
     end
 
-    it "compares the default bucket read from its snapshot and leaves the filter without one out" do
+    before do
+      create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ["eu"],
+        created_at: filter_created_at, updated_at: filter_created_at)
+    end
+
+    it "counts the filter without usage at the end of the previous period as read from the period" do
       expect(result.snapshot_charges_count).to eq(1)
       expect(result.rows.find { it.charge_filter_id.nil? }).to have_attributes(snapshot_read: true)
-      expect(result.rows.find { it.charge_filter_id == charge_filter.id }).to have_attributes(snapshot_read: false)
+      expect(result.rows.find { it.charge_filter_id == charge_filter.id }).to have_attributes(snapshot_read: true)
       expect(result.differences).to be_empty
     end
 
-    context "when the filter had no usage at the end of the previous period" do
-      let(:charge_filter) { create(:charge_filter, charge:, properties: {amount: "1"}, created_at: Time.zone.parse("2022-04-01")) }
+    context "when the filter was created after the previous period" do
+      let(:filter_created_at) { Time.zone.parse("2022-05-10") }
 
-      it "counts the filter as read from the period" do
-        expect(result.snapshot_charges_count).to eq(1)
-        expect(result.rows.find { it.charge_filter_id == charge_filter.id }).to have_attributes(snapshot_read: true)
-        expect(result.differences).to be_empty
+      it "compares nothing, as every bucket of the charge scans its full history" do
+        expect(result.snapshot_charges_count).to eq(0)
+        expect(result.rows).to be_empty
       end
     end
   end
