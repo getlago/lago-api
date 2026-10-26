@@ -90,8 +90,15 @@ module BillableMetrics
         )
 
         unless cached_aggregation
+          # NOTE: a first-of-period remove of an active unit frees a unit already billed for the period
+          current_aggregation = if operation_type == :add
+            newly_applied_units
+          else
+            active_unique_property ? -1 : 0
+          end
+
           handle_event_metadata(
-            current_aggregation: newly_applied_units,
+            current_aggregation:,
             max_aggregation: newly_applied_units,
             units_applied: newly_applied_units
           )

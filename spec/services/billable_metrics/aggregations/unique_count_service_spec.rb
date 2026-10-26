@@ -541,6 +541,98 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, transaction: f
         end
       end
 
+      context "when the first event of the period removes a unique id that was never added" do
+        let(:properties) { {unique_id: "never_added", operation_type: "remove"} }
+
+        it "stores no freed unit" do
+          result = count_service.aggregate
+
+          expect(result.pay_in_advance_aggregation).to eq(0)
+          expect(result.current_aggregation).to eq(0)
+          expect(result.max_aggregation).to eq(0)
+        end
+      end
+
+      context "when the first event of the period removes a unique id already removed in a previous period" do
+        let(:properties) { {unique_id: "already_removed", operation_type: "remove"} }
+
+        let(:previous_add_event) do
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            external_customer_id: customer.external_id,
+            external_subscription_id: subscription.external_id,
+            timestamp: from_datetime - 20.days,
+            properties: {unique_id: "already_removed"}
+          )
+        end
+
+        let(:previous_remove_event) do
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            external_customer_id: customer.external_id,
+            external_subscription_id: subscription.external_id,
+            timestamp: from_datetime - 10.days,
+            properties: {unique_id: "already_removed", operation_type: "remove"}
+          )
+        end
+
+        before do
+          previous_add_event
+          previous_remove_event
+        end
+
+        it "stores no freed unit" do
+          result = count_service.aggregate
+
+          expect(result.pay_in_advance_aggregation).to eq(0)
+          expect(result.current_aggregation).to eq(0)
+          expect(result.max_aggregation).to eq(0)
+        end
+      end
+
+      context "when an add follows a first-of-period remove" do
+        let(:properties) { {unique_id: "new_unit"} }
+
+        let(:previous_event) do
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            external_customer_id: customer.external_id,
+            external_subscription_id: subscription.external_id,
+            timestamp: from_datetime + 5.days,
+            properties: {unique_id: unique_count_event.properties["unique_id"], operation_type: "remove"}
+          )
+        end
+
+        let(:cached_aggregation) do
+          create(
+            :cached_aggregation,
+            organization:,
+            charge:,
+            event_transaction_id: previous_event.transaction_id,
+            external_subscription_id: subscription.external_id,
+            timestamp: previous_event.timestamp,
+            current_aggregation: "-1",
+            max_aggregation: "0"
+          )
+        end
+
+        before { cached_aggregation }
+
+        it "does not bill the added unit" do
+          result = count_service.aggregate
+
+          expect(result.pay_in_advance_aggregation).to eq(0)
+          expect(result.current_aggregation).to eq(0)
+          expect(result.max_aggregation).to eq(0)
+        end
+      end
+
       context "when current period aggregation is greater than period maximum" do
         let(:properties) { {unique_id: "003"} }
 
