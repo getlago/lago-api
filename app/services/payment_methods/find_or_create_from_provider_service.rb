@@ -4,12 +4,13 @@ module PaymentMethods
   class FindOrCreateFromProviderService < BaseService
     Result = BaseResult[:payment_method]
 
-    def initialize(customer:, payment_provider_customer:, provider_method_id:, params: {}, set_as_default: false)
+    def initialize(customer:, payment_provider_customer:, provider_method_id:, params: {}, set_as_default: false, set_as_default_on_create: true)
       @customer = customer
       @payment_provider_customer = payment_provider_customer
       @provider_method_id = provider_method_id
       @params = params
       @set_as_default = set_as_default
+      @set_as_default_on_create = set_as_default_on_create
 
       super
     end
@@ -30,7 +31,7 @@ module PaymentMethods
 
     private
 
-    attr_reader :customer, :payment_provider_customer, :provider_method_id, :params, :set_as_default
+    attr_reader :customer, :payment_provider_customer, :provider_method_id, :params, :set_as_default, :set_as_default_on_create
     alias_method :set_as_default?, :set_as_default
 
     def find_payment_method
@@ -48,7 +49,8 @@ module PaymentMethods
         provider_method_id:,
         payment_provider_id: payment_provider_customer.payment_provider_id,
         payment_provider_customer:,
-        details: params[:details]
+        details: params[:details],
+        set_as_default: set_as_default_on_create
       ).payment_method
     end
   end

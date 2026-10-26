@@ -93,6 +93,34 @@ RSpec.describe PaymentMethods::CreateFromProviderService do
       end
     end
 
+    context "when the customer already has a default payment method" do
+      let(:existing_payment_method) { create(:payment_method, customer:, is_default: true) }
+
+      before { existing_payment_method }
+
+      it "sets the new payment method as default and unsets the existing one" do
+        result = create_service.call
+
+        expect(result.payment_method.is_default).to be(true)
+        expect(existing_payment_method.reload.is_default).to be(false)
+      end
+
+      context "when set_as_default is false" do
+        subject(:create_service) do
+          described_class.new(customer:, params:, provider_method_id:, payment_provider_id:, payment_provider_customer:, set_as_default: false)
+        end
+
+        it "creates the payment method without setting it as default" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.payment_method).to be_persisted
+          expect(result.payment_method.reload.is_default).to be(false)
+          expect(existing_payment_method.reload.is_default).to be(true)
+        end
+      end
+    end
+
     describe "provider_method_type" do
       context "when included in params" do
         let(:params) do

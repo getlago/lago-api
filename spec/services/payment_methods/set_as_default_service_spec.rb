@@ -67,6 +67,42 @@ RSpec.describe PaymentMethods::SetAsDefaultService do
       end
     end
 
+    context "with only_when_no_default true" do
+      subject(:default_service) { described_class.new(payment_method:, only_when_no_default: true) }
+
+      context "when the customer has another default payment method" do
+        before do
+          payment_method
+          payment_method2
+        end
+
+        it "does not change any payment method" do
+          result = default_service.call
+
+          expect(result).to be_success
+          expect(result.payment_method).to eq(payment_method)
+          expect(payment_method.reload.is_default).to be(false)
+          expect(payment_method2.reload.is_default).to be(true)
+        end
+      end
+
+      context "when the customer has no default payment method" do
+        before do
+          payment_method
+          payment_method3
+        end
+
+        it "sets the payment method as default" do
+          result = default_service.call
+
+          expect(result).to be_success
+          expect(result.payment_method).to eq(payment_method)
+          expect(payment_method.reload.is_default).to be(true)
+          expect(payment_method3.reload.is_default).to be(false)
+        end
+      end
+    end
+
     context "when billing entity is nil" do
       let(:payment_method) { nil }
 
