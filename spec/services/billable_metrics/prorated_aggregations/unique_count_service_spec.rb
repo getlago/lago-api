@@ -628,6 +628,53 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, transa
         end
       end
 
+      context "when the first event of the period removes a unit active from a previous period" do
+        let(:properties) { {unique_id: event.properties["unique_id"], operation_type: "remove"} }
+
+        it "stores the freed unit below the units billed for the period" do
+          expect(result.pay_in_advance_aggregation).to eq(0)
+          expect(result.current_aggregation).to eq(-1)
+          expect(result.max_aggregation).to eq(0)
+          expect(BigDecimal(result.max_aggregation_with_proration)).to eq(0)
+        end
+      end
+
+      context "when an add follows a first-of-period remove" do
+        let(:properties) { {unique_id: "new_unit"} }
+
+        let(:previous_event) do
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            external_subscription_id: subscription.external_id,
+            timestamp: from_datetime + 5.days,
+            properties: {unique_id: event.properties["unique_id"], operation_type: "remove"}
+          )
+        end
+
+        let(:cached_aggregation) do
+          create(
+            :cached_aggregation,
+            organization:,
+            charge:,
+            event_transaction_id: previous_event.transaction_id,
+            external_subscription_id: subscription.external_id,
+            timestamp: previous_event.timestamp,
+            current_aggregation: "-1",
+            max_aggregation: "0",
+            max_aggregation_with_proration: "0"
+          )
+        end
+
+        before { cached_aggregation }
+
+        it "does not bill the added unit" do
+          expect(result.pay_in_advance_aggregation).to eq(0)
+          expect(result.current_aggregation).to eq(0)
+        end
+      end
+
       context "when current period aggregation is greater than period maximum" do
         let(:previous_event) do
           create(
