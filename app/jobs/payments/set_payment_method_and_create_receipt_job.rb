@@ -72,7 +72,8 @@ module Payments
     end
 
     def stripe_payment_method_customer_id(stripe_payment_method)
-      customer = stripe_payment_method.customer
+      # The hash accessor returns nil when Stripe sent no customer key, where the method accessor raises.
+      customer = stripe_payment_method["customer"]
       customer.is_a?(String) ? customer : customer&.id
     end
   end

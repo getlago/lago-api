@@ -111,6 +111,24 @@ RSpec.describe Payments::SetPaymentMethodAndCreateReceiptJob do
       end
     end
 
+    context "when the Stripe payment method has no customer key" do
+      let(:stripe_payment_method_json) do
+        JSON.parse(get_stripe_fixtures("retrieve_payment_method_response.json", version: "2025-04-30.basil"))
+          .except("customer").to_json
+      end
+
+      before do
+        stub_request(:get, %r{/v1/payment_methods/#{provider_payment_method_id}}).and_return(status: 200, body: stripe_payment_method_json)
+      end
+
+      it "does not create a payment method and stores the payment data" do
+        expect { described_class.perform_now(payment:, provider_payment_method_id:) }.not_to change(PaymentMethod, :count)
+
+        expect(payment.reload.payment_method_id).to be_nil
+        expect(payment.provider_payment_method_data).to include("brand" => "visa", "last4" => "4242")
+      end
+    end
+
     context "when a payment method with the same provider_method_id already exists" do
       let!(:payment_method) do
         create(:payment_method, customer:, payment_provider_customer: stripe_customer, provider_method_id: provider_payment_method_id)
