@@ -193,6 +193,108 @@ describe X402::Connection do
 
       it { expect(connection.errors.messages[:auto_create_customers]).to eq(["value_is_invalid"]) }
     end
+
+    describe "allowed_origins validation" do
+      subject(:connection) { build(:x402_connection, allowed_origins:) }
+
+      let(:allowed_origins) { ["https://api.example.com"] }
+      let(:errors) { connection.errors.to_hash[:allowed_origins] }
+
+      before { connection.valid? }
+
+      context "with an empty list" do
+        let(:allowed_origins) { [] }
+
+        it { expect(errors).to eq(["value_is_mandatory"]) }
+      end
+
+      context "with nil" do
+        let(:allowed_origins) { nil }
+
+        it { expect(errors).to eq(["value_is_mandatory"]) }
+      end
+
+      context "with a non-canonical origin duplicating a canonical one" do
+        let(:allowed_origins) { ["HTTPS://API.example.com:443/", "https://api.example.com"] }
+
+        it "stores the canonical origin once" do
+          expect(connection.errors).to be_empty
+          expect(connection.allowed_origins).to eq(["https://api.example.com"])
+        end
+      end
+
+      context "with a non-default port" do
+        let(:allowed_origins) { ["https://api.example.com:8443"] }
+
+        it "keeps the port" do
+          expect(connection.errors).to be_empty
+          expect(connection.allowed_origins).to eq(["https://api.example.com:8443"])
+        end
+      end
+
+      context "with loopback origins over http" do
+        let(:allowed_origins) { ["http://localhost:3000", "http://127.0.0.1:3000", "http://[::1]:3000"] }
+
+        it { expect(connection.errors).to be_empty }
+      end
+
+      context "with http on a public host" do
+        let(:allowed_origins) { ["http://api.example.com"] }
+
+        it { expect(errors).to eq(["invalid_format"]) }
+      end
+
+      context "with a path" do
+        let(:allowed_origins) { ["https://api.example.com/v1"] }
+
+        it { expect(errors).to eq(["invalid_format"]) }
+      end
+
+      context "with credentials" do
+        let(:allowed_origins) { ["https://user@api.example.com"] }
+
+        it { expect(errors).to eq(["invalid_format"]) }
+      end
+
+      context "with another scheme" do
+        let(:allowed_origins) { ["ftp://api.example.com"] }
+
+        it { expect(errors).to eq(["invalid_format"]) }
+      end
+
+      context "without a scheme" do
+        let(:allowed_origins) { ["api.example.com"] }
+
+        it { expect(errors).to eq(["invalid_format"]) }
+      end
+
+      context "with a nil entry beside a valid origin" do
+        let(:allowed_origins) { ["https://api.example.com", nil] }
+
+        it { expect(errors).to eq(["invalid_format"]) }
+      end
+
+      context "with several invalid origins" do
+        let(:allowed_origins) { ["api.example.com", "ftp://api.example.com"] }
+
+        it { expect(errors).to eq(["invalid_format"]) }
+      end
+
+      context "with more than ten origins" do
+        let(:allowed_origins) { Array.new(11) { |n| "https://a#{n}.example.com" } }
+
+        it { expect(errors).to eq(["value_is_too_long"]) }
+      end
+
+      context "with more than ten entries that de-duplicate to ten" do
+        let(:allowed_origins) { Array.new(10) { |n| "https://a#{n}.example.com" } + ["HTTPS://A0.example.com"] }
+
+        it "is valid" do
+          expect(connection.errors).to be_empty
+          expect(connection.allowed_origins.size).to eq(10)
+        end
+      end
+    end
   end
 
   describe "#validation_error_messages" do
