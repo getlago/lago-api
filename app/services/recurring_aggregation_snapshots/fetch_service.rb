@@ -27,7 +27,7 @@ module RecurringAggregationSnapshots
     def call
       period_records = latest_period_records.to_a
       marker = period_records.find { it.charge_filter_id.nil? }
-      return result unless marker && same_grouped_by_keys?(marker) && !filters_changed_since?(marker)
+      return result unless marker && !filters_changed_since?(marker)
 
       records = period_records.select { it.charge_filter_id == charge_filter&.id }
       return result unless records.all? { same_grouped_by_keys?(it) }
@@ -75,7 +75,8 @@ module RecurringAggregationSnapshots
           .exists?
     end
 
-    # Snapshots grouped on other keys cannot be regrouped, only a full scan can
+    # Snapshots grouped on other keys cannot be regrouped, only a full scan can. Checked on the
+    # bucket's own rows, as a filter can group on other keys than the default bucket holding the marker.
     def same_grouped_by_keys?(record)
       record.grouped_by.keys.sort == Array(grouped_by_keys).map(&:to_s).sort
     end
