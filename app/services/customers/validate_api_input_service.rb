@@ -4,6 +4,12 @@ module Customers
   class ValidateApiInputService < BaseService
     Result = BaseResult
 
+    # Settings stored under another name than their REST field, with their allowed values.
+    ISSUING_DATE_SETTINGS = {
+      subscription_invoice_issuing_date_anchor: [:periodic_invoice_anchor, Customer::SUBSCRIPTION_INVOICE_ISSUING_DATE_ANCHORS],
+      subscription_invoice_issuing_date_adjustment: [:periodic_invoice_adjustment, Customer::SUBSCRIPTION_INVOICE_ISSUING_DATE_ADJUSTMENTS]
+    }.freeze
+
     def initialize(params:)
       @params = params
       super
@@ -16,9 +22,11 @@ module Customers
       end
 
       # Validated here so that the error names the REST field, not the column it is stored in.
-      adjustment = params.dig(:billing_configuration, :subscription_invoice_issuing_date_adjustment)
-      if !adjustment.nil? && !Customer::SUBSCRIPTION_INVOICE_ISSUING_DATE_ADJUSTMENTS.value?(adjustment)
-        return result.single_validation_failure!(field: :periodic_invoice_adjustment, error_code: "value_is_invalid")
+      ISSUING_DATE_SETTINGS.each do |setting, (field, allowed_values)|
+        value = params.dig(:billing_configuration, setting)
+        if !value.nil? && !allowed_values.value?(value)
+          return result.single_validation_failure!(field:, error_code: "value_is_invalid")
+        end
       end
 
       integration_types = params[:integration_customers]&.map { |entry| entry[:integration_type] } || []

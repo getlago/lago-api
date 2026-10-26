@@ -32,6 +32,27 @@ RSpec.describe Customers::ValidateApiInputService do
     end
   end
 
+  %w[current_period_end next_period_start].each do |value|
+    context "with the periodic invoice anchor set to #{value}" do
+      let(:params) { {billing_configuration: {subscription_invoice_issuing_date_anchor: value}} }
+
+      it "accepts the value" do
+        expect(result).to be_success
+      end
+    end
+  end
+
+  [false, 123, "invalid"].each do |value|
+    context "with the periodic invoice anchor set to #{value.inspect}" do
+      let(:params) { {billing_configuration: {subscription_invoice_issuing_date_anchor: value}} }
+
+      it "returns a validation error under the REST field name" do
+        expect(result).to be_failure
+        expect(result.error.messages).to eq(periodic_invoice_anchor: ["value_is_invalid"])
+      end
+    end
+  end
+
   %w[keep_anchor align_with_finalization_date].each do |value|
     context "with the periodic invoice adjustment set to #{value}" do
       let(:params) { {billing_configuration: {subscription_invoice_issuing_date_adjustment: value}} }

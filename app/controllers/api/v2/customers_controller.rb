@@ -14,6 +14,13 @@ module Api
         moneyhash_customer
       ].freeze
 
+      # REST names of the settings the shared services read from `billing_configuration`.
+      BILLING_CONFIGURATION_FIELDS = {
+        document_locale: :document_locale,
+        periodic_invoice_anchor: :subscription_invoice_issuing_date_anchor,
+        periodic_invoice_adjustment: :subscription_invoice_issuing_date_adjustment
+      }.freeze
+
       PROVIDER_CUSTOMER_FIELDS = %i[
         provider_customer_id
         sync
@@ -150,8 +157,7 @@ module Api
           :provider_customer_id,
           :sync,
           :sync_with_provider,
-          :document_locale,
-          :periodic_invoice_adjustment,
+          *BILLING_CONFIGURATION_FIELDS.keys,
           provider_payment_methods: [],
           shipping_address: [
             :address_line1,
@@ -189,11 +195,7 @@ module Api
         end
 
         # Adapt the flat REST fields to the shared customer services.
-        billing_configuration = input.extract!(:document_locale)
-        if input.key?(:periodic_invoice_adjustment)
-          billing_configuration[:subscription_invoice_issuing_date_adjustment] = input.delete(:periodic_invoice_adjustment)
-        end
-        input[:billing_configuration] = billing_configuration
+        input[:billing_configuration] = input.extract!(*BILLING_CONFIGURATION_FIELDS.keys).transform_keys(BILLING_CONFIGURATION_FIELDS)
         provider_customer = input.extract!(*PROVIDER_CUSTOMER_FIELDS)
         input[:provider_customer] = provider_customer if provider_customer.any?
         normalize_metadata!(input[:metadata])
