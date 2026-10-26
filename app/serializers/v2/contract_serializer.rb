@@ -32,25 +32,15 @@ module V2
         canceled_at: model.canceled_at&.iso8601,
         skip_invoice_custom_sections: model.skip_invoice_custom_sections,
         created_at: model.created_at.iso8601,
-        updated_at: model.updated_at.iso8601,
-        applied_rate_cards_count: applied_rate_cards_count
+        updated_at: model.updated_at.iso8601
       }
     end
 
     private
 
-    # The index passes one grouped count for the whole page; show falls back
-    # to a count on the single record.
-    def applied_rate_cards_count
-      counts = options[:applied_rate_cards_counts]
-      return counts.fetch(model.id, 0) if counts
-
-      model.applied_rate_cards.count
-    end
-
     # As /applied_rate_cards lists them, with what each card renders.
     def applied_rate_cards
-      model.applied_rate_cards.preload(:rate_card, :contract, :rate_phases).order(::CursorPagination::DEFAULT_SORT)
+      model.applied_rate_cards.preload(:rate_card, :contract).order(::CursorPagination::DEFAULT_SORT)
     end
 
     # Read with_discarded, so that a deleted plan expands with its deleted_at.

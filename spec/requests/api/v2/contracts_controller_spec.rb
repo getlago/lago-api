@@ -11,7 +11,7 @@ RSpec.describe Api::V2::ContractsController do
     %i[
       lago_id external_id lago_customer_id external_customer_id name plan_code status billing_time
       consolidate_invoice purchase_order_number billing_anchor_date effective_billing_anchor_date started_at
-      ended_at terminated_at canceled_at skip_invoice_custom_sections created_at updated_at applied_rate_cards_count
+      ended_at terminated_at canceled_at skip_invoice_custom_sections created_at updated_at
     ]
   end
 
@@ -37,7 +37,7 @@ RSpec.describe Api::V2::ContractsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:contract]).to include(external_id: "contract-1", plan_code: catalog_plan.code, status: "active", applied_rate_cards_count: 1)
+        expect(json[:contract]).to include(external_id: "contract-1", plan_code: catalog_plan.code, status: "active")
         expect(json[:contract].keys).to eq(flat_keys)
 
         get_with_token(organization, "/api/v2/contracts/contract-1", {expands: %w[applied_rate_cards]})
@@ -96,7 +96,7 @@ RSpec.describe Api::V2::ContractsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:contract]).to include(plan_code: nil, applied_rate_cards_count: 0)
+        expect(json[:contract]).to include(plan_code: nil)
         expect(organization.contracts.find_by!(external_id: "contract-1").applied_rate_cards).to be_empty
       end
     end
@@ -130,16 +130,13 @@ RSpec.describe Api::V2::ContractsController do
 
     include_examples "requires API permission", "contract", "read"
 
-    it "lists active contracts with their card counts" do
-      create(:contract_rate_card, organization:, contract:)
-
+    it "lists the flat active contracts" do
       subject
 
       expect(response).to have_http_status(:success)
       result = json[:contracts].sole
       expect(result.keys).to eq(flat_keys)
       expect(result[:lago_id]).to eq(contract.id)
-      expect(result[:applied_rate_cards_count]).to eq(1)
       expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
     end
 
@@ -252,8 +249,7 @@ RSpec.describe Api::V2::ContractsController do
           canceled_at: nil,
           skip_invoice_custom_sections: false,
           created_at: contract.created_at.iso8601,
-          updated_at: contract.updated_at.iso8601,
-          applied_rate_cards_count: 1
+          updated_at: contract.updated_at.iso8601
         )
       end
     end
@@ -262,11 +258,9 @@ RSpec.describe Api::V2::ContractsController do
       let(:params) { {expands: %w[applied_rate_cards]} }
       let(:created_at) { Time.zone.parse("2026-09-28T10:00:00.000001Z") }
 
-      # Ties to the microsecond, created out of order, the first with rate phases, next to cards that
-      # neither list may show.
+      # Ties to the microsecond, created out of order, next to cards that neither list may show.
       before do
-        cards = [1, 0, 2, 1, 0, 1].map { create(:contract_rate_card, organization:, contract:, created_at: created_at - it.seconds) }
-        [1, 2].each { create(:rate_phase, organization:, plan_rate_card: nil, contract_rate_card: cards.first, position: it) }
+        [1, 0, 2, 1, 0, 1].each { create(:contract_rate_card, organization:, contract:, created_at: created_at - it.seconds) }
         create(:contract_rate_card, organization:, contract:, created_at:).discard!
         create(:contract_rate_card, organization:, created_at:)
         sibling = create(:contract, :terminated, organization:, customer:, external_id: contract.external_id, started_at: 2.months.ago)
@@ -292,7 +286,6 @@ RSpec.describe Api::V2::ContractsController do
         subject
 
         expect(listed.size).to eq(6)
-        expect(listed.sum { it[:rate_phases_count] }).to eq(2)
         expect(json[:contract][:applied_rate_cards]).to eq(listed)
         expect(json[:contract].keys).to eq([*flat_keys, :applied_rate_cards])
       end
@@ -410,6 +403,7 @@ RSpec.describe Api::V2::ContractsController do
     context "with every expansion" do
       let(:params) { {expands: %w[invoice_custom_sections customer plan applied_rate_cards]} }
 
+      # Cards with rate phases, so that reading them in the expansion would show as more queries.
       before do
         card = create(:contract_rate_card, organization:, contract:)
         create(:rate_phase, organization:, plan_rate_card: nil, contract_rate_card: card)
@@ -447,7 +441,6 @@ RSpec.describe Api::V2::ContractsController do
 
           expect(response).to have_http_status(:success)
           expect(json[:contract].values_at(:applied_rate_cards, :invoice_custom_sections).map(&:size)).to eq([3, 3])
-          expect(json[:contract][:applied_rate_cards].pluck(:rate_phases_count)).to eq([2, 2, 2])
           expect(larger).to eq(one_of_each)
         end
       end
@@ -620,7 +613,7 @@ RSpec.describe Api::V2::ContractsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:contract]).to include(plan_code: other_plan.code, applied_rate_cards_count: 1)
+        expect(json[:contract]).to include(plan_code: other_plan.code)
         expect(json[:contract].keys).to eq(flat_keys)
 
         get_with_token(organization, "/api/v2/contracts/#{contract.external_id}", {expands: %w[applied_rate_cards]})

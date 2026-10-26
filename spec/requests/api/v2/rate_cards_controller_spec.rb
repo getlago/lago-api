@@ -8,7 +8,7 @@ RSpec.describe Api::V2::RateCardsController do
   let(:flat_keys) do
     %i[
       lago_id product_code product_filter_code name code description currency billing_timing proration display_on_invoice
-      regroup_paid_fees applied_pricing_unit_code rates_count created_at updated_at deleted_at
+      regroup_paid_fees applied_pricing_unit_code created_at updated_at deleted_at
     ]
   end
 
@@ -121,7 +121,7 @@ RSpec.describe Api::V2::RateCardsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:rate_card][:rates_count]).to eq(2)
+        expect(RateCard.find(json[:rate_card][:lago_id]).rates.pluck(:code)).to match_array(%w[launch_price standard_price])
       end
 
       context "when a nested rate is invalid" do
@@ -352,7 +352,6 @@ RSpec.describe Api::V2::RateCardsController do
         display_on_invoice: true,
         regroup_paid_fees: nil,
         applied_pricing_unit_code: nil,
-        rates_count: 1,
         created_at: rate_card.created_at.iso8601,
         updated_at: rate_card.updated_at.iso8601,
         deleted_at: nil
@@ -382,7 +381,7 @@ RSpec.describe Api::V2::RateCardsController do
           subject
 
           expect(response).to have_http_status(:success)
-          expect(json[:rate_card]).to include(rates_count: 2, active_rate: nil)
+          expect(json[:rate_card]).to include(active_rate: nil)
         end
       end
     end
