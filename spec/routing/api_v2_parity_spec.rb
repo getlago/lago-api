@@ -80,4 +80,22 @@ RSpec.describe "API v2 routing parity" do
       end
     end
   end
+
+  it "routes credit note actions to v2 while preserving the v1 controller" do
+    id = SecureRandom.uuid
+    paths = {
+      get: ["/api/v2/credit_notes", "/api/v2/credit_notes/#{id}"],
+      post: ["/api/v2/credit_notes", "/api/v2/credit_notes/estimate", "/api/v2/credit_notes/#{id}/download", "/api/v2/credit_notes/#{id}/download_pdf", "/api/v2/credit_notes/#{id}/download_xml", "/api/v2/credit_notes/#{id}/resend_email"],
+      put: ["/api/v2/credit_notes/#{id}", "/api/v2/credit_notes/#{id}/void"],
+      patch: ["/api/v2/credit_notes/#{id}"]
+    }
+
+    paths.each do |method, urls|
+      urls.each do |url|
+        expect(Rails.application.routes.recognize_path(url, method:)[:controller]).to eq("api/v2/credit_notes")
+      end
+    end
+
+    expect(Rails.application.routes.recognize_path("/api/v1/credit_notes", method: :get)[:controller]).to eq("api/v1/credit_notes")
+  end
 end
