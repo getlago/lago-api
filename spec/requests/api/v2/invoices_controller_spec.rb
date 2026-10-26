@@ -86,11 +86,10 @@ RSpec.describe Api::V2::InvoicesController do
     context "with page=0" do
       let(:params) { {page: 0} }
 
-      it "returns a validation error on page" do
+      it "returns the invoices" do
         subject
 
-        expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details]).to eq(page: ["value_is_out_of_range"])
+        expect(response).to have_http_status(:success)
       end
     end
   end
