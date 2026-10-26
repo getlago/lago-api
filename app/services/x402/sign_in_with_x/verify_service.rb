@@ -131,7 +131,7 @@ module X402
           "issued_at_in_future"
         elsif expiration_time && expiration_time < now
           "expired"
-        elsif not_before && not_before > now
+        elsif not_before && not_before > now + MAX_CLOCK_SKEW
           "not_yet_valid"
         end
       end

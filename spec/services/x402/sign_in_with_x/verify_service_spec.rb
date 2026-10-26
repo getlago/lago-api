@@ -357,6 +357,18 @@ describe X402::SignInWithX::VerifyService do
     it { expect(result.error.messages).to eq(siwx: ["not_yet_valid"]) }
   end
 
+  context "with a notBefore 31 seconds ahead" do
+    let(:payload) { signed_siwx(key, notBefore: 31.seconds.from_now.utc.iso8601(3)) }
+
+    it { expect(result.error.messages).to eq(siwx: ["not_yet_valid"]) }
+  end
+
+  context "with a notBefore exactly 30 seconds ahead" do
+    let(:payload) { signed_siwx(key, notBefore: 30.seconds.from_now.utc.iso8601(3)) }
+
+    it { expect(result).to be_success }
+  end
+
   context "with a notBefore 1 minute ago" do
     let(:payload) { signed_siwx(key, notBefore: 1.minute.ago.utc.iso8601(3)) }
 
