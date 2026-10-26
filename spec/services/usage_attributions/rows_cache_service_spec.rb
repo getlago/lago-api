@@ -103,20 +103,6 @@ RSpec.describe UsageAttributions::RowsCacheService, cache: :memory, clickhouse: 
     end
   end
 
-  context "when the subscription cache is expired" do
-    before do
-      result
-      travel(1.second)
-      described_class.expire_for_subscription(subscription)
-    end
-
-    it "reads the query again" do
-      described_class.call!(subscription:, query:)
-
-      expect(query).to have_received(:rows).twice
-    end
-  end
-
   context "with another query" do
     let(:other_query) { build_query(offset: 1) }
 

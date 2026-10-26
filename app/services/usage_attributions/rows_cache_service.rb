@@ -15,15 +15,6 @@ module UsageAttributions
 
     Result = BaseResult[:rows]
 
-    # For changes to the subscription's events that ingest none, such as removing duplicates.
-    def self.expire_for_subscription(subscription)
-      Rails.cache.write(expired_at_key(subscription.id), Time.current, expires_in: MAX_TTL)
-    end
-
-    def self.expired_at_key(subscription_id)
-      ["attributed-usage-expired-at", CACHE_KEY_VERSION, subscription_id].join("/")
-    end
-
     def initialize(subscription:, query:)
       @subscription = subscription
       @query = query
@@ -50,14 +41,12 @@ module UsageAttributions
     attr_reader :subscription, :query
 
     def cached_entry
-      entries = Rails.cache.read_multi(cache_key, expired_at_key)
-      entry = entries[cache_key]
-      entry if entry && valid?(entry, entries[expired_at_key])
+      entry = Rails.cache.read(cache_key)
+      entry if entry && valid?(entry)
     end
 
-    def valid?(entry, expired_at)
-      (expired_at.nil? || entry["computed_at"] > expired_at) &&
-        (entry.key?("error") || !query.ingested_since?(entry["computed_at"] - INGESTION_MARGIN))
+    def valid?(entry)
+      entry.key?("error") || !query.ingested_since?(entry["computed_at"] - INGESTION_MARGIN)
     end
 
     def compute
@@ -67,7 +56,7 @@ module UsageAttributions
       rows
     rescue ActiveRecord::ActiveRecordError => e
       if QueryService::CLICKHOUSE_FAILURES.keys.any? { e.message.include?(it) }
-        Rails.cache.write(cache_key, {"computed_at" => computed_at, "error" => e.message}, expires_in: FAILURE_TTL)
+        Rails.cache.write(cache_key, {"error" => e.message}, expires_in: FAILURE_TTL)
       end
 
       raise
@@ -81,10 +70,6 @@ module UsageAttributions
         subscription.id,
         Digest::SHA256.hexdigest(query.query)
       ].join("/")
-    end
-
-    def expired_at_key
-      self.class.expired_at_key(subscription.id)
     end
   end
 end

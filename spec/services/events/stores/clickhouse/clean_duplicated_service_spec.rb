@@ -68,7 +68,6 @@ RSpec.describe Events::Stores::Clickhouse::CleanDuplicatedService, :clickhouse d
     before do
       insert_enriched_events(duplicated_rows)
       allow(Subscriptions::ChargeCacheService).to receive(:expire_for_subscription)
-      allow(UsageAttributions::RowsCacheService).to receive(:expire_for_subscription)
     end
 
     it "removes duplicated events" do
@@ -83,7 +82,6 @@ RSpec.describe Events::Stores::Clickhouse::CleanDuplicatedService, :clickhouse d
       expect(event.enriched_at).to match_datetime(base_enriched_at + 2.minutes)
 
       expect(Subscriptions::ChargeCacheService).to have_received(:expire_for_subscription).with(subscription)
-      expect(UsageAttributions::RowsCacheService).to have_received(:expire_for_subscription).with(subscription)
     end
 
     context "when events share the same transaction_id but have different codes" do
