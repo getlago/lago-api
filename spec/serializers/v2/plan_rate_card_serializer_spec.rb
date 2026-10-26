@@ -14,7 +14,6 @@ RSpec.describe V2::PlanRateCardSerializer do
       plan_code: plan_rate_card.catalog_plan.code,
       rate_card_code: plan_rate_card.rate_card.code,
       units: nil,
-      rate_phases_count: 0,
       created_at: plan_rate_card.created_at.iso8601,
       updated_at: plan_rate_card.updated_at.iso8601,
       deleted_at: nil
@@ -35,8 +34,8 @@ RSpec.describe V2::PlanRateCardSerializer do
       create(:rate_phase, organization: plan_rate_card.organization, plan_rate_card:, position: 3, deleted_at: Time.current)
     end
 
-    it "renders the units and counts the kept rate phases only" do
-      expect(payload).to eq(flat_payload.merge(units: BigDecimal("12.3456789012345678901"), rate_phases_count: 2))
+    it "renders the units, and no count of the rate phases" do
+      expect(payload).to eq(flat_payload.merge(units: BigDecimal("12.3456789012345678901")))
     end
   end
 

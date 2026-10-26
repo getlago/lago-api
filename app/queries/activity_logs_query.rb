@@ -20,7 +20,6 @@ class ActivityLogsQuery < BaseQuery
     return result.forbidden_failure! unless Utils::ActivityLog.available?
 
     activity_logs = Clickhouse::ActivityLog.where(organization_id: organization.id)
-    activity_logs = paginate(activity_logs)
     activity_logs = activity_logs.order(logged_at: :desc)
 
     activity_logs = within_retention_period(activity_logs) if organization.audit_logs_period.present?
@@ -35,6 +34,7 @@ class ActivityLogsQuery < BaseQuery
     activity_logs = with_resource_ids(activity_logs) if filters.resource_ids.present?
     activity_logs = with_resource_types(activity_logs) if filters.resource_types.present?
 
+    activity_logs = paginate(activity_logs)
     result.activity_logs = activity_logs
     result
   end

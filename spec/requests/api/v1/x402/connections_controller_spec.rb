@@ -33,7 +33,7 @@ describe Api::V1::X402::ConnectionsController, :premium do
     let(:params) do
       {
         code: "my_cdp", name: "My CDP", networks: ["eip155:84532"], payout_addresses: {evm: evm_address},
-        cdp_api_key_id:, cdp_api_key_secret:
+        allowed_origins: ["https://api.example.com"], cdp_api_key_id:, cdp_api_key_secret:
       }
     end
 
@@ -53,6 +53,17 @@ describe Api::V1::X402::ConnectionsController, :premium do
     it "renders no secret" do
       subject
       expect(json[:x402_connection].keys.grep(/secret|cdp_api_key/)).to be_empty
+    end
+
+    context "with an origin to normalise" do
+      let(:params) { super().merge(allowed_origins: ["HTTPS://API.example.com:443/"]) }
+
+      it "renders it normalised" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:x402_connection][:allowed_origins]).to eq(["https://api.example.com"])
+      end
     end
 
     context "when the API log is produced" do
@@ -126,6 +137,39 @@ describe Api::V1::X402::ConnectionsController, :premium do
 
         expect(response).to have_http_status(:unprocessable_content)
         expect(json[:error_details]).to eq(networks: ["must_be_array"])
+      end
+    end
+
+    context "without allowed origins" do
+      let(:params) { super().except(:allowed_origins) }
+
+      it "returns a validation error and creates nothing" do
+        expect { subject }.not_to change { organization.x402_connections.count }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(allowed_origins: ["value_is_mandatory"])
+      end
+    end
+
+    context "with a string for allowed origins" do
+      let(:params) { super().merge(allowed_origins: "https://api.example.com") }
+
+      it "returns a validation error and creates nothing" do
+        expect { subject }.not_to change { organization.x402_connections.count }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(allowed_origins: ["must_be_array"])
+      end
+    end
+
+    context "with a null for allowed origins" do
+      let(:params) { super().merge(allowed_origins: nil) }
+
+      it "returns a validation error and creates nothing" do
+        expect { subject }.not_to change { organization.x402_connections.count }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(allowed_origins: ["must_be_array"])
       end
     end
 
@@ -284,6 +328,19 @@ describe Api::V1::X402::ConnectionsController, :premium do
       end
     end
 
+    context "with a connection saved without allowed origins" do
+      let(:connection) do
+        create(:x402_connection, :without_allowed_origins, organization:, cdp_api_key_id:, cdp_api_key_secret:)
+      end
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(allowed_origins: ["value_is_mandatory"])
+      end
+    end
+
     context "with a string for networks" do
       let(:params) { {networks: "eip155:8453"} }
 
@@ -301,6 +358,28 @@ describe Api::V1::X402::ConnectionsController, :premium do
           subject
           expect(response).to be_not_found_error("x402_connection")
         end
+      end
+    end
+
+    context "with a string for allowed origins" do
+      let(:params) { {allowed_origins: "https://api.example.com"} }
+
+      it "returns a validation error and keeps the origins" do
+        expect { subject }.not_to change { connection.reload.allowed_origins }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(allowed_origins: ["must_be_array"])
+      end
+    end
+
+    context "with an origin that is not normalised" do
+      let(:params) { {allowed_origins: ["http://api.example.com"]} }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(allowed_origins: ["invalid_format"])
       end
     end
 

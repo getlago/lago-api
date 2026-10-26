@@ -22,6 +22,11 @@ RSpec.describe AiConversations::ResumeService do
     create(:ai_conversation_tool_call, ai_conversation:, name: "create_coupon", arguments: {"coupon" => {"code" => "SPRING"}}, status: write_status, position: 1)
   end
   let(:write_status) { "confirmed" }
+  let(:nonce) { "fedcba9876543210fedcba9876543210" }
+
+  def wrapped(text)
+    "#{LagoMcpClient::Mistral::Agent::UNTRUSTED_DATA_NOTICE}\n<untrusted_data_#{nonce}>\n#{text}\n</untrusted_data_#{nonce}>"
+  end
 
   before do
     allow(ENV).to receive(:[]).and_call_original
@@ -35,6 +40,8 @@ RSpec.describe AiConversations::ResumeService do
     end
     allow(LagoApiSchema.subscriptions).to receive(:trigger)
     stub_const("AiConversations::StreamService::CHUNK_DELAY", 0)
+    allow(SecureRandom).to receive(:hex).and_call_original
+    allow(SecureRandom).to receive(:hex).with(16).and_return(nonce)
   end
 
   it "runs the confirmed write and sends every result of the batch" do
@@ -47,8 +54,8 @@ RSpec.describe AiConversations::ResumeService do
       expect(mistral_client).to have_received(:append_to_conversation).with(
         conversation_id: ai_conversation.mistral_conversation_id,
         inputs: [
-          {tool_call_id: read_call.tool_call_id, result: "No coupon", type: "function.result", object: "entry"},
-          {tool_call_id: write_call.tool_call_id, result: "Coupon SPRING created", type: "function.result", object: "entry"}
+          {tool_call_id: read_call.tool_call_id, result: wrapped("No coupon"), type: "function.result", object: "entry"},
+          {tool_call_id: write_call.tool_call_id, result: wrapped("Coupon SPRING created"), type: "function.result", object: "entry"}
         ]
       )
       expect(LagoApiSchema.subscriptions).to have_received(:trigger).with(:ai_conversation_streamed, {id: ai_conversation.id}, {chunk: "Done", done: false})
@@ -68,7 +75,7 @@ RSpec.describe AiConversations::ResumeService do
       expect(mistral_client).to have_received(:append_to_conversation).with(
         conversation_id: ai_conversation.mistral_conversation_id,
         inputs: include(
-          {tool_call_id: write_call.tool_call_id, result: described_class::INTERRUPTED_RESULT, type: "function.result", object: "entry"}
+          {tool_call_id: write_call.tool_call_id, result: wrapped(described_class::INTERRUPTED_RESULT), type: "function.result", object: "entry"}
         )
       )
     end
@@ -139,7 +146,7 @@ RSpec.describe AiConversations::ResumeService do
       expect(mistral_client).to have_received(:append_to_conversation).with(
         conversation_id: ai_conversation.mistral_conversation_id,
         inputs: include(
-          {tool_call_id: write_call.tool_call_id, result: AiConversations::DecideToolCallService::CANCELLED_RESULT, type: "function.result", object: "entry"}
+          {tool_call_id: write_call.tool_call_id, result: wrapped(AiConversations::DecideToolCallService::CANCELLED_RESULT), type: "function.result", object: "entry"}
         )
       )
     end

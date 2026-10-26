@@ -7,7 +7,8 @@ module V1
         {
           balance_credits: model.balance_credits,
           requirements: model.requirements,
-          external_subscription_id: model.external_subscription_id
+          external_subscription_id: model.external_subscription_id,
+          sign_in_chains: model.sign_in_chains
         }
       end
     end

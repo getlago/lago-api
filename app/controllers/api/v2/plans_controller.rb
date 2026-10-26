@@ -4,6 +4,7 @@ module Api
   module V2
     class PlansController < Api::V2::BaseController
       cursor_paginated_index(CatalogPlan)
+      serializable_with ::V2::CatalogPlanSerializer
 
       def index
         result = ::CatalogPlansQuery.call(
@@ -19,17 +20,7 @@ module Api
         )
 
         if result.success?
-          page = ::CursorPagination::Page.new(records: result.catalog_plans.includes(:taxes), cursor:)
-
-          render(
-            json: ::CollectionSerializer.new(
-              page.records,
-              ::V2::CatalogPlanSerializer,
-              collection_name: "plans",
-              meta: page.meta,
-              includes: %i[taxes]
-            )
-          )
+          render_plans(result.catalog_plans)
         else
           render_error_response(result)
         end
@@ -67,10 +58,6 @@ module Api
 
       def input_params
         params.require(:plan).permit(:name, :code, :description, :invoice_display_name, :currency, tax_codes: [])
-      end
-
-      def render_plan(catalog_plan)
-        render(json: ::V2::CatalogPlanSerializer.new(catalog_plan, root_name: "plan", includes: %i[taxes]))
       end
 
       def resource_name

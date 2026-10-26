@@ -31,6 +31,30 @@ module TaskPrompt
     input.split(/[\s,]+/).reject(&:empty?)
   end
 
+  # The listed subscriptions of the organization, or a random sample of its active ones
+  def self.ask_for_sampled_subscriptions(organization)
+    subscription_ids = ask_for_subscription_ids
+    if subscription_ids.any?
+      subscriptions = Subscription.where(organization_id: organization.id, id: subscription_ids).to_a
+      missing_ids = subscription_ids - subscriptions.map(&:id)
+      puts "Not found in the organization, skipped: #{missing_ids.join(", ")}" if missing_ids.any?
+
+      return subscriptions
+    end
+
+    active_count = Subscription.active.where(organization_id: organization.id).count
+    puts "Organization has #{active_count} active subscription(s)."
+    sample_size = ask("Number of active subscriptions to sample [50]: ")
+    sample_size = sample_size.empty? ? 50 : Integer(sample_size, exception: false)
+    abort "Invalid sample size: expected a positive integer." unless sample_size&.positive?
+
+    Subscription.active
+      .where(organization_id: organization.id)
+      .order(Arel.sql("RANDOM()"))
+      .limit(sample_size)
+      .to_a
+  end
+
   def self.ask_for_timestamp_range
     from_time = ask_for_timestamp("From timestamp (UTC, e.g. 2026-01-01 00:00:00): ")
     to_time = ask_for_timestamp("To timestamp (UTC, e.g. 2026-01-31 23:59:59): ")

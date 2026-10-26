@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class PlansController < Api::BaseController
+    class PlansController < Api::V1::BaseController
       def create
         result = ::Plans::CreateService.call(
           input_params.merge(organization_id: current_organization.id).to_h.deep_symbolize_keys
@@ -69,8 +69,8 @@ module Api
         result = PlansQuery.call(
           organization: current_organization,
           pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
+            page: page_number,
+            limit: page_size
           },
           filters: {include_pending_deletion: true}
         )

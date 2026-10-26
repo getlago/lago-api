@@ -21,7 +21,7 @@ module Credits
       else
         ActiveRecord::Base.transaction do
           Customers::LockService.call(customer:, scope: :credit_note) do
-            apply_credits
+            apply_credits unless already_applied?
           end
         end
       end
@@ -77,7 +77,17 @@ module Credits
         .available
         .where(total_amount_currency: invoice.currency)
         .where.not(invoice_id: invoice.id)
-        .order(created_at: :asc)
+        .where(<<~SQL.squish, Fee.fee_types[:product], invoice.billing_entity_id)
+          NOT EXISTS (
+            SELECT 1
+            FROM credit_note_items
+            INNER JOIN fees ON fees.id = credit_note_items.fee_id
+            WHERE credit_note_items.credit_note_id = credit_notes.id
+              AND (fees.contract_id IS NOT NULL OR fees.fee_type = ?)
+          ) OR invoices.billing_entity_id = ?
+        SQL
+        .joins(:invoice)
+        .order("credit_notes.created_at ASC, credit_notes.id ASC")
         .to_a
     end
 

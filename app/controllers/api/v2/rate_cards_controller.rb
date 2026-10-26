@@ -70,7 +70,7 @@ module Api
         )
 
         if result.success?
-          render_rate_cards(result.rate_cards.includes(:product, :product_filter, :rates))
+          render_rate_cards(result.rate_cards.includes(:product, :product_filter))
         else
           render_error_response(result)
         end

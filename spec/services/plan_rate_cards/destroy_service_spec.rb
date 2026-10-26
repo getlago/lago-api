@@ -65,13 +65,14 @@ RSpec.describe PlanRateCards::DestroyService, :capture_kafka_messages do
       "resource_type" => "PlanRateCard",
       "resource_id" => plan_rate_card.id
     )
-    expect(activity.fetch("activity_object")).to include("lago_id" => plan_rate_card.id, "rate_phases_count" => 0)
+    expect(activity.fetch("activity_object")).to include("lago_id" => plan_rate_card.id)
+    expect(activity.fetch("activity_object")).not_to have_key("rate_phases_count")
     expect(activity.fetch("activity_object")).not_to have_key("rate_phases")
     expect(phase.reload).to be_discarded
     expect(override.reload).to be_discarded
     expect(plan_rate_card.reload.rate_phases).to be_empty
     serialized_card = ::V2::PlanRateCardSerializer.new(plan_rate_card, root_name: "plan_rate_card").serialize
-    expect(serialized_card).to include(rate_phases_count: 0)
+    expect(serialized_card).not_to have_key(:rate_phases_count)
     expect(serialized_card).not_to have_key(:rate_phases)
   end
 

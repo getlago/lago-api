@@ -4,6 +4,12 @@ require "rails_helper"
 
 RSpec.describe Api::V2::ProductsController do
   let(:organization) { create(:organization) }
+  let(:flat_keys) do
+    %i[
+      lago_id product_category_code billable_metric_code name code description invoice_display_name product_type
+      created_at updated_at deleted_at
+    ]
+  end
 
   describe "POST /api/v2/products" do
     subject { post_with_token(organization, "/api/v2/products", {product: create_params}) }
@@ -190,18 +196,14 @@ RSpec.describe Api::V2::ProductsController do
 
     include_examples "requires API permission", "product", "read"
 
-    it "returns the product" do
-      create(:product_filter, organization:, product:)
-
+    it "returns the flat product" do
       subject
 
       expect(response).to have_http_status(:success)
       expect(json[:product][:lago_id]).to eq(product.id)
       expect(json[:product][:code]).to eq(product.code)
-      expect(json[:product][:filters_count]).to eq(1)
-      expect(json[:product]).to include(deleted_at: nil)
-      expect(json[:product]).not_to have_key(:product_category)
-      expect(json[:product]).not_to have_key(:billable_metric)
+      expect(json[:product]).to include(created_at: product.created_at.iso8601(6), updated_at: product.updated_at.iso8601(6), deleted_at: nil)
+      expect(json[:product].keys).to eq(flat_keys)
     end
 
     context "with expands[]=product_category" do
@@ -235,7 +237,7 @@ RSpec.describe Api::V2::ProductsController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:product][:billable_metric]).to eq(V2::BillableMetricSerializer.new(product.billable_metric).serialize)
+        expect(json[:product][:billable_metric]).to eq(V2::BillableMetricSerializer.new(product.billable_metric, includes: %i[usec_timestamps]).serialize)
         expect(json[:product]).not_to have_key(:product_category)
       end
 
@@ -245,8 +247,8 @@ RSpec.describe Api::V2::ProductsController do
         it "embeds it with its deletion date" do
           subject
 
-          expect(json[:product][:billable_metric]).to eq(V2::BillableMetricSerializer.new(product.billable_metric.reload).serialize)
-          expect(json[:product][:billable_metric][:deleted_at]).to eq(product.billable_metric.deleted_at.iso8601)
+          expect(json[:product][:billable_metric]).to eq(V2::BillableMetricSerializer.new(product.billable_metric.reload, includes: %i[usec_timestamps]).serialize)
+          expect(json[:product][:billable_metric][:deleted_at]).to eq(product.billable_metric.deleted_at.iso8601(6))
         end
       end
     end
@@ -343,14 +345,10 @@ RSpec.describe Api::V2::ProductsController do
       end
     end
 
-    it "returns the batched filters counts" do
-      create(:product_filter, organization:, product: usage_item)
-      create(:product_filter, organization:, product: usage_item, code: "second")
-
+    it "returns the flat products" do
       subject
 
-      counts = json[:products].to_h { [it[:lago_id], it[:filters_count]] }
-      expect(counts).to eq(usage_item.id => 2, fixed_item.id => 0)
+      expect(json[:products].map(&:keys)).to eq([flat_keys, flat_keys])
     end
 
     context "with an product_type filter" do
@@ -381,6 +379,23 @@ RSpec.describe Api::V2::ProductsController do
         subject
 
         expect(json[:products].map { it[:lago_id] }).to eq([usage_item.id])
+      end
+
+      context "with include_total_count" do
+        let(:query_params) { "#{super()}&include_total_count=true" }
+
+        before do
+          create(:product, organization:, product_category:)
+          create(:product, organization:, product_category:, deleted_at: Time.current)
+          create(:product, organization:)
+        end
+
+        it "counts the kept products of the category" do
+          subject
+
+          expect(json[:products].size).to eq(2)
+          expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil, total_count: 2)
+        end
       end
     end
 
@@ -463,7 +478,7 @@ RSpec.describe Api::V2::ProductsController do
       expect(response).to have_http_status(:success)
       expect(json[:product][:lago_id]).to eq(product.id)
       expect(product.reload).to be_discarded
-      expect(json[:product][:deleted_at]).to eq(product.deleted_at.iso8601)
+      expect(json[:product][:deleted_at]).to eq(product.deleted_at.iso8601(6))
     end
 
     context "when the product does not exist" do
