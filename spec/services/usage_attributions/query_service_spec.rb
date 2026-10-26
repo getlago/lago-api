@@ -149,10 +149,27 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
   context "with a yearly plan" do
     let(:plan) { create(:plan, organization:, interval: :yearly, amount_currency: "EUR") }
 
-    it "narrows the current period to its last 31 days" do
-      expect(result.from_datetime).to eq(Time.zone.parse("2026-08-15 12:00:00"))
-      expect(result.to_datetime).to eq(Time.zone.parse("2026-09-15 12:00:00"))
+    it "starts the current period 31 days before today" do
+      expect(result.from_datetime).to eq(Time.zone.parse("2026-08-15"))
+      expect(result.to_datetime).to eq(Time.zone.parse("2026-12-31").end_of_day)
       expect(summary(result.rows)).to eq([["eng", 125_150, 4], ["data", 100_000, 1]])
+    end
+
+    it "keeps the same window for the whole day" do
+      window = [result.from_datetime, result.to_datetime]
+
+      travel(11.hours)
+
+      repeated = described_class.call(subscription:, group_by:)
+      expect([repeated.from_datetime, repeated.to_datetime]).to eq(window)
+    end
+
+    context "with a customer in another timezone" do
+      let(:customer) { create(:customer, organization:, timezone: "America/New_York") }
+
+      it "starts the window at midnight in the customer's timezone" do
+        expect(result.from_datetime).to eq(Time.zone.parse("2026-08-15 04:00:00"))
+      end
     end
   end
 
