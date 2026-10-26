@@ -25,10 +25,11 @@ module RecurringAggregationSnapshots
     # Returns the snapshots of the latest period closed before from_datetime, one per group with
     # units or events, and that period. Both are nil when the aggregation must fall back to a full scan.
     def call
-      marker = latest_marker
+      period_records = latest_period_records.to_a
+      marker = period_records.find { it.charge_filter_id.nil? }
       return result unless marker && same_grouped_by_keys?(marker) && !filters_changed_since?(marker)
 
-      records = period_records(marker).to_a
+      records = period_records.select { it.charge_filter_id == charge_filter&.id }
       return result unless records.all? { same_grouped_by_keys?(it) }
 
       result.period = Period.new(to_datetime: marker.to_datetime, watermark: marker.watermark)
@@ -50,25 +51,28 @@ module RecurringAggregationSnapshots
 
     # The default bucket keeps a row for every closed period, other buckets only for groups with
     # units or events: the marker tells a bucket without usage from a period never closed.
-    def latest_marker
-      charge_snapshots
+    # One statement reads the marker and the bucket, so a run rewriting the period cannot land in between.
+    def latest_period_records
+      latest_to_datetime = charge_snapshots
         .where(charge_filter_id: nil, to_datetime: ...from_datetime)
-        .order(to_datetime: :desc, watermark: :desc)
-        .first
+        .order(to_datetime: :desc)
+        .limit(1)
+        .select(:to_datetime)
+
+      charge_snapshots.where(charge_filter_id: [nil, charge_filter&.id].uniq, to_datetime: latest_to_datetime)
     end
 
-    # Rows of an older watermark belong to an overlapping run of the period, not to the marker's
-    def period_records(marker)
-      charge_snapshots.where(charge_filter_id: charge_filter&.id, to_datetime: marker.to_datetime, watermark: marker.watermark)
-    end
-
-    # A filter created or removed since the marker moves older events between buckets, so the
-    # snapshots of every bucket of the charge are stale, not only the one of that filter
+    # A filter or filter value created, edited or removed since the marker moves older events between
+    # buckets, so the snapshots of every bucket of the charge are stale, not only the one of that filter
     def filters_changed_since?(marker)
-      ChargeFilter.with_discarded.unscope(:order)
+      charge_filters = ChargeFilter.with_discarded.unscope(:order)
         .where(organization_id: subscription.organization_id, charge_id: charge.id)
-        .where("created_at > :watermark OR deleted_at > :watermark", watermark: marker.watermark)
-        .exists?
+
+      charge_filters.where("created_at > :watermark OR deleted_at > :watermark", watermark: marker.watermark).exists? ||
+        ChargeFilterValue.with_discarded.unscope(:order)
+          .where(organization_id: subscription.organization_id, charge_filter_id: charge_filters.select(:id))
+          .where("updated_at > :watermark OR deleted_at > :watermark", watermark: marker.watermark)
+          .exists?
     end
 
     # Snapshots grouped on other keys cannot be regrouped, only a full scan can
