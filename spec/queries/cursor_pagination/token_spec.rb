@@ -24,11 +24,11 @@ RSpec.describe CursorPagination::Token do
       expect(token).to match(/\A[A-Za-z0-9_-]+\z/)
     end
 
-    context "with a sort on other columns than the key" do
-      subject(:token) { described_class.encode(table: "products", record:, sort: {name: :asc, id: :asc}) }
+    context "with a sort of more than two columns" do
+      subject(:token) { described_class.encode(table: "products", record:, sort: {created_at: :asc, name: :asc, id: :asc}) }
 
-      it "raises an argument error, since the cursor could not be resumed" do
-        expect { token }.to raise_error(ArgumentError, /created_at then id/)
+      it "raises an argument error, since the cursor key holds two columns" do
+        expect { token }.to raise_error(ArgumentError, /two columns/)
       end
     end
 
@@ -38,6 +38,32 @@ RSpec.describe CursorPagination::Token do
       it "raises an argument error" do
         expect { token }.to raise_error(ArgumentError, /single direction/)
       end
+    end
+  end
+
+  describe "a sort with a time column and a string tiebreak" do
+    let(:sort) { {logged_at: :desc, activity_id: :desc} }
+    let(:logged_at) { Time.zone.parse("2026-09-28T10:11:12.123Z") }
+    let(:activity_id) { "evt_not-a-uuid_42" }
+    let(:log) { Struct.new(:logged_at, :activity_id).new(logged_at, activity_id) }
+
+    it "encodes the two values off the record by the sort keys" do
+      token = described_class.encode(table: "activity_logs", record: log, sort:)
+
+      expect(JSON.parse(Base64.urlsafe_decode64(token))).to eq(
+        "v" => 1,
+        "o" => {"t" => "activity_logs", "s" => "logged_at:desc,activity_id:desc"},
+        "k" => ["2026-09-28T10:11:12.123000Z", "evt_not-a-uuid_42"]
+      )
+    end
+
+    it "round-trips a precision-3 timestamp and the plain string tiebreak" do
+      token = described_class.encode(table: "activity_logs", record: log, sort:)
+      time, tiebreak = described_class.decode(token, table: "activity_logs", param: :after, sort:)
+
+      expect(time).to eq(logged_at)
+      expect(time.usec).to eq(123_000)
+      expect(tiebreak).to eq("evt_not-a-uuid_42")
     end
   end
 
@@ -170,11 +196,11 @@ RSpec.describe CursorPagination::Token do
       end
     end
 
-    context "when decoded under a sort on other columns than the key" do
-      subject(:decode) { described_class.decode(value, table: "products", param: :after, sort: {name: :asc, id: :asc}) }
+    context "when decoded under a sort of more than two columns" do
+      subject(:decode) { described_class.decode(value, table: "products", param: :after, sort: {created_at: :asc, name: :asc, id: :asc}) }
 
       it "raises an argument error" do
-        expect { decode }.to raise_error(ArgumentError, /created_at then id/)
+        expect { decode }.to raise_error(ArgumentError, /two columns/)
       end
     end
 
@@ -214,13 +240,33 @@ RSpec.describe CursorPagination::Token do
       it_behaves_like "an invalid cursor", "malformed_key"
     end
 
-    context "with a malformed UUID" do
-      let(:payload) { super().merge(k: ["2026-09-28T10:11:12.123456Z", "not-a-uuid"]) }
+    context "with a non-UUID string tiebreak" do
+      let(:payload) { super().merge(k: ["2026-09-28T10:11:12.123456Z", "evt_not-a-uuid_42"]) }
+
+      it "accepts it as an opaque bounded string" do
+        expect(decode).to eq([Time.utc(2026, 9, 28, 10, 11, Rational(12_123_456, 1_000_000)), "evt_not-a-uuid_42"])
+      end
+    end
+
+    context "with an empty tiebreak" do
+      let(:payload) { super().merge(k: ["2026-09-28T10:11:12.123456Z", ""]) }
 
       it_behaves_like "an invalid cursor", "malformed_key"
     end
 
-    context "with a non-string key" do
+    context "with a tiebreak longer than the key cap" do
+      let(:payload) { super().merge(k: ["2026-09-28T10:11:12.123456Z", "a" * 257]) }
+
+      it_behaves_like "an invalid cursor", "malformed_key"
+    end
+
+    context "with a non-string tiebreak" do
+      let(:payload) { super().merge(k: ["2026-09-28T10:11:12.123456Z", 42]) }
+
+      it_behaves_like "an invalid cursor", "malformed_key"
+    end
+
+    context "with a non-string timestamp" do
       let(:payload) { super().merge(k: [1_790_000_000, record.id]) }
 
       it_behaves_like "an invalid cursor", "malformed_key"
