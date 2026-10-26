@@ -268,8 +268,8 @@ RSpec.describe Api::V1::Customers::AttributedUsageController, clickhouse: {clean
       end
     end
 
-    context "with a per_page that is not a plain decimal" do
-      let(:params) { {external_subscription_id: subscription.external_id, group_by: "team", per_page: "010"} }
+    context "with a per_page that is not an integer" do
+      let(:params) { {external_subscription_id: subscription.external_id, group_by: "team", per_page: "abc"} }
 
       it "returns a validation error on per_page" do
         subject
