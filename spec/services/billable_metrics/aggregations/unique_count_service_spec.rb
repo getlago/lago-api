@@ -529,6 +529,18 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, transaction: f
         end
       end
 
+      context "when the first event of the period removes a unit active from a previous period" do
+        let(:properties) { {unique_id: unique_count_event.properties["unique_id"], operation_type: "remove"} }
+
+        it "stores the freed unit below the units billed for the period" do
+          result = count_service.aggregate
+
+          expect(result.pay_in_advance_aggregation).to eq(0)
+          expect(result.current_aggregation).to eq(-1)
+          expect(result.max_aggregation).to eq(0)
+        end
+      end
+
       context "when current period aggregation is greater than period maximum" do
         let(:properties) { {unique_id: "003"} }
 
