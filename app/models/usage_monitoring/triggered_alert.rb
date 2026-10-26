@@ -41,6 +41,7 @@ end
 #  idx_on_usage_monitoring_alert_id_4290c95dec                 (usage_monitoring_alert_id)
 #  index_usage_monitoring_triggered_alerts_on_organization_id  (organization_id)
 #  index_usage_monitoring_triggered_alerts_on_subscription_id  (subscription_id)
+#  index_usage_monitoring_triggered_alerts_on_triggered_at     (triggered_at)
 #  index_usage_monitoring_triggered_alerts_on_wallet_id        (wallet_id)
 #
 # Foreign Keys
