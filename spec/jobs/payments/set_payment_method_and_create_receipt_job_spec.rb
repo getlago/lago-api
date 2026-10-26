@@ -61,5 +61,88 @@ RSpec.describe Payments::SetPaymentMethodAndCreateReceiptJob do
       )
       expect(payment.reload.payment_method_id).to eq(payment_method.id)
     end
+
+    context "with an existing default payment method" do
+      let!(:default_payment_method) { create(:payment_method, customer:, provider_method_id: "pm_default", is_default: true) }
+
+      it "creates a payment method that is not default and keeps the existing default" do
+        described_class.perform_now(payment:, provider_payment_method_id:)
+
+        payment_method = customer.payment_methods.find_by!(provider_method_id: provider_payment_method_id)
+        expect(payment_method.is_default).to be(false)
+        expect(default_payment_method.reload.is_default).to be(true)
+        expect(payment.reload.payment_method_id).to eq(payment_method.id)
+      end
+    end
+
+    context "when the Stripe payment method belongs to another Stripe customer" do
+      let(:stripe_payment_method_json) do
+        JSON.parse(get_stripe_fixtures("retrieve_payment_method_response.json", version: "2025-04-30.basil"))
+          .merge("customer" => "cus_another").to_json
+      end
+
+      before do
+        stub_request(:get, %r{/v1/payment_methods/#{provider_payment_method_id}}).and_return(status: 200, body: stripe_payment_method_json)
+      end
+
+      it "does not create a payment method and stores the payment data" do
+        expect { described_class.perform_now(payment:, provider_payment_method_id:) }.not_to change(PaymentMethod, :count)
+
+        expect(payment.reload.payment_method_id).to be_nil
+        expect(payment.provider_payment_method_data).to include("brand" => "visa", "last4" => "4242")
+      end
+    end
+
+    context "when the Stripe payment method has no customer" do
+      let(:stripe_payment_method_json) do
+        JSON.parse(get_stripe_fixtures("retrieve_payment_method_response.json", version: "2025-04-30.basil"))
+          .merge("customer" => nil).to_json
+      end
+
+      before do
+        stub_request(:get, %r{/v1/payment_methods/#{provider_payment_method_id}}).and_return(status: 200, body: stripe_payment_method_json)
+      end
+
+      it "does not create a payment method and stores the payment data" do
+        expect { described_class.perform_now(payment:, provider_payment_method_id:) }.not_to change(PaymentMethod, :count)
+
+        expect(payment.reload.payment_method_id).to be_nil
+        expect(payment.provider_payment_method_data).to include("brand" => "visa", "last4" => "4242")
+      end
+    end
+
+    context "when a payment method with the same provider_method_id already exists" do
+      let!(:payment_method) do
+        create(:payment_method, customer:, payment_provider_customer: stripe_customer, provider_method_id: provider_payment_method_id)
+      end
+
+      it "links the existing payment method and fills its details" do
+        expect { described_class.perform_now(payment:, provider_payment_method_id:) }.not_to change(PaymentMethod, :count)
+
+        expect(payment.reload.payment_method_id).to eq(payment_method.id)
+        expect(payment_method.reload.details).to include("type" => "card", "brand" => "visa", "last4" => "4242")
+      end
+    end
+
+    context "when the job runs twice for the same payment" do
+      it "creates only one payment method" do
+        described_class.perform_now(payment:, provider_payment_method_id:)
+        described_class.perform_now(payment: payment.reload, provider_payment_method_id:)
+
+        expect(customer.payment_methods.pluck(:provider_method_id)).to eq([provider_payment_method_id])
+        expect(payment.reload.payment_method_id).to eq(customer.payment_methods.sole.id)
+      end
+    end
+
+    context "without a Stripe customer" do
+      let(:payment) { create(:payment, payable: create(:invoice, customer:), payment_provider_customer: nil) }
+
+      it "does not create a payment method" do
+        expect { described_class.perform_now(payment:, provider_payment_method_id:) }.not_to change(PaymentMethod, :count)
+
+        expect(payment.reload.payment_method_id).to be_nil
+        expect(payment.provider_payment_method_data).to include("brand" => "visa", "last4" => "4242")
+      end
+    end
   end
 end

@@ -52,6 +52,30 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
         end.not_to have_enqueued_job(PaymentReceipts::CreateJob)
       end
 
+      context "when the card is attached to the customer's Stripe customer and unknown to Lago" do
+        let(:customer) { create(:customer, organization:) }
+        let(:provider_customer_id) { JSON.parse(get_stripe_fixtures("retrieve_payment_method_response.json", version:))["customer"] }
+        let(:stripe_customer) { create(:stripe_customer, customer:, provider_customer_id:) }
+        let(:payment) do
+          create(:payment, provider_payment_id: event.data.object.id, payable: create(:invoice, customer:, organization:), payment_provider_customer: stripe_customer)
+        end
+
+        before { payment }
+
+        it "creates a default payment method with the card details and links it to the payment" do
+          perform_enqueued_jobs(only: Payments::SetPaymentMethodAndCreateReceiptJob) { event_service.call }
+
+          payment_method = customer.payment_methods.sole
+          expect(payment_method).to have_attributes(
+            provider_method_id: event.data.object.payment_method,
+            payment_provider_customer: stripe_customer,
+            is_default: true,
+            details: hash_including("type" => "card", "brand" => "visa", "last4" => "4242")
+          )
+          expect(payment.reload.payment_method_id).to eq(payment_method.id)
+        end
+      end
+
       context "when issue_receipts_enabled is true", :premium do
         before { organization.update!(premium_integrations: %w[issue_receipts]) }
 
