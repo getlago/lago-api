@@ -105,6 +105,21 @@ RSpec.describe WalletAlertsConsumer do
       end
     end
 
+    context "when the wallet belongs to another organization" do
+      let(:message) do
+        {organization_id: create(:organization).id, wallet_id: wallet.id, dispatched_at_ms:}
+      end
+
+      before { allow(UsageMonitoring::ProcessWalletAlertsService).to receive(:call!) }
+
+      it "skips it" do
+        consumer.consume
+
+        expect(UsageMonitoring::ProcessWalletAlertsService).not_to have_received(:call!)
+        expect(outcomes).to have_received(:increment).with({outcome: "skipped", reason: "wallet_not_found"}, by: 1)
+      end
+    end
+
     context "when an evaluation raises" do
       let(:other_wallet) { create(:wallet, organization:, customer:) }
 

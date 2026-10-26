@@ -14,12 +14,13 @@ class WalletAlertsConsumer < ApplicationConsumer
     end
 
     # Evaluation reads the wallet from the database, so a batch needs one pass per wallet however
-    # many times its balance moved.
-    payloads_by_wallet = payloads.group_by { it["wallet_id"] }
-    wallets = Wallet.where(id: payloads_by_wallet.keys).index_by(&:id)
+    # many times its balance moved. A wallet is resolved by its organization too, so that a payload
+    # naming another organization's wallet is skipped rather than evaluated.
+    payloads_by_wallet = payloads.group_by { [it["organization_id"], it["wallet_id"]] }
+    wallets = Wallet.where(id: payloads_by_wallet.keys.map(&:last)).index_by { [it.organization_id, it.id] }
 
-    payloads_by_wallet.each do |wallet_id, wallet_payloads|
-      wallet = wallets[wallet_id]
+    payloads_by_wallet.each do |key, wallet_payloads|
+      wallet = wallets[key]
 
       if wallet.nil?
         report(:skipped, :wallet_not_found)
