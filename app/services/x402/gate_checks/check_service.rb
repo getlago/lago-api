@@ -220,8 +220,11 @@ module X402
 
       def sign_in_chains
         environment = X402::Network.environment(connection.networks.first)
+        families = connection_families
 
-        X402::Network::NETWORKS.filter_map { |network, env| network if env == environment }
+        X402::Network::NETWORKS.filter_map do |network, env|
+          network if env == environment && families.include?(X402::Network.family_of_network(network))
+        end
       end
 
       def refuse(code)

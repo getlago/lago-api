@@ -361,7 +361,7 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
     it "challenges at a zero balance" do
       expect(result).to have_attributes(
         requirements: [evm_requirement], external_subscription_id: nil, balance_credits: 0,
-        sign_in_chains: ["eip155:84532", "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"]
+        sign_in_chains: ["eip155:84532"]
       )
     end
 
@@ -389,7 +389,7 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
     it "challenges the funded agent's address as a stranger" do
       expect(result).to have_attributes(
         requirements: [evm_requirement], balance_credits: 0, external_subscription_id: nil,
-        sign_in_chains: ["eip155:84532", "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"]
+        sign_in_chains: ["eip155:84532"]
       )
     end
 
@@ -890,8 +890,8 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
     context "without siwx" do
       let(:params) { super().except(:siwx) }
 
-      it "lists the mainnet chains" do
-        expect(result.sign_in_chains).to eq(["eip155:8453", "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"])
+      it "offers sign-in on the mainnet chain" do
+        expect(result.sign_in_chains).to eq(["eip155:8453"])
       end
     end
   end
@@ -904,6 +904,10 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
 
     it "challenges with the Solana entry" do
       expect(result.requirements.map { |entry| entry[:network] }).to eq(["solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"])
+    end
+
+    it "offers sign-in on Solana only" do
+      expect(result.sign_in_chains).to eq(["solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"])
     end
   end
 
@@ -918,6 +922,10 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
 
     it "challenges with one entry per configured network" do
       expect(result.requirements.map { |entry| entry[:network] }).to eq(["eip155:84532", "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"])
+    end
+
+    it "offers sign-in on both families" do
+      expect(result.sign_in_chains).to eq(["eip155:84532", "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"])
     end
 
     context "when /supported is unavailable" do

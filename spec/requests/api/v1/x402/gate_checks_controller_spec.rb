@@ -19,7 +19,7 @@ describe Api::V1::X402::GateChecksController, :premium do
         extra: {name: "USDC", version: "2"}, pay_to: "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed",
         amount_atomic: "10000000", max_timeout_seconds: 60
       }],
-      sign_in_chains: ["eip155:84532", "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"]
+      sign_in_chains: ["eip155:84532"]
     }
   end
   let(:params) do
