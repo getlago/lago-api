@@ -57,12 +57,32 @@ class BaseService
   end
 
   class ValidationFailure < FailedResult
-    attr_reader :messages
+    Entry = Data.define(:field, :code, :meta)
 
-    def initialize(result, messages:)
+    attr_reader :messages, :meta
+
+    # messages: {field => [code]}, or one of the String, indexed and nested shapes a few services
+    # build, kept as they are. meta: {field => [Hash]}, position i describing messages[field][i].
+    def initialize(result, messages:, meta: {})
       @messages = messages
+      @meta = ValidationMeta.align(messages, meta)
 
       super(result, format_messages)
+    end
+
+    # One entry per code, in the order of messages, duplicates kept.
+    def entries
+      if messages.is_a?(Hash)
+        messages.flat_map do |field, codes|
+          Array.wrap(codes).each_with_index.map { |code, index| Entry.new(field:, code:, meta: meta.dig(field, index) || ValidationMeta::EMPTY) }
+        end
+      else
+        []
+      end
+    end
+
+    def ==(other)
+      super && meta == other.meta
     end
 
     private

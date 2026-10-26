@@ -23,14 +23,8 @@ module Api
       render_v2_error(404, code: "resource_not_found", details: [error_detail(code: "resource_not_found", field: :base, meta: {resource:})])
     end
 
-    # One entry per code of ValidationFailure#messages, in order and duplicates kept, so that
-    # grouping the entries by field gives the hash back.
-    def validation_errors(errors:)
-      details = errors.flat_map do |field, codes|
-        Array.wrap(codes).map { error_detail(code: it, field:) }
-      end
-
-      render_v2_error(422, code: "validation_errors", details:)
+    def validation_errors(errors:, meta: {})
+      render_validation_failure(BaseService::ValidationFailure.new(nil, messages: errors, meta:))
     end
 
     def render_error_response(error_result)
@@ -43,7 +37,8 @@ module Api
       when BaseService::MethodNotAllowedFailure then render_v2_error(422, code: error.code)
       # Ahead of ValidationFailure, its parent: its messages are the sentences of the contract.
       when BaseQuery::FiltersFailure then filter_errors(error.filters)
-      when BaseService::ValidationFailure then validation_errors(errors: error.messages)
+      # The failure itself, whose meta its messages alone would drop.
+      when BaseService::ValidationFailure then render_validation_failure(error)
       when BaseService::ForbiddenFailure then forbidden_error(code: error.code)
       # A provider refusing the organization's own credentials. The API key of the request is fine, so
       # not a 401: on v2, a 401 always means the Lago API key was refused. Ahead of its parent.
@@ -101,6 +96,14 @@ module Api
       render_v2_error(422, code: "validation_errors", details:)
     end
 
+    # One entry per code of the failure, in order and duplicates kept, so that grouping the entries
+    # by field gives its messages back.
+    def render_validation_failure(failure)
+      details = failure.entries.map { error_detail(code: it.code, field: it.field, meta: it.meta) }
+
+      render_v2_error(422, code: "validation_errors", details:)
+    end
+
     # Some providers give an HTTP status instead of a token (Adyen, Cashfree, Flutterwave), which tells
     # the client nothing the status of the response does not.
     def provider_error_code(code)
@@ -112,8 +115,9 @@ module Api
       render_v2_error(status, code:, details: [error_detail(code:, field: :base, meta: meta.compact)])
     end
 
+    # Every v2 entry, 400, 422 and 429 alike, goes through the registry of meta keys.
     def error_detail(code:, field:, meta: {})
-      {code:, field: field.to_s, meta:}
+      {code:, field: field.to_s, meta: ValidationMeta.check(meta)}
     end
 
     def render_v2_error(status, code:, details: [])
