@@ -714,6 +714,8 @@ RSpec.describe Api::V2::CustomersController do
 
       expect(response).to have_http_status(:ok)
       expect(json[:customer][:lago_id]).to eq(customer.id)
+      expect(json[:customer][:created_at]).to eq(customer.created_at.iso8601(6))
+      expect(json[:customer][:updated_at]).to eq(customer.updated_at.iso8601(6))
       expect(json[:customer][:document_locale]).to eq(customer.document_locale)
       expect(json[:customer][:shipping_address]).to eq(customer.shipping_address)
       expect(json[:customer]).not_to have_key(:billing_configuration)
@@ -738,6 +740,9 @@ RSpec.describe Api::V2::CustomersController do
         expect(response).to have_http_status(:ok)
         expect(json[:customer][:taxes].map { it[:lago_id] }).to eq([tax.id])
         expect(json[:customer][:metadata].map { it[:display_on_invoice] }).to eq([true])
+        expect(json[:customer][:metadata].first[:created_at]).to eq(metadata.created_at.iso8601(6))
+        expect(json[:customer][:metadata].first[:updated_at]).to eq(metadata.updated_at.iso8601(6))
+        expect(json[:customer][:taxes].first[:created_at]).to eq(tax.created_at.iso8601(6))
         expect(json[:customer][:metadata].first).not_to have_key(:display_in_invoice)
         expect(json[:customer][:integration_customers].map { it[:lago_id] }).to eq([integration_customer.id])
         expect(json[:customer][:shipping_address]).to eq(customer.shipping_address)
@@ -911,7 +916,7 @@ RSpec.describe Api::V2::CustomersController do
       expect(response).to have_http_status(:ok)
       expect(customer.reload).to be_discarded
       expect(json[:customer]).not_to have_key(:billing_configuration)
-      expect(json[:customer][:deleted_at]).to eq(customer.deleted_at.iso8601)
+      expect(json[:customer][:deleted_at]).to eq(customer.deleted_at.iso8601(6))
       expect(json[:customer][:shipping_address]).to eq(customer.shipping_address)
     end
 
