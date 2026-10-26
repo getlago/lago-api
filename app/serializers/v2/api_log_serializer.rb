@@ -13,8 +13,8 @@ module V2
         request_body: deep_json_parser(model.request_body),
         request_response: deep_json_parser(model.request_response),
         api_version: model.api_version,
-        logged_at: model.logged_at.iso8601,
-        created_at: model.created_at.iso8601
+        logged_at: format_time(model.logged_at),
+        created_at: format_time(model.created_at)
       }
     end
 

@@ -8,45 +8,63 @@ RSpec.describe V2::ApiLogSerializer, clickhouse: true do
   let(:api_log) do
     create(
       :clickhouse_api_log,
-      request_body: {"metadata" => "{\"foo\":\"bar\"}", "plain" => "hello"},
-      request_response: {"items" => "[1,2,3]", "note" => "not-json"}
+      request_id: "api-log-1",
+      client: "RSpec",
+      http_method: "post",
+      http_status: 200,
+      request_origin: "https://lago.test",
+      request_path: "/api/v1/test-endpoint",
+      api_version: "v1",
+      request_body:,
+      request_response:
     )
   end
 
   let(:result) { JSON.parse(serializer.to_json)["api_log"] }
 
-  it "serializes the object" do
-    expect(result["request_id"]).to eq(api_log.request_id)
-    expect(result["client"]).to eq(api_log.client)
-    expect(result["http_method"]).to eq(api_log.http_method)
-    expect(result["http_status"]).to eq(api_log.http_status)
-    expect(result["request_origin"]).to eq(api_log.request_origin)
-    expect(result["request_path"]).to eq(api_log.request_path)
-    expect(result["api_version"]).to eq(api_log.api_version)
-    expect(result["logged_at"]).to eq(api_log.logged_at.iso8601)
-    expect(result["created_at"]).to eq(api_log.created_at.iso8601)
+  # Constant fields with the two JSON maps passed in; the timestamps are read from the record
+  # since they are assigned at creation. The serializer renders them at whole seconds by default.
+  def expected_payload(request_body:, request_response:)
+    {
+      "request_id" => "api-log-1",
+      "client" => "RSpec",
+      "http_method" => "post",
+      "http_status" => 200,
+      "request_origin" => "https://lago.test",
+      "request_path" => "/api/v1/test-endpoint",
+      "request_body" => request_body,
+      "request_response" => request_response,
+      "api_version" => "v1",
+      "logged_at" => api_log.logged_at.iso8601,
+      "created_at" => api_log.created_at.iso8601
+    }
   end
 
-  it "parses JSON-encoded request_body values one level deep" do
-    expect(result["request_body"]).to eq("metadata" => {"foo" => "bar"}, "plain" => "hello")
-  end
+  context "when the map values are JSON-encoded" do
+    let(:request_body) { {"metadata" => "{\"foo\":\"bar\"}", "plain" => "hello"} }
+    let(:request_response) { {"items" => "[1,2,3]", "note" => "not-json"} }
 
-  it "parses JSON-encoded request_response values one level deep" do
-    expect(result["request_response"]).to eq("items" => [1, 2, 3], "note" => "not-json")
-  end
-
-  context "when a value is not valid JSON" do
-    let(:api_log) do
-      create(
-        :clickhouse_api_log,
-        request_body: {"raw" => "not json at all"},
-        request_response: {"raw" => "still not json"}
+    it "serializes the object and parses the JSON values one level deep" do
+      expect(result).to eq(
+        expected_payload(
+          request_body: {"metadata" => {"foo" => "bar"}, "plain" => "hello"},
+          request_response: {"items" => [1, 2, 3], "note" => "not-json"}
+        )
       )
     end
+  end
+
+  context "when a map value is not valid JSON" do
+    let(:request_body) { {"raw" => "not json at all"} }
+    let(:request_response) { {"raw" => "still not json"} }
 
     it "returns the value unchanged" do
-      expect(result["request_body"]).to eq("raw" => "not json at all")
-      expect(result["request_response"]).to eq("raw" => "still not json")
+      expect(result).to eq(
+        expected_payload(
+          request_body: {"raw" => "not json at all"},
+          request_response: {"raw" => "still not json"}
+        )
+      )
     end
   end
 end

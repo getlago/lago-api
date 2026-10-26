@@ -6,8 +6,48 @@ RSpec.describe Api::V2::ApiLogsController, clickhouse: true do
   subject { get_with_token(organization, path, params) }
 
   let(:organization) { create(:organization) }
-  let(:api_log) { create(:clickhouse_api_log, organization:) }
+  let(:request_body) { {"foo" => "bar", "baz" => "qux"} }
+  let(:request_response) { {"foo" => "bar"} }
+  let(:api_log) do
+    create(
+      :clickhouse_api_log,
+      organization:,
+      request_id: "api-log-1",
+      client: "RSpec",
+      http_method: "post",
+      http_status: 200,
+      request_origin: "https://lago.test",
+      request_path: "/api/v1/test-endpoint",
+      api_version: "v1",
+      request_body:,
+      request_response:
+    )
+  end
   let(:params) { {} }
+
+  # The full serialized object the endpoint returns. `json` symbolizes keys, so the parsed map
+  # values are symbol-keyed too. The timestamps are read from the stored record because ClickHouse
+  # keeps millisecond precision while the in-memory factory time has microseconds (the v2 render
+  # path emits microseconds). The two map fields are this serializer's parsed output.
+  def expected_payload(record, request_body:, request_response:)
+    {
+      request_id: "api-log-1",
+      client: "RSpec",
+      http_method: "post",
+      http_status: 200,
+      request_origin: "https://lago.test",
+      request_path: "/api/v1/test-endpoint",
+      request_body:,
+      request_response:,
+      api_version: "v1",
+      logged_at: record.logged_at.iso8601(6),
+      created_at: record.created_at.iso8601(6)
+    }
+  end
+
+  def stored_api_log
+    Clickhouse::ApiLog.where(organization_id: organization.id).find_by(request_id: "api-log-1")
+  end
 
   describe "GET /api/v2/api_logs" do
     let(:path) { "/api/v2/api_logs" }
@@ -83,30 +123,34 @@ RSpec.describe Api::V2::ApiLogsController, clickhouse: true do
     context "with premium organization", :premium do
       include_examples "requires API permission", "api_log", "read"
 
-      it "returns api logs with parsed JSON fields and cursor meta" do
+      it "returns the full api log object and cursor meta" do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:api_logs].map { |l| l[:request_id] }).to include(api_log.request_id)
+        expect(json[:api_logs].sole).to eq(
+          expected_payload(
+            stored_api_log,
+            request_body: {foo: "bar", baz: "qux"},
+            request_response: {foo: "bar"}
+          )
+        )
         expect(json[:meta].keys).to eq(%i[next_cursor prev_cursor])
       end
 
       context "when request_body and request_response hold JSON-encoded values" do
-        let(:api_log) do
-          create(
-            :clickhouse_api_log,
-            organization:,
-            request_body: {"metadata" => "{\"foo\":\"bar\"}", "plain" => "hello"},
-            request_response: {"items" => "[1,2,3]", "note" => "not-json"}
-          )
-        end
+        let(:request_body) { {"metadata" => "{\"foo\":\"bar\"}", "plain" => "hello"} }
+        let(:request_response) { {"items" => "[1,2,3]", "note" => "not-json"} }
 
-        it "parses them one level deep" do
+        it "returns the full object with the JSON values parsed one level deep" do
           subject
 
-          entry = json[:api_logs].find { |l| l[:request_id] == api_log.request_id }
-          expect(entry[:request_body]).to eq(metadata: {foo: "bar"}, plain: "hello")
-          expect(entry[:request_response]).to eq(items: [1, 2, 3], note: "not-json")
+          expect(json[:api_logs].sole).to eq(
+            expected_payload(
+              stored_api_log,
+              request_body: {metadata: {foo: "bar"}, plain: "hello"},
+              request_response: {items: [1, 2, 3], note: "not-json"}
+            )
+          )
         end
       end
 
@@ -215,28 +259,22 @@ RSpec.describe Api::V2::ApiLogsController, clickhouse: true do
     end
 
     context "with premium organization", :premium do
-      let(:api_log) do
-        create(
-          :clickhouse_api_log,
-          organization:,
-          request_body: {"metadata" => "{\"foo\":\"bar\"}"},
-          request_response: {"items" => "[1,2,3]"}
-        )
-      end
+      let(:request_body) { {"metadata" => "{\"foo\":\"bar\"}"} }
+      let(:request_response) { {"items" => "[1,2,3]"} }
 
       include_examples "requires API permission", "api_log", "read"
 
-      it "returns the api log with parsed JSON fields" do
+      it "returns the full api log object with parsed JSON fields" do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:api_log]).to include(
-          request_id: api_log.request_id,
-          http_method: api_log.http_method,
-          logged_at: api_log.logged_at.iso8601
+        expect(json[:api_log]).to eq(
+          expected_payload(
+            stored_api_log,
+            request_body: {metadata: {foo: "bar"}},
+            request_response: {items: [1, 2, 3]}
+          )
         )
-        expect(json[:api_log][:request_body]).to eq(metadata: {foo: "bar"})
-        expect(json[:api_log][:request_response]).to eq(items: [1, 2, 3])
       end
 
       context "when the request_id is unknown" do
