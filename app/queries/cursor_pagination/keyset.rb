@@ -15,9 +15,9 @@ module CursorPagination
       sort = cursor.sort
       scope = case cursor.direction
       when :forward
-        scope.where("#{row(scope, sort)} #{operator(sort, :forward)} (?, ?)", *cursor.key)
+        scope.where("#{row(scope, sort)} #{operator(sort, :forward)} (?, ?)", *bound_key(cursor.key))
       when :backward
-        scope.where("#{row(scope, sort)} #{operator(sort, :backward)} (?, ?)", *cursor.key)
+        scope.where("#{row(scope, sort)} #{operator(sort, :backward)} (?, ?)", *bound_key(cursor.key))
       else
         scope
       end
@@ -31,6 +31,18 @@ module CursorPagination
     def self.order(cursor)
       cursor.backward? ? reversed(cursor.sort) : cursor.sort
     end
+
+    # Binds a Time/DateTime from the cursor key as a microsecond-precision UTC literal,
+    # which both ClickHouse DateTime64(3) and Postgres timestamptz parse. Passing the raw
+    # Time through the ClickHouse adapter's `quoted_date` truncates it to the whole second
+    # (`value.to_fs(:db)`), dropping rows that share the anchor's second. The string
+    # tiebreak is bound unchanged.
+    def self.bound_key(key)
+      key.map do |value|
+        (value.is_a?(Time) || value.is_a?(DateTime)) ? value.utc.strftime("%Y-%m-%d %H:%M:%S.%6N") : value
+      end
+    end
+    private_class_method :bound_key
 
     def self.row(scope, sort)
       columns = sort.keys.map { |column| "#{scope.quoted_table_name}.#{scope.connection.quote_column_name(column)}" }

@@ -45,6 +45,62 @@ RSpec.describe Customers::UpdateService do
 
     let(:account_type) { "customer" }
 
+    context "with a database uniqueness conflict" do
+      subject(:result) { described_class.call(customer:, args: update_args) }
+
+      let(:constraint) { "index_customers_on_external_id_and_organization_id" }
+      let(:database_result) { instance_double(PG::Result, error_field: constraint) }
+      let(:database_error) { PG::UniqueViolation.new("duplicate value") }
+      let(:write_error) { ActiveRecord::RecordNotUnique.new("duplicate value") }
+
+      before do
+        allow(database_error).to receive(:result).and_return(database_result)
+        allow(customer).to receive(:save!) { raise write_error, cause: database_error }
+      end
+
+      it "returns a validation error for an external ID collision" do
+        original_attributes = customer.attributes
+
+        expect(result.error.messages).to eq(external_id: ["value_already_exist"])
+        expect(customer.reload.attributes).to eq(original_attributes)
+        expect(SendWebhookJob).not_to have_been_enqueued.with("customer.updated", customer)
+      end
+
+      context "with another constraint" do
+        let(:constraint) { "customers_pkey" }
+
+        it "does not hide the database error" do
+          expect { result }.to raise_error(ActiveRecord::RecordNotUnique)
+        end
+      end
+    end
+
+    context "when tax assignment fails" do
+      let(:update_args) { super().merge(tax_codes: ["unknown-tax"]) }
+
+      it "rolls back customer changes" do
+        original_attributes = customer.attributes
+
+        result = customers_service.call
+
+        expect(result).to be_failure
+        expect(customer.reload.attributes).to eq(original_attributes)
+        expect(SendWebhookJob).not_to have_been_enqueued.with("customer.updated", customer)
+      end
+    end
+
+    context "with invoice custom section codes" do
+      let(:section) { create(:invoice_custom_section, organization:) }
+      let(:update_args) { super().merge(invoice_custom_section_codes: [section.code]) }
+
+      it "assigns sections by code" do
+        result = customers_service.call
+
+        expect(result).to be_success
+        expect(customer.reload.manual_selected_invoice_custom_sections).to eq([section])
+      end
+    end
+
     it "updates a customer and calls SendWebhookJob" do
       result = customers_service.call
       updated_customer = result.customer
@@ -91,6 +147,28 @@ RSpec.describe Customers::UpdateService do
       it "sanitizes the email before saving" do
         result = customers_service.call
         expect(result.customer.email).to eq("hello@something-other.com")
+      end
+    end
+
+    context "with a line break in the address" do
+      let(:update_args) { {id: customer.id, address_line2: "Line A\nLine B"} }
+
+      it "stores the line break" do
+        result = customers_service.call
+
+        expect(result).to be_success
+        expect(customer.reload.address_line2).to eq("Line A\nLine B")
+      end
+    end
+
+    context "with a tab in the address" do
+      let(:update_args) { {id: customer.id, address_line2: "Floor 2\tSuite 4"} }
+
+      it "stores the tab" do
+        result = customers_service.call
+
+        expect(result).to be_success
+        expect(customer.reload.address_line2).to eq("Floor 2\tSuite 4")
       end
     end
 

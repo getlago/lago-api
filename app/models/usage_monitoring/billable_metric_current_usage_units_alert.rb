@@ -7,6 +7,10 @@ module UsageMonitoring
       matching_charge_ids = Charge.where(id: charge_ids, billable_metric_id: billable_metric_id).ids
       current_usage.fees.select { |fee| matching_charge_ids.include? fee.charge_id }.map(&:units).max
     end
+
+    def window_resets_each_period?(_subscription)
+      !billable_metric.recurring?
+    end
   end
 end
 

@@ -1,11 +1,13 @@
 # frozen_string_literal: true
 
 module V2
-  # V1's scalar fields plus deleted_at: billing_configuration, shipping_address, metadata and
-  # everything V1 includes on demand are left out, so that the record stays flat.
   class CustomerSerializer < ModelSerializer
+    expandable :metadata, serializer: ::V2::Customers::MetadataSerializer
+    expandable :taxes, serializer: ::V2::TaxSerializer
+    expandable :integration_customers, serializer: ::V1::IntegrationCustomerSerializer
+
     def serialize
-      {
+      payload = {
         lago_id: model.id,
         billing_entity_code: model.billing_entity.code,
         external_id: model.external_id,
@@ -34,16 +36,42 @@ module V2
         tax_identification_number: model.tax_identification_number,
         timezone: model.timezone,
         applicable_timezone: model.applicable_timezone,
-        net_payment_term: model.net_payment_term,
         external_salesforce_id: model.external_salesforce_id,
         finalize_zero_amount_invoice: model.finalize_zero_amount_invoice,
         skip_invoice_custom_sections: model.skip_invoice_custom_sections,
+        **billing_fields,
         **x402_payload,
         deleted_at: format_time(model.deleted_at)
       }
+
+      if options[:include_shipping_address]
+        payload[:shipping_address] = model.shipping_address
+      end
+
+      payload
     end
 
     private
+
+    def billing_fields
+      provider_customer = model.provider_customer
+      {
+        invoice_grace_period: model.invoice_grace_period,
+        periodic_invoice_issuing_date_anchor: model.subscription_invoice_issuing_date_anchor,
+        periodic_invoice_issuing_date_adjustment: model.subscription_invoice_issuing_date_adjustment,
+        payment_provider: model.payment_provider,
+        payment_provider_code: model.payment_provider_code,
+        provider_customer_id: provider_customer&.provider_customer_id,
+        provider_payment_methods: provider_customer&.provider_payment_methods,
+        document_locale: model.document_locale
+      }
+    end
+
+    def metadata = model.metadata.order(:created_at, :id)
+
+    def taxes = model.taxes.order(:created_at, :id)
+
+    def integration_customers = model.integration_customers.preload(:integration).order(:created_at, :id)
 
     # As V1, only for an organization that takes x402 payments.
     def x402_payload

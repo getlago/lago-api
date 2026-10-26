@@ -472,6 +472,7 @@ DROP INDEX IF EXISTS public.index_usage_thresholds_on_subscription_id;
 DROP INDEX IF EXISTS public.index_usage_thresholds_on_plan_id;
 DROP INDEX IF EXISTS public.index_usage_thresholds_on_organization_id;
 DROP INDEX IF EXISTS public.index_usage_monitoring_triggered_alerts_on_wallet_id;
+DROP INDEX IF EXISTS public.index_usage_monitoring_triggered_alerts_on_triggered_at;
 DROP INDEX IF EXISTS public.index_usage_monitoring_triggered_alerts_on_subscription_id;
 DROP INDEX IF EXISTS public.index_usage_monitoring_triggered_alerts_on_organization_id;
 DROP INDEX IF EXISTS public.index_usage_monitoring_alerts_on_wallet_id;
@@ -1481,6 +1482,7 @@ DROP TYPE IF EXISTS public.x402_settlement_settled_by;
 DROP TYPE IF EXISTS public.x402_settlement_kind;
 DROP TYPE IF EXISTS public.x402_facilitator;
 DROP TYPE IF EXISTS public.x402_asset;
+DROP TYPE IF EXISTS public.usage_monitoring_triggered_alert_resolution_reasons;
 DROP TYPE IF EXISTS public.usage_monitoring_triggered_alert_kinds;
 DROP TYPE IF EXISTS public.usage_monitoring_alert_types;
 DROP TYPE IF EXISTS public.usage_monitoring_alert_direction;
@@ -2079,6 +2081,17 @@ CREATE TYPE public.usage_monitoring_triggered_alert_kinds AS ENUM (
     'triggered',
     'resolved',
     'seeded'
+);
+
+
+--
+-- Name: usage_monitoring_triggered_alert_resolution_reasons; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.usage_monitoring_triggered_alert_resolution_reasons AS ENUM (
+    'recovered',
+    'threshold_updated',
+    'threshold_removed'
 );
 
 
@@ -4865,6 +4878,7 @@ CREATE TABLE public.usage_monitoring_triggered_alerts (
     kind public.usage_monitoring_triggered_alert_kinds DEFAULT 'triggered'::public.usage_monitoring_triggered_alert_kinds NOT NULL,
     in_alarm_thresholds jsonb,
     fully_resolved boolean,
+    resolution_reason public.usage_monitoring_triggered_alert_resolution_reasons,
     CONSTRAINT chk_triggered_alerts_subscription_xor_wallet CHECK (((subscription_id IS NOT NULL) <> (wallet_id IS NOT NULL)))
 );
 
@@ -12316,6 +12330,13 @@ CREATE INDEX index_usage_monitoring_triggered_alerts_on_subscription_id ON publi
 
 
 --
+-- Name: index_usage_monitoring_triggered_alerts_on_triggered_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_usage_monitoring_triggered_alerts_on_triggered_at ON public.usage_monitoring_triggered_alerts USING btree (triggered_at);
+
+
+--
 -- Name: index_usage_monitoring_triggered_alerts_on_wallet_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -15922,6 +15943,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261026150420'),
 ('20261022090030'),
 ('20261020144205'),
 ('20261020074217'),
@@ -15934,6 +15956,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261014123349'),
 ('20261014123348'),
 ('20261013124033'),
+('20261011162319'),
 ('20261009154629'),
 ('20261009103426'),
 ('20261008135612'),
