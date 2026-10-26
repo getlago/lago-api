@@ -4,8 +4,46 @@ require "rails_helper"
 
 RSpec.describe Api::V2::SecurityLogsController, :premium, clickhouse: true do
   let(:organization) { create(:organization, premium_integrations: ["security_logs"]) }
+  let(:user) { create(:user, email: "user@example.test") }
   let(:to_date) { Time.current.iso8601 }
   let(:returned_ids) { json[:security_logs].map { |l| l[:log_id] } }
+
+  # Builds a log with constant identifier fields and a fixed user, so the payload can be asserted
+  # against literal values. resources and device_info are parsed one level deep by the model.
+  def create_security_log(resources: {"user_email" => "test@example.com"}, device_info: {"browser" => "Chrome"}, **extra)
+    membership = create(:membership, organization:, user:)
+    create(
+      :clickhouse_security_log,
+      membership:,
+      log_id: "security-log-1",
+      log_type: "user",
+      log_event: "user.signed_up",
+      resources:,
+      device_info:,
+      **extra
+    )
+  end
+
+  def stored_security_log
+    organization.security_logs.find_by(log_id: "security-log-1")
+  end
+
+  # The full serialized object the endpoint returns. `json` symbolizes keys, so the parsed map
+  # values are symbol-keyed too. The timestamps are read from the stored record because ClickHouse
+  # keeps millisecond precision while the in-memory factory time has microseconds (the v2 render
+  # path emits microseconds).
+  def expected_payload(record, resources:, device_info:)
+    {
+      log_id: "security-log-1",
+      log_type: "user",
+      log_event: "user.signed_up",
+      user_email: "user@example.test",
+      logged_at: record.logged_at.iso8601(6),
+      created_at: record.created_at.iso8601(6),
+      resources:,
+      device_info:
+    }
+  end
 
   describe "GET /api/v2/security_logs" do
     subject(:request) { get_with_token(organization, "/api/v2/security_logs", params) }
@@ -45,24 +83,25 @@ RSpec.describe Api::V2::SecurityLogsController, :premium, clickhouse: true do
     end
 
     context "with stored security logs" do
-      let!(:security_log) do
-        create(
-          :clickhouse_security_log,
-          organization:,
+      before do
+        create_security_log(
           logged_at: 1.hour.ago,
           resources: {"detail" => "{\"key\":\"value\"}"},
           device_info: {"meta" => "[1,2,3]"}
         )
       end
 
-      it "returns the entries with resources and device_info parsed as JSON" do
+      it "returns the full entry with resources and device_info parsed as JSON" do
         request
 
         expect(response).to have_http_status(:success)
-        expect(returned_ids).to contain_exactly(security_log.log_id)
-        entry = json[:security_logs].first
-        expect(entry[:resources]).to eq(detail: {key: "value"})
-        expect(entry[:device_info]).to eq(meta: [1, 2, 3])
+        expect(json[:security_logs].sole).to eq(
+          expected_payload(
+            stored_security_log,
+            resources: {detail: {key: "value"}},
+            device_info: {meta: [1, 2, 3]}
+          )
+        )
       end
 
       it "does not return a total count by default" do
@@ -147,7 +186,7 @@ RSpec.describe Api::V2::SecurityLogsController, :premium, clickhouse: true do
   describe "GET /api/v2/security_logs/:log_id" do
     subject(:request) { get_with_token(organization, "/api/v2/security_logs/#{security_log.log_id}") }
 
-    let!(:security_log) { create(:clickhouse_security_log, organization:, logged_at: 1.hour.ago) }
+    let!(:security_log) { create_security_log(logged_at: 1.hour.ago) }
 
     context "with a premium organization without the `security_logs` feature" do
       let(:organization) { create(:organization, premium_integrations: []) }
@@ -169,11 +208,17 @@ RSpec.describe Api::V2::SecurityLogsController, :premium, clickhouse: true do
       end
     end
 
-    it "returns the security log" do
+    it "returns the full security log object" do
       request
 
       expect(response).to have_http_status(:success)
-      expect(json[:security_log][:log_id]).to eq(security_log.log_id)
+      expect(json[:security_log]).to eq(
+        expected_payload(
+          stored_security_log,
+          resources: {user_email: "test@example.com"},
+          device_info: {browser: "Chrome"}
+        )
+      )
     end
 
     context "when the security log does not exist" do
