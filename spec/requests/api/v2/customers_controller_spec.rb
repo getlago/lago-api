@@ -324,8 +324,8 @@ RSpec.describe Api::V2::CustomersController do
         super().merge(
           invoice_grace_period: 3,
           document_locale: "fr",
-          periodic_invoice_anchor: "current_period_end",
-          periodic_invoice_adjustment: "keep_anchor"
+          periodic_invoice_issuing_date_anchor: "current_period_end",
+          periodic_invoice_issuing_date_adjustment: "keep_anchor"
         )
       end
 
@@ -334,7 +334,7 @@ RSpec.describe Api::V2::CustomersController do
 
         expect(response).to have_http_status(:ok)
         expect(json[:customer]).to include(
-          attributes.slice(:invoice_grace_period, :document_locale, :periodic_invoice_anchor, :periodic_invoice_adjustment)
+          attributes.slice(:invoice_grace_period, :document_locale, :periodic_invoice_issuing_date_anchor, :periodic_invoice_issuing_date_adjustment)
         )
         expect(json[:customer]).not_to have_key(:billing_configuration)
         customer = organization.customers.find_by!(external_id: attributes[:external_id])
@@ -345,7 +345,7 @@ RSpec.describe Api::V2::CustomersController do
       end
     end
 
-    %i[periodic_invoice_anchor periodic_invoice_adjustment].each do |field|
+    %i[periodic_invoice_issuing_date_anchor periodic_invoice_issuing_date_adjustment].each do |field|
       ["unknown", false].each do |value|
         context "with #{field} set to #{value.inspect}" do
           let(:attributes) { super().merge(field => value) }
@@ -553,7 +553,7 @@ RSpec.describe Api::V2::CustomersController do
         end
       end
 
-      %i[periodic_invoice_anchor periodic_invoice_adjustment].each do |field|
+      %i[periodic_invoice_issuing_date_anchor periodic_invoice_issuing_date_adjustment].each do |field|
         context "with an invalid #{field}" do
           let(:attributes) { {:name => "Must not change", field => "unknown"} }
 
@@ -693,52 +693,52 @@ RSpec.describe Api::V2::CustomersController do
         end
       end
 
-      context "with a periodic invoice anchor" do
-        let(:attributes) { {periodic_invoice_anchor: "current_period_end"} }
+      context "with a periodic invoice issuing date anchor" do
+        let(:attributes) { {periodic_invoice_issuing_date_anchor: "current_period_end"} }
 
         it "updates the anchor" do
           request
 
           expect(response).to have_http_status(:ok)
           expect(customer.reload.subscription_invoice_issuing_date_anchor).to eq("current_period_end")
-          expect(json[:customer][:periodic_invoice_anchor]).to eq("current_period_end")
+          expect(json[:customer][:periodic_invoice_issuing_date_anchor]).to eq("current_period_end")
         end
 
         context "when clearing it" do
           let(:customer) { create(:customer, organization:, subscription_invoice_issuing_date_anchor: "current_period_end") }
-          let(:attributes) { {periodic_invoice_anchor: nil} }
+          let(:attributes) { {periodic_invoice_issuing_date_anchor: nil} }
 
           it "falls back to the billing entity setting" do
             request
 
             expect(response).to have_http_status(:ok)
             expect(customer.reload.subscription_invoice_issuing_date_anchor).to be_nil
-            expect(json[:customer][:periodic_invoice_anchor]).to be_nil
+            expect(json[:customer][:periodic_invoice_issuing_date_anchor]).to be_nil
           end
         end
       end
 
-      context "with a periodic invoice adjustment" do
-        let(:attributes) { {periodic_invoice_adjustment: "keep_anchor"} }
+      context "with a periodic invoice issuing date adjustment" do
+        let(:attributes) { {periodic_invoice_issuing_date_adjustment: "keep_anchor"} }
 
         it "updates the adjustment" do
           request
 
           expect(response).to have_http_status(:ok)
           expect(customer.reload.subscription_invoice_issuing_date_adjustment).to eq("keep_anchor")
-          expect(json[:customer][:periodic_invoice_adjustment]).to eq("keep_anchor")
+          expect(json[:customer][:periodic_invoice_issuing_date_adjustment]).to eq("keep_anchor")
         end
 
         context "when clearing it" do
           let(:customer) { create(:customer, organization:, subscription_invoice_issuing_date_adjustment: "keep_anchor") }
-          let(:attributes) { {periodic_invoice_adjustment: nil} }
+          let(:attributes) { {periodic_invoice_issuing_date_adjustment: nil} }
 
           it "falls back to the billing entity setting" do
             request
 
             expect(response).to have_http_status(:ok)
             expect(customer.reload.subscription_invoice_issuing_date_adjustment).to be_nil
-            expect(json[:customer][:periodic_invoice_adjustment]).to be_nil
+            expect(json[:customer][:periodic_invoice_issuing_date_adjustment]).to be_nil
           end
         end
       end

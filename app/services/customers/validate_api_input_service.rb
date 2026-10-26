@@ -6,8 +6,8 @@ module Customers
 
     # Settings stored under another name than their REST field, with their allowed values.
     ISSUING_DATE_SETTINGS = {
-      subscription_invoice_issuing_date_anchor: [:periodic_invoice_anchor, Customer::SUBSCRIPTION_INVOICE_ISSUING_DATE_ANCHORS],
-      subscription_invoice_issuing_date_adjustment: [:periodic_invoice_adjustment, Customer::SUBSCRIPTION_INVOICE_ISSUING_DATE_ADJUSTMENTS]
+      subscription_invoice_issuing_date_anchor: [:periodic_invoice_issuing_date_anchor, Customer::SUBSCRIPTION_INVOICE_ISSUING_DATE_ANCHORS],
+      subscription_invoice_issuing_date_adjustment: [:periodic_invoice_issuing_date_adjustment, Customer::SUBSCRIPTION_INVOICE_ISSUING_DATE_ADJUSTMENTS]
     }.freeze
 
     def initialize(params:)

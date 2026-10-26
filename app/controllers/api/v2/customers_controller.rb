@@ -17,8 +17,8 @@ module Api
       # REST names of the settings the shared services read from `billing_configuration`.
       BILLING_CONFIGURATION_FIELDS = {
         document_locale: :document_locale,
-        periodic_invoice_anchor: :subscription_invoice_issuing_date_anchor,
-        periodic_invoice_adjustment: :subscription_invoice_issuing_date_adjustment
+        periodic_invoice_issuing_date_anchor: :subscription_invoice_issuing_date_anchor,
+        periodic_invoice_issuing_date_adjustment: :subscription_invoice_issuing_date_adjustment
       }.freeze
 
       PROVIDER_CUSTOMER_FIELDS = %i[
