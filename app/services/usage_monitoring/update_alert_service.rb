@@ -56,8 +56,12 @@ module UsageMonitoring
         alert.save!
 
         if params[:thresholds].present?
+          lines_before = announced_lines_in_alarm(alert)
           alert.thresholds.delete_all
           alert.thresholds.create!(prepare_thresholds(params[:thresholds], alert.organization_id))
+          alert.reload_thresholds
+          seed_alarms_already_past(alert, alertable)
+          resolve_alarms_closed_by_edit(alert, alertable, lines_before)
         end
       end
 
@@ -81,10 +85,20 @@ module UsageMonitoring
     attr_reader :alert, :params
     delegate :organization, to: :alert
 
+    def alertable
+      if alert.wallet_id?
+        alert.wallet
+      else
+        active_subscription
+      end
+    end
+
+    def active_subscription
+      @active_subscription ||= organization.subscriptions.active.find_by(external_id: alert.subscription_external_id)
+    end
+
     def track_subscription_activity
       return unless alert.subscription_external_id?
-      active_subscription = organization.subscriptions.active
-        .find_by(external_id: alert.subscription_external_id)
       return unless active_subscription
       return unless License.premium?
 
