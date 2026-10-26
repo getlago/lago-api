@@ -46,7 +46,6 @@ RSpec.describe Webhooks::Contracts::UpdatedService do
           "skip_invoice_custom_sections" => true,
           "created_at" => contract.created_at.iso8601,
           "updated_at" => contract.updated_at.iso8601,
-          "applied_rate_cards_count" => 1,
           "applied_rate_cards" => [{
             "lago_id" => applied_rate_card.id,
             "external_contract_id" => "contract_external_id",
@@ -55,7 +54,6 @@ RSpec.describe Webhooks::Contracts::UpdatedService do
             "effective_date" => "2026-01-01",
             "billing_anchor_date" => "2026-01-01",
             "next_billing_at" => "2026-02-01T00:00:00Z",
-            "rate_phases_count" => 0,
             "created_at" => applied_rate_card.created_at.iso8601,
             "updated_at" => applied_rate_card.updated_at.iso8601,
             "deleted_at" => nil

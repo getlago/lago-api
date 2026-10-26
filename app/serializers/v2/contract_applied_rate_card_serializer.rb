@@ -8,15 +8,13 @@ module V2
         external_contract_id: model.contract.external_id,
         rate_card_code: model.rate_card.code,
         units: model.units,
-        effective_date: model.effective_date.iso8601,
-        billing_anchor_date: model.billing_anchor_date.iso8601,
-        next_billing_at: model.next_billing_at&.iso8601,
-        # size counts the loaded collection when the caller preloaded it.
-        rate_phases_count: model.rate_phases.size,
+        effective_date: format_date(model.effective_date),
+        billing_anchor_date: format_date(model.billing_anchor_date),
+        next_billing_at: format_time(model.next_billing_at),
         **(include?(:rate_phases) ? {rate_phases: rate_phases} : {}),
-        created_at: model.created_at.iso8601,
-        updated_at: model.updated_at.iso8601,
-        deleted_at: model.deleted_at&.iso8601
+        created_at: format_time(model.created_at),
+        updated_at: format_time(model.updated_at),
+        deleted_at: format_time(model.deleted_at)
       }
     end
 

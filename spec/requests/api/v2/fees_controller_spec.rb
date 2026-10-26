@@ -147,6 +147,28 @@ RSpec.describe Api::V2::FeesController do
       expect(json[:fee]).to include(lago_id: fee.id, lago_invoice_id: invoice.id, billing_timing: "arrears")
     end
 
+    context "with timestamps between two seconds" do
+      let(:fee) do
+        create(
+          :fee,
+          fee_attributes.merge(
+            created_at: Time.zone.parse("2026-10-01T08:30:00.123456Z"),
+            properties: {"from_datetime" => "2026-10-01T00:00:00.000Z", "to_datetime" => "2026-10-31T23:59:59.999Z"}
+          )
+        )
+      end
+
+      it "returns them to the microsecond, the billed period as its properties store it" do
+        subject
+
+        expect(json[:fee]).to include(
+          from_datetime: "2026-10-01T00:00:00.000000Z",
+          to_datetime: "2026-10-31T23:59:59.999000Z",
+          created_at: "2026-10-01T08:30:00.123456Z"
+        )
+      end
+    end
+
     context "when the fee is a legacy one" do
       let(:fee_id) { legacy_fee.id }
 
@@ -181,7 +203,7 @@ RSpec.describe Api::V2::FeesController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:fee]).to include(lago_id: fee.id, payment_status: "succeeded", succeeded_at: Time.current.iso8601, billing_timing: "arrears")
+        expect(json[:fee]).to include(lago_id: fee.id, payment_status: "succeeded", succeeded_at: Time.current.iso8601(6), billing_timing: "arrears")
         expect(fee.reload).to be_payment_succeeded
       end
     end
@@ -290,6 +312,7 @@ RSpec.describe Api::V2::FeesController do
       expect(response).to have_http_status(:ok)
       expect(json[:fee].keys.last(7)).to eq(names.map(&:to_sym))
       expect(json[:fee][:applied_taxes].map { it[:lago_tax_id] }).to eq([tax.id])
+      expect(json[:fee][:applied_taxes].sole.values_at(:created_at, :updated_at)).to all(match(/\.\d{6}Z\z/))
       expect(json[:fee][:product][:lago_id]).to eq(fee.invoiceable_id)
       expect(json[:fee][:rate_card][:lago_id]).to eq(contract_rate_card.rate_card_id)
       expect(json[:fee][:rate][:lago_id]).to eq(rate_card_rate.id)

@@ -18,6 +18,10 @@ module Api
 
     Serialization = Data.define(:serializer, :root, :collection, :expand_on)
 
+    # Datetimes to the microsecond, passed on every render: an internal include that no expansion
+    # is named after. Webhooks and activity logs render the same serializers without it, at seconds.
+    TIMESTAMP_INCLUDES = %i[usec_timestamps].freeze
+
     # Included by Api::V2::BaseController, whose cursor and 400 body it uses, so that the
     # validation runs before every callback of a subclass.
     included { before_action :validate_expand! }
@@ -47,7 +51,7 @@ module Api
 
     # With the expansions the request asked for, on an `expand_on` action.
     def render_resource(record)
-      render(json: serialization.serializer.new(record, root_name: serialization.root, includes: requested_expansions))
+      render(json: serialization.serializer.new(record, root_name: serialization.root, includes: [*requested_expansions, *TIMESTAMP_INCLUDES]))
     end
 
     # One page and its cursors on a cursor-paginated index, the whole list anywhere else.
@@ -58,7 +62,7 @@ module Api
         meta = page.meta
       end
 
-      render(json: ::CollectionSerializer.new(records, serialization.serializer, collection_name: serialization.collection, meta:))
+      render(json: ::CollectionSerializer.new(records, serialization.serializer, collection_name: serialization.collection, meta:, includes: TIMESTAMP_INCLUDES))
     end
 
     # A form that cannot be read is reported as such wherever it is sent.

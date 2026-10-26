@@ -99,6 +99,7 @@ end
 # Database name: primary
 #
 #  id                    :uuid             not null, primary key
+#  allowed_origins       :string           default([]), not null, is an Array
 #  asset                 :enum             default("usdc"), not null
 #  auto_create_customers :boolean          default(TRUE), not null
 #  code                  :string           not null

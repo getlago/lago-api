@@ -18,7 +18,6 @@ RSpec.describe V2::ProductSerializer do
       description: product.description,
       invoice_display_name: product.invoice_display_name,
       product_type: "metered",
-      filters_count: 0,
       created_at: product.created_at.iso8601,
       updated_at: product.updated_at.iso8601,
       deleted_at: nil
@@ -41,7 +40,6 @@ RSpec.describe V2::ProductSerializer do
             code: product_category.code,
             description: product_category.description,
             invoice_display_name: product_category.invoice_display_name,
-            products_count: 1,
             created_at: product_category.created_at.iso8601,
             updated_at: product_category.updated_at.iso8601,
             deleted_at: nil

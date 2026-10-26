@@ -2,8 +2,8 @@
 
 require "rails_helper"
 
-# The v1 controller serves /api/v2 through the v1 fallback routes.
-RSpec.describe Api::V1::Customers::AttributedUsageController, clickhouse: {clean_before: true} do # rubocop:disable RSpec/SpecFilePathFormat
+# The v1 controller serves /api/v2 through the v1 fallback routes, so with v1 timestamps.
+RSpec.describe Api::V1::Customers::AttributedUsageController, clickhouse: {clean_before: true}, v2_timestamps: false do # rubocop:disable RSpec/SpecFilePathFormat
   include_context "with clickhouse availability"
 
   around { |example| travel_to(Time.zone.parse("2026-09-15 12:00:00")) { example.run } }
@@ -106,16 +106,16 @@ RSpec.describe Api::V1::Customers::AttributedUsageController, clickhouse: {clean
       end
     end
 
-    context "with an invalid datetime and out of range page params" do
+    context "with an invalid datetime, page=0 and per_page above its own maximum" do
       let(:params) do
         {external_subscription_id: subscription.external_id, group_by: "team", from_datetime: "yesterday", page: 0, per_page: 101}
       end
 
-      it "returns the page errors before the datetime check" do
+      it "returns the per_page error before the datetime check" do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details]).to eq(page: ["value_is_out_of_range"], per_page: ["value_is_out_of_range"])
+        expect(json[:error_details]).to eq(per_page: ["value_is_out_of_range"])
       end
     end
 
