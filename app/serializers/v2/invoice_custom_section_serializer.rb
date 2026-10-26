@@ -11,9 +11,9 @@ module V2
         description: model.description,
         details: model.details,
         display_name: model.display_name,
-        created_at: model.created_at.iso8601,
-        updated_at: model.updated_at.iso8601,
-        deleted_at: model.deleted_at&.iso8601
+        created_at: format_time(model.created_at),
+        updated_at: format_time(model.updated_at),
+        deleted_at: format_time(model.deleted_at)
       }
     end
   end
