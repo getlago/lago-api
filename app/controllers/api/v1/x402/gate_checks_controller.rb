@@ -9,7 +9,7 @@ module Api
         def create
           result = ::X402::GateChecks::CheckService.call(
             organization: current_organization,
-            params: create_params.to_h.deep_symbolize_keys.merge(siwx: raw_body_section("gate_check")&.dig("siwx"))
+            params: create_params.to_h.deep_symbolize_keys.merge(siwx: request.request_parameters.dig("gate_check", "siwx"))
           )
 
           if result.success?

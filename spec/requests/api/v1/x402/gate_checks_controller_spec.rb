@@ -122,9 +122,9 @@ describe Api::V1::X402::GateChecksController, :premium do
         )
       end
 
-      it "renders the challenge" do
+      it "renders the pass" do
         subject
-        expect(json[:gate_check]).to eq(challenge)
+        expect(json[:gate_check]).to eq(balance_credits: "15.0", requirements: nil, external_subscription_id: external_id, sign_in_chains: nil)
       end
     end
   end
