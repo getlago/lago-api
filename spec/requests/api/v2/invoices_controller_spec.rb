@@ -339,7 +339,7 @@ RSpec.describe Api::V2::InvoicesController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("invoice")
+        expect(response).to be_v2_not_found_error("invoice")
       end
     end
 
@@ -361,7 +361,7 @@ RSpec.describe Api::V2::InvoicesController do
         subject
 
         expect(response).to have_http_status(:method_not_allowed)
-        expect(json[:code]).to eq("not_voidable")
+        expect(json).to eq(code: "not_voidable", details: [])
         expect(invoice.reload).to be_draft
       end
     end

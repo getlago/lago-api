@@ -32,7 +32,7 @@ RSpec.describe Api::V2::PlansController do
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("expand_not_supported")
-        expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: %w[taxes]})
+        expect(json[:details]).to eq([{code: "action_not_expandable", field: "expands", meta: {invalid_values: %w[taxes]}}])
       end
     end
 
@@ -63,7 +63,7 @@ RSpec.describe Api::V2::PlansController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:error_details][:currency]).to be_present
+        expect(json[:details]).to eq([{code: "value_is_invalid", field: "currency", meta: {}}])
       end
     end
 
@@ -119,7 +119,7 @@ RSpec.describe Api::V2::PlansController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("plan")
+        expect(response).to be_v2_not_found_error("plan")
       end
     end
   end
@@ -209,7 +209,7 @@ RSpec.describe Api::V2::PlansController do
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("invalid_expand")
-        expect(json[:error_details]).to eq(expands: {invalid_values: %w[applied_rate_cards], allowed_values: %w[taxes]})
+        expect(json[:details]).to eq([{code: "invalid_expand", field: "expands", meta: {invalid_values: %w[applied_rate_cards], allowed_values: %w[taxes]}}])
       end
     end
 
@@ -219,7 +219,7 @@ RSpec.describe Api::V2::PlansController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("plan")
+        expect(response).to be_v2_not_found_error("plan")
       end
     end
   end
@@ -289,7 +289,7 @@ RSpec.describe Api::V2::PlansController do
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("expand_not_supported")
-        expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: %w[taxes]})
+        expect(json[:details]).to eq([{code: "action_not_expandable", field: "expands", meta: {invalid_values: %w[taxes]}}])
       end
     end
 

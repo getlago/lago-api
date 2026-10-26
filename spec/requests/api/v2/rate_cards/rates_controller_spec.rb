@@ -53,7 +53,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
           subject
 
           expect(response).to have_http_status(:unprocessable_entity)
-          expect(json.dig(:error_details, :effective_from)).to eq(["value_already_exist"])
+          expect(json[:details]).to eq([{code: "value_already_exist", field: "effective_from", meta: {}}])
         end
       end
     end
@@ -78,7 +78,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json.dig(:error_details, :effective_from)).to eq(["value_is_invalid"])
+        expect(json[:details]).to eq([{code: "value_is_invalid", field: "effective_from", meta: {}}])
       end
     end
 
@@ -89,7 +89,18 @@ RSpec.describe Api::V2::RateCards::RatesController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json.dig(:error_details, :effective_from)).to eq(["value_is_mandatory"])
+        expect(json[:details]).to eq([{code: "value_is_mandatory", field: "effective_from", meta: {}}])
+      end
+    end
+
+    context "when min_amount_cents does not fit its column" do
+      let(:create_params) { super().merge(min_amount_cents: 10**20) }
+
+      it "returns a validation error instead of a 500" do
+        expect { subject }.not_to change(RateCardRate, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_out_of_range", field: "base", meta: {}}])
       end
     end
 
@@ -99,7 +110,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("rate_card")
+        expect(response).to be_v2_not_found_error("rate_card")
       end
     end
   end
@@ -134,7 +145,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("rate_card_rate")
+        expect(response).to be_v2_not_found_error("rate_card_rate")
       end
     end
   end
@@ -180,7 +191,7 @@ RSpec.describe Api::V2::RateCards::RatesController do
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("invalid_pagination_parameter")
-        expect(json[:error_details]).to eq(page: {reason: "not_paginated"}, per_page: {reason: "not_paginated"})
+        expect(json[:details]).to eq([{code: "not_paginated", field: "page", meta: {}}, {code: "not_paginated", field: "per_page", meta: {}}])
       end
     end
 

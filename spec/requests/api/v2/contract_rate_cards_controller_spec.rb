@@ -38,7 +38,7 @@ RSpec.describe Api::V2::ContractRateCardsController do
 
       it "returns a not found error" do
         subject
-        expect(response).to be_not_found_error("contract")
+        expect(response).to be_v2_not_found_error("contract")
       end
     end
 
@@ -47,7 +47,7 @@ RSpec.describe Api::V2::ContractRateCardsController do
 
       it "returns a not found error" do
         subject
-        expect(response).to be_not_found_error("rate_card")
+        expect(response).to be_v2_not_found_error("rate_card")
       end
     end
 
@@ -163,7 +163,7 @@ RSpec.describe Api::V2::ContractRateCardsController do
 
       it "returns a not found error" do
         subject
-        expect(response).to be_not_found_error("applied_rate_card")
+        expect(response).to be_v2_not_found_error("applied_rate_card")
       end
     end
   end

@@ -110,37 +110,37 @@ RSpec.describe CursorPagination::Cursor do
   context "with a limit of 0" do
     let(:params) { {limit: "0"} }
 
-    it_behaves_like "a pagination error", "invalid_pagination_limit", {limit: {value: "0", allowed_range: "1..100"}}
+    it_behaves_like "a pagination error", "invalid_pagination_limit", {limit: {value: "0", min: 1, max: 100}}
   end
 
   context "with a limit above the maximum" do
     let(:params) { {limit: "101"} }
 
-    it_behaves_like "a pagination error", "invalid_pagination_limit", {limit: {value: "101", allowed_range: "1..100"}}
+    it_behaves_like "a pagination error", "invalid_pagination_limit", {limit: {value: "101", min: 1, max: 100}}
   end
 
   context "with a non-integer limit" do
     let(:params) { {limit: "1.5"} }
 
-    it_behaves_like "a pagination error", "invalid_pagination_limit", {limit: {value: "1.5", allowed_range: "1..100"}}
+    it_behaves_like "a pagination error", "invalid_pagination_limit", {limit: {value: "1.5", min: 1, max: 100}}
   end
 
   context "with a negative limit" do
     let(:params) { {limit: "-1"} }
 
-    it_behaves_like "a pagination error", "invalid_pagination_limit", {limit: {value: "-1", allowed_range: "1..100"}}
+    it_behaves_like "a pagination error", "invalid_pagination_limit", {limit: {value: "-1", min: 1, max: 100}}
   end
 
   context "with a limit too long to be echoed back" do
     let(:params) { {limit: "1" * 21} }
 
-    it_behaves_like "a pagination error", "invalid_pagination_limit", {limit: {allowed_range: "1..100"}}
+    it_behaves_like "a pagination error", "invalid_pagination_limit", {limit: {min: 1, max: 100}}
   end
 
   context "with a limit that is not a string" do
     let(:params) { {limit: ["1"]} }
 
-    it_behaves_like "a pagination error", "invalid_pagination_limit", {limit: {allowed_range: "1..100"}}
+    it_behaves_like "a pagination error", "invalid_pagination_limit", {limit: {min: 1, max: 100}}
   end
 
   context "with offset pagination parameters" do

@@ -94,7 +94,7 @@ module CursorPagination
       end
       return limit if LIMIT_RANGE.cover?(limit)
 
-      details = {allowed_range: "#{LIMIT_RANGE.first}..#{LIMIT_RANGE.last}"}
+      details = {min: LIMIT_RANGE.min, max: LIMIT_RANGE.max}
       if value.is_a?(String) && value.length <= MAX_ECHOED_LIMIT_LENGTH
         details = {value:, **details}
       end
