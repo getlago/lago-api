@@ -120,7 +120,9 @@ module UsageMonitoring
       end
 
       def validate_notify_on!(thresholds)
-        if thresholds.any? { notify_on_for(it).any? { |value| AlertThreshold::NOTIFY_ON_VALUES.exclude?(value) } }
+        # A plain value such as "resolved" would otherwise read as a one-item list and hide a malformed request
+        if thresholds.any? { !it[:notify_on].nil? && !it[:notify_on].is_a?(Array) } ||
+            thresholds.any? { notify_on_for(it).any? { |value| AlertThreshold::NOTIFY_ON_VALUES.exclude?(value) } }
           return result.single_validation_failure!(field: "thresholds:notify_on", error_code: "value_is_invalid")
         end
 
