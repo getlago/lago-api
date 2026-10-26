@@ -960,7 +960,7 @@ RSpec.describe Fees::ChargeService, :premium do
           end
 
           context "with recurring weighted sum aggregation" do
-            let(:organization) { create_default(:organization, feature_flags: ["recurring_aggregation_snapshots"]) }
+            let(:organization) { create_default(:organization) }
             let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
 
             it "stores presentation_breakdowns on each snapshot scoped to its group" do
@@ -2853,7 +2853,7 @@ RSpec.describe Fees::ChargeService, :premium do
     end
 
     context "with recurring weighted sum aggregation" do
-      let(:organization) { create_default(:organization, feature_flags: ["recurring_aggregation_snapshots"]) }
+      let(:organization) { create_default(:organization) }
       let(:context) { :recurring }
       let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
 
@@ -4751,7 +4751,7 @@ RSpec.describe Fees::ChargeService, :premium do
       have_attributes(call: have_attributes(**attributes))
     end
 
-    let(:organization) { create_default(:organization, feature_flags: ["recurring_aggregation_snapshots"]) }
+    let(:organization) { create_default(:organization) }
     let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:, field_name: "value") }
     let(:snapshots) { RecurringAggregationSnapshot.where(subscription:, charge:) }
     let(:event_values) { [10, 5] }
@@ -4781,19 +4781,7 @@ RSpec.describe Fees::ChargeService, :premium do
       )
     end
 
-    context "without the recurring_aggregation_snapshots feature flag" do
-      let(:organization) { create_default(:organization) }
-
-      it "bills the units without persisting snapshots" do
-        result = charge_subscription_service.call
-
-        expect(result.fees.sole).to have_attributes(units: 15, events_count: 2)
-        expect(snapshots).to be_empty
-      end
-    end
-
     context "with the snapshot_backfill context" do
-      let(:organization) { create_default(:organization) }
       let(:context) { :snapshot_backfill }
       let(:invoice) { nil }
 
@@ -4801,7 +4789,7 @@ RSpec.describe Fees::ChargeService, :premium do
         create(:charge_fee, invoice: nil, organization:, subscription:, charge:, properties: boundaries.to_h)
       end
 
-      it "persists the snapshots without the flag, saving no fee" do
+      it "persists the snapshots, saving no fee" do
         expect { charge_subscription_service.call }.not_to change(Fee, :count)
 
         expect(snapshots.sole).to have_attributes(
@@ -4973,7 +4961,7 @@ RSpec.describe Fees::ChargeService, :premium do
     end
 
     context "with charge filters read in one scan", clickhouse: {clean_before: true} do
-      let(:organization) { create(:organization, clickhouse_events_store: true, feature_flags: %w[charge_filters_single_scan recurring_aggregation_snapshots]) }
+      let(:organization) { create(:organization, clickhouse_events_store: true, feature_flags: %w[charge_filters_single_scan]) }
       let(:region) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
       let(:eu_filter) { create(:charge_filter, charge:, properties: {amount: "20"}) }
       let(:us_filter) { create(:charge_filter, charge:, properties: {amount: "20"}) }

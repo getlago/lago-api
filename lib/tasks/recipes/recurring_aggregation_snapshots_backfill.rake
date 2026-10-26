@@ -12,7 +12,6 @@ namespace :recipes do
       Rails.logger.level = Logger::Severity::ERROR
 
       organization = TaskPrompt.ask_for_organization
-      recurring_snapshots_backfill_warn_writes_off(organization)
       subscription_ids = TaskPrompt.ask_for_subscription_ids
 
       subscriptions = RecurringAggregationSnapshots::BackfillService.backfillable_subscriptions(organization)
@@ -57,12 +56,6 @@ namespace :recipes do
       recurring_snapshots_backfill_list("Nothing written, no snapshot to store (see Fees::ChargeService)", unwritten_ids)
     end
   end
-end
-
-def recurring_snapshots_backfill_warn_writes_off(organization)
-  return if organization.feature_flag_enabled?(:recurring_aggregation_snapshots)
-
-  puts "Warning: recurring_aggregation_snapshots is off, so no invoice will write the snapshots of later periods."
 end
 
 # The subscriptions a job wrote a marker for since the task started
