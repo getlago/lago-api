@@ -35,6 +35,7 @@ Rails.application.routes.draw do
           post :checkout_url, to: "checkout_urls#create"
           resources :invoices, only: :index
           resources :payments, only: :index
+          resources :payment_requests, only: :index
           resources :payment_methods, only: %i[index destroy] do
             put :set_as_default, on: :member
           end

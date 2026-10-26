@@ -145,6 +145,7 @@ RSpec.describe "API v2 routing parity" do
   it "routes customer payment endpoints to their controllers" do
     {
       [:get, "/api/v2/customers/cus_1/payments"] => "api/v2/customers/payments",
+      [:get, "/api/v2/customers/cus_1/payment_requests"] => "api/v2/customers/payment_requests",
       [:post, "/api/v2/customers/cus_1/checkout_url"] => "api/v2/customers/checkout_urls",
       [:get, "/api/v2/customers/cus_1/payment_methods"] => "api/v2/customers/payment_methods",
       [:delete, "/api/v2/customers/cus_1/payment_methods/pm_1"] => "api/v2/customers/payment_methods",
