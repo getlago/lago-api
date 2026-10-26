@@ -74,6 +74,22 @@ RSpec.describe Auth::GoogleService do
       end
     end
 
+    context "when the stored email casing differs from the Google email" do
+      let(:user) { create(:user, email: "Foo@Bar.com") }
+
+      before do
+        create(:membership, :active, user:)
+        allow(UserDevices::RegisterService).to receive(:call!)
+      end
+
+      it "logs in the existing user" do
+        result = described_class.call(:login, "code")
+
+        expect(result).to be_success
+        expect(result.user).to eq(user)
+      end
+    end
+
     context "when user does not exist" do
       it "returns a validation failure" do
         result = described_class.call(:login, "code")
@@ -167,6 +183,18 @@ RSpec.describe Auth::GoogleService do
       it "returns a validation failure" do
         result = described_class.call(:register_user, "code", "FooBar")
 
+        expect(result).not_to be_success
+        expect(result.error.messages.values.flatten).to include("user_already_exists")
+      end
+    end
+
+    context "when an existing user differs from the Google email only by casing" do
+      before { create(:user, email: "Foo@Bar.com") }
+
+      it "returns a validation failure without creating a duplicate user" do
+        result = nil
+
+        expect { result = described_class.call(:register_user, "code", "FooBar") }.not_to change(User, :count)
         expect(result).not_to be_success
         expect(result.error.messages.values.flatten).to include("user_already_exists")
       end

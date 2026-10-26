@@ -17,7 +17,7 @@ class UsersService < BaseService
       return result.single_validation_failure!(error_code: "incorrect_login_or_password")
     end
 
-    result.user = User.find_by(email:)&.authenticate(password)
+    result.user = find_user_by_email(email)&.authenticate(password)
 
     unless result.user.present? && result.user.memberships.active.any?
       return result.single_validation_failure!(error_code: "incorrect_login_or_password")
@@ -46,7 +46,7 @@ class UsersService < BaseService
       return result.not_allowed_failure!(code: "signup_disabled")
     end
 
-    if User.exists?(email:)
+    if find_user_by_email(email)
       result.single_validation_failure!(field: :email, error_code: "user_already_exists")
 
       return result
@@ -122,6 +122,11 @@ class UsersService < BaseService
     Utils::AuthToken.encode(user: result.user, login_method: Organizations::AuthenticationMethods::EMAIL_PASSWORD)
   rescue => e
     result.service_failure!(code: "token_encoding_error", message: e.message)
+  end
+
+  def find_user_by_email(email)
+    User.find_by(email:) ||
+      User.where("LOWER(email) = ?", email.to_s.downcase).order(:created_at).first
   end
 
   def track_organization_registered(organization, membership)
