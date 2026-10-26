@@ -78,10 +78,11 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
 
     context "with a charge filter" do
       let(:charge_filter) { create_filter }
+      let(:filter_grouped_by) { {} }
 
       before do
         create_snapshot(to_datetime: previous_to_datetime, units: 10)
-        create_snapshot(to_datetime: previous_to_datetime, charge_filter:, units: 4)
+        create_snapshot(to_datetime: previous_to_datetime, charge_filter:, grouped_by: filter_grouped_by, units: 4)
         create_snapshot(to_datetime: previous_to_datetime, charge_filter: create_filter, units: 6)
       end
 
@@ -184,6 +185,26 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
 
         it "returns the snapshot of the charge filter" do
           expect(fetch_service.call.snapshots.map(&:units)).to eq([4])
+        end
+      end
+
+      context "when the charge filter groups on keys the default bucket does not" do
+        let(:grouped_by_keys) { %w[region] }
+        let(:filter_grouped_by) { {"region" => "eu"} }
+
+        it "returns the snapshot of the charge filter" do
+          expect(fetch_service.call.snapshots.map { [it.grouped_by, it.units] }).to eq([[{"region" => "eu"}, 4]])
+        end
+      end
+
+      context "when the charge filter is grouped on other keys than its snapshot" do
+        let(:grouped_by_keys) { %w[region] }
+
+        it "returns no snapshot" do
+          result = fetch_service.call
+
+          expect(result.snapshots).to be_nil
+          expect(result.period).to be_nil
         end
       end
 

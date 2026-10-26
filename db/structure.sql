@@ -545,6 +545,7 @@ DROP INDEX IF EXISTS public.index_recurring_aggregation_snapshots_on_organizatio
 DROP INDEX IF EXISTS public.index_recurring_aggregation_snapshots_on_charge_id;
 DROP INDEX IF EXISTS public.index_recurring_aggregation_snapshots_on_charge_filter_id;
 DROP INDEX IF EXISTS public.index_recurring_aggregation_snapshots_on_billable_metric_id;
+DROP INDEX IF EXISTS public.index_recurring_aggregation_snapshots_by_period;
 DROP INDEX IF EXISTS public.index_record_deletions_on_updated_at;
 DROP INDEX IF EXISTS public.index_record_deletions_on_organization_id_and_deleted_at;
 DROP INDEX IF EXISTS public.index_record_deletions_on_deleted_at;
@@ -11756,6 +11757,13 @@ CREATE INDEX index_record_deletions_on_updated_at ON public.record_deletions USI
 
 
 --
+-- Name: index_recurring_aggregation_snapshots_by_period; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_recurring_aggregation_snapshots_by_period ON public.recurring_aggregation_snapshots USING btree (subscription_id, charge_id, charge_filter_id, to_datetime);
+
+
+--
 -- Name: index_recurring_aggregation_snapshots_on_billable_metric_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -15872,6 +15880,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261026101445'),
 ('20261022090030'),
 ('20261020144205'),
 ('20261020074217'),
