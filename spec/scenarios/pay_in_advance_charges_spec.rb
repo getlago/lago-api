@@ -640,6 +640,168 @@ describe "Pay in advance charges Scenarios", transaction: false do
     end
   end
 
+  describe "with recurring unique_count_agg / standard when the first event of a period is a remove" do
+    let(:organization) do
+      create(:organization, feature_flags: [], webhook_url: nil, clickhouse_events_store: clickhouse_events_store)
+    end
+    let(:clickhouse_events_store) { false }
+    let(:customer) { create(:customer, organization:, timezone: "UTC", currency: "EUR") }
+    let(:plan) do
+      create(:plan, organization:, amount_cents: 0, amount_currency: "EUR", interval: "monthly", pay_in_advance: false)
+    end
+    let(:billable_metric) do
+      create(:billable_metric, organization:, aggregation_type: "unique_count_agg", field_name: "unique_id", recurring: true)
+    end
+    let(:prorated) { false }
+    let(:charge) do
+      create(
+        :standard_charge,
+        :pay_in_advance,
+        invoiceable: false,
+        prorated:,
+        plan:,
+        billable_metric:,
+        properties: {amount: "10"}
+      )
+    end
+    let(:subscription) { customer.subscriptions.sole }
+
+    before do
+      charge
+
+      travel_to(Time.utc(2024, 1, 15)) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code
+          }
+        )
+      end
+    end
+
+    def with_event_store(&)
+      if organization.clickhouse_events_store?
+        Events::Stores::StoreFactory.with_override(store_class: Events::Stores::ClickhouseStore, &)
+      else
+        yield
+      end
+    end
+
+    def send_unique_count_event(unique_id, operation_type: "add")
+      transaction_id = SecureRandom.uuid
+      properties = {unique_id:, operation_type:}
+
+      with_event_store do
+        if organization.clickhouse_events_store?
+          create_clickhouse_event(
+            transaction_id:,
+            external_subscription_id: subscription.external_id,
+            code: billable_metric.code,
+            timestamp: Time.current,
+            properties:,
+            value: unique_id,
+            enriched_at: Time.current
+          )
+        else
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id:,
+              external_subscription_id: subscription.external_id,
+              properties:
+            }
+          )
+        end
+      end
+
+      transaction_id
+    end
+
+    def event_fee(transaction_id)
+      Fee.find_by!(subscription:, charge:, pay_in_advance_event_transaction_id: transaction_id)
+    end
+
+    def event_cached_aggregation(transaction_id)
+      CachedAggregation.find_by!(
+        organization:, external_subscription_id: subscription.external_id, charge:, event_transaction_id: transaction_id
+      )
+    end
+
+    shared_examples "a first remove of the period" do |check_current_usage: true|
+      it "does not bill the add that follows a first-of-period remove" do
+        ### January: three units are added and billed.
+        %w[u1 u2 u3].each_with_index do |unique_id, index|
+          travel_to(Time.utc(2024, 1, 16 + index)) do
+            transaction_id = send_unique_count_event(unique_id)
+
+            expect(event_fee(transaction_id).units).to eq(1)
+            expect(event_fee(transaction_id).amount_cents).to be_positive
+          end
+        end
+
+        ### 1 February: the period renews with three paid units.
+        travel_to(Time.utc(2024, 2, 1, 1)) do
+          with_event_store { perform_billing }
+        end
+
+        ### 2 February: the first event of the period removes u1.
+        travel_to(Time.utc(2024, 2, 2)) do
+          transaction_id = send_unique_count_event("u1", operation_type: "remove")
+
+          expect(event_fee(transaction_id)).to have_attributes(units: 0, amount_cents: 0)
+          expect(event_cached_aggregation(transaction_id))
+            .to have_attributes(current_aggregation: -1, max_aggregation: 0)
+
+          if check_current_usage
+            with_event_store { fetch_current_usage(customer:) }
+
+            # The amount covers 2 active units - (-1) current + 0 max: the 3 units paid for the period.
+            # The displayed units stay the 2 active ones.
+            expect(json[:customer_usage][:charges_usage].sole).to include(units: "2.0", amount_cents: 3000)
+          end
+        end
+
+        ### 3 February: u4 takes the unit freed by the remove, nothing is billed.
+        travel_to(Time.utc(2024, 2, 3)) do
+          transaction_id = send_unique_count_event("u4")
+
+          # The fee keeps the applied unit, as for any add that does not raise the period maximum.
+          expect(event_fee(transaction_id)).to have_attributes(units: 1, amount_cents: 0)
+          expect(event_cached_aggregation(transaction_id))
+            .to have_attributes(current_aggregation: 0, max_aggregation: 0)
+        end
+
+        ### 4 February: u5 is a new unit beyond the paid ones, it is billed.
+        travel_to(Time.utc(2024, 2, 4)) do
+          transaction_id = send_unique_count_event("u5")
+
+          expect(event_fee(transaction_id).units).to eq(1)
+          if prorated
+            expect(event_fee(transaction_id).amount_cents).to be_positive
+          else
+            expect(event_fee(transaction_id).amount_cents).to eq(1000)
+          end
+        end
+      end
+    end
+
+    it_behaves_like "a first remove of the period"
+
+    context "with ClickHouse-backed event aggregation", clickhouse: true do
+      let(:clickhouse_events_store) { true }
+
+      it_behaves_like "a first remove of the period"
+    end
+
+    context "with a prorated charge" do
+      let(:prorated) { true }
+
+      # NOTE: the prorated current usage display clamps the current aggregation at 0, so it is not checked here.
+      it_behaves_like "a first remove of the period", check_current_usage: false
+    end
+  end
+
   describe "with sum_agg / standard" do
     let(:aggregation_type) { "sum_agg" }
     let(:field_name) { "amount" }
