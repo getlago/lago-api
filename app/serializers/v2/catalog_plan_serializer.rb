@@ -13,8 +13,8 @@ module V2
         description: model.description,
         currency: model.currency,
         **counts,
-        created_at: model.created_at.iso8601,
-        deleted_at: model.deleted_at&.iso8601
+        created_at: format_time(model.created_at),
+        deleted_at: format_time(model.deleted_at)
       }
     end
 
