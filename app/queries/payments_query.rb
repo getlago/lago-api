@@ -9,8 +9,8 @@ class PaymentsQuery < BaseQuery
 
     payments = base_scope
     payments = apply_filters(payments)
-    payments = paginate(payments)
     payments = apply_consistent_ordering(payments)
+    payments = paginate(payments)
 
     result.payments = payments
     result
