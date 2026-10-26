@@ -73,12 +73,12 @@ module V2
         amount_details: ::RateProperties.present(model.amount_details),
         pricing_unit_details:,
         payment_status: model.payment_status,
-        succeeded_at: model.succeeded_at&.iso8601,
-        failed_at: model.failed_at&.iso8601,
-        refunded_at: model.refunded_at&.iso8601,
-        created_at: model.created_at.iso8601,
-        updated_at: model.updated_at.iso8601,
-        deleted_at: model.deleted_at&.iso8601
+        succeeded_at: format_time(model.succeeded_at),
+        failed_at: format_time(model.failed_at),
+        refunded_at: format_time(model.refunded_at),
+        created_at: format_time(model.created_at),
+        updated_at: format_time(model.updated_at),
+        deleted_at: format_time(model.deleted_at)
       }
     end
 
@@ -125,7 +125,7 @@ module V2
     end
 
     def datetime_property(key)
-      model.properties[key]&.to_time&.utc&.iso8601
+      format_time(model.properties[key]&.to_time&.utc)
     end
 
     def pricing_unit_details
