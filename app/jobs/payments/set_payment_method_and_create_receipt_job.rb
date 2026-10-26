@@ -56,7 +56,9 @@ module Payments
         set_as_default_on_create: false
       ).payment_method
 
-      PaymentMethods::SetAsDefaultService.call!(payment_method:, only_when_no_default: true).payment_method
+      if payment_method.present?
+        PaymentMethods::SetAsDefaultService.call!(payment_method:, only_when_no_default: true).payment_method
+      end
     end
 
     def stripe_customer_for(payment)
