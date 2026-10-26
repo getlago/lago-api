@@ -20,6 +20,10 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
     create(:charge_filter, charge:, created_at: watermark - 1.month, **attributes)
   end
 
+  def create_filter_value(charge_filter, **attributes)
+    create(:charge_filter_value, charge_filter:, created_at: watermark - 1.month, updated_at: watermark - 1.month, **attributes)
+  end
+
   def create_snapshot(**attributes)
     create(:recurring_aggregation_snapshot, organization:, subscription:, charge:, watermark:, **attributes)
   end
@@ -145,13 +149,41 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
         end
       end
 
-      context "when its snapshot belongs to an older run of the period" do
-        before do
-          RecurringAggregationSnapshot.where(charge_filter:).update_all(watermark: watermark - 1.hour) # rubocop:disable Rails/SkipsModelValidations
-        end
+      context "when a value of another filter of the charge was edited after the latest period" do
+        before { create_filter_value(create_filter, updated_at: watermark + 1.minute) }
 
-        it "ignores it" do
-          expect(fetch_service.call.snapshots).to eq([])
+        it "returns no snapshot, as the edited filter can take events counted in this one" do
+          result = fetch_service.call
+
+          expect(result.snapshots).to be_nil
+          expect(result.period).to be_nil
+        end
+      end
+
+      context "when a value of another filter of the charge was removed after the latest period" do
+        before { create_filter_value(create_filter, deleted_at: watermark + 1.minute) }
+
+        it "returns no snapshot, as this filter can now match events counted in the other one" do
+          result = fetch_service.call
+
+          expect(result.snapshots).to be_nil
+          expect(result.period).to be_nil
+        end
+      end
+
+      context "when a value of the charge filter was edited before the latest period" do
+        before { create_filter_value(charge_filter, updated_at: watermark - 1.minute) }
+
+        it "returns the snapshot of the charge filter" do
+          expect(fetch_service.call.snapshots.map(&:units)).to eq([4])
+        end
+      end
+
+      context "when a value of a filter of another charge was edited after the latest period" do
+        before { create(:charge_filter_value, updated_at: watermark + 1.minute) }
+
+        it "returns the snapshot of the charge filter" do
+          expect(fetch_service.call.snapshots.map(&:units)).to eq([4])
         end
       end
 
