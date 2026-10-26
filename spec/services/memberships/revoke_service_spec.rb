@@ -26,6 +26,7 @@ RSpec.describe Memberships::RevokeService do
         result = revoke_service.call
 
         expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
         expect(result.error.code).to eq("cannot_revoke_own_membership")
       end
 
