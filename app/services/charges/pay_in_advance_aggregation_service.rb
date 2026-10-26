@@ -76,7 +76,7 @@ module Charges
       if metered_item.billing_segment || metered_item.charge_filter.present?
         matching_result = metered_item.matching_and_ignored_filters
         # Aggregations::BaseService retains this object for charge_filter_id cache lookups;
-        # CustomService also scopes cached state by it and reads
+        # WeightedSumService and CustomService also scope cached state by it. CustomService reads
         # its custom_properties, while BaseStore extracts its ID for enriched-event queries.
         filters[:charge_filter] = metered_item.charge_filter if metered_item.charge_filter&.persisted?
         filters[:matching_filters] = matching_result.matching_filters
