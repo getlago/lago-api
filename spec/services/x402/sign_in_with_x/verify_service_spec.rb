@@ -259,6 +259,12 @@ describe X402::SignInWithX::VerifyService do
     it { expect(result.error.messages).to eq(siwx: ["domain_mismatch"]) }
   end
 
+  context "with the domain in another case" do
+    let(:payload) { signed_siwx(key, domain: "API.Example.com") }
+
+    it { expect(result).to be_success }
+  end
+
   context "with a uri on another host" do
     let(:payload) { signed_siwx(key, uri: "https://evil.example.com/v1") }
 

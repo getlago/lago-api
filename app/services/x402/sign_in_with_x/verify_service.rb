@@ -112,7 +112,7 @@ module X402
       end
 
       def origin_error
-        origins = allowed_origins.select { |origin| X402::Origin.host(origin) == payload["domain"] }
+        origins = allowed_origins.select { |origin| X402::Origin.host(origin) == payload["domain"].downcase }
 
         if origins.empty?
           "domain_mismatch"
