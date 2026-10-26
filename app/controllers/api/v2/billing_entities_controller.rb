@@ -12,6 +12,8 @@ module Api
         document_locale: :document_locale
       }.freeze
 
+      BOOLEAN_FIELDS = %i[eu_tax_management einvoicing finalize_zero_amount_invoice].freeze
+
       cursor_paginated_index(BillingEntity)
       serializable_with ::V2::BillingEntitySerializer
 
@@ -28,7 +30,7 @@ module Api
       end
 
       def create
-        input = input_params.except(:tax_codes, :invoice_custom_section_codes)
+        input = input_params
         validation = ::BillingEntities::ValidateApiInputService.call(params: input, require_code: true)
         return render_error_response(validation) unless validation.success?
 
@@ -45,7 +47,7 @@ module Api
         billing_entity = find_billing_entity
         return not_found_error(resource: "billing_entity") unless billing_entity
 
-        input = update_params
+        input = input_params.except(:code)
         validation = ::BillingEntities::ValidateApiInputService.call(params: input)
         return render_error_response(validation) unless validation.success?
 
@@ -98,23 +100,18 @@ module Api
           invoice_custom_section_codes: []
         ).to_h.deep_symbolize_keys
 
-        if input.key?(:eu_tax_management)
-          input[:eu_tax_management] = ActiveModel::Type::Boolean.new.cast(input[:eu_tax_management])
+        BOOLEAN_FIELDS.each do |key|
+          input[key] = ActiveModel::Type::Boolean.new.cast(input[key]) if input.key?(key)
         end
 
-        # The shared write services still expect nested billing fields.
-        input[:billing_configuration] = input.extract!(*BILLING_CONFIGURATION_FIELDS.keys).transform_keys(BILLING_CONFIGURATION_FIELDS)
-        input
-      end
-
-      def update_params
-        input = input_params.except(:code)
-
+        # Resolved within the organization: the shared services look codes up across organizations.
         if input.key?(:invoice_custom_section_codes)
           codes = input.delete(:invoice_custom_section_codes)
           input[:invoice_custom_section_ids] = current_organization.invoice_custom_sections.where(code: codes).ids
         end
 
+        # The shared write services still expect nested billing fields.
+        input[:billing_configuration] = input.extract!(*BILLING_CONFIGURATION_FIELDS.keys).transform_keys(BILLING_CONFIGURATION_FIELDS)
         input
       end
 

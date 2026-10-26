@@ -64,13 +64,11 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
       expect(response.headers["X-Lago-Endpoint-Status"]).to eq("beta")
     end
 
-    context "with removed, unknown and update-only parameters" do
+    context "with removed and unknown parameters" do
       let(:attributes) do
         super().merge(
           net_payment_term: 99,
           unknown: "ignored",
-          tax_codes: ["unknown"],
-          invoice_custom_section_codes: ["unknown"],
           subscription_invoice_issuing_date_anchor: "next_period_start",
           subscription_invoice_issuing_date_adjustment: "align_with_finalization_date"
         )
@@ -87,8 +85,34 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
           subscription_invoice_issuing_date_adjustment: "keep_anchor"
         )
         expect(json[:billing_entity].keys).not_to include(:subscription_invoice_issuing_date_anchor, :subscription_invoice_issuing_date_adjustment)
-        expect(billing_entity.taxes).to be_empty
-        expect(billing_entity.selected_invoice_custom_sections).to be_empty
+      end
+    end
+
+    context "with tax codes and invoice custom section codes" do
+      let(:tax) { create(:tax, organization:) }
+      let(:section) { create(:invoice_custom_section, organization:) }
+      let(:foreign_section) { create(:invoice_custom_section, organization: create(:organization), code: section.code) }
+      let(:attributes) { super().merge(tax_codes: [tax.code], invoice_custom_section_codes: [section.code]) }
+
+      before { foreign_section }
+
+      it "applies the current organization's tax and section" do
+        request
+
+        expect(response).to have_http_status(:ok)
+        billing_entity = organization.all_billing_entities.find_by!(code: attributes[:code])
+        expect(billing_entity.taxes).to eq([tax])
+        expect(billing_entity.selected_invoice_custom_sections).to eq([section])
+      end
+
+      context "with an unknown tax code" do
+        let(:attributes) { super().merge(tax_codes: ["unknown"]) }
+
+        it "returns not found without creating an entity" do
+          expect { request }.not_to change(organization.all_billing_entities, :count)
+
+          expect(response).to be_not_found_error("tax")
+        end
       end
     end
 
@@ -147,6 +171,19 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
 
           expect(response).to have_http_status(:unprocessable_content)
           expect(json[:error_details][:eu_tax_management]).to eq(["value_is_invalid"])
+        end
+      end
+    end
+
+    %i[einvoicing finalize_zero_amount_invoice].each do |field|
+      context "with a null #{field}" do
+        let(:attributes) { super().merge(field => nil) }
+
+        it "returns a validation error without creating an entity" do
+          expect { request }.not_to change(organization.all_billing_entities, :count)
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq(field => ["value_is_invalid"])
         end
       end
     end
@@ -452,6 +489,21 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
 
           expect(response).to have_http_status(:unprocessable_content)
           expect(json[:error_details][:eu_tax_management]).to eq(["value_is_invalid"])
+        end
+      end
+
+      %i[einvoicing finalize_zero_amount_invoice].each do |field|
+        [nil, ""].each do |value|
+          context "with #{field} set to #{value.inspect}" do
+            let(:attributes) { {field => value} }
+
+            it "returns a validation error without updating the entity" do
+              expect { request }.not_to change { billing_entity.reload.attributes }
+
+              expect(response).to have_http_status(:unprocessable_content)
+              expect(json[:error_details]).to eq(field => ["value_is_invalid"])
+            end
+          end
         end
       end
 
