@@ -441,6 +441,32 @@ RSpec.describe Api::V2::CustomersController do
           end
         end
 
+        context "when switching to another account of the same provider" do
+          let(:provider) { create(:stripe_provider, organization:) }
+          let(:attributes) { {payment_provider: "stripe", payment_provider_code: provider.code} }
+
+          it "discards the payment methods of the old account" do
+            request
+
+            expect(response).to have_http_status(:ok)
+            expect(customer.reload).to have_attributes(payment_provider: "stripe", payment_provider_code: provider.code)
+            expect(payment_method.reload).to be_discarded
+            expect(old_provider_customer.reload).not_to be_discarded
+          end
+
+          context "without the provider type" do
+            let(:attributes) { {payment_provider_code: provider.code} }
+
+            it "discards the payment methods of the old account" do
+              request
+
+              expect(response).to have_http_status(:ok)
+              expect(customer.reload).to have_attributes(payment_provider: "stripe", payment_provider_code: provider.code)
+              expect(payment_method.reload).to be_discarded
+            end
+          end
+        end
+
         context "when only updating the name" do
           let(:attributes) { {name: "Updated"} }
 

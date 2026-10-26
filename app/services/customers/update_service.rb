@@ -31,6 +31,7 @@ module Customers
 
       old_payment_provider = customer.payment_provider
       old_provider_customer = customer.provider_customer
+      old_payment_provider_id = resolved_payment_provider_id(customer) if api_context? && old_provider_customer
       original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
       original_searchable_values = customer.slice(*Customer::SEARCHABLE_CUSTOMER_FIELDS)
       ActiveRecord::Base.transaction do
@@ -209,11 +210,17 @@ module Customers
           update_result.raise_if_error!
         end
 
-        # Match v1 REST cleanup without changing GraphQL provider switches.
-        if api_context? && old_provider_customer && customer.payment_provider.present? &&
-            old_payment_provider != customer.payment_provider
-          old_provider_customer.payment_methods.find_each do |payment_method|
-            PaymentMethods::DestroyService.call!(payment_method:)
+        # Match v1 REST cleanup without changing GraphQL provider switches: payment methods belong
+        # to one provider account, so they go when the provider or its account changes.
+        if api_context? && old_provider_customer && customer.payment_provider.present?
+          new_payment_provider_id = resolved_payment_provider_id(customer)
+          account_changed = old_payment_provider_id.present? && new_payment_provider_id.present? &&
+            old_payment_provider_id != new_payment_provider_id
+
+          if old_payment_provider != customer.payment_provider || account_changed
+            old_provider_customer.payment_methods.find_each do |payment_method|
+              PaymentMethods::DestroyService.call!(payment_method:)
+            end
           end
         end
       end
@@ -286,6 +293,15 @@ module Customers
 
       # NOTE: Create service is modifying an other instance of the provider customer
       customer.reload
+    end
+
+    # Nil when the code cannot be resolved, so that an ambiguous legacy setup never fails the update.
+    def resolved_payment_provider_id(customer)
+      PaymentProviders::FindService.call(
+        organization_id: customer.organization_id,
+        code: customer.payment_provider_code,
+        payment_provider_type: customer.payment_provider
+      ).payment_provider&.id
     end
 
     def applied_dunning_campaign
