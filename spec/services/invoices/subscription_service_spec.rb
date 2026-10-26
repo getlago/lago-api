@@ -48,6 +48,13 @@ RSpec.describe Invoices::SubscriptionService do
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
     end
 
+    it "does not track the invoice creation in Segment" do
+      result = invoice_service.call
+
+      expect(result.invoice).to be_finalized
+      expect(SegmentTrackJob).not_to have_been_enqueued.with(hash_including(event: "invoice_created"))
+    end
+
     it "creates a payment" do
       allow(Invoices::Payments::CreateService).to receive(:call_async)
 
