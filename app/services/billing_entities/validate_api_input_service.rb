@@ -4,10 +4,11 @@ module BillingEntities
   class ValidateApiInputService < BaseService
     Result = BaseResult
 
+    # Allowed values per stored attribute, with the REST field an error is reported under.
     ENUMS = {
-      document_numbering: BillingEntity::DOCUMENT_NUMBERINGS,
-      subscription_invoice_issuing_date_anchor: BillingEntity::SUBSCRIPTION_INVOICE_ISSUING_DATE_ANCHORS,
-      subscription_invoice_issuing_date_adjustment: BillingEntity::SUBSCRIPTION_INVOICE_ISSUING_DATE_ADJUSTMENTS
+      document_numbering: [:document_numbering, BillingEntity::DOCUMENT_NUMBERINGS],
+      subscription_invoice_issuing_date_anchor: [:periodic_invoice_issuing_date_anchor, BillingEntity::SUBSCRIPTION_INVOICE_ISSUING_DATE_ANCHORS],
+      subscription_invoice_issuing_date_adjustment: [:periodic_invoice_issuing_date_adjustment, BillingEntity::SUBSCRIPTION_INVOICE_ISSUING_DATE_ADJUSTMENTS]
     }.freeze
 
     def initialize(params:, require_code: false)
@@ -18,8 +19,8 @@ module BillingEntities
 
     def call
       attributes = params.slice(:document_numbering).merge(params[:billing_configuration] || {})
-      errors = ENUMS.each_with_object({}) do |(field, values), invalid|
-        if attributes.key?(field) && !values.value?(attributes[field])
+      errors = ENUMS.each_with_object({}) do |(attribute, (field, values)), invalid|
+        if attributes.key?(attribute) && !values.value?(attributes[attribute])
           invalid[field] = ["value_is_invalid"]
         end
       end

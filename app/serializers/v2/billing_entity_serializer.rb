@@ -11,15 +11,16 @@ module V2
         :phone, :city, :state, :zipcode, :einvoicing, :email, :legal_name, :legal_number,
         :timezone, :email_settings, :document_numbering, :document_number_prefix,
         :tax_identification_number, :finalize_zero_amount_invoice, :invoice_footer,
-        :invoice_grace_period, :subscription_invoice_issuing_date_adjustment,
-        :subscription_invoice_issuing_date_anchor, :document_locale, :eu_tax_management
+        :invoice_grace_period, :document_locale, :eu_tax_management
       ).symbolize_keys.merge(
+        periodic_invoice_issuing_date_anchor: model.subscription_invoice_issuing_date_anchor,
+        periodic_invoice_issuing_date_adjustment: model.subscription_invoice_issuing_date_adjustment,
         lago_id: model.id,
         is_default: model.organization.default_billing_entity&.id == model.id,
         logo_url: model.logo_url,
-        created_at: model.created_at.iso8601,
-        updated_at: model.updated_at.iso8601,
-        deleted_at: model.deleted_at&.iso8601
+        created_at: format_time(model.created_at),
+        updated_at: format_time(model.updated_at),
+        deleted_at: format_time(model.deleted_at)
       )
     end
 

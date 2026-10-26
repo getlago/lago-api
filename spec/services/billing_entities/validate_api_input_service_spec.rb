@@ -88,12 +88,12 @@ RSpec.describe BillingEntities::ValidateApiInputService do
   end
 
   {
-    document_numbering: "per_customer",
-    subscription_invoice_issuing_date_anchor: "next_period_start",
-    subscription_invoice_issuing_date_adjustment: "keep_anchor"
-  }.each do |field, valid_value|
-    context "with #{field}" do
-      let(:params) { (field == :document_numbering) ? {field => value} : {billing_configuration: {field => value}} }
+    document_numbering: ["per_customer", :document_numbering],
+    subscription_invoice_issuing_date_anchor: ["next_period_start", :periodic_invoice_issuing_date_anchor],
+    subscription_invoice_issuing_date_adjustment: ["keep_anchor", :periodic_invoice_issuing_date_adjustment]
+  }.each do |attribute, (valid_value, field)|
+    context "with #{attribute}" do
+      let(:params) { (attribute == :document_numbering) ? {attribute => value} : {billing_configuration: {attribute => value}} }
       let(:value) { valid_value }
 
       it "accepts a supported value" do

@@ -6,7 +6,15 @@ RSpec.describe V2::BillingEntitySerializer do
   subject(:payload) { described_class.new(billing_entity, includes:).serialize }
 
   let_it_be(:organization) { create_default(:organization) }
-  let(:billing_entity) { create(:billing_entity, organization:, net_payment_term: 30) }
+  let(:billing_entity) do
+    create(
+      :billing_entity,
+      organization:,
+      net_payment_term: 30,
+      subscription_invoice_issuing_date_anchor: "current_period_end",
+      subscription_invoice_issuing_date_adjustment: "keep_anchor"
+    )
+  end
   let(:includes) { [] }
 
   it "serializes flat settings without payment terms or relationships" do
@@ -34,8 +42,8 @@ RSpec.describe V2::BillingEntitySerializer do
       finalize_zero_amount_invoice: billing_entity.finalize_zero_amount_invoice,
       invoice_footer: billing_entity.invoice_footer,
       invoice_grace_period: billing_entity.invoice_grace_period,
-      subscription_invoice_issuing_date_adjustment: billing_entity.subscription_invoice_issuing_date_adjustment,
-      subscription_invoice_issuing_date_anchor: billing_entity.subscription_invoice_issuing_date_anchor,
+      periodic_invoice_issuing_date_anchor: "current_period_end",
+      periodic_invoice_issuing_date_adjustment: "keep_anchor",
       document_locale: billing_entity.document_locale,
       eu_tax_management: billing_entity.eu_tax_management,
       is_default: false,
