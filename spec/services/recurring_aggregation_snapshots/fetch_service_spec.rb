@@ -207,6 +207,50 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
         end
       end
 
+      context "with another filter of the charge set to all values of a metric filter" do
+        let(:region) do
+          create(:billable_metric_filter, organization:, billable_metric: charge.billable_metric, key: "region", values: %w[eu us],
+            created_at: watermark - 1.month, updated_at: watermark - 1.month)
+        end
+        let(:region_values) { [ChargeFilterValue::ALL_FILTER_VALUES] }
+
+        before do
+          create_filter_value(create_filter, billable_metric_filter: region, values: region_values)
+          travel_to(watermark + 1.minute) { region.update!(values: new_region_values) }
+        end
+
+        context "when the metric filter gained a value after the latest period" do
+          let(:new_region_values) { %w[eu us apac] }
+
+          it "returns no snapshot, as the filter now takes events counted in this one" do
+            result = fetch_service.call
+
+            expect(result.snapshots).to be_nil
+            expect(result.period).to be_nil
+          end
+        end
+
+        context "when the metric filter lost a value after the latest period" do
+          let(:new_region_values) { %w[eu] }
+
+          it "returns no snapshot, as this filter can now match events counted in the other one" do
+            result = fetch_service.call
+
+            expect(result.snapshots).to be_nil
+            expect(result.period).to be_nil
+          end
+        end
+
+        context "when the filter lists the values of the metric filter" do
+          let(:region_values) { %w[eu] }
+          let(:new_region_values) { %w[eu us apac] }
+
+          it "returns the snapshot of the charge filter" do
+            expect(fetch_service.call.snapshots.map(&:units)).to eq([4])
+          end
+        end
+      end
+
       context "when the charge filter groups on keys the default bucket does not" do
         let(:grouped_by_keys) { %w[region] }
         let(:filter_grouped_by) { {"region" => "eu"} }
@@ -263,6 +307,22 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
         before { create_filter(deleted_at: watermark + 1.minute) }
 
         it "returns no snapshot, as the default bucket now matches events counted in the removed filter" do
+          expect(fetch_service.call.snapshots).to be_nil
+        end
+      end
+
+      context "when a metric filter a filter sets to all values gained a value after the latest period" do
+        let(:region) do
+          create(:billable_metric_filter, organization:, billable_metric: charge.billable_metric, key: "region", values: %w[eu us],
+            created_at: watermark - 1.month, updated_at: watermark - 1.month)
+        end
+
+        before do
+          create_filter_value(create_filter, billable_metric_filter: region, values: [ChargeFilterValue::ALL_FILTER_VALUES])
+          travel_to(watermark + 1.minute) { region.update!(values: %w[eu us apac]) }
+        end
+
+        it "returns no snapshot, as the filter now takes events counted in the default bucket" do
           expect(fetch_service.call.snapshots).to be_nil
         end
       end

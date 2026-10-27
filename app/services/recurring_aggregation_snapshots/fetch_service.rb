@@ -64,14 +64,21 @@ module RecurringAggregationSnapshots
     end
 
     # A filter or filter value created, edited or removed since the marker moves older events between
-    # buckets, so the snapshots of every bucket of the charge are stale, not only the one of that filter
+    # buckets, so the snapshots of every bucket of the charge are stale, not only the one of that filter.
+    # A value set to all values reads the metric filter's values, which change without touching it.
     def filters_changed_since?(marker)
       charge_filters = ChargeFilter.with_discarded.unscope(:order)
         .where(organization_id: subscription.organization_id, charge_id: charge.id)
+      charge_filter_values = ChargeFilterValue.with_discarded.unscope(:order)
+        .where(organization_id: subscription.organization_id, charge_filter_id: charge_filters.select(:id))
 
       charge_filters.where("created_at > :watermark OR deleted_at > :watermark", watermark: marker.watermark).exists? ||
-        ChargeFilterValue.with_discarded.unscope(:order)
-          .where(organization_id: subscription.organization_id, charge_filter_id: charge_filters.select(:id))
+        charge_filter_values.where("updated_at > :watermark OR deleted_at > :watermark", watermark: marker.watermark).exists? ||
+        BillableMetricFilter.with_discarded.unscope(:order)
+          .where(
+            organization_id: subscription.organization_id,
+            id: charge_filter_values.where(values: [ChargeFilterValue::ALL_FILTER_VALUES]).select(:billable_metric_filter_id)
+          )
           .where("updated_at > :watermark OR deleted_at > :watermark", watermark: marker.watermark)
           .exists?
     end
