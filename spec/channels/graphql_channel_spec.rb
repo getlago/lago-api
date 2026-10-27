@@ -56,8 +56,18 @@ RSpec.describe GraphqlChannel, :premium, type: :channel do
       end
       let(:subscription_id) { subscription.instance_variable_get(:@subscription_ids).first }
 
-      def stream_chunk
-        LagoApiSchema.subscriptions.execute_update(subscription_id, event, {chunk: "Hello", done: false})
+      def stream_chunk(done: false)
+        LagoApiSchema.subscriptions.execute_update(subscription_id, event, {chunk: "Hello", done:})
+      end
+
+      def revoke_membership
+        membership.update!(status: :revoked, revoked_at: Time.current)
+      end
+
+      def expect_ended_with_error(result, code:, status:)
+        expect(result["data"]).to be_nil
+        expect(result["errors"].first["extensions"]).to include("code" => code, "status" => status)
+        expect(result.context.namespace(:subscriptions)[:final_update]).to be(true)
       end
 
       before { execute_subscription }
@@ -66,32 +76,62 @@ RSpec.describe GraphqlChannel, :premium, type: :channel do
         expect(stream_chunk["data"]["aiConversationStreamed"]).to eq("chunk" => "Hello", "done" => false)
       end
 
-      it "ends the subscription once the member loses ai_conversations:view" do
+      it "ends the subscription with an error once the member loses ai_conversations:view" do
         MembershipRole.where(membership:).delete_all
         role = create(:role, organization:, permissions: %w[ai_conversations:create])
         create(:membership_role, membership:, role:)
 
-        expect(stream_chunk.nil?).to be(true)
-        expect(LagoApiSchema.subscriptions.read_subscription(subscription_id)).to be_nil
+        expect_ended_with_error(stream_chunk, code: "forbidden", status: 403)
       end
 
-      it "ends the subscription once the token has expired" do
+      it "ends the subscription with an error once the token has expired" do
         allow(subscription.connection).to receive(:token_expired?).and_return(true)
 
-        expect(stream_chunk.nil?).to be(true)
+        expect_ended_with_error(stream_chunk, code: "token_expired", status: 401)
+      end
+
+      it "ends the subscription with an error once the organization no longer allows the session's login method" do
+        organization.update!(authentication_methods: [Organizations::AuthenticationMethods::GOOGLE_OAUTH])
+
+        expect_ended_with_error(stream_chunk, code: "forbidden", status: 403)
+      end
+
+      it "ends the subscription with an error once the membership is revoked" do
+        revoke_membership
+
+        expect_ended_with_error(stream_chunk, code: "forbidden", status: 403)
+      end
+
+      it "removes the subscription once its error is delivered" do
+        revoke_membership
+        result = stream_chunk
+
+        expect(LagoApiSchema.subscriptions.read_subscription(subscription_id)).not_to be_nil
+        LagoApiSchema.subscriptions.deliver(subscription_id, result)
         expect(LagoApiSchema.subscriptions.read_subscription(subscription_id)).to be_nil
       end
 
-      it "ends the subscription once the organization no longer allows the session's login method" do
-        organization.update!(authentication_methods: [Organizations::AuthenticationMethods::GOOGLE_OAUTH])
+      it "checks access again only once the interval has passed" do
+        stream_chunk
+        expect(subscription.access_checked_at.keys).to eq([subscription_id])
+        revoke_membership
 
-        expect(stream_chunk.nil?).to be(true)
+        expect(stream_chunk["data"]["aiConversationStreamed"]).to eq("chunk" => "Hello", "done" => false)
+        travel(6.seconds) { expect_ended_with_error(stream_chunk, code: "forbidden", status: 403) }
       end
 
-      it "ends the subscription once the membership is revoked" do
-        membership.update!(status: :revoked, revoked_at: Time.current)
+      it "checks access on the last chunk" do
+        stream_chunk
+        revoke_membership
 
-        expect(stream_chunk.nil?).to be(true)
+        expect_ended_with_error(stream_chunk(done: true), code: "forbidden", status: 403)
+      end
+
+      it "checks the token on every chunk" do
+        stream_chunk
+        allow(subscription.connection).to receive(:token_expired?).and_return(true)
+
+        expect_ended_with_error(stream_chunk, code: "token_expired", status: 401)
       end
     end
 

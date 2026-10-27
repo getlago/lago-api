@@ -67,6 +67,11 @@ class GraphqlChannel < ApplicationCable::Channel
     end
   end
 
+  # When each subscription of this channel last passed its access check during a stream.
+  def access_checked_at
+    @access_checked_at ||= {}
+  end
+
   def unsubscribed
     Array(@subscription_ids).each { |id| LagoApiSchema.subscriptions.delete_subscription(id) }
   end
