@@ -760,7 +760,7 @@ RSpec.describe Api::V2::ContractsController do
 
       expect(response).to have_http_status(:success)
       expect(json[:segments].map { it[:period_from] }).to eq(
-        ["2026-01-01T00:00:00Z", "2026-02-01T00:00:00Z", "2026-03-01T00:00:00Z"]
+        ["2026-01-01T00:00:00.000000Z", "2026-02-01T00:00:00.000000Z", "2026-03-01T00:00:00.000000Z"]
       )
     end
 
@@ -772,8 +772,8 @@ RSpec.describe Api::V2::ContractsController do
         lago_applied_rate_card_id: contract_rate_card.id,
         applied_rate_card_code: rate_card.code,
         cycle_index: 1,
-        period_to: "2026-01-31T23:59:59Z",
-        billing_at: "2026-02-01T00:00:00Z"
+        period_to: "2026-01-31T23:59:59.999999Z",
+        billing_at: "2026-02-01T00:00:00.000000Z"
       )
     end
 
@@ -782,7 +782,7 @@ RSpec.describe Api::V2::ContractsController do
     it "reports the next instant anything bills after the window" do
       subject
 
-      expect(json[:next_billing_at]).to eq("2026-04-01T00:00:00Z")
+      expect(json[:next_billing_at]).to eq("2026-04-01T00:00:00.000000Z")
     end
 
     it "writes nothing" do
@@ -813,7 +813,8 @@ RSpec.describe Api::V2::ContractsController do
     end
   end
 
-  describe "POST /api/v2/contracts/:external_id/bill" do
+  # Bill renders v1 invoices, so with v1 timestamps.
+  describe "POST /api/v2/contracts/:external_id/bill", v2_timestamps: false do
     subject { post_with_token(organization, "/api/v2/contracts/#{contract.external_id}/bill", {end_on: "2026-02-01"}) }
 
     let(:customer) { create(:customer, organization:, timezone: "UTC", currency: "EUR") }

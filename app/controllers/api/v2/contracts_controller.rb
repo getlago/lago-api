@@ -106,9 +106,10 @@ module Api
           payload = ::CollectionSerializer.new(
             result.previews,
             ::V2::BillableSegmentSerializer,
-            collection_name: "segments"
+            collection_name: "segments",
+            includes: ::Api::Serializable::TIMESTAMP_INCLUDES
           ).serialize
-          payload[:next_billing_at] = result.next_billing_at.iso8601 if result.next_billing_at
+          payload[:next_billing_at] = result.next_billing_at.iso8601(6) if result.next_billing_at
 
           render json: payload
         else
