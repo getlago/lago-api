@@ -56,6 +56,8 @@ module Api
       case error
       when BaseService::NotFoundFailure then not_found_error(resource: error.resource)
       when BaseService::MethodNotAllowedFailure then method_not_allowed_error(code: error.code)
+      # Ahead of ValidationFailure, its parent: a refused filter is a bad query parameter.
+      when BaseQuery::FiltersFailure then invalid_request_error(code: "invalid_filter", error_details: error.filters)
       when BaseService::ValidationFailure then validation_errors(errors: error.messages)
       when BaseService::ForbiddenFailure then forbidden_error(code: error.code)
       # Only payment providers fail with it today, refusing the organization's own credentials: the

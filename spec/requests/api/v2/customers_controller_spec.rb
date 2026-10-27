@@ -1096,6 +1096,34 @@ RSpec.describe Api::V2::CustomersController do
         expect(json[:code]).to eq("expand_not_supported")
       end
     end
+
+    context "with filters outside their allowed values" do
+      let(:parameters) { {account_type: %w[bogus customer other], has_customer_type: "maybe"} }
+
+      it "returns a bad request error keyed by each filter" do
+        request
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(
+          code: "invalid_filter",
+          details: [
+            {code: "invalid_filter", field: "account_type", meta: {invalid_values: %w[bogus other], allowed_values: %w[customer partner]}},
+            {code: "invalid_filter", field: "has_customer_type", meta: {value: "maybe", allowed_values: %w[true false]}}
+          ]
+        )
+      end
+    end
+
+    context "with filters that contradict each other" do
+      let(:parameters) { {has_customer_type: "false", customer_type: "company"} }
+
+      it "returns a bad request error on the refused filter" do
+        request
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(code: "invalid_filter", details: [{code: "invalid_filter", field: "customer_type", meta: {}}])
+      end
+    end
   end
 
   describe "DELETE /api/v2/customers/:external_id" do

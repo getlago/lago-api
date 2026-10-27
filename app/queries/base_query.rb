@@ -9,6 +9,46 @@ class BaseQuery < BaseService
   Pagination = Struct.new(:page, :limit, keyword_init: true)
   Filters = BaseFilters
 
+  # Filters that the contract of the query refuses. Its messages are the contract's, which v1 and
+  # GraphQL render; native v2 renders #filters as a 400, since they come from the query string.
+  class FiltersFailure < BaseService::ValidationFailure
+    def initialize(result, contract_errors:)
+      @contract_errors = contract_errors
+
+      super(result, messages: contract_errors.to_h)
+    end
+
+    # {filter => meta}. A value outside a closed list gets the values allowed, which the v1 sentence
+    # lists, and the values received, which v1 only indexes.
+    def filters
+      @contract_errors.group_by { it.path.first }.transform_values { meta_of(it) }
+    end
+
+    private
+
+    def meta_of(errors)
+      if errors.all? { inclusion?(it) }
+        allowed_values = errors.first.args.first
+        received = errors.map(&:input)
+
+        if errors.first.path.one?
+          {value: received.first, allowed_values:}
+        else
+          {invalid_values: received.uniq, allowed_values:}
+        end
+      else
+        {}
+      end
+    end
+
+    # A rule failure has no predicate, and the message of an or-schema (`value(...) | array(...)`) is
+    # not a Dry::Schema::Message, which would raise on #predicate.
+    def inclusion?(error)
+      error.is_a?(Dry::Schema::Message) && error.predicate == :included_in? &&
+        error.input.is_a?(String) && error.args.first.is_a?(Array) && error.args.first.all?(String)
+    end
+  end
+
   # Restores a capped `total_count` on a `without_count` relation, so that pagination
   # metadata keeps working without counting every matching row.
   module CappedTotalCount
@@ -64,8 +104,7 @@ class BaseQuery < BaseService
     validation_result = filters_contract.call(filters.to_h)
 
     unless validation_result.success?
-      errors = validation_result.errors.to_h
-      result.validation_failure!(errors:)
+      result.fail_with_error!(FiltersFailure.new(result, contract_errors: validation_result.errors))
     end
 
     result
