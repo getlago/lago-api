@@ -16,7 +16,6 @@ module UsageAttributions
     MAX_FILTER_VALUES = 20
     MAX_FLAT_FILTERS = 3
     SPLIT_FILTERS_PER_PAGE = 10
-    # A charge cannot list more filters than its price lookup holds entries.
     MAX_SPLIT_FILTERS_OFFSET = ChargePriceLookupService::MAX_ENTRIES
     MAX_SEARCH_LENGTH = 100
     MAX_CUSTOM_WINDOW = 31.days
