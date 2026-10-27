@@ -20,7 +20,6 @@ RSpec.describe Api::V2Errors do
                 get :out_of_range
                 get :invalid_request
                 get :missing_record
-                get :literal_validation
               end
             end
           end
@@ -54,14 +53,6 @@ RSpec.describe Api::V2Errors do
 
       def invalid_request
         invalid_request_error(code: "invalid_expand", error_details: {expands: {invalid_values: ["fees"], allowed_values: []}, after: {reason: "malformed"}})
-      end
-
-      # A few actions render their own validation errors, without a failed result.
-      def literal_validation
-        validation_errors(
-          errors: {rate_model: %w[value_is_mandatory value_is_invalid], code: ["value_already_exist"]},
-          meta: {rate_model: [{}, {allowed_values: %w[standard graduated]}]}
-        )
       end
 
       private
@@ -100,10 +91,12 @@ RSpec.describe Api::V2Errors do
             "code" => ["value_already_exist"]
           })
         when "validation_with_meta"
-          result.validation_failure!(
-            errors: {position: ["value_is_out_of_range"], name: ["value_is_mandatory"]},
-            meta: {position: [{min: 1, max: 3}]}
-          )
+          result.single_validation_failure!(field: :position, error_code: "value_is_out_of_range", meta: {min: 1, max: 3})
+        when "record_validation_with_meta"
+          record = Customer.new
+          record.errors.add(:currency, :inclusion, meta: {allowed_values: %w[EUR USD]})
+          record.errors.add(:external_id, :blank)
+          result.record_validation_failure!(record:)
         end
       end
 
@@ -290,33 +283,26 @@ RSpec.describe Api::V2Errors do
   context "with a validation failure carrying meta" do
     let(:failure) { "validation_with_meta" }
 
-    it "returns the meta of each code, and an empty object for a code without" do
+    it "returns the meta of the code" do
+      show
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(json).to eq(code: "validation_errors", details: [{code: "value_is_out_of_range", field: "position", meta: {min: 1, max: 3}}])
+    end
+  end
+
+  context "with a record whose errors carry meta" do
+    let(:failure) { "record_validation_with_meta" }
+
+    it "returns the meta option of each error, and an empty object for an error without" do
       show
 
       expect(response).to have_http_status(:unprocessable_content)
       expect(json).to eq(
         code: "validation_errors",
         details: [
-          {code: "value_is_out_of_range", field: "position", meta: {min: 1, max: 3}},
-          {code: "value_is_mandatory", field: "name", meta: {}}
-        ]
-      )
-    end
-  end
-
-  context "with validation errors rendered by the action" do
-    subject(:literal_validation) { get_with_token(organization, "/api/v2/error_tests/literal_validation") }
-
-    it "returns the meta aligned with the codes of each field" do
-      literal_validation
-
-      expect(response).to have_http_status(:unprocessable_content)
-      expect(json).to eq(
-        code: "validation_errors",
-        details: [
-          {code: "value_is_mandatory", field: "rate_model", meta: {}},
-          {code: "value_is_invalid", field: "rate_model", meta: {allowed_values: %w[standard graduated]}},
-          {code: "value_already_exist", field: "code", meta: {}}
+          {code: "value_is_invalid", field: "currency", meta: {allowed_values: %w[EUR USD]}},
+          {code: "value_is_mandatory", field: "external_id", meta: {}}
         ]
       )
     end

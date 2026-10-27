@@ -3,139 +3,107 @@
 require "rails_helper"
 
 RSpec.describe BaseService::ValidationFailure do
-  subject(:failure) { described_class.new(result, messages:, meta:) }
+  subject(:failure) { described_class.new(result, messages:) }
 
   let(:result) { BaseResult.new }
-  let(:messages) { {position: ["value_is_out_of_range"]} }
-  let(:meta) { {position: [{min: 1, max: 3}]} }
+  let(:messages) { {name: ["value_is_mandatory"], position: %w[value_is_out_of_range value_is_invalid]} }
 
-  describe "#meta" do
-    let(:messages) { {name: ["value_is_mandatory"], position: ["value_is_out_of_range", "value_is_invalid"]} }
-    let(:meta) { {name: [{}], position: [{"min" => 1, "max" => 3}]} }
+  def entry(field, code, meta = {})
+    described_class::Entry.new(field:, code:, meta:)
+  end
 
-    it "is aligned with the codes and frozen" do
-      expect(failure.meta).to eq({position: [{min: 1, max: 3}, {}]})
-      expect(failure.meta).to be_frozen
-      expect(failure.meta[:position]).to be_frozen
-      expect(failure.meta[:position]).to all(be_frozen)
-    end
+  describe ".from_errors" do
+    subject(:failure) { described_class.from_errors(result, record.errors) }
 
-    context "without meta" do
-      subject(:failure) { described_class.new(result, messages:) }
-
-      it "is an empty frozen hash" do
-        expect(failure.meta).to eq({})
-        expect(failure.meta).to be_frozen
+    let(:record) do
+      build(:rate_card_rate).tap do |rate|
+        rate.errors.add(:billing_interval_count, :greater_than_or_equal_to, count: 1, value: 0)
+        rate.errors.add(:code, :blank)
+        rate.errors.add(:billing_interval_count, :not_allowed_for_billing_timing, meta: {min: 1, max: 3})
+        rate.errors.add(:rate_model, :not_allowed_for_product, meta: {allowed_values: %w[standard package]})
       end
     end
 
-    context "when messages has indifferent access" do
-      let(:messages) { {position: ["value_is_out_of_range"]}.with_indifferent_access }
-      let(:meta) { {position: [{min: 1}]} }
+    it "keeps the messages of the record and the meta option of each error, grouped as messages are" do
+      expect(failure.messages).to eq(
+        billing_interval_count: %w[value_is_out_of_range not_allowed_for_billing_timing],
+        code: %w[value_is_mandatory],
+        rate_model: %w[not_allowed_for_product]
+      )
+      # count and value are options of the validator, not meta: value echoes the request.
+      expect(failure.entries).to eq([
+        entry(:billing_interval_count, "value_is_out_of_range"),
+        entry(:billing_interval_count, "not_allowed_for_billing_timing", {min: 1, max: 3}),
+        entry(:code, "value_is_mandatory"),
+        entry(:rate_model, "not_allowed_for_product", {allowed_values: %w[standard package]})
+      ])
+      expect(failure.entries.group_by(&:field).transform_values { it.map(&:code) }).to eq(failure.messages)
+    end
 
-      # Its keys are Strings, under which entries would not find a meta stored under a Symbol.
-      it { expect { failure }.to raise_error(ArgumentError, "meta of :position does not match its codes") }
+    it "keeps them once the record is validated again" do
+      failure
+      record.errors.clear
+
+      expect(failure.messages.keys).to eq(%i[billing_interval_count code rate_model])
+      expect(failure.entries.size).to eq(4)
+    end
+
+    context "with an error imported under another attribute" do
+      let(:record) do
+        build(:rate_card_rate).tap do |rate|
+          error = ActiveModel::Error.new(rate, :billing_interval_count, :not_allowed_for_billing_timing, meta: {min: 1})
+          rate.errors.import(error, attribute: :"rates.billing_interval_count")
+        end
+      end
+
+      # Autosaved associations import their errors so, and re-keying a failure can do the same.
+      it "keeps its meta under the new attribute" do
+        expect(failure.messages).to eq("rates.billing_interval_count": ["not_allowed_for_billing_timing"])
+        expect(failure.entries).to eq([entry(:"rates.billing_interval_count", "not_allowed_for_billing_timing", {min: 1})])
+      end
     end
   end
 
   describe "#message" do
-    it { expect(failure.message).to eq('Validation errors: {"position":["value_is_out_of_range"]}') }
-
-    context "without meta" do
-      subject(:failure) { described_class.new(result, messages:) }
-
-      it { expect(failure.message).to eq('Validation errors: {"position":["value_is_out_of_range"]}') }
-    end
+    it { expect(failure.message).to eq('Validation errors: {"name":["value_is_mandatory"],"position":["value_is_out_of_range","value_is_invalid"]}') }
   end
 
   describe "#entries" do
-    let(:messages) { {name: ["value_is_mandatory"], position: ["value_is_out_of_range", "value_is_invalid"]} }
-
-    it "returns one entry per code, in the order of messages" do
+    it "returns one entry per code, in the order of messages, without meta" do
       expect(failure.entries).to eq([
-        described_class::Entry.new(field: :name, code: "value_is_mandatory", meta: {}),
-        described_class::Entry.new(field: :position, code: "value_is_out_of_range", meta: {min: 1, max: 3}),
-        described_class::Entry.new(field: :position, code: "value_is_invalid", meta: {})
+        entry(:name, "value_is_mandatory"),
+        entry(:position, "value_is_out_of_range"),
+        entry(:position, "value_is_invalid")
       ])
-      expect(failure.entries.map(&:meta)).to all(be_frozen)
-    end
-
-    context "when a field has the same code twice" do
-      let(:messages) { {graduated_ranges: ["invalid_graduated_ranges", "invalid_graduated_ranges"]} }
-      let(:meta) { {graduated_ranges: [{min: 0}, {min: 101}]} }
-
-      it "keeps each code with its own meta" do
-        expect(failure.entries).to eq([
-          described_class::Entry.new(field: :graduated_ranges, code: "invalid_graduated_ranges", meta: {min: 0}),
-          described_class::Entry.new(field: :graduated_ranges, code: "invalid_graduated_ranges", meta: {min: 101})
-        ])
-      end
+      expect(failure.entries).to be_frozen
     end
 
     context "when fields have string and symbol keys" do
       let(:messages) { {"billing_interval_count" => ["value_is_out_of_range"], :name => ["value_is_mandatory"]} }
-      let(:meta) { {"billing_interval_count" => [{min: 1}]} }
 
       it "keeps each field as given" do
-        expect(failure.entries).to eq([
-          described_class::Entry.new(field: "billing_interval_count", code: "value_is_out_of_range", meta: {min: 1}),
-          described_class::Entry.new(field: :name, code: "value_is_mandatory", meta: {})
-        ])
+        expect(failure.entries).to eq([entry("billing_interval_count", "value_is_out_of_range"), entry(:name, "value_is_mandatory")])
       end
     end
 
     context "when codes are symbols" do
       let(:messages) { {base: [:invalid_date]} }
-      let(:meta) { {} }
 
-      it "keeps each code as given" do
-        expect(failure.entries).to eq([described_class::Entry.new(field: :base, code: :invalid_date, meta: {})])
-      end
+      it { expect(failure.entries).to eq([entry(:base, :invalid_date)]) }
     end
 
     context "when messages is a String" do
       let(:messages) { "invalid_payload" }
-      let(:meta) { {} }
 
       it { expect(failure.entries).to eq([]) }
     end
-  end
 
-  describe "#==" do
-    let(:other) { described_class.new(result, messages:, meta: other_meta) }
-    let(:other_meta) { {position: [{min: 1, max: 3}]} }
+    context "with entries given" do
+      subject(:failure) { described_class.new(result, messages: {position: ["value_is_out_of_range"]}, entries:) }
 
-    it { expect(failure).to eq(other) }
+      let(:entries) { [entry(:position, "value_is_out_of_range", {min: 1, max: 3})] }
 
-    context "when only the meta differs" do
-      let(:other_meta) { {position: [{min: 0, max: 3}]} }
-
-      it { expect(failure).not_to eq(other) }
-    end
-
-    context "when the messages differ" do
-      let(:other) { described_class.new(result, messages: {position: ["value_is_invalid"]}, meta: other_meta) }
-
-      it { expect(failure).not_to eq(other) }
-    end
-
-    context "when both are raised" do
-      # Raised from the same frames, so their backtraces, which Exception#== compares, are equal.
-      let(:raised) do
-        [failure, other].map do |error|
-          raise error
-        rescue described_class => e
-          e
-        end
-      end
-
-      it { expect(raised.first).to eq(raised.last) }
-
-      context "when only the meta differs" do
-        let(:other_meta) { {position: [{min: 0, max: 3}]} }
-
-        it { expect(raised.first).not_to eq(raised.last) }
-      end
+      it { expect(failure.entries).to eq(entries) }
     end
   end
 end

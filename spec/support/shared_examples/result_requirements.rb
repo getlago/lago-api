@@ -108,19 +108,9 @@ RSpec.shared_examples "a result object" do
     it { expect(result.error).to be_a(BaseService::ValidationFailure) }
     it { expect(result.error.messages).to eq({field: ["error"]}) }
     it { expect(result.error.message).to eq('Validation errors: {"field":["error"]}') }
-    it { expect(result.error.meta).to eq({}) }
+    it { expect(result.error.entries).to eq([BaseService::ValidationFailure::Entry.new(field: :field, code: "error", meta: {})]) }
 
     it { expect { result.raise_if_error! }.to raise_error(BaseService::ValidationFailure) }
-
-    context "when passing meta to the failure" do
-      let(:errors) { {position: %w[value_is_out_of_range value_is_mandatory], name: ["value_is_invalid"]} }
-
-      before { result.validation_failure!(errors:, meta: {position: [{min: 1, max: 3}]}) }
-
-      it { expect(result.error.messages).to eq(errors) }
-      it { expect(result.error.message).to eq("Validation errors: #{errors.to_json}") }
-      it { expect(result.error.meta).to eq({position: [{min: 1, max: 3}, {}]}) }
-    end
   end
 
   describe ".record_validation_failure!" do
@@ -133,7 +123,6 @@ RSpec.shared_examples "a result object" do
     it { expect(result.error).to be_a(BaseService::ValidationFailure) }
     it { expect(result.error.messages.keys).to match_array(%i[external_id organization]) }
     it { expect(result.error.message).to eq("Validation errors: #{result.error.messages.to_json}") }
-    it { expect(result.error.meta).to eq({}) }
 
     it { expect { result.raise_if_error! }.to raise_error(BaseService::ValidationFailure) }
 
@@ -152,7 +141,11 @@ RSpec.shared_examples "a result object" do
         # The hash of ActiveModel as it is, frozen and with an empty default, not a copy.
         expect(result.error.messages).to be_frozen
         expect(result.error.messages[:name]).to eq([])
-        expect(result.error.meta).to eq({external_id: [{}, {allowed_values: %w[a b]}]})
+        expect(result.error.entries.map { [it.code, it.meta] }).to eq([
+          ["value_is_mandatory", {}],
+          ["value_is_invalid", {allowed_values: %w[a b]}],
+          ["value_is_invalid", {}]
+        ])
       end
     end
   end
@@ -165,7 +158,7 @@ RSpec.shared_examples "a result object" do
     it { expect(result.error).to be_a(BaseService::ValidationFailure) }
     it { expect(result.error.messages).to eq({base: ["error_code"]}) }
     it { expect(result.error.message).to eq('Validation errors: {"base":["error_code"]}') }
-    it { expect(result.error.meta).to eq({}) }
+    it { expect(result.error.entries).to eq([BaseService::ValidationFailure::Entry.new(field: :base, code: "error_code", meta: {})]) }
 
     it { expect { result.raise_if_error! }.to raise_error(BaseService::ValidationFailure) }
 
@@ -181,7 +174,7 @@ RSpec.shared_examples "a result object" do
 
       it { expect(result.error.messages).to eq({position: ["value_is_out_of_range"]}) }
       it { expect(result.error.message).to eq('Validation errors: {"position":["value_is_out_of_range"]}') }
-      it { expect(result.error.meta).to eq({position: [{min: 1, max: 3}]}) }
+      it { expect(result.error.entries).to eq([BaseService::ValidationFailure::Entry.new(field: :position, code: "value_is_out_of_range", meta: {min: 1, max: 3})]) }
     end
   end
 

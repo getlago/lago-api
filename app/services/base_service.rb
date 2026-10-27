@@ -57,32 +57,41 @@ class BaseService
   end
 
   class ValidationFailure < FailedResult
+    # One code of the failure, with the facts that let a client fix its next request (see
+    # ValidationMeta::KEYS). Only native v2 errors render them.
     Entry = Data.define(:field, :code, :meta)
 
-    attr_reader :messages, :meta
+    attr_reader :messages, :entries
 
-    # messages: {field => [code]}, or one of the String, indexed and nested shapes a few services
-    # build, kept as they are. meta: {field => [Hash]}, position i describing messages[field][i].
-    def initialize(result, messages:, meta: {})
-      @messages = messages
-      @meta = ValidationMeta.align(messages, meta)
+    # The errors of a record, read now: valid? clears them in place, and ActiveModel computes each
+    # message when it is read. The `meta:` option of an error is its meta, and its other options are
+    # not: `value:` echoes the request.
+    def self.from_errors(result, errors)
+      entries = errors.group_by_attribute.flat_map do |field, field_errors|
+        field_errors.map { Entry.new(field:, code: it.message, meta: it.options.fetch(:meta, {})) }
+      end
 
-      super(result, format_messages)
+      new(result, messages: errors.messages, entries:)
     end
 
     # One entry per code, in the order of messages, duplicates kept.
-    def entries
+    def self.entries_from(messages)
       if messages.is_a?(Hash)
         messages.flat_map do |field, codes|
-          Array.wrap(codes).each_with_index.map { |code, index| Entry.new(field:, code:, meta: meta.dig(field, index) || ValidationMeta::EMPTY) }
+          Array.wrap(codes).map { Entry.new(field:, code: it, meta: {}) }
         end
       else
         []
       end
     end
 
-    def ==(other)
-      super && meta == other.meta
+    # messages: {field => [code]}, or one of the String, indexed and nested shapes a few services
+    # build, kept as they are. entries: derived from messages when the producer adds no meta.
+    def initialize(result, messages:, entries: nil)
+      @messages = messages
+      @entries = (entries || self.class.entries_from(messages)).freeze
+
+      super(result, format_messages)
     end
 
     private

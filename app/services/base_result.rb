@@ -52,17 +52,18 @@ class BaseResult
   end
 
   def record_validation_failure!(record:)
-    validation_failure!(errors: record.errors.messages, meta: ValidationMeta.for_record(record))
+    fail_with_error!(BaseService::ValidationFailure.from_errors(self, record.errors))
   end
 
-  # meta: {field => [Hash]}, position i describing errors[field][i] (see ValidationMeta::KEYS).
-  def validation_failure!(errors:, meta: {})
-    fail_with_error!(BaseService::ValidationFailure.new(self, messages: errors, meta:))
+  def validation_failure!(errors:)
+    fail_with_error!(BaseService::ValidationFailure.new(self, messages: errors))
   end
 
   def single_validation_failure!(error_code:, field: :base, meta: {})
     field = field.to_sym
-    validation_failure!(errors: {field => [error_code]}, meta: {field => [meta]})
+    entry = BaseService::ValidationFailure::Entry.new(field:, code: error_code, meta:)
+
+    fail_with_error!(BaseService::ValidationFailure.new(self, messages: {field => [error_code]}, entries: [entry]))
   end
 
   def service_failure!(code:, message:, error: nil)

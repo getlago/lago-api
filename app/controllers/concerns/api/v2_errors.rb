@@ -23,8 +23,8 @@ module Api
       render_v2_error(404, code: "resource_not_found", details: [error_detail(code: "resource_not_found", field: :base, meta: {resource:})])
     end
 
-    def validation_errors(errors:, meta: {})
-      render_validation_failure(BaseService::ValidationFailure.new(nil, messages: errors, meta:))
+    def validation_errors(errors:)
+      render_validation_entries(BaseService::ValidationFailure.entries_from(errors))
     end
 
     def render_error_response(error_result)
@@ -37,8 +37,8 @@ module Api
       when BaseService::MethodNotAllowedFailure then render_v2_error(422, code: error.code)
       # Ahead of ValidationFailure, its parent: its messages are the sentences of the contract.
       when BaseQuery::FiltersFailure then filter_errors(error.filters)
-      # The failure itself, whose meta its messages alone would drop.
-      when BaseService::ValidationFailure then render_validation_failure(error)
+      # Its entries, which carry the meta that its messages alone would drop.
+      when BaseService::ValidationFailure then render_validation_entries(error.entries)
       when BaseService::ForbiddenFailure then forbidden_error(code: error.code)
       # A provider refusing the organization's own credentials. The API key of the request is fine, so
       # not a 401: on v2, a 401 always means the Lago API key was refused. Ahead of its parent.
@@ -80,10 +80,10 @@ module Api
     def not_found = render_v2_error(404, code: "resource_not_found")
 
     # A 400 keyed by the offending parameter, `{param => {reason:, **meta}}`. Without a reason, the
-    # code of the error is the code of its entry.
+    # code of the error is the code of its entry. Its meta may echo the parameter received.
     def invalid_request_error(code:, error_details:)
       details = error_details.map do |param, detail|
-        error_detail(code: detail.fetch(:reason, code), field: param, meta: detail.except(:reason))
+        error_detail(code: detail.fetch(:reason, code), field: param, meta: detail.except(:reason), echo: true)
       end
 
       render_v2_error(400, code:, details:)
@@ -96,10 +96,10 @@ module Api
       render_v2_error(422, code: "validation_errors", details:)
     end
 
-    # One entry per code of the failure, in order and duplicates kept, so that grouping the entries
-    # by field gives its messages back.
-    def render_validation_failure(failure)
-      details = failure.entries.map { error_detail(code: it.code, field: it.field, meta: it.meta) }
+    # One entry per code, in order and duplicates kept, so that grouping the entries by field gives
+    # the messages of the failure back.
+    def render_validation_entries(entries)
+      details = entries.map { error_detail(code: it.code, field: it.field, meta: it.meta) }
 
       render_v2_error(422, code: "validation_errors", details:)
     end
@@ -116,8 +116,8 @@ module Api
     end
 
     # Every v2 entry, 400, 422 and 429 alike, goes through the registry of meta keys.
-    def error_detail(code:, field:, meta: {})
-      {code:, field: field.to_s, meta: ValidationMeta.check(meta)}
+    def error_detail(code:, field:, meta: {}, echo: false)
+      {code:, field: field.to_s, meta: ValidationMeta.check(meta, echo:)}
     end
 
     def render_v2_error(status, code:, details: [])

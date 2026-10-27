@@ -14,16 +14,15 @@ module ValidationMeta
     provider_name: String # the provider of a too_many_provider_requests error
   }.freeze
 
-  # They echo the request, which a validation error never does.
+  # They echo the request, which only a 400 may do.
   ECHO_KEYS = %i[value invalid_values].freeze
-
-  EMPTY = {}.freeze
 
   module_function
 
-  # Symbol keys, without nil values. Bad meta raises in development and test, and is reported and
-  # dropped elsewhere, so that the error stays a 4xx.
-  def check(meta, echo: true)
+  # Symbol keys, without nil values. A key that is not registered with its type, or that echoes the
+  # request outside a 400, raises in development and test, and is dropped and reported elsewhere, so
+  # that the error stays a 4xx.
+  def check(meta, echo: false)
     if meta.is_a?(Hash)
       meta.compact.each_with_object({}) do |(key, value), checked|
         name = key.to_sym if key.is_a?(Symbol) || key.is_a?(String)
@@ -31,44 +30,14 @@ module ValidationMeta
         if !registered?(name, value)
           report("meta #{key}: #{value.inspect} is not a registered key and type")
         elsif !echo && ECHO_KEYS.include?(name)
-          report("meta #{key} echoes the request, which a validation error never does")
+          report("meta #{key} echoes the request, which only a 400 may do")
         else
           checked[name] = value
         end
-      end.freeze
+      end
     else
       report("meta is not a Hash: #{meta.class}") unless meta.nil?
-      EMPTY
-    end
-  end
-
-  # {field => [Hash]}, where position i describes code i of messages[field]. A field whose codes
-  # carry nothing is left out.
-  def align(messages, meta)
-    if meta.is_a?(Hash)
-      meta.each_with_object({}) do |(field, items), aligned|
-        # Only a key that messages iterates with, which entries reads the meta back with.
-        codes = messages.fetch(field, nil) if messages.is_a?(Hash) && messages.each_key.include?(field)
-
-        if codes.is_a?(Array) && items.is_a?(Array) && items.size <= codes.size
-          checked = items.map { check(it, echo: false) }
-          aligned[field] = (checked + Array.new(codes.size - checked.size, EMPTY)).freeze if checked.any?(&:present?)
-        else
-          report("meta of #{field.inspect} does not match its codes")
-        end
-      end.freeze
-    else
-      report("meta is not a Hash of fields: #{meta.class}") unless meta.nil?
-      EMPTY
-    end
-  end
-
-  # The `meta:` option of the record's errors, aligned with record.errors.messages, which groups
-  # errors.objects by attribute in the same order.
-  def for_record(record)
-    record.errors.group_by_attribute.each_with_object({}) do |(attribute, errors), meta|
-      items = errors.map { it.options[:meta] || EMPTY }
-      meta[attribute] = items if items.any?(&:present?)
+      {}
     end
   end
 
@@ -88,8 +57,6 @@ module ValidationMeta
     if Rails.env.local?
       raise error
     elsif defined?(Sentry)
-      # Never raised, so without it the event would not show which producer sent the meta.
-      error.set_backtrace(caller)
       Sentry.capture_exception(error)
     end
   end
