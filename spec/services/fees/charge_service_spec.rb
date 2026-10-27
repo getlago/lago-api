@@ -5166,7 +5166,7 @@ RSpec.describe Fees::ChargeService, :premium do
       let(:april) { [Time.zone.parse("2022-04-01"), Time.zone.parse("2022-04-30").end_of_day] }
       let(:may) { [Time.zone.parse("2022-05-01"), Time.zone.parse("2022-05-31").end_of_day] }
 
-      def bill((from, to))
+      def bill((from, to), options: self.options)
         travel_to(to + 1.hour)
 
         period = BillingPeriodBoundaries.new(
@@ -5227,6 +5227,30 @@ RSpec.describe Fees::ChargeService, :premium do
           expect(bill(may)).to match_array([[{"region" => "eu"}, 42, 4], [{"region" => "us"}, 3, 1], [{"region" => "apac"}, 4, 1]])
           expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
             .with(hash_including(initial_value: be_present)).twice
+        end
+      end
+
+      context "with current usage filtered by group" do
+        let(:usage_options) do
+          described_class::Options.new(context: :current_usage, usage_filters: UsageFilters.new(filter_by_group: {"region" => ["eu"]}))
+        end
+
+        it "counts only the selected group" do
+          bill(march)
+
+          expect(bill(april, options: usage_options)).to eq([[{}, 35, 3]])
+        end
+
+        context "with pricing group keys" do
+          let(:charge) do
+            create(:standard_charge, plan: subscription.plan, billable_metric:, properties: {amount: "20", pricing_group_keys: ["region"]})
+          end
+
+          it "counts only the selected group" do
+            bill(march)
+
+            expect(bill(april, options: usage_options)).to eq([[{}, 35, 3]])
+          end
         end
       end
 
