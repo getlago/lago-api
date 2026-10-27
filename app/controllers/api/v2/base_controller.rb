@@ -4,7 +4,7 @@ module Api
   module V2
     # Parent of the native v2 controllers, for the behaviour they share and v1 does not.
     class BaseController < Api::BaseController
-      # The v2 error body, in place of the ApiErrors and ApiResponses renderers that v1 keeps.
+      # The v2 error body, in place of the Api::V1Errors and ApiResponses renderers that v1 keeps.
       include Api::V2Errors
       # Every native v2 endpoint belongs to the product catalog. Included ahead of the cursor
       # callback, so that a disabled catalog is a 403 before any pagination parameter is read.

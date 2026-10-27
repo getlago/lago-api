@@ -6,7 +6,7 @@ RSpec.describe Api::BaseController, type: :controller do
   let_it_be(:organization) { create_default(:organization) }
   controller do
     # The renderers its callbacks call, which each version's base controller includes.
-    include ApiErrors
+    include Api::V1Errors
 
     def index
       render nothing: true

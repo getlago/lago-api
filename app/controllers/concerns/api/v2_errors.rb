@@ -5,8 +5,8 @@ module Api
   #
   #   {code: "validation_errors", details: [{code: "value_is_mandatory", field: "name", meta: {}}]}
   #
-  # It defines the renderers of ApiErrors, which only v1, Admin and the data API include, under the
-  # same names, so that the callbacks Api::BaseController shares with v1 render it too, and it
+  # It defines the renderers of Api::V1Errors, which only v1, Admin and the data API include, under
+  # the same names, so that the callbacks Api::BaseController shares with v1 render it too, and it
   # overrides ApiResponses#not_found_error. bad_request_error aside: Api::V2::BaseController rescues
   # a missing parameter itself. The status is the HTTP one only. `details` is always an array and
   # `meta` always an object, so that a client never checks for nil.

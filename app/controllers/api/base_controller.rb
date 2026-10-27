@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Api
-  # Its callbacks and rescues render errors with the renderers of each version: ApiErrors, which
+  # Its callbacks and rescues render errors with the renderers of each version: Api::V1Errors, which
   # Api::V1::BaseController includes, or Api::V2Errors, whose base controller rescues a missing
   # parameter itself.
   class BaseController < ApplicationController
