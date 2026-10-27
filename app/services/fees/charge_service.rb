@@ -645,8 +645,10 @@ module Fees
       SNAPSHOT_AGGREGATION_TYPES.include?(selected_metered_item.billable_metric.aggregation_type)
     end
 
+    # Usage filtered by group narrows the events read, but snapshots hold every group's units
     def recurring_initial_value(selected_metered_item)
       return unless selected_metered_item.billable_metric.recurring? && snapshot_eligible?(selected_metered_item)
+      return if options.usage_filters.filter_by_group.present?
 
       if billing_context.organization.feature_flag_enabled?(:persisted_recurring_values)
         RecurringAggregationSnapshots::FetchService.call!(
