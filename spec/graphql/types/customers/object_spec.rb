@@ -43,6 +43,7 @@ RSpec.describe Types::Customers::Object do
     expect(subject).to have_field(:tax_identification_number).of_type("String")
     expect(subject).to have_field(:timezone).of_type("TimezoneEnum")
     expect(subject).to have_field(:url).of_type("String")
+    expect(subject).to have_field(:x402_agent_address).of_type("String")
     expect(subject).to have_field(:zipcode).of_type("String")
 
     expect(subject).to have_field(:metadata).of_type("[CustomerMetadata!]")

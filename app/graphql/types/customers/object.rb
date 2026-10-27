@@ -37,6 +37,7 @@ module Types
       field :tax_identification_number, String, null: true
       field :timezone, Types::TimezoneEnum, null: true
       field :url, String, null: true
+      field :x402_agent_address, String, null: true
       field :zipcode, String, null: true
 
       field :shipping_address, Types::Customers::Address, null: true
