@@ -5212,6 +5212,125 @@ RSpec.describe Fees::ChargeService, :premium do
         end
       end
     end
+
+    describe "billing from the snapshots over several periods" do
+      let(:organization) { create(:organization, feature_flags: ["recurring_aggregation_snapshots", "persisted_recurring_values"]) }
+      let(:march) { [subscription.started_at, Time.zone.parse("2022-03-31").end_of_day] }
+      let(:april) { [Time.zone.parse("2022-04-01"), Time.zone.parse("2022-04-30").end_of_day] }
+      let(:may) { [Time.zone.parse("2022-05-01"), Time.zone.parse("2022-05-31").end_of_day] }
+
+      def bill((from, to), options: self.options)
+        travel_to(to + 1.hour)
+
+        period = BillingPeriodBoundaries.new(
+          from_datetime: from,
+          to_datetime: to,
+          charges_from_datetime: from,
+          charges_to_datetime: to,
+          timestamp: to + 1.second,
+          charges_duration: ((to - from) / 1.day).ceil
+        )
+
+        described_class.call(
+          invoice: create(:invoice, customer:, organization:),
+          metered_item: described_class::MeteredItem.from_charge(charge:, boundaries: period),
+          billing_context:,
+          options:,
+          plan: subscription.plan,
+          customer:
+        ).fees.map { [it.grouped_by, it.units, it.events_count] }
+      end
+
+      def create_event(timestamp, value, region, created_at: timestamp)
+        create(:event, organization:, subscription:, code: billable_metric.code, created_at:,
+          timestamp: Time.zone.parse(timestamp), properties: {value:, region:})
+      end
+
+      before do
+        allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_call_original
+
+        create_event("2022-03-20", 3, "us")
+        create_event("2022-04-10", 20, "eu")
+        create_event("2022-05-10", 4, "apac")
+      end
+
+      it "bills what the full scan bills" do
+        expect(bill(march)).to eq([[{}, 18, 3]])
+
+        # Dated in March, ingested after its snapshot
+        create_event("2022-03-25", 7, "eu", created_at: Time.zone.parse("2022-04-01T05:00:00"))
+
+        expect(bill(april)).to eq([[{}, 45, 5]])
+        expect(bill(may)).to eq([[{}, 49, 6]])
+        expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
+          .with(hash_including(initial_value: [have_attributes(grouped_by: {})])).twice
+      end
+
+      context "with pricing group keys" do
+        let(:charge) do
+          create(:standard_charge, plan: subscription.plan, billable_metric:, properties: {amount: "20", pricing_group_keys: ["region"]})
+        end
+
+        it "bills what the full scan bills" do
+          expect(bill(march)).to match_array([[{"region" => "eu"}, 15, 2], [{"region" => "us"}, 3, 1]])
+
+          create_event("2022-03-25", 7, "eu", created_at: Time.zone.parse("2022-04-01T05:00:00"))
+
+          expect(bill(april)).to match_array([[{"region" => "eu"}, 42, 4], [{"region" => "us"}, 3, 1]])
+          expect(bill(may)).to match_array([[{"region" => "eu"}, 42, 4], [{"region" => "us"}, 3, 1], [{"region" => "apac"}, 4, 1]])
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
+            .with(hash_including(initial_value: be_present)).twice
+        end
+      end
+
+      context "with current usage filtered by group" do
+        let(:usage_options) do
+          described_class::Options.new(context: :current_usage, usage_filters: UsageFilters.new(filter_by_group: {"region" => ["eu"]}))
+        end
+
+        it "counts only the selected group" do
+          bill(march)
+
+          expect(bill(april, options: usage_options)).to eq([[{}, 35, 3]])
+        end
+
+        context "with pricing group keys" do
+          let(:charge) do
+            create(:standard_charge, plan: subscription.plan, billable_metric:, properties: {amount: "20", pricing_group_keys: ["region"]})
+          end
+
+          it "counts only the selected group" do
+            bill(march)
+
+            expect(bill(april, options: usage_options)).to eq([[{}, 35, 3]])
+          end
+        end
+      end
+
+      context "with a charge filter without usage before the last period" do
+        let(:region) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us apac]) }
+        let(:filter_created_at) { Time.zone.parse("2022-03-01") }
+        let(:apac_filter) do
+          create(:charge_filter, charge:, properties: {amount: "20"}, created_at: filter_created_at, updated_at: filter_created_at)
+        end
+
+        before do
+          create(:charge_filter_value, charge_filter: apac_filter, billable_metric_filter: region, values: ["apac"],
+            created_at: filter_created_at, updated_at: filter_created_at)
+        end
+
+        it "bills what the full scan bills, starting the filter from zero" do
+          expect(bill(march)).to eq([[{}, 18, 3]])
+
+          create_event("2022-03-25", 5, "apac", created_at: Time.zone.parse("2022-04-01T05:00:00"))
+
+          expect(bill(april)).to match_array([[{}, 38, 4], [{}, 5, 1]])
+          expect(bill(may)).to match_array([[{}, 38, 4], [{}, 9, 2]])
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
+            .with(hash_including(metered_item: have_attributes(charge_filter: apac_filter), initial_value: [], initial_period: be_present)).once
+        end
+      end
+    end
   end
 
   describe "presentation_breakdowns interaction with adjusted fees" do
