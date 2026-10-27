@@ -6,7 +6,7 @@ module X402
       DEGRADED_CALL_HEADROOM = 1_000
       MAX_ESTIMATED_CALL_COST_CENTS = 2**53 - 1
 
-      Result = BaseResult[:balance_credits, :requirements, :external_subscription_id, :sign_in_chains]
+      Result = BaseResult[:balance_credits, :requirements, :external_subscription_id, :subscription_started_at, :sign_in_chains]
 
       def initialize(organization:, params:)
         @organization = organization
@@ -31,6 +31,7 @@ module X402
         return refuse("subscription_not_active") if active_subscription.nil? && subscriptions.any?
 
         result.external_subscription_id = active_subscription&.external_id
+        result.subscription_started_at = active_subscription&.started_at
         result.balance_credits = balance_credits
 
         if active_subscription && wallet && covered?

@@ -37,6 +37,7 @@ describe Api::V1::X402::CreditPurchasesController, :premium do
           status: "settled", replayed: false, network: "eip155:84532",
           transaction_hash: "0xefad33f01282b3a8b18893a9eb0aecbc2fc210ffcfa7fda7ca79f14c8822963a",
           payer_address:, external_subscription_id: "x402_#{payer_address}_agent_api",
+          subscription_started_at: Time.zone.at(1_789_649_271).iso8601(3),
           credits_granted: "10000.0", settled_amount_cents: 1000, reconcile_after: nil
         )
       end
@@ -47,7 +48,10 @@ describe Api::V1::X402::CreditPurchasesController, :premium do
 
       it "renders the replay" do
         subject
-        expect(json[:x402_settlement]).to include(status: "settled", replayed: true, external_subscription_id: "x402_#{payer_address}_agent_api")
+        expect(json[:x402_settlement]).to include(
+          status: "settled", replayed: true, external_subscription_id: "x402_#{payer_address}_agent_api",
+          subscription_started_at: Time.zone.at(1_789_649_271).iso8601(3)
+        )
       end
     end
 
@@ -58,7 +62,7 @@ describe Api::V1::X402::CreditPurchasesController, :premium do
         subject
         expect(json[:x402_settlement]).to include(
           status: "pending", replayed: false, transaction_hash: nil, credits_granted: nil,
-          external_subscription_id: nil, reconcile_after: Time.zone.at(1_789_649_361).iso8601
+          external_subscription_id: nil, subscription_started_at: nil, reconcile_after: Time.zone.at(1_789_649_361).iso8601(3)
         )
       end
     end
