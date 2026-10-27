@@ -5238,7 +5238,7 @@ RSpec.describe Fees::ChargeService, :premium do
         it "reads no snapshot" do
           charge_subscription_service.call
 
-          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_value: nil, initial_period: nil))
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_snapshots: nil))
         end
       end
 
@@ -5250,7 +5250,7 @@ RSpec.describe Fees::ChargeService, :premium do
         it "reads no snapshot" do
           charge_subscription_service.call
 
-          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_value: nil, initial_period: nil))
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_snapshots: nil))
         end
       end
 
@@ -5263,7 +5263,7 @@ RSpec.describe Fees::ChargeService, :premium do
           charge_subscription_service.call
 
           expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
-            .with(hash_including(initial_value: [have_attributes(units: 12)]))
+            .with(hash_including(initial_snapshots: fetching(snapshots: [have_attributes(units: 12)])))
         end
       end
 
@@ -5273,7 +5273,7 @@ RSpec.describe Fees::ChargeService, :premium do
         it "reads no snapshot" do
           charge_subscription_service.call
 
-          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_value: nil, initial_period: nil))
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_snapshots: nil))
         end
       end
     end
