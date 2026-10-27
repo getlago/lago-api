@@ -68,6 +68,17 @@ RSpec.describe Api::V1::CustomersController do
       end
     end
 
+    context "with a payment_term whose days exceed 365" do
+      before { create_params[:payment_term] = {term_type: "net_end_of_month", days: 10**12} }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details][:payment_term]).to eq(["invalid_days"])
+      end
+    end
+
     context "with a payment_term sent as an array of objects" do
       before { create_params[:payment_term] = [{term_type: "net", days: 30}] }
 
