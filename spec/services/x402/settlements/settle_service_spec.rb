@@ -6,7 +6,7 @@ describe X402::Settlements::SettleService do
   include_context "with an x402 payment"
 
   describe "#call" do
-    subject(:result) { described_class.call(verified_payment:, kind:, invoice:, purchase_settings:) }
+    subject(:result) { described_class.call(verified_payment:, kind:, invoice:, purchase_settings:, request_key_digest:) }
 
     let(:payment) { x402_evm_payment }
     let(:payment_requirements) { x402_evm_requirements }
@@ -25,6 +25,7 @@ describe X402::Settlements::SettleService do
     let(:kind) { :credit_purchase }
     let(:invoice) { nil }
     let(:purchase_settings) { {"plan_code" => "agent_api", "wallet_code" => "agent_credits"} }
+    let(:request_key_digest) { nil }
     let(:fault) { nil }
     let(:other_connection) { create(:x402_connection, organization:) }
     let(:settlement) { result.settlement.reload }
@@ -130,6 +131,14 @@ describe X402::Settlements::SettleService do
 
       it "stores the exchange in the payload" do
         expect(settlement.payload.keys).to match_array(%w[payment payment_requirements verify_response settle_response])
+      end
+
+      context "with a request key digest" do
+        let(:request_key_digest) { X402::Settlement.request_key_digest("agent-request-0001") }
+
+        it "stores the digest in the payload" do
+          expect(settlement.payload["request_key_digest"]).to eq(request_key_digest)
+        end
       end
 
       it "requests /settle once with the original objects" do

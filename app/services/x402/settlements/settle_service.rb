@@ -13,11 +13,12 @@ module X402
         "index_x402_settlements_on_pending_invoice_id" => "invoice_payment_pending"
       }.freeze
 
-      def initialize(verified_payment:, kind:, invoice: nil, purchase_settings: nil)
+      def initialize(verified_payment:, kind:, invoice: nil, purchase_settings: nil, request_key_digest: nil)
         @verified_payment = verified_payment
         @kind = kind
         @invoice = invoice
         @purchase_settings = purchase_settings
+        @request_key_digest = request_key_digest
 
         super
       end
@@ -38,7 +39,7 @@ module X402
 
       private
 
-      attr_reader :verified_payment, :kind, :invoice, :purchase_settings
+      attr_reader :verified_payment, :kind, :invoice, :purchase_settings, :request_key_digest
 
       delegate :connection, :network, :asset, to: :verified_payment, private: true
 
@@ -81,8 +82,9 @@ module X402
           payload: {
             "payment" => verified_payment.payment,
             "payment_requirements" => verified_payment.payment_requirements,
-            "verify_response" => verified_payment.verify_response
-          }
+            "verify_response" => verified_payment.verify_response,
+            "request_key_digest" => request_key_digest
+          }.compact
         )
       rescue ActiveRecord::RecordInvalid => e
         result.record_validation_failure!(record: e.record)

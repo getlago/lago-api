@@ -273,6 +273,40 @@ describe X402::Settlement do
     end
   end
 
+  describe ".request_key_digest" do
+    it "returns the key's SHA-256" do
+      expect(described_class.request_key_digest("agent-request-0001")).to eq(OpenSSL::Digest::SHA256.hexdigest("agent-request-0001"))
+    end
+
+    it "returns nil without a key" do
+      expect(described_class.request_key_digest(nil)).to be_nil
+    end
+  end
+
+  describe "#same_request?" do
+    subject(:settlement) { build(:x402_settlement, request_key: "agent-request-0001") }
+
+    it "matches the digest of the key that made the row" do
+      expect(settlement.same_request?(described_class.request_key_digest("agent-request-0001"))).to be(true)
+    end
+
+    it "refuses the digest of another key" do
+      expect(settlement.same_request?(described_class.request_key_digest("agent-request-0002"))).to be(false)
+    end
+
+    it "refuses a request without a key" do
+      expect(settlement.same_request?(nil)).to be(false)
+    end
+
+    context "without a stored key" do
+      subject(:settlement) { build(:x402_settlement) }
+
+      it "refuses every request" do
+        expect(settlement.same_request?(described_class.request_key_digest("agent-request-0001"))).to be(false)
+      end
+    end
+  end
+
   describe "check constraints" do
     subject(:insert) { settlement.save(validate: false) }
 

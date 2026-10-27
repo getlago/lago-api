@@ -36,6 +36,16 @@ module X402
     scope :pending_reconciliation, -> { pending.where(reconcile_after: ..Time.current) }
     scope :grant_retry_due, -> { credit_purchase.settled.where(wallet_transaction_id: nil, updated_at: ..GRANT_RETRY_DELAY.ago) }
 
+    def self.request_key_digest(key)
+      OpenSSL::Digest::SHA256.hexdigest(key) if key
+    end
+
+    def same_request?(request_key_digest)
+      stored = payload["request_key_digest"]
+
+      stored.is_a?(String) && request_key_digest.is_a?(String) && ActiveSupport::SecurityUtils.secure_compare(stored, request_key_digest)
+    end
+
     private
 
     def family
