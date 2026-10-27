@@ -5158,6 +5158,59 @@ RSpec.describe Fees::ChargeService, :premium do
           expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_value: nil, initial_period: nil))
         end
       end
+
+      context "with a billing segment of the charge's product" do
+        let(:rate_card) { create(:rate_card, organization:, product: create(:product, organization:, billable_metric:, charge:)) }
+        let(:contract) { create(:contract, organization:, customer:) }
+        let(:billing_segment) do
+          create(:billing_segment, organization:, customer:, contract:,
+            contract_rate_card: create(:contract_rate_card, organization:, contract:, rate_card:),
+            rate_card_rate: create(:rate_card_rate, organization:, rate_card:),
+            cycle_started_at: boundaries.charges_from_datetime, started_at: boundaries.charges_from_datetime,
+            ended_at: boundaries.charges_to_datetime)
+        end
+        let(:metered_item) { described_class::MeteredItem.from_billing_segment(billing_segment:) }
+
+        it "reads no snapshot" do
+          charge_subscription_service.call
+
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_value: nil, initial_period: nil))
+        end
+      end
+
+      context "with a contract billing context" do
+        let(:billing_context) { Billing::Context.from(contract: create(:contract, organization:, customer:)) }
+        let(:invoice) { nil }
+        let(:options) { described_class::Options.new(context: :current_usage, skip_adjusted_fees: true) }
+
+        it "reads no snapshot" do
+          charge_subscription_service.call
+
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_value: nil, initial_period: nil))
+        end
+      end
+
+      context "with a prorated charge" do
+        let(:charge) do
+          create(:standard_charge, plan: subscription.plan, billable_metric:, prorated: true, properties: {amount: "20"})
+        end
+
+        it "reads no snapshot" do
+          charge_subscription_service.call
+
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_value: nil, initial_period: nil))
+        end
+      end
+
+      context "with a recurring unique count billable metric" do
+        let(:billable_metric) { create(:unique_count_billable_metric, :recurring, organization:, field_name: "value") }
+
+        it "reads no snapshot" do
+          charge_subscription_service.call
+
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_value: nil, initial_period: nil))
+        end
+      end
     end
   end
 
