@@ -349,6 +349,20 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
         end
       end
 
+      context "with an archived entity using the same code" do
+        let(:archived_entity) { create(:billing_entity, :archived, organization:, code: "entity.eu") }
+
+        before { archived_entity }
+
+        it "updates the active entity" do
+          expect { request }.not_to change { archived_entity.reload.attributes }
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:billing_entity][:lago_id]).to eq(billing_entity.id)
+          expect(billing_entity.reload.name).to eq("Updated")
+        end
+      end
+
       context "with a missing entity" do
         let(:billing_entity) { build_stubbed(:billing_entity) }
 
@@ -567,6 +581,17 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
       expect(json[:billing_entity][:created_at]).to eq(billing_entity.created_at.iso8601(6))
       expect(json[:billing_entity][:updated_at]).to eq(billing_entity.updated_at.iso8601(6))
       expect(json[:billing_entity][:deleted_at]).to be_nil
+    end
+
+    context "with an archived entity using the same code" do
+      before { create(:billing_entity, :archived, organization:, code: "entity.eu") }
+
+      it "returns the active entity" do
+        request
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:billing_entity][:lago_id]).to eq(billing_entity.id)
+      end
     end
 
     context "with expansions" do
