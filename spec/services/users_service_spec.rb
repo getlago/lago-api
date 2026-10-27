@@ -100,11 +100,12 @@ RSpec.describe UsersService do
         ENV["LAGO_DISABLE_SIGNUP"] = nil
       end
 
-      it "returns a not allowed error" do
+      it "returns a forbidden error" do
         result = described_class.call(:register, "email", "password", "organization_name")
 
         expect(result).not_to be_success
-        expect(result.error.message).to eq("signup_disabled")
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("signup_disabled")
       end
 
       it_behaves_like "does not produce a security log" do
