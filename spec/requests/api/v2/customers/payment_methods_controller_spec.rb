@@ -109,7 +109,9 @@ RSpec.describe Api::V2::Customers::PaymentMethodsController do
   end
 
   describe "DELETE /api/v2/customers/:external_id/payment_methods/:id" do
-    subject { delete_with_token(organization, "#{customer_path}/payment_methods/#{payment_method.id}") }
+    subject { delete_with_token(organization, "#{customer_path}/payment_methods/#{payment_method_id}") }
+
+    let(:payment_method_id) { payment_method.id }
 
     include_examples "requires API permission", "payment_method", "write"
 
@@ -120,6 +122,18 @@ RSpec.describe Api::V2::Customers::PaymentMethodsController do
       expect(json[:payment_method][:lago_id]).to eq(payment_method.id)
       expect(json[:payment_method][:deleted_at]).to be_present
       expect(payment_method.reload).to be_discarded
+    end
+
+    context "with a payment method of another customer" do
+      let(:other_payment_method) { create(:payment_method, organization:, customer: create(:customer, organization:)) }
+      let(:payment_method_id) { other_payment_method.id }
+
+      it "returns a not found error and keeps it" do
+        subject
+
+        expect(response).to be_not_found_error("payment_method")
+        expect(other_payment_method.reload).not_to be_discarded
+      end
     end
   end
 end

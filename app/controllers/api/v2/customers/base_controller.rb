@@ -8,11 +8,12 @@ module Api
 
         private
 
-        attr_reader :customer
-
         def find_customer
-          @customer = current_organization.customers.find_by(external_id: params[:customer_external_id])
           not_found_error(resource: "customer") unless customer
+        end
+
+        def customer
+          @customer ||= current_organization.customers.find_by(external_id: params[:customer_external_id])
         end
       end
     end

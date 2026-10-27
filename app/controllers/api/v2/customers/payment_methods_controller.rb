@@ -22,9 +22,10 @@ module Api
         end
 
         def destroy
-          result = ::PaymentMethods::DestroyService.call(
-            payment_method: customer.payment_methods.find_by(id: params[:id])
-          )
+          payment_method = customer.payment_methods.find_by(id: params[:id])
+          return not_found_error(resource: "payment_method") unless payment_method
+
+          result = ::PaymentMethods::DestroyService.call(payment_method:)
 
           if result.success?
             render_payment_method(result.payment_method)
