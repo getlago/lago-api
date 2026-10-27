@@ -293,6 +293,23 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
 
         expect(result.aggregations.map { totals(it) }).to eq([[{"region" => "eu"}, 7 + 20, 2, 7 + 20, 2]])
       end
+
+      context "with a missing and a blank group value in the period" do
+        before do
+          create_event(timestamp: periods.second.begin + 3.days, value: 5, region: nil)
+          create_event(timestamp: periods.second.begin + 4.days, value: 3, region: " ")
+        end
+
+        it "counts both in the null group" do
+          result = aggregate(periods.second, initial_value: [], initial_period: closed(periods.first))
+          null_groups = result.aggregations.select { it.grouped_by == {"region" => nil} }
+          full_scan_null_groups = aggregate(periods.second, initial_value: nil).aggregations.select { it.grouped_by == {"region" => nil} }
+
+          expect(full_scan_null_groups.sum(&:aggregation)).to eq(8)
+          expect(null_groups.sum(&:aggregation)).to eq(8)
+          expect(null_groups.sum(&:count)).to eq(2)
+        end
+      end
     end
 
     context "when the charge is paid in advance" do
