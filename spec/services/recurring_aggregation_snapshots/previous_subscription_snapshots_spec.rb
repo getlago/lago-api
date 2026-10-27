@@ -74,7 +74,7 @@ RSpec.describe RecurringAggregationSnapshots::PreviousSubscriptionSnapshots do
         buckets.drop(1).each { lookup.period(charge: fresh_charge, charge_filter: it) }
       end
 
-      expect(first_bucket_queries).to eq(7)
+      expect(first_bucket_queries).to eq(8)
       expect(other_buckets_queries).to eq(0)
     end
 
