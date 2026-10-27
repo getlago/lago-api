@@ -170,9 +170,11 @@ class Invoice < ApplicationRecord
       .distinct
   }
 
+  # A correlated EXISTS, so that a list only probes the fees of the invoices it walks: an
+  # `IN` under the `OR` would read the catalog fees of every organization.
   scope :product_catalog, -> {
     where(invoice_type: :contract)
-      .or(where(id: Fee.where.not(contract_id: nil).select(:invoice_id)))
+      .or(where(Fee.where(Fee.arel_table[:invoice_id].eq(arel_table[:id])).where.not(contract_id: nil).arel.exists))
   }
 
   scope :self_billed, -> { where(self_billed: true) }
