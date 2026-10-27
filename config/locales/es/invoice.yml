@@ -70,7 +70,7 @@ es:
     paid_tax_invoice: Factura fiscal pagada
     pay_with_bank_transfer: Paga con transferencia bancaria
     payment_due_date: Fecha de vencimiento
-    payment_term: Plazo de pago neto
+    payment_term: Plazo de pago
     payment_terms:
       day_of_month:
         following_month: Pago el día %{day} del mes siguiente
