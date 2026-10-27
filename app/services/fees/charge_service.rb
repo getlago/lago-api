@@ -641,9 +641,11 @@ module Fees
       SNAPSHOT_AGGREGATION_TYPES.include?(selected_metered_item.billable_metric.aggregation_type)
     end
 
-    # Fetched once the aggregation reads them: a fee served from the cache or the usage buckets needs none
+    # Fetched once the aggregation reads them: a fee served from the cache or the usage buckets needs none.
+    # Usage filtered by group narrows the events read, but snapshots hold every group's units.
     def recurring_initial_snapshots(selected_metered_item)
       return unless selected_metered_item.billable_metric.recurring? && snapshot_eligible?(selected_metered_item)
+      return if options.usage_filters.filter_by_group.present?
 
       if RecurringAggregationSnapshots.read_enabled?(billing_context.organization)
         from_datetime = selected_metered_item.boundaries.charges_from_datetime

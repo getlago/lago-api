@@ -5160,6 +5160,18 @@ RSpec.describe Fees::ChargeService, :premium do
         end
       end
 
+      context "when current usage is filtered by group" do
+        let(:options) do
+          described_class::Options.new(context: :current_usage, apply_taxes:, usage_filters: UsageFilters.new(filter_by_group: {"region" => ["eu"]}))
+        end
+
+        it "falls back to a full scan" do
+          charge_subscription_service.call
+
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_snapshots: nil))
+        end
+      end
+
       context "without a snapshot before the period" do
         let(:previous_to_datetime) { boundaries.charges_from_datetime }
 
