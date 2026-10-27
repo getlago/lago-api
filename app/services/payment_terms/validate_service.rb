@@ -20,10 +20,11 @@ module PaymentTerms
 
     private
 
+    # Both fields sent: they must describe the same term, a null on either side included.
     def valid_alias_equivalence?
-      return true if payment_term.nil? || args[:net_payment_term].nil?
+      return true unless args.key?(:payment_term) && args.key?(:net_payment_term)
 
-      alias_value = PaymentTerm.from_h(payment_term).net_payment_term_alias
+      alias_value = payment_term && PaymentTerm.from_h(payment_term).net_payment_term_alias
       if alias_value != args[:net_payment_term]
         add_error(field: :payment_term, error_code: "conflicting_net_payment_term")
       else
