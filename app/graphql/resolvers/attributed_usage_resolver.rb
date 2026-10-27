@@ -46,7 +46,7 @@ module Resolvers
         to_datetime:,
         charges:,
         split_charge:,
-        split_filters_offset:,
+        split_filters_offset: split_filters_offset || 0,
         search: search_term,
         basis:,
         limit:,

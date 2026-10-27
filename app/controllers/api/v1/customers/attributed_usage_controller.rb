@@ -73,7 +73,7 @@ module Api
         end
 
         def split_filters_offset
-          params[:split_filters_offset].blank? ? 0 : Integer(params[:split_filters_offset], exception: false)
+          params[:split_filters_offset].blank? ? 0 : Integer(params[:split_filters_offset].to_s, 10, exception: false)
         end
 
         def default_page_size

@@ -576,6 +576,14 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
         expect(split_cells(result.totals)).to eq([[nil, 100]])
       end
     end
+
+    context "with an offset above the maximum" do
+      let(:split_filters_offset) { 100_000_000_000_000_000_000 }
+
+      it "returns a validation failure" do
+        expect(result.error.messages).to eq(split_filters_offset: ["value_is_out_of_range"])
+      end
+    end
   end
 
   context "with a split charge outside the plan" do

@@ -173,6 +173,18 @@ RSpec.describe Resolvers::AttributedUsageResolver, clickhouse: {clean_before: tr
         expect(cells.map { [it["chargeFilter"], it["units"]] }).to eq([[nil, 500.0]])
       end
     end
+
+    context "with an explicit null offset" do
+      let(:variables) do
+        {subscriptionId: subscription.id, groupBy: "team", chargeIds: [tokens_charge.id], splitChargeId: tokens_charge.id, splitFiltersOffset: nil}
+      end
+
+      it "returns the first filters" do
+        cells = attributed_usage["rows"].find { it["value"] == "eng" }["chargesUsage"]
+
+        expect(cells.map { [it["chargeFilter"]&.dig("id"), it["units"]] }).to eq([[charge_filter.id, 1000.0], [nil, 500.0]])
+      end
+    end
   end
 
   context "with filters" do

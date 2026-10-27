@@ -16,6 +16,8 @@ module UsageAttributions
     MAX_FILTER_VALUES = 20
     MAX_FLAT_FILTERS = 3
     SPLIT_FILTERS_PER_PAGE = 10
+    # A charge cannot list more filters than its price lookup holds entries.
+    MAX_SPLIT_FILTERS_OFFSET = ChargePriceLookupService::MAX_ENTRIES
     MAX_SEARCH_LENGTH = 100
     MAX_CUSTOM_WINDOW = 31.days
     MAX_GROUPS = 250_000
@@ -115,7 +117,7 @@ module UsageAttributions
         order_by: order_by_errors,
         charges: charges_errors,
         split_charge: split_charge_errors,
-        split_filters_offset: (["value_is_out_of_range"] unless split_filters_offset.is_a?(Integer) && split_filters_offset >= 0)
+        split_filters_offset: (["value_is_out_of_range"] unless split_filters_offset.is_a?(Integer) && split_filters_offset.between?(0, MAX_SPLIT_FILTERS_OFFSET))
       }.compact_blank
     end
 
