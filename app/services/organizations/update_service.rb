@@ -31,8 +31,8 @@ module Organizations
       organization.finalize_zero_amount_invoice = params[:finalize_zero_amount_invoice] if params.key?(:finalize_zero_amount_invoice)
       organization.net_payment_term = params[:net_payment_term] if params.key?(:net_payment_term)
       organization.document_numbering = params[:document_numbering] if params.key?(:document_numbering)
-      if params.key?(:customer_portal_editable_fields)
-        organization.customer_portal_editable_fields = params[:customer_portal_editable_fields]&.uniq
+      if params.key?(:customer_portal_locked_fields)
+        organization.customer_portal_locked_fields = params[:customer_portal_locked_fields]&.uniq
       end
       if params.key?(:authentication_methods)
         deletions = organization.authentication_methods - params[:authentication_methods]

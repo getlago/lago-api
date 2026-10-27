@@ -32,7 +32,7 @@ module Types
       argument :document_numbering, Types::Organizations::DocumentNumberingEnum, required: false
 
       argument :billing_configuration, Types::Organizations::BillingConfigurationInput, required: false, permission: "organization:invoices:update"
-      argument :customer_portal_editable_fields, [Types::Organizations::CustomerPortalEditableFieldEnum], required: false, permission: "organization:taxes:update"
+      argument :customer_portal_locked_fields, [Types::Organizations::CustomerPortalFieldEnum], required: false, permission: "organization:taxes:update"
       argument :email_settings, [Types::Organizations::EmailSettingsEnum], required: false, permission: "organization:emails:update"
       argument :finalize_zero_amount_invoice, Boolean, required: false
     end

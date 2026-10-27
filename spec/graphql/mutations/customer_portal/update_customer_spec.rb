@@ -80,7 +80,7 @@ RSpec.describe Mutations::CustomerPortal::UpdateCustomer do
   end
 
   before do
-    organization.update!(customer_portal_editable_fields: Organization::CUSTOMER_PORTAL_EDITABLE_FIELDS)
+    organization.update!(customer_portal_locked_fields: [])
   end
 
   it_behaves_like "requires a customer portal user"
@@ -144,7 +144,7 @@ RSpec.describe Mutations::CustomerPortal::UpdateCustomer do
     let(:input) { {name: "Updated customer name", country: "US"} }
 
     before do
-      organization.update!(customer_portal_editable_fields: Organization::DEFAULT_CUSTOMER_PORTAL_EDITABLE_FIELDS)
+      organization.update!(customer_portal_locked_fields: Organization::DEFAULT_CUSTOMER_PORTAL_LOCKED_FIELDS)
     end
 
     it "returns a validation error and does not update the customer" do

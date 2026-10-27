@@ -101,12 +101,12 @@ module CustomerPortal
 
     def locked_fields
       @locked_fields ||= begin
-        editable_fields = customer.organization.customer_portal_editable_fields
-        args.keys.reject { |field| editable_fields.include?(field.to_s) }
+        organization_locked_fields = customer.organization.customer_portal_locked_fields
+        args.keys.select { |field| organization_locked_fields.include?(field.to_s) }
       end
     end
 
-    # NOTE: Portal versions released before the editable fields setting send the whole form,
+    # NOTE: Portal versions released before the locked fields setting send the whole form,
     #       so a locked field sent with its current value is ignored and only an actual change is refused.
     def locked_fields_errors
       @locked_fields_errors ||= locked_fields

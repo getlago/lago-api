@@ -35,7 +35,7 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
   end
 
   before do
-    customer&.organization&.update!(customer_portal_editable_fields: Organization::CUSTOMER_PORTAL_EDITABLE_FIELDS)
+    customer&.organization&.update!(customer_portal_locked_fields: [])
   end
 
   it "updates the customer" do
@@ -212,9 +212,9 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
     end
   end
 
-  context "with the default editable fields" do
+  context "with the default locked fields" do
     before do
-      customer.organization.update!(customer_portal_editable_fields: Organization::DEFAULT_CUSTOMER_PORTAL_EDITABLE_FIELDS)
+      customer.organization.update!(customer_portal_locked_fields: Organization::DEFAULT_CUSTOMER_PORTAL_LOCKED_FIELDS)
       customer.update!(country: "FR", zipcode: "75001", tax_identification_number: nil)
     end
 
@@ -274,7 +274,7 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
       before do
         customer.update!(shipping_city: "Lyon", shipping_country: "FR")
         customer.organization.update!(
-          customer_portal_editable_fields: Organization::DEFAULT_CUSTOMER_PORTAL_EDITABLE_FIELDS - ["shipping_address"]
+          customer_portal_locked_fields: Organization::DEFAULT_CUSTOMER_PORTAL_LOCKED_FIELDS + ["shipping_address"]
         )
       end
 
@@ -290,7 +290,7 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
       before do
         customer.update!(shipping_city: "Lyon")
         customer.organization.update!(
-          customer_portal_editable_fields: Organization::DEFAULT_CUSTOMER_PORTAL_EDITABLE_FIELDS - ["shipping_address"]
+          customer_portal_locked_fields: Organization::DEFAULT_CUSTOMER_PORTAL_LOCKED_FIELDS + ["shipping_address"]
         )
       end
 
@@ -320,7 +320,7 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
     let(:update_args) { {country: "US", zipcode: "10001"} }
 
     before do
-      organization.update!(customer_portal_editable_fields: Organization::DEFAULT_CUSTOMER_PORTAL_EDITABLE_FIELDS)
+      organization.update!(customer_portal_locked_fields: Organization::DEFAULT_CUSTOMER_PORTAL_LOCKED_FIELDS)
       create(:customer_applied_tax, customer:, tax: fr_tax)
       allow(Customers::EuAutoTaxesService).to receive(:call).and_call_original
     end

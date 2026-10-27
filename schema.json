@@ -23834,7 +23834,7 @@
               "deprecationReason": null
             },
             {
-              "name": "customerPortalEditableFields",
+              "name": "customerPortalLockedFields",
               "description": null,
               "args": [],
               "type": {
@@ -23848,7 +23848,7 @@
                     "name": null,
                     "ofType": {
                       "kind": "ENUM",
-                      "name": "CustomerPortalEditableFieldEnum",
+                      "name": "CustomerPortalFieldEnum",
                       "ofType": null
                     }
                   }
@@ -26525,8 +26525,8 @@
         },
         {
           "kind": "ENUM",
-          "name": "CustomerPortalEditableFieldEnum",
-          "description": "Customer fields that can be edited from the customer portal",
+          "name": "CustomerPortalFieldEnum",
+          "description": "Customer fields that can be sent from the customer portal",
           "fields": null,
           "inputFields": null,
           "interfaces": null,
@@ -26642,7 +26642,7 @@
               "deprecationReason": null
             },
             {
-              "name": "customerPortalEditableFields",
+              "name": "customerPortalLockedFields",
               "description": null,
               "args": [],
               "type": {
@@ -26656,7 +26656,7 @@
                     "name": null,
                     "ofType": {
                       "kind": "ENUM",
-                      "name": "CustomerPortalEditableFieldEnum",
+                      "name": "CustomerPortalFieldEnum",
                       "ofType": null
                     }
                   }
@@ -88076,7 +88076,7 @@
               "deprecationReason": null
             },
             {
-              "name": "customerPortalEditableFields",
+              "name": "customerPortalLockedFields",
               "description": null,
               "type": {
                 "kind": "LIST",
@@ -88086,7 +88086,7 @@
                   "name": null,
                   "ofType": {
                     "kind": "ENUM",
-                    "name": "CustomerPortalEditableFieldEnum",
+                    "name": "CustomerPortalFieldEnum",
                     "ofType": null
                   }
                 }

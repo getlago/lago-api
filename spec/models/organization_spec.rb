@@ -189,16 +189,16 @@ RSpec.describe Organization do
       expect(organization.errors.first.type).to eq(:unsupported_value)
     end
 
-    it "keeps the tax determining fields out of the default customer portal editable fields" do
-      expect(described_class.new.customer_portal_editable_fields).to match_array(described_class::DEFAULT_CUSTOMER_PORTAL_EDITABLE_FIELDS)
-      expect(described_class::DEFAULT_CUSTOMER_PORTAL_EDITABLE_FIELDS).not_to include("country", "zipcode", "tax_identification_number")
+    it "locks the tax determining fields in the customer portal by default" do
+      expect(described_class.new.customer_portal_locked_fields).to match_array(described_class::DEFAULT_CUSTOMER_PORTAL_LOCKED_FIELDS)
+      expect(described_class::DEFAULT_CUSTOMER_PORTAL_LOCKED_FIELDS).to match_array(%w[country zipcode tax_identification_number])
     end
 
-    it "is invalid with non permitted customer_portal_editable_fields value" do
-      organization.customer_portal_editable_fields = ["currency"]
+    it "is invalid with non permitted customer_portal_locked_fields value" do
+      organization.customer_portal_locked_fields = ["currency"]
 
       expect(organization).not_to be_valid
-      expect(organization.errors.first.attribute).to eq(:customer_portal_editable_fields)
+      expect(organization.errors.first.attribute).to eq(:customer_portal_locked_fields)
       expect(organization.errors.first.type).to eq(:unsupported_value)
     end
 

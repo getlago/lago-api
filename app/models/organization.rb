@@ -16,7 +16,9 @@ class Organization < ApplicationRecord
     "payment_receipt.created"
   ].freeze
 
-  CUSTOMER_PORTAL_EDITABLE_FIELDS = %w[
+  # NOTE: Every field a customer can send from the customer portal. A spec checks it matches the portal update
+  #       input, so a new portal field has to be added here, and its default lock decided, before it ships.
+  CUSTOMER_PORTAL_FIELDS = %w[
     customer_type
     document_locale
     email
@@ -35,9 +37,8 @@ class Organization < ApplicationRecord
   ].freeze
 
   # NOTE: Country, zipcode and tax identification number drive the EU tax rate applied to the customer,
-  #       so they stay merchant owned unless the organization explicitly opens them in the customer portal.
-  CUSTOMER_PORTAL_TAX_FIELDS = %w[country tax_identification_number zipcode].freeze
-  DEFAULT_CUSTOMER_PORTAL_EDITABLE_FIELDS = (CUSTOMER_PORTAL_EDITABLE_FIELDS - CUSTOMER_PORTAL_TAX_FIELDS).freeze
+  #       so they stay merchant owned unless the organization explicitly unlocks them in the customer portal.
+  DEFAULT_CUSTOMER_PORTAL_LOCKED_FIELDS = %w[country tax_identification_number zipcode].freeze
 
   MULTI_ENTITIES_MAX = {
     default: 1,
@@ -223,7 +224,7 @@ class Organization < ApplicationRecord
 
   validate :validate_premium_integrations
   validate :validate_email_settings
-  validate :validate_customer_portal_editable_fields
+  validate :validate_customer_portal_locked_fields
 
   normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
 
@@ -353,11 +354,11 @@ class Organization < ApplicationRecord
     errors.add(:email_settings, :unsupported_value)
   end
 
-  def validate_customer_portal_editable_fields
-    return errors.add(:customer_portal_editable_fields, "value_is_mandatory") if customer_portal_editable_fields.nil?
-    return if customer_portal_editable_fields.all? { |v| CUSTOMER_PORTAL_EDITABLE_FIELDS.include?(v) }
+  def validate_customer_portal_locked_fields
+    return errors.add(:customer_portal_locked_fields, "value_is_mandatory") if customer_portal_locked_fields.nil?
+    return if customer_portal_locked_fields.all? { |v| CUSTOMER_PORTAL_FIELDS.include?(v) }
 
-    errors.add(:customer_portal_editable_fields, :unsupported_value)
+    errors.add(:customer_portal_locked_fields, :unsupported_value)
   end
 
   def validate_premium_integrations
@@ -397,7 +398,7 @@ end
 #  clickhouse_events_store          :boolean          default(FALSE), not null
 #  country                          :string
 #  custom_aggregation               :boolean          default(FALSE)
-#  customer_portal_editable_fields  :string           default(["customer_type", "document_locale", "email", "firstname", "lastname", "legal_name", "name", "address_line1", "address_line2", "city", "state", "shipping_address"]), not null, is an Array
+#  customer_portal_locked_fields    :string           default(["country", "zipcode", "tax_identification_number"]), not null, is an Array
 #  default_currency                 :string           default("USD"), not null
 #  document_locale                  :string           default("en"), not null
 #  document_number_prefix           :string
