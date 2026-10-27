@@ -269,7 +269,10 @@ module BillableMetrics
 
       def persisted_grouped_prorated_results
         @persisted_grouped_prorated_results ||= if grouped_recurring_sum_result
-          current_results = current_grouped_prorated_results.index_by(&:groups)
+          # Blank values ("" and " ") come as one row each but form one null group with the recurring sum
+          current_results = current_grouped_prorated_results.group_by(&:groups).transform_values do |results|
+            Events::Stores::BaseStore::AggregationResult.new(value: results.sum { it.value || 0 }, events_count: results.sum { it.events_count || 0 })
+          end
 
           grouped_recurring_sum_result.map do |recurring|
             Events::Stores::BaseStore::GroupedProratedAggregationResult.new(

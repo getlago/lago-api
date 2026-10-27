@@ -266,6 +266,25 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
             .to eq([[{"region" => nil}, 0, 0], [{"region" => nil}, 0, 0]])
         end
       end
+
+      context "with a missing and a blank group value in the period" do
+        before do
+          create_event(timestamp: periods.first.begin + 3.days, value: 5, region: nil)
+          create_event(timestamp: periods.second.begin + 10.days, value: 2, region: nil)
+          create_event(timestamp: periods.second.begin + 10.days, value: 3, region: " ")
+        end
+
+        it "prorates both in the null group" do
+          initial_value = snapshots(periods.first, aggregate(periods.first, initial_value: nil).aggregations)
+
+          result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first))
+          null_group = result.aggregations.find { it.grouped_by == {"region" => nil} }
+          legacy_null_group = legacy_aggregate(periods.second).aggregations.find { it.grouped_by == {"region" => nil} }
+
+          expect(totals(null_group)).to eq(totals(legacy_null_group))
+          expect([null_group.recurring_units, null_group.recurring_events_count]).to eq([10, 3])
+        end
+      end
     end
 
     context "when the charge is paid in advance" do
