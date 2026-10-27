@@ -76,6 +76,8 @@ module BillableMetrics
         result.service_failure!(code: "aggregation_failure", message: e.message)
       end
 
+      # With a snapshot period: stored units plus the events they missed. Otherwise invoicing scans
+      # the whole history to persist a first snapshot, and other reads fall back to the plain sum (nil).
       def recurring_sum(options)
         return unless billable_metric.recurring?
 
@@ -87,17 +89,26 @@ module BillableMetrics
         end
       end
 
-      # A group only in the snapshot saw no event since: it keeps its units.
+      # Same reads per group, joined on grouped_by: a snapshot group without new events keeps its units,
+      # and a group first seen in the delta starts from zero.
       def grouped_recurring_sum(options)
         return unless billable_metric.recurring?
 
         if (period = delta_period(options))
           deltas = event_store.grouped_recurring_sum(watermark: delta_watermark(options), period:).index_by(&:groups)
-
-          initial_value.map { with_snapshot(deltas.delete(it.grouped_by) || empty_grouped_delta(it.grouped_by), it) } + deltas.values
+          with_grouped_snapshots(deltas)
         elsif options[:recurring_watermark]
           event_store.grouped_recurring_sum(watermark: options[:recurring_watermark])
         end
+      end
+
+      def with_grouped_snapshots(deltas)
+        snapshot_groups = initial_value.map do |snapshot|
+          delta = deltas[snapshot.grouped_by] || empty_grouped_delta(snapshot.grouped_by)
+          with_snapshot(delta, snapshot)
+        end
+
+        snapshot_groups + deltas.except(*initial_value.map(&:grouped_by)).values
       end
 
       def snapshot_units?(options)
