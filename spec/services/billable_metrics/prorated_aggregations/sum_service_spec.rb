@@ -254,6 +254,18 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
           initial_value, initial_period = snapshots(period, from_snapshot.aggregations), closed(period)
         end
       end
+
+      context "with a filter matching no event" do
+        let(:matching_filters) { {"region" => ["latam"]} }
+
+        it "closes the bucket at zero units" do
+          first = aggregate(periods.first, initial_value: nil)
+          second = aggregate(periods.second, initial_value: [], initial_period: closed(periods.first))
+
+          expect([first, second].flat_map(&:aggregations).map { [it.grouped_by, it.recurring_units, it.recurring_events_count] })
+            .to eq([[{"region" => nil}, 0, 0], [{"region" => nil}, 0, 0]])
+        end
+      end
     end
 
     context "when the charge is paid in advance" do

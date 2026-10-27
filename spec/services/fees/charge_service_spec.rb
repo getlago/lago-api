@@ -4997,6 +4997,27 @@ RSpec.describe Fees::ChargeService, :premium do
         end
       end
 
+      context "with pricing group keys and charge filters" do
+        let(:charge) do
+          create(:standard_charge, plan: subscription.plan, billable_metric:, prorated: true, properties: {amount: "20", pricing_group_keys: ["region"]})
+        end
+        let(:region) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
+        let(:eu_filter) { create(:charge_filter, charge:, properties: {amount: "20", pricing_group_keys: ["region"]}) }
+        let(:us_filter) { create(:charge_filter, charge:, properties: {amount: "20", pricing_group_keys: ["region"]}) }
+
+        before do
+          create(:charge_filter_value, charge_filter: eu_filter, billable_metric_filter: region, values: ["eu"])
+          create(:charge_filter_value, charge_filter: us_filter, billable_metric_filter: region, values: ["us"])
+        end
+
+        it "persists the filters with units and the buckets without events as the marker of the period" do
+          charge_subscription_service.call
+
+          expect(snapshots.pluck(:charge_filter_id, :grouped_by, :units))
+            .to match_array([[eu_filter.id, {"region" => "eu"}, 15], [nil, {"region" => nil}, 0]])
+        end
+      end
+
       context "when paid in advance" do
         let(:charge) do
           create(:standard_charge, plan: subscription.plan, billable_metric:, prorated: true, pay_in_advance: true, properties: {amount: "20"})

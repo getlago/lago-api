@@ -76,7 +76,8 @@ module BillableMetrics
         )
 
         aggregations = compute_grouped_event_aggregation
-        return empty_results if aggregations.blank?
+        # Nothing to prorate: the base result keeps the zero snapshot of the bucket
+        return aggregation_without_proration if aggregations.blank?
 
         result.aggregations = aggregations.map do |aggregation|
           aggregation_value = aggregation[:value].ceil(5)
