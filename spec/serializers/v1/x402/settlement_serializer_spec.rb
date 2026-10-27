@@ -27,14 +27,14 @@ describe V1::X402::SettlementSerializer do
   end
 
   context "with a pending purchase" do
-    let(:settlement) { build_stubbed(:x402_settlement, :pending, transaction_hash: "0x#{"cd" * 32}", reconcile_after: Time.zone.parse("2026-09-24T10:02:00Z")) }
+    let(:settlement) { build_stubbed(:x402_settlement, :pending, transaction_hash: "0x#{"cd" * 32}", reconcile_after: Time.zone.parse("2026-09-24T10:02:00.315713Z")) }
 
     it "renders no hash" do
       expect(payload["transaction_hash"]).to be_nil
     end
 
     it "renders when reconciliation runs" do
-      expect(payload["reconcile_after"]).to eq("2026-09-24T10:02:00Z")
+      expect(payload["reconcile_after"]).to eq("2026-09-24T10:02:00.315Z")
     end
 
     it "renders no grant" do

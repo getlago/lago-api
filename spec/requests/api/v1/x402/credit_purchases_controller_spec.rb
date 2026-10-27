@@ -62,7 +62,7 @@ describe Api::V1::X402::CreditPurchasesController, :premium do
         subject
         expect(json[:x402_settlement]).to include(
           status: "pending", replayed: false, transaction_hash: nil, credits_granted: nil,
-          external_subscription_id: nil, subscription_started_at: nil, reconcile_after: Time.zone.at(1_789_649_361).iso8601
+          external_subscription_id: nil, subscription_started_at: nil, reconcile_after: Time.zone.at(1_789_649_361).iso8601(3)
         )
       end
     end

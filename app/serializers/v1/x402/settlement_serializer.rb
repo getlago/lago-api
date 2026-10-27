@@ -17,7 +17,7 @@ module V1
           subscription_started_at: model.subscription&.started_at&.iso8601(3),
           credits_granted: model.wallet_transaction&.credit_amount,
           settled_amount_cents: model.settled_amount_cents,
-          reconcile_after: model.pending? ? model.reconcile_after&.iso8601 : nil
+          reconcile_after: model.pending? ? model.reconcile_after&.iso8601(3) : nil
         }
       end
     end
