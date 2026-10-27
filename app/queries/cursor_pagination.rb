@@ -18,6 +18,16 @@ module CursorPagination
   # reads their value as.
   KEY_COLUMNS = {issuing_date: :date, created_at: :time, logged_at: :time}.freeze
 
+  # The tiebreaks whose value has a type of its own. Any other tiebreak is an opaque string.
+  TIEBREAK_TYPES = {id: :uuid}.freeze
+
+  DIRECTIONS = %i[asc desc].freeze
+
+  # The type `Token` writes and reads the value of a sort column as.
+  def self.column_type(column)
+    KEY_COLUMNS.fetch(column) { TIEBREAK_TYPES.fetch(column, :string) }
+  end
+
   # Written in every cursor: a cursor minted under another sort is rejected as expired.
   def self.signature(sort)
     sort.map { |column, direction| "#{column}:#{direction}" }.join(",")
@@ -31,7 +41,7 @@ module CursorPagination
     supported = columns.any? &&
       columns.all? { KEY_COLUMNS.key?(it) } &&
       !KEY_COLUMNS.key?(tiebreak) &&
-      sort.values.all? { %i[asc desc].include?(it) }
+      sort.values.all? { DIRECTIONS.include?(it) }
 
     raise ArgumentError, "unsupported cursor sort #{sort.inspect}: columns among #{KEY_COLUMNS.keys.join(", ")}, then a unique tiebreak, each asc or desc" unless supported
   end

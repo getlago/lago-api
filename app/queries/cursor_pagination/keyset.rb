@@ -24,8 +24,9 @@ module CursorPagination
 
     # The condition, with its values, that keeps the rows past the anchor.
     def self.past_anchor(scope, cursor)
-      columns = cursor.sort.keys.map { "#{scope.quoted_table_name}.#{scope.connection.quote_column_name(it)}" }
-      operators = cursor.sort.values.map { operator(it, cursor.direction) }
+      columns, operators = cursor.sort.each_pair.map { |column, direction|
+        ["#{scope.quoted_table_name}.#{scope.connection.quote_column_name(column)}", operator(direction, cursor.direction)]
+      }.transpose
       key = bound_key(cursor.key)
 
       if operators.uniq.one?

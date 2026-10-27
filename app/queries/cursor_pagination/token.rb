@@ -76,7 +76,7 @@ module CursorPagination
     private_class_method :key
 
     def self.written_value(column, value)
-      case CursorPagination::KEY_COLUMNS[column]
+      case CursorPagination.column_type(column)
       when :date then value.iso8601
       when :time then value.utc.iso8601(6)
       else value.to_s
@@ -85,21 +85,16 @@ module CursorPagination
     private_class_method :written_value
 
     # Read back as the type the column compares with: a date stays a `Date`, so that a
-    # timestamp is never resumed in its place. Nil when the value is not of that format. An
-    # `id` must be a UUID, or Postgres would fail the comparison; another tiebreak is an
-    # opaque string.
+    # timestamp is never resumed in its place. Nil when the value is not of that format. A
+    # UUID is checked here, or Postgres would fail the comparison.
     def self.read_value(column, value)
       return unless value.is_a?(String)
 
-      case CursorPagination::KEY_COLUMNS[column]
+      case CursorPagination.column_type(column)
       when :date then Date.iso8601(value) if value.match?(DATE_FORMAT)
       when :time then Time.iso8601(value) if value.match?(TIMESTAMP_FORMAT)
-      else
-        if column == :id
-          value if value.match?(BaseQuery::UUID_REGEX)
-        elsif !value.empty? && value.bytesize <= MAX_TIEBREAK_LENGTH
-          value
-        end
+      when :uuid then value if value.match?(BaseQuery::UUID_REGEX)
+      when :string then value if !value.empty? && value.bytesize <= MAX_TIEBREAK_LENGTH
       end
     end
     private_class_method :read_value
