@@ -57,7 +57,19 @@ module Payments
       ).payment_method
 
       if payment_method.present?
-        PaymentMethods::SetAsDefaultService.call!(payment_method:, only_when_no_default: true).payment_method
+        set_as_default(payment_method)
+      end
+
+      payment_method
+    end
+
+    # A failure here (e.g. the customer payment method lock is held) only skips the default flag,
+    # so the payment is still linked, its method data stored and its receipt created.
+    def set_as_default(payment_method)
+      default_result = PaymentMethods::SetAsDefaultService.call(payment_method:, only_when_no_default: true)
+
+      if default_result.failure?
+        Rails.logger.warn("Payment method #{payment_method.id} was not set as default: #{default_result.error.message}")
       end
     end
 
