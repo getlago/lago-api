@@ -116,7 +116,9 @@ module Api
       end
 
       def find_billing_entity
-        current_organization.all_billing_entities.find_by(code: params[:code])
+        current_organization.all_billing_entities
+          .order("archived_at DESC NULLS FIRST")
+          .find_by(code: params[:code])
       end
 
       def resource_name
