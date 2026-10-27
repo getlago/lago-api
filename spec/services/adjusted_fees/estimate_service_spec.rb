@@ -613,6 +613,46 @@ RSpec.describe AdjustedFees::EstimateService do
           expect(result.fee).to have_attributes(charge_id: charge.id, units: 2, unit_amount_cents: 1000, amount_cents: 2000)
         end
       end
+
+      context "when the parent charge is discarded" do
+        before { charge.discard! }
+
+        it "prices the units with the historical charge" do
+          expect(result).to be_success
+          expect(result.fee).to have_attributes(charge_id: charge.id, units: 2, unit_amount_cents: 1000, amount_cents: 2000)
+        end
+      end
+
+      context "when creating a new fee for a charge of the child plan" do
+        let(:params) { {invoice_subscription_id: child_subscription.id, charge_id: child_charge.id, units: 2} }
+
+        it "prices the units with the child charge" do
+          expect(result.fee).not_to be_persisted
+          expect(result.fee).to have_attributes(charge_id: child_charge.id, units: 2, unit_amount_cents: 200_000, amount_cents: 400_000)
+        end
+      end
+    end
+
+    context "when the invoice is voided and the fee charge price changed on the plan" do
+      let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+      let(:charge) { create(:standard_charge, billable_metric:, plan:, properties: {amount: "25"}) }
+      let(:charge_fee) do
+        create(
+          :charge_fee,
+          invoice:,
+          subscription:,
+          charge:,
+          units: 1,
+          amount_cents: 1000,
+          unit_amount_cents: 1000,
+          precise_unit_amount: 10
+        )
+      end
+      let(:params) { {fee_id: charge_fee.id, units: 2} }
+
+      it "prices the units with the current properties of the charge" do
+        expect(result.fee).to have_attributes(charge_id: charge.id, units: 2, unit_amount_cents: 2500, amount_cents: 5000)
+      end
     end
 
     context "with presentation_breakdowns" do
