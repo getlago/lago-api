@@ -477,5 +477,26 @@ RSpec.describe EInvoices::CreditNotes::Ubl::Builder do
         end
       end
     end
+
+    context "with partially credited subscription fees" do
+      let(:subscription) { create(:subscription, customer:, plan:) }
+      let(:fee) do
+        create(:fee, invoice:, subscription:, fee_type: :subscription, units: 8,
+          amount_cents: 8000, precise_amount_cents: 8000, precise_unit_amount: 10)
+      end
+      let(:credit_note) { create(:credit_note, invoice:, total_amount_cents: 2000) }
+      let(:credit_note_item1) do
+        create(:credit_note_item, credit_note:, fee:, amount_cents: 2000, precise_amount_cents: 2000)
+      end
+      let(:credit_note_item2) { nil }
+
+      before { credit_note_item1 }
+
+      it "serializes the prorated negative quantity, original unit price and credited line total" do
+        expect(subject).to contains_xml_node("//cac:CreditNoteLine[1]/cbc:CreditedQuantity").with_value("-2.00")
+        expect(subject).to contains_xml_node("//cac:CreditNoteLine[1]/cac:Price/cbc:PriceAmount").with_value("10.0")
+        expect(subject).to contains_xml_node("//cac:CreditNoteLine[1]/cbc:LineExtensionAmount").with_value("-20.00")
+      end
+    end
   end
 end

@@ -13,7 +13,7 @@ module Invoices
     end
 
     def call
-      create_invoice
+      with_advance_state_lock { create_invoice }
       result
     end
 
@@ -91,6 +91,18 @@ module Invoices
     attr_reader :timestamp, :invoice, :metered_item, :billing_context
 
     delegate :event, to: :metered_item
+
+    # Subscription charges are not serialized yet.
+    def with_advance_state_lock(&)
+      return yield unless metered_item.billing_segment
+
+      Contracts::AdvanceStateLockService.call(
+        contract: metered_item.contract,
+        product: metered_item.invoiceable,
+        product_filter: metered_item.contract_rate_card.rate_card.product_filter,
+        &
+      )
+    end
 
     def create_generating_invoice
       invoice_result = Invoices::CreateGeneratingService.call(

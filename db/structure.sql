@@ -549,6 +549,7 @@ DROP INDEX IF EXISTS public.index_recurring_aggregation_snapshots_on_organizatio
 DROP INDEX IF EXISTS public.index_recurring_aggregation_snapshots_on_charge_id;
 DROP INDEX IF EXISTS public.index_recurring_aggregation_snapshots_on_charge_filter_id;
 DROP INDEX IF EXISTS public.index_recurring_aggregation_snapshots_on_billable_metric_id;
+DROP INDEX IF EXISTS public.index_recurring_aggregation_snapshots_by_period;
 DROP INDEX IF EXISTS public.index_record_deletions_on_updated_at;
 DROP INDEX IF EXISTS public.index_record_deletions_on_organization_id_and_deleted_at;
 DROP INDEX IF EXISTS public.index_record_deletions_on_deleted_at;
@@ -1482,6 +1483,7 @@ DROP TYPE IF EXISTS public.x402_settlement_settled_by;
 DROP TYPE IF EXISTS public.x402_settlement_kind;
 DROP TYPE IF EXISTS public.x402_facilitator;
 DROP TYPE IF EXISTS public.x402_asset;
+DROP TYPE IF EXISTS public.usage_monitoring_triggered_alert_resolution_reasons;
 DROP TYPE IF EXISTS public.usage_monitoring_triggered_alert_kinds;
 DROP TYPE IF EXISTS public.usage_monitoring_alert_types;
 DROP TYPE IF EXISTS public.usage_monitoring_alert_direction;
@@ -2080,6 +2082,17 @@ CREATE TYPE public.usage_monitoring_triggered_alert_kinds AS ENUM (
     'triggered',
     'resolved',
     'seeded'
+);
+
+
+--
+-- Name: usage_monitoring_triggered_alert_resolution_reasons; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.usage_monitoring_triggered_alert_resolution_reasons AS ENUM (
+    'recovered',
+    'threshold_updated',
+    'threshold_removed'
 );
 
 
@@ -4867,6 +4880,7 @@ CREATE TABLE public.usage_monitoring_triggered_alerts (
     kind public.usage_monitoring_triggered_alert_kinds DEFAULT 'triggered'::public.usage_monitoring_triggered_alert_kinds NOT NULL,
     in_alarm_thresholds jsonb,
     fully_resolved boolean,
+    resolution_reason public.usage_monitoring_triggered_alert_resolution_reasons,
     CONSTRAINT chk_triggered_alerts_subscription_xor_wallet CHECK (((subscription_id IS NOT NULL) <> (wallet_id IS NOT NULL)))
 );
 
@@ -11786,6 +11800,13 @@ CREATE INDEX index_record_deletions_on_updated_at ON public.record_deletions USI
 
 
 --
+-- Name: index_recurring_aggregation_snapshots_by_period; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_recurring_aggregation_snapshots_by_period ON public.recurring_aggregation_snapshots USING btree (subscription_id, charge_id, charge_filter_id, to_datetime);
+
+
+--
 -- Name: index_recurring_aggregation_snapshots_on_billable_metric_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -15932,6 +15953,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20261026150420'),
+('20261026101445'),
 ('20261023090000'),
 ('20261022090030'),
 ('20261020144205'),
@@ -15945,6 +15967,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261014123349'),
 ('20261014123348'),
 ('20261013124033'),
+('20261011162319'),
 ('20261009154629'),
 ('20261009103426'),
 ('20261008135612'),

@@ -136,6 +136,26 @@ RSpec.describe Mutations::Customers::Update do
     expect(result_data["billingEntity"]["code"]).to eq(billing_entity.code)
   end
 
+  context "when replacing the payment provider" do
+    let(:customer) { create(:customer, :with_stripe_payment_provider, organization:) }
+    let(:old_provider_customer) { customer.stripe_customer }
+    let(:payment_method) { create(:payment_method, payment_provider_customer: old_provider_customer) }
+    let(:provider) { create(:gocardless_provider, organization:) }
+    let(:input) { {id: customer.id, externalId: customer.external_id, paymentProvider: "gocardless", paymentProviderCode: provider.code} }
+
+    before { payment_method }
+
+    it "keeps the existing payment methods" do
+      result = execute_query(query: mutation, input:)
+
+      expect(result["errors"]).to be_nil
+      expect(result.dig("data", "updateCustomer", "paymentProvider")).to eq("gocardless")
+      expect(payment_method.reload).not_to be_discarded
+      expect(payment_method).to be_is_default
+      expect(old_provider_customer.reload).not_to be_discarded
+    end
+  end
+
   context "when stripe customer does not exist" do
     before do
       stripe_provider
