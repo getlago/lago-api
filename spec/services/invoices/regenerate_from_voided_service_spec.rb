@@ -626,6 +626,75 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
           expect(regenerated_fee).to have_attributes(charge_id: parent_charge.id, unit_amount_cents: 500, amount_cents: 1000)
         end
       end
+
+      context "when the fee is paid in advance" do
+        let(:original_fee) do
+          create(
+            :charge_fee,
+            invoice: original_invoice,
+            organization:,
+            subscription:,
+            charge: parent_charge,
+            pay_in_advance: true,
+            units: 1,
+            amount_cents: 1000,
+            unit_amount_cents: 1000,
+            precise_unit_amount: 10
+          )
+        end
+
+        it "prices the units with the historical parent charge" do
+          regenerated_fee = regenerate_result.invoice.fees.sole
+
+          expect(regenerated_fee).to have_attributes(
+            charge_id: parent_charge.id,
+            units: 2,
+            unit_amount_cents: 1000,
+            amount_cents: 2000
+          )
+        end
+      end
+
+      context "when the voided invoice is a progressive billing invoice" do
+        let(:original_invoice) do
+          create(
+            :invoice,
+            :voided,
+            :with_subscriptions,
+            :progressive_billing_invoice,
+            organization:,
+            customer:,
+            currency: "EUR",
+            subscriptions: [subscription]
+          )
+        end
+
+        it "prices the units with the historical parent charge" do
+          regenerated_fee = regenerate_result.invoice.fees.sole
+
+          expect(regenerated_fee).to have_attributes(
+            charge_id: parent_charge.id,
+            units: 2,
+            unit_amount_cents: 1000,
+            amount_cents: 2000
+          )
+        end
+      end
+
+      context "when the parent charge was discarded after the invoice" do
+        before { parent_charge.discard! }
+
+        it "prices the units with the historical parent charge" do
+          regenerated_fee = regenerate_result.invoice.fees.sole
+
+          expect(regenerated_fee).to have_attributes(
+            charge_id: parent_charge.id,
+            units: 2,
+            unit_amount_cents: 1000,
+            amount_cents: 2000
+          )
+        end
+      end
     end
 
     context "when a plan charge was soft deleted" do

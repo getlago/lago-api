@@ -121,15 +121,9 @@ module Invoices
         next unless adjusted_fee
 
         if fee.fee_type == "charge"
-          # The first-override child charge created after the invoice gives the price,
-          # while the regenerated fee keeps the voided fee's charge and filter.
-          current = Fees::ResolveCurrentChargeService.call!(
-            subscription: fee.subscription,
-            charge: fee.charge,
-            charge_filter: fee.charge_filter
-          )
+          current = current_charge(fee)
 
-          if current.charge
+          if current&.charge
             properties = current.charge_filter&.properties || current.charge.properties
             pricing_charge = current.charge
           else
@@ -206,6 +200,19 @@ module Invoices
 
         fee.save!
       end
+    end
+
+    # The first-override child charge created after the invoice gives the price,
+    # while the regenerated fee keeps the voided fee's charge and filter.
+    # Pay-in-advance fees and fees of a progressive-billing invoice keep their historical price.
+    def current_charge(fee)
+      return if fee.pay_in_advance? || voided_invoice.progressive_billing?
+
+      Fees::ResolveCurrentChargeService.call!(
+        subscription: fee.subscription,
+        charge: fee.charge,
+        charge_filter: fee.charge_filter
+      )
     end
 
     def assign_applied_usage_thresholds
