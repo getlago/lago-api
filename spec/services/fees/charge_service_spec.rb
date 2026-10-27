@@ -5229,10 +5229,11 @@ RSpec.describe Fees::ChargeService, :premium do
           create(:standard_charge, plan: subscription.plan, billable_metric:, prorated: true, properties: {amount: "20"})
         end
 
-        it "reads no snapshot" do
+        it "starts the aggregation from the snapshot" do
           charge_subscription_service.call
 
-          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_value: nil, initial_period: nil))
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
+            .with(hash_including(initial_value: [have_attributes(units: 12)]))
         end
       end
 
