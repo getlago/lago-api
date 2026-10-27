@@ -50,6 +50,13 @@ RSpec.describe "API v2 routing parity" do
     expect(Rails.application.routes.recognize_path("/api/v1/customers", method: :post)[:controller]).to eq("api/v1/customers")
   end
 
+  it "routes organization endpoints to v2 without changing v1" do
+    %i[get put].each do |method|
+      expect(Rails.application.routes.recognize_path("/api/v2/organizations", method:)[:controller]).to eq("api/v2/organizations")
+      expect(Rails.application.routes.recognize_path("/api/v1/organizations", method:)[:controller]).to eq("api/v1/organizations")
+    end
+  end
+
   it "routes tax endpoints to the v2 controller" do
     {
       get: %w[/api/v2/taxes /api/v2/taxes/vat.eu],
