@@ -94,7 +94,7 @@ module Api
           render(json: ::V2::CreditNotes::EstimateSerializer.new(
             result.credit_note,
             root_name: "estimated_credit_note",
-            includes: [:usec_timestamps]
+            includes: %i[items applied_taxes usec_timestamps]
           ))
         else
           render_error_response(result)

@@ -3,8 +3,9 @@
 require "rails_helper"
 
 RSpec.describe V2::CreditNotes::EstimateSerializer do
-  subject(:payload) { described_class.new(credit_note, root_name: "estimated_credit_note").serialize }
+  subject(:payload) { described_class.new(credit_note, root_name: "estimated_credit_note", includes:).serialize }
 
+  let(:includes) { %i[items applied_taxes] }
   let(:credit_note) { build(:credit_note, total_amount_cents: 3000, taxes_amount_cents: 500, credit_amount_cents: 3000, refund_amount_cents: 0) }
   let(:item) { build(:credit_note_item, credit_note:, amount_cents: 2500, precise_amount_cents: 2500) }
   let(:tax) { build(:credit_note_applied_tax, credit_note:, tax_rate: 20, base_amount_cents: 2500, amount_cents: 500) }
@@ -84,6 +85,15 @@ RSpec.describe V2::CreditNotes::EstimateSerializer do
           currency: "EUR"
         }
       ])
+    end
+  end
+
+  context "without expansions" do
+    let(:includes) { [] }
+
+    it "keeps relationships out of the base payload" do
+      expect(payload).not_to have_key(:items)
+      expect(payload).not_to have_key(:applied_taxes)
     end
   end
 end
