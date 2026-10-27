@@ -10,17 +10,30 @@ RSpec.describe Api::V2::CreditNotesController do
   end
   let(:credit_note) { create(:credit_note, invoice:, customer:) }
 
+  before { organization.enable_feature_flag!(:product_catalog) }
+
   describe "GET /api/v2/credit_notes/:id" do
     subject(:request) { get_with_token(organization, "/api/v2/credit_notes/#{credit_note.id}") }
 
     include_examples "requires API permission", "credit_note", "read"
 
-    it "returns the v2 credit note payload without requiring product catalog" do
+    it "returns the v2 credit note payload" do
       request
 
       expect(response).to have_http_status(:ok)
       expect(json[:credit_note]).to include(lago_id: credit_note.id, lago_invoice_id: invoice.id)
       expect(json[:credit_note][:created_at]).to eq(credit_note.created_at.iso8601(6))
+    end
+
+    context "when the product catalog is disabled" do
+      before { organization.disable_feature_flag!(:product_catalog) }
+
+      it "returns a forbidden error" do
+        request
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:code]).to eq("feature_unavailable")
+      end
     end
 
     context "when the credit note belongs to another organization" do
@@ -126,6 +139,17 @@ RSpec.describe Api::V2::CreditNotesController do
       })
     end
 
+    context "when the product catalog is disabled" do
+      before { organization.disable_feature_flag!(:product_catalog) }
+
+      it "rejects the request without creating a credit note" do
+        expect { request }.not_to change(CreditNote, :count)
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:code]).to eq("feature_unavailable")
+      end
+    end
+
     context "when the invoice belongs to another organization" do
       let(:invoice) { create(:invoice) }
 
@@ -152,6 +176,17 @@ RSpec.describe Api::V2::CreditNotesController do
       expect(response).to have_http_status(:ok)
       expect(json[:credit_note]).to include(lago_invoice_id: invoice.id)
       expect(json[:credit_note]).not_to have_key(:coupons_adjustment_amount_cents)
+    end
+
+    context "when the product catalog is disabled" do
+      before { organization.disable_feature_flag!(:product_catalog) }
+
+      it "rejects the request without creating a credit note" do
+        expect { request }.not_to change(CreditNote, :count)
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:code]).to eq("feature_unavailable")
+      end
     end
 
     context "when the invoice belongs to another organization" do

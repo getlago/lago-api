@@ -3,7 +3,6 @@
 module Api
   module V2
     class CreditNotesController < Api::V2::BaseController
-      skip_before_action :ensure_product_catalog!
       PRELOADS = [
         :items,
         invoice: :billing_entity,
