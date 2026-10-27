@@ -244,6 +244,57 @@ RSpec.describe Api::V2::CreditNotesController do
         expect(json[:credit_note]).not_to have_key(:precise_total_amount_cents)
       end
     end
+
+    context "when only the XML exists" do
+      let(:credit_note) { create(:credit_note, invoice:, customer:) }
+
+      before do
+        credit_note.xml_file.attach(
+          io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.xml"))),
+          filename: "credit_note.xml",
+          content_type: "application/xml"
+        )
+      end
+
+      it "generates the PDF instead of returning the XML", v2_timestamps: false do
+        expect { request }.to have_enqueued_job(CreditNotes::GeneratePdfJob).with(credit_note)
+
+        expect(response).to have_http_status(:ok)
+      end
+    end
+  end
+
+  describe "POST /api/v2/credit_notes/:id/download_xml" do
+    subject(:request) { post_with_token(organization, "/api/v2/credit_notes/#{credit_note.id}/download_xml") }
+
+    let(:credit_note) { create(:credit_note, invoice:, customer:) }
+
+    context "when only the PDF exists" do
+      let(:credit_note) { create(:credit_note, :with_file, invoice:, customer:) }
+
+      it "generates the XML instead of returning the PDF", v2_timestamps: false do
+        expect { request }.to have_enqueued_job(CreditNotes::GenerateXmlJob).with(credit_note)
+
+        expect(response).to have_http_status(:ok)
+      end
+    end
+
+    context "when the XML exists" do
+      before do
+        credit_note.xml_file.attach(
+          io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.xml"))),
+          filename: "credit_note.xml",
+          content_type: "application/xml"
+        )
+      end
+
+      it "returns the v2 payload" do
+        request
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:credit_note][:lago_id]).to eq(credit_note.id)
+      end
+    end
   end
 
   describe "contract product-fee credit notes on v2", :premium do
@@ -505,9 +556,15 @@ RSpec.describe Api::V2::CreditNotesController do
           post_with_token(organization, "#{path}/#{credit_note.id}/download_#{format}")
         end
 
-        let(:credit_note) { create(:credit_note, :with_file, invoice:, customer:) }
+        let(:credit_note) { create(:credit_note, invoice:, customer:) }
 
         before do
+          attachment = (format == "pdf") ? credit_note.file : credit_note.xml_file
+          attachment.attach(
+            io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.#{format}"))),
+            filename: "blank.#{format}",
+            content_type: (format == "pdf") ? "application/pdf" : "application/xml"
+          )
           create(:credit_note_item, credit_note:, fee: product_fee) if credit_note.invoice_id == invoice.id
         end
 
@@ -519,7 +576,7 @@ RSpec.describe Api::V2::CreditNotesController do
         end
 
         context "when the credit note belongs to another organization" do
-          let(:credit_note) { create(:credit_note, :with_file) }
+          let(:credit_note) { create(:credit_note) }
 
           it "returns not found" do
             subject

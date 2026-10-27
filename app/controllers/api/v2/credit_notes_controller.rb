@@ -61,7 +61,7 @@ module Api
       end
 
       def download_xml
-        download_credit_note_file(:file, ::CreditNotes::GenerateXmlJob)
+        download_credit_note_file(:xml_file, ::CreditNotes::GenerateXmlJob)
       end
 
       def resend_email
