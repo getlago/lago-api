@@ -117,9 +117,9 @@ RSpec.describe Wallets::Balance::UpdateOngoingService do
         expect(Wallets::ThresholdTopUpService).to have_received(:call).with(wallet:, state_changed: false)
       end
 
-      it "does not dispatch the wallet alerts" do
+      it "still dispatches the wallet alerts" do
         subject
-        expect(UsageMonitoring::DispatchWalletAlertsService).not_to have_received(:call)
+        expect(UsageMonitoring::DispatchWalletAlertsService).to have_received(:call).with(wallet:)
       end
     end
 

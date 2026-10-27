@@ -120,6 +120,58 @@ RSpec.describe WalletAlertsConsumer do
       end
     end
 
+    context "with a payload that is not valid JSON" do
+      before { karafka.produce("{not json") }
+
+      it "skips it and evaluates the others" do
+        expect { consumer.consume }.to change(organization.triggered_alerts, :count).by(1)
+
+        expect(outcomes).to have_received(:increment).with({outcome: "skipped", reason: "invalid_payload"}, by: 1)
+      end
+    end
+
+    context "when the batch deadline is reached" do
+      let(:other_wallet) { create(:wallet, organization:, customer:) }
+
+      before do
+        karafka.produce({organization_id: organization.id, wallet_id: other_wallet.id, dispatched_at_ms:}.to_json)
+        stub_const("#{described_class}::CONSUME_DEADLINE", -1.second)
+        allow(UsageMonitoring::ProcessWalletAlertsService).to receive(:call!)
+      end
+
+      it "hands the remaining wallets to the alerts job" do
+        expect { consumer.consume }.to have_enqueued_job(UsageMonitoring::ProcessWalletAlertsJob).twice
+
+        expect(UsageMonitoring::ProcessWalletAlertsService).not_to have_received(:call!)
+        expect(outcomes).to have_received(:increment).with({outcome: "deferred", reason: "deadline"}, by: 1).twice
+      end
+    end
+
+    context "when the batch raises" do
+      before do
+        allow(Wallet).to receive(:where).and_raise(ActiveRecord::ConnectionNotEstablished)
+        allow(Sentry).to receive(:capture_exception)
+      end
+
+      it "raises so that Karafka retries the batch" do
+        expect { consumer.consume }.to raise_error(ActiveRecord::ConnectionNotEstablished)
+      end
+
+      context "when it has been retried enough" do
+        before do
+          allow(consumer.coordinator.pause_tracker).to receive(:attempt).and_return(described_class::MAX_ATTEMPTS)
+        end
+
+        it "drops the batch" do
+          expect { consumer.consume }.not_to raise_error
+
+          expect(consumer.coordinator).to be_marked
+          expect(Sentry).to have_received(:capture_exception).with(ActiveRecord::ConnectionNotEstablished, extra: {attempts: 3})
+          expect(outcomes).to have_received(:increment).with({outcome: "failed", reason: "batch_dropped"}, by: 1)
+        end
+      end
+    end
+
     context "when an evaluation raises" do
       let(:other_wallet) { create(:wallet, organization:, customer:) }
 
@@ -147,6 +199,17 @@ RSpec.describe WalletAlertsConsumer do
 
         expect(Sentry).to have_received(:capture_exception).with(ActiveRecord::LockWaitTimeout, extra: {wallet_id: wallet.id})
         expect(outcomes).to have_received(:increment).with({outcome: "failed", reason: "evaluation_raised"}, by: 1)
+      end
+
+      context "with an error other than a database one" do
+        before do
+          allow(UsageMonitoring::ProcessWalletAlertsService).to receive(:call!)
+            .with(wallet:).and_raise(NoMethodError)
+        end
+
+        it "raises out of the batch" do
+          expect { consumer.consume }.to raise_error(NoMethodError)
+        end
       end
     end
   end

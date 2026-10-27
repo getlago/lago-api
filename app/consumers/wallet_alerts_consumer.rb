@@ -1,11 +1,18 @@
 # frozen_string_literal: true
 
-# Evaluates wallet alerts as soon as a balance moves (UsageMonitoring::DispatchWalletAlertsService).
-# Evaluating inline keeps the partition's ordering: the topic is keyed by wallet, so the consumer
-# never evaluates one wallet's alerts twice at once.
+# The topic is keyed by wallet, so a wallet's messages are evaluated in order. ProcessWalletAlertsJob
+# can still evaluate the same wallet: ProcessAlertService reads the wallet under the alert lock.
 class WalletAlertsConsumer < ApplicationConsumer
+  # A batch outliving max.poll.interval.ms gets the member evicted and the batch replayed by its
+  # next owner. What the deadline cuts goes to the job.
+  CONSUME_DEADLINE = 2.minutes
+
+  # There is no dead letter topic: past this, the batch is dropped and the next refresh of each
+  # wallet dispatches it again.
+  MAX_ATTEMPTS = 3
+
   def consume
-    payloads = messages.map(&:payload).compact
+    payloads = messages.filter_map { parse(it) }
     return if payloads.empty?
 
     unless License.premium?
@@ -13,34 +20,53 @@ class WalletAlertsConsumer < ApplicationConsumer
       return
     end
 
-    # Evaluation reads the wallet from the database, so a batch needs one pass per wallet however
-    # many times its balance moved. A wallet is resolved by its organization too, so that a payload
-    # naming another organization's wallet is skipped rather than evaluated.
+    # One evaluation per wallet however many times its balance moved in the batch. Resolving by
+    # organization too skips a payload naming another organization's wallet.
     payloads_by_wallet = payloads.group_by { [it["organization_id"], it["wallet_id"]] }
     wallets = Wallet.where(id: payloads_by_wallet.keys.map(&:last)).index_by { [it.organization_id, it.id] }
+    deadline = Time.current + CONSUME_DEADLINE
 
     payloads_by_wallet.each do |key, wallet_payloads|
       wallet = wallets[key]
 
       if wallet.nil?
         report(:skipped, :wallet_not_found)
-        next
+      elsif Time.current > deadline
+        report(:deferred, :deadline)
+        UsageMonitoring::ProcessWalletAlertsJob.perform_later(wallet)
+      else
+        evaluate(wallet, wallet_payloads)
       end
-
-      evaluate(wallet, wallet_payloads)
     end
+  rescue => e
+    raise if attempt < MAX_ATTEMPTS
+
+    report(:failed, :batch_dropped, by: messages.size)
+    Rails.logger.error("[alerts] wallet alerts batch dropped after #{attempt} attempts: #{e.class} #{e.message}")
+    Sentry.capture_exception(e, extra: {attempts: attempt})
+    mark_as_consumed(messages.last)
   end
 
   private
+
+  def parse(message)
+    payload = message.payload # upsert-format retractions arrive as tombstones
+    return payload if payload.nil? || payload.is_a?(Hash)
+
+    report(:skipped, :invalid_payload)
+    nil
+  rescue JSON::ParserError
+    report(:skipped, :invalid_payload)
+    nil
+  end
 
   def evaluate(wallet, wallet_payloads)
     UsageMonitoring::ProcessWalletAlertsService.call!(wallet:)
 
     report(:evaluated, :none)
     report_latency(wallet_payloads)
-  rescue => e
-    # Raising out of #consume pauses the partition and replays the batch, re-evaluating every wallet
-    # already done. The job retries this one wallet instead.
+  rescue ActiveRecord::ActiveRecordError => e
+    # Raising out of #consume would replay the batch, re-evaluating every wallet already done.
     report(:failed, :evaluation_raised)
     Rails.logger.error("[alerts] wallet alerts evaluation raised wallet_id=#{wallet.id}: #{e.class} #{e.message}")
     Sentry.capture_exception(e, extra: {wallet_id: wallet.id})

@@ -60,6 +60,18 @@ RSpec.describe UsageMonitoring::DispatchWalletAlertsService do
           end
         end
 
+        context "when the producer raises" do
+          before do
+            allow(Karafka.producer).to receive(:produce_async).and_raise(WaterDrop::Errors::ProduceError)
+            stub_const("ENV", ENV.to_h.merge("LAGO_KAFKA_WALLET_ALERTS_TOPIC" => topic, "SENTRY_DSN" => nil))
+          end
+
+          it "falls back to the alerts job" do
+            expect { result }.to have_enqueued_job(UsageMonitoring::ProcessWalletAlertsJob).with(wallet)
+            expect(dispatched).to have_received(:increment).with({via: "job_fallback"})
+          end
+        end
+
         context "when the organization does not have the realtime usage flag" do
           subject(:result) { described_class.call(wallet: other_wallet) }
 

@@ -1,9 +1,7 @@
 # frozen_string_literal: true
 
 module UsageMonitoring
-  # Hands a wallet whose balance moved to alert evaluation. For an organization on realtime usage,
-  # with the wallet alerts topic configured, WalletAlertsConsumer evaluates it as soon as the message
-  # lands, off the Sidekiq queues. Everywhere else ProcessWalletAlertsJob does, as before.
+  # WalletAlertsConsumer evaluates off the Sidekiq queues, which lag behind the realtime refresh.
   class DispatchWalletAlertsService < BaseService
     Result = BaseResult
 
@@ -14,11 +12,10 @@ module UsageMonitoring
 
     def call
       return result unless License.premium?
-      # Every refresh lands here and most wallets carry no alert: this saves a message or a job each.
-      return result unless wallet.alerts.using_wallet.exists?
 
-      # Evaluation reads the wallet back from the database, so it must not run before the commit.
-      after_commit { dispatch }
+      # Evaluation reads the wallet back from the database, so it must not run before the commit. The
+      # alert check runs there too, off the caller's transaction (once per fee on invoice finalization).
+      after_commit { dispatch if wallet.alerts.using_wallet.exists? }
 
       result
     end
@@ -31,7 +28,7 @@ module UsageMonitoring
       if kafka? && produce
         report(:kafka)
       else
-        # When a produce fails the producer has already reported it: the job keeps the evaluation.
+        # A failed produce has been logged: the job keeps the evaluation.
         ProcessWalletAlertsJob.perform_later(wallet)
         report(kafka? ? :job_fallback : :job)
       end
@@ -48,7 +45,7 @@ module UsageMonitoring
     def produce
       Utils::KafkaProducer.produce_async(
         topic:,
-        # Keyed by wallet: one wallet's alerts are never evaluated twice at once.
+        # Keyed by wallet, so the consumer evaluates one wallet's messages in order.
         key: wallet.id,
         payload: {
           organization_id: wallet.organization_id,
@@ -56,6 +53,11 @@ module UsageMonitoring
           dispatched_at_ms: (Time.current.to_f * 1000).to_i
         }.to_json
       )
+    rescue WaterDrop::Errors::MessageInvalidError, WaterDrop::Errors::ProduceError => e
+      # Without SENTRY_DSN the producer re-raises: this runs after the commit, so raising would turn a
+      # saved balance into a 500 and lose the evaluation.
+      Rails.logger.error("[alerts] wallet alerts produce failed wallet_id=#{wallet.id}: #{e.class} #{e.message}")
+      false
     end
 
     def topic
