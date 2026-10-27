@@ -622,6 +622,7 @@ RSpec.describe Customers::UpdateService do
         organization.update(eu_tax_management: true)
 
         eu_tax_result.tax_code = tax_code
+        eu_tax_result.tax_codes = [tax_code]
         allow(Customers::EuAutoTaxesService).to receive(:call).and_return(eu_tax_result)
       end
 
@@ -762,6 +763,19 @@ RSpec.describe Customers::UpdateService do
           expect(result).to be_success
           expect(result.customer.taxes.pluck(:code)).to eq(["uk_vat"])
           expect(invoice.reload.ready_to_be_refreshed).to be(false)
+        end
+      end
+
+      context "when the customer also has the EU exemption" do
+        let(:update_args) { {id: customer.id, zipcode: "EC1A 1BB"} }
+
+        before { create(:customer_applied_tax, organization:, customer:, tax: exempt_tax) }
+
+        it "removes the EU exemption" do
+          result = customers_service.call
+
+          expect(result).to be_success
+          expect(result.customer.taxes.pluck(:code)).to eq(["uk_vat"])
         end
       end
 

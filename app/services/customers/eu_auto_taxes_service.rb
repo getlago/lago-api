@@ -3,26 +3,42 @@
 module Customers
   class EuAutoTaxesService < BaseService
     include Customers::Concerns::EuTaxCodeResolver
-    include Customers::Concerns::EuExemptionOverride
 
-    Result = BaseResult[:tax_code]
+    # tax_codes is the full list of taxes to apply on the customer: the requested ones with the EU tax code.
+    Result = BaseResult[:tax_code, :tax_codes]
 
     B2B_ONLY_TERRITORY_COUNTRIES = %w[FR].freeze
+    EU_TAX_CODE_PREFIX = "lago_eu"
+    EU_TAX_EXEMPT_CODE = "lago_eu_tax_exempt"
 
-    def initialize(customer:, new_record:, tax_attributes_changed:)
+    def initialize(customer:, new_record:, tax_attributes_changed:, tax_codes: nil)
       @customer = customer
       @new_record = new_record
       @tax_attributes_changed = tax_attributes_changed
+      @tax_codes = tax_codes
 
       super
     end
 
     def call
+      return result.not_allowed_failure!(code: "eu_tax_not_applicable") unless customer.billing_entity.eu_tax_management
+
+      kept_tax_codes = custom_tax_codes_to_keep
+      if kept_tax_codes
+        delete_pending_vies_check_if_exists
+        if tax_codes.nil? && kept_tax_codes.sort == customer_tax_codes.sort
+          return result.not_allowed_failure!(code: "eu_tax_not_applicable")
+        end
+
+        result.tax_codes = kept_tax_codes
+        return result
+      end
+
       return result.not_allowed_failure!(code: "eu_tax_not_applicable") unless should_apply_eu_taxes?
 
       territory_tax_code = detect_special_territory
       if territory_tax_code
-        result.tax_code = territory_tax_code
+        assign_tax_code(territory_tax_code)
         delete_pending_vies_check_if_exists
         return result
       end
@@ -32,14 +48,43 @@ module Customers
         return result.service_failure!(code: "vies_check_pending", message: "VIES check scheduled asynchronously")
       end
 
-      result.tax_code = process_not_vies_tax
+      assign_tax_code(process_not_vies_tax)
       delete_pending_vies_check_if_exists
       result
     end
 
     private
 
-    attr_reader :customer, :tax_attributes_changed, :new_record
+    attr_reader :customer, :tax_attributes_changed, :new_record, :tax_codes
+
+    def assign_tax_code(tax_code)
+      result.tax_code = tax_code
+      result.tax_codes = ((tax_codes || []) + [tax_code]).uniq
+    end
+
+    # Custom taxes on a customer outside the EU without tax ID (e.g. a B2C VAT) replace the EU taxes.
+    def custom_tax_codes_to_keep
+      return unless outside_eu_without_tax_id?
+
+      if tax_codes.nil?
+        # An EU rate left from a previous country must still be replaced by the exemption.
+        current_codes = customer_tax_codes - [EU_TAX_EXEMPT_CODE]
+        current_codes if current_codes.any? && current_codes.none? { |code| eu_tax_code?(code) }
+      else
+        requested_codes = tax_codes.reject { |code| eu_tax_code?(code) }
+        requested_codes if requested_codes.any?(&:present?)
+      end
+    end
+
+    def outside_eu_without_tax_id?
+      customer.tax_identification_number.blank? &&
+        customer.country.present? &&
+        eu_countries_code.exclude?(customer.country.upcase)
+    end
+
+    def eu_tax_code?(code)
+      code.to_s.downcase.start_with?(EU_TAX_CODE_PREFIX)
+    end
 
     def detect_special_territory
       country_code = customer.country&.upcase
@@ -73,20 +118,11 @@ module Customers
     end
 
     def should_apply_eu_taxes?
-      return false unless customer.billing_entity.eu_tax_management
-      return false if eu_exemption_overridable? && custom_taxes_without_eu_rate?
       return true if new_record
 
       non_existing_eu_taxes = customer_tax_codes.none? { |code| eu_tax_code?(code) }
 
       non_existing_eu_taxes || tax_attributes_changed
-    end
-
-    # An EU rate left from a previous country must still be replaced by the exemption.
-    def custom_taxes_without_eu_rate?
-      codes = customer_tax_codes - [EU_TAX_EXEMPT_CODE]
-
-      codes.any? && codes.none? { |code| eu_tax_code?(code) }
     end
 
     def customer_tax_codes

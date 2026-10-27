@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Customers::EuAutoTaxesService do
-  subject(:eu_tax_service) { described_class.new(customer:, new_record:, tax_attributes_changed:) }
+  subject(:eu_tax_service) { described_class.new(customer:, new_record:, tax_attributes_changed:, tax_codes:) }
 
   let_it_be(:organization, refind: true) { create(:organization, country: "IT", eu_tax_management: true) }
   let_it_be(:billing_entity, refind: true) { create(:billing_entity, organization:, country: "FR", eu_tax_management: true) }
@@ -11,6 +11,7 @@ RSpec.describe Customers::EuAutoTaxesService do
   let_it_be(:customer, refind: true) { create(:customer, organization:, billing_entity:, tax_identification_number:, zipcode: nil) }
   let(:new_record) { true }
   let(:tax_attributes_changed) { true }
+  let(:tax_codes) { nil }
 
   describe ".call" do
     context "when eu_tax_management is false" do
@@ -66,6 +67,7 @@ RSpec.describe Customers::EuAutoTaxesService do
       let(:customer) { create(:customer, organization:, billing_entity:, tax_identification_number:, zipcode: nil) }
 
       let_it_be(:custom_tax) { create(:tax, organization:, code: "uk_vat") }
+      let_it_be(:exempt_tax) { create(:tax, organization:, code: "lago_eu_tax_exempt") }
 
       before do
         customer.update!(country: "GB")
@@ -77,6 +79,39 @@ RSpec.describe Customers::EuAutoTaxesService do
 
         expect(result).not_to be_success
         expect(result.error.code).to eq("eu_tax_not_applicable")
+      end
+
+      context "when the customer also has the EU exemption" do
+        before { create(:customer_applied_tax, customer:, tax: exempt_tax) }
+
+        it "returns the custom tax only" do
+          result = eu_tax_service.call
+
+          expect(result).to be_success
+          expect(result.tax_codes).to eq(["uk_vat"])
+        end
+      end
+
+      context "when the EU exemption and an EU rate are requested with the custom tax" do
+        let(:tax_codes) { %w[lago_eu_tax_exempt lago_eu_fr_standard uk_vat] }
+
+        it "returns the custom tax only" do
+          result = eu_tax_service.call
+
+          expect(result).to be_success
+          expect(result.tax_codes).to eq(["uk_vat"])
+        end
+      end
+
+      context "when no tax is requested" do
+        let(:tax_codes) { [] }
+
+        it "returns the EU exemption" do
+          result = eu_tax_service.call
+
+          expect(result).to be_success
+          expect(result.tax_codes).to eq(["lago_eu_tax_exempt"])
+        end
       end
 
       context "when the customer has a tax identification number" do
@@ -97,6 +132,7 @@ RSpec.describe Customers::EuAutoTaxesService do
           result = eu_tax_service.call
 
           expect(result.tax_code).to eq("lago_eu_tax_exempt")
+          expect(result.tax_codes).to eq(["lago_eu_tax_exempt"])
         end
       end
 

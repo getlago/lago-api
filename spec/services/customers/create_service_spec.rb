@@ -384,6 +384,7 @@ RSpec.describe Customers::CreateService do
       organization.update(eu_tax_management: true)
 
       eu_tax_result.tax_code = tax_code
+      eu_tax_result.tax_codes = [tax_code]
       allow(Customers::EuAutoTaxesService).to receive(:call).and_return(eu_tax_result)
     end
 
