@@ -57,7 +57,7 @@ RSpec.describe PaymentTerms::ValidateService do
   describe "payment_term validation" do
     shared_examples "a term type carrying days" do |term_type|
       context "when days is valid" do
-        [0, 30, 400].each do |days|
+        [0, 30, 365].each do |days|
           context "with #{days}" do
             let(:payment_term) { {term_type:, days:} }
 
@@ -80,6 +80,15 @@ RSpec.describe PaymentTerms::ValidateService do
 
       context "when days is negative" do
         let(:payment_term) { {term_type:, days: -1} }
+
+        it "fails with invalid_days" do
+          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:payment_term]).to eq(["invalid_days"])
+        end
+      end
+
+      context "when days is above 365" do
+        let(:payment_term) { {term_type:, days: 366} }
 
         it "fails with invalid_days" do
           expect(validate_service).not_to be_valid

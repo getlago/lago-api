@@ -2,6 +2,7 @@
 
 module PaymentTerms
   class ValidateService < BaseValidator
+    DAYS_RANGE = (0..365)
     DAY_OF_MONTH_RANGE = (1..31)
     MONTH_OFFSET_RANGE = (0..12)
 
@@ -69,7 +70,7 @@ module PaymentTerms
 
       days = payment_term[:days]
 
-      return true if days.is_a?(Integer) && days >= 0
+      return true if days.is_a?(Integer) && DAYS_RANGE.cover?(days)
 
       add_error(field: :payment_term, error_code: "invalid_days")
     end
