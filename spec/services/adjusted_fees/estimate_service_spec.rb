@@ -574,6 +574,25 @@ RSpec.describe AdjustedFees::EstimateService do
         end
       end
 
+      context "with a progressive billing invoice" do
+        let(:invoice) do
+          create(
+            :invoice,
+            :voided,
+            :with_subscriptions,
+            organization:,
+            customer:,
+            subscriptions: [child_subscription],
+            currency: "EUR",
+            invoice_type: :progressive_billing
+          )
+        end
+
+        it "prices the units with the historical charge" do
+          expect(result.fee).to have_attributes(charge_id: charge.id, units: 2, unit_amount_cents: 1000, amount_cents: 2000)
+        end
+      end
+
       context "when the child charge model cannot be adjusted by units" do
         let(:child_charge_model) { :percentage_charge }
         let(:child_charge_properties) { {rate: "5", fixed_amount: "0"} }

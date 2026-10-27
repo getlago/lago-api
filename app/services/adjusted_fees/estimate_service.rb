@@ -84,12 +84,12 @@ module AdjustedFees
     # keep the fee's own charge, as in Invoices::RegenerateFromVoidedService.
     # The service estimates a single fee, so the result is memoized once.
     def current_charge_result(fee)
-      return @current_charge_result if defined?(@current_charge_result)
-
-      @current_charge_result = if fee.charge.nil? || !invoice.voided? || fee.pay_in_advance? || invoice.progressive_billing?
-        nil
+      if defined?(@current_charge_result)
+        @current_charge_result
+      elsif fee.charge.nil? || !invoice.voided? || fee.pay_in_advance? || invoice.progressive_billing?
+        @current_charge_result = nil
       else
-        Fees::ResolveCurrentChargeService.call!(
+        @current_charge_result = Fees::ResolveCurrentChargeService.call!(
           subscription: fee.subscription,
           charge: fee.charge,
           charge_filter: fee.charge_filter
