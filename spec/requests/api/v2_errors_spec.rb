@@ -60,8 +60,15 @@ RSpec.describe Api::V2Errors do
         when "not_allowed" then result.not_allowed_failure!(code: "not_voidable")
         # Not the default code, which the catalog gate also renders.
         when "forbidden" then result.forbidden_failure!(code: "premium_integration_missing")
-        when "unauthorized" then result.unauthorized_failure!
+        when "unauthorized" then result.unauthorized_failure!(message: "Stripe authentication failed.")
+        when "third_party"
+          result.third_party_failure!(third_party: "Stripe", error_code: "resource_missing", error_message: "No such customer: 'cus_unknown'")
+        when "provider"
+          result.provider_failure!(provider: PaymentProviders::StripeProvider.new(code: "stripe_eu"), error: StandardError.new("Your card was declined."))
+        when "too_many_requests"
+          result.too_many_provider_requests_failure!(provider_name: "Anrok", error: BaseService::ThrottlingError.new(provider_name: "Anrok"))
         when "lock" then result.lock_acquisition_failure!(message: "lock")
+        when "service" then result.service_failure!(code: "unknown", message: "unknown")
         when "validation"
           # Symbol keys, a dotted one included, and a string key: services pass both.
           result.validation_failure!(errors: {
@@ -115,11 +122,44 @@ RSpec.describe Api::V2Errors do
   context "with an unauthorized failure" do
     let(:failure) { "unauthorized" }
 
-    it "returns an unauthorized error without the message" do
+    it "returns a provider unauthorized error, apart from an invalid API key" do
       show
 
       expect(response).to have_http_status(:unauthorized)
-      expect(json).to eq(code: "unauthorized", details: [])
+      expect(json).to eq(code: "provider_unauthorized", details: [])
+    end
+  end
+
+  context "with a third party failure" do
+    let(:failure) { "third_party" }
+
+    it "returns an unprocessable error naming the third party, without its message" do
+      show
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(json).to eq(code: "third_party_error", details: [{code: "third_party_error", field: "base", meta: {third_party: "Stripe"}}])
+    end
+  end
+
+  context "with a provider failure" do
+    let(:failure) { "provider" }
+
+    it "returns an unprocessable error naming the provider by its code, without its error" do
+      show
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(json).to eq(code: "provider_error", details: [{code: "provider_error", field: "base", meta: {provider_code: "stripe_eu"}}])
+    end
+  end
+
+  context "with a too many provider requests failure" do
+    let(:failure) { "too_many_requests" }
+
+    it "returns a too many requests error naming the provider, without its message" do
+      show
+
+      expect(response).to have_http_status(:too_many_requests)
+      expect(json).to eq(code: "too_many_provider_requests", details: [{code: "too_many_provider_requests", field: "base", meta: {provider_name: "Anrok"}}])
     end
   end
 
@@ -171,6 +211,14 @@ RSpec.describe Api::V2Errors do
 
       expect(response).to have_http_status(:unprocessable_content)
       expect(json).to eq(code: "lock_acquisition_failed", details: [])
+    end
+  end
+
+  context "with a service failure" do
+    let(:failure) { "service" }
+
+    it "raises it, as v1 does" do
+      expect { show }.to raise_error(BaseService::ServiceFailure)
     end
   end
 

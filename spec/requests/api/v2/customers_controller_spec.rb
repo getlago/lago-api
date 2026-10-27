@@ -526,6 +526,39 @@ RSpec.describe Api::V2::CustomersController do
         end
       end
 
+      context "when the provider fails on the provider customer id" do
+        let(:customer) { create(:customer, :with_stripe_payment_provider, organization:) }
+        let(:attributes) do
+          {payment_provider: "stripe", payment_provider_code: customer.stripe_customer.payment_provider.code, provider_customer_id: "cus_unknown"}
+        end
+        let(:provider_response) do
+          {status: 404, body: {error: {type: "invalid_request_error", code: "resource_missing", message: "No such customer: 'cus_unknown'"}}}
+        end
+
+        before do
+          stub_request(:post, "https://api.stripe.com/v1/customers/cus_unknown")
+            .to_return(**provider_response, body: provider_response[:body].to_json, headers: {"Content-Type" => "application/json"})
+        end
+
+        it "returns a third party error naming the provider, without its message" do
+          request
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "third_party_error", details: [{code: "third_party_error", field: "base", meta: {third_party: "Stripe"}}])
+        end
+
+        context "when the provider refuses the key of the organization" do
+          let(:provider_response) { {status: 401, body: {error: {type: "invalid_request_error", message: "Invalid API Key provided"}}} }
+
+          it "returns a provider unauthorized error, apart from an invalid API key" do
+            request
+
+            expect(response).to have_http_status(:unauthorized)
+            expect(json).to eq(code: "provider_unauthorized", details: [])
+          end
+        end
+      end
+
       context "when removing the payment provider" do
         let(:customer) { create(:customer, :with_stripe_payment_provider, organization:) }
         let(:provider_customer) { customer.stripe_customer }

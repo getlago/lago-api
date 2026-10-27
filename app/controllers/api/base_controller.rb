@@ -1,10 +1,12 @@
 # frozen_string_literal: true
 
 module Api
+  # Its callbacks and rescues render errors with the renderers of each version: ApiErrors, which
+  # Api::V1::BaseController includes, or Api::V2Errors, whose base controller rescues a missing
+  # parameter itself.
   class BaseController < ApplicationController
     include Pagination
     include Common
-    include ApiErrors
 
     # Prepended, so that it runs before the authentication and authorization callbacks and
     # 401 and 403 responses carry the header too. Keyed on the path rather than set by the

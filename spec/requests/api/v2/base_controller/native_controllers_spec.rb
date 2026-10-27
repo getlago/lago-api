@@ -14,10 +14,9 @@ RSpec.describe "API v2 native controllers" do # rubocop:disable RSpec/DescribeCl
 
   hand_rendered_actions = {}
 
-  # Left to ApiErrors: the dispatcher, which calls the renderers below, and the renderers no native
-  # v2 action reaches. Any other ApiErrors renderer, one added later included, must be Api::V2Errors'.
-  v1_renderers = %i[render_error_response bad_request_error provider_error thirdpary_error too_many_provider_requests_error]
-  v2_renderers = ApiErrors.public_instance_methods(false) - v1_renderers + %i[not_found_error invalid_request_error]
+  # Every ApiErrors renderer, one added later included, so that the callers v1 and v2 share always
+  # find a v2 one. The v2 base controller rescues a missing parameter with a handler of its own.
+  v2_renderers = ApiErrors.public_instance_methods(false) - %i[bad_request_error] + %i[not_found_error invalid_request_error]
 
   let(:base_callbacks) { before_callbacks(Api::V2::BaseController) }
 
@@ -41,6 +40,7 @@ RSpec.describe "API v2 native controllers" do # rubocop:disable RSpec/DescribeCl
 
       it "renders its errors with Api::V2Errors" do
         expect(native_controller).to be < Api::V2Errors
+        expect(native_controller.ancestors).not_to include(ApiErrors)
         expect(v2_renderers.index_with { native_controller.instance_method(it).owner }).to eq(v2_renderers.index_with(Api::V2Errors))
       end
 

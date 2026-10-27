@@ -5,6 +5,9 @@ require "rails_helper"
 RSpec.describe Api::BaseController, type: :controller do
   let_it_be(:organization) { create_default(:organization) }
   controller do
+    # The renderers its callbacks call, which each version's base controller includes.
+    include ApiErrors
+
     def index
       render nothing: true
     end
