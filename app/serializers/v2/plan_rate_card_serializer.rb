@@ -8,11 +8,10 @@ module V2
         plan_code: model.catalog_plan.code,
         rate_card_code: model.rate_card.code,
         units: model.units,
-        rate_phases_count: model.rate_phases.size,
         **(include?(:rate_phases) ? {rate_phases: rate_phases} : {}),
-        created_at: model.created_at.iso8601,
-        updated_at: model.updated_at.iso8601,
-        deleted_at: model.deleted_at&.iso8601
+        created_at: format_time(model.created_at),
+        updated_at: format_time(model.updated_at),
+        deleted_at: format_time(model.deleted_at)
       }
     end
 

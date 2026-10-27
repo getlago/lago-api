@@ -25,7 +25,6 @@ RSpec.describe V2::ProductCategorySerializer do
       code: "compute",
       description: "Compute resources",
       invoice_display_name: "Compute usage",
-      products_count: 0,
       created_at: "2026-03-02T10:00:00Z",
       updated_at: "2026-03-04T12:30:00Z",
       deleted_at: nil
@@ -42,8 +41,8 @@ RSpec.describe V2::ProductCategorySerializer do
       create(:product, organization: product_category.organization, product_category:, deleted_at: Time.current)
     end
 
-    it "counts only the kept products" do
-      expect(payload).to eq(flat_payload.merge(products_count: 2))
+    it "renders no count of them" do
+      expect(payload).to eq(flat_payload)
     end
   end
 

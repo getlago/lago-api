@@ -39,11 +39,19 @@ RSpec.describe CursorPagination::Cursor do
     end
   end
 
-  context "with a sort on other columns" do
-    subject(:cursor) { described_class.new(table: "products", sort: {name: :asc, id: :asc}) }
+  context "with a two-column sort on a time column and a string tiebreak" do
+    subject(:cursor) { described_class.new(table: "activity_logs", sort: {logged_at: :desc, activity_id: :desc}) }
 
-    it "raises an argument error, until cursor keys are typed" do
-      expect { cursor }.to raise_error(ArgumentError, /created_at then id/)
+    it "accepts it" do
+      expect(cursor.sort).to eq(logged_at: :desc, activity_id: :desc)
+    end
+  end
+
+  context "with a sort of more than two columns" do
+    subject(:cursor) { described_class.new(table: "products", sort: {created_at: :desc, name: :desc, id: :desc}) }
+
+    it "raises an argument error, since the cursor key holds two columns" do
+      expect { cursor }.to raise_error(ArgumentError, /two columns/)
     end
   end
 

@@ -3,7 +3,13 @@
 require Rails.root.join("lib/lago_http_client/lago_http_client")
 
 class SendWebhookJob < ApplicationJob
+  # Raised for a webhook type this process does not know, for example on a worker that still runs the previous
+  # release during a rolling deploy. Retrying gives a worker with the new release time to take the job.
+  class UnknownWebhookTypeError < StandardError; end
+
   queue_as { self.class.queue_for(arguments.first) }
+
+  retry_on UnknownWebhookTypeError, wait: :polynomially_longer, attempts: 5
 
   retry_on ActiveJob::DeserializationError, wait: :polynomially_longer, attempts: 6
 
@@ -14,6 +20,7 @@ class SendWebhookJob < ApplicationJob
     "add_on.created" => Webhooks::AddOns::CreatedService,
     "add_on.updated" => Webhooks::AddOns::UpdatedService,
     "add_on.deleted" => Webhooks::AddOns::DeletedService,
+    "alert.resolved" => Webhooks::UsageMonitoring::AlertResolvedService,
     "alert.triggered" => Webhooks::UsageMonitoring::AlertTriggeredService,
     "billable_metric.created" => Webhooks::BillableMetrics::CreatedService,
     "billable_metric.updated" => Webhooks::BillableMetrics::UpdatedService,
@@ -123,12 +130,15 @@ class SendWebhookJob < ApplicationJob
 
   HIGH_PRIORITY_WEBHOOK_TYPES = %w[
     alert.triggered
+    alert.resolved
     subscription.usage_threshold_reached
     wallet.depleted_ongoing_balance
   ].freeze
 
   def self.queue_for(webhook_type = nil)
-    if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_WEBHOOK"])
+    if HIGH_PRIORITY_WEBHOOK_TYPES.include?(webhook_type) && ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_WEBHOOK_ALERT"])
+      :webhook_alert_worker
+    elsif ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_WEBHOOK"])
       HIGH_PRIORITY_WEBHOOK_TYPES.include?(webhook_type) ? :webhook_worker_high_priority : :webhook_worker
     else
       :webhook
@@ -153,7 +163,7 @@ class SendWebhookJob < ApplicationJob
     # Jobs enqueued by the previous release still use the former names.
     # TODO: Remove after one release.
     webhook_type = WebhookEndpoint::RENAMED_EVENT_TYPES.fetch(webhook_type, webhook_type)
-    raise(NotImplementedError) unless WEBHOOK_SERVICES.include?(webhook_type)
+    raise(UnknownWebhookTypeError, webhook_type.to_s) unless WEBHOOK_SERVICES.include?(webhook_type)
 
     # NOTE: This condition is only temporary to handle enqueued jobs
     # TODO: Remove this condition after queued jobs are processed

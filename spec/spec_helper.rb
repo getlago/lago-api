@@ -120,6 +120,10 @@ RSpec.configure do |config|
   config.define_derived_metadata(file_path: Regexp.new("/spec/scenarios/")) do |metadata|
     metadata[:type] = :request
   end
+  # Native v2 renders datetimes to the microsecond: see the `:v2_timestamps` hook below.
+  config.define_derived_metadata(file_path: Regexp.new("/spec/requests/api/v2/")) do |metadata|
+    metadata[:v2_timestamps] = true unless metadata.key?(:v2_timestamps)
+  end
 
   config.expect_with :rspec do |expectations|
     expectations.include_chain_clauses_in_custom_matcher_descriptions = true
@@ -262,5 +266,15 @@ RSpec.configure do |config|
     end
 
     example.run
+  end
+
+  # The last JSON response of the example: datetimes to the microsecond, dates as days. A spec of
+  # an endpoint that renders a v1 payload opts out with `v2_timestamps: false`.
+  config.after(:each, :v2_timestamps) do
+    # The session itself, as a spec may name its subject `request` or `response`.
+    session = @integration_session
+    next unless session&.response&.media_type == "application/json"
+
+    expect(session.response.parsed_body).to have_normalized_timestamps
   end
 end

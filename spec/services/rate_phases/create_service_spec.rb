@@ -220,13 +220,13 @@ RSpec.describe RatePhases::CreateService do
       allow(Utils::ActivityLog).to receive(:produce_after_commit).and_call_original
     end
 
-    it "emits one owner update with the ordered phase and count changes" do
+    it "emits one owner update with the ordered phase changes" do
       expect(result).to be_success
       payload = activity_payload(plan_rate_card, "plan_rate_card.updated")
       before_phases, after_phases = payload.fetch("activity_object_changes").fetch("rate_phases")
       expect([before_phases.map { |phase| phase.fetch("code") }, after_phases.map { |phase| phase.fetch("code") }])
         .to eq([%w[intro forever], %w[trial intro forever]])
-      expect(payload.fetch("activity_object_changes").fetch("rate_phases_count")).to eq([2, 3])
+      expect(payload.fetch("activity_object_changes")).not_to have_key("rate_phases_count")
       expect(intro.reload.position).to eq(2)
     end
   end

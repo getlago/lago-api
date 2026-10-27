@@ -49,8 +49,7 @@ RSpec.describe V2::ContractSerializer do
       canceled_at: nil,
       skip_invoice_custom_sections: false,
       created_at: "2026-01-05T09:00:00Z",
-      updated_at: "2026-09-30T12:00:01Z",
-      applied_rate_cards_count: 4
+      updated_at: "2026-09-30T12:00:01Z"
     }
   end
 

@@ -20,12 +20,16 @@ Rails.application.routes.draw do
 
   namespace :api do
     namespace :v1 do
+      resources :activity_logs, param: :activity_id, only: %i[index show]
+      resources :api_logs, param: :request_id, only: %i[index show]
+      resources :security_logs, param: :log_id, only: %i[index show]
       draw(:shared_api)
     end
 
     # Drawn first so version-specific routes win recognition; everything else on /api/v2
     # falls through to v1.
     namespace :v2 do
+      resources :customers, param: :external_id, constraints: {external_id: /[^\/]+/}, only: %i[index show create update destroy]
       resources :taxes, param: :code, code: /.*/, only: %i[index show create update destroy]
       resources :products, param: :code, code: /.*/, only: %i[index show create update destroy] do
         resources :filters, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "products/filters"
@@ -58,6 +62,13 @@ Rails.application.routes.draw do
       resources :invoices, only: [] do
         post :void, on: :member
       end
+      resources :fees, only: %i[index show update destroy]
+      # The v2 log endpoints have their own route here and a matching v1 route
+      # above, rather than a shared definition, so each version maps to its own
+      # controller (v2 for the cursor pagination and v2 error body).
+      resources :activity_logs, param: :activity_id, only: %i[index show]
+      resources :api_logs, param: :request_id, only: %i[index show]
+      resources :security_logs, param: :log_id, only: %i[index show]
     end
 
     namespace :v2, module: :v1 do

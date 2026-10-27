@@ -2,7 +2,8 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V2::InvoicesController do
+# Void renders a v1 invoice until a V2 serializer exists, so with v1 timestamps.
+RSpec.describe Api::V2::InvoicesController, v2_timestamps: false do
   let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
   let(:customer) { create(:customer, organization:) }
 
@@ -56,6 +57,38 @@ RSpec.describe Api::V2::InvoicesController do
       end
     end
 
+    context "when the credit note void fails", :premium do
+      let(:params) { {generate_credit_note: true} }
+      let(:invoice) do
+        create(
+          :invoice,
+          status:,
+          payment_status: :pending,
+          customer:,
+          organization:,
+          fees_amount_cents: 200,
+          taxes_amount_cents: 2,
+          sub_total_excluding_taxes_amount_cents: 200,
+          sub_total_including_taxes_amount_cents: 202,
+          total_amount_cents: 202
+        )
+      end
+
+      before do
+        allow(CreditNotes::VoidService).to receive(:call)
+          .and_return(CreditNotes::VoidService::Result.new.not_allowed_failure!(code: "no_voidable_amount"))
+      end
+
+      it "returns a method not allowed error and keeps the invoice finalized" do
+        subject
+
+        expect(response).to have_http_status(:method_not_allowed)
+        expect(json).to eq(status: 405, error: "Method Not Allowed", code: "no_voidable_amount")
+        expect(invoice.reload).to be_finalized
+        expect(invoice.credit_notes).to be_empty
+      end
+    end
+
     context "when the organization is not on the product catalog", product_catalog: false do
       let(:organization) { create(:organization) }
 
@@ -65,6 +98,31 @@ RSpec.describe Api::V2::InvoicesController do
         expect(response).to have_http_status(:forbidden)
         expect(json[:code]).to eq("feature_unavailable")
         expect(invoice.reload).to be_finalized
+      end
+    end
+  end
+
+  describe "GET /api/v2/invoices" do
+    subject { get_with_token(organization, "/api/v2/invoices", params) }
+
+    context "with per_page above the v1 maximum page size" do
+      let(:params) { {per_page: 1_000_000_000} }
+
+      it "returns a validation error on per_page" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(per_page: ["value_is_out_of_range"])
+      end
+    end
+
+    context "with page=0" do
+      let(:params) { {page: 0} }
+
+      it "returns the invoices" do
+        subject
+
+        expect(response).to have_http_status(:success)
       end
     end
   end

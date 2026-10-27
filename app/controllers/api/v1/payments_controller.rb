@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class PaymentsController < Api::BaseController
+    class PaymentsController < Api::V1::BaseController
       include PaymentIndex
 
       def create

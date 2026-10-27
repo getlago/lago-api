@@ -13,6 +13,11 @@ add_on_deleted:
   description: An add-on has been deleted
   category: Add Ons
   deprecated: false
+alert_resolved:
+  name: alert.resolved
+  description: One or more thresholds defined in the alert are no longer crossed
+  category: Alerts
+  deprecated: false
 alert_triggered:
   name: alert.triggered
   description: One or more thresholds defined in the alert were crossed

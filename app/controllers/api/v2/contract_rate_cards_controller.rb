@@ -4,6 +4,7 @@ module Api
   module V2
     class ContractRateCardsController < Api::V2::BaseController
       cursor_paginated_index(ContractRateCard)
+      serializable_with ::V2::ContractAppliedRateCardSerializer, root: :applied_rate_card
 
       def create
         return not_found_error(resource: "contract") unless find_contract
@@ -14,7 +15,7 @@ module Api
         )
 
         if result.success?
-          render_contract_rate_card(result.contract_rate_card)
+          render_applied_rate_card(result.contract_rate_card)
         else
           render_error_response(result)
         end
@@ -25,7 +26,7 @@ module Api
 
         return not_found_error(resource: "applied_rate_card") unless contract_rate_card
 
-        render_contract_rate_card(contract_rate_card)
+        render_applied_rate_card(contract_rate_card)
       end
 
       def update
@@ -36,7 +37,7 @@ module Api
         )
 
         if result.success?
-          render_contract_rate_card(result.contract_rate_card)
+          render_applied_rate_card(result.contract_rate_card)
         else
           render_error_response(result)
         end
@@ -47,7 +48,7 @@ module Api
         result = ::ContractRateCards::DestroyService.call(contract_rate_card:)
 
         if result.success?
-          render_contract_rate_card(result.contract_rate_card)
+          render_applied_rate_card(result.contract_rate_card)
         else
           render_error_response(result)
         end
@@ -63,16 +64,7 @@ module Api
         )
 
         if result.success?
-          page = ::CursorPagination::Page.new(records: result.contract_rate_cards.includes(:contract, :rate_card, :rate_phases), cursor:)
-
-          render(
-            json: ::CollectionSerializer.new(
-              page.records,
-              ::V2::ContractAppliedRateCardSerializer,
-              collection_name: "applied_rate_cards",
-              meta: page.meta
-            )
-          )
+          render_applied_rate_cards(result.contract_rate_cards.includes(:contract, :rate_card))
         else
           render_error_response(result)
         end
@@ -123,10 +115,6 @@ module Api
 
       def update_params
         params.require(:applied_rate_card).permit(:units, :billing_anchor_date)
-      end
-
-      def render_contract_rate_card(contract_rate_card)
-        render(json: ::V2::ContractAppliedRateCardSerializer.new(contract_rate_card, root_name: "applied_rate_card"))
       end
 
       def resource_name

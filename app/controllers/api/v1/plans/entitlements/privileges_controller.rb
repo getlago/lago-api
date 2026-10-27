@@ -4,7 +4,7 @@ module Api
   module V1
     module Plans
       module Entitlements
-        class PrivilegesController < Api::BaseController
+        class PrivilegesController < Api::V1::BaseController
           before_action :find_plan
           before_action :find_entitlement
 

@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class SecurityLogsController < Api::BaseController
+    class SecurityLogsController < Api::V1::BaseController
       include PremiumFeatureOnly
 
       skip_audit_logs!
@@ -13,8 +13,8 @@ module Api
         result = SecurityLogsQuery.call(
           organization: current_organization,
           pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
+            page: page_number,
+            limit: page_size
           },
           filters: index_filters
         )

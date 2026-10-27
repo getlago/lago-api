@@ -95,8 +95,7 @@ module Api
         )
 
         if result.success?
-          # Preloaded so filters_count reads the loaded association.
-          render_products(result.products.includes(:filters))
+          render_products(result.products)
         else
           render_error_response(result)
         end

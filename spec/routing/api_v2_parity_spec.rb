@@ -25,12 +25,29 @@ RSpec.describe "API v2 routing parity" do
     expect(recognized[:plan_code]).to eq("foo")
   end
 
-  it "falls back to v1 controllers for shared resources" do
-    customers = Rails.application.routes.routes.find do |route|
-      route.path.spec.to_s.start_with?("/api/v2/customers(") && route.verb == "GET"
+  it "keeps customer-nested paths on their shared controllers" do
+    recognized = Rails.application.routes.recognize_path("/api/v2/customers/customer/invoices", method: :get)
+
+    expect(recognized[:controller]).to eq("api/v1/customers/invoices")
+    expect(recognized[:customer_external_id]).to eq("customer")
+  end
+
+  it "routes customer CRUD to v2 without changing v1" do
+    {
+      get: %w[/customers /customers/customer.eu],
+      post: %w[/customers],
+      put: %w[/customers/customer.eu],
+      patch: %w[/customers/customer.eu],
+      delete: %w[/customers/customer.eu]
+    }.each do |method, paths|
+      paths.each do |path|
+        recognized = Rails.application.routes.recognize_path("/api/v2#{path}", method:)
+
+        expect(recognized[:controller]).to eq("api/v2/customers")
+      end
     end
 
-    expect(customers.defaults[:controller]).to eq("api/v1/customers")
+    expect(Rails.application.routes.recognize_path("/api/v1/customers", method: :post)[:controller]).to eq("api/v1/customers")
   end
 
   it "routes tax endpoints to the v2 controller" do
@@ -45,6 +62,21 @@ RSpec.describe "API v2 routing parity" do
         recognized = Rails.application.routes.recognize_path(path, method:)
 
         expect(recognized[:controller]).to eq("api/v2/taxes")
+      end
+    end
+  end
+
+  it "routes fee endpoints to the v2 controller" do
+    id = SecureRandom.uuid
+
+    {
+      get: ["/api/v2/fees", "/api/v2/fees/#{id}"],
+      put: ["/api/v2/fees/#{id}"],
+      patch: ["/api/v2/fees/#{id}"],
+      delete: ["/api/v2/fees/#{id}"]
+    }.each do |method, paths|
+      paths.each do |path|
+        expect(Rails.application.routes.recognize_path(path, method:)[:controller]).to eq("api/v2/fees")
       end
     end
   end

@@ -346,7 +346,7 @@ module Fees
         charge_filter: selected_metered_item.charge_filter&.persisted? ? selected_metered_item.charge_filter : nil
       )
 
-      unless selected_metered_item.invoiceable?
+      if selected_metered_item.billing_segment || !selected_metered_item.invoiceable?
         new_fee.pay_in_advance = selected_metered_item.pay_in_advance?
       end
 
