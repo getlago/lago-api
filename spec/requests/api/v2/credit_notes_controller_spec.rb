@@ -297,6 +297,66 @@ RSpec.describe Api::V2::CreditNotesController do
     end
   end
 
+  describe "POST /api/v2/credit_notes/:id/resend_email", :premium, v2_timestamps: false do
+    subject(:request) do
+      post_with_token(organization, "/api/v2/credit_notes/#{credit_note.id}/resend_email", recipients)
+    end
+
+    let(:customer) { create(:customer, organization:, email: "customer@example.com") }
+    let(:invoice) { create(:invoice, organization:, customer:, status: :finalized) }
+    let(:credit_note) { create(:credit_note, invoice:, customer:, status: :finalized) }
+    let(:recipients) { {to: ["recipient@example.com"], cc: ["copy@example.com"], bcc: ["hidden@example.com"]} }
+
+    include_examples "requires API permission", "credit_note", "write"
+
+    it "enqueues the credit note email for the supplied recipients" do
+      expect { request }.to have_enqueued_mail(CreditNoteMailer, :created).with(
+        params: {
+          credit_note:,
+          resend: true,
+          to: recipients[:to],
+          cc: recipients[:cc],
+          bcc: recipients[:bcc]
+        },
+        args: []
+      )
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to be_empty
+    end
+
+    context "when the recipients are invalid" do
+      let(:recipients) { {to: ["invalid"]} }
+
+      it "returns a validation error without sending an email" do
+        expect { request }.not_to have_enqueued_mail(CreditNoteMailer, :created)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details][:to]).to be_present
+      end
+    end
+
+    context "when the credit note is a draft" do
+      let(:credit_note) { create(:credit_note, :draft, invoice:, customer:) }
+
+      it "returns not found without sending an email" do
+        expect { request }.not_to have_enqueued_mail(CreditNoteMailer, :created)
+
+        expect(response).to be_not_found_error("credit_note")
+      end
+    end
+
+    context "when the credit note belongs to another organization" do
+      let(:credit_note) { create(:credit_note, status: :finalized) }
+
+      it "returns not found without sending an email" do
+        expect { request }.not_to have_enqueued_mail(CreditNoteMailer, :created)
+
+        expect(response).to be_not_found_error("credit_note")
+      end
+    end
+  end
+
   describe "contract product-fee credit notes on v2", :premium do
     before { organization.enable_feature_flag!(:product_catalog) }
 
