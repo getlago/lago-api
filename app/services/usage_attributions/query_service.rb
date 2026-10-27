@@ -4,7 +4,7 @@ module UsageAttributions
   class QueryService < BaseService
     Result = BaseResult[
       :subscription, :group_by, :rows, :unattributed, :totals, :groups_count, :basis, :from_datetime, :to_datetime,
-      :currency, :limit, :offset
+      :currency, :limit, :offset, :split_filters_count
     ]
 
     Row = Data.define(:value, :rank, :amount_cents, :events_count, :cells)
@@ -15,7 +15,7 @@ module UsageAttributions
     MAX_LIMIT = 100
     MAX_FILTER_VALUES = 20
     MAX_FLAT_FILTERS = 3
-    MAX_SPLIT_FILTERS = 10
+    SPLIT_FILTERS_PER_PAGE = 10
     MAX_SEARCH_LENGTH = 100
     MAX_CUSTOM_WINDOW = 31.days
     MAX_GROUPS = 250_000
@@ -33,7 +33,7 @@ module UsageAttributions
     }.freeze
 
     def initialize(subscription:, group_by:, filters: {}, from_datetime: nil, to_datetime: nil, charges: nil,
-      split_charge: nil, search: nil, basis: "units", order_by: nil, limit: DEFAULT_LIMIT, offset: 0)
+      split_charge: nil, split_filters_offset: 0, search: nil, basis: "units", order_by: nil, limit: DEFAULT_LIMIT, offset: 0)
       @subscription = subscription
       @group_by = group_by.to_s
       @filters = filters.to_h.to_h { |code, values| [code.to_s, (values.is_a?(Array) ? values : [values]).map(&:to_s)] }
@@ -41,6 +41,7 @@ module UsageAttributions
       @to_datetime = to_datetime
       @requested_charges = charges&.to_a
       @split_charge = split_charge
+      @split_filters_offset = split_filters_offset
       @search = search.presence
       @basis = basis.to_s
       @order_by = (order_by || ((@basis == "amount") ? "amount" : "events_count")).to_s
@@ -67,6 +68,7 @@ module UsageAttributions
       result.from_datetime = window_from
       result.to_datetime = window_to
       result.currency = currency.iso_code
+      result.split_filters_count = split_filter_ids.size if split_charge
 
       assign_result(fetch_rows)
       result
@@ -82,7 +84,7 @@ module UsageAttributions
 
     private
 
-    attr_reader :subscription, :group_by, :filters, :from_datetime, :to_datetime, :requested_charges, :split_charge,
+    attr_reader :subscription, :group_by, :filters, :from_datetime, :to_datetime, :requested_charges, :split_charge, :split_filters_offset,
       :search, :basis, :order_by, :limit, :offset
 
     delegate :organization, to: :subscription
@@ -112,7 +114,8 @@ module UsageAttributions
         basis: (["value_is_invalid"] unless BASES.include?(basis)),
         order_by: order_by_errors,
         charges: charges_errors,
-        split_charge: split_charge_errors
+        split_charge: split_charge_errors,
+        split_filters_offset: (["value_is_out_of_range"] unless split_filters_offset.is_a?(Integer) && split_filters_offset >= 0)
       }.compact_blank
     end
 
@@ -152,7 +155,7 @@ module UsageAttributions
       filters_count = filters_count_by_charge_id.fetch(split_charge.id, 0)
       if filters_count.zero?
         errors << "must_have_filters"
-      elsif filters_count > MAX_SPLIT_FILTERS || (supported_charge?(split_charge) && price_lookup(split_charge).nil?)
+      elsif supported_charge?(split_charge) && price_lookup(split_charge).nil?
         errors << "too_many_filters"
       end
 
@@ -286,7 +289,7 @@ module UsageAttributions
         count: charge.billable_metric.count_agg?,
         unit_amount_cents: (unit_amount_cents(charge) if priced),
         lookup:,
-        split:
+        split_filter_ids: (split_filters.map(&:id) if split)
       )
     end
 
@@ -336,7 +339,7 @@ module UsageAttributions
     end
 
     def build_cells(values)
-      ordered_cells.map do |cell, index|
+      Array(@cells).each_with_index.map do |cell, index|
         Cell.new(
           charge: charges_by_id.fetch(cell.charge_id),
           charge_filter: split_filters_by_id[cell.charge_filter_id],
@@ -347,29 +350,32 @@ module UsageAttributions
       end
     end
 
-    # The query cells, each with the index of its columns in the returned rows, in the order of the
-    # charges. A split charge lists its filters in their own order and the default last, while the
-    # query ranks them by specificity.
-    def ordered_cells
-      @ordered_cells ||= Array(@cells).each_with_index.sort_by do |cell, index|
-        [cell.column_index, split_filter_positions.fetch(cell.charge_filter_id, split_filters.size), index]
-      end
-    end
-
     def charges_by_id
       @charges_by_id ||= charges.index_by(&:id)
     end
 
+    def split_filter_ids
+      @split_filter_ids ||= begin
+        matchable = price_lookup(split_charge).filter_ids.to_set
+        ordered_split_filters.pluck(:id).select { matchable.include?(it) }
+      end
+    end
+
     def split_filters
-      @split_filters ||= split_charge ? split_charge.filters.includes(values: :billable_metric_filter).to_a : []
+      @split_filters ||= if split_charge
+        page_ids = split_filter_ids.slice(split_filters_offset, SPLIT_FILTERS_PER_PAGE)
+        ordered_split_filters.where(id: page_ids).includes(values: :billable_metric_filter).to_a
+      else
+        []
+      end
+    end
+
+    def ordered_split_filters
+      split_charge.filters.reorder(:updated_at, :id)
     end
 
     def split_filters_by_id
       @split_filters_by_id ||= split_filters.index_by(&:id)
-    end
-
-    def split_filter_positions
-      @split_filter_positions ||= split_filters.each_with_index.to_h { |filter, position| [filter.id, position] }
     end
 
     # The values of a returned row, by column name: {"amount" => ..., "events" => ..., "units_0" => ...}.

@@ -21,6 +21,7 @@ module Resolvers
     argument :basis, Types::AttributedUsage::BasisEnum, required: false
     argument :charge_ids, [ID], required: false, description: "Defaults to every charge of the plan"
     argument :split_charge_id, ID, required: false
+    argument :split_filters_offset, Integer, required: false, description: "Index of the first filter of the split charge to list"
 
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
@@ -29,7 +30,7 @@ module Resolvers
     type Types::AttributedUsage::Object, null: false
 
     def resolve(subscription_id:, group_by:, filters: [], from_datetime: nil, to_datetime: nil, basis: "units",
-      charge_ids: nil, split_charge_id: nil, limit: UsageAttributions::QueryService::DEFAULT_LIMIT, page: 1, search_term: nil)
+      charge_ids: nil, split_charge_id: nil, split_filters_offset: 0, limit: UsageAttributions::QueryService::DEFAULT_LIMIT, page: 1, search_term: nil)
       subscription = current_organization.subscriptions.active.find_by(id: subscription_id)
       return not_found_error(resource: "subscription") unless subscription
       return validation_error(messages: {page: ["value_is_out_of_range"]}) unless page.positive?
@@ -45,6 +46,7 @@ module Resolvers
         to_datetime:,
         charges:,
         split_charge:,
+        split_filters_offset:,
         search: search_term,
         basis:,
         limit:,

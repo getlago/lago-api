@@ -1175,6 +1175,7 @@ type AttributedUsage {
   groupBy: String!
   metadata: CollectionMetadata!
   rows: [AttributedUsageRow!]!
+  splitFiltersCount: Int
   subscriptionId: ID!
   toDatetime: ISO8601DateTime!
   totals: AttributedUsageAggregate!
@@ -12502,6 +12503,11 @@ type Query {
     page: Int
     searchTerm: String
     splitChargeId: ID
+
+    """
+    Index of the first filter of the split charge to list
+    """
+    splitFiltersOffset: Int
     subscriptionId: ID!
 
     """
