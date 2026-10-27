@@ -201,5 +201,6 @@ Also check:
 ## Keeping this file current
 
 - When a review comment points out a mistake that no rule here prevents, and the lesson applies beyond this PR, the same PR adds or fixes the rule in this file. One-off choices and personal preferences stay out.
+- When you notice a recurring pattern in the code, or a repeated step in the workflow, that no rule here captures, propose adding it rather than leaving it undocumented. Suggest the exact wording so a maintainer can approve it.
 - A rule that a cop (`dev/cops`) or a spec can check goes there instead. Keep this file short: tighten or replace an existing rule rather than stacking a new one, and remove rules that no longer match the code.
 - Edit `AGENTS.md`. `CLAUDE.md` only imports it.
