@@ -580,20 +580,39 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
 
       context "with a charge filter" do
         let(:charge_filter) { create(:charge_filter, charge: parent_charge, code: "region_eu", properties: {amount: "20"}) }
-        let!(:child_filter) { create(:charge_filter, charge: child_charge, code: "region_eu", properties: {amount: "30"}) }
 
-        before { create(:charge_filter, charge: child_charge, code: "region_us", properties: {amount: "40"}) }
+        before do
+          create(:charge_filter, charge: child_charge, code: "region_eu", properties: {amount: "30"})
+          create(:charge_filter, charge: child_charge, code: "region_us", properties: {amount: "40"})
+        end
 
         it "prices the units with the child filter of the same code and keeps the parent filter" do
           regenerated_fee = regenerate_result.invoice.fees.sole
 
-          expect(child_filter.code).to eq(charge_filter.code)
           expect(regenerated_fee).to have_attributes(
             charge_id: parent_charge.id,
             charge_filter_id: charge_filter.id,
             units: 2,
             unit_amount_cents: 3000,
             amount_cents: 6000
+          )
+        end
+      end
+
+      context "when the child charge has no filter with the code of the fee filter" do
+        let(:charge_filter) { create(:charge_filter, charge: parent_charge, code: "region_eu", properties: {amount: "20"}) }
+
+        before { create(:charge_filter, charge: child_charge, code: "region_us", properties: {amount: "40"}) }
+
+        it "prices the units with the historical parent filter and keeps the parent charge" do
+          regenerated_fee = regenerate_result.invoice.fees.sole
+
+          expect(regenerated_fee).to have_attributes(
+            charge_id: parent_charge.id,
+            charge_filter_id: charge_filter.id,
+            units: 2,
+            unit_amount_cents: 2000,
+            amount_cents: 4000
           )
         end
       end
