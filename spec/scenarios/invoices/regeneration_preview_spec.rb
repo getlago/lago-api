@@ -182,10 +182,11 @@ describe "Invoice regeneration preview" do
         )["data"]["invoiceBuildRegenerationPreview"]
         preview_fee = data["fees"].find { |fee| fee["id"] == charge_fee.id }
 
-        # 1 unit at 2,000 EUR prorated over 1 day of a 30-day month: 200_000 * 1 / 30 = 6667 cents.
+        # 1 unit at 2,000 EUR prorated over 1 day of a 30-day month. Billing rounds the
+        # 1/30 proration coefficient up to 0.03334, so 200_000 * 0.03334 = 6668 cents.
         expect(preview_fee["units"]).to eq(1.0)
-        expect(preview_fee["amountCents"]).to eq("6667")
-        expect(preview_fee["preciseUnitAmount"]).to be_within(0.01).of(66.67)
+        expect(preview_fee["amountCents"]).to eq("6668")
+        expect(preview_fee["preciseUnitAmount"]).to be_within(0.01).of(66.68)
       end
     end
   end
@@ -276,9 +277,11 @@ describe "Invoice regeneration preview" do
         )["data"]["invoiceBuildRegenerationPreview"]
         preview_fee = preview["fees"].find { |fee| fee["id"] == charge_fee.id }
 
-        # 1 unit at 2,000 EUR prorated over 1 day of a 30-day month: 200_000 * 1 / 30 = 6667 cents.
+        # 1 unit at 2,000 EUR prorated over 1 day of a 30-day month. Billing rounds the
+        # 1/30 proration coefficient up to 0.03334, so 200_000 * 0.03334 = 6668 cents.
         expect(preview_fee["units"]).to eq(1.0)
-        expect(preview_fee["amountCents"]).to eq("6667")
+        expect(preview_fee["amountCents"]).to eq("6668")
+        expect(preview_fee["preciseUnitAmount"]).to be_within(0.01).of(66.68)
 
         # NOTE: lago-front sends every preview fee back with its units and preciseUnitAmount as unitAmountCents.
         fees_input = preview["fees"].map do |fee|
@@ -302,7 +305,7 @@ describe "Invoice regeneration preview" do
         )["data"]["regenerateFromVoided"]
         regenerated_fee = Invoice.find(regenerated["id"]).fees.charge.sole
 
-        expect(regenerated_fee.amount_cents).to eq(6667)
+        expect(regenerated_fee.amount_cents).to eq(6668)
         expect(regenerated_fee.units).to eq(1)
         expect(regenerated_fee.charge_id).to eq(charge_fee.charge_id)
       end
