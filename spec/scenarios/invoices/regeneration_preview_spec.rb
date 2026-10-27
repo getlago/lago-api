@@ -380,19 +380,11 @@ describe "Invoice regeneration preview" do
     let(:charge_fee) { invoice.fees.charge.sole }
 
     before do
-      expect(invoice).to be_finalized
-      expect(charge_fee.charge_id).to eq(charge.id)
-      expect(charge_fee.units).to eq(1)
-      expect(charge_fee.amount_cents).to eq(0)
+      charge_fee
 
       travel_to(Time.zone.parse("2024-10-02T10:00:00")) do
         update_subscription(subscription, {plan_overrides: {charges: [{id: charge.id, properties: {amount: "2000"}}]}})
-        expect(subscription.reload.plan.parent_id).to eq(plan.id)
-        expect(subscription.plan.charges.sole).to have_attributes(parent_id: charge.id, properties: {"amount" => "2000"})
-        expect(charge.reload.properties["amount"]).to eq("0")
-
         void_invoice(invoice)
-        expect(invoice.reload).to be_voided
       end
     end
 
@@ -422,6 +414,13 @@ describe "Invoice regeneration preview" do
     end
 
     it "previews and regenerates the fee with the child charge price" do
+      # The invoice was billed on the parent charge at 0 EUR, before the subscription moved to a child plan.
+      expect(charge_fee.reload).to have_attributes(charge_id: charge.id, units: 1, amount_cents: 0)
+      expect(invoice.reload).to be_voided
+      expect(subscription.reload.plan.parent_id).to eq(plan.id)
+      expect(subscription.plan.charges.sole).to have_attributes(parent_id: charge.id, properties: {"amount" => "2000"})
+      expect(charge.reload.properties["amount"]).to eq("0")
+
       preview = build_preview
       preview_fee = preview["fees"].find { |fee| fee["id"] == charge_fee.id }
 
