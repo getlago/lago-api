@@ -206,13 +206,15 @@ module Invoices
     # while the regenerated fee keeps the voided fee's charge and filter.
     # Pay-in-advance fees and fees of a progressive-billing invoice keep their historical price.
     def current_charge(fee)
-      return if fee.pay_in_advance? || voided_invoice.progressive_billing?
-
-      Fees::ResolveCurrentChargeService.call!(
-        subscription: fee.subscription,
-        charge: fee.charge,
-        charge_filter: fee.charge_filter
-      )
+      if fee.pay_in_advance? || voided_invoice.progressive_billing?
+        nil
+      else
+        Fees::ResolveCurrentChargeService.call!(
+          subscription: fee.subscription,
+          charge: fee.charge,
+          charge_filter: fee.charge_filter
+        )
+      end
     end
 
     def assign_applied_usage_thresholds
