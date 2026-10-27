@@ -135,180 +135,32 @@ RSpec.describe Invoices::BuildRegenerationPreviewService do
         expect(preview_fee_applied_tax.tax_rate).to eq(12)
       end
     end
-  end
 
-  describe "#call with charge fees priced again" do
-    subject(:result) { preview_service.call }
-
-    let(:invoice) { create(:invoice, :voided, organization:, customer:, currency: "EUR") }
-    let(:subscription) do
-      create(:subscription, customer:, organization:, plan:, started_at: Time.zone.parse("2024-01-01"))
-    end
-    let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "value") }
-    let(:current_amount) { "10" }
-    let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: current_amount}) }
-    let(:fee_properties) do
-      {
-        "timestamp" => "2024-04-01T00:00:00.000Z",
-        "from_datetime" => "2024-03-01T00:00:00.000Z",
-        "to_datetime" => "2024-03-31T23:59:59.999Z",
-        "charges_from_datetime" => "2024-03-01T00:00:00.000Z",
-        "charges_to_datetime" => "2024-03-31T23:59:59.999Z",
-        "charges_duration" => 31
-      }
-    end
-    let(:voided_amount_cents) { 1500 }
-    let(:charge_fee) do
-      create(
-        :charge_fee,
-        invoice:,
-        organization:,
-        subscription:,
-        charge:,
-        units: 3,
-        total_aggregated_units: 3,
-        events_count: 1,
-        amount_cents: voided_amount_cents,
-        precise_amount_cents: voided_amount_cents,
-        unit_amount_cents: 500,
-        precise_unit_amount: 5,
-        amount_currency: "EUR",
-        properties: fee_properties
-      )
-    end
-    let(:subscription_fee) do
-      create(
-        :fee,
-        invoice:,
-        organization:,
-        subscription:,
-        fee_type: "subscription",
-        units: 1,
-        amount_cents: 1000,
-        amount_currency: "EUR"
-      )
-    end
-
-    let(:preview_charge_fee) { result.invoice.fees.find { |preview_fee| preview_fee.id == charge_fee.id } }
-
-    before do
-      create(:invoice_subscription, invoice:, subscription:)
-      create(
-        :event,
-        organization_id: organization.id,
-        subscription:,
-        code: billable_metric.code,
-        timestamp: Time.zone.parse("2024-03-10T12:00:00"),
-        properties: {value: 3}
-      )
-      charge_fee
-      subscription_fee
-    end
-
-    context "when the charge price changed" do
-      it "prices the fee with the current price" do
-        expect(preview_charge_fee).to have_attributes(
-          units: 3,
-          amount_cents: 3000,
-          unit_amount_cents: 1000,
-          precise_unit_amount: 10,
-          charge_id: charge.id
-        )
-        expect(result.invoice.fees_amount_cents).to eq(4000)
+    context "with charge fees priced again" do
+      let(:result) { preview_service.call }
+      let(:invoice) { create(:invoice, :voided, organization:, customer:, currency: "EUR") }
+      let(:subscription) do
+        create(:subscription, customer:, organization:, plan:, started_at: Time.zone.parse("2024-01-01"))
       end
-
-      it "keeps the non-charge fee unchanged" do
-        preview_subscription_fee = result.invoice.fees.find { |preview_fee| preview_fee.id == subscription_fee.id }
-
-        expect(preview_subscription_fee).to have_attributes(units: 1, amount_cents: 1000)
+      let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "value") }
+      let(:current_amount) { "10" }
+      let(:charge_properties) { {amount: current_amount} }
+      let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: charge_properties) }
+      let(:event_properties) { {value: 3} }
+      let(:fee_properties) do
+        {
+          "timestamp" => "2024-04-01T00:00:00.000Z",
+          "from_datetime" => "2024-03-01T00:00:00.000Z",
+          "to_datetime" => "2024-03-31T23:59:59.999Z",
+          "charges_from_datetime" => "2024-03-01T00:00:00.000Z",
+          "charges_to_datetime" => "2024-03-31T23:59:59.999Z",
+          "charges_duration" => 31
+        }
       end
-
-      it "persists nothing" do
-        expect { result }
-          .to not_change(Fee, :count)
-          .and not_change(AdjustedFee, :count)
-          .and not_change(Invoice, :count)
-          .and not_change(PricingUnitUsage, :count)
-      end
-
-      it "leaves the voided invoice and its fees unchanged" do
-        result
-
-        expect(invoice.reload.fees_amount_cents).to eq(invoice.fees_amount_cents)
-        expect(charge_fee.reload).to have_attributes(units: 3, amount_cents: 1500, precise_unit_amount: 5)
-        expect(result.invoice.fees.size).to eq(invoice.fees.count)
-      end
-    end
-
-    context "when the price did not change" do
-      let(:current_amount) { "5" }
-
-      it "returns the voided amounts" do
-        expect(preview_charge_fee).to have_attributes(units: 3, amount_cents: 1500, precise_unit_amount: 5)
-      end
-    end
-
-    context "with a manual adjustment" do
-      let(:voided_amount_cents) { 0 }
-
-      before do
-        create(
-          :adjusted_fee,
-          organization:,
-          invoice:,
-          fee: charge_fee,
-          subscription:,
-          charge:,
-          fee_type: :charge,
-          units: 3,
-          unit_amount_cents: 0,
-          unit_precise_amount_cents: 0,
-          adjusted_units: false,
-          adjusted_amount: true
-        )
-      end
-
-      it "keeps the adjusted price" do
-        expect(preview_charge_fee).to have_attributes(units: 3, amount_cents: 0)
-      end
-    end
-
-    context "with a true-up fee" do
-      let(:true_up_fee) do
-        create(
-          :charge_fee,
-          invoice:,
-          organization:,
-          subscription:,
-          charge:,
-          true_up_parent_fee: charge_fee,
-          units: 1,
-          amount_cents: 700,
-          amount_currency: "EUR",
-          properties: fee_properties
-        )
-      end
-
-      before { true_up_fee }
-
-      it "keeps the true-up amount" do
-        preview_true_up_fee = result.invoice.fees.find { |preview_fee| preview_fee.id == true_up_fee.id }
-
-        expect(preview_true_up_fee).to have_attributes(units: 1, amount_cents: 700)
-        expect(preview_charge_fee.amount_cents).to eq(3000)
-      end
-    end
-
-    context "when the charge is discarded" do
-      before { charge.discard! }
-
-      it "keeps the historical values" do
-        expect(preview_charge_fee).to have_attributes(units: 3, amount_cents: 1500, precise_unit_amount: 5)
-      end
-    end
-
-    context "when the charge filter is discarded" do
-      let(:charge_filter) { create(:charge_filter, charge:, properties: {amount: current_amount}) }
+      let(:voided_amount_cents) { 1500 }
+      let(:charge_filter) { nil }
+      let(:grouped_by) { {} }
+      let(:pay_in_advance_event_id) { nil }
       let(:charge_fee) do
         create(
           :charge_fee,
@@ -317,9 +169,13 @@ RSpec.describe Invoices::BuildRegenerationPreviewService do
           subscription:,
           charge:,
           charge_filter:,
+          grouped_by:,
+          pay_in_advance_event_id:,
           units: 3,
-          amount_cents: 1500,
-          precise_amount_cents: 1500,
+          total_aggregated_units: 3,
+          events_count: 1,
+          amount_cents: voided_amount_cents,
+          precise_amount_cents: voided_amount_cents,
           unit_amount_cents: 500,
           precise_unit_amount: 5,
           amount_currency: "EUR",
@@ -327,41 +183,240 @@ RSpec.describe Invoices::BuildRegenerationPreviewService do
         )
       end
 
-      before { charge_filter.discard! }
+      let(:preview_charge_fee) { result.invoice.fees.find { |preview_fee| preview_fee.id == charge_fee.id } }
 
-      it "keeps the historical values" do
-        expect(preview_charge_fee).to have_attributes(units: 3, amount_cents: 1500, precise_unit_amount: 5)
-      end
-    end
-
-    context "with a pay in advance fee" do
-      let(:charge_fee) do
+      before do
         create(
-          :charge_fee,
-          invoice:,
-          organization:,
+          :event,
+          organization_id: organization.id,
           subscription:,
-          charge:,
-          pay_in_advance: true,
-          units: 3,
-          amount_cents: 1500,
-          amount_currency: "EUR",
-          properties: fee_properties
+          code: billable_metric.code,
+          timestamp: Time.zone.parse("2024-03-10T12:00:00"),
+          properties: event_properties
         )
+        charge_fee
       end
 
-      it "keeps the historical values" do
-        expect(preview_charge_fee).to have_attributes(units: 3, amount_cents: 1500)
-      end
-    end
+      context "when the charge price changed" do
+        let!(:voided_invoice_attributes) do
+          invoice.reload.slice("fees_amount_cents", "total_amount_cents", "updated_at")
+        end
 
-    context "with a progressive billing invoice" do
-      let(:invoice) do
-        create(:invoice, :voided, organization:, customer:, currency: "EUR", invoice_type: :progressive_billing)
+        it "prices the fee with the current price" do
+          expect(preview_charge_fee).to have_attributes(
+            units: 3,
+            amount_cents: 3000,
+            unit_amount_cents: 1000,
+            precise_unit_amount: 10,
+            charge_id: charge.id
+          )
+          expect(result.invoice.fees_amount_cents).to eq(4000)
+        end
+
+        it "keeps the non-charge fee unchanged" do
+          preview_subscription_fee = result.invoice.fees.find { |preview_fee| preview_fee.id == fee.id }
+
+          expect(preview_subscription_fee).to have_attributes(units: 1, amount_cents: 1000)
+        end
+
+        it "persists nothing" do
+          expect { result }
+            .to not_change(Fee, :count)
+            .and not_change(AdjustedFee, :count)
+            .and not_change(Invoice, :count)
+            .and not_change(PricingUnitUsage, :count)
+        end
+
+        it "leaves the voided invoice and its fees unchanged" do
+          result
+
+          expect(invoice.reload.slice("fees_amount_cents", "total_amount_cents", "updated_at"))
+            .to eq(voided_invoice_attributes)
+          expect(charge_fee.reload).to have_attributes(units: 3, amount_cents: 1500, precise_unit_amount: 5)
+          expect(result.invoice.fees.size).to eq(invoice.fees.count)
+        end
       end
 
-      it "keeps the historical values" do
-        expect(preview_charge_fee).to have_attributes(units: 3, amount_cents: 1500)
+      context "when the price did not change" do
+        let(:current_amount) { "5" }
+
+        it "returns the voided amounts" do
+          expect(preview_charge_fee).to have_attributes(units: 3, amount_cents: 1500, precise_unit_amount: 5)
+        end
+      end
+
+      context "with an active charge filter" do
+        let(:event_properties) { {value: 3, region: "eu"} }
+        let(:billable_metric_filter) do
+          create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us])
+        end
+        let(:charge_filter) { create(:charge_filter, charge:, properties: {amount: "20"}) }
+
+        before do
+          create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ["eu"])
+        end
+
+        it "prices the fee with the current price of the filter" do
+          expect(preview_charge_fee).to have_attributes(
+            units: 3,
+            amount_cents: 6000,
+            precise_unit_amount: 20,
+            charge_filter_id: charge_filter.id
+          )
+        end
+      end
+
+      context "with pricing group keys" do
+        let(:charge_properties) { {amount: current_amount, pricing_group_keys: ["region"]} }
+        let(:event_properties) { {value: 3, region: "eu"} }
+        let(:grouped_by) { {"region" => "eu"} }
+
+        before do
+          create(
+            :event,
+            organization_id: organization.id,
+            subscription:,
+            code: billable_metric.code,
+            timestamp: Time.zone.parse("2024-03-12T12:00:00"),
+            properties: {value: 7, region: "af"}
+          )
+        end
+
+        it "prices the fee of the same group with the current price" do
+          expect(preview_charge_fee).to have_attributes(units: 3, amount_cents: 3000, grouped_by: {"region" => "eu"})
+        end
+
+        context "when no current fee matches the group" do
+          let(:grouped_by) { {"region" => "apac"} }
+
+          it "keeps the historical values" do
+            expect(preview_charge_fee).to have_attributes(units: 3, amount_cents: 1500, precise_unit_amount: 5)
+          end
+        end
+      end
+
+      context "when the subscription is on a child plan overriding the charge" do
+        let(:child_plan) { create(:plan, organization:, parent: plan) }
+        let(:subscription) do
+          create(:subscription, customer:, organization:, plan: child_plan, started_at: Time.zone.parse("2024-01-01"))
+        end
+        let(:current_amount) { "5" }
+
+        before do
+          create(:standard_charge, organization:, plan: child_plan, billable_metric:, parent: charge, properties: {amount: "20"})
+        end
+
+        it "prices the fee with the price of the child charge" do
+          expect(preview_charge_fee).to have_attributes(units: 3, amount_cents: 6000, charge_id: charge.id)
+        end
+      end
+
+      context "with a manual adjustment" do
+        let(:voided_amount_cents) { 0 }
+
+        before do
+          create(
+            :adjusted_fee,
+            organization:,
+            invoice:,
+            fee: charge_fee,
+            subscription:,
+            charge:,
+            fee_type: :charge,
+            units: 3,
+            unit_amount_cents: 0,
+            unit_precise_amount_cents: 0,
+            adjusted_units: false,
+            adjusted_amount: true
+          )
+        end
+
+        it "keeps the adjusted price" do
+          expect(preview_charge_fee).to have_attributes(units: 3, amount_cents: 0)
+        end
+      end
+
+      context "with a true-up fee" do
+        let(:true_up_fee) do
+          create(
+            :charge_fee,
+            invoice:,
+            organization:,
+            subscription:,
+            charge:,
+            true_up_parent_fee: charge_fee,
+            units: 1,
+            amount_cents: 700,
+            amount_currency: "EUR",
+            properties: fee_properties
+          )
+        end
+
+        before { true_up_fee }
+
+        it "keeps the true-up amount" do
+          preview_true_up_fee = result.invoice.fees.find { |preview_fee| preview_fee.id == true_up_fee.id }
+
+          expect(preview_true_up_fee).to have_attributes(units: 1, amount_cents: 700)
+          expect(preview_charge_fee.amount_cents).to eq(3000)
+        end
+      end
+
+      context "when the charge is discarded" do
+        before { charge.discard! }
+
+        it "keeps the historical values" do
+          expect(preview_charge_fee).to have_attributes(units: 3, amount_cents: 1500, precise_unit_amount: 5)
+        end
+      end
+
+      context "when the charge filter is discarded" do
+        let(:charge_filter) { create(:charge_filter, charge:, properties: {amount: current_amount}) }
+
+        before { charge_filter.discard! }
+
+        it "keeps the historical values" do
+          expect(preview_charge_fee).to have_attributes(units: 3, amount_cents: 1500, precise_unit_amount: 5)
+        end
+      end
+
+      context "with a pay in advance fee" do
+        let(:charge_fee) do
+          create(
+            :charge_fee,
+            invoice:,
+            organization:,
+            subscription:,
+            charge:,
+            pay_in_advance: true,
+            units: 3,
+            amount_cents: 1500,
+            amount_currency: "EUR",
+            properties: fee_properties
+          )
+        end
+
+        it "keeps the historical values" do
+          expect(preview_charge_fee).to have_attributes(units: 3, amount_cents: 1500)
+        end
+      end
+
+      context "with a pay in advance event fee" do
+        let(:pay_in_advance_event_id) { SecureRandom.uuid }
+
+        it "keeps the historical values" do
+          expect(preview_charge_fee).to have_attributes(units: 3, amount_cents: 1500, precise_unit_amount: 5)
+        end
+      end
+
+      context "with a progressive billing invoice" do
+        let(:invoice) do
+          create(:invoice, :voided, organization:, customer:, currency: "EUR", invoice_type: :progressive_billing)
+        end
+
+        it "keeps the historical values" do
+          expect(preview_charge_fee).to have_attributes(units: 3, amount_cents: 1500)
+        end
       end
     end
   end
