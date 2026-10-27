@@ -374,6 +374,21 @@ RSpec.describe Contracts::CurrentUsageService do
       end
     end
 
+    context "when the provider throttles the request" do
+      subject(:result) { described_class.call(contract:, timestamp:, apply_taxes:, filters:) }
+
+      before do
+        allow(Throttling).to receive(:for).with(:anrok).and_return(instance_double(Throttling::Base, check: false))
+      end
+
+      it "returns a too many provider requests failure instead of usage" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::TooManyProviderRequestsFailure)
+        expect(result.error).to have_attributes(provider_name: :anrok, message: "Service anrok is not available. Try again later.")
+        expect(WebMock).not_to have_requested(:post, endpoint)
+      end
+    end
+
     context "when taxes are skipped" do
       let(:apply_taxes) { false }
 
