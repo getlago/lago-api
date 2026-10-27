@@ -121,12 +121,27 @@ module Invoices
         next unless adjusted_fee
 
         if fee.fee_type == "charge"
-          properties = fee.charge_filter&.properties || fee.charge.properties
+          # The first-override child charge created after the invoice gives the price,
+          # while the regenerated fee keeps the voided fee's charge and filter.
+          current = Fees::ResolveCurrentChargeService.call!(
+            subscription: fee.subscription,
+            charge: fee.charge,
+            charge_filter: fee.charge_filter
+          )
+
+          if current.charge
+            properties = current.charge_filter&.properties || current.charge.properties
+            pricing_charge = current.charge
+          else
+            properties = fee.charge_filter&.properties || fee.charge.properties
+            pricing_charge = nil
+          end
 
           result = Fees::InitFromAdjustedChargeFeeService.call!(
             adjusted_fee:,
             boundaries: fee.properties,
-            properties:
+            properties:,
+            pricing_charge:
           )
 
           updated = result.fee

@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Fees::InitFromAdjustedChargeFeeService do
-  subject(:init_service) { described_class.new(adjusted_fee:, boundaries:, properties:) }
+  subject(:init_service) { described_class.new(adjusted_fee:, boundaries:, properties:, pricing_charge:) }
 
   let(:subscription) do
     create(
@@ -27,6 +27,7 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService do
     )
   end
   let(:properties) { charge.properties }
+  let(:pricing_charge) { nil }
   let(:boundaries) do
     {
       charges_from_datetime: subscription.started_at.beginning_of_day,
@@ -245,6 +246,89 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService do
             payment_status: "pending"
           )
         end
+      end
+    end
+  end
+
+  context "with a pricing charge" do
+    let(:child_plan) { create(:plan, organization:, parent: subscription.plan) }
+    let(:pricing_charge) do
+      create(
+        :standard_charge,
+        plan: child_plan,
+        parent: charge,
+        billable_metric:,
+        properties: {amount: "50"}
+      )
+    end
+    let(:properties) { pricing_charge.properties }
+
+    it "prices the fee with the pricing charge and keeps the adjusted fee's charge" do
+      result = init_service.call
+
+      expect(result).to be_success
+      expect(result.fee).to have_attributes(
+        charge:,
+        invoiceable: charge,
+        units: 7,
+        amount_cents: 35000,
+        precise_amount_cents: 35000,
+        unit_amount_cents: 5000,
+        precise_unit_amount: 50,
+        pricing_unit_usage: nil
+      )
+    end
+
+    context "when the pricing charge has a pricing unit associated" do
+      before do
+        create(
+          :applied_pricing_unit,
+          pricing_unitable: pricing_charge,
+          pricing_unit: create(:pricing_unit, organization:),
+          conversion_rate: 10
+        )
+      end
+
+      it "converts the amount with the pricing charge's pricing unit" do
+        result = init_service.call
+
+        expect(result).to be_success
+        expect(result.fee).to have_attributes(
+          charge:,
+          amount_cents: 350000,
+          precise_amount_cents: 350000,
+          unit_amount_cents: 50000,
+          precise_unit_amount: 500
+        )
+        expect(result.fee.pricing_unit_usage).to have_attributes(
+          amount_cents: 35000,
+          unit_amount_cents: 5000,
+          conversion_rate: 10
+        )
+      end
+    end
+
+    context "with adjusted amount" do
+      let(:adjusted_fee) do
+        create(
+          :adjusted_fee,
+          invoice:,
+          subscription:,
+          charge:,
+          properties:,
+          fee_type: :charge,
+          adjusted_units: false,
+          adjusted_amount: true,
+          units: 4,
+          unit_amount_cents: 200,
+          unit_precise_amount_cents: 200.0
+        )
+      end
+
+      it "keeps the manual unit amount" do
+        result = init_service.call
+
+        expect(result.fee).to have_attributes(charge:, amount_cents: 800, unit_amount_cents: 200)
       end
     end
   end

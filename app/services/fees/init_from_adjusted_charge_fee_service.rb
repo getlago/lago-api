@@ -4,10 +4,11 @@ module Fees
   class InitFromAdjustedChargeFeeService < ::BaseService
     Result = BaseResult[:fee]
 
-    def initialize(adjusted_fee:, boundaries:, properties:)
+    def initialize(adjusted_fee:, boundaries:, properties:, pricing_charge: nil)
       @adjusted_fee = adjusted_fee
       @boundaries = boundaries
       @properties = properties
+      @pricing_charge = pricing_charge
 
       super
     end
@@ -23,7 +24,7 @@ module Fees
 
     private
 
-    attr_reader :adjusted_fee, :boundaries, :properties
+    attr_reader :adjusted_fee, :boundaries, :properties, :pricing_charge
 
     delegate :invoice, :subscription, to: :adjusted_fee
 
@@ -32,7 +33,7 @@ module Fees
       units = adjusted_fee.units
       amount_details = adjusted_fee.adjusted_units? ? amount_result.amount_details : {}
 
-      if charge.applied_pricing_unit
+      if pricing_charge_or_charge.applied_pricing_unit
         amount_cents, precise_amount_cents, unit_amount_cents, precise_unit_amount = pricing_unit_usage
           .to_fiat_currency_cents(currency)
           .values_at(:amount_cents, :precise_amount_cents, :unit_amount_cents, :precise_unit_amount)
@@ -88,13 +89,13 @@ module Fees
       aggregation_result.full_units_number = adjusted_fee.units
       aggregation_result.count = 0
 
-      if charge.dynamic?
+      if pricing_charge_or_charge.dynamic?
         aggregation_result.precise_total_amount_cents = 0
       end
 
       @amount_result = ChargeModels::Factory
         .new_instance(
-          pricing_structure: ChargeModels::PricingStructure.from_charge(charge).with(properties:),
+          pricing_structure: ChargeModels::PricingStructure.from_charge(pricing_charge_or_charge).with(properties:),
           aggregation_result:
         )
         .apply
@@ -103,7 +104,7 @@ module Fees
     def pricing_unit_usage
       return @pricing_unit_usage if defined?(@pricing_unit_usage)
 
-      unless charge.applied_pricing_unit
+      unless pricing_charge_or_charge.applied_pricing_unit
         @pricing_unit_usage = nil
         return
       end
@@ -113,15 +114,21 @@ module Fees
         unit_amount = amount_result.unit_amount
       else
         precise_amount_cents = adjusted_fee.units * adjusted_fee.unit_precise_amount_cents
-        amount = precise_amount_cents / charge.pricing_unit.subunit_to_unit.to_d
-        unit_amount = adjusted_fee.unit_precise_amount_cents / charge.pricing_unit.subunit_to_unit.to_d
+        amount = precise_amount_cents / pricing_charge_or_charge.pricing_unit.subunit_to_unit.to_d
+        unit_amount = adjusted_fee.unit_precise_amount_cents / pricing_charge_or_charge.pricing_unit.subunit_to_unit.to_d
       end
 
       @pricing_unit_usage = PricingUnitUsage.build_from_fiat_amounts(
         amount:,
         unit_amount:,
-        applied_pricing_unit: charge.applied_pricing_unit
+        applied_pricing_unit: pricing_charge_or_charge.applied_pricing_unit
       )
+    end
+
+    # The charge whose price applies: the first-override child charge when regeneration
+    # resolved one, otherwise the adjusted fee's own charge. The fee keeps the latter.
+    def pricing_charge_or_charge
+      pricing_charge || charge
     end
 
     def charge

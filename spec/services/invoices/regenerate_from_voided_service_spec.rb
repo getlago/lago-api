@@ -537,6 +537,78 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
       end
     end
 
+    context "when the subscription moved to a child plan after the invoice" do
+      let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+      let(:parent_charge) { create(:standard_charge, plan:, organization:, billable_metric:, properties: {amount: "10"}) }
+      let(:child_plan) { create(:plan, organization:, parent: plan) }
+      let(:child_charge) do
+        create(:standard_charge, plan: child_plan, organization:, billable_metric:, parent: parent_charge, properties: {amount: "2000"})
+      end
+      let(:subscription) { create(:subscription, organization:, customer:, plan: child_plan) }
+      let(:original_invoice) do
+        create(:invoice, :voided, :with_subscriptions, organization:, customer:, currency: "EUR", subscriptions: [subscription])
+      end
+      let(:charge_filter) { nil }
+      let(:original_fee) do
+        create(
+          :charge_fee,
+          invoice: original_invoice,
+          organization:,
+          subscription:,
+          charge: parent_charge,
+          charge_filter:,
+          units: 1,
+          amount_cents: 1000,
+          unit_amount_cents: 1000,
+          precise_unit_amount: 10
+        )
+      end
+      let(:fees_params) { [{id: original_fee.id, subscription_id: subscription.id, units: 2}] }
+
+      before { child_charge }
+
+      it "prices the units with the child charge and keeps the parent charge" do
+        regenerated_fee = regenerate_result.invoice.fees.sole
+
+        expect(regenerated_fee).to have_attributes(
+          charge_id: parent_charge.id,
+          units: 2,
+          unit_amount_cents: 200_000,
+          amount_cents: 400_000
+        )
+      end
+
+      context "with a charge filter" do
+        let(:charge_filter) { create(:charge_filter, charge: parent_charge, code: "region_eu", properties: {amount: "20"}) }
+        let!(:child_filter) { create(:charge_filter, charge: child_charge, code: "region_eu", properties: {amount: "30"}) }
+
+        before { create(:charge_filter, charge: child_charge, code: "region_us", properties: {amount: "40"}) }
+
+        it "prices the units with the child filter of the same code and keeps the parent filter" do
+          regenerated_fee = regenerate_result.invoice.fees.sole
+
+          expect(child_filter.code).to eq(charge_filter.code)
+          expect(regenerated_fee).to have_attributes(
+            charge_id: parent_charge.id,
+            charge_filter_id: charge_filter.id,
+            units: 2,
+            unit_amount_cents: 3000,
+            amount_cents: 6000
+          )
+        end
+      end
+
+      context "when the fee has a manual unit amount" do
+        let(:fees_params) { [{id: original_fee.id, subscription_id: subscription.id, units: 2, unit_amount_cents: 5}] }
+
+        it "keeps the manual unit amount" do
+          regenerated_fee = regenerate_result.invoice.fees.sole
+
+          expect(regenerated_fee).to have_attributes(charge_id: parent_charge.id, unit_amount_cents: 500, amount_cents: 1000)
+        end
+      end
+    end
+
     context "when a plan charge was soft deleted" do
       let(:parent_charge) { create(:standard_charge, plan:, organization:) }
       let(:charge) do
