@@ -57,6 +57,38 @@ RSpec.describe Api::V2::InvoicesController, v2_timestamps: false do
       end
     end
 
+    context "when the credit note void fails", :premium do
+      let(:params) { {generate_credit_note: true} }
+      let(:invoice) do
+        create(
+          :invoice,
+          status:,
+          payment_status: :pending,
+          customer:,
+          organization:,
+          fees_amount_cents: 200,
+          taxes_amount_cents: 2,
+          sub_total_excluding_taxes_amount_cents: 200,
+          sub_total_including_taxes_amount_cents: 202,
+          total_amount_cents: 202
+        )
+      end
+
+      before do
+        allow(CreditNotes::VoidService).to receive(:call)
+          .and_return(CreditNotes::VoidService::Result.new.not_allowed_failure!(code: "no_voidable_amount"))
+      end
+
+      it "returns a method not allowed error and keeps the invoice finalized" do
+        subject
+
+        expect(response).to have_http_status(:method_not_allowed)
+        expect(json).to eq(status: 405, error: "Method Not Allowed", code: "no_voidable_amount")
+        expect(invoice.reload).to be_finalized
+        expect(invoice.credit_notes).to be_empty
+      end
+    end
+
     context "when the organization is not on the product catalog", product_catalog: false do
       let(:organization) { create(:organization) }
 

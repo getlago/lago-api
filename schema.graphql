@@ -7058,6 +7058,7 @@ enum EventTypeEnum {
   add_on_created
   add_on_deleted
   add_on_updated
+  alert_resolved
   alert_triggered
   all
   billable_metric_created
@@ -7213,6 +7214,7 @@ enum FeatureFlagEnum {
   incremental_charge_cache
   multi_connection
   order_forms
+  persisted_recurring_values
   postgres_enriched_events
   product_catalog
   realtime_usage

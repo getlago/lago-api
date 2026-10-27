@@ -957,6 +957,37 @@ RSpec.describe Api::V1::InvoicesController do
         expect(json[:invoice][:status]).to eq("voided")
         expect(json[:invoice][:voided_at]).not_to be_nil
       end
+
+      context "when the credit note void fails" do
+        let(:invoice) do
+          create(
+            :invoice,
+            status:,
+            payment_status:,
+            customer:,
+            organization:,
+            fees_amount_cents: 100,
+            sub_total_excluding_taxes_amount_cents: 100,
+            sub_total_including_taxes_amount_cents: 100,
+            total_amount_cents: 100
+          )
+        end
+
+        before do
+          create(:fee, invoice:, amount_cents: 100, precise_amount_cents: 100, taxes_amount_cents: 0, taxes_precise_amount_cents: 0)
+          allow(CreditNotes::VoidService).to receive(:call)
+            .and_return(CreditNotes::VoidService::Result.new.not_allowed_failure!(code: "no_voidable_amount"))
+        end
+
+        it "returns a method not allowed error and keeps the invoice finalized" do
+          subject
+
+          expect(response).to have_http_status(:method_not_allowed)
+          expect(json).to eq(status: 405, error: "Method Not Allowed", code: "no_voidable_amount")
+          expect(invoice.reload).to be_finalized
+          expect(invoice.credit_notes).to be_empty
+        end
+      end
     end
   end
 

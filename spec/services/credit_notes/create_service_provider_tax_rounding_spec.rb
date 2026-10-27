@@ -100,6 +100,45 @@ RSpec.describe CreditNotes::CreateService, :premium do
     end
   end
 
+  context "when crediting a contract product fee after its tax provider is detached" do
+    let(:invoice) do
+      create(:invoice, invoice_type: :one_off, version_number: 3, payment_status: :succeeded,
+        fees_amount_cents: 100, total_amount_cents: 100)
+    end
+    let(:contract) { create(:contract, organization: invoice.organization, customer: invoice.customer) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization: invoice.organization, contract:) }
+    let(:rate_card_rate) { create(:rate_card_rate, organization: invoice.organization, rate_card: contract_rate_card.rate_card) }
+    let(:fees) do
+      [create(:fee, invoice:, subscription: nil, fee_type: :product, amount_cents: 100, precise_amount_cents: 100,
+        taxes_rate: 0, invoiceable: contract_rate_card.rate_card.product, contract:, contract_rate_card:, rate_card_rate:,
+        taxes_amount_cents: 0, taxes_precise_amount_cents: 0)]
+    end
+    let(:items) { [{fee_id: fees.sole.id, amount_cents: 50}] }
+    let(:credit_amount_cents) { 51 }
+    let(:provider_taxes) do
+      [build(:tax_result, item_id: fees.sole.id, tax_amount_cents: 3, tax_breakdown: [
+        build(:tax_breakdown_item, name: "State Sales Tax", type: "tax", rate: "0.025", tax_amount: 3)
+      ])]
+    end
+
+    before do
+      invoice.organization.enable_feature_flag!(:product_catalog)
+      invoice.customer.anrok_customer.destroy!
+    end
+
+    it "reverses the invoice's booked tax code, rate, and exact cents across partial credits" do
+      expect(invoice.applied_taxes.sole).to have_attributes(tax_code: "state_sales_tax", tax_rate: 2.5, amount_cents: 3)
+
+      first_credit = described_class.call!(invoice:, items:, credit_amount_cents: 52).credit_note
+      final_credit = create_credit_note
+
+      expect(first_credit.applied_taxes.sole).to have_attributes(tax_code: "state_sales_tax", tax_rate: 2.5, amount_cents: 2)
+      expect(final_credit.applied_taxes.sole).to have_attributes(tax_code: "state_sales_tax", tax_rate: 2.5, amount_cents: 1)
+      expect(invoice.reload.credit_notes.sum(:total_amount_cents)).to eq(103)
+      expect(invoice.credit_notes.sum { |note| note.applied_taxes.sum(&:amount_cents) }).to eq(3)
+    end
+  end
+
   {
     ubl: [EInvoices::CreditNotes::Ubl::Builder, "//cac:TaxSubtotal/cbc:TaxAmount", "//cac:TaxTotal/cbc:TaxAmount"],
     cii: [EInvoices::CreditNotes::Cii::Builder, "//ram:ApplicableHeaderTradeSettlement/ram:ApplicableTradeTax/ram:CalculatedAmount",

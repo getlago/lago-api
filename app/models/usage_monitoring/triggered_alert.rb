@@ -3,6 +3,11 @@
 module UsageMonitoring
   class TriggeredAlert < ApplicationRecord
     KINDS = {triggered: "triggered", resolved: "resolved", seeded: "seeded"}.freeze
+    RESOLUTION_REASONS = {
+      recovered: "recovered",
+      threshold_updated: "threshold_updated",
+      threshold_removed: "threshold_removed"
+    }.freeze
 
     belongs_to :organization
     belongs_to :subscription, optional: true
@@ -13,6 +18,15 @@ module UsageMonitoring
       class_name: "UsageMonitoring::Alert"
 
     enum :kind, KINDS, validate: true
+    enum :resolution_reason, RESOLUTION_REASONS, prefix: true, validate: {allow_nil: true}
+
+    def alertable=(alertable)
+      case alertable
+      when Subscription then self.subscription = alertable
+      when Wallet then self.wallet = alertable
+      else raise ArgumentError, "unsupported alertable: #{alertable.class}"
+      end
+    end
   end
 end
 
@@ -28,6 +42,7 @@ end
 #  in_alarm_thresholds       :jsonb
 #  kind                      :enum             default("triggered"), not null
 #  previous_value            :decimal(30, 5)   not null
+#  resolution_reason         :enum
 #  triggered_at              :datetime         not null
 #  created_at                :datetime         not null
 #  updated_at                :datetime         not null
