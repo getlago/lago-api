@@ -7,8 +7,8 @@ class WalletAlertsConsumer < ApplicationConsumer
   # next owner. What the deadline cuts goes to the job.
   CONSUME_DEADLINE = 2.minutes
 
-  # There is no dead letter topic: past this, the batch is dropped and the next refresh of each
-  # wallet dispatches it again.
+  # There is no dead letter topic: past this, the batch's wallets go to the job and the batch is
+  # skipped. Until the job has them, the batch keeps retrying.
   MAX_ATTEMPTS = 3
 
   def consume
@@ -20,10 +20,9 @@ class WalletAlertsConsumer < ApplicationConsumer
       return
     end
 
-    # One evaluation per wallet however many times its balance moved in the batch. Resolving by
-    # organization too skips a payload naming another organization's wallet.
+    # One evaluation per wallet however many times its balance moved in the batch.
     payloads_by_wallet = payloads.group_by { [it["organization_id"], it["wallet_id"]] }
-    wallets = Wallet.where(id: payloads_by_wallet.keys.map(&:last)).index_by { [it.organization_id, it.id] }
+    wallets = resolve(payloads_by_wallet.keys)
     deadline = Time.current + CONSUME_DEADLINE
 
     payloads_by_wallet.each do |key, wallet_payloads|
@@ -39,15 +38,28 @@ class WalletAlertsConsumer < ApplicationConsumer
       end
     end
   rescue => e
-    raise if attempt < MAX_ATTEMPTS
+    raise if attempt < MAX_ATTEMPTS || payloads_by_wallet.nil?
 
-    report(:failed, :batch_dropped, by: messages.size)
-    Rails.logger.error("[alerts] wallet alerts batch dropped after #{attempt} attempts: #{e.class} #{e.message}")
+    # Evaluation is idempotent under the alert lock, so wallets already evaluated can go again.
+    # Raising here (Redis or the database still down) keeps the batch for the next attempt.
+    hand_to_job(resolve(payloads_by_wallet.keys).values)
+
+    Rails.logger.error("[alerts] wallet alerts batch handed to the job after #{attempt} attempts: #{e.class} #{e.message}")
     Sentry.capture_exception(e, extra: {attempts: attempt})
     mark_as_consumed(messages.last)
   end
 
   private
+
+  # Resolving by organization too skips a payload naming another organization's wallet.
+  def resolve(keys)
+    Wallet.where(id: keys.map(&:last)).index_by { [it.organization_id, it.id] }.slice(*keys)
+  end
+
+  def hand_to_job(wallets)
+    wallets.each { UsageMonitoring::ProcessWalletAlertsJob.perform_later(it) }
+    report(:deferred, :batch_failed, by: wallets.size)
+  end
 
   def parse(message)
     payload = message.payload # upsert-format retractions arrive as tombstones
@@ -65,7 +77,7 @@ class WalletAlertsConsumer < ApplicationConsumer
 
     report(:evaluated, :none)
     report_latency(wallet_payloads)
-  rescue ActiveRecord::ActiveRecordError => e
+  rescue => e
     # Raising out of #consume would replay the batch, re-evaluating every wallet already done.
     report(:failed, :evaluation_raised)
     Rails.logger.error("[alerts] wallet alerts evaluation raised wallet_id=#{wallet.id}: #{e.class} #{e.message}")

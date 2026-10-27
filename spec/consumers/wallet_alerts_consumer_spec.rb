@@ -148,13 +148,25 @@ RSpec.describe WalletAlertsConsumer do
     end
 
     context "when the batch raises" do
+      let(:other_wallet) { create(:wallet, organization:, customer:) }
+      let(:wallet_lookups) { [] }
+
       before do
-        allow(Wallet).to receive(:where).and_raise(ActiveRecord::ConnectionNotEstablished)
+        karafka.produce({organization_id: organization.id, wallet_id: other_wallet.id, dispatched_at_ms:}.to_json)
+
+        # The first lookup is the batch's, the next one the hand-off to the job.
+        allow(Wallet).to receive(:where).and_wrap_original do |original, *args, **kwargs|
+          wallet_lookups << args
+          raise ActiveRecord::ConnectionNotEstablished if wallet_lookups.size == 1
+
+          original.call(*args, **kwargs)
+        end
         allow(Sentry).to receive(:capture_exception)
       end
 
       it "raises so that Karafka retries the batch" do
         expect { consumer.consume }.to raise_error(ActiveRecord::ConnectionNotEstablished)
+        expect(consumer.coordinator.seek_offset).to eq(0)
       end
 
       context "when it has been retried enough" do
@@ -162,12 +174,23 @@ RSpec.describe WalletAlertsConsumer do
           allow(consumer.coordinator.pause_tracker).to receive(:attempt).and_return(described_class::MAX_ATTEMPTS)
         end
 
-        it "drops the batch" do
-          expect { consumer.consume }.not_to raise_error
+        it "hands every wallet of the batch to the alerts job, then skips the batch" do
+          expect { consumer.consume }
+            .to have_enqueued_job(UsageMonitoring::ProcessWalletAlertsJob).with(wallet)
+            .and have_enqueued_job(UsageMonitoring::ProcessWalletAlertsJob).with(other_wallet)
 
-          expect(consumer.coordinator).to be_marked
+          expect(consumer.coordinator.seek_offset).to eq(consumer.messages.last.offset + 1)
           expect(Sentry).to have_received(:capture_exception).with(ActiveRecord::ConnectionNotEstablished, extra: {attempts: 3})
-          expect(outcomes).to have_received(:increment).with({outcome: "failed", reason: "batch_dropped"}, by: 1)
+          expect(outcomes).to have_received(:increment).with({outcome: "deferred", reason: "batch_failed"}, by: 2)
+        end
+
+        context "when the hand-off fails too" do
+          before { allow(Wallet).to receive(:where).and_raise(ActiveRecord::ConnectionNotEstablished) }
+
+          it "keeps the batch for the next attempt" do
+            expect { consumer.consume }.to raise_error(ActiveRecord::ConnectionNotEstablished)
+            expect(consumer.coordinator.seek_offset).to eq(0)
+          end
         end
       end
     end
@@ -207,8 +230,10 @@ RSpec.describe WalletAlertsConsumer do
             .with(wallet:).and_raise(NoMethodError)
         end
 
-        it "raises out of the batch" do
-          expect { consumer.consume }.to raise_error(NoMethodError)
+        it "hands the wallet to the alerts job and keeps consuming the batch" do
+          expect { consumer.consume }.to have_enqueued_job(UsageMonitoring::ProcessWalletAlertsJob).with(wallet)
+
+          expect(UsageMonitoring::ProcessWalletAlertsService).to have_received(:call!).with(wallet: other_wallet)
         end
       end
     end
