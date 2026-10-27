@@ -277,6 +277,30 @@ RSpec.describe BillingEntities::CreateService do
           expect(result.error).to be_a(BaseService::ValidationFailure)
         end
       end
+
+      context "with tax codes and invoice custom section ids" do
+        let(:tax) { create(:tax, organization:) }
+        let(:section) { create(:invoice_custom_section, organization:) }
+        let(:foreign_section) { create(:invoice_custom_section, organization: create(:organization)) }
+        let(:params) { super().merge(tax_codes: [tax.code], invoice_custom_section_ids: [section.id, foreign_section.id]) }
+
+        it "applies the taxes and the organization's sections" do
+          expect(result).to be_success
+          expect(result.billing_entity.taxes).to eq([tax])
+          expect(result.billing_entity.selected_invoice_custom_sections).to eq([section])
+        end
+
+        context "with an unknown tax code" do
+          let(:params) { super().merge(tax_codes: ["unknown"]) }
+
+          it "fails without creating the billing entity" do
+            expect { result }.not_to change(organization.all_billing_entities, :count)
+
+            expect(result).to be_failure
+            expect(result.error.error_code).to eq("tax_not_found")
+          end
+        end
+      end
     end
   end
 end
