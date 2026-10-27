@@ -586,6 +586,32 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
           end
         end
       end
+
+      context "when the charge accepts target wallets", :premium do
+        let(:charge) { create(:standard_charge, billable_metric:, pay_in_advance: true, accepts_target_wallet: true) }
+        let(:event) do
+          create(:event, organization:, external_subscription_id: subscription.external_id, code: billable_metric.code,
+            timestamp: period_start + 2.days, properties: {value: 5, target_wallet_code: "first"})
+        end
+
+        before do
+          organization.update!(premium_integrations: ["events_targeting_wallets"])
+          create_snapshot(units: 100, grouped_by: {"target_wallet_code" => "first"})
+          create_snapshot(units: 50, grouped_by: {"target_wallet_code" => "second"})
+        end
+
+        it "starts from the snapshot of the event wallet" do
+          expect(agg_service.call.aggregation).to eq(100 + 5)
+        end
+
+        context "when the event targets no wallet" do
+          let(:event) { create_event(timestamp: period_start + 2.days, value: 5) }
+
+          it "starts from the snapshots of every wallet, as it reads the events of every wallet" do
+            expect(agg_service.call.aggregation).to eq(100 + 50 + 7 + 5)
+          end
+        end
+      end
     end
   end
 end

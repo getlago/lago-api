@@ -66,10 +66,11 @@ module Charges
     end
 
     # The aggregation only reads the group of the event. A group without a snapshot had neither
-    # units nor events at the period, so it starts from zero.
+    # units nor events at the period, so it starts from zero. An event without a target wallet
+    # reads every wallet, so it starts from the snapshots of every wallet.
     def event_group_snapshots(snapshots)
       grouped_by = normalized_group(metered_item.grouped_by_values)
-      snapshots.select { normalized_group(it.grouped_by) == grouped_by }
+      snapshots.select { normalized_group(it.grouped_by.slice(*grouped_by.keys)) == grouped_by }
     end
 
     # The stores group a blank value with a missing one, so a snapshot holds an event's "" as nil
