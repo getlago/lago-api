@@ -245,6 +245,23 @@ RSpec.describe Invoices::BuildRegenerationPreviewService do
         end
       end
 
+      context "with a pricing unit on the charge" do
+        before do
+          create(:applied_pricing_unit, organization:, conversion_rate: 0.25, pricing_unitable: charge)
+        end
+
+        it "prices the fee and its pricing unit usage with the current price" do
+          expect(preview_charge_fee).to have_attributes(amount_cents: 750, unit_amount_cents: 250)
+          expect(preview_charge_fee.pricing_unit_usage)
+            .to be_new_record
+            .and have_attributes(amount_cents: 3000, precise_amount_cents: 3000.0, unit_amount_cents: 1000)
+        end
+
+        it "persists no pricing unit usage" do
+          expect { result }.not_to change(PricingUnitUsage, :count)
+        end
+      end
+
       context "with an active charge filter" do
         let(:event_properties) { {value: 3, region: "eu"} }
         let(:billable_metric_filter) do

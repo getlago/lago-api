@@ -70,12 +70,12 @@ module Invoices
     attr_reader :invoice
 
     def reprice(dup_fee, repriced_fee)
-      return unless repriced_fee
+      if repriced_fee
+        dup_fee.assign_attributes(repriced_fee.attributes.slice(*REPRICED_ATTRIBUTES))
 
-      dup_fee.assign_attributes(repriced_fee.attributes.slice(*REPRICED_ATTRIBUTES))
-
-      if repriced_fee.pricing_unit_usage
-        dup_fee.pricing_unit_usage = repriced_fee.pricing_unit_usage.dup
+        if repriced_fee.pricing_unit_usage
+          dup_fee.pricing_unit_usage = repriced_fee.pricing_unit_usage.dup
+        end
       end
     end
 
@@ -85,16 +85,11 @@ module Invoices
     def repriced_fees
       @repriced_fees ||= begin
         current_charges = invoice.fees.each_with_object({}) do |fee, charges|
-          next unless repriceable?(fee)
+          current = current_charge(fee)
 
-          current = Fees::ResolveCurrentChargeService.call!(
-            subscription: fee.subscription,
-            charge: fee.charge,
-            charge_filter: fee.charge_filter
-          )
-          next unless current.charge
-
-          charges[fee] = current
+          if current&.charge
+            charges[fee] = current
+          end
         end
 
         current_charges
@@ -121,14 +116,24 @@ module Invoices
       end
     end
 
-    def repriceable?(fee)
-      return false unless fee.charge?
-      return false if fee.true_up_parent_fee_id.present?
-      return false if fee.adjusted_fee.present?
-      return false if fee.pay_in_advance_event_id.present? || fee.pay_in_advance
-      return false if invoice.progressive_billing?
+    def current_charge(fee)
+      if repriceable?(fee)
+        Fees::ResolveCurrentChargeService.call!(
+          subscription: fee.subscription,
+          charge: fee.charge,
+          charge_filter: fee.charge_filter
+        )
+      end
+    end
 
-      fee.subscription.present?
+    def repriceable?(fee)
+      fee.charge? &&
+        fee.true_up_parent_fee_id.nil? &&
+        fee.adjusted_fee.nil? &&
+        !fee.pay_in_advance &&
+        fee.pay_in_advance_event_id.nil? &&
+        !invoice.progressive_billing? &&
+        fee.subscription.present?
     end
 
     def price_with_current_charge(fee, current_charge)
