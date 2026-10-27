@@ -189,4 +189,123 @@ describe "Invoice regeneration preview" do
       end
     end
   end
+
+  context "when the overridden charge price changed after the invoice was finalized", :premium do
+    let(:customer) { create(:customer, organization:, currency: "EUR") }
+    let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:, field_name: "item_id") }
+    let(:plan) { create(:plan, organization:, interval: :monthly, amount_cents: 0, amount_currency: "EUR", pay_in_advance: false) }
+    let(:charge) do
+      create(
+        :standard_charge,
+        plan:,
+        billable_metric:,
+        prorated: true,
+        pay_in_advance: false,
+        properties: {amount: "0"}
+      )
+    end
+    let(:query) do
+      <<~GQL
+        query($id: ID!) {
+          invoiceBuildRegenerationPreview(id: $id) {
+            id
+            fees {
+              id
+              invoiceDisplayName
+              units
+              amountCents
+              preciseUnitAmount
+              charge { id }
+              chargeFilter { id }
+              subscription { id }
+            }
+          }
+        }
+      GQL
+    end
+    let(:regenerate_mutation) do
+      <<~GQL
+        mutation($input: RegenerateInvoiceInput!) {
+          regenerateFromVoided(input: $input) { id }
+        }
+      GQL
+    end
+
+    it "previews and regenerates the fee with the current overridden price" do
+      charge
+
+      subscription = travel_to(Time.zone.parse("2024-09-30T10:00:00")) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: "sub_#{SecureRandom.hex(4)}",
+            plan_code: plan.code,
+            billing_time: "calendar",
+            plan_overrides: {charges: [{id: charge.id, properties: {amount: "0"}}]}
+          }
+        )
+        subscription = customer.subscriptions.sole
+        ingest_event(subscription, billable_metric, 1)
+        subscription
+      end
+      child_charge = subscription.plan.charges.sole
+      expect(child_charge.parent_id).to eq(charge.id)
+
+      invoice = travel_to(Time.zone.parse("2024-10-01T01:00:00")) do
+        perform_billing
+        subscription.invoices.sole
+      end
+
+      charge_fee = invoice.fees.charge.sole
+      expect(charge_fee.charge_id).to eq(child_charge.id)
+      expect(charge_fee.amount_cents).to eq(0)
+
+      travel_to(Time.zone.parse("2024-10-02T10:00:00")) do
+        update_subscription_charge(subscription, child_charge.code, {properties: {amount: "2000"}})
+        expect(child_charge.reload.properties["amount"]).to eq("2000")
+        expect(subscription.plan.charges.sole.id).to eq(child_charge.id)
+
+        void_invoice(invoice)
+
+        preview = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: "invoices:view",
+          query:,
+          variables: {id: invoice.id}
+        )["data"]["invoiceBuildRegenerationPreview"]
+        preview_fee = preview["fees"].find { |fee| fee["id"] == charge_fee.id }
+
+        # 1 unit at 2,000 EUR prorated over 1 day of a 30-day month: 200_000 * 1 / 30 = 6667 cents.
+        expect(preview_fee["units"]).to eq(1.0)
+        expect(preview_fee["amountCents"]).to eq("6667")
+
+        # NOTE: lago-front sends every preview fee back with its units and preciseUnitAmount as unitAmountCents.
+        fees_input = preview["fees"].map do |fee|
+          {
+            id: fee["id"],
+            units: fee["units"],
+            unitAmountCents: fee["preciseUnitAmount"],
+            chargeId: fee.dig("charge", "id"),
+            chargeFilterId: fee.dig("chargeFilter", "id"),
+            subscriptionId: fee.dig("subscription", "id"),
+            invoiceDisplayName: fee["invoiceDisplayName"]
+          }
+        end
+
+        regenerated = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: "invoices:update",
+          query: regenerate_mutation,
+          variables: {input: {voidedInvoiceId: invoice.id, fees: fees_input}}
+        )["data"]["regenerateFromVoided"]
+        regenerated_fee = Invoice.find(regenerated["id"]).fees.charge.sole
+
+        expect(regenerated_fee.amount_cents).to eq(6667)
+        expect(regenerated_fee.units).to eq(1)
+        expect(regenerated_fee.charge_id).to eq(charge_fee.charge_id)
+      end
+    end
+  end
 end
