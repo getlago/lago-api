@@ -39,9 +39,7 @@ module PaymentMethods
     attr_reader :payment_method, :only_when_no_default
 
     def skip_default?
-      return false unless only_when_no_default
-
-      payment_method.customer.payment_methods.where(is_default: true).where.not(id: payment_method.id).exists?
+      only_when_no_default && payment_method.customer.payment_methods.where(is_default: true).where.not(id: payment_method.id).exists?
     end
   end
 end
