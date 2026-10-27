@@ -16,7 +16,8 @@ module AdjustedFees
       fee = find_or_initialize_fee
       return result if result.failure?
 
-      return result.validation_failure!(errors: {charge: ["invalid_charge_model"]}) if disabled_charge_model?(fee.charge)
+      pricing_charge = current_charge_result(fee)&.charge || fee.charge
+      return result.validation_failure!(errors: {charge: ["invalid_charge_model"]}) if disabled_charge_model?(pricing_charge)
 
       adjusted_fee = initialize_adjusted_fee(fee, params)
 
@@ -25,7 +26,7 @@ module AdjustedFees
       elsif fee.fee_type == "fixed_charge"
         init_from_fixed_charge_fee(adjusted_fee)
       else
-        init_from_charge_fee(adjusted_fee)
+        init_from_charge_fee(fee, adjusted_fee)
       end
 
       reset_presentation_breakdowns(estimated_fee)
@@ -44,13 +45,22 @@ module AdjustedFees
       fee.applied_taxes.each { |tax| tax.id = SecureRandom.uuid }
     end
 
-    def init_from_charge_fee(adjusted_fee)
-      properties = adjusted_fee.charge_filter&.properties || adjusted_fee.charge.properties
+    def init_from_charge_fee(fee, adjusted_fee)
+      current = current_charge_result(fee)
+
+      if current&.charge
+        properties = current.charge_filter&.properties || current.charge.properties
+        pricing_charge = current.charge
+      else
+        properties = adjusted_fee.charge_filter&.properties || adjusted_fee.charge.properties
+        pricing_charge = nil
+      end
 
       result = Fees::InitFromAdjustedChargeFeeService.call(
         adjusted_fee:,
         boundaries: adjusted_fee.properties,
-        properties:
+        properties:,
+        pricing_charge:
       )
 
       result.fee.id = SecureRandom.uuid
@@ -66,6 +76,25 @@ module AdjustedFees
 
       result.fee.id = SecureRandom.uuid
       result.fee
+    end
+
+    # On a voided invoice, the estimate uses the charge that regeneration prices with:
+    # the first-override child charge created after the invoice, when there is one.
+    # Draft invoices, pay-in-advance fees and fees of a progressive-billing invoice
+    # keep the fee's own charge, as in Invoices::RegenerateFromVoidedService.
+    # The service estimates a single fee, so the result is memoized once.
+    def current_charge_result(fee)
+      return @current_charge_result if defined?(@current_charge_result)
+
+      @current_charge_result = if fee.charge.nil? || !invoice.voided? || fee.pay_in_advance? || invoice.progressive_billing?
+        nil
+      else
+        Fees::ResolveCurrentChargeService.call!(
+          subscription: fee.subscription,
+          charge: fee.charge,
+          charge_filter: fee.charge_filter
+        )
+      end
     end
 
     def adjust_subscription_fee(fee, adjusted_fee)

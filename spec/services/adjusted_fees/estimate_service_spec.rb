@@ -489,6 +489,113 @@ RSpec.describe AdjustedFees::EstimateService do
       end
     end
 
+    context "when the invoice is voided and the subscription moved to a child plan" do
+      let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+      let(:charge) { create(:standard_charge, billable_metric:, plan:, properties: {amount: "10"}) }
+      let(:child_plan) { create(:plan, organization:, parent: plan) }
+      let(:child_charge_model) { :standard_charge }
+      let(:child_charge_properties) { {amount: "2000"} }
+      let(:child_charge) do
+        create(child_charge_model, plan: child_plan, organization:, billable_metric:, parent: charge, properties: child_charge_properties)
+      end
+      let(:child_subscription) { create(:subscription, organization:, customer:, plan: child_plan) }
+      let(:invoice) do
+        create(:invoice, :voided, :with_subscriptions, organization:, customer:, subscriptions: [child_subscription], currency: "EUR")
+      end
+      let(:charge_filter) { nil }
+      let(:charge_fee) do
+        create(
+          :charge_fee,
+          invoice:,
+          subscription: child_subscription,
+          charge:,
+          charge_filter:,
+          units: 1,
+          amount_cents: 1000,
+          unit_amount_cents: 1000,
+          precise_unit_amount: 10
+        )
+      end
+      let(:params) { {fee_id: charge_fee.id, units: 2} }
+
+      before { child_charge }
+
+      it "prices the units with the child charge and keeps the parent charge" do
+        expect(result.fee).to have_attributes(
+          charge_id: charge.id,
+          units: 2,
+          unit_amount_cents: 200_000,
+          amount_cents: 400_000
+        )
+      end
+
+      context "with a charge filter" do
+        let(:charge_filter) { create(:charge_filter, charge:, code: "region_eu", properties: {amount: "20"}) }
+
+        before do
+          create(:charge_filter, charge: child_charge, code: "region_eu", properties: {amount: "30"})
+          create(:charge_filter, charge: child_charge, code: "region_us", properties: {amount: "40"})
+        end
+
+        it "prices the units with the child filter of the same code and keeps the parent filter" do
+          expect(result.fee).to have_attributes(
+            charge_id: charge.id,
+            charge_filter_id: charge_filter.id,
+            units: 2,
+            unit_amount_cents: 3000,
+            amount_cents: 6000
+          )
+        end
+      end
+
+      context "when the child charge has no filter with the code of the fee filter" do
+        let(:charge_filter) { create(:charge_filter, charge:, code: "region_eu", properties: {amount: "20"}) }
+
+        before { create(:charge_filter, charge: child_charge, code: "region_us", properties: {amount: "40"}) }
+
+        it "prices the units with the historical filter" do
+          expect(result.fee).to have_attributes(
+            charge_id: charge.id,
+            charge_filter_id: charge_filter.id,
+            units: 2,
+            unit_amount_cents: 2000,
+            amount_cents: 4000
+          )
+        end
+      end
+
+      context "with a pay in advance fee" do
+        let(:charge_fee) do
+          create(:charge_fee, invoice:, subscription: child_subscription, charge:, pay_in_advance: true, units: 1, precise_unit_amount: 10)
+        end
+
+        it "prices the units with the historical charge" do
+          expect(result.fee).to have_attributes(charge_id: charge.id, units: 2, unit_amount_cents: 1000, amount_cents: 2000)
+        end
+      end
+
+      context "when the child charge model cannot be adjusted by units" do
+        let(:child_charge_model) { :percentage_charge }
+        let(:child_charge_properties) { {rate: "5", fixed_amount: "0"} }
+
+        it "returns a validation error" do
+          expect(result).to be_failure
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:charge]).to eq(["invalid_charge_model"])
+        end
+      end
+
+      context "when the invoice is a draft" do
+        let(:invoice) do
+          create(:invoice, :draft, :with_subscriptions, organization:, customer:, subscriptions: [child_subscription], currency: "EUR")
+        end
+
+        it "prices the units with the fee charge" do
+          expect(result.fee).to have_attributes(charge_id: charge.id, units: 2, unit_amount_cents: 1000, amount_cents: 2000)
+        end
+      end
+    end
+
     context "with presentation_breakdowns" do
       let(:charge) do
         create(
