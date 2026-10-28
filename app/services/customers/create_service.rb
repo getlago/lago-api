@@ -34,6 +34,9 @@ module Customers
         )
       end
 
+      integration_customers_validation = IntegrationCustomers::ValidateBatchService.call(integration_customers: args[:integration_customers])
+      return result.fail_with_error!(integration_customers_validation.error) unless integration_customers_validation.success?
+
       customer = billing_entity.customers.new(
         organization_id: organization.id,
         external_id: args[:external_id],
