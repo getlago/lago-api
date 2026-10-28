@@ -13,6 +13,38 @@ RSpec.describe PaymentReceipt do
     expect(subject).to have_one_attached(:xml_file)
   end
 
+  describe "Scopes" do
+    describe ".product_catalog" do
+      subject(:scope) { described_class.product_catalog }
+
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:) }
+      let(:catalog_invoice) { create(:invoice, organization:, customer:, invoice_type: :contract) }
+      let(:legacy_invoice) { create(:invoice, organization:, customer:, invoice_type: :subscription) }
+      let(:catalog_receipt) { create(:payment_receipt, organization:, payment: create(:payment, payable: catalog_invoice)) }
+      let(:legacy_receipt) { create(:payment_receipt, organization:, payment: create(:payment, payable: legacy_invoice)) }
+      let(:catalog_request_receipt) do
+        payment_request = create(:payment_request, organization:, customer:, invoices: [catalog_invoice, legacy_invoice])
+        create(:payment_receipt, organization:, payment: create(:payment, payable: payment_request))
+      end
+      let(:legacy_request_receipt) do
+        payment_request = create(:payment_request, organization:, customer:, invoices: [legacy_invoice])
+        create(:payment_receipt, organization:, payment: create(:payment, payable: payment_request))
+      end
+
+      before do
+        catalog_receipt
+        legacy_receipt
+        catalog_request_receipt
+        legacy_request_receipt
+      end
+
+      it "returns the receipts of payments on catalog invoices, directly or through a payment request" do
+        expect(scope).to match_array([catalog_receipt, catalog_request_receipt])
+      end
+    end
+  end
+
   describe "#file_url" do
     before do
       payment_receipt.save!

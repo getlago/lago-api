@@ -13,6 +13,16 @@ class PaymentReceipt < ApplicationRecord
   has_one_attached :xml_file
 
   expiring_document_urls :file, :xml_file
+
+  # A payment request counts when it covers at least one catalog invoice.
+  scope :product_catalog, -> {
+    catalog_invoices = Invoice.product_catalog.select(:id)
+    catalog_payment_requests = PaymentRequest::AppliedInvoice.where(invoice_id: catalog_invoices).select(:payment_request_id)
+    catalog_payments = Payment.where(payable_type: "Invoice", payable_id: catalog_invoices)
+      .or(Payment.where(payable_type: "PaymentRequest", payable_id: catalog_payment_requests))
+
+    where(payment_id: catalog_payments.select(:id))
+  }
 end
 
 # == Schema Information
