@@ -194,6 +194,12 @@ RSpec.describe Organization do
       expect(described_class::DEFAULT_CUSTOMER_PORTAL_LOCKED_FIELDS).to match_array(%w[country zipcode tax_identification_number])
     end
 
+    it "is valid with every customer portal field locked" do
+      organization.customer_portal_locked_fields = described_class::CUSTOMER_PORTAL_FIELDS
+
+      expect(organization).to be_valid
+    end
+
     it "is invalid with non permitted customer_portal_locked_fields value" do
       organization.customer_portal_locked_fields = ["currency"]
 
