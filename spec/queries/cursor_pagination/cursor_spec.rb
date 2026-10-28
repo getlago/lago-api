@@ -51,7 +51,7 @@ RSpec.describe CursorPagination::Cursor do
     subject(:cursor) { described_class.new(table: "products", sort: {created_at: :desc, name: :desc, id: :desc}) }
 
     it "raises an argument error" do
-      expect { cursor }.to raise_error(ArgumentError, /columns among issuing_date, created_at, logged_at/)
+      expect { cursor }.to raise_error(ArgumentError, /date or time columns/)
     end
   end
 
@@ -59,14 +59,22 @@ RSpec.describe CursorPagination::Cursor do
     subject(:cursor) { described_class.new(table: "products", sort: {created_at: :desc}) }
 
     it "raises an argument error" do
-      expect { cursor }.to raise_error(ArgumentError, /then a unique tiebreak/)
+      expect { cursor }.to raise_error(ArgumentError, /then a tiebreak/)
     end
   end
 
-  context "with a sort on the issuing date, mixing directions" do
+  context "with a sort mixing directions" do
+    subject(:cursor) { described_class.new(table: "products", sort: {created_at: :desc, id: :asc}) }
+
+    it "raises an argument error" do
+      expect { cursor }.to raise_error(ArgumentError, /single direction/)
+    end
+  end
+
+  context "with a sort on the issuing date" do
     subject(:cursor) { described_class.from_params(params, table: "invoices", sort:) }
 
-    let(:sort) { {issuing_date: :desc, created_at: :desc, id: :asc} }
+    let(:sort) { {issuing_date: :desc, created_at: :desc, id: :desc} }
     let(:invoice) { build_stubbed(:invoice, issuing_date: Date.new(2026, 9, 27), created_at: product.created_at) }
     let(:params) { {after: CursorPagination::Token.encode(table: "invoices", record: invoice, sort:)} }
 

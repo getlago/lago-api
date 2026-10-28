@@ -203,15 +203,15 @@ RSpec.describe CursorPagination::Page do
       expect(backward).to eq(products)
     end
 
-    context "with a sort mixing directions" do
-      let(:sort) { {issuing_date: :desc, created_at: :desc, id: :asc} }
+    context "with a sort on the issuing date" do
+      let(:sort) { {issuing_date: :desc, created_at: :desc, id: :desc} }
       let(:customer) { create(:customer, organization:) }
 
       # Ties on the issuing date, then on the timestamp, so that pages break on each.
       let(:invoices) do
         [[0, 0], [0, 0], [0, 1], [1, 0], [1, 0], [1, 1]]
           .map { |days, seconds| create(:invoice, customer:, issuing_date: Date.new(2026, 9, 28) - days, created_at: created_at - seconds) }
-          .sort { |a, b| [b.issuing_date, b.created_at, a.id] <=> [a.issuing_date, a.created_at, b.id] }
+          .sort_by { [it.issuing_date, it.created_at, it.id] }.reverse
       end
 
       before { invoices }

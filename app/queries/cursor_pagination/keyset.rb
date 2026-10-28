@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
 module CursorPagination
-  # Positions a scope on a cursor: keeps the rows past the anchor, in the order of the sort.
+  # Positions a scope on a cursor. The sort of a cursor runs in a single direction, so a
+  # single row-value comparison bounds the page and an index on the tuple serves it (read
+  # backward for an ascending sort on a descending index).
   module Keyset
     # Must be the last scope operation of a query: `reorder` drops any ordering applied
     # before it, and a later `order` would be appended after the tuple.
@@ -10,7 +12,15 @@ module CursorPagination
         raise ArgumentError, "cursor minted for #{cursor.table} applied to #{scope.table_name}"
       end
 
-      scope = scope.where(*past_anchor(scope, cursor)) unless cursor.direction == :first
+      sort = cursor.sort
+      scope = case cursor.direction
+      when :forward
+        scope.where("#{row(scope, sort)} #{operator(sort, :forward)} #{placeholders(sort)}", *bound_key(cursor.key))
+      when :backward
+        scope.where("#{row(scope, sort)} #{operator(sort, :backward)} #{placeholders(sort)}", *bound_key(cursor.key))
+      else
+        scope
+      end
 
       # One extra row tells whether the list continues in the direction being paged.
       scope.reorder(order(cursor)).limit(cursor.limit + 1)
@@ -22,58 +32,35 @@ module CursorPagination
       cursor.backward? ? reversed(cursor.sort) : cursor.sort
     end
 
-    # The condition, with its values, that keeps the rows past the anchor.
-    def self.past_anchor(scope, cursor)
-      columns, operators = cursor.sort.each_pair.map { |column, direction|
-        ["#{scope.quoted_table_name}.#{scope.connection.quote_column_name(column)}", operator(direction, cursor.direction)]
-      }.transpose
-      key = bound_key(cursor.key)
-
-      if operators.uniq.one?
-        row_comparison(columns, operators.first, key)
-      else
-        column_by_column(columns, operators, key)
-      end
-    end
-    private_class_method :past_anchor
-
-    # A time binds as a microsecond UTC literal, which both Postgres and ClickHouse parse: the
-    # ClickHouse adapter would quote a `Time` to the whole second, dropping the rows that share
-    # the anchor's second.
+    # Binds a Time/DateTime from the cursor key as a microsecond-precision UTC literal,
+    # which both ClickHouse DateTime64(3) and Postgres timestamptz parse. Passing the raw
+    # Time through the ClickHouse adapter's `quoted_date` truncates it to the whole second
+    # (`value.to_fs(:db)`), dropping rows that share the anchor's second. A date and the
+    # tiebreak are bound unchanged.
     def self.bound_key(key)
-      key.map { it.is_a?(Time) ? it.utc.strftime("%Y-%m-%d %H:%M:%S.%6N") : it }
+      key.map do |value|
+        (value.is_a?(Time) || value.is_a?(DateTime)) ? value.utc.strftime("%Y-%m-%d %H:%M:%S.%6N") : value
+      end
     end
     private_class_method :bound_key
 
-    # Every column runs in the same direction: `(a, b) < (x, y)`, which an index on the
-    # tuple serves (read backward for an ascending sort on a descending index).
-    def self.row_comparison(columns, operator, key)
-      ["(#{columns.join(", ")}) #{operator} (#{columns.map { "?" }.join(", ")})", *key]
+    def self.row(scope, sort)
+      columns = sort.keys.map { |column| "#{scope.quoted_table_name}.#{scope.connection.quote_column_name(column)}" }
+      "(#{columns.join(", ")})"
     end
-    private_class_method :row_comparison
+    private_class_method :row
 
-    # The columns run in different directions, which one row comparison cannot express. A
-    # row is past the anchor on its first column, or ties on it and is past it on the next:
-    #
-    #   a < x OR (a = x AND b < y) OR (a = x AND b = y AND c > z)
-    #
-    # `a <= x` comes first: the OR implies it, and it gives an index on the tuple a place to
-    # start, where the OR alone would filter the whole list.
-    def self.column_by_column(columns, operators, key)
-      branches = columns.each_index.map do |position|
-        ties = columns.first(position).map { "#{it} = ?" }
-        "(#{[*ties, "#{columns[position]} #{operators[position]} ?"].join(" AND ")})"
-      end
-      branch_values = columns.each_index.flat_map { key.first(it + 1) }
-
-      ["#{columns.first} #{operators.first}= ? AND (#{branches.join(" OR ")})", key.first, *branch_values]
+    def self.placeholders(sort)
+      "(#{Array.new(sort.size, "?").join(", ")})"
     end
-    private_class_method :column_by_column
+    private_class_method :placeholders
 
-    # Past the anchor means lower values when paging a descending column forward, or an
-    # ascending one backward, and higher values otherwise.
-    def self.operator(direction, paging)
-      ((direction == :desc) == (paging == :forward)) ? "<" : ">"
+    # The rows past the anchor, in the direction being paged: lower values when walking
+    # forward a descending sort, higher ones when walking it backward, and the other way
+    # around for an ascending sort.
+    def self.operator(sort, direction)
+      descending = sort.values.first == :desc
+      (descending == (direction == :forward)) ? "<" : ">"
     end
     private_class_method :operator
 
