@@ -92,7 +92,8 @@ module Api
 
         result = ::Invoices::Payments::RetryService.call(
           invoice:,
-          payment_method_params: retry_payment_params[:payment_method]
+          payment_method_params: retry_payment_params[:payment_method],
+          validate_payment_method: true
         )
 
         if result.success?

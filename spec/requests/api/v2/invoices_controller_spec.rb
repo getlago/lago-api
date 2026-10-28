@@ -570,7 +570,20 @@ RSpec.describe Api::V2::InvoicesController, v2_timestamps: false do
       expect(response).to have_http_status(:success)
       expect(response.body).to be_empty
       expect(Invoices::Payments::RetryService).to have_received(:call)
-        .with(invoice: contract_invoice, payment_method_params: {payment_method_type: "manual"})
+        .with(invoice: contract_invoice, payment_method_params: {payment_method_type: "manual"}, validate_payment_method: true)
+    end
+
+    context "when the payment method is invalid" do
+      let(:retry_result) do
+        Invoices::Payments::RetryService::Result.new.validation_failure!(errors: {payment_method: ["invalid_payment_method"]})
+      end
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details]).to eq(payment_method: ["invalid_payment_method"])
+      end
     end
 
     context "when the payment cannot be retried" do
