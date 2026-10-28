@@ -550,10 +550,10 @@ RSpec.describe Api::V2::CustomersController do
         context "when the provider refuses the key of the organization" do
           let(:provider_response) { {status: 401, body: {error: {type: "invalid_request_error", message: "Invalid API Key provided"}}} }
 
-          it "returns a provider unauthorized error, apart from an invalid API key" do
+          it "returns an unprocessable provider unauthorized error, apart from an invalid API key" do
             request
 
-            expect(response).to have_http_status(:unauthorized)
+            expect(response).to have_http_status(:unprocessable_content)
             expect(json).to eq(code: "provider_unauthorized", details: [])
           end
         end

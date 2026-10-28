@@ -128,10 +128,10 @@ RSpec.describe Api::V2Errors do
   context "with an unauthorized failure" do
     let(:failure) { "unauthorized" }
 
-    it "returns a provider unauthorized error, apart from an invalid API key" do
+    it "returns an unprocessable provider unauthorized error, apart from an invalid API key" do
       show
 
-      expect(response).to have_http_status(:unauthorized)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(json).to eq(code: "provider_unauthorized", details: [])
     end
   end

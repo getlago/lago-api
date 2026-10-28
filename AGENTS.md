@@ -79,7 +79,7 @@ Business logic, and every create, update or delete of a model, lives in a servic
 
 ## REST API
 
-- Controllers inherit `Api::BaseController`, load records through `current_organization` and call a service. See `app/controllers/api/v1/usage_attribution_types_controller.rb`.
+- Controllers inherit `Api::V1::BaseController` (`Api::V2::BaseController` for a native v2 one), load records through `current_organization` and call a service. See `app/controllers/api/v1/usage_attribution_types_controller.rb`.
 - Every controller has a `resource_name`, an entry of `ApiKey::RESOURCES`. Without it, every API key of an organization with the `api_permissions` premium integration gets a 403, and only the `"requires API permission"` shared example catches it.
 - Look records up with `find_by` and answer `not_found_error(resource: "alert")`. `find` gives a generic error code.
 - Render failures with `render_error_response(result)`, records with `::V1::<Model>Serializer`, and lists with `::CollectionSerializer` and `pagination_metadata`. `create` returns 200, not 201.
