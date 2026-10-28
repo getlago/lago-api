@@ -12,21 +12,7 @@ class PaymentReceipt < ApplicationRecord
   has_one_attached :file
   has_one_attached :xml_file
 
-  def file_url
-    expiring_document_url(file)
-  end
-
-  def xml_url
-    expiring_document_url(xml_file)
-  end
-
-  def file_url_expires_at
-    document_url_expires_at if file.present?
-  end
-
-  def xml_url_expires_at
-    document_url_expires_at if xml_file.present?
-  end
+  expiring_document_urls :file, :xml_file
 end
 
 # == Schema Information

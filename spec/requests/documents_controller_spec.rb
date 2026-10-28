@@ -82,6 +82,21 @@ RSpec.describe DocumentsController do
       expect(response).to have_http_status(:redirect)
     end
 
+    context "when the cutoff is in the future" do
+      around do |test|
+        Rails.application.config.x.legacy_document_urls_expire_at = 1.day.from_now
+        test.run
+      ensure
+        Rails.application.config.x.legacy_document_urls_expire_at = nil
+      end
+
+      it "keeps serving document blobs" do
+        get legacy_path
+
+        expect(response).to have_http_status(:redirect)
+      end
+    end
+
     context "when the cutoff has passed" do
       around do |test|
         Rails.application.config.x.legacy_document_urls_expire_at = Time.zone.parse("2026-01-01")
@@ -95,6 +110,29 @@ RSpec.describe DocumentsController do
 
         expect(response).to have_http_status(:gone)
         expect(json[:code]).to eq("expired")
+      end
+
+      it "refuses document blobs through the proxy route" do
+        get Rails.application.routes.url_helpers.rails_storage_proxy_path(invoice.file, only_path: true),
+          headers: {"Accept" => "application/json"}
+
+        expect(response).to have_http_status(:gone)
+      end
+
+      it "refuses every document type" do
+        pdf = -> { {io: File.open(Rails.root.join("spec/fixtures/blank.pdf")), filename: "document.pdf"} }
+        credit_note = create(:credit_note)
+        credit_note.file.attach(**pdf.call)
+        payment_receipt = create(:payment_receipt)
+        payment_receipt.file.attach(**pdf.call)
+        order_form = create(:order_form, :signed, :with_signed_document)
+
+        [credit_note.file, payment_receipt.file, order_form.signed_document].each do |attachment|
+          get Rails.application.routes.url_helpers.rails_blob_path(attachment, only_path: true),
+            headers: {"Accept" => "application/json"}
+
+          expect(response).to have_http_status(:gone), "expected #{attachment.record_type} to be refused"
+        end
       end
 
       it "still serves logos" do

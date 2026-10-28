@@ -35,6 +35,8 @@ class OrderForm < ApplicationRecord
 
   has_one_attached :signed_document
 
+  expiring_document_urls :signed_document
+
   enum :status, STATUSES,
     default: :generated,
     validate: true
@@ -63,17 +65,6 @@ class OrderForm < ApplicationRecord
 
   def self.ransackable_attributes(_ = nil)
     %w[number]
-  end
-
-  def signed_document_url
-    return if signed_document.blank?
-    return unless signed_document.blob.persisted?
-
-    expiring_document_url(signed_document)
-  end
-
-  def signed_document_url_expires_at
-    document_url_expires_at if signed_document.present? && signed_document.blob.persisted?
   end
 
   private

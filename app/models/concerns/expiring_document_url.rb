@@ -10,6 +10,24 @@ module ExpiringDocumentUrl
   PURPOSE = :document
   MINIMUM_VALIDITY = 10.days
 
+  class_methods do
+    # Defines `<name>_url` and `<name>_url_expires_at` for each attachment. The name drops a
+    # `_file` suffix: `:file` gives `file_url`, `:xml_file` gives `xml_url`.
+    def expiring_document_urls(*attachments)
+      attachments.each do |attachment|
+        name = attachment.to_s.delete_suffix("_file")
+
+        define_method(:"#{name}_url") do
+          expiring_document_url(public_send(attachment))
+        end
+
+        define_method(:"#{name}_url_expires_at") do
+          document_url_expires_at if stored_attachment?(public_send(attachment))
+        end
+      end
+    end
+  end
+
   def document_url_expires_at
     floor = (Time.current + MINIMUM_VALIDITY).end_of_day
     anchor = document_url_anchor_date
@@ -25,8 +43,12 @@ module ExpiringDocumentUrl
     created_at&.to_date
   end
 
+  def stored_attachment?(attachment)
+    attachment.present? && attachment.blob.persisted?
+  end
+
   def expiring_document_url(attachment)
-    return if attachment.blank?
+    return unless stored_attachment?(attachment)
 
     signed_id = attachment.blob.signed_id(purpose: PURPOSE, expires_at: document_url_expires_at)
     path = Rails.application.routes.url_helpers.document_path(signed_id, attachment.filename.to_s)

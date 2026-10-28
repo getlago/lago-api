@@ -16,6 +16,25 @@ RSpec.describe Api::V1::OrderFormsController do
 
     before { create(:order_form, :signed, organization:, customer:) }
 
+    context "with signed documents" do
+      def create_signed_order_forms(count)
+        create_list(:order_form, count, :signed, :with_signed_document, organization:, customer:)
+      end
+
+      def organization_queries
+        capture_sql { get_with_token(organization, "/api/v1/order_forms") }.grep(/FROM "organizations"/).size
+      end
+
+      it "loads the organization once, whatever the number of order forms" do
+        create_signed_order_forms(1)
+        queries_with_one_order_form = organization_queries
+
+        create_signed_order_forms(3)
+
+        expect(organization_queries).to eq(queries_with_one_order_form)
+      end
+    end
+
     include_examples "requires API permission", "order_form", "read"
 
     it "returns a list of order forms" do

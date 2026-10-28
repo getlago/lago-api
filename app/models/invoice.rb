@@ -70,6 +70,8 @@ class Invoice < ApplicationRecord
   has_one_attached :file
   has_one_attached :xml_file
 
+  expiring_document_urls :file, :xml_file
+
   monetize :coupons_amount_cents,
     :credit_notes_amount_cents,
     :fees_amount_cents,
@@ -228,22 +230,6 @@ class Invoice < ApplicationRecord
 
   def invisible?
     INVISIBLE_STATUS.key?(status.to_sym)
-  end
-
-  def file_url
-    expiring_document_url(file)
-  end
-
-  def xml_url
-    expiring_document_url(xml_file)
-  end
-
-  def file_url_expires_at
-    document_url_expires_at if file.present?
-  end
-
-  def xml_url_expires_at
-    document_url_expires_at if xml_file.present?
   end
 
   def web_url

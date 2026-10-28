@@ -72,6 +72,18 @@ RSpec.describe ExpiringDocumentUrl do
       expect(credit_note.document_url_expires_at).to eq(Date.new(2026, 11, 14).end_of_day)
     end
 
+    it "anchors signed order forms on their signing date" do
+      order_form = create(:order_form, organization:, signed_at: Time.zone.parse("2026-10-10 15:00:00"), created_at: Time.zone.parse("2026-09-01 08:00:00"))
+
+      expect(order_form.document_url_expires_at).to eq(Date.new(2026, 11, 9).end_of_day)
+    end
+
+    it "anchors unsigned order forms on their creation date" do
+      order_form = create(:order_form, organization:, signed_at: nil, created_at: Time.zone.parse("2026-10-12 08:00:00"))
+
+      expect(order_form.document_url_expires_at).to eq(Date.new(2026, 11, 11).end_of_day)
+    end
+
     it "anchors payment receipts on their creation date" do
       receipt = create(:payment_receipt, organization:, created_at: Time.zone.parse("2026-10-20 08:00:00"))
 

@@ -19,7 +19,7 @@ module Api
         if result.success?
           render(
             json: ::CollectionSerializer.new(
-              result.order_forms.includes(:organization),
+              result.order_forms,
               ::V1::OrderFormSerializer,
               collection_name: "order_forms",
               meta: pagination_metadata(result.order_forms)
