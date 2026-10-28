@@ -9,9 +9,9 @@ module ValidationMeta
     allowed_values: [String], # every value of the field that the check accepts
     value: String, # the query value received, in a 400 only
     invalid_values: [String], # the refused values received, in a 400 only
-    third_party: String, # the provider of a third_party_error
-    provider_code: String, # the code of the payment provider of a provider_error
-    provider_name: String # the provider of a too_many_provider_requests error
+    resource: String, # the resource of a resource_not_found, such as customer
+    provider_name: String, # the lowercase token of the provider that failed or throttled, such as stripe
+    provider_code: String # the code of the connection of the organization to that provider
   }.freeze
 
   # They echo the request, which only a 400 may do.
