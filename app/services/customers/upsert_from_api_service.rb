@@ -44,9 +44,8 @@ module Customers
         )
       end
 
-      unless valid_integration_types?(integration_customers: params[:integration_customers])
-        return result.single_validation_failure!(field: :integration_type, error_code: "value_is_invalid")
-      end
+      integration_customers_validation = IntegrationCustomers::ValidateBatchService.call(integration_customers: params[:integration_customers])
+      return result.fail_with_error!(integration_customers_validation.error) unless integration_customers_validation.success?
 
       ActiveRecord::Base.transaction do
         original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
@@ -198,14 +197,6 @@ module Customers
       input_types = integration_customers&.map { |c| c.to_h.deep_symbolize_keys }&.map { |c| c[:integration_type] }
 
       input_types.length == input_types.uniq.length
-    end
-
-    def valid_integration_types?(integration_customers:)
-      return true if integration_customers.blank?
-
-      integration_customers.all? do |integration_customer|
-        IntegrationCustomers::BaseCustomer::CUSTOMER_TYPES.key?(integration_customer.to_h.deep_symbolize_keys[:integration_type])
-      end
     end
 
     def create_metadata(customer:, args:)
