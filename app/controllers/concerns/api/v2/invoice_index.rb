@@ -9,8 +9,10 @@ module Api
       # Public value => stored enum.
       INVOICE_TYPES = {"contract" => "contract", "advance_fees" => "advance_charges"}.freeze
 
-      # The order of the v1 lists, which `index_invoices_by_cursor` was built for.
-      SORT = {issuing_date: :desc, created_at: :desc, id: :asc}.freeze
+      # The order of the v1 lists, which `index_invoices_by_cursor` was built for, except for
+      # `id`: it only breaks ties on a microsecond `created_at`, and runs in the same direction
+      # as the dates so that one row comparison bounds a page.
+      SORT = {issuing_date: :desc, created_at: :desc, id: :desc}.freeze
 
       included do
         cursor_paginated_index(Invoice, sort: SORT)
