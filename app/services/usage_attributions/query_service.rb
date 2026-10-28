@@ -193,8 +193,9 @@ module UsageAttributions
     end
 
     # The current billing period. A period longer than a custom window (quarterly or yearly charges)
-    # starts MAX_CUSTOM_WINDOW before today in the customer's timezone, so the default view scans
-    # about as much as a custom one, and its boundaries, and so its cache entry, last the whole day.
+    # runs from MAX_CUSTOM_WINDOW before today to the end of today in the customer's timezone, so the
+    # default view scans about as much as a custom one, and its boundaries, and so its cache entry,
+    # last the whole day.
     def default_window
       @default_window ||= begin
         period_from = dates_service.charges_from_datetime
@@ -203,6 +204,7 @@ module UsageAttributions
         if period_to - period_from > MAX_CUSTOM_WINDOW
           today = Time.current.in_time_zone(subscription.customer.applicable_timezone).beginning_of_day
           period_from = [period_from, today - MAX_CUSTOM_WINDOW].max
+          period_to = [period_to, today.end_of_day].min
         end
 
         [period_from, period_to]

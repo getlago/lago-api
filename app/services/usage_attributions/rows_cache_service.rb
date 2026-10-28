@@ -7,10 +7,13 @@ module UsageAttributions
   # An entry is served only while no event of the query was ingested after its watermark.
   # enriched_at is stamped when an insert begins, so the watermark trails the read by
   # INGESTION_MARGIN to cover rows that were not readable yet.
+  #
+  # MAX_TTL bounds what the watermark cannot see: a row readable later than the margin, and
+  # duplicates merged or deleted after the read.
   class RowsCacheService < BaseService
     CACHE_KEY_VERSION = "1"
     INGESTION_MARGIN = 5.seconds
-    MAX_TTL = 12.hours
+    MAX_TTL = 6.hours
     FAILURE_TTL = 10.seconds
 
     Result = BaseResult[:rows]
@@ -47,6 +50,8 @@ module UsageAttributions
 
     def valid?(entry)
       entry.key?("error") || !query.ingested_since?(entry["computed_at"] - INGESTION_MARGIN)
+    rescue ActiveRecord::ActiveRecordError
+      false
     end
 
     def compute

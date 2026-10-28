@@ -149,9 +149,9 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
   context "with a yearly plan" do
     let(:plan) { create(:plan, organization:, interval: :yearly, amount_currency: "EUR") }
 
-    it "starts the current period 31 days before today" do
+    it "reads the 31 days before today, up to the end of today" do
       expect(result.from_datetime).to eq(Time.zone.parse("2026-08-15"))
-      expect(result.to_datetime).to eq(Time.zone.parse("2026-12-31").end_of_day)
+      expect(result.to_datetime).to eq(Time.zone.parse("2026-09-15").end_of_day)
       expect(summary(result.rows)).to eq([["eng", 125_150, 4], ["data", 100_000, 1]])
     end
 
@@ -167,8 +167,9 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     context "with a customer in another timezone" do
       let(:customer) { create(:customer, organization:, timezone: "America/New_York") }
 
-      it "starts the window at midnight in the customer's timezone" do
+      it "bounds the window by midnight in the customer's timezone" do
         expect(result.from_datetime).to eq(Time.zone.parse("2026-08-15 04:00:00"))
+        expect(result.to_datetime).to eq(Time.zone.parse("2026-09-15 12:00:00").in_time_zone("America/New_York").end_of_day)
       end
     end
   end

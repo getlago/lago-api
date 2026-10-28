@@ -21,7 +21,7 @@ RSpec.describe UsageAttributions::RowsCacheService, cache: :memory, clickhouse: 
       label_filters: {},
       charge_columns: [
         Events::Stores::Clickhouse::AttributedUsageQuery::ChargeColumn.new(
-          charge_id: SecureRandom.uuid, code: "tokens", count: false, unit_amount_cents: BigDecimal("0.5"), lookup: nil, split: false
+          charge_id: SecureRandom.uuid, code: "tokens", count: false, unit_amount_cents: BigDecimal("0.5"), lookup: nil, split_filter_ids: nil
         )
       ],
       order_by: "amount",
@@ -86,6 +86,27 @@ RSpec.describe UsageAttributions::RowsCacheService, cache: :memory, clickhouse: 
       described_class.call!(subscription:, query:)
 
       expect(query).to have_received(:rows).once
+    end
+
+    it "reads the query again once the entry is six hours old" do
+      travel(4.hours)
+      described_class.call!(subscription:, query:)
+      expect(query).to have_received(:rows).once
+
+      travel(2.hours)
+      described_class.call!(subscription:, query:)
+      expect(query).to have_received(:rows).twice
+    end
+
+    context "when the check fails" do
+      before do
+        allow(query).to receive(:ingested_since?).and_raise(ActiveRecord::StatementInvalid, "Code: 159. DB::Exception: TIMEOUT_EXCEEDED")
+      end
+
+      it "reads the query again" do
+        expect(nodes(described_class.call!(subscription:, query:).rows)).to eq([["eng", BigDecimal(500)]])
+        expect(query).to have_received(:rows).twice
+      end
     end
   end
 
