@@ -79,11 +79,6 @@ module Api
           return not_found_error(resource: "product_category")
         end
 
-        # The column is a PG enum: an unknown value would fail the SQL cast.
-        if params[:product_type].present? && !Product::PRODUCT_TYPES.value?(params[:product_type])
-          return validation_errors(errors: {product_type: ["value_is_invalid"]})
-        end
-
         result = ::ProductsQuery.call(
           organization: current_organization,
           search_term: params[:search_term],
