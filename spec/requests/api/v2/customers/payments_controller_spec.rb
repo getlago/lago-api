@@ -38,6 +38,21 @@ RSpec.describe Api::V2::Customers::PaymentsController do
       expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
     end
 
+    context "with a deleted customer sharing the external id" do
+      let(:customer) { create(:customer, organization:, external_id: "reused") }
+
+      before do
+        deleted_customer = create(:customer, organization:, external_id: "reused", deleted_at: Time.current)
+        create(:payment, payable: create(:invoice, organization:, customer: deleted_customer))
+      end
+
+      it "lists the payments of the current customer only" do
+        subject
+
+        expect(json[:payments].map { it[:lago_id] }).to eq([payment.id])
+      end
+    end
+
     context "with a payment on a payment request" do
       let(:other_invoice) { create(:invoice, organization:, customer:) }
       let(:payment_request) { create(:payment_request, organization:, customer:, invoices: [invoice, other_invoice]) }

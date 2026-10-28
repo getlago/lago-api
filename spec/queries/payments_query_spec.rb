@@ -200,6 +200,32 @@ RSpec.describe PaymentsQuery do
     end
   end
 
+  context "when filtering by customer_id" do
+    let(:filters) { {customer_id: customer.id} }
+    let(:customer) { create(:customer, organization:, external_id: "reused") }
+    let(:deleted_customer) { create(:customer, organization:, external_id: "reused", deleted_at: Time.current) }
+    let(:customer_payment) { create(:payment, payable: create(:invoice, organization:, customer:)) }
+
+    before do
+      create(:payment, payable: create(:invoice, organization:, customer: deleted_customer))
+      customer_payment
+    end
+
+    it "returns only the payments of that customer, not of a deleted one sharing its external id" do
+      expect(result).to be_success
+      expect(returned_ids).to eq([customer_payment.id])
+    end
+  end
+
+  context "when filtering by an invalid customer_id" do
+    let(:filters) { {customer_id: "not-a-uuid"} }
+
+    it "returns a validation error" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:customer_id]).to include("is in invalid format")
+    end
+  end
+
   context "when filtering by an invalid external_customer_id" do
     let(:filters) { {external_customer_id: "invalid-external-id"} }
 
