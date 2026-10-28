@@ -11,9 +11,10 @@ module V2
     expandable :applied_invoice_custom_sections, serializer: ::V2::Invoices::AppliedInvoiceCustomSectionSerializer
     expandable :error_details, serializer: ::V2::ErrorDetailSerializer
 
-    # A webhook cannot ask for expansions: it carries everything but the fees, so that its size
-    # does not grow with the invoice. A consumer reads the fees through the API.
-    WEBHOOK_INCLUDES = %i[applied_taxes contracts applied_invoice_custom_sections error_details].freeze
+    # The body of an invoice event, its webhook and its activity log, which cannot ask for
+    # expansions: everything but the fees, so that its size does not grow with the invoice. A
+    # consumer reads the fees through the API.
+    EVENT_INCLUDES = %i[applied_taxes contracts applied_invoice_custom_sections error_details].freeze
 
     def serialize
       {
