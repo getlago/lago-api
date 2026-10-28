@@ -4,6 +4,7 @@ module Api
   module V2
     class PlansController < Api::V2::BaseController
       cursor_paginated_index(CatalogPlan)
+      date_range_filtered_index(:created_at)
       serializable_with ::V2::CatalogPlanSerializer
 
       def index
@@ -16,7 +17,7 @@ module Api
             product_filter_ids: Array(params[:product_filter_id]).presence,
             product_category_ids: Array(params[:product_category_id]).presence,
             rate_card_ids: Array(params[:rate_card_id]).presence,
-            **created_at_filters
+            **date_range_filters
           }
         )
 

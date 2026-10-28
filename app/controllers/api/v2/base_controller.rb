@@ -28,6 +28,12 @@ module Api
         private(define_method(:paginated_sort) { sort })
       end
 
+      # Declares the date ranges the index filters on, read by `date_range_filters` as
+      # `<column>_from` and `<column>_to`.
+      def self.date_range_filtered_index(*columns)
+        private(define_method(:date_range_columns) { columns })
+      end
+
       private
 
       attr_reader :cursor
@@ -44,10 +50,10 @@ module Api
         ::CursorPagination::Cursor.from_params(params, table: model.table_name, sort:)
       end
 
-      # The creation range of the cursor paginated lists, the logs aside (`from_date`, `to_date`). Read
-      # raw rather than permitted, so that a non scalar value is an `invalid_date` error, not ignored.
-      def created_at_filters
-        {created_at_from: params[:created_at_from], created_at_to: params[:created_at_to]}
+      # Read raw rather than permitted, so that a non scalar bound is an `invalid_date` error,
+      # not an ignored filter.
+      def date_range_filters
+        date_range_columns.flat_map { |column| [:"#{column}_from", :"#{column}_to"] }.index_with { params[it] }
       end
 
       # For a list returned whole: it still rejects `page` and `per_page`, which a

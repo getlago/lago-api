@@ -4,6 +4,7 @@ module Api
   module V2
     class TaxesController < Api::V2::BaseController
       cursor_paginated_index(Tax)
+      date_range_filtered_index(:created_at)
       serializable_with ::V2::TaxSerializer
 
       def create
@@ -49,7 +50,7 @@ module Api
       end
 
       def index
-        result = ::TaxesQuery.call(organization: current_organization, pagination: cursor, filters: created_at_filters)
+        result = ::TaxesQuery.call(organization: current_organization, pagination: cursor, filters: date_range_filters)
 
         if result.success?
           render_taxes(result.taxes)

@@ -4,6 +4,7 @@ module Api
   module V2
     class FeesController < Api::V2::BaseController
       cursor_paginated_index(Fee)
+      date_range_filtered_index(:created_at)
       serializable_with ::V2::FeeSerializer
 
       def index
@@ -73,7 +74,7 @@ module Api
           :failed_at_to,
           :refunded_at_from,
           :refunded_at_to
-        ).to_h.merge(created_at_filters)
+        ).to_h.merge(date_range_filters)
       end
 
       def resource_name

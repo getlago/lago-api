@@ -4,6 +4,7 @@ module Api
   module V2
     class ContractRateCardsController < Api::V2::BaseController
       cursor_paginated_index(ContractRateCard)
+      date_range_filtered_index(:created_at)
       serializable_with ::V2::ContractAppliedRateCardSerializer, root: :applied_rate_card
 
       def create
@@ -60,7 +61,7 @@ module Api
         result = ::ContractRateCardsQuery.call(
           organization: current_organization,
           pagination: cursor,
-          filters: {contract_id: find_contract.id, **created_at_filters}
+          filters: {contract_id: find_contract.id, **date_range_filters}
         )
 
         if result.success?
