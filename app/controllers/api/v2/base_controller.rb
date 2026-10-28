@@ -44,8 +44,8 @@ module Api
         ::CursorPagination::Cursor.from_params(params, table: model.table_name, sort:)
       end
 
-      # The creation range every cursor paginated list filters on. Read raw rather than
-      # permitted, so that a non scalar value is an `invalid_date` error, not an ignored filter.
+      # The creation range of the cursor paginated lists, the logs aside (`from_date`, `to_date`). Read
+      # raw rather than permitted, so that a non scalar value is an `invalid_date` error, not ignored.
       def created_at_filters
         {created_at_from: params[:created_at_from], created_at_to: params[:created_at_to]}
       end
