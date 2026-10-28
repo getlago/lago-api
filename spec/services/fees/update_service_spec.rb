@@ -60,6 +60,19 @@ RSpec.describe Fees::UpdateService do
       end
     end
 
+    context "when payment_status is not a string" do
+      let(:payment_status) { 1 }
+
+      it "returns a validation failure" do
+        result = update_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:payment_status]).to eq(["value_is_invalid"])
+        expect(fee.reload).to be_payment_pending
+      end
+    end
+
     context "when payment_status is failed" do
       let(:payment_status) { "failed" }
 
