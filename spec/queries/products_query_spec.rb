@@ -59,6 +59,16 @@ RSpec.describe ProductsQuery do
     end
   end
 
+  context "with an unknown product_type" do
+    let(:filters) { {product_type: "bogus"} }
+
+    it "fails with the product types allowed" do
+      expect(result).to be_failure
+      expect(result.error.messages).to eq(product_type: ["value_is_invalid"])
+      expect(result.error.meta).to eq(product_type: {allowed_values: %w[metered fixed]})
+    end
+  end
+
   context "with a search term" do
     let(:search_term) { "sea" }
 

@@ -113,11 +113,14 @@ RSpec.describe Api::V2::PaymentRequestsController do
     context "with an invalid payment_status filter" do
       let(:params) { {payment_status: "bogus"} }
 
-      it "returns a validation error" do
+      it "returns a validation error with the statuses allowed" do
         request
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "payment_status", meta: {}}])
+        expect(json).to eq(
+          code: "validation_errors",
+          details: [{code: "value_is_invalid", field: "payment_status", meta: {allowed_values: %w[pending succeeded failed]}}]
+        )
       end
     end
 

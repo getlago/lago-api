@@ -167,7 +167,7 @@ RSpec.describe Api::V2::CustomersController do
         request
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json).to eq(code: "validation_errors", details: [{code: "invalid_value", field: "finalize_zero_amount_invoice", meta: {}}])
+        expect(json).to eq(code: "validation_errors", details: [{code: "invalid_value", field: "finalize_zero_amount_invoice", meta: {allowed_values: %w[inherit skip finalize]}}])
       end
     end
 
@@ -372,7 +372,10 @@ RSpec.describe Api::V2::CustomersController do
       end
     end
 
-    %i[periodic_invoice_issuing_date_anchor periodic_invoice_issuing_date_adjustment].each do |field|
+    {
+      periodic_invoice_issuing_date_anchor: %w[current_period_end next_period_start],
+      periodic_invoice_issuing_date_adjustment: %w[keep_anchor align_with_finalization_date]
+    }.each do |field, allowed_values|
       ["unknown", false].each do |value|
         context "with #{field} set to #{value.inspect}" do
           let(:attributes) { super().merge(field => value) }
@@ -381,7 +384,7 @@ RSpec.describe Api::V2::CustomersController do
             expect { request }.not_to change(organization.customers, :count)
 
             expect(response).to have_http_status(:unprocessable_content)
-            expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: field.to_s, meta: {}}])
+            expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: field.to_s, meta: {allowed_values:}}])
           end
         end
       end
@@ -626,7 +629,10 @@ RSpec.describe Api::V2::CustomersController do
         end
       end
 
-      %i[periodic_invoice_issuing_date_anchor periodic_invoice_issuing_date_adjustment].each do |field|
+      {
+        periodic_invoice_issuing_date_anchor: %w[current_period_end next_period_start],
+        periodic_invoice_issuing_date_adjustment: %w[keep_anchor align_with_finalization_date]
+      }.each do |field, allowed_values|
         context "with an invalid #{field}" do
           let(:attributes) { {:name => "Must not change", field => "unknown"} }
 
@@ -634,7 +640,7 @@ RSpec.describe Api::V2::CustomersController do
             expect { request }.not_to change { customer.reload.attributes }
 
             expect(response).to have_http_status(:unprocessable_content)
-            expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: field.to_s, meta: {}}])
+            expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: field.to_s, meta: {allowed_values:}}])
           end
         end
       end
@@ -646,7 +652,7 @@ RSpec.describe Api::V2::CustomersController do
           expect { request }.not_to change { customer.reload.attributes }
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json).to eq(code: "validation_errors", details: [{code: "invalid_value", field: "finalize_zero_amount_invoice", meta: {}}])
+          expect(json).to eq(code: "validation_errors", details: [{code: "invalid_value", field: "finalize_zero_amount_invoice", meta: {allowed_values: %w[inherit skip finalize]}}])
         end
       end
 

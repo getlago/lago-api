@@ -18,7 +18,11 @@ module Contracts
 
     def call
       if filters[:product_type].present? && !Product::PRODUCT_TYPES.value?(filters[:product_type])
-        return result.single_validation_failure!(field: :product_type, error_code: "value_is_invalid")
+        return result.single_validation_failure!(
+          field: :product_type,
+          error_code: "value_is_invalid",
+          meta: {allowed_values: Product::PRODUCT_TYPES.values}
+        )
       end
 
       result.contract = contract
