@@ -24,15 +24,14 @@ module ValidationMeta
   # that the error stays a 4xx.
   def check(meta, echo: false)
     if meta.is_a?(Hash)
-      meta.compact.each_with_object({}) do |(key, value), checked|
-        name = key.to_sym if key.is_a?(Symbol) || key.is_a?(String)
-
-        if !registered?(name, value)
+      # symbolize_keys leaves a key that has no Symbol form, such as an Integer, as it is.
+      meta.compact.symbolize_keys.each_with_object({}) do |(key, value), checked|
+        if !registered?(key, value)
           report("meta #{key}: #{value.inspect} is not a registered key and type")
-        elsif !echo && ECHO_KEYS.include?(name)
+        elsif !echo && ECHO_KEYS.include?(key)
           report("meta #{key} echoes the request, which only a 400 may do")
         else
-          checked[name] = value
+          checked[key] = value
         end
       end
     else
