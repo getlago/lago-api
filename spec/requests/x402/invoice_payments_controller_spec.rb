@@ -373,6 +373,7 @@ describe X402::InvoicePaymentsController, :premium do
 
         expect(response).to have_http_status(:conflict)
         expect(json[:code]).to eq("invoice_payment_pending")
+        expect(response.headers["PAYMENT-RESPONSE"]).to be_nil
       end
 
       it "leaves the invoice unpaid" do
@@ -440,6 +441,32 @@ describe X402::InvoicePaymentsController, :premium do
         subject
 
         expect(response).to have_http_status(:conflict)
+        expect(a_request(:post, "#{cdp_facilitator_url}/verify")).not_to have_been_made
+      end
+    end
+
+    context "with a non-USD invoice" do
+      let(:invoice) do
+        create(:invoice, organization:, customer:, currency: "EUR", total_amount_cents: 105, x402_payment_token: token, x402_connection:)
+      end
+
+      it "answers 422 naming the currency rule without verifying" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(base: ["invoice_currency_not_supported"])
+        expect(a_request(:post, "#{cdp_facilitator_url}/verify")).not_to have_been_made
+      end
+    end
+
+    context "without an x402 wallet" do
+      let(:wallet) { create(:wallet, customer:, currency: "USD", x402_enabled: false) }
+
+      it "answers 422 naming the wallet rule without verifying" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(base: ["wallet_not_x402_enabled"])
         expect(a_request(:post, "#{cdp_facilitator_url}/verify")).not_to have_been_made
       end
     end
