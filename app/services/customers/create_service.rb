@@ -34,6 +34,10 @@ module Customers
         )
       end
 
+      unless valid_integration_types?(integration_customers: args[:integration_customers])
+        return result.single_validation_failure!(field: :integration_type, error_code: "value_is_invalid")
+      end
+
       customer = billing_entity.customers.new(
         organization_id: organization.id,
         external_id: args[:external_id],
@@ -166,6 +170,14 @@ module Customers
       return true if metadata.count <= ::Metadata::CustomerMetadata::COUNT_PER_CUSTOMER
 
       false
+    end
+
+    def valid_integration_types?(integration_customers:)
+      return true if integration_customers.blank?
+
+      integration_customers.all? do |integration_customer|
+        IntegrationCustomers::BaseCustomer::CUSTOMER_TYPES.key?(integration_customer.to_h.deep_symbolize_keys[:integration_type])
+      end
     end
 
     def create_metadata(customer:, args:)

@@ -29,6 +29,10 @@ module Customers
         )
       end
 
+      unless valid_integration_types?(integration_customers: args[:integration_customers])
+        return result.single_validation_failure!(field: :integration_type, error_code: "value_is_invalid")
+      end
+
       old_payment_provider = customer.payment_provider
       old_provider_customer = customer.provider_customer
       old_payment_provider_id = resolved_payment_provider_id(customer) if api_context? && old_provider_customer
@@ -267,6 +271,14 @@ module Customers
       return true if metadata.count <= ::Metadata::CustomerMetadata::COUNT_PER_CUSTOMER
 
       false
+    end
+
+    def valid_integration_types?(integration_customers:)
+      return true if integration_customers.blank?
+
+      integration_customers.all? do |integration_customer|
+        IntegrationCustomers::BaseCustomer::CUSTOMER_TYPES.key?(integration_customer.to_h.deep_symbolize_keys[:integration_type])
+      end
     end
 
     def assign_premium_attributes(customer, args)
