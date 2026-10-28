@@ -21,12 +21,11 @@ module RealtimeUsage
       MAX_DIMENSIONS = 5
 
       # The charge default has an empty key, so the folded series needs one no dimension can take.
+      # It is no dimension filter.
       OTHER_KEY = "__other__"
 
       def initialize(billable_metrics:, dimension_keys: nil, **)
-        @billable_metrics = billable_metrics.select do |billable_metric|
-          SUPPORTED_AGGREGATION_TYPES.include?(billable_metric.aggregation_type)
-        end
+        @billable_metrics = billable_metrics.select { |billable_metric| self.class.served?(billable_metric) }
         @dimension_keys = dimension_keys.presence
 
         super(**)
@@ -34,6 +33,7 @@ module RealtimeUsage
 
       def call
         validate_request
+        validate_dimension_keys(dimension_keys) if result.success?
         return result unless result.success?
 
         rescue_read_errors do
@@ -48,9 +48,9 @@ module RealtimeUsage
 
       def build_reports
         dimension_key = dimension_key_for(billable_metrics.map(&:code))
-        totals = dimension_totals(billable_metrics:, dimension_key:, dimension_keys:).group_by { |row| row[:code] }
-        dimensions = totals.transform_values { |rows| build_dimensions(rows, dimension_key) }
-        periods = period_rows(dimension_key, dimensions)
+        ranked = ranked_dimensions(billable_metrics:, dimension_key:, dimension_keys:, limit: MAX_DIMENSIONS)
+        dimensions = ranked.group_by(&:first).transform_values { |rows| build_dimensions(rows, dimension_key) }
+        periods = period_rows_by_code(dimension_key, dimensions)
 
         billable_metrics.map do |billable_metric|
           metric_dimensions = dimensions.fetch(billable_metric.code, [])
@@ -68,17 +68,18 @@ module RealtimeUsage
         end
       end
 
-      # Biggest first, so the caller can assign colors by rank once.
+      # Biggest first, so the caller can assign colors by rank once. The read keeps the biggest
+      # dimensions only; the tail is what they leave of the metric's units.
       def build_dimensions(rows, dimension_key)
-        sorted = rows.sort_by { |row| [-row[:units], row[:dimension]] }.map do |row|
-          dimension = dimension_key.dimension(row[:dimension])
-          Dimension.new(row[:dimension], dimension.name, dimension.values, row[:units], false)
+        dimensions = rows.map do |_code, key, units, _metric_units, _dimensions_count|
+          dimension = dimension_key.dimension(key)
+          Dimension.new(key, dimension.name, dimension.values, units, false)
         end
 
-        return sorted if sorted.size <= MAX_DIMENSIONS
+        _code, _key, _units, metric_units, dimensions_count = rows.first
+        return dimensions if dimensions_count <= MAX_DIMENSIONS
 
-        tail = sorted.drop(MAX_DIMENSIONS)
-        sorted.first(MAX_DIMENSIONS) << Dimension.new(OTHER_KEY, nil, {}, tail.sum(BigDecimal(0), &:units), true)
+        dimensions << Dimension.new(OTHER_KEY, nil, {}, metric_units - dimensions.sum(BigDecimal(0), &:units), true)
       end
 
       def points(dimensions, rows)
@@ -93,16 +94,10 @@ module RealtimeUsage
 
       # The folded dimensions are grouped together in ClickHouse, so the read returns at most one
       # row per metric, period and served series whatever the cardinality of the dimensions.
-      def period_rows(dimension_key, dimensions)
+      def period_rows_by_code(dimension_key, dimensions)
         return {} if dimensions.empty?
 
-        rows = usage_rows(
-          billable_metrics:,
-          dimension_key:,
-          dimension_keys:,
-          by_period: true,
-          series_sql: series_sql(dimensions)
-        )
+        rows = period_rows(billable_metrics:, dimension_key:, dimension_keys:, series_sql: series_sql(dimensions))
 
         rows.each_with_object({}) do |(code, period, key, units), by_code|
           ((by_code[code] ||= {})[period] ||= {})[key] = units

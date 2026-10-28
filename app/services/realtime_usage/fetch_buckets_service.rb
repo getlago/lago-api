@@ -112,17 +112,11 @@ module RealtimeUsage
     # The pipeline attributes an event to a subscription only within its lifetime, so widening
     # the window to whole buckets cannot pull in usage from a neighbouring subscription.
     def window
-      @window ||= floor_to_bucket(boundaries.charges_from_datetime)...ceil_to_bucket(boundaries.charges_to_datetime)
-    end
-
-    def floor_to_bucket(time)
-      Time.zone.at(time.to_i - (time.to_i % BUCKET_DURATION.to_i))
-    end
-
-    def ceil_to_bucket(time)
-      floor = floor_to_bucket(time)
-
-      (floor == time) ? floor : floor + BUCKET_DURATION
+      @window ||= Range.new(
+        RealtimeUsage.floor_to_bucket(boundaries.charges_from_datetime),
+        RealtimeUsage.ceil_to_bucket(boundaries.charges_to_datetime),
+        true
+      )
     end
   end
 end

@@ -65,6 +65,16 @@ RSpec.describe RealtimeUsage::Reports::EventsService, clickhouse: {clean_before:
     end
   end
 
+  context "without buckets in the window" do
+    let(:from_datetime) { Time.zone.parse("2026-08-25 09:00:00") }
+    let(:to_datetime) { Time.zone.parse("2026-08-25 10:00:00") }
+
+    it "has no last ingestion" do
+      expect(result.events.events_count).to eq(0)
+      expect(result.events.last_ingested_at).to be_nil
+    end
+  end
+
   context "with a customer" do
     let(:other_subscription) { create(:subscription, customer: create(:customer, organization:), plan:) }
     let(:customer_ids) { [customer.id] }

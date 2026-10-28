@@ -156,6 +156,49 @@ RSpec.describe RealtimeUsage::Reports::BillableMetricsService, clickhouse: {clea
     end
   end
 
+  context "with charges of one metric splitting the usage differently" do
+    let(:second_charge) { create(:standard_charge, plan:, billable_metric:) }
+
+    before do
+      insert_bucket(bucket: "09:30", units: 6, charge_filter: region_filter(charge, "eu"))
+      insert_bucket(bucket: "09:30", units: 4)
+      insert_bucket(bucket: "09:30", units: 10, charge: second_charge)
+    end
+
+    it "reads the charge splitting it the finest, once" do
+      report = result.billable_metrics.sole
+
+      expect(report.units).to eq(10)
+      expect(report.dimensions.map { |dimension| [dimension.name, dimension.units.to_f] }).to eq([["eu", 6.0], [nil, 4.0]])
+      expect(report.points.first.units).to eq(10)
+    end
+
+    context "with dimension keys" do
+      let(:dimension_keys) { [RealtimeUsage::Reports::DimensionKey::SEPARATOR] }
+
+      it "filters the usage of the charge read" do
+        expect(result.billable_metrics.sole.units).to eq(4)
+      end
+    end
+  end
+
+  context "with the folded series as a dimension key" do
+    let(:dimension_keys) { [described_class::OTHER_KEY] }
+
+    it "fails with a validation error" do
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+      expect(result.error.messages).to eq({dimension_keys: ["invalid_dimension_key"]})
+    end
+  end
+
+  context "with a recurring metric" do
+    let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value", recurring: true) }
+
+    it "leaves it out" do
+      expect(result.billable_metrics).to eq([])
+    end
+  end
+
   context "with a max metric" do
     let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "max_agg", field_name: "value") }
 

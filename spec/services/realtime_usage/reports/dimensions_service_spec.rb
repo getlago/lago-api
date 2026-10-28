@@ -61,8 +61,37 @@ RSpec.describe RealtimeUsage::Reports::DimensionsService, clickhouse: {clean_bef
     end
   end
 
+  context "with a page past the last one" do
+    let(:page) { 3 }
+
+    it "returns no dimension and still counts them" do
+      expect(result.dimensions).to eq([])
+      expect(result.total_count).to eq(3)
+    end
+  end
+
+  context "with the folded series as a dimension key" do
+    subject(:result) do
+      described_class.call(
+        organization:, billable_metric:, dimension_keys: [RealtimeUsage::Reports::BillableMetricsService::OTHER_KEY], from_datetime:, to_datetime:
+      )
+    end
+
+    it "fails with a validation error" do
+      expect(result.error.messages).to eq({dimension_keys: ["invalid_dimension_key"]})
+    end
+  end
+
   context "with a metric the buckets do not serve" do
     let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "unique_count_agg", field_name: "value") }
+
+    it "fails with a validation error" do
+      expect(result.error.messages).to eq({billable_metric_code: ["unsupported_aggregation_type"]})
+    end
+  end
+
+  context "with a recurring metric" do
+    let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value", recurring: true) }
 
     it "fails with a validation error" do
       expect(result.error.messages).to eq({billable_metric_code: ["unsupported_aggregation_type"]})

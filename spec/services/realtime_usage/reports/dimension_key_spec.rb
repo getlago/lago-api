@@ -50,6 +50,19 @@ RSpec.describe RealtimeUsage::Reports::DimensionKey do
     end
   end
 
+  context "with a deleted filter whose value on a key was replaced while it was used" do
+    before do
+      charge_filter.values.find_by(billable_metric_filter: region).update!(deleted_at: 2.days.ago, updated_at: 2.days.ago)
+      create(:charge_filter_value, charge_filter:, billable_metric_filter: region, values: %w[eu])
+      charge_filter.values.each(&:discard!) && charge_filter.discard!
+    end
+
+    it "keys it on the values it had when it was deleted, as billing names it" do
+      expect(dimension_key.sql).to include(%({"region":["eu"],"tier":["__ALL_FILTER_VALUES__"]}))
+      expect(dimension_key.sql).not_to include("us")
+    end
+  end
+
   context "with a value removed from a filter that is still used" do
     before { charge_filter.values.find_by(billable_metric_filter: tier).discard! }
 

@@ -23,18 +23,14 @@ module RealtimeUsage
 
       def call
         validate_request
+        validate_billable_metric(billable_metric) if result.success?
         return result unless result.success?
-        unless SUPPORTED_AGGREGATION_TYPES.include?(billable_metric.aggregation_type)
-          return result.single_validation_failure!(field: :billable_metric_code, error_code: "unsupported_aggregation_type")
-        end
 
         rescue_read_errors do
           dimension_key = dimension_key_for([billable_metric.code])
 
-          result.dimensions = dimension_totals(billable_metrics: [billable_metric], dimension_key:)
-            .sort_by { |row| [-row[:units], row[:dimension]] }
-            .first(limit)
-            .map { |row| Row.new(row[:dimension], dimension_key.dimension(row[:dimension]).name) }
+          result.dimensions = ranked_dimensions(billable_metrics: [billable_metric], dimension_key:, limit:)
+            .map { |_code, key| Row.new(key, dimension_key.dimension(key).name) }
           result
         end
       end

@@ -5,20 +5,19 @@ module Resolvers
     class BillableMetricsResolver < BaseResolver
       description "Query the real-time usage of the billable metrics of the organization, per period and per dimension"
 
-      DEFAULT_LIMIT = 20
-
       argument :limit, Integer, required: false
       argument :page, Integer, required: false
 
       type Types::RealtimeUsage::BillableMetric.collection_type, null: false
 
       def resolve(page: nil, limit: nil, **args)
-        billable_metrics = current_organization.billable_metrics
-          .where(aggregation_type: ::RealtimeUsage::Reports::BaseService::SUPPORTED_AGGREGATION_TYPES, recurring: false)
-          .order(:name, :id)
-          .page(page)
-          .per(limit || DEFAULT_LIMIT)
+        query_result = ::RealtimeUsage::BillableMetricsQuery.call(
+          organization: current_organization,
+          pagination: {page:, limit:}
+        )
+        return result_error(query_result) unless query_result.success?
 
+        billable_metrics = query_result.billable_metrics
         result = ::RealtimeUsage::Reports::BillableMetricsService.call(
           billable_metrics: billable_metrics.to_a,
           **report_filters(**args)

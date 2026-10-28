@@ -5,7 +5,7 @@ module RealtimeUsage
     # The organization-wide reads behind the real-time usage pages. They answer from the usage
     # buckets alone, so they only see the events the stream matched to a served charge.
     class BaseService < ::BaseService
-      SUPPORTED_AGGREGATION_TYPES = %w[count_agg sum_agg max_agg latest_agg].freeze
+      include BucketReads
 
       # A customer or subscription filter is a list of ids, as one external id can name several
       # records over time (a deleted customer, a terminated subscription).
@@ -18,6 +18,11 @@ module RealtimeUsage
         super
       end
 
+      # The bucket pipeline leaves recurring metrics out, so they have no usage to report.
+      def self.served?(billable_metric)
+        SUPPORTED_AGGREGATION_TYPES.include?(billable_metric.aggregation_type) && !billable_metric.recurring?
+      end
+
       private
 
       attr_reader :organization, :customer_ids, :subscription_ids, :window
@@ -27,6 +32,20 @@ module RealtimeUsage
 
         errors = window.errors
         result.validation_failure!(errors:) if errors.present?
+      end
+
+      def validate_billable_metric(billable_metric)
+        return if self.class.served?(billable_metric)
+
+        result.single_validation_failure!(field: :billable_metric_code, error_code: "unsupported_aggregation_type")
+      end
+
+      # The folded series is cut from the dimensions of the whole window, so it names no usage a
+      # filter could select.
+      def validate_dimension_keys(dimension_keys)
+        return unless dimension_keys&.include?(BillableMetricsService::OTHER_KEY)
+
+        result.single_validation_failure!(field: :dimension_keys, error_code: "invalid_dimension_key")
       end
 
       # The sink tombstones a row it has retracted, which the engine only drops on a merge, so
@@ -51,53 +70,93 @@ module RealtimeUsage
         DimensionKey.build(organization:, charge_filter_ids:)
       end
 
-      # One row per metric and dimension, which bounds the read by the dimensions rather than by
-      # the periods of the window.
-      def dimension_totals(billable_metrics:, dimension_key:, dimension_keys: nil)
-        usage_rows(billable_metrics:, dimension_key:, dimension_keys:)
-          .map { |code, dimension, units| {code:, dimension:, units:} }
+      # The dimensions of each metric, biggest first, ranked and cut in ClickHouse so a page never
+      # loads the tail. Every row also carries the units and the number of dimensions of its
+      # metric, which the folded series and the pagination are built from.
+      #
+      # Returns [code, dimension, units, metric_units, dimensions_count] rows.
+      def ranked_dimensions(billable_metrics:, dimension_key:, limit:, dimension_keys: nil, offset: 0)
+        sql = usage_sql(billable_metrics:, dimension_key:, dimension_keys:)
+
+        rows = with_retry do
+          Clickhouse::UsageBucket.connection.select_rows(<<~SQL.squish)
+            SELECT code, series, units, sum(units) OVER (PARTITION BY code), count() OVER (PARTITION BY code)
+            FROM (#{sql})
+            ORDER BY code, units DESC, series
+            LIMIT #{offset.to_i}, #{limit.to_i} BY code
+          SQL
+        end
+
+        rows.map do |code, dimension, units, metric_units, dimensions_count|
+          [code, dimension, BigDecimal(units.to_s), BigDecimal(metric_units.to_s), dimensions_count.to_i]
+        end
       end
 
-      # Billing reads every subscription on its own, so the buckets are aggregated in three steps:
-      # each charge as its metric aggregates (a max of maxes, the latest of the latest values),
-      # then the charges of one metric on a subscription, which read the same events and are kept
-      # once, then the subscriptions, which add up. The series fold last, so a folded max is still
-      # the sum of real maxes.
+      def dimensions_count(billable_metric:, dimension_key:, dimension_keys: nil)
+        sql = usage_sql(billable_metrics: [billable_metric], dimension_key:, dimension_keys:)
+
+        with_retry { Clickhouse::UsageBucket.connection.select_value("SELECT count() FROM (#{sql})").to_i }
+      end
+
+      # Returns [code, period, series, units] rows.
+      def period_rows(billable_metrics:, dimension_key:, dimension_keys: nil, keys: nil, series_sql: "dimension")
+        sql = usage_sql(billable_metrics:, dimension_key:, dimension_keys:, keys:, by_period: true, series_sql:)
+
+        with_retry { Clickhouse::UsageBucket.connection.select_rows(sql) }.map do |code, period, series, units|
+          [code, period.to_i, series, BigDecimal(units.to_s)]
+        end
+      end
+
+      # Billing reads every subscription on its own, so the buckets are aggregated in two steps:
+      # each subscription as its metric aggregates (a max of maxes, the latest of the latest
+      # values), then the subscriptions, which add up. The series fold last, so a folded max is
+      # still the sum of real maxes.
       #
-      # Returns [code, (period,) series, units] rows.
-      def usage_rows(billable_metrics:, dimension_key:, dimension_keys: nil, keys: nil, by_period: false, series_sql: "dimension")
+      # The charges of one metric on a subscription each read every event of the metric, but can
+      # split them on different dimensions: one per region, another not at all. Adding them up
+      # would count the events twice, and keeping the biggest per dimension would count the
+      # filtered ones twice, so a single charge is read per subscription and metric.
+      #
+      # Returns the SQL of [code, (period,) series, units] rows.
+      def usage_sql(billable_metrics:, dimension_key:, dimension_keys: nil, keys: nil, by_period: false, series_sql: "dimension")
         codes = billable_metrics.map(&:code)
-        scope = base_scope.where(code: codes)
+        metric_scope = base_scope.where(code: codes)
+
+        scope = metric_scope.where("(code, subscription_id, charge_id) IN (#{read_charges_sql(metric_scope)})")
         scope = scope.where("#{dimension_key.sql} IN (#{quote_list(dimension_keys)})") if dimension_keys
         scope = scope.where("#{dimension_key.sql} IN (#{quote_list(keys)})") if keys
 
         period = by_period ? "period, " : ""
 
-        per_charge = scope
-          .group(Arel.sql("code, subscription_id, charge_id, #{period}dimension"))
+        per_subscription = scope
+          .group(Arel.sql("code, subscription_id, #{period}dimension"))
           .select(Arel.sql(<<~SQL.squish))
             code, subscription_id, #{"#{period_sql} AS period, " if by_period}
             #{dimension_key.sql} AS dimension, #{units_sql(billable_metrics)} AS value
           SQL
           .to_sql
 
-        rows = with_retry do
-          Clickhouse::UsageBucket.connection.select_rows(<<~SQL.squish)
-            SELECT code, #{period}#{series_sql} AS series, sum(value)
-            FROM (
-              SELECT code, subscription_id, #{period}dimension, max(value) AS value
-              FROM (#{per_charge})
-              GROUP BY code, subscription_id, #{period}dimension
-            )
-            GROUP BY code, #{period}series
-          SQL
-        end
+        <<~SQL.squish
+          SELECT code, #{period}#{series_sql} AS series, sum(value) AS units
+          FROM (#{per_subscription})
+          GROUP BY code, #{period}series
+        SQL
+      end
 
-        rows.map do |row|
-          *columns, units = row
-          columns[1] = columns[1].to_i if by_period
-          [*columns, BigDecimal(units.to_s)]
-        end
+      # The charge splitting the usage the finest, then the smallest id. It is picked on the
+      # whole window before any dimension filter, so every read of a report splits the usage
+      # the same way.
+      def read_charges_sql(scope)
+        per_charge = scope
+          .group(:code, :subscription_id, :charge_id)
+          .select("code, subscription_id, charge_id, uniqExact(charge_filter_id, grouped_by) AS dimensions")
+          .to_sql
+
+        <<~SQL.squish
+          SELECT code, subscription_id, argMin(charge_id, (-toInt64(dimensions), charge_id))
+          FROM (#{per_charge})
+          GROUP BY code, subscription_id
+        SQL
       end
 
       # A bucket holds the max or the latest value of its 15 minutes, so a period or a window
@@ -113,18 +172,6 @@ module RealtimeUsage
 
       def period_sql
         window.period_sql(quote(window.timezone))
-      end
-
-      def quote(value)
-        Clickhouse::UsageBucket.connection.quote(value)
-      end
-
-      def quote_list(values)
-        values.map { |value| quote(value) }.join(", ")
-      end
-
-      def with_retry(&)
-        Events::Stores::Utils::ClickhouseConnection.with_retry(&)
       end
 
       def rescue_read_errors

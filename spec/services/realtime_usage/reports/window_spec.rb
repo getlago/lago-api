@@ -11,7 +11,7 @@ RSpec.describe RealtimeUsage::Reports::Window do
 
   it "reads short spans by the hour, widened to whole buckets" do
     expect(window.granularity).to eq("hour")
-    expect(window.start_time).to eq(Time.zone.parse("2026-08-24 09:00:00"))
+    expect(window.start_time).to eq(Time.zone.parse("2026-08-24 09:15:00"))
     expect(window.end_time).to eq(Time.zone.parse("2026-08-24 12:15:00"))
     expect(window.periods).to eq(
       ["09:00", "10:00", "11:00", "12:00"].map { |hour| Time.zone.parse("2026-08-24 #{hour}:00").to_i }
@@ -31,9 +31,10 @@ RSpec.describe RealtimeUsage::Reports::Window do
   context "with a span longer than two days" do
     let(:to_datetime) { Time.zone.parse("2026-08-27 10:00:00") }
 
-    it "reads by the day" do
+    it "reads by the day, from the bucket of the start rather than its midnight" do
       expect(window.granularity).to eq("day")
-      expect(window.start_time).to eq(Time.zone.parse("2026-08-24 00:00:00"))
+      expect(window.start_time).to eq(Time.zone.parse("2026-08-24 09:15:00"))
+      expect(window.periods.first).to eq(Time.zone.parse("2026-08-24 00:00:00").to_i)
       expect(window.periods.size).to eq(4)
     end
   end

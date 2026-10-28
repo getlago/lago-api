@@ -24,28 +24,32 @@ module RealtimeUsage
 
       def call
         validate_request
+        validate_billable_metric(billable_metric) if result.success?
+        validate_dimension_keys(dimension_keys) if result.success?
         return result unless result.success?
-        unless SUPPORTED_AGGREGATION_TYPES.include?(billable_metric.aggregation_type)
-          return result.single_validation_failure!(field: :billable_metric_code, error_code: "unsupported_aggregation_type")
-        end
 
         rescue_read_errors do
           dimension_key = dimension_key_for([billable_metric.code])
-          totals = dimension_totals(billable_metrics: [billable_metric], dimension_key:, dimension_keys:)
-            .sort_by { |row| [-row[:units], row[:dimension]] }
-          page_rows = totals.drop((page - 1) * limit).first(limit)
-          periods = period_rows(dimension_key, page_rows.map { |row| row[:dimension] })
+          page_rows = ranked_dimensions(
+            billable_metrics: [billable_metric],
+            dimension_key:,
+            dimension_keys:,
+            limit:,
+            offset: (page - 1) * limit
+          )
+          periods = periods_by_key(dimension_key, page_rows.map(&:second))
 
-          result.total_count = totals.size
+          result.total_count = page_rows.first&.last ||
+            dimensions_count(billable_metric:, dimension_key:, dimension_keys:)
           result.page = page
           result.limit = limit
-          result.dimensions = page_rows.map do |row|
-            dimension = dimension_key.dimension(row[:dimension])
+          result.dimensions = page_rows.map do |_code, key, units|
+            dimension = dimension_key.dimension(key)
             points = window.periods.map do |period|
-              Point.new(Time.zone.at(period), periods.dig(period, row[:dimension]) || BigDecimal(0))
+              Point.new(Time.zone.at(period), periods.dig(period, key) || BigDecimal(0))
             end
 
-            Row.new(row[:dimension], dimension.name, dimension.values, row[:units], points)
+            Row.new(key, dimension.name, dimension.values, units, points)
           end
           result
         end
@@ -55,10 +59,10 @@ module RealtimeUsage
 
       attr_reader :billable_metric, :dimension_keys, :page, :limit
 
-      def period_rows(dimension_key, keys)
+      def periods_by_key(dimension_key, keys)
         return {} if keys.empty?
 
-        usage_rows(billable_metrics: [billable_metric], dimension_key:, keys:, by_period: true)
+        period_rows(billable_metrics: [billable_metric], dimension_key:, keys:)
           .each_with_object({}) do |(_code, period, key, units), by_period|
             (by_period[period] ||= {})[key] = units
           end

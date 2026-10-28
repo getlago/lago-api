@@ -22,6 +22,7 @@ RSpec.describe Resolvers::RealtimeUsage::BillableMetricResolver, clickhouse: {cl
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:) }
   let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+  let(:charge) { create(:standard_charge, billable_metric:, plan: subscription.plan) }
   let(:billable_metric_code) { billable_metric.code }
   let(:dimension_keys) { nil }
   let(:variables) do
@@ -32,7 +33,7 @@ RSpec.describe Resolvers::RealtimeUsage::BillableMetricResolver, clickhouse: {cl
 
   before do
     %w[eu us].each_with_index do |region, index|
-      create(:clickhouse_usage_bucket, subscription:, customer:, organization:, billable_metric:,
+      create(:clickhouse_usage_bucket, subscription:, customer:, organization:, billable_metric:, charge:,
         bucket: Time.zone.parse("2026-08-24 10:15:00"), grouped_by: %({"region":"#{region}"}), units: 5 + index)
     end
   end

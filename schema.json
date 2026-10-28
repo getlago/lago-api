@@ -76918,7 +76918,7 @@
           "fields": [
             {
               "name": "key",
-              "description": "Opaque key, to pass back as a dimension filter",
+              "description": "Opaque key, to pass back as a dimension filter, except on the folded series",
               "args": [],
               "type": {
                 "kind": "NON_NULL",

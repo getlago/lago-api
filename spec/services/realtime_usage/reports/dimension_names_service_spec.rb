@@ -68,4 +68,12 @@ RSpec.describe RealtimeUsage::Reports::DimensionNamesService, clickhouse: {clean
       expect(result.error.messages).to eq({billable_metric_code: ["unsupported_aggregation_type"]})
     end
   end
+
+  context "with a recurring metric" do
+    let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value", recurring: true) }
+
+    it "fails with a validation error" do
+      expect(result.error.messages).to eq({billable_metric_code: ["unsupported_aggregation_type"]})
+    end
+  end
 end

@@ -13933,7 +13933,7 @@ A charge filter or pricing group value a usage is split on, and its window total
 """
 type RealtimeUsageDimension {
   """
-  Opaque key, to pass back as a dimension filter
+  Opaque key, to pass back as a dimension filter, except on the folded series
   """
   key: String!
 

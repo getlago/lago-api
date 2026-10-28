@@ -16,16 +16,10 @@ module RealtimeUsage
       # Buckets outlive the filters they were counted on, so a deleted filter still names its
       # usage, with the values it had when it was deleted.
       def self.build(organization:, charge_filter_ids:)
-        discarded_ids = ChargeFilter.with_discarded.discarded
+        filters = ChargeFilter.with_discarded
           .where(organization_id: organization.id, id: charge_filter_ids)
-          .pluck(:id).to_set
-
-        filters = ChargeFilterValue.with_discarded
-          .where(organization_id: organization.id, charge_filter_id: charge_filter_ids)
-          .includes(:billable_metric_filter)
-          .select { |value| value.deleted_at.nil? || discarded_ids.include?(value.charge_filter_id) }
-          .group_by(&:charge_filter_id)
-          .transform_values { |values| values.to_h { |value| [value.billable_metric_filter.key, value.values] } }
+          .includes(values: :billable_metric_filter)
+          .to_h { |filter| [filter.id, filter.discarded? ? filter.to_h_with_discarded : filter.to_h] }
 
         new(filters:)
       end

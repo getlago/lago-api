@@ -38,24 +38,15 @@ module RealtimeUsage
         @granularity ||= (to_datetime - from_datetime > HOURLY_LIMIT) ? "day" : "hour"
       end
 
-      # The first period wall at or before from_datetime, in the report's timezone — the same
-      # instant ClickHouse groups the buckets on.
+      # A bucket is summed whole, so both ends widen to the bucket wall they sit on rather than
+      # cutting it. The start stays within a bucket of from_datetime even when the first period
+      # opens earlier: a day read from 18:00 does not count the morning.
       def start_time
-        @start_time ||= Time.use_zone(timezone) do
-          time = from_datetime.in_time_zone(timezone)
-          (granularity == "day") ? time.beginning_of_day : time.beginning_of_hour
-        end
+        @start_time ||= RealtimeUsage.floor_to_bucket(from_datetime)
       end
 
-      # A bucket is summed whole, so an end inside one would report less than what was counted.
-      # The end widens to the bucket wall it sits on rather than cutting the bucket.
       def end_time
-        @end_time ||= begin
-          seconds = BUCKET_DURATION.to_i
-          aligned = (to_datetime.to_i % seconds).zero? && to_datetime.usec.zero?
-
-          aligned ? to_datetime : Time.zone.at(to_datetime.to_i - (to_datetime.to_i % seconds) + seconds)
-        end
+        @end_time ||= RealtimeUsage.ceil_to_bucket(to_datetime)
       end
 
       # Every period of the window, as the unix timestamps the reads return, so a period no
@@ -63,7 +54,7 @@ module RealtimeUsage
       def periods
         @periods ||= begin
           walls = []
-          wall = start_time
+          wall = first_period
 
           while wall < end_time
             walls << wall.to_i
@@ -87,6 +78,15 @@ module RealtimeUsage
       private
 
       attr_reader :from_datetime, :to_datetime
+
+      # The first period wall at or before from_datetime, in the report's timezone — the same
+      # instant ClickHouse groups the buckets on. The first period only holds what follows it.
+      def first_period
+        Time.use_zone(timezone) do
+          time = from_datetime.in_time_zone(timezone)
+          (granularity == "day") ? time.beginning_of_day : time.beginning_of_hour
+        end
+      end
     end
   end
 end

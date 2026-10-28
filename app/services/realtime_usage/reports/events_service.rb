@@ -20,7 +20,7 @@ module RealtimeUsage
             window.end_time,
             window.timezone,
             window.granularity,
-            with_retry { base_scope.maximum(:last_ingested_at) },
+            last_ingested_at,
             counts.values.sum,
             window.periods.map { |period| Point.new(Time.zone.at(period), counts.fetch(period, 0)) }
           )
@@ -29,6 +29,12 @@ module RealtimeUsage
       end
 
       private
+
+      # ClickHouse answers the max of no rows with the zero of the column type, the epoch.
+      def last_ingested_at
+        value = with_retry { base_scope.maximum(:last_ingested_at) }
+        value if value.to_i.positive?
+      end
 
       # An event lands in the bucket of every charge reading its metric on the subscription, so
       # a plan charging the same metric twice would count it twice. Within a bucket, the charges
