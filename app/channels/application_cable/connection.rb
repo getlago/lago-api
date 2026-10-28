@@ -17,6 +17,8 @@ module ApplicationCable
 
       self.connection_identifier = SecureRandom.uuid
       authenticate_user(token)
+      # No socket without a valid session: an Origin header is not a credential outside a browser.
+      reject_unauthorized_connection unless current_user
     end
 
     def session_claims

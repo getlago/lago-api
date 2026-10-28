@@ -31,18 +31,16 @@ RSpec.describe ApplicationCable::Connection, type: :channel do
     travel_to(4.hours.from_now) { expect(connection.token_expired?).to be(true) }
   end
 
-  it "accepts the connection without a user when no token is sent" do
-    connect_with("actioncable-v1-json, actioncable-unsupported")
-
-    expect(connection.current_user).to be_nil
-    expect(connection.auth_error_code).to be_nil
+  it "rejects the connection when no token is sent" do
+    expect { connect_with("actioncable-v1-json, actioncable-unsupported") }.to have_rejected_connection
   end
 
-  it "ignores an invalid token" do
-    connect_with("actioncable-v1-json, lago-token.invalid")
+  it "rejects the connection when no subprotocol is sent" do
+    expect { connect "/cable" }.to have_rejected_connection
+  end
 
-    expect(connection.current_user).to be_nil
-    expect(connection.auth_error_code).to be_nil
+  it "rejects an invalid token" do
+    expect { connect_with("actioncable-v1-json, lago-token.invalid") }.to have_rejected_connection
   end
 
   it "keeps the session claims of the token" do
@@ -52,19 +50,15 @@ RSpec.describe ApplicationCable::Connection, type: :channel do
     expect(connection.session_claims).to eq(login_method: "okta", sso_organization_id: "org-id", sso_issuer: "https://sso.okta.com")
   end
 
-  it "treats an SSO session without its claims as unauthenticated" do
+  it "rejects an SSO session without its claims" do
     sso_token = Utils::AuthToken.encode(user:, login_method: "okta")
-    connect_with("actioncable-v1-json, lago-token.#{sso_token}")
 
-    expect(connection.current_user).to be_nil
-    expect(connection.session_claims).to eq({})
+    expect { connect_with("actioncable-v1-json, lago-token.#{sso_token}") }.to have_rejected_connection
   end
 
-  it "flags an expired token" do
+  it "rejects an expired token" do
     expired_token = travel_to(4.hours.ago) { Utils::AuthToken.encode(user:) }
-    connect_with("actioncable-v1-json, lago-token.#{expired_token}")
 
-    expect(connection.current_user).to be_nil
-    expect(connection.auth_error_code).to eq("expired_jwt_token")
+    expect { connect_with("actioncable-v1-json, lago-token.#{expired_token}") }.to have_rejected_connection
   end
 end
