@@ -41,7 +41,7 @@ module CreditNotes
     end
 
     def build_pdf_file
-      pdf_content = Utils::PdfGenerator.call(template:, context: credit_note).io.read
+      pdf_content = Utils::PdfGenerator.call(template:, context: credit_note, **page_layout).io.read
 
       pdf_file = Tempfile.new([credit_note.number, ".pdf"])
       pdf_file.binmode
@@ -83,7 +83,16 @@ module CreditNotes
       context == "admin" || credit_note.file.blank?
     end
 
+    def page_layout
+      if credit_note.invoice.product_catalog?
+        {footer: "credit_notes/product_catalog/footer", margin_bottom: "1.0167"}
+      else
+        {}
+      end
+    end
+
     def template
+      return "credit_notes/product_catalog/credit_note" if credit_note.invoice.product_catalog?
       return "credit_notes/self_billed" if credit_note.invoice.self_billed?
 
       "credit_notes/credit_note"
