@@ -9,7 +9,8 @@ module Events
       # Each event is priced on its own row: the charge's price lookup resolves the rank of the filter
       # pricing it, and the rank picks the unit amount. The rows are then grouped by the attribution
       # value only, into a fixed set of cells (units, amount, events) per charge, so the number of
-      # filters never adds groups. A split charge gets one cell per filter, plus the default one.
+      # filters never adds groups. A split charge gets one cell per filter it lists, plus the default
+      # one. The filters it does not list still count in the amount of their row.
       #
       # Ranking and level totals are window functions over every group, computed before paging. The
       # unattributed usage (empty value) is ranked in its own partition, and the query returns it
@@ -23,7 +24,7 @@ module Events
       class AttributedUsageQuery
         include Events::Stores::Utils::ClickhouseSqlHelpers
 
-        ChargeColumn = Data.define(:charge_id, :code, :count, :unit_amount_cents, :lookup, :split)
+        ChargeColumn = Data.define(:charge_id, :code, :count, :unit_amount_cents, :lookup, :split_filter_ids)
         Cell = Data.define(:charge_id, :charge_filter_id, :priced, :column_index, :rank)
 
         SCALE = 12
@@ -51,8 +52,8 @@ module Events
           @cells ||= charge_columns.each_with_index.flat_map do |column, index|
             priced = !column.unit_amount_cents.nil?
 
-            if column.split
-              column.lookup.filter_ids.map.with_index(1) { |filter_id, rank| Cell.new(column.charge_id, filter_id, priced, index, rank) } +
+            if column.split_filter_ids
+              column.split_filter_ids.zip(split_ranks(column)).map { |filter_id, rank| Cell.new(column.charge_id, filter_id, priced, index, rank) } +
                 [Cell.new(column.charge_id, nil, priced, index, default_rank(column))]
             else
               [Cell.new(column.charge_id, nil, priced, index, nil)]
@@ -166,7 +167,7 @@ module Events
             column = charge_columns[cell.column_index]
             condition = code_condition(column)
             condition += " AND rank_#{cell.column_index} = #{cell.rank}" if cell.rank
-            units = column.count ? "toDecimal128(1, #{SCALE})" : "event_units"
+            units = units_sql(column)
             amount = if cell.priced
               "sumIf(toDecimal128(#{units} * price_#{cell.column_index}, #{SCALE}), #{condition})"
             else
@@ -178,8 +179,23 @@ module Events
         end
 
         def amount_sql
-          priced = cells.each_index.select { cells[it].priced }
-          priced.any? ? priced.map { "amount_#{it}" }.join(" + ") : decimal_sql(0)
+          amounts = cells.each_index.select { cells[it].priced }.map { "amount_#{it}" } + unlisted_amounts_sql
+          amounts.any? ? amounts.join(" + ") : decimal_sql(0)
+        end
+
+        # The amount of the filters a split charge does not list, so a row is ranked on its whole amount.
+        def unlisted_amounts_sql
+          charge_columns.each_with_index.filter_map do |column, index|
+            next unless column.unit_amount_cents && column.split_filter_ids
+            next if column.split_filter_ids.size == column.lookup.filter_ids.size
+
+            listed = [*split_ranks(column), default_rank(column)].join(", ")
+            "sumIf(toDecimal128(#{units_sql(column)} * price_#{index}, #{SCALE}), #{code_condition(column)} AND rank_#{index} NOT IN (#{listed}))"
+          end
+        end
+
+        def units_sql(column)
+          column.count ? "toDecimal128(1, #{SCALE})" : "event_units"
         end
 
         def level_windows_sql
@@ -246,6 +262,10 @@ module Events
 
         def decimal_sql(value)
           "toDecimal128(#{quote(decimal_literal(value))}, #{SCALE})"
+        end
+
+        def split_ranks(column)
+          column.split_filter_ids.map { column.lookup.filter_ids.index(it) + 1 }
         end
 
         def default_rank(column)
