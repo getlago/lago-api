@@ -53,6 +53,17 @@ class PaymentTerm < Data.define(:term_type, :days, :day_of_month, :month_offset)
     }.compact
   end
 
+  # Terms giving the same due date for every issuing date share a key, so they bill on one invoice.
+  def grouping_key
+    return to_h unless days&.zero?
+
+    case term_type
+    when "net" then {"term_type" => "due_on_receipt"}
+    when "net_end_of_month", "days_end_of_month" then {"term_type" => "end_of_month"}
+    else to_h
+    end
+  end
+
   # The legacy integer can only represent net and due_on_receipt.
   def net_payment_term_alias
     case term_type

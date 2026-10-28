@@ -1158,6 +1158,38 @@ RSpec.describe Subscriptions::OrganizationBillingService do
           expect(invoices_per_customer).to have_received(:measure).with({}, 2)
         end
       end
+
+      context "when subscriptions resolve to different terms giving the same due date" do
+        let(:net_zero_resolution) do
+          PaymentTerms::ResolveService::Result.new.tap do |resolution|
+            resolution.payment_term = PaymentTerm.from_h({"term_type" => "net", "days" => 0})
+            resolution.source = "customer"
+          end
+        end
+
+        let(:due_on_receipt_resolution) do
+          PaymentTerms::ResolveService::Result.new.tap do |resolution|
+            resolution.payment_term = PaymentTerm.from_h({"term_type" => "due_on_receipt"})
+            resolution.source = "customer"
+          end
+        end
+
+        before do
+          allow(PaymentTerms::ResolveService).to receive(:call!).and_return(net_zero_resolution, due_on_receipt_resolution)
+        end
+
+        it "groups them into a single billing job" do
+          billing_service.call
+
+          expect(BillSubscriptionJob).to have_been_enqueued
+            .with(
+              contain_exactly(first_subscription, second_subscription),
+              current_date.to_i,
+              invoicing_reason: :subscription_periodic
+            )
+          expect(invoices_per_customer).to have_received(:measure).with({}, 1)
+        end
+      end
     end
 
     context "when a subscription opts out of invoice consolidation" do

@@ -196,6 +196,35 @@ RSpec.describe BillSubscriptionJob do
       end
     end
 
+    context "when subscriptions resolve to different terms giving the same due date" do
+      let(:net_zero_resolution) do
+        PaymentTerms::ResolveService::Result.new.tap do |resolution|
+          resolution.payment_term = PaymentTerm.from_h({"term_type" => "net", "days" => 0})
+          resolution.source = "customer"
+        end
+      end
+
+      let(:due_on_receipt_resolution) do
+        PaymentTerms::ResolveService::Result.new.tap do |resolution|
+          resolution.payment_term = PaymentTerm.from_h({"term_type" => "due_on_receipt"})
+          resolution.source = "customer"
+        end
+      end
+
+      before do
+        allow(PaymentTerms::ResolveService).to receive(:call!).and_return(net_zero_resolution, due_on_receipt_resolution)
+        allow(Invoices::SubscriptionService).to receive(:call).and_return(result)
+      end
+
+      it "bills them together without splitting" do
+        described_class.perform_now(subscriptions, timestamp, invoicing_reason:)
+
+        expect(Invoices::SubscriptionService).to have_received(:call).with(hash_including(subscriptions:))
+        expect(described_class).not_to have_been_enqueued
+        expect(splits).not_to have_received(:increment)
+      end
+    end
+
     context "when an invoice is given" do
       let(:invoice) { create(:invoice, :generating, customer:) }
 

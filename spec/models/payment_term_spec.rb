@@ -187,6 +187,27 @@ RSpec.describe PaymentTerm do
     end
   end
 
+  describe "#grouping_key" do
+    it "groups zero-day terms with the term giving the same due date" do
+      expect(described_class.from_h(term_type: "net", days: 0).grouping_key).to eq("term_type" => "due_on_receipt")
+      expect(described_class.from_h(term_type: "net_end_of_month", days: 0).grouping_key).to eq("term_type" => "end_of_month")
+      expect(described_class.from_h(term_type: "days_end_of_month", days: 0).grouping_key).to eq("term_type" => "end_of_month")
+    end
+
+    it "keeps every other term as it is" do
+      [
+        {"term_type" => "due_on_receipt"},
+        {"term_type" => "end_of_month"},
+        {"term_type" => "net", "days" => 30},
+        {"term_type" => "net_end_of_month", "days" => 2},
+        {"term_type" => "days_end_of_month", "days" => 10},
+        {"term_type" => "day_of_month", "day_of_month" => 15, "month_offset" => 0}
+      ].each do |term|
+        expect(described_class.from_h(term).grouping_key).to eq(term)
+      end
+    end
+  end
+
   describe "#net_payment_term_alias" do
     subject(:net_payment_term_alias) { term.net_payment_term_alias }
 

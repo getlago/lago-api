@@ -60,7 +60,7 @@ module Invoices
       groups = pending_billing_contexts_with_fees.group_by do |billing_context|
         [
           billing_context.purchase_order_number,
-          PaymentTerms::ResolveService.call!(customer: billing_context.customer).payment_term.to_h
+          PaymentTerms::ResolveService.call!(customer: billing_context.customer).payment_term.grouping_key
         ]
       end
 
