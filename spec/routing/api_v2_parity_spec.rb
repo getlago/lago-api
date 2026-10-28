@@ -180,8 +180,15 @@ RSpec.describe "API v2 routing parity" do
   end
 
   it "routes payment receipt endpoints to the v2 controller" do
-    ["/api/v2/payment_receipts", "/api/v2/payment_receipts/#{SecureRandom.uuid}"].each do |path|
-      expect(Rails.application.routes.recognize_path(path, method: :get)[:controller]).to eq("api/v2/payment_receipts")
+    id = SecureRandom.uuid
+
+    {
+      get: ["/api/v2/payment_receipts", "/api/v2/payment_receipts/#{id}"],
+      post: ["/api/v2/payment_receipts/#{id}/resend_email"]
+    }.each do |method, paths|
+      paths.each do |path|
+        expect(Rails.application.routes.recognize_path(path, method:)[:controller]).to eq("api/v2/payment_receipts")
+      end
     end
   end
 end
