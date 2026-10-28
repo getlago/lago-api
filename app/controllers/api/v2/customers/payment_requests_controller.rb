@@ -11,7 +11,8 @@ module Api
           result = ::PaymentRequestsQuery.call(
             organization: current_organization,
             pagination: cursor,
-            filters: {external_customer_id: customer.external_id}
+            # The id rather than the external one, which a deleted customer may share.
+            filters: {customer_id: customer.id}
           )
 
           if result.success?

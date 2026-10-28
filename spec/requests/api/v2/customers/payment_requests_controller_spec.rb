@@ -63,6 +63,19 @@ RSpec.describe Api::V2::Customers::PaymentRequestsController do
       end
     end
 
+    context "with a deleted customer sharing the external id" do
+      before do
+        deleted_customer = create(:customer, organization:, external_id: customer.external_id, deleted_at: Time.current)
+        create(:payment_request, organization:, customer: deleted_customer)
+      end
+
+      it "lists the payment requests of the current customer only" do
+        subject
+
+        expect(json[:payment_requests].map { it[:lago_id] }).to eq([payment_request.id])
+      end
+    end
+
     context "with an unknown customer" do
       let(:customer_path) { "/api/v2/customers/unknown" }
 
