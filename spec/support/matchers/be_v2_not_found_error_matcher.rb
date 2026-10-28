@@ -2,7 +2,10 @@
 
 # The whole 404 body of a native v2 endpoint. be_not_found_error checks the v1 one.
 RSpec::Matchers.define :be_v2_not_found_error do |resource|
-  expected_body = {"code" => "#{resource}_not_found", "details" => []}
+  expected_body = {
+    "code" => "resource_not_found",
+    "details" => [{"code" => "resource_not_found", "field" => "base", "meta" => {"resource" => resource}}]
+  }
 
   match do |response|
     response.status == 404 && JSON.parse(response.body) == expected_body

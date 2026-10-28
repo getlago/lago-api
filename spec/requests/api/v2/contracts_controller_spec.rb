@@ -755,11 +755,11 @@ RSpec.describe Api::V2::ContractsController do
     context "when the billing lock of the customer is held" do
       before { allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock) }
 
-      it "returns a lock error and leaves the contract active" do
+      it "returns a concurrency conflict and leaves the contract active" do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json).to eq(code: "lock_acquisition_failed", details: [])
+        expect(json).to eq(code: "concurrency_conflict", details: [])
         expect(contract.reload.status).to eq("active")
       end
     end

@@ -17,17 +17,21 @@ RSpec.describe BaseQuery::FiltersFailure do
   end
 
   describe "#filters" do
-    it "returns the values received and the values allowed of each filter" do
+    it "returns the values allowed of each filter, without the values received" do
       expect(failure.filters).to eq(
-        account_type: {invalid_values: %w[bogus other], allowed_values: %w[customer partner]},
-        has_customer_type: {value: "maybe", allowed_values: %w[true false]}
+        account_type: {allowed_values: %w[customer partner]},
+        has_customer_type: {allowed_values: %w[true false]}
       )
     end
 
-    context "with the same refused value twice" do
-      let(:filters) { {account_type: %w[bogus bogus]} }
+    context "with a closed list of values that are not strings" do
+      let(:contract_errors) do
+        Class.new(Dry::Validation::Contract) { params { optional(:limit).value(:integer, included_in?: [10, 20]) } }
+          .new.call(filters).errors
+      end
+      let(:filters) { {limit: 15} }
 
-      it { expect(failure.filters).to eq(account_type: {invalid_values: %w[bogus], allowed_values: %w[customer partner]}) }
+      it { expect(failure.filters).to eq(limit: {}) }
     end
 
     context "with a value of another type" do

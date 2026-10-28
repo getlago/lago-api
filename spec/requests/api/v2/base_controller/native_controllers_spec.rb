@@ -14,9 +14,15 @@ RSpec.describe "API v2 native controllers" do # rubocop:disable RSpec/DescribeCl
 
   hand_rendered_actions = {}
 
-  # Every Api::V1Errors renderer, one added later included, so that the callers v1 and v2 share
-  # always find a v2 one. The v2 base controller rescues a missing parameter with its own handler.
-  v2_renderers = Api::V1Errors.public_instance_methods(false) - %i[bad_request_error] + %i[not_found_error invalid_request_error]
+  # The Api::V1Errors renderers that the callers v1 and v2 share reach, which Api::V2Errors defines
+  # under the same names, and the ones it must not define: render_error_response renders those
+  # failures itself, and the v2 base controller rescues a missing parameter with its own handler.
+  shared_renderers = %i[unauthorized_error forbidden_error validation_errors render_error_response]
+  v1_only_renderers = %i[
+    bad_request_error method_not_allowed_error provider_error thirdpary_error too_many_provider_requests_error
+    lock_acquisition_error
+  ]
+  v2_renderers = shared_renderers + %i[not_found_error not_found invalid_request_error]
 
   let(:base_callbacks) { before_callbacks(Api::V2::BaseController) }
 
@@ -27,6 +33,11 @@ RSpec.describe "API v2 native controllers" do # rubocop:disable RSpec/DescribeCl
   # A floor, so that a change to the route filter cannot empty the list unnoticed.
   it "walks every native controller" do
     expect(native_controllers.size).to be >= 11
+  end
+
+  # A renderer added to Api::V1Errors later fails here until it is classified.
+  it "classifies every Api::V1Errors renderer as shared or v1 only" do
+    expect(Api::V1Errors.public_instance_methods(false)).to match_array(shared_renderers + v1_only_renderers)
   end
 
   native_controllers.each do |native_controller|
@@ -42,6 +53,7 @@ RSpec.describe "API v2 native controllers" do # rubocop:disable RSpec/DescribeCl
         expect(native_controller).to be < Api::V2Errors
         expect(native_controller.ancestors).not_to include(Api::V1Errors)
         expect(v2_renderers.index_with { native_controller.instance_method(it).owner }).to eq(v2_renderers.index_with(Api::V2Errors))
+        expect(v1_only_renderers.select { native_controller.method_defined?(it) || native_controller.private_method_defined?(it) }).to be_empty
       end
 
       if (native_actions[native_controller] - hand_rendered_actions.fetch(native_controller, [])).any?

@@ -540,11 +540,11 @@ RSpec.describe Api::V2::CustomersController do
             .to_return(**provider_response, body: provider_response[:body].to_json, headers: {"Content-Type" => "application/json"})
         end
 
-        it "returns a third party error naming the provider, without its message" do
+        it "returns a provider error naming the provider, without its message" do
           request
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json).to eq(code: "third_party_error", details: [{code: "third_party_error", field: "base", meta: {third_party: "Stripe"}}])
+          expect(json).to eq(code: "provider_error", details: [{code: "provider_error", field: "base", meta: {provider_name: "stripe"}}])
         end
 
         context "when the provider refuses the key of the organization" do
@@ -1100,15 +1100,15 @@ RSpec.describe Api::V2::CustomersController do
     context "with filters outside their allowed values" do
       let(:parameters) { {account_type: %w[bogus customer other], has_customer_type: "maybe"} }
 
-      it "returns a bad request error keyed by each filter" do
+      it "returns a validation error on each filter with the values it allows" do
         request
 
-        expect(response).to have_http_status(:bad_request)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(json).to eq(
-          code: "invalid_filter",
+          code: "validation_errors",
           details: [
-            {code: "invalid_filter", field: "account_type", meta: {invalid_values: %w[bogus other], allowed_values: %w[customer partner]}},
-            {code: "invalid_filter", field: "has_customer_type", meta: {value: "maybe", allowed_values: %w[true false]}}
+            {code: "value_is_invalid", field: "account_type", meta: {allowed_values: %w[customer partner]}},
+            {code: "value_is_invalid", field: "has_customer_type", meta: {allowed_values: %w[true false]}}
           ]
         )
       end
@@ -1117,11 +1117,11 @@ RSpec.describe Api::V2::CustomersController do
     context "with filters that contradict each other" do
       let(:parameters) { {has_customer_type: "false", customer_type: "company"} }
 
-      it "returns a bad request error on the refused filter" do
+      it "returns a validation error on the refused filter" do
         request
 
-        expect(response).to have_http_status(:bad_request)
-        expect(json).to eq(code: "invalid_filter", details: [{code: "invalid_filter", field: "customer_type", meta: {}}])
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "customer_type", meta: {}}])
       end
     end
   end

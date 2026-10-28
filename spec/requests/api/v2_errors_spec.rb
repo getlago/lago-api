@@ -19,6 +19,7 @@ RSpec.describe Api::V2Errors do
               collection do
                 get :out_of_range
                 get :invalid_request
+                get :missing_record
               end
             end
           end
@@ -46,6 +47,10 @@ RSpec.describe Api::V2Errors do
         raise ActiveModel::RangeError, "out of range"
       end
 
+      def missing_record
+        raise ActiveRecord::RecordNotFound
+      end
+
       def invalid_request
         invalid_request_error(code: "invalid_expand", error_details: {expands: {invalid_values: ["fees"], allowed_values: []}, after: {reason: "malformed"}})
       end
@@ -65,8 +70,9 @@ RSpec.describe Api::V2Errors do
           result.third_party_failure!(third_party: "Stripe", error_code: "resource_missing", error_message: "No such customer: 'cus_unknown'")
         when "provider"
           result.provider_failure!(provider: PaymentProviders::StripeProvider.new(code: "stripe_eu"), error: StandardError.new("Your card was declined."))
+        # A Symbol, as throttle! names the provider.
         when "too_many_requests"
-          result.too_many_provider_requests_failure!(provider_name: "Anrok", error: BaseService::ThrottlingError.new(provider_name: "Anrok"))
+          result.too_many_provider_requests_failure!(provider_name: :anrok, error: BaseService::ThrottlingError.new(provider_name: :anrok))
         when "lock" then result.lock_acquisition_failure!(message: "lock")
         when "service" then result.service_failure!(code: "unknown", message: "unknown")
         when "validation"
@@ -133,22 +139,22 @@ RSpec.describe Api::V2Errors do
   context "with a third party failure" do
     let(:failure) { "third_party" }
 
-    it "returns an unprocessable error naming the third party, without its message" do
+    it "returns a provider error naming the third party by its token, without its message" do
       show
 
       expect(response).to have_http_status(:unprocessable_content)
-      expect(json).to eq(code: "third_party_error", details: [{code: "third_party_error", field: "base", meta: {third_party: "Stripe"}}])
+      expect(json).to eq(code: "provider_error", details: [{code: "provider_error", field: "base", meta: {provider_name: "stripe"}}])
     end
   end
 
   context "with a provider failure" do
     let(:failure) { "provider" }
 
-    it "returns an unprocessable error naming the provider by its code, without its error" do
+    it "returns a provider error naming the provider and its connection, without its error" do
       show
 
       expect(response).to have_http_status(:unprocessable_content)
-      expect(json).to eq(code: "provider_error", details: [{code: "provider_error", field: "base", meta: {provider_code: "stripe_eu"}}])
+      expect(json).to eq(code: "provider_error", details: [{code: "provider_error", field: "base", meta: {provider_name: "stripe", provider_code: "stripe_eu"}}])
     end
   end
 
@@ -159,16 +165,27 @@ RSpec.describe Api::V2Errors do
       show
 
       expect(response).to have_http_status(:too_many_requests)
-      expect(json).to eq(code: "too_many_provider_requests", details: [{code: "too_many_provider_requests", field: "base", meta: {provider_name: "Anrok"}}])
+      expect(json).to eq(code: "too_many_provider_requests", details: [{code: "too_many_provider_requests", field: "base", meta: {provider_name: "anrok"}}])
     end
   end
 
   context "with a not found failure" do
-    it "returns a not found error named after the resource" do
+    it "returns a not found error naming the resource in its meta" do
       show
 
       expect(response).to have_http_status(:not_found)
-      expect(json).to eq(code: "product_not_found", details: [])
+      expect(json).to eq(code: "resource_not_found", details: [{code: "resource_not_found", field: "base", meta: {resource: "product"}}])
+    end
+  end
+
+  context "with a record that no lookup names" do
+    subject(:missing_record) { get_with_token(organization, "/api/v2/error_tests/missing_record") }
+
+    it "returns a not found error without an entry" do
+      missing_record
+
+      expect(response).to have_http_status(:not_found)
+      expect(json).to eq(code: "resource_not_found", details: [])
     end
   end
 
@@ -206,11 +223,11 @@ RSpec.describe Api::V2Errors do
   context "with a lock acquisition failure" do
     let(:failure) { "lock" }
 
-    it "returns its code without the message" do
+    it "returns a concurrency conflict without the message" do
       show
 
       expect(response).to have_http_status(:unprocessable_content)
-      expect(json).to eq(code: "lock_acquisition_failed", details: [])
+      expect(json).to eq(code: "concurrency_conflict", details: [])
     end
   end
 
