@@ -909,6 +909,7 @@ DROP INDEX IF EXISTS public.index_credit_notes_on_organization_id;
 DROP INDEX IF EXISTS public.index_credit_notes_on_invoice_id_and_sequential_id;
 DROP INDEX IF EXISTS public.index_credit_notes_on_invoice_id;
 DROP INDEX IF EXISTS public.index_credit_notes_on_customer_id;
+DROP INDEX IF EXISTS public.index_credit_notes_by_cursor;
 DROP INDEX IF EXISTS public.index_credit_note_items_on_organization_id;
 DROP INDEX IF EXISTS public.index_credit_note_items_on_fee_id;
 DROP INDEX IF EXISTS public.index_credit_note_items_on_credit_note_id;
@@ -9286,6 +9287,13 @@ CREATE INDEX index_credit_note_items_on_organization_id ON public.credit_note_it
 
 
 --
+-- Name: index_credit_notes_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_credit_notes_by_cursor ON public.credit_notes USING btree (organization_id, created_at DESC, id DESC) WHERE (status = 1);
+
+
+--
 -- Name: index_credit_notes_on_customer_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -15951,6 +15959,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261027135959'),
 ('20261026150420'),
 ('20261026101445'),
 ('20261022090030'),
