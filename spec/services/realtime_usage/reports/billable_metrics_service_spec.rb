@@ -123,6 +123,42 @@ RSpec.describe RealtimeUsage::Reports::BillableMetricsService, clickhouse: {clea
       expect(report.points.map { |point| point.breakdown.map { |usage| usage.units.to_f } }).to eq([[10.0, 4.0], [0.0, 2.0], [0.0, 0.0]])
       expect(report.points.first.breakdown.map(&:dimension_key)).to eq(["{\"region\":[\"eu\"]}\u001F", described_class::OTHER_KEY])
     end
+
+    context "with another metric that does not fold" do
+      let(:count_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+      let(:count_charge) { create(:standard_charge, plan:, billable_metric: count_metric) }
+      let(:billable_metrics) { [billable_metric, count_metric] }
+
+      before { insert_bucket(bucket: "09:30", units: 3, billable_metric: count_metric, charge: count_charge) }
+
+      it "keeps its dimension as its own series" do
+        count_report = result.billable_metrics.last
+
+        expect(result.billable_metrics.first.dimensions.map(&:other)).to eq([false, true])
+        expect(count_report.dimensions.map { |dimension| [dimension.key, dimension.units.to_f, dimension.other] }).to eq(
+          [[RealtimeUsage::Reports::DimensionKey::SEPARATOR, 3.0, false]]
+        )
+        expect(count_report.points.map { |point| point.breakdown.map { |usage| usage.units.to_f } }).to eq([[3.0], [0.0], [0.0]])
+      end
+    end
+
+    context "with a max metric" do
+      let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "max_agg", field_name: "value") }
+
+      before do
+        insert_bucket(bucket: "09:45", units: 1, charge_filter: region_filter(charge, "us"))
+        insert_bucket(bucket: "10:30", units: 3, charge: other_charge, subscription: other_subscription, charge_filter: region_filter(other_charge, "us"))
+      end
+
+      it "folds the sum of the real maxes of the tail" do
+        report = result.billable_metrics.sole
+
+        expect(report.dimensions.map { |dimension| [dimension.name, dimension.units.to_f, dimension.other] }).to eq(
+          [["eu", 10.0, false], [nil, 9.0, true]]
+        )
+        expect(report.points.map { |point| point.breakdown.map { |usage| usage.units.to_f } }).to eq([[10.0, 4.0], [0.0, 5.0], [0.0, 0.0]])
+      end
+    end
   end
 
   context "with several metrics" do
@@ -138,6 +174,28 @@ RSpec.describe RealtimeUsage::Reports::BillableMetricsService, clickhouse: {clea
     it "answers every metric the buckets serve, in order, and leaves the others out" do
       expect(result.billable_metrics.map { |report| [report.billable_metric, report.units.to_f] }).to eq(
         [[billable_metric, 10.0], [count_metric, 3.0]]
+      )
+    end
+  end
+
+  context "with sum, max and latest metrics read together" do
+    let(:max_metric) { create(:billable_metric, organization:, aggregation_type: "max_agg", field_name: "value") }
+    let(:latest_metric) { create(:billable_metric, organization:, aggregation_type: "latest_agg", field_name: "value") }
+    let(:max_charge) { create(:standard_charge, plan:, billable_metric: max_metric) }
+    let(:latest_charge) { create(:standard_charge, plan:, billable_metric: latest_metric) }
+    let(:billable_metrics) { [billable_metric, max_metric, latest_metric] }
+
+    before do
+      [[billable_metric, charge], [max_metric, max_charge], [latest_metric, latest_charge]].each do |metric, metric_charge|
+        insert_bucket(bucket: "09:30", units: 4, billable_metric: metric, charge: metric_charge)
+        insert_bucket(bucket: "09:45", units: 2, billable_metric: metric, charge: metric_charge)
+        insert_bucket(bucket: "10:15", units: 3, billable_metric: metric, charge: metric_charge)
+      end
+    end
+
+    it "aggregates each one as its metric does" do
+      expect(result.billable_metrics.map { |report| [report.units.to_f, report.points.map { |point| point.units.to_f }] }).to eq(
+        [[9.0, [6.0, 3.0, 0.0]], [4.0, [4.0, 3.0, 0.0]], [3.0, [2.0, 3.0, 0.0]]]
       )
     end
   end
@@ -179,6 +237,22 @@ RSpec.describe RealtimeUsage::Reports::BillableMetricsService, clickhouse: {clea
       it "filters the usage of the charge read" do
         expect(result.billable_metrics.sole.units).to eq(4)
       end
+    end
+  end
+
+  context "with a subscription whose charge changes in the window" do
+    let(:override_charge) { create(:standard_charge, plan: create(:plan, organization:), billable_metric:) }
+
+    before do
+      insert_bucket(bucket: "09:30", units: 10, charge_filter: region_filter(charge, "eu"))
+      insert_bucket(bucket: "10:30", units: 5, charge: override_charge)
+    end
+
+    it "keeps the usage read by both charges" do
+      report = result.billable_metrics.sole
+
+      expect(report.units).to eq(15)
+      expect(report.points.map { |point| point.units.to_f }).to eq([10.0, 5.0, 0.0])
     end
   end
 

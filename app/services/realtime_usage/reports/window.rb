@@ -14,10 +14,14 @@ module RealtimeUsage
       attr_reader :timezone
 
       # The start of the longest window ending at to_datetime. It sits on a day wall, so every
-      # read of the same day covers the same days.
+      # read of the same day covers the same days, unless a DST change makes those days longer
+      # than the maximum.
       def self.longest_from(to_datetime:, timezone:)
+        to_datetime ||= Time.current
+
         Time.use_zone(timezone) do
-          (to_datetime || Time.current).in_time_zone(timezone).beginning_of_day - (MAX_DURATION - 1.day)
+          day_wall = to_datetime.in_time_zone(timezone).beginning_of_day - (MAX_DURATION - 1.day)
+          [day_wall, to_datetime - MAX_DURATION].max
         end
       end
 

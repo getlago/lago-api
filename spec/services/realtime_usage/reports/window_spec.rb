@@ -74,6 +74,14 @@ RSpec.describe RealtimeUsage::Reports::Window do
         expect(described_class.new(from_datetime:, to_datetime: nil, timezone:).errors).to eq({})
       end
     end
+
+    it "stays within the maximum when a DST change lengthens the days" do
+      to_datetime = Time.zone.parse("2026-11-20 22:30:00")
+      from_datetime = described_class.longest_from(to_datetime:, timezone:)
+
+      expect(from_datetime).to eq(to_datetime - described_class::MAX_DURATION)
+      expect(described_class.new(from_datetime:, to_datetime:, timezone:).errors).to eq({})
+    end
   end
 
   context "with an inverted window" do

@@ -7,12 +7,10 @@ module RealtimeUsage
     class BaseService < ::BaseService
       include BucketReads
 
-      # A customer or subscription filter is a list of ids, as one external id can name several
-      # records over time (a deleted customer, a terminated subscription).
-      def initialize(organization:, from_datetime: nil, to_datetime: nil, customer_ids: nil, subscription_ids: nil)
+      def initialize(organization:, from_datetime: nil, to_datetime: nil, external_customer_id: nil, external_subscription_id: nil)
         @organization = organization
-        @customer_ids = customer_ids
-        @subscription_ids = subscription_ids
+        @external_customer_id = external_customer_id
+        @external_subscription_id = external_subscription_id
         @window = Window.new(from_datetime:, to_datetime:, timezone: organization.timezone)
 
         super
@@ -25,7 +23,7 @@ module RealtimeUsage
 
       private
 
-      attr_reader :organization, :customer_ids, :subscription_ids, :window
+      attr_reader :organization, :external_customer_id, :external_subscription_id, :window
 
       def validate_request
         return result.forbidden_failure! unless RealtimeUsage.enabled?(organization)
@@ -55,9 +53,19 @@ module RealtimeUsage
           .where(organization_id: organization.id, is_deleted: 0)
           .where("bucket >= ? AND bucket < ?", window.start_time, window.end_time)
 
-        scope = scope.where(customer_id: customer_ids) unless customer_ids.nil?
-        scope = scope.where(subscription_id: subscription_ids) unless subscription_ids.nil?
+        scope = scope.where(customer_id: customer_ids) if external_customer_id
+        scope = scope.where(subscription_id: subscription_ids) if external_subscription_id
         scope
+      end
+
+      # Deleted customers and terminated subscriptions keep their buckets, so a filter matches
+      # every record its external id named.
+      def customer_ids
+        @customer_ids ||= Customer.with_discarded.where(organization:, external_id: external_customer_id).ids
+      end
+
+      def subscription_ids
+        @subscription_ids ||= organization.subscriptions.where(external_id: external_subscription_id).ids
       end
 
       # Only the filters with usage in the window are loaded, which bounds the lookup by what was
@@ -115,14 +123,14 @@ module RealtimeUsage
       # The charges of one metric on a subscription each read every event of the metric, but can
       # split them on different dimensions: one per region, another not at all. Adding them up
       # would count the events twice, and keeping the biggest per dimension would count the
-      # filtered ones twice, so a single charge is read per subscription and metric.
+      # filtered ones twice, so a single charge is read per subscription, metric and bucket.
       #
       # Returns the SQL of [code, (period,) series, units] rows.
       def usage_sql(billable_metrics:, dimension_key:, dimension_keys: nil, keys: nil, by_period: false, series_sql: "dimension")
         codes = billable_metrics.map(&:code)
         metric_scope = base_scope.where(code: codes)
 
-        scope = metric_scope.where("(code, subscription_id, charge_id) IN (#{read_charges_sql(metric_scope)})")
+        scope = metric_scope.where("(code, subscription_id, bucket, charge_id) IN (#{read_charges_sql(metric_scope)})")
         scope = scope.where("#{dimension_key.sql} IN (#{quote_list(dimension_keys)})") if dimension_keys
         scope = scope.where("#{dimension_key.sql} IN (#{quote_list(keys)})") if keys
 
@@ -143,19 +151,22 @@ module RealtimeUsage
         SQL
       end
 
-      # The charge splitting the usage the finest, then the smallest id. It is picked on the
-      # whole window before any dimension filter, so every read of a report splits the usage
-      # the same way.
+      # The charge splitting the usage the finest, then the smallest id, ranked on the whole
+      # window before any dimension filter, so every read of a report splits the usage the same
+      # way. The pick is made per bucket: a plan override moves a subscription to new charges
+      # without changing its id, and each half of the window keeps the charges it was read on.
       def read_charges_sql(scope)
-        per_charge = scope
-          .group(:code, :subscription_id, :charge_id)
-          .select("code, subscription_id, charge_id, uniqExact(charge_filter_id, grouped_by) AS dimensions")
+        ranked = scope
+          .select(<<~SQL.squish)
+            code, subscription_id, bucket, charge_id,
+            uniqExact(charge_filter_id, grouped_by) OVER (PARTITION BY code, subscription_id, charge_id) AS dimensions
+          SQL
           .to_sql
 
         <<~SQL.squish
-          SELECT code, subscription_id, argMin(charge_id, (-toInt64(dimensions), charge_id))
-          FROM (#{per_charge})
-          GROUP BY code, subscription_id
+          SELECT code, subscription_id, bucket, argMin(charge_id, (-toInt64(dimensions), charge_id))
+          FROM (#{ranked})
+          GROUP BY code, subscription_id, bucket
         SQL
       end
 

@@ -10,7 +10,6 @@ module Types
       field :name, String, null: true, description: "Null for the usage of no charge filter or pricing group"
       field :points, [Types::RealtimeUsage::DimensionPoint], null: false
       field :units, GraphQL::Types::Float, null: false
-      field :values, GraphQL::Types::JSON, null: false
     end
   end
 end

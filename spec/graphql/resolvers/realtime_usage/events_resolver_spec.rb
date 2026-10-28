@@ -68,7 +68,7 @@ RSpec.describe Resolvers::RealtimeUsage::EventsResolver, clickhouse: {clean_befo
 
     before do
       other_subscription = create(:subscription, customer: other_customer)
-      create(:clickhouse_usage_bucket, subscription: other_subscription, customer: other_customer,
+      create(:clickhouse_usage_bucket, subscription: other_subscription, customer: other_customer, organization:,
         bucket: Time.zone.parse("2026-08-24 10:15:00"), events_count: 8)
     end
 

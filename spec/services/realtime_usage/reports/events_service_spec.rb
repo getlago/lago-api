@@ -3,7 +3,9 @@
 require "rails_helper"
 
 RSpec.describe RealtimeUsage::Reports::EventsService, clickhouse: {clean_before: true}, transaction: false do
-  subject(:result) { described_class.call(organization:, customer_ids:, from_datetime:, to_datetime:) }
+  subject(:result) do
+    described_class.call(organization:, external_customer_id:, external_subscription_id:, from_datetime:, to_datetime:)
+  end
 
   let(:organization) { create(:organization, clickhouse_events_store: true, feature_flags: ["realtime_usage"]) }
   let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
@@ -11,7 +13,8 @@ RSpec.describe RealtimeUsage::Reports::EventsService, clickhouse: {clean_before:
   let(:charge) { create(:standard_charge, plan:, billable_metric:) }
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:, plan:) }
-  let(:customer_ids) { nil }
+  let(:external_customer_id) { nil }
+  let(:external_subscription_id) { nil }
 
   let(:from_datetime) { Time.zone.parse("2026-08-24 09:20:00") }
   let(:to_datetime) { Time.zone.parse("2026-08-24 12:05:00") }
@@ -77,12 +80,46 @@ RSpec.describe RealtimeUsage::Reports::EventsService, clickhouse: {clean_before:
 
   context "with a customer" do
     let(:other_subscription) { create(:subscription, customer: create(:customer, organization:), plan:) }
-    let(:customer_ids) { [customer.id] }
+    let(:external_customer_id) { customer.external_id }
 
     before { insert_bucket(bucket: Time.zone.parse("2026-08-24 10:00:00"), events_count: 8, subscription: other_subscription) }
 
     it "only counts its events" do
       expect(result.events.events_count).to eq(9)
+    end
+
+    context "when the customer is deleted" do
+      before { customer.discard! }
+
+      it "still counts its events" do
+        expect(result.events.events_count).to eq(9)
+      end
+    end
+  end
+
+  context "with a subscription" do
+    let(:other_subscription) { create(:subscription, customer:, plan:) }
+    let(:external_subscription_id) { subscription.external_id }
+
+    before { insert_bucket(bucket: Time.zone.parse("2026-08-24 10:00:00"), events_count: 8, subscription: other_subscription) }
+
+    it "only counts its events, not those of the customer's other subscriptions" do
+      expect(result.events.events_count).to eq(9)
+    end
+  end
+
+  context "when ClickHouse fails" do
+    let(:error) { RealtimeUsage::READ_ERRORS.first.new("connection refused") }
+
+    before do
+      allow(Clickhouse::UsageBucket.connection).to receive(:select_rows).and_raise(error)
+      allow(Sentry).to receive(:capture_exception)
+    end
+
+    it "fails with a service failure and reports the error" do
+      expect(result.error).to be_a(BaseService::ServiceFailure)
+      expect(result.error.code).to eq("usage_buckets_read_failure")
+      expect(Sentry).to have_received(:capture_exception).with(error)
     end
   end
 

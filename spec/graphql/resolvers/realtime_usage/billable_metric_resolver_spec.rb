@@ -11,7 +11,7 @@ RSpec.describe Resolvers::RealtimeUsage::BillableMetricResolver, clickhouse: {cl
           billableMetricCode: $billableMetricCode, dimensionKeys: $dimensionKeys, fromDatetime: $fromDatetime, toDatetime: $toDatetime
         ) {
           billableMetricCode units
-          dimensions { key name values units }
+          dimensions { key name units }
         }
       }
     GQL
@@ -49,8 +49,8 @@ RSpec.describe Resolvers::RealtimeUsage::BillableMetricResolver, clickhouse: {cl
       "billableMetricCode" => billable_metric.code,
       "units" => 11.0,
       "dimensions" => [
-        {"key" => %(\u001F{"region":"us"}), "name" => "us", "values" => {"region" => ["us"]}, "units" => 6.0},
-        {"key" => %(\u001F{"region":"eu"}), "name" => "eu", "values" => {"region" => ["eu"]}, "units" => 5.0}
+        {"key" => %(\u001F{"region":"us"}), "name" => "us", "units" => 6.0},
+        {"key" => %(\u001F{"region":"eu"}), "name" => "eu", "units" => 5.0}
       ]
     )
   end

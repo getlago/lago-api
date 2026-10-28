@@ -13947,7 +13947,6 @@ type RealtimeUsageDimension {
   """
   other: Boolean!
   units: Float!
-  values: JSON!
 }
 
 """
@@ -13988,7 +13987,6 @@ type RealtimeUsageDimensionRow {
   name: String
   points: [RealtimeUsageDimensionPoint!]!
   units: Float!
-  values: JSON!
 }
 
 """
