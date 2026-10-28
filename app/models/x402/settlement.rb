@@ -19,7 +19,7 @@ module X402
     enum :status, STATUSES, validate: true
     enum :settled_by, SETTLED_BY, prefix: true, validate: true
 
-    attr_readonly :payer_address, :payee_address, :payment_digest, :purchase_settings, :invoice_id
+    attr_readonly :payer_address, :payee_address, :payment_digest, :purchase_settings, :invoice_id, :request_key_digest
 
     before_validation :normalize_addresses, on: :create
 
@@ -29,6 +29,8 @@ module X402
     validates :settled_amount_cents, numericality: {only_integer: true}
     validates :invoice, presence: true, if: :invoice_payment?
     validates :purchase_settings, presence: true, if: :credit_purchase?
+    validates :request_key_digest, format: {with: /\A[0-9a-f]{64}\z/}, allow_nil: true
+    validates :request_key_digest, absence: true, if: :invoice_payment?
     validate :validate_addresses
     validate :validate_connection, on: :create
     validate :validate_invoice, on: :create
@@ -40,10 +42,8 @@ module X402
       OpenSSL::Digest::SHA256.hexdigest(key) if key
     end
 
-    def same_request?(request_key_digest)
-      stored = payload["request_key_digest"]
-
-      stored.is_a?(String) && request_key_digest.is_a?(String) && ActiveSupport::SecurityUtils.secure_compare(stored, request_key_digest)
+    def same_request?(digest)
+      request_key_digest.present? && digest.present? && ActiveSupport::SecurityUtils.secure_compare(request_key_digest, digest)
     end
 
     private
@@ -118,6 +118,7 @@ end
 #  payment_digest        :string           not null
 #  purchase_settings     :jsonb
 #  reconcile_after       :datetime
+#  request_key_digest    :string
 #  settled_amount_atomic :decimal(38, )    not null
 #  settled_amount_cents  :bigint           not null
 #  settled_by            :enum             default("lago"), not null

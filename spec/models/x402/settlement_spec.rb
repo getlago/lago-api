@@ -135,6 +135,36 @@ describe X402::Settlement do
       end
     end
 
+    describe "request key digest validation" do
+      subject(:settlement) { build(:x402_settlement, request_key_digest:) }
+
+      let(:request_key_digest) { "agent-request-0001" }
+
+      before { settlement.valid? }
+
+      it { expect(settlement.errors.where(:request_key_digest, :invalid)).to be_present }
+
+      context "with a SHA-256 digest" do
+        let(:request_key_digest) { described_class.request_key_digest("agent-request-0001") }
+
+        it { expect(settlement.errors.where(:request_key_digest)).to be_empty }
+      end
+
+      context "without a digest" do
+        let(:request_key_digest) { nil }
+
+        it { expect(settlement.errors.where(:request_key_digest)).to be_empty }
+      end
+
+      context "with an invoice payment" do
+        subject(:settlement) { build(:x402_settlement, :invoice_payment, request_key_digest:) }
+
+        let(:request_key_digest) { described_class.request_key_digest("agent-request-0001") }
+
+        it { expect(settlement.errors.where(:request_key_digest, :present)).to be_present }
+      end
+    end
+
     describe "network validation" do
       subject(:settlement) { build(:x402_settlement, network: "eip155:1") }
 
@@ -268,6 +298,10 @@ describe X402::Settlement do
       expect { settlement.purchase_settings = {} }.to raise_error(ActiveRecord::ReadonlyAttributeError)
     end
 
+    it "refuses to bind the settlement to another request" do
+      expect { settlement.request_key_digest = described_class.request_key_digest("agent-request-0001") }.to raise_error(ActiveRecord::ReadonlyAttributeError)
+    end
+
     it "updates the rest" do
       expect { settlement.update!(status: "failed", error_reason: "settle_timeout") }.not_to raise_error
     end
@@ -358,6 +392,18 @@ describe X402::Settlement do
       let(:settlement) { build(:x402_settlement, :merchant, x402_connection: connection) }
 
       it { expect(insert).to be(true) }
+    end
+
+    context "with a malformed request key digest" do
+      let(:settlement) { build(:x402_settlement, x402_connection: connection, request_key_digest: "agent-request-0001") }
+
+      it { expect { insert }.to raise_error(ActiveRecord::StatementInvalid, /PG::CheckViolation.*check_x402_settlements_request_key_digest_format/) }
+    end
+
+    context "with an invoice payment holding a request key digest" do
+      let(:settlement) { build(:x402_settlement, :invoice_payment, x402_connection: connection, request_key: "agent-request-0001") }
+
+      it { expect { insert }.to raise_error(ActiveRecord::StatementInvalid, /PG::CheckViolation.*check_x402_settlements_invoice_payment_has_no_request_key/) }
     end
 
     context "with a granted row without a subscription" do

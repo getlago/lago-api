@@ -19,7 +19,7 @@ FactoryBot.define do
     transaction_hash { "0x#{SecureRandom.hex(32)}" }
     payment_digest { SecureRandom.hex(32) }
     purchase_settings { {"plan_code" => "agent_api", "wallet_code" => "agent_credits"} }
-    payload { request_key ? {"request_key_digest" => X402::Settlement.request_key_digest(request_key)} : {} }
+    request_key_digest { X402::Settlement.request_key_digest(request_key) }
 
     trait :pending do
       status { "pending" }

@@ -111,7 +111,7 @@ describe X402::CreditPurchases::PurchaseService do
       end
 
       it "stores the digest of the request's key" do
-        expect(result.settlement.reload.payload["request_key_digest"]).to eq(OpenSSL::Digest::SHA256.hexdigest(idempotency_key))
+        expect(result.settlement.reload.request_key_digest).to eq(OpenSSL::Digest::SHA256.hexdigest(idempotency_key))
       end
 
       it "requests /verify once" do
@@ -133,7 +133,7 @@ describe X402::CreditPurchases::PurchaseService do
       end
 
       it "stores no key digest" do
-        expect(result.settlement.reload.payload).not_to have_key("request_key_digest")
+        expect(result.settlement.reload.request_key_digest).to be_nil
       end
     end
 
@@ -655,7 +655,7 @@ describe X402::CreditPurchases::PurchaseService do
 
     context "with an invoice payment holding the payment" do
       before do
-        create(:x402_settlement, :invoice_payment, organization:, x402_connection:, payee_address:, payer_address:, payment_digest: digest, request_key: idempotency_key)
+        create(:x402_settlement, :invoice_payment, organization:, x402_connection:, payee_address:, payer_address:, payment_digest: digest)
       end
 
       it_behaves_like "a replay refusal"

@@ -78,13 +78,13 @@ module X402
           settled_amount_atomic: verified_payment.settled_amount_atomic,
           settled_amount_cents: verified_payment.settled_amount_cents,
           payment_digest: verified_payment.payment_digest,
+          request_key_digest:,
           reconcile_after:,
           payload: {
             "payment" => verified_payment.payment,
             "payment_requirements" => verified_payment.payment_requirements,
-            "verify_response" => verified_payment.verify_response,
-            "request_key_digest" => request_key_digest
-          }.compact
+            "verify_response" => verified_payment.verify_response
+          }
         )
       rescue ActiveRecord::RecordInvalid => e
         result.record_validation_failure!(record: e.record)

@@ -136,8 +136,8 @@ describe X402::Settlements::SettleService do
       context "with a request key digest" do
         let(:request_key_digest) { X402::Settlement.request_key_digest("agent-request-0001") }
 
-        it "stores the digest in the payload" do
-          expect(settlement.payload["request_key_digest"]).to eq(request_key_digest)
+        it "stores the digest" do
+          expect(settlement.request_key_digest).to eq(request_key_digest)
         end
       end
 
