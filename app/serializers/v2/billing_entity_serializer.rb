@@ -20,6 +20,7 @@ module V2
         logo_url: model.logo_url,
         created_at: format_time(model.created_at),
         updated_at: format_time(model.updated_at),
+        archived_at: format_time(model.archived_at),
         deleted_at: format_time(model.deleted_at)
       )
     end

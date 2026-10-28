@@ -12,8 +12,6 @@ module Api
         document_locale: :document_locale
       }.freeze
 
-      BOOLEAN_FIELDS = %i[eu_tax_management einvoicing finalize_zero_amount_invoice].freeze
-
       cursor_paginated_index(BillingEntity)
       serializable_with ::V2::BillingEntitySerializer
 
@@ -31,10 +29,10 @@ module Api
 
       def create
         input = input_params
-        validation = ::BillingEntities::ValidateApiInputService.call(params: input, require_code: true)
+        validation = ::BillingEntities::ValidateApiInputService.call(organization: current_organization, params: input, require_code: true)
         return render_error_response(validation) unless validation.success?
 
-        result = ::BillingEntities::CreateService.call(organization: current_organization, params: input)
+        result = ::BillingEntities::CreateService.call(organization: current_organization, params: cast_boolean_fields(input))
 
         if result.success?
           render_billing_entity(result.billing_entity)
@@ -48,10 +46,10 @@ module Api
         return not_found_error(resource: "billing_entity") unless billing_entity
 
         input = input_params.except(:code)
-        validation = ::BillingEntities::ValidateApiInputService.call(params: input)
+        validation = ::BillingEntities::ValidateApiInputService.call(organization: current_organization, params: input)
         return render_error_response(validation) unless validation.success?
 
-        result = ::BillingEntities::UpdateService.call(billing_entity:, params: input)
+        result = ::BillingEntities::UpdateService.call(billing_entity:, params: cast_boolean_fields(input))
 
         if result.success?
           render_billing_entity(result.billing_entity)
@@ -100,19 +98,15 @@ module Api
           invoice_custom_section_codes: []
         ).to_h.deep_symbolize_keys
 
-        BOOLEAN_FIELDS.each do |key|
-          input[key] = ActiveModel::Type::Boolean.new.cast(input[key]) if input.key?(key)
-        end
-
-        # Resolved within the organization: the shared services look codes up across organizations.
-        if input.key?(:invoice_custom_section_codes)
-          codes = input.delete(:invoice_custom_section_codes)
-          input[:invoice_custom_section_ids] = current_organization.invoice_custom_sections.where(code: codes).ids
-        end
-
         # The shared write services still expect nested billing fields.
         input[:billing_configuration] = input.extract!(*BILLING_CONFIGURATION_FIELDS.keys).transform_keys(BILLING_CONFIGURATION_FIELDS)
         input
+      end
+
+      def cast_boolean_fields(input)
+        booleans = input.slice(*::BillingEntities::ValidateApiInputService::BOOLEAN_FIELDS)
+          .transform_values { ActiveModel::Type::Boolean.new.cast(it) }
+        input.merge(booleans)
       end
 
       def find_billing_entity

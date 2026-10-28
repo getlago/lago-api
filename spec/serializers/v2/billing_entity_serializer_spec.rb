@@ -50,6 +50,7 @@ RSpec.describe V2::BillingEntitySerializer do
       logo_url: nil,
       created_at: billing_entity.created_at.iso8601,
       updated_at: billing_entity.updated_at.iso8601,
+      archived_at: nil,
       deleted_at: nil
     )
   end
@@ -94,6 +95,14 @@ RSpec.describe V2::BillingEntitySerializer do
         updated_at: section.updated_at.iso8601,
         deleted_at: nil
       }])
+    end
+  end
+
+  context "with an archived entity" do
+    let(:billing_entity) { create(:billing_entity, :archived, organization:) }
+
+    it "includes the archive timestamp" do
+      expect(payload[:archived_at]).to eq(billing_entity.archived_at.iso8601)
     end
   end
 

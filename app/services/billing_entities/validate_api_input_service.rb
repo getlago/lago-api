@@ -4,6 +4,8 @@ module BillingEntities
   class ValidateApiInputService < BaseService
     Result = BaseResult
 
+    BOOLEAN_FIELDS = %i[eu_tax_management einvoicing finalize_zero_amount_invoice].freeze
+
     # Allowed values per stored attribute, with the REST field an error is reported under.
     ENUMS = {
       document_numbering: [:document_numbering, BillingEntity::DOCUMENT_NUMBERINGS],
@@ -11,7 +13,8 @@ module BillingEntities
       subscription_invoice_issuing_date_adjustment: [:periodic_invoice_issuing_date_adjustment, BillingEntity::SUBSCRIPTION_INVOICE_ISSUING_DATE_ADJUSTMENTS]
     }.freeze
 
-    def initialize(params:, require_code: false)
+    def initialize(organization:, params:, require_code: false)
+      @organization = organization
       @params = params
       @require_code = require_code
       super
@@ -33,20 +36,31 @@ module BillingEntities
         errors[:tax_codes] = ["value_is_invalid"]
       end
 
-      %i[eu_tax_management einvoicing finalize_zero_amount_invoice].each do |field|
-        errors[field] = ["value_is_invalid"] if params.key?(field) && ![true, false].include?(params[field])
+      if params.key?(:invoice_custom_section_codes) && !params[:invoice_custom_section_codes].all?(String)
+        errors[:invoice_custom_section_codes] = ["value_is_invalid"]
+      end
+
+      BOOLEAN_FIELDS.each do |field|
+        errors[field] = ["value_is_invalid"] if params.key?(field) && ![true, false, "true", "false"].include?(params[field])
       end
 
       if params[:logo].present? && (!params[:logo].is_a?(String) || !params[:logo].match?(%r{\Adata:image/(png|jpe?g);base64,[A-Za-z0-9+/=\s]+\z}))
         errors[:logo] = ["value_is_invalid"]
       end
 
-      result.validation_failure!(errors:) if errors.any?
+      if errors.any?
+        result.validation_failure!(errors:)
+      elsif params.key?(:invoice_custom_section_codes)
+        codes = params[:invoice_custom_section_codes].uniq
+        if organization.invoice_custom_sections.where(code: codes).count != codes.size
+          result.not_found_failure!(resource: "invoice_custom_section")
+        end
+      end
       result
     end
 
     private
 
-    attr_reader :params, :require_code
+    attr_reader :organization, :params, :require_code
   end
 end

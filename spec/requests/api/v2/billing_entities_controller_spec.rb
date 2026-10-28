@@ -114,6 +114,64 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
           expect(response).to be_not_found_error("tax")
         end
       end
+
+      context "with an unknown invoice custom section code" do
+        let(:attributes) { super().merge(invoice_custom_section_codes: [section.code, "unknown"]) }
+
+        it "rejects the request without creating an entity" do
+          expect { request }.not_to change(organization.all_billing_entities, :count)
+
+          expect(response).to be_not_found_error("invoice_custom_section")
+        end
+      end
+
+      context "with a foreign invoice custom section code" do
+        let(:foreign_section) { create(:invoice_custom_section, organization: create(:organization)) }
+        let(:attributes) { super().merge(invoice_custom_section_codes: [section.code, foreign_section.code]) }
+
+        it "rejects the request without creating an entity" do
+          expect { request }.not_to change(organization.all_billing_entities, :count)
+
+          expect(response).to be_not_found_error("invoice_custom_section")
+        end
+      end
+
+      context "with duplicate invoice custom section codes" do
+        let(:attributes) { super().merge(invoice_custom_section_codes: [section.code, section.code]) }
+
+        it "assigns the section once" do
+          request
+
+          expect(response).to have_http_status(:ok)
+          expect(organization.all_billing_entities.find_by!(code: attributes[:code]).selected_invoice_custom_sections).to eq([section])
+        end
+      end
+    end
+
+    %i[eu_tax_management einvoicing finalize_zero_amount_invoice].each do |field|
+      context "with an invalid boolean for #{field}" do
+        let(:attributes) { super().merge(field => "banana") }
+
+        it "rejects the request without creating an entity" do
+          expect { request }.not_to change(organization.all_billing_entities, :count)
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq(field => ["value_is_invalid"])
+        end
+      end
+
+      %w[true false].each do |value|
+        context "with string #{value} for #{field}" do
+          let(:attributes) { super().merge(field => value) }
+
+          it "stores the boolean value" do
+            request
+
+            expect(response).to have_http_status(:ok)
+            expect(organization.all_billing_entities.find_by!(code: attributes[:code]).public_send(field)).to eq(value == "true")
+          end
+        end
+      end
     end
 
     context "with an existing code" do
@@ -521,6 +579,33 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
         end
       end
 
+      %i[eu_tax_management einvoicing finalize_zero_amount_invoice].each do |field|
+        context "with an invalid boolean for #{field}" do
+          let(:attributes) { {name: "Must not change"}.merge(field => "banana") }
+
+          it "rejects the request without updating the entity" do
+            expect { request }.not_to change { billing_entity.reload.attributes }
+
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json[:error_details]).to eq(field => ["value_is_invalid"])
+          end
+        end
+
+        %w[true false].each do |value|
+          context "with string #{value} for #{field}" do
+            let(:billing_entity) { create(:billing_entity, organization:, country: "FR", **{field => (value != "true")}) }
+            let(:attributes) { {field => value} }
+
+            it "stores the boolean value" do
+              request
+
+              expect(response).to have_http_status(:ok)
+              expect(billing_entity.reload.public_send(field)).to eq(value == "true")
+            end
+          end
+        end
+      end
+
       context "with invoice custom section codes" do
         let(:section) { create(:invoice_custom_section, organization:) }
         let(:foreign_section) { create(:invoice_custom_section, organization: create(:organization), code: section.code) }
@@ -550,14 +635,29 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
         end
 
         context "with a foreign-only code" do
-          let(:attributes) { {invoice_custom_section_codes: [foreign_section.code]} }
+          let(:attributes) { {name: "Must not change", invoice_custom_section_codes: [foreign_section.code]} }
           let(:foreign_section) { create(:invoice_custom_section, organization: create(:organization)) }
 
-          it "does not attach the foreign section" do
-            request
+          before { create(:billing_entity_applied_invoice_custom_section, organization:, billing_entity:, invoice_custom_section: section) }
 
-            expect(response).to have_http_status(:ok)
-            expect(billing_entity.reload.selected_invoice_custom_sections).to be_empty
+          it "rejects the code without changing the entity or its sections" do
+            expect { request }.not_to change { billing_entity.reload.attributes }
+
+            expect(response).to be_not_found_error("invoice_custom_section")
+            expect(billing_entity.reload.selected_invoice_custom_sections).to eq([section])
+          end
+        end
+
+        context "with an unknown invoice custom section code" do
+          let(:attributes) { {name: "Must not change", invoice_custom_section_codes: [section.code, "unknown"]} }
+
+          before { create(:billing_entity_applied_invoice_custom_section, organization:, billing_entity:, invoice_custom_section: section) }
+
+          it "rejects the code without changing the entity or its sections" do
+            expect { request }.not_to change { billing_entity.reload.attributes }
+
+            expect(response).to be_not_found_error("invoice_custom_section")
+            expect(billing_entity.reload.selected_invoice_custom_sections).to eq([section])
           end
         end
       end
@@ -580,6 +680,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
       expect(json[:billing_entity].keys & %i[billing_configuration net_payment_term taxes selected_invoice_custom_sections]).to eq([])
       expect(json[:billing_entity][:created_at]).to eq(billing_entity.created_at.iso8601(6))
       expect(json[:billing_entity][:updated_at]).to eq(billing_entity.updated_at.iso8601(6))
+      expect(json[:billing_entity][:archived_at]).to be_nil
       expect(json[:billing_entity][:deleted_at]).to be_nil
     end
 
@@ -676,6 +777,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
 
         expect(response).to have_http_status(:ok)
         expect(json[:billing_entity][:lago_id]).to eq(billing_entity.id)
+        expect(json[:billing_entity][:archived_at]).to eq(billing_entity.archived_at.iso8601(6))
       end
     end
 

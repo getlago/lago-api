@@ -3,8 +3,9 @@
 require "rails_helper"
 
 RSpec.describe BillingEntities::ValidateApiInputService do
-  subject(:result) { described_class.call(params:, require_code:) }
+  subject(:result) { described_class.call(organization:, params:, require_code:) }
 
+  let_it_be(:organization) { create_default(:organization) }
   let(:params) { {} }
   let(:require_code) { false }
 
@@ -69,7 +70,7 @@ RSpec.describe BillingEntities::ValidateApiInputService do
   end
 
   %i[eu_tax_management einvoicing finalize_zero_amount_invoice].each do |field|
-    [true, false].each do |value|
+    [true, false, "true", "false"].each do |value|
       context "with #{field} set to #{value}" do
         let(:params) { {field => value} }
 
@@ -79,12 +80,68 @@ RSpec.describe BillingEntities::ValidateApiInputService do
       end
     end
 
-    context "with null #{field}" do
-      let(:params) { {field => nil} }
+    [nil, "", "banana", 1].each do |value|
+      context "with invalid #{field} #{value.inspect}" do
+        let(:params) { {field => value} }
 
-      it "returns a validation error" do
+        it "returns a validation error" do
+          expect(result).to be_failure
+          expect(result.error.messages).to eq(field => ["value_is_invalid"])
+        end
+      end
+    end
+  end
+
+  context "with invoice custom section codes" do
+    let(:section) { create(:invoice_custom_section, organization:) }
+    let(:params) { {invoice_custom_section_codes: [section.code]} }
+
+    it "accepts the organization's code" do
+      expect(result).to be_success
+    end
+
+    context "with duplicate codes" do
+      let(:params) { {invoice_custom_section_codes: [section.code, section.code]} }
+
+      it "accepts the duplicates" do
+        expect(result).to be_success
+      end
+    end
+
+    context "with an empty list" do
+      let(:params) { {invoice_custom_section_codes: []} }
+
+      it "allows clearing the sections" do
+        expect(result).to be_success
+      end
+    end
+
+    context "with an unknown code" do
+      let(:params) { {invoice_custom_section_codes: [section.code, "unknown"]} }
+
+      it "returns not found" do
         expect(result).to be_failure
-        expect(result.error.messages).to eq(field => ["value_is_invalid"])
+        expect(result.error.error_code).to eq("invoice_custom_section_not_found")
+      end
+    end
+
+    context "with a foreign code" do
+      let(:section) { create(:invoice_custom_section, organization: create(:organization)) }
+
+      it "returns not found" do
+        expect(result).to be_failure
+        expect(result.error.error_code).to eq("invoice_custom_section_not_found")
+      end
+    end
+
+    [123, nil, false].each do |code|
+      context "with a non-string code #{code.inspect}" do
+        let(:params) { {invoice_custom_section_codes: [code]} }
+
+        it "returns a validation error" do
+          expect(result).to be_failure
+          expect(result.error.messages).to eq(invoice_custom_section_codes: ["value_is_invalid"])
+        end
       end
     end
   end

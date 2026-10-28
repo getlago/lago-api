@@ -290,6 +290,19 @@ RSpec.describe BillingEntities::CreateService do
           expect(result.billing_entity.selected_invoice_custom_sections).to eq([section])
         end
 
+        context "with invoice custom section codes" do
+          let(:foreign_section) { create(:invoice_custom_section, organization: create(:organization), code: section.code) }
+          let(:params) { super().except(:invoice_custom_section_ids).merge(invoice_custom_section_codes: [section.code]) }
+
+          before { foreign_section }
+
+          it "applies only the organization's section" do
+            expect(result).to be_success
+            expect(result.billing_entity.selected_invoice_custom_sections).to eq([section])
+            expect(foreign_section.billing_entity_applied_invoice_custom_sections).to be_empty
+          end
+        end
+
         context "with an unknown tax code" do
           let(:params) { super().merge(tax_codes: ["unknown"]) }
 
