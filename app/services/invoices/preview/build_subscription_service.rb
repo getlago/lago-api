@@ -15,6 +15,7 @@ module Invoices
       def call
         return result.not_found_failure!(resource: "customer") unless customer
         return result.not_found_failure!(resource: "plan") unless plan
+        return result unless PaymentTerms::ValidateService.new(result, payment_term: params[:payment_term]).valid?
 
         result.subscriptions = [build_subscription]
         result
@@ -35,6 +36,7 @@ module Invoices
           subscription_at: params[:subscription_at].presence || Time.current,
           started_at: params[:subscription_at].presence || Time.current,
           billing_time:,
+          payment_term: params[:payment_term] && PaymentTerm.from_h(params[:payment_term]).to_h,
           created_at: params[:subscription_at].presence || Time.current,
           updated_at: Time.current
         )

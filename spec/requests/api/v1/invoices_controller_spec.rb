@@ -1536,6 +1536,28 @@ RSpec.describe Api::V1::InvoicesController do
       )
     end
 
+    context "with a payment_term for the new subscription" do
+      before { preview_params[:payment_term] = {term_type: "net_end_of_month", days: 2} }
+
+      it "previews the invoice with that term" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoice][:payment_term]).to eq(term_type: "net_end_of_month", days: 2)
+      end
+
+      context "when the payment_term is invalid" do
+        before { preview_params[:payment_term] = {term_type: "net"} }
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json[:error_details][:payment_term]).to eq(["invalid_days"])
+        end
+      end
+    end
+
     context "with exact time" do
       let(:timestamp) { Time.zone.parse("15 Mar 2024") }
 
