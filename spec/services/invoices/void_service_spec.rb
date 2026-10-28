@@ -300,6 +300,83 @@ RSpec.describe Invoices::VoidService do
           expect(credit_note.items.sole.amount_cents).to eq(200)
         end
       end
+
+      context "when a credit note service fails", :premium do
+        let(:invoice) do
+          create(
+            :invoice,
+            status: :finalized,
+            payment_status: :pending,
+            fees_amount_cents: 100,
+            sub_total_excluding_taxes_amount_cents: 100,
+            sub_total_including_taxes_amount_cents: 100,
+            total_amount_cents: 100
+          )
+        end
+
+        before do
+          create(
+            :fee,
+            invoice:,
+            amount_cents: 100,
+            precise_amount_cents: 100,
+            taxes_amount_cents: 0,
+            taxes_precise_amount_cents: 0
+          )
+        end
+
+        context "when the estimate fails" do
+          before do
+            allow(CreditNotes::EstimateService).to receive(:call)
+              .and_return(CreditNotes::EstimateService::Result.new.not_allowed_failure!(code: "invalid_type_or_status"))
+          end
+
+          it "returns the failure and keeps the invoice finalized" do
+            result = void_service.call
+
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+            expect(result.error.code).to eq("invalid_type_or_status")
+            expect(invoice.reload).to be_finalized
+            expect(invoice.credit_notes).to be_empty
+          end
+        end
+
+        context "when the credit note creation fails" do
+          before do
+            allow(CreditNotes::CreateService).to receive(:call)
+              .and_return(CreditNotes::CreateService::Result.new.not_allowed_failure!(code: "invalid_type_or_status"))
+          end
+
+          it "returns the failure and keeps the invoice finalized" do
+            result = void_service.call
+
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+            expect(result.error.code).to eq("invalid_type_or_status")
+            expect(invoice.reload).to be_finalized
+            expect(invoice.credit_notes).to be_empty
+          end
+        end
+
+        context "when the credit note void fails" do
+          before do
+            allow(CreditNotes::VoidService).to receive(:call)
+              .and_return(CreditNotes::VoidService::Result.new.not_allowed_failure!(code: "no_voidable_amount"))
+          end
+
+          it "returns the failure and rolls back the credit note" do
+            result = void_service.call
+
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+            expect(result.error.code).to eq("no_voidable_amount")
+            expect(CreditNotes::VoidService).to have_received(:call).with(credit_note: an_instance_of(CreditNote))
+            expect(invoice.reload).to be_finalized
+            expect(invoice.credit_notes).to be_empty
+          end
+        end
+      end
     end
 
     describe "guard against concurrent calls" do

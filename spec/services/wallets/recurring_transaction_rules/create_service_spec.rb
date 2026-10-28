@@ -36,6 +36,7 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
     context "when freemium" do
       it "does not create any recurring transaction rule" do
         expect { create_service.call }.not_to change { wallet.reload.recurring_transaction_rules.count }
+        expect(create_service.call).to be_success
       end
     end
 

@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class AppliedCouponsController < Api::BaseController
+    class AppliedCouponsController < Api::V1::BaseController
       include AppliedCouponIndex
 
       def create

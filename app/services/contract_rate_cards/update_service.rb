@@ -8,6 +8,11 @@ module ContractRateCards
   class UpdateService < BaseService
     Result = BaseResult[:contract_rate_card]
 
+    activity_loggable(
+      action: "contract_rate_card.updated",
+      record: -> { contract_rate_card }
+    )
+
     def initialize(contract_rate_card:, params:)
       @contract_rate_card = contract_rate_card
       @params = params.to_h.with_indifferent_access
@@ -27,6 +32,7 @@ module ContractRateCards
           return result.single_validation_failure!(field: :contract, error_code: "contract_locked")
         end
 
+        contract_rate_card.lock!
         contract_rate_card.units = params[:units] if params.key?(:units)
         contract_rate_card.billing_anchor_date = params[:billing_anchor_date] if params.key?(:billing_anchor_date)
         contract_rate_card.save!
@@ -38,6 +44,8 @@ module ContractRateCards
             billing_anchor_date: contract_rate_card.billing_anchor_date
           )
         end
+
+        SendWebhookJob.perform_after_commit("contract_rate_card.updated", contract_rate_card)
       end
 
       result.contract_rate_card = contract_rate_card

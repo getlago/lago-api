@@ -66,6 +66,7 @@ RSpec.describe Organization do
       expect(subject).to have_many(:usage_attribution_values)
       expect(subject).to have_many(:x402_connections).class_name("X402::Connection")
       expect(subject).to have_many(:x402_settlements).class_name("X402::Settlement")
+      expect(subject).to have_many(:x402_sign_in_nonces).class_name("X402::SignInNonce")
 
       expect(subject).to have_one(:applied_dunning_campaign).conditions(applied_to_organization: true)
       expect(subject).to have_many(:pending_vies_checks)
@@ -89,6 +90,7 @@ RSpec.describe Organization do
   describe "Validations" do
     it do
       expect(subject).to validate_inclusion_of(:default_currency).in_array(described_class.currency_list)
+      expect(subject).to validate_numericality_of(:pagination_max_page_size).only_integer.is_greater_than(0).allow_nil
     end
 
     it "is valid with valid attributes" do

@@ -3,10 +3,12 @@
 module Api
   module V1
     module Customers
-      class AttributedUsageController < Api::BaseController
-        DEFAULT_PER_PAGE = UsageAttributions::QueryService::DEFAULT_LIMIT
-        MAX_PER_PAGE = UsageAttributions::QueryService::MAX_LIMIT
+      class AttributedUsageController < Api::V1::BaseController
+        DEFAULT_PAGE_SIZE = UsageAttributions::QueryService::DEFAULT_LIMIT
+        MAX_PAGE_SIZE = UsageAttributions::QueryService::MAX_LIMIT
         QUERY_LIMIT_ERRORS = %w[too_many_groups query_timeout memory_limit_exceeded].freeze
+
+        self.max_page_size = MAX_PAGE_SIZE
 
         before_action :ensure_feature_flag!
 
@@ -24,10 +26,11 @@ module Api
             to_datetime: parsed_datetime(:to_datetime),
             charges: selected_charges,
             split_charge: selected_split_charge,
+            split_filters_offset:,
             search: params[:search_term],
             basis: params[:basis] || "units",
-            limit: per_page,
-            offset: (page - 1) * per_page
+            limit: page_size,
+            offset: (page_number - 1) * page_size
           )
 
           if result.success?
@@ -55,9 +58,7 @@ module Api
         def params_errors
           @params_errors ||= {
             from_datetime: datetime_errors(:from_datetime),
-            to_datetime: datetime_errors(:to_datetime),
-            page: (["value_is_out_of_range"] unless page&.positive?),
-            per_page: (["value_is_out_of_range"] unless per_page&.between?(1, MAX_PER_PAGE))
+            to_datetime: datetime_errors(:to_datetime)
           }.compact_blank
         end
 
@@ -71,12 +72,12 @@ module Api
           Utils::Datetime.parse_iso8601(params[name])&.to_time&.in_time_zone
         end
 
-        def page
-          Integer(params[:page] || 1, exception: false)
+        def split_filters_offset
+          params[:split_filters_offset].blank? ? 0 : Integer(params[:split_filters_offset].to_s, 10, exception: false)
         end
 
-        def per_page
-          Integer(params[:per_page] || DEFAULT_PER_PAGE, exception: false)
+        def default_page_size
+          DEFAULT_PAGE_SIZE
         end
 
         # filters[team]=eng&filters[model][]=opus&filters[model][]=haiku

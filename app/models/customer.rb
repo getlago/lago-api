@@ -172,6 +172,20 @@ class Customer < ApplicationRecord
   validates :document_locale, language_code: true, unless: -> { document_locale.nil? }
   validates :currency, inclusion: {in: currency_list}, allow_nil: true
   validates :name, length: {maximum: 255}, if: :name_changed?
+  validates :firstname, length: {maximum: 255}, if: :firstname_changed?
+  validates :lastname, length: {maximum: 255}, if: :lastname_changed?
+  validates :legal_name, length: {maximum: 255}, if: :legal_name_changed?
+  validates :tax_identification_number, length: {maximum: 255}, if: :tax_identification_number_changed?
+  validates :address_line1, length: {maximum: 500}, if: :address_line1_changed?
+  validates :address_line2, length: {maximum: 500}, if: :address_line2_changed?
+  validates :zipcode, length: {maximum: 255}, if: :zipcode_changed?
+  validates :city, length: {maximum: 255}, if: :city_changed?
+  validates :state, length: {maximum: 255}, if: :state_changed?
+  validates :shipping_address_line1, length: {maximum: 500}, if: :shipping_address_line1_changed?
+  validates :shipping_address_line2, length: {maximum: 500}, if: :shipping_address_line2_changed?
+  validates :shipping_zipcode, length: {maximum: 255}, if: :shipping_zipcode_changed?
+  validates :shipping_city, length: {maximum: 255}, if: :shipping_city_changed?
+  validates :shipping_state, length: {maximum: 255}, if: :shipping_state_changed?
   validates :external_id,
     presence: true,
     uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id},

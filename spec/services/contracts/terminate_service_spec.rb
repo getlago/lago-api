@@ -10,16 +10,20 @@ RSpec.describe Contracts::TerminateService do
   let(:catalog_plan) { create(:catalog_plan, organization:) }
   let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
 
+  before { allow(Utils::ActivityLog).to receive(:produce_after_commit) }
+
   it "terminates an active contract" do
     freeze_time do
+      expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("contract.terminated", contract)
       expect(result).to be_success
       expect(contract.reload).to have_attributes(status: "terminated", terminated_at: Time.current)
       expect(contract.canceled_at).to be_nil
+      expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(contract, "contract.terminated")
     end
   end
 
   # Started Aug 1 and terminated Aug 21 at 14:00, both in the customer's time: the termination
-  # day is served, so it is paid, which makes 21 of August's 31 days.
+  # day is served, so a prorating card pays 21 of August's 31 days.
   context "when the contract has rate cards" do
     let(:customer) { create(:customer, organization:, timezone: "America/New_York") }
     let(:started_at) { Time.find_zone("America/New_York").parse("2026-08-01 00:00:00") }
@@ -28,8 +32,8 @@ RSpec.describe Contracts::TerminateService do
     let(:arrears_card) { card(billing_timing: "arrears") }
     let(:advance_card) { card(billing_timing: "advance") }
 
-    def card(billing_timing:, priced: true)
-      rate_card = create(:rate_card, organization:, billing_timing:, proration: false, product: create(:product, :fixed, organization:))
+    def card(billing_timing:, priced: true, proration: false)
+      rate_card = create(:rate_card, organization:, billing_timing:, proration:, product: create(:product, :fixed, organization:))
       if priced
         create(:rate_card_rate, organization:, rate_card:, effective_from: started_at - 1.month, billing_interval_count: 1, billing_interval_unit: "month")
       end
@@ -51,16 +55,29 @@ RSpec.describe Contracts::TerminateService do
       BillingSegments::ScheduleService.call!(customer:, timestamp: started_at)
     end
 
-    it "bills the arrears card for the days served, the termination day included, even without proration" do
+    it "bills the arrears card's whole price for the period it closes, as the card does not prorate" do
       travel_to(terminated_at) { result }
 
       expect(segments_of(arrears_card).sole).to have_attributes(
         started_at:,
         ended_at: BillingSegment.inclusive_end(terminated_at),
         billing_at: terminated_at,
-        proration_ratio: (BigDecimal(21) / 31).round(10),
+        proration_ratio: 1,
         status: "pending"
       )
+    end
+
+    context "when the arrears card prorates" do
+      let(:arrears_card) { card(billing_timing: "arrears", proration: true) }
+
+      it "bills the days served, the termination day included" do
+        travel_to(terminated_at) { result }
+
+        expect(segments_of(arrears_card).sole).to have_attributes(
+          ended_at: BillingSegment.inclusive_end(terminated_at),
+          proration_ratio: (BigDecimal(21) / 31).round(10)
+        )
+      end
     end
 
     it "bills nothing more for the advance card, paid for the month already" do
@@ -151,9 +168,11 @@ RSpec.describe Contracts::TerminateService do
 
     it "cancels it instead of terminating" do
       freeze_time do
+        expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("contract.canceled", contract)
         expect(result).to be_success
         expect(contract.reload).to have_attributes(status: "canceled", canceled_at: Time.current)
         expect(contract.terminated_at).to be_nil
+        expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(contract, "contract.canceled")
       end
     end
   end
@@ -162,8 +181,11 @@ RSpec.describe Contracts::TerminateService do
     let(:contract) { create(:contract, :terminated, organization:, customer:, catalog_plan:) }
 
     it "rejects the termination" do
+      expect { result }.not_to have_enqueued_job(SendWebhookJob)
       expect(result).not_to be_success
       expect(result.error.messages[:contract]).to eq(["cannot_terminate"])
+      expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "contract.terminated", any_args)
+      expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "contract.canceled", any_args)
     end
   end
 
@@ -171,8 +193,11 @@ RSpec.describe Contracts::TerminateService do
     let(:contract) { create(:contract, :canceled, organization:, customer:, catalog_plan:) }
 
     it "rejects the termination" do
+      expect { result }.not_to have_enqueued_job(SendWebhookJob)
       expect(result).not_to be_success
       expect(result.error.messages[:contract]).to eq(["cannot_terminate"])
+      expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "contract.terminated", any_args)
+      expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "contract.canceled", any_args)
     end
   end
 

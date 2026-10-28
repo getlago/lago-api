@@ -28,6 +28,21 @@ RSpec.describe Api::V1::WalletsController do
           expect(json[:error_details][:customer]).to eq ["customer_not_found"]
         end
       end
+
+      context "when recurring transaction rules are requested without Premium" do
+        let(:create_params) do
+          super().merge(recurring_transaction_rules: [
+            {trigger: "threshold", method: "fixed", threshold_credits: "1", paid_credits: "10"}
+          ])
+        end
+
+        it "creates the wallet and ignores the recurring transaction rules" do
+          expect { subject }.to change(Wallet, :count).by(1)
+
+          expect(response).to have_http_status(:success)
+          expect(Wallet.find(json[:wallet][:lago_id]).recurring_transaction_rules).to be_empty
+        end
+      end
     end
 
     it_behaves_like "a wallet create endpoint with billing_entity_id" do
@@ -48,6 +63,22 @@ RSpec.describe Api::V1::WalletsController do
       end
 
       let(:id) { wallet.id }
+
+      context "when recurring transaction rules are requested without Premium" do
+        let(:update_params) do
+          super().merge(recurring_transaction_rules: [
+            {trigger: "threshold", method: "fixed", threshold_credits: "1", paid_credits: "10"}
+          ])
+        end
+
+        it "updates the wallet and ignores the recurring transaction rules" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(wallet.reload.name).to eq("wallet1")
+          expect(wallet.recurring_transaction_rules).to be_empty
+        end
+      end
     end
   end
 

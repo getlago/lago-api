@@ -245,6 +245,12 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           create(:product_filter_value, organization:, product_filter:, billable_metric_filter: metric_filter, value: "eu")
         end
 
+        it "stores the selected filter values on the fee" do
+          fee = fee_service.call.fees.sole
+
+          expect(fee.reload.properties["product_filter_values"]).to eq("region" => ["eu"])
+        end
+
         it "returns a validation failure on retry for a filtered fee" do
           fee = fee_service.call.fees.sole
           retry_result = fee_service.call
@@ -299,6 +305,50 @@ RSpec.describe Fees::CreatePayInAdvanceService do
           expect([first, second].map(&:pay_in_advance_event_transaction_id))
             .to eq([event.transaction_id, other_event.transaction_id])
         end
+      end
+    end
+
+    context "when two events of the same contract product are priced at once", transaction: false do
+      let(:billable_metric) { create(:unique_count_billable_metric, organization:, field_name: "user_id") }
+      let(:contract) { create(:contract, organization:, customer:) }
+      let(:product) { create(:product, :metered, organization:, billable_metric:) }
+      let(:rate_card) { create(:rate_card, :advance, organization:, product:, display_on_invoice: false) }
+      let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+      let(:billing_segment) do
+        create(:billing_segment, organization:, customer:, contract:, contract_rate_card:, currency: "EUR",
+          rate_properties: {"amount" => "10"})
+      end
+      let(:billing_context) { Billing::Context.from(contract:) }
+      let(:metered_items) do
+        %w[user_1 user_2].map do |user_id|
+          source = create(:event, organization_id: organization.id, external_subscription_id: contract.external_id,
+            external_customer_id: customer.external_id, code: billable_metric.code,
+            timestamp: billing_segment.started_at, properties: {"user_id" => user_id})
+          Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment:, event: Events::CommonFactory.new_instance(source:))
+        end
+      end
+      let(:both_priced) { Concurrent::CountDownLatch.new(2) }
+
+      before do
+        metered_items
+        allow(Charges::PayInAdvanceAggregationService).to receive(:call).and_call_original
+
+        # Holds each fee between pricing and saving, so both read the state before either writes it.
+        allow(Charges::ApplyPayInAdvanceChargeModelService).to receive(:call).and_wrap_original do |method, **kwargs|
+          method.call(**kwargs).tap do
+            both_priced.count_down
+            both_priced.wait(1)
+          end
+        end
+      end
+
+      it "counts both events in the persisted state" do
+        metered_items.map { |metered_item|
+          Thread.new { described_class.call(metered_item:, billing_context:, billing_at: metered_item.event.timestamp) }
+        }.each(&:join)
+
+        expect(Fee.where(contract:).count).to eq(2)
+        expect(CachedAggregation.where(contract:, product:).maximum(:current_aggregation)).to eq(2)
       end
     end
 

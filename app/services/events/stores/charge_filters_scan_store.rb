@@ -2,7 +2,7 @@
 
 module Events
   module Stores
-    # Answers a charge filter's count, sum, max and latest value from the read of every filter of
+    # Answers a charge filter's count, sum, recurring sum, max and latest value from the read of every filter of
     # its charge, and delegates the rest to the store it wraps, which also answers whatever the read does not
     # cover (see ChargeFiltersScan#covers?).
     #
@@ -46,6 +46,27 @@ module Events
         else
           super
         end
+      end
+
+      # The delta of a closed period keeps the store's own read, pruned by timestamp and enriched_at.
+      def recurring_sum(watermark:, period: nil)
+        if period.nil? && scanned?(operation: :recurring_sum)
+          scan.recurring_sum(__getobj__, watermark:)
+        else
+          super
+        end
+      end
+
+      def grouped_recurring_sum(watermark:, period: nil)
+        if period.nil? && scanned?(operation: :recurring_sum)
+          scan.grouped_recurring_sum(__getobj__, watermark:)
+        else
+          super
+        end
+      end
+
+      def incremental_sum?
+        scan.incremental? && scanned?(operation: :sum)
       end
 
       def max(with_count: true)

@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Mutations::WalletTransactions::Create do
   subject(:result) { execute_query(query:, input:) }
 
-  let(:required_permission) { "wallets:top_up" }
+  let(:required_permission) { %w[wallets:top_up wallets:update] }
   let(:subscription) { create(:subscription, customer:) }
   let(:wallet) { create(:wallet, customer:, balance: 10.0, credits_balance: 10.0) }
   let(:query) do
@@ -105,6 +105,50 @@ RSpec.describe Mutations::WalletTransactions::Create do
     )
   end
 
+  context "with wallets:top_up only" do
+    let(:required_permission) { "wallets:top_up" }
+
+    context "when granting credits" do
+      let(:input) { {walletId: wallet.id, grantedCredits: "15.00"} }
+
+      it "returns a forbidden error requiring wallets:update" do
+        expect { result }.not_to change(organization.wallet_transactions, :count)
+        expect_forbidden_error(result)
+        expect(result["errors"].first["extensions"]["required_permissions"]).to eq(["wallets:update"])
+      end
+    end
+
+    context "when voiding credits" do
+      let(:input) { {walletId: wallet.id, voidedCredits: "5.00"} }
+
+      it "returns a forbidden error" do
+        expect { result }.not_to change(organization.wallet_transactions, :count)
+        expect_forbidden_error(result)
+        expect(wallet.reload.credits_balance).to eq(10)
+      end
+    end
+
+    context "when topping up with the default top-up form values" do
+      let(:input) do
+        {
+          walletId: wallet.id,
+          paidCredits: "5.00",
+          grantedCredits: "0",
+          ignorePaidTopUpLimits: false
+        }
+      end
+
+      it "creates the paid wallet transaction" do
+        result_data = result["data"]["createCustomerWalletTransaction"]
+
+        expect(result_data["collection"]).to contain_exactly(include(
+          "transactionStatus" => "purchased",
+          "creditAmount" => "5.0"
+        ))
+      end
+    end
+  end
+
   context "when wallet has a minimum amount" do
     before do
       wallet.update!(paid_top_up_min_amount_cents: 10_00)
@@ -129,6 +173,15 @@ RSpec.describe Mutations::WalletTransactions::Create do
 
         result_data = result["data"]["createCustomerWalletTransaction"]
         expect(result_data["collection"].count).to eq 1
+      end
+
+      context "with wallets:top_up only" do
+        let(:required_permission) { "wallets:top_up" }
+
+        it "returns a forbidden error" do
+          expect { subject }.not_to change(organization.wallet_transactions, :count)
+          expect_forbidden_error(result)
+        end
       end
     end
   end

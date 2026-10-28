@@ -4,10 +4,9 @@ module X402
   module GateChecks
     class CheckService < BaseService
       DEGRADED_CALL_HEADROOM = 1_000
-      MAX_AGENT_ADDRESS_LENGTH = 44
       MAX_ESTIMATED_CALL_COST_CENTS = 2**53 - 1
 
-      Result = BaseResult[:balance_credits, :requirements, :external_subscription_id]
+      Result = BaseResult[:balance_credits, :requirements, :external_subscription_id, :subscription_started_at, :sign_in_chains]
 
       def initialize(organization:, params:)
         @organization = organization
@@ -23,12 +22,16 @@ module X402
         route = RouteCheckService.call(organization:, plan_code: params[:plan_code], billable_metric_code: params[:billable_metric_code])
         return result.fail_with_error!(route.error) unless route.success?
 
-        return refuse("buyer_not_recognized") if customer.nil? && !connection.auto_create_customers
+        return refuse("allowed_origins_not_configured") if siwx && connection.allowed_origins.empty?
+        return result.fail_with_error!(sign_in.error) if sign_in&.failure?
+        return nonce_already_used if agent_address && !record_nonce
+        return refuse("buyer_not_recognized") if agent_address && customer.nil? && !connection.auto_create_customers
         return refuse("wallet_not_x402_enabled") if wallet && !wallet.x402_enabled
         return refuse("customer_not_refreshable") if customer && customer.error_details.tax_error.exists?
         return refuse("subscription_not_active") if active_subscription.nil? && subscriptions.any?
 
         result.external_subscription_id = active_subscription&.external_id
+        result.subscription_started_at = active_subscription&.started_at
         result.balance_credits = balance_credits
 
         if active_subscription && wallet && covered?
@@ -51,6 +54,7 @@ module X402
 
         if requirements.success?
           result.requirements = requirements.requirements
+          result.sign_in_chains = sign_in_chains
           result
         else
           result.fail_with_error!(requirements.error)
@@ -64,7 +68,7 @@ module X402
           wallet_code: mandatory(:wallet_code),
           amount_cents: positive_integer(:amount_cents),
           estimated_call_cost_cents: positive_integer(:estimated_call_cost_cents, max: MAX_ESTIMATED_CALL_COST_CENTS),
-          agent_address: (["invalid_format"] if agent_address && !valid_agent_address?)
+          siwx: (["value_is_invalid"] unless siwx.nil? || siwx.is_a?(Hash))
         }.compact
       end
 
@@ -82,24 +86,38 @@ module X402
         end
       end
 
-      def valid_agent_address?
-        agent_family.present? && X402::Network.valid_address?(agent_address, family: agent_family)
+      def siwx
+        params[:siwx]
       end
 
-      def agent_address
-        params[:agent_address]&.to_s
-      end
-
-      def agent_family
-        if defined?(@agent_family)
-          @agent_family
-        else
-          @agent_family = decodable_agent_address? ? X402::Network.family_of_address(agent_address) : nil
+      def sign_in
+        @sign_in ||= if siwx
+          X402::SignInWithX::VerifyService.call(
+            payload: siwx, allowed_origins: connection.allowed_origins, networks: connection.networks
+          )
         end
       end
 
-      def decodable_agent_address?
-        agent_address.present? && agent_address.length <= MAX_AGENT_ADDRESS_LENGTH
+      def agent_address
+        sign_in&.address
+      end
+
+      def agent_family
+        sign_in&.family
+      end
+
+      def nonce
+        sign_in&.nonce
+      end
+
+      def record_nonce
+        organization.x402_sign_in_nonces
+          .insert({agent_address:, nonce:}, unique_by: %i[organization_id agent_address nonce]) # rubocop:disable Rails/SkipsModelValidations
+          .any?
+      end
+
+      def nonce_already_used
+        result.single_validation_failure!(field: :siwx, error_code: "nonce_already_used")
       end
 
       def amount_cents
@@ -191,6 +209,15 @@ module X402
 
       def connection_families
         connection.networks.map { |network| X402::Network.family_of_network(network) }
+      end
+
+      def sign_in_chains
+        environment = X402::Network.environment(connection.networks.first)
+        families = connection_families
+
+        X402::Network::NETWORKS.filter_map do |network, env|
+          network if env == environment && families.include?(X402::Network.family_of_network(network))
+        end
       end
 
       def refuse(code)

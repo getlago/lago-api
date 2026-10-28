@@ -25,7 +25,7 @@ module Integrations
 
             result
           rescue LagoHttpClient::HttpError => e
-            raise Integrations::Aggregator::RequestLimitError(e) if request_limit_error?(e)
+            raise Integrations::Aggregator::RequestLimitError.new(e) if request_limit_error?(e)
             raise Integrations::Aggregator::BadGatewayError.new(e.error_body, e.uri) if bad_gateway_error?(e)
             raise Integrations::Aggregator::TaskInProgressError if task_in_progress_error?(e)
             raise Integrations::Aggregator::TaskExpiredError if task_expired_error?(e)

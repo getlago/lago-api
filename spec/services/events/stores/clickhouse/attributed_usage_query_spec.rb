@@ -33,7 +33,7 @@ RSpec.describe Events::Stores::Clickhouse::AttributedUsageQuery, clickhouse: {cl
   let(:requests_charge_id) { SecureRandom.uuid }
   let(:opus_eu_filter_id) { SecureRandom.uuid }
   let(:opus_filter_id) { SecureRandom.uuid }
-  let(:split) { false }
+  let(:split_filter_ids) { nil }
 
   # Ranked by specificity: {model, region} before {model}. Rank 3 is the charge's own price.
   let(:tokens_lookup) do
@@ -47,10 +47,10 @@ RSpec.describe Events::Stores::Clickhouse::AttributedUsageQuery, clickhouse: {cl
   let(:charge_columns) do
     [
       described_class::ChargeColumn.new(
-        charge_id: tokens_charge_id, code: "tokens", count: false, unit_amount_cents: BigDecimal(1), lookup: tokens_lookup, split:
+        charge_id: tokens_charge_id, code: "tokens", count: false, unit_amount_cents: BigDecimal(1), lookup: tokens_lookup, split_filter_ids:
       ),
       described_class::ChargeColumn.new(
-        charge_id: requests_charge_id, code: "requests", count: true, unit_amount_cents: nil, lookup: nil, split: false
+        charge_id: requests_charge_id, code: "requests", count: true, unit_amount_cents: nil, lookup: nil, split_filter_ids: nil
       )
     ]
   end
@@ -87,13 +87,13 @@ RSpec.describe Events::Stores::Clickhouse::AttributedUsageQuery, clickhouse: {cl
     end
 
     context "when the charge is split" do
-      let(:split) { true }
+      let(:split_filter_ids) { [opus_filter_id, opus_eu_filter_id] }
 
-      it "returns one cell per filter and one for the default price" do
+      it "returns one cell per listed filter and one for the default price" do
         expect(attributed_usage_query.cells.map { [it.charge_id, it.charge_filter_id, it.rank] }).to eq(
           [
-            [tokens_charge_id, opus_eu_filter_id, 1],
             [tokens_charge_id, opus_filter_id, 2],
+            [tokens_charge_id, opus_eu_filter_id, 1],
             [tokens_charge_id, nil, 3],
             [requests_charge_id, nil, nil]
           ]
@@ -169,10 +169,19 @@ RSpec.describe Events::Stores::Clickhouse::AttributedUsageQuery, clickhouse: {cl
     end
 
     context "when the charge is split" do
-      let(:split) { true }
+      let(:split_filter_ids) { [opus_eu_filter_id, opus_filter_id] }
 
       it "sums each filter in its own cell" do
         expect(cells(row("eng"))).to eq([[10, 200, 1], [100, 1_000, 1], [5, 5, 1], [1, 0, 1]])
+      end
+
+      context "when only some filters are listed" do
+        let(:split_filter_ids) { [opus_filter_id] }
+
+        it "leaves the other filters out of the cells but not out of the amount" do
+          expect(cells(row("eng"))).to eq([[100, 1_000, 1], [5, 5, 1], [1, 0, 1]])
+          expect(row("eng")["amount"].to_d).to eq(1_205)
+        end
       end
     end
 
@@ -200,6 +209,10 @@ RSpec.describe Events::Stores::Clickhouse::AttributedUsageQuery, clickhouse: {cl
         expect(attributed_usage_query.rows.map { [it["node"], it["rank"].to_i, it["in_page"].to_i] }).to eq(
           [["eng", 1, 0], ["data", 2, 1], ["", 1, 0]]
         )
+      end
+
+      it "counts the matching values only" do
+        expect(attributed_usage_query.rows.first["groups_count"].to_i).to eq(1)
       end
     end
 

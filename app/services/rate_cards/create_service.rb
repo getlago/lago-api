@@ -56,6 +56,7 @@ module RateCards
         create_rates(rate_card)
 
         result.rate_card = rate_card
+        SendWebhookJob.perform_after_commit("rate_card.created", rate_card)
       end
 
       result
@@ -70,7 +71,7 @@ module RateCards
     attr_reader :product, :params
 
     def organization
-      product.organization
+      product&.organization
     end
 
     def apply_taxes(rate_card)
@@ -81,7 +82,7 @@ module RateCards
 
     def create_rates(rate_card)
       (params[:rates] || []).each do |rate_params|
-        RateCardRates::CreateService.call!(rate_card:, params: rate_params, emit_activity_log: false)
+        RateCardRates::CreateService.call!(rate_card:, params: rate_params, emit_events: false)
       end
     rescue BaseService::ValidationFailure => e
       errors = e.messages.transform_keys { |key| :"rates.#{key}" }
