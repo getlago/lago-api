@@ -2,6 +2,8 @@
 
 module V2
   class PaymentReceiptSerializer < ModelSerializer
+    PRELOADS = [:organization, {file_attachment: :blob}, {xml_file_attachment: :blob}].freeze
+
     timestamps :pdf_url_expires_at, :xml_url_expires_at, :created_at, :updated_at
 
     def serialize

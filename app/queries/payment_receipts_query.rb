@@ -2,14 +2,14 @@
 
 class PaymentReceiptsQuery < BaseQuery
   Result = BaseResult[:payment_receipts]
-  Filters = BaseFilters[:invoice_id]
+  Filters = BaseFilters[:invoice_id, :product_catalog]
 
   def call
     return result unless validate_filters.success?
 
     payment_receipts = apply_filters(base_scope)
-    payment_receipts = paginate(payment_receipts)
     payment_receipts = apply_consistent_ordering(payment_receipts)
+    payment_receipts = paginate(payment_receipts)
 
     result.payment_receipts = payment_receipts
     result
@@ -26,8 +26,13 @@ class PaymentReceiptsQuery < BaseQuery
   end
 
   def apply_filters(scope)
+    scope = scope.product_catalog if product_catalog?
     scope = filter_by_invoice(scope) if filters.invoice_id.present?
     scope
+  end
+
+  def product_catalog?
+    ActiveModel::Type::Boolean.new.cast(filters.product_catalog) == true
   end
 
   def filter_by_invoice(scope)
