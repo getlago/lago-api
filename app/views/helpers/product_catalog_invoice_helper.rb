@@ -269,15 +269,7 @@ class ProductCatalogInvoiceHelper
   end
 
   def summary_lines
-    by_category = product_fees.group_by { category_for(it) }
-    standalone_fees = by_category.delete(nil) || []
-
-    category_lines = by_category.map { |category, fees| Line.new(name: category.invoice_name, amount_cents: fees.sum(&:amount_cents)) }
-    product_lines = standalone_fees.group_by { product_for(it) }.map do |product, fees|
-      Line.new(name: product.invoice_name, amount_cents: fees.sum(&:amount_cents))
-    end
-
-    sort_by_name(category_lines) + sort_by_name(product_lines)
+    ProductCatalogHierarchyHelper.summary_groups(hierarchy_entries).map { Line.new(name: it.name, amount_cents: it.amount_cents) }
   end
 
   # An invoice billed on event reception holds a single pay-in-advance fee.
@@ -286,8 +278,8 @@ class ProductCatalogInvoiceHelper
   end
 
   def contract_blocks
-    product_fees.group_by(&:contract).sort_by { |contract, _| contract_name(contract).to_s.downcase }.map do |contract, fees|
-      ContractBlock.new(title: contract_title(contract), sections: sections(fees))
+    ProductCatalogHierarchyHelper.contract_groups(hierarchy_entries).map do |group|
+      ContractBlock.new(title: contract_title(group.contract), sections: sections(group.sections))
     end
   end
 
@@ -313,36 +305,33 @@ class ProductCatalogInvoiceHelper
     products[fee.invoiceable_id]
   end
 
-  def category_for(fee)
-    categories[product_for(fee).product_category_id]
-  end
-
-  def sections(fees)
-    by_category = fees.group_by { category_for(it) }
-    standalone_fees = by_category.delete(nil)
-
-    categorized = by_category.sort_by { |category, _| category.invoice_name.downcase }.map do |category, category_fees|
-      Section.new(name: category.invoice_name, amount_cents: category_fees.sum(&:amount_cents), products: product_nodes(category_fees))
-    end
-    return categorized if standalone_fees.blank?
-
-    categorized + [Section.new(name: nil, amount_cents: standalone_fees.sum(&:amount_cents), products: product_nodes(standalone_fees))]
-  end
-
-  def product_nodes(fees)
-    nodes = fees.group_by { product_for(it) }.map do |product, product_fees|
-      unfiltered, filtered = product_fees.partition { filter_for(it).nil? }
-      filters = filtered.group_by { filter_for(it) }.map { |filter, filter_fees| FilterNode.new(name: filter.invoice_name, fees: by_period(filter_fees)) }
-
-      ProductNode.new(
-        name: product.invoice_name,
-        amount_cents: product_fees.sum(&:amount_cents),
-        fees: by_period(unfiltered),
-        filters: sort_by_name(filters)
+  def hierarchy_entries
+    @hierarchy_entries ||= product_fees.map do |fee|
+      product = product_for(fee)
+      ProductCatalogHierarchyHelper::Entry.new(
+        fee:, source: fee, amount_cents: fee.amount_cents, contract: fee.contract,
+        product:, category: categories[product.product_category_id], filter: filter_for(fee)
       )
     end
+  end
 
-    sort_by_name(nodes)
+  def sections(groups)
+    groups.map do |group|
+      Section.new(
+        name: group.category&.invoice_name,
+        amount_cents: ProductCatalogHierarchyHelper.total(group.entries),
+        products: group.products.map do |product_group|
+          ProductNode.new(
+            name: product_group.product.invoice_name,
+            amount_cents: ProductCatalogHierarchyHelper.total(product_group.entries),
+            fees: product_group.unfiltered_entries.map(&:fee),
+            filters: product_group.filters.map do |filter_group|
+              FilterNode.new(name: filter_group.filter.invoice_name, fees: filter_group.entries.map(&:fee))
+            end
+          )
+        end
+      )
+    end
   end
 
   # A true-up fee carries no filter of its own; it belongs with the fee it tops up.
@@ -350,24 +339,12 @@ class ProductCatalogInvoiceHelper
     (fee.true_up_parent_fee || fee).product_filter
   end
 
-  # Each true-up follows the fee it tops up.
-  def by_period(fees)
-    fees.sort_by do |fee|
-      parent = fee.true_up_parent_fee || fee
-      [parent.properties["from_datetime"].to_s, parent.id, fee.true_up_parent_fee_id ? 1 : 0]
-    end
-  end
-
-  def sort_by_name(items)
-    items.sort_by { it.name.downcase }
+  def contract_title(contract)
+    purchase_order_number = invoice.purchase_order_number.presence || contract.purchase_order_number
+    [contract_name(contract), "#{invoice.document_invoice_name} #{invoice.number}", purchase_order_number.presence].compact.join(" - ")
   end
 
   def contract_name(contract)
     contract.name.presence || contract.catalog_plan&.invoice_display_name.presence || contract.catalog_plan&.name
-  end
-
-  def contract_title(contract)
-    purchase_order_number = invoice.purchase_order_number.presence || contract.purchase_order_number
-    [contract_name(contract), "#{invoice.document_invoice_name} #{invoice.number}", purchase_order_number.presence].compact.join(" - ")
   end
 end
