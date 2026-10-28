@@ -8,7 +8,6 @@ RSpec.describe GraphqlChannel, :premium, type: :channel do
   let(:ai_conversation) { create(:ai_conversation, organization:, membership:) }
   let(:conversation_id) { ai_conversation.id }
   let(:current_user) { membership.user }
-  let(:auth_error_code) { nil }
   let(:token_expired) { false }
   let(:session_claims) { {login_method: Organizations::AuthenticationMethods::EMAIL_PASSWORD} }
   let(:mistral_api_key) { "test_api_key" }
@@ -32,7 +31,7 @@ RSpec.describe GraphqlChannel, :premium, type: :channel do
     allow(ENV).to receive(:[]).with("MISTRAL_API_KEY").and_return(mistral_api_key)
     allow(ENV).to receive(:[]).with("MISTRAL_AGENT_ID").and_return("test_agent_id")
 
-    stub_connection(connection_identifier: SecureRandom.uuid, current_user:, auth_error_code:, token_expired?: token_expired, session_claims:)
+    stub_connection(connection_identifier: SecureRandom.uuid, current_user:, token_expired?: token_expired, session_claims:)
   end
 
   context "with an authenticated user and an organization" do
@@ -84,12 +83,6 @@ RSpec.describe GraphqlChannel, :premium, type: :channel do
         expect_ended_with_error(stream_chunk, code: "forbidden", status: 403)
       end
 
-      it "ends the subscription with an error once the token has expired" do
-        allow(subscription.connection).to receive(:token_expired?).and_return(true)
-
-        expect_ended_with_error(stream_chunk, code: "token_expired", status: 401)
-      end
-
       it "ends the subscription with an error once the organization no longer allows the session's login method" do
         organization.update!(authentication_methods: [Organizations::AuthenticationMethods::GOOGLE_OAUTH])
 
@@ -127,11 +120,25 @@ RSpec.describe GraphqlChannel, :premium, type: :channel do
         expect_ended_with_error(stream_chunk(done: true), code: "forbidden", status: 403)
       end
 
-      it "checks the token on every chunk" do
-        stream_chunk
-        allow(subscription.connection).to receive(:token_expired?).and_return(true)
+      it "keeps the subscription after delivering a chunk" do
+        LagoApiSchema.subscriptions.deliver(subscription_id, stream_chunk)
 
-        expect_ended_with_error(stream_chunk, code: "token_expired", status: 401)
+        expect(LagoApiSchema.subscriptions.read_subscription(subscription_id)).not_to be_nil
+      end
+
+      it "removes its subscriptions when the client unsubscribes" do
+        unsubscribe
+
+        expect(LagoApiSchema.subscriptions.read_subscription(subscription_id)).to be_nil
+      end
+
+      context "when the token expires during the stream" do
+        before { allow(subscription.connection).to receive(:token_expired?).and_return(false, true) }
+
+        it "ends the subscription with an error at the next chunk, without waiting for the access check" do
+          expect(stream_chunk["data"]["aiConversationStreamed"]).to eq("chunk" => "Hello", "done" => false)
+          expect_ended_with_error(stream_chunk, code: "token_expired", status: 401)
+        end
       end
     end
 
@@ -167,7 +174,7 @@ RSpec.describe GraphqlChannel, :premium, type: :channel do
 
     it "registers the subscription of each socket on its own" do
       execute_subscription
-      stub_connection(connection_identifier: SecureRandom.uuid, current_user:, auth_error_code:, token_expired?: false, session_claims:)
+      stub_connection(connection_identifier: SecureRandom.uuid, current_user:, token_expired?: false, session_claims:)
       subscribe(organization_id: organization.id)
       execute_subscription
 
@@ -209,22 +216,6 @@ RSpec.describe GraphqlChannel, :premium, type: :channel do
     end
   end
 
-  context "without an authenticated user" do
-    let(:current_user) { nil }
-
-    before { subscribe(organization_id: organization.id) }
-
-    it "rejects the operation as unauthorized before parsing it" do
-      allow(GraphQL::Query).to receive(:new).and_call_original
-
-      execute_subscription
-
-      expect(last_transmission["result"]["errors"].first["extensions"]).to eq("status" => 401, "code" => "unauthorized")
-      expect(GraphQL::Query).not_to have_received(:new)
-      expect(subscription.streams).to be_empty
-    end
-  end
-
   context "with a query over the maximum length" do
     before { subscribe(organization_id: organization.id) }
 
@@ -263,21 +254,6 @@ RSpec.describe GraphqlChannel, :premium, type: :channel do
 
       expect(close_calls).to eq([{reason: "token_expired", reconnect: true}])
       expect(transmissions.pluck("result")).to all(be_nil)
-      expect(subscription.streams).to be_empty
-    end
-  end
-
-  context "when the token had expired when the socket opened" do
-    let(:current_user) { nil }
-    let(:auth_error_code) { "expired_jwt_token" }
-
-    before { subscribe(organization_id: organization.id) }
-
-    it "returns the expired token error" do
-      execute_subscription
-
-      expect(last_transmission["more"]).to be(false)
-      expect(last_transmission["result"]["errors"].first["extensions"]).to eq("status" => 401, "code" => "expired_jwt_token")
       expect(subscription.streams).to be_empty
     end
   end

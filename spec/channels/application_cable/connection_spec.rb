@@ -14,7 +14,6 @@ RSpec.describe ApplicationCable::Connection, type: :channel do
     connect_with("actioncable-v1-json, actioncable-unsupported, lago-token.#{token}")
 
     expect(connection.current_user).to eq(user)
-    expect(connection.auth_error_code).to be_nil
   end
 
   it "redacts the token from the env once read" do

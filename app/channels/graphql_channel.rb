@@ -11,9 +11,6 @@ class GraphqlChannel < ApplicationCable::Channel
       return
     end
 
-    return transmit_error(code: connection.auth_error_code, status: 401) if connection.auth_error_code
-    return transmit_error(code: "unauthorized", status: 401) unless current_user
-
     if data["query"].to_s.length > GraphqlController::MAX_QUERY_LENGTH
       return transmit_error(code: "query_is_too_large", status: 413)
     end

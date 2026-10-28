@@ -8,7 +8,7 @@ module ApplicationCable
 
     identified_by :connection_identifier
 
-    attr_reader :current_user, :auth_error_code
+    attr_reader :current_user
 
     def connect
       token = subprotocol_token
@@ -41,8 +41,6 @@ module ApplicationCable
       @current_user = User.find_by(id: decoded_token["sub"])
       @token_expires_at = decoded_token["exp"]
       @session_claims = Utils::AuthToken.session_claims(decoded_token)
-    rescue JWT::ExpiredSignature
-      @auth_error_code = "expired_jwt_token"
     rescue JWT::DecodeError
       @current_user = nil
     end

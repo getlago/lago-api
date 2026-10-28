@@ -106,9 +106,12 @@ RSpec.describe Resolvers::AiConversationsResolver do
     end
 
     context "without limit parameter" do
-      before { create_list(:ai_conversation, 2, organization:, membership:) }
+      before do
+        stub_const("#{described_class}::DEFAULT_LIMIT", 2)
+        create_list(:ai_conversation, 2, organization:, membership:)
+      end
 
-      it "returns the latest conversations" do
+      it "returns the default number of conversations" do
         result = execute_graphql(
           current_user: membership.user,
           current_organization: organization,
@@ -116,7 +119,23 @@ RSpec.describe Resolvers::AiConversationsResolver do
           query:
         )
 
-        expect(result["data"]["aiConversations"]["collection"].count).to eq(3)
+        expect(result["data"]["aiConversations"]["collection"].count).to eq(2)
+      end
+    end
+
+    context "with a limit below one" do
+      it "returns one conversation" do
+        create(:ai_conversation, organization:, membership:)
+
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query:,
+          variables: {limit: 0}
+        )
+
+        expect(result["data"]["aiConversations"]["collection"].count).to eq(1)
       end
     end
 
