@@ -171,6 +171,39 @@ RSpec.describe Invoices::SubscriptionService do
       end
     end
 
+    context "when subscriptions resolve to different terms giving the same due date" do
+      let(:subscription) do
+        create(
+          :subscription,
+          plan:,
+          customer:,
+          subscription_at: started_at.to_date,
+          started_at:,
+          created_at: started_at,
+          payment_term: {term_type: "net", days: 0}
+        )
+      end
+      let(:other_subscription) do
+        create(
+          :subscription,
+          plan:,
+          customer:,
+          subscription_at: started_at.to_date,
+          started_at:,
+          created_at: started_at,
+          payment_term: {term_type: "due_on_receipt"}
+        )
+      end
+      let(:subscriptions) { [subscription, other_subscription] }
+
+      it "bills them on one invoice" do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice.subscriptions).to contain_exactly(subscription, other_subscription)
+      end
+    end
+
     it "creates a payment" do
       allow(Invoices::Payments::CreateService).to receive(:call_async)
 

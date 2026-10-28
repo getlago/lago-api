@@ -259,7 +259,7 @@ module Invoices
     end
 
     def mixed_payment_terms?
-      resolved_payment_terms.map { |resolution| resolution.payment_term.to_h }.uniq.many?
+      resolved_payment_terms.map { |resolution| resolution.payment_term.grouping_key }.uniq.many?
     end
 
     def mixed_purchase_order_numbers?
