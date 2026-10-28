@@ -74,6 +74,16 @@ RSpec.describe PaymentReceiptsQuery do
     end
   end
 
+  context "when filtering by product catalog" do
+    let(:filters) { {product_catalog: true} }
+    let(:invoice) { create(:invoice, organization:, invoice_type: :contract) }
+
+    it "returns only the payment_receipts of catalog invoices" do
+      expect(result).to be_success
+      expect(returned_ids).to eq([payment_receipt_one.id])
+    end
+  end
+
   context "when filtering with an invalid invoice_id" do
     let(:filters) { {invoice_id: "invalid-uuid"} }
 

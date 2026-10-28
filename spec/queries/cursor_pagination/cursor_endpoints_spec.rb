@@ -372,4 +372,19 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
 
     it_behaves_like "a keyset-paginated query", table: "contract_rate_cards", index: "index_contract_rate_cards_by_cursor"
   end
+
+  context "with PaymentReceiptsQuery" do
+    let(:filtered_scope) do
+      lambda do |pagination|
+        PaymentReceiptsQuery.call(
+          organization:,
+          pagination:,
+          filters: {invoice_id: SecureRandom.uuid, product_catalog: true}
+        ).payment_receipts
+      end
+    end
+
+    # No cursor index: a receipt is issued per payment, and the organization index bounds the page.
+    it_behaves_like "a keyset-paginated query", table: "payment_receipts"
+  end
 end
