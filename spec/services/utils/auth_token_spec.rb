@@ -95,4 +95,38 @@ RSpec.describe Utils::AuthToken do
       it { is_expected.to be_nil }
     end
   end
+
+  describe "self.session_claims" do
+    subject { described_class.session_claims(decoded_token) }
+
+    let(:decoded_token) do
+      {"sub" => user.id, "exp" => 1, "login_method" => "okta", "sso_organization_id" => "org-id", "sso_issuer" => "https://sso.okta.com"}
+    end
+
+    it "keeps only the claims that bind the session to an organization" do
+      expect(subject).to eq(login_method: "okta", sso_organization_id: "org-id", sso_issuer: "https://sso.okta.com")
+    end
+  end
+
+  describe "self.sso_session_without_claims?" do
+    subject { described_class.sso_session_without_claims?(decoded_token) }
+
+    context "with an SSO session that has its claims" do
+      let(:decoded_token) { {"login_method" => "okta", "sso_organization_id" => "org-id"} }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "with an SSO session issued before the claims existed" do
+      let(:decoded_token) { {"login_method" => "okta"} }
+
+      it { is_expected.to be(true) }
+    end
+
+    context "with a session that is not SSO" do
+      let(:decoded_token) { {"login_method" => Organizations::AuthenticationMethods::EMAIL_PASSWORD} }
+
+      it { is_expected.to be(false) }
+    end
+  end
 end

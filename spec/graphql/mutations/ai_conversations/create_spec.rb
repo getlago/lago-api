@@ -65,5 +65,36 @@ RSpec.describe Mutations::AiConversations::Create do
         message:
       ).on_queue("default")
     end
+
+    context "with a conversation id" do
+      subject(:result) do
+        execute_graphql(
+          current_user: membership.user,
+          current_organization: membership.organization,
+          permissions: required_permission,
+          query:,
+          variables: {input: {message:, conversationId: ai_conversation.id}}
+        )
+      end
+
+      context "when the conversation belongs to the current member" do
+        let(:ai_conversation) { create(:ai_conversation, organization: membership.organization, membership:) }
+
+        it "appends the message to the conversation" do
+          expect { result }.to have_enqueued_job(AiConversations::StreamJob).with(ai_conversation:, message:)
+          expect(result["data"]["createAiConversation"]["id"]).to eq(ai_conversation.id)
+        end
+      end
+
+      context "when the conversation belongs to another member of the organization" do
+        let(:other_membership) { create(:membership, organization: membership.organization) }
+        let(:ai_conversation) { create(:ai_conversation, organization: membership.organization, membership: other_membership) }
+
+        it "returns a not found error" do
+          expect { result }.not_to have_enqueued_job(AiConversations::StreamJob)
+          expect_graphql_error(result:, message: "Resource not found")
+        end
+      end
+    end
   end
 end
