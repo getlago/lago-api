@@ -200,6 +200,25 @@ RSpec.describe Auth::GoogleService do
       end
     end
 
+    context "when signup is disabled" do
+      before do
+        ENV["LAGO_DISABLE_SIGNUP"] = "true"
+      end
+
+      after do
+        ENV["LAGO_DISABLE_SIGNUP"] = nil
+      end
+
+      it "returns a forbidden error without creating a user" do
+        result = nil
+
+        expect { result = described_class.call(:register_user, "code", "FooBar") }.not_to change(User, :count)
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("signup_disabled")
+      end
+    end
+
     context "when google auth is not set up" do
       before do
         ENV["GOOGLE_AUTH_CLIENT_ID"] = nil

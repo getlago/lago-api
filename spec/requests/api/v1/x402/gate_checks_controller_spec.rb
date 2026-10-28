@@ -13,7 +13,7 @@ describe Api::V1::X402::GateChecksController, :premium do
   let(:agent_address) { siwx_address(agent_key) }
   let(:challenge) do
     {
-      balance_credits: "0.0", external_subscription_id: nil,
+      balance_credits: "0.0", external_subscription_id: nil, subscription_started_at: nil,
       requirements: [{
         scheme: "exact", network: "eip155:84532", asset: "usdc", asset_address: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
         extra: {name: "USDC", version: "2"}, pay_to: "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed",
@@ -39,10 +39,11 @@ describe Api::V1::X402::GateChecksController, :premium do
     let(:customer) { create(:customer, organization:, x402_agent_address: agent_address) }
     let(:external_id) { "x402_#{agent_address}_#{plan.code}" }
     let(:signed_params) { params.merge(siwx: signed_siwx(agent_key)) }
+    let(:subscription) { create(:subscription, customer:, plan:, external_id:, started_at: Time.zone.parse("2026-09-24T10:00:00.315713Z")) }
 
     before do
       create(:wallet, customer:, code: "agent_credits", currency: "USD", x402_enabled: true, balance_cents: 1_500, credits_balance: 15)
-      create(:subscription, customer:, plan:, external_id:)
+      subscription
     end
 
     context "with the sign-in" do
@@ -50,7 +51,10 @@ describe Api::V1::X402::GateChecksController, :premium do
 
       it "renders the pass" do
         subject
-        expect(json[:gate_check]).to eq(balance_credits: "15.0", requirements: nil, external_subscription_id: external_id, sign_in_chains: nil)
+        expect(json[:gate_check]).to eq(
+          balance_credits: "15.0", requirements: nil, external_subscription_id: external_id,
+          subscription_started_at: "2026-09-24T10:00:00.315Z", sign_in_chains: nil
+        )
       end
 
       it "filters the sign-in from the logged parameters" do
@@ -124,7 +128,10 @@ describe Api::V1::X402::GateChecksController, :premium do
 
       it "renders the pass" do
         subject
-        expect(json[:gate_check]).to eq(balance_credits: "15.0", requirements: nil, external_subscription_id: external_id, sign_in_chains: nil)
+        expect(json[:gate_check]).to eq(
+          balance_credits: "15.0", requirements: nil, external_subscription_id: external_id,
+          subscription_started_at: "2026-09-24T10:00:00.315Z", sign_in_chains: nil
+        )
       end
     end
   end

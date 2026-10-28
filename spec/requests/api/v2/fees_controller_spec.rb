@@ -242,6 +242,18 @@ RSpec.describe Api::V2::FeesController do
       end
     end
 
+    context "with a payment status that is not a string" do
+      let(:payment_status) { 1 }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json.dig(:error_details, :payment_status)).to eq(["value_is_invalid"])
+        expect(fee.reload).to be_payment_pending
+      end
+    end
+
     context "when the fee wrapper is missing" do
       subject { put_with_token(organization, "/api/v2/fees/#{fee_id}", {payment_status: "succeeded"}) }
 

@@ -20,16 +20,15 @@ module Mutations
         raise unauthorized_error unless License.premium?
         raise forbidden_error(code: "feature_unavailable") if ENV["MISTRAL_API_KEY"].blank? || ENV["MISTRAL_AGENT_ID"].blank?
 
-        membership = current_organization.memberships.find_by(user_id: context[:current_user].id)
-
         ai_conversation = if conversation_id.present?
-          current_organization.ai_conversations.find(conversation_id)
+          current_membership.ai_conversations.find_by(id: conversation_id)
         else
           current_organization.ai_conversations.create!(
-            membership:,
+            membership: current_membership,
             name: message
           )
         end
+        return not_found_error(resource: "ai_conversation") unless ai_conversation
 
         # The model expects the results of its last tool calls before any new message. They stay
         # unsubmitted until the member answers every write, and the resume may then start another round.

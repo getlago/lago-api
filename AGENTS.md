@@ -61,7 +61,7 @@ Business logic, and every create, update or delete of a model, lives in a servic
 - It inherits `BaseService`, stores its keyword arguments in instance variables with private `attr_reader`s, then calls `super`. Its only public method is `call`, without arguments (cop `Lago/ServiceCall`), and it returns `result`.
 - Declare the result: `Result = BaseResult[:customer, :subscription]`, or `Result = BaseResult` when nothing is returned.
 - Callers use `Service.call(...)`, or `Service.call!(...)` to raise `BaseService::FailedResult` on failure. Never `Service.new(...).call`: it skips the middlewares (activity log, tracing).
-- Fail early with `return result.not_found_failure!(resource: "customer")`. User errors use `single_validation_failure!(field:, error_code:)`, `validation_failure!(errors:)`, `record_validation_failure!(record:)`, `forbidden_failure!` (code `feature_unavailable`) or `not_allowed_failure!(code:)`. Error codes are snake_case tokens (`value_is_invalid`) that the front-end translates, not sentences.
+- Fail early with `return result.not_found_failure!(resource: "customer")`. User errors use `single_validation_failure!(field:, error_code:)`, `validation_failure!(errors:)`, `record_validation_failure!(record:)`, `forbidden_failure!(code:)` when the license, the plan or the caller's rights refuse the action (pass the code; it defaults to `feature_unavailable`), or `not_allowed_failure!(code:)` when a record's state refuses it. Error codes are snake_case tokens (`value_is_invalid`) that the front-end translates, not sentences.
 - `service_failure!` and unknown failures become a 500 in REST and GraphQL. Keep them for real server errors.
 - Never drop the failure of an inner service: check `success?` and pass it on with `result.fail_with_error!(inner_result.error)`, or use `call!`.
 - Inside a transaction, enqueue jobs with `SomeJob.perform_after_commit(...)` or an `after_commit {}` block. A plain `perform_later` can run before the commit and miss the data.
@@ -201,5 +201,6 @@ Also check:
 ## Keeping this file current
 
 - When a review comment points out a mistake that no rule here prevents, and the lesson applies beyond this PR, the same PR adds or fixes the rule in this file. One-off choices and personal preferences stay out.
+- When you notice a recurring pattern in the code, or a repeated step in the workflow, that no rule here captures, propose adding it rather than leaving it undocumented. Suggest the exact wording so a maintainer can approve it.
 - A rule that a cop (`dev/cops`) or a spec can check goes there instead. Keep this file short: tighten or replace an existing rule rather than stacking a new one, and remove rules that no longer match the code.
 - Edit `AGENTS.md`. `CLAUDE.md` only imports it.

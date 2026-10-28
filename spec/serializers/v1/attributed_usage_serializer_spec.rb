@@ -41,6 +41,7 @@ RSpec.describe ::V1::AttributedUsageSerializer do
       result.from_datetime = Time.zone.parse("2026-09-01")
       result.to_datetime = Time.zone.parse("2026-09-30").end_of_day
       result.currency = "EUR"
+      result.split_filters_count = 1
     end
   end
 
@@ -68,7 +69,8 @@ RSpec.describe ::V1::AttributedUsageSerializer do
       "basis" => "amount",
       "from_datetime" => "2026-09-01T00:00:00Z",
       "to_datetime" => "2026-09-30T23:59:59Z",
-      "currency" => "EUR"
+      "currency" => "EUR",
+      "split_filters_count" => 1
     )
   end
 

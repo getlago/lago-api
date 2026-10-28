@@ -209,6 +209,28 @@ RSpec.describe Api::V2::Contracts::UsageController do
       end
     end
 
+    # As above, the error renders no entry, so the eager loading the entries need goes unused.
+    context "when the customer's tax provider throttles the request", bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+      let(:integration) { create(:anrok_integration, organization:) }
+
+      before do
+        create(:anrok_customer, integration:, customer:)
+        allow(Throttling).to receive(:for).with(:anrok).and_return(instance_double(Throttling::Base, check: false))
+      end
+
+      it "answers with a too many provider requests error" do
+        subject
+
+        expect(response).to have_http_status(:too_many_requests)
+        expect(json).to eq(
+          status: 429,
+          error: "Too Many Provider Requests",
+          code: "too_many_provider_requests",
+          error_details: {provider_name: "anrok", message: "Service anrok is not available. Try again later."}
+        )
+      end
+    end
+
     context "with a pending replacement" do
       before do
         create(:contract, :pending, organization:, customer:, external_id: contract.external_id)

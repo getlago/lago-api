@@ -45,7 +45,8 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
 
     it "passes on the computed base while the stored ongoing balance is stale" do
       expect(result).to have_attributes(
-        requirements: nil, sign_in_chains: nil, external_subscription_id: subscription.external_id, balance_credits: 13
+        requirements: nil, sign_in_chains: nil, external_subscription_id: subscription.external_id,
+        subscription_started_at: subscription.reload.started_at, balance_credits: 13
       )
     end
 
@@ -270,7 +271,10 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
     end
 
     it "challenges for the route's top-up" do
-      expect(result).to have_attributes(requirements: [evm_requirement], external_subscription_id: subscription.external_id, balance_credits: 9)
+      expect(result).to have_attributes(
+        requirements: [evm_requirement], external_subscription_id: subscription.external_id,
+        subscription_started_at: subscription.reload.started_at, balance_credits: 9
+      )
     end
 
     it "records the nonce" do
@@ -324,7 +328,7 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
   context "with a stranger" do
     it "challenges at a zero balance" do
       expect(result).to have_attributes(
-        requirements: [evm_requirement], external_subscription_id: nil, balance_credits: 0,
+        requirements: [evm_requirement], external_subscription_id: nil, subscription_started_at: nil, balance_credits: 0,
         sign_in_chains: ["eip155:84532"]
       )
     end

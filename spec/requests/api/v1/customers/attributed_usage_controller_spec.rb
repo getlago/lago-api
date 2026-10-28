@@ -69,7 +69,8 @@ RSpec.describe Api::V1::Customers::AttributedUsageController, clickhouse: {clean
         basis: "units",
         from_datetime: "2026-09-01T00:00:00Z",
         to_datetime: "2026-09-30T23:59:59Z",
-        currency: "EUR"
+        currency: "EUR",
+        split_filters_count: nil
       )
       expect(json[:attributed_usage][:rows].map { it.slice(:value, :rank, :events_count, :amount_cents) }).to eq(
         [
@@ -154,6 +155,66 @@ RSpec.describe Api::V1::Customers::AttributedUsageController, clickhouse: {clean
             {lago_charge_filter_id: nil, charge_filter_values: nil, charge_filter_invoice_display_name: nil, units: "500.0"}
           ]
         )
+        expect(json[:attributed_usage][:split_filters_count]).to eq(1)
+      end
+
+      context "with an offset past the last filter" do
+        let(:params) do
+          {
+            external_subscription_id: subscription.external_id,
+            group_by: "team",
+            charge_codes: ["tokens"],
+            split_charge_code: "tokens",
+            split_filters_offset: "1"
+          }
+        end
+
+        it "returns the default price only" do
+          subject
+
+          cells = json[:attributed_usage][:rows].find { it[:value] == "eng" }[:charges_usage]
+          expect(cells.map { it.slice(:lago_charge_filter_id, :units) }).to eq([{lago_charge_filter_id: nil, units: "500.0"}])
+        end
+      end
+
+      context "with an invalid offset" do
+        let(:params) do
+          {external_subscription_id: subscription.external_id, group_by: "team", split_charge_code: "tokens", split_filters_offset: "first"}
+        end
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq(split_filters_offset: ["value_is_out_of_range"])
+        end
+      end
+
+      context "with an offset above the maximum" do
+        let(:params) do
+          {external_subscription_id: subscription.external_id, group_by: "team", split_charge_code: "tokens", split_filters_offset: "100000000000000000000"}
+        end
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq(split_filters_offset: ["value_is_out_of_range"])
+        end
+      end
+
+      context "with a zero-padded offset" do
+        let(:params) do
+          {external_subscription_id: subscription.external_id, group_by: "team", split_charge_code: "tokens", split_filters_offset: "08"}
+        end
+
+        it "reads it as a decimal number" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          cells = json[:attributed_usage][:rows].find { it[:value] == "eng" }[:charges_usage]
+          expect(cells.map { it.slice(:lago_charge_filter_id, :units) }).to include({lago_charge_filter_id: nil, units: "500.0"})
+        end
       end
     end
 

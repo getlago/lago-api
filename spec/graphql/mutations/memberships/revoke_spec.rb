@@ -69,9 +69,9 @@ RSpec.describe Mutations::Memberships::Revoke do
       }
     )
 
-    expect(result["errors"].first["message"]).to eq("Method Not Allowed")
+    expect(result["errors"].first["message"]).to eq("forbidden")
     expect(result["errors"].first["extensions"]["code"]).to eq("cannot_revoke_own_membership")
-    expect(result["errors"].first["extensions"]["status"]).to eq(405)
+    expect(result["errors"].first["extensions"]["status"]).to eq(403)
   end
 
   it "cannot revoke membership if it's the last admin of the organization" do

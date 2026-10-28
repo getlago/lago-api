@@ -309,6 +309,40 @@ RSpec.describe Api::V1::CustomersController do
         )
         expect(response).to have_http_status(:success)
       end
+
+      [nil, "bogus"].each do |integration_type|
+        context "with #{integration_type.inspect} as integration type" do
+          let(:create_params) do
+            {
+              external_id: SecureRandom.uuid,
+              name: "Foo Bar",
+              integration_customers: [{integration_type:, integration_code: "netsuite", sync_with_provider: true}.compact]
+            }
+          end
+
+          it "returns a validation error without creating the customer" do
+            expect { subject }.not_to change(organization.customers, :count)
+
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json[:error_details]).to eq(integration_type: ["value_is_invalid"])
+          end
+
+          context "when the customer already exists" do
+            let(:customer) { create(:customer, organization:, external_id: create_params[:external_id]) }
+            let(:integration_customer) { create(:netsuite_customer, customer:, integration:) }
+
+            before { integration_customer }
+
+            it "returns a validation error without modifying the customer or its integrations" do
+              expect { subject }.not_to change { customer.reload.attributes }
+
+              expect(response).to have_http_status(:unprocessable_content)
+              expect(json[:error_details]).to eq(integration_type: ["value_is_invalid"])
+              expect(customer.integration_customers).to eq([integration_customer])
+            end
+          end
+        end
+      end
     end
 
     context "with metadata" do

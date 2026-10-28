@@ -29,6 +29,9 @@ module Customers
         )
       end
 
+      integration_customers_validation = IntegrationCustomers::ValidateBatchService.call(integration_customers: args[:integration_customers])
+      return result.fail_with_error!(integration_customers_validation.error) unless integration_customers_validation.success?
+
       old_payment_provider = customer.payment_provider
       old_provider_customer = customer.provider_customer
       old_payment_provider_id = resolved_payment_provider_id(customer) if api_context? && old_provider_customer
