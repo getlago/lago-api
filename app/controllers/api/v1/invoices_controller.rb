@@ -4,6 +4,7 @@ module Api
   module V1
     class InvoicesController < Api::V1::BaseController
       include InvoiceIndex
+      include RawPaymentTermParams
 
       before_action :ensure_x402_payments_enabled, only: [:x402_payment_url]
 
@@ -283,7 +284,7 @@ module Api
         result = Invoices::PreviewContextService.call(
           organization: current_organization,
           billing_entity: billing_entity,
-          params: preview_params.to_h.deep_symbolize_keys
+          params: with_raw_payment_term(preview_params, params).to_h.deep_symbolize_keys
         )
         return render_error_response(result) unless result.success?
 
