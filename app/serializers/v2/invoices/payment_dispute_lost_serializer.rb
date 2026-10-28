@@ -12,7 +12,7 @@ module V2
       private
 
       def invoice
-        ::V2::InvoiceSerializer.new(model, includes: ::V2::InvoiceSerializer::WEBHOOK_INCLUDES).serialize
+        ::V2::InvoiceSerializer.new(model, includes: ::V2::InvoiceSerializer::EVENT_INCLUDES).serialize
       end
     end
   end
