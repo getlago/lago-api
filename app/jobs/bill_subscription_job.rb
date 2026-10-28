@@ -23,7 +23,7 @@ class BillSubscriptionJob < ApplicationJob
     resolutions = invoice.nil? ? resolve_payment_terms(subscriptions) : []
 
     if mixed_payment_terms?(resolutions)
-      term_groups = subscriptions.zip(resolutions).group_by { |_, resolution| resolution.payment_term.to_h }.values
+      term_groups = subscriptions.zip(resolutions).group_by { |_, resolution| resolution.payment_term.grouping_key }.values
       Rails.logger.info("BillSubscriptionJob - Mixed payment terms, splitting into #{term_groups.size} groups")
 
       Yabeda.payment_terms.splits_total.increment({invoicing_reason: invoicing_reason.to_s})
@@ -110,6 +110,6 @@ class BillSubscriptionJob < ApplicationJob
   end
 
   def mixed_payment_terms?(resolutions)
-    resolutions.map { |resolution| resolution.payment_term.to_h }.uniq.many?
+    resolutions.map { |resolution| resolution.payment_term.grouping_key }.uniq.many?
   end
 end
