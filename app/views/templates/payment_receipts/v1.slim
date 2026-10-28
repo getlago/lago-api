@@ -102,7 +102,10 @@ html
 
       - if payment.payable.is_a?(Invoice)
         .invoice-resume.mb-24.overflow-auto
-          - if payment.payable.credit?
+          / Catalog advance fees invoices also have the advance_charges type.
+          - if payment.payable.product_catalog?
+            == SlimHelper.render('templates/payment_receipts/v1/_product_catalog', payment.payable)
+          - elsif payment.payable.credit?
             == SlimHelper.render('templates/invoices/v4/_credit', payment.payable)
           - elsif payment.payable.one_off?
             == SlimHelper.render('templates/invoices/v4/_one_off', payment.payable)
