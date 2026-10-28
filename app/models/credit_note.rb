@@ -215,6 +215,7 @@ end
 #
 # Indexes
 #
+#  index_credit_notes_by_cursor                        (organization_id,created_at DESC,id DESC) WHERE (status = 1)
 #  index_credit_notes_on_customer_id                   (customer_id)
 #  index_credit_notes_on_invoice_id                    (invoice_id)
 #  index_credit_notes_on_invoice_id_and_sequential_id  (invoice_id,sequential_id) UNIQUE

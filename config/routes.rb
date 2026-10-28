@@ -60,6 +60,14 @@ Rails.application.routes.draw do
       resources :invoices, only: [] do
         post :void, on: :member
       end
+      resources :credit_notes, only: %i[index show create update] do
+        post :download, on: :member, action: :download_pdf
+        post :download_pdf, on: :member
+        post :download_xml, on: :member
+        post :resend_email, on: :member
+        put :void, on: :member
+        post :estimate, on: :collection
+      end
       resources :fees, only: %i[index show update destroy]
       # The v2 log endpoints have their own route here and a matching v1 route
       # above, rather than a shared definition, so each version maps to its own

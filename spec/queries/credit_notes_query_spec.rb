@@ -43,6 +43,18 @@ RSpec.describe CreditNotesQuery do
     end
   end
 
+  context "when cursor pagination is provided" do
+    let(:pagination) { CursorPagination::Cursor.new(table: "credit_notes", limit: 2) }
+    let!(:credit_notes) { create_list(:credit_note, 3, customer:) }
+
+    it "returns a keyset page in deterministic order" do
+      expect(result).to be_success
+      expected = credit_notes.sort_by { |credit_note| [-credit_note.created_at.to_f, credit_note.id] }.first(2).map(&:id)
+      page = CursorPagination::Page.new(records: result.credit_notes, cursor: pagination)
+      expect(page.records.map(&:id)).to eq(expected)
+    end
+  end
+
   context "when currency filter applied" do
     let(:filters) { {currency: matching_credit_note.total_amount_currency} }
 
