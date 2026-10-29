@@ -51,7 +51,8 @@ module Charges
         charge: metered_item.charge,
         charge_filter: metered_item.charge_filter,
         grouped_by_keys: metered_item.pricing_group_keys,
-        from_datetime: metered_item.boundaries.charges_from_datetime
+        from_datetime: metered_item.boundaries.charges_from_datetime,
+        all_buckets: false
       )
 
       [event_group_snapshots(fetched.snapshots), fetched.period] if fetched.period
