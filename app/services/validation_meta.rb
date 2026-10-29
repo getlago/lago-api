@@ -3,9 +3,14 @@
 # Facts in a v2 error entry that let a client fix its next request, or tell which provider failed.
 # Each key keeps one meaning and one JSON type across codes, so it is declared here once.
 module ValidationMeta
+  # A bound that is exclusive, or that is not an Integer, gets keys of its own when a producer first
+  # needs one, so that these keep their meaning and their type.
   KEYS = {
     min: Integer, # inclusive bound on the value, in the unit of the field
     max: Integer,
+    min_length: Integer, # inclusive bound on the length of a String, in characters
+    max_length: Integer,
+    max_items: Integer, # inclusive bound on the number of elements, of a list or behind an expansion
     allowed_values: [String], # every value of the field that the check accepts
     value: String, # the query value received, in a 400 only
     invalid_values: [String], # the refused values received, in a 400 only

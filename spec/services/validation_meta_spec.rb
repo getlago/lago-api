@@ -6,9 +6,9 @@ RSpec.describe ValidationMeta do
   describe ".check" do
     subject(:checked) { described_class.check(meta) }
 
-    let(:meta) { {min: 1, max: 3, allowed_values: %w[day month], provider_code: "stripe_eu"} }
+    let(:meta) { {min: 1, max: 3, max_length: 255, max_items: 1000, allowed_values: %w[day month], provider_code: "stripe_eu"} }
 
-    it { expect(checked).to eq(min: 1, max: 3, allowed_values: %w[day month], provider_code: "stripe_eu") }
+    it { expect(checked).to eq(min: 1, max: 3, max_length: 255, max_items: 1000, allowed_values: %w[day month], provider_code: "stripe_eu") }
 
     context "with string keys" do
       let(:meta) { {"min" => 1, "allowed_values" => %w[day]} }
