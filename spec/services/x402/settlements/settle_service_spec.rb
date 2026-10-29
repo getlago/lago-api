@@ -574,6 +574,16 @@ describe X402::Settlements::SettleService do
         it_behaves_like "a refusal after the insert", {payment: ["amount_mismatch"]}, "amount_mismatch"
       end
 
+      context "when the invoice is only marked paid meanwhile" do
+        before do
+          change_invoice_during_insert { Invoices::UpdateService.call!(invoice: Invoice.find(invoice.id), params: {payment_status: "succeeded"}) }
+        end
+
+        it_behaves_like "a refusal after the insert",
+          {base: ["invalid_invoice_status_or_payment_status"]},
+          "invalid_invoice_status_or_payment_status"
+      end
+
       context "when another attempt settles meanwhile" do
         before do
           change_invoice_during_insert do
