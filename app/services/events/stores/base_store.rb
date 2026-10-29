@@ -8,7 +8,7 @@ module Events
         .map { it.chr(Encoding::UTF_8) }.freeze
 
       # Matches the values Ruby's `blank?` reads as missing, so SQL groups them like `build_groups`
-      BLANK_VALUE_PATTERN = "^(#{BLANK_VALUE_CHARS.join("|")})*$"
+      BLANK_VALUE_PATTERN = "^[#{BLANK_VALUE_CHARS.join}]*$"
 
       AggregationResult = Data.define(
         :value,

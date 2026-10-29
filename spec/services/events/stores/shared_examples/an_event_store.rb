@@ -3226,7 +3226,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       event_store.numeric_property = numeric_property
 
       create_event(timestamp: subscription_started_at + 6.days, value: 7, properties: {"region" => ""})
-      create_event(timestamp: subscription_started_at + 7.days, value: 5, properties: {"region" => " \t\u00A0\u3000"})
+      create_event(timestamp: subscription_started_at + 7.days, value: 5, properties: {"region" => Events::Stores::BaseStore::BLANK_VALUE_CHARS.join})
       create_event(timestamp: subscription_started_at + 8.days, value: 4, properties: {"region" => " eu "})
     end
 
@@ -3285,6 +3285,18 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         it "returns a single group from #grouped_unique_count" do
           expect(groups_of(event_store.grouped_unique_count)).to match_array(expected_groups)
         end
+
+        if include_feature?(:grouped_prorated_unique_count)
+          it "returns a single group from #grouped_prorated_unique_count" do
+            expect(groups_of(event_store.grouped_prorated_unique_count)).to match_array(expected_groups)
+          end
+        end
+      end
+    end
+
+    if include_feature?(:recurring_sum)
+      it "returns a single group from #grouped_recurring_sum" do
+        expect(groups_of(event_store.grouped_recurring_sum(watermark: Time.current + 1.hour))).to match_array(expected_groups)
       end
     end
 
