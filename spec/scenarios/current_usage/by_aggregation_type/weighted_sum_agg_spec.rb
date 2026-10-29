@@ -84,6 +84,16 @@ describe "Aggregation - Weighted Sum Scenarios", transaction: false do
             }
           )
 
+          # Dated in the billed period: a weighted sum never counts it
+          create_event(
+            {
+              code: billable_metric.code,
+              external_subscription_id: subscription.external_id,
+              timestamp: DateTime.new(2023, 3, 20).to_i,
+              properties: {value: "1000"}
+            }
+          )
+
           fetch_current_usage(customer:)
           expect(json[:customer_usage][:total_amount_cents]).to eq(53_333)
 
