@@ -32,7 +32,11 @@ Rails.application.routes.draw do
       put "/organizations", to: "organizations#update"
       resources :customers, param: :external_id, constraints: {external_id: /[^\/]+/}, only: %i[index show create update destroy] do
         scope module: :customers do
+          post :checkout_url, to: "checkout_urls#create"
           resources :invoices, only: :index
+          resources :payment_methods, only: %i[index destroy] do
+            put :set_as_default, on: :member
+          end
         end
       end
       resources :taxes, param: :code, code: /.*/, only: %i[index show create update destroy]
