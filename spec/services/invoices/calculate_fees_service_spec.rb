@@ -1504,8 +1504,23 @@ RSpec.describe Invoices::CalculateFeesService do
         end
       end
 
-      context "when subscription was already billed earlier the same day" do
+      context "when the subscription was already billed for the same period" do
         let(:timestamp) { Time.current }
+        let(:existing_invoice_status) { :finalized }
+        let(:existing_invoice) do
+          create(:invoice, customer:, organization:, status: existing_invoice_status)
+        end
+        let(:existing_subscription_fee) do
+          create(
+            :fee,
+            invoice: existing_invoice,
+            subscription:,
+            properties: {
+              from_datetime: date_service.from_datetime,
+              to_datetime: date_service.to_datetime
+            }
+          )
+        end
         let(:fixed_charge) do
           create(
             :fixed_charge,
@@ -1517,7 +1532,7 @@ RSpec.describe Invoices::CalculateFeesService do
         end
 
         before do
-          create(:fee, subscription:)
+          existing_subscription_fee
           create(:fixed_charge_fee, subscription:, fixed_charge:, created_at: timestamp)
         end
 
@@ -1568,6 +1583,17 @@ RSpec.describe Invoices::CalculateFeesService do
             expect(result).to be_success
 
             expect(invoice.fees.commitment.count).to eq(0)
+          end
+        end
+
+        context "when the existing invoice is voided" do
+          let(:existing_invoice_status) { :voided }
+
+          it "creates the subscription fee" do
+            result = invoice_service.call
+
+            expect(result).to be_success
+            expect(invoice.fees.subscription.count).to eq(1)
           end
         end
       end

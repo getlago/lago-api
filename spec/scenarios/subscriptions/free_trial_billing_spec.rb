@@ -415,6 +415,60 @@ describe "Free Trial Billing Subscriptions Scenario" do
     end
   end
 
+  context "when the trial ends after the anniversary renewal date" do
+    let(:trial_period) { 31 }
+
+    before do
+      customer.update!(invoice_grace_period: 2)
+
+      travel_to(Time.zone.parse("2024-09-27T12:12:00")) do
+        create(:standard_charge, plan:, billable_metric:, properties: {amount: "10"})
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+            billing_time: "anniversary"
+          }
+        )
+      end
+
+      travel_to(Time.zone.parse("2024-10-27T13:00:00")) { perform_billing }
+    end
+
+    it "does not add the trial-end subscription fee when the renewal draft finalizes" do
+      renewal_invoice = customer.invoices.sole
+      expect(renewal_invoice).to be_draft
+      expect(renewal_invoice.fees.subscription).to be_empty
+
+      travel_to(Time.zone.parse("2024-10-28T13:00:00")) { perform_billing }
+
+      expect(customer.invoices.reload.count).to eq(2)
+      expect(customer.invoices.joins(:fees).merge(Fee.subscription).count).to eq(1)
+
+      travel_to(Time.zone.parse("2024-10-29T13:00:00")) do
+        Clock::FinalizeInvoicesJob.perform_later
+        perform_all_enqueued_jobs
+      end
+
+      expect(renewal_invoice.reload).to be_finalized
+      expect(customer.invoices.joins(:fees).merge(Fee.subscription).count).to eq(1)
+    end
+
+    it "does not create a trial-end invoice when the renewal already billed the period" do
+      travel_to(Time.zone.parse("2024-10-29T13:00:00")) do
+        Clock::FinalizeInvoicesJob.perform_later
+        perform_all_enqueued_jobs
+
+        Clock::FreeTrialSubscriptionsBillerJob.perform_later
+        perform_all_enqueued_jobs
+      end
+
+      expect(customer.invoices.reload.count).to eq(1)
+      expect(customer.invoices.sole.fees.subscription.count).to eq(1)
+    end
+  end
+
   context "with free trial ending on billing day" do
     let(:trial_period) { 10 }
     let(:timezone) { "Europe/Paris" }

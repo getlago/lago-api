@@ -129,6 +129,45 @@ RSpec.describe Subscriptions::FreeTrialBillingService do
           end
         end
       end
+
+      context "when a subscription fee exists for the current period" do
+        let(:subscription) { create(:subscription, plan:, started_at: 11.days.ago) }
+        let(:date_service) { Subscriptions::DatesService.new_instance(subscription, timestamp) }
+        let(:existing_invoice_status) { :finalized }
+        let(:existing_invoice) do
+          create(
+            :invoice,
+            customer: subscription.customer,
+            organization: subscription.organization,
+            status: existing_invoice_status
+          )
+        end
+        let(:existing_subscription_fee) do
+          create(
+            :fee,
+            invoice: existing_invoice,
+            subscription:,
+            properties: {
+              from_datetime: date_service.from_datetime,
+              to_datetime: date_service.to_datetime
+            }
+          )
+        end
+
+        before { existing_subscription_fee }
+
+        it "does not enqueue a job to bill the subscription" do
+          expect { service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+        end
+
+        context "when the existing invoice is voided" do
+          let(:existing_invoice_status) { :voided }
+
+          it "enqueues a job to bill the subscription" do
+            expect { service.call }.to have_enqueued_job(BillSubscriptionJob)
+          end
+        end
+      end
     end
   end
 end

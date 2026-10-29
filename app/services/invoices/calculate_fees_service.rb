@@ -79,10 +79,6 @@ module Invoices
 
     delegate :customer, :currency, to: :invoice
 
-    def issuing_date
-      timestamp.in_time_zone(customer.applicable_timezone).to_date
-    end
-
     def date_service(subscription)
       Subscriptions::DatesService.new_instance(
         subscription,
@@ -266,17 +262,7 @@ module Invoices
     end
 
     def should_create_subscription_fee?(subscription, boundaries)
-      # NOTE: When plan is pay in advance we generate an invoice upon subscription creation
-      # We want to prevent creating subscription fee if subscription creation already happened on billing day
-      fee_exists = subscription.fees
-        .subscription
-        .includes(:invoice)
-        .where(created_at: issuing_date.beginning_of_day..issuing_date.end_of_day)
-        .where.not(invoice_id: invoice.id)
-        .where.not(invoice_id: invoice.voided_invoice_id)
-        .any?
-
-      return false if subscription.plan.pay_in_advance? && fee_exists
+      return false if subscription.plan.pay_in_advance? && subscription_fee_billed_for_period?(subscription, boundaries)
       return false unless should_create_yearly_subscription_fee?(subscription)
       return false unless should_create_semiannual_subscription_fee?(subscription)
       return false if in_trial_period_not_ending_today?(subscription, boundaries.timestamp)
@@ -289,6 +275,22 @@ module Invoices
       subscription.active? || subscription.incomplete? ||
         (subscription.terminated? && subscription.plan.pay_in_arrears?) ||
         (subscription.terminated? && subscription.terminated_at > invoice.created_at)
+    end
+
+    def subscription_fee_billed_for_period?(subscription, boundaries)
+      subscription
+        .fees
+        .subscription
+        .joins(:invoice).where.not(invoices: {status: %i[voided deleted]})
+        .where(
+          "date_trunc('second', (properties->>'from_datetime')::timestamptz) = date_trunc('second', ?::timestamptz)",
+          boundaries.from_datetime&.iso8601(3)
+        )
+        .where(
+          "date_trunc('second', (properties->>'to_datetime')::timestamptz) = date_trunc('second', ?::timestamptz)",
+          boundaries.to_datetime&.iso8601(3)
+        )
+        .exists?
     end
 
     def should_create_semiannual_subscription_fee?(subscription)
