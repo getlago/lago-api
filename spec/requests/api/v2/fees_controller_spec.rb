@@ -105,6 +105,19 @@ RSpec.describe Api::V2::FeesController do
       end
     end
 
+    %w[succeeded_at failed_at refunded_at].each do |column|
+      context "with a #{column} bound that is not a string" do
+        let(:params) { {"#{column}_from": {gte: "2026-10-01T00:00:00Z"}} }
+
+        it "rejects it rather than ignoring it" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq("#{column}_from": ["invalid_date"])
+        end
+      end
+    end
+
     context "with lago_invoice_id" do
       let(:params) { {lago_invoice_id: invoice.id} }
 
