@@ -20,24 +20,41 @@ module ValidationMeta
 
   module_function
 
-  # Symbol keys, without nil values. A key that is not registered with its type, or that echoes the
-  # request outside a 400, raises in development and test, and is dropped and reported elsewhere, so
-  # that the error stays a 4xx.
+  # Symbol keys, without nil values, and Symbols rendered as the Strings their JSON is. A key that is
+  # not registered with its type, or that echoes the request outside a 400, raises in development and
+  # test. Elsewhere it is reported and the whole meta is dropped, so that the error stays a 4xx and a
+  # client never reads half of it, such as a min without its max.
   def check(meta, echo: false)
     if meta.is_a?(Hash)
       # symbolize_keys leaves a key that has no Symbol form, such as an Integer, as it is.
-      meta.compact.symbolize_keys.each_with_object({}) do |(key, value), checked|
-        if !registered?(key, value)
-          report("meta #{key}: #{value.inspect} is not a registered key and type")
-        elsif !echo && ECHO_KEYS.include?(key)
-          report("meta #{key} echoes the request, which only a 400 may do")
-        else
-          checked[key] = value
-        end
+      checked = meta.compact.symbolize_keys.transform_values { stringify_symbols(it) }
+      refusals = checked.filter_map { |key, value| refusal(key, value, echo) }
+
+      if refusals.empty?
+        checked
+      else
+        refusals.each { report(it) }
+        {}
       end
     else
       report("meta is not a Hash: #{meta.class}") unless meta.nil?
       {}
+    end
+  end
+
+  def refusal(key, value, echo)
+    if !registered?(key, value)
+      "meta #{key}: #{value.inspect} is not a registered key and type"
+    elsif !echo && ECHO_KEYS.include?(key)
+      "meta #{key} echoes the request, which only a 400 may do"
+    end
+  end
+
+  def stringify_symbols(value)
+    case value
+    when Symbol then value.to_s
+    when Array then value.map { it.is_a?(Symbol) ? it.to_s : it }
+    else value
     end
   end
 
@@ -51,15 +68,17 @@ module ValidationMeta
     end
   end
 
+  # Logged too, so that an install without Sentry keeps a trace.
   def report(message)
     error = ArgumentError.new(message)
 
     if Rails.env.local?
       raise error
-    elsif defined?(Sentry)
-      Sentry.capture_exception(error)
+    else
+      Rails.logger.warn("ValidationMeta: #{message}")
+      Sentry.capture_exception(error) if defined?(Sentry)
     end
   end
 
-  private_class_method :registered?
+  private_class_method :refusal, :stringify_symbols, :registered?
 end

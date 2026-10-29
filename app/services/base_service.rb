@@ -58,8 +58,13 @@ class BaseService
 
   class ValidationFailure < FailedResult
     # One code of the failure, with the facts that let a client fix its next request (see
-    # ValidationMeta::KEYS). Only native v2 errors render them.
-    Entry = Data.define(:field, :code, :meta)
+    # ValidationMeta::KEYS). Only native v2 errors render them. The meta is checked when the entry is
+    # built, so that a bad key raises in tests at the line that added it, not in the renderer.
+    Entry = Data.define(:field, :code, :meta) do
+      def initialize(field:, code:, meta: {})
+        super(field:, code:, meta: ValidationMeta.check(meta).freeze)
+      end
+    end
 
     attr_reader :messages
 

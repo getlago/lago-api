@@ -22,6 +22,14 @@ RSpec.describe ValidationMeta do
       it { expect(checked).to eq(min: 1) }
     end
 
+    context "with symbols" do
+      let(:meta) { {resource: :customer, allowed_values: %i[day month]} }
+
+      it "checks them as the strings their JSON is" do
+        expect(checked).to eq(resource: "customer", allowed_values: %w[day month])
+      end
+    end
+
     context "without meta" do
       let(:meta) { nil }
 
@@ -107,11 +115,15 @@ RSpec.describe ValidationMeta do
 
       before do
         allow(Rails.env).to receive(:local?).and_return(false)
+        allow(Rails.logger).to receive(:warn)
         allow(Sentry).to receive(:capture_exception)
       end
 
-      it "drops the bad keys and reports each one" do
-        expect(checked).to eq(min: 1)
+      # A min without its max would read as a value without an upper bound.
+      it "drops the whole meta and reports each bad key" do
+        expect(checked).to eq({})
+        expect(Rails.logger).to have_received(:warn).with("ValidationMeta: meta max: 1.5 is not a registered key and type")
+        expect(Rails.logger).to have_received(:warn).exactly(4).times
         expect(Sentry).to have_received(:capture_exception).exactly(4).times
         expect(Sentry).to have_received(:capture_exception).with(an_object_having_attributes(message: "meta max: 1.5 is not a registered key and type"))
         expect(Sentry).to have_received(:capture_exception).with(an_object_having_attributes(message: "meta count: 2 is not a registered key and type"))

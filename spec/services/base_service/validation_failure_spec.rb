@@ -48,6 +48,18 @@ RSpec.describe BaseService::ValidationFailure do
       expect(failure.entries.size).to eq(4)
     end
 
+    context "when an error carries a key that is not registered" do
+      let(:record) do
+        build(:rate_card_rate).tap do |rate|
+          rate.errors.add(:billing_interval_count, :not_allowed_for_billing_timing, meta: {min: "1"})
+        end
+      end
+
+      it "raises when the failure reads the errors, in development and test" do
+        expect { failure }.to raise_error(ArgumentError, 'meta min: "1" is not a registered key and type')
+      end
+    end
+
     context "with an error imported under another attribute" do
       let(:record) do
         build(:rate_card_rate).tap do |rate|
@@ -141,6 +153,13 @@ RSpec.describe BaseService::ValidationFailure do
       let(:entries) { [entry(:position, "value_is_out_of_range", {min: 1, max: 3})] }
 
       it { expect(failure.entries).to eq(entries) }
+
+      context "when an entry carries a key that is not registered" do
+        it "raises when the entry is built, in development and test" do
+          expect { entry(:position, "value_is_out_of_range", {min: 1, max: 1.5}) }
+            .to raise_error(ArgumentError, "meta max: 1.5 is not a registered key and type")
+        end
+      end
     end
   end
 end
