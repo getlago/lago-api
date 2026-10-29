@@ -39,6 +39,8 @@ class ApplicationController < ActionController::API
   end
 
   def not_found
+    # Unknown v2 routes land here, outside Api::BaseController, which sets the header for the others.
+    response.set_header("X-Lago-Endpoint-Status", "beta") if request.path.start_with?("/api/v2/")
     not_found_error(resource: "resource")
   end
 
