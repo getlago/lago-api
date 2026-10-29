@@ -257,7 +257,10 @@ RSpec.describe Customers::ViesCheckService do
     [
       Errno::ECONNRESET,
       Errno::ENETUNREACH,
+      Errno::ETIMEDOUT,
+      Errno::EPIPE,
       Net::OpenTimeout,
+      Net::WriteTimeout,
       OpenSSL::SSL::SSLError
     ].each do |network_error|
       context "when the connection to VIES fails with #{network_error}" do

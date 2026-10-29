@@ -38,6 +38,10 @@ RSpec.describe PendingViesCheck, type: :model do
       expect(described_class.error_type_for(Errno::ECONNRESET.new)).to eq("network_error")
       expect(described_class.error_type_for(Errno::ENETUNREACH.new)).to eq("network_error")
       expect(described_class.error_type_for(Net::ReadTimeout.new)).to eq("network_error")
+      expect(described_class.error_type_for(Errno::ETIMEDOUT.new)).to eq("network_error")
+      expect(described_class.error_type_for(Errno::ECONNABORTED.new)).to eq("network_error")
+      expect(described_class.error_type_for(Net::WriteTimeout.new)).to eq("network_error")
+      expect(described_class.error_type_for(EOFError.new)).to eq("network_error")
       expect(described_class.error_type_for(OpenSSL::SSL::SSLError.new)).to eq("network_error")
     end
 

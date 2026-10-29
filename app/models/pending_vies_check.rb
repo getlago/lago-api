@@ -12,16 +12,13 @@ class PendingViesCheck < ApplicationRecord
   }.freeze
 
   # Transport failures raised by Net::HTTP while talking to VIES. Valvat does not wrap them.
+  # Base classes, so every socket error (Errno::*) and Net::HTTP timeout is covered.
   NETWORK_ERRORS = [
-    Errno::ECONNREFUSED,
-    Errno::ECONNRESET,
-    Errno::EHOSTUNREACH,
-    Errno::ENETUNREACH,
     IOError,
-    Net::OpenTimeout,
-    Net::ReadTimeout,
     OpenSSL::SSL::SSLError,
-    SocketError
+    SocketError,
+    SystemCallError,
+    Timeout::Error
   ].freeze
 
   KNOWN_ERROR_TYPES = (ERROR_TYPE_MAPPING.values + ["network_error", "unknown"]).freeze
