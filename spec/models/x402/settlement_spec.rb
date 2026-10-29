@@ -246,7 +246,10 @@ describe X402::Settlement do
       end
 
       it "keeps an older row updatable after its network is removed" do
-        connection.update!(networks: ["eip155:8453"])
+        connection.update!(
+          networks: ["solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"],
+          payout_addresses: connection.payout_addresses.merge("svm" => "2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4")
+        )
 
         expect(settlement.reload.update(status: "failed")).to be(true)
       end

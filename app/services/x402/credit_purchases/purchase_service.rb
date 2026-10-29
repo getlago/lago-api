@@ -24,6 +24,7 @@ module X402
         replay = find_replay(digest_result.digest)
         return answer_replay(replay) if replay
         return result.not_found_failure!(resource: "connection") unless connection
+        return refuse(:connection_code, "environment_not_enabled") unless connection.environment_enabled?
 
         checks = ValidateService.call(connection:, params:)
         return result.fail_with_error!(checks.error) if checks.failure?

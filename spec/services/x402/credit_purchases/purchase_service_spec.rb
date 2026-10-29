@@ -168,6 +168,44 @@ describe X402::CreditPurchases::PurchaseService do
       end
     end
 
+    context "with a testnet connection on an organization running on mainnet" do
+      let(:organization) { create(:organization, feature_flags: ["x402_mainnet"]) }
+      let(:x402_connection) do
+        create(
+          :x402_connection,
+          :saved_before_switch,
+          organization:,
+          networks: ["eip155:84532", "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"],
+          payout_addresses: {"evm" => "0x94bA479439C2f1bA5f5DaCBD06Ea0c129604B4a5", "svm" => "HHU1aLQQCbCzW9ebjFTntq2vkvsQsxkDyPjMsW2WtiLG"},
+          cdp_api_key_id:,
+          cdp_api_key_secret:
+        )
+      end
+
+      it_behaves_like "a refusal before settle", {connection_code: ["environment_not_enabled"]}
+
+      it "does not request /verify" do
+        result
+        expect(verify_request).not_to have_been_made
+      end
+
+      context "with a granted settlement holding the payment" do
+        let(:customer) { create(:customer, organization:, x402_agent_address: payer_address) }
+        let(:subscription) { create(:subscription, customer:, plan:, external_id: "x402_#{payer_address}_agent_api") }
+        let(:wallet) { create(:wallet, customer:, code: "agent_credits", currency: "USD", x402_enabled: true) }
+        let!(:settlement) do
+          create(
+            :x402_settlement, organization:, x402_connection:, payee_address:, payer_address:, payment_digest: digest,
+            purchase_settings: stored_settings, customer:, subscription:, wallet_transaction: create(:wallet_transaction, wallet:)
+          )
+        end
+
+        it "answers from the row" do
+          expect(result).to have_attributes(settlement:, replayed: true)
+        end
+      end
+    end
+
     context "with an unknown plan" do
       let(:params) { super().merge(plan_code: "unknown") }
 

@@ -7181,6 +7181,7 @@ enum FeatureFlagEnum {
   usage_prefilter_incremental
   usage_prefilter_short_cache
   wallet_traceability
+  x402_mainnet
   x402_payments
   x402_reservation_counter_disabled
 }
