@@ -79,29 +79,17 @@ class BaseService
       new(result, messages: errors.messages, entries:)
     end
 
-    # One entry per code, in the order of messages, duplicates kept. A code that is not a token (the
-    # indexed sentences of a contract, a nested hash), or messages that are not a hash, become
-    # value_is_invalid, reported so that their producer gets fixed.
+    # One entry per code, in the order of messages, duplicates kept, each code as it is: v2 renders a
+    # code that is not a token as value_is_invalid. Messages that are not a hash become
+    # value_is_invalid on base, reported so that their producer gets fixed.
     def self.entries_from(messages)
       if messages.is_a?(Hash)
-        messages.flat_map do |field, codes|
-          Array.wrap(codes).map { Entry.new(field:, code: token_or_invalid(it, field), meta: {}) }
-        end
+        messages.flat_map { |field, codes| Array.wrap(codes).map { Entry.new(field:, code: it) } }
       else
         ValidationMeta.report("validation messages are not a Hash: #{messages.class}")
-        [Entry.new(field: :base, code: "value_is_invalid", meta: {})]
+        [Entry.new(field: :base, code: "value_is_invalid")]
       end
     end
-
-    def self.token_or_invalid(code, field)
-      if code.is_a?(String) || code.is_a?(Symbol)
-        code
-      else
-        ValidationMeta.report("validation code of #{field} is not a token: #{code.class}")
-        "value_is_invalid"
-      end
-    end
-    private_class_method :token_or_invalid
 
     # messages: {field => [code]}, or one of the String, indexed and nested shapes a few services
     # build, kept as they are. entries: derived from messages when the producer adds no meta.

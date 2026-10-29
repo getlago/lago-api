@@ -90,6 +90,14 @@ RSpec.describe Api::V2Errors do
             :base => ["value_is_out_of_range"],
             "code" => ["value_already_exist"]
           })
+        # A sentence, as a contract or Rails gives one, and an indexed hash of them.
+        when "validation_with_sentences"
+          result.validation_failure!(errors: {
+            net_payment_term: ["is not a number"],
+            account_type: {0 => ["must be one of: customer, partner"]},
+            "rates.rate_properties": [:invalid_amount, "invalidAmount"],
+            name: ["value_is_mandatory"]
+          })
         when "validation_with_meta"
           result.single_validation_failure!(field: :position, error_code: "value_is_out_of_range", meta: {min: 1, max: 3})
         when "record_validation_with_meta"
@@ -277,6 +285,42 @@ RSpec.describe Api::V2Errors do
           {code: "value_already_exist", field: "code", meta: {}}
         ]
       )
+    end
+  end
+
+  context "with a validation failure whose codes are not tokens" do
+    let(:failure) { "validation_with_sentences" }
+
+    it "raises in development and test" do
+      expect { show }.to raise_error(ArgumentError, "code of net_payment_term is not a token: String")
+    end
+
+    context "when the environment is not local" do
+      before do
+        allow(Rails.env).to receive(:local?).and_return(false)
+        allow(Sentry).to receive(:capture_exception)
+      end
+
+      it "returns value_is_invalid in their place and reports each one" do
+        show
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(
+          code: "validation_errors",
+          details: [
+            {code: "value_is_invalid", field: "net_payment_term", meta: {}},
+            {code: "value_is_invalid", field: "account_type", meta: {}},
+            {code: "invalid_amount", field: "rates.rate_properties", meta: {}},
+            {code: "value_is_invalid", field: "rates.rate_properties", meta: {}},
+            {code: "value_is_mandatory", field: "name", meta: {}}
+          ]
+        )
+        expect(Sentry).to have_received(:capture_exception).exactly(3).times
+        expect(Sentry).to have_received(:capture_exception)
+          .with(an_object_having_attributes(message: "code of account_type is not a token: Hash"))
+        expect(Sentry).to have_received(:capture_exception)
+          .with(an_object_having_attributes(message: "code of rates.rate_properties is not a token: String"))
+      end
     end
   end
 

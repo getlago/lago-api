@@ -127,23 +127,14 @@ RSpec.describe BaseService::ValidationFailure do
     end
 
     context "when a code is not a token" do
-      let(:messages) { {account_type: {0 => ["must be one of: customer, partner"]}, name: ["value_is_mandatory"]} }
+      let(:messages) { {account_type: {0 => ["must be one of: customer, partner"]}, name: ["is not a number"]} }
 
-      it "builds nothing until they are read, then raises in development and test" do
-        expect { failure }.not_to raise_error
-        expect { failure.entries }.to raise_error(ArgumentError, "validation code of account_type is not a token: Hash")
-      end
-
-      context "when the environment is not local" do
-        before do
-          allow(Rails.env).to receive(:local?).and_return(false)
-          allow(Sentry).to receive(:capture_exception)
-        end
-
-        it "returns value_is_invalid on its field and reports it" do
-          expect(failure.entries).to eq([entry(:account_type, "value_is_invalid"), entry(:name, "value_is_mandatory")])
-          expect(Sentry).to have_received(:capture_exception).once
-        end
+      # v1 and GraphQL render them as they are; the v2 renderer replaces them.
+      it "keeps it as it is" do
+        expect(failure.entries).to eq([
+          entry(:account_type, {0 => ["must be one of: customer, partner"]}),
+          entry(:name, "is not a number")
+        ])
       end
     end
 

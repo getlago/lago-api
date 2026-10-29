@@ -13,6 +13,9 @@ module Api
   module V2Errors
     extend ActiveSupport::Concern
 
+    # A Lago error code, which a client switches on.
+    TOKEN = /\A[a-z][a-z0-9_]*\z/
+
     # The v1 message is the reason phrase, which the v2 body leaves out.
     def unauthorized_error = render_v2_error(401, code: "unauthorized")
 
@@ -115,9 +118,21 @@ module Api
       render_v2_error(status, code:, details: [error_detail(code:, field: :base, meta: meta.compact)])
     end
 
-    # Every v2 entry, 400, 422 and 429 alike, goes through the registry of meta keys.
+    # Every v2 entry, 400, 422 and 429 alike, goes through the registry of meta keys and the token check.
     def error_detail(code:, field:, meta: {}, echo: false)
-      {code:, field: field.to_s, meta: ValidationMeta.check(meta, echo:)}
+      {code: token_or_invalid(code, field), field: field.to_s, meta: ValidationMeta.check(meta, echo:)}
+    end
+
+    # v1 and GraphQL keep the code a service or Rails gives, a sentence included ("is not a number").
+    # v2 renders it as value_is_invalid, reported so that its producer gets fixed: by its class only, as
+    # a sentence can quote the request (an email address the client sent).
+    def token_or_invalid(code, field)
+      if (code.is_a?(String) || code.is_a?(Symbol)) && code.match?(TOKEN)
+        code
+      else
+        ValidationMeta.report("code of #{field} is not a token: #{code.class}")
+        "value_is_invalid"
+      end
     end
 
     def render_v2_error(status, code:, details: [])
