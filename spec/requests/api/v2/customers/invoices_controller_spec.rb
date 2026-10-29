@@ -35,6 +35,11 @@ RSpec.describe Api::V2::Customers::InvoicesController do
       let(:create_paginated_record) { ->(created_at) { create(:invoice, organization:, customer:, invoice_type: :contract, created_at:) } }
     end
 
+    it_behaves_like "a v2 list filtered on created_at", collection: :invoices do
+      let(:filtered_path) { "/api/v2/customers/#{customer.external_id}/invoices" }
+      let(:create_filtered_record) { ->(created_at) { create(:invoice, organization:, customer:, invoice_type: :contract, created_at:) } }
+    end
+
     context "with filters" do
       let(:params) { {invoice_type: "advance_fees"} }
       let(:advance_fees_invoice) { create(:invoice, organization:, customer:, invoice_type: :advance_charges) }

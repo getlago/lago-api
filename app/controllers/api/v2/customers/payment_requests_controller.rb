@@ -5,6 +5,7 @@ module Api
     module Customers
       class PaymentRequestsController < BaseController
         cursor_paginated_index(PaymentRequest)
+        date_range_filtered_index(:created_at)
         serializable_with ::V2::PaymentRequestSerializer
 
         def index
@@ -12,7 +13,7 @@ module Api
             organization: current_organization,
             pagination: cursor,
             # The id rather than the external one, which a deleted customer may share.
-            filters: {customer_id: customer.id}
+            filters: {customer_id: customer.id, **date_range_filters}
           )
 
           if result.success?

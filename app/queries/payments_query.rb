@@ -2,17 +2,20 @@
 
 class PaymentsQuery < BaseQuery
   Result = BaseResult[:payments]
-  Filters = BaseFilters[:invoice_id, :external_customer_id, :customer_id, :currency]
+  Filters = BaseFilters[:invoice_id, :external_customer_id, :customer_id, :currency, :created_at_from, :created_at_to]
 
   def call
     return result unless validate_filters.success?
 
     payments = base_scope
     payments = apply_filters(payments)
+    payments = with_date_range(payments, :created_at)
     payments = apply_consistent_ordering(payments)
     payments = paginate(payments)
 
     result.payments = payments
+    result
+  rescue BaseService::FailedResult
     result
   end
 

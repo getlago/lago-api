@@ -73,6 +73,13 @@ RSpec.describe Api::V2::Customers::PaymentsController do
       end
     end
 
+    it_behaves_like "a v2 list filtered on created_at", collection: :payments do
+      let(:filtered_path) { "#{customer_path}/payments" }
+      let(:create_filtered_record) do
+        ->(created_at) { create(:payment, payable: create(:invoice, organization:, customer:), created_at:) }
+      end
+    end
+
     context "with offset pagination parameters" do
       let(:params) { {page: 2} }
 
