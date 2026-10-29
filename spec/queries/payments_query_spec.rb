@@ -181,6 +181,104 @@ RSpec.describe PaymentsQuery do
     end
   end
 
+  context "when filtering by invoice_id with a payment request including the invoice" do
+    let(:filters) { {invoice_id: invoice.id} }
+
+    before { create(:payment_request_applied_invoice, invoice:, payment_request:) }
+
+    it "returns each payment of the invoice and of its payment request once, not those of another invoice" do
+      expect(result).to be_success
+      expect(returned_ids.size).to eq(2)
+      expect(returned_ids).to match_array([payment_one.id, payment_three.id])
+      expect(returned_ids).not_to include(payment_two.id)
+    end
+
+    context "with sequential and bitmap scans disabled" do
+      before do
+        %w[enable_seqscan enable_bitmapscan].each do |setting|
+          ActiveRecord::Base.connection.execute("SET LOCAL #{setting} = off")
+        end
+      end
+
+      # An OR across a join of invoices_payment_requests scans every payment of the organization.
+      it "selects the payment ids through the payable and the applied invoice indexes" do
+        plan = ActiveRecord::Base.connection.select_rows("EXPLAIN #{result.payments.to_sql}").flatten.join("\n")
+
+        expect(plan).to include("index_payments_on_payable_type_and_payable_id")
+        expect(plan).to match(/index_invoices_payment_requests_on_invoice_id|idx_on_invoice_id_payment_request_id_aa550779a4/)
+        expect(returned_ids).to match_array([payment_one.id, payment_three.id])
+      end
+    end
+  end
+
+  context "when the invoice belongs to another organization" do
+    let(:filters) { {invoice_id: other_invoice.id} }
+    let(:other_organization) { create(:organization) }
+    let(:other_customer) { create(:customer, organization: other_organization) }
+    let(:other_invoice) { create(:invoice, organization: other_organization, customer: other_customer) }
+    let(:other_payment_request) { create(:payment_request, organization: other_organization, customer: other_customer) }
+
+    before do
+      create(:payment_request_applied_invoice, invoice: other_invoice, payment_request: other_payment_request, organization: other_organization)
+      create(:payment, payable: other_invoice, organization: other_organization, customer: other_customer)
+      create(:payment, payable: other_payment_request, organization: other_organization, customer: other_customer)
+    end
+
+    it "returns no payments" do
+      expect(result).to be_success
+      expect(returned_ids).to eq([])
+    end
+
+    context "when a payment request of this organization is applied to it in the other organization" do
+      let(:own_payment_request) { create(:payment_request, organization:) }
+
+      before do
+        create(:payment, payable: own_payment_request, organization:)
+        create(:payment_request_applied_invoice, invoice: other_invoice, payment_request: own_payment_request, organization: other_organization)
+      end
+
+      it "does not return a payment request payment of this organization through another organization applied invoice" do
+        expect(result).to be_success
+        expect(returned_ids).to eq([])
+      end
+    end
+  end
+
+  context "when the invoice filter is combined with other filters and pagination" do
+    let(:filters) do
+      {invoice_id: invoice.id, currency: "EUR", external_customer_id: invoice.customer.external_id}
+    end
+    let(:pagination) { {page: 1, limit: 1} }
+    let(:payment_request) { create(:payment_request, organization:, customer: invoice.customer) }
+    let(:payment_three) { create(:payment, payable: payment_request, provider_payment_id: "pr-payment-ref") }
+
+    before do
+      create(:payment_request_applied_invoice, invoice:, payment_request:)
+      # Failed attempts, as only one pending provider payment is allowed per invoice.
+      # Excluded by the currency filter.
+      create(:payment, payable: invoice, amount_currency: "USD", status: "failed", payable_payment_status: "failed")
+      # Excluded by the external_customer_id filter.
+      create(:payment, payable: invoice, customer: create(:customer, organization:), status: "failed", payable_payment_status: "failed")
+    end
+
+    it "paginates the intersection of the filters" do
+      expect(result).to be_success
+      expect(result.payments.total_count).to eq(2)
+      expect(returned_ids.size).to eq(1)
+      expect([payment_one.id, payment_three.id]).to include(returned_ids.first)
+    end
+
+    context "with a search_term" do
+      let(:search_term) { "pr-payment-ref" }
+
+      it "returns the intersection with the search" do
+        expect(result).to be_success
+        expect(result.payments.total_count).to eq(1)
+        expect(returned_ids).to eq([payment_three.id])
+      end
+    end
+  end
+
   context "when filtering by external_customer_id" do
     let(:filters) { {external_customer_id: customer.external_id} }
     let(:new_payment) { create(:payment, payable: new_invoice) }
