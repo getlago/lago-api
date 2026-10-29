@@ -30,7 +30,11 @@ Rails.application.routes.draw do
       resources :billing_entities, param: :code, constraints: {code: /[^\/]+/}, only: %i[index show create update]
       get "/organizations", to: "organizations#show"
       put "/organizations", to: "organizations#update"
-      resources :customers, param: :external_id, constraints: {external_id: /[^\/]+/}, only: %i[index show create update destroy]
+      resources :customers, param: :external_id, constraints: {external_id: /[^\/]+/}, only: %i[index show create update destroy] do
+        scope module: :customers do
+          resources :invoices, only: :index
+        end
+      end
       resources :taxes, param: :code, code: /.*/, only: %i[index show create update destroy]
       resources :products, param: :code, code: /.*/, only: %i[index show create update destroy] do
         resources :filters, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "products/filters"

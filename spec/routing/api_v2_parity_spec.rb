@@ -26,9 +26,9 @@ RSpec.describe "API v2 routing parity" do
   end
 
   it "keeps customer-nested paths on their shared controllers" do
-    recognized = Rails.application.routes.recognize_path("/api/v2/customers/customer/invoices", method: :get)
+    recognized = Rails.application.routes.recognize_path("/api/v2/customers/customer/credit_notes", method: :get)
 
-    expect(recognized[:controller]).to eq("api/v1/customers/invoices")
+    expect(recognized[:controller]).to eq("api/v1/customers/credit_notes")
     expect(recognized[:customer_external_id]).to eq("customer")
   end
 
@@ -113,5 +113,17 @@ RSpec.describe "API v2 routing parity" do
     ].each do |method, path|
       expect(Rails.application.routes.recognize_path(path, method:)[:controller]).to eq("api/v2/invoices")
     end
+  end
+
+  it "routes a customer external id containing a dot, as v2 contracts do" do
+    recognized = Rails.application.routes.recognize_path("/api/v2/customers/acme.eu/invoices", method: :get)
+
+    expect(recognized).to include(controller: "api/v2/customers/invoices", customer_external_id: "acme.eu")
+  end
+
+  it "routes the customer invoice list to the v2 controller" do
+    recognized = Rails.application.routes.recognize_path("/api/v2/customers/cus_1/invoices", method: :get)
+
+    expect(recognized[:controller]).to eq("api/v2/customers/invoices")
   end
 end
