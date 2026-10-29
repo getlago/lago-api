@@ -249,7 +249,7 @@ RSpec.describe Api::V2::FeesController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json.dig(:error_details, :payment_status)).to eq(["value_is_invalid"])
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "payment_status", meta: {}}])
         expect(fee.reload).to be_payment_pending
       end
     end

@@ -182,7 +182,7 @@ RSpec.describe Api::V2::CustomersController do
           expect { request }.not_to change(organization.customers, :count)
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:error_details]).to eq(integration_type: ["value_is_invalid"])
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "integration_type", meta: {}}])
         end
       end
     end
@@ -654,7 +654,7 @@ RSpec.describe Api::V2::CustomersController do
             expect { request }.not_to change { customer.reload.attributes }
 
             expect(response).to have_http_status(:unprocessable_content)
-            expect(json[:error_details]).to eq(integration_type: ["value_is_invalid"])
+            expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "integration_type", meta: {}}])
             expect(customer.integration_customers).to eq([integration_customer])
           end
         end
