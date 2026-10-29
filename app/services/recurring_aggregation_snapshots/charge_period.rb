@@ -55,23 +55,9 @@ module RecurringAggregationSnapshots
         period_snapshots = charge_snapshots
           .where(charge_filter_id: [nil, *(charge_filter_ids || charge.filters.ids)])
           .of_period(latest_to_datetime)
-        period_snapshots = group_snapshots(period_snapshots) if grouped_by_values
+        period_snapshots = period_snapshots.of_group(grouped_by_values) if grouped_by_values
         period_snapshots.group_by(&:charge_filter_id)
       end
-    end
-
-    # A blank value matches a missing one, as the stores group them together
-    def group_snapshots(period_snapshots)
-      bucket_snapshots = period_snapshots.select("DISTINCT ON (charge_filter_id) id").order(:charge_filter_id, :id)
-      conditions = grouped_by_values.map do |key, value|
-        if value.to_s.strip.empty?
-          ActiveRecord::Base.sanitize_sql_for_conditions(["COALESCE(TRIM(grouped_by ->> ?), '') = ''", key.to_s])
-        else
-          ActiveRecord::Base.sanitize_sql_for_conditions(["grouped_by ->> ? = ?", key.to_s, value.to_s])
-        end
-      end
-
-      period_snapshots.where(id: bucket_snapshots).or(period_snapshots.where(conditions.join(" AND ")))
     end
 
     def filters_changed?

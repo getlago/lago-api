@@ -115,6 +115,25 @@ RSpec.describe RecurringAggregationSnapshots::PreviousSubscriptionSnapshots do
           expect(loaded).to eq(1)
         end
 
+        context "with grouped_by_values" do
+          before do
+            create_previous_snapshot(to_datetime: termination_datetime, charge_filter: previous_eu_filter, grouped_by: {"cloud" => "aws"}, units: 5)
+            create_previous_snapshot(to_datetime: termination_datetime, charge_filter: previous_eu_filter, grouped_by: {"cloud" => "gcp"}, units: 6)
+          end
+
+          it "loads only the group's snapshots and the first snapshot of each bucket" do
+            first_eu_units = RecurringAggregationSnapshot.where(charge_filter: previous_eu_filter, to_datetime: termination_datetime).order(:id).first.units
+            expected_units = [6, first_eu_units].uniq(&:to_d)
+
+            loaded = count_loaded_snapshots do
+              records = lookup.period(charge:, charge_filter: eu_filter, all_buckets: false, grouped_by_values: {"cloud" => "gcp"}).last
+              expect(records.map(&:units)).to match_array(expected_units)
+            end
+
+            expect(loaded).to eq(1 + expected_units.size)
+          end
+        end
+
         it "loads every bucket when a later caller reads them all" do
           lookup.period(charge:, charge_filter: eu_filter, all_buckets: false)
 

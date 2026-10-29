@@ -56,7 +56,7 @@ module RecurringAggregationSnapshots
     # An upgrade or downgrade keeps the external id, so the events counted by the previous
     # subscription are the ones this one reads.
     def previous_subscription_period
-      subscription.previous_recurring_aggregation_snapshots.period(charge:, charge_filter:, all_buckets:)
+      subscription.previous_recurring_aggregation_snapshots.period(charge:, charge_filter:, all_buckets:, grouped_by_values:)
     end
 
     # Snapshots grouped on other keys cannot be regrouped, only a full scan can. Checked on the

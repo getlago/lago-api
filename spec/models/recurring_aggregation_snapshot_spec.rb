@@ -30,6 +30,25 @@ RSpec.describe RecurringAggregationSnapshot do
         expect(described_class.of_period(latest_to_datetime)).to eq([snapshot])
       end
     end
+
+    describe ".of_group" do
+      let(:snapshot) { create(:recurring_aggregation_snapshot, grouped_by: {"region" => "eu", "cloud" => "aws"}) }
+      let(:bucket_snapshots) do
+        [{"region" => "eu", "cloud" => " "}, {"region" => "us", "cloud" => nil}, {"region" => "us", "cloud" => "aws"}].map do |grouped_by|
+          create(:recurring_aggregation_snapshot, organization: snapshot.organization, subscription: snapshot.subscription,
+            charge: snapshot.charge, grouped_by:)
+        end
+      end
+      let(:first_snapshot) { ([snapshot] + bucket_snapshots).min_by(&:id) }
+
+      it "returns the snapshots of the group and the first snapshot of the bucket" do
+        expect(described_class.of_group({"region" => "us", "cloud" => "aws"})).to match_array([bucket_snapshots.last, first_snapshot].uniq)
+      end
+
+      it "matches a blank value with a missing one" do
+        expect(described_class.of_group({"cloud" => ""})).to match_array([*bucket_snapshots.first(2), first_snapshot].uniq)
+      end
+    end
   end
 
   describe "validations" do
