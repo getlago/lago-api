@@ -11,7 +11,20 @@ class PendingViesCheck < ApplicationRecord
     Valvat::MemberStateUnavailable => "member_state_unavailable"
   }.freeze
 
-  KNOWN_ERROR_TYPES = (ERROR_TYPE_MAPPING.values + ["unknown"]).freeze
+  # Transport failures raised by Net::HTTP while talking to VIES. Valvat does not wrap them.
+  NETWORK_ERRORS = [
+    Errno::ECONNREFUSED,
+    Errno::ECONNRESET,
+    Errno::EHOSTUNREACH,
+    Errno::ENETUNREACH,
+    IOError,
+    Net::OpenTimeout,
+    Net::ReadTimeout,
+    OpenSSL::SSL::SSLError,
+    SocketError
+  ].freeze
+
+  KNOWN_ERROR_TYPES = (ERROR_TYPE_MAPPING.values + ["network_error", "unknown"]).freeze
 
   belongs_to :organization
   belongs_to :billing_entity
@@ -22,6 +35,8 @@ class PendingViesCheck < ApplicationRecord
   validates :last_error_type, inclusion: {in: KNOWN_ERROR_TYPES}, allow_nil: true
 
   def self.error_type_for(exception)
+    return "network_error" if NETWORK_ERRORS.any? { |klass| exception.is_a?(klass) }
+
     ERROR_TYPE_MAPPING.fetch(exception.class, "unknown")
   end
 end

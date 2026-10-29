@@ -34,6 +34,17 @@ RSpec.describe PendingViesCheck, type: :model do
       expect(described_class.error_type_for(Valvat::MemberStateUnavailable.new("error", :vies))).to eq("member_state_unavailable")
     end
 
+    it "maps transport failures to network_error" do
+      expect(described_class.error_type_for(Errno::ECONNRESET.new)).to eq("network_error")
+      expect(described_class.error_type_for(Errno::ENETUNREACH.new)).to eq("network_error")
+      expect(described_class.error_type_for(Net::ReadTimeout.new)).to eq("network_error")
+      expect(described_class.error_type_for(OpenSSL::SSL::SSLError.new)).to eq("network_error")
+    end
+
+    it "returns 'unknown' for unmapped Valvat lookup errors" do
+      expect(described_class.error_type_for(Valvat::UnknownLookupError.new("SERVER_BUSY", :vies))).to eq("unknown")
+    end
+
     it "returns 'unknown' for unmapped exceptions" do
       expect(described_class.error_type_for(StandardError.new)).to eq("unknown")
     end

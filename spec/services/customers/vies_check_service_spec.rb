@@ -232,7 +232,8 @@ RSpec.describe Customers::ViesCheckService do
       "SERVICE_UNAVAILABLE" => "service_unavailable",
       "TIMEOUT" => "timeout",
       "VAT_BLOCKED" => "blocked",
-      "INVALID_REQUESTER_INFO" => "invalid_requester"
+      "INVALID_REQUESTER_INFO" => "invalid_requester",
+      "SERVER_BUSY" => "unknown"
     }.each do |fault_string, error_type|
       context "when VIES check raises #{error_type} error" do
         it_behaves_like "a VIES check error",
@@ -250,6 +251,45 @@ RSpec.describe Customers::ViesCheckService do
         it_behaves_like "a VIES check error",
           http_status: http_status,
           error_type: "service_unavailable"
+      end
+    end
+
+    [
+      Errno::ECONNRESET,
+      Errno::ENETUNREACH,
+      Net::OpenTimeout,
+      OpenSSL::SSL::SSLError
+    ].each do |network_error|
+      context "when the connection to VIES fails with #{network_error}" do
+        before do
+          stub_request(:post, "https://ec.europa.eu/taxation_customs/vies/services/checkVatService")
+            .to_raise(network_error)
+        end
+
+        it "returns an error" do
+          result = vies_check_service.call
+
+          expect(result).not_to be_success
+          expect(result.tax_code).to be_nil
+          expect(result.error.code).to eq("vies_check_failed")
+        end
+
+        context "when the pending_vies_check was never attempted" do
+          before { create(:pending_vies_check, customer:, attempts_count: 0, last_attempt_at: nil, last_error_type: nil) }
+
+          it "records the attempt so ViesCheckJob schedules a retry" do
+            result = vies_check_service.call
+
+            expect(result.pending_vies_check).to have_attributes(attempts_count: 1, last_error_type: "network_error")
+            expect(result.pending_vies_check.last_attempt_at).to be_present
+          end
+        end
+
+        it "sends a vies_check webhook with error details" do
+          expect { vies_check_service.call }
+            .to have_enqueued_job(SendWebhookJob)
+            .with("customer.vies_check", customer, vies_check: hash_including(valid: false, valid_format: true, error: be_present))
+        end
       end
     end
   end
