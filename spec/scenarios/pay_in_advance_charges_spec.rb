@@ -367,6 +367,103 @@ describe "Pay in advance charges Scenarios", transaction: false do
     end
   end
 
+  describe "with recurring unique_count_agg after renewal" do
+    let(:organization) do
+      create(:organization, webhook_url: nil, clickhouse_events_store: clickhouse_events_store)
+    end
+    let(:clickhouse_events_store) { false }
+    let(:plan) { create(:plan, organization:, amount_cents: 0, pay_in_advance: true) }
+    let(:billable_metric) do
+      create(:unique_count_billable_metric, :recurring, organization:, field_name: "user_id")
+    end
+    let(:charge) do
+      create(
+        :standard_charge,
+        :pay_in_advance,
+        invoiceable: true,
+        prorated: true,
+        plan:,
+        billable_metric:,
+        properties: {amount: "10"}
+      )
+    end
+    let(:subscription) { customer.subscriptions.sole }
+
+    before do
+      charge
+
+      travel_to(Time.utc(2026, 6, 5, 10)) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code
+          }
+        )
+        perform_billing
+      end
+
+      (1..7).each do |index|
+        travel_to(Time.utc(2026, 6, 10 + index, 10)) do
+          create_event(
+            {
+              code: billable_metric.code,
+              external_subscription_id: subscription.external_id,
+              properties: {user_id: "user_#{index}"}
+            }
+          )
+        end
+      end
+
+      travel_to(Time.utc(2026, 7, 1, 0, 10)) { perform_billing }
+    end
+
+    shared_examples "a period-start removal" do
+      it "does not bill an add below the units billed at the period start" do
+        renewal_fee = subscription.invoices.order(created_at: :desc).first.fees.where(charge:).sole
+        expect(renewal_fee).to have_attributes(units: 7, amount_cents: 7000)
+
+        inputs = [
+          {transaction_id: SecureRandom.uuid, user_id: "user_1", operation_type: "remove"},
+          {transaction_id: SecureRandom.uuid, user_id: "user_8", operation_type: "add"}
+        ]
+
+        inputs.each.with_index do |input, index|
+          travel_to(Time.utc(2026, 7, 2, 10, index)) do
+            create_event(
+              {
+                code: billable_metric.code,
+                transaction_id: input.fetch(:transaction_id),
+                external_subscription_id: subscription.external_id,
+                properties: input.slice(:user_id, :operation_type)
+              }
+            )
+          end
+        end
+
+        transaction_ids = inputs.pluck(:transaction_id)
+        fees = Fee.where(charge:, pay_in_advance_event_transaction_id: transaction_ids)
+          .index_by(&:pay_in_advance_event_transaction_id)
+        cached_aggregations = CachedAggregation.where(charge:, event_transaction_id: transaction_ids)
+          .index_by(&:event_transaction_id)
+
+        expect(transaction_ids.map { fees.fetch(it).amount_cents }).to eq([0, 0])
+        expect(transaction_ids.map do |transaction_id|
+          cached = cached_aggregations.fetch(transaction_id)
+          [cached.current_aggregation, cached.max_aggregation]
+        end).to eq([[6, 7], [7, 7]])
+      end
+    end
+
+    it_behaves_like "a period-start removal"
+
+    context "with ClickHouse-backed event aggregation", clickhouse: true do
+      let(:clickhouse_events_store) { true }
+
+      it_behaves_like "a period-start removal"
+    end
+  end
+
   describe "with unique_count_agg / percentage duplicate events" do
     subject(:event_fee_records) do
       inputs.each do |input|
