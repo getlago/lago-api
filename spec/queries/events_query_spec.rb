@@ -70,6 +70,68 @@ RSpec.describe EventsQuery do
         expect(result).to be_success
         expect(result.events.count).to eq(1)
       end
+
+      context "when the planner cannot scan the table", transaction: false do
+        let(:pagination) { {page: 1, limit: 100} }
+        # The statement total_count really runs, with its binds, so a change in how the
+        # pagination counts is still checked.
+        let(:count_query) do
+          queries = []
+          callback = ->(*, payload) { queries << payload if payload[:sql].match?(/\ASELECT COUNT\(.*FROM "events"/m) }
+          ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { events_query.call.events.total_count }
+          queries.sole
+        end
+        let(:page_sql) { events_query.call.events.to_sql }
+
+        # Session settings on the events pool: VACUUM cannot run in a transaction, and it sets
+        # the visibility map an index-only scan needs. Without sequential scans, the tiny test
+        # table leaves the planner the indexes only, and without sorts, only an ordered index.
+        around do |example|
+          Event.connection.execute("SET enable_seqscan = off")
+          Event.connection.execute("SET enable_sort = off")
+          example.run
+        ensure
+          Event.connection.execute("SET enable_seqscan = on")
+          Event.connection.execute("SET enable_sort = on")
+        end
+
+        before { Event.connection.execute("VACUUM ANALYZE events") }
+
+        def explain(sql, binds = []) = Event.connection.select_rows("EXPLAIN #{sql}", "EXPLAIN", binds).flatten.join("\n")
+
+        # The uncached total_count of the events index: reading the heap for every matching
+        # row to check deleted_at times out for codes with many events.
+        it "counts the events from the code index only" do
+          plan = explain(count_query[:sql], count_query[:binds])
+
+          expect(plan).to include("Index Only Scan using index_events_on_organization_id_code_and_timestamp on events")
+        end
+
+        # An Incremental Sort on the transaction_id tie-break is fine; a full Sort reads every matching row.
+        it "reads the page from the code index in timestamp order" do
+          plan = explain(page_sql)
+
+          expect(plan).to include("index_events_on_organization_id_code_and_timestamp")
+          expect(plan.lines.map(&:strip)).not_to include(a_string_matching(/\A(->\s+)?Sort  \(cost=/))
+        end
+
+        context "with a timestamp range" do
+          let(:filters) { {code: event.code, timestamp_from: 2.days.ago.to_date.iso8601, timestamp_to: Date.tomorrow.iso8601} }
+
+          it "counts the events from the code index only" do
+            plan = explain(count_query[:sql], count_query[:binds])
+
+            expect(plan).to include("Index Only Scan using index_events_on_organization_id_code_and_timestamp on events")
+          end
+
+          it "reads the page from the code index in timestamp order" do
+            plan = explain(page_sql)
+
+            expect(plan).to include("index_events_on_organization_id_code_and_timestamp")
+            expect(plan.lines.map(&:strip)).not_to include(a_string_matching(/\A(->\s+)?Sort  \(cost=/))
+          end
+        end
+      end
     end
 
     context "with external subscription id filter" do
