@@ -102,6 +102,8 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
   end
 
   context "with PaymentRequestsQuery" do
+    let(:default_scope) { ->(pagination) { PaymentRequestsQuery.call(organization:, pagination:).payment_requests } }
+
     let(:filtered_scope) do
       lambda do |pagination|
         PaymentRequestsQuery.call(
@@ -112,7 +114,7 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
       end
     end
 
-    it_behaves_like "a keyset-paginated query", table: "payment_requests"
+    it_behaves_like "a keyset-paginated query", table: "payment_requests", index: "index_payment_requests_by_cursor"
   end
 
   context "with PaymentsQuery" do
