@@ -1,10 +1,12 @@
 # frozen_string_literal: true
 
 module Api
-  # Its callbacks and rescues render errors with the renderers of each version: Api::V1Errors, which
-  # Api::V1::BaseController includes, or Api::V2Errors, whose base controller rescues a missing
-  # parameter itself.
+  # Abstract: its callbacks and rescues render errors with the renderers of each version, which it
+  # does not define. A controller inherits Api::V1::BaseController (Api::V1Errors) or
+  # Api::V2::BaseController (Api::V2Errors).
   class BaseController < ApplicationController
+    abstract!
+
     include Pagination
     include Common
 
@@ -21,7 +23,6 @@ module Api
     include Trackable
     include ApiLoggable
 
-    rescue_from ActionController::ParameterMissing, with: :bad_request_error
     # A number too large for its column (bigint amounts, integer terms) fails when it is saved.
     rescue_from ActiveModel::RangeError, ActiveRecord::RangeError, with: :value_out_of_range_error
 
