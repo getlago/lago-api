@@ -26,6 +26,20 @@ class RecurringAggregationSnapshot < ApplicationRecord
     markers = markers.where(to_datetime: ...before) if before
     where(charge_filter_id: bucket_ids).of_period(markers.order(to_datetime: :desc).limit(1).select(:to_datetime))
   }
+  # The snapshots of one group, plus one per bucket for the marker and the grouping keys check. A key left
+  # out matches every value, and a blank value matches a missing one, as the stores group them together.
+  scope :of_group, lambda { |grouped_by_values|
+    conditions = grouped_by_values.map do |key, value|
+      if value.to_s.strip.empty?
+        sanitize_sql_for_conditions(["COALESCE(TRIM(grouped_by ->> ?), '') = ''", key.to_s])
+      else
+        sanitize_sql_for_conditions(["grouped_by ->> ? = ?", key.to_s, value.to_s])
+      end
+    end
+    bucket_snapshots = select("DISTINCT ON (charge_filter_id) id").order(:charge_filter_id, :id)
+
+    where(id: bucket_snapshots).or(where(conditions.join(" AND ")))
+  }
 
   # Snapshots are keyed on a subscription, which billing segments do not bill
   def self.eligible?(metered_item:, billing_context:)
