@@ -113,7 +113,7 @@ RSpec.describe Api::V2::FeesController do
           subject
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:error_details]).to eq("#{column}_from": ["invalid_date"])
+          expect(json).to eq(code: "validation_errors", details: [{code: "invalid_date", field: "#{column}_from", meta: {}}])
         end
       end
     end
