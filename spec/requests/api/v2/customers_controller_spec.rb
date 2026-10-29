@@ -544,7 +544,10 @@ RSpec.describe Api::V2::CustomersController do
           request
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json).to eq(code: "provider_error", details: [{code: "provider_error", field: "base", meta: {provider_name: "stripe"}}])
+          expect(json).to eq(
+            code: "provider_error",
+            details: [{code: "provider_error", field: "base", meta: {provider_name: "stripe", provider_error_code: "resource_missing"}}]
+          )
         end
 
         context "when the provider refuses the key of the organization" do

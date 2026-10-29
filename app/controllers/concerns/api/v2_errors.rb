@@ -49,11 +49,23 @@ module Api
       # key of the request is fine, so not a 401: on v2, a 401 always means the Lago API key was refused.
       when BaseService::UnauthorizedFailure then render_v2_error(422, code: "provider_unauthorized")
       # A provider is named by its token, never by its message: a sentence of the provider's, which
-      # can echo the request.
+      # can echo the request. Its error code (resource_missing, card_declined) is a token of the
+      # provider's, which tells an input the client can fix from a failure to retry.
       when BaseService::ProviderFailure
-        render_provider_error(422, code: "provider_error", provider_name: error.provider.payment_type, provider_code: error.provider.code)
+        render_provider_error(
+          422,
+          code: "provider_error",
+          provider_name: error.provider.payment_type,
+          provider_code: error.provider.code,
+          provider_error_code: provider_error_code(error.original_error.try(:code))
+        )
       when BaseService::ThirdPartyFailure
-        render_provider_error(422, code: "provider_error", provider_name: error.third_party.to_s.downcase)
+        render_provider_error(
+          422,
+          code: "provider_error",
+          provider_name: error.third_party.to_s.downcase,
+          provider_error_code: provider_error_code(error.error_code)
+        )
       # throttle! names the provider with a Symbol.
       when BaseService::TooManyProviderRequestsFailure
         render_provider_error(429, code: "too_many_provider_requests", provider_name: error.provider_name&.to_s)
@@ -83,6 +95,13 @@ module Api
       details = filters.map { |filter, meta| error_detail(code: "value_is_invalid", field: filter, meta:) }
 
       render_v2_error(422, code: "validation_errors", details:)
+    end
+
+    # Some providers give an HTTP status instead of a token (Adyen, Cashfree, Flutterwave), which tells
+    # the client nothing the status of the response does not.
+    def provider_error_code(code)
+      code = code.to_s
+      code if code.match?(/\A[a-z][a-z0-9_]*\z/)
     end
 
     def render_provider_error(status, code:, **meta)

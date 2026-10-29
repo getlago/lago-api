@@ -69,7 +69,12 @@ RSpec.describe Api::V2Errors do
         when "third_party"
           result.third_party_failure!(third_party: "Stripe", error_code: "resource_missing", error_message: "No such customer: 'cus_unknown'")
         when "provider"
-          result.provider_failure!(provider: PaymentProviders::StripeProvider.new(code: "stripe_eu"), error: StandardError.new("Your card was declined."))
+          error = Stripe::CardError.new("Your card was declined.", nil, code: "card_declined")
+          result.provider_failure!(provider: PaymentProviders::StripeProvider.new(code: "stripe_eu"), error:)
+        when "third_party_status"
+          result.third_party_failure!(third_party: "Cashfree", error_code: "400", error_message: "Bad Request")
+        when "provider_without_code"
+          result.provider_failure!(provider: PaymentProviders::StripeProvider.new(code: "stripe_eu"), error: StandardError.new("timeout"))
         # A Symbol, as throttle! names the provider.
         when "too_many_requests"
           result.too_many_provider_requests_failure!(provider_name: :anrok, error: BaseService::ThrottlingError.new(provider_name: :anrok))
@@ -139,18 +144,50 @@ RSpec.describe Api::V2Errors do
   context "with a third party failure" do
     let(:failure) { "third_party" }
 
-    it "returns a provider error naming the third party by its token, without its message" do
+    it "returns a provider error naming the third party and its error code, without its message" do
       show
 
       expect(response).to have_http_status(:unprocessable_content)
-      expect(json).to eq(code: "provider_error", details: [{code: "provider_error", field: "base", meta: {provider_name: "stripe"}}])
+      expect(json).to eq(
+        code: "provider_error",
+        details: [{code: "provider_error", field: "base", meta: {provider_name: "stripe", provider_error_code: "resource_missing"}}]
+      )
     end
   end
 
   context "with a provider failure" do
     let(:failure) { "provider" }
 
-    it "returns a provider error naming the provider and its connection, without its error" do
+    it "returns a provider error naming the provider, its connection and its error code, without its message" do
+      show
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(json).to eq(
+        code: "provider_error",
+        details: [{
+          code: "provider_error",
+          field: "base",
+          meta: {provider_name: "stripe", provider_code: "stripe_eu", provider_error_code: "card_declined"}
+        }]
+      )
+    end
+  end
+
+  context "with a third party failure whose error code is an HTTP status" do
+    let(:failure) { "third_party_status" }
+
+    it "returns a provider error without the status as its error code" do
+      show
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(json).to eq(code: "provider_error", details: [{code: "provider_error", field: "base", meta: {provider_name: "cashfree"}}])
+    end
+  end
+
+  context "with a provider failure whose error has no code" do
+    let(:failure) { "provider_without_code" }
+
+    it "returns a provider error without an error code" do
       show
 
       expect(response).to have_http_status(:unprocessable_content)
