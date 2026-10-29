@@ -48,7 +48,7 @@ RSpec.describe ContractRateCards::DestroyService do
     expect(override.reload).to be_discarded
     expect(contract_rate_card.reload.rate_phases).to be_empty
     serialized_card = ::V2::ContractAppliedRateCardSerializer.new(contract_rate_card, root_name: "contract_rate_card").serialize
-    expect(serialized_card).to include(rate_phases_count: 0)
+    expect(serialized_card).not_to have_key(:rate_phases_count)
     expect(serialized_card).not_to have_key(:rate_phases)
   end
 

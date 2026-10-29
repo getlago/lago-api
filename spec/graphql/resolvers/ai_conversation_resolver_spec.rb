@@ -7,7 +7,7 @@ RSpec.describe Resolvers::AiConversationResolver do
   let_it_be(:user) { create_default(:user) }
   let(:required_permission) { "ai_conversations:view" }
   let(:organization) { membership.organization }
-  let(:ai_conversation) { create(:ai_conversation, organization:, mistral_conversation_id: "conv_123") }
+  let(:ai_conversation) { create(:ai_conversation, organization:, membership:, mistral_conversation_id: "conv_123") }
   let(:fetch_messages_service) { instance_double(AiConversations::FetchMessagesService) }
   let(:service_result) do
     result = AiConversations::FetchMessagesService::Result.new
@@ -119,6 +119,24 @@ RSpec.describe Resolvers::AiConversationResolver do
         )
 
         expect_graphql_error(result:, message: "Resource not found")
+      end
+    end
+
+    context "when ai conversation belongs to another member of the organization" do
+      let(:other_membership) { create(:membership, organization:, user: create(:user)) }
+      let(:other_ai_conversation) { create(:ai_conversation, organization:, membership: other_membership) }
+
+      it "returns a not found error" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query:,
+          variables: {id: other_ai_conversation.id}
+        )
+
+        expect_graphql_error(result:, message: "Resource not found")
+        expect(AiConversations::FetchMessagesService).not_to have_received(:call)
       end
     end
 

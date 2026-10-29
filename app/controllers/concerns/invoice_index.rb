@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 module InvoiceIndex
-  include Pagination
   extend ActiveSupport::Concern
 
   WHITELIST = [
@@ -35,8 +34,8 @@ module InvoiceIndex
     result = InvoicesQuery.call(
       organization: current_organization,
       pagination: {
-        page: params[:page],
-        limit: params[:per_page] || PER_PAGE
+        page: page_number,
+        limit: page_size
       },
       search_term: params[:search_term],
       filters: {
@@ -66,6 +65,7 @@ module InvoiceIndex
           :metadata,
           :applied_taxes,
           :billing_entity,
+          :organization,
           :applied_usage_thresholds,
           customer: [
             :billing_entity,

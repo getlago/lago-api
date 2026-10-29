@@ -11,7 +11,7 @@ module V2
         billing_interval_count: model.billing_interval_count,
         billing_interval_unit: model.billing_interval_unit,
         pricing_unit_conversion_rate: model.pricing_unit_conversion_rate,
-        deleted_at: model.deleted_at&.iso8601
+        deleted_at: format_time(model.deleted_at)
       }
     end
   end

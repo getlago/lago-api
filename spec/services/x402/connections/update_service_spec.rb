@@ -78,6 +78,61 @@ describe X402::Connections::UpdateService do
       end
     end
 
+    context "when only allowed_origins is sent" do
+      let(:params) { {allowed_origins: ["https://API.example.com/"]} }
+
+      it "saves the normalised list and keeps the rest" do
+        expect(result).to be_success
+        expect(connection.reload).to have_attributes(
+          name: "Coinbase CDP",
+          networks: ["eip155:84532", "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"],
+          payout_addresses: {
+            "evm" => evm_address,
+            "svm" => svm_address
+          },
+          allowed_origins: ["https://api.example.com"],
+          cdp_api_key_id:,
+          cdp_api_key_secret:
+        )
+      end
+
+      it "calls CDP for nothing" do
+        result
+        expect(a_request(:any, /api\.cdp\.coinbase\.com/)).not_to have_been_made
+      end
+    end
+
+    context "with a connection saved without allowed origins" do
+      let(:connection) do
+        create(
+          :x402_connection,
+          :without_allowed_origins,
+          organization:,
+          networks: ["eip155:84532", "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"],
+          payout_addresses: {"evm" => evm_address, "svm" => svm_address},
+          cdp_api_key_id:,
+          cdp_api_key_secret:
+        )
+      end
+
+      context "when only name is sent" do
+        it "fails and keeps the stored name" do
+          expect(result).not_to be_success
+          expect(result.error.messages).to eq(allowed_origins: ["value_is_mandatory"])
+          expect(connection.reload.name).to eq("Coinbase CDP")
+        end
+      end
+
+      context "when allowed_origins is sent" do
+        let(:params) { {allowed_origins: ["https://API.example.com/"]} }
+
+        it "saves the normalised list" do
+          expect(result).to be_success
+          expect(connection.reload.allowed_origins).to eq(["https://api.example.com"])
+        end
+      end
+    end
+
     context "when only cdp_api_key_secret is sent" do
       let(:rotated_signing_key) { OpenSSL::PKey.generate_key("ED25519") }
       let(:rotated_secret) { Base64.strict_encode64(rotated_signing_key.raw_private_key + rotated_signing_key.raw_public_key) }

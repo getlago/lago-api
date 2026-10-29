@@ -23,6 +23,10 @@ RSpec.describe SendHttpWebhookJob do
       it_behaves_like "a configurable queue", "webhook_worker_high_priority", "SIDEKIQ_WEBHOOK", "webhook" do
         let(:arguments) { create(:webhook, webhook_type: "alert.triggered") }
       end
+
+      it_behaves_like "a configurable queue", "webhook_alert_worker", "SIDEKIQ_WEBHOOK_ALERT", "webhook" do
+        let(:arguments) { create(:webhook, webhook_type: "alert.triggered") }
+      end
     end
   end
 

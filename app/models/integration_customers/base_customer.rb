@@ -18,6 +18,17 @@ module IntegrationCustomers
       IntegrationCustomers::AvalaraCustomer
     ].freeze
 
+    # Accepted `integration_type` values of the customer APIs.
+    CUSTOMER_TYPES = {
+      "netsuite" => "IntegrationCustomers::NetsuiteCustomer",
+      "okta" => "IntegrationCustomers::OktaCustomer",
+      "anrok" => "IntegrationCustomers::AnrokCustomer",
+      "avalara" => "IntegrationCustomers::AvalaraCustomer",
+      "xero" => "IntegrationCustomers::XeroCustomer",
+      "hubspot" => "IntegrationCustomers::HubspotCustomer",
+      "salesforce" => "IntegrationCustomers::SalesforceCustomer"
+    }.freeze
+
     CATEGORIES = {
       payment: "payment",
       tax: "tax",
@@ -62,24 +73,7 @@ module IntegrationCustomers
     settings_accessors :sync_with_provider
 
     def self.customer_type(type)
-      case type
-      when "netsuite"
-        "IntegrationCustomers::NetsuiteCustomer"
-      when "okta"
-        "IntegrationCustomers::OktaCustomer"
-      when "anrok"
-        "IntegrationCustomers::AnrokCustomer"
-      when "avalara"
-        "IntegrationCustomers::AvalaraCustomer"
-      when "xero"
-        "IntegrationCustomers::XeroCustomer"
-      when "hubspot"
-        "IntegrationCustomers::HubspotCustomer"
-      when "salesforce"
-        "IntegrationCustomers::SalesforceCustomer"
-      else
-        raise(NotImplementedError)
-      end
+      CUSTOMER_TYPES.fetch(type) { raise(NotImplementedError) }
     end
 
     def self.category_for(customer_type)

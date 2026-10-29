@@ -1175,6 +1175,7 @@ type AttributedUsage {
   groupBy: String!
   metadata: CollectionMetadata!
   rows: [AttributedUsageRow!]!
+  splitFiltersCount: Int
   subscriptionId: ID!
   toDatetime: ISO8601DateTime!
   totals: AttributedUsageAggregate!
@@ -1193,6 +1194,11 @@ type AttributedUsageAggregate {
   Null with the units basis
   """
   preciseAmountCents: Float
+
+  """
+  Units of the split charge over all its filters. Null without a split charge
+  """
+  splitChargeUnits: Float
 }
 
 enum AttributedUsageBasisEnum {
@@ -1245,6 +1251,11 @@ type AttributedUsageRow {
   Position of the value in the whole level
   """
   rank: Int!
+
+  """
+  Units of the split charge over all its filters. Null without a split charge
+  """
+  splitChargeUnits: Float
   value: String!
 }
 
@@ -4388,6 +4399,7 @@ type CreditNote {
   errorDetails: [ErrorDetail!]
   externalIntegrationId: String
   fileUrl: String
+  fileUrlExpiresAt: ISO8601DateTime
   id: ID!
   integrationSyncable: Boolean!
   invoice: Invoice
@@ -4410,6 +4422,7 @@ type CreditNote {
   updatedAt: ISO8601DateTime!
   voidedAt: ISO8601DateTime
   xmlUrl: String
+  xmlUrlExpiresAt: ISO8601DateTime
 }
 
 type CreditNoteAppliedTax implements AppliedTax {
@@ -5263,6 +5276,7 @@ type CurrentOrganization {
   defaultCurrency: CurrencyEnum!
   documentNumberPrefix: String!
   documentNumbering: DocumentNumberingEnum!
+  documentUrlExpirationDays: Int!
   email: String
   emailSettings: [EmailSettingsEnum!]
   euTaxManagement: Boolean!
@@ -6976,6 +6990,7 @@ enum EventCategoryEnum {
   ADD_ONS
   ALERTS
   BILLABLE_METRICS
+  CONTRACTS
   COUPONS
   CREDIT_NOTES
   CUSTOMERS
@@ -7012,6 +7027,7 @@ enum EventTypeEnum {
   add_on_created
   add_on_deleted
   add_on_updated
+  alert_resolved
   alert_triggered
   all
   billable_metric_created
@@ -7167,6 +7183,7 @@ enum FeatureFlagEnum {
   incremental_charge_cache
   multi_connection
   order_forms
+  persisted_recurring_values
   postgres_enriched_events
   product_catalog
   realtime_usage
@@ -7177,6 +7194,7 @@ enum FeatureFlagEnum {
   usage_prefilter_incremental
   usage_prefilter_short_cache
   wallet_traceability
+  x402_mainnet
   x402_payments
   x402_reservation_counter_disabled
 }
@@ -7987,6 +8005,7 @@ type Invoice {
   fees: [Fee!]
   feesAmountCents: BigInt!
   fileUrl: String
+  fileUrlExpiresAt: ISO8601DateTime
   id: ID!
   integrationHubspotSyncable: Boolean!
   integrationSalesforceSyncable: Boolean!
@@ -8033,6 +8052,7 @@ type Invoice {
   voidedAt: ISO8601DateTime
   voidedInvoiceId: String
   xmlUrl: String
+  xmlUrlExpiresAt: ISO8601DateTime
 }
 
 type InvoiceAppliedTax implements AppliedTax {
@@ -11237,6 +11257,7 @@ type OrderForm {
   quote: Quote!
   signedAt: ISO8601DateTime
   signedDocumentUrl: String
+  signedDocumentUrlExpiresAt: ISO8601DateTime
   status: OrderFormStatusEnum!
   updatedAt: ISO8601DateTime!
   voidReason: OrderFormVoidReasonEnum
@@ -11463,11 +11484,13 @@ PaymentReceipt
 type PaymentReceipt {
   createdAt: ISO8601DateTime!
   fileUrl: String
+  fileUrlExpiresAt: ISO8601DateTime
   id: ID!
   number: String!
   organization: Organization!
   payment: Payment!
   xmlUrl: String
+  xmlUrlExpiresAt: ISO8601DateTime
 }
 
 type PaymentRequest {
@@ -12500,6 +12523,11 @@ type Query {
     page: Int
     searchTerm: String
     splitChargeId: ID
+
+    """
+    Index of the first filter of the split charge to list
+    """
+    splitFiltersOffset: Int
     subscriptionId: ID!
 
     """
@@ -13271,7 +13299,7 @@ type Query {
   """
   Query rate cards of an organization
   """
-  rateCards(code: String, currency: CurrencyEnum, limit: Int, page: Int, productCategoryIds: [ID!], productCode: String, productFilterCode: String, productFilterIds: [ID!], productIds: [ID!], searchTerm: String, withoutProductCategory: Boolean): RateCardCollection!
+  rateCards(code: String, currency: CurrencyEnum, excludePricedOnContractId: ID, excludePricedOnPlanId: ID, limit: Int, page: Int, productCategoryIds: [ID!], productCode: String, productFilterCode: String, productFilterIds: [ID!], productIds: [ID!], searchTerm: String, withoutProductCategory: Boolean): RateCardCollection!
 
   """
   Query a single role
@@ -16376,6 +16404,7 @@ input UpdateOrganizationInput {
   defaultCurrency: CurrencyEnum
   documentNumberPrefix: String
   documentNumbering: DocumentNumberingEnum
+  documentUrlExpirationDays: Int
   email: String
   emailSettings: [EmailSettingsEnum!]
   euTaxManagement: Boolean

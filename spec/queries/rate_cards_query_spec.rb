@@ -142,6 +142,75 @@ RSpec.describe RateCardsQuery do
     end
   end
 
+  context "with an exclude_priced_on_plan_id filter" do
+    let(:catalog_plan) { create(:catalog_plan, organization:) }
+    let(:item_filter) { create(:product_filter, organization:, product:) }
+    let!(:filtered_card) { create(:rate_card, organization:, product:, product_filter: item_filter, code: "filtered") }
+    let(:priced_card) { create(:rate_card, organization:, product:, code: "priced") }
+    let(:filters) { {exclude_priced_on_plan_id: catalog_plan.id} }
+
+    before { create(:plan_rate_card, organization:, catalog_plan:, rate_card: priced_card) }
+
+    it "excludes the cards of the slices the plan prices" do
+      expect(result.rate_cards).to match_array([filtered_card, card_two])
+    end
+
+    context "when the plan prices a product filter" do
+      let(:priced_card) { create(:rate_card, organization:, product:, product_filter: item_filter, code: "priced") }
+
+      it "excludes only the cards of that product filter" do
+        expect(result.rate_cards).to match_array([card_one, card_two])
+      end
+    end
+
+    context "when another plan prices the slice" do
+      let(:filters) { {exclude_priced_on_plan_id: create(:catalog_plan, organization:).id} }
+
+      it "excludes no card" do
+        expect(result.rate_cards).to match_array([card_one, card_two, filtered_card, priced_card])
+      end
+    end
+
+    context "when the applied card is deleted" do
+      before { PlanRateCard.find_by!(rate_card: priced_card).discard! }
+
+      it "excludes no card" do
+        expect(result.rate_cards).to match_array([card_one, card_two, filtered_card, priced_card])
+      end
+    end
+
+    context "when the plan belongs to another organization" do
+      let(:catalog_plan) { create(:catalog_plan, organization: create(:organization)) }
+
+      it "returns a not found error" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.error_code).to eq("plan_not_found")
+      end
+    end
+  end
+
+  context "with an exclude_priced_on_contract_id filter" do
+    let(:contract) { create(:contract, customer: create(:customer, organization:)) }
+    let(:filters) { {exclude_priced_on_contract_id: contract.id} }
+
+    before { create(:contract_rate_card, organization:, contract:, rate_card: create(:rate_card, organization:, product:, code: "priced")) }
+
+    it "excludes the cards of the slices the contract prices" do
+      expect(result.rate_cards).to eq([card_two])
+    end
+
+    context "when the contract belongs to another organization" do
+      let(:contract) { create(:contract, customer: create(:customer, organization: create(:organization))) }
+
+      it "returns a not found error" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.error_code).to eq("contract_not_found")
+      end
+    end
+  end
+
   context "with pagination" do
     let(:pagination) { {page: 1, limit: 1} }
 

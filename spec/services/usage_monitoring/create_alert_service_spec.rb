@@ -226,6 +226,38 @@ RSpec.describe UsageMonitoring::CreateAlertService do
         expect(result.alert.thresholds.sole.notify_on).to eq(%w[triggered])
       end
 
+      it "falls back to the default when recurring is explicitly null" do
+        params = base.merge(thresholds: [{code: "warn", value: 10, recurring: nil}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_success
+        expect(result.alert.thresholds.sole.recurring).to eq(false)
+      end
+
+      it "falls back to the default when recurring is blank" do
+        params = base.merge(thresholds: [{code: "warn", value: 10, recurring: ""}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_success
+        expect(result.alert.thresholds.sole.recurring).to eq(false)
+      end
+
+      it "keeps an explicit false recurring" do
+        params = base.merge(thresholds: [{code: "warn", value: 10, recurring: "false"}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_success
+        expect(result.alert.thresholds.sole.recurring).to eq(false)
+      end
+
+      it "keeps an explicit true recurring" do
+        params = base.merge(thresholds: [{code: "warn", value: 10}, {value: 5, recurring: true}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_success
+        expect(result.alert.thresholds.pluck(:code, :recurring)).to contain_exactly(["warn", false], [nil, true])
+      end
+
       it "rejects an explicitly emptied list" do
         params = base.merge(thresholds: [{code: "warn", value: 10, notify_on: []}])
         result = described_class.call(organization:, alertable: subscription, params:)
@@ -447,6 +479,107 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       end
     end
 
+    context "when the usage is already past a line at creation", :premium do
+      let(:thresholds) { [{code: "warning", value: 80, notify_on: %w[triggered resolved]}, {code: "critical", value: 120}] }
+      let(:usage) { Struct.new(:amount_cents).new(100) }
+
+      before do
+        allow(::Invoices::CustomerUsageService).to receive(:call).and_return(::Invoices::CustomerUsageService::Result.new.tap { it.usage = usage })
+      end
+
+      it "takes the usage as baseline and records the opted-in line silently" do
+        freeze_time do
+          expect(result).to be_success
+          expect(result.alert).to have_attributes(previous_value: 100, last_processed_at: Time.current)
+
+          seeded = result.alert.all_triggered_alerts.sole
+          expect(seeded).to be_seeded
+          expect(seeded.crossed_thresholds.map { it["code"] }).to eq(%w[warning])
+          expect(SendWebhookJob).not_to have_been_enqueued
+        end
+      end
+
+      context "when the usage cannot be built" do
+        before do
+          allow(::Invoices::CustomerUsageService).to receive(:call)
+            .and_return(::Invoices::CustomerUsageService::Result.new.tap { it.not_found_failure!(resource: "customer") })
+        end
+
+        it "creates the alert without a baseline" do
+          expect(result).to be_success
+          expect(result.alert).to have_attributes(previous_value: 0, last_processed_at: nil)
+          expect(result.alert.all_triggered_alerts).to be_empty
+        end
+      end
+
+      context "when the subscription is pending" do
+        let(:subscription) { create(:subscription, :pending, organization:) }
+
+        it "does not build the usage" do
+          expect(result).to be_success
+          expect(::Invoices::CustomerUsageService).not_to have_received(:call)
+          expect(result.alert.previous_value).to eq(0)
+        end
+      end
+
+      context "when the license is not premium" do
+        before { allow(License).to receive(:premium?).and_return(false) }
+
+        it "does not build the usage, since the alert is never evaluated" do
+          expect(result).to be_success
+          expect(::Invoices::CustomerUsageService).not_to have_received(:call)
+          expect(result.alert.previous_value).to eq(0)
+        end
+      end
+    end
+
+    context "when a billable metric lifetime usage alert is created past a line", :premium do
+      let(:premium_integrations) { ["granular_lifetime_usage"] }
+      let(:billable_metric) { create(:billable_metric, organization:) }
+      let(:charge) { create(:standard_charge, organization:, plan: subscription.plan, billable_metric:) }
+      let(:params) { {alert_type: "billable_metric_lifetime_usage_units", billable_metric_id: billable_metric.id, thresholds:, code: "units"} }
+      let(:thresholds) { [{code: "warning", value: 80, notify_on: %w[triggered resolved]}] }
+      let(:usage) { Struct.new(:fees).new([Struct.new(:charge_id, :units).new(charge.id, 90)]) }
+
+      before do
+        allow(::Invoices::CustomerUsageService).to receive(:call).and_return(::Invoices::CustomerUsageService::Result.new.tap { it.usage = usage })
+      end
+
+      it "takes the usage of the metric since the start of the subscription as baseline" do
+        expect(result).to be_success
+        expect(result.alert.previous_value).to eq(90)
+        expect(result.alert.all_triggered_alerts.sole).to be_seeded
+        expect(::Invoices::CustomerUsageService).to have_received(:call)
+          .with(hash_including(usage_filters: have_attributes(full_usage: true, filter_by_charge_id: [charge.id])))
+      end
+
+      context "when the metric is not charged by the plan" do
+        let(:usage) { nil }
+
+        before { charge.discard }
+
+        it "does not build the usage" do
+          expect(result).to be_success
+          expect(::Invoices::CustomerUsageService).not_to have_received(:call)
+          expect(result.alert.previous_value).to eq(0)
+        end
+      end
+    end
+
+    context "when a lifetime usage alert is created past a line", :premium do
+      let(:premium_integrations) { ["lifetime_usage"] }
+      let(:params) { {alert_type: "lifetime_usage_amount", thresholds:, code: "lifetime"} }
+      let(:thresholds) { [{code: "warning", value: 80, notify_on: %w[triggered resolved]}] }
+
+      before { create(:lifetime_usage, organization:, subscription:, historical_usage_amount_cents: 90) }
+
+      it "takes the lifetime usage as baseline" do
+        expect(result).to be_success
+        expect(result.alert.previous_value).to eq(90)
+        expect(result.alert.all_triggered_alerts.sole).to be_seeded
+      end
+    end
+
     context "when direction is :decreasing" do
       subject(:result) { described_class.call(organization:, alertable: wallet, params:) }
 
@@ -468,6 +601,30 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       it "sets direction to decreasing for wallet alerts" do
         expect(result).to be_success
         expect(result.alert.direction).to eq("decreasing")
+      end
+
+      context "when a watched line is already past at creation" do
+        let(:wallet) { create(:wallet, organization:, balance_cents: 0) }
+        let(:thresholds) { [{code: "critical", value: 0, notify_on: %w[triggered resolved]}, {code: "warn", value: 100}] }
+
+        it "records a silent alarm so the first top-up can announce" do
+          expect(result).to be_success
+
+          seeded = result.alert.all_triggered_alerts.sole
+          expect(seeded).to be_seeded
+          expect(seeded.crossed_thresholds.map { it["code"] }).to eq(%w[critical])
+          expect(SendWebhookJob).not_to have_been_enqueued
+        end
+      end
+
+      context "when a watched line is not yet past at creation" do
+        let(:wallet) { create(:wallet, organization:, balance_cents: 5000) }
+        let(:thresholds) { [{code: "critical", value: 0, notify_on: %w[triggered resolved]}] }
+
+        it "records nothing" do
+          expect(result).to be_success
+          expect(result.alert.all_triggered_alerts).to be_empty
+        end
       end
 
       it "inserts the alert before locking the wallet, so balance updates cannot race the baseline" do

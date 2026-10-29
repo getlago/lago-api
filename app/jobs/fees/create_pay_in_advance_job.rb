@@ -9,6 +9,7 @@ module Fees
     RETRY_JITTER = 1..15
 
     retry_on BaseService::ThrottlingError, wait: :polynomially_longer, attempts: 25
+    retry_on BaseLockService::FailedToAcquireLock, attempts: MAX_LOCK_RETRY_ATTEMPTS, wait: random_lock_retry_delay
 
     # Increasing backoff (a few seconds, then longer and longer) plus jitter, to give
     # Clickhouse time to recover from too many high-usage parallel calls.

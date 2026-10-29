@@ -72,8 +72,8 @@ RSpec.describe SendWebhookJob do
       after { ENV.delete("SIDEKIQ_WEBHOOK") }
 
       it "uses the high priority queue for usage webhooks" do
-        expect(%w[alert.triggered subscription.usage_threshold_reached wallet.depleted_ongoing_balance].map { described_class.queue_for(it) })
-          .to eq(%i[webhook_worker_high_priority webhook_worker_high_priority webhook_worker_high_priority])
+        expect(%w[alert.triggered alert.resolved subscription.usage_threshold_reached wallet.depleted_ongoing_balance].map { described_class.queue_for(it) })
+          .to eq(%i[webhook_worker_high_priority webhook_worker_high_priority webhook_worker_high_priority webhook_worker_high_priority])
       end
 
       it "uses the webhook_worker queue for other webhook types" do
@@ -88,6 +88,35 @@ RSpec.describe SendWebhookJob do
       it "enqueues other webhooks on the webhook_worker queue" do
         expect { described_class.perform_later("invoice.created", invoice) }
           .to have_enqueued_job(described_class).on_queue("webhook_worker")
+      end
+    end
+
+    context "when SIDEKIQ_WEBHOOK_ALERT is true" do
+      before { ENV["SIDEKIQ_WEBHOOK_ALERT"] = "true" }
+      after { ENV.delete("SIDEKIQ_WEBHOOK_ALERT") }
+
+      it "uses the webhook_alert_worker queue for usage webhooks" do
+        expect(%w[alert.triggered subscription.usage_threshold_reached wallet.depleted_ongoing_balance].map { described_class.queue_for(it) })
+          .to eq(%i[webhook_alert_worker webhook_alert_worker webhook_alert_worker])
+      end
+
+      it "uses the webhook queue for other webhook types" do
+        expect(described_class.queue_for("invoice.created")).to eq(:webhook)
+      end
+
+      context "when SIDEKIQ_WEBHOOK is true" do
+        before { ENV["SIDEKIQ_WEBHOOK"] = "true" }
+        after { ENV.delete("SIDEKIQ_WEBHOOK") }
+
+        it "keeps usage webhooks on the webhook_alert_worker queue" do
+          expect([described_class.queue_for("alert.triggered"), described_class.queue_for("invoice.created")])
+            .to eq(%i[webhook_alert_worker webhook_worker])
+        end
+      end
+
+      it "enqueues alert webhooks on the webhook_alert_worker queue" do
+        expect { described_class.perform_later("alert.triggered", triggered_alert) }
+          .to have_enqueued_job(described_class).on_queue("webhook_alert_worker")
       end
     end
   end
@@ -542,10 +571,20 @@ RSpec.describe SendWebhookJob do
       end
     end
 
-    context "with not implemented webhook type" do
-      it "raises a NotImplementedError" do
-        expect { send_webhook_job.perform_now(:subscription, invoice) }
-          .to raise_error(NotImplementedError)
+    context "with a webhook type this process does not know" do
+      it "retries the job instead of dropping the event" do
+        expect { send_webhook_job.perform_now("unknown.type", invoice) }
+          .to have_enqueued_job(described_class).with("unknown.type", invoice)
+      end
+
+      context "when the last attempt fails" do
+        let(:job) { described_class.new("unknown.type", invoice) }
+
+        before { job.exception_executions["[SendWebhookJob::UnknownWebhookTypeError]"] = 4 }
+
+        it "gives up" do
+          expect { job.perform_now }.to raise_error(SendWebhookJob::UnknownWebhookTypeError, "unknown.type")
+        end
       end
     end
 

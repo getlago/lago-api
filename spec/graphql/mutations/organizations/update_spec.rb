@@ -29,6 +29,7 @@ RSpec.describe Mutations::Organizations::Update do
           documentNumbering
           documentNumberPrefix
           finalizeZeroAmountInvoice
+          documentUrlExpirationDays
           billingConfiguration {
             invoiceFooter,
             invoiceGracePeriod,
@@ -68,6 +69,7 @@ RSpec.describe Mutations::Organizations::Update do
           webhookUrl: "https://app.test.dev",
           documentNumberPrefix: "ORG-2",
           finalizeZeroAmountInvoice: false,
+          documentUrlExpirationDays: 90,
           billingConfiguration: {
             invoiceFooter: "invoice footer",
             documentLocale: "fr"
@@ -99,6 +101,7 @@ RSpec.describe Mutations::Organizations::Update do
     expect(result_data["euTaxManagement"]).to be_truthy
     expect(result_data["timezone"]).to eq("TZ_UTC")
     expect(result_data["finalizeZeroAmountInvoice"]).to be false
+    expect(result_data["documentUrlExpirationDays"]).to eq(90)
   end
 
   context "without organization:update" do

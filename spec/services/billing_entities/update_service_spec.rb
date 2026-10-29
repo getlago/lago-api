@@ -347,6 +347,19 @@ RSpec.describe BillingEntities::UpdateService do
         expect(result.billing_entity.selected_invoice_custom_sections).to contain_exactly(invoice_custom_section_1, invoice_custom_section_2)
       end
 
+      context "with a foreign section id" do
+        let(:foreign_section) { create(:invoice_custom_section, organization: create(:organization)) }
+        let(:params) { {invoice_custom_section_ids: [invoice_custom_section_1.id, foreign_section.id]} }
+
+        it "assigns only the organization's section" do
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(result.billing_entity.selected_invoice_custom_sections).to eq([invoice_custom_section_1])
+          expect(foreign_section.billing_entity_applied_invoice_custom_sections).to be_empty
+        end
+      end
+
       context "when removing a section" do
         let(:params) { {invoice_custom_section_ids: [invoice_custom_section_1.id]} }
 
@@ -394,6 +407,31 @@ RSpec.describe BillingEntities::UpdateService do
           result = update_service.call
 
           expect(result.billing_entity.selected_invoice_custom_sections).to contain_exactly(invoice_custom_section_1, invoice_custom_section_2)
+        end
+
+        context "with a foreign section sharing the code" do
+          let(:foreign_section) { create(:invoice_custom_section, organization: create(:organization), code: invoice_custom_section_1.code) }
+
+          before { foreign_section }
+
+          it "assigns only the organization's sections" do
+            result = update_service.call
+
+            expect(result).to be_success
+            expect(result.billing_entity.selected_invoice_custom_sections).to match_array([invoice_custom_section_1, invoice_custom_section_2])
+            expect(foreign_section.billing_entity_applied_invoice_custom_sections).to be_empty
+          end
+        end
+
+        context "with unknown section codes" do
+          let(:params) { {invoice_custom_section_codes: [invoice_custom_section_1.code, "unknown"]} }
+
+          it "keeps ignoring unknown codes for existing callers" do
+            result = update_service.call
+
+            expect(result).to be_success
+            expect(result.billing_entity.selected_invoice_custom_sections).to eq([invoice_custom_section_1])
+          end
         end
 
         context "when removing a section" do

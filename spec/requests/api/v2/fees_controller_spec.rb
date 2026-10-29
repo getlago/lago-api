@@ -119,7 +119,7 @@ RSpec.describe Api::V2::FeesController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json.dig(:error_details, :payment_status)).to eq(["value_is_invalid"])
+        expect(json[:details]).to eq([{code: "value_is_invalid", field: "payment_status", meta: {}}])
       end
     end
 
@@ -147,13 +147,35 @@ RSpec.describe Api::V2::FeesController do
       expect(json[:fee]).to include(lago_id: fee.id, lago_invoice_id: invoice.id, billing_timing: "arrears")
     end
 
+    context "with timestamps between two seconds" do
+      let(:fee) do
+        create(
+          :fee,
+          fee_attributes.merge(
+            created_at: Time.zone.parse("2026-10-01T08:30:00.123456Z"),
+            properties: {"from_datetime" => "2026-10-01T00:00:00.000Z", "to_datetime" => "2026-10-31T23:59:59.999Z"}
+          )
+        )
+      end
+
+      it "returns them to the microsecond, the billed period as its properties store it" do
+        subject
+
+        expect(json[:fee]).to include(
+          from_datetime: "2026-10-01T00:00:00.000000Z",
+          to_datetime: "2026-10-31T23:59:59.999000Z",
+          created_at: "2026-10-01T08:30:00.123456Z"
+        )
+      end
+    end
+
     context "when the fee is a legacy one" do
       let(:fee_id) { legacy_fee.id }
 
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("fee")
+        expect(response).to be_v2_not_found_error("fee")
       end
     end
 
@@ -163,7 +185,7 @@ RSpec.describe Api::V2::FeesController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("fee")
+        expect(response).to be_v2_not_found_error("fee")
       end
     end
   end
@@ -181,7 +203,7 @@ RSpec.describe Api::V2::FeesController do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:fee]).to include(lago_id: fee.id, payment_status: "succeeded", succeeded_at: Time.current.iso8601, billing_timing: "arrears")
+        expect(json[:fee]).to include(lago_id: fee.id, payment_status: "succeeded", succeeded_at: Time.current.iso8601(6), billing_timing: "arrears")
         expect(fee.reload).to be_payment_succeeded
       end
     end
@@ -192,7 +214,7 @@ RSpec.describe Api::V2::FeesController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("fee")
+        expect(response).to be_v2_not_found_error("fee")
         expect(legacy_fee.reload).to be_payment_pending
       end
     end
@@ -203,8 +225,8 @@ RSpec.describe Api::V2::FeesController do
       it "returns a not allowed error" do
         subject
 
-        expect(response).to have_http_status(:method_not_allowed)
-        expect(json[:code]).to eq("invoiced_fee")
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "invoiced_fee", details: [])
         expect(fee.reload).to be_payment_pending
       end
     end
@@ -216,7 +238,19 @@ RSpec.describe Api::V2::FeesController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json.dig(:error_details, :payment_status)).to eq(["value_is_invalid"])
+        expect(json[:details]).to eq([{code: "value_is_invalid", field: "payment_status", meta: {}}])
+      end
+    end
+
+    context "with a payment status that is not a string" do
+      let(:payment_status) { 1 }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "payment_status", meta: {}}])
+        expect(fee.reload).to be_payment_pending
       end
     end
 
@@ -228,10 +262,8 @@ RSpec.describe Api::V2::FeesController do
 
         expect(response).to have_http_status(:bad_request)
         expect(json).to eq(
-          status: 400,
-          error: "Bad Request",
           code: "missing_parameter",
-          error_details: {fee: {reason: "missing"}}
+          details: [{code: "missing", field: "fee", meta: {}}]
         )
       end
     end
@@ -258,7 +290,7 @@ RSpec.describe Api::V2::FeesController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("fee")
+        expect(response).to be_v2_not_found_error("fee")
         expect(legacy_fee.reload).to be_kept
       end
     end
@@ -269,8 +301,8 @@ RSpec.describe Api::V2::FeesController do
       it "returns a not allowed error" do
         subject
 
-        expect(response).to have_http_status(:method_not_allowed)
-        expect(json[:code]).to eq("invoiced_fee")
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "invoiced_fee", details: [])
         expect(fee.reload).to be_kept
       end
     end
@@ -290,6 +322,7 @@ RSpec.describe Api::V2::FeesController do
       expect(response).to have_http_status(:ok)
       expect(json[:fee].keys.last(7)).to eq(names.map(&:to_sym))
       expect(json[:fee][:applied_taxes].map { it[:lago_tax_id] }).to eq([tax.id])
+      expect(json[:fee][:applied_taxes].sole.values_at(:created_at, :updated_at)).to all(match(/\.\d{6}Z\z/))
       expect(json[:fee][:product][:lago_id]).to eq(fee.invoiceable_id)
       expect(json[:fee][:rate_card][:lago_id]).to eq(contract_rate_card.rate_card_id)
       expect(json[:fee][:rate][:lago_id]).to eq(rate_card_rate.id)
@@ -316,8 +349,16 @@ RSpec.describe Api::V2::FeesController do
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("invalid_expand")
-        expect(json[:error_details][:expands]).to include(invalid_values: %w[subscription])
-        expect(json[:error_details][:expands][:allowed_values]).to include("applied_taxes", "customer")
+        expect(json[:details]).to eq([
+          {
+            code: "invalid_expand",
+            field: "expands",
+            meta: {
+              invalid_values: %w[subscription],
+              allowed_values: %w[applied_taxes invoice product product_filter rate_card rate contract customer]
+            }
+          }
+        ])
       end
     end
 
@@ -329,7 +370,7 @@ RSpec.describe Api::V2::FeesController do
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("expand_not_supported")
-        expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: %w[applied_taxes]})
+        expect(json[:details]).to eq([{code: "action_not_expandable", field: "expands", meta: {invalid_values: %w[applied_taxes]}}])
       end
     end
 

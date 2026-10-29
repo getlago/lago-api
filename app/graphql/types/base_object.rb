@@ -20,5 +20,19 @@ module Types
         end
       end
     end
+
+    # Defines field methods that batch an association through `Sources::ActiveRecordAssociation`
+    # before calling the model method of the same name, for model methods that read it.
+    #
+    # Usage:
+    #   dataload_association_for :organization, :file_url, :xml_url
+    def self.dataload_association_for(association, *fields)
+      fields.each do |field|
+        define_method(field) do
+          dataloader.with(Sources::ActiveRecordAssociation, association).load(object)
+          object.public_send(field)
+        end
+      end
+    end
   end
 end

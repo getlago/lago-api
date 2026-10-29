@@ -11,7 +11,8 @@ RSpec.describe Api::Serializable do
   let(:product_category) { create(:product_category, organization:) }
   let(:product) { create(:product, organization:, product_category:) }
   let(:expands) { nil }
-  let(:product_category_payload) { ::V2::ProductCategorySerializer.new(product_category).serialize }
+  let(:serializer_options) { {} }
+  let(:product_category_payload) { ::V2::ProductCategorySerializer.new(product_category, includes: %i[usec_timestamps]).serialize }
 
   # Two expansions, so that their order and a repeated key can be told apart.
   let(:serializer) do
@@ -45,11 +46,12 @@ RSpec.describe Api::Serializable do
 
   before do
     serializer = self.serializer
+    serializer_options = self.serializer_options
 
     stub_const("Api::V2::SerializableTestsController", Class.new(Api::V2::BaseController) do
       cursor_paginated_index(Product)
       # An anonymous class has no controller name to take the root from.
-      serializable_with(serializer, root: :product, expand_on: %i[show update])
+      serializable_with(serializer, root: :product, expand_on: %i[show update], serializer_options:)
 
       # A lookup of the controller's own, like those of the v2 controllers.
       before_action(only: %i[show update]) { not_found_error(resource: "product") unless product }
@@ -134,6 +136,35 @@ RSpec.describe Api::Serializable do
     expect(json).to eq(product: {code: product.code})
   end
 
+  context "with serializer options" do
+    let(:serializer_options) { {include_name: true} }
+    let(:serializer) do
+      Class.new(ModelSerializer) do
+        def serialize
+          payload = {code: model.code}
+          payload[:name] = model.name if options[:include_name]
+          payload
+        end
+      end
+    end
+
+    it "passes the options when rendering a record" do
+      show
+
+      expect(response).to have_http_status(:success)
+      expect(json).to eq(product: {code: product.code, name: product.name})
+    end
+
+    it "passes the options when rendering a collection" do
+      product
+
+      get_with_token(organization, "/api/v2/serializable_tests")
+
+      expect(response).to have_http_status(:success)
+      expect(json).to eq(products: [{code: product.code, name: product.name}], meta: {next_cursor: nil, prev_cursor: nil})
+    end
+  end
+
   context "with an expansion" do
     let(:expands) { ["product_category"] }
 
@@ -151,6 +182,38 @@ RSpec.describe Api::Serializable do
         show
 
         expect(json).to eq(product: {code: product.code, product_category: nil})
+      end
+    end
+  end
+
+  # Webhooks and activity logs build the same serializers without it, and keep whole seconds.
+  context "with a serializer that reads the timestamp precision" do
+    let(:expands) { ["product_category"] }
+    let(:serializer) do
+      category_serializer = Class.new(ModelSerializer) { def serialize = {usec_timestamps: include?(:usec_timestamps)} }
+
+      Class.new(ModelSerializer) do
+        expandable :product_category, serializer: category_serializer
+
+        def serialize = {code: model.code, usec_timestamps: include?(:usec_timestamps)}
+      end
+    end
+
+    it "passes usec_timestamps to the record and to its expansion" do
+      show
+
+      expect(json).to eq(product: {code: product.code, usec_timestamps: true, product_category: {usec_timestamps: true}})
+    end
+
+    context "with a list" do
+      subject(:index) { get_with_token(organization, "/api/v2/serializable_tests") }
+
+      before { product }
+
+      it "passes usec_timestamps to every record" do
+        index
+
+        expect(json[:products]).to eq([{code: product.code, usec_timestamps: true}])
       end
     end
   end
@@ -174,7 +237,7 @@ RSpec.describe Api::Serializable do
       show
 
       expect(response).to have_http_status(:bad_request)
-      expect(json[:error_details]).to eq(expands: {reason: "malformed", allowed_values: %w[product_category billable_metric]})
+      expect(json[:details]).to eq([{code: "malformed", field: "expands", meta: {allowed_values: %w[product_category billable_metric]}}])
     end
   end
 
@@ -228,10 +291,8 @@ RSpec.describe Api::Serializable do
 
       expect(response).to have_http_status(:bad_request)
       expect(json).to eq(
-        status: 400,
-        error: "Bad Request",
         code: "invalid_expand",
-        error_details: {expands: {invalid_values: ["fees"], allowed_values: %w[product_category billable_metric]}}
+        details: [{code: "invalid_expand", field: "expands", meta: {invalid_values: ["fees"], allowed_values: %w[product_category billable_metric]}}]
       )
     end
   end
@@ -240,6 +301,7 @@ RSpec.describe Api::Serializable do
     "a dotted path" => [["product_category.billable_metric"], ["product_category.billable_metric"]],
     "comma-separated names" => [["product_category,billable_metric"], ["product_category,billable_metric"]],
     "a name in another case" => [["Product_Category"], ["Product_Category"]],
+    "the internal usec_timestamps include" => [["usec_timestamps"], ["usec_timestamps"]],
     "valid and invalid names" => [["product_category", " fees ", "billable_metric"], ["fees"]]
   }.each do |description, (value, invalid_values)|
     context "with #{description}" do
@@ -250,7 +312,7 @@ RSpec.describe Api::Serializable do
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("invalid_expand")
-        expect(json[:error_details]).to eq(expands: {invalid_values:, allowed_values: %w[product_category billable_metric]})
+        expect(json[:details]).to eq([{code: "invalid_expand", field: "expands", meta: {invalid_values:, allowed_values: %w[product_category billable_metric]}}])
       end
     end
   end
@@ -261,7 +323,7 @@ RSpec.describe Api::Serializable do
     it "returns it once" do
       show
 
-      expect(json[:error_details]).to eq(expands: {invalid_values: ["fees"], allowed_values: %w[product_category billable_metric]})
+      expect(json[:details]).to eq([{code: "invalid_expand", field: "expands", meta: {invalid_values: ["fees"], allowed_values: %w[product_category billable_metric]}}])
     end
   end
 
@@ -280,7 +342,7 @@ RSpec.describe Api::Serializable do
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("invalid_expand")
-        expect(json[:error_details]).to eq(expands: {reason: "malformed", allowed_values: %w[product_category billable_metric]})
+        expect(json[:details]).to eq([{code: "malformed", field: "expands", meta: {allowed_values: %w[product_category billable_metric]}}])
       end
     end
   end
@@ -293,7 +355,7 @@ RSpec.describe Api::Serializable do
       show
 
       expect(response).to have_http_status(:bad_request)
-      expect(json[:error_details]).to eq(expands: {reason: "malformed", allowed_values: %w[product_category billable_metric]})
+      expect(json[:details]).to eq([{code: "malformed", field: "expands", meta: {allowed_values: %w[product_category billable_metric]}}])
     end
   end
 
@@ -305,7 +367,7 @@ RSpec.describe Api::Serializable do
         create_request
 
         expect(response).to have_http_status(:bad_request)
-        expect(json[:error_details]).to eq(expands: {reason: "malformed", allowed_values: []})
+        expect(json[:details]).to eq([{code: "malformed", field: "expands", meta: {allowed_values: []}}])
       end
     end
   end
@@ -318,10 +380,8 @@ RSpec.describe Api::Serializable do
 
       expect(response).to have_http_status(:bad_request)
       expect(json).to eq(
-        status: 400,
-        error: "Bad Request",
         code: "expand_not_supported",
-        error_details: {expands: {reason: "action_not_expandable", invalid_values: ["product_category"]}}
+        details: [{code: "action_not_expandable", field: "expands", meta: {invalid_values: ["product_category"]}}]
       )
     end
   end
@@ -334,7 +394,7 @@ RSpec.describe Api::Serializable do
 
       expect(response).to have_http_status(:bad_request)
       expect(json[:code]).to eq("expand_not_supported")
-      expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: ["product_category"]})
+      expect(json[:details]).to eq([{code: "action_not_expandable", field: "expands", meta: {invalid_values: ["product_category"]}}])
     end
   end
 
@@ -357,7 +417,7 @@ RSpec.describe Api::Serializable do
 
       expect(response).to have_http_status(:bad_request)
       expect(json[:code]).to eq("expand_not_supported")
-      expect(json[:error_details]).to eq(expands: {reason: "not_expandable", invalid_values: ["product_category"]})
+      expect(json[:details]).to eq([{code: "not_expandable", field: "expands", meta: {invalid_values: ["product_category"]}}])
     end
   end
 
@@ -368,7 +428,7 @@ RSpec.describe Api::Serializable do
       show
 
       expect(response).to have_http_status(:bad_request)
-      expect(json[:error_details]).to eq(expands: {reason: "not_expandable", invalid_values: ["product_category"]})
+      expect(json[:details]).to eq([{code: "not_expandable", field: "expands", meta: {invalid_values: ["product_category"]}}])
     end
   end
 
@@ -388,7 +448,7 @@ RSpec.describe Api::Serializable do
         show
 
         expect(response).to have_http_status(:bad_request)
-        expect(json[:error_details]).to eq(expands: {reason: "not_expandable", invalid_values: ["product_category"]})
+        expect(json[:details]).to eq([{code: "not_expandable", field: "expands", meta: {invalid_values: ["product_category"]}}])
       end
     end
   end
@@ -434,7 +494,7 @@ RSpec.describe Api::Serializable do
       it "returns a not found error" do
         show
 
-        expect(response).to be_not_found_error("product")
+        expect(response).to be_v2_not_found_error("product")
       end
     end
 

@@ -14,6 +14,7 @@ module CreditNotes
     def call
       return result.not_found_failure!(resource: "invoice") unless invoice
       return result.forbidden_failure! unless License.premium?
+      return result.forbidden_failure! if product_fee_feature_unavailable?
       return result.not_allowed_failure!(code: "invalid_type_or_status") unless valid_type_or_status?
 
       @credit_note = CreditNote.new(
@@ -42,7 +43,16 @@ module CreditNotes
 
     attr_reader :invoice, :items, :credit_note
 
+    def product_fee_feature_unavailable?
+      return false if invoice.organization.feature_flag_enabled?(:product_catalog)
+      return false unless items.is_a?(Array)
+
+      fee_ids = items.filter_map { |item| item[:fee_id] if item.respond_to?(:key?) && item.key?(:fee_id) }
+      invoice.fees.where(id: fee_ids).product.exists?
+    end
+
     def valid_type_or_status?
+      return false if invoice.status.in?(%w[pending failed])
       return false if invoice.credit? && (invoice.payment_status != "succeeded" || invoice.associated_active_wallet.nil?)
 
       invoice.version_number >= Invoice::CREDIT_NOTES_MIN_VERSION
@@ -52,7 +62,8 @@ module CreditNotes
       return result.validation_failure!(errors: {items: ["must_be_an_array"]}) unless items.is_a?(Array)
 
       items.each do |item_attr|
-        amount_cents = item_attr[:amount_cents]&.to_i || 0
+        amount_cents = parse_item_amount_cents(item_attr[:amount_cents])
+        return result.single_validation_failure!(field: :amount_cents, error_code: "invalid_value") unless amount_cents
 
         item = CreditNoteItem.new(
           organization_id: invoice.organization_id,
@@ -65,6 +76,16 @@ module CreditNotes
 
         break unless valid_item?(item)
       end
+    end
+
+    def parse_item_amount_cents(value)
+      return BigDecimal(0) if value.nil?
+      return unless value.is_a?(Numeric) || value.is_a?(String)
+
+      amount_cents = BigDecimal(value.to_s)
+      amount_cents if amount_cents.finite?
+    rescue ArgumentError
+      nil
     end
 
     def valid_credit_note?

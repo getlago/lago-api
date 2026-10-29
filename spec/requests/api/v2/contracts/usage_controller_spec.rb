@@ -60,8 +60,8 @@ RSpec.describe Api::V2::Contracts::UsageController do
         product_type: "metered",
         billable_metric_code: billable_metric.code,
         billing_timing: "arrears",
-        from_datetime: "2027-02-01T00:00:00Z",
-        to_datetime: "2027-02-28T23:59:59Z",
+        from_datetime: "2027-02-01T00:00:00.000000Z",
+        to_datetime: "2027-02-28T23:59:59.999999Z",
         rate_phase_code: nil,
         rate_phase_name: nil,
         rate_source: "rate",
@@ -84,8 +84,8 @@ RSpec.describe Api::V2::Contracts::UsageController do
         product_type: "fixed",
         billable_metric_code: nil,
         billing_timing: "arrears",
-        from_datetime: "2027-02-01T00:00:00Z",
-        to_datetime: "2027-02-28T23:59:59Z",
+        from_datetime: "2027-02-01T00:00:00.000000Z",
+        to_datetime: "2027-02-28T23:59:59.999999Z",
         rate_phase_code: nil,
         rate_phase_name: nil,
         rate_source: "rate",
@@ -165,7 +165,7 @@ RSpec.describe Api::V2::Contracts::UsageController do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details]).to eq(product_type: ["value_is_invalid"])
+        expect(json[:details]).to eq([{code: "value_is_invalid", field: "product_type", meta: {}}])
       end
     end
 
@@ -205,7 +205,30 @@ RSpec.describe Api::V2::Contracts::UsageController do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json).to include(code: "validation_errors", error_details: {tax_error: ["taxDateTooFarInFuture: Service failure"]})
+        expect(json).to eq(
+          code: "validation_errors",
+          details: [{code: "taxDateTooFarInFuture: Service failure", field: "tax_error", meta: {}}]
+        )
+      end
+    end
+
+    # As above, the error renders no entry, so the eager loading the entries need goes unused.
+    context "when the customer's tax provider throttles the request", bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+      let(:integration) { create(:anrok_integration, organization:) }
+
+      before do
+        create(:anrok_customer, integration:, customer:)
+        allow(Throttling).to receive(:for).with(:anrok).and_return(instance_double(Throttling::Base, check: false))
+      end
+
+      it "answers with a too many provider requests error naming the provider, without its message" do
+        subject
+
+        expect(response).to have_http_status(:too_many_requests)
+        expect(json).to eq(
+          code: "too_many_provider_requests",
+          details: [{code: "too_many_provider_requests", field: "base", meta: {provider_name: "anrok"}}]
+        )
       end
     end
 
@@ -241,7 +264,7 @@ RSpec.describe Api::V2::Contracts::UsageController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("contract")
+        expect(response).to be_v2_not_found_error("contract")
       end
     end
 
@@ -251,7 +274,7 @@ RSpec.describe Api::V2::Contracts::UsageController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("contract")
+        expect(response).to be_v2_not_found_error("contract")
       end
     end
 
@@ -264,7 +287,7 @@ RSpec.describe Api::V2::Contracts::UsageController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("contract")
+        expect(response).to be_v2_not_found_error("contract")
       end
     end
 

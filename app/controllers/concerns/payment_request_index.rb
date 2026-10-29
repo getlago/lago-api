@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 module PaymentRequestIndex
-  include Pagination
   extend ActiveSupport::Concern
 
   def payment_request_index(external_customer_id:)
@@ -19,8 +18,8 @@ module PaymentRequestIndex
     result = PaymentRequestsQuery.call(
       organization: current_organization,
       pagination: {
-        page: params[:page],
-        limit: params[:per_page] || PER_PAGE
+        page: page_number,
+        limit: page_size
       },
       filters: filters
     )
@@ -28,7 +27,7 @@ module PaymentRequestIndex
     if result.success?
       render(
         json: ::CollectionSerializer.new(
-          result.payment_requests.preload(:customer, :invoices),
+          result.payment_requests.preload(:customer, invoices: :organization),
           ::V1::PaymentRequestSerializer,
           collection_name: "payment_requests",
           meta: pagination_metadata(result.payment_requests),

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
-# Contract of a cursor-paginated v2 list. The including group provides:
+# Contract of a cursor-paginated v2 list. `sort` is the one the endpoint declares. The
+# including group provides:
 # - `organization`
 # - `paginated_path`: the list path
 # - `create_paginated_record`: a lambda creating one listed record at the given `created_at`
@@ -9,7 +10,7 @@
 #
 # Rows already listed by the including group are tolerated: the walks are compared with
 # the whole list, read in a single page.
-RSpec.shared_examples "a cursor paginated v2 endpoint" do |collection:, model:|
+RSpec.shared_examples "a cursor paginated v2 endpoint" do |collection:, model:, sort: CursorPagination::DEFAULT_SORT|
   let(:paginated_collection) { collection }
   let(:created_at) { Time.zone.parse("2026-09-28T10:00:00.000001Z") }
   let(:other_table_record) do
@@ -30,11 +31,11 @@ RSpec.shared_examples "a cursor paginated v2 endpoint" do |collection:, model:|
     fetch_page(params.merge(limit: 100))[paginated_collection].map { it[:lago_id] }
   end
 
-  it "lists the rows ordered by created_at then id, both descending" do
+  it "lists the rows in the sort of the endpoint" do
     ids = listed_ids
 
     expect(ids.size).to be >= 6
-    expect(model.unscoped.where(id: ids).order(created_at: :desc, id: :desc).ids).to eq(ids)
+    expect(model.unscoped.where(id: ids).order(sort).ids).to eq(ids)
   end
 
   it "returns every row exactly once, walking forward then backward" do
@@ -94,10 +95,8 @@ RSpec.shared_examples "a cursor paginated v2 endpoint" do |collection:, model:|
 
     expect(response).to have_http_status(:bad_request)
     expect(json).to eq(
-      status: 400,
-      error: "Bad Request",
       code: "invalid_pagination_limit",
-      error_details: {limit: {value: "101", allowed_range: "1..100"}}
+      details: [{code: "invalid_pagination_limit", field: "limit", meta: {value: "101", min: 1, max: 100}}]
     )
   end
 
@@ -106,7 +105,10 @@ RSpec.shared_examples "a cursor paginated v2 endpoint" do |collection:, model:|
 
     expect(response).to have_http_status(:bad_request)
     expect(json[:code]).to eq("invalid_pagination_parameter")
-    expect(json[:error_details]).to eq(page: {reason: "replaced_by_cursor"}, per_page: {reason: "replaced_by_cursor"})
+    expect(json[:details]).to eq([
+      {code: "replaced_by_cursor", field: "page", meta: {}},
+      {code: "replaced_by_cursor", field: "per_page", meta: {}}
+    ])
   end
 
   it "rejects a malformed cursor" do
@@ -122,6 +124,6 @@ RSpec.shared_examples "a cursor paginated v2 endpoint" do |collection:, model:|
 
     expect(response).to have_http_status(:bad_request)
     expect(json[:code]).to eq("invalid_pagination_cursor")
-    expect(json[:error_details]).to eq(after: {reason: "wrong_resource"})
+    expect(json[:details]).to eq([{code: "wrong_resource", field: "after", meta: {}}])
   end
 end

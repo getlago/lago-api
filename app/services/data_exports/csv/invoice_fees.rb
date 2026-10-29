@@ -123,7 +123,7 @@ module DataExports
       end
 
       def collection
-        Invoice.find(data_export_part.object_ids)
+        Invoice.includes(:organization).find(data_export_part.object_ids)
       end
     end
   end

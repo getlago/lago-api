@@ -86,6 +86,19 @@ RSpec.describe V2::RatePhaseSerializer do
           )
         )
       end
+
+      context "with the usec_timestamps include of a v2 render" do
+        subject(:payload) { described_class.new(rate_phase, includes: %i[usec_timestamps]).serialize }
+
+        it "renders both deletion timestamps to the microsecond" do
+          expect(payload).to eq(
+            flat_payload.merge(
+              deleted_at: "2026-03-04T10:00:00.000000Z",
+              rate_override: override_payload.merge(deleted_at: "2026-03-04T10:00:00.000000Z")
+            )
+          )
+        end
+      end
     end
   end
 end
