@@ -4,6 +4,8 @@ module Api
   module V2
     # Parent of the native v2 controllers, for the behaviour they share and v1 does not.
     class BaseController < Api::BaseController
+      # The v2 error body, in place of the Api::V1Errors and ApiResponses renderers that v1 keeps.
+      include Api::V2Errors
       # Every native v2 endpoint belongs to the product catalog. Included ahead of the cursor
       # callback, so that a disabled catalog is a 403 before any pagination parameter is read.
       include Api::RequiresProductCatalog
@@ -55,19 +57,6 @@ module Api
       def pagination_error(error)
         Yabeda.api_pagination.errors_total.increment({code: error.code})
         invalid_request_error(code: error.code, error_details: error.details)
-      end
-
-      # Every v2 400 shares this body, keyed by the offending parameter.
-      def invalid_request_error(code:, error_details:)
-        render(
-          json: {
-            status: 400,
-            error: "Bad Request",
-            code:,
-            error_details:
-          },
-          status: :bad_request
-        )
       end
     end
   end

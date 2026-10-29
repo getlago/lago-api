@@ -20,4 +20,11 @@ RSpec.describe "API v2 fallback to v1", v2_timestamps: false do
 
     expect(response).to have_http_status(:success)
   end
+
+  it "renders the v1 error body, which only the native v2 controllers replace" do
+    get_with_token(organization, "/api/v2/billable_metrics/unknown")
+
+    expect(response).to be_not_found_error("billable_metric")
+    expect(json).not_to have_key(:details)
+  end
 end

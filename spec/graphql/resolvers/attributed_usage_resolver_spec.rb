@@ -46,11 +46,11 @@ RSpec.describe Resolvers::AttributedUsageResolver, clickhouse: {clean_before: tr
         ) {
           subscriptionId externalSubscriptionId groupBy basis currency fromDatetime toDatetime splitFiltersCount
           rows {
-            value rank amountCents preciseAmountCents eventsCount
+            value rank amountCents preciseAmountCents eventsCount splitChargeUnits
             chargesUsage { charge { id } chargeFilter { id values } units amountCents preciseAmountCents eventsCount }
           }
-          unattributed { amountCents eventsCount }
-          totals { amountCents eventsCount }
+          unattributed { amountCents eventsCount splitChargeUnits }
+          totals { amountCents eventsCount splitChargeUnits }
           metadata { currentPage limitValue totalCount totalPages }
         }
       }
@@ -121,8 +121,8 @@ RSpec.describe Resolvers::AttributedUsageResolver, clickhouse: {clean_before: tr
         {"charge" => {"id" => requests_charge.id}, "chargeFilter" => nil, "units" => 1.0, "amountCents" => nil, "preciseAmountCents" => nil, "eventsCount" => 1}
       ]
     )
-    expect(attributed_usage["unattributed"]).to eq("amountCents" => nil, "eventsCount" => 1)
-    expect(attributed_usage["totals"]).to eq("amountCents" => nil, "eventsCount" => 5)
+    expect(attributed_usage["unattributed"]).to eq("amountCents" => nil, "eventsCount" => 1, "splitChargeUnits" => nil)
+    expect(attributed_usage["totals"]).to eq("amountCents" => nil, "eventsCount" => 5, "splitChargeUnits" => nil)
     expect(attributed_usage["metadata"]).to eq("currentPage" => 1, "limitValue" => 50, "totalCount" => 2, "totalPages" => 1)
   end
 
@@ -137,7 +137,7 @@ RSpec.describe Resolvers::AttributedUsageResolver, clickhouse: {clean_before: tr
         ]
       )
       expect(attributed_usage["rows"].flat_map { it["chargesUsage"] }.map { it["charge"]["id"] }.uniq).to eq([tokens_charge.id])
-      expect(attributed_usage["totals"]).to eq("amountCents" => "180000", "eventsCount" => 4)
+      expect(attributed_usage["totals"]).to eq("amountCents" => "180000", "eventsCount" => 4, "splitChargeUnits" => nil)
     end
   end
 
@@ -162,6 +162,12 @@ RSpec.describe Resolvers::AttributedUsageResolver, clickhouse: {clean_before: tr
       expect(attributed_usage["splitFiltersCount"]).to eq(1)
     end
 
+    it "returns the units of the whole split charge" do
+      expect(attributed_usage["rows"].map { [it["value"], it["splitChargeUnits"]] }).to eq([["eng", 1500.0], ["data", 2000.0]])
+      expect(attributed_usage["unattributed"]["splitChargeUnits"]).to eq(100.0)
+      expect(attributed_usage["totals"]["splitChargeUnits"]).to eq(2000.0 + 1500.0 + 100.0) # data + eng + unattributed
+    end
+
     context "with an offset past the last filter" do
       let(:variables) do
         {subscriptionId: subscription.id, groupBy: "team", chargeIds: [tokens_charge.id], splitChargeId: tokens_charge.id, splitFiltersOffset: 1}
@@ -171,6 +177,7 @@ RSpec.describe Resolvers::AttributedUsageResolver, clickhouse: {clean_before: tr
         cells = attributed_usage["rows"].find { it["value"] == "eng" }["chargesUsage"]
 
         expect(cells.map { [it["chargeFilter"], it["units"]] }).to eq([[nil, 500.0]])
+        expect(attributed_usage["rows"].find { it["value"] == "eng" }["splitChargeUnits"]).to eq(1500.0) # opus 1000 + default 500
       end
     end
 

@@ -95,10 +95,8 @@ RSpec.shared_examples "a cursor paginated v2 endpoint" do |collection:, model:, 
 
     expect(response).to have_http_status(:bad_request)
     expect(json).to eq(
-      status: 400,
-      error: "Bad Request",
       code: "invalid_pagination_limit",
-      error_details: {limit: {value: "101", allowed_range: "1..100"}}
+      details: [{code: "invalid_pagination_limit", field: "limit", meta: {value: "101", min: 1, max: 100}}]
     )
   end
 
@@ -107,7 +105,10 @@ RSpec.shared_examples "a cursor paginated v2 endpoint" do |collection:, model:, 
 
     expect(response).to have_http_status(:bad_request)
     expect(json[:code]).to eq("invalid_pagination_parameter")
-    expect(json[:error_details]).to eq(page: {reason: "replaced_by_cursor"}, per_page: {reason: "replaced_by_cursor"})
+    expect(json[:details]).to eq([
+      {code: "replaced_by_cursor", field: "page", meta: {}},
+      {code: "replaced_by_cursor", field: "per_page", meta: {}}
+    ])
   end
 
   it "rejects a malformed cursor" do
@@ -123,6 +124,6 @@ RSpec.shared_examples "a cursor paginated v2 endpoint" do |collection:, model:, 
 
     expect(response).to have_http_status(:bad_request)
     expect(json[:code]).to eq("invalid_pagination_cursor")
-    expect(json[:error_details]).to eq(after: {reason: "wrong_resource"})
+    expect(json[:details]).to eq([{code: "wrong_resource", field: "after", meta: {}}])
   end
 end

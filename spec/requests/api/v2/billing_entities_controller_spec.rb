@@ -111,7 +111,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
         it "returns not found without creating an entity" do
           expect { request }.not_to change(organization.all_billing_entities, :count)
 
-          expect(response).to be_not_found_error("tax")
+          expect(response).to be_v2_not_found_error("tax")
         end
       end
 
@@ -121,7 +121,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
         it "rejects the request without creating an entity" do
           expect { request }.not_to change(organization.all_billing_entities, :count)
 
-          expect(response).to be_not_found_error("invoice_custom_section")
+          expect(response).to be_v2_not_found_error("invoice_custom_section")
         end
       end
 
@@ -132,7 +132,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
         it "rejects the request without creating an entity" do
           expect { request }.not_to change(organization.all_billing_entities, :count)
 
-          expect(response).to be_not_found_error("invoice_custom_section")
+          expect(response).to be_v2_not_found_error("invoice_custom_section")
         end
       end
 
@@ -156,7 +156,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
           expect { request }.not_to change(organization.all_billing_entities, :count)
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:error_details]).to eq(field => ["value_is_invalid"])
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: field.to_s, meta: {}}])
         end
       end
 
@@ -193,7 +193,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
           expect { request }.not_to change(organization.all_billing_entities, :count)
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:error_details][:code]).to eq(["value_is_mandatory"])
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_mandatory", field: "code", meta: {}}])
         end
       end
     end
@@ -205,7 +205,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
         expect { request }.not_to change(organization.all_billing_entities, :count)
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details][:code]).to eq(["value_is_mandatory"])
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_mandatory", field: "code", meta: {}}])
       end
     end
 
@@ -228,7 +228,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
           expect { request }.not_to change(organization.all_billing_entities, :count)
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:error_details][:eu_tax_management]).to eq(["value_is_invalid"])
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "eu_tax_management", meta: {}}])
         end
       end
     end
@@ -241,7 +241,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
           expect { request }.not_to change(organization.all_billing_entities, :count)
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:error_details]).to eq(field => ["value_is_invalid"])
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: field.to_s, meta: {}}])
         end
       end
     end
@@ -287,7 +287,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
         expect { request }.not_to change(organization.all_billing_entities, :count)
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details][:logo]).to eq(["value_is_invalid"])
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "logo", meta: {}}])
       end
     end
 
@@ -311,7 +311,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
         request
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details][:name]).to eq(["value_is_mandatory"])
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_mandatory", field: "name", meta: {}}])
       end
     end
 
@@ -322,7 +322,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
         expect { request }.not_to change(organization.all_billing_entities, :count)
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details][:document_numbering]).to eq(["value_is_invalid"])
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "document_numbering", meta: {}}])
       end
     end
 
@@ -381,7 +381,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
           expect { request }.not_to change { billing_entity.reload.attributes }
 
           expect(response).to have_http_status(:bad_request)
-          expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: ["taxes"]})
+          expect(json[:details]).to eq([{code: "action_not_expandable", field: "expands", meta: {invalid_values: ["taxes"]}}])
         end
       end
 
@@ -403,7 +403,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
           expect { request }.not_to change { billing_entity.reload.attributes }
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:error_details]).to eq(periodic_invoice_issuing_date_anchor: ["value_is_invalid"])
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "periodic_invoice_issuing_date_anchor", meta: {}}])
         end
       end
 
@@ -427,7 +427,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
         it "does not create an entity" do
           expect { request }.not_to change(BillingEntity, :count)
 
-          expect(response).to be_not_found_error("billing_entity")
+          expect(response).to be_v2_not_found_error("billing_entity")
         end
       end
 
@@ -485,7 +485,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
         it "does not modify the foreign entity" do
           expect { request }.not_to change { billing_entity.reload.attributes }
 
-          expect(response).to be_not_found_error("billing_entity")
+          expect(response).to be_v2_not_found_error("billing_entity")
         end
       end
 
@@ -510,7 +510,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
               expect { request }.not_to change { billing_entity.reload.attributes }
 
               expect(response).to have_http_status(:unprocessable_content)
-              expect(json[:error_details][:tax_codes]).to eq(["value_is_invalid"])
+              expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "tax_codes", meta: {}}])
               expect(billing_entity.reload.taxes).to eq([tax])
             end
           end
@@ -522,7 +522,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
           it "does not assign the foreign tax" do
             request
 
-            expect(response).to be_not_found_error("tax")
+            expect(response).to be_v2_not_found_error("tax")
             expect(billing_entity.reload.taxes).to be_empty
           end
         end
@@ -560,7 +560,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
           expect { request }.not_to change { billing_entity.reload.attributes }
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:error_details][:eu_tax_management]).to eq(["value_is_invalid"])
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "eu_tax_management", meta: {}}])
         end
       end
 
@@ -573,7 +573,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
               expect { request }.not_to change { billing_entity.reload.attributes }
 
               expect(response).to have_http_status(:unprocessable_content)
-              expect(json[:error_details]).to eq(field => ["value_is_invalid"])
+              expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: field.to_s, meta: {}}])
             end
           end
         end
@@ -587,7 +587,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
             expect { request }.not_to change { billing_entity.reload.attributes }
 
             expect(response).to have_http_status(:unprocessable_content)
-            expect(json[:error_details]).to eq(field => ["value_is_invalid"])
+            expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: field.to_s, meta: {}}])
           end
         end
 
@@ -643,7 +643,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
           it "rejects the code without changing the entity or its sections" do
             expect { request }.not_to change { billing_entity.reload.attributes }
 
-            expect(response).to be_not_found_error("invoice_custom_section")
+            expect(response).to be_v2_not_found_error("invoice_custom_section")
             expect(billing_entity.reload.selected_invoice_custom_sections).to eq([section])
           end
         end
@@ -656,7 +656,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
           it "rejects the code without changing the entity or its sections" do
             expect { request }.not_to change { billing_entity.reload.attributes }
 
-            expect(response).to be_not_found_error("invoice_custom_section")
+            expect(response).to be_v2_not_found_error("invoice_custom_section")
             expect(billing_entity.reload.selected_invoice_custom_sections).to eq([section])
           end
         end
@@ -738,9 +738,9 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("invalid_expand")
-        expect(json[:error_details]).to eq(expands: {
-          invalid_values: ["organization"], allowed_values: %w[taxes selected_invoice_custom_sections]
-        })
+        expect(json[:details]).to eq([
+          {code: "invalid_expand", field: "expands", meta: {invalid_values: ["organization"], allowed_values: %w[taxes selected_invoice_custom_sections]}}
+        ])
       end
     end
 
@@ -752,7 +752,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("invalid_expand")
-        expect(json[:error_details]).to eq(expands: {reason: "malformed", allowed_values: %w[taxes selected_invoice_custom_sections]})
+        expect(json[:details]).to eq([{code: "malformed", field: "expands", meta: {allowed_values: %w[taxes selected_invoice_custom_sections]}}])
       end
     end
 
@@ -764,7 +764,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
           request
 
           expect(response).to have_http_status(:bad_request)
-          expect(json[:error_details]).to eq(expands: {reason: "malformed", allowed_values: %w[taxes selected_invoice_custom_sections]})
+          expect(json[:details]).to eq([{code: "malformed", field: "expands", meta: {allowed_values: %w[taxes selected_invoice_custom_sections]}}])
         end
       end
     end
@@ -787,7 +787,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
       it "returns not found" do
         request
 
-        expect(response).to be_not_found_error("billing_entity")
+        expect(response).to be_v2_not_found_error("billing_entity")
       end
     end
 
@@ -797,7 +797,7 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
       it "does not expose the foreign entity" do
         request
 
-        expect(response).to be_not_found_error("billing_entity")
+        expect(response).to be_v2_not_found_error("billing_entity")
       end
     end
   end

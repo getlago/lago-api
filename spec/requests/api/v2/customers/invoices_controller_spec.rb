@@ -61,7 +61,7 @@ RSpec.describe Api::V2::Customers::InvoicesController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json.dig(:error_details, :invoice_type)).to eq(["value_is_invalid"])
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "invoice_type", meta: {}}])
       end
     end
 
@@ -71,7 +71,7 @@ RSpec.describe Api::V2::Customers::InvoicesController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("customer")
+        expect(response).to be_v2_not_found_error("customer")
       end
     end
 
@@ -82,7 +82,7 @@ RSpec.describe Api::V2::Customers::InvoicesController do
         subject
 
         expect(response).to have_http_status(:bad_request)
-        expect(json[:error_details]).to eq(expands: {reason: "not_expandable", invalid_values: ["fees"]})
+        expect(json[:details]).to eq([{code: "not_expandable", field: "expands", meta: {invalid_values: ["fees"]}}])
       end
     end
 

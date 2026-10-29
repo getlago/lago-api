@@ -1194,6 +1194,11 @@ type AttributedUsageAggregate {
   Null with the units basis
   """
   preciseAmountCents: Float
+
+  """
+  Units of the split charge over all its filters. Null without a split charge
+  """
+  splitChargeUnits: Float
 }
 
 enum AttributedUsageBasisEnum {
@@ -1246,6 +1251,11 @@ type AttributedUsageRow {
   Position of the value in the whole level
   """
   rank: Int!
+
+  """
+  Units of the split charge over all its filters. Null without a split charge
+  """
+  splitChargeUnits: Float
   value: String!
 }
 
@@ -7204,6 +7214,7 @@ enum FeatureFlagEnum {
   usage_prefilter_incremental
   usage_prefilter_short_cache
   wallet_traceability
+  x402_mainnet
   x402_payments
   x402_reservation_counter_disabled
 }

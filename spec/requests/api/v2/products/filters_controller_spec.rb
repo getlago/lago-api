@@ -76,7 +76,7 @@ RSpec.describe Api::V2::Products::FiltersController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json.dig(:error_details, :values)).to eq(["key_only_conflicts_with_values"])
+        expect(json[:details]).to eq([{code: "key_only_conflicts_with_values", field: "values", meta: {}}])
       end
     end
 
@@ -86,7 +86,7 @@ RSpec.describe Api::V2::Products::FiltersController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("product")
+        expect(response).to be_v2_not_found_error("product")
       end
     end
   end
@@ -138,7 +138,7 @@ RSpec.describe Api::V2::Products::FiltersController do
           subject
 
           expect(response).to have_http_status(:unprocessable_entity)
-          expect(json[:error_details][:code]).to eq(%w[attached_to_plan_or_subscription])
+          expect(json[:details]).to eq([{code: "attached_to_plan_or_subscription", field: "code", meta: {}}])
         end
       end
     end
@@ -149,7 +149,7 @@ RSpec.describe Api::V2::Products::FiltersController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("product_filter")
+        expect(response).to be_v2_not_found_error("product_filter")
       end
     end
   end
@@ -276,7 +276,7 @@ RSpec.describe Api::V2::Products::FiltersController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:error_details][:product_filter]).to eq(%w[attached_to_plan_or_subscription])
+        expect(json[:details]).to eq([{code: "attached_to_plan_or_subscription", field: "product_filter", meta: {}}])
         expect(filter.reload).not_to be_discarded
       end
     end

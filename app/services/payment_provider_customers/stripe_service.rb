@@ -53,7 +53,7 @@ module PaymentProviderCustomers
       deliver_error_webhook(e)
 
       message = ["Stripe authentication failed.", e.message.presence].compact.join(" ")
-      result.unauthorized_failure!(message:)
+      result.provider_unauthorized_failure!(provider: stripe_payment_provider, message:)
     end
 
     def delete_payment_method(organization_id:, stripe_customer_id:, payment_method_id:, metadata: {})
@@ -106,7 +106,7 @@ module PaymentProviderCustomers
       deliver_error_webhook(e)
 
       message = ["Stripe authentication failed.", e.message.presence].compact.join(" ")
-      result.unauthorized_failure!(message:)
+      result.provider_unauthorized_failure!(provider: stripe_payment_provider, message:)
     end
 
     attr_accessor :stripe_customer
@@ -164,7 +164,7 @@ module PaymentProviderCustomers
       deliver_error_webhook(e)
 
       message = ["Stripe authentication failed.", e.message.presence].compact.join(" ")
-      result.unauthorized_failure!(message:)
+      result.provider_unauthorized_failure!(provider: stripe_payment_provider, message:)
     rescue ::Stripe::IdempotencyError
       stripe_customers = ::Stripe::Customer.list({email: customer.email}, {api_key:})
       return stripe_customers.first if stripe_customers.count == 1

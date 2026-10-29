@@ -43,10 +43,10 @@ RSpec.describe "v1 pricing endpoints on a product-catalog organization", type: :
     legacy_plan = create(:plan, organization:)
 
     get_with_token(organization, "/api/v2/plans/#{legacy_plan.code}")
-    expect(response).to be_not_found_error("plan")
+    expect(response).to be_v2_not_found_error("plan")
 
     put_with_token(organization, "/api/v2/plans/#{legacy_plan.code}", {plan: {name: "x"}})
-    expect(response).to be_not_found_error("plan")
+    expect(response).to be_v2_not_found_error("plan")
   end
 
   it "rejects nested charges on a pre-migration legacy plan" do

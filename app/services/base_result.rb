@@ -87,6 +87,10 @@ class BaseResult
     fail_with_error!(BaseService::UnauthorizedFailure.new(self, message:))
   end
 
+  def provider_unauthorized_failure!(provider:, message:)
+    fail_with_error!(BaseService::ProviderUnauthorizedFailure.new(self, provider:, message:))
+  end
+
   def provider_failure!(provider:, error:)
     fail_with_error!(BaseService::ProviderFailure.new(self, provider:, error:))
   end

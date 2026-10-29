@@ -82,10 +82,8 @@ RSpec.describe Api::V2::BaseController, type: :controller do
 
       expect(response).to have_http_status(:bad_request)
       expect(json).to eq(
-        status: 400,
-        error: "Bad Request",
         code: "invalid_pagination_limit",
-        error_details: {limit: {value: "101", allowed_range: "1..100"}}
+        details: [{code: "invalid_pagination_limit", field: "limit", meta: {value: "101", min: 1, max: 100}}]
       )
     end
 
@@ -115,7 +113,7 @@ RSpec.describe Api::V2::BaseController, type: :controller do
       index
 
       expect(response).to have_http_status(:forbidden)
-      expect(json[:code]).to eq("feature_unavailable")
+      expect(json).to eq(code: "feature_unavailable", details: [])
     end
   end
 
@@ -128,6 +126,7 @@ RSpec.describe Api::V2::BaseController, type: :controller do
       index
 
       expect(response).to have_http_status(:unauthorized)
+      expect(json).to eq(code: "unauthorized", details: [])
     end
   end
 
@@ -139,7 +138,7 @@ RSpec.describe Api::V2::BaseController, type: :controller do
 
       expect(response).to have_http_status(:bad_request)
       expect(json[:code]).to eq("invalid_pagination_cursor")
-      expect(json[:error_details]).to eq(after: {reason: "malformed"})
+      expect(json[:details]).to eq([{code: "malformed", field: "after", meta: {}}])
     end
   end
 
@@ -151,7 +150,10 @@ RSpec.describe Api::V2::BaseController, type: :controller do
 
       expect(response).to have_http_status(:bad_request)
       expect(json[:code]).to eq("invalid_pagination_parameter")
-      expect(json[:error_details]).to eq(page: {reason: "replaced_by_cursor"}, per_page: {reason: "replaced_by_cursor"})
+      expect(json[:details]).to eq([
+        {code: "replaced_by_cursor", field: "page", meta: {}},
+        {code: "replaced_by_cursor", field: "per_page", meta: {}}
+      ])
     end
   end
 
@@ -173,12 +175,7 @@ RSpec.describe Api::V2::BaseController, type: :controller do
       create_request
 
       expect(response).to have_http_status(:bad_request)
-      expect(json).to eq(
-        status: 400,
-        error: "Bad Request",
-        code: "missing_parameter",
-        error_details: {product: {reason: "missing"}}
-      )
+      expect(json).to eq(code: "missing_parameter", details: [{code: "missing", field: "product", meta: {}}])
     end
   end
 
@@ -189,7 +186,7 @@ RSpec.describe Api::V2::BaseController, type: :controller do
       show
 
       expect(response).to have_http_status(:bad_request)
-      expect(json[:error_details]).to eq(page: {reason: "not_paginated"})
+      expect(json[:details]).to eq([{code: "not_paginated", field: "page", meta: {}}])
     end
   end
 end

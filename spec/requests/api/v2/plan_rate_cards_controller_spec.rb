@@ -35,7 +35,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("plan")
+        expect(response).to be_v2_not_found_error("plan")
       end
     end
 
@@ -45,7 +45,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("rate_card")
+        expect(response).to be_v2_not_found_error("rate_card")
       end
     end
   end
@@ -109,7 +109,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("plan")
+        expect(response).to be_v2_not_found_error("plan")
       end
     end
   end
@@ -149,7 +149,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json.dig(:error_details, :rate_phases)).to eq(["last_phase_must_be_indefinite"])
+        expect(json[:details]).to eq([{code: "last_phase_must_be_indefinite", field: "rate_phases", meta: {}}])
       end
     end
 
@@ -164,7 +164,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json.dig(:error_details, :rate_phases)).to eq(["value_is_mandatory"])
+        expect(json[:details]).to eq([{code: "value_is_mandatory", field: "rate_phases", meta: {}}])
       end
     end
   end
@@ -191,7 +191,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("applied_rate_card")
+        expect(response).to be_v2_not_found_error("applied_rate_card")
       end
     end
   end
@@ -226,7 +226,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("applied_rate_card")
+        expect(response).to be_v2_not_found_error("applied_rate_card")
       end
     end
   end

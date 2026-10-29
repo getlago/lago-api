@@ -2,6 +2,10 @@
 
 FactoryBot.define do
   factory :x402_settlement, class: "X402::Settlement" do
+    transient do
+      request_key { nil }
+    end
+
     x402_connection
     organization { x402_connection&.organization || association(:organization) }
     kind { "credit_purchase" }
@@ -15,6 +19,7 @@ FactoryBot.define do
     transaction_hash { "0x#{SecureRandom.hex(32)}" }
     payment_digest { SecureRandom.hex(32) }
     purchase_settings { {"plan_code" => "agent_api", "wallet_code" => "agent_credits"} }
+    request_key_digest { X402::Settlement.request_key_digest(request_key) }
 
     trait :pending do
       status { "pending" }
