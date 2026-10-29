@@ -49,6 +49,7 @@ module Invoices
           payable_payment_status: "pending"
         )
 
+        payment.payment_provider_customer = current_payment_provider_customer
         payment.payment_method_id = determine_payment_method&.id
         payment.save!
 

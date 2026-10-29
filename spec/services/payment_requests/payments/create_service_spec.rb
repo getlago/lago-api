@@ -636,6 +636,36 @@ RSpec.describe PaymentRequests::Payments::CreateService do
         expect(provider_service).to have_received(:call!)
       end
 
+      context "when the payment provider customer was discarded" do
+        let(:discarded_provider_customer) do
+          create(:stripe_customer, payment_provider:, customer:).tap(&:discard!)
+        end
+        let(:provider_customer) do
+          discarded_provider_customer
+          create(:stripe_customer, payment_provider:, customer:)
+        end
+        let(:payment) do
+          create(
+            :payment,
+            payable: payment_request,
+            payment_provider:,
+            payment_provider_customer: discarded_provider_customer,
+            amount_cents: payment_request.total_amount_cents,
+            amount_currency: payment_request.currency,
+            status: "pending",
+            payable_payment_status: payment_status
+          )
+        end
+
+        it "updates the payment to use the current provider customer" do
+          result = create_service.call
+
+          expect(result.payment).to eq(payment)
+          expect(result.payment.reload.payment_provider_customer).to eq(provider_customer)
+          expect(provider_service).to have_received(:call!)
+        end
+      end
+
       context "when payment is already processing" do
         let(:payment_status) { "processing" }
 
