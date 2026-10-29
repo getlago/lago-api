@@ -2,8 +2,7 @@
 
 require "rails_helper"
 
-# Void renders a v1 invoice until a V2 serializer exists, so with v1 timestamps.
-RSpec.describe Api::V2::InvoicesController, v2_timestamps: false do
+RSpec.describe Api::V2::InvoicesController do
   let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
   let(:customer) { create(:customer, organization:) }
   let(:contract_invoice) { create(:invoice, organization:, customer:, invoice_type: :contract) }
@@ -703,6 +702,130 @@ RSpec.describe Api::V2::InvoicesController, v2_timestamps: false do
 
         expect(response).to be_not_found_error("invoice")
         expect(Invoices::RefreshDraftService).not_to have_received(:call)
+      end
+    end
+  end
+
+  describe "PUT /api/v2/invoices/:id" do
+    subject { put_with_token(organization, "/api/v2/invoices/#{invoice_id}", {invoice: {payment_status: "succeeded"}}) }
+
+    let(:invoice) { create(:invoice, organization:, customer:, invoice_type: :contract) }
+    let(:invoice_id) { invoice.id }
+
+    include_examples "requires API permission", "invoice", "write"
+
+    it "updates the payment status and returns the invoice" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(invoice.reload).to be_payment_succeeded
+      expect(json[:invoice]).to include(lago_id: invoice.id, invoice_type: "contract", payment_status: "succeeded")
+      expect(json[:invoice]).not_to have_key(:fees)
+    end
+
+    context "when the invoice is voided" do
+      let(:invoice) { create(:invoice, :voided, organization:, customer:, invoice_type: :contract) }
+
+      it "returns a method not allowed error without updating it" do
+        subject
+
+        expect(response).to have_http_status(:method_not_allowed)
+        expect(json[:code]).to eq("update_on_voided_invoice")
+        expect(invoice.reload).to be_payment_pending
+      end
+    end
+
+    context "when the invoice is a legacy one" do
+      let(:invoice_id) { legacy_invoice.id }
+
+      it "returns a not found error without updating it" do
+        subject
+
+        expect(response).to be_not_found_error("invoice")
+        expect(legacy_invoice.reload).to be_payment_pending
+      end
+    end
+  end
+
+  describe "DELETE /api/v2/invoices/:id" do
+    subject { delete_with_token(organization, "/api/v2/invoices/#{invoice_id}") }
+
+    let(:invoice) { create(:invoice, :draft, organization:, customer:, invoice_type: :contract) }
+    let(:invoice_id) { invoice.id }
+
+    include_examples "requires API permission", "invoice", "write"
+
+    it "deletes the draft and returns it" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(invoice.reload).to be_deleted
+      expect(json[:invoice]).to include(lago_id: invoice.id, invoice_type: "contract", status: "deleted")
+    end
+
+    context "when the invoice is finalized" do
+      let(:invoice) { create(:invoice, organization:, customer:, invoice_type: :contract) }
+
+      it "returns a method not allowed error" do
+        subject
+
+        expect(response).to have_http_status(:method_not_allowed)
+        expect(json[:code]).to eq("not_deletable")
+        expect(invoice.reload).to be_finalized
+      end
+    end
+
+    context "when the invoice is a legacy one" do
+      let(:legacy_invoice) { create(:invoice, :draft, organization:, customer:) }
+      let(:invoice_id) { legacy_invoice.id }
+
+      it "returns a not found error without deleting it" do
+        subject
+
+        expect(response).to be_not_found_error("invoice")
+        expect(legacy_invoice.reload).to be_draft
+      end
+    end
+  end
+
+  describe "POST /api/v2/invoices/:id/lose_dispute" do
+    subject { post_with_token(organization, "/api/v2/invoices/#{invoice_id}/lose_dispute") }
+
+    let(:invoice) { create(:invoice, organization:, customer:, invoice_type: :contract) }
+    let(:invoice_id) { invoice.id }
+
+    include_examples "requires API permission", "invoice", "write"
+
+    it "marks the dispute as lost and returns the invoice" do
+      freeze_time do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(invoice.reload.payment_dispute_lost_at).to eq(Time.current)
+        expect(json[:invoice]).to include(lago_id: invoice.id, payment_dispute_lost_at: Time.current.iso8601(6))
+      end
+    end
+
+    context "when the invoice is a draft" do
+      let(:invoice) { create(:invoice, :draft, organization:, customer:, invoice_type: :contract) }
+
+      it "returns a method not allowed error" do
+        subject
+
+        expect(response).to have_http_status(:method_not_allowed)
+        expect(json[:code]).to eq("not_disputable")
+        expect(invoice.reload.payment_dispute_lost_at).to be_nil
+      end
+    end
+
+    context "when the invoice is a legacy one" do
+      let(:invoice_id) { legacy_invoice.id }
+
+      it "returns a not found error without marking it" do
+        subject
+
+        expect(response).to be_not_found_error("invoice")
+        expect(legacy_invoice.reload.payment_dispute_lost_at).to be_nil
       end
     end
   end

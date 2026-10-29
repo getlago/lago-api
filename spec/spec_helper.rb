@@ -273,7 +273,7 @@ RSpec.configure do |config|
   config.after(:each, :v2_timestamps) do
     # The session itself, as a spec may name its subject `request` or `response`.
     session = @integration_session
-    next unless session&.response&.media_type == "application/json"
+    next unless session&.response&.media_type == "application/json" && session.response.body.present?
 
     expect(session.response.parsed_body).to have_normalized_timestamps
   end
