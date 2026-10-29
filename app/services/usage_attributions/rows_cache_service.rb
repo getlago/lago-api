@@ -8,15 +8,24 @@ module UsageAttributions
   # enriched_at is stamped when an insert begins, so the watermark trails the read by
   # INGESTION_MARGIN to cover rows that were not readable yet.
   #
-  # MAX_TTL bounds what the watermark cannot see: a row readable later than the margin, and
-  # duplicates merged or deleted after the read.
+  # Deleted events leave no trace the watermark can see, so a deletion expires the entries of its
+  # subscription computed before it. MAX_TTL bounds what neither covers, such as duplicates merged
+  # by ClickHouse after the read.
   class RowsCacheService < BaseService
     CACHE_KEY_VERSION = "1"
-    INGESTION_MARGIN = 5.seconds
+    INGESTION_MARGIN = Events::Stores::ChargeFiltersScan::IncrementalCache::INGESTION_MARGIN
     MAX_TTL = 6.hours
     FAILURE_TTL = 10.seconds
 
     Result = BaseResult[:rows]
+
+    def self.expire_for_subscription(subscription)
+      Rails.cache.write(expiry_key(subscription), Time.current, expires_in: MAX_TTL)
+    end
+
+    def self.expiry_key(subscription)
+      ["attributed-usage", CACHE_KEY_VERSION, subscription.organization_id, subscription.id, "expired-at"].join("/")
+    end
 
     def initialize(subscription:, query:)
       @subscription = subscription
@@ -44,12 +53,17 @@ module UsageAttributions
     attr_reader :subscription, :query
 
     def cached_entry
-      entry = Rails.cache.read(cache_key)
-      entry if entry && valid?(entry)
+      expiry_key = self.class.expiry_key(subscription)
+      entries = Rails.cache.read_multi(cache_key, expiry_key)
+      entry = entries[cache_key]
+      entry if entry && valid?(entry, entries[expiry_key])
     end
 
-    def valid?(entry)
-      entry.key?("error") || !query.ingested_since?(entry["computed_at"] - INGESTION_MARGIN)
+    def valid?(entry, expired_at)
+      return true if entry.key?("error")
+      return false if expired_at && entry["computed_at"] <= expired_at
+
+      !query.ingested_since?(entry["computed_at"] - INGESTION_MARGIN)
     rescue ActiveRecord::ActiveRecordError
       false
     end

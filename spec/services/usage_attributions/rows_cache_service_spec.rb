@@ -68,7 +68,7 @@ RSpec.describe UsageAttributions::RowsCacheService, cache: :memory, clickhouse: 
     it "serves the entry when no event was ingested since" do
       expect(nodes(described_class.call!(subscription:, query:).rows)).to eq([["eng", BigDecimal(500)]])
       expect(query).to have_received(:rows).once
-      expect(query).to have_received(:ingested_since?).with(Time.zone.parse("2026-10-20 11:59:55"))
+      expect(query).to have_received(:ingested_since?).with(Time.zone.parse("2026-10-20 11:55:00"))
     end
 
     it "reads the query again when an event of a past day was ingested since" do
@@ -110,9 +110,45 @@ RSpec.describe UsageAttributions::RowsCacheService, cache: :memory, clickhouse: 
     end
   end
 
+  context "when the events of the subscription are deleted after the read" do
+    before do
+      result
+      travel(1.minute)
+      described_class.expire_for_subscription(subscription)
+    end
+
+    it "reads the query again" do
+      described_class.call!(subscription:, query:)
+
+      expect(query).to have_received(:rows).twice
+    end
+
+    it "serves the entry read after the deletion" do
+      travel(1.second)
+      described_class.call!(subscription:, query:)
+      travel(1.minute)
+      described_class.call!(subscription:, query:)
+
+      expect(query).to have_received(:rows).twice
+    end
+  end
+
+  context "when another subscription's events are deleted" do
+    before do
+      result
+      described_class.expire_for_subscription(create(:subscription))
+    end
+
+    it "serves the entry" do
+      described_class.call!(subscription:, query:)
+
+      expect(query).to have_received(:rows).once
+    end
+  end
+
   context "when an event is ingested within the margin of the read" do
     before do
-      create_event(team: "data", value: 2000, enriched_at: 2.seconds.ago)
+      create_event(team: "data", value: 2000, enriched_at: 4.minutes.ago)
       result
       travel(1.hour)
     end

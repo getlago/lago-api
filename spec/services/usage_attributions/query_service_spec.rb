@@ -499,7 +499,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
         end
       end
 
-      travel(1.minute)
+      travel(10.minutes) # past the ingestion margin of the events
       result
       travel(1.minute)
     end
