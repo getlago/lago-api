@@ -583,6 +583,23 @@ RSpec.describe Mutations::Wallets::Create, :premium do
       expect(result["data"]["createCustomerWallet"]["name"]).to eq("Restricted Wallet")
     end
 
+    context "without the deprecated initial transaction inputs" do
+      let(:base_input) do
+        {
+          customerId: customer.id,
+          name: "Restricted Wallet",
+          priority: 9,
+          rateAmount: "1",
+          currency: "EUR"
+        }
+      end
+
+      it "creates the wallet without a transaction" do
+        expect { result }.to change(Wallet, :count).by(1)
+        expect(Wallet.find(result["data"]["createCustomerWallet"]["id"]).wallet_transactions).to be_empty
+      end
+    end
+
     context "when granting credits" do
       let(:extra_input) { {grantedCredits: "15.00"} }
 
