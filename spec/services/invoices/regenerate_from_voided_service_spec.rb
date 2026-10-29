@@ -362,14 +362,6 @@ describe "Regenerate From Voided Invoice Scenarios", :with_pdf_generation_stub, 
       expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
     end
 
-    it "produces segment event" do
-      allow(Utils::SegmentTrack).to receive(:invoice_created).and_call_original
-
-      regenerate_result
-
-      expect(Utils::SegmentTrack).to have_received(:invoice_created)
-    end
-
     it "enqueues GenerateDocumentsJob with email false" do
       expect do
         regenerate_result

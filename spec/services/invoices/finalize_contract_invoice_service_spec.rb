@@ -25,7 +25,6 @@ RSpec.describe Invoices::FinalizeContractInvoiceService do
 
   before do
     allow(Utils::ActivityLog).to receive(:produce_after_commit)
-    allow(Utils::SegmentTrack).to receive(:invoice_created)
     allow(Invoices::Payments::CreateService).to receive(:call_async)
   end
 
@@ -38,7 +37,6 @@ RSpec.describe Invoices::FinalizeContractInvoiceService do
     expect(Invoices::GenerateDocumentsJob).to have_been_enqueued.once.with(invoice:, notify: false)
     expect(Utils::ActivityLog).to have_received(:produce_after_commit).once.with(invoice, "invoice.created")
     expect(Invoices::Payments::CreateService).to have_received(:call_async).once.with(invoice:)
-    expect(Utils::SegmentTrack).to have_received(:invoice_created).once.with(invoice)
   end
 
   it "does not sync the invoice with integrations the customer does not use" do
@@ -71,17 +69,6 @@ RSpec.describe Invoices::FinalizeContractInvoiceService do
     end
   end
 
-  context "when the enclosing transaction rolls back" do
-    it "does not track the invoice creation" do
-      ActiveRecord::Base.transaction do
-        described_class.call(invoice:)
-        raise ActiveRecord::Rollback
-      end
-
-      expect(Utils::SegmentTrack).not_to have_received(:invoice_created)
-    end
-  end
-
   context "with a premium license", :premium do
     it "notifies the customer" do
       result
@@ -107,7 +94,6 @@ RSpec.describe Invoices::FinalizeContractInvoiceService do
       expect(result).to be_success
       expect(invoice.reload).to be_draft
       expect(SendWebhookJob).not_to have_been_enqueued
-      expect(Utils::SegmentTrack).not_to have_received(:invoice_created)
     end
   end
 
@@ -135,7 +121,6 @@ RSpec.describe Invoices::FinalizeContractInvoiceService do
       expect(Invoices::GenerateDocumentsJob).not_to have_been_enqueued
       expect(Utils::ActivityLog).not_to have_received(:produce_after_commit)
       expect(Invoices::Payments::CreateService).not_to have_received(:call_async)
-      expect(Utils::SegmentTrack).not_to have_received(:invoice_created)
     end
   end
 
@@ -148,7 +133,6 @@ RSpec.describe Invoices::FinalizeContractInvoiceService do
       expect(Invoices::GenerateDocumentsJob).not_to have_been_enqueued
       expect(Utils::ActivityLog).not_to have_received(:produce_after_commit)
       expect(Invoices::Payments::CreateService).not_to have_received(:call_async)
-      expect(Utils::SegmentTrack).not_to have_received(:invoice_created)
     end
   end
 

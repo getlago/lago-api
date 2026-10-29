@@ -25,11 +25,6 @@ RSpec.describe Invoices::FinalizeOpenCreditService do
       expect(SendWebhookJob).to have_been_enqueued.with("invoice.paid_credit_added", result.invoice)
       expect(Invoices::GenerateDocumentsJob).to have_been_enqueued.with(invoice: result.invoice, notify: false)
       expect(Integrations::Aggregator::Invoices::CreateJob).to have_been_enqueued.with(invoice: result.invoice)
-      expect(SegmentTrackJob).to have_been_enqueued.with(membership_id: anything, event: "invoice_created", properties: {
-        organization_id: result.invoice.organization.id,
-        invoice_id: result.invoice.id,
-        invoice_type: result.invoice.invoice_type
-      })
       expect(Utils::ActivityLog).to have_produced("invoice.paid_credit_added").with(invoice)
     end
 

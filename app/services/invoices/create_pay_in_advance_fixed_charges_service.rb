@@ -70,7 +70,6 @@ module Invoices
       if subscription.gated?
         Invoices::Payments::CreateService.call_async(invoice:)
       elsif !invoice.closed?
-        Utils::SegmentTrack.invoice_created(invoice)
         deliver_webhooks
         Utils::ActivityLog.produce(invoice, "invoice.created")
         Invoices::GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?)
