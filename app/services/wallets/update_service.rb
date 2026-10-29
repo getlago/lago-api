@@ -29,15 +29,12 @@ module Wallets
       return result unless valid_connections?
       return result unless valid_x402?
 
-      if billing_entity_param_sent?
-        if billing_entity_value_provided? && billing_entity.nil?
-          return result.not_found_failure!(resource: "billing_entity")
-        end
-
-        wallet.billing_entity = billing_entity
+      if billing_entity_param_sent? && billing_entity_value_provided? && billing_entity.nil?
+        return result.not_found_failure!(resource: "billing_entity")
       end
 
-      ActiveRecord::Base.transaction do
+      wallet.with_lock do
+        wallet.billing_entity = billing_entity if billing_entity_param_sent?
         wallet.name = params[:name] if params.key?(:name)
         wallet.code = params[:code] if params[:code]
         wallet.priority = params[:priority] if params[:priority]

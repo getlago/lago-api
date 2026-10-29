@@ -48,6 +48,20 @@ RSpec.describe Wallets::UpdateService do
       expect(Utils::ActivityLog).to have_produced("wallet.updated").after_commit.with(wallet)
     end
 
+    context "when the wallet changes after it is loaded" do
+      let(:wallet) { Wallet.find(super().id) }
+
+      before do
+        wallet
+        Wallet.find(wallet.id).update!(balance_cents: 500)
+      end
+
+      it "updates the latest wallet version" do
+        expect(result).to be_success
+        expect(wallet.reload).to have_attributes(name: "new name", balance_cents: 500)
+      end
+    end
+
     context "when recurring transaction rules are requested without Premium" do
       let(:params) do
         super().merge(recurring_transaction_rules: [
@@ -991,8 +1005,7 @@ RSpec.describe Wallets::UpdateService do
 
       context "when payment method is already attached" do
         before do
-          wallet.payment_method = payment_method
-          wallet.payment_method_type = "provider"
+          wallet.update!(payment_method:, payment_method_type: "provider")
         end
 
         let(:payment_method_params) do
