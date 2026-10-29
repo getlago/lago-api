@@ -117,7 +117,7 @@ class PaymentsQuery < BaseQuery
       invoice_base.where(payable_type: "Invoice", payable_id: invoice_id).select(:id),
       invoice_base.where(payable_type: "PaymentRequest")
         .joins("INNER JOIN invoices_payment_requests ON invoices_payment_requests.payment_request_id = payments.payable_id")
-        .where(invoices_payment_requests: {invoice_id:})
+        .where(invoices_payment_requests: {invoice_id:, organization_id: organization.id})
         .select(:id)
     ]
 

@@ -176,6 +176,15 @@ RSpec.describe PaymentsQuery do
       expect(sql).not_to include("LEFT JOIN invoices_payment_requests")
       expect(sql).not_to include("OR invoices_payment_requests.invoice_id")
     end
+
+    it "reads each payment source through an index" do
+      plan = ActiveRecord::Base.transaction do
+        ActiveRecord::Base.connection.execute("SET LOCAL enable_seqscan = off")
+        ActiveRecord::Base.connection.select_values("EXPLAIN (COSTS OFF) #{result.payments.to_sql}").join("\n")
+      end
+
+      expect(plan.scan("index_payments_on_payable_type_and_payable_id").size).to eq(2)
+    end
   end
 
   context "when filtering by invoice_id of a payment request" do
