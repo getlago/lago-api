@@ -67,18 +67,49 @@ class BaseService
       end
     end
 
+    # The meta keys of the bounds that the length and numericality validators give as an Integer
+    # count, so that a model states each bound once. An exclusive bound (greater_than) or a decimal
+    # one has no key yet.
+    BOUND_KEYS = {
+      greater_than_or_equal_to: %i[min],
+      less_than_or_equal_to: %i[max],
+      too_short: %i[min_length],
+      too_long: %i[max_length],
+      wrong_length: %i[min_length max_length]
+    }.freeze
+
     attr_reader :messages
 
     # The errors of a record, read now: valid? clears them in place, and ActiveModel computes each
-    # message when it is read. The `meta:` option of an error is its meta, and its other options are
-    # not: `value:` echoes the request.
+    # message when it is read.
     def self.from_errors(result, errors)
       entries = errors.group_by_attribute.flat_map do |field, field_errors|
-        field_errors.map { Entry.new(field:, code: it.message, meta: it.options.fetch(:meta, {})) }
+        field_errors.map { Entry.new(field:, code: it.message, meta: meta_of(it)) }
       end
 
       new(result, messages: errors.messages, entries:)
     end
+
+    # The bound of its validator, then its `meta:` option, which wins key by key. Its other options are
+    # not meta: `value:` echoes the request.
+    def self.meta_of(error)
+      count = error.options[:count]
+      keys = count.is_a?(Integer) ? BOUND_KEYS.fetch(error.type, []) : []
+      keys = [] if keys.intersect?(%i[min_length max_length]) && !text?(error)
+      meta = error.options.fetch(:meta, {})
+
+      meta.is_a?(Hash) ? keys.index_with(count).merge(meta.symbolize_keys) : meta
+    end
+
+    # The length validator also counts the elements of a list, which min_length and max_length do not
+    # mean. An error imported from another record reads its value there.
+    def self.text?(error)
+      error = error.inner_error if error.is_a?(ActiveModel::NestedError)
+      value = error.base.read_attribute_for_validation(error.attribute) if error.base.respond_to?(error.attribute)
+
+      value.nil? || value.is_a?(String)
+    end
+    private_class_method :meta_of, :text?
 
     # One entry per code, in the order of messages, duplicates kept, each code as it is: v2 renders a
     # code that is not a token as value_is_invalid. Messages that are not a hash become

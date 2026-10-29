@@ -30,9 +30,9 @@ RSpec.describe BaseService::ValidationFailure do
         code: %w[value_is_mandatory],
         rate_model: %w[not_allowed_for_product]
       )
-      # count and value are options of the validator, not meta: value echoes the request.
+      # The count of the validator is its bound; value echoes the request.
       expect(failure.entries).to eq([
-        entry(:billing_interval_count, "value_is_out_of_range"),
+        entry(:billing_interval_count, "value_is_out_of_range", {min: 1}),
         entry(:billing_interval_count, "not_allowed_for_billing_timing", {min: 1, max: 3}),
         entry(:code, "value_is_mandatory"),
         entry(:rate_model, "not_allowed_for_product", {allowed_values: %w[standard package]})
@@ -46,6 +46,60 @@ RSpec.describe BaseService::ValidationFailure do
 
       expect(failure.messages.keys).to eq(%i[billing_interval_count code rate_model])
       expect(failure.entries.size).to eq(4)
+    end
+
+    context "with the errors of the length and numericality validators" do
+      let(:record) do
+        build(:customer, name: "a" * 256, net_payment_term: -1).tap(&:valid?).tap do |customer|
+          customer.errors.add(:legal_name, :too_short, count: 2)
+          customer.errors.add(:zipcode, :wrong_length, count: 5)
+          customer.errors.add(:city, :less_than_or_equal_to, count: 10)
+          customer.errors.add(:state, :greater_than, count: 0)
+          customer.errors.add(:firstname, :greater_than_or_equal_to, count: BigDecimal("0.5"))
+          customer.errors.add(:invoice_grace_period, :greater_than_or_equal_to, count: 0, meta: {min: 1, max: 365})
+        end
+      end
+
+      # An exclusive or decimal bound has no key, and the meta option wins over the bound.
+      it "derives the inclusive Integer bounds" do
+        expect(failure.entries.map { [it.field, it.code, it.meta] }).to eq([
+          [:name, "value_is_too_long", {max_length: 255}],
+          [:net_payment_term, "value_is_out_of_range", {min: 0}],
+          [:legal_name, "value_is_too_short", {min_length: 2}],
+          # No code of Lago's own: v2 renders the sentence of Rails as value_is_invalid.
+          [:zipcode, "is the wrong length (should be 5 characters)", {min_length: 5, max_length: 5}],
+          [:city, "value_is_out_of_range", {max: 10}],
+          [:state, "value_is_out_of_range", {}],
+          [:firstname, "value_is_out_of_range", {}],
+          [:invoice_grace_period, "value_is_out_of_range", {min: 1, max: 365}]
+        ])
+      end
+
+      context "with length errors imported from other records" do
+        let(:record) do
+          build(:rate_card_rate).tap do |rate|
+            text = ActiveModel::Error.new(build(:customer, name: "abc"), :name, :too_long, count: 2)
+            list = ActiveModel::Error.new(build(:usage_attribution_type, attribution_keys: %w[a b]), :attribution_keys, :too_long, count: 1)
+            rate.errors.import(text, attribute: :"customer.name")
+            rate.errors.import(list, attribute: :"usage_attribution_type.attribution_keys")
+          end
+        end
+
+        it "reads the value they bound on the record they come from" do
+          expect(failure.entries.map { [it.field, it.meta] }).to eq([
+            [:"customer.name", {max_length: 2}],
+            [:"usage_attribution_type.attribution_keys", {}]
+          ])
+        end
+      end
+
+      context "when the length validator counts the elements of a list" do
+        let(:record) { build(:usage_attribution_type, attribution_keys: %w[a b c d e]).tap(&:valid?) }
+
+        it "derives no length bound" do
+          expect(failure.entries.select { it.field == :attribution_keys }.map { [it.code, it.meta] }).to eq([["value_is_too_long", {}]])
+        end
+      end
     end
 
     context "when an error carries a key that is not registered" do
