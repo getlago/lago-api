@@ -4399,6 +4399,7 @@ type CreditNote {
   errorDetails: [ErrorDetail!]
   externalIntegrationId: String
   fileUrl: String
+  fileUrlExpiresAt: ISO8601DateTime
   id: ID!
   integrationSyncable: Boolean!
   invoice: Invoice
@@ -4421,6 +4422,7 @@ type CreditNote {
   updatedAt: ISO8601DateTime!
   voidedAt: ISO8601DateTime
   xmlUrl: String
+  xmlUrlExpiresAt: ISO8601DateTime
 }
 
 type CreditNoteAppliedTax implements AppliedTax {
@@ -5274,6 +5276,7 @@ type CurrentOrganization {
   defaultCurrency: CurrencyEnum!
   documentNumberPrefix: String!
   documentNumbering: DocumentNumberingEnum!
+  documentUrlExpirationDays: Int!
   email: String
   emailSettings: [EmailSettingsEnum!]
   euTaxManagement: Boolean!
@@ -8002,6 +8005,7 @@ type Invoice {
   fees: [Fee!]
   feesAmountCents: BigInt!
   fileUrl: String
+  fileUrlExpiresAt: ISO8601DateTime
   id: ID!
   integrationHubspotSyncable: Boolean!
   integrationSalesforceSyncable: Boolean!
@@ -8048,6 +8052,7 @@ type Invoice {
   voidedAt: ISO8601DateTime
   voidedInvoiceId: String
   xmlUrl: String
+  xmlUrlExpiresAt: ISO8601DateTime
 }
 
 type InvoiceAppliedTax implements AppliedTax {
@@ -11252,6 +11257,7 @@ type OrderForm {
   quote: Quote!
   signedAt: ISO8601DateTime
   signedDocumentUrl: String
+  signedDocumentUrlExpiresAt: ISO8601DateTime
   status: OrderFormStatusEnum!
   updatedAt: ISO8601DateTime!
   voidReason: OrderFormVoidReasonEnum
@@ -11478,11 +11484,13 @@ PaymentReceipt
 type PaymentReceipt {
   createdAt: ISO8601DateTime!
   fileUrl: String
+  fileUrlExpiresAt: ISO8601DateTime
   id: ID!
   number: String!
   organization: Organization!
   payment: Payment!
   xmlUrl: String
+  xmlUrlExpiresAt: ISO8601DateTime
 }
 
 type PaymentRequest {
@@ -16396,6 +16404,7 @@ input UpdateOrganizationInput {
   defaultCurrency: CurrencyEnum
   documentNumberPrefix: String
   documentNumbering: DocumentNumberingEnum
+  documentUrlExpirationDays: Int
   email: String
   emailSettings: [EmailSettingsEnum!]
   euTaxManagement: Boolean

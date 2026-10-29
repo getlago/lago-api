@@ -196,6 +196,12 @@ RSpec.describe Organization do
       expect(organization).not_to be_valid
     end
 
+    it "allows document_url_expiration_days between 30 and 120" do
+      expect(organization.document_url_expiration_days).to eq(30)
+      expect(organization).to validate_numericality_of(:document_url_expiration_days)
+        .only_integer.is_greater_than_or_equal_to(30).is_less_than_or_equal_to(120)
+    end
+
     describe "of hmac key uniqueness" do
       before { create(:organization) }
 

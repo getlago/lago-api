@@ -3758,6 +3758,7 @@ CREATE TABLE public.organizations (
     max_wallets integer,
     slug character varying NOT NULL,
     pagination_max_page_size integer,
+    document_url_expiration_days integer DEFAULT 30 NOT NULL,
     CONSTRAINT check_organizations_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -15959,6 +15960,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261026150420'),
 ('20261026101445'),
 ('20261022090030'),
+('20261021200000'),
 ('20261020144205'),
 ('20261020074217'),
 ('20261019074555'),

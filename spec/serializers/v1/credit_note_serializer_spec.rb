@@ -49,7 +49,9 @@ RSpec.describe V1::CreditNoteSerializer do
       "created_at" => credit_note.created_at.iso8601,
       "updated_at" => credit_note.updated_at.iso8601,
       "file_url" => credit_note.file_url,
+      "file_url_expires_at" => nil,
       "xml_url" => credit_note.xml_url,
+      "xml_url_expires_at" => nil,
       "error_details" => [{
         "lago_id" => error_detail.id,
         "error_code" => error_detail.error_code,
@@ -60,5 +62,21 @@ RSpec.describe V1::CreditNoteSerializer do
 
     expect(result["credit_note"].keys).to include("customer", "items")
     expect(result["credit_note"]["customer"].keys).to include("integration_customers")
+  end
+
+  context "with attached documents" do
+    before do
+      credit_note.file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.pdf")), filename: "credit_note.pdf")
+      credit_note.xml_file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.xml")), filename: "credit_note.xml")
+    end
+
+    it "serializes expiring urls with their expiry" do
+      result = JSON.parse(serializer.to_json)["credit_note"]
+      expires_at = credit_note.document_url_expires_at.iso8601
+
+      expect(result["file_url"]).to include("/documents/")
+      expect(result["xml_url"]).to include("/documents/")
+      expect(result).to include("file_url_expires_at" => expires_at, "xml_url_expires_at" => expires_at)
+    end
   end
 end
