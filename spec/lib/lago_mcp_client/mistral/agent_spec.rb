@@ -470,11 +470,11 @@ RSpec.describe LagoMcpClient::Mistral::Agent do
       end
     end
 
-    it "sends the results and returns the final content" do
+    it "sends the results and streams the answer" do
       chunks = []
       result = agent.submit_tool_results(tool_results) { |chunk| chunks << chunk }
 
-      expect(result).to eq("The coupon was created")
+      expect(result).to eq([])
       expect(chunks).to eq(["Done"])
       expect(mistral_client).to have_received(:append_to_conversation).with(
         conversation_id:,
@@ -482,29 +482,19 @@ RSpec.describe LagoMcpClient::Mistral::Agent do
       )
     end
 
-    it "calls on_submitted once the model has the results" do
-      calls = []
-      allow(mistral_client).to receive(:append_to_conversation) do |**_args, &block|
-        calls << :append
-        {"outputs" => [{"content" => "The coupon was created"}]}
-      end
-
-      agent.submit_tool_results(tool_results, on_submitted: -> { calls << :submitted }) { |_chunk| }
-
-      expect(calls).to eq(%i[append submitted])
-    end
-
-    context "when the model does not accept the results" do
+    context "when the model makes more tool calls" do
       before do
-        allow(mistral_client).to receive(:append_to_conversation).and_raise(LagoMcpClient::Mistral::ApiError.new(503, "unavailable"))
+        allow(mcp_client).to receive(:call_tool)
+        allow(mistral_client).to receive(:append_to_conversation).and_return(
+          {"tool_calls" => [{"id" => "call_456", "function" => {"name" => "get_coupon", "arguments" => '{"code":"SPRING"}'}}]}
+        )
       end
 
-      it "does not call on_submitted" do
-        submitted = false
+      it "returns them without running them" do
+        result = agent.submit_tool_results(tool_results) { |_chunk| }
 
-        expect { agent.submit_tool_results(tool_results, on_submitted: -> { submitted = true }) { |_chunk| } }
-          .to raise_error(LagoMcpClient::Mistral::ApiError)
-        expect(submitted).to be(false)
+        expect(result).to eq([{tool_call_id: "call_456", name: "get_coupon", arguments: {"code" => "SPRING"}}])
+        expect(mcp_client).not_to have_received(:call_tool)
       end
     end
 

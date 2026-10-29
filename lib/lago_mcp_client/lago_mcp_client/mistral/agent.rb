@@ -32,16 +32,21 @@ module LagoMcpClient
         process_conversation(user_message, max_tool_iterations) { |chunk| yield chunk }
       end
 
-      # Sends the results of a batch that waited for a confirmation, then carries on
-      # the conversation as #chat does, with a nonce of its own as it runs in another job.
-      # on_submitted is called once the model has the results.
-      def submit_tool_results(tool_results, max_tool_iterations: MAX_ITERATIONS, on_submitted: nil)
+      # Sends the results of a batch that waited for a confirmation and returns the tool calls
+      # the model makes next, without running them: the caller keeps them first, so a failure
+      # while running them can be retried.
+      def submit_tool_results(tool_results)
         raise ArgumentError, "Block required for streaming" unless block_given?
 
-        nonce = SecureRandom.hex(16)
-        response = send_tool_results(tool_results, nonce) { |chunk| yield chunk }
-        on_submitted&.call
-        follow_tool_calls(response, max_tool_iterations, nonce) { |chunk| yield chunk }
+        response = send_tool_results(tool_results, SecureRandom.hex(16)) { |chunk| yield chunk }
+
+        Array(response["tool_calls"]).map do |tool_call|
+          {
+            tool_call_id: tool_call["id"],
+            name: tool_call.dig("function", "name"),
+            arguments: JSON.parse(tool_call.dig("function", "arguments").presence || "{}")
+          }
+        end
       end
 
       def run_confirmed_tool_call(tool_call_id:, name:, arguments:)
