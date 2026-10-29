@@ -92,6 +92,12 @@ class BaseService
       end
     end
 
+    # Entries a service collects itself, with their meta. The messages group their codes by field, as
+    # the messages of a record do.
+    def self.from_entries(result, entries)
+      new(result, messages: entries.group_by(&:field).transform_values { it.map(&:code) }, entries:)
+    end
+
     # messages: {field => [code]}, or one of the String, indexed and nested shapes a few services
     # build, kept as they are. entries: derived from messages when the producer adds no meta.
     def initialize(result, messages:, entries: nil)
@@ -105,6 +111,15 @@ class BaseService
     # may be nested, never builds them.
     def entries
       @entries ||= (@given_entries || self.class.entries_from(messages)).freeze
+    end
+
+    # The same codes on the result of the caller, under the fields the block gives, the meta of each
+    # kept: a nested record's errors under the key of its parent, a column under its parameter. A
+    # plain ValidationFailure, as the block may rename what a subclass reads its facts from.
+    def remap(result, &)
+      entries = @given_entries&.map { it.with(field: yield(it.field)) }
+
+      ValidationFailure.new(result, messages: messages.transform_keys(&), entries:)
     end
 
     private

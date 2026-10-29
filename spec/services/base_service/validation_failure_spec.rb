@@ -76,6 +76,24 @@ RSpec.describe BaseService::ValidationFailure do
     end
   end
 
+  describe ".from_entries" do
+    subject(:failure) { described_class.from_entries(result, entries) }
+
+    let(:entries) do
+      [
+        entry(:position, "value_is_out_of_range", {min: 1, max: 3}),
+        entry(:name, "value_is_mandatory"),
+        entry(:position, "value_is_invalid")
+      ]
+    end
+
+    it "keeps the entries and groups their codes by field as messages" do
+      expect(failure.entries).to eq(entries)
+      expect(failure.messages).to eq(position: %w[value_is_out_of_range value_is_invalid], name: ["value_is_mandatory"])
+      expect(failure.result).to eq(result)
+    end
+  end
+
   describe "#message" do
     it { expect(failure.message).to eq('Validation errors: {"name":["value_is_mandatory"],"position":["value_is_out_of_range","value_is_invalid"]}') }
   end
@@ -150,6 +168,32 @@ RSpec.describe BaseService::ValidationFailure do
           expect { entry(:position, "value_is_out_of_range", {min: 1, max: 1.5}) }
             .to raise_error(ArgumentError, "meta max: 1.5 is not a registered key and type")
         end
+      end
+    end
+  end
+
+  describe "#remap" do
+    subject(:remapped) { failure.remap(other_result) { :"rates.#{it}" } }
+
+    let(:other_result) { BaseResult.new }
+
+    it "renames the fields of the messages, on the result given" do
+      expect(remapped).to be_a(described_class)
+      expect(remapped.result).to eq(other_result)
+      expect(remapped.messages).to eq("rates.name": ["value_is_mandatory"], "rates.position": %w[value_is_out_of_range value_is_invalid])
+      expect(remapped.entries).to eq([
+        entry(:"rates.name", "value_is_mandatory"),
+        entry(:"rates.position", "value_is_out_of_range"),
+        entry(:"rates.position", "value_is_invalid")
+      ])
+    end
+
+    context "with entries given" do
+      let(:failure) { described_class.from_entries(result, [entry(:position, "value_is_out_of_range", {min: 1, max: 3})]) }
+
+      it "renames their fields and keeps their meta" do
+        expect(remapped.messages).to eq("rates.position": ["value_is_out_of_range"])
+        expect(remapped.entries).to eq([entry(:"rates.position", "value_is_out_of_range", {min: 1, max: 3})])
       end
     end
   end

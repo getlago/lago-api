@@ -111,6 +111,23 @@ RSpec.shared_examples "a result object" do
     it { expect(result.error.entries).to eq([BaseService::ValidationFailure::Entry.new(field: :field, code: "error", meta: {})]) }
 
     it { expect { result.raise_if_error! }.to raise_error(BaseService::ValidationFailure) }
+
+    context "when passing entries" do
+      let(:entries) do
+        [
+          BaseService::ValidationFailure::Entry.new(field: :position, code: "value_is_out_of_range", meta: {min: 1, max: 3}),
+          BaseService::ValidationFailure::Entry.new(field: :name, code: "value_is_mandatory"),
+          BaseService::ValidationFailure::Entry.new(field: :position, code: "value_is_invalid")
+        ]
+      end
+
+      before { result.validation_failure!(entries:) }
+
+      it "keeps them, and groups their codes by field as messages" do
+        expect(result.error.entries).to eq(entries)
+        expect(result.error.messages).to eq({position: %w[value_is_out_of_range value_is_invalid], name: ["value_is_mandatory"]})
+      end
+    end
   end
 
   describe ".record_validation_failure!" do
@@ -146,6 +163,20 @@ RSpec.shared_examples "a result object" do
           ["value_is_invalid", {allowed_values: %w[a b]}],
           ["value_is_invalid", {}]
         ])
+      end
+
+      context "with a block renaming the fields" do
+        before { result.record_validation_failure!(record:) { :"customer.#{it}" } }
+
+        it "renames the fields of the messages and of the entries, the meta kept" do
+          expect(result.error.messages).to eq({"customer.external_id": %w[value_is_mandatory value_is_invalid], "customer.currency": ["value_is_invalid"]})
+          expect(result.error.entries.map { [it.field, it.meta] }).to eq([
+            [:"customer.external_id", {}],
+            [:"customer.external_id", {allowed_values: %w[a b]}],
+            [:"customer.currency", {}]
+          ])
+          expect(result.error.result).to eq(result)
+        end
       end
     end
   end
