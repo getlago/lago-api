@@ -139,15 +139,23 @@ class BaseQuery < BaseService
       .raise_if_error!
   end
 
-  # Narrows `scope` on the `<column>_from` and `<column>_to` filters, both bounds included.
-  # An invalid bound raises the `invalid_date` failure: the query rescues it to return its result.
+  # Narrows `scope` on the `<column>_from` and `<column>_to` filters, both bounds included, so a
+  # date-only `_to` covers its whole day. An invalid bound raises the `invalid_date` failure.
   def with_date_range(scope, column)
     from = filters[:"#{column}_from"]
     to = filters[:"#{column}_to"]
 
     scope = scope.where(column => parse_datetime_filter(:"#{column}_from")..) if from.present?
-    scope = scope.where(column => ..parse_datetime_filter(:"#{column}_to")) if to.present?
+    if to.present?
+      to_bound = parse_datetime_filter(:"#{column}_to")
+      scope = date_only?(to) ? scope.where(column => ...to_bound.next_day) : scope.where(column => ..to_bound)
+    end
     scope
+  end
+
+  # `Date._iso8601` only returns an hour for a value that carries a time.
+  def date_only?(value)
+    value.is_a?(String) && !Date._iso8601(value).key?(:hour)
   end
 
   # Apply consistent ordering across query objects

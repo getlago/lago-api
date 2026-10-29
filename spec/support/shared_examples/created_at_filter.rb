@@ -23,6 +23,14 @@ RSpec.shared_examples "a v2 list filtered on created_at" do |collection:|
     expect(json[collection].map { it[:lago_id] }).to eq([rows_around_bound.second.id])
   end
 
+  it "covers the whole day of a date-only bound" do
+    day = created_at_bound.to_date.iso8601
+    get_with_token(organization, filtered_path, created_at_from: day, created_at_to: day)
+
+    expect(response).to have_http_status(:ok)
+    expect(json[collection].map { it[:lago_id] }).to match_array(rows_around_bound.map(&:id))
+  end
+
   it "rejects a bound that is not a datetime" do
     get_with_token(organization, filtered_path, created_at_from: "2026-13-01")
 
