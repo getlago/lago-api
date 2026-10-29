@@ -109,12 +109,11 @@ module RecurringAggregationSnapshots
       Aggregation.from(Charges::PayInAdvanceAggregationService.call!(metered_item:, billing_context:))
     end
 
-    # Charges::PayInAdvanceAggregationService#snapshot_readable?: with a period, the event group
-    # starts from its snapshot, or from zero without one. The subscription is the one the event
-    # resolves to, which an upgrade can make another one.
+    # RecurringAggregationSnapshots::FetchService.readable?: with a period, the event group starts
+    # from its snapshot, or from zero without one. The subscription is the one the event resolves
+    # to, which an upgrade can make another one.
     def snapshot_read?(metered_item, billing_context)
-      return false if metered_item.billing_segment
-      return false unless billing_context.subscription?
+      return false unless RecurringAggregationSnapshot.eligible?(metered_item:, billing_context:)
 
       RecurringAggregationSnapshots::FetchService.call!(
         subscription: billing_context.subscription,
@@ -166,10 +165,10 @@ module RecurringAggregationSnapshots
         .map { Events::CommonFactory.new_instance(source: it) }
     end
 
-    # Charges::PayInAdvanceAggregationService#snapshot_readable?
     def compared_charges
       @compared_charges ||= subscription.plan.charges.pay_in_advance.includes(:billable_metric).select do |charge|
-        charge.billable_metric.recurring? && charge.billable_metric.sum_agg?
+        charge.billable_metric.recurring? &&
+          RecurringAggregationSnapshot::AGGREGATION_TYPES.include?(charge.billable_metric.aggregation_type)
       end
     end
 
