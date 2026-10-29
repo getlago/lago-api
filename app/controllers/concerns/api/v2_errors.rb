@@ -16,6 +16,12 @@ module Api
     # A Lago error code, which a client switches on.
     TOKEN = /\A[a-z][a-z0-9_]*\z/
 
+    # The field of an entry is a path into the request: a key per level, joined by dots, and [n] for
+    # the n-th element of a list, from 0 (rates[1].rate_properties.amount). base is the request as a
+    # whole. A 422 never echoes a value, so the index is how a client finds the element refused. The
+    # rates of a rate card and the values of a product filter do not give it yet.
+    FIELD = /\A[a-zA-Z_][a-zA-Z0-9_]*(\[\d+\])*(\.[a-zA-Z_][a-zA-Z0-9_]*(\[\d+\])*)*\z/
+
     # The v1 message is the reason phrase, which the v2 body leaves out.
     def unauthorized_error = render_v2_error(401, code: "unauthorized")
 
@@ -118,9 +124,17 @@ module Api
       render_v2_error(status, code:, details: [error_detail(code:, field: :base, meta: meta.compact)])
     end
 
-    # Every v2 entry, 400, 422 and 429 alike, goes through the registry of meta keys and the token check.
+    # Every v2 entry, 400, 422 and 429 alike, goes through the registry of meta keys and the token and path checks.
     def error_detail(code:, field:, meta: {}, echo: false)
-      {code: token_or_invalid(code, field), field: field.to_s, meta: ValidationMeta.check(meta, echo:)}
+      {code: token_or_invalid(code, field), field: checked_field(field), meta: ValidationMeta.check(meta, echo:)}
+    end
+
+    # Rendered as it is, as the client has nothing better to map, and reported so that its producer
+    # gets fixed.
+    def checked_field(field)
+      field = field.to_s
+      ValidationMeta.report("field #{field.truncate(80).inspect} is not a path into the request") unless field.match?(FIELD)
+      field
     end
 
     # v1 and GraphQL keep the code a service or Rails gives, a sentence included ("is not a number").
