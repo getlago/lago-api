@@ -149,6 +149,10 @@ module Types
         object.invoices.payment_overdue.any?
       end
 
+      def x402_agent_address
+        object.x402_agent_address if object.organization.x402_payments_enabled?
+      end
+
       def overdue_balances
         object.overdue_balances.map do |currency, amount_cents|
           {currency:, amount_cents:}

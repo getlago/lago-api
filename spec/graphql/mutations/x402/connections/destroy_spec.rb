@@ -39,8 +39,33 @@ RSpec.describe Mutations::X402::Connections::Destroy, :premium do
     let(:organization) { create(:organization) }
 
     it "returns a feature unavailable error" do
-      expect_forbidden_error(result)
+      expect_graphql_error(result:, message: "feature_unavailable")
       expect(connection.reload).not_to be_discarded
+    end
+  end
+
+  context "when the connection belongs to another organization" do
+    let(:connection) { create(:x402_connection) }
+
+    it "returns a not found error" do
+      expect_not_found(result)
+      expect(connection.reload).not_to be_discarded
+    end
+  end
+
+  context "when the connection does not exist" do
+    subject(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {input: {id: SecureRandom.uuid}}
+      )
+    end
+
+    it "returns a not found error" do
+      expect_not_found(result)
     end
   end
 end

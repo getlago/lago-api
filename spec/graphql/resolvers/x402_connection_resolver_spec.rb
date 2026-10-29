@@ -39,6 +39,20 @@ RSpec.describe Resolvers::X402ConnectionResolver, :premium do
     )
   end
 
+  context "without the x402_payments flag" do
+    let(:organization) { create(:organization) }
+
+    it "returns a feature unavailable error" do
+      expect_graphql_error(result:, message: "feature_unavailable")
+    end
+  end
+
+  context "without a premium license", premium: false do
+    it "returns a feature unavailable error" do
+      expect_graphql_error(result:, message: "feature_unavailable")
+    end
+  end
+
   context "when the connection belongs to another organization" do
     let(:id) { create(:x402_connection).id }
 

@@ -48,7 +48,13 @@ RSpec.describe Resolvers::X402ConnectionsResolver, :premium do
     let(:organization) { create(:organization) }
 
     it "returns a feature unavailable error" do
-      expect_forbidden_error(result)
+      expect_graphql_error(result:, message: "feature_unavailable")
+    end
+  end
+
+  context "without a premium license", premium: false do
+    it "returns a feature unavailable error" do
+      expect_graphql_error(result:, message: "feature_unavailable")
     end
   end
 end

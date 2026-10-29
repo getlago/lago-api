@@ -55,9 +55,17 @@ RSpec.describe Mutations::X402::Connections::Update, :premium do
     end
 
     it "keeps the stored secrets" do
-      result
+      expect(result["errors"]).to be_nil
+      expect(connection.reload).to have_attributes(name: "Renamed", cdp_api_key_id:, cdp_api_key_secret:)
+    end
+  end
 
-      expect(connection.reload).to have_attributes(cdp_api_key_id:, cdp_api_key_secret:)
+  context "when the form sends back only the masked key id" do
+    let(:input) { super().merge(cdpApiKeyId: "••••••••…x02") }
+
+    it "keeps the stored key id" do
+      expect(result["errors"]).to be_nil
+      expect(connection.reload.cdp_api_key_id).to eq(cdp_api_key_id)
     end
   end
 
@@ -85,7 +93,7 @@ RSpec.describe Mutations::X402::Connections::Update, :premium do
     let(:organization) { create(:organization) }
 
     it "returns a feature unavailable error" do
-      expect_forbidden_error(result)
+      expect_graphql_error(result:, message: "feature_unavailable")
     end
   end
 end

@@ -104,7 +104,7 @@ RSpec.describe Mutations::X402::Connections::Create, :premium do
     let(:organization) { create(:organization) }
 
     it "returns a feature unavailable error" do
-      expect_forbidden_error(result)
+      expect_graphql_error(result:, message: "feature_unavailable")
       expect(organization.x402_connections).to be_empty
     end
   end
