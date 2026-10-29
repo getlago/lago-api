@@ -176,6 +176,7 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
       organization.update!(eu_tax_management: true)
 
       eu_tax_result.tax_code = tax_code
+      eu_tax_result.tax_codes = [tax_code]
       allow(Customers::EuAutoTaxesService).to receive(:call).and_return(eu_tax_result)
     end
 
@@ -331,6 +332,25 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
       expect(result).not_to be_success
       expect(customer.reload).to have_attributes(country: "FR", zipcode: "75001")
       expect(Customers::EuAutoTaxesService).not_to have_received(:call)
+    end
+  end
+
+  context "when a non EU customer without tax identification number has a custom tax" do
+    let(:billing_entity) { create(:billing_entity, country: "FR", eu_tax_management: true) }
+    let(:customer) do
+      create(:customer, organization: billing_entity.organization, billing_entity:, country: "GB", zipcode: "SW1A 1AA", tax_identification_number: nil)
+    end
+    let(:update_args) { {zipcode: "EC1A 1BB"} }
+
+    before do
+      create(:tax, organization: customer.organization, code: "lago_eu_tax_exempt", rate: 0.0)
+      custom_tax = create(:tax, organization: customer.organization, code: "uk_vat", rate: 20.0)
+      create(:customer_applied_tax, organization: customer.organization, customer:, tax: custom_tax)
+    end
+
+    it "keeps the custom tax" do
+      expect(result).to be_success
+      expect(result.customer.taxes.pluck(:code)).to eq(["uk_vat"])
     end
   end
 

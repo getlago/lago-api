@@ -171,6 +171,19 @@ RSpec.describe Api::V2::CustomersController do
       end
     end
 
+    [nil, "bogus"].each do |integration_type|
+      context "with #{integration_type.inspect} as integration type" do
+        let(:attributes) { super().merge(integration_customers: [{integration_type:, integration_code: "netsuite"}.compact]) }
+
+        it "rejects the request without creating a customer" do
+          expect { request }.not_to change(organization.customers, :count)
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq(integration_type: ["value_is_invalid"])
+        end
+      end
+    end
+
     context "without the customer wrapper" do
       subject(:request) { post_with_token(organization, "/api/v2/customers", attributes) }
 
@@ -585,6 +598,23 @@ RSpec.describe Api::V2::CustomersController do
 
           expect(response).to have_http_status(:unprocessable_content)
           expect(json[:error_details][:integration_customers]).to eq(["invalid_count_per_integration_type"])
+        end
+      end
+
+      [nil, "bogus"].each do |integration_type|
+        context "with #{integration_type.inspect} as integration type" do
+          let(:attributes) { {name: "Must not change", integration_customers: [{integration_type:, integration_code: "netsuite"}.compact]} }
+          let(:integration_customer) { create(:netsuite_customer, customer:) }
+
+          before { integration_customer }
+
+          it "rejects the request before modifying the customer or its integrations" do
+            expect { request }.not_to change { customer.reload.attributes }
+
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json[:error_details]).to eq(integration_type: ["value_is_invalid"])
+            expect(customer.integration_customers).to eq([integration_customer])
+          end
         end
       end
 

@@ -11,13 +11,18 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
   let(:organization) { create(:organization) }
 
   # Without `index`, only the ordering is checked: for a query several indexes can serve.
-  shared_examples "a keyset-paginated query" do |table:, index: nil|
-    let(:anchor_token) { CursorPagination::Token.encode(table:, record: Struct.new(:id, :created_at).new(SecureRandom.uuid, Time.current)) }
+  # `sort` is the one the endpoint declares.
+  shared_examples "a keyset-paginated query" do |table:, index: nil, sort: CursorPagination::DEFAULT_SORT|
+    let(:anchor_token) do
+      anchor = Struct.new(:id, :created_at, :issuing_date).new(SecureRandom.uuid, Time.current, Date.current)
+      CursorPagination::Token.encode(table:, record: anchor, sort:)
+    end
+    let(:keyset_order) { sort.map { |column, direction| %("#{table}"."#{column}" #{direction.upcase}) }.join(", ") }
 
     it "ends with the keyset ordering and runs" do
-      scope = filtered_scope.call(CursorPagination::Cursor.new(table:))
+      scope = filtered_scope.call(CursorPagination::Cursor.new(table:, sort:))
 
-      expect(scope.to_sql).to end_with(%(ORDER BY "#{table}"."created_at" DESC, "#{table}"."id" DESC LIMIT 21))
+      expect(scope.to_sql).to end_with("ORDER BY #{keyset_order} LIMIT 21")
       expect(scope.to_a).to eq([])
     end
 
@@ -35,10 +40,10 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
 
         it "serves the first page and the following ones from the cursor index" do
           {
-            CursorPagination::Cursor.new(table:) => "Index Scan",
-            CursorPagination::Cursor.new(table:, after: anchor_token) => "Index Scan",
+            CursorPagination::Cursor.new(table:, sort:) => "Index Scan",
+            CursorPagination::Cursor.new(table:, sort:, after: anchor_token) => "Index Scan",
             # Paging backward walks the same index in reverse.
-            CursorPagination::Cursor.new(table:, before: anchor_token) => "Index Scan Backward"
+            CursorPagination::Cursor.new(table:, sort:, before: anchor_token) => "Index Scan Backward"
           }.each do |cursor, scan|
             plan = ActiveRecord::Base.connection.select_rows("EXPLAIN #{default_scope.call(cursor).to_sql}").flatten.join("\n")
 
@@ -47,6 +52,13 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
         end
       end
     end
+  end
+
+  context "with BillingEntitiesQuery" do
+    let(:organization) { create(:organization, billing_entities: []) }
+    let(:filtered_scope) { ->(pagination) { BillingEntitiesQuery.call(organization:, pagination:).billing_entities } }
+
+    it_behaves_like "a keyset-paginated query", table: "billing_entities"
   end
 
   context "with CustomersQuery" do
@@ -73,6 +85,49 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
     end
 
     it_behaves_like "a keyset-paginated query", table: "customers"
+  end
+
+  context "with PaymentMethodsQuery" do
+    let(:filtered_scope) do
+      lambda do |pagination|
+        PaymentMethodsQuery.call(
+          organization:,
+          pagination:,
+          filters: {external_customer_id: "customer", payment_provider_customer_id: SecureRandom.uuid, with_deleted: true}
+        ).payment_methods
+      end
+    end
+
+    it_behaves_like "a keyset-paginated query", table: "payment_methods"
+  end
+
+  context "with PaymentRequestsQuery" do
+    let(:filtered_scope) do
+      lambda do |pagination|
+        PaymentRequestsQuery.call(
+          organization:,
+          pagination:,
+          filters: {external_customer_id: "customer", payment_status: "pending", currency: "EUR", billing_entity_ids: [SecureRandom.uuid]}
+        ).payment_requests
+      end
+    end
+
+    it_behaves_like "a keyset-paginated query", table: "payment_requests"
+  end
+
+  context "with PaymentsQuery" do
+    let(:filtered_scope) do
+      lambda do |pagination|
+        PaymentsQuery.call(
+          organization:,
+          pagination:,
+          search_term: "pay",
+          filters: {invoice_id: SecureRandom.uuid, external_customer_id: "customer", currency: "EUR"}
+        ).payments
+      end
+    end
+
+    it_behaves_like "a keyset-paginated query", table: "payments"
   end
 
   context "with TaxesQuery" do
@@ -259,6 +314,41 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
     let(:default_scope) { ->(pagination) { ProductFeesQuery.call(organization:, pagination:).fees } }
 
     it_behaves_like "a keyset-paginated query", table: "fees", index: "index_fees_by_product_cursor"
+  end
+
+  context "with InvoicesQuery" do
+    let(:filtered_scope) do
+      lambda do |pagination|
+        InvoicesQuery.call(
+          organization:,
+          search_term: "a",
+          pagination:,
+          filters: {
+            amount_from: 1,
+            amount_to: 2,
+            billing_entity_ids: [SecureRandom.uuid],
+            currency: "EUR",
+            customer_id: SecureRandom.uuid,
+            invoice_type: "contract",
+            issuing_date_from: "2026-01-01",
+            issuing_date_to: "2026-12-31",
+            partially_paid: false,
+            payment_dispute_lost: false,
+            payment_overdue: false,
+            payment_status: ["pending"],
+            product_catalog: true,
+            purchase_order_number: "po",
+            settlements: ["credit_note"],
+            status: ["finalized"]
+          }
+        ).invoices
+      end
+    end
+    let(:default_scope) { ->(pagination) { InvoicesQuery.call(organization:, pagination:, filters: {product_catalog: true}).invoices } }
+
+    # The order of the v1 lists: the index mixes directions, so the pages are bounded by
+    # an OR-expansion, which the index serves from its leading column.
+    it_behaves_like "a keyset-paginated query", table: "invoices", index: "index_invoices_by_cursor", sort: Api::V2::InvoiceIndex::SORT
   end
 
   context "with ContractRateCardsQuery" do

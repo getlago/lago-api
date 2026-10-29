@@ -5,6 +5,7 @@ module Queries
     params do
       optional(:invoice_id).maybe(:string, format?: Regex::UUID)
       optional(:external_customer_id).maybe(:string)
+      optional(:customer_id).maybe(:string, format?: Regex::UUID)
     end
   end
 end

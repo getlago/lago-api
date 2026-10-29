@@ -117,6 +117,10 @@ module Events
           (store.grouped_by || []).all? { group_keys.include?(it) }
       end
 
+      def incremental?
+        incremental.present?
+      end
+
       def count(store)
         events_count = rows_for(store).sum(0, &:events_count)
 
@@ -152,6 +156,7 @@ module Events
         end
       end
 
+      # The full history only: the delta of a snapshot keeps the read of the filter's own store.
       def recurring_sum(store, watermark:)
         rows = recurring_rows_for(store, watermark)
 
@@ -416,11 +421,13 @@ module Events
       end
 
       def recurring_aggregates_sql(watermark)
+        ingested_before_watermark = ActiveRecord::Base.sanitize_sql_for_conditions(["events_enriched.enriched_at <= ?", watermark])
+
         <<~SQL.squish
           sum(events_enriched.decimal_value),
-          #{ActiveRecord::Base.sanitize_sql_for_conditions(["sumIf(events_enriched.decimal_value, events_enriched.enriched_at <= ?)", watermark])},
+          sumIf(events_enriched.decimal_value, #{ingested_before_watermark}),
           count(),
-          #{ActiveRecord::Base.sanitize_sql_for_conditions(["countIf(events_enriched.enriched_at <= ?)", watermark])}
+          countIf(#{ingested_before_watermark})
         SQL
       end
 

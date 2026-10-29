@@ -32,6 +32,14 @@ describe X402::Subscriptions::ResolveService do
     end
   end
 
+  context "with a clock between milliseconds" do
+    before { travel_to(Time.zone.at(1_789_649_271, 123_456, :usec), with_usec: true) }
+
+    it "starts the subscription on the millisecond" do
+      expect(result.subscription.reload.started_at).to eq(Time.zone.at(1_789_649_271, 123_000, :usec))
+    end
+  end
+
   context "with an active subscription" do
     let(:subscription) { create(:subscription, customer:, plan:, external_id:) }
 

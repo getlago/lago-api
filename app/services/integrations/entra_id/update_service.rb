@@ -14,7 +14,7 @@ module Integrations
         return result.not_found_failure!(resource: "integration") unless integration
 
         unless integration.organization.entra_id_enabled?
-          return result.not_allowed_failure!(code: "premium_integration_missing")
+          return result.forbidden_failure!(code: "premium_integration_missing")
         end
 
         integration.client_id = params[:client_id] if params.key?(:client_id)

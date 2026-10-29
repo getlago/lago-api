@@ -44,6 +44,8 @@ module Contracts
       result.taxes_amount_cents = result.rate_card_usages.sum(&:taxes_amount_cents)
       result.total_amount_cents = result.amount_cents + result.taxes_amount_cents
       result
+    rescue BaseService::ThrottlingError => error
+      result.too_many_provider_requests_failure!(provider_name: error.provider_name, error:)
     end
 
     private

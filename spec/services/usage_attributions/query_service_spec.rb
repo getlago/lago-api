@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true} do
   subject(:result) do
     described_class.call(
-      subscription:, group_by:, filters:, from_datetime:, to_datetime:, charges:, split_charge:, search:, basis:, order_by:, limit:, offset:
+      subscription:, group_by:, filters:, from_datetime:, to_datetime:, charges:, split_charge:, split_filters_offset:, search:, basis:, order_by:, limit:, offset:
     )
   end
 
@@ -30,6 +30,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
   let(:to_datetime) { nil }
   let(:charges) { nil }
   let(:split_charge) { nil }
+  let(:split_filters_offset) { 0 }
   let(:search) { nil }
   let(:basis) { "amount" }
   let(:order_by) { nil }
@@ -327,7 +328,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
 
     context "with a more specific filter" do
       let(:region_filter) { create(:billable_metric_filter, billable_metric: tokens_metric, key: "region", values: %w[eu us]) }
-      let(:opus_eu_filter) { create(:charge_filter, charge: tokens_charge, properties: {"amount" => "3"}) }
+      let(:opus_eu_filter) { create(:charge_filter, charge: tokens_charge, properties: {"amount" => "3"}, updated_at: 1.minute.from_now) }
 
       before do
         create(:charge_filter_value, charge_filter: opus_eu_filter, billable_metric_filter:, values: ["opus"])
@@ -531,13 +532,57 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     end
   end
 
-  context "with a split charge holding too many filters" do
+  context "with a split charge holding more filters than a page" do
     let(:split_charge) { tokens_charge }
+    let(:models) { %w[opus sonnet] + Array.new(10) { "model-#{it}" } }
+    let(:model_filter) { create(:billable_metric_filter, billable_metric: tokens_metric, key: "model", values: models) }
+    let(:charge_filters) do
+      models.each_with_index.map do |model, index|
+        create(:charge_filter, charge: tokens_charge, properties: {"amount" => "1"}, updated_at: (models.size - index).days.ago).tap do
+          create(:charge_filter_value, charge_filter: it, billable_metric_filter: model_filter, values: [model])
+        end
+      end
+    end
 
-    before { create_list(:charge_filter, 11, charge: tokens_charge) }
+    def split_cells(aggregate)
+      aggregate.cells.select { it.charge == tokens_charge }.map { [it.charge_filter, it.units] }
+    end
 
-    it "returns a validation failure" do
-      expect(result.error.messages).to eq(split_charge: ["too_many_filters"])
+    before { charge_filters }
+
+    it "lists the first page of filters and the default price" do
+      expect(result.split_filters_count).to eq(12)
+      expect(split_cells(result.totals)).to eq(
+        [[charge_filters[0], 3_000], [charge_filters[1], 500]] + charge_filters[2...10].map { [it, 0] } + [[nil, 100]]
+      )
+      expect(result.totals.amount_cents).to eq(355_200)
+    end
+
+    context "with the offset of the next page" do
+      let(:split_filters_offset) { 10 }
+
+      it "lists the next filters, keeping the amounts of the others" do
+        expect(result.split_filters_count).to eq(12)
+        expect(split_cells(result.totals)).to eq([[charge_filters[10], 0], [charge_filters[11], 0], [nil, 100]])
+        expect(summary(result.rows)).to eq([["data", 200_000, 1], ["eng", 150_200, 3]])
+        expect(result.totals.amount_cents).to eq(355_200)
+      end
+    end
+
+    context "with an offset past the last filter" do
+      let(:split_filters_offset) { 12 }
+
+      it "lists the default price only" do
+        expect(split_cells(result.totals)).to eq([[nil, 100]])
+      end
+    end
+
+    context "with an offset above the maximum" do
+      let(:split_filters_offset) { 100_000_000_000_000_000_000 }
+
+      it "returns a validation failure" do
+        expect(result.error.messages).to eq(split_filters_offset: ["value_is_out_of_range"])
+      end
     end
   end
 
@@ -559,6 +604,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     let(:order_by) { "units" }
     let(:limit) { 101 }
     let(:offset) { -1 }
+    let(:split_filters_offset) { -1 }
 
     it "returns a validation failure" do
       expect(result.error.messages).to eq(
@@ -569,7 +615,8 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
         search: ["value_is_too_long"],
         basis: ["value_is_invalid"],
         order_by: ["value_is_invalid"],
-        split_charge: ["must_have_filters"]
+        split_charge: ["must_have_filters"],
+        split_filters_offset: ["value_is_out_of_range"]
       )
     end
   end

@@ -26,6 +26,7 @@ module Api
             to_datetime: parsed_datetime(:to_datetime),
             charges: selected_charges,
             split_charge: selected_split_charge,
+            split_filters_offset:,
             search: params[:search_term],
             basis: params[:basis] || "units",
             limit: page_size,
@@ -69,6 +70,10 @@ module Api
           return if params[name].blank?
 
           Utils::Datetime.parse_iso8601(params[name])&.to_time&.in_time_zone
+        end
+
+        def split_filters_offset
+          params[:split_filters_offset].blank? ? 0 : Integer(params[:split_filters_offset].to_s, 10, exception: false)
         end
 
         def default_page_size
