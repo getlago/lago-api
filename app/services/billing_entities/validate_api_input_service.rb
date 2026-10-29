@@ -22,9 +22,12 @@ module BillingEntities
 
     def call
       attributes = params.slice(:document_numbering).merge(params[:billing_configuration] || {})
+      # With the values allowed, as customers send them for the same settings.
+      meta = {}
       errors = ENUMS.each_with_object({}) do |(attribute, (field, values)), invalid|
         if attributes.key?(attribute) && !values.value?(attributes[attribute])
           invalid[field] = ["value_is_invalid"]
+          meta[field] = {allowed_values: values.values}
         end
       end
 
@@ -49,7 +52,7 @@ module BillingEntities
       end
 
       if errors.any?
-        result.validation_failure!(errors:)
+        result.validation_failure!(errors:, meta:)
       elsif params.key?(:invoice_custom_section_codes)
         codes = params[:invoice_custom_section_codes].uniq
         if organization.invoice_custom_sections.where(code: codes).count != codes.size
