@@ -147,12 +147,13 @@ module BillableMetrics
         @latest_breakdowns = []
       end
 
-      # A snapshot closing an older period misses the events of the periods in between.
+      # Only a period closing right before this one: an older one misses the periods in between, a later one
+      # (previous subscription terminated on upgrade) counts events the variation reads again.
       # Without snapshots, the period still tells that the bucket had no active units.
       def latest_snapshots
         return @latest_snapshots if defined?(@latest_snapshots)
 
-        @latest_snapshots = initial_value if initial_period && initial_period.to_datetime >= from_datetime - 1.second
+        @latest_snapshots = initial_value if initial_period&.to_datetime&.between?(from_datetime - 1.second, from_datetime)
       end
 
       def latest_cached_aggregation

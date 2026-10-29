@@ -5398,6 +5398,7 @@ RSpec.describe Fees::ChargeService, :premium do
 
         it "carries the active units over from the snapshots" do
           bill(march)
+          CachedAggregation.delete_all
 
           # Dated in a closed period: a weighted sum never counts it
           create_event("2022-03-25", 7, "eu", created_at: Time.zone.parse("2022-04-01T05:00:00"))

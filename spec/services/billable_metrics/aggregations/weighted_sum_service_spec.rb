@@ -244,6 +244,14 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
         end
       end
 
+      context "when the snapshot closes after the period starts" do
+        let(:initial_value) { [snapshot(units: 400, to_datetime: from_datetime + 1.second)] }
+
+        it "uses the persisted recurring value as initial value" do
+          expect(aggregator.aggregate.total_aggregated_units).to eq(1000)
+        end
+      end
+
       context "when the bucket had no active units at the end of the previous period" do
         let(:initial_value) { [] }
         let(:presentation_by) { ["region"] }
