@@ -400,12 +400,12 @@ module Invoices
     # NOTE: Evaluated at the billing timestamp, not the current time, so a draft refreshed
     #       after the trial ended does not bill the fee already billed by the trial end.
     def in_trial_period_not_ending_today?(subscription, timestamp)
-      trial_end_datetime = subscription.trial_end_datetime
-      return false if trial_end_datetime.nil? || timestamp >= trial_end_datetime
+      trial_end = subscription.trial_ended_at || subscription.trial_end_datetime
+      return false if trial_end.nil? || timestamp >= trial_end
 
       tz = subscription.customer.applicable_timezone
 
-      timestamp.in_time_zone(tz).to_date != trial_end_datetime.in_time_zone(tz).to_date
+      timestamp.in_time_zone(tz).to_date != trial_end.in_time_zone(tz).to_date
     end
 
     def billing_advance_fixed_charges_on_first_invoice?(subscription)
