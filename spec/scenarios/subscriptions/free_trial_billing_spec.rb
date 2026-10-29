@@ -415,6 +415,72 @@ describe "Free Trial Billing Subscriptions Scenario" do
     end
   end
 
+  context "with free trial ending after the renewal while the renewal invoice is a draft" do
+    let(:trial_period) { 31 }
+    let(:customer) { create(:customer, organization:, timezone:, invoice_grace_period: 2) }
+    let(:plan) { create(:plan, organization:, trial_period:, amount_cents: 500, pay_in_advance:) }
+    let(:pay_in_advance) { true }
+    let(:renewal) { customer.invoices.order(:created_at).first }
+
+    def billed_subscription_fees
+      Fee.subscription.where(subscription: customer.subscriptions).map do |fee|
+        [fee.invoice.invoice_subscriptions.sole.invoicing_reason, fee.amount_cents]
+      end
+    end
+
+    before do
+      travel_to(Time.zone.parse("2026-09-27T16:02:00")) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code,
+            billing_time: "anniversary"
+          }
+        )
+      end
+
+      travel_to(Time.zone.parse("2026-10-27T00:11:00")) { perform_billing }
+    end
+
+    it "bills the subscription fee once, on the end of trial invoice" do
+      expect(renewal).to be_draft
+      expect(renewal.fees.subscription).to be_empty
+
+      travel_to(Time.zone.parse("2026-10-28T16:35:00")) { perform_billing }
+      travel_to(Time.zone.parse("2026-10-29T00:30:00")) { perform_finalize_refresh }
+
+      expect(renewal.reload).to be_finalized
+      expect(billed_subscription_fees).to eq([["subscription_starting", 484]])
+    end
+
+    context "when the draft is refreshed between the end of the trial and its billing" do
+      it "bills the subscription fee once, on the end of trial invoice" do
+        travel_to(Time.zone.parse("2026-10-28T16:10:00")) do
+          renewal.update!(ready_to_be_refreshed: true)
+          perform_invoices_refresh
+        end
+        travel_to(Time.zone.parse("2026-10-28T16:35:00")) { perform_billing }
+        travel_to(Time.zone.parse("2026-10-29T00:30:00")) { perform_finalize_refresh }
+
+        expect(billed_subscription_fees).to eq([["subscription_starting", 484]])
+      end
+    end
+
+    context "when the plan switches from pay in arrears to pay in advance while the renewal is a draft" do
+      let(:pay_in_advance) { false }
+
+      it "bills the subscription fee once, on the end of trial invoice" do
+        travel_to(Time.zone.parse("2026-10-28T14:30:00")) { plan.update!(pay_in_advance: true) }
+        travel_to(Time.zone.parse("2026-10-28T16:35:00")) { perform_billing }
+        travel_to(Time.zone.parse("2026-10-29T00:30:00")) { perform_finalize_refresh }
+
+        expect(renewal.reload).to be_finalized
+        expect(billed_subscription_fees).to eq([["subscription_starting", 484]])
+      end
+    end
+  end
+
   context "with free trial ending on billing day" do
     let(:trial_period) { 10 }
     let(:timezone) { "Europe/Paris" }
