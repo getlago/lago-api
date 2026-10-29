@@ -13291,7 +13291,7 @@ type Query {
   """
   Query rate cards of an organization
   """
-  rateCards(code: String, currency: CurrencyEnum, limit: Int, page: Int, productCategoryIds: [ID!], productCode: String, productFilterCode: String, productFilterIds: [ID!], productIds: [ID!], searchTerm: String, withoutProductCategory: Boolean): RateCardCollection!
+  rateCards(code: String, currency: CurrencyEnum, excludePricedOnContractId: ID, excludePricedOnPlanId: ID, limit: Int, page: Int, productCategoryIds: [ID!], productCode: String, productFilterCode: String, productFilterIds: [ID!], productIds: [ID!], searchTerm: String, withoutProductCategory: Boolean): RateCardCollection!
 
   """
   Query a single role
