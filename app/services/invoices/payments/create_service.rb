@@ -134,6 +134,7 @@ module Invoices
         return false if invoice.credit? && skip_credit_invoice_delay?
         return false if invoice.subscription? && invoice.subscription_payment_gated?
         return false if non_manual_wallet_topup?
+        return false if current_payment_provider && stripe_shared_payment_token_only?
 
         PaymentIntent.where(organization_id: invoice.organization_id).exists?
       end
@@ -150,6 +151,7 @@ module Invoices
         return false if invoice.self_billed?
         return false if invoice.payment_succeeded? || invoice.voided? || invoice.closed?
         return false if current_payment_provider.blank?
+        return false if stripe_shared_payment_token_only? && !determine_payment_method&.shared_payment_token?
 
         current_payment_provider_customer&.provider_customer_id &&
           (determine_payment_method.present? ||
@@ -167,6 +169,11 @@ module Invoices
       def stripe_customer_balance_only?
         current_payment_provider_customer.is_a?(PaymentProviderCustomers::StripeCustomer) &&
           current_payment_provider_customer.provider_payment_methods == ["customer_balance"]
+      end
+
+      def stripe_shared_payment_token_only?
+        current_payment_provider_customer.is_a?(PaymentProviderCustomers::StripeCustomer) &&
+          current_payment_provider_customer.shared_payment_token_only?
       end
 
       # NOTE: While the OSS payment methods backfill is still running

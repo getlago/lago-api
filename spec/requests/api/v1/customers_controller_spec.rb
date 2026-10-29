@@ -165,6 +165,15 @@ RSpec.describe Api::V1::CustomersController do
         subject
       end
 
+      context "when provider payment methods are shared_payment_token" do
+        let(:provider_payment_methods) { %w[shared_payment_token] }
+
+        it "returns an unprocessable entity error" do
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq({provider_payment_methods: ["value_is_invalid"]})
+        end
+      end
+
       context "when provider payment methods are not present" do
         let(:provider_payment_methods) { nil }
 

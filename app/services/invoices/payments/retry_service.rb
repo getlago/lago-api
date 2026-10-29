@@ -14,6 +14,7 @@ module Invoices
 
       def call
         return result.not_found_failure!(resource: "invoice") if invoice.blank?
+        return result.single_validation_failure!(field: :payment_method, error_code: "invalid_payment_method") if shared_payment_token_chosen?
 
         if invoice.draft? || invoice.voided? || invoice.payment_succeeded?
           return result.not_allowed_failure!(code: "invalid_status")
@@ -36,6 +37,11 @@ module Invoices
       attr_reader :invoice, :payment_method_params
 
       delegate :customer, to: :invoice
+
+      def shared_payment_token_chosen?
+        payment_method_id = payment_method_params&.dig(:payment_method_id)
+        payment_method_id.present? && customer.payment_methods.find_by(id: payment_method_id)&.shared_payment_token?
+      end
 
       def deliver_webhook
         SendWebhookJob.perform_later(

@@ -32,6 +32,10 @@ module Invoices
           return result.single_validation_failure!(error_code: "missing_payment_provider_customer")
         end
 
+        if stripe_shared_payment_token_only?
+          return result.single_validation_failure!(error_code: "payment_url_not_available_for_shared_payment_token")
+        end
+
         payment_intent = PaymentIntents::FetchService.call!(invoice:).payment_intent
 
         result.payment_url = payment_intent.payment_url
@@ -57,6 +61,11 @@ module Invoices
 
       def current_payment_provider
         @current_payment_provider ||= payment_provider(customer)
+      end
+
+      def stripe_shared_payment_token_only?
+        current_payment_provider_customer.is_a?(PaymentProviderCustomers::StripeCustomer) &&
+          current_payment_provider_customer.shared_payment_token_only?
       end
 
       def deliver_error_webhook(payment_url_failure)
