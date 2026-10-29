@@ -297,7 +297,8 @@ describe X402::CreditPurchases::PurchaseService do
         let!(:settlement) do
           create(
             :x402_settlement, organization:, x402_connection:, payee_address:, payer_address:, payment_digest: digest,
-            purchase_settings: stored_settings, customer:, subscription:, wallet_transaction: create(:wallet_transaction, wallet:)
+            purchase_settings: stored_settings, customer:, subscription:, wallet_transaction: create(:wallet_transaction, wallet:),
+            request_key: idempotency_key
           )
         end
 
