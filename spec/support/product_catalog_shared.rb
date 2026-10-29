@@ -3,7 +3,7 @@
 # Enables the product_catalog flag for every catalog spec, so the files do
 # not repeat the setup.
 CATALOG_SPEC_PATHS = %r{
-  requests/api/v2 |
+  requests/api/v2/ |
   graphql/(mutations|resolvers)/.*(product|rate_card|rate_phase|plan_applied|contract)
 }x
 

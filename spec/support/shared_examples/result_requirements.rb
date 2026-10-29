@@ -88,6 +88,18 @@ RSpec.shared_examples "a result object" do
     end
   end
 
+  describe ".provider_unauthorized_failure!" do
+    let(:provider) { PaymentProviders::StripeProvider.new(code: "stripe_eu") }
+
+    before { result.provider_unauthorized_failure!(provider:, message: "Stripe authentication failed.") }
+
+    it { expect(result).to be_failure }
+    it { expect(result.error).to be_a(BaseService::ProviderUnauthorizedFailure) }
+    it { expect(result.error).to be_a(BaseService::UnauthorizedFailure) }
+    it { expect(result.error.provider).to eq(provider) }
+    it { expect(result.error.message).to eq("Stripe authentication failed.") }
+  end
+
   describe ".validation_failure!" do
     before { result.validation_failure!(errors: {field: ["error"]}) }
 

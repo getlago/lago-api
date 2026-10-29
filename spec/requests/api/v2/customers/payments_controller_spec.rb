@@ -101,7 +101,7 @@ RSpec.describe Api::V2::Customers::PaymentsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("customer")
+        expect(response).to be_v2_not_found_error("customer")
       end
     end
 

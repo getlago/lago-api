@@ -165,7 +165,7 @@ RSpec.describe Api::V2::Contracts::UsageController do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details]).to eq(product_type: ["value_is_invalid"])
+        expect(json[:details]).to eq([{code: "value_is_invalid", field: "product_type", meta: {}}])
       end
     end
 
@@ -205,7 +205,10 @@ RSpec.describe Api::V2::Contracts::UsageController do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json).to include(code: "validation_errors", error_details: {tax_error: ["taxDateTooFarInFuture: Service failure"]})
+        expect(json).to eq(
+          code: "validation_errors",
+          details: [{code: "taxDateTooFarInFuture: Service failure", field: "tax_error", meta: {}}]
+        )
       end
     end
 
@@ -218,15 +221,13 @@ RSpec.describe Api::V2::Contracts::UsageController do
         allow(Throttling).to receive(:for).with(:anrok).and_return(instance_double(Throttling::Base, check: false))
       end
 
-      it "answers with a too many provider requests error" do
+      it "answers with a too many provider requests error naming the provider, without its message" do
         subject
 
         expect(response).to have_http_status(:too_many_requests)
         expect(json).to eq(
-          status: 429,
-          error: "Too Many Provider Requests",
           code: "too_many_provider_requests",
-          error_details: {provider_name: "anrok", message: "Service anrok is not available. Try again later."}
+          details: [{code: "too_many_provider_requests", field: "base", meta: {provider_name: "anrok"}}]
         )
       end
     end
@@ -263,7 +264,7 @@ RSpec.describe Api::V2::Contracts::UsageController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("contract")
+        expect(response).to be_v2_not_found_error("contract")
       end
     end
 
@@ -273,7 +274,7 @@ RSpec.describe Api::V2::Contracts::UsageController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("contract")
+        expect(response).to be_v2_not_found_error("contract")
       end
     end
 
@@ -286,7 +287,7 @@ RSpec.describe Api::V2::Contracts::UsageController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("contract")
+        expect(response).to be_v2_not_found_error("contract")
       end
     end
 

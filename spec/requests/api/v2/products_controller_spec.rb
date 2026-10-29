@@ -60,7 +60,7 @@ RSpec.describe Api::V2::ProductsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("billable_metric")
+        expect(response).to be_v2_not_found_error("billable_metric")
       end
     end
 
@@ -71,7 +71,7 @@ RSpec.describe Api::V2::ProductsController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:error_details][:billable_metric_code]).to eq(["value_is_mandatory"])
+        expect(json[:details]).to eq([{code: "value_is_mandatory", field: "billable_metric_code", meta: {}}])
       end
     end
 
@@ -82,7 +82,7 @@ RSpec.describe Api::V2::ProductsController do
         expect { subject }.not_to change(Product, :count)
 
         expect(response).to have_http_status(:bad_request)
-        expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: ["product_category"]})
+        expect(json[:details]).to eq([{code: "action_not_expandable", field: "expands", meta: {invalid_values: ["product_category"]}}])
       end
     end
   end
@@ -123,7 +123,7 @@ RSpec.describe Api::V2::ProductsController do
           subject
 
           expect(response).to have_http_status(:unprocessable_entity)
-          expect(json[:error_details][:code]).to eq(%w[attached_to_plan_or_subscription])
+          expect(json[:details]).to eq([{code: "attached_to_plan_or_subscription", field: "code", meta: {}}])
         end
       end
     end
@@ -145,7 +145,7 @@ RSpec.describe Api::V2::ProductsController do
         it "returns a not found error" do
           subject
 
-          expect(response).to be_not_found_error("product_category")
+          expect(response).to be_v2_not_found_error("product_category")
         end
       end
 
@@ -159,7 +159,7 @@ RSpec.describe Api::V2::ProductsController do
           subject
 
           expect(response).to have_http_status(:unprocessable_entity)
-          expect(json[:error_details][:product_category_code]).to eq(%w[attached_to_plan_or_subscription])
+          expect(json[:details]).to eq([{code: "attached_to_plan_or_subscription", field: "product_category_code", meta: {}}])
         end
       end
 
@@ -183,7 +183,7 @@ RSpec.describe Api::V2::ProductsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("product")
+        expect(response).to be_v2_not_found_error("product")
       end
     end
   end
@@ -281,10 +281,10 @@ RSpec.describe Api::V2::ProductsController do
 
         expect(response).to have_http_status(:bad_request)
         expect(json).to eq(
-          status: 400,
-          error: "Bad Request",
           code: "invalid_expand",
-          error_details: {expands: {invalid_values: %w[filters], allowed_values: %w[product_category billable_metric]}}
+          details: [
+            {code: "invalid_expand", field: "expands", meta: {invalid_values: %w[filters], allowed_values: %w[product_category billable_metric]}}
+          ]
         )
       end
     end
@@ -295,7 +295,7 @@ RSpec.describe Api::V2::ProductsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("product")
+        expect(response).to be_v2_not_found_error("product")
       end
     end
   end
@@ -367,7 +367,7 @@ RSpec.describe Api::V2::ProductsController do
           subject
 
           expect(response).to have_http_status(:unprocessable_entity)
-          expect(json[:error_details][:product_type]).to eq(%w[value_is_invalid])
+          expect(json[:details]).to eq([{code: "value_is_invalid", field: "product_type", meta: {}}])
         end
       end
     end
@@ -437,7 +437,7 @@ RSpec.describe Api::V2::ProductsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("product_category")
+        expect(response).to be_v2_not_found_error("product_category")
       end
     end
 
@@ -449,7 +449,7 @@ RSpec.describe Api::V2::ProductsController do
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("expand_not_supported")
-        expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: ["product_category"]})
+        expect(json[:details]).to eq([{code: "action_not_expandable", field: "expands", meta: {invalid_values: ["product_category"]}}])
       end
     end
 
@@ -487,7 +487,7 @@ RSpec.describe Api::V2::ProductsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("product")
+        expect(response).to be_v2_not_found_error("product")
       end
     end
   end

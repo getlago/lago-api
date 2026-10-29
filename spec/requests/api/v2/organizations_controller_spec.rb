@@ -180,7 +180,7 @@ RSpec.describe Api::V2::OrganizationsController do
         expect { request }.not_to change { organization.reload.attributes }
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details][:slug]).to eq(["value_already_exist"])
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_already_exist", field: "slug", meta: {}}])
         expect(organization.default_billing_entity.reload.email).to eq(original_billing_email)
       end
     end
@@ -193,7 +193,7 @@ RSpec.describe Api::V2::OrganizationsController do
           expect { request }.not_to change { organization.reload.attributes }
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:error_details][:slug]).to be_present
+          expect(json[:details]).to be_present.and(all(include(field: "slug")))
         end
       end
     end
@@ -205,7 +205,7 @@ RSpec.describe Api::V2::OrganizationsController do
         expect { request }.not_to change { organization.reload.attributes }
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details][:email]).to eq(["invalid_email_format"])
+        expect(json).to eq(code: "validation_errors", details: [{code: "invalid_email_format", field: "email", meta: {}}])
       end
     end
 
@@ -271,12 +271,7 @@ RSpec.describe Api::V2::OrganizationsController do
           expect { request }.not_to change { organization.reload.attributes }
 
           expect(response).to have_http_status(:bad_request)
-          expect(json).to eq(
-            status: 400,
-            error: "Bad Request",
-            code: "missing_parameter",
-            error_details: {organization: {reason: "missing"}}
-          )
+          expect(json).to eq(code: "missing_parameter", details: [{code: "missing", field: "organization", meta: {}}])
         end
       end
     end

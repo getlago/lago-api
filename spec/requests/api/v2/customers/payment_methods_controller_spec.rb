@@ -67,7 +67,7 @@ RSpec.describe Api::V2::Customers::PaymentMethodsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("customer")
+        expect(response).to be_v2_not_found_error("customer")
       end
     end
 
@@ -103,7 +103,7 @@ RSpec.describe Api::V2::Customers::PaymentMethodsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("payment_method")
+        expect(response).to be_v2_not_found_error("payment_method")
       end
     end
   end
@@ -131,7 +131,7 @@ RSpec.describe Api::V2::Customers::PaymentMethodsController do
       it "returns a not found error and keeps it" do
         subject
 
-        expect(response).to be_not_found_error("payment_method")
+        expect(response).to be_v2_not_found_error("payment_method")
         expect(other_payment_method.reload).not_to be_discarded
       end
     end
