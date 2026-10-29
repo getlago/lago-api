@@ -365,6 +365,29 @@ describe X402::InvoicePaymentsController, :premium do
       end
     end
 
+    context "when the invoice is marked paid during verification" do
+      before do
+        allow(X402::Settlements::VerifyService).to receive(:call).and_wrap_original do |original, **kwargs|
+          verification = original.call(**kwargs)
+          Invoices::UpdateService.call!(invoice: Invoice.find(invoice.id), params: {payment_status: "succeeded"})
+          verification
+        end
+      end
+
+      it "answers 410" do
+        subject
+
+        expect(response).to have_http_status(:gone)
+        expect(json[:code]).to eq("invalid_invoice_status_or_payment_status")
+      end
+
+      it "never settles" do
+        subject
+
+        expect(a_request(:post, "#{cdp_facilitator_url}/settle")).not_to have_been_made
+      end
+    end
+
     context "with settlement_pending" do
       let(:fault) { :settlement_pending }
 

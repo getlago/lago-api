@@ -114,6 +114,8 @@ module X402
           [:invoice, "x402_connection_changed"]
         elsif verified_payment.settled_amount_atomic != amount_due_atomic
           [:payment, "amount_mismatch"]
+        elsif invoice.payment_succeeded?
+          [:base, "invalid_invoice_status_or_payment_status"]
         elsif invoice.x402_settlements.where.not(id: settlement.id).where.not(status: :failed).exists?
           [:base, "invoice_payment_pending"]
         end
