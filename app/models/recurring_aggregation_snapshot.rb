@@ -17,6 +17,9 @@ class RecurringAggregationSnapshot < ApplicationRecord
   validates :watermark, presence: true
   validates :units, numericality: true
 
+  # Compared to a scalar subquery: the period index then serves to_datetime, which an IN subquery does not
+  scope :of_period, ->(to_datetime_query) { where(arel_table[:to_datetime].eq(Arel::Nodes::Grouping.new(to_datetime_query.arel))) }
+
   # Snapshots are keyed on a subscription, which billing segments do not bill
   def self.eligible?(metered_item:, billing_context:)
     metered_item.billing_segment.nil? &&

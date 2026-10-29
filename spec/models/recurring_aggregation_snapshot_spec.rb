@@ -15,6 +15,23 @@ RSpec.describe RecurringAggregationSnapshot do
     end
   end
 
+  describe "Scopes" do
+    describe ".of_period" do
+      let(:snapshot) { create(:recurring_aggregation_snapshot, to_datetime: Time.zone.parse("2026-09-30T23:59:59")) }
+
+      before do
+        create(:recurring_aggregation_snapshot, organization: snapshot.organization, subscription: snapshot.subscription,
+          charge: snapshot.charge, to_datetime: Time.zone.parse("2026-08-31T23:59:59"))
+      end
+
+      it "returns the snapshots of the period the query selects" do
+        latest_to_datetime = described_class.order(to_datetime: :desc).limit(1).select(:to_datetime)
+
+        expect(described_class.of_period(latest_to_datetime)).to eq([snapshot])
+      end
+    end
+  end
+
   describe "validations" do
     it do
       expect(snapshot).to validate_presence_of(:to_datetime)

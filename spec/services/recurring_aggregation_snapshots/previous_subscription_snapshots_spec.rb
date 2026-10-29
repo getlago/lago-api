@@ -39,6 +39,15 @@ RSpec.describe RecurringAggregationSnapshots::PreviousSubscriptionSnapshots do
     count
   end
 
+  def count_loaded_snapshots(&)
+    count = 0
+    counter = lambda do |*, payload|
+      count += payload[:record_count] if payload[:class_name] == "RecurringAggregationSnapshot"
+    end
+    ActiveSupport::Notifications.subscribed(counter, "instantiation.active_record", &)
+    count
+  end
+
   describe "#period" do
     let(:eu_filter) { create_filter(charge, %w[eu]) }
     let(:us_filter) { create_filter(charge, %w[us]) }
@@ -76,6 +85,42 @@ RSpec.describe RecurringAggregationSnapshots::PreviousSubscriptionSnapshots do
 
       expect(first_bucket_queries).to eq(8)
       expect(other_buckets_queries).to eq(0)
+    end
+
+    context "with snapshots in several buckets of the latest period" do
+      before { create_previous_snapshot(to_datetime: termination_datetime, charge_filter: previous_us_filter, units: 2) }
+
+      it "loads the snapshots of every bucket" do
+        loaded = count_loaded_snapshots do
+          expect(lookup.period(charge:, charge_filter: eu_filter).last.map(&:units)).to eq([3])
+        end
+
+        expect(loaded).to eq(3)
+      end
+
+      context "with all_buckets: false" do
+        it "loads only the marker and the snapshots of the bucket" do
+          loaded = count_loaded_snapshots do
+            expect(lookup.period(charge:, charge_filter: eu_filter, all_buckets: false).last.map(&:units)).to eq([3])
+          end
+
+          expect(loaded).to eq(2)
+        end
+
+        it "loads only the marker for the default bucket" do
+          loaded = count_loaded_snapshots do
+            expect(lookup.period(charge:, charge_filter: build(:charge_filter, charge:), all_buckets: false).last.map(&:units)).to eq([7])
+          end
+
+          expect(loaded).to eq(1)
+        end
+
+        it "loads every bucket when a later caller reads them all" do
+          lookup.period(charge:, charge_filter: eu_filter, all_buckets: false)
+
+          expect(lookup.period(charge:, charge_filter: us_filter).last.map(&:units)).to eq([2])
+        end
+      end
     end
 
     context "without previous subscription" do
