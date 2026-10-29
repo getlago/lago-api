@@ -3,7 +3,7 @@
 module X402
   module Invoices
     class SettleService < BaseService
-      Result = BaseResult[:settlement, :replayed]
+      Result = BaseResult[:settlement]
       RACE_CODES = %w[payment_already_recorded invoice_payment_pending].freeze
 
       def initialize(invoice:, payment:)
@@ -94,16 +94,16 @@ module X402
         if settle_result.outcome == :settled
           finish(settle_result.settlement, settle_result.transaction_hash)
         else
-          answer(settle_result.settlement, replayed: false)
+          answer(settle_result.settlement)
         end
       end
 
       def finish(settlement, transaction_hash)
         finished = X402::Invoices::FinishPaymentService.call(settlement:, transaction_hash:)
-        answer(finished.settlement, replayed: false)
+        answer(finished.settlement)
       rescue ActiveRecord::ActiveRecordError => e
         Rails.logger.warn("#{self.class.name} call failed reason=finish_failed network=#{settlement.network} error=#{e.class.name}")
-        answer(settlement.reload, replayed: false)
+        answer(settlement.reload)
       end
 
       def answer_failure(error, digest)
@@ -121,12 +121,11 @@ module X402
 
       def answer_replay(settlement)
         Rails.logger.info("#{self.class.name} replay status=#{settlement.status} network=#{settlement.network}")
-        answer(settlement, replayed: true)
+        answer(settlement)
       end
 
-      def answer(settlement, replayed:)
+      def answer(settlement)
         result.settlement = settlement
-        result.replayed = replayed
         result
       end
 

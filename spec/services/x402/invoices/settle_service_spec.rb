@@ -39,8 +39,10 @@ describe X402::Invoices::SettleService do
       expect(result.settlement).to have_attributes(status: "settled", transaction_hash: "0xefad33f01282b3a8b18893a9eb0aecbc2fc210ffcfa7fda7ca79f14c8822963a")
     end
 
-    it "answers live" do
-      expect(result.replayed).to be(false)
+    it "settles with the facilitator" do
+      result
+
+      expect(facilitator_request("/settle", x402_evm_payment.merge("resource" => resource), x402_evm_requirements)).to have_been_made.once
     end
 
     it "pays the invoice" do
@@ -135,7 +137,7 @@ describe X402::Invoices::SettleService do
       before { settled }
 
       it "answers the settled attempt" do
-        expect(result).to have_attributes(settlement: settled, replayed: true)
+        expect(result.settlement).to eq(settled)
       end
 
       it "asks CDP nothing" do
@@ -285,7 +287,13 @@ describe X402::Invoices::SettleService do
       end
 
       it "answers the pending attempt" do
-        expect(result).to have_attributes(settlement: racer, replayed: true)
+        expect(result.settlement).to eq(racer)
+      end
+
+      it "never settles" do
+        result
+
+        expect(a_request(:post, "#{cdp_facilitator_url}/settle")).not_to have_been_made
       end
     end
 
@@ -314,7 +322,7 @@ describe X402::Invoices::SettleService do
       end
 
       it "answers the pending attempt" do
-        expect(result).to have_attributes(settlement: have_attributes(status: "pending", transaction_hash: nil), replayed: false)
+        expect(result.settlement).to have_attributes(status: "pending", transaction_hash: nil)
       end
 
       it "logs the failure" do
