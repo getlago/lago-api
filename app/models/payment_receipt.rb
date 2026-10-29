@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class PaymentReceipt < ApplicationRecord
+  include ExpiringDocumentUrl
+
   belongs_to :payment
   belongs_to :organization
   belongs_to :billing_entity
@@ -10,17 +12,7 @@ class PaymentReceipt < ApplicationRecord
   has_one_attached :file
   has_one_attached :xml_file
 
-  def file_url
-    return if file.blank?
-
-    Rails.application.routes.url_helpers.rails_blob_url(file, host: ENV["LAGO_API_URL"])
-  end
-
-  def xml_url
-    return if xml_file.blank?
-
-    Rails.application.routes.url_helpers.rails_blob_url(xml_file, host: ENV["LAGO_API_URL"])
-  end
+  expiring_document_urls :file, :xml_file
 end
 
 # == Schema Information

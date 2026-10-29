@@ -16,6 +16,8 @@ Rails.application.routes.draw do
   get "/health", to: "application#health"
   get "/ready", to: "application#ready"
 
+  get "/documents/:signed_id/*filename", to: "documents#show", as: :document
+
   namespace :api do
     namespace :v1 do
       resources :activity_logs, param: :activity_id, only: %i[index show]

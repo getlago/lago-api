@@ -35,5 +35,6 @@ RSpec.describe Types::Organizations::UpdateOrganizationInput do
     expect(subject).to accept_argument(:customer_portal_locked_fields).of_type("[CustomerPortalFieldEnum!]").with_permission("organization:taxes:update")
     expect(subject).to accept_argument(:email_settings).of_type("[EmailSettingsEnum!]").with_permission("organization:emails:update")
     expect(subject).to accept_argument(:finalize_zero_amount_invoice).of_type("Boolean")
+    expect(subject).to accept_argument(:document_url_expiration_days).of_type("Int")
   end
 end

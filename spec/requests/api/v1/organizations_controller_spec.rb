@@ -33,6 +33,7 @@ RSpec.describe Api::V1::OrganizationsController do
         customer_portal_locked_fields: %w[name country],
         document_number_prefix: "ORG-2",
         finalize_zero_amount_invoice: false,
+        document_url_expiration_days: 90,
         billing_configuration: {
           invoice_footer: "footer",
           invoice_grace_period: 3,
@@ -60,6 +61,7 @@ RSpec.describe Api::V1::OrganizationsController do
       expect(json[:organization][:document_numbering]).to eq("per_customer")
       expect(json[:organization][:document_number_prefix]).to eq("ORG-2")
       expect(json[:organization][:finalize_zero_amount_invoice]).to eq(false)
+      expect(json[:organization][:document_url_expiration_days]).to eq(90)
       # TODO(:timezone): Timezone update is turned off for now
       # expect(json[:organization][:timezone]).to eq(update_params[:timezone])
 
@@ -68,6 +70,17 @@ RSpec.describe Api::V1::OrganizationsController do
       expect(billing[:document_locale]).to eq("fr")
 
       expect(json[:organization][:taxes]).not_to be_nil
+    end
+
+    context "with a document url expiration window above 120 days" do
+      let(:update_params) { {document_url_expiration_days: 365} }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details][:document_url_expiration_days]).to eq(["value_is_out_of_range"])
+      end
     end
 
     context "with premium features", :premium do

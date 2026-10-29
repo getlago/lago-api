@@ -38,6 +38,7 @@ RSpec.describe Types::Organizations::CurrentOrganizationType do
     expect(subject).to have_field(:events_store).of_type("EventsStoreEnum!")
 
     expect(subject).to have_field(:finalize_zero_amount_invoice).of_type("Boolean!")
+    expect(subject).to have_field(:document_url_expiration_days).of_type("Int!")
     expect(subject).to have_field(:billing_configuration).of_type("OrganizationBillingConfiguration").with_permission("organization:invoices:view")
     expect(subject).to have_field(:customer_portal_locked_fields).of_type("[CustomerPortalFieldEnum!]!")
     expect(subject).to have_field(:email_settings).of_type("[EmailSettingsEnum!]").with_permission("organization:emails:view")

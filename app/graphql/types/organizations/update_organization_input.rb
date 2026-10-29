@@ -33,6 +33,7 @@ module Types
 
       argument :billing_configuration, Types::Organizations::BillingConfigurationInput, required: false, permission: "organization:invoices:update"
       argument :customer_portal_locked_fields, [Types::Organizations::CustomerPortalFieldEnum], required: false, permission: "organization:taxes:update"
+      argument :document_url_expiration_days, Integer, required: false
       argument :email_settings, [Types::Organizations::EmailSettingsEnum], required: false, permission: "organization:emails:update"
       argument :finalize_zero_amount_invoice, Boolean, required: false
     end

@@ -50,6 +50,7 @@ module Api
           :document_numbering,
           :document_number_prefix,
           :finalize_zero_amount_invoice,
+          :document_url_expiration_days,
           :slug,
           email_settings: [],
           customer_portal_locked_fields: [],
