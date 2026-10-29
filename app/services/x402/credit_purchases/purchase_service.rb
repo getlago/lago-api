@@ -6,6 +6,7 @@ module X402
       Result = BaseResult[:settlement, :replayed]
 
       RACE_CODES = %w[payment_already_recorded credit_purchase_pending].freeze
+      IDEMPOTENCY_KEY = /\A[\x20-\x7E]{16,128}\z/
 
       def initialize(organization:, params:)
         @organization = organization
@@ -15,6 +16,7 @@ module X402
       end
 
       def call
+        return refuse(:idempotency_key, "invalid_value") unless valid_idempotency_key?
         return refuse(:payment, "invalid_payment") unless payment.is_a?(Hash)
         return refuse(:payment_requirements, "invalid_payment_requirements") unless payment_requirements.is_a?(Hash)
 
@@ -60,6 +62,18 @@ module X402
         @payment_payload ||= X402::PaymentPayload.new(payment:, payment_requirements:)
       end
 
+      def idempotency_key
+        params[:idempotency_key]
+      end
+
+      def valid_idempotency_key?
+        idempotency_key.nil? || (idempotency_key.is_a?(String) && IDEMPOTENCY_KEY.match?(idempotency_key))
+      end
+
+      def request_key_digest
+        @request_key_digest ||= X402::Settlement.request_key_digest(idempotency_key)
+      end
+
       def purchase_settings
         @purchase_settings ||= {
           "plan_code" => params[:plan_code],
@@ -92,7 +106,7 @@ module X402
       end
 
       def settle(verified_payment)
-        settle_result = X402::Settlements::SettleService.call(verified_payment:, kind: :credit_purchase, purchase_settings:)
+        settle_result = X402::Settlements::SettleService.call(verified_payment:, kind: :credit_purchase, purchase_settings:, request_key_digest:)
         return answer_lost_race(settle_result.error, verified_payment.payment_digest) if settle_result.failure?
 
         settlement = settle_result.settlement
@@ -108,7 +122,8 @@ module X402
       end
 
       def answer_replay(settlement)
-        return refuse_invoice_payment(settlement) if settlement.invoice_payment?
+        return refuse_replay(settlement, "recorded_as_invoice_payment") if settlement.invoice_payment?
+        return refuse_replay(settlement, "other_request") unless settlement.same_request?(request_key_digest)
 
         Rails.logger.info("#{self.class.name} replay status=#{settlement.status} settings_changed=#{settlement.purchase_settings != purchase_settings}")
 
@@ -119,9 +134,9 @@ module X402
         end
       end
 
-      def refuse_invoice_payment(settlement)
-        Rails.logger.warn("#{self.class.name} call failed reason=recorded_as_invoice_payment network=#{settlement.network}")
-        refuse(:payment, "recorded_as_invoice_payment")
+      def refuse_replay(settlement, reason)
+        Rails.logger.warn("#{self.class.name} call failed reason=#{reason} network=#{settlement.network}")
+        refuse(:base, "payment_already_settled")
       end
 
       def answer_lost_race(error, digest)
