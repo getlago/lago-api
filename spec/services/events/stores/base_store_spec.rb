@@ -6,6 +6,7 @@ RSpec.describe Events::Stores::BaseStore do
   describe "BLANK_VALUE_CHARS" do
     it "lists the characters Ruby's blank? reads as blank" do
       blank_chars = (0..0xFFFF).filter_map do |codepoint|
+        # Surrogates are not valid in UTF-8: chr raises on them.
         next if (0xD800..0xDFFF).cover?(codepoint)
 
         char = codepoint.chr(Encoding::UTF_8)
