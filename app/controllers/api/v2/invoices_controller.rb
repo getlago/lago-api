@@ -22,7 +22,7 @@ module Api
         if fees_count.to_i > MAX_EXPANDED_FEES
           return invalid_request_error(
             code: "expansion_too_large",
-            error_details: {expands: {fees: {count: fees_count, max: MAX_EXPANDED_FEES}}}
+            error_details: {expands: {invalid_values: ["fees"], max: MAX_EXPANDED_FEES}}
           )
         end
 
@@ -32,7 +32,9 @@ module Api
       def update
         invoice = find_invoice(:visible)
         return not_found_error(resource: "invoice") unless invoice
-        return method_not_allowed_error(code: "update_on_voided_invoice") if invoice.voided?
+        if invoice.voided?
+          return render_error_response(BaseService::Result.new.not_allowed_failure!(code: "update_on_voided_invoice"))
+        end
 
         result = ::Invoices::UpdateService.call(
           invoice:,

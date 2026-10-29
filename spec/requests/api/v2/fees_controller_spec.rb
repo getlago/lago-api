@@ -355,7 +355,7 @@ RSpec.describe Api::V2::FeesController do
             field: "expands",
             meta: {
               invalid_values: %w[subscription],
-              allowed_values: %w[applied_taxes product product_filter rate_card rate contract customer]
+              allowed_values: %w[applied_taxes invoice product product_filter rate_card rate contract customer]
             }
           }
         ])

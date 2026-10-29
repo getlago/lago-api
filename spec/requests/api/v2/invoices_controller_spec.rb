@@ -49,7 +49,7 @@ RSpec.describe Api::V2::InvoicesController do
 
           expect(response).to have_http_status(:bad_request)
           expect(json[:code]).to eq("invalid_pagination_parameter")
-          expect(json[:error_details]).to eq(offset_params.keys.sole => {reason: "replaced_by_cursor"})
+          expect(json[:details]).to eq([{code: "replaced_by_cursor", field: offset_params.keys.sole.to_s, meta: {}}])
         end
       end
     end
@@ -97,7 +97,7 @@ RSpec.describe Api::V2::InvoicesController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json.dig(:error_details, :invoice_type)).to eq(["value_is_invalid"])
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "invoice_type", meta: {}}])
       end
     end
 
@@ -107,7 +107,7 @@ RSpec.describe Api::V2::InvoicesController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("billing_entity")
+        expect(response).to be_v2_not_found_error("billing_entity")
       end
     end
 
@@ -154,7 +154,7 @@ RSpec.describe Api::V2::InvoicesController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("invoice")
+        expect(response).to be_v2_not_found_error("invoice")
       end
     end
 
@@ -164,7 +164,7 @@ RSpec.describe Api::V2::InvoicesController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("invoice")
+        expect(response).to be_v2_not_found_error("invoice")
       end
     end
   end
@@ -221,10 +221,8 @@ RSpec.describe Api::V2::InvoicesController do
 
         expect(response).to have_http_status(:bad_request)
         expect(json).to eq(
-          status: 400,
-          error: "Bad Request",
           code: "expansion_too_large",
-          error_details: {expands: {fees: {count: 2, max: 1}}}
+          details: [{code: "expansion_too_large", field: "expands", meta: {invalid_values: ["fees"], max: 1}}]
         )
       end
 
@@ -265,7 +263,7 @@ RSpec.describe Api::V2::InvoicesController do
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("invalid_expand")
-        expect(json[:error_details][:expands]).to include(invalid_values: %w[subscriptions])
+        expect(json[:details].sole).to include(field: "expands", meta: include(invalid_values: %w[subscriptions]))
       end
     end
 
@@ -276,7 +274,7 @@ RSpec.describe Api::V2::InvoicesController do
         subject
 
         expect(response).to have_http_status(:bad_request)
-        expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: %w[fees]})
+        expect(json[:details]).to eq([{code: "action_not_expandable", field: "expands", meta: {invalid_values: %w[fees]}}])
       end
     end
 
@@ -349,7 +347,7 @@ RSpec.describe Api::V2::InvoicesController do
       it "returns a not found error without voiding it" do
         subject
 
-        expect(response).to be_not_found_error("invoice")
+        expect(response).to be_v2_not_found_error("invoice")
         expect(legacy_invoice.reload).to be_finalized
       end
     end
@@ -467,7 +465,7 @@ RSpec.describe Api::V2::InvoicesController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("invoice")
+        expect(response).to be_v2_not_found_error("invoice")
       end
     end
 
@@ -477,7 +475,7 @@ RSpec.describe Api::V2::InvoicesController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("invoice")
+        expect(response).to be_v2_not_found_error("invoice")
         expect(Invoices::GeneratePdfJob).not_to have_been_enqueued
       end
     end
@@ -517,7 +515,7 @@ RSpec.describe Api::V2::InvoicesController do
       it "returns a not found error" do
         expect { subject }.not_to have_enqueued_mail(InvoiceMailer, :created)
 
-        expect(response).to be_not_found_error("invoice")
+        expect(response).to be_v2_not_found_error("invoice")
       end
     end
   end
@@ -544,11 +542,11 @@ RSpec.describe Api::V2::InvoicesController do
     context "when the invoice is not failed" do
       let(:status) { :finalized }
 
-      it "returns a method not allowed error" do
+      it "returns a not allowed error" do
         subject
 
-        expect(response).to have_http_status(:method_not_allowed)
-        expect(json[:code]).to eq("invalid_status")
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "invalid_status", details: [])
         expect(invoice.reload).to be_finalized
       end
     end
@@ -559,7 +557,7 @@ RSpec.describe Api::V2::InvoicesController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("invoice")
+        expect(response).to be_v2_not_found_error("invoice")
         expect(Invoices::ProviderTaxes::PullTaxesAndApplyJob).not_to have_been_enqueued
       end
     end
@@ -594,18 +592,18 @@ RSpec.describe Api::V2::InvoicesController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:error_details]).to eq(payment_method: ["invalid_payment_method"])
+        expect(json).to eq(code: "validation_errors", details: [{code: "invalid_payment_method", field: "payment_method", meta: {}}])
       end
     end
 
     context "when the payment cannot be retried" do
       let(:retry_result) { Invoices::Payments::RetryService::Result.new.not_allowed_failure!(code: "invalid_status") }
 
-      it "returns a method not allowed error" do
+      it "returns a not allowed error" do
         subject
 
-        expect(response).to have_http_status(:method_not_allowed)
-        expect(json[:code]).to eq("invalid_status")
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "invalid_status", details: [])
       end
     end
 
@@ -615,7 +613,7 @@ RSpec.describe Api::V2::InvoicesController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("invoice")
+        expect(response).to be_v2_not_found_error("invoice")
         expect(Invoices::Payments::RetryService).not_to have_received(:call)
       end
     end
@@ -659,7 +657,7 @@ RSpec.describe Api::V2::InvoicesController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("invoice")
+        expect(response).to be_v2_not_found_error("invoice")
         expect(Invoices::RefreshDraftAndFinalizeService).not_to have_received(:call)
       end
     end
@@ -670,7 +668,7 @@ RSpec.describe Api::V2::InvoicesController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("invoice")
+        expect(response).to be_v2_not_found_error("invoice")
         expect(Invoices::RefreshDraftAndFinalizeService).not_to have_received(:call)
       end
     end
@@ -713,7 +711,7 @@ RSpec.describe Api::V2::InvoicesController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("invoice")
+        expect(response).to be_v2_not_found_error("invoice")
         expect(Invoices::RefreshDraftService).not_to have_received(:call)
       end
     end
@@ -739,11 +737,11 @@ RSpec.describe Api::V2::InvoicesController do
     context "when the invoice is voided" do
       let(:invoice) { create(:invoice, :voided, organization:, customer:, invoice_type: :contract) }
 
-      it "returns a method not allowed error without updating it" do
+      it "returns a not allowed error without updating it" do
         subject
 
-        expect(response).to have_http_status(:method_not_allowed)
-        expect(json[:code]).to eq("update_on_voided_invoice")
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "update_on_voided_invoice", details: [])
         expect(invoice.reload).to be_payment_pending
       end
     end
@@ -754,7 +752,7 @@ RSpec.describe Api::V2::InvoicesController do
       it "returns a not found error without updating it" do
         subject
 
-        expect(response).to be_not_found_error("invoice")
+        expect(response).to be_v2_not_found_error("invoice")
         expect(legacy_invoice.reload).to be_payment_pending
       end
     end
@@ -779,11 +777,11 @@ RSpec.describe Api::V2::InvoicesController do
     context "when the invoice is finalized" do
       let(:invoice) { create(:invoice, organization:, customer:, invoice_type: :contract) }
 
-      it "returns a method not allowed error" do
+      it "returns a not allowed error" do
         subject
 
-        expect(response).to have_http_status(:method_not_allowed)
-        expect(json[:code]).to eq("not_deletable")
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "not_deletable", details: [])
         expect(invoice.reload).to be_finalized
       end
     end
@@ -795,7 +793,7 @@ RSpec.describe Api::V2::InvoicesController do
       it "returns a not found error without deleting it" do
         subject
 
-        expect(response).to be_not_found_error("invoice")
+        expect(response).to be_v2_not_found_error("invoice")
         expect(legacy_invoice.reload).to be_draft
       end
     end
@@ -822,11 +820,11 @@ RSpec.describe Api::V2::InvoicesController do
     context "when the invoice is a draft" do
       let(:invoice) { create(:invoice, :draft, organization:, customer:, invoice_type: :contract) }
 
-      it "returns a method not allowed error" do
+      it "returns a not allowed error" do
         subject
 
-        expect(response).to have_http_status(:method_not_allowed)
-        expect(json[:code]).to eq("not_disputable")
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "not_disputable", details: [])
         expect(invoice.reload.payment_dispute_lost_at).to be_nil
       end
     end
@@ -837,7 +835,7 @@ RSpec.describe Api::V2::InvoicesController do
       it "returns a not found error without marking it" do
         subject
 
-        expect(response).to be_not_found_error("invoice")
+        expect(response).to be_v2_not_found_error("invoice")
         expect(legacy_invoice.reload.payment_dispute_lost_at).to be_nil
       end
     end

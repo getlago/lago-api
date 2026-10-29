@@ -42,7 +42,7 @@ RSpec.describe Api::V2::Invoices::PaymentUrlsController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:error_details]).to eq(base: ["invalid_invoice_status_or_payment_status"])
+        expect(json).to eq(code: "validation_errors", details: [{code: "invalid_invoice_status_or_payment_status", field: "base", meta: {}}])
       end
     end
 
@@ -52,7 +52,7 @@ RSpec.describe Api::V2::Invoices::PaymentUrlsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("invoice")
+        expect(response).to be_v2_not_found_error("invoice")
         expect(::Stripe::Checkout::Session).not_to have_received(:create)
       end
     end
