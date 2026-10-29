@@ -7,7 +7,7 @@ module Integrations
 
       AccountInformation = Data.define(:id)
 
-      # NOTE: Nango HubSpot template, v1 returns the portal id as `id`
+      # NOTE: Nango HubSpot template. Older versions return the portal id as `id`, newer ones as `portalId`
       def action_name
         "fetch-account-information"
       end
@@ -17,7 +17,8 @@ module Integrations
 
         response = JSON.parse(trigger_action({}).body)
 
-        result.account_information = AccountInformation.new(id: response["id"])
+        portal_id = response["id"].presence || response["portalId"]&.to_s
+        result.account_information = AccountInformation.new(id: portal_id)
         result
       end
     end

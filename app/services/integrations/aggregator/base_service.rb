@@ -109,6 +109,9 @@ module Integrations
       end
 
       def trigger_action(input)
+        # NOTE: Every action shares the same URI, so errors are tagged with the action name to tell them apart
+        Sentry.set_tags(nango_action: action_name) if defined?(Sentry)
+
         http_client.post_with_response({action_name:, input:}, headers)
       end
 

@@ -47,5 +47,13 @@ RSpec.describe Integrations::Aggregator::AccountInformationService do
     end
 
     it_behaves_like "throttles!", :hubspot
+
+    context "when the template returns the portal id as portalId" do
+      let(:aggregator_response) { instance_double(Net::HTTPOK, body: {portalId: 1234567890}.to_json) }
+
+      it "reads the portal id from portalId" do
+        expect(service.call.account_information.id).to eq("1234567890")
+      end
+    end
   end
 end

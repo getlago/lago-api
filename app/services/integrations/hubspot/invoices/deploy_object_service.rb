@@ -47,14 +47,6 @@ module Integrations
           integration.save!
         end
 
-        def headers
-          {
-            "Provider-Config-Key" => "hubspot",
-            "Authorization" => "Bearer #{secret_key}",
-            "Connection-Id" => integration.connection_id
-          }
-        end
-
         def payload
           {
             name: "LagoInvoices",
