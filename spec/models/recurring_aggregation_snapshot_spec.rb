@@ -23,6 +23,41 @@ RSpec.describe RecurringAggregationSnapshot do
     end
   end
 
+  describe ".eligible?" do
+    subject(:eligible) { described_class.eligible?(metered_item:, billing_context:) }
+
+    let(:billable_metric) { build_stubbed(:sum_billable_metric) }
+    let(:billing_segment) { nil }
+    let(:metered_item) { instance_double(Fees::ChargeService::MeteredItem, billable_metric:, billing_segment:) }
+    let(:billing_context) { Billing::Context.from(subscription: build_stubbed(:subscription)) }
+
+    it { is_expected.to be(true) }
+
+    context "with a weighted sum metric" do
+      let(:billable_metric) { build_stubbed(:weighted_sum_billable_metric) }
+
+      it { is_expected.to be(true) }
+    end
+
+    context "with another aggregation type" do
+      let(:billable_metric) { build_stubbed(:billable_metric, aggregation_type: "count_agg") }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "with a billing segment" do
+      let(:billing_segment) { build_stubbed(:billing_segment) }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "with a contract billing context" do
+      let(:billing_context) { Billing::Context.from(contract: build_stubbed(:contract)) }
+
+      it { is_expected.to be(false) }
+    end
+  end
+
   describe "unique index" do
     let(:existing) { create(:recurring_aggregation_snapshot, grouped_by:) }
     let(:grouped_by) { {} }

@@ -44,7 +44,7 @@ module Charges
     end
 
     def recurring_initial_value
-      return unless snapshot_readable?
+      return unless RecurringAggregationSnapshots::FetchService.readable?(metered_item:, billing_context:)
 
       fetched = RecurringAggregationSnapshots::FetchService.call!(
         subscription: billing_context.subscription,
@@ -55,14 +55,6 @@ module Charges
       )
 
       [event_group_snapshots(fetched.snapshots), fetched.period] if fetched.period
-    end
-
-    def snapshot_readable?
-      return false unless metered_item.billable_metric.recurring? && metered_item.billable_metric.sum_agg?
-      return false if metered_item.billing_segment
-      return false unless billing_context.subscription?
-
-      billing_context.organization.feature_flag_enabled?(:persisted_recurring_values)
     end
 
     # The aggregation only reads the group of the event. A group without a snapshot had neither
