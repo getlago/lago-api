@@ -226,6 +226,38 @@ RSpec.describe UsageMonitoring::CreateAlertService do
         expect(result.alert.thresholds.sole.notify_on).to eq(%w[triggered])
       end
 
+      it "falls back to the default when recurring is explicitly null" do
+        params = base.merge(thresholds: [{code: "warn", value: 10, recurring: nil}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_success
+        expect(result.alert.thresholds.sole.recurring).to eq(false)
+      end
+
+      it "falls back to the default when recurring is blank" do
+        params = base.merge(thresholds: [{code: "warn", value: 10, recurring: ""}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_success
+        expect(result.alert.thresholds.sole.recurring).to eq(false)
+      end
+
+      it "keeps an explicit false recurring" do
+        params = base.merge(thresholds: [{code: "warn", value: 10, recurring: "false"}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_success
+        expect(result.alert.thresholds.sole.recurring).to eq(false)
+      end
+
+      it "keeps an explicit true recurring" do
+        params = base.merge(thresholds: [{code: "warn", value: 10}, {value: 5, recurring: true}])
+        result = described_class.call(organization:, alertable: subscription, params:)
+
+        expect(result).to be_success
+        expect(result.alert.thresholds.pluck(:code, :recurring)).to contain_exactly(["warn", false], [nil, true])
+      end
+
       it "rejects an explicitly emptied list" do
         params = base.merge(thresholds: [{code: "warn", value: 10, notify_on: []}])
         result = described_class.call(organization:, alertable: subscription, params:)
