@@ -27,6 +27,7 @@ Rails.application.routes.draw do
     # Drawn first so version-specific routes win recognition; everything else on /api/v2
     # falls through to v1.
     namespace :v2 do
+      resources :billing_entities, param: :code, constraints: {code: /[^\/]+/}, only: %i[index show create update]
       get "/organizations", to: "organizations#show"
       put "/organizations", to: "organizations#update"
       resources :customers, param: :external_id, constraints: {external_id: /[^\/]+/}, only: %i[index show create update destroy]
