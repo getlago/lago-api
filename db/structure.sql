@@ -831,6 +831,7 @@ DROP INDEX IF EXISTS public.index_fees_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_fees_on_applied_add_on_id;
 DROP INDEX IF EXISTS public.index_fees_on_add_on_id;
 DROP INDEX IF EXISTS public.index_fees_by_product_cursor;
+DROP INDEX IF EXISTS public.index_events_on_organization_id_code_and_timestamp;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_transaction_id;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_timestamp;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_created_at;
@@ -9832,6 +9833,13 @@ CREATE INDEX index_events_on_organization_id_and_transaction_id ON public.events
 
 
 --
+-- Name: index_events_on_organization_id_code_and_timestamp; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_events_on_organization_id_code_and_timestamp ON public.events USING btree (organization_id, code, "timestamp" DESC) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: index_fees_by_product_cursor; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -15951,6 +15959,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261029133222'),
 ('20261026150420'),
 ('20261026101445'),
 ('20261022090030'),
