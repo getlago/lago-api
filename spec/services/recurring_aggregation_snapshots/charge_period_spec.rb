@@ -94,7 +94,7 @@ RSpec.describe RecurringAggregationSnapshots::ChargePeriod do
       it "loads the group's snapshots and the first snapshot of each bucket" do
         first_eu_units = RecurringAggregationSnapshot.where(charge_filter: eu_filter).order(:id).first.units
 
-        expect(charge_period.period(charge_filter: eu_filter).last.map(&:units)).to match_array([100, first_eu_units].uniq)
+        expect(charge_period.period(charge_filter: eu_filter).last.map(&:units)).to match_array([100, first_eu_units].uniq(&:to_d))
         expect(charge_period.period(charge_filter: nil).last.map(&:units)).to eq([10])
       end
 
