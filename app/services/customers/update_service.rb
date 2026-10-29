@@ -172,13 +172,10 @@ module Customers
         eu_tax_code_result = Customers::EuAutoTaxesService.call(
           customer:,
           new_record: false,
-          tax_attributes_changed: tax_attributes_changed || billing_entity_changed
+          tax_attributes_changed: tax_attributes_changed || billing_entity_changed,
+          tax_codes: args[:tax_codes]
         )
-
-        if eu_tax_code_result.success?
-          args[:tax_codes] ||= []
-          args[:tax_codes] = (args[:tax_codes] + [eu_tax_code_result.tax_code]).uniq
-        end
+        args[:tax_codes] = eu_tax_code_result.tax_codes if eu_tax_code_result.success?
 
         # NOTE: EU-managed taxes (lago_eu_*) belong to the previous billing entity. When the
         #       billing entity changes and no new EU tax applies (new entity does not manage
