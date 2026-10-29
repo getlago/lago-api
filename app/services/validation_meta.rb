@@ -61,5 +61,5 @@ module ValidationMeta
     end
   end
 
-  private_class_method :registered?, :report
+  private_class_method :registered?
 end

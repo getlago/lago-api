@@ -61,7 +61,7 @@ class BaseService
     # ValidationMeta::KEYS). Only native v2 errors render them.
     Entry = Data.define(:field, :code, :meta)
 
-    attr_reader :messages, :entries
+    attr_reader :messages
 
     # The errors of a record, read now: valid? clears them in place, and ActiveModel computes each
     # message when it is read. The `meta:` option of an error is its meta, and its other options are
@@ -74,24 +74,43 @@ class BaseService
       new(result, messages: errors.messages, entries:)
     end
 
-    # One entry per code, in the order of messages, duplicates kept.
+    # One entry per code, in the order of messages, duplicates kept. A code that is not a token (the
+    # indexed sentences of a contract, a nested hash), or messages that are not a hash, become
+    # value_is_invalid, reported so that their producer gets fixed.
     def self.entries_from(messages)
       if messages.is_a?(Hash)
         messages.flat_map do |field, codes|
-          Array.wrap(codes).map { Entry.new(field:, code: it, meta: {}) }
+          Array.wrap(codes).map { Entry.new(field:, code: token_or_invalid(it, field), meta: {}) }
         end
       else
-        []
+        ValidationMeta.report("validation messages are not a Hash: #{messages.class}")
+        [Entry.new(field: :base, code: "value_is_invalid", meta: {})]
       end
     end
+
+    def self.token_or_invalid(code, field)
+      if code.is_a?(String) || code.is_a?(Symbol)
+        code
+      else
+        ValidationMeta.report("validation code of #{field} is not a token: #{code.class}")
+        "value_is_invalid"
+      end
+    end
+    private_class_method :token_or_invalid
 
     # messages: {field => [code]}, or one of the String, indexed and nested shapes a few services
     # build, kept as they are. entries: derived from messages when the producer adds no meta.
     def initialize(result, messages:, entries: nil)
       @messages = messages
-      @entries = (entries || self.class.entries_from(messages)).freeze
+      @given_entries = entries
 
       super(result, format_messages)
+    end
+
+    # Derived on the first read, which only native v2 does: a v1 or GraphQL failure, whose messages
+    # may be nested, never builds them.
+    def entries
+      @entries ||= (@given_entries || self.class.entries_from(messages)).freeze
     end
 
     private
