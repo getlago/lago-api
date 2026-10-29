@@ -65,7 +65,7 @@ RSpec.describe PaymentRequestsQuery do
     end
   end
 
-  context "when filtering by customer_id" do
+  context "when filtering by external_customer_id" do
     let(:filters) { {external_customer_id: customer.external_id} }
 
     it "returns all payment_requests of the customer" do
@@ -73,6 +73,20 @@ RSpec.describe PaymentRequestsQuery do
       expect(result.payment_requests.pluck(:id)).to contain_exactly(
         payment_request_second.id
       )
+    end
+  end
+
+  context "when filtering by customer_id" do
+    let(:filters) { {customer_id: customer.id} }
+
+    before do
+      deleted_customer = create(:customer, organization:, external_id: customer.external_id, deleted_at: Time.current)
+      create(:payment_request, organization:, customer: deleted_customer)
+    end
+
+    it "returns only the payment requests of that customer, not of a deleted one sharing its external id" do
+      expect(result).to be_success
+      expect(result.payment_requests.pluck(:id)).to contain_exactly(payment_request_second.id)
     end
   end
 

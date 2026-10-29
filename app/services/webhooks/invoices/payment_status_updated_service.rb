@@ -3,14 +3,12 @@
 module Webhooks
   module Invoices
     class PaymentStatusUpdatedService < Webhooks::BaseService
+      include Webhooks::Invoices::ProductCatalogPayload
+
       private
 
-      def object_serializer
-        ::V1::InvoiceSerializer.new(
-          object,
-          root_name: "invoice",
-          includes: %i[customer fees]
-        )
+      def v1_includes
+        %i[customer fees]
       end
 
       def webhook_type

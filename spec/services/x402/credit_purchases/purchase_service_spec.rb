@@ -16,10 +16,12 @@ describe X402::CreditPurchases::PurchaseService do
     let(:payment) { x402_evm_payment }
     let(:payment_requirements) { x402_evm_requirements }
     let(:wallet_shape) { {"name" => "Agent credits", "rate_amount" => "0.001", "currency" => "USD"} }
+    let(:idempotency_key) { "agent-request-0001" }
+    let(:other_key) { "agent-request-0002" }
     let(:params) do
       {
         connection_code: x402_connection.code, plan_code: "agent_api", wallet_code: "agent_credits",
-        wallet: wallet_shape.symbolize_keys, payment:, payment_requirements:
+        wallet: wallet_shape.symbolize_keys, payment:, payment_requirements:, idempotency_key:
       }
     end
     let(:fault) { nil }
@@ -60,6 +62,19 @@ describe X402::CreditPurchases::PurchaseService do
       end
     end
 
+    shared_examples "a replay refusal" do
+      it_behaves_like "a refusal before settle", {base: ["payment_already_settled"]}
+
+      it "answers no settlement" do
+        expect(result.settlement).to be_nil
+      end
+
+      it "calls no facilitator" do
+        result
+        expect(verify_request).not_to have_been_made
+      end
+    end
+
     shared_examples "a pending purchase" do
       it "answers the pending row" do
         expect(result.settlement).to have_attributes(status: "pending", customer_id: nil, wallet_transaction_id: nil)
@@ -95,6 +110,10 @@ describe X402::CreditPurchases::PurchaseService do
         expect(result.settlement.reload.purchase_settings).to eq(stored_settings)
       end
 
+      it "stores the digest of the request's key" do
+        expect(result.settlement.reload.request_key_digest).to eq(OpenSSL::Digest::SHA256.hexdigest(idempotency_key))
+      end
+
       it "requests /verify once" do
         result
         expect(verify_request).to have_been_made.once
@@ -104,6 +123,64 @@ describe X402::CreditPurchases::PurchaseService do
         result
         expect(settle_request).to have_been_made.once
       end
+    end
+
+    context "without an idempotency key" do
+      let(:params) { super().except(:idempotency_key) }
+
+      it "settles the purchase" do
+        expect(result.settlement.reload).to have_attributes(status: "settled", transaction_hash: settled_hash)
+      end
+
+      it "stores no key digest" do
+        expect(result.settlement.reload.request_key_digest).to be_nil
+      end
+    end
+
+    context "with an idempotency key at the length bounds" do
+      let(:idempotency_key) { "k" * 16 }
+
+      it "settles the purchase" do
+        expect(result.settlement.reload.status).to eq("settled")
+      end
+
+      context "with the longest key" do
+        let(:idempotency_key) { "~" * 128 }
+
+        it "settles the purchase" do
+          expect(result.settlement.reload.status).to eq("settled")
+        end
+      end
+    end
+
+    context "with an idempotency key shorter than 16 characters" do
+      let(:idempotency_key) { "k" * 15 }
+
+      it_behaves_like "a refusal before settle", {idempotency_key: ["invalid_value"]}
+    end
+
+    context "with an idempotency key longer than 128 characters" do
+      let(:idempotency_key) { "k" * 129 }
+
+      it_behaves_like "a refusal before settle", {idempotency_key: ["invalid_value"]}
+    end
+
+    context "with an idempotency key outside printable ASCII" do
+      let(:idempotency_key) { "agent-request-\u00e9001" }
+
+      it_behaves_like "a refusal before settle", {idempotency_key: ["invalid_value"]}
+    end
+
+    context "with an idempotency key holding a control character" do
+      let(:idempotency_key) { "agent-request\n0001" }
+
+      it_behaves_like "a refusal before settle", {idempotency_key: ["invalid_value"]}
+    end
+
+    context "with an idempotency key that is not a string" do
+      let(:idempotency_key) { 1_234_567_890_123_456 }
+
+      it_behaves_like "a refusal before settle", {idempotency_key: ["invalid_value"]}
     end
 
     context "with keys outside the wallet shape" do
@@ -131,6 +208,30 @@ describe X402::CreditPurchases::PurchaseService do
 
       it "grants the payer" do
         expect(result.settlement.customer).to have_attributes(x402_agent_address: x402_svm_payer)
+      end
+
+      context "with the payment pending under this request" do
+        let(:svm_digest) { X402::Payments::ComputeDigestService.call(payment: x402_svm_payment, network: x402_svm_requirements["network"]).digest }
+        let!(:settlement) do
+          create(
+            :x402_settlement, :solana, :pending, organization:, x402_connection:, payee_address: x402_connection.payout_addresses["svm"],
+            payer_address: x402_svm_payer, payment_digest: svm_digest, purchase_settings: stored_settings, request_key: idempotency_key
+          )
+        end
+
+        it "answers the pending row" do
+          expect(result.settlement).to have_attributes(id: settlement.id, status: "pending")
+        end
+
+        it "is a replay" do
+          expect(result.replayed).to be(true)
+        end
+
+        context "with the payment rebuilt from the landed transaction" do
+          let(:params) { super().merge(idempotency_key: other_key) }
+
+          it_behaves_like "a replay refusal"
+        end
       end
     end
 
@@ -165,6 +266,45 @@ describe X402::CreditPurchases::PurchaseService do
 
       it "fails with connection_not_found" do
         expect(result.error.error_code).to eq("connection_not_found")
+      end
+    end
+
+    context "with a testnet connection on an organization running on mainnet" do
+      let(:organization) { create(:organization, feature_flags: ["x402_mainnet"]) }
+      let(:x402_connection) do
+        create(
+          :x402_connection,
+          :saved_before_switch,
+          organization:,
+          networks: ["eip155:84532", "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"],
+          payout_addresses: {"evm" => "0x94bA479439C2f1bA5f5DaCBD06Ea0c129604B4a5", "svm" => "HHU1aLQQCbCzW9ebjFTntq2vkvsQsxkDyPjMsW2WtiLG"},
+          cdp_api_key_id:,
+          cdp_api_key_secret:
+        )
+      end
+
+      it_behaves_like "a refusal before settle", {connection_code: ["environment_not_enabled"]}
+
+      it "does not request /verify" do
+        result
+        expect(verify_request).not_to have_been_made
+      end
+
+      context "with a granted settlement holding the payment" do
+        let(:customer) { create(:customer, organization:, x402_agent_address: payer_address) }
+        let(:subscription) { create(:subscription, customer:, plan:, external_id: "x402_#{payer_address}_agent_api") }
+        let(:wallet) { create(:wallet, customer:, code: "agent_credits", currency: "USD", x402_enabled: true) }
+        let!(:settlement) do
+          create(
+            :x402_settlement, organization:, x402_connection:, payee_address:, payer_address:, payment_digest: digest,
+            purchase_settings: stored_settings, customer:, subscription:, wallet_transaction: create(:wallet_transaction, wallet:),
+            request_key: idempotency_key
+          )
+        end
+
+        it "answers from the row" do
+          expect(result).to have_attributes(settlement:, replayed: true)
+        end
       end
     end
 
@@ -332,7 +472,7 @@ describe X402::CreditPurchases::PurchaseService do
       let!(:settlement) do
         create(
           :x402_settlement, organization:, x402_connection:, payee_address:, payer_address:, payment_digest: digest,
-          purchase_settings: stored_settings, customer:, subscription:, wallet_transaction:
+          purchase_settings: stored_settings, customer:, subscription:, wallet_transaction:, request_key: idempotency_key
         )
       end
 
@@ -399,13 +539,74 @@ describe X402::CreditPurchases::PurchaseService do
           expect(result.settlement).to eq(settlement)
         end
       end
+
+      context "with the payout address rotated since" do
+        let!(:settlement) do
+          build(
+            :x402_settlement, organization:, x402_connection:, payee_address: "0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359", payer_address:,
+            payment_digest: digest, purchase_settings: stored_settings, customer:, subscription:, wallet_transaction:, request_key: idempotency_key
+          ).tap { |row| row.save!(validate: false) }
+        end
+
+        it "answers from the row" do
+          expect(result.settlement).to eq(settlement)
+        end
+      end
+
+      context "when presented by another request" do
+        let(:params) { super().merge(idempotency_key: other_key) }
+
+        it_behaves_like "a replay refusal"
+
+        it "logs the refusal" do
+          result
+          expect(Rails.logger).to have_received(:warn).with("X402::CreditPurchases::PurchaseService call failed reason=other_request network=eip155:84532")
+        end
+
+        context "with the payment rebuilt from the chain" do
+          let(:payment) do
+            {
+              "x402Version" => 2,
+              "resource" => {"url" => "https://api.example.com/other"},
+              "accepted" => x402_evm_requirements,
+              "payload" => x402_evm_payment["payload"]
+            }
+          end
+
+          it_behaves_like "a replay refusal"
+        end
+
+        context "with a garbage signature" do
+          let(:payment) { x402_evm_payment.deep_merge("payload" => {"signature" => "0xdeadbeef"}) }
+
+          it_behaves_like "a replay refusal"
+        end
+
+        context "with another signature over the same authorization" do
+          let(:payment) { x402_evm_payment.deep_merge("payload" => {"signature" => "0x#{"cd" * 65}"}) }
+
+          it_behaves_like "a replay refusal"
+        end
+
+        context "with another connection" do
+          let(:params) { super().merge(connection_code: create(:x402_connection, organization:).code) }
+
+          it_behaves_like "a replay refusal"
+        end
+      end
+
+      context "when presented without a key" do
+        let(:params) { super().except(:idempotency_key) }
+
+        it_behaves_like "a replay refusal"
+      end
     end
 
     context "with a settled settlement without a grant" do
       before do
         create(
           :x402_settlement, organization:, x402_connection:, payee_address:, payer_address:, payment_digest: digest,
-          settled_amount_atomic: 10_000_000, settled_amount_cents: 1000, purchase_settings: stored_settings
+          settled_amount_atomic: 10_000_000, settled_amount_cents: 1000, purchase_settings: stored_settings, request_key: idempotency_key
         )
       end
 
@@ -441,11 +642,20 @@ describe X402::CreditPurchases::PurchaseService do
           expect(result.error.messages).to eq(base: ["credit_grant_failed"])
         end
       end
+
+      context "when presented by another request" do
+        let(:params) { super().merge(idempotency_key: other_key) }
+
+        it_behaves_like "a replay refusal"
+      end
     end
 
     context "with a pending settlement holding the payment" do
       let!(:settlement) do
-        create(:x402_settlement, :pending, organization:, x402_connection:, payee_address:, payer_address:, payment_digest: digest, purchase_settings: stored_settings)
+        create(
+          :x402_settlement, :pending, organization:, x402_connection:, payee_address:, payer_address:, payment_digest: digest,
+          purchase_settings: stored_settings, request_key: idempotency_key
+        )
       end
 
       it "answers the pending row" do
@@ -460,17 +670,34 @@ describe X402::CreditPurchases::PurchaseService do
         result
         expect(verify_request).not_to have_been_made
       end
+
+      context "when presented by another request" do
+        let(:params) { super().merge(idempotency_key: other_key) }
+
+        it_behaves_like "a replay refusal"
+      end
+    end
+
+    context "with a settlement made without a key holding the payment" do
+      before do
+        create(:x402_settlement, organization:, x402_connection:, payee_address:, payer_address:, payment_digest: digest, purchase_settings: stored_settings)
+      end
+
+      it_behaves_like "a replay refusal"
+
+      context "when presented without a key" do
+        let(:params) { super().except(:idempotency_key) }
+
+        it_behaves_like "a replay refusal"
+      end
     end
 
     context "with an invoice payment holding the payment" do
-      before { create(:x402_settlement, :invoice_payment, organization:, x402_connection:, payee_address:, payer_address:, payment_digest: digest) }
-
-      it_behaves_like "a refusal before settle", {payment: ["recorded_as_invoice_payment"]}
-
-      it "calls no facilitator" do
-        result
-        expect(verify_request).not_to have_been_made
+      before do
+        create(:x402_settlement, :invoice_payment, organization:, x402_connection:, payee_address:, payer_address:, payment_digest: digest)
       end
+
+      it_behaves_like "a replay refusal"
 
       it "logs the refusal" do
         result
@@ -481,7 +708,7 @@ describe X402::CreditPurchases::PurchaseService do
     context "with a pending invoice payment holding the payment" do
       before { create(:x402_settlement, :pending, :invoice_payment, organization:, x402_connection:, payee_address:, payer_address:, payment_digest: digest) }
 
-      it_behaves_like "a refusal before settle", {payment: ["recorded_as_invoice_payment"]}
+      it_behaves_like "a replay refusal"
     end
 
     context "with a failed settlement holding the payment" do
@@ -507,7 +734,10 @@ describe X402::CreditPurchases::PurchaseService do
     context "with the same payment inserted during /verify" do
       before do
         stub_request(:post, "#{cdp_facilitator_url}/verify").to_return do
-          create(:x402_settlement, :pending, organization:, x402_connection:, payee_address:, payer_address:, payment_digest: digest, purchase_settings: stored_settings)
+          create(
+            :x402_settlement, :pending, organization:, x402_connection:, payee_address:, payer_address:, payment_digest: digest,
+            purchase_settings: stored_settings, request_key: idempotency_key
+          )
           {status: 200, body: cdp_fixture("verify_valid")}
         end
       end
@@ -524,6 +754,31 @@ describe X402::CreditPurchases::PurchaseService do
         result
         expect(settle_request).not_to have_been_made
       end
+
+      context "when another request inserted it" do
+        before do
+          stub_request(:post, "#{cdp_facilitator_url}/verify").to_return do
+            create(
+              :x402_settlement, :pending, organization:, x402_connection:, payee_address:, payer_address:, payment_digest: digest,
+              purchase_settings: stored_settings, request_key: other_key
+            )
+            {status: 200, body: cdp_fixture("verify_valid")}
+          end
+        end
+
+        it "fails with payment_already_settled" do
+          expect(result.error.messages).to eq(base: ["payment_already_settled"])
+        end
+
+        it "answers no settlement" do
+          expect(result.settlement).to be_nil
+        end
+
+        it "does not request /settle" do
+          result
+          expect(settle_request).not_to have_been_made
+        end
+      end
     end
 
     context "with an invoice payment inserted during /verify" do
@@ -534,8 +789,8 @@ describe X402::CreditPurchases::PurchaseService do
         end
       end
 
-      it "fails with recorded_as_invoice_payment" do
-        expect(result.error.messages).to eq(payment: ["recorded_as_invoice_payment"])
+      it "fails with payment_already_settled" do
+        expect(result.error.messages).to eq(base: ["payment_already_settled"])
       end
 
       it "does not request /settle" do

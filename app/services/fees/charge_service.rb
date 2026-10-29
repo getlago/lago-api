@@ -639,8 +639,6 @@ module Fees
     def snapshot_eligible?(selected_metered_item)
       return false if selected_metered_item.billing_segment
       return false unless billing_context.subscription?
-      # Prorated sums have no snapshot read yet
-      return false if selected_metered_item.charge.prorated?
 
       SNAPSHOT_AGGREGATION_TYPES.include?(selected_metered_item.billable_metric.aggregation_type)
     end

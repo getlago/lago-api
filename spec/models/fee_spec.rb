@@ -24,6 +24,7 @@ RSpec.describe Fee do
       expect(subject).to belong_to(:product_filter).optional
       expect(subject).to belong_to(:group).optional
       expect(subject).to belong_to(:invoiceable).optional
+      expect(subject).to belong_to(:billed_product).class_name("Product").with_foreign_key(:invoiceable_id).optional
       expect(subject).to belong_to(:true_up_parent_fee).class_name("Fee").optional
       expect(subject).to belong_to(:original_fee).class_name("Fee").optional
       expect(subject).to belong_to(:organization)

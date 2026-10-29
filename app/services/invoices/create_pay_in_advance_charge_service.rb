@@ -65,7 +65,6 @@ module Invoices
       end
 
       unless invoice.closed?
-        Utils::SegmentTrack.invoice_created(invoice)
         deliver_webhooks
         Utils::ActivityLog.produce(invoice, "invoice.created")
         GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?)

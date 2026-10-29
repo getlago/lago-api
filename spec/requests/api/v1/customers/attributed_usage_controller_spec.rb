@@ -156,6 +156,7 @@ RSpec.describe Api::V1::Customers::AttributedUsageController, clickhouse: {clean
           ]
         )
         expect(json[:attributed_usage][:split_filters_count]).to eq(1)
+        expect(json[:attributed_usage][:rows].find { it[:value] == "eng" }[:split_charge_units]).to eq("1500.0") # opus 1000 + default 500
       end
 
       context "with an offset past the last filter" do

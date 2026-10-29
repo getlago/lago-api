@@ -7,8 +7,8 @@ module UsageAttributions
       :currency, :limit, :offset, :split_filters_count
     ]
 
-    Row = Data.define(:value, :rank, :amount_cents, :events_count, :cells)
-    Aggregate = Data.define(:amount_cents, :events_count, :cells)
+    Row = Data.define(:value, :rank, :amount_cents, :events_count, :split_charge_units, :cells)
+    Aggregate = Data.define(:amount_cents, :events_count, :split_charge_units, :cells)
     Cell = Data.define(:charge, :charge_filter, :units, :amount_cents, :events_count)
 
     DEFAULT_LIMIT = 50
@@ -193,16 +193,18 @@ module UsageAttributions
     end
 
     # The current billing period. A period longer than a custom window (quarterly or yearly charges)
-    # is narrowed to its last MAX_CUSTOM_WINDOW up to now, so the default view scans as much as a
-    # custom one at most.
+    # runs from MAX_CUSTOM_WINDOW before today to the end of today in the customer's timezone, so the
+    # default view scans about as much as a custom one, and its boundaries, and so its cache entry,
+    # last the whole day.
     def default_window
       @default_window ||= begin
         period_from = dates_service.charges_from_datetime
         period_to = dates_service.charges_to_datetime
 
         if period_to - period_from > MAX_CUSTOM_WINDOW
-          period_to = [period_to, Time.current].min
-          period_from = [period_from, period_to - MAX_CUSTOM_WINDOW].max
+          today = Time.current.in_time_zone(subscription.customer.applicable_timezone).beginning_of_day
+          period_from = [period_from, today - MAX_CUSTOM_WINDOW].max
+          period_to = [period_to, today.end_of_day].min
         end
 
         [period_from, period_to]
@@ -275,7 +277,7 @@ module UsageAttributions
         max_execution_time: MAX_EXECUTION_TIME
       )
       @cells = query.cells
-      query.rows
+      RowsCacheService.call!(subscription:, query:).rows
     end
 
     def charge_column(charge)
@@ -327,6 +329,7 @@ module UsageAttributions
         rank: row["rank"].to_i,
         amount_cents: (values["amount"] if amount_basis?),
         events_count: values["events"].to_i,
+        split_charge_units: (values["split_units"] if split_charge),
         cells: build_cells(values)
       )
     end
@@ -335,6 +338,7 @@ module UsageAttributions
       Aggregate.new(
         amount_cents: (values["amount"] if amount_basis?),
         events_count: values["events"].to_i,
+        split_charge_units: (values["split_units"] if split_charge),
         cells: build_cells(values)
       )
     end
@@ -386,7 +390,7 @@ module UsageAttributions
     end
 
     def column_names
-      @column_names ||= %w[amount events] + Array(@cells).each_index.flat_map do |index|
+      @column_names ||= ["amount", "events", *("split_units" if split_charge)] + Array(@cells).each_index.flat_map do |index|
         ["units_#{index}", "amount_#{index}", "events_#{index}"]
       end
     end

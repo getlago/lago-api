@@ -2,13 +2,14 @@
 
 class PaymentRequestsQuery < BaseQuery
   Result = BaseResult[:payment_requests]
-  Filters = BaseFilters[:external_customer_id, :payment_status, :currency, :billing_entity_ids]
+  Filters = BaseFilters[:external_customer_id, :customer_id, :payment_status, :currency, :billing_entity_ids]
 
   def call
     payment_requests = PaymentRequest.where(organization:)
 
     payment_requests = with_billing_entity_ids(payment_requests) if filters.billing_entity_ids.present?
     payment_requests = with_external_customer(payment_requests) if filters.external_customer_id
+    payment_requests = payment_requests.where(customer_id: filters.customer_id) if filters.customer_id
     payment_requests = with_payment_status(payment_requests) if filters.payment_status
     payment_requests = with_currency(payment_requests) if filters.currency
 

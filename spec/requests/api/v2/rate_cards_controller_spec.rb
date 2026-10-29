@@ -46,7 +46,7 @@ RSpec.describe Api::V2::RateCardsController do
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("expand_not_supported")
-        expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: %w[taxes]})
+        expect(json[:details]).to eq([{code: "action_not_expandable", field: "expands", meta: {invalid_values: %w[taxes]}}])
       end
     end
 
@@ -75,7 +75,7 @@ RSpec.describe Api::V2::RateCardsController do
         it "returns a tax not found error" do
           expect { subject }.not_to change(RateCard, :count)
 
-          expect(response).to be_not_found_error("tax")
+          expect(response).to be_v2_not_found_error("tax")
         end
       end
     end
@@ -86,7 +86,7 @@ RSpec.describe Api::V2::RateCardsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("product")
+        expect(response).to be_v2_not_found_error("product")
       end
     end
 
@@ -141,7 +141,7 @@ RSpec.describe Api::V2::RateCardsController do
           subject
 
           expect(response).to have_http_status(:unprocessable_entity)
-          expect(json.dig(:error_details, :"rates.rate_properties")).to be_present
+          expect(json[:details]).to eq([{code: "invalid_amount", field: "rates.rate_properties", meta: {}}])
           expect(RateCard.count).to eq(0)
         end
       end
@@ -180,7 +180,7 @@ RSpec.describe Api::V2::RateCardsController do
         it "returns a not found error" do
           subject
 
-          expect(response).to be_not_found_error("product_filter")
+          expect(response).to be_v2_not_found_error("product_filter")
         end
       end
 
@@ -223,7 +223,7 @@ RSpec.describe Api::V2::RateCardsController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:error_details][:regroup_paid_fees]).to eq(["value_is_invalid"])
+        expect(json[:details]).to eq([{code: "value_is_invalid", field: "regroup_paid_fees", meta: {}}])
       end
     end
 
@@ -301,7 +301,7 @@ RSpec.describe Api::V2::RateCardsController do
         it "returns a tax not found error and keeps the existing tax" do
           subject
 
-          expect(response).to be_not_found_error("tax")
+          expect(response).to be_v2_not_found_error("tax")
           expect(rate_card.reload.taxes).to eq([tax1])
         end
       end
@@ -313,7 +313,7 @@ RSpec.describe Api::V2::RateCardsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("rate_card")
+        expect(response).to be_v2_not_found_error("rate_card")
       end
     end
   end
@@ -549,12 +549,14 @@ RSpec.describe Api::V2::RateCardsController do
 
         expect(response).to have_http_status(:bad_request)
         expect(json).to eq(
-          status: 400,
-          error: "Bad Request",
           code: "invalid_expand",
-          error_details: {
-            expands: {invalid_values: %w[product_category], allowed_values: %w[active_rate taxes rates product product_filter]}
-          }
+          details: [
+            {
+              code: "invalid_expand",
+              field: "expands",
+              meta: {invalid_values: %w[product_category], allowed_values: %w[active_rate taxes rates product product_filter]}
+            }
+          ]
         )
       end
     end
@@ -565,7 +567,7 @@ RSpec.describe Api::V2::RateCardsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("rate_card")
+        expect(response).to be_v2_not_found_error("rate_card")
       end
     end
   end
@@ -595,7 +597,7 @@ RSpec.describe Api::V2::RateCardsController do
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("expand_not_supported")
-        expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: %w[taxes]})
+        expect(json[:details]).to eq([{code: "action_not_expandable", field: "expands", meta: {invalid_values: %w[taxes]}}])
       end
     end
 
@@ -670,7 +672,7 @@ RSpec.describe Api::V2::RateCardsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("rate_card")
+        expect(response).to be_v2_not_found_error("rate_card")
       end
     end
   end

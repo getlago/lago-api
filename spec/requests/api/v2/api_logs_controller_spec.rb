@@ -105,8 +105,7 @@ RSpec.describe Api::V2::ApiLogsController, clickhouse: true do
         subject
 
         expect(response).to have_http_status(:forbidden)
-        expect(json[:error]).to eq("Forbidden")
-        expect(json[:code]).to eq("feature_unavailable")
+        expect(json).to eq(code: "feature_unavailable", details: [])
       end
     end
 
@@ -186,9 +185,10 @@ RSpec.describe Api::V2::ApiLogsController, clickhouse: true do
           subject
 
           expect(response).to have_http_status(:bad_request)
-          expect(json[:status]).to eq(400)
-          expect(json[:error]).to eq("Bad Request")
-          expect(json[:code]).to eq("invalid_pagination_cursor")
+          expect(json).to eq(
+            code: "invalid_pagination_cursor",
+            details: [{code: "malformed", field: "after", meta: {}}]
+          )
         end
       end
     end
@@ -253,8 +253,7 @@ RSpec.describe Api::V2::ApiLogsController, clickhouse: true do
         subject
 
         expect(response).to have_http_status(:forbidden)
-        expect(json[:error]).to eq("Forbidden")
-        expect(json[:code]).to eq("feature_unavailable")
+        expect(json).to eq(code: "feature_unavailable", details: [])
       end
     end
 
@@ -283,7 +282,7 @@ RSpec.describe Api::V2::ApiLogsController, clickhouse: true do
         it "returns a not found error" do
           subject
 
-          expect(response).to be_not_found_error("api_log")
+          expect(response).to be_v2_not_found_error("api_log")
         end
       end
     end

@@ -10,6 +10,7 @@ class Invoice < ApplicationRecord
   include Sequenced
   include RansackUuidSearch
   include HasPurchaseOrderNumber
+  include ExpiringDocumentUrl
 
   CREDIT_NOTES_MIN_VERSION = 2
   COUPON_BEFORE_VAT_VERSION = 3
@@ -68,6 +69,8 @@ class Invoice < ApplicationRecord
 
   has_one_attached :file
   has_one_attached :xml_file
+
+  expiring_document_urls :file, :xml_file
 
   monetize :coupons_amount_cents,
     :credit_notes_amount_cents,
@@ -170,9 +173,11 @@ class Invoice < ApplicationRecord
       .distinct
   }
 
+  # A correlated EXISTS, so that a list only probes the fees of the invoices it walks: an
+  # `IN` under the `OR` would read the catalog fees of every organization.
   scope :product_catalog, -> {
     where(invoice_type: :contract)
-      .or(where(id: Fee.where.not(contract_id: nil).select(:invoice_id)))
+      .or(where(Fee.where(Fee.arel_table[:invoice_id].eq(arel_table[:id])).where.not(contract_id: nil).arel.exists))
   }
 
   scope :self_billed, -> { where(self_billed: true) }
@@ -227,28 +232,6 @@ class Invoice < ApplicationRecord
 
   def invisible?
     INVISIBLE_STATUS.key?(status.to_sym)
-  end
-
-  def file_url
-    return if file.blank?
-
-    blob_path = Rails.application.routes.url_helpers.rails_blob_path(
-      file,
-      host: "void"
-    )
-
-    File.join(ENV["LAGO_API_URL"], blob_path)
-  end
-
-  def xml_url
-    return if xml_file.blank?
-
-    blob_path = Rails.application.routes.url_helpers.rails_blob_path(
-      xml_file,
-      host: "void"
-    )
-
-    File.join(ENV["LAGO_API_URL"], blob_path)
   end
 
   def web_url
@@ -636,6 +619,10 @@ class Invoice < ApplicationRecord
   end
 
   private
+
+  def document_url_anchor_date
+    payment_due_date || issuing_date
+  end
 
   def fees_available_to_credit_amount_cents
     booked_tax = booked_tax_by_fee

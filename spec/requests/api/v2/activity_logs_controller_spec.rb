@@ -197,12 +197,10 @@ RSpec.describe Api::V2::ActivityLogsController, clickhouse: true do
           subject
 
           expect(response).to have_http_status(:bad_request)
-          expect(json).to include(
-            status: 400,
-            error: "Bad Request",
-            code: "invalid_pagination_cursor"
+          expect(json).to eq(
+            code: "invalid_pagination_cursor",
+            details: [{code: "malformed", field: "after", meta: {}}]
           )
-          expect(json[:error_details]).to be_present
         end
       end
 
@@ -267,7 +265,7 @@ RSpec.describe Api::V2::ActivityLogsController, clickhouse: true do
         it "returns a not found error" do
           subject
 
-          expect(response).to be_not_found_error("activity_log")
+          expect(response).to be_v2_not_found_error("activity_log")
         end
       end
     end

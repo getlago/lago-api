@@ -12,6 +12,7 @@ en:
         country_must_be_present: country_must_be_present
         country_not_supported: country_not_supported
         does_not_belong_to_product: does_not_belong_to_product
+        environment_not_enabled: environment_not_enabled
         exactly_one_plan_required: exactly_one_plan_required
         exclusion: value_is_reserved
         feature_unavailable: feature_unavailable
@@ -50,6 +51,7 @@ en:
         invalid_volume_ranges: invalid_volume_ranges
         language_code_invalid: not_a_valid_language_code
         less_than_or_equal_to: value_is_out_of_range
+        mainnet_not_downgradable: mainnet_not_downgradable
         missing_graduated_ranges: missing_graduated_ranges
         missing_volume_ranges: missing_volume_ranges
         mixed_environments: mixed_environments

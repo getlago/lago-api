@@ -47,11 +47,19 @@ RSpec.describe CursorPagination::Cursor do
     end
   end
 
-  context "with a sort of more than two columns" do
+  context "with a sort on a column the cursor key cannot hold" do
     subject(:cursor) { described_class.new(table: "products", sort: {created_at: :desc, name: :desc, id: :desc}) }
 
-    it "raises an argument error, since the cursor key holds two columns" do
-      expect { cursor }.to raise_error(ArgumentError, /two columns/)
+    it "raises an argument error" do
+      expect { cursor }.to raise_error(ArgumentError, /date or time columns/)
+    end
+  end
+
+  context "with a sort not ending with a tiebreak" do
+    subject(:cursor) { described_class.new(table: "products", sort: {created_at: :desc}) }
+
+    it "raises an argument error" do
+      expect { cursor }.to raise_error(ArgumentError, /then a tiebreak/)
     end
   end
 
@@ -60,6 +68,18 @@ RSpec.describe CursorPagination::Cursor do
 
     it "raises an argument error" do
       expect { cursor }.to raise_error(ArgumentError, /single direction/)
+    end
+  end
+
+  context "with a sort on the issuing date" do
+    subject(:cursor) { described_class.from_params(params, table: "invoices", sort:) }
+
+    let(:sort) { {issuing_date: :desc, created_at: :desc, id: :desc} }
+    let(:invoice) { build_stubbed(:invoice, issuing_date: Date.new(2026, 9, 27), created_at: product.created_at) }
+    let(:params) { {after: CursorPagination::Token.encode(table: "invoices", record: invoice, sort:)} }
+
+    it "pages forward from the typed key" do
+      expect(cursor).to have_attributes(sort:, direction: :forward, key: [Date.new(2026, 9, 27), invoice.created_at.utc, invoice.id])
     end
   end
 
@@ -90,37 +110,37 @@ RSpec.describe CursorPagination::Cursor do
   context "with a limit of 0" do
     let(:params) { {limit: "0"} }
 
-    it_behaves_like "a pagination error", "invalid_pagination_limit", {limit: {value: "0", allowed_range: "1..100"}}
+    it_behaves_like "a pagination error", "invalid_pagination_limit", {limit: {value: "0", min: 1, max: 100}}
   end
 
   context "with a limit above the maximum" do
     let(:params) { {limit: "101"} }
 
-    it_behaves_like "a pagination error", "invalid_pagination_limit", {limit: {value: "101", allowed_range: "1..100"}}
+    it_behaves_like "a pagination error", "invalid_pagination_limit", {limit: {value: "101", min: 1, max: 100}}
   end
 
   context "with a non-integer limit" do
     let(:params) { {limit: "1.5"} }
 
-    it_behaves_like "a pagination error", "invalid_pagination_limit", {limit: {value: "1.5", allowed_range: "1..100"}}
+    it_behaves_like "a pagination error", "invalid_pagination_limit", {limit: {value: "1.5", min: 1, max: 100}}
   end
 
   context "with a negative limit" do
     let(:params) { {limit: "-1"} }
 
-    it_behaves_like "a pagination error", "invalid_pagination_limit", {limit: {value: "-1", allowed_range: "1..100"}}
+    it_behaves_like "a pagination error", "invalid_pagination_limit", {limit: {value: "-1", min: 1, max: 100}}
   end
 
   context "with a limit too long to be echoed back" do
     let(:params) { {limit: "1" * 21} }
 
-    it_behaves_like "a pagination error", "invalid_pagination_limit", {limit: {allowed_range: "1..100"}}
+    it_behaves_like "a pagination error", "invalid_pagination_limit", {limit: {min: 1, max: 100}}
   end
 
   context "with a limit that is not a string" do
     let(:params) { {limit: ["1"]} }
 
-    it_behaves_like "a pagination error", "invalid_pagination_limit", {limit: {allowed_range: "1..100"}}
+    it_behaves_like "a pagination error", "invalid_pagination_limit", {limit: {min: 1, max: 100}}
   end
 
   context "with offset pagination parameters" do

@@ -132,7 +132,7 @@ module BillableMetrics
       # No group up to the watermark: the bucket closes at zero units rather than without a snapshot
       def empty_recurring_results(options)
         empty_results
-        if snapshot_units?(options) && !options[:precomputed_grouped_aggregations]
+        if snapshot_units?(options)
           result.aggregations.each do
             it.recurring_units = 0
             it.recurring_events_count = 0
@@ -174,7 +174,7 @@ module BillableMetrics
         )
       end
 
-      # A precomputed prorated result is not bounded by the watermark, so it persists no snapshot
+      # A sum read without a watermark carries no snapshot value: it persists no snapshot
       def assign_recurring_snapshot(target_result, sum_result)
         return unless billable_metric.recurring? && sum_result.respond_to?(:snapshot_value)
 

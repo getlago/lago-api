@@ -20,6 +20,9 @@ class Fee < ApplicationRecord
   belongs_to :product_filter, -> { with_discarded }, optional: true
   belongs_to :group, -> { with_discarded }, optional: true
   belongs_to :invoiceable, polymorphic: true, optional: true
+  # The product a product fee billed, deleted or not: preloading `invoiceable` applies the
+  # product's default scope, which leaves a deleted one out.
+  belongs_to :billed_product, -> { with_discarded }, class_name: "Product", foreign_key: :invoiceable_id, optional: true
   belongs_to :true_up_parent_fee, class_name: "Fee", optional: true
   belongs_to :original_fee, class_name: "Fee", optional: true # Points to the root fee in a void/regenerate chain
   belongs_to :organization

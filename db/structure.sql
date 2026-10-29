@@ -3804,6 +3804,7 @@ CREATE TABLE public.organizations (
     max_wallets integer,
     slug character varying NOT NULL,
     pagination_max_page_size integer,
+    document_url_expiration_days integer DEFAULT 30 NOT NULL,
     CONSTRAINT check_organizations_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -6473,12 +6474,15 @@ CREATE TABLE public.x402_settlements (
     error_reason character varying,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
+    request_key_digest character varying,
     CONSTRAINT check_x402_settlements_amount_positive CHECK ((settled_amount_atomic > (0)::numeric)),
     CONSTRAINT check_x402_settlements_credit_purchase_has_settings CHECK (((kind <> 'credit_purchase'::public.x402_settlement_kind) OR (purchase_settings IS NOT NULL))),
     CONSTRAINT check_x402_settlements_granted_has_subscription CHECK (((wallet_transaction_id IS NULL) OR (subscription_id IS NOT NULL))),
     CONSTRAINT check_x402_settlements_invoice_payment_has_invoice CHECK (((kind <> 'invoice_payment'::public.x402_settlement_kind) OR (invoice_id IS NOT NULL))),
+    CONSTRAINT check_x402_settlements_invoice_payment_has_no_request_key CHECK (((kind <> 'invoice_payment'::public.x402_settlement_kind) OR (request_key_digest IS NULL))),
     CONSTRAINT check_x402_settlements_merchant_settled_credit_purchase CHECK (((settled_by = 'lago'::public.x402_settlement_settled_by) OR ((kind = 'credit_purchase'::public.x402_settlement_kind) AND (status = 'settled'::public.x402_settlement_status)))),
     CONSTRAINT check_x402_settlements_pending_has_reconcile_after CHECK (((status <> 'pending'::public.x402_settlement_status) OR (reconcile_after IS NOT NULL))),
+    CONSTRAINT check_x402_settlements_request_key_digest_format CHECK (((request_key_digest IS NULL) OR ((request_key_digest)::text ~ '^[0-9a-f]{64}$'::text))),
     CONSTRAINT check_x402_settlements_settled_has_hash CHECK (((status <> 'settled'::public.x402_settlement_status) OR (transaction_hash IS NOT NULL)))
 );
 
@@ -16050,11 +16054,14 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261028184732'),
+('20261028184731'),
 ('20261026150420'),
 ('20261026101445'),
 ('20261023180000'),
 ('20261023090000'),
 ('20261022090030'),
+('20261021200000'),
 ('20261020144205'),
 ('20261020074217'),
 ('20261019074555'),
