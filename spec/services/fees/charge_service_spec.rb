@@ -5254,7 +5254,7 @@ RSpec.describe Fees::ChargeService, :premium do
       let(:april) { [Time.zone.parse("2022-04-01"), Time.zone.parse("2022-04-30").end_of_day] }
       let(:may) { [Time.zone.parse("2022-05-01"), Time.zone.parse("2022-05-31").end_of_day] }
 
-      def bill((from, to), options: self.options)
+      def bill((from, to), options: self.options, attributes: %i[grouped_by units events_count])
         travel_to(to + 1.hour)
 
         period = BillingPeriodBoundaries.new(
@@ -5273,7 +5273,7 @@ RSpec.describe Fees::ChargeService, :premium do
           options:,
           plan: subscription.plan,
           customer:
-        ).fees.map { [it.grouped_by, it.units, it.events_count] }
+        ).fees.map { |fee| attributes.map { fee.public_send(it) } }
       end
 
       def create_event(timestamp, value, region, created_at: timestamp)
@@ -5315,6 +5315,33 @@ RSpec.describe Fees::ChargeService, :premium do
           expect(bill(may)).to match_array([[{"region" => "eu"}, 42, 4], [{"region" => "us"}, 3, 1], [{"region" => "apac"}, 4, 1]])
           expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
             .with(hash_including(initial_value: be_present)).twice
+        end
+      end
+
+      context "with a prorated charge" do
+        let(:charge) do
+          create(:standard_charge, plan: subscription.plan, billable_metric:, prorated: true, properties: {amount: "20"})
+        end
+
+        def bill(period, attributes: %i[units precise_amount_cents])
+          super
+        end
+
+        it "prorates the current period's events over what the snapshot carries" do
+          # 10 on 16 Mar, 5 on 17 Mar and 3 on 20 Mar, over 17 days
+          expect(bill(march)).to eq([[18, (BigDecimal(10 * 16 + 5 * 15 + 3 * 12) / 17).ceil(5) * 2_000]])
+
+          create_event("2022-03-25", 7, "eu", created_at: Time.zone.parse("2022-04-01T05:00:00"))
+
+          # 18 from the snapshot and the late 7 at full weight, 20 on 10 Apr over 21 of 30 days
+          expect(bill(april)).to eq([[45, (25 + 20 * 21 / 30) * 2_000]])
+
+          # 45 from the snapshot at full weight, 4 on 10 May over 22 of 31 days
+          expect(bill(may)).to eq([[49, (45 + BigDecimal(4 * 22) / 31).ceil(5) * 2_000]])
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
+            .with(hash_including(initial_value: [have_attributes(units: 18)])).once
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
+            .with(hash_including(initial_value: [have_attributes(units: 45)])).once
         end
       end
 
