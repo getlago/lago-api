@@ -77,10 +77,10 @@ module RecurringAggregationSnapshots
     # A filter or filter value created, edited or removed since the marker moves older events between
     # buckets, so the snapshots of every bucket of the charge are stale, not only the one of that filter.
     # A value set to all values reads the metric filter's values, which change without touching it.
-    # Both charges count when the snapshots come from the previous subscription.
+    # From the previous subscription, only its charge counts: the current filters match it by signature.
     def filters_changed_since?(bucket, marker)
       charge_filters = ChargeFilter.with_discarded.unscope(:order)
-        .where(organization_id: subscription.organization_id, charge_id: [charge.id, bucket.charge_id].uniq)
+        .where(organization_id: subscription.organization_id, charge_id: bucket.charge_id)
       charge_filter_values = ChargeFilterValue.with_discarded.unscope(:order)
         .where(organization_id: subscription.organization_id, charge_filter_id: charge_filters.select(:id))
 
@@ -118,9 +118,8 @@ module RecurringAggregationSnapshots
       )
     end
 
-    # An event goes to the most specific matching filter: a bucket only holds the same events when
-    # both charges have the same filters. A discarded charge is skipped, its filters are discarded
-    # with it and would no longer tell its buckets apart.
+    # Weighted sum stores its breakdowns per presentation group, which only the same keys can read.
+    # A discarded charge is skipped, its filters are discarded with it and would no longer tell its buckets apart.
     def previous_charges
       charge_ids = RecurringAggregationSnapshot
         .where(
@@ -134,17 +133,38 @@ module RecurringAggregationSnapshots
       Charge
         .where(organization_id: subscription.organization_id, id: charge_ids)
         .includes(filters: {values: :billable_metric_filter})
-        .select { |previous_charge| filters_signature(previous_charge) == filters_signature(charge) }
+        .select do |previous_charge|
+          filters_signature(previous_charge) == filters_signature(charge) &&
+            previous_charge.presentation_group_keys_values.sort == charge.presentation_group_keys_values.sort
+        end
     end
 
     def matching_previous_filter(previous_charge)
       return if default_bucket?
 
-      previous_charge.filters.find { filter_signature(it) == filter_signature(charge_filter) }
+      signature = bucket_signatures(charge)[charge_filter.id]
+      previous_charge.filters.find { bucket_signatures(previous_charge)[it.id] == signature }
     end
 
     def filters_signature(target_charge)
-      target_charge.filters.map { filter_signature(it) }.to_set
+      bucket_signatures(target_charge).values.to_set
+    end
+
+    # An event goes to the matching filter of highest precedence: a bucket holds the same events on
+    # both charges when its filter and the overlapping filters taking precedence over it are the same
+    def bucket_signatures(target_charge)
+      @bucket_signatures ||= {}
+      @bucket_signatures[target_charge.id] ||= target_charge.filters.to_h do |filter|
+        preceding = target_charge.filters.select { preceding_overlap?(it, filter) }
+        [filter.id, [filter_signature(filter), preceding.map { filter_signature(it) }.tally]]
+      end
+    end
+
+    def preceding_overlap?(other, filter)
+      values = filter.to_h_with_all_values
+
+      (other.precedence <=> filter.precedence).negative? &&
+        other.to_h_with_all_values.all? { |key, other_values| !values.key?(key) || other_values.intersect?(values[key]) }
     end
 
     def filter_signature(filter)

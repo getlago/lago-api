@@ -470,6 +470,23 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
         end
       end
 
+      context "when the previous charge has other presentation group keys" do
+        let(:previous_charge) do
+          create(
+            :standard_charge,
+            organization:,
+            billable_metric:,
+            properties: {amount: "10", presentation_group_keys: [{value: "cluster"}]}
+          )
+        end
+
+        before { create_previous_snapshot(to_datetime: termination_datetime, units: 7) }
+
+        it "returns no snapshot, as its breakdowns are grouped on other keys" do
+          expect(fetch_service.call.snapshots).to be_nil
+        end
+      end
+
       context "when the grouped_by keys of the previous charge differ" do
         let(:grouped_by_keys) { %w[region] }
 
@@ -485,8 +502,8 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
         let(:charge_filter) { create_filter(charge, %w[eu]) }
         let(:previous_charge_filter) { create_filter(previous_charge, %w[eu]) }
 
-        def create_filter(target_charge, values)
-          create(:charge_filter, charge: target_charge, created_at: watermark - 1.month, updated_at: watermark - 1.month).tap do |filter|
+        def create_filter(target_charge, values, created_at: watermark - 1.month)
+          create(:charge_filter, charge: target_charge, created_at:, updated_at: created_at).tap do |filter|
             create_filter_value(filter, billable_metric_filter:, values:)
           end
         end
@@ -535,6 +552,64 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
 
           it "returns no snapshot" do
             expect(fetch_service.call.snapshots).to be_nil
+          end
+        end
+
+        context "with overlapping filters of the same precedence" do
+          let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us ap]) }
+          let(:charge_filter) { create_filter(charge, %w[eu us]) }
+          let(:previous_charge_filter) { create_filter(previous_charge, %w[eu us]) }
+          let(:previous_overlapping_filter_created_at) { watermark - 2.months }
+
+          before do
+            create_filter(charge, %w[us ap], created_at: watermark - 2.months)
+            create_filter(previous_charge, %w[us ap], created_at: previous_overlapping_filter_created_at)
+          end
+
+          it "returns the snapshot of the filter with the same values" do
+            expect(fetch_service.call.snapshots.map(&:units)).to eq([3])
+          end
+
+          context "when the previous charge ranks them in another order" do
+            let(:previous_overlapping_filter_created_at) { watermark - 1.week }
+
+            it "returns no snapshot, as the shared values went to the other filter" do
+              expect(fetch_service.call.snapshots).to be_nil
+            end
+          end
+        end
+
+        context "when the charge filters were created after the previous snapshot, as by a plan override" do
+          let(:charge_filter) { create_filter(charge, %w[eu], created_at: watermark + 1.hour) }
+
+          it "returns the snapshot of the filter with the same values" do
+            expect(fetch_service.call.snapshots.map(&:units)).to eq([3])
+          end
+        end
+
+        context "with filters that do not overlap" do
+          let(:charge_filter) { create_filter(charge, %w[eu], created_at: watermark - 2.months) }
+
+          before do
+            create_filter(charge, %w[us])
+            create_filter(previous_charge, %w[us], created_at: watermark - 2.months)
+          end
+
+          it "returns the snapshot of the filter with the same values, whatever their age" do
+            expect(fetch_service.call.snapshots.map(&:units)).to eq([3])
+          end
+        end
+
+        context "with identical filters" do
+          let(:charge_filter) { create_filter(charge, %w[eu], created_at: watermark - 1.week) }
+
+          before do
+            create_filter(charge, %w[eu])
+            create_filter(previous_charge, %w[eu], created_at: watermark - 1.week)
+          end
+
+          it "reads the previous filter that the older one does not take precedence over" do
+            expect(fetch_service.call.snapshots).to eq([])
           end
         end
       end
