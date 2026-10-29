@@ -65,7 +65,9 @@ RSpec.describe Api::V2Errors do
         when "not_allowed" then result.not_allowed_failure!(code: "not_voidable")
         # Not the default code, which the catalog gate also renders.
         when "forbidden" then result.forbidden_failure!(code: "premium_integration_missing")
-        when "unauthorized" then result.unauthorized_failure!(message: "Stripe authentication failed.")
+        when "provider_unauthorized"
+          result.provider_unauthorized_failure!(provider: PaymentProviders::StripeProvider.new(code: "stripe_eu"), message: "Stripe authentication failed.")
+        when "unauthorized" then result.unauthorized_failure!(message: "Session expired.")
         when "third_party"
           result.third_party_failure!(third_party: "Stripe", error_code: "resource_missing", error_message: "No such customer: 'cus_unknown'")
         when "provider"
@@ -130,14 +132,28 @@ RSpec.describe Api::V2Errors do
     end
   end
 
-  context "with an unauthorized failure" do
-    let(:failure) { "unauthorized" }
+  context "with a provider unauthorized failure" do
+    let(:failure) { "provider_unauthorized" }
 
-    it "returns an unprocessable provider unauthorized error, apart from an invalid API key" do
+    it "returns an unprocessable provider unauthorized error naming the provider, apart from an invalid API key" do
       show
 
       expect(response).to have_http_status(:unprocessable_content)
-      expect(json).to eq(code: "provider_unauthorized", details: [])
+      expect(json).to eq(
+        code: "provider_unauthorized",
+        details: [{code: "provider_unauthorized", field: "base", meta: {provider_name: "stripe", provider_code: "stripe_eu"}}]
+      )
+    end
+  end
+
+  context "with an unauthorized failure that no provider raised" do
+    let(:failure) { "unauthorized" }
+
+    it "returns an unauthorized error without the message" do
+      show
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(json).to eq(code: "unauthorized", details: [])
     end
   end
 

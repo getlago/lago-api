@@ -45,9 +45,11 @@ module Api
       when BaseQuery::FiltersFailure then filter_errors(error.filters)
       when BaseService::ValidationFailure then validation_errors(errors: error.messages)
       when BaseService::ForbiddenFailure then forbidden_error(code: error.code)
-      # Only payment providers fail with it today, refusing the organization's own credentials. The API
-      # key of the request is fine, so not a 401: on v2, a 401 always means the Lago API key was refused.
-      when BaseService::UnauthorizedFailure then render_v2_error(422, code: "provider_unauthorized")
+      # A provider refusing the organization's own credentials. The API key of the request is fine, so
+      # not a 401: on v2, a 401 always means the Lago API key was refused. Ahead of its parent.
+      when BaseService::ProviderUnauthorizedFailure
+        render_provider_error(422, code: "provider_unauthorized", provider_name: error.provider.payment_type, provider_code: error.provider.code)
+      when BaseService::UnauthorizedFailure then unauthorized_error
       # A provider is named by its token, never by its message: a sentence of the provider's, which
       # can echo the request. Its error code (resource_missing, card_declined) is a token of the
       # provider's, which tells an input the client can fix from a failure to retry.
