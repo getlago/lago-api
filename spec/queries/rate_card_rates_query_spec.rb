@@ -19,7 +19,7 @@ RSpec.describe RateCardRatesQuery do
   before { create(:rate_card_rate, organization:) }
 
   it "preloads the card timeline so statuses derive without extra queries" do
-    create(:rate_card_rate, organization:, rate_card:, code: "newer", effective_from: 1.hour.ago)
+    create(:rate_card_rate, organization:, rate_card:, code: "newer", effective_from: Time.current.beginning_of_day)
 
     loaded = result.rate_card_rates.to_a
     statuses = loaded.to_h { [it.code, it.status] }
@@ -34,7 +34,7 @@ RSpec.describe RateCardRatesQuery do
   end
 
   it "serializes rates and derives statuses without issuing additional queries" do
-    create(:rate_card_rate, organization:, rate_card:, code: "newer", effective_from: 1.hour.ago)
+    create(:rate_card_rate, organization:, rate_card:, code: "newer", effective_from: Time.current.beginning_of_day)
     loaded = result.rate_card_rates.to_a
     queries = []
     subscriber = ->(*, payload) { queries << payload[:sql] unless payload[:name] == "SCHEMA" }
