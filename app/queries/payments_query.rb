@@ -2,15 +2,15 @@
 
 class PaymentsQuery < BaseQuery
   Result = BaseResult[:payments]
-  Filters = BaseFilters[:invoice_id, :external_customer_id, :currency]
+  Filters = BaseFilters[:invoice_id, :external_customer_id, :customer_id, :currency]
 
   def call
     return result unless validate_filters.success?
 
     payments = base_scope
     payments = apply_filters(payments)
-    payments = paginate(payments)
     payments = apply_consistent_ordering(payments)
+    payments = paginate(payments)
 
     result.payments = payments
     result
@@ -95,6 +95,7 @@ class PaymentsQuery < BaseQuery
   def apply_filters(scope)
     scope = filter_by_invoice(scope) if filters.invoice_id.present?
     scope = filter_by_customer(scope) if filters.external_customer_id.present?
+    scope = scope.where(customer_id: filters.customer_id) if filters.customer_id.present?
     scope = filter_by_currency(scope) if filters.currency.present?
     scope
   end
