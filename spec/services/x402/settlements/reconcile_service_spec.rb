@@ -375,52 +375,14 @@ describe X402::Settlements::ReconcileService do
         expect(result.settlement.reload).to be_failed
       end
 
-      it "marks the invoice payment failed" do
+      it "leaves the invoice pending" do
         result
 
-        expect(invoice.reload.payment_status).to eq("failed")
+        expect(invoice.reload.payment_status).to eq("pending")
       end
 
-      it "notifies the merchant" do
-        expect { result }.to have_enqueued_job(SendWebhookJob).with("invoice.payment_status_updated", invoice)
-      end
-
-      context "with an invoice paid meanwhile" do
-        let(:invoice) do
-          create(:invoice, organization: x402_connection.organization, currency: "USD", total_amount_cents: 100, payment_status: "succeeded")
-        end
-
-        it "leaves the invoice paid" do
-          result
-
-          expect(invoice.reload.payment_status).to eq("succeeded")
-        end
-
-        it "sends no webhook" do
-          expect { result }.not_to have_enqueued_job(SendWebhookJob).with("invoice.payment_status_updated", invoice)
-        end
-      end
-
-      context "with a voided invoice" do
-        let(:invoice) { create(:invoice, :voided, organization: x402_connection.organization, currency: "USD", total_amount_cents: 100) }
-
-        it "marks the row failed" do
-          expect(result.settlement.reload).to be_failed
-        end
-
-        it "leaves the invoice as it was" do
-          expect { result }.not_to change { invoice.reload.attributes.slice("status", "payment_status") }
-        end
-      end
-
-      context "when the chain can still change its answer" do
-        let(:reader) { instance_double(X402::Chain::EvmReader, settled?: false, identifier: nil, final?: false) }
-
-        it "leaves the invoice pending" do
-          result
-
-          expect(invoice.reload.payment_status).to eq("pending")
-        end
+      it "sends no webhook" do
+        expect { result }.not_to have_enqueued_job(SendWebhookJob).with("invoice.payment_status_updated", invoice)
       end
     end
 

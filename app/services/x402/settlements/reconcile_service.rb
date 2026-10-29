@@ -35,7 +35,7 @@ module X402
         if reader.settled?
           mark_settled(reader.identifier)
         elsif reader.final?
-          transition(status: :failed, transaction_hash: nil) { fail_invoice if settlement.invoice_payment? }
+          transition(status: :failed, transaction_hash: nil)
         end
       rescue X402::Chain::Error => e
         report("chain read failed", e)
@@ -64,14 +64,6 @@ module X402
 
       def finish_payment(transaction_hash)
         X402::Invoices::FinishPaymentService.call(settlement:, transaction_hash:)
-      end
-
-      def fail_invoice
-        invoice = settlement.invoice.lock!
-
-        if invoice.finalized? && invoice.payment_pending?
-          ::Invoices::UpdateService.call!(invoice:, params: {payment_status: "failed"}, webhook_notification: true)
-        end
       end
 
       def reader
@@ -107,10 +99,7 @@ module X402
 
       def transition(**attributes)
         settlement.with_lock do
-          if settlement.pending?
-            settlement.update!(**attributes)
-            yield if block_given?
-          end
+          settlement.update!(**attributes) if settlement.pending?
         end
       end
 
