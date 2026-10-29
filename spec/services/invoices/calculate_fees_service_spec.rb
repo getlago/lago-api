@@ -1465,6 +1465,32 @@ RSpec.describe Invoices::CalculateFeesService do
         end
       end
 
+      context "when the trial ends after the billing timestamp" do
+        let(:trial_period) { 10 }
+        let(:started_at) { Time.zone.parse("2024-09-25 12:00:00") }
+        let(:timestamp) { Time.zone.parse("2024-10-01 00:00:00") }
+
+        before { travel_to(Time.zone.parse("2024-10-07 12:00:00")) }
+
+        it "does not create a subscription fee when calculated after the trial ended" do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(invoice.fees.subscription.count).to eq(0)
+        end
+
+        context "when the trial ends on the billing day" do
+          let(:started_at) { Time.zone.parse("2024-09-21 12:00:00") }
+
+          it "creates a subscription fee" do
+            result = invoice_service.call
+
+            expect(result).to be_success
+            expect(invoice.fees.subscription.count).to eq(1)
+          end
+        end
+      end
+
       context "when fixed charges are pay in advance" do
         let(:fixed_charge) do
           create(
