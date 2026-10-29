@@ -9,6 +9,8 @@ class ModelSerializer
     end
   end
 
+  Expansion = Data.define(:serializer, :webhooks)
+
   NO_EXPANSIONS = {}.freeze
 
   # Set once per serializer, when its class is loaded, through `expandable`.
@@ -19,14 +21,18 @@ class ModelSerializer
   # Lets a native v2 endpoint embed `model.<name>` on `expands[]=<name>`, or what a private method
   # of the serializer with that name returns, for records that are ordered or computed. One record
   # or a list, each rendered by `serializer` with `nested_options` only, so that it stays flat. It
-  # comes last in `serialize`.
-  def self.expandable(name, serializer:)
+  # comes last in `serialize`. `webhooks: true` also embeds it in the record's webhooks.
+  def self.expandable(name, serializer:, webhooks: false)
     prepend(RendersExpansions)
 
-    self.expansions = expansions.merge(name.to_sym => serializer).freeze
+    self.expansions = expansions.merge(name.to_sym => Expansion.new(serializer:, webhooks:)).freeze
   end
 
   def self.expandable_names = expansions.keys
+
+  # A webhook cannot ask for expansions: it passes these includes, the ones declared with
+  # `webhooks: true`, in their declared order.
+  def self.webhook_includes = expansions.filter_map { |name, expansion| name if expansion.webhooks }
 
   # The possible values for the options are:
   # - includes: Specify the relation to include in the payload
@@ -107,10 +113,10 @@ class ModelSerializer
   # The declared expansions found in `includes`, in their declared order: Api::Serializable
   # passes the requested ones, and a nil record renders as null.
   def expanded_payload
-    self.class.expansions.each_with_object({}) do |(name, serializer), payload|
+    self.class.expansions.each_with_object({}) do |(name, expansion), payload|
       next unless include?(name)
 
-      payload[name] = render_expansion(expanded_records(name), serializer)
+      payload[name] = render_expansion(expanded_records(name), expansion.serializer)
     end
   end
 

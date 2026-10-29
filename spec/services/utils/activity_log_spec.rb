@@ -640,7 +640,7 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
           it "serializes the v2 body its webhooks send" do
             produce
 
-            expected = V2::InvoiceSerializer.new(record, includes: V2::InvoiceSerializer::EVENT_INCLUDES).serialize
+            expected = V2::InvoiceSerializer.new(record, includes: V2::InvoiceSerializer.webhook_includes).serialize
             expect(produced_payload[:activity_object]).to eq(JSON.parse(expected.to_json, symbolize_names: true))
             expect(produced_payload[:activity_object]).to include(:contracts)
             expect(produced_payload[:activity_object]).not_to include(:subscriptions, :billing_periods, :fees)

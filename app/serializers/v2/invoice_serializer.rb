@@ -4,17 +4,14 @@ module V2
   # An invoice billed from the product catalog: it names the contracts its
   # fees came from, not the v1 subscriptions and billing periods.
   class InvoiceSerializer < ModelSerializer
+    # Webhooks and activity logs leave out the fees, so that their size does not grow with the
+    # invoice, and the customer: a consumer reads both through the API.
     expandable :fees, serializer: ::V2::FeeSerializer
-    expandable :applied_taxes, serializer: ::V2::Invoices::AppliedTaxSerializer
+    expandable :applied_taxes, serializer: ::V2::Invoices::AppliedTaxSerializer, webhooks: true
     expandable :customer, serializer: ::V2::CustomerSerializer
-    expandable :contracts, serializer: ::V2::ContractSerializer
-    expandable :applied_invoice_custom_sections, serializer: ::V2::Invoices::AppliedInvoiceCustomSectionSerializer
-    expandable :error_details, serializer: ::V2::ErrorDetailSerializer
-
-    # The body of an invoice event, its webhook and its activity log, which cannot ask for
-    # expansions: everything but the fees, so that its size does not grow with the invoice. A
-    # consumer reads the fees through the API.
-    EVENT_INCLUDES = %i[applied_taxes contracts applied_invoice_custom_sections error_details].freeze
+    expandable :contracts, serializer: ::V2::ContractSerializer, webhooks: true
+    expandable :applied_invoice_custom_sections, serializer: ::V2::Invoices::AppliedInvoiceCustomSectionSerializer, webhooks: true
+    expandable :error_details, serializer: ::V2::ErrorDetailSerializer, webhooks: true
 
     def serialize
       {

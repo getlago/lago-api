@@ -241,15 +241,11 @@ RSpec.describe V2::InvoiceSerializer do
       )
     end
 
-    context "with the event includes" do
-      let(:includes) { described_class::EVENT_INCLUDES }
+    context "with the webhook includes" do
+      let(:includes) { described_class.webhook_includes }
 
       it "leaves the fees and the customer out" do
         expect(result.keys.last(4)).to eq(%w[applied_taxes contracts applied_invoice_custom_sections error_details])
-      end
-
-      it "names declared expansions only" do
-        expect(described_class.expandable_names).to include(*described_class::EVENT_INCLUDES)
       end
     end
   end

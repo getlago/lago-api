@@ -156,7 +156,7 @@ module Utils
         end
       when :invoice
         if object.product_catalog?
-          V2::InvoiceSerializer::EVENT_INCLUDES
+          V2::InvoiceSerializer.webhook_includes
         elsif object.fees.count > MAX_SERIALIZED_FEES
           SERIALIZED_INCLUDED_OBJECTS[:invoice] - [:fees]
         else

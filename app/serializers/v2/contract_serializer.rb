@@ -6,7 +6,7 @@ module V2
   # billing anchor. There are no plan-interval fields — pricing lives on the
   # applied rate cards.
   class ContractSerializer < ModelSerializer
-    expandable :applied_rate_cards, serializer: ::V2::ContractAppliedRateCardSerializer
+    expandable :applied_rate_cards, serializer: ::V2::ContractAppliedRateCardSerializer, webhooks: true
     expandable :plan, serializer: ::V2::CatalogPlanSerializer
     # Read with_discarded, so that a deleted customer expands with its deleted_at.
     expandable :customer, serializer: ::V2::CustomerSerializer

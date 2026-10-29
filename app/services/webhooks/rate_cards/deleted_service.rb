@@ -5,6 +5,8 @@ module Webhooks
     class DeletedService < Webhooks::BaseService
       private
 
+      # Without the webhook includes: the rates are discarded with the card, so `rates` and
+      # `active_rate` would render empty.
       def object_serializer
         ::V2::RateCardSerializer.new(object, root_name: object_type)
       end

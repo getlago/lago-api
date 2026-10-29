@@ -2,9 +2,9 @@
 
 module V2
   class RateCardSerializer < ModelSerializer
-    expandable :active_rate, serializer: ::V2::RateCardRateSerializer
-    expandable :taxes, serializer: ::V2::TaxSerializer
-    expandable :rates, serializer: ::V2::RateCardRateSerializer
+    expandable :active_rate, serializer: ::V2::RateCardRateSerializer, webhooks: true
+    expandable :taxes, serializer: ::V2::TaxSerializer, webhooks: true
+    expandable :rates, serializer: ::V2::RateCardRateSerializer, webhooks: true
     expandable :product, serializer: ::V2::ProductSerializer
     expandable :product_filter, serializer: ::V2::ProductFilterSerializer
 

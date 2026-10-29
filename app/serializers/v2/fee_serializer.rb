@@ -4,7 +4,7 @@ module V2
   # A fee billed from the product catalog: it names the contract, product and
   # rate card it was priced from, not the v1 subscription and charge.
   class FeeSerializer < ModelSerializer
-    expandable :applied_taxes, serializer: ::V2::Fees::AppliedTaxSerializer
+    expandable :applied_taxes, serializer: ::V2::Fees::AppliedTaxSerializer, webhooks: true
     expandable :invoice, serializer: ::V2::InvoiceSerializer
     expandable :product, serializer: ::V2::ProductSerializer
     expandable :product_filter, serializer: ::V2::ProductFilterSerializer
