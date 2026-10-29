@@ -52,6 +52,19 @@ RSpec.describe Mutations::AiConversations::Create do
     before do
       ENV["MISTRAL_API_KEY"] = "test_api_key"
       ENV["MISTRAL_AGENT_ID"] = "test_agent_id"
+      allow(ENV).to receive(:[]).and_call_original
+      allow(ENV).to receive(:[]).with("LAGO_MCP_SERVER_URL").and_return(mcp_server_url)
+    end
+
+    let(:mcp_server_url) { "http://localhost:3001" }
+
+    context "without an MCP server" do
+      let(:mcp_server_url) { nil }
+
+      it "refuses the message before the conversation is created" do
+        expect { result }.not_to change(AiConversation, :count)
+        expect_graphql_error(result:, message: "feature_unavailable")
+      end
     end
 
     it "creates a new AI conversation, busy until the agent answers" do

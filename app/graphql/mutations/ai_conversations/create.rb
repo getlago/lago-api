@@ -18,7 +18,9 @@ module Mutations
 
       def resolve(message:, conversation_id: nil)
         raise unauthorized_error unless License.premium?
-        raise forbidden_error(code: "feature_unavailable") if ENV["MISTRAL_API_KEY"].blank? || ENV["MISTRAL_AGENT_ID"].blank?
+        if ENV["MISTRAL_API_KEY"].blank? || ENV["MISTRAL_AGENT_ID"].blank? || ENV["LAGO_MCP_SERVER_URL"].blank?
+          raise forbidden_error(code: "feature_unavailable")
+        end
 
         if conversation_id.blank?
           ai_conversation = current_organization.ai_conversations.create!(

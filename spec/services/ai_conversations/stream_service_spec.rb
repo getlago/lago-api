@@ -23,6 +23,7 @@ RSpec.describe AiConversations::StreamService do
     allow(mistral_agent_mock).to receive(:setup!)
     allow(mistral_agent_mock).to receive(:conversation_id).and_return(nil)
     allow(mistral_agent_mock).to receive(:pending_tool_calls).and_return(nil)
+    allow(mistral_agent_mock).to receive(:awaiting_tool_results?).and_return(false)
     allow(LagoApiSchema.subscriptions).to receive(:trigger)
   end
 
@@ -220,6 +221,12 @@ RSpec.describe AiConversations::StreamService do
         service.call
         expect(LagoMcpClient::Client).not_to have_received(:new)
       end
+
+      it "takes the next message" do
+        service.call
+
+        expect(ai_conversation.reload).not_to be_busy
+      end
     end
 
     context "when an error occurs during streaming" do
@@ -242,6 +249,18 @@ RSpec.describe AiConversations::StreamService do
         service.call
 
         expect(ai_conversation.reload).not_to be_busy
+      end
+
+      context "when the model waits for the results of tool calls" do
+        before { allow(mistral_agent_mock).to receive(:awaiting_tool_results?).and_return(true) }
+
+        it "keeps the conversation closed, so no message reaches the model out of turn" do
+          allow(mistral_agent_mock).to receive(:chat).and_raise(ActiveRecord::ConnectionNotEstablished)
+
+          service.call
+
+          expect(ai_conversation.reload).to be_busy
+        end
       end
 
       it "returns service_failure result" do

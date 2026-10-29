@@ -14,7 +14,10 @@ module AiConversations
     end
 
     def call
-      return result.forbidden_failure! if mcp_server_url.blank?
+      if mcp_server_url.blank?
+        finish!
+        return result.forbidden_failure!
+      end
 
       setup_clients!
       stream_response
@@ -115,8 +118,14 @@ module AiConversations
       Rails.logger.error(error.backtrace.join("\n"))
 
       trigger_subscription(chunk: "Error: #{error.message}", done: true)
-      finish!
+      finish! if release_after_error?
       result.service_failure!(code: "stream_service_error", message: error.message)
+    end
+
+    # The model may wait for the results of tool calls that only this attempt knew about. A new
+    # message would then reach it out of turn, so the conversation stays closed until BUSY_TIMEOUT.
+    def release_after_error?
+      !mistral_agent.awaiting_tool_results?
     end
 
     # Only once the writes the agent stopped on are saved: until then a new message could reach

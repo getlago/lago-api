@@ -482,6 +482,12 @@ RSpec.describe LagoMcpClient::Mistral::Agent do
       )
     end
 
+    it "is not waiting for tool results once the model answers" do
+      agent.submit_tool_results(tool_results) { |_chunk| }
+
+      expect(agent).not_to be_awaiting_tool_results
+    end
+
     context "when the model makes more tool calls" do
       before do
         allow(mcp_client).to receive(:call_tool)
@@ -495,6 +501,12 @@ RSpec.describe LagoMcpClient::Mistral::Agent do
 
         expect(result).to eq([{tool_call_id: "call_456", name: "get_coupon", arguments: {"code" => "SPRING"}}])
         expect(mcp_client).not_to have_received(:call_tool)
+      end
+
+      it "waits for their results" do
+        agent.submit_tool_results(tool_results) { |_chunk| }
+
+        expect(agent).to be_awaiting_tool_results
       end
     end
 

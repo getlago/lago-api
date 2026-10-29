@@ -147,5 +147,11 @@ module AiConversations
       Rails.logger.error("ResumeService error, retried: #{error.message}")
       result.service_failure!(code: "stream_service_error", message: error.message)
     end
+
+    # The calls the model makes next are saved before they run, so the next message can always
+    # start the resume again (see Mutations::AiConversations::Create).
+    def release_after_error?
+      true
+    end
   end
 end

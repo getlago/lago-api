@@ -14,6 +14,12 @@ module LagoMcpClient
       # are kept, as the model expects every result of a batch together.
       attr_reader :conversation_id, :pending_tool_calls
 
+      # Whether the model's last response asked for tool calls that got no result yet. Until they
+      # do, the conversation takes no other input.
+      def awaiting_tool_results?
+        !!@awaiting_tool_results
+      end
+
       def initialize(client:, conversation_id:, tool_guard: nil)
         @mistral_client = LagoMcpClient::Mistral::Client.new
         @mcp_context = LagoMcpClient::RunContext.new(client:, tool_guard:)
@@ -86,16 +92,18 @@ module LagoMcpClient
       end
 
       def send_message(message)
-        if conversation_id
+        response = if conversation_id
           mistral_client.append_to_conversation(
             conversation_id: conversation_id,
             inputs: [{role: "user", content: message}]
           ) { |chunk| yield chunk }
         else
-          response = mistral_client.start_conversation(inputs: message) { |chunk| yield chunk }
-          self.conversation_id = response["conversation_id"]
-          response
+          mistral_client.start_conversation(inputs: message) { |chunk| yield chunk }.tap do |started|
+            self.conversation_id = started["conversation_id"]
+          end
         end
+
+        track_tool_calls(response)
       end
 
       def send_tool_results(tool_results, nonce)
@@ -108,10 +116,17 @@ module LagoMcpClient
           }
         end
 
-        mistral_client.append_to_conversation(
+        response = mistral_client.append_to_conversation(
           conversation_id: conversation_id,
           inputs: inputs
         ) { |chunk| yield chunk }
+
+        track_tool_calls(response)
+      end
+
+      def track_tool_calls(response)
+        @awaiting_tool_results = has_tool_calls?(response)
+        response
       end
 
       def wrap_untrusted_data(text, nonce)
