@@ -147,8 +147,9 @@ module BillableMetrics
         @latest_breakdowns = []
       end
 
-      # Only a period closing right before this one: an older one misses the periods in between, a later one
-      # (previous subscription terminated on upgrade) counts events the variation reads again.
+      # Only a period closing right before this one: an older one misses the periods in between (as the cached
+      # aggregation does for a period never invoiced), a later one (previous subscription terminated on upgrade)
+      # counts events the variation reads again.
       # Without snapshots, the period still tells that the bucket had no active units.
       def latest_snapshots
         return @latest_snapshots if defined?(@latest_snapshots)

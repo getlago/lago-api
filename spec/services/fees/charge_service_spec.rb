@@ -5403,11 +5403,43 @@ RSpec.describe Fees::ChargeService, :premium do
           # Dated in a closed period: a weighted sum never counts it
           create_event("2022-03-25", 7, "eu", created_at: Time.zone.parse("2022-04-01T05:00:00"))
 
+          # 18 from the March snapshot, 20 on 10 Apr over 21 of 30 days
           expect(bill(april)).to eq([[{}, 18 + 20 * 21/30r, 1]])
+          # 38 from the April snapshot, 4 on 10 May over 22 of 31 days
           expect(bill(may).sole.second.round(10)).to eq((38 + 4 * 22/31r).round(10))
           expect(snapshots.order(:to_datetime).pluck(:units)).to eq([18, 38, 42])
           expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
             .with(hash_including(initial_value: [have_attributes(grouped_by: {})])).twice
+        end
+
+        context "with a group back to zero units" do
+          let(:charge) do
+            create(:standard_charge, plan: subscription.plan, billable_metric:,
+              properties: {amount: "20", pricing_group_keys: ["region"], presentation_group_keys: [{value: "country"}]})
+          end
+
+          def create_country_event(timestamp, value, country)
+            create(:event, organization:, subscription:, code: billable_metric.code,
+              timestamp: Time.zone.parse(timestamp), properties: {value:, region: "apac", country:})
+          end
+
+          before do
+            create_country_event("2022-03-20", 6, "fr")
+            create_country_event("2022-04-10", -6, "fr")
+            create_country_event("2022-05-10", 2, "it")
+          end
+
+          it "drops the presentation breakdowns the group ended the previous period without" do
+            bill(march)
+            bill(april)
+            breakdowns = bill(may, attributes: %i[grouped_by presentation_breakdowns]).to_h.fetch({"region" => "apac"})
+
+            # apac closes April at zero units, so it has no snapshot row and fr no zero line, unlike the cached aggregation.
+            # 2 it and 4 without country on 10 May, over 22 of 31 days
+            expect(breakdowns.map { [it.presentation_by, it.units.round(10)] }).to match_array(
+              [[{"country" => "it"}, (2 * 22/31r).round(10)], [{"country" => nil}, (4 * 22/31r).round(10)]]
+            )
+          end
         end
       end
     end

@@ -859,6 +859,31 @@ RSpec.describe BillableMetrics::Aggregations::WeightedSumService, transaction: f
             expect(aggregator.aggregate.aggregations.map(&:total_aggregated_units)).to eq([1000, 1000])
           end
         end
+
+        context "with ClickHouse events", clickhouse: true do
+          let(:event_store_class) { Events::Stores::ClickhouseStore }
+          let(:organization) { create(:organization, clickhouse_events_store: true) }
+          let(:subscription) { create(:subscription, organization:, started_at: DateTime.parse("2023-04-01 22:22:22")) }
+          let(:initial_value) do
+            [snapshot(units: 400, grouped_by: {"agent_name" => "aragorn"}), snapshot(units: 600, grouped_by: {"agent_name" => nil})]
+          end
+
+          before do
+            create(:clickhouse_events_enriched, organization:, subscription:, customer:, billable_metric:,
+              timestamp: from_datetime, properties: {"agent_name" => "aragorn"}, value: "2", decimal_value: 2)
+            create(:clickhouse_events_enriched, organization:, subscription:, customer:, billable_metric:,
+              timestamp: from_datetime, value: "5", decimal_value: 5)
+          end
+
+          it "matches the snapshots to their group, the null one included" do
+            expect(aggregator.aggregate.aggregations.map { [it.grouped_by, it.aggregation, it.total_aggregated_units, it.recurring_units] }).to match_array(
+              [
+                [{"agent_name" => "aragorn"}, 402, 402, 402],
+                [{"agent_name" => nil}, 605, 605, 605]
+              ]
+            )
+          end
+        end
       end
 
       context "without cached aggregation events" do
