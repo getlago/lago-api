@@ -11,7 +11,8 @@ module ValidationMeta
     invalid_values: [String], # the refused values received, in a 400 only
     resource: String, # the resource of a resource_not_found, such as customer
     provider_name: String, # the lowercase token of the provider that failed or throttled, such as stripe
-    provider_code: String # the code of the connection of the organization to that provider
+    provider_code: String, # the code of the connection of the organization to that provider
+    provider_error_code: String # the provider's own error token, such as resource_missing or card_declined
   }.freeze
 
   # They echo the request, which only a 400 may do.
