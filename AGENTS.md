@@ -128,6 +128,7 @@ Business logic, and every create, update or delete of a model, lives in a servic
 - Before writing a spec, open one or two existing specs of the same kind (two `create_service_spec.rb` for a new create service) and follow their structure. Do not add top-level `describe` blocks they do not have.
 - Test behaviour, not configuration: a spec for a threshold, a schedule or a webhook crosses the trigger and checks the side effect, not only the saved settings.
 - A webhook or serializer spec compares the whole serialized object with `eq`, with an explicit value per field. The `creates webhook` shared example only checks the keys it is given, so a missing or renamed field still passes.
+- An expected value computed by hand (proration, weighted sum, tiers) shows its derivation: write the arithmetic, or the literal with the arithmetic in a comment, and name where each term comes from (`eq((1000 + 7 + 20 * 18.fdiv(28)).ceil(5)) # snapshot + late event + 11 Feb event over 18 of 28 days`).
 - A run counts only when its summary shows the expected number of examples and no "errors occurred outside of examples": a spec file that fails to load is left out of the count. Run new spec files on their own first.
 - Helpers:
   - REST: `get_with_token(organization, path, params)` (also `post_`, `put_`, `delete_`), `json` for the parsed body, `expect(response).to be_not_found_error("alert")`, `include_examples "requires API permission", "alert", "write"`.
