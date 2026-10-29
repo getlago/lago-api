@@ -29,6 +29,7 @@ module Events
         Cell = Data.define(:charge_id, :charge_filter_id, :priced, :column_index, :rank)
 
         SCALE = 12
+        CHECK_MAX_EXECUTION_TIME = 2
         ORDERS = {"amount" => "amount", "events_count" => "events"}.freeze
 
         def initialize(organization_id:, external_subscription_id:, from_datetime:, to_datetime:, group_key:, label_filters:,
@@ -70,8 +71,21 @@ module Events
           end
         end
 
+        # The skip index on enriched_at keeps this to the granules ingested since, whatever the window.
+        # A timeout throws: breaking would return no row, which reads as nothing ingested.
+        def ingested_since?(time)
+          sql = <<~SQL.squish
+            SELECT 1 FROM events_enriched
+            WHERE #{where_sql} AND #{sql_condition("enriched_at > ?", time)}
+            LIMIT 1
+            SETTINGS max_execution_time = #{CHECK_MAX_EXECUTION_TIME}, timeout_overflow_mode = 'throw'
+          SQL
+
+          ::Clickhouse::BaseRecord.with_connection { |connection| connection.select_value(sql).present? }
+        end
+
         def query
-          <<~SQL.squish
+          @query ||= <<~SQL.squish
             SELECT
               node, rank, in_page, groups_count,
               #{value_names.join(", ")},

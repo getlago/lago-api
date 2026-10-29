@@ -48,7 +48,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     ]
   end
 
-  def create_event(code:, value:, labels:, properties: {}, timestamp: Time.zone.parse("2026-09-10"), transaction_id: SecureRandom.uuid)
+  def create_event(code:, value:, labels:, properties: {}, timestamp: Time.zone.parse("2026-09-10"), transaction_id: SecureRandom.uuid, enriched_at: Time.current)
     Clickhouse::EventsEnriched.create!(
       organization_id: organization.id,
       external_subscription_id: subscription.external_id,
@@ -58,7 +58,8 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
       properties:,
       attribution_labels: labels,
       value: value.to_s,
-      decimal_value: value
+      decimal_value: value,
+      enriched_at:
     )
   end
 
@@ -148,10 +149,28 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
   context "with a yearly plan" do
     let(:plan) { create(:plan, organization:, interval: :yearly, amount_currency: "EUR") }
 
-    it "narrows the current period to its last 31 days" do
-      expect(result.from_datetime).to eq(Time.zone.parse("2026-08-15 12:00:00"))
-      expect(result.to_datetime).to eq(Time.zone.parse("2026-09-15 12:00:00"))
+    it "reads the 31 days before today, up to the end of today" do
+      expect(result.from_datetime).to eq(Time.zone.parse("2026-08-15"))
+      expect(result.to_datetime).to eq(Time.zone.parse("2026-09-15").end_of_day)
       expect(summary(result.rows)).to eq([["eng", 125_150, 4], ["data", 100_000, 1]])
+    end
+
+    it "keeps the same window for the whole day" do
+      window = [result.from_datetime, result.to_datetime]
+
+      travel(11.hours)
+
+      repeated = described_class.call(subscription:, group_by:)
+      expect([repeated.from_datetime, repeated.to_datetime]).to eq(window)
+    end
+
+    context "with a customer in another timezone" do
+      let(:customer) { create(:customer, organization:, timezone: "America/New_York") }
+
+      it "bounds the window by midnight in the customer's timezone" do
+        expect(result.from_datetime).to eq(Time.zone.parse("2026-08-15 04:00:00"))
+        expect(result.to_datetime).to eq(Time.zone.parse("2026-09-15 12:00:00").in_time_zone("America/New_York").end_of_day)
+      end
     end
   end
 
@@ -460,6 +479,42 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
       result
 
       expect(Events::Stores::Clickhouse::AttributedUsageQuery).to have_received(:new).with(hash_including(deduplicate: false))
+    end
+  end
+
+  context "with a cache store", cache: :memory do
+    subject(:repeated_result) do
+      described_class.call(
+        subscription:, group_by:, filters:, from_datetime:, to_datetime:, charges:, split_charge:, search:, basis:, order_by:, limit:, offset:
+      )
+    end
+
+    let(:queries) { [] }
+
+    before do
+      allow(Events::Stores::Clickhouse::AttributedUsageQuery).to receive(:new).and_wrap_original do |original, **args|
+        original.call(**args).tap do |query|
+          allow(query).to receive(:rows).and_call_original
+          queries << query
+        end
+      end
+
+      travel(10.minutes) # past the ingestion margin of the events
+      result
+      travel(1.minute)
+    end
+
+    it "serves a repeated request from the cache" do
+      expect(summary(repeated_result.rows)).to eq([["data", 100_000, 1], ["eng", 75_200, 3]])
+      expect(queries.last).not_to have_received(:rows)
+    end
+
+    context "when an event was ingested since" do
+      before { create_event(code: "tokens", value: 4000, labels: {"team" => "sales"}) }
+
+      it "reads the events again" do
+        expect(summary(repeated_result.rows)).to eq([["sales", 200_000, 1], ["data", 100_000, 1], ["eng", 75_200, 3]])
+      end
     end
   end
 
