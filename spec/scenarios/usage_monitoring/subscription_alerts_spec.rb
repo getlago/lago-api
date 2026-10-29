@@ -245,6 +245,48 @@ describe "Subscriptions Alerting Scenario", :premium, cache: :redis do
     end
   end
 
+  context "when the alert is created after usage passed its lines" do
+    it "records the lines silently and announces only the recovery" do
+      create_subscription({
+        external_customer_id: customer.external_id,
+        external_id: subscription_external_id,
+        plan_code: plan.code
+      })
+
+      send_event!(code: billable_metric.code, properties: {ops_count: 15}, external_subscription_id: subscription_external_id)
+      perform_usage_update
+
+      create_alert(subscription_external_id, {
+        alert_type: :billable_metric_current_usage_units,
+        code: :already_past,
+        billable_metric_code: billable_metric.code,
+        thresholds: [
+          {value: 5, code: :low},
+          {value: 10, code: :warn, notify_on: %w[triggered resolved]}
+        ]
+      })
+      alert = UsageMonitoring::Alert.find(json[:alert][:lago_id])
+      expect(alert.previous_value).to eq(15)
+
+      perform_usage_update
+      expect(alert.all_triggered_alerts.pluck(:kind)).to eq(%w[seeded])
+
+      send_event!(code: billable_metric.code, properties: {ops_count: -10}, external_subscription_id: subscription_external_id)
+      perform_usage_update
+
+      expect(webhooks_sent.map { it[:webhook_type] }).not_to include("alert.triggered")
+      resolved = webhooks_sent.find { it[:webhook_type] == "alert.resolved" }
+      expect(resolved[:resolved_alert]).to include(
+        alert_code: "already_past",
+        previous_value: "15.0",
+        current_value: "5.0",
+        in_alarm_thresholds: ["low"],
+        reason: "recovered"
+      )
+      expect(resolved[:resolved_alert][:recovered_thresholds]).to eq([{code: "warn", value: "10.0", recurring: false}.with_indifferent_access])
+    end
+  end
+
   context "with lifetime_usage alerts" do
     let(:premium_integrations) { %i[lifetime_usage progressive_billing] }
 

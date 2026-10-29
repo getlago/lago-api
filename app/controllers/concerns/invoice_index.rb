@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 module InvoiceIndex
-  include Pagination
   extend ActiveSupport::Concern
 
   WHITELIST = [
@@ -35,8 +34,8 @@ module InvoiceIndex
     result = InvoicesQuery.call(
       organization: current_organization,
       pagination: {
-        page: params[:page],
-        limit: params[:per_page] || PER_PAGE
+        page: page_number,
+        limit: page_size
       },
       search_term: params[:search_term],
       filters: {
@@ -61,43 +60,41 @@ module InvoiceIndex
     )
 
     if result.success?
-      # Eager-load exceeds RDS Proxy's 16 KB pin threshold — bypass the pooler.
-      ApplicationRecord.connected_to(role: :direct) do
-        invoices = Invoice.preload_offset_amounts(
-          result.invoices.includes(
-            :metadata,
-            :applied_taxes,
+      invoices = Invoice.preload_aggregations(
+        result.invoices.includes(
+          :metadata,
+          :applied_taxes,
+          :billing_entity,
+          :applied_usage_thresholds,
+          customer: [
             :billing_entity,
-            :applied_usage_thresholds,
-            customer: [
-              :billing_entity,
-              :organization,
-              :metadata,
-              :stripe_customer,
-              :gocardless_customer,
-              :cashfree_customer,
-              :adyen_customer,
-              :moneyhash_customer,
-              {integration_customers: :integration}
-            ]
-          )
-        )
+            :organization,
+            :metadata,
+            :stripe_customer,
+            :gocardless_customer,
+            :cashfree_customer,
+            :adyen_customer,
+            :moneyhash_customer,
+            {integration_customers: :integration}
+          ]
+        ),
+        :offset_amount_cents
+      )
 
-        render(
-          json: ::CollectionSerializer.new(
+      render(
+        json: ::CollectionSerializer.new(
+          invoices,
+          ::V1::InvoiceSerializer,
+          collection_name: "invoices",
+          meta: pagination_metadata(
             invoices,
-            ::V1::InvoiceSerializer,
-            collection_name: "invoices",
-            meta: pagination_metadata(
-              invoices,
-              key: "invoices",
-              organization_id: current_organization.id,
-              params: params.permit(*WHITELIST)
-            ),
-            includes: %i[customer integration_customers metadata applied_taxes]
-          )
+            key: "invoices",
+            organization_id: current_organization.id,
+            params: params.permit(*WHITELIST)
+          ),
+          includes: %i[customer integration_customers metadata applied_taxes]
         )
-      end
+      )
     else
       render_error_response(result)
     end

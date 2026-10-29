@@ -5614,6 +5614,18 @@
               "deprecationReason": null
             },
             {
+              "name": "splitFiltersCount",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "Int",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "subscriptionId",
               "description": null,
               "args": [],
@@ -5743,6 +5755,18 @@
             {
               "name": "preciseAmountCents",
               "description": "Null with the units basis",
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "Float",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "splitChargeUnits",
+              "description": "Units of the split charge over all its filters. Null without a split charge",
               "args": [],
               "type": {
                 "kind": "SCALAR",
@@ -6008,6 +6032,18 @@
                   "name": "Int",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "splitChargeUnits",
+              "description": "Units of the split charge over all its filters. Null without a split charge",
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "Float",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null
@@ -34261,6 +34297,12 @@
               "deprecationReason": null
             },
             {
+              "name": "CONTRACTS",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "WALLETS_AND_CREDITS",
               "description": null,
               "isDeprecated": false,
@@ -34342,6 +34384,12 @@
             },
             {
               "name": "add_on_deleted",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "alert_resolved",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -35149,6 +35197,12 @@
               "deprecationReason": null
             },
             {
+              "name": "persisted_recurring_values",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "skip_credit_invoice_auto_payment_delay",
               "description": null,
               "isDeprecated": false,
@@ -35173,6 +35227,12 @@
               "deprecationReason": null
             },
             {
+              "name": "x402_mainnet",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "usage_prefilter_short_cache",
               "description": null,
               "isDeprecated": false,
@@ -35192,6 +35252,12 @@
             },
             {
               "name": "sso_cross_organization_sessions",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "recurring_aggregation_snapshots",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -64706,6 +64772,18 @@
                   "type": {
                     "kind": "SCALAR",
                     "name": "ID",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "splitFiltersOffset",
+                  "description": "Index of the first filter of the split charge to list",
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Int",
                     "ofType": null
                   },
                   "defaultValue": null,

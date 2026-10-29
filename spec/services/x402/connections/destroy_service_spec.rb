@@ -36,6 +36,14 @@ describe X402::Connections::DestroyService do
       )
     end
 
+    context "with a connection saved without allowed origins" do
+      let(:connection) { create(:x402_connection, :without_allowed_origins, organization:) }
+
+      it "discards the connection" do
+        expect { result }.to change { connection.reload.discarded? }.from(false).to(true)
+      end
+    end
+
     context "without a connection" do
       let(:connection) { nil }
 

@@ -110,6 +110,76 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
       })
     end
 
+    context "when thresholds opt in to notify_on" do
+      let(:params) do
+        {
+          code: "test",
+          alert_type: "wallet_balance_amount",
+          thresholds: [{code: :notice, value: 1000, notify_on: %w[triggered resolved]}]
+        }
+      end
+
+      it "persists and returns notify_on" do
+        subject
+
+        expect(json[:alert][:thresholds].sole).to include({code: "notice", notify_on: %w[triggered resolved]})
+        expect(UsageMonitoring::Alert.find(json[:alert][:lago_id]).thresholds.sole.notify_on).to eq %w[triggered resolved]
+      end
+    end
+
+    context "when notify_on holds an unknown value" do
+      let(:params) do
+        {
+          code: "test",
+          alert_type: "wallet_balance_amount",
+          thresholds: [{code: :notice, value: 1000, notify_on: %w[triggered exploded]}]
+        }
+      end
+
+      it "does not create the alert" do
+        expect { subject }.not_to change(UsageMonitoring::Alert, :count)
+        expect(json).to eq({
+          code: "validation_errors",
+          error: "Unprocessable Entity",
+          error_details: {"thresholds:notify_on": ["value_is_invalid"]},
+          status: 422
+        })
+      end
+    end
+
+    context "when notify_on is sent as a plain value" do
+      let(:params) do
+        {
+          code: "test",
+          alert_type: "wallet_balance_amount",
+          thresholds: [{code: :notice, value: 1000, notify_on: "resolved"}]
+        }
+      end
+
+      it "rejects it instead of dropping it" do
+        expect { subject }.not_to change(UsageMonitoring::Alert, :count)
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq({"thresholds:notify_on": ["value_is_invalid"]})
+      end
+    end
+
+    context "when notify_on is sent as null" do
+      let(:params) do
+        {
+          code: "test",
+          alert_type: "wallet_balance_amount",
+          thresholds: [{code: :notice, value: 1000, notify_on: nil}]
+        }
+      end
+
+      it "stores the default" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:alert][:thresholds].sole).to include({code: "notice", notify_on: %w[triggered]})
+      end
+    end
+
     context "when alert_type is wallet_credits_balance" do
       let(:params) do
         {
@@ -254,6 +324,70 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
       })
     end
 
+    context "when thresholds opt in to notify_on" do
+      let(:params) do
+        {
+          thresholds: [{code: :notice, value: 88_00, notify_on: %w[triggered resolved]}]
+        }
+      end
+
+      it "persists and returns notify_on" do
+        subject
+
+        expect(json[:alert][:thresholds].sole).to include({code: "notice", notify_on: %w[triggered resolved]})
+        expect(alert.reload.thresholds.sole.notify_on).to eq %w[triggered resolved]
+      end
+    end
+
+    context "when a threshold already opted in and the update leaves notify_on out" do
+      let(:alert) { create(:wallet_balance_amount_alert, :processed, code:, wallet:, organization:, thresholds: nil) }
+      let(:params) { {thresholds: [{code: :notice, value: 88_00}]} }
+
+      before do
+        create(:alert_threshold, alert:, code: "notice", value: 1000, notify_on: %w[triggered resolved])
+      end
+
+      it "keeps notify_on" do
+        subject
+
+        expect(json[:alert][:thresholds].sole).to include({code: "notice", notify_on: %w[triggered resolved]})
+        expect(alert.reload.thresholds.sole).to have_attributes(value: 88_00, notify_on: %w[triggered resolved])
+      end
+    end
+
+    context "when an update sends notify_on as a plain value" do
+      let(:alert) { create(:wallet_balance_amount_alert, :processed, code:, wallet:, organization:, thresholds: nil) }
+      let(:params) { {thresholds: [{code: :notice, value: 88_00, notify_on: "resolved"}]} }
+
+      before do
+        create(:alert_threshold, alert:, code: "notice", value: 1000, notify_on: %w[triggered])
+      end
+
+      it "rejects it and keeps the thresholds" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq({"thresholds:notify_on": ["value_is_invalid"]})
+        expect(alert.reload.thresholds.sole).to have_attributes(value: 1000, notify_on: %w[triggered])
+      end
+    end
+
+    context "when an update sends notify_on as null" do
+      let(:alert) { create(:wallet_balance_amount_alert, :processed, code:, wallet:, organization:, thresholds: nil) }
+      let(:params) { {thresholds: [{code: :notice, value: 88_00, notify_on: nil}]} }
+
+      before do
+        create(:alert_threshold, alert:, code: "notice", value: 1000, notify_on: %w[triggered resolved])
+      end
+
+      it "resets the threshold to the default instead of keeping the previous value" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(alert.reload.thresholds.sole).to have_attributes(value: 88_00, notify_on: %w[triggered])
+      end
+    end
+
     context "when alert is not found" do
       let(:alert) { nil }
 
@@ -324,6 +458,27 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
       ])
     end
 
+    context "when thresholds opt in to notify_on" do
+      let(:params) do
+        {
+          alerts: [
+            {
+              code: "alert1",
+              alert_type: "wallet_balance_amount",
+              thresholds: [{code: :notice, value: 1000, notify_on: %w[triggered resolved]}]
+            }
+          ]
+        }
+      end
+
+      it "persists and returns notify_on" do
+        subject
+
+        expect(json[:alerts].sole[:thresholds].sole).to include({code: "notice", notify_on: %w[triggered resolved]})
+        expect(UsageMonitoring::Alert.find_by(code: "alert1").thresholds.sole.notify_on).to eq %w[triggered resolved]
+      end
+    end
+
     context "when alerts are empty" do
       let(:params) { {alerts: []} }
 
@@ -364,8 +519,8 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
         expect(json[:code]).to eq "validation_errors"
 
         expect(json[:error_details]).to match(
-          "1": match(params: params[:alerts][1], errors: include("invalid_type")),
-          "2": match(params: params[:alerts][2], errors: include("alert_already_exists"))
+          "1": match(params: params[:alerts][1], errors: {alert_type: ["invalid_type"]}),
+          "2": match(params: params[:alerts][2], errors: {base: ["alert_already_exists"]})
         )
       end
     end
@@ -385,7 +540,7 @@ RSpec.describe Api::V1::Customers::Wallets::AlertsController do
 
         expect(response).to have_http_status(:unprocessable_entity)
         expect(json[:error_details]).to match(
-          "1": match(params: params[:alerts][1], errors: include("value_already_exist"))
+          "1": match(params: params[:alerts][1], errors: {code: ["value_already_exist"]})
         )
       end
     end

@@ -12,5 +12,6 @@ RSpec.describe Webhooks::Invoices::PaymentStatusUpdatedService do
 
   describe ".call" do
     it_behaves_like "creates webhook", "invoice.payment_status_updated", "invoice"
+    it_behaves_like "sends the catalog invoice on v2"
   end
 end

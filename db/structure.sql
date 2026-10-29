@@ -159,6 +159,7 @@ ALTER TABLE IF EXISTS ONLY public.memberships DROP CONSTRAINT IF EXISTS fk_rails
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_98980b326b;
 ALTER TABLE IF EXISTS ONLY public.fixed_charge_events DROP CONSTRAINT IF EXISTS fk_rails_9881e28151;
 ALTER TABLE IF EXISTS ONLY public.pending_vies_checks DROP CONSTRAINT IF EXISTS fk_rails_96fc54cd9a;
+ALTER TABLE IF EXISTS ONLY public.x402_sign_in_nonces DROP CONSTRAINT IF EXISTS fk_rails_96e2978f7d;
 ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS fk_rails_95df3194c5;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_94cc21031f;
 ALTER TABLE IF EXISTS ONLY public.rate_cards_taxes DROP CONSTRAINT IF EXISTS fk_rails_9457f0d2da;
@@ -420,6 +421,8 @@ SELECT
     NULL::json AS filters,
     NULL::jsonb AS filters_grouped_by;
 DROP INDEX IF EXISTS public.unique_default_payment_method_per_customer;
+DROP INDEX IF EXISTS public.index_x402_sign_in_nonces_on_organization_address_nonce;
+DROP INDEX IF EXISTS public.index_x402_sign_in_nonces_on_created_at;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_x402_connection_id;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_ungranted_id;
 DROP INDEX IF EXISTS public.index_x402_settlements_on_pending_reconcile_after;
@@ -469,6 +472,7 @@ DROP INDEX IF EXISTS public.index_usage_thresholds_on_subscription_id;
 DROP INDEX IF EXISTS public.index_usage_thresholds_on_plan_id;
 DROP INDEX IF EXISTS public.index_usage_thresholds_on_organization_id;
 DROP INDEX IF EXISTS public.index_usage_monitoring_triggered_alerts_on_wallet_id;
+DROP INDEX IF EXISTS public.index_usage_monitoring_triggered_alerts_on_triggered_at;
 DROP INDEX IF EXISTS public.index_usage_monitoring_triggered_alerts_on_subscription_id;
 DROP INDEX IF EXISTS public.index_usage_monitoring_triggered_alerts_on_organization_id;
 DROP INDEX IF EXISTS public.index_usage_monitoring_alerts_on_wallet_id;
@@ -545,6 +549,7 @@ DROP INDEX IF EXISTS public.index_recurring_aggregation_snapshots_on_organizatio
 DROP INDEX IF EXISTS public.index_recurring_aggregation_snapshots_on_charge_id;
 DROP INDEX IF EXISTS public.index_recurring_aggregation_snapshots_on_charge_filter_id;
 DROP INDEX IF EXISTS public.index_recurring_aggregation_snapshots_on_billable_metric_id;
+DROP INDEX IF EXISTS public.index_recurring_aggregation_snapshots_by_period;
 DROP INDEX IF EXISTS public.index_record_deletions_on_updated_at;
 DROP INDEX IF EXISTS public.index_record_deletions_on_organization_id_and_deleted_at;
 DROP INDEX IF EXISTS public.index_record_deletions_on_deleted_at;
@@ -825,6 +830,7 @@ DROP INDEX IF EXISTS public.index_fees_on_charge_filter_id;
 DROP INDEX IF EXISTS public.index_fees_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_fees_on_applied_add_on_id;
 DROP INDEX IF EXISTS public.index_fees_on_add_on_id;
+DROP INDEX IF EXISTS public.index_fees_by_product_cursor;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_transaction_id;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_timestamp;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_created_at;
@@ -1129,6 +1135,7 @@ DROP INDEX IF EXISTS public.idx_billing_on_enriched_events;
 DROP INDEX IF EXISTS public.idx_lookup_on_enriched_events;
 DROP INDEX IF EXISTS public.idx_unique_on_enriched_events;
 DROP INDEX IF EXISTS public.index_enriched_events_on_event_id;
+ALTER TABLE IF EXISTS ONLY public.x402_sign_in_nonces DROP CONSTRAINT IF EXISTS x402_sign_in_nonces_pkey;
 ALTER TABLE IF EXISTS ONLY public.x402_settlements DROP CONSTRAINT IF EXISTS x402_settlements_pkey;
 ALTER TABLE IF EXISTS ONLY public.x402_connections DROP CONSTRAINT IF EXISTS x402_connections_pkey;
 ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS webhooks_pkey;
@@ -1280,6 +1287,7 @@ ALTER TABLE IF EXISTS ONLY public.active_storage_attachments DROP CONSTRAINT IF 
 ALTER TABLE IF EXISTS public.versions ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.usage_monitoring_subscription_activities ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.quote_owners ALTER COLUMN id DROP DEFAULT;
+DROP TABLE IF EXISTS public.x402_sign_in_nonces;
 DROP TABLE IF EXISTS public.x402_settlements;
 DROP TABLE IF EXISTS public.x402_connections;
 DROP TABLE IF EXISTS public.webhooks;
@@ -1475,6 +1483,7 @@ DROP TYPE IF EXISTS public.x402_settlement_settled_by;
 DROP TYPE IF EXISTS public.x402_settlement_kind;
 DROP TYPE IF EXISTS public.x402_facilitator;
 DROP TYPE IF EXISTS public.x402_asset;
+DROP TYPE IF EXISTS public.usage_monitoring_triggered_alert_resolution_reasons;
 DROP TYPE IF EXISTS public.usage_monitoring_triggered_alert_kinds;
 DROP TYPE IF EXISTS public.usage_monitoring_alert_types;
 DROP TYPE IF EXISTS public.usage_monitoring_alert_direction;
@@ -2073,6 +2082,17 @@ CREATE TYPE public.usage_monitoring_triggered_alert_kinds AS ENUM (
     'triggered',
     'resolved',
     'seeded'
+);
+
+
+--
+-- Name: usage_monitoring_triggered_alert_resolution_reasons; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.usage_monitoring_triggered_alert_resolution_reasons AS ENUM (
+    'recovered',
+    'threshold_updated',
+    'threshold_removed'
 );
 
 
@@ -3737,6 +3757,7 @@ CREATE TABLE public.organizations (
     feature_flags character varying[] DEFAULT '{}'::character varying[] NOT NULL,
     max_wallets integer,
     slug character varying NOT NULL,
+    pagination_max_page_size integer,
     CONSTRAINT check_organizations_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -4858,6 +4879,7 @@ CREATE TABLE public.usage_monitoring_triggered_alerts (
     kind public.usage_monitoring_triggered_alert_kinds DEFAULT 'triggered'::public.usage_monitoring_triggered_alert_kinds NOT NULL,
     in_alarm_thresholds jsonb,
     fully_resolved boolean,
+    resolution_reason public.usage_monitoring_triggered_alert_resolution_reasons,
     CONSTRAINT chk_triggered_alerts_subscription_xor_wallet CHECK (((subscription_id IS NOT NULL) <> (wallet_id IS NOT NULL)))
 );
 
@@ -6370,7 +6392,8 @@ CREATE TABLE public.x402_connections (
     auto_create_customers boolean DEFAULT true NOT NULL,
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    allowed_origins character varying[] DEFAULT '{}'::character varying[] NOT NULL
 );
 
 
@@ -6404,13 +6427,30 @@ CREATE TABLE public.x402_settlements (
     error_reason character varying,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
+    request_key_digest character varying,
     CONSTRAINT check_x402_settlements_amount_positive CHECK ((settled_amount_atomic > (0)::numeric)),
     CONSTRAINT check_x402_settlements_credit_purchase_has_settings CHECK (((kind <> 'credit_purchase'::public.x402_settlement_kind) OR (purchase_settings IS NOT NULL))),
     CONSTRAINT check_x402_settlements_granted_has_subscription CHECK (((wallet_transaction_id IS NULL) OR (subscription_id IS NOT NULL))),
     CONSTRAINT check_x402_settlements_invoice_payment_has_invoice CHECK (((kind <> 'invoice_payment'::public.x402_settlement_kind) OR (invoice_id IS NOT NULL))),
+    CONSTRAINT check_x402_settlements_invoice_payment_has_no_request_key CHECK (((kind <> 'invoice_payment'::public.x402_settlement_kind) OR (request_key_digest IS NULL))),
     CONSTRAINT check_x402_settlements_merchant_settled_credit_purchase CHECK (((settled_by = 'lago'::public.x402_settlement_settled_by) OR ((kind = 'credit_purchase'::public.x402_settlement_kind) AND (status = 'settled'::public.x402_settlement_status)))),
     CONSTRAINT check_x402_settlements_pending_has_reconcile_after CHECK (((status <> 'pending'::public.x402_settlement_status) OR (reconcile_after IS NOT NULL))),
+    CONSTRAINT check_x402_settlements_request_key_digest_format CHECK (((request_key_digest IS NULL) OR ((request_key_digest)::text ~ '^[0-9a-f]{64}$'::text))),
     CONSTRAINT check_x402_settlements_settled_has_hash CHECK (((status <> 'settled'::public.x402_settlement_status) OR (transaction_hash IS NOT NULL)))
+);
+
+
+--
+-- Name: x402_sign_in_nonces; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.x402_sign_in_nonces (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    agent_address character varying NOT NULL,
+    nonce character varying NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -7624,6 +7664,14 @@ ALTER TABLE ONLY public.x402_connections
 
 ALTER TABLE ONLY public.x402_settlements
     ADD CONSTRAINT x402_settlements_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: x402_sign_in_nonces x402_sign_in_nonces_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.x402_sign_in_nonces
+    ADD CONSTRAINT x402_sign_in_nonces_pkey PRIMARY KEY (id);
 
 
 --
@@ -9787,6 +9835,13 @@ CREATE INDEX index_events_on_organization_id_and_transaction_id ON public.events
 
 
 --
+-- Name: index_fees_by_product_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fees_by_product_cursor ON public.fees USING btree (organization_id, created_at DESC, id DESC) WHERE ((deleted_at IS NULL) AND (fee_type = 6));
+
+
+--
 -- Name: index_fees_on_add_on_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11747,6 +11802,13 @@ CREATE INDEX index_record_deletions_on_updated_at ON public.record_deletions USI
 
 
 --
+-- Name: index_recurring_aggregation_snapshots_by_period; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_recurring_aggregation_snapshots_by_period ON public.recurring_aggregation_snapshots USING btree (subscription_id, charge_id, charge_filter_id, to_datetime);
+
+
+--
 -- Name: index_recurring_aggregation_snapshots_on_billable_metric_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12279,6 +12341,13 @@ CREATE INDEX index_usage_monitoring_triggered_alerts_on_subscription_id ON publi
 
 
 --
+-- Name: index_usage_monitoring_triggered_alerts_on_triggered_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_usage_monitoring_triggered_alerts_on_triggered_at ON public.usage_monitoring_triggered_alerts USING btree (triggered_at);
+
+
+--
 -- Name: index_usage_monitoring_triggered_alerts_on_wallet_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12619,6 +12688,20 @@ CREATE INDEX index_x402_settlements_on_ungranted_id ON public.x402_settlements U
 --
 
 CREATE INDEX index_x402_settlements_on_x402_connection_id ON public.x402_settlements USING btree (x402_connection_id);
+
+
+--
+-- Name: index_x402_sign_in_nonces_on_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_x402_sign_in_nonces_on_created_at ON public.x402_sign_in_nonces USING btree (created_at);
+
+
+--
+-- Name: index_x402_sign_in_nonces_on_organization_address_nonce; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_x402_sign_in_nonces_on_organization_address_nonce ON public.x402_sign_in_nonces USING btree (organization_id, agent_address, nonce);
 
 
 --
@@ -14657,6 +14740,14 @@ ALTER TABLE ONLY public.entitlement_subscription_feature_removals
 
 
 --
+-- Name: x402_sign_in_nonces fk_rails_96e2978f7d; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.x402_sign_in_nonces
+    ADD CONSTRAINT fk_rails_96e2978f7d FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: pending_vies_checks fk_rails_96fc54cd9a; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -15863,14 +15954,23 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261028184732'),
+('20261028184731'),
+('20261026150420'),
+('20261026101445'),
+('20261022090030'),
 ('20261020144205'),
 ('20261020074217'),
 ('20261019074555'),
+('20261016163945'),
+('20261016163943'),
+('20261016153657'),
 ('20261014180403'),
 ('20261014123350'),
 ('20261014123349'),
 ('20261014123348'),
 ('20261013124033'),
+('20261011162319'),
 ('20261009154629'),
 ('20261009103426'),
 ('20261008135612'),

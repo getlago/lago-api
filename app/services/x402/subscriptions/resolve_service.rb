@@ -22,7 +22,7 @@ module X402
           subscription = ::Subscriptions::CreateService.call!(
             customer:,
             plan:,
-            params: {external_id:, external_customer_id: customer.external_id, billing_time: :calendar}
+            params: {external_id:, external_customer_id: customer.external_id, billing_time: :calendar, subscription_at: Time.current.floor(3)}
           ).subscription
 
           if subscription.active?

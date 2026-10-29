@@ -2,13 +2,13 @@
 
 module Api
   module V1
-    class FeaturesController < Api::BaseController
+    class FeaturesController < Api::V1::BaseController
       def index
         result = ::Entitlement::FeaturesQuery.call(
           organization: current_organization,
           pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
+            page: page_number,
+            limit: page_size
           },
           search_term: params[:search_term]
         )

@@ -8,6 +8,11 @@ module ContractRateCards
   class CreateService < BaseService
     Result = BaseResult[:contract_rate_card]
 
+    activity_loggable(
+      action: "contract_rate_card.created",
+      record: -> { result.contract_rate_card }
+    )
+
     def initialize(contract:, params:)
       @contract = contract
       @params = params.to_h.with_indifferent_access
@@ -62,9 +67,9 @@ module ContractRateCards
         # create back. Omitted or null, the card starts on a single default
         # terminal phase.
         if params.key?(:rate_phases) && !params[:rate_phases].nil?
-          RatePhases::ReplaceService.call!(contract_rate_card:, phases_params: params[:rate_phases])
+          RatePhases::ReplaceService.call!(contract_rate_card:, phases_params: params[:rate_phases], emit_events: false)
         else
-          RatePhases::CreateService.call!(contract_rate_card:, params: {code: "default", position: 1})
+          RatePhases::CreateService.call!(contract_rate_card:, params: {code: "default", position: 1}, emit_events: false)
         end
         ContractRateCards::SeedLifecycleService.call!(
           contract_rate_card:,
@@ -72,6 +77,8 @@ module ContractRateCards
         )
 
         result.contract_rate_card = contract_rate_card
+        contract_rate_card.association(:rate_phases).reset
+        SendWebhookJob.perform_after_commit("contract_rate_card.created", contract_rate_card)
       end
 
       result

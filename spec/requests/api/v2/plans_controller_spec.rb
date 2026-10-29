@@ -4,6 +4,7 @@ require "rails_helper"
 
 RSpec.describe Api::V2::PlansController do
   let_it_be(:organization, refind: true) { create_default(:organization, feature_flags: ["product_catalog"]) }
+  let(:plan_keys) { %i[lago_id name invoice_display_name code description currency created_at deleted_at] }
 
   describe "POST /api/v2/plans" do
     subject { post_with_token(organization, "/api/v2/plans", {plan: create_params}) }
@@ -23,6 +24,18 @@ RSpec.describe Api::V2::PlansController do
       expect(CatalogPlan.find(json[:plan][:lago_id])).to be_present
     end
 
+    context "with expand" do
+      subject { post_with_token(organization, "/api/v2/plans?expands[]=taxes", {plan: create_params}) }
+
+      it "creates nothing, as only show expands" do
+        expect { subject }.not_to change(CatalogPlan, :count)
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:code]).to eq("expand_not_supported")
+        expect(json[:details]).to eq([{code: "action_not_expandable", field: "expands", meta: {invalid_values: %w[taxes]}}])
+      end
+    end
+
     context "with taxes" do
       let(:tax1) { create(:tax, organization:) }
       let(:tax2) { create(:tax, organization:) }
@@ -30,12 +43,16 @@ RSpec.describe Api::V2::PlansController do
         {name: "Growth", code: "growth", currency: "USD", tax_codes: [tax1.code, tax2.code]}
       end
 
-      it "assigns and returns the taxes" do
+      it "assigns the taxes, which a show then expands" do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:plan][:taxes].pluck(:code)).to match_array([tax1.code, tax2.code])
+        expect(json[:plan].keys).to eq(plan_keys)
         expect(CatalogPlan.find(json[:plan][:lago_id]).taxes).to match_array([tax1, tax2])
+
+        get_with_token(organization, "/api/v2/plans/growth", {expands: %w[taxes]})
+
+        expect(json[:plan][:taxes].pluck(:code)).to match_array([tax1.code, tax2.code])
       end
     end
 
@@ -46,7 +63,7 @@ RSpec.describe Api::V2::PlansController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:error_details][:currency]).to be_present
+        expect(json[:details]).to eq([{code: "value_is_invalid", field: "currency", meta: {}}])
       end
     end
 
@@ -87,11 +104,11 @@ RSpec.describe Api::V2::PlansController do
 
       let(:tax) { create(:tax, organization:) }
 
-      it "assigns and returns the taxes" do
+      it "assigns the taxes and returns the plan without them" do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:plan][:taxes].pluck(:code)).to eq([tax.code])
+        expect(json[:plan].keys).to eq(plan_keys)
         expect(catalog_plan.reload.taxes).to eq([tax])
       end
     end
@@ -102,34 +119,98 @@ RSpec.describe Api::V2::PlansController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("plan")
+        expect(response).to be_v2_not_found_error("plan")
       end
     end
   end
 
   describe "GET /api/v2/plans/:code" do
-    subject { get_with_token(organization, "/api/v2/plans/#{catalog_plan.code}") }
+    subject { get_with_token(organization, "/api/v2/plans/#{catalog_plan.code}", params) }
 
     let(:catalog_plan) { create(:catalog_plan, organization:) }
+    let(:params) { {} }
+    let(:tax) { create(:tax, organization:) }
+    let(:linked_at) { Time.current }
+    let(:flat_payload) do
+      {
+        lago_id: catalog_plan.id,
+        name: catalog_plan.name,
+        invoice_display_name: catalog_plan.invoice_display_name,
+        code: catalog_plan.code,
+        description: catalog_plan.description,
+        currency: catalog_plan.currency,
+        created_at: catalog_plan.created_at.iso8601(6),
+        deleted_at: nil
+      }
+    end
+
+    before { create(:plan_applied_tax, :catalog_plan, catalog_plan:, tax:, organization:, created_at: linked_at) }
 
     include_examples "requires API permission", "plan", "read"
 
-    it "returns the catalog plan shape" do
+    it "returns the flat plan, without its taxes" do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:plan][:lago_id]).to eq(catalog_plan.id)
-      expect(json[:plan][:applied_rate_cards_count]).to eq(0)
-      expect(json[:plan]).not_to have_key(:interval)
+      expect(json[:plan]).to eq(flat_payload)
     end
 
-    it "returns the assigned taxes" do
-      tax = create(:tax, organization:)
-      create(:plan_applied_tax, :catalog_plan, catalog_plan:, tax:, organization:)
+    context "with expands[]=taxes" do
+      let(:params) { {expands: %w[taxes]} }
+      let(:created_at) { Time.zone.parse("2026-09-28T10:00:00.000001Z") }
+      let(:tax) { create(:tax, organization:, created_at: created_at - 1.day) }
+      let(:linked_at) { created_at - 1.second }
+      # Two taxes created before `tax` but linked after it, at the same microsecond with ascending
+      # ids, so that only the link order, then the id tiebreak, gives the list.
+      let(:tied_links) do
+        Array.new(2) { SecureRandom.uuid }.sort.map do |id|
+          create(:plan_applied_tax, :catalog_plan, id:, catalog_plan:, organization:, tax: create(:tax, organization:, created_at: created_at - 2.days), created_at:)
+        end
+      end
+      let(:discarded_tax) { create(:tax, organization:) }
 
-      subject
+      # Next to taxes that the plan may not show.
+      before do
+        tied_links
+        create(:plan_applied_tax, :catalog_plan, catalog_plan:, tax: discarded_tax, organization:)
+        # Discarded directly: Taxes::DestroyService would delete the link as well.
+        discarded_tax.discard!
+        create(:plan_applied_tax, :catalog_plan, catalog_plan: create(:catalog_plan, organization:), organization:)
+      end
 
-      expect(json[:plan][:taxes].pluck(:code)).to eq([tax.code])
+      def tax_payload(tax)
+        {
+          lago_id: tax.id,
+          name: tax.name,
+          code: tax.code,
+          rate: tax.rate,
+          description: tax.description,
+          created_at: tax.created_at.iso8601(6),
+          updated_at: tax.updated_at.iso8601(6),
+          deleted_at: nil
+        }
+      end
+
+      it "embeds its kept taxes, latest linked first" do
+        subject
+
+        listed = [*tied_links.reverse.map(&:tax), tax]
+
+        expect(response).to have_http_status(:success)
+        expect(json[:plan]).to eq(flat_payload.merge(taxes: listed.map { tax_payload(it) }))
+      end
+    end
+
+    context "with an unknown expansion" do
+      let(:params) { {expands: %w[taxes applied_rate_cards]} }
+
+      it "returns an invalid expand error listing the allowed expansions" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:code]).to eq("invalid_expand")
+        expect(json[:details]).to eq([{code: "invalid_expand", field: "expands", meta: {invalid_values: %w[applied_rate_cards], allowed_values: %w[taxes]}}])
+      end
     end
 
     context "when the plan does not exist" do
@@ -138,7 +219,7 @@ RSpec.describe Api::V2::PlansController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("plan")
+        expect(response).to be_v2_not_found_error("plan")
       end
     end
   end
@@ -154,15 +235,13 @@ RSpec.describe Api::V2::PlansController do
 
     it "lists the organization catalog plans" do
       create(:catalog_plan)
-      create_list(:plan_rate_card, 2, organization:, catalog_plan:)
 
       subject
 
       expect(response).to have_http_status(:success)
       expect(json[:plans].map { it[:lago_id] }).to eq([catalog_plan.id])
       expect(json[:plans].first[:currency]).to eq(catalog_plan.currency)
-      expect(json[:plans].first[:applied_rate_cards_count]).to eq(2)
-      expect(json[:plans].first).not_to have_key(:interval)
+      expect(json[:plans].first.keys).to eq(plan_keys)
       expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
     end
 
@@ -194,13 +273,24 @@ RSpec.describe Api::V2::PlansController do
       end
     end
 
-    it "returns the assigned taxes" do
-      tax = create(:tax, organization:)
-      create(:plan_applied_tax, :catalog_plan, catalog_plan:, tax:, organization:)
+    it "lists the plans without their taxes" do
+      create(:plan_applied_tax, :catalog_plan, catalog_plan:, organization:)
 
       subject
 
-      expect(json[:plans].first[:taxes].pluck(:code)).to eq([tax.code])
+      expect(json[:plans].sole.keys).to eq(plan_keys)
+    end
+
+    context "with expands[]=taxes" do
+      let(:params) { {expands: %w[taxes]} }
+
+      it "returns an expand error, as only show expands" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:code]).to eq("expand_not_supported")
+        expect(json[:details]).to eq([{code: "action_not_expandable", field: "expands", meta: {invalid_values: %w[taxes]}}])
+      end
     end
 
     it_behaves_like "a cursor paginated v2 endpoint", collection: :plans, model: CatalogPlan do

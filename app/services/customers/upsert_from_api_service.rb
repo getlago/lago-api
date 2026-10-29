@@ -44,6 +44,9 @@ module Customers
         )
       end
 
+      integration_customers_validation = IntegrationCustomers::ValidateBatchService.call(integration_customers: params[:integration_customers])
+      return result.fail_with_error!(integration_customers_validation.error) unless integration_customers_validation.success?
+
       ActiveRecord::Base.transaction do
         original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
 
@@ -108,13 +111,10 @@ module Customers
         eu_tax_code_result = Customers::EuAutoTaxesService.call(
           customer:,
           new_record: new_customer,
-          tax_attributes_changed: tax_attributes_changed || billing_entity_changed
+          tax_attributes_changed: tax_attributes_changed || billing_entity_changed,
+          tax_codes: params[:tax_codes]
         )
-
-        if eu_tax_code_result.success?
-          params[:tax_codes] ||= []
-          params[:tax_codes] = (params[:tax_codes] + [eu_tax_code_result.tax_code]).uniq
-        end
+        params[:tax_codes] = eu_tax_code_result.tax_codes if eu_tax_code_result.success?
 
         # NOTE: EU-managed taxes (lago_eu_*) belong to the previous billing entity. When the
         #       billing entity changes and no new EU tax applies (new entity does not manage

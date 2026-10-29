@@ -24,6 +24,7 @@ RSpec.describe Fee do
       expect(subject).to belong_to(:product_filter).optional
       expect(subject).to belong_to(:group).optional
       expect(subject).to belong_to(:invoiceable).optional
+      expect(subject).to belong_to(:billed_product).class_name("Product").with_foreign_key(:invoiceable_id).optional
       expect(subject).to belong_to(:true_up_parent_fee).class_name("Fee").optional
       expect(subject).to belong_to(:original_fee).class_name("Fee").optional
       expect(subject).to belong_to(:organization)
@@ -1055,6 +1056,39 @@ RSpec.describe Fee do
         it "returns the reduced remaining amount" do
           expect(subject).to eq(700)
         end
+      end
+    end
+  end
+
+  describe "#credited_amount_cents" do
+    subject(:fee) { create(:fee) }
+
+    context "when there are no credit note items" do
+      it "returns 0" do
+        expect(fee.credited_amount_cents).to eq(0)
+      end
+    end
+
+    context "when there are credit note items" do
+      let(:credit_note) { create(:credit_note) }
+
+      before do
+        create(:credit_note_item, credit_note:, fee:, amount_cents: 100)
+        create(:credit_note_item, credit_note:, fee:, amount_cents: 200)
+      end
+
+      it "sums all the credit note items amount_cents" do
+        expect(fee.credited_amount_cents).to eq(300)
+      end
+    end
+
+    context "when the value is cached by a preloader" do
+      before do
+        fee.aggregation_cache[:credited_amount_cents] = 100
+      end
+
+      it "returns the cached value" do
+        expect(fee.credited_amount_cents).to eq(100)
       end
     end
   end

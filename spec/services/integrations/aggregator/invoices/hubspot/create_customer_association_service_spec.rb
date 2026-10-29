@@ -79,6 +79,19 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::CreateCustomerAssoci
 
         it_behaves_like "throttles!", :hubspot
       end
+
+      context "when it is a request limit error" do
+        let(:http_error) { LagoHttpClient::HttpError.new(429, {error: {code: "SSS_REQUEST_LIMIT_EXCEEDED"}}.to_json, nil) }
+
+        before do
+          allow(Integrations::Hubspot::Invoices::DeployObjectService).to receive(:call)
+          allow(lago_client).to receive(:put_with_response).with(params, headers).and_raise(http_error)
+        end
+
+        it "raises RequestLimitError" do
+          expect { service_call }.to raise_error(Integrations::Aggregator::RequestLimitError)
+        end
+      end
     end
   end
 end

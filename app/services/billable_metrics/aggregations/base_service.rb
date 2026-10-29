@@ -32,7 +32,11 @@ module BillableMetrics
         :max_aggregation, # Maximum aggregation result cached in a pay in advance scenario (billing and current usage)
         :max_aggregation_with_proration, # Similar to max_aggregation but with proration on billing period applied
         :units_applied, # Number of units applied by the event and cached in a pay in advance scenario (billing and current usage)
-        :recurring_updated_at # Date when the recurring cached aggregation was updated
+        :recurring_updated_at, # Date when the recurring cached aggregation was updated
+        # Recurring aggregation snapshot fields
+        :recurring_units, # Cumulative units of a recurring metric at the end of the period, before rounding
+        :recurring_events_count, # Number of events behind recurring_units, only set for a sum
+        :recurring_breakdowns # Units of each presentation group at the end of the period, only set for a weighted sum
       ]
       PerEventAggregationResult = BaseResult[:event_aggregation]
 
@@ -49,7 +53,9 @@ module BillableMetrics
         result
       end
 
-      def initialize(event_store:, metered_item:, billing_context:, boundaries:, filters: {}, bypass_aggregation: false)
+      # initial_value and initial_period: snapshots and period of RecurringAggregationSnapshots::FetchService.
+      # Without a period a recurring aggregation scans the full history; with one, a missing group had no usage.
+      def initialize(event_store:, metered_item:, billing_context:, boundaries:, filters: {}, bypass_aggregation: false, initial_value: nil, initial_period: nil)
         super(nil)
         @event_store = event_store
         @metered_item = metered_item
@@ -66,6 +72,8 @@ module BillableMetrics
         @boundaries = boundaries
 
         @bypass_aggregation = bypass_aggregation
+        @initial_value = initial_value
+        @initial_period = initial_period
 
         result.aggregator = self
         result.pay_in_advance_event = event if event
@@ -145,6 +153,8 @@ module BillableMetrics
         :grouped_by_values,
         :presentation_by,
         :bypass_aggregation,
+        :initial_value,
+        :initial_period,
         :uniq_grouped_by_and_presentation_by
 
       delegate :billable_metric, to: :metered_item

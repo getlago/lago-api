@@ -6,8 +6,9 @@ module RatePhases
   class DestroyService < BaseService
     Result = BaseResult[:rate_phase]
 
-    def initialize(rate_phase:)
+    def initialize(rate_phase:, emit_events: true)
       @rate_phase = rate_phase
+      @emit_events = emit_events
       super
     end
 
@@ -33,11 +34,13 @@ module RatePhases
           return result.single_validation_failure!(field: :rate_phase, error_code: "cannot_delete_last_phase")
         end
 
-        rate_phase.discard!
-        rate_phase.rate_override&.discard!
+        publish_owner_update do
+          rate_phase.discard!
+          rate_phase.rate_override&.discard!
 
-        siblings.select { |phase| phase.position > rate_phase.position }.each do |phase|
-          phase.update!(position: phase.position - 1)
+          siblings.select { |phase| phase.position > rate_phase.position }.each do |phase|
+            phase.update!(position: phase.position - 1)
+          end
         end
       end
 
@@ -47,10 +50,23 @@ module RatePhases
 
     private
 
-    attr_reader :rate_phase
+    attr_reader :rate_phase, :emit_events
 
     def applied_rate_card
       rate_phase.plan_rate_card || rate_phase.contract_rate_card
+    end
+
+    def publish_owner_update
+      event_type = rate_phase.plan_rate_card_id ? "plan_rate_card.updated" : "contract_rate_card.updated"
+      if emit_events
+        Utils::ActivityLog.produce_after_commit(applied_rate_card, event_type) do
+          yield
+          SendWebhookJob.perform_after_commit(event_type, applied_rate_card)
+          result
+        end
+      else
+        yield
+      end
     end
   end
 end

@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 class RecurringAggregationSnapshot < ApplicationRecord
+  # An event ingested just before the aggregation may not be readable yet, so the next period counts it.
+  # Same margin as the other enriched_at readers (ChargeFiltersScan::IncrementalCache::INGESTION_MARGIN).
+  WATERMARK_LAG = 5.minutes
+
   belongs_to :organization
   belongs_to :subscription
   belongs_to :charge, -> { with_discarded }
@@ -35,6 +39,7 @@ end
 # Indexes
 #
 #  idx_recurring_aggregation_snapshots_unique                   (subscription_id,charge_id,charge_filter_id,grouped_by,to_datetime) UNIQUE NULLS NOT DISTINCT
+#  index_recurring_aggregation_snapshots_by_period              (subscription_id,charge_id,charge_filter_id,to_datetime)
 #  index_recurring_aggregation_snapshots_on_billable_metric_id  (billable_metric_id)
 #  index_recurring_aggregation_snapshots_on_charge_filter_id    (charge_filter_id)
 #  index_recurring_aggregation_snapshots_on_charge_id           (charge_id)

@@ -76,6 +76,10 @@ module UsageMonitoring
         return result.single_validation_failure!(field: :code, error_code: "value_already_exist")
       end
 
+      # NOTE: measured before the transaction, so no lock is held while the usage is built
+      usage_measured_at = Time.current
+      usage = usage_at_creation(billable_metric)
+
       ActiveRecord::Base.transaction do
         alert = Alert.new(
           organization:,
@@ -95,7 +99,9 @@ module UsageMonitoring
         # NOTE: FOR NO KEY UPDATE still conflicts with a balance update, but not with the key-share lock the
         #       insert above took on the same row, which two concurrent creates would otherwise deadlock upgrading
         alert.update!(previous_value: alert.find_value(alertable.lock!("FOR NO KEY UPDATE"))) if alert.decreasing?
+        take_usage_baseline(alert, usage, usage_measured_at) if usage
         alert.thresholds.create!(prepare_thresholds(params[:thresholds], organization.id))
+        seed_alarms_already_past(alert, alertable)
 
         result.alert = alert
       end
@@ -131,6 +137,44 @@ module UsageMonitoring
 
     def direction_for_alert
       Alert::WALLET_TYPES.include?(params[:alert_type]) ? "decreasing" : "increasing"
+    end
+
+    # A usage alert starts from the usage at creation, as a wallet alert starts from the balance. Without it, the
+    # first evaluation would see the whole usage as a crossing and announce lines that were already past.
+    def usage_at_creation(billable_metric)
+      return unless License.premium?
+      return unless subscription&.active?
+
+      case params[:alert_type]
+      when "lifetime_usage_amount"
+        subscription.lifetime_usage
+      when *Alert::BILLABLE_METRIC_LIFETIME_USAGE_TYPES
+        charge_ids = subscription.plan.charges.where(billable_metric_id: billable_metric&.id).ids
+        return if charge_ids.empty?
+
+        customer_usage(usage_filters: UsageFilters.new(full_usage: true, filter_by_charge_id: charge_ids))
+      when *Alert::CURRENT_USAGE_TYPES
+        customer_usage(use_usage_buckets: true)
+      end
+    end
+
+    # NOTE: a failure leaves the alert without a baseline, as before, rather than failing its creation
+    def customer_usage(**options)
+      ::Invoices::CustomerUsageService.call(
+        customer: subscription.customer,
+        subscription:,
+        apply_taxes: false,
+        with_cache: true,
+        **options
+      ).usage
+    end
+
+    def take_usage_baseline(alert, usage, measured_at)
+      value = alert.find_value(usage)
+      return if value.nil?
+
+      # NOTE: last_processed_at dates the baseline, so a renewal before the first evaluation still resets it
+      alert.update!(previous_value: value, last_processed_at: measured_at)
     end
 
     def track_subscription_activity

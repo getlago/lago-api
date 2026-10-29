@@ -26,7 +26,7 @@ module Integrations
             result.external_id = body["id"]
             result
           rescue LagoHttpClient::HttpError => e
-            raise RequestLimitError(e) if request_limit_error?(e)
+            raise RequestLimitError.new(e) if request_limit_error?(e)
 
             code = code(e)
             message = message(e)

@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 module WalletMetadataActions
-  include Pagination
   extend ActiveSupport::Concern
 
   def metadata_create(wallet)

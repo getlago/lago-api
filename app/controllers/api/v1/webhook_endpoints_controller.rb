@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class WebhookEndpointsController < Api::BaseController
+    class WebhookEndpointsController < Api::V1::BaseController
       def create
         service = ::WebhookEndpoints::CreateService.new(
           organization: current_organization,
@@ -34,8 +34,8 @@ module Api
         result = WebhookEndpointsQuery.call(
           organization: current_organization,
           pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
+            page: page_number,
+            limit: page_size
           }
         )
 

@@ -36,7 +36,8 @@ module Auth
       return result unless result.success?
 
       google_oidc = oidc_verifier(code:)
-      user = User.find_by(email: google_oidc["email"])
+      email = google_oidc["email"]
+      user = find_user_by_email(email)
 
       unless user.present? && user.memberships&.active&.any?
         return result.single_validation_failure!(error_code: "user_does_not_exist")
@@ -106,10 +107,10 @@ module Auth
 
     def register(email, organization_name)
       if ENV.fetch("LAGO_DISABLE_SIGNUP", "false") == "true"
-        return result.not_allowed_failure!(code: "signup_disabled")
+        return result.forbidden_failure!(code: "signup_disabled")
       end
 
-      if User.exists?(email:)
+      if find_user_by_email(email)
         result.single_validation_failure!(field: :email, error_code: "user_already_exists")
 
         return result
@@ -154,6 +155,11 @@ module Auth
           email: membership.user.email
         }
       )
+    end
+
+    def find_user_by_email(email)
+      User.find_by(email:) ||
+        User.where("LOWER(email) = ?", email.to_s.downcase).order(:created_at).first
     end
 
     def client_id

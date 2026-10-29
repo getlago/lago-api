@@ -7,7 +7,7 @@ RSpec.describe Api::RequiresProductCatalog do
 
   # rubocop:disable RSpec/DescribedClass
   controller(ApplicationController) do
-    include ApiErrors
+    include Api::V1Errors
     include Api::RequiresProductCatalog
 
     attr_reader :current_organization

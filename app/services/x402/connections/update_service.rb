@@ -6,7 +6,8 @@ module X402
       Result = BaseResult[:connection]
 
       ATTRIBUTES = %i[
-        code name networks payout_addresses auto_create_customers cdp_api_key_id cdp_api_key_secret
+        code name networks payout_addresses auto_create_customers allowed_origins cdp_api_key_id
+        cdp_api_key_secret
       ].freeze
 
       LIVE_CHECK_ATTRIBUTES = %w[networks payout_addresses secrets].freeze

@@ -3,6 +3,7 @@
 class Fee < ApplicationRecord
   include Currencies
   include Discard::Model
+  include PreloadableAggregations
 
   self.discard_column = :deleted_at
   self.ignored_columns += %w[duplicated_in_advance]
@@ -19,6 +20,9 @@ class Fee < ApplicationRecord
   belongs_to :product_filter, -> { with_discarded }, optional: true
   belongs_to :group, -> { with_discarded }, optional: true
   belongs_to :invoiceable, polymorphic: true, optional: true
+  # The product a product fee billed, deleted or not: preloading `invoiceable` applies the
+  # product's default scope, which leaves a deleted one out.
+  belongs_to :billed_product, -> { with_discarded }, class_name: "Product", foreign_key: :invoiceable_id, optional: true
   belongs_to :true_up_parent_fee, class_name: "Fee", optional: true
   belongs_to :original_fee, class_name: "Fee", optional: true # Points to the root fee in a void/regenerate chain
   belongs_to :organization
@@ -101,6 +105,10 @@ class Fee < ApplicationRecord
     to = Arel.sql("(properties->>'to_datetime')::timestamptz NULLS LAST")
 
     order(from, to)
+  end
+
+  preloadable_aggregation :credited_amount_cents do |ids|
+    CreditNoteItem.where(fee_id: ids).group(:fee_id).sum(:amount_cents)
   end
 
   def item_key
@@ -292,7 +300,7 @@ class Fee < ApplicationRecord
   end
 
   def creditable_amount_cents
-    remaining_amount = amount_cents - credit_note_items.sum(:amount_cents)
+    remaining_amount = amount_cents - credited_amount_cents
 
     if credit?
       return [remaining_amount, creditable_from_wallet_amount_cents].min
@@ -477,6 +485,7 @@ end
 #  idx_pay_in_advance_duplication_guard_charge          (pay_in_advance_event_transaction_id,charge_id) UNIQUE WHERE ((deleted_at IS NULL) AND (charge_filter_id IS NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false) AND (original_fee_id IS NULL))
 #  idx_pay_in_advance_duplication_guard_charge_filter   (pay_in_advance_event_transaction_id,charge_id,charge_filter_id) UNIQUE WHERE ((deleted_at IS NULL) AND (charge_filter_id IS NOT NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false) AND (original_fee_id IS NULL))
 #  idx_pay_in_advance_product_card_event                (pay_in_advance_event_transaction_id,contract_rate_card_id) UNIQUE WHERE ((deleted_at IS NULL) AND (charge_id IS NULL) AND (contract_rate_card_id IS NOT NULL) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true) AND (duplicated_in_advance = false) AND (original_fee_id IS NULL))
+#  index_fees_by_product_cursor                         (organization_id,created_at DESC,id DESC) WHERE ((deleted_at IS NULL) AND (fee_type = 6))
 #  index_fees_on_add_on_id                              (add_on_id)
 #  index_fees_on_applied_add_on_id                      (applied_add_on_id)
 #  index_fees_on_billing_entity_id                      (billing_entity_id)
