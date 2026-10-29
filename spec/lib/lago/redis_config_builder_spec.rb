@@ -16,6 +16,7 @@ RSpec.describe Lago::RedisConfigBuilder do
       LAGO_REDIS_CACHE_SENTINELS LAGO_REDIS_CACHE_MASTER_NAME
       LAGO_REDIS_CACHE_SENTINEL_USERNAME LAGO_REDIS_CACHE_SENTINEL_PASSWORD
       LAGO_REDIS_THROTTLING_URL LAGO_REDIS_THROTTLING_PASSWORD
+      LAGO_REDIS_CABLE_URL LAGO_REDIS_CABLE_PASSWORD
     ]
     original_env = ENV.to_h.slice(*env_keys)
     env_keys.each { |key| ENV.delete(key) }
@@ -651,6 +652,52 @@ RSpec.describe Lago::RedisConfigBuilder do
 
       it "does not use them" do
         expect(result).not_to include(:password)
+      end
+    end
+  end
+
+  describe "#cable" do
+    subject(:result) { builder.cable }
+
+    context "without LAGO_REDIS_CABLE_URL" do
+      before do
+        ENV["REDIS_PASSWORD"] = "sidekiq_secret"
+        ENV["LAGO_REDIS_CABLE_PASSWORD"] = "cable_secret"
+      end
+
+      it "uses the Sidekiq password, as the URL falls back to REDIS_URL" do
+        expect(result).to eq(password: "sidekiq_secret")
+      end
+    end
+
+    context "with LAGO_REDIS_CABLE_URL and LAGO_REDIS_CABLE_PASSWORD set" do
+      before do
+        ENV["LAGO_REDIS_CABLE_URL"] = "redis://cable:6379"
+        ENV["LAGO_REDIS_CABLE_PASSWORD"] = "cable_secret"
+        ENV["REDIS_PASSWORD"] = "sidekiq_secret"
+      end
+
+      it "uses the cable password" do
+        expect(result).to eq(password: "cable_secret")
+      end
+    end
+
+    context "with LAGO_REDIS_CABLE_URL and only the Sidekiq password" do
+      before do
+        ENV["LAGO_REDIS_CABLE_URL"] = "redis://cable:6379"
+        ENV["REDIS_PASSWORD"] = "sidekiq_secret"
+      end
+
+      it "does not use it" do
+        expect(result).to eq({})
+      end
+    end
+
+    context "without any password" do
+      before { ENV["REDIS_PASSWORD"] = "" }
+
+      it "omits the password" do
+        expect(result).to eq({})
       end
     end
   end
