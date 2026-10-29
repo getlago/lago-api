@@ -164,6 +164,29 @@ RSpec.describe PaymentsQuery do
       expect(returned_ids).not_to include(payment_two.id)
       expect(returned_ids).not_to include(payment_three.id)
     end
+
+    it "uses the payable index for each payment source" do
+      connection = ActiveRecord::Base.connection
+      plan = connection.transaction do
+        connection.execute("SET LOCAL enable_seqscan = off")
+        connection.select_values("EXPLAIN (COSTS OFF) #{result.payments.to_sql}").join("\n")
+      end
+
+      expect(plan.scan("index_payments_on_payable_type_and_payable_id").size).to eq(2)
+    end
+  end
+
+  context "when an invoice has direct and payment request payments" do
+    let(:filters) { {invoice_id: invoice.id} }
+
+    before do
+      create(:payment_request_applied_invoice, invoice:, payment_request:)
+    end
+
+    it "returns payments from both sources" do
+      expect(result).to be_success
+      expect(returned_ids).to contain_exactly(payment_one.id, payment_three.id)
+    end
   end
 
   context "when filtering by invoice_id of a payment request" do

@@ -52,8 +52,7 @@ class PaymentsQuery < BaseQuery
       branches << search_base.where(customer_id: matching_customer_ids).select(:id)
     end
 
-    union_sql = branches.map(&:to_sql).join(" UNION ")
-    Payment.unscoped.from("(#{union_sql}) AS payments").select(:id)
+    union_payment_ids(branches)
   end
 
   def matching_invoice_ids
@@ -106,18 +105,29 @@ class PaymentsQuery < BaseQuery
   end
 
   def filter_by_invoice(scope)
-    invoice_id = filters.invoice_id
+    scope.where(id: matching_payment_ids_by_invoice)
+  end
 
-    scope.joins(<<~SQL.squish)
-      LEFT JOIN invoices_payment_requests
-        ON invoices_payment_requests.payment_request_id = payments.payable_id
-        AND payments.payable_type = 'PaymentRequest'
-    SQL
-      .where(
-        "(payments.payable_type = 'Invoice' AND payments.payable_id = :invoice_id) " \
-        "OR invoices_payment_requests.invoice_id = :invoice_id",
-        invoice_id:
-      )
+  def matching_payment_ids_by_invoice
+    search_base = Payment.where(organization:)
+    branches = [
+      search_base.where(payable_type: "Invoice", payable_id: filters.invoice_id).select(:id),
+      search_base.where(
+        payable_type: "PaymentRequest",
+        payable_id: matching_payment_request_ids
+      ).select(:id)
+    ]
+
+    union_payment_ids(branches)
+  end
+
+  def matching_payment_request_ids
+    PaymentRequest::AppliedInvoice.where(organization:, invoice_id: filters.invoice_id).select(:payment_request_id)
+  end
+
+  def union_payment_ids(branches)
+    union_sql = branches.map(&:to_sql).join(" UNION ")
+    Payment.unscoped.from("(#{union_sql}) AS payments").select(:id)
   end
 
   def filter_by_currency(scope)
