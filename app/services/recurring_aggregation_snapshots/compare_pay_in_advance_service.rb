@@ -125,7 +125,7 @@ module RecurringAggregationSnapshots
     end
 
     # The latest events of the period put max_timestamp late in it, where the delta is the largest.
-    # events_raw keeps every insert of a re-sent transaction id until it merges: one replay each.
+    # events_raw keeps every insert of a re-sent event until it merges: the latest one is replayed.
     def events
       @events ||= compared_charges.map { it.billable_metric.code }.uniq.flat_map do |code|
         if subscription.organization.clickhouse_events_store?
@@ -149,19 +149,26 @@ module RecurringAggregationSnapshots
         .map { Events::CommonFactory.new_instance(source: it) }
     end
 
+    # Deduplicated before the limit, so the inserts of one event cannot crowd out the others.
+    # An event is a (transaction_id, timestamp) pair, as for the event stores.
     def clickhouse_events(code)
-      Clickhouse::EventsRaw
-        .where(
-          organization_id: subscription.organization_id,
-          external_subscription_id: subscription.external_id,
-          code:,
-          timestamp: date_service.charges_from_datetime..timestamp
-        )
-        .order(timestamp: :desc, ingested_at: :desc)
-        .limit(EVENTS_PER_BILLABLE_METRIC * 3)
+      scope = Clickhouse::EventsRaw.where(
+        organization_id: subscription.organization_id,
+        external_subscription_id: subscription.external_id,
+        code:,
+        timestamp: date_service.charges_from_datetime..timestamp
+      )
+      latest_inserts = scope
+        .group(:transaction_id, :timestamp)
+        .order(timestamp: :desc, transaction_id: :asc)
+        .limit(EVENTS_PER_BILLABLE_METRIC)
+        .select(:transaction_id, :timestamp, "max(ingested_at)")
+
+      scope
+        .where("(transaction_id, timestamp, ingested_at) IN (#{latest_inserts.to_sql})")
+        .order(timestamp: :desc, transaction_id: :asc)
         .to_a
-        .uniq(&:transaction_id)
-        .first(EVENTS_PER_BILLABLE_METRIC)
+        .uniq { [it.transaction_id, it.timestamp] }
         .map { Events::CommonFactory.new_instance(source: it) }
     end
 

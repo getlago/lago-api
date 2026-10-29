@@ -123,6 +123,54 @@ RSpec.describe RecurringAggregationSnapshots::ComparePayInAdvanceService do
       it "replays it once" do
         expect(result.compared_events_count).to eq(1)
       end
+
+      context "with other properties" do
+        before do
+          create(
+            :clickhouse_events_raw,
+            raw_event.attributes.symbolize_keys.merge(ingested_at: Time.zone.parse("2022-05-14"), properties: {value: "6"})
+          )
+        end
+
+        it "replays the latest insert" do
+          expect(result.rows.sole.full_scan).to have_attributes(pay_in_advance_aggregation: 6)
+        end
+      end
+    end
+
+    context "when the latest event was inserted more times than the sample" do
+      let(:older_raw_event) do
+        create(
+          :clickhouse_events_raw,
+          organization:,
+          subscription:,
+          billable_metric:,
+          timestamp: Time.zone.parse("2022-05-11"),
+          ingested_at: Time.zone.parse("2022-05-11"),
+          properties: {value: "2"}
+        )
+      end
+
+      before do
+        older_raw_event
+        (described_class::EVENTS_PER_BILLABLE_METRIC * 3).times do |index|
+          create(:clickhouse_events_raw, raw_event.attributes.symbolize_keys.merge(ingested_at: raw_event.ingested_at + (index + 1).minutes))
+        end
+      end
+
+      it "still replays the older events" do
+        expect(result.rows.map(&:event_transaction_id)).to eq([raw_event.transaction_id, older_raw_event.transaction_id])
+      end
+    end
+
+    context "when a transaction id is sent again with another timestamp" do
+      before do
+        create(:clickhouse_events_raw, raw_event.attributes.symbolize_keys.merge(timestamp: Time.zone.parse("2022-05-11")))
+      end
+
+      it "replays both events" do
+        expect(result.rows.map(&:event_timestamp)).to eq([Time.zone.parse("2022-05-12"), Time.zone.parse("2022-05-11")])
+      end
     end
   end
 
