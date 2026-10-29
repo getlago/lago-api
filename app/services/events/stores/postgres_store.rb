@@ -545,7 +545,7 @@ module Events
             scope.where("events.properties @> ?", {grouped_by.to_s => grouped_by_value.to_s}.to_json)
           else
             scope.where(
-              sanitize_sql_for_conditions(["COALESCE(events.properties->>?, '') = ''", grouped_by])
+              sanitize_sql_for_conditions(["TRIM(COALESCE(events.properties->>?, '')) = ''", grouped_by])
             )
           end
         end
@@ -574,9 +574,10 @@ module Events
         grouped_by.map { sanitized_group_name(it) }
       end
 
-      # A missing and a blank value are one group, as on ClickHouse where a missing key reads as ''
+      # A missing, blank or whitespace-only value is one group, as the single group filter reads them
       def sanitized_group_name(property)
-        "NULLIF(#{sanitized_property_name(property)}, '')"
+        name = sanitized_property_name(property)
+        "CASE WHEN TRIM(#{name}) = '' THEN NULL ELSE #{name} END"
       end
 
       delegate :connection, to: :Event
