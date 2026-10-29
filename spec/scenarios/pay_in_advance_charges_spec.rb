@@ -1084,6 +1084,100 @@ describe "Pay in advance charges Scenarios", transaction: false do
     end
   end
 
+  describe "with recurring sum_agg / graduated" do
+    let(:organization) { create(:organization, webhook_url: nil, feature_flags:) }
+    let(:feature_flags) { [] }
+    let(:customer) { create(:customer, organization:, timezone: "UTC") }
+    let(:plan) { create(:plan, organization:, amount_cents: 0, interval: "monthly") }
+    let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:, field_name: "amount") }
+    let(:subscription) { customer.subscriptions.sole }
+    let(:charge) do
+      create(:graduated_charge, :pay_in_advance, invoiceable: true, plan:, billable_metric:,
+        properties: {
+          graduated_ranges: [
+            {from_value: 0, to_value: 22, per_unit_amount: "1", flat_amount: "0"},
+            {from_value: 23, to_value: nil, per_unit_amount: "0.5", flat_amount: "0"}
+          ]
+        })
+    end
+
+    let(:billed) do
+      {
+        march_invoice: {amount_cents: 1300, units: 13, events_count: 2},
+        late_event_fee: {amount_cents: 700, units: 7, events_count: 1},
+        # 20 units before the event, 2 units at $1 up to 22 then 3 units at $0.5
+        april_event_fee: {amount_cents: 350, units: 5, events_count: 1},
+        current_usage: {amount_cents: 2350, units: 25, events_count: 4},
+        april_invoice: {amount_cents: 2350, units: 25, events_count: 4}
+      }
+    end
+
+    def send_event(amount, timestamp: Time.current)
+      create_event({
+        code: billable_metric.code,
+        external_subscription_id: subscription.external_id,
+        timestamp: timestamp.to_i,
+        properties: {amount:}
+      })
+      Fee.where(subscription:, charge:).order(:created_at).last
+    end
+
+    def billed_values(fee)
+      {amount_cents: fee.amount_cents, units: fee.units, events_count: fee.events_count}
+    end
+
+    def period_invoice_values
+      perform_billing
+      billed_values(subscription.invoices.order(:created_at).last.fees.charge.find_by!(charge:))
+    end
+
+    def bill_recurring_sum
+      travel_to(Time.utc(2026, 3, 1)) do
+        create_subscription({external_customer_id: customer.external_id, external_id: customer.external_id, plan_code: plan.code})
+        charge
+      end
+      travel_to(Time.utc(2026, 3, 5)) { send_event(10) }
+      travel_to(Time.utc(2026, 3, 10)) { send_event(3) }
+
+      march_invoice = travel_to(Time.utc(2026, 4, 1, 1)) { period_invoice_values }
+      # Dated in March, ingested after the March invoice
+      late_event_fee = travel_to(Time.utc(2026, 4, 2)) { send_event(7, timestamp: Time.utc(2026, 3, 20)) }
+      april_event_fee = travel_to(Time.utc(2026, 4, 3)) { send_event(5) }
+      usage = travel_to(Time.utc(2026, 4, 10)) { fetch_current_usage(customer:) }[:customer_usage][:charges_usage].sole
+
+      {
+        march_invoice:,
+        late_event_fee: billed_values(late_event_fee),
+        april_event_fee: billed_values(april_event_fee),
+        current_usage: {amount_cents: usage[:amount_cents], units: BigDecimal(usage[:units]), events_count: usage[:events_count]},
+        april_invoice: travel_to(Time.utc(2026, 5, 1, 1)) { period_invoice_values }
+      }
+    end
+
+    it "bills from the full history" do
+      expect(bill_recurring_sum).to eq(billed)
+      expect(RecurringAggregationSnapshot.where(subscription:)).to be_empty
+    end
+
+    context "with snapshots" do
+      let(:feature_flags) { %w[recurring_aggregation_snapshots persisted_recurring_values] }
+      let(:read_periods) { [] }
+
+      before do
+        allow(RecurringAggregationSnapshots::FetchService).to receive(:call!).and_wrap_original do |method, **args|
+          method.call(**args).tap { read_periods << it.period&.to_datetime }
+        end
+      end
+
+      it "bills what the full history bills, starting from the snapshot of the previous period" do
+        expect(bill_recurring_sum).to eq(billed)
+        expect(read_periods.compact.uniq).to eq([Time.utc(2026, 3, 31).end_of_day.floor(6)])
+        expect(RecurringAggregationSnapshot.where(subscription:).order(:to_datetime).pluck(:units, :events_count))
+          .to eq([[13, 2], [25, 4]])
+      end
+    end
+  end
+
   # TODO: Add free_units calculation fix
   describe "with sum_agg / percentage" do
     let(:aggregation_type) { "sum_agg" }

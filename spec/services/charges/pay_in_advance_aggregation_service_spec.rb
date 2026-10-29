@@ -129,6 +129,19 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
           filters: anything
         )
       end
+
+      context "with a recurring sum metric" do
+        let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+
+        before { organization.enable_feature_flag!(:persisted_recurring_values) }
+
+        it "reads no snapshot, as snapshots are keyed on a subscription" do
+          agg_service.call
+
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
+            .with(hash_including(initial_value: nil, initial_period: nil))
+        end
+      end
     end
 
     describe "when count aggregation" do
@@ -517,9 +530,9 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
           timestamp:, created_at:, properties: {value:, region:})
       end
 
-      def create_snapshot(units:, grouped_by: {})
-        create(:recurring_aggregation_snapshot, organization:, subscription:, charge:, grouped_by:, units:, events_count: 1,
-          to_datetime: period_start - 1.second, watermark: snapshot_watermark)
+      def create_snapshot(units:, grouped_by: {}, charge_filter: nil)
+        create(:recurring_aggregation_snapshot, organization:, subscription:, charge:, charge_filter:, grouped_by:, units:,
+          events_count: 1, to_datetime: period_start - 1.second, watermark: snapshot_watermark)
       end
 
       before do
@@ -528,6 +541,12 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
         create_event(timestamp: subscription.started_at + 1.day, value: 10)
         # Dated in the snapshot period, ingested after its watermark
         create_event(timestamp: subscription.started_at + 2.days, value: 7, created_at: snapshot_watermark + 1.minute)
+      end
+
+      context "without a snapshot" do
+        it "reads the full history" do
+          expect(agg_service.call.aggregation).to eq(10 + 7 + 5)
+        end
       end
 
       context "with a snapshot" do
@@ -583,6 +602,39 @@ RSpec.describe Charges::PayInAdvanceAggregationService do
 
           it "starts from the snapshot of the missing value, as the stores group them together" do
             expect(agg_service.call.aggregation).to eq(40 + 5)
+          end
+        end
+      end
+
+      context "with charge filters" do
+        let(:edited_at) { snapshot_watermark - 1.day }
+        let(:billable_metric_filter) do
+          create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us], updated_at: edited_at)
+        end
+        let(:eu_filter) { create(:charge_filter, charge:, created_at: edited_at, updated_at: edited_at) }
+        let(:charge_filter) { eu_filter }
+
+        before do
+          create(:charge_filter_value, charge_filter: eu_filter, billable_metric_filter:, values: ["eu"],
+            created_at: edited_at, updated_at: edited_at)
+          create_snapshot(units: 100, charge_filter: eu_filter)
+          create_snapshot(units: 30)
+        end
+
+        it "starts from the snapshot of the event filter" do
+          expect(agg_service.call.aggregation).to eq(100 + 7 + 5)
+        end
+
+        context "when the event matches no filter" do
+          let(:charge_filter) { ChargeFilter.new(charge:) }
+          let(:event) { create_event(timestamp: period_start + 2.days, value: 5, region: "us") }
+
+          before do
+            create_event(timestamp: subscription.started_at + 2.days, value: 2, region: "us", created_at: snapshot_watermark + 1.minute)
+          end
+
+          it "starts from the snapshot of the default bucket" do
+            expect(agg_service.call.aggregation).to eq(30 + 2 + 5)
           end
         end
       end
