@@ -29,6 +29,34 @@ RSpec.describe Invoices::DeleteService do
       expect(Utils::ActivityLog).to have_produced("invoice.deleted").after_commit.with(invoice)
     end
 
+    context "when the draft has a non-zero total and the customer has an active wallet" do
+      let(:invoice) { create(:invoice, :draft, organization:, customer:, total_amount_cents: 850_00) }
+
+      before { create(:wallet, organization:, customer:) }
+
+      it "flags the customer wallets for refresh" do
+        result = delete_service.call
+
+        expect(result).to be_success
+        expect(invoice.reload).to be_deleted
+        expect(customer.reload.awaiting_wallet_refresh).to be(true)
+      end
+    end
+
+    context "when the draft has a zero total and the customer has an active wallet" do
+      let(:invoice) { create(:invoice, :draft, organization:, customer:, total_amount_cents: 0) }
+
+      before { create(:wallet, organization:, customer:) }
+
+      it "does not flag the customer wallets for refresh" do
+        result = delete_service.call
+
+        expect(result).to be_success
+        expect(invoice.reload).to be_deleted
+        expect(customer.reload.awaiting_wallet_refresh).to be(false)
+      end
+    end
+
     context "when invoice is nil" do
       let(:invoice) { nil }
 
@@ -42,7 +70,9 @@ RSpec.describe Invoices::DeleteService do
     end
 
     context "when invoice is not a draft" do
-      let(:invoice) { create(:invoice, status: :finalized, organization:, customer:) }
+      let(:invoice) { create(:invoice, status: :finalized, organization:, customer:, total_amount_cents: 850_00) }
+
+      before { create(:wallet, organization:, customer:) }
 
       it "returns a not allowed failure and does not delete the invoice" do
         result = delete_service.call
@@ -51,6 +81,7 @@ RSpec.describe Invoices::DeleteService do
         expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
         expect(result.error.code).to eq("not_deletable")
         expect(invoice.reload).to be_finalized
+        expect(customer.reload.awaiting_wallet_refresh).to be(false)
       end
 
       it "does not enqueue a webhook" do
@@ -59,7 +90,12 @@ RSpec.describe Invoices::DeleteService do
     end
 
     context "when the invoice has been synced externally" do
-      before { create(:integration_resource, syncable: invoice) }
+      let(:invoice) { create(:invoice, :draft, organization:, customer:, total_amount_cents: 850_00) }
+
+      before do
+        create(:wallet, organization:, customer:)
+        create(:integration_resource, syncable: invoice)
+      end
 
       it "returns a not allowed failure and does not delete the invoice" do
         result = delete_service.call
@@ -68,6 +104,7 @@ RSpec.describe Invoices::DeleteService do
         expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
         expect(result.error.code).to eq("invoice_synced_to_external_system")
         expect(invoice.reload).to be_draft
+        expect(customer.reload.awaiting_wallet_refresh).to be(false)
       end
     end
 
@@ -86,9 +123,13 @@ RSpec.describe Invoices::DeleteService do
     end
 
     context "when the draft invoice has a credit note that cannot be deleted" do
+      let(:invoice) { create(:invoice, :draft, organization:, customer:, total_amount_cents: 850_00) }
       let(:credit_note) { create(:credit_note, status: :finalized, invoice:, customer:) }
 
-      before { credit_note }
+      before do
+        create(:wallet, organization:, customer:)
+        credit_note
+      end
 
       it "returns a failure and does not delete the invoice or the credit note" do
         result = delete_service.call
@@ -98,6 +139,7 @@ RSpec.describe Invoices::DeleteService do
         expect(result.error.code).to eq("credit_note_not_deletable")
         expect(invoice.reload).to be_draft
         expect(credit_note.reload).to be_finalized
+        expect(customer.reload.awaiting_wallet_refresh).to be(false)
       end
 
       it "does not enqueue a webhook" do
