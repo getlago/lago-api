@@ -30,6 +30,7 @@ Rails.application.routes.draw do
     # falls through to v1.
     namespace :v2 do
       resources :billing_entities, param: :code, constraints: {code: /[^\/]+/}, only: %i[index show create update]
+      resources :payments, only: %i[index show create]
       get "/organizations", to: "organizations#show"
       put "/organizations", to: "organizations#update"
       resources :customers, param: :external_id, constraints: {external_id: /[^\/]+/}, only: %i[index show create update destroy] do
