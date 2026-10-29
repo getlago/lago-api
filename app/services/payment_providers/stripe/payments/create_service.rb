@@ -50,7 +50,7 @@ module PaymentProviders
         rescue ::Stripe::RateLimitError => e
           # Allow auto-retry with idempotency key
           raise Invoices::Payments::RateLimitError, e
-        rescue ::Stripe::APIConnectionError => e
+        rescue ::Stripe::APIConnectionError, ::Stripe::APIError => e
           # Allow auto-retry with idempotency key
           raise Invoices::Payments::ConnectionError, e
         rescue ::Stripe::StripeError => e

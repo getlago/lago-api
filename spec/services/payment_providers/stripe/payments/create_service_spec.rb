@@ -329,6 +329,23 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
       end
     end
 
+    [::Stripe::APIConnectionError, ::Stripe::APIError].each do |error_class|
+      context "with #{error_class}" do
+        before do
+          allow(Stripe::PaymentIntent).to receive(:create)
+            .and_raise(error_class.new("error"))
+        end
+
+        it "raises a connection error and keeps the payment pending" do
+          expect { create_service.call }.to raise_error(Invoices::Payments::ConnectionError)
+
+          expect(payment.reload.status).to eq("pending")
+          expect(payment.payable_payment_status).to eq("pending")
+          expect(payment.provider_payment_id).to be_nil
+        end
+      end
+    end
+
     context "when invoice has a too small amount" do
       let(:organization) { create(:organization) }
       let(:customer) { create(:customer, organization:) }
