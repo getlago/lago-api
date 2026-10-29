@@ -85,7 +85,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::CreateCustomerAssoci
 
         before do
           allow(Integrations::Hubspot::Invoices::DeployObjectService).to receive(:call)
-          allow(lago_client).to receive(:put_with_response).with(params, headers).and_raise(http_error)
+          allow(lago_client).to receive(:post_with_response).with({action_name:, input: params}, headers).and_raise(http_error)
         end
 
         it "raises RequestLimitError" do
