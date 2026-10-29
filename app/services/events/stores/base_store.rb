@@ -3,8 +3,12 @@
 module Events
   module Stores
     class BaseStore
+      # Unicode White_Space, as Ruby's `blank?`: `[[:space:]]` is ASCII-only in RE2 and locale-dependent in PostgreSQL
+      BLANK_VALUE_CHARS = [*0x09..0x0D, 0x20, 0x85, 0xA0, 0x1680, *0x2000..0x200A, 0x2028, 0x2029, 0x202F, 0x205F, 0x3000]
+        .map { it.chr(Encoding::UTF_8) }.freeze
+
       # Matches the values Ruby's `blank?` reads as missing, so SQL groups them like `build_groups`
-      BLANK_VALUE_PATTERN = "^[[:space:]]*$"
+      BLANK_VALUE_PATTERN = "^(#{BLANK_VALUE_CHARS.join("|")})*$"
 
       AggregationResult = Data.define(
         :value,

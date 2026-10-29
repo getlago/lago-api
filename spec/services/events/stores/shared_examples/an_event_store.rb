@@ -150,7 +150,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
         before do
           create_event(timestamp: subscription_started_at + 6.days, value: 6, properties: {"region" => ""})
-          create_event(timestamp: subscription_started_at + 7.days, value: 7, properties: {"region" => " \t\n"})
+          create_event(timestamp: subscription_started_at + 7.days, value: 7, properties: {"region" => " \t\n\u00A0\u3000"})
           create_event(timestamp: subscription_started_at + 8.days, value: 8, properties: {"region" => " eu "})
         end
 
@@ -365,7 +365,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           context "with blank and whitespace-only values" do
             before do
               create_event(timestamp: subscription_started_at + 6.days, value: 6, properties: {"region" => ""})
-              create_event(timestamp: subscription_started_at + 7.days, value: 7, properties: {"region" => " \t"})
+              create_event(timestamp: subscription_started_at + 7.days, value: 7, properties: {"region" => " \t\u00A0\u3000"})
             end
 
             it "counts them with the missing values, as the grouped reads do" do
@@ -3226,7 +3226,7 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       event_store.numeric_property = numeric_property
 
       create_event(timestamp: subscription_started_at + 6.days, value: 7, properties: {"region" => ""})
-      create_event(timestamp: subscription_started_at + 7.days, value: 5, properties: {"region" => " \t"})
+      create_event(timestamp: subscription_started_at + 7.days, value: 5, properties: {"region" => " \t\u00A0\u3000"})
       create_event(timestamp: subscription_started_at + 8.days, value: 4, properties: {"region" => " eu "})
     end
 
