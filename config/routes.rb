@@ -66,6 +66,9 @@ Rails.application.routes.draw do
       delete "/contracts/:external_id", to: "contracts#terminate", constraints: {external_id: /[^\/]+/}
       resources :invoices, only: %i[index show] do
         post :void, on: :member
+        post :download_pdf, on: :member
+        post :resend_email, on: :member
+        post :retry_taxes, on: :member
       end
       resources :fees, only: %i[index show update destroy]
       # The v2 log endpoints have their own route here and a matching v1 route

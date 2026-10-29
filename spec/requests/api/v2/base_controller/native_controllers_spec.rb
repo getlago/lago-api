@@ -12,8 +12,7 @@ RSpec.describe "API v2 native controllers" do # rubocop:disable RSpec/DescribeCl
     .transform_values { |defaults| defaults.map { it[:action] }.uniq }
   native_controllers = native_actions.keys
 
-  # Invoices void renders a v1 invoice. Any other action of the same controller needs the macro.
-  hand_rendered_actions = {Api::V2::InvoicesController => %w[void]}
+  hand_rendered_actions = {}
 
   let(:base_callbacks) { before_callbacks(Api::V2::BaseController) }
 
