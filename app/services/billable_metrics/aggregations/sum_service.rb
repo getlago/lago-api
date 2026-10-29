@@ -102,7 +102,7 @@ module BillableMetrics
         end
       end
 
-      # The stores return one row per blank value ("" and " "), which all read as the null group
+      # A blank value the stores still group apart, such as a Unicode space, reads as the null group
       def merge_groups(results)
         results.group_by(&:groups).map do |_groups, group_results|
           group_results.reduce do |sum, row|

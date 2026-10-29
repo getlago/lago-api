@@ -3,6 +3,9 @@
 module Events
   module Stores
     class BaseStore
+      # Matches the values Ruby's `blank?` reads as missing, so SQL groups them like `build_groups`
+      BLANK_VALUE_PATTERN = "^[[:space:]]*$"
+
       AggregationResult = Data.define(
         :value,
         :events_count
