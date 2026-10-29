@@ -46,7 +46,11 @@ module RecurringAggregationSnapshots
           .limit(1)
           .select(:to_datetime)
 
-        charge_snapshots.where(to_datetime: latest_to_datetime).group_by(&:charge_filter_id)
+        # Listing the buckets lets the period index serve to_datetime too
+        charge_snapshots
+          .where(charge_filter_id: [nil, *charge.filters.ids])
+          .of_period(latest_to_datetime)
+          .group_by(&:charge_filter_id)
       end
     end
 

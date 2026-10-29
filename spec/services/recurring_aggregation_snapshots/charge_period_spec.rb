@@ -52,7 +52,7 @@ RSpec.describe RecurringAggregationSnapshots::ChargePeriod do
         [us_filter, nil].each { charge_period.period(charge_filter: it) }
       end
 
-      expect(first_bucket_queries).to eq(4)
+      expect(first_bucket_queries).to eq(5)
       expect(other_buckets_queries).to eq(0)
     end
 
