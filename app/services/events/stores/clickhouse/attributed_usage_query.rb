@@ -10,7 +10,8 @@ module Events
       # pricing it, and the rank picks the unit amount. The rows are then grouped by the attribution
       # value only, into a fixed set of cells (units, amount, events) per charge, so the number of
       # filters never adds groups. A split charge gets one cell per filter it lists, plus the default
-      # one. The filters it does not list still count in the amount of their row.
+      # one. The filters it does not list still count in the amount of their row, and in its
+      # split_units, the units of the whole split charge.
       #
       # Ranking and level totals are window functions over every group, computed before paging. The
       # unattributed usage (empty value) is ranked in its own partition, and the query returns it
@@ -73,8 +74,8 @@ module Events
           <<~SQL.squish
             SELECT
               node, rank, in_page, groups_count,
-              amount, events, #{cell_names.join(", ")},
-              total_amount, total_events, #{cell_names.map { "total_#{it}" }.join(", ")}
+              #{value_names.join(", ")},
+              #{value_names.map { "total_#{it}" }.join(", ")}
             FROM (
               SELECT *, #{page_condition_sql} AS in_page
               FROM (
@@ -88,6 +89,7 @@ module Events
                     node,
                     #{cells_sql.join(", ")},
                     #{amount_sql} AS amount,
+                    #{split_units_sql}
                     count() AS events
                   FROM (
                     SELECT #{event_columns_sql.join(", ")}
@@ -199,7 +201,21 @@ module Events
         end
 
         def level_windows_sql
-          %w[amount events].concat(cell_names).map { |name| "sum(#{name}) OVER level AS total_#{name}" }.join(", ")
+          value_names.map { |name| "sum(#{name}) OVER level AS total_#{name}" }.join(", ")
+        end
+
+        def value_names
+          @value_names ||= ["amount", "events", *("split_units" if split_column), *cell_names]
+        end
+
+        def split_column
+          @split_column ||= charge_columns.find(&:split_filter_ids)
+        end
+
+        def split_units_sql
+          return "" unless split_column
+
+          "sumIf(#{units_sql(split_column)}, #{code_condition(split_column)}) AS split_units,"
         end
 
         def groups_count_sql

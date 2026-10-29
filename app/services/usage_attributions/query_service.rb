@@ -7,8 +7,8 @@ module UsageAttributions
       :currency, :limit, :offset, :split_filters_count
     ]
 
-    Row = Data.define(:value, :rank, :amount_cents, :events_count, :cells)
-    Aggregate = Data.define(:amount_cents, :events_count, :cells)
+    Row = Data.define(:value, :rank, :amount_cents, :events_count, :split_charge_units, :cells)
+    Aggregate = Data.define(:amount_cents, :events_count, :split_charge_units, :cells)
     Cell = Data.define(:charge, :charge_filter, :units, :amount_cents, :events_count)
 
     DEFAULT_LIMIT = 50
@@ -327,6 +327,7 @@ module UsageAttributions
         rank: row["rank"].to_i,
         amount_cents: (values["amount"] if amount_basis?),
         events_count: values["events"].to_i,
+        split_charge_units: (values["split_units"] if split_charge),
         cells: build_cells(values)
       )
     end
@@ -335,6 +336,7 @@ module UsageAttributions
       Aggregate.new(
         amount_cents: (values["amount"] if amount_basis?),
         events_count: values["events"].to_i,
+        split_charge_units: (values["split_units"] if split_charge),
         cells: build_cells(values)
       )
     end
@@ -386,7 +388,7 @@ module UsageAttributions
     end
 
     def column_names
-      @column_names ||= %w[amount events] + Array(@cells).each_index.flat_map do |index|
+      @column_names ||= ["amount", "events", *("split_units" if split_charge)] + Array(@cells).each_index.flat_map do |index|
         ["units_#{index}", "amount_#{index}", "events_#{index}"]
       end
     end

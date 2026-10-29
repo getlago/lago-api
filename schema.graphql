@@ -1194,6 +1194,11 @@ type AttributedUsageAggregate {
   Null with the units basis
   """
   preciseAmountCents: Float
+
+  """
+  Units of the split charge over all its filters. Null without a split charge
+  """
+  splitChargeUnits: Float
 }
 
 enum AttributedUsageBasisEnum {
@@ -1246,6 +1251,11 @@ type AttributedUsageRow {
   Position of the value in the whole level
   """
   rank: Int!
+
+  """
+  Units of the split charge over all its filters. Null without a split charge
+  """
+  splitChargeUnits: Float
   value: String!
 }
 
