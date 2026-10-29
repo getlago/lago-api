@@ -552,4 +552,158 @@ RSpec.describe Api::V2::InvoicesController, v2_timestamps: false do
       end
     end
   end
+
+  describe "POST /api/v2/invoices/:id/retry_payment" do
+    subject { post_with_token(organization, "/api/v2/invoices/#{invoice_id}/retry_payment", params) }
+
+    let(:invoice_id) { contract_invoice.id }
+    let(:params) { {payment_method: {payment_method_type: "manual"}} }
+    let(:retry_result) { Invoices::Payments::RetryService::Result.new }
+
+    before { allow(Invoices::Payments::RetryService).to receive(:call).and_return(retry_result) }
+
+    include_examples "requires API permission", "invoice", "write"
+
+    it "retries the payment with the given payment method" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to be_empty
+      expect(Invoices::Payments::RetryService).to have_received(:call)
+        .with(invoice: contract_invoice, payment_method_params: {payment_method_type: "manual"}, validate_payment_method: true)
+    end
+
+    context "when the payment method is invalid" do
+      let(:retry_result) do
+        Invoices::Payments::RetryService::Result.new.validation_failure!(errors: {payment_method: ["invalid_payment_method"]})
+      end
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details]).to eq(payment_method: ["invalid_payment_method"])
+      end
+    end
+
+    context "when the payment cannot be retried" do
+      let(:retry_result) { Invoices::Payments::RetryService::Result.new.not_allowed_failure!(code: "invalid_status") }
+
+      it "returns a method not allowed error" do
+        subject
+
+        expect(response).to have_http_status(:method_not_allowed)
+        expect(json[:code]).to eq("invalid_status")
+      end
+    end
+
+    context "when the invoice is a legacy one" do
+      let(:invoice_id) { legacy_invoice.id }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_not_found_error("invoice")
+        expect(Invoices::Payments::RetryService).not_to have_received(:call)
+      end
+    end
+  end
+
+  describe "PUT /api/v2/invoices/:id/finalize" do
+    subject { put_with_token(organization, "/api/v2/invoices/#{invoice_id}/finalize") }
+
+    let(:invoice) { create(:invoice, organization:, customer:, invoice_type: :contract, status:) }
+    let(:invoice_id) { invoice.id }
+    let(:status) { :draft }
+    let(:finalize_result) { Invoices::RefreshDraftAndFinalizeService::Result.new.tap { it.invoice = invoice } }
+
+    before { allow(Invoices::RefreshDraftAndFinalizeService).to receive(:call).and_return(finalize_result) }
+
+    include_examples "requires API permission", "invoice", "write"
+
+    it "finalizes the draft and returns it" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:invoice]).to include(lago_id: invoice.id, invoice_type: "contract")
+      expect(json[:invoice]).not_to have_key(:fees)
+      expect(Invoices::RefreshDraftAndFinalizeService).to have_received(:call).with(invoice:)
+    end
+
+    context "when the invoice cannot be finalized" do
+      let(:finalize_result) { Invoices::RefreshDraftAndFinalizeService::Result.new.forbidden_failure!(code: "cannot_finalize_with_pending_taxes") }
+
+      it "returns a forbidden error" do
+        subject
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:code]).to eq("cannot_finalize_with_pending_taxes")
+      end
+    end
+
+    context "when the invoice is not a draft" do
+      let(:status) { :finalized }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_not_found_error("invoice")
+        expect(Invoices::RefreshDraftAndFinalizeService).not_to have_received(:call)
+      end
+    end
+
+    context "when the invoice is a legacy one" do
+      let(:invoice_id) { create(:invoice, :draft, organization:, customer:).id }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_not_found_error("invoice")
+        expect(Invoices::RefreshDraftAndFinalizeService).not_to have_received(:call)
+      end
+    end
+  end
+
+  describe "PUT /api/v2/invoices/:id/refresh" do
+    subject { put_with_token(organization, "/api/v2/invoices/#{invoice_id}/refresh") }
+
+    let(:invoice) { create(:invoice, :draft, organization:, customer:, invoice_type: :contract) }
+    let(:invoice_id) { invoice.id }
+    let(:refresh_result) { Invoices::RefreshDraftService::Result.new.tap { it.invoice = invoice } }
+
+    before { allow(Invoices::RefreshDraftService).to receive(:call).and_return(refresh_result) }
+
+    include_examples "requires API permission", "invoice", "write"
+
+    it "refreshes the draft and returns it" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:invoice]).to include(lago_id: invoice.id, invoice_type: "contract", status: "draft")
+      expect(json[:invoice]).not_to have_key(:fees)
+      expect(Invoices::RefreshDraftService).to have_received(:call).with(invoice:)
+    end
+
+    context "when the invoice cannot be refreshed" do
+      let(:refresh_result) { Invoices::RefreshDraftService::Result.new.forbidden_failure! }
+
+      it "returns a forbidden error" do
+        subject
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:code]).to eq("feature_unavailable")
+      end
+    end
+
+    context "when the invoice is a legacy one" do
+      let(:invoice_id) { legacy_invoice.id }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to be_not_found_error("invoice")
+        expect(Invoices::RefreshDraftService).not_to have_received(:call)
+      end
+    end
+  end
 end
