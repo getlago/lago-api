@@ -15,10 +15,10 @@ module Types
         null: false,
         description: "Writes the AI agent asked for that wait for the member's confirmation"
 
-      field :resuming,
+      field :busy,
         Boolean,
         null: false,
-        description: "Whether the agent is carrying on after the member answered its writes"
+        description: "Whether the agent is still answering, so the conversation takes no new message yet"
     end
   end
 end

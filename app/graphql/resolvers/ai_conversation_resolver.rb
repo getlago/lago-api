@@ -23,7 +23,7 @@ module Resolvers
       ai_conversation.attributes.symbolize_keys.merge(
         messages: result.messages,
         pending_tool_calls: ai_conversation.tool_calls.unsubmitted.pending.order(:position),
-        resuming: ai_conversation.resuming?
+        busy: ai_conversation.busy?
       )
     rescue ActiveRecord::RecordNotFound
       not_found_error(resource: "ai_conversation")

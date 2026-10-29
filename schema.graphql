@@ -920,6 +920,10 @@ enum AiConversationToolCallStatusEnum {
 }
 
 type AiConversationWithMessages {
+  """
+  Whether the agent is still answering, so the conversation takes no new message yet
+  """
+  busy: Boolean!
   createdAt: ISO8601DateTime!
   id: ID!
 
@@ -935,11 +939,6 @@ type AiConversationWithMessages {
   Writes the AI agent asked for that wait for the member's confirmation
   """
   pendingToolCalls: [AiConversationToolCall!]!
-
-  """
-  Whether the agent is carrying on after the member answered its writes
-  """
-  resuming: Boolean!
   updatedAt: ISO8601DateTime!
 }
 

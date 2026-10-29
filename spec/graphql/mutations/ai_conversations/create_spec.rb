@@ -54,9 +54,10 @@ RSpec.describe Mutations::AiConversations::Create do
       ENV["MISTRAL_AGENT_ID"] = "test_agent_id"
     end
 
-    it "creates a new AI conversation" do
+    it "creates a new AI conversation, busy until the agent answers" do
       expect { result }.to change(AiConversation, :count).by(1)
       expect(result["data"]["createAiConversation"]["name"]).to eq(message)
+      expect(AiConversation.last).to be_busy
     end
 
     it "triggers streaming" do
@@ -134,13 +135,15 @@ RSpec.describe Mutations::AiConversations::Create do
 
       before { create(:ai_conversation_tool_call, ai_conversation:, status: "confirmed") }
 
-      it "refuses the message" do
+      it "starts the resume again and refuses the message" do
         expect { result }.not_to have_enqueued_job(AiConversations::StreamJob)
-        expect(result["errors"].first["extensions"]["code"]).to eq("ai_conversation_tool_calls_pending")
+        expect(result["errors"].first["extensions"]["code"]).to eq("ai_conversation_busy")
+        expect(AiConversations::ResumeJob).to have_been_enqueued.with(ai_conversation)
+        expect(ai_conversation.reload).to be_busy
       end
     end
 
-    context "when the conversation is resuming" do
+    context "when the agent is still answering" do
       subject(:result) do
         execute_graphql(
           current_user: membership.user,
@@ -151,19 +154,20 @@ RSpec.describe Mutations::AiConversations::Create do
         )
       end
 
-      let(:ai_conversation) { create(:ai_conversation, organization: membership.organization, membership:, resuming_at:) }
-      let(:resuming_at) { 1.minute.ago }
+      let(:ai_conversation) { create(:ai_conversation, organization: membership.organization, membership:, busy_at:) }
+      let(:busy_at) { 1.minute.ago }
 
       it "refuses the message" do
         expect { result }.not_to have_enqueued_job(AiConversations::StreamJob)
-        expect(result["errors"].first["extensions"]["code"]).to eq("ai_conversation_tool_calls_pending")
+        expect(result["errors"].first["extensions"]["code"]).to eq("ai_conversation_busy")
       end
 
-      context "when the resume started too long ago" do
-        let(:resuming_at) { (AiConversation::RESUME_TIMEOUT + 1.minute).ago }
+      context "when the answer started too long ago" do
+        let(:busy_at) { (AiConversation::BUSY_TIMEOUT + 1.minute).ago }
 
         it "accepts the message" do
           expect { result }.to have_enqueued_job(AiConversations::StreamJob)
+          expect(ai_conversation.reload).to be_busy
         end
       end
     end

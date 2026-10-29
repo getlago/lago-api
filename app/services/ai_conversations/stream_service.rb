@@ -21,6 +21,7 @@ module AiConversations
       save_conversation_id!
       save_pending_tool_calls!
       notify_completion
+      finish!
       result.ai_conversation = ai_conversation
       result
     rescue => e
@@ -114,7 +115,14 @@ module AiConversations
       Rails.logger.error(error.backtrace.join("\n"))
 
       trigger_subscription(chunk: "Error: #{error.message}", done: true)
+      finish!
       result.service_failure!(code: "stream_service_error", message: error.message)
+    end
+
+    # Only once the writes the agent stopped on are saved: until then a new message could reach
+    # the model while it waits for their results.
+    def finish!
+      ai_conversation.update!(busy_at: nil)
     end
 
     def mcp_server_url

@@ -3547,6 +3547,22 @@
           "description": null,
           "fields": [
             {
+              "name": "busy",
+              "description": "Whether the agent is still answering, so the conversation takes no new message yet",
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "createdAt",
               "description": null,
               "args": [],
@@ -3665,22 +3681,6 @@
                       "ofType": null
                     }
                   }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "resuming",
-              "description": "Whether the agent is carrying on after the member answered its writes",
-              "args": [],
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Boolean",
-                  "ofType": null
                 }
               },
               "isDeprecated": false,

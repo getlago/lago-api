@@ -43,7 +43,7 @@ RSpec.describe Resolvers::AiConversationResolver do
             arguments
             status
           }
-          resuming
+          busy
           createdAt
           updatedAt
         }
@@ -134,7 +134,7 @@ RSpec.describe Resolvers::AiConversationResolver do
     end
 
     it "tells whether the agent is carrying on" do
-      ai_conversation.update!(resuming_at: 1.minute.ago)
+      ai_conversation.update!(busy_at: 1.minute.ago)
 
       result = execute_graphql(
         current_user: membership.user,
@@ -144,7 +144,7 @@ RSpec.describe Resolvers::AiConversationResolver do
         variables: {id: ai_conversation.id}
       )
 
-      expect(result["data"]["aiConversation"]["resuming"]).to be(true)
+      expect(result["data"]["aiConversation"]["busy"]).to be(true)
     end
 
     context "when ai conversation is not found" do

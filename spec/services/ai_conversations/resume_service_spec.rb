@@ -9,7 +9,7 @@ RSpec.describe AiConversations::ResumeService do
   let(:permissions) { %w[ai_conversations:create ai_conversations:view coupons:view coupons:create] }
   let(:role) { create(:role, organization:, permissions:) }
   let(:membership) { create(:membership, organization:, role:) }
-  let(:ai_conversation) { create(:ai_conversation, organization:, membership:, resuming_at: 1.minute.ago) }
+  let(:ai_conversation) { create(:ai_conversation, organization:, membership:, busy_at: 1.minute.ago) }
 
   let(:mcp_client) { instance_double(LagoMcpClient::Client, setup!: nil, list_tools: tools) }
   let(:tools) do
@@ -65,7 +65,7 @@ RSpec.describe AiConversations::ResumeService do
       )
       expect(LagoApiSchema.subscriptions).to have_received(:trigger).with(:ai_conversation_streamed, {id: ai_conversation.id}, {chunk: "Done", done: false})
       expect(LagoApiSchema.subscriptions).to have_received(:trigger).with(:ai_conversation_streamed, {id: ai_conversation.id}, {chunk: nil, done: true})
-      expect(ai_conversation.reload.resuming_at).to be_nil
+      expect(ai_conversation.reload.busy_at).to be_nil
     end
   end
 
@@ -115,21 +115,28 @@ RSpec.describe AiConversations::ResumeService do
     context "when the attempt will be retried" do
       subject(:service) { described_class.new(ai_conversation:, final_attempt: false) }
 
-      it "fails without telling the member" do
+      it "fails without telling the member and keeps the conversation busy" do
         expect(service.call).to be_failure
         expect(LagoApiSchema.subscriptions).not_to have_received(:trigger)
+        expect(ai_conversation.reload).to be_busy
+      end
+
+      it "keeps the batch for the next attempt without running the write again" do
+        expect(service.call).to be_failure
+        expect(write_call.reload).to have_attributes(status: "completed", submitted_at: nil)
+        expect(read_call.reload.submitted_at).to be_nil
+
+        described_class.new(ai_conversation:, final_attempt: false).call
+
+        expect(mcp_client).to have_received(:call_tool).once
       end
     end
 
-    it "keeps the batch for the next attempt without running the write again" do
-      expect(service.call).to be_failure
-      expect(write_call.reload).to have_attributes(status: "completed", submitted_at: nil)
-      expect(read_call.reload.submitted_at).to be_nil
+    it "frees the conversation on the last attempt, leaving the batch for a new message to retry" do
+      service.call
 
-      described_class.new(ai_conversation:).call
-
-      expect(mcp_client).to have_received(:call_tool).once
-      expect(ai_conversation.reload.resuming_at).to be_present
+      expect(ai_conversation.reload).not_to be_busy
+      expect(ai_conversation.tool_calls.unsubmitted.count).to eq(2)
     end
   end
 
@@ -139,7 +146,7 @@ RSpec.describe AiConversations::ResumeService do
     it "only ends the resume" do
       expect(service.call).to be_success
       expect(mistral_client).not_to have_received(:append_to_conversation)
-      expect(ai_conversation.reload.resuming_at).to be_nil
+      expect(ai_conversation.reload.busy_at).to be_nil
     end
   end
 
@@ -196,7 +203,7 @@ RSpec.describe AiConversations::ResumeService do
         conversation_id: ai_conversation.mistral_conversation_id,
         inputs: [{tool_call_id: "call_next", result: wrapped("Coupon SPRING"), type: "function.result", object: "entry"}]
       )
-      expect(ai_conversation.reload.resuming_at).to be_nil
+      expect(ai_conversation.reload.busy_at).to be_nil
     end
 
     context "when running the read fails" do
@@ -216,7 +223,7 @@ RSpec.describe AiConversations::ResumeService do
         expect(mcp_client).to have_received(:call_tool).with("create_coupon", anything).once
         expect(mistral_client).to have_received(:append_to_conversation).twice
         expect(ai_conversation.tool_calls.find_by!(tool_call_id: "call_next")).to have_attributes(status: "completed", result: "Coupon SPRING")
-        expect(ai_conversation.reload.resuming_at).to be_nil
+        expect(ai_conversation.reload.busy_at).to be_nil
       end
     end
 
@@ -235,7 +242,7 @@ RSpec.describe AiConversations::ResumeService do
           {id: ai_conversation.id},
           {chunk: nil, done: true, pending_tool_calls: [{id: next_call.id, name: "create_coupon", arguments: {"code" => "SPRING"}, status: "pending"}]}
         )
-        expect(ai_conversation.reload.resuming_at).to be_nil
+        expect(ai_conversation.reload.busy_at).to be_nil
       end
     end
 
@@ -253,6 +260,31 @@ RSpec.describe AiConversations::ResumeService do
     end
   end
 
+  context "when the model keeps calling tools past the step limit" do
+    before do
+      round = 0
+      allow(mistral_client).to receive(:append_to_conversation) do |**_args, &block|
+        round += 1
+        block&.call("Done")
+        next {"outputs" => [{"content" => "Done"}]} if round > described_class::MAX_ROUNDS
+
+        {"tool_calls" => [{"id" => "call_#{round}", "function" => {"name" => "get_coupon", "arguments" => "{}"}}]}
+      end
+      allow(mcp_client).to receive(:call_tool).with("get_coupon", {})
+        .and_return({"content" => [{"type" => "text", "text" => "Coupon SPRING"}]})
+    end
+
+    it "answers the calls past the limit without running or dropping them" do
+      expect(service.call).to be_success
+
+      over_limit = ai_conversation.tool_calls.find_by!(tool_call_id: "call_#{described_class::MAX_ROUNDS}")
+      expect(over_limit).to have_attributes(status: "completed", result: described_class::STEP_LIMIT_RESULT, submitted_at: be_present)
+      expect(mcp_client).to have_received(:call_tool).with("get_coupon", {}).exactly(described_class::MAX_ROUNDS - 1).times
+      expect(ai_conversation.tool_calls.unsubmitted).to be_empty
+      expect(ai_conversation.reload).not_to be_busy
+    end
+  end
+
   context "when an earlier attempt stopped on new writes after keeping them" do
     let(:write_status) { "pending" }
 
@@ -266,7 +298,7 @@ RSpec.describe AiConversations::ResumeService do
         {id: ai_conversation.id},
         {chunk: nil, done: true, pending_tool_calls: [{id: write_call.id, name: "create_coupon", arguments: {"coupon" => {"code" => "SPRING"}}, status: "pending"}]}
       )
-      expect(ai_conversation.reload.resuming_at).to be_nil
+      expect(ai_conversation.reload.busy_at).to be_nil
     end
   end
 end

@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe AiConversations::StreamService do
   subject(:service) { described_class.new(ai_conversation:, message:) }
 
-  let(:ai_conversation) { create(:ai_conversation) }
+  let(:ai_conversation) { create(:ai_conversation, busy_at: Time.current) }
   let(:message) { "Hello, how are you?" }
 
   let(:mcp_client_mock) { instance_double(LagoMcpClient::Client) }
@@ -30,6 +30,12 @@ RSpec.describe AiConversations::StreamService do
     context "when streaming succeeds" do
       before do
         allow(mistral_agent_mock).to receive(:chat)
+      end
+
+      it "takes the next message once the agent is done" do
+        service.call
+
+        expect(ai_conversation.reload).not_to be_busy
       end
 
       it "returns the ai_conversation" do
@@ -131,7 +137,7 @@ RSpec.describe AiConversations::StreamService do
           allow(ai_conversation).to receive(:update!)
           service.call
 
-          expect(ai_conversation).not_to have_received(:update!)
+          expect(ai_conversation).not_to have_received(:update!).with(hash_including(:mistral_conversation_id))
         end
       end
     end
@@ -168,6 +174,17 @@ RSpec.describe AiConversations::StreamService do
           membership_id: ai_conversation.membership_id,
           position: 1
         )
+      end
+
+      it "takes the next message only once the pending calls are kept" do
+        allow(ai_conversation).to receive(:update!).and_wrap_original do |original, **attributes|
+          expect(ai_conversation.tool_calls.pending.count).to eq(1) if attributes.key?(:busy_at)
+          original.call(**attributes)
+        end
+
+        service.call
+
+        expect(ai_conversation.reload).not_to be_busy
       end
 
       it "sends the pending calls with the completion" do
@@ -217,6 +234,14 @@ RSpec.describe AiConversations::StreamService do
           {id: ai_conversation.id},
           {chunk: "Error: Connection timeout", done: true}
         )
+      end
+
+      it "takes the next message" do
+        allow(mistral_agent_mock).to receive(:chat).and_raise(StandardError.new("Connection timeout"))
+
+        service.call
+
+        expect(ai_conversation.reload).not_to be_busy
       end
 
       it "returns service_failure result" do
