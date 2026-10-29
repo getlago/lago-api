@@ -759,7 +759,7 @@ RSpec.describe Api::V2::ContractsController do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json).to eq(code: "concurrency_conflict", details: [])
+        expect(json).to eq(code: "validation_errors", details: [{code: "concurrency_conflict", field: "base", meta: {}}])
         expect(contract.reload.status).to eq("active")
       end
     end

@@ -71,8 +71,10 @@ module Api
       # throttle! names the provider with a Symbol.
       when BaseService::TooManyProviderRequestsFailure
         render_provider_error(429, code: "too_many_provider_requests", provider_name: error.provider_name&.to_s)
-      # The same request can succeed once the lock is free. v1 and GraphQL keep lock_acquisition_failed.
-      when BaseService::LockAcquisitionFailure then render_v2_error(422, code: "concurrency_conflict")
+      # The shape of the services that already refuse with concurrency_conflict, so that a client
+      # handles one. The same request can succeed once the lock is free. v1 and GraphQL keep
+      # lock_acquisition_failed.
+      when BaseService::LockAcquisitionFailure then validation_errors(errors: {base: ["concurrency_conflict"]})
       else raise(error)
       end
     end
