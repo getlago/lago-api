@@ -168,11 +168,20 @@ RSpec.describe Events::Stores::Clickhouse::AttributedUsageQuery, clickhouse: {cl
       expect(row("eng").keys.grep(/running/)).to eq([])
     end
 
+    it "returns no split units without a split charge" do
+      expect(row("eng").keys.grep(/split_units/)).to eq([])
+    end
+
     context "when the charge is split" do
       let(:split_filter_ids) { [opus_eu_filter_id, opus_filter_id] }
 
       it "sums each filter in its own cell" do
         expect(cells(row("eng"))).to eq([[10, 200, 1], [100, 1_000, 1], [5, 5, 1], [1, 0, 1]])
+      end
+
+      it "returns the units of the whole split charge" do
+        expect(row("eng")["split_units"].to_d).to eq(100 + 10 + 5) # opus + opus eu + default (haiku)
+        expect(row("eng")["total_split_units"].to_d).to eq(115 + 7) # eng + data
       end
 
       context "when only some filters are listed" do
@@ -181,6 +190,10 @@ RSpec.describe Events::Stores::Clickhouse::AttributedUsageQuery, clickhouse: {cl
         it "leaves the other filters out of the cells but not out of the amount" do
           expect(cells(row("eng"))).to eq([[100, 1_000, 1], [5, 5, 1], [1, 0, 1]])
           expect(row("eng")["amount"].to_d).to eq(1_205)
+        end
+
+        it "keeps the other filters in the split units" do
+          expect(row("eng")["split_units"].to_d).to eq(100 + 10 + 5) # opus + opus eu (unlisted) + default (haiku)
         end
       end
     end

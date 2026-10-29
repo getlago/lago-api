@@ -91,6 +91,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     expect(result.to_datetime).to eq(Time.zone.parse("2026-09-30").end_of_day)
     expect(result.currency).to eq("EUR")
     expect(result).to have_attributes(subscription:, group_by: "team", limit: 50, offset: 0)
+    expect([*result.rows, result.unattributed, result.totals].map(&:split_charge_units)).to eq([nil, nil, nil, nil])
   end
 
   it "returns the units, amount and events count of each charge" do
@@ -558,6 +559,20 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
       expect(result.totals.amount_cents).to eq(355_200)
     end
 
+    it "returns the units of the whole split charge" do
+      expect(result.rows.map { [it.value, it.split_charge_units] }).to eq([["data", 2_000], ["eng", 1_500]]) # eng: opus 1000 + sonnet 500
+      expect(result.unattributed.split_charge_units).to eq(100)
+      expect(result.totals.split_charge_units).to eq(2_000 + 1_500 + 100) # data + eng + unattributed
+    end
+
+    context "with the units basis" do
+      let(:basis) { "units" }
+
+      it "returns the units of the whole split charge" do
+        expect(result.totals.split_charge_units).to eq(2_000 + 1_500 + 100) # data + eng + unattributed
+      end
+    end
+
     context "with the offset of the next page" do
       let(:split_filters_offset) { 10 }
 
@@ -566,6 +581,11 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
         expect(split_cells(result.totals)).to eq([[charge_filters[10], 0], [charge_filters[11], 0], [nil, 100]])
         expect(summary(result.rows)).to eq([["data", 200_000, 1], ["eng", 150_200, 3]])
         expect(result.totals.amount_cents).to eq(355_200)
+      end
+
+      it "returns the same units of the whole split charge" do
+        expect(result.rows.map { [it.value, it.split_charge_units] }).to eq([["data", 2_000], ["eng", 1_500]])
+        expect(result.totals.split_charge_units).to eq(2_000 + 1_500 + 100) # data + eng + unattributed
       end
     end
 

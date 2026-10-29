@@ -32,6 +32,7 @@ module V1
       {
         **amounts(aggregate.amount_cents),
         events_count: aggregate.events_count,
+        split_charge_units: aggregate.split_charge_units&.to_s,
         charges_usage: aggregate.cells.map { serialize_cell(it) }
       }
     end
