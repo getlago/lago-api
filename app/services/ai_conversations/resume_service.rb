@@ -10,7 +10,9 @@ module AiConversations
     # The batch the member answered, then as many follow-ups as a turn of the agent allows
     MAX_ROUNDS = LagoMcpClient::Mistral::Agent::MAX_ITERATIONS + 1
 
-    def initialize(ai_conversation:)
+    def initialize(ai_conversation:, final_attempt: true)
+      @final_attempt = final_attempt
+
       super(ai_conversation:, message: nil)
     end
 
@@ -122,6 +124,15 @@ module AiConversations
       )
 
       tool_call.update!(status: "completed", result: tool_result[:content])
+    end
+
+    # An attempt that is retried tells the member nothing, or the error would show as the answer
+    # and the retried answer would follow it.
+    def handle_error(error)
+      return super if @final_attempt
+
+      Rails.logger.error("ResumeService error, retried: #{error.message}")
+      result.service_failure!(code: "stream_service_error", message: error.message)
     end
 
     def finish_resume!

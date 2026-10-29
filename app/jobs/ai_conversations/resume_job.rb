@@ -15,10 +15,12 @@ module AiConversations
     # The conversation accepts no new message until its tool results reach the model, so a
     # failure to resume (MCP server or Mistral unavailable) is retried. A retry is safe: writes
     # that already ran are not run again.
-    retry_on BaseService::ServiceFailure, wait: :polynomially_longer, attempts: 3
+    ATTEMPTS = 3
+
+    retry_on BaseService::ServiceFailure, wait: :polynomially_longer, attempts: ATTEMPTS
 
     def perform(ai_conversation)
-      AiConversations::ResumeService.call!(ai_conversation:)
+      AiConversations::ResumeService.call!(ai_conversation:, final_attempt: executions >= ATTEMPTS)
     end
   end
 end

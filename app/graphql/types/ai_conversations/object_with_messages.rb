@@ -14,6 +14,11 @@ module Types
         [Types::AiConversations::ToolCall],
         null: false,
         description: "Writes the AI agent asked for that wait for the member's confirmation"
+
+      field :resuming,
+        Boolean,
+        null: false,
+        description: "Whether the agent is carrying on after the member answered its writes"
     end
   end
 end

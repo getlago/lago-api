@@ -901,6 +901,11 @@ A write the AI agent asked for, waiting for the member's confirmation
 """
 type AiConversationToolCall {
   arguments: JSON!
+
+  """
+  Whether every write of this call's batch has an answer, so the agent carries on
+  """
+  batchAnswered: Boolean!
   id: ID!
   name: String!
   status: AiConversationToolCallStatusEnum!
@@ -930,6 +935,11 @@ type AiConversationWithMessages {
   Writes the AI agent asked for that wait for the member's confirmation
   """
   pendingToolCalls: [AiConversationToolCall!]!
+
+  """
+  Whether the agent is carrying on after the member answered its writes
+  """
+  resuming: Boolean!
   updatedAt: ISO8601DateTime!
 }
 

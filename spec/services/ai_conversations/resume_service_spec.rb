@@ -105,6 +105,22 @@ RSpec.describe AiConversations::ResumeService do
       allow(mistral_client).to receive(:append_to_conversation).and_raise(LagoMcpClient::Mistral::ApiError.new(503, "unavailable"))
     end
 
+    it "tells the member about the failure on the last attempt" do
+      service.call
+
+      expect(LagoApiSchema.subscriptions).to have_received(:trigger)
+        .with(:ai_conversation_streamed, {id: ai_conversation.id}, {chunk: start_with("Error:"), done: true})
+    end
+
+    context "when the attempt will be retried" do
+      subject(:service) { described_class.new(ai_conversation:, final_attempt: false) }
+
+      it "fails without telling the member" do
+        expect(service.call).to be_failure
+        expect(LagoApiSchema.subscriptions).not_to have_received(:trigger)
+      end
+    end
+
     it "keeps the batch for the next attempt without running the write again" do
       expect(service.call).to be_failure
       expect(write_call.reload).to have_attributes(status: "completed", submitted_at: nil)
