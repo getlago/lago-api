@@ -388,6 +388,17 @@ RSpec.describe Api::V1::PlansController do
             expect(response).to be_not_found_error("add_ons")
           end
         end
+
+        context "when fixed charge has no add-on" do
+          before { create_params[:fixed_charges].first.delete(:add_on_id) }
+
+          it "returns a validation error and creates no plan" do
+            expect { subject }.not_to change(Plan, :count)
+
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json[:error_details]).to eq({add_on_id: ["value_is_mandatory"]})
+          end
+        end
       end
     end
   end
@@ -756,6 +767,60 @@ RSpec.describe Api::V1::PlansController do
         expect(json[:plan][:fixed_charges].first[:taxes].first[:code]).to eq(tax.code)
         expect(json[:plan][:fixed_charges].last[:invoice_display_name]).to eq("Fixed charge 2")
         expect(json[:plan][:fixed_charges].last[:taxes]).to be_empty
+      end
+
+      context "when a new fixed charge has no add-on" do
+        let(:fixed_charges_params) do
+          [
+            {
+              id: fixed_charge.id,
+              invoice_display_name: "Fixed charge 1 updated",
+              units: 1,
+              add_on_id: add_on.id,
+              charge_model: "standard",
+              properties: {amount: "15"}
+            },
+            {
+              code: "fixed_charge_2_code",
+              invoice_display_name: "Fixed charge 2",
+              units: 1,
+              charge_model: "standard",
+              properties: {amount: "10"}
+            }
+          ]
+        end
+
+        it "returns a validation error and leaves the fixed charges unchanged" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq({add_on_id: ["value_is_mandatory"]})
+          expect(plan.fixed_charges.reload).to eq([fixed_charge])
+          expect(fixed_charge.reload.invoice_display_name).to eq("Fixed charge 1")
+        end
+      end
+
+      context "when an existing fixed charge is sent without add-on" do
+        let(:fixed_charges_params) do
+          [
+            {
+              id: fixed_charge.id,
+              invoice_display_name: "Fixed charge 1 updated",
+              units: 1,
+              charge_model: "standard",
+              properties: {amount: "15"}
+            }
+          ]
+        end
+
+        it "updates the fixed charge" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:plan][:fixed_charges].count).to eq(1)
+          expect(json[:plan][:fixed_charges].first[:lago_id]).to eq(fixed_charge.id)
+          expect(json[:plan][:fixed_charges].first[:invoice_display_name]).to eq("Fixed charge 1 updated")
+        end
       end
     end
 

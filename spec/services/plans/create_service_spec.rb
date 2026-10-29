@@ -644,6 +644,25 @@ RSpec.describe Plans::CreateService do
         expect(result.error.error_code).to eq("add_ons_not_found")
       end
     end
+
+    context "with a fixed charge without add-on" do
+      let(:fixed_charges_args) do
+        [
+          {
+            charge_model: "standard",
+            properties: {amount: "100"}
+          }
+        ]
+      end
+
+      it "returns a validation error and creates nothing" do
+        expect { result }.to not_change(Plan, :count).and not_change(FixedCharge, :count)
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({add_on_id: ["value_is_mandatory"]})
+      end
+    end
   end
 
   describe "#bill_charges_monthly" do

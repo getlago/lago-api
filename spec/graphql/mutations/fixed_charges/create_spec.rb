@@ -93,4 +93,28 @@ RSpec.describe Mutations::FixedCharges::Create, type: :graphql do
       expect_not_found(result)
     end
   end
+
+  context "when add_on_id is blank" do
+    before { plan }
+
+    it "returns a validation error and does not create a fixed charge" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            planId: plan.id,
+            addOnId: "",
+            chargeModel: "standard",
+            properties: {amount: "100"}
+          }
+        }
+      )
+
+      expect_unprocessable_entity(result, details: {addOnId: ["value_is_mandatory"]})
+      expect(FixedCharge.count).to eq(0)
+    end
+  end
 end
