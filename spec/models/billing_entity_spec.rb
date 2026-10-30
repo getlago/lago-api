@@ -86,6 +86,18 @@ RSpec.describe BillingEntity do
       expect(billing_entity).to be_valid
     end
 
+    it "caps a changed net_payment_term at 365" do
+      expect(billing_entity).to allow_value(365).for(:net_payment_term)
+      expect(billing_entity).not_to allow_value(366).for(:net_payment_term)
+    end
+
+    it "keeps a net_payment_term stored above 365 valid while it is unchanged" do
+      billing_entity.net_payment_term = 400
+      billing_entity.clear_changes_information
+
+      expect(billing_entity).to be_valid
+    end
+
     it { is_expected.to validate_length_of(:document_number_prefix).is_at_least(1).is_at_most(10).on(:update) }
 
     it { is_expected.to allow_value(nil).for(:document_number_prefix).on(:create) }

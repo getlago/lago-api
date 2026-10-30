@@ -126,6 +126,18 @@ RSpec.describe Customer do
 
     let(:external_id) { SecureRandom.uuid }
 
+    it "caps a changed net_payment_term at 365" do
+      expect(customer).to allow_value(365).for(:net_payment_term)
+      expect(customer).not_to allow_value(366).for(:net_payment_term)
+    end
+
+    it "keeps a net_payment_term stored above 365 valid while it is unchanged" do
+      customer.net_payment_term = 400
+      customer.clear_changes_information
+
+      expect(customer).to be_valid
+    end
+
     it "validates the language code" do
       customer.document_locale = nil
       expect(customer).to be_valid

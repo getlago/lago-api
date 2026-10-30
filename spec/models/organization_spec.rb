@@ -97,6 +97,18 @@ RSpec.describe Organization do
       expect(organization).to be_valid
     end
 
+    it "caps a changed net_payment_term at 365" do
+      expect(organization).to allow_value(365).for(:net_payment_term)
+      expect(organization).not_to allow_value(366).for(:net_payment_term)
+    end
+
+    it "keeps a net_payment_term stored above 365 valid while it is unchanged" do
+      organization.net_payment_term = 400
+      organization.clear_changes_information
+
+      expect(organization).to be_valid
+    end
+
     it "is not valid without name" do
       organization.name = nil
 
