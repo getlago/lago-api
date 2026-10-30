@@ -45,7 +45,7 @@ class RecurringAggregationSnapshot < ApplicationRecord
   def self.readable?(metered_item:, billing_context:)
     metered_item.billable_metric.recurring? &&
       eligible?(metered_item:, billing_context:) &&
-      billing_context.organization.feature_flag_enabled?(:persisted_recurring_values)
+      RecurringAggregationSnapshots.read_enabled?(billing_context.organization)
   end
 
   # A filter or filter value created, edited or removed since the marker moves older events between
