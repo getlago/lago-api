@@ -33,7 +33,7 @@ module AiConversations
           decided = true
 
           unless ai_conversation.tool_calls.unsubmitted.pending.exists?
-            ai_conversation.update!(busy_at: Time.current)
+            ai_conversation.update!(resuming_at: Time.current)
             resume = true
           end
         end

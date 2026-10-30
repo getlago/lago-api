@@ -52,25 +52,11 @@ RSpec.describe Mutations::AiConversations::Create do
     before do
       ENV["MISTRAL_API_KEY"] = "test_api_key"
       ENV["MISTRAL_AGENT_ID"] = "test_agent_id"
-      allow(ENV).to receive(:[]).and_call_original
-      allow(ENV).to receive(:[]).with("LAGO_MCP_SERVER_URL").and_return(mcp_server_url)
     end
 
-    let(:mcp_server_url) { "http://localhost:3001" }
-
-    context "without an MCP server" do
-      let(:mcp_server_url) { nil }
-
-      it "refuses the message before the conversation is created" do
-        expect { result }.not_to change(AiConversation, :count)
-        expect_graphql_error(result:, message: "feature_unavailable")
-      end
-    end
-
-    it "creates a new AI conversation, busy until the agent answers" do
+    it "creates a new AI conversation" do
       expect { result }.to change(AiConversation, :count).by(1)
       expect(result["data"]["createAiConversation"]["name"]).to eq(message)
-      expect(AiConversation.last).to be_busy
     end
 
     it "triggers streaming" do
@@ -148,15 +134,13 @@ RSpec.describe Mutations::AiConversations::Create do
 
       before { create(:ai_conversation_tool_call, ai_conversation:, status: "confirmed") }
 
-      it "starts the resume again and refuses the message" do
+      it "refuses the message" do
         expect { result }.not_to have_enqueued_job(AiConversations::StreamJob)
-        expect(result["errors"].first["extensions"]["code"]).to eq("ai_conversation_busy")
-        expect(AiConversations::ResumeJob).to have_been_enqueued.with(ai_conversation)
-        expect(ai_conversation.reload).to be_busy
+        expect(result["errors"].first["extensions"]["code"]).to eq("ai_conversation_tool_calls_pending")
       end
     end
 
-    context "when the agent is still answering" do
+    context "when the conversation is resuming" do
       subject(:result) do
         execute_graphql(
           current_user: membership.user,
@@ -167,20 +151,19 @@ RSpec.describe Mutations::AiConversations::Create do
         )
       end
 
-      let(:ai_conversation) { create(:ai_conversation, organization: membership.organization, membership:, busy_at:) }
-      let(:busy_at) { 1.minute.ago }
+      let(:ai_conversation) { create(:ai_conversation, organization: membership.organization, membership:, resuming_at:) }
+      let(:resuming_at) { 1.minute.ago }
 
       it "refuses the message" do
         expect { result }.not_to have_enqueued_job(AiConversations::StreamJob)
-        expect(result["errors"].first["extensions"]["code"]).to eq("ai_conversation_busy")
+        expect(result["errors"].first["extensions"]["code"]).to eq("ai_conversation_tool_calls_pending")
       end
 
-      context "when the answer started too long ago" do
-        let(:busy_at) { (AiConversation::BUSY_TIMEOUT + 1.minute).ago }
+      context "when the resume started too long ago" do
+        let(:resuming_at) { (AiConversation::RESUME_TIMEOUT + 1.minute).ago }
 
         it "accepts the message" do
           expect { result }.to have_enqueued_job(AiConversations::StreamJob)
-          expect(ai_conversation.reload).to be_busy
         end
       end
     end

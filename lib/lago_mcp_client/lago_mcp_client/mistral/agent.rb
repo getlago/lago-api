@@ -14,12 +14,6 @@ module LagoMcpClient
       # are kept, as the model expects every result of a batch together.
       attr_reader :conversation_id, :pending_tool_calls
 
-      # Whether the model's last response asked for tool calls that got no result yet. Until they
-      # do, the conversation takes no other input.
-      def awaiting_tool_results?
-        !!@awaiting_tool_results
-      end
-
       def initialize(client:, conversation_id:, tool_guard: nil)
         @mistral_client = LagoMcpClient::Mistral::Client.new
         @mcp_context = LagoMcpClient::RunContext.new(client:, tool_guard:)
@@ -38,21 +32,16 @@ module LagoMcpClient
         process_conversation(user_message, max_tool_iterations) { |chunk| yield chunk }
       end
 
-      # Sends the results of a batch that waited for a confirmation and returns the tool calls
-      # the model makes next, without running them: the caller keeps them first, so a failure
-      # while running them can be retried.
-      def submit_tool_results(tool_results)
+      # Sends the results of a batch that waited for a confirmation, then carries on
+      # the conversation as #chat does, with a nonce of its own as it runs in another job.
+      # on_submitted is called once the model has the results.
+      def submit_tool_results(tool_results, max_tool_iterations: MAX_ITERATIONS, on_submitted: nil)
         raise ArgumentError, "Block required for streaming" unless block_given?
 
-        response = send_tool_results(tool_results, SecureRandom.hex(16)) { |chunk| yield chunk }
-
-        Array(response["tool_calls"]).map do |tool_call|
-          {
-            tool_call_id: tool_call["id"],
-            name: tool_call.dig("function", "name"),
-            arguments: JSON.parse(tool_call.dig("function", "arguments").presence || "{}")
-          }
-        end
+        nonce = SecureRandom.hex(16)
+        response = send_tool_results(tool_results, nonce) { |chunk| yield chunk }
+        on_submitted&.call
+        follow_tool_calls(response, max_tool_iterations, nonce) { |chunk| yield chunk }
       end
 
       def run_confirmed_tool_call(tool_call_id:, name:, arguments:)
@@ -92,18 +81,16 @@ module LagoMcpClient
       end
 
       def send_message(message)
-        response = if conversation_id
+        if conversation_id
           mistral_client.append_to_conversation(
             conversation_id: conversation_id,
             inputs: [{role: "user", content: message}]
           ) { |chunk| yield chunk }
         else
-          mistral_client.start_conversation(inputs: message) { |chunk| yield chunk }.tap do |started|
-            self.conversation_id = started["conversation_id"]
-          end
+          response = mistral_client.start_conversation(inputs: message) { |chunk| yield chunk }
+          self.conversation_id = response["conversation_id"]
+          response
         end
-
-        track_tool_calls(response)
       end
 
       def send_tool_results(tool_results, nonce)
@@ -116,17 +103,10 @@ module LagoMcpClient
           }
         end
 
-        response = mistral_client.append_to_conversation(
+        mistral_client.append_to_conversation(
           conversation_id: conversation_id,
           inputs: inputs
         ) { |chunk| yield chunk }
-
-        track_tool_calls(response)
-      end
-
-      def track_tool_calls(response)
-        @awaiting_tool_results = has_tool_calls?(response)
-        response
       end
 
       def wrap_untrusted_data(text, nonce)

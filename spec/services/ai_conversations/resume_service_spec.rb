@@ -9,15 +9,10 @@ RSpec.describe AiConversations::ResumeService do
   let(:permissions) { %w[ai_conversations:create ai_conversations:view coupons:view coupons:create] }
   let(:role) { create(:role, organization:, permissions:) }
   let(:membership) { create(:membership, organization:, role:) }
-  let(:ai_conversation) { create(:ai_conversation, organization:, membership:, busy_at: 1.minute.ago) }
+  let(:ai_conversation) { create(:ai_conversation, organization:, membership:, resuming_at: 1.minute.ago) }
 
   let(:mcp_client) { instance_double(LagoMcpClient::Client, setup!: nil, list_tools: tools) }
-  let(:tools) do
-    [
-      LagoMcpClient::Tool.new(name: "create_coupon", description: "Creates a coupon", input_schema: {}),
-      LagoMcpClient::Tool.new(name: "get_coupon", description: "Gets a coupon", input_schema: {})
-    ]
-  end
+  let(:tools) { [LagoMcpClient::Tool.new(name: "create_coupon", description: "Creates a coupon", input_schema: {})] }
   let(:mistral_client) { instance_double(LagoMcpClient::Mistral::Client) }
 
   let!(:read_call) do
@@ -65,7 +60,7 @@ RSpec.describe AiConversations::ResumeService do
       )
       expect(LagoApiSchema.subscriptions).to have_received(:trigger).with(:ai_conversation_streamed, {id: ai_conversation.id}, {chunk: "Done", done: false})
       expect(LagoApiSchema.subscriptions).to have_received(:trigger).with(:ai_conversation_streamed, {id: ai_conversation.id}, {chunk: nil, done: true})
-      expect(ai_conversation.reload.busy_at).to be_nil
+      expect(ai_conversation.reload.resuming_at).to be_nil
     end
   end
 
@@ -105,38 +100,15 @@ RSpec.describe AiConversations::ResumeService do
       allow(mistral_client).to receive(:append_to_conversation).and_raise(LagoMcpClient::Mistral::ApiError.new(503, "unavailable"))
     end
 
-    it "tells the member about the failure on the last attempt" do
-      service.call
+    it "keeps the batch for the next attempt without running the write again" do
+      expect(service.call).to be_failure
+      expect(write_call.reload).to have_attributes(status: "completed", submitted_at: nil)
+      expect(read_call.reload.submitted_at).to be_nil
 
-      expect(LagoApiSchema.subscriptions).to have_received(:trigger)
-        .with(:ai_conversation_streamed, {id: ai_conversation.id}, {chunk: start_with("Error:"), done: true})
-    end
+      described_class.new(ai_conversation:).call
 
-    context "when the attempt will be retried" do
-      subject(:service) { described_class.new(ai_conversation:, final_attempt: false) }
-
-      it "fails without telling the member and keeps the conversation busy" do
-        expect(service.call).to be_failure
-        expect(LagoApiSchema.subscriptions).not_to have_received(:trigger)
-        expect(ai_conversation.reload).to be_busy
-      end
-
-      it "keeps the batch for the next attempt without running the write again" do
-        expect(service.call).to be_failure
-        expect(write_call.reload).to have_attributes(status: "completed", submitted_at: nil)
-        expect(read_call.reload.submitted_at).to be_nil
-
-        described_class.new(ai_conversation:, final_attempt: false).call
-
-        expect(mcp_client).to have_received(:call_tool).once
-      end
-    end
-
-    it "frees the conversation on the last attempt, leaving the batch for a new message to retry" do
-      service.call
-
-      expect(ai_conversation.reload).not_to be_busy
-      expect(ai_conversation.tool_calls.unsubmitted.count).to eq(2)
+      expect(mcp_client).to have_received(:call_tool).once
+      expect(ai_conversation.reload.resuming_at).to be_present
     end
   end
 
@@ -146,7 +118,7 @@ RSpec.describe AiConversations::ResumeService do
     it "only ends the resume" do
       expect(service.call).to be_success
       expect(mistral_client).not_to have_received(:append_to_conversation)
-      expect(ai_conversation.reload.busy_at).to be_nil
+      expect(ai_conversation.reload.resuming_at).to be_nil
     end
   end
 
@@ -180,125 +152,13 @@ RSpec.describe AiConversations::ResumeService do
     end
   end
 
-  context "when the model answers the results with more tool calls" do
-    let(:next_tool_calls) { [{"id" => "call_next", "function" => {"name" => next_tool, "arguments" => '{"code":"SPRING"}'}}] }
-    let(:next_tool) { "get_coupon" }
-
-    before do
-      responses = [{"tool_calls" => next_tool_calls}, {"outputs" => [{"content" => "Done"}]}]
-      allow(mistral_client).to receive(:append_to_conversation) do |**_args, &block|
-        block&.call("Done")
-        responses.shift
-      end
-      allow(mcp_client).to receive(:call_tool).with("get_coupon", {"code" => "SPRING"})
-        .and_return({"content" => [{"type" => "text", "text" => "Coupon SPRING"}]})
-    end
-
-    it "keeps the read, runs it and sends its result" do
-      expect(service.call).to be_success
-
-      next_call = ai_conversation.tool_calls.find_by!(tool_call_id: "call_next")
-      expect(next_call).to have_attributes(status: "completed", result: "Coupon SPRING", requires_confirmation: false, submitted_at: be_present)
-      expect(mistral_client).to have_received(:append_to_conversation).with(
-        conversation_id: ai_conversation.mistral_conversation_id,
-        inputs: [{tool_call_id: "call_next", result: wrapped("Coupon SPRING"), type: "function.result", object: "entry"}]
-      )
-      expect(ai_conversation.reload.busy_at).to be_nil
-    end
-
-    context "when running the read fails" do
-      before do
-        allow(mcp_client).to receive(:call_tool).with("get_coupon", {"code" => "SPRING"}).and_raise(Net::ReadTimeout)
-      end
-
-      it "runs it again on the next attempt without sending the batch or the write twice" do
-        expect(service.call).to be_failure
-        expect(write_call.reload.submitted_at).to be_present
-        expect(ai_conversation.tool_calls.find_by!(tool_call_id: "call_next")).to have_attributes(status: "executing", submitted_at: nil)
-
-        allow(mcp_client).to receive(:call_tool).with("get_coupon", {"code" => "SPRING"})
-          .and_return({"content" => [{"type" => "text", "text" => "Coupon SPRING"}]})
-        expect(described_class.new(ai_conversation:).call).to be_success
-
-        expect(mcp_client).to have_received(:call_tool).with("create_coupon", anything).once
-        expect(mistral_client).to have_received(:append_to_conversation).twice
-        expect(ai_conversation.tool_calls.find_by!(tool_call_id: "call_next")).to have_attributes(status: "completed", result: "Coupon SPRING")
-        expect(ai_conversation.reload.busy_at).to be_nil
-      end
-    end
-
-    context "when the model asks for another write" do
-      let(:next_tool) { "create_coupon" }
-
-      it "keeps it for the member's confirmation without running it" do
-        expect(service.call).to be_success
-
-        next_call = ai_conversation.tool_calls.find_by!(tool_call_id: "call_next")
-        expect(next_call).to have_attributes(status: "pending", requires_confirmation: true, submitted_at: nil)
-        expect(mcp_client).to have_received(:call_tool).once
-        expect(mistral_client).to have_received(:append_to_conversation).once
-        expect(LagoApiSchema.subscriptions).to have_received(:trigger).with(
-          :ai_conversation_streamed,
-          {id: ai_conversation.id},
-          {chunk: nil, done: true, pending_tool_calls: [next_call]}
-        )
-        expect(ai_conversation.reload.busy_at).to be_nil
-      end
-    end
-
-    context "when the member's role does not allow the next call" do
-      let(:next_tool) { "delete_coupon" }
-
-      it "sends the refusal without running it" do
-        expect(service.call).to be_success
-
-        next_call = ai_conversation.tool_calls.find_by!(tool_call_id: "call_next")
-        expect(next_call).to have_attributes(status: "completed", submitted_at: be_present)
-        expect(next_call.result).to include("coupons:delete")
-        expect(mcp_client).not_to have_received(:call_tool).with("delete_coupon", anything)
-      end
-    end
-  end
-
-  context "when the model keeps calling tools past the step limit" do
-    before do
-      round = 0
-      allow(mistral_client).to receive(:append_to_conversation) do |**_args, &block|
-        round += 1
-        block&.call("Done")
-        next {"outputs" => [{"content" => "Done"}]} if round > described_class::MAX_ROUNDS
-
-        {"tool_calls" => [{"id" => "call_#{round}", "function" => {"name" => "get_coupon", "arguments" => "{}"}}]}
-      end
-      allow(mcp_client).to receive(:call_tool).with("get_coupon", {})
-        .and_return({"content" => [{"type" => "text", "text" => "Coupon SPRING"}]})
-    end
-
-    it "answers the calls past the limit without running or dropping them" do
-      expect(service.call).to be_success
-
-      over_limit = ai_conversation.tool_calls.find_by!(tool_call_id: "call_#{described_class::MAX_ROUNDS}")
-      expect(over_limit).to have_attributes(status: "completed", result: described_class::STEP_LIMIT_RESULT, submitted_at: be_present)
-      expect(mcp_client).to have_received(:call_tool).with("get_coupon", {}).exactly(described_class::MAX_ROUNDS - 1).times
-      expect(ai_conversation.tool_calls.unsubmitted).to be_empty
-      expect(ai_conversation.reload).not_to be_busy
-    end
-  end
-
-  context "when an earlier attempt stopped on new writes after keeping them" do
+  context "when a write of the batch still waits for the member" do
     let(:write_status) { "pending" }
 
-    it "asks the member about them and ends the resume" do
+    it "does nothing" do
       expect(service.call).to be_success
-
       expect(LagoMcpClient::Client).not_to have_received(:new)
       expect(mistral_client).not_to have_received(:append_to_conversation)
-      expect(LagoApiSchema.subscriptions).to have_received(:trigger).with(
-        :ai_conversation_streamed,
-        {id: ai_conversation.id},
-        {chunk: nil, done: true, pending_tool_calls: [write_call]}
-      )
-      expect(ai_conversation.reload.busy_at).to be_nil
     end
   end
 end

@@ -14,11 +14,6 @@ module Types
         [Types::AiConversations::ToolCall],
         null: false,
         description: "Writes the AI agent asked for that wait for the member's confirmation"
-
-      field :busy,
-        Boolean,
-        null: false,
-        description: "Whether the agent is still answering, so the conversation takes no new message yet"
     end
   end
 end

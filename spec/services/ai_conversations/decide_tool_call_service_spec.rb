@@ -15,7 +15,7 @@ RSpec.describe AiConversations::DecideToolCallService do
         expect(result).to be_success
         expect(tool_call.reload).to have_attributes(status: "confirmed", decided_at: Time.current, result: nil)
         expect(AiConversations::ResumeJob).to have_been_enqueued.with(ai_conversation)
-        expect(ai_conversation.reload.busy_at).to eq(Time.current)
+        expect(ai_conversation.reload.resuming_at).to eq(Time.current)
       end
     end
   end
@@ -35,7 +35,7 @@ RSpec.describe AiConversations::DecideToolCallService do
 
     it "does not resume the conversation yet" do
       expect(result).to be_success
-      expect(ai_conversation.reload.busy_at).to be_nil
+      expect(ai_conversation.reload.resuming_at).to be_nil
       expect(AiConversations::ResumeJob).not_to have_been_enqueued
     end
   end

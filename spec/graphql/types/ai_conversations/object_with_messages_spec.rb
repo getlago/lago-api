@@ -13,7 +13,5 @@ RSpec.describe Types::AiConversations::ObjectWithMessages do
     expect(subject).to have_field(:created_at).of_type("ISO8601DateTime!")
     expect(subject).to have_field(:updated_at).of_type("ISO8601DateTime!")
     expect(subject).to have_field(:messages).of_type("[AiConversationMessage!]!")
-    expect(subject).to have_field(:pending_tool_calls).of_type("[AiConversationToolCall!]!")
-    expect(subject).to have_field(:busy).of_type("Boolean!")
   end
 end

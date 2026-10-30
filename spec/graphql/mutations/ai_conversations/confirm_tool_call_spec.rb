@@ -23,7 +23,7 @@ RSpec.describe Mutations::AiConversations::ConfirmToolCall do
   let(:query) do
     <<~GQL
       mutation($input: ConfirmAiConversationToolCallInput!) {
-        confirmAiConversationToolCall(input: $input) { id name status arguments batchAnswered }
+        confirmAiConversationToolCall(input: $input) { id name status arguments }
       }
     GQL
   end
@@ -56,24 +56,14 @@ RSpec.describe Mutations::AiConversations::ConfirmToolCall do
       allow(ENV).to receive(:[]).and_call_original
       allow(ENV).to receive(:[]).with("MISTRAL_API_KEY").and_return("test_api_key")
       allow(ENV).to receive(:[]).with("MISTRAL_AGENT_ID").and_return("test_agent_id")
-      allow(ENV).to receive(:[]).with("LAGO_MCP_SERVER_URL").and_return("http://localhost:3001")
     end
 
     it "records the member's answer and resumes the conversation" do
       data = result["data"]["confirmAiConversationToolCall"]
 
-      expect(data).to include("id" => tool_call.id, "name" => "create_coupon", "status" => "confirmed", "batchAnswered" => true)
+      expect(data).to include("id" => tool_call.id, "name" => "create_coupon", "status" => "confirmed")
       expect(tool_call.reload.status).to eq("confirmed")
       expect(AiConversations::ResumeJob).to have_been_enqueued.with(ai_conversation)
-    end
-
-    context "when another write of the batch still waits" do
-      before { create(:ai_conversation_tool_call, ai_conversation:, position: 1) }
-
-      it "tells the batch is not answered yet" do
-        expect(result["data"]["confirmAiConversationToolCall"]["batchAnswered"]).to be(false)
-        expect(AiConversations::ResumeJob).not_to have_been_enqueued
-      end
     end
 
     context "when the conversation belongs to another member" do

@@ -43,7 +43,6 @@ RSpec.describe Resolvers::AiConversationResolver do
             arguments
             status
           }
-          busy
           createdAt
           updatedAt
         }
@@ -131,20 +130,6 @@ RSpec.describe Resolvers::AiConversationResolver do
       expect(result["data"]["aiConversation"]["pendingToolCalls"]).to eq([
         {"id" => pending.id, "name" => "create_coupon", "arguments" => {"coupon" => {"code" => "SPRING"}}, "status" => "pending"}
       ])
-    end
-
-    it "tells whether the agent is carrying on" do
-      ai_conversation.update!(busy_at: 1.minute.ago)
-
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: organization,
-        permissions: required_permission,
-        query:,
-        variables: {id: ai_conversation.id}
-      )
-
-      expect(result["data"]["aiConversation"]["busy"]).to be(true)
     end
 
     context "when ai conversation is not found" do

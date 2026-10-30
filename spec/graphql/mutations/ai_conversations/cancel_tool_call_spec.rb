@@ -56,7 +56,6 @@ RSpec.describe Mutations::AiConversations::CancelToolCall do
       allow(ENV).to receive(:[]).and_call_original
       allow(ENV).to receive(:[]).with("MISTRAL_API_KEY").and_return("test_api_key")
       allow(ENV).to receive(:[]).with("MISTRAL_AGENT_ID").and_return("test_agent_id")
-      allow(ENV).to receive(:[]).with("LAGO_MCP_SERVER_URL").and_return("http://localhost:3001")
     end
 
     it "records the member's answer and resumes the conversation" do

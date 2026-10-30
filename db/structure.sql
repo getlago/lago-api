@@ -2403,7 +2403,7 @@ CREATE TABLE public.ai_conversations (
     mistral_conversation_id character varying,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    busy_at timestamp(6) without time zone
+    resuming_at timestamp(6) without time zone
 );
 
 

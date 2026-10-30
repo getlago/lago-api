@@ -901,11 +901,6 @@ A write the AI agent asked for, waiting for the member's confirmation
 """
 type AiConversationToolCall {
   arguments: JSON!
-
-  """
-  Whether every write of this call's batch has an answer, so the agent carries on
-  """
-  batchAnswered: Boolean!
   id: ID!
   name: String!
   status: AiConversationToolCallStatusEnum!
@@ -920,10 +915,6 @@ enum AiConversationToolCallStatusEnum {
 }
 
 type AiConversationWithMessages {
-  """
-  Whether the agent is still answering, so the conversation takes no new message yet
-  """
-  busy: Boolean!
   createdAt: ISO8601DateTime!
   id: ID!
 
