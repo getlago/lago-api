@@ -542,7 +542,8 @@ module Events
       def apply_grouped_by_values(scope)
         grouped_by_values.each do |grouped_by, grouped_by_value|
           scope = if grouped_by_value.present?
-            scope.where("events.properties @> ?", {grouped_by.to_s => grouped_by_value.to_s}.to_json)
+            # Text comparison, so a numeric value matches as it does in the grouped reads
+            scope.where(sanitize_sql_for_conditions(["events.properties->>? = ?", grouped_by.to_s, grouped_by_value.to_s]))
           else
             scope.where(
               sanitize_sql_for_conditions(["COALESCE(events.properties->>?, '') ~ ?", grouped_by, BLANK_VALUE_PATTERN])

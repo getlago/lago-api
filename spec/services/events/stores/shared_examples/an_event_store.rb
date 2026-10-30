@@ -161,6 +161,22 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         end
       end
 
+      context "with a numeric grouped_by_values value" do
+        let(:grouped_by_values) { {"region" => 1} }
+
+        before do
+          create_event(timestamp: subscription_started_at + 6.days, value: 6, properties: {"region" => 1})
+          create_event(timestamp: subscription_started_at + 7.days, value: 7, properties: {"region" => "1"})
+          create_event(timestamp: subscription_started_at + 8.days, value: 8, properties: {"region" => 10})
+        end
+
+        it "returns the events whose value reads as the same text, as the grouped reads do" do
+          values = event_store.events.map { |e| e.properties[billable_metric.field_name].to_s }
+
+          expect(values).to match_array(["6", "7"])
+        end
+      end
+
       context "when ordered is true" do
         it "returns the events ordered by timestamp" do
           retrieved_events = event_store.events(ordered: true)
@@ -1602,6 +1618,20 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
         expect(result.value).to eq(15)
         expect(result.events_count).to eq(5)
+      end
+
+      context "with a numeric grouped_by_values value" do
+        let(:grouped_by_values) { {"region" => 1} }
+
+        before do
+          create_event(timestamp: subscription_started_at + 6.days, value: 6, properties: {"region" => 1})
+          create_event(timestamp: subscription_started_at + 7.days, value: 7, properties: {"region" => "1"})
+          create_event(timestamp: subscription_started_at + 8.days, value: 8, properties: {"region" => 10})
+        end
+
+        it "sums the events whose value reads as the same text" do
+          expect(event_store.sum).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 13, events_count: 2))
+        end
       end
 
       if with_event_duplication
