@@ -247,8 +247,10 @@ RSpec.describe PaymentTerm do
       expect(described_class.from_h(term_type: "days_end_of_month", days: 30).label).to eq("Due 30 days, end of month")
     end
 
-    it "renders a net-0 term as due on receipt" do
+    it "renders a zero-day term as the term it is equal to" do
       expect(described_class.from_h(term_type: "net", days: 0).label).to eq("Due on receipt")
+      expect(described_class.from_h(term_type: "net_end_of_month", days: 0).label).to eq("Due at end of month")
+      expect(described_class.from_h(term_type: "days_end_of_month", days: 0).label).to eq("Due at end of month")
     end
 
     it "renders the month_offset variants for day_of_month" do

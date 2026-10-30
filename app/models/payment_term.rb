@@ -80,8 +80,8 @@ class PaymentTerm < Data.define(:term_type, :days, :day_of_month, :month_offset)
   def label(issuing_date: nil)
     if term_type == "day_of_month"
       day_of_month_label(issuing_date&.to_date)
-    elsif term_type == "net" && days.zero?
-      I18n.t("invoice.payment_terms.due_on_receipt")
+    elsif days&.zero?
+      I18n.t("invoice.payment_terms.#{grouping_key["term_type"]}")
     else
       I18n.t("invoice.payment_terms.#{term_type}", count: days, days:)
     end
