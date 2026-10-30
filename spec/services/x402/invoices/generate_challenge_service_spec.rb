@@ -64,8 +64,8 @@ describe X402::Invoices::GenerateChallengeService do
       )
     end
 
-    it "refuses it" do
-      expect(result.error.messages).to eq({base: ["invalid_invoice_status_or_payment_status"]})
+    it "refuses it as gone" do
+      expect(result.error).to be_a(BaseService::GoneFailure).and have_attributes(code: "invalid_invoice_status_or_payment_status")
     end
   end
 
@@ -74,8 +74,8 @@ describe X402::Invoices::GenerateChallengeService do
       create(:x402_settlement, :pending, :invoice_payment, x402_connection:, invoice:, payee_address: "0x94bA479439C2f1bA5f5DaCBD06Ea0c129604B4a5")
     end
 
-    it "refuses a fresh challenge" do
-      expect(result.error.messages).to eq({base: ["invoice_payment_pending"]})
+    it "refuses a fresh challenge as a conflict" do
+      expect(result.error).to be_a(BaseService::ConflictFailure).and have_attributes(code: "invoice_payment_pending")
     end
 
     it "asks CDP nothing" do
