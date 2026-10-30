@@ -141,6 +141,7 @@ RSpec.describe "templates/payment_receipts/v1.slim" do
       create(:payment, payable: invoice, organization:, customer:, amount_cents: 2_800, amount_currency: "EUR", status: "succeeded", payable_payment_status: "succeeded")
     end
     let(:payment_receipt) { create(:payment_receipt, payment:, organization:, billing_entity:, number: "RCT-202610-001") }
+    let(:product_filter) { nil }
 
     before do
       create(
@@ -153,6 +154,7 @@ RSpec.describe "templates/payment_receipts/v1.slim" do
         invoice_display_name: nil,
         contract:,
         contract_rate_card:,
+        product_filter:,
         rate_card_rate: create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card),
         amount_cents: 2_800,
         amount_currency: "EUR",
@@ -168,6 +170,19 @@ RSpec.describe "templates/payment_receipts/v1.slim" do
 
     it "ends the totals with the amount due" do
       expect(rendered_text).to include("Subtotal (excl. tax) €28.00 Total €28.00 Amount due €0.00")
+    end
+
+    it "details each contract after the summary, down to the billing period" do
+      expect(rendered_text).to include("Details Platform - Invoice LAGO-202610-001")
+      expect(rendered_text).to include("Infrastructure €28.00 Compute €28.00 From 1 Oct to 31 Oct 2026 280")
+    end
+
+    context "when the fee is billed on a product filter" do
+      let(:product_filter) { create(:product_filter, organization:, product:, name: "EU", invoice_display_name: nil) }
+
+      it "details the fee under its filter" do
+        expect(rendered_text).to include("Compute €28.00 EU From 1 Oct to 31 Oct 2026 280")
+      end
     end
 
     context "when the invoice bills fees paid in advance" do
