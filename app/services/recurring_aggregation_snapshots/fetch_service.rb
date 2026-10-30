@@ -40,7 +40,7 @@ module RecurringAggregationSnapshots
 
       records = period_records.select { it.charge_filter_id == bucket.charge_filter&.id }
       return result unless records.all? { same_grouped_by_keys?(it) }
-      return result if records.empty? && filter_edited_since?(marker)
+      return result if records.empty? && regrouped_since?(bucket.charge_filter, marker)
 
       result.period = Period.new(to_datetime: marker.to_datetime, watermark: marker.watermark)
       result.snapshots = records.map { to_snapshot(it) }
@@ -181,10 +181,16 @@ module RecurringAggregationSnapshots
       record.grouped_by.keys.sort == Array(grouped_by_keys).map(&:to_s).sort
     end
 
-    # An empty bucket has no row to compare grouping keys with, and an edit of the filter's
-    # properties can regroup units that netted to zero into non-zero groups
-    def filter_edited_since?(marker)
-      charge_filter.present? && charge_filter.updated_at > marker.watermark
+    # An empty bucket has no row to compare grouping keys with: an edit of the filter's properties, or a
+    # previous filter grouped on other keys, can regroup units that netted to zero into non-zero groups
+    def regrouped_since?(bucket_filter, marker)
+      bucket_filter.present? &&
+        (bucket_filter.updated_at > marker.watermark || (bucket_filter != charge_filter && !same_grouping?(bucket_filter)))
+    end
+
+    def same_grouping?(previous_filter)
+      Array(previous_filter.pricing_group_keys).sort == Array(charge_filter.pricing_group_keys).sort &&
+        previous_filter.charge.accepts_target_wallet == charge.accepts_target_wallet
     end
 
     def to_snapshot(record)

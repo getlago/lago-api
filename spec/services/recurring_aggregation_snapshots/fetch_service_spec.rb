@@ -502,8 +502,8 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
         let(:charge_filter) { create_filter(charge, %w[eu]) }
         let(:previous_charge_filter) { create_filter(previous_charge, %w[eu]) }
 
-        def create_filter(target_charge, values, created_at: watermark - 1.month)
-          create(:charge_filter, charge: target_charge, created_at:, updated_at: created_at).tap do |filter|
+        def create_filter(target_charge, values, created_at: watermark - 1.month, **attributes)
+          create(:charge_filter, charge: target_charge, created_at:, updated_at: created_at, **attributes).tap do |filter|
             create_filter_value(filter, billable_metric_filter:, values:)
           end
         end
@@ -584,6 +584,47 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
 
           it "returns the snapshot of the filter with the same values" do
             expect(fetch_service.call.snapshots.map(&:units)).to eq([3])
+          end
+        end
+
+        context "without a snapshot of the previous filter" do
+          before { RecurringAggregationSnapshot.where(charge_filter: previous_charge_filter).delete_all }
+
+          it "returns no group" do
+            expect(fetch_service.call.snapshots).to eq([])
+          end
+
+          context "when the charge filters were created after the previous snapshot, as by a plan override" do
+            let(:charge_filter) { create_filter(charge, %w[eu], created_at: watermark + 1.hour) }
+
+            it "returns no group" do
+              expect(fetch_service.call.snapshots).to eq([])
+            end
+          end
+
+          context "when the charge filter groups on keys the previous filter does not" do
+            let(:charge_filter) { create_filter(charge, %w[eu], properties: {"amount" => "1", "pricing_group_keys" => %w[user]}) }
+            let(:grouped_by_keys) { %w[user] }
+
+            it "returns no snapshot, as units that netted to zero can split into groups" do
+              expect(fetch_service.call.snapshots).to be_nil
+            end
+          end
+
+          context "when the previous filter was edited after its snapshot" do
+            before { previous_charge_filter.update!(updated_at: watermark + 1.minute) }
+
+            it "returns no snapshot" do
+              expect(fetch_service.call.snapshots).to be_nil
+            end
+          end
+
+          context "when only the charge accepts target wallets" do
+            before { charge.update_column(:accepts_target_wallet, true) } # rubocop:disable Rails/SkipsModelValidations
+
+            it "returns no snapshot, as the wallet code groups the events" do
+              expect(fetch_service.call.snapshots).to be_nil
+            end
           end
         end
 
