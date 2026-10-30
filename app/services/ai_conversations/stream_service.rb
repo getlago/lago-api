@@ -92,12 +92,9 @@ module AiConversations
       end
     end
 
+    # The records themselves, so every field of the tool call type resolves, batchAnswered included
     def notify_completion
-      pending_tool_calls = @pending_tool_calls_saved.map do |tool_call|
-        {id: tool_call.id, name: tool_call.name, arguments: tool_call.arguments, status: tool_call.status}
-      end
-
-      trigger_subscription(chunk: nil, done: true, pending_tool_calls:)
+      trigger_subscription(chunk: nil, done: true, pending_tool_calls: @pending_tool_calls_saved)
     end
 
     def trigger_subscription(chunk:, done:, pending_tool_calls: [])

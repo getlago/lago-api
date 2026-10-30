@@ -71,6 +71,27 @@ RSpec.describe GraphqlChannel, :premium, type: :channel do
 
       before { execute_subscription }
 
+      context "when the answer ends on writes to confirm" do
+        let(:subscription_query) do
+          <<~GQL
+            subscription($id: ID!) {
+              aiConversationStreamed(id: $id) { done pendingToolCalls { id name status batchAnswered } }
+            }
+          GQL
+        end
+
+        it "sends every field of the pending calls" do
+          tool_call = create(:ai_conversation_tool_call, ai_conversation:)
+
+          result = LagoApiSchema.subscriptions.execute_update(subscription_id, event, {chunk: nil, done: true, pending_tool_calls: [tool_call]})
+
+          expect(result["errors"]).to be_nil
+          expect(result["data"]["aiConversationStreamed"]["pendingToolCalls"]).to eq([
+            {"id" => tool_call.id, "name" => "create_coupon", "status" => "pending", "batchAnswered" => false}
+          ])
+        end
+      end
+
       it "keeps streaming while the member still has access" do
         expect(stream_chunk["data"]["aiConversationStreamed"]).to eq("chunk" => "Hello", "done" => false)
       end

@@ -198,7 +198,7 @@ RSpec.describe AiConversations::StreamService do
           {
             chunk: nil,
             done: true,
-            pending_tool_calls: [{id: pending.id, name: "create_coupon", arguments: {"code" => "SPRING"}, status: "pending"}]
+            pending_tool_calls: [pending]
           }
         )
       end

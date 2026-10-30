@@ -240,7 +240,7 @@ RSpec.describe AiConversations::ResumeService do
         expect(LagoApiSchema.subscriptions).to have_received(:trigger).with(
           :ai_conversation_streamed,
           {id: ai_conversation.id},
-          {chunk: nil, done: true, pending_tool_calls: [{id: next_call.id, name: "create_coupon", arguments: {"code" => "SPRING"}, status: "pending"}]}
+          {chunk: nil, done: true, pending_tool_calls: [next_call]}
         )
         expect(ai_conversation.reload.busy_at).to be_nil
       end
@@ -296,7 +296,7 @@ RSpec.describe AiConversations::ResumeService do
       expect(LagoApiSchema.subscriptions).to have_received(:trigger).with(
         :ai_conversation_streamed,
         {id: ai_conversation.id},
-        {chunk: nil, done: true, pending_tool_calls: [{id: write_call.id, name: "create_coupon", arguments: {"coupon" => {"code" => "SPRING"}}, status: "pending"}]}
+        {chunk: nil, done: true, pending_tool_calls: [write_call]}
       )
       expect(ai_conversation.reload.busy_at).to be_nil
     end
