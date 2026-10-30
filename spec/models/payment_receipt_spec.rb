@@ -42,6 +42,23 @@ RSpec.describe PaymentReceipt do
       it "returns the receipts of payments on catalog invoices, directly or through a payment request" do
         expect(scope).to match_array([catalog_receipt, catalog_request_receipt])
       end
+
+      context "when the planner cannot scan a table" do
+        # Scoped to the transaction wrapping the example: without scans, a subquery reading the
+        # invoices of every organization shows as a forced Seq Scan.
+        before do
+          %w[enable_seqscan enable_bitmapscan].each do |setting|
+            ActiveRecord::Base.connection.execute("SET LOCAL #{setting} = off")
+          end
+        end
+
+        it "probes the invoice of each payment by id" do
+          plan = ActiveRecord::Base.connection.select_rows("EXPLAIN #{scope.where(id: catalog_receipt.id).to_sql}").flatten.join("\n")
+
+          expect(plan).to include("Index Cond: (id = payments.payable_id)")
+          expect(plan).not_to include("Seq Scan on invoices")
+        end
+      end
     end
   end
 
