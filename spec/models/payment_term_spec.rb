@@ -170,6 +170,44 @@ RSpec.describe PaymentTerm do
     end
   end
 
+  describe "#==" do
+    it "compares terms by value" do
+      expect(described_class.from_h(term_type: "net", days: 30))
+        .to eq(described_class.from_h("term_type" => "net", "days" => 30))
+      expect(described_class.from_h(term_type: "net", days: 30))
+        .not_to eq(described_class.from_h(term_type: "net", days: 15))
+      expect(described_class.from_h(term_type: "due_on_receipt"))
+        .not_to eq("term_type" => "due_on_receipt")
+    end
+
+    it "hashes equal terms identically for group_by" do
+      terms = [described_class.from_h(term_type: "net", days: 30), described_class.from_h("term_type" => "net", "days" => 30)]
+
+      expect(terms.group_by(&:itself).size).to eq(1)
+    end
+  end
+
+  describe "#grouping_key" do
+    it "groups zero-day terms with the term giving the same due date" do
+      expect(described_class.from_h(term_type: "net", days: 0).grouping_key).to eq("term_type" => "due_on_receipt")
+      expect(described_class.from_h(term_type: "net_end_of_month", days: 0).grouping_key).to eq("term_type" => "end_of_month")
+      expect(described_class.from_h(term_type: "days_end_of_month", days: 0).grouping_key).to eq("term_type" => "end_of_month")
+    end
+
+    it "keeps every other term as it is" do
+      [
+        {"term_type" => "due_on_receipt"},
+        {"term_type" => "end_of_month"},
+        {"term_type" => "net", "days" => 30},
+        {"term_type" => "net_end_of_month", "days" => 2},
+        {"term_type" => "days_end_of_month", "days" => 10},
+        {"term_type" => "day_of_month", "day_of_month" => 15, "month_offset" => 0}
+      ].each do |term|
+        expect(described_class.from_h(term).grouping_key).to eq(term)
+      end
+    end
+  end
+
   describe "#net_payment_term_alias" do
     subject(:net_payment_term_alias) { term.net_payment_term_alias }
 
@@ -209,8 +247,10 @@ RSpec.describe PaymentTerm do
       expect(described_class.from_h(term_type: "days_end_of_month", days: 30).label).to eq("Due 30 days, end of month")
     end
 
-    it "renders a net-0 term as due on receipt" do
+    it "renders a zero-day term as the term it is equal to" do
       expect(described_class.from_h(term_type: "net", days: 0).label).to eq("Due on receipt")
+      expect(described_class.from_h(term_type: "net_end_of_month", days: 0).label).to eq("Due at end of month")
+      expect(described_class.from_h(term_type: "days_end_of_month", days: 0).label).to eq("Due at end of month")
     end
 
     it "renders the month_offset variants for day_of_month" do
