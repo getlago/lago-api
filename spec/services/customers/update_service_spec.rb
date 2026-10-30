@@ -655,14 +655,12 @@ RSpec.describe Customers::UpdateService do
       context "with both fields sent" do
         let(:update_args) { {id: customer.id, net_payment_term: 45, payment_term: {term_type: "end_of_month"}} }
 
-        it "rejects conflicting aliases without changing the customer" do
+        it "lets payment_term win" do
           result = customers_service.call
 
-          expect(result).to be_failure
-          expect(result.error.messages[:payment_term]).to eq(["conflicting_net_payment_term"])
-          expect(customer.reload).to have_attributes(
-            payment_term: {"term_type" => "net", "days" => 30},
-            net_payment_term: 30
+          expect(result.customer).to have_attributes(
+            payment_term: {"term_type" => "end_of_month"},
+            net_payment_term: nil
           )
         end
       end

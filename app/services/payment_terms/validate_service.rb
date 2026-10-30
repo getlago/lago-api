@@ -8,7 +8,6 @@ module PaymentTerms
 
     def valid?
       valid_payment_term?
-      valid_alias_equivalence? unless errors?
 
       if errors?
         result.validation_failure!(errors:)
@@ -19,19 +18,6 @@ module PaymentTerms
     end
 
     private
-
-    # Both fields sent: they must describe the same term, a null on either side included.
-    def valid_alias_equivalence?
-      return true unless args.key?(:payment_term) && args.key?(:net_payment_term)
-
-      alias_value = payment_term && PaymentTerm.from_h(payment_term).net_payment_term_alias
-      # Compared as the integer column casts it, so the legacy "30" and 30.0 inputs still match
-      if alias_value != ActiveModel::Type::Integer.new.cast(args[:net_payment_term])
-        add_error(field: :payment_term, error_code: "conflicting_net_payment_term")
-      else
-        true
-      end
-    end
 
     def valid_payment_term?
       return true if payment_term.nil?
