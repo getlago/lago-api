@@ -142,6 +142,18 @@ RSpec.describe "API v2 routing parity" do
     expect(recognized[:controller]).to eq("api/v2/customers/invoices")
   end
 
+  it "routes top-level payment endpoints to v2 without changing v1" do
+    {
+      get: ["/payments", "/payments/#{SecureRandom.uuid}"],
+      post: ["/payments"]
+    }.each do |method, paths|
+      paths.each do |path|
+        expect(Rails.application.routes.recognize_path("/api/v2#{path}", method:)[:controller]).to eq("api/v2/payments")
+        expect(Rails.application.routes.recognize_path("/api/v1#{path}", method:)[:controller]).to eq("api/v1/payments")
+      end
+    end
+  end
+
   it "routes customer payment endpoints to their controllers" do
     {
       [:get, "/api/v2/customers/cus_1/payments"] => "api/v2/customers/payments",
