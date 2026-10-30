@@ -364,6 +364,18 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         expect(Invoices::Payments::CreateService).to have_received(:call_async)
       end
 
+      context "when the customer has an active wallet" do
+        before { create(:wallet, organization:, customer:) }
+
+        it "finalizes the invoice without flagging the customer wallets for refresh" do
+          result = pull_taxes_service.call
+
+          expect(result).to be_success
+          expect(result.invoice).to be_finalized
+          expect(customer.reload.awaiting_wallet_refresh).to be(false)
+        end
+      end
+
       context "with credit notes" do
         let(:credit_note) do
           create(
@@ -471,6 +483,33 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
 
           pull_taxes_service.call
           expect(Invoices::Payments::CreateService).not_to have_received(:call_async)
+        end
+
+        context "when the customer has an active wallet" do
+          before { create(:wallet, organization:, customer:) }
+
+          it "flags the customer wallets for refresh" do
+            expect(invoice.reload.total_amount_cents).to eq(0)
+            expect(customer.reload.awaiting_wallet_refresh).to be(false)
+
+            result = pull_taxes_service.call
+
+            expect(result).to be_success
+            expect(result.invoice.total_amount_cents).to eq(3_350) # 2_000 + 1_000 fees + 350 provider taxes
+            expect(customer.reload.awaiting_wallet_refresh).to be(true)
+          end
+        end
+
+        context "when the customer has no active wallet" do
+          before { create(:wallet, :terminated, organization:, customer:) }
+
+          it "does not flag the customer wallets for refresh" do
+            result = pull_taxes_service.call
+
+            expect(result).to be_success
+            expect(result.invoice.total_amount_cents).to eq(3_350) # 2_000 + 1_000 fees + 350 provider taxes
+            expect(customer.reload.awaiting_wallet_refresh).to be(false)
+          end
         end
 
         context "with credit notes" do
@@ -597,6 +636,21 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         expect(result.invoice.taxes_rate).to eq(10.0)
         expect(result.invoice.applied_taxes.count).to eq(1)
       end
+
+      context "when the invoice is a draft and the customer has an active wallet" do
+        before do
+          invoice.update!(status: :draft)
+          create(:wallet, organization:, customer:)
+        end
+
+        it "does not flag the customer wallets for refresh as the total is unchanged" do
+          result = pull_taxes_service.call
+
+          expect(result).to be_success
+          expect(result.invoice).to have_attributes(status: "draft", total_amount_cents: 0)
+          expect(customer.reload.awaiting_wallet_refresh).to be(false)
+        end
+      end
     end
 
     context "when failed to fetch taxes" do
@@ -661,6 +715,21 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
 
         expect(result).to be_success
         expect(invoice.reload.status).to eq("failed")
+      end
+
+      context "when the invoice is a draft and the customer has an active wallet" do
+        before do
+          invoice.update!(status: :draft)
+          create(:wallet, organization:, customer:)
+        end
+
+        it "does not flag the customer wallets for refresh" do
+          result = pull_taxes_service.call
+
+          expect(result).to be_success
+          expect(invoice.reload).to have_attributes(status: "draft", tax_status: "failed", total_amount_cents: 0)
+          expect(customer.reload.awaiting_wallet_refresh).to be(false)
+        end
       end
 
       it "resolves old tax error and creates new one" do
