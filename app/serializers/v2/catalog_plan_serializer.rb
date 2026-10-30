@@ -2,7 +2,7 @@
 
 module V2
   class CatalogPlanSerializer < ModelSerializer
-    expandable :taxes, serializer: ::V2::TaxSerializer
+    expandable :taxes, serializer: ::V2::TaxSerializer, webhooks: true
 
     def serialize
       {

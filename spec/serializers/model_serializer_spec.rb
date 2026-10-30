@@ -125,6 +125,24 @@ RSpec.describe ModelSerializer do
     end
   end
 
+  describe ".webhook_includes" do
+    let(:serializer_class) do
+      Class.new(described_class) do
+        expandable :first, serializer: ModelSerializer, webhooks: true
+        expandable :second, serializer: ModelSerializer
+        expandable :third, serializer: ModelSerializer, webhooks: true
+      end
+    end
+
+    it "includes nothing by default" do
+      expect(described_class.webhook_includes).to eq([])
+    end
+
+    it "lists the expansions declared with webhooks, in their declared order" do
+      expect(serializer_class.webhook_includes).to eq(%i[first third])
+    end
+  end
+
   describe "#serialize" do
     subject(:payload) { serializer_class.new(model, options).serialize }
 
@@ -165,6 +183,42 @@ RSpec.describe ModelSerializer do
 
       it "passes it on to the embedded record, and no expansion" do
         expect(payload).to eq(code: "parent", first: {code: "first", options: {includes: %i[usec_timestamps]}})
+      end
+    end
+
+    context "with webhook: true" do
+      let(:options) { {webhook: true} }
+
+      let(:serializer_class) do
+        embedded_serializer = self.embedded_serializer
+
+        Class.new(described_class) do
+          expandable :first, serializer: embedded_serializer
+          expandable :second, serializer: embedded_serializer, webhooks: true
+          expandable :third, serializer: embedded_serializer, webhooks: true
+
+          def serialize = {code: "parent"}
+        end
+      end
+
+      it "adds the expansions declared with webhooks only" do
+        expect(payload).to eq(code: "parent", second: nil, third: {code: "first", options: {}})
+      end
+
+      context "with an internal include" do
+        let(:options) { {webhook: true, includes: %i[usec_timestamps]} }
+
+        it "keeps it next to the webhook includes" do
+          expect(payload).to eq(code: "parent", second: nil, third: {code: "first", options: {includes: %i[usec_timestamps]}})
+        end
+      end
+
+      context "with an expansion in its includes" do
+        let(:options) { {webhook: true, includes: %i[first]} }
+
+        it "raises, since only webhooks: true embeds an expansion in a webhook" do
+          expect { payload }.to raise_error(ArgumentError, /only through `webhooks: true`/)
+        end
       end
     end
 
