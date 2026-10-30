@@ -5,6 +5,8 @@ module Types
     class Object < Types::BaseObject
       graphql_name "Payment"
 
+      dataload_association :x402_settlement
+
       field :id, ID, null: false
 
       field :amount_cents, GraphQL::Types::BigInt, null: false
@@ -20,6 +22,7 @@ module Types
       field :payment_type, Types::Payments::PaymentTypeEnum, null: false
       field :provider_payment_id, GraphQL::Types::String, null: true
       field :reference, GraphQL::Types::String, null: true
+      field :x402_settlement, Types::X402::Settlement, null: true
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: true

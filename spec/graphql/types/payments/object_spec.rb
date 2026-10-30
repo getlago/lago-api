@@ -20,6 +20,7 @@ RSpec.describe Types::Payments::Object do
   it { is_expected.to have_field(:payment_type).of_type("PaymentTypeEnum!") }
   it { is_expected.to have_field(:provider_payment_id).of_type("String") }
   it { is_expected.to have_field(:reference).of_type("String") }
+  it { is_expected.to have_field(:x402_settlement).of_type("X402Settlement") }
 
   it { is_expected.to have_field(:created_at).of_type("ISO8601DateTime!") }
   it { is_expected.to have_field(:updated_at).of_type("ISO8601DateTime") }
