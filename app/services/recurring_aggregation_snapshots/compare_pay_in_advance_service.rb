@@ -109,7 +109,7 @@ module RecurringAggregationSnapshots
       Aggregation.from(Charges::PayInAdvanceAggregationService.call!(metered_item:, billing_context:))
     end
 
-    # RecurringAggregationSnapshots::FetchService.readable?: with a period, the event group starts
+    # RecurringAggregationSnapshot.readable?: with a period, the event group starts
     # from its snapshot, or from zero without one. The subscription is the one the event resolves
     # to, which an upgrade can make another one.
     def snapshot_read?(metered_item, billing_context)
