@@ -12,12 +12,16 @@ module Integrations
           super(integration:)
         end
 
+        def action_name
+          "update-company"
+        end
+
         def call
           Integrations::Hubspot::Companies::DeployPropertiesService.call(integration:)
 
           throttle!(:hubspot)
 
-          response = http_client.put_with_response(params, headers)
+          response = trigger_action(params)
           body = JSON.parse(response.body)
 
           if body.is_a?(Hash)

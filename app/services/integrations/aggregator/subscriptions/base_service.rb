@@ -16,14 +16,6 @@ module Integrations
 
         delegate :customer, to: :subscription, allow_nil: true
 
-        def headers
-          {
-            "Connection-Id" => integration.connection_id,
-            "Authorization" => "Bearer #{secret_key}",
-            "Provider-Config-Key" => provider_key
-          }
-        end
-
         def integration
           return nil unless integration_customer
 

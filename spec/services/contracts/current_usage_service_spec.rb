@@ -335,7 +335,7 @@ RSpec.describe Contracts::CurrentUsageService do
   context "when the customer is linked to a tax provider" do
     let(:apply_taxes) { true }
     let(:integration) { create(:anrok_integration, organization:) }
-    let(:endpoint) { "https://api.nango.dev/v1/anrok/draft_invoices" }
+    let(:endpoint) { "https://api.nango.dev/action/trigger" }
 
     before do
       create(:anrok_customer, integration:, customer:)
@@ -346,7 +346,7 @@ RSpec.describe Contracts::CurrentUsageService do
       stub_request(:post, endpoint).to_return do |request|
         response = JSON.parse(File.read(Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")))
         provider_fee = response["succeededInvoices"].first["fees"].last
-        provider_fee["item_key"] = JSON.parse(request.body).first["fees"].last["item_key"]
+        provider_fee["item_key"] = JSON.parse(request.body)["input"].first["fees"].last["item_key"]
         provider_fee["amount_cents"] = 200
         provider_fee["tax_amount_cents"] = 17
         provider_fee["tax_breakdown"].first["tax_amount"] = 17

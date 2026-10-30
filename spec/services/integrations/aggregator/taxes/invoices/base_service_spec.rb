@@ -35,8 +35,8 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::BaseService do
         second_fee
         first_fee
 
-        stub_request(:post, %r{https://api.nango.dev/v1/#{provider}/(draft|finalized)_invoices}).to_return do |request|
-          items = JSON.parse(request.body).first.fetch("fees")
+        stub_request(:post, "https://api.nango.dev/action/trigger").to_return do |request|
+          items = JSON.parse(request.body)["input"].first.fetch("fees")
           requested_items.concat(items)
           taxed_items = items.map do |item|
             item.merge("tax_amount_cents" => 5, "tax_breakdown" => [

@@ -5,8 +5,13 @@ module Integrations
     module Taxes
       module Invoices
         class VoidService < BaseService
-          def action_path
-            "v1/#{provider}/void_invoices"
+          def action_name
+            case provider
+            when "anrok"
+              "anrok-void-transaction"
+            when "avalara"
+              "void-invoice"
+            end
           end
 
           def call
@@ -14,7 +19,7 @@ module Integrations
             return result unless ::Integrations::BaseIntegration::INTEGRATION_TAX_TYPES.include?(integration.type)
             return result if never_reported?
 
-            response = http_client.post_with_response(payload, headers)
+            response = trigger_action(payload)
             body = JSON.parse(response.body)
 
             process_void_response(body)

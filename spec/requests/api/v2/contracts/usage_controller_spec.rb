@@ -197,7 +197,7 @@ RSpec.describe Api::V2::Contracts::UsageController do
 
       before do
         create(:anrok_customer, integration:, customer:)
-        stub_request(:post, "https://api.nango.dev/v1/anrok/draft_invoices")
+        stub_request(:post, "https://api.nango.dev/action/trigger")
           .to_return(body: File.read(Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")))
       end
 

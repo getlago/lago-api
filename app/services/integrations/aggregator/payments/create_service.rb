@@ -12,8 +12,13 @@ module Integrations
           super(invoice:)
         end
 
-        def action_path
-          "v1/#{provider}/payments"
+        def action_name
+          case provider
+          when "netsuite"
+            "netsuite-create-payment"
+          when "xero"
+            "xero-create-payment"
+          end
         end
 
         def call
@@ -25,7 +30,7 @@ module Integrations
 
           throttle!(:netsuite, :xero)
 
-          response = http_client.post_with_response(payload.body, headers)
+          response = trigger_action(payload.body)
           body = JSON.parse(response.body)
 
           if body.is_a?(Hash)

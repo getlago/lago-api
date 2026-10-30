@@ -2,15 +2,11 @@
 
 module Integrations
   module Aggregator
-    class ItemsService < BaseService
+    class ItemsService < BaseRecordsService
       Result = BaseResult[:items]
 
       LIMIT = 450
       MAX_SUBSEQUENT_REQUESTS = 15
-
-      def action_path
-        "v1/#{provider}/items"
-      end
 
       def call
         @cursor = ""
@@ -21,7 +17,7 @@ module Integrations
           integration.integration_items.where(item_type: :standard).destroy_all
 
           MAX_SUBSEQUENT_REQUESTS.times do
-            response = http_client.get(headers:, params:)
+            response = fetch_records(limit: LIMIT, cursor:)
             fetched_items.concat(response["records"])
             @cursor = response["next_cursor"]
 
@@ -38,14 +34,6 @@ module Integrations
       private
 
       attr_reader :cursor, :items
-
-      def headers
-        {
-          "Connection-Id" => integration.connection_id,
-          "Authorization" => "Bearer #{secret_key}",
-          "Provider-Config-Key" => provider_key
-        }
-      end
 
       def handle_items(new_items)
         new_items.each do |item|
@@ -64,10 +52,8 @@ module Integrations
         end
       end
 
-      def params
-        {
-          limit: LIMIT
-        }.merge(cursor.present? ? {cursor:} : {})
+      def model
+        "Item"
       end
 
       # Nango uses incremental sync to synchronize Xero items which means it doesn't not take deleted record into
