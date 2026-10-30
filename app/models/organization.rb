@@ -187,7 +187,7 @@ class Organization < ApplicationRecord
   validates :document_number_prefix, length: {minimum: 1, maximum: 10}, on: :update
   validates :invoice_grace_period, numericality: {greater_than_or_equal_to: 0}
   validates :pagination_max_page_size, numericality: {only_integer: true, greater_than: 0}, allow_nil: true
-  validates :net_payment_term, numericality: {greater_than_or_equal_to: 0, only_integer: true}
+  validates :net_payment_term, numericality: {greater_than_or_equal_to: 0}
   validates :document_url_expiration_days, numericality: {only_integer: true, greater_than_or_equal_to: 30, less_than_or_equal_to: 120}
   validates :logo,
     image: {authorized_content_type: %w[image/png image/jpg image/jpeg], max_size: 800.kilobytes},

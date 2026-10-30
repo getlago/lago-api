@@ -7,53 +7,6 @@ RSpec.describe PaymentTerms::ValidateService do
 
   let(:result) { BaseResult.new }
 
-  describe "net_payment_term validation" do
-    subject(:validate_service) { described_class.new(result, net_payment_term:) }
-
-    context "with an integer >= 0 or null" do
-      [30, 0, nil].each do |value|
-        context "with #{value.inspect}" do
-          let(:net_payment_term) { value }
-
-          it "returns true" do
-            expect(validate_service).to be_valid
-            expect(result).to be_success
-          end
-        end
-      end
-    end
-
-    context "with a negative integer" do
-      let(:net_payment_term) { -1 }
-
-      it "fails with value_is_out_of_range" do
-        expect(validate_service).not_to be_valid
-        expect(result.error.messages[:net_payment_term]).to eq(["value_is_out_of_range"])
-      end
-    end
-
-    context "with a non-integer value" do
-      [30.5, 30.0, "30", "abc", "", true, {}, []].each do |value|
-        context "with #{value.inspect}" do
-          let(:net_payment_term) { value }
-
-          it "fails with invalid_format" do
-            expect(validate_service).not_to be_valid
-            expect(result.error.messages[:net_payment_term]).to eq(["invalid_format"])
-          end
-        end
-      end
-    end
-
-    context "when the key is absent" do
-      subject(:validate_service) { described_class.new(result) }
-
-      it "returns true" do
-        expect(validate_service).to be_valid
-      end
-    end
-  end
-
   describe "payment_term validation" do
     shared_examples "a term type carrying days" do |term_type|
       context "when days is valid" do

@@ -7,7 +7,6 @@ module PaymentTerms
     MONTH_OFFSET_RANGE = (0..12)
 
     def valid?
-      valid_net_payment_term?
       valid_payment_term?
 
       if errors?
@@ -19,19 +18,6 @@ module PaymentTerms
     end
 
     private
-
-    def valid_net_payment_term?
-      value = args[:net_payment_term]
-      if value.nil?
-        true
-      elsif !value.is_a?(Integer)
-        add_error(field: :net_payment_term, error_code: "invalid_format")
-      elsif value.negative?
-        add_error(field: :net_payment_term, error_code: "value_is_out_of_range")
-      else
-        true
-      end
-    end
 
     def valid_payment_term?
       return true if payment_term.nil?
