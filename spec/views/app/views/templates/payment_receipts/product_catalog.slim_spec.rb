@@ -50,7 +50,7 @@ RSpec.describe "templates/payment_receipts/product_catalog.slim" do
   let(:payment_receipt) { create(:payment_receipt, payment:, organization:, billing_entity:, number: "RCT-001") }
 
   before do
-    billing_entity.update!(name: "Hooli", invoice_footer: "Hooli footer")
+    billing_entity.update!(name: "Hooli", legal_name: nil, invoice_footer: "Hooli footer")
     create(
       :fee,
       invoice:,
@@ -80,8 +80,8 @@ RSpec.describe "templates/payment_receipts/product_catalog.slim" do
     expect(rendered_text).to include("€28.00 Paid on #{I18n.l(Date.new(2026, 11, 2), format: :default)} (Remaining to pay: €0.00)")
   end
 
-  it "summarizes the invoice like the catalog invoice, with one line per category" do
-    expect(rendered_text).to include("Description Amount Infrastructure €28.00")
+  it "summarizes the invoice with one line per category, then the totals" do
+    expect(rendered_text).to include("Item Amount Infrastructure €28.00")
     expect(rendered_text).to include("Subtotal (excl. tax) €28.00 Total €28.00 Amount due €0.00")
     expect(rendered_text).to include("Hooli footer")
   end
@@ -103,7 +103,7 @@ RSpec.describe "templates/payment_receipts/product_catalog.slim" do
     let(:invoice_type) { :advance_charges }
 
     it "shows the total as already paid, with nothing due" do
-      expect(rendered_text).to include("Description Amount Infrastructure €28.00")
+      expect(rendered_text).to include("Item Amount Infrastructure €28.00")
       expect(rendered_text).to include("Subtotal (excl. tax) €28.00 Already paid €28.00")
       expect(rendered_text).not_to include("Amount due")
     end

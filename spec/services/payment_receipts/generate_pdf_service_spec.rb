@@ -87,10 +87,10 @@ RSpec.describe PaymentReceipts::GeneratePdfService do
         )
       end
 
-      it "renders the receipt from the catalog invoice layout" do
+      it "renders the receipt from the catalog receipt template" do
         result = payment_receipt_generate_service.call
 
-        expect(result.payment_receipt.file.download).to include("document-totals", I18n.t("invoice.already_paid"))
+        expect(result.payment_receipt.file.download).to include("invoice-resume-table", I18n.t("invoice.already_paid"))
       end
     end
 
