@@ -70,13 +70,12 @@ RSpec.describe PaymentTerms::ResolveService do
   context "when the subscription is issued by another billing entity" do
     subject(:result) { described_class.call(customer:, subscription:) }
 
-    let(:other_billing_entity) { create(:billing_entity, organization:, payment_term: {term_type: "end_of_month"}) }
-    let(:subscription) { create(:subscription, customer:, billing_entity: other_billing_entity) }
-
-    before { billing_entity.update!(payment_term: {term_type: "net", days: 30}) }
+    let(:billing_entity_term) { {term_type: "net", days: 30} }
+    let(:other_billing_entity) { build_stubbed(:billing_entity, payment_term: {term_type: "end_of_month"}) }
+    let(:subscription) { build_stubbed(:subscription, customer:, billing_entity: other_billing_entity) }
 
     it "returns the term of the subscription's billing entity" do
-      expect(result.payment_term.term_type).to eq("end_of_month")
+      expect(result.payment_term).to eq(PaymentTerm.new(term_type: "end_of_month"))
       expect(result.source).to eq("billing_entity")
     end
 
@@ -84,7 +83,7 @@ RSpec.describe PaymentTerms::ResolveService do
       subject(:result) { described_class.call(customer:, subscription:, billing_entity:) }
 
       it "returns the term of the given billing entity" do
-        expect(result.payment_term.term_type).to eq("net")
+        expect(result.payment_term).to eq(PaymentTerm.new(term_type: "net", days: 30))
         expect(result.source).to eq("billing_entity")
       end
     end
