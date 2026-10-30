@@ -163,4 +163,45 @@ RSpec.describe Api::V2::PaymentReceiptsController do
       end
     end
   end
+
+  describe "POST /api/v2/payment_receipts/:id/resend_email" do
+    subject { post_with_token(organization, "/api/v2/payment_receipts/#{payment_receipt_id}/resend_email", params) }
+
+    let(:payment_receipt_id) { payment_receipt.id }
+    let(:params) { {to: ["custom@example.com"], cc: ["cc@example.com"], bcc: ["bcc@example.com"]} }
+
+    before { payment_receipt.billing_entity.update!(email: "billing@example.com") }
+
+    include_examples "requires API permission", "payment_receipt", "write"
+
+    it "resends the payment receipt email", :premium do
+      expect { subject }.to have_enqueued_mail(PaymentReceiptMailer, :created)
+        .with(params: {payment_receipt:, resend: true, to: ["custom@example.com"], cc: ["cc@example.com"], bcc: ["bcc@example.com"]}, args: [])
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to be_empty
+    end
+
+    context "without a premium license" do
+      it "returns a forbidden error" do
+        expect { subject }.not_to have_enqueued_mail(PaymentReceiptMailer, :created)
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:code]).to eq("premium_license_required")
+      end
+    end
+
+    context "when the receipt belongs to another organization", :premium do
+      let(:other_invoice) { create(:invoice) }
+      let(:payment_receipt_id) do
+        create(:payment_receipt, organization: other_invoice.organization, payment: create(:payment, payable: other_invoice)).id
+      end
+
+      it "returns a not found error" do
+        expect { subject }.not_to have_enqueued_mail(PaymentReceiptMailer, :created)
+
+        expect(response).to be_v2_not_found_error("payment_receipt")
+      end
+    end
+  end
 end

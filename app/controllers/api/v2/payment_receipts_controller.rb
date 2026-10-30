@@ -22,7 +22,7 @@ module Api
       end
 
       def show
-        payment_receipt = current_organization.payment_receipts.find_by(id: params[:id])
+        payment_receipt = find_payment_receipt
 
         if payment_receipt
           render_payment_receipt(payment_receipt)
@@ -31,7 +31,33 @@ module Api
         end
       end
 
+      def resend_email
+        payment_receipt = find_payment_receipt
+        return not_found_error(resource: "payment_receipt") unless payment_receipt
+
+        result = ::Emails::ResendService.call(
+          resource: payment_receipt,
+          to: resend_email_params[:to],
+          cc: resend_email_params[:cc],
+          bcc: resend_email_params[:bcc]
+        )
+
+        if result.success?
+          head(:ok)
+        else
+          render_error_response(result)
+        end
+      end
+
       private
+
+      def find_payment_receipt
+        current_organization.payment_receipts.find_by(id: params[:id])
+      end
+
+      def resend_email_params
+        params.permit(to: [], cc: [], bcc: [])
+      end
 
       def resource_name
         "payment_receipt"
