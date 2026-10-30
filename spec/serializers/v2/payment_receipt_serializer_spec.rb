@@ -24,6 +24,35 @@ RSpec.describe V2::PaymentReceiptSerializer do
     )
   end
 
+  context "with the payment expansion" do
+    let(:includes) { [:payment] }
+    let(:payment) { payment_receipt.payment }
+
+    it "embeds the payment" do
+      expect(payload[:payment]).to eq(
+        lago_id: payment.id,
+        lago_customer_id: payment.customer_id,
+        external_customer_id: payment.customer.external_id,
+        lago_payable_id: payment.payable_id,
+        payable_type: "Invoice",
+        lago_invoice_ids: [payment.payable_id],
+        amount_cents: payment.amount_cents,
+        currency: payment.amount_currency,
+        status: payment.status,
+        payment_status: payment.payable_payment_status,
+        payment_type: "provider",
+        reference: payment.reference,
+        payment_provider_code: payment.payment_provider.code,
+        payment_provider_type: "stripe",
+        provider_payment_id: payment.provider_payment_id,
+        provider_customer_id: payment.payment_provider_customer.provider_customer_id,
+        next_action: payment.provider_payment_data,
+        created_at: payment.created_at.iso8601,
+        updated_at: payment.updated_at.iso8601
+      )
+    end
+  end
+
   context "when the PDF and the XML are generated" do
     before do
       payment_receipt.file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.pdf")), filename: "receipt.pdf", content_type: "application/pdf")

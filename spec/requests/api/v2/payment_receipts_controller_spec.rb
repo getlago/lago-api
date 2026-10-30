@@ -82,11 +82,23 @@ RSpec.describe Api::V2::PaymentReceiptsController do
         expect(json[:code]).to eq("feature_unavailable")
       end
     end
+
+    context "with an expansion" do
+      let(:params) { {expands: ["payment"]} }
+
+      it "rejects it, as only a receipt expands its payment" do
+        subject
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:details]).to eq([{code: "action_not_expandable", field: "expands", meta: {invalid_values: ["payment"]}}])
+      end
+    end
   end
 
   describe "GET /api/v2/payment_receipts/:id" do
-    subject { get_with_token(organization, "/api/v2/payment_receipts/#{payment_receipt_id}") }
+    subject { get_with_token(organization, "/api/v2/payment_receipts/#{payment_receipt_id}", params) }
 
+    let(:params) { {} }
     let(:payment_receipt_id) { payment_receipt.id }
 
     include_examples "requires API permission", "payment_receipt", "read"
@@ -124,6 +136,22 @@ RSpec.describe Api::V2::PaymentReceiptsController do
           xml_url_expires_at: payment_receipt.xml_url_expires_at.iso8601(6),
           created_at: payment_receipt.created_at.iso8601(6),
           updated_at: payment_receipt.updated_at.iso8601(6)
+        )
+      end
+    end
+
+    context "with the payment expansion" do
+      let(:params) { {expands: ["payment"]} }
+
+      it "embeds the payment of the receipt" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:payment_receipt][:payment]).to include(
+          lago_id: payment_receipt.payment_id,
+          lago_payable_id: invoice.id,
+          payable_type: "Invoice",
+          lago_invoice_ids: [invoice.id]
         )
       end
     end
