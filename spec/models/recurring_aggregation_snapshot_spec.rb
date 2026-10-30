@@ -106,6 +106,68 @@ RSpec.describe RecurringAggregationSnapshot do
     end
   end
 
+  describe ".filters_changed_since?" do
+    subject(:filters_changed) { described_class.filters_changed_since?(organization_id: charge.organization_id, charge_ids: charge.id, watermark:) }
+
+    let(:watermark) { Time.zone.parse("2026-10-01T00:05:00") }
+    let(:charge) { create(:standard_charge) }
+    let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric: charge.billable_metric, values: %w[eu us]) }
+    let(:charge_filter) { create(:charge_filter, charge:, created_at: watermark - 1.month) }
+    let(:values) { %w[eu] }
+    let(:charge_filter_value) do
+      create(:charge_filter_value, charge_filter:, billable_metric_filter:, values:, created_at: watermark - 1.month, updated_at: watermark - 1.month)
+    end
+
+    before do
+      charge_filter_value
+      billable_metric_filter.update_columns(updated_at: watermark - 1.month) # rubocop:disable Rails/SkipsModelValidations
+    end
+
+    it { is_expected.to be(false) }
+
+    context "when a filter was created after the watermark" do
+      before { create(:charge_filter, charge:, created_at: watermark + 1.minute) }
+
+      it { is_expected.to be(true) }
+    end
+
+    context "when a filter was removed after the watermark" do
+      before { charge_filter.update_columns(deleted_at: watermark + 1.minute) } # rubocop:disable Rails/SkipsModelValidations
+
+      it { is_expected.to be(true) }
+    end
+
+    context "when a filter value was edited after the watermark" do
+      before { charge_filter_value.update_columns(updated_at: watermark + 1.minute) } # rubocop:disable Rails/SkipsModelValidations
+
+      it { is_expected.to be(true) }
+    end
+
+    context "when a filter of another charge changed after the watermark" do
+      before { create(:charge_filter, created_at: watermark + 1.minute) }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "when the metric filter of a value listing its values changed after the watermark" do
+      before { billable_metric_filter.update_columns(updated_at: watermark + 1.minute) } # rubocop:disable Rails/SkipsModelValidations
+
+      it { is_expected.to be(false) }
+    end
+
+    context "with a value set to all values of the metric filter" do
+      let(:values) { [ChargeFilterValue::ALL_FILTER_VALUES] }
+
+      it { is_expected.to be(false) }
+
+      context "when the metric filter changed after the watermark" do
+        before { billable_metric_filter.update_columns(updated_at: watermark + 1.minute) } # rubocop:disable Rails/SkipsModelValidations
+
+        it { is_expected.to be(true) }
+      end
+    end
+  end
+
   describe "unique index" do
     let(:existing) { create(:recurring_aggregation_snapshot, grouped_by:) }
     let(:grouped_by) { {} }
