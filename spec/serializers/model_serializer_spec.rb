@@ -353,8 +353,8 @@ RSpec.describe ModelSerializer do
     end
   end
 
-  describe "#for_webhook" do
-    subject(:webhook_serializer) { serializer.for_webhook }
+  describe "#for_webhook!" do
+    subject(:webhook_serializer) { serializer.for_webhook! }
 
     let(:serializer) { serializer_class.new(model, options) }
     let(:model) { Struct.new(:first, :second).new(first_record, first_record) }
@@ -375,30 +375,34 @@ RSpec.describe ModelSerializer do
       end
     end
 
-    it "renders the expansions declared with webhooks, with the options it was built with" do
+    it "turns the serializer itself into a render of the expansions declared with webhooks, with the options it was built with" do
+      expect(webhook_serializer).to be(serializer)
       expect(webhook_serializer.root_name).to eq("record")
       expect(webhook_serializer.serialize).to eq(code: "parent", second: {code: "first", options: {includes: %i[usec_timestamps]}})
     end
 
-    it "leaves the serializer it is called on as it was" do
-      webhook_serializer
+    # Its includes then name the expansions, which a second `webhook: true` would refuse.
+    context "when called twice" do
+      before { serializer.for_webhook! }
 
-      expect(serializer.serialize).to eq(code: "parent")
+      it "keeps the same render" do
+        expect(webhook_serializer.serialize).to eq(code: "parent", second: {code: "first", options: {includes: %i[usec_timestamps]}})
+      end
     end
 
     context "when built with webhook: false" do
       let(:options) { {webhook: false} }
 
-      it "returns the same serializer" do
-        expect(webhook_serializer).to be(serializer)
+      it "keeps it flat" do
+        expect(webhook_serializer.serialize).to eq(code: "parent")
       end
     end
 
     context "when built with webhook: true" do
       let(:options) { {webhook: true} }
 
-      it "returns the same serializer" do
-        expect(webhook_serializer).to be(serializer)
+      it "keeps the render it was built with" do
+        expect(webhook_serializer.serialize).to eq(code: "parent", second: {code: "first", options: {}})
       end
     end
 
@@ -437,8 +441,8 @@ RSpec.describe ModelSerializer do
     context "with a serializer that declares no expansion" do
       let(:serializer_class) { Class.new(described_class) { def serialize = {code: "parent"} } }
 
-      it "returns the same serializer" do
-        expect(webhook_serializer).to be(serializer)
+      it "leaves its options as they were" do
+        expect(webhook_serializer.options).to eq(root_name: "record", includes: %i[usec_timestamps])
       end
     end
   end

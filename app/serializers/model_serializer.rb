@@ -22,7 +22,7 @@ class ModelSerializer
   # of the serializer with that name returns, for records that are ordered or computed. One record
   # or a list, each rendered by `serializer` with `nested_options` only, so that it stays flat. It
   # comes last in `serialize`. `webhooks: true` also embeds it in the record's webhooks: see
-  # `for_webhook`.
+  # `for_webhook!`.
   def self.expandable(name, serializer:, webhooks: false)
     prepend(RendersExpansions)
 
@@ -95,14 +95,15 @@ class ModelSerializer
     include[value]
   end
 
-  # The render of a webhook body, as Webhooks::BaseService asks for it: with `webhook: true`,
-  # unless the service chose a `webhook` option. A serializer without expansions has none to add.
-  def for_webhook
-    if self.class.expandable_names.empty? || options.key?(:webhook)
-      self
-    else
-      self.class.new(model, options.merge(webhook: true))
+  # Turns this render into a webhook body, as Webhooks::BaseService asks for it: with
+  # `webhook: true`, unless the service chose a `webhook` option. A serializer without expansions
+  # has none to add.
+  def for_webhook!
+    unless self.class.expandable_names.empty? || options.key?(:webhook)
+      @options = webhook_options(options.merge(webhook: true))
     end
+
+    self
   end
 
   private
