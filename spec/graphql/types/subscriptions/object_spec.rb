@@ -9,6 +9,7 @@ RSpec.describe Types::Subscriptions::Object do
   let_it_be(:customer) { create_default(:customer) }
 
   it do
+    expect(subject).to have_field(:payment_term).of_type("PaymentTerm")
     expect(subject).to have_field(:billing_entity_id).of_type("ID")
     expect(subject).to have_field(:customer).of_type("Customer!")
     expect(subject).to have_field(:external_id).of_type("String!")
