@@ -11,5 +11,6 @@ RSpec.describe Webhooks::Invoices::PaymentOverdueService do
 
   describe ".call" do
     it_behaves_like "creates webhook", "invoice.payment_overdue", "invoice"
+    it_behaves_like "sends the catalog invoice on v2"
   end
 end

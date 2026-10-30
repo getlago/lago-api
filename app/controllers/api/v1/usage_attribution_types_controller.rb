@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class UsageAttributionTypesController < Api::BaseController
+    class UsageAttributionTypesController < Api::V1::BaseController
       before_action :ensure_feature_flag!
 
       def create
@@ -63,8 +63,8 @@ module Api
         result = ::UsageAttributionTypesQuery.call(
           organization: current_organization,
           pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
+            page: page_number,
+            limit: page_size
           },
           filters: {role: params[:role]},
           search_term: params[:search_term]

@@ -16,6 +16,7 @@ module Types
       field :voided_at, GraphQL::Types::ISO8601DateTime, null: true
 
       field :signed_document_url, String, null: true
+      field :signed_document_url_expires_at, GraphQL::Types::ISO8601DateTime, null: true
 
       field :activity_logs, [Types::ActivityLogs::Object], null: true, permission: "audit_logs:view"
       field :customer, Types::Customers::Object, null: false
@@ -30,6 +31,9 @@ module Types
       dataload_association :order
       dataload_association :organization
       dataload_association :quote
+
+      # NOTE: Document urls read the organization expiry window
+      dataload_association_for :organization, :signed_document_url, :signed_document_url_expires_at
     end
   end
 end

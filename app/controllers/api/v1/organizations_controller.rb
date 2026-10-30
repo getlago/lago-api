@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class OrganizationsController < Api::BaseController
+    class OrganizationsController < Api::V1::BaseController
       def show
         render(
           json: ::V1::OrganizationSerializer.new(
@@ -50,6 +50,7 @@ module Api
           :document_numbering,
           :document_number_prefix,
           :finalize_zero_amount_invoice,
+          :document_url_expiration_days,
           :slug,
           email_settings: [],
           billing_configuration: [

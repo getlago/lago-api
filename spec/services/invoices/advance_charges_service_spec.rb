@@ -111,7 +111,6 @@ RSpec.describe Invoices::AdvanceChargesService do
         expect(SendWebhookJob).to have_been_enqueued.with("invoice.created", result.invoice)
         expect(Utils::ActivityLog).to have_produced("invoice.created").with(result.invoice)
         expect(Invoices::GenerateDocumentsJob).to have_been_enqueued.with(invoice: result.invoice, notify: false)
-        expect(SegmentTrackJob).to have_been_enqueued.once
         expect(Invoices::TransitionToFinalStatusService).to have_received(:call).with(invoice: result.invoice)
 
         expect(Payments::ManualCreateJob)
@@ -125,6 +124,48 @@ RSpec.describe Invoices::AdvanceChargesService do
               created_at: result.invoice.created_at
             }
           )
+      end
+
+      context "with an available credit note for a previously invoiced fee" do
+        let(:source_invoice) do
+          create(:invoice, organization:, customer:, billing_entity: customer.billing_entity, currency: "EUR", total_amount_cents: 500)
+        end
+        let(:credit_note) do
+          create(
+            :credit_note,
+            invoice: source_invoice,
+            customer:,
+            total_amount_cents: 500,
+            total_amount_currency: "EUR",
+            credit_amount_cents: 500,
+            credit_amount_currency: "EUR",
+            balance_amount_cents: 500,
+            balance_amount_currency: "EUR",
+            credit_status: :available
+          )
+        end
+
+        before { create(:credit_note_item, credit_note:, fee: create(:product_fee, invoice: source_invoice)) }
+
+        it "does not apply the credit to fees already paid in advance" do
+          result = invoice_service.call
+          invoice = result.invoice.reload
+
+          expect(result).to be_success
+          expect(invoice).to have_attributes(total_amount_cents: 231, currency: "EUR")
+          expect(invoice.credits.where(credit_note:)).to be_empty
+          expect(Credit.where(credit_note:)).to be_empty
+          expect(credit_note.reload.balance_amount_cents).to eq(500)
+          expect(Payments::ManualCreateJob).to have_been_enqueued.once.with(
+            organization:,
+            params: {
+              invoice_id: invoice.id,
+              amount_cents: 231,
+              reference:,
+              created_at: invoice.created_at
+            }
+          )
+        end
       end
 
       context "with billing entity resolution" do

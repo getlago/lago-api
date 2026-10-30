@@ -29,8 +29,12 @@ module Customers
         )
       end
 
+      integration_customers_validation = IntegrationCustomers::ValidateBatchService.call(integration_customers: args[:integration_customers])
+      return result.fail_with_error!(integration_customers_validation.error) unless integration_customers_validation.success?
+
       old_payment_provider = customer.payment_provider
       old_provider_customer = customer.provider_customer
+      old_payment_provider_id = resolved_payment_provider_id(customer) if api_context? && old_provider_customer
       original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
       original_searchable_values = customer.slice(*Customer::SEARCHABLE_CUSTOMER_FIELDS)
       ActiveRecord::Base.transaction do
@@ -76,6 +80,12 @@ module Customers
 
         customer.payment_provider = args[:payment_provider] if args.key?(:payment_provider)
         customer.payment_provider_code = args[:payment_provider_code] if args.key?(:payment_provider_code)
+
+        if api_context? && customer.payment_provider.present? && !args.key?(:payment_provider_customers) &&
+            %i[payment_provider payment_provider_code provider_customer].any? { |key| args.key?(key) }
+          customer.payment_provider_code = required_payment_provider(customer).code
+        end
+
         customer.invoice_footer = args[:invoice_footer] if args.key?(:invoice_footer)
 
         if billing_configuration.key?(:document_locale)
@@ -83,55 +93,53 @@ module Customers
         end
 
         @address_changed = customer.address_changed?
-      end
 
-      if args.key?(:billing_configuration)
-        billing = args[:billing_configuration]
-        customer.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
-      end
-
-      Customers::UpdateInvoiceIssuingDateSettingsService.call(customer:, params: args)
-
-      if args.key?(:net_payment_term)
-        Customers::UpdateInvoicePaymentDueDateService.call(customer:, net_payment_term: args[:net_payment_term])
-      end
-
-      # NOTE: Some fields are not editable if customer is attached to subscriptions:
-      #       external_id, account_type
-      billing_entity_changed = false
-      if args.key?(:billing_entity_code)
-        customer.billing_entity = billing_entity
-        billing_entity_changed = customer.billing_entity_id_changed?
-      end
-
-      if customer.editable?
-        customer.external_id = args[:external_id] if args.key?(:external_id)
-
-        if organization.revenue_share_enabled?
-          customer.account_type = args[:account_type] if args.key?(:account_type)
-        end
-      end
-
-      if organization.auto_dunning_enabled?
-        if args.key?(:applied_dunning_campaign_id)
-          customer.applied_dunning_campaign = applied_dunning_campaign
-          customer.exclude_from_dunning_campaign = false
+        if args.key?(:billing_configuration)
+          billing = args[:billing_configuration]
+          customer.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
         end
 
-        # NOTE: exclude_from_dunning_campaign has higher priority than applied campaign
-        if args.key?(:exclude_from_dunning_campaign)
-          customer.exclude_from_dunning_campaign = args[:exclude_from_dunning_campaign]
-          customer.applied_dunning_campaign = nil if args[:exclude_from_dunning_campaign]
+        Customers::UpdateInvoiceIssuingDateSettingsService.call(customer:, params: args)
+
+        if args.key?(:net_payment_term)
+          Customers::UpdateInvoicePaymentDueDateService.call(customer:, net_payment_term: args[:net_payment_term])
         end
-      end
 
-      # NOTE: partner accounts are excluded from dunning campaigns
-      if customer.partner_account?
-        customer.exclude_from_dunning_campaign = true
-        customer.applied_dunning_campaign = nil
-      end
+        # NOTE: Some fields are not editable if customer is attached to subscriptions:
+        #       external_id, account_type
+        billing_entity_changed = false
+        if args.key?(:billing_entity_code)
+          customer.billing_entity = billing_entity
+          billing_entity_changed = customer.billing_entity_id_changed?
+        end
 
-      ActiveRecord::Base.transaction do
+        if customer.editable?
+          customer.external_id = args[:external_id] if args.key?(:external_id)
+
+          if organization.revenue_share_enabled?
+            customer.account_type = args[:account_type] if args.key?(:account_type)
+          end
+        end
+
+        if organization.auto_dunning_enabled?
+          if args.key?(:applied_dunning_campaign_id)
+            customer.applied_dunning_campaign = applied_dunning_campaign
+            customer.exclude_from_dunning_campaign = false
+          end
+
+          # NOTE: exclude_from_dunning_campaign has higher priority than applied campaign
+          if args.key?(:exclude_from_dunning_campaign)
+            customer.exclude_from_dunning_campaign = args[:exclude_from_dunning_campaign]
+            customer.applied_dunning_campaign = nil if args[:exclude_from_dunning_campaign]
+          end
+        end
+
+        # NOTE: partner accounts are excluded from dunning campaigns
+        if customer.partner_account?
+          customer.exclude_from_dunning_campaign = true
+          customer.applied_dunning_campaign = nil
+        end
+
         if old_provider_customer && payment_provider_removed?
           old_provider_customer.discard!
           customer.payment_provider_code = nil
@@ -147,7 +155,8 @@ module Customers
         Customers::ManageInvoiceCustomSectionsService.call(
           customer:,
           skip_invoice_custom_sections: args[:skip_invoice_custom_sections],
-          section_ids: args[:configurable_invoice_custom_section_ids]
+          section_ids: args[:configurable_invoice_custom_section_ids],
+          section_codes: args[:invoice_custom_section_codes]
         ).raise_if_error!
 
         customer.save!
@@ -163,13 +172,10 @@ module Customers
         eu_tax_code_result = Customers::EuAutoTaxesService.call(
           customer:,
           new_record: false,
-          tax_attributes_changed: tax_attributes_changed || billing_entity_changed
+          tax_attributes_changed: tax_attributes_changed || billing_entity_changed,
+          tax_codes: args[:tax_codes]
         )
-
-        if eu_tax_code_result.success?
-          args[:tax_codes] ||= []
-          args[:tax_codes] = (args[:tax_codes] + [eu_tax_code_result.tax_code]).uniq
-        end
+        args[:tax_codes] = eu_tax_code_result.tax_codes if eu_tax_code_result.success?
 
         # NOTE: EU-managed taxes (lago_eu_*) belong to the previous billing entity. When the
         #       billing entity changes and no new EU tax applies (new entity does not manage
@@ -183,7 +189,7 @@ module Customers
           taxes_result = Customers::ApplyTaxesService.call(customer:, tax_codes: args[:tax_codes])
           taxes_result.raise_if_error!
         end
-        Customers::Metadata::UpdateService.call(customer:, params: args[:metadata]) if args[:metadata]
+        Customers::Metadata::UpdateService.call(customer:, params: args[:metadata]).raise_if_error! if args[:metadata]
       end
 
       # NOTE: the payment_provider_customers array (new shape) takes precedence over the singular
@@ -195,13 +201,27 @@ module Customers
         ).raise_if_error!
       else
         if args.key?(:provider_customer) || args.key?(:payment_provider)
-          payment_provider = old_payment_provider || customer.payment_provider
+          payment_provider = customer.payment_provider || old_payment_provider
           create_or_update_provider_customer(customer, payment_provider, args[:provider_customer])
         end
 
         if args.dig(:provider_customer, :provider_customer_id)
           update_result = PaymentProviderCustomers::UpdateService.call(customer)
           update_result.raise_if_error!
+        end
+
+        # Match v1 REST cleanup without changing GraphQL provider switches: payment methods belong
+        # to one provider account, so they go when the provider or its account changes.
+        if api_context? && old_provider_customer && customer.payment_provider.present?
+          new_payment_provider_id = resolved_payment_provider_id(customer)
+          account_changed = old_payment_provider_id.present? && new_payment_provider_id.present? &&
+            old_payment_provider_id != new_payment_provider_id
+
+          if old_payment_provider != customer.payment_provider || account_changed
+            old_provider_customer.payment_methods.find_each do |payment_method|
+              PaymentMethods::DestroyService.call!(payment_method:)
+            end
+          end
         end
       end
 
@@ -218,6 +238,13 @@ module Customers
       result.record_validation_failure!(record: e.record)
     rescue ActiveRecord::RecordNotFound => e
       result.not_found_failure!(resource: e.model.underscore)
+    rescue ActiveRecord::RecordNotUnique => e
+      if e.cause.is_a?(PG::UniqueViolation) &&
+          e.cause.result&.error_field(PG::Result::PG_DIAG_CONSTRAINT_NAME) == "index_customers_on_external_id_and_organization_id"
+        result.single_validation_failure!(field: :external_id, error_code: "value_already_exist")
+      else
+        raise
+      end
     rescue BaseService::FailedResult => e
       e.result
     end
@@ -260,11 +287,21 @@ module Customers
         provider: payment_provider,
         customer:,
         payment_provider_id: payment_provider(customer)&.id,
-        params: billing_configuration
+        params: billing_configuration,
+        async: !(billing_configuration || {})[:sync]
       ).call.raise_if_error!
 
       # NOTE: Create service is modifying an other instance of the provider customer
       customer.reload
+    end
+
+    # Nil when the code cannot be resolved, so that an ambiguous legacy setup never fails the update.
+    def resolved_payment_provider_id(customer)
+      PaymentProviders::FindService.call(
+        organization_id: customer.organization_id,
+        code: customer.payment_provider_code,
+        payment_provider_type: customer.payment_provider
+      ).payment_provider&.id
     end
 
     def applied_dunning_campaign

@@ -304,7 +304,6 @@ module Invoices
     def call_invoice_finalization_jobs(invoice)
       return if invoice.closed?
 
-      Utils::SegmentTrack.invoice_created(invoice)
       SendWebhookJob.perform_later("invoice.created", invoice)
       Utils::ActivityLog.produce(invoice, "invoice.created")
       GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?)

@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class CustomersController < Api::BaseController
+    class CustomersController < Api::V1::BaseController
       def create
         result = ::Customers::UpsertFromApiService.call(
           organization: current_organization,
@@ -59,8 +59,8 @@ module Api
         result = CustomersQuery.call(
           organization: current_organization,
           pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
+            page: page_number,
+            limit: page_size
           },
           search_term:,
           filters: filter_params.merge(billing_entity_ids: billing_entities&.ids)

@@ -2,15 +2,15 @@
 
 module Api
   module V1
-    class OrdersController < Api::BaseController
+    class OrdersController < Api::V1::BaseController
       before_action :ensure_feature_flag!
 
       def index
         result = OrdersQuery.call(
           organization: current_organization,
           pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
+            page: page_number,
+            limit: page_size
           },
           filters: index_filters,
           search_term: params[:search_term]

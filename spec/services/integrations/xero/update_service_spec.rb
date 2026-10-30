@@ -29,7 +29,8 @@ RSpec.describe Integrations::Xero::UpdateService do
         result = service_call
 
         expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("premium_integration_missing")
       end
     end
 
@@ -39,7 +40,8 @@ RSpec.describe Integrations::Xero::UpdateService do
           result = service_call
 
           expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          expect(result.error.code).to eq("premium_integration_missing")
         end
       end
 

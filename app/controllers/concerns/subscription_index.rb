@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 module SubscriptionIndex
-  include Pagination
   extend ActiveSupport::Concern
 
   def subscription_index(external_customer_id: nil)
@@ -15,8 +14,8 @@ module SubscriptionIndex
     result = SubscriptionsQuery.call(
       organization: current_organization,
       pagination: {
-        page: params[:page],
-        limit: params[:per_page] || PER_PAGE
+        page: page_number,
+        limit: page_size
       },
       filters: filters
     )

@@ -128,6 +128,60 @@ RSpec.describe "Contract usage billing behavior" do
       end
     end
 
+    context "when two events of the card are priced at the same time", transaction: false do
+      subject(:event_fees) do
+        %w[user_1 user_2].each do |user_id|
+          create_event({external_contract_id: contract.external_id, code: billable_metric.code,
+            timestamp: (started_at + 1.hour).to_i, properties: {field_name => user_id}}, perform_jobs: false)
+        end
+        perform_all_enqueued_jobs(except: [BillingSegments::ScheduleJob, BillingSegments::ProcessJob, pricing_job])
+
+        pricing_jobs = enqueued_jobs(only: [pricing_job])
+        queue_adapter.enqueued_jobs -= pricing_jobs
+        pricing_jobs.map { |job|
+          Thread.new { ApplicationRecord.connection_pool.with_connection { ActiveJob::Base.deserialize(job).perform_now } }
+        }.each(&:join)
+
+        Fee.where(contract:, fee_type: :product).order(:created_at).to_a
+      end
+
+      let(:aggregation_type) { :unique_count_agg }
+      let(:field_name) { "user_id" }
+      let(:pricing_job) { Invoices::CreatePayInAdvanceChargeJob }
+      let(:current_usage) do
+        api_call(perform_jobs: false) { get_with_token(organization, "/api/v2/contracts/#{contract.external_id}/current_usage") }
+      end
+
+      before do
+        both_priced = Concurrent::CountDownLatch.new(2)
+
+        # Holds each event between pricing and saving, so both read the state before either writes it.
+        allow(Charges::ApplyPayInAdvanceChargeModelService).to receive(:call).and_wrap_original do |method, **kwargs|
+          method.call(**kwargs).tap do
+            both_priced.count_down
+            both_priced.wait(1)
+          end
+        end
+      end
+
+      it "counts both events in the persisted state and the current usage" do
+        expect(event_fees.map(&:amount_cents)).to eq([100, 100])
+        expect(CachedAggregation.where(contract:, product:).maximum(:current_aggregation)).to eq(2)
+        expect(current_usage[:current_usage][:rate_cards].sole).to include(units: "2.0", amount_cents: 200)
+      end
+
+      context "when the card is not displayed on invoices" do
+        let(:display) { false }
+        let(:pricing_job) { Fees::CreatePayInAdvanceJob }
+
+        it "counts both events in the persisted state and the current usage" do
+          expect(event_fees.map(&:amount_cents)).to eq([100, 100])
+          expect(CachedAggregation.where(contract:, product:).maximum(:current_aggregation)).to eq(2)
+          expect(current_usage[:current_usage][:rate_cards].sole).to include(units: "2.0", amount_cents: 200)
+        end
+      end
+    end
+
     context "with a product filter" do
       let(:product_filter) { create(:product_filter, organization:, product:) }
       let(:metric_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }

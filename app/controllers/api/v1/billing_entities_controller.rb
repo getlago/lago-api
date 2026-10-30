@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class BillingEntitiesController < Api::BaseController
+    class BillingEntitiesController < Api::V1::BaseController
       def index
         render(
           json: ::CollectionSerializer.new(

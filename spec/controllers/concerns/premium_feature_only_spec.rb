@@ -7,7 +7,7 @@ RSpec.describe PremiumFeatureOnly do
 
   # rubocop:disable RSpec/DescribedClass
   controller(ApplicationController) do
-    include ApiErrors
+    include Api::V1Errors
     include PremiumFeatureOnly
 
     attr_reader :current_organization

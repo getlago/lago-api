@@ -39,9 +39,9 @@ RSpec.describe Webhooks::RateCards::UpdatedService do
         "display_on_invoice" => true,
         "regroup_paid_fees" => nil,
         "applied_pricing_unit_code" => nil,
-        "rates_count" => 1,
         "created_at" => rate_card.created_at.iso8601,
         "updated_at" => rate_card.updated_at.iso8601,
+        "deleted_at" => nil,
         "active_rate" => {
           "lago_id" => active_rate.id,
           "code" => "current-rate",
@@ -55,7 +55,8 @@ RSpec.describe Webhooks::RateCards::UpdatedService do
           "billing_interval_unit" => "month",
           "applied_pricing_unit_conversion_rate" => nil,
           "created_at" => active_rate.created_at.iso8601,
-          "updated_at" => active_rate.updated_at.iso8601
+          "updated_at" => active_rate.updated_at.iso8601,
+          "deleted_at" => nil
         },
         "rates" => [
           {
@@ -71,7 +72,8 @@ RSpec.describe Webhooks::RateCards::UpdatedService do
             "billing_interval_unit" => "month",
             "applied_pricing_unit_conversion_rate" => nil,
             "created_at" => active_rate.created_at.iso8601,
-            "updated_at" => active_rate.updated_at.iso8601
+            "updated_at" => active_rate.updated_at.iso8601,
+            "deleted_at" => nil
           }
         ],
         "taxes" => []

@@ -11,6 +11,9 @@ class UsageMonitoring::AlertThreshold < ApplicationRecord
     foreign_key: "usage_monitoring_alert_id",
     class_name: "UsageMonitoring::Alert"
 
+  # notify_on is a set: duplicates are dropped and the values kept in one order, whatever order was sent
+  normalizes :notify_on, with: ->(values) { NOTIFY_ON_VALUES & values }
+
   def notify_on_resolved?
     notify_on.include?(NOTIFY_ON_RESOLVED)
   end

@@ -11,6 +11,7 @@ module V1
         from_datetime: model.from_datetime.iso8601,
         to_datetime: model.to_datetime.iso8601,
         currency: model.currency,
+        split_filters_count: model.split_filters_count,
         rows: model.rows.map { serialize_row(it) },
         unattributed: serialize_aggregate(model.unattributed),
         totals: serialize_aggregate(model.totals)
@@ -31,6 +32,7 @@ module V1
       {
         **amounts(aggregate.amount_cents),
         events_count: aggregate.events_count,
+        split_charge_units: aggregate.split_charge_units&.to_s,
         charges_usage: aggregate.cells.map { serialize_cell(it) }
       }
     end

@@ -140,8 +140,8 @@ RSpec.describe Api::V1::TaxesController do
       end
     end
 
-    context "with an expand parameter" do
-      subject(:request) { get_with_token(organization, "/api/v1/taxes/#{tax_code}", {expand: ["counts"]}) }
+    context "with an expands parameter" do
+      subject(:request) { get_with_token(organization, "/api/v1/taxes/#{tax_code}", {expands: ["counts"]}) }
 
       it "still ignores the parameter and returns the v1 response" do
         request

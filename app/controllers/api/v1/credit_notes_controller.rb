@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class CreditNotesController < Api::BaseController
+    class CreditNotesController < Api::V1::BaseController
       include CreditNoteIndex
 
       def create

@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true} do
   subject(:result) do
     described_class.call(
-      subscription:, group_by:, filters:, from_datetime:, to_datetime:, charges:, split_charge:, search:, basis:, order_by:, limit:, offset:
+      subscription:, group_by:, filters:, from_datetime:, to_datetime:, charges:, split_charge:, split_filters_offset:, search:, basis:, order_by:, limit:, offset:
     )
   end
 
@@ -30,6 +30,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
   let(:to_datetime) { nil }
   let(:charges) { nil }
   let(:split_charge) { nil }
+  let(:split_filters_offset) { 0 }
   let(:search) { nil }
   let(:basis) { "amount" }
   let(:order_by) { nil }
@@ -47,7 +48,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     ]
   end
 
-  def create_event(code:, value:, labels:, properties: {}, timestamp: Time.zone.parse("2026-09-10"), transaction_id: SecureRandom.uuid)
+  def create_event(code:, value:, labels:, properties: {}, timestamp: Time.zone.parse("2026-09-10"), transaction_id: SecureRandom.uuid, enriched_at: Time.current)
     Clickhouse::EventsEnriched.create!(
       organization_id: organization.id,
       external_subscription_id: subscription.external_id,
@@ -57,7 +58,8 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
       properties:,
       attribution_labels: labels,
       value: value.to_s,
-      decimal_value: value
+      decimal_value: value,
+      enriched_at:
     )
   end
 
@@ -90,6 +92,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     expect(result.to_datetime).to eq(Time.zone.parse("2026-09-30").end_of_day)
     expect(result.currency).to eq("EUR")
     expect(result).to have_attributes(subscription:, group_by: "team", limit: 50, offset: 0)
+    expect([*result.rows, result.unattributed, result.totals].map(&:split_charge_units)).to eq([nil, nil, nil, nil])
   end
 
   it "returns the units, amount and events count of each charge" do
@@ -146,10 +149,28 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
   context "with a yearly plan" do
     let(:plan) { create(:plan, organization:, interval: :yearly, amount_currency: "EUR") }
 
-    it "narrows the current period to its last 31 days" do
-      expect(result.from_datetime).to eq(Time.zone.parse("2026-08-15 12:00:00"))
-      expect(result.to_datetime).to eq(Time.zone.parse("2026-09-15 12:00:00"))
+    it "reads the 31 days before today, up to the end of today" do
+      expect(result.from_datetime).to eq(Time.zone.parse("2026-08-15"))
+      expect(result.to_datetime).to eq(Time.zone.parse("2026-09-15").end_of_day)
       expect(summary(result.rows)).to eq([["eng", 125_150, 4], ["data", 100_000, 1]])
+    end
+
+    it "keeps the same window for the whole day" do
+      window = [result.from_datetime, result.to_datetime]
+
+      travel(11.hours)
+
+      repeated = described_class.call(subscription:, group_by:)
+      expect([repeated.from_datetime, repeated.to_datetime]).to eq(window)
+    end
+
+    context "with a customer in another timezone" do
+      let(:customer) { create(:customer, organization:, timezone: "America/New_York") }
+
+      it "bounds the window by midnight in the customer's timezone" do
+        expect(result.from_datetime).to eq(Time.zone.parse("2026-08-15 04:00:00"))
+        expect(result.to_datetime).to eq(Time.zone.parse("2026-09-15 12:00:00").in_time_zone("America/New_York").end_of_day)
+      end
     end
   end
 
@@ -327,7 +348,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
 
     context "with a more specific filter" do
       let(:region_filter) { create(:billable_metric_filter, billable_metric: tokens_metric, key: "region", values: %w[eu us]) }
-      let(:opus_eu_filter) { create(:charge_filter, charge: tokens_charge, properties: {"amount" => "3"}) }
+      let(:opus_eu_filter) { create(:charge_filter, charge: tokens_charge, properties: {"amount" => "3"}, updated_at: 1.minute.from_now) }
 
       before do
         create(:charge_filter_value, charge_filter: opus_eu_filter, billable_metric_filter:, values: ["opus"])
@@ -461,6 +482,42 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     end
   end
 
+  context "with a cache store", cache: :memory do
+    subject(:repeated_result) do
+      described_class.call(
+        subscription:, group_by:, filters:, from_datetime:, to_datetime:, charges:, split_charge:, search:, basis:, order_by:, limit:, offset:
+      )
+    end
+
+    let(:queries) { [] }
+
+    before do
+      allow(Events::Stores::Clickhouse::AttributedUsageQuery).to receive(:new).and_wrap_original do |original, **args|
+        original.call(**args).tap do |query|
+          allow(query).to receive(:rows).and_call_original
+          queries << query
+        end
+      end
+
+      travel(10.minutes) # past the ingestion margin of the events
+      result
+      travel(1.minute)
+    end
+
+    it "serves a repeated request from the cache" do
+      expect(summary(repeated_result.rows)).to eq([["data", 100_000, 1], ["eng", 75_200, 3]])
+      expect(queries.last).not_to have_received(:rows)
+    end
+
+    context "when an event was ingested since" do
+      before { create_event(code: "tokens", value: 4000, labels: {"team" => "sales"}) }
+
+      it "reads the events again" do
+        expect(summary(repeated_result.rows)).to eq([["sales", 200_000, 1], ["data", 100_000, 1], ["eng", 75_200, 3]])
+      end
+    end
+  end
+
   context "when the query exceeds the groups limit" do
     before { stub_const("#{described_class}::MAX_GROUPS", 1) }
 
@@ -531,13 +588,76 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     end
   end
 
-  context "with a split charge holding too many filters" do
+  context "with a split charge holding more filters than a page" do
     let(:split_charge) { tokens_charge }
+    let(:models) { %w[opus sonnet] + Array.new(10) { "model-#{it}" } }
+    let(:model_filter) { create(:billable_metric_filter, billable_metric: tokens_metric, key: "model", values: models) }
+    let(:charge_filters) do
+      models.each_with_index.map do |model, index|
+        create(:charge_filter, charge: tokens_charge, properties: {"amount" => "1"}, updated_at: (models.size - index).days.ago).tap do
+          create(:charge_filter_value, charge_filter: it, billable_metric_filter: model_filter, values: [model])
+        end
+      end
+    end
 
-    before { create_list(:charge_filter, 11, charge: tokens_charge) }
+    def split_cells(aggregate)
+      aggregate.cells.select { it.charge == tokens_charge }.map { [it.charge_filter, it.units] }
+    end
 
-    it "returns a validation failure" do
-      expect(result.error.messages).to eq(split_charge: ["too_many_filters"])
+    before { charge_filters }
+
+    it "lists the first page of filters and the default price" do
+      expect(result.split_filters_count).to eq(12)
+      expect(split_cells(result.totals)).to eq(
+        [[charge_filters[0], 3_000], [charge_filters[1], 500]] + charge_filters[2...10].map { [it, 0] } + [[nil, 100]]
+      )
+      expect(result.totals.amount_cents).to eq(355_200)
+    end
+
+    it "returns the units of the whole split charge" do
+      expect(result.rows.map { [it.value, it.split_charge_units] }).to eq([["data", 2_000], ["eng", 1_500]]) # eng: opus 1000 + sonnet 500
+      expect(result.unattributed.split_charge_units).to eq(100)
+      expect(result.totals.split_charge_units).to eq(2_000 + 1_500 + 100) # data + eng + unattributed
+    end
+
+    context "with the units basis" do
+      let(:basis) { "units" }
+
+      it "returns the units of the whole split charge" do
+        expect(result.totals.split_charge_units).to eq(2_000 + 1_500 + 100) # data + eng + unattributed
+      end
+    end
+
+    context "with the offset of the next page" do
+      let(:split_filters_offset) { 10 }
+
+      it "lists the next filters, keeping the amounts of the others" do
+        expect(result.split_filters_count).to eq(12)
+        expect(split_cells(result.totals)).to eq([[charge_filters[10], 0], [charge_filters[11], 0], [nil, 100]])
+        expect(summary(result.rows)).to eq([["data", 200_000, 1], ["eng", 150_200, 3]])
+        expect(result.totals.amount_cents).to eq(355_200)
+      end
+
+      it "returns the same units of the whole split charge" do
+        expect(result.rows.map { [it.value, it.split_charge_units] }).to eq([["data", 2_000], ["eng", 1_500]])
+        expect(result.totals.split_charge_units).to eq(2_000 + 1_500 + 100) # data + eng + unattributed
+      end
+    end
+
+    context "with an offset past the last filter" do
+      let(:split_filters_offset) { 12 }
+
+      it "lists the default price only" do
+        expect(split_cells(result.totals)).to eq([[nil, 100]])
+      end
+    end
+
+    context "with an offset above the maximum" do
+      let(:split_filters_offset) { 100_000_000_000_000_000_000 }
+
+      it "returns a validation failure" do
+        expect(result.error.messages).to eq(split_filters_offset: ["value_is_out_of_range"])
+      end
     end
   end
 
@@ -559,6 +679,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     let(:order_by) { "units" }
     let(:limit) { 101 }
     let(:offset) { -1 }
+    let(:split_filters_offset) { -1 }
 
     it "returns a validation failure" do
       expect(result.error.messages).to eq(
@@ -569,7 +690,8 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
         search: ["value_is_too_long"],
         basis: ["value_is_invalid"],
         order_by: ["value_is_invalid"],
-        split_charge: ["must_have_filters"]
+        split_charge: ["must_have_filters"],
+        split_filters_offset: ["value_is_out_of_range"]
       )
     end
   end

@@ -39,7 +39,6 @@ module Invoices
       Invoices::Payments::CreateService.call_async(invoice:)
       Integrations::Aggregator::Invoices::CreateJob.perform_after_commit(invoice:) if invoice.should_sync_invoice?
       Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_after_commit(invoice:) if invoice.should_sync_hubspot_invoice?
-      after_commit { Utils::SegmentTrack.invoice_created(invoice) }
     end
 
     def should_deliver_email?

@@ -77,7 +77,6 @@ module Invoices
       return result if tax_deferred
 
       unless invoice.closed?
-        after_commit { Utils::SegmentTrack.invoice_created(invoice) }
         SendWebhookJob.perform_after_commit("invoice.one_off_created", invoice)
         GenerateDocumentsJob.perform_after_commit(invoice:, notify: should_deliver_email?)
         Integrations::Aggregator::Invoices::CreateJob.perform_after_commit(invoice:) if invoice.should_sync_invoice?

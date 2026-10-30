@@ -19,6 +19,7 @@ class InvoicesQuery < BaseQuery
     :metadata,
     :partially_paid,
     :positive_due_amount,
+    :product_catalog,
     :purchase_order_number,
     :self_billed,
     :subscription_id,
@@ -39,6 +40,7 @@ class InvoicesQuery < BaseQuery
   def invoices
     invoices = base_scope.includes(:customer).preload(file_attachment: :blob, xml_file_attachment: :blob)
 
+    invoices = invoices.product_catalog if product_catalog?
     invoices = with_billing_entity_ids(invoices) if filters.billing_entity_ids.present?
     invoices = with_currency(invoices) if filters.currency
     invoices = with_customer_external_id(invoices) if filters.customer_external_id
@@ -58,11 +60,15 @@ class InvoicesQuery < BaseQuery
     invoices = with_subscription_id(invoices) if filters.subscription_id.present?
     invoices = with_settlements(invoices) if valid_settlements.present?
 
-    invoices = paginate(invoices)
-    apply_consistent_ordering(
+    invoices = apply_consistent_ordering(
       invoices,
       default_order: {issuing_date: :desc, created_at: :desc}
     )
+    paginate(invoices)
+  end
+
+  def product_catalog?
+    ActiveModel::Type::Boolean.new.cast(filters.product_catalog) == true
   end
 
   def filters_contract
@@ -134,7 +140,7 @@ class InvoicesQuery < BaseQuery
   end
 
   def with_payment_dispute_lost(scope)
-    if filters.payment_dispute_lost
+    if ActiveModel::Type::Boolean.new.cast(filters.payment_dispute_lost)
       scope.where.not(payment_dispute_lost_at: nil)
     else
       scope.where(payment_dispute_lost_at: nil)

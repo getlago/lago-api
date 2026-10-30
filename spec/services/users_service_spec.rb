@@ -73,6 +73,22 @@ RSpec.describe UsersService do
       it_behaves_like "does not produce a security log" do
         before { described_class.call(:register, user.email, "password", "organization_name") }
       end
+
+      context "when the email differs only by case" do
+        subject(:registration_result) do
+          described_class.call(:register, "jane@acme.com", "password", "organization_name")
+        end
+
+        let(:user) { create(:user, email: "Jane@acme.com") }
+
+        before { user }
+
+        it "fails without creating a duplicate user" do
+          expect { registration_result }.not_to change(User, :count)
+          expect(registration_result).not_to be_success
+          expect(registration_result.error.messages[:email]).to include("user_already_exists")
+        end
+      end
     end
 
     context "when signup is disabled" do
@@ -84,11 +100,12 @@ RSpec.describe UsersService do
         ENV["LAGO_DISABLE_SIGNUP"] = nil
       end
 
-      it "returns a not allowed error" do
+      it "returns a forbidden error" do
         result = described_class.call(:register, "email", "password", "organization_name")
 
         expect(result).not_to be_success
-        expect(result.error.message).to eq("signup_disabled")
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("signup_disabled")
       end
 
       it_behaves_like "does not produce a security log" do
@@ -383,6 +400,22 @@ RSpec.describe UsersService do
         subject
 
         expect(SegmentIdentifyJob).not_to have_been_enqueued
+      end
+    end
+
+    context "when the stored email casing differs from the login email" do
+      let(:email) { "jane@acme.com" }
+      let(:password) { "password" }
+      let(:mixed_case_user) { create(:user, email: "Jane@acme.com", password:) }
+
+      before do
+        create(:membership, :active, user: mixed_case_user)
+        allow(UserDevices::RegisterService).to receive(:call!)
+      end
+
+      it "logs in the existing user" do
+        expect(result).to be_success
+        expect(result.user).to eq(mixed_case_user)
       end
     end
   end

@@ -15,7 +15,8 @@ module Mutations
       type Types::Payments::Object
 
       def resolve(**args)
-        result = ::Payments::ManualCreateService.call(organization: current_organization, params: args)
+        params = args.except(:created_at).merge(paid_at: args[:created_at].iso8601)
+        result = ::Payments::ManualCreateService.call(organization: current_organization, params:)
         result.success? ? result.payment : result_error(result)
       end
     end

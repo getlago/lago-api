@@ -38,10 +38,9 @@ class CustomersQuery < BaseQuery
     customers = with_metadata(customers) if filters.metadata.present?
 
     customers = customers.with_discarded if filters.with_deleted
-    customers = paginate(customers)
     customers = apply_consistent_ordering(customers)
 
-    result.customers = customers
+    result.customers = paginate(customers)
     result
   end
 

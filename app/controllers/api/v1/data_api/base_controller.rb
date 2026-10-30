@@ -3,7 +3,7 @@
 module Api
   module V1
     module DataApi
-      class BaseController < Api::BaseController
+      class BaseController < Api::V1::BaseController
         private
 
         def resource_name

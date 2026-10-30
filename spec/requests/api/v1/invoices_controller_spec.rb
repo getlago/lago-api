@@ -305,8 +305,6 @@ RSpec.describe Api::V1::InvoicesController do
     end
 
     context "when the invoice has a product fee" do
-      subject { get_with_token(organization, "/api/v2/invoices/#{invoice_id}") }
-
       let(:product) do
         create(:product, organization:, code: "compute", name: "Compute", description: "Compute usage")
       end
@@ -514,6 +512,244 @@ RSpec.describe Api::V1::InvoicesController do
       end
     end
 
+    context "with per_page above the maximum page size" do
+      subject { get_with_token(organization, "/api/v1/invoices", per_page: 1_000_000_000) }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(per_page: ["value_is_out_of_range"])
+      end
+    end
+
+    describe "pagination params validation" do
+      subject { get_with_token(organization, "/api/v1/invoices", params) }
+
+      let(:max_page_size_env) { nil }
+
+      before do
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with("LAGO_API_PAGINATION_MAX_PAGE_SIZE").and_return(max_page_size_env)
+      end
+
+      [
+        [{page: 0}, {page: 1, limit: 100}],
+        [{page: -1}, {page: 1, limit: 100}],
+        [{page: "null"}, {page: 1, limit: 100}],
+        [{page: "1.5"}, {page: 1, limit: 100}],
+        [{page: "02"}, {page: 2, limit: 100}],
+        [{per_page: 0}, {page: 1, limit: 100}],
+        [{per_page: -1}, {page: 1, limit: 100}],
+        [{per_page: "abc"}, {page: 1, limit: 100}],
+        [{per_page: "0x10"}, {page: 1, limit: 100}],
+        [{per_page: "010"}, {page: 1, limit: 10}],
+        [{per_page: "+5"}, {page: 1, limit: 5}],
+        [{per_page: " 5"}, {page: 1, limit: 5}],
+        [{page: 0, per_page: 0}, {page: 1, limit: 100}]
+      ].each do |given_params, pagination|
+        context "with #{given_params}" do
+          let(:params) { given_params }
+
+          before { allow(InvoicesQuery).to receive(:call).and_call_original }
+
+          it "falls back to a valid page and page size" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(InvoicesQuery).to have_received(:call).with(hash_including(pagination:))
+          end
+        end
+      end
+
+      [{per_page: "+1000000000"}, {per_page: "1_000_000_000"}, {per_page: " 1000000000"}].each do |large_params|
+        context "with #{large_params}" do
+          let(:params) { large_params }
+
+          it "returns a validation error" do
+            subject
+
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json[:error_details]).to eq(per_page: ["value_is_out_of_range"])
+          end
+        end
+      end
+
+      context "with blank page and per_page" do
+        let(:params) { {page: "", per_page: ""} }
+
+        it "returns the invoices" do
+          subject
+
+          expect(response).to have_http_status(:success)
+        end
+      end
+
+      context "without page and per_page" do
+        let(:params) { {} }
+
+        before { allow(InvoicesQuery).to receive(:call).and_call_original }
+
+        it "uses the default page size" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(InvoicesQuery).to have_received(:call).with(hash_including(pagination: {page: 1, limit: 100}))
+        end
+      end
+
+      context "when the env var is unset" do
+        context "with per_page equal to the default limit" do
+          let(:params) { {per_page: 200} }
+
+          it "returns the invoices" do
+            subject
+
+            expect(response).to have_http_status(:success)
+          end
+        end
+
+        context "with per_page above the default limit" do
+          let(:params) { {per_page: 201} }
+
+          it "returns a validation error" do
+            subject
+
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json[:error_details]).to eq(per_page: ["value_is_out_of_range"])
+          end
+        end
+      end
+
+      context "when the env var is 50" do
+        let(:max_page_size_env) { "50" }
+
+        context "with per_page equal to the limit" do
+          let(:params) { {per_page: 50} }
+
+          it "returns the invoices" do
+            subject
+
+            expect(response).to have_http_status(:success)
+          end
+        end
+
+        context "with per_page above the limit" do
+          let(:params) { {per_page: 51} }
+
+          it "returns a validation error" do
+            subject
+
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json[:error_details]).to eq(per_page: ["value_is_out_of_range"])
+          end
+        end
+      end
+
+      %w[abc 0].each do |invalid_env|
+        context "when the env var is #{invalid_env.inspect}" do
+          let(:max_page_size_env) { invalid_env }
+
+          context "with per_page equal to the default limit" do
+            let(:params) { {per_page: 200} }
+
+            it "returns the invoices" do
+              subject
+
+              expect(response).to have_http_status(:success)
+            end
+          end
+
+          context "with per_page above the default limit" do
+            let(:params) { {per_page: 201} }
+
+            it "returns a validation error" do
+              subject
+
+              expect(response).to have_http_status(:unprocessable_content)
+              expect(json[:error_details]).to eq(per_page: ["value_is_out_of_range"])
+            end
+          end
+        end
+      end
+
+      context "when the organization pagination_max_page_size is 500" do
+        let(:organization) { create(:organization, pagination_max_page_size: 500) }
+
+        context "with per_page equal to the organization limit" do
+          let(:params) { {per_page: 500} }
+
+          it "returns the invoices" do
+            subject
+
+            expect(response).to have_http_status(:success)
+          end
+        end
+
+        context "with per_page above the organization limit" do
+          let(:params) { {per_page: 501} }
+
+          it "returns a validation error" do
+            subject
+
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json[:error_details]).to eq(per_page: ["value_is_out_of_range"])
+          end
+        end
+      end
+
+      context "when the organization pagination_max_page_size is 10 and the env var is 1000" do
+        let(:organization) { create(:organization, pagination_max_page_size: 10) }
+        let(:max_page_size_env) { "1000" }
+        let(:params) { {per_page: 11} }
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq(per_page: ["value_is_out_of_range"])
+        end
+      end
+
+      context "when the organization pagination_max_page_size is below the default page size" do
+        let(:organization) { create(:organization, pagination_max_page_size: 50) }
+
+        before { allow(InvoicesQuery).to receive(:call).and_call_original }
+
+        context "without per_page" do
+          let(:params) { {} }
+
+          it "uses the organization limit as the page size" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(InvoicesQuery).to have_received(:call).with(hash_including(pagination: {page: 1, limit: 50}))
+          end
+        end
+
+        context "with a blank per_page" do
+          let(:params) { {per_page: ""} }
+
+          it "uses the organization limit as the page size" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(InvoicesQuery).to have_received(:call).with(hash_including(pagination: {page: 1, limit: 50}))
+          end
+        end
+      end
+
+      context "without authorization header" do
+        subject { get("/api/v1/invoices", params: {per_page: 1_000_000_000}) }
+
+        it "returns an unauthorized error" do
+          subject
+
+          expect(response).to have_http_status(:unauthorized)
+        end
+      end
+    end
+
     context "with unknown params" do
       before do
         allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
@@ -718,6 +954,37 @@ RSpec.describe Api::V1::InvoicesController do
         expect(json[:invoice][:lago_id]).to eq(invoice.id)
         expect(json[:invoice][:status]).to eq("voided")
         expect(json[:invoice][:voided_at]).not_to be_nil
+      end
+
+      context "when the credit note void fails" do
+        let(:invoice) do
+          create(
+            :invoice,
+            status:,
+            payment_status:,
+            customer:,
+            organization:,
+            fees_amount_cents: 100,
+            sub_total_excluding_taxes_amount_cents: 100,
+            sub_total_including_taxes_amount_cents: 100,
+            total_amount_cents: 100
+          )
+        end
+
+        before do
+          create(:fee, invoice:, amount_cents: 100, precise_amount_cents: 100, taxes_amount_cents: 0, taxes_precise_amount_cents: 0)
+          allow(CreditNotes::VoidService).to receive(:call)
+            .and_return(CreditNotes::VoidService::Result.new.not_allowed_failure!(code: "no_voidable_amount"))
+        end
+
+        it "returns a method not allowed error and keeps the invoice finalized" do
+          subject
+
+          expect(response).to have_http_status(:method_not_allowed)
+          expect(json).to eq(status: 405, error: "Method Not Allowed", code: "no_voidable_amount")
+          expect(invoice.reload).to be_finalized
+          expect(invoice.credit_notes).to be_empty
+        end
       end
     end
   end

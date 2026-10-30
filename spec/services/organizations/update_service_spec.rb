@@ -112,6 +112,16 @@ RSpec.describe Organizations::UpdateService do
       end
     end
 
+    context "when document_url_expiration_days is sent" do
+      before { params[:document_url_expiration_days] = 90 }
+
+      it "updates the document url expiration window" do
+        result = update_service.call
+
+        expect(result.organization.document_url_expiration_days).to eq(90)
+      end
+    end
+
     context "when document_number_prefix is invalid" do
       before { params[:document_number_prefix] = "aaaaaaaaaaaaaaa" }
 

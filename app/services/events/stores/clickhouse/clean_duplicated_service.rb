@@ -15,6 +15,7 @@ module Events
         def call
           remove_duplicated_events
           Subscriptions::ChargeCacheService.expire_for_subscription(subscription)
+          UsageAttributions::RowsCacheService.expire_for_subscription(subscription)
 
           result
         end

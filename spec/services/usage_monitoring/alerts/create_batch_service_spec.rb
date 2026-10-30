@@ -101,8 +101,44 @@ RSpec.describe UsageMonitoring::Alerts::CreateBatchService do
 
           expect(result).to be_failure
           expect(result.error.messages.keys).to eq([1])
-          expect(result.error.messages[1][:errors]).to eq('Validation errors: {"base":["alert_already_exists"]}')
+          expect(result.error.messages[1][:errors]).to eq({base: ["alert_already_exists"]})
         end
+      end
+    end
+
+    context "when a threshold sends recurring as null" do
+      let(:alerts_params) do
+        [
+          {
+            alert_type: "current_usage_amount",
+            code: "alert1",
+            thresholds: [{code: "warning", value: "5", recurring: nil, notify_on: ["triggered"]}]
+          }
+        ]
+      end
+
+      it "stores the threshold as not recurring" do
+        expect { result }.to change(UsageMonitoring::Alert, :count).by(1)
+        expect(result).to be_success
+        expect(result.alerts.sole.thresholds.reload.map { |t| [t.code, t.recurring] }).to eq([["warning", false]])
+      end
+    end
+
+    context "when a threshold sends recurring as an empty string" do
+      let(:alerts_params) do
+        [
+          {
+            alert_type: "current_usage_amount",
+            code: "alert1",
+            thresholds: [{code: "warning", value: "5", recurring: "", notify_on: ["triggered"]}]
+          }
+        ]
+      end
+
+      it "stores the threshold as not recurring" do
+        expect { result }.to change(UsageMonitoring::Alert, :count).by(1)
+        expect(result).to be_success
+        expect(result.alerts.sole.thresholds.reload.map { |t| [t.code, t.recurring] }).to eq([["warning", false]])
       end
     end
 
@@ -146,7 +182,7 @@ RSpec.describe UsageMonitoring::Alerts::CreateBatchService do
         expect(result.alerts).to be_empty
         expect(result.error.messages).to have_key(1)
         expect(result.error.messages[1][:params]).to eq(alerts_params[1])
-        expect(result.error.messages[1][:errors]).to include("invalid_type")
+        expect(result.error.messages[1][:errors]).to eq({alert_type: ["invalid_type"]})
       end
     end
 
@@ -173,7 +209,7 @@ RSpec.describe UsageMonitoring::Alerts::CreateBatchService do
         expect(result).to be_failure
         expect(result.error.messages).to have_key(1)
         expect(result.error.messages[1][:params]).to eq(alerts_params[1])
-        expect(result.error.messages[1][:errors]).to include("value_already_exist")
+        expect(result.error.messages[1][:errors]).to eq({code: ["value_already_exist"]})
       end
     end
 
@@ -200,7 +236,7 @@ RSpec.describe UsageMonitoring::Alerts::CreateBatchService do
         expect(result).to be_failure
         expect(result.error.messages).to have_key(1)
         expect(result.error.messages[1][:params]).to eq(alerts_params[1])
-        expect(result.error.messages[1][:errors]).to include("alert_already_exists")
+        expect(result.error.messages[1][:errors]).to eq({base: ["alert_already_exists"]})
       end
     end
 
@@ -243,13 +279,13 @@ RSpec.describe UsageMonitoring::Alerts::CreateBatchService do
         expect(result).to be_failure
         expect(result.error.messages.size).to eq(4)
         expect(result.error.messages[0][:params]).to eq(alerts_params[0])
-        expect(result.error.messages[0][:errors]).to include("invalid_type")
+        expect(result.error.messages[0][:errors]).to eq({alert_type: ["invalid_type"]})
         expect(result.error.messages[1][:params]).to eq(alerts_params[1])
-        expect(result.error.messages[1][:errors]).to include("value_is_mandatory")
+        expect(result.error.messages[1][:errors]).to eq({thresholds: ["value_is_mandatory"]})
         expect(result.error.messages[3][:params]).to eq(alerts_params[3])
-        expect(result.error.messages[3][:errors]).to include("alert_already_exists")
+        expect(result.error.messages[3][:errors]).to eq({base: ["alert_already_exists"]})
         expect(result.error.messages[4][:params]).to eq(alerts_params[4])
-        expect(result.error.messages[4][:errors]).to include("value_already_exist")
+        expect(result.error.messages[4][:errors]).to eq({code: ["value_already_exist"]})
       end
     end
 

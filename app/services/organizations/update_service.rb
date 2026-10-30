@@ -30,6 +30,7 @@ module Organizations
       organization.slug = params[:slug]&.strip&.downcase if params.key?(:slug)
       organization.finalize_zero_amount_invoice = params[:finalize_zero_amount_invoice] if params.key?(:finalize_zero_amount_invoice)
       organization.net_payment_term = params[:net_payment_term] if params.key?(:net_payment_term)
+      organization.document_url_expiration_days = params[:document_url_expiration_days] if params.key?(:document_url_expiration_days)
       organization.document_numbering = params[:document_numbering] if params.key?(:document_numbering)
       if params.key?(:authentication_methods)
         deletions = organization.authentication_methods - params[:authentication_methods]

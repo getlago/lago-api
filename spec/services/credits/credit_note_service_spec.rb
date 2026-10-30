@@ -165,6 +165,138 @@ RSpec.describe Credits::CreditNoteService do
       end
     end
 
+    context "when credit notes have contract provenance" do
+      let(:contract) { create(:contract, customer:) }
+      let(:contract_rate_card) { create(:contract_rate_card, organization: customer.organization, contract:) }
+      let(:source_invoice) do
+        create(:invoice, customer:, billing_entity: customer.billing_entity, total_amount_cents: 100)
+      end
+      let(:source_fee) { create(:product_fee, invoice: source_invoice) }
+      let(:contract_credit_note) do
+        create(
+          :credit_note,
+          invoice: source_invoice,
+          customer:,
+          total_amount_cents: 15,
+          credit_amount_cents: 15,
+          balance_amount_cents: 15
+        )
+      end
+
+      before do
+        create(:credit_note_item, credit_note: contract_credit_note, fee: source_fee)
+        create(
+          :credit_note_item,
+          credit_note: contract_credit_note,
+          fee: create(:fee, invoice: source_invoice, subscription:, fee_type: :subscription)
+        )
+      end
+
+      it "applies a mixed-provenance note to an invoice from the same billing entity" do
+        result = credit_service.call
+
+        expect(result.credits.map(&:credit_note)).to include(contract_credit_note)
+        expect(contract_credit_note.reload.balance_amount_cents).to eq(0)
+      end
+
+      context "when the target invoice has a different billing entity" do
+        let(:invoice) do
+          create(
+            :invoice,
+            customer:,
+            billing_entity: create(:billing_entity, organization: customer.organization),
+            currency: "EUR",
+            total_amount_cents: amount_cents
+          )
+        end
+
+        it "does not apply the note" do
+          result = credit_service.call
+
+          expect(result.credits.map(&:credit_note)).not_to include(contract_credit_note)
+          expect(contract_credit_note.reload.balance_amount_cents).to eq(15)
+        end
+
+        context "when the credited fee is not a product fee" do
+          let(:source_fee) do
+            create(
+              :fee,
+              invoice: source_invoice,
+              subscription:,
+              fee_type: :subscription,
+              contract_id: contract.id,
+              contract_rate_card_id: contract_rate_card.id
+            )
+          end
+
+          it "does not apply the note" do
+            result = credit_service.call
+
+            expect(result.credits.map(&:credit_note)).not_to include(contract_credit_note)
+            expect(contract_credit_note.reload.balance_amount_cents).to eq(15)
+          end
+        end
+
+        context "when the credited product fee has been discarded" do
+          let(:source_fee) do
+            create(
+              :product_fee,
+              invoice: source_invoice,
+              contract_id: contract.id,
+              contract_rate_card_id: contract_rate_card.id
+            )
+          end
+
+          before { source_fee.discard }
+
+          it "does not apply the note" do
+            result = credit_service.call
+
+            expect(result.credits.map(&:credit_note)).not_to include(contract_credit_note)
+            expect(contract_credit_note.reload.balance_amount_cents).to eq(15)
+          end
+        end
+      end
+
+      context "when the credit note is subscription-only" do
+        let(:source_fee) { create(:fee, invoice: source_invoice, subscription:, fee_type: :subscription) }
+        let(:uncredited_product_fee) { create(:product_fee, invoice: source_invoice) }
+
+        let(:invoice) do
+          create(
+            :invoice,
+            customer:,
+            billing_entity: create(:billing_entity, organization: customer.organization),
+            currency: "EUR",
+            total_amount_cents: amount_cents
+          )
+        end
+
+        before { uncredited_product_fee }
+
+        it "retains cross-entity application" do
+          result = credit_service.call
+
+          credit = result.credits.find { |applied_credit| applied_credit.credit_note == contract_credit_note }
+
+          expect(credit).to be_present
+          expect(credit.amount_cents).to eq(15)
+          expect(contract_credit_note.reload.balance_amount_cents).to eq(0)
+        end
+      end
+
+      context "when the source invoice is the target invoice" do
+        let(:source_invoice) { invoice }
+
+        it "does not apply the note back to its own invoice" do
+          result = credit_service.call
+
+          expect(result.credits.map(&:credit_note)).not_to include(contract_credit_note)
+          expect(contract_credit_note.reload.balance_amount_cents).to eq(15)
+        end
+      end
+    end
+
     context "when credit amount is higher than invoice amount" do
       let(:amount_cents) { 10 }
 

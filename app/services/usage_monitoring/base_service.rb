@@ -12,8 +12,9 @@ module UsageMonitoring
           recurring: false
         }.merge(threshold_params.to_h).with_indifferent_access
 
-        # An explicit null would break the NOT NULL column, so let its default stand instead
+        # An explicit null (or a blank recurring) would break the NOT NULL columns, so let their defaults stand instead
         row.delete(:notify_on) if row[:notify_on].nil?
+        row.delete(:recurring) if ActiveModel::Type::Boolean.new.cast(row[:recurring]).nil?
         row
       end
     end

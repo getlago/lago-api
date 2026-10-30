@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class WebhooksController < Api::BaseController
+    class WebhooksController < Api::V1::BaseController
       # Deprecated method
       def public_key
         render(plain: Base64.encode64(RsaPublicKey.to_s))

@@ -17,7 +17,7 @@ describe Api::V1::X402::CreditPurchasesController, :premium do
       {
         connection_code: x402_connection.code, plan_code: "agent_api", wallet_code: "agent_credits",
         payment: x402_evm_payment, payment_requirements: x402_evm_requirements,
-        wallet: {name: "Agent credits", rate_amount: "0.001", currency: "USD"}
+        wallet: {name: "Agent credits", rate_amount: "0.001", currency: "USD"}, idempotency_key: "agent-request-0001"
       }
     end
     let(:fault) { nil }
@@ -37,6 +37,7 @@ describe Api::V1::X402::CreditPurchasesController, :premium do
           status: "settled", replayed: false, network: "eip155:84532",
           transaction_hash: "0xefad33f01282b3a8b18893a9eb0aecbc2fc210ffcfa7fda7ca79f14c8822963a",
           payer_address:, external_subscription_id: "x402_#{payer_address}_agent_api",
+          subscription_started_at: Time.zone.at(1_789_649_271).iso8601(3),
           credits_granted: "10000.0", settled_amount_cents: 1000, reconcile_after: nil
         )
       end
@@ -47,7 +48,60 @@ describe Api::V1::X402::CreditPurchasesController, :premium do
 
       it "renders the replay" do
         subject
-        expect(json[:x402_settlement]).to include(status: "settled", replayed: true, external_subscription_id: "x402_#{payer_address}_agent_api")
+        expect(json[:x402_settlement]).to include(
+          status: "settled", replayed: true, external_subscription_id: "x402_#{payer_address}_agent_api",
+          subscription_started_at: Time.zone.at(1_789_649_271).iso8601(3)
+        )
+      end
+
+      context "with another idempotency key" do
+        subject { post_with_token(organization, "/api/v1/x402/credit_purchases", {credit_purchase: params.merge(idempotency_key: "agent-request-0002")}) }
+
+        it "answers 422 with the code only" do
+          subject
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(status: 422, error: "Unprocessable Entity", code: "validation_errors", error_details: {base: ["payment_already_settled"]})
+        end
+      end
+
+      context "without an idempotency key" do
+        subject { post_with_token(organization, "/api/v1/x402/credit_purchases", {credit_purchase: params.except(:idempotency_key)}) }
+
+        it "answers 422 with the code only" do
+          subject
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(status: 422, error: "Unprocessable Entity", code: "validation_errors", error_details: {base: ["payment_already_settled"]})
+        end
+      end
+    end
+
+    context "when the API log is produced" do
+      before { allow(Utils::ApiLog).to receive(:produce) }
+
+      it "filters the idempotency key out of the logged params" do
+        subject
+        expect(Utils::ApiLog).to have_received(:produce)
+          .with(anything, anything, organization:, filtered_params: [:idempotency_key])
+      end
+    end
+
+    context "with a malformed idempotency key" do
+      let(:params) { super().merge(idempotency_key: "short") }
+
+      it "answers 422 with the code" do
+        subject
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(idempotency_key: ["invalid_value"])
+      end
+    end
+
+    context "with an idempotency key that is not a string" do
+      let(:params) { super().merge(idempotency_key: {value: "agent-request-0001"}) }
+
+      it "answers 422 with the code" do
+        subject
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(idempotency_key: ["invalid_value"])
       end
     end
 
@@ -58,7 +112,7 @@ describe Api::V1::X402::CreditPurchasesController, :premium do
         subject
         expect(json[:x402_settlement]).to include(
           status: "pending", replayed: false, transaction_hash: nil, credits_granted: nil,
-          external_subscription_id: nil, reconcile_after: Time.zone.at(1_789_649_361).iso8601
+          external_subscription_id: nil, subscription_started_at: nil, reconcile_after: Time.zone.at(1_789_649_361).iso8601(3)
         )
       end
     end

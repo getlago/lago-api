@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class QuoteVersionsController < Api::BaseController
+    class QuoteVersionsController < Api::V1::BaseController
       before_action :ensure_feature_flag!
 
       def show

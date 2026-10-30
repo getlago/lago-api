@@ -14,6 +14,7 @@ module V1
           networks: model.networks,
           payout_addresses: model.payout_addresses,
           auto_create_customers: model.auto_create_customers,
+          allowed_origins: model.allowed_origins,
           created_at: model.created_at.iso8601,
           updated_at: model.updated_at.iso8601
         }

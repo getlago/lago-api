@@ -327,4 +327,32 @@ RSpec.describe Resolvers::OrderFormsResolver do
       expect(result.dig("data", "orderForms", "collection").length).to eq(2)
     end
   end
+
+  context "with N+1 query detection on document urls", :with_bullet, bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+    before do
+      # NOTE: Attachments are loaded one by one for any document url, this is not covered here
+      Bullet.add_safelist(type: :n_plus_one_query, class_name: "OrderForm", association: :signed_document_attachment)
+      Bullet.add_safelist(type: :n_plus_one_query, class_name: "ActiveStorage::Attachment", association: :blob)
+
+      create_list(:order_form, 2, :signed, :with_signed_document, organization:, customer:)
+    end
+
+    it "does not trigger N+1 queries" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: <<~GQL
+          query {
+            orderForms(limit: 10) {
+              collection { id signedDocumentUrl signedDocumentUrlExpiresAt }
+            }
+          }
+        GQL
+      )
+
+      expect(result["errors"]).to be_nil
+      expect(result.dig("data", "orderForms", "collection").pluck("signedDocumentUrlExpiresAt").compact.length).to eq(2)
+    end
+  end
 end

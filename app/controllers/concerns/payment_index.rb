@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 module PaymentIndex
-  include Pagination
   extend ActiveSupport::Concern
 
   def payment_index(customer_external_id: nil)
@@ -10,8 +9,8 @@ module PaymentIndex
     result = PaymentsQuery.call(
       organization: current_organization,
       pagination: {
-        page: params[:page],
-        limit: params[:per_page] || PER_PAGE
+        page: page_number,
+        limit: page_size
       },
       filters: filters
     )

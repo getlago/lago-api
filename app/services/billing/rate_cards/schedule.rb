@@ -91,8 +91,7 @@ module Billing
       end
 
       def build_billable_segment(cycle:, segment:)
-        # A contract's last window bills the days it ran, even on a card that does not prorate.
-        proration_ratio = if terms.prorated || cycle.closed_early?
+        proration_ratio = if terms.prorated
           cycle.calendar.proration_ratio(segment.started_at, segment.ended_at)
         else
           1.0

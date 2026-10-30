@@ -88,6 +88,31 @@ RSpec.describe Api::V1::PaymentRequestsController do
   end
 
   describe "GET /api/v1/payment_requests" do
+    context "with invoice documents" do
+      let(:customer) { create(:customer, organization:) }
+
+      def create_payment_request_with_invoice_files(count)
+        invoices = create_list(:invoice, count, organization:, customer:)
+        invoices.each do |invoice|
+          invoice.file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.pdf")), filename: "invoice.pdf")
+        end
+        create(:payment_request, customer:, invoices:)
+      end
+
+      def organization_queries
+        capture_sql { get_with_token(organization, "/api/v1/payment_requests") }.grep(/FROM "organizations"/).size
+      end
+
+      it "loads the invoice organizations once, whatever the number of invoices" do
+        create_payment_request_with_invoice_files(1)
+        queries_with_one_invoice = organization_queries
+
+        create_payment_request_with_invoice_files(3)
+
+        expect(organization_queries).to eq(queries_with_one_invoice)
+      end
+    end
+
     include_examples "a payment request index endpoint" do
       subject { get_with_token(organization, "/api/v1/payment_requests", params) }
 

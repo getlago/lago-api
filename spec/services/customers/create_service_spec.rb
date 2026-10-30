@@ -95,6 +95,71 @@ RSpec.describe Customers::CreateService do
     expect(Utils::ActivityLog).to have_produced("customer.created").after_commit.with(result.customer)
   end
 
+  context "when the provider lookup has an unexpected failure" do
+    let(:create_args) { super().merge(payment_provider: "stripe") }
+    let(:lookup_result) do
+      PaymentProviders::FindService::Result.new.service_failure!(code: "unexpected_provider_error", message: "Lookup failed")
+    end
+
+    before do
+      allow(CurrentContext).to receive(:source).and_return("api")
+      allow(PaymentProviders::FindService).to receive(:call).and_return(lookup_result)
+    end
+
+    it "preserves the service failure without creating a customer" do
+      expect { result }.not_to change(Customer, :count)
+      expect(result.error).to eq(lookup_result.error)
+    end
+  end
+
+  context "with a database uniqueness conflict" do
+    let(:customer) { build(:customer, organization:, billing_entity:) }
+    let(:constraint) { "index_customers_on_external_id_and_organization_id" }
+    let(:database_result) { instance_double(PG::Result, error_field: constraint) }
+    let(:database_error) { PG::UniqueViolation.new("duplicate value") }
+    let(:write_error) { ActiveRecord::RecordNotUnique.new("duplicate value") }
+
+    before do
+      allow(database_error).to receive(:result).and_return(database_result)
+      allow(customer).to receive(:save!) { raise write_error, cause: database_error }
+      allow(Customer).to receive(:new).and_return(customer)
+    end
+
+    it "returns a validation error for an external ID collision" do
+      expect { result }.not_to change(Customer, :count)
+      expect(result.error.messages).to eq(external_id: ["value_already_exist"])
+      expect(SendWebhookJob).not_to have_been_enqueued.with("customer.created", anything)
+    end
+
+    context "with another constraint" do
+      let(:constraint) { "customers_pkey" }
+
+      it "does not hide the database error" do
+        expect { result }.to raise_error(ActiveRecord::RecordNotUnique)
+      end
+    end
+  end
+
+  context "with invoice custom section codes" do
+    let(:section) { create(:invoice_custom_section, organization:) }
+    let(:create_args) { super().merge(invoice_custom_section_codes: [section.code]) }
+
+    it "assigns the organization's sections" do
+      expect(result).to be_success
+      expect(result.customer.manual_selected_invoice_custom_sections).to eq([section])
+    end
+
+    context "with conflicting section settings" do
+      let(:create_args) { super().merge(skip_invoice_custom_sections: true) }
+
+      it "rolls back customer creation" do
+        expect { result }.not_to change(Customer, :count)
+        expect(result).to be_failure
+        expect(SendWebhookJob).not_to have_been_enqueued.with("customer.created", anything)
+      end
+    end
+  end
+
   context "when organization has multiple billing entities" do
     let(:billing_entity_2) { create(:billing_entity, organization:) }
 
@@ -384,6 +449,7 @@ RSpec.describe Customers::CreateService do
       organization.update(eu_tax_management: true)
 
       eu_tax_result.tax_code = tax_code
+      eu_tax_result.tax_codes = [tax_code]
       allow(Customers::EuAutoTaxesService).to receive(:call).and_return(eu_tax_result)
     end
 
@@ -400,6 +466,33 @@ RSpec.describe Customers::CreateService do
       it "does not apply tax" do
         expect(result).to be_success
         expect(result.customer.taxes).to eq([])
+      end
+    end
+  end
+
+  context "when a non EU customer without tax identification number is created" do
+    let(:billing_entity) { create(:billing_entity, country: "FR", eu_tax_management: true) }
+    let(:create_args) do
+      {organization_id: organization.id, external_id:, name: "Foo Bar", currency: "EUR", country: "GB", tax_codes:}
+    end
+    let(:tax_codes) { ["uk_vat"] }
+
+    before do
+      create(:tax, organization:, code: "lago_eu_tax_exempt", rate: 0.0)
+      create(:tax, organization:, code: "uk_vat", rate: 20.0)
+    end
+
+    it "applies the custom tax only" do
+      expect(result).to be_success
+      expect(result.customer.taxes.pluck(:code)).to eq(["uk_vat"])
+    end
+
+    context "without tax codes" do
+      let(:tax_codes) { nil }
+
+      it "applies the EU exemption" do
+        expect(result).to be_success
+        expect(result.customer.taxes.pluck(:code)).to eq(["lago_eu_tax_exempt"])
       end
     end
   end

@@ -61,6 +61,64 @@ describe X402::Invoices::MintPaymentLinkService, :premium do
     end
   end
 
+  context "when the organization moved to mainnet" do
+    let(:organization) { create(:organization, feature_flags: ["x402_payments", "x402_mainnet"]) }
+    let(:testnet_connection) { create(:x402_connection, :saved_before_switch, organization:) }
+    let(:connection) { create(:x402_connection, :mainnet, organization:) }
+    let(:invoice) do
+      create(:invoice, organization:, customer:, currency: "USD", total_amount_cents: 1_000,
+        x402_connection: testnet_connection, x402_payment_token: "ab" * 32)
+    end
+
+    it "rebinds the invoice to the mainnet connection" do
+      expect { result }.to change { invoice.reload.x402_connection_id }.from(testnet_connection.id).to(connection.id)
+    end
+
+    it "mints a new token" do
+      expect { result }.to change { invoice.reload.x402_payment_token }.from("ab" * 32).to(match(/\A\h{64}\z/))
+    end
+
+    context "with the testnet connection code" do
+      let(:connection_code) { testnet_connection.code }
+      let(:invoice) do
+        create(:invoice, organization:, customer:, currency: "USD", total_amount_cents: 1_000,
+          x402_connection: connection, x402_payment_token: "ab" * 32)
+      end
+
+      it "fails on connection_code" do
+        expect(result.error.messages).to eq(connection_code: ["environment_not_enabled"])
+      end
+
+      it "keeps the binding" do
+        expect { result }.not_to change { invoice.reload.slice(:x402_connection_id, :x402_payment_token) }
+      end
+    end
+  end
+
+  context "when the organization moved back to testnet" do
+    let(:mainnet_connection) { create(:x402_connection, :mainnet, :saved_before_switch, organization:) }
+    let(:invoice) do
+      create(:invoice, organization:, customer:, currency: "USD", total_amount_cents: 1_000,
+        x402_connection: mainnet_connection, x402_payment_token: "ab" * 32)
+    end
+
+    it "fails on connection_code" do
+      expect(result.error.messages).to eq(connection_code: ["invoice_bound_to_mainnet"])
+    end
+
+    it "keeps the binding" do
+      expect { result }.not_to change { invoice.reload.slice(:x402_connection_id, :x402_payment_token) }
+    end
+
+    context "with the mainnet connection deleted" do
+      let(:mainnet_connection) { create(:x402_connection, :mainnet, :saved_before_switch, :discarded, organization:) }
+
+      it "fails on connection_code" do
+        expect(result.error.messages).to eq(connection_code: ["invoice_bound_to_mainnet"])
+      end
+    end
+  end
+
   context "without x402 payments" do
     let(:organization) { create(:organization) }
     let(:invoice) do

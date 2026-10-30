@@ -27,6 +27,7 @@ module V1
         document_number_prefix: model.document_number_prefix,
         tax_identification_number: model.tax_identification_number,
         finalize_zero_amount_invoice: model.finalize_zero_amount_invoice,
+        document_url_expiration_days: model.document_url_expiration_days,
         billing_configuration:,
         events_store: model.events_store
       }

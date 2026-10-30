@@ -16,7 +16,7 @@ module Integrations
         return result.not_found_failure!(resource: "integration") unless integration
 
         unless integration.organization.avalara_enabled?
-          return result.not_allowed_failure!(code: "premium_integration_missing")
+          return result.forbidden_failure!(code: "premium_integration_missing")
         end
 
         integration.name = params[:name] if params.key?(:name)

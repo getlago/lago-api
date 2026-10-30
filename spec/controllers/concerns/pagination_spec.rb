@@ -11,7 +11,14 @@ RSpec.describe Pagination do
     Class.new do
       include Pagination
 
+      attr_writer :params
+
       public :_count_total, :pagination_metadata
+
+      # The request params, which the page_number and page_size helpers read.
+      def params
+        @params || ActionController::Parameters.new(page: "1", per_page: "10")
+      end
     end
   end
   let(:cache) { ActiveSupport::Cache::MemoryStore.new }
@@ -85,6 +92,7 @@ RSpec.describe Pagination do
 
     before do
       instance._count_total(key: "invoices", organization_id:, params: query_params.merge("page" => "1")) { 99 }
+      instance.params = ActionController::Parameters.new(query_params)
     end
 
     it "re-calculates from records" do
@@ -170,6 +178,35 @@ RSpec.describe Pagination do
       records = double("records", total_count: 5, current_page: 1, limit_value: 10)
       result = instance.pagination_metadata(records, key:, organization_id:, params:)
       expect(result["total_count"]).to eq(5)
+    end
+  end
+
+  describe "#default_max_page_size" do
+    subject(:default_max_page_size) { instance.send(:default_max_page_size) }
+
+    let(:max_page_size_env) { nil }
+
+    before do
+      allow(ENV).to receive(:[]).and_call_original
+      allow(ENV).to receive(:[]).with("LAGO_API_PAGINATION_MAX_PAGE_SIZE").and_return(max_page_size_env)
+    end
+
+    context "when the env var is unset" do
+      it { expect(default_max_page_size).to eq(200) }
+    end
+
+    context "when the env var is a positive integer" do
+      let(:max_page_size_env) { "300" }
+
+      it { expect(default_max_page_size).to eq(300) }
+    end
+
+    %w[0 -5 abc 0x10].each do |invalid_value|
+      context "when the env var is #{invalid_value.inspect}" do
+        let(:max_page_size_env) { invalid_value }
+
+        it { expect(default_max_page_size).to eq(200) }
+      end
     end
   end
 end

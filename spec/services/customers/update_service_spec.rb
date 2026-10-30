@@ -45,6 +45,62 @@ RSpec.describe Customers::UpdateService do
 
     let(:account_type) { "customer" }
 
+    context "with a database uniqueness conflict" do
+      subject(:result) { described_class.call(customer:, args: update_args) }
+
+      let(:constraint) { "index_customers_on_external_id_and_organization_id" }
+      let(:database_result) { instance_double(PG::Result, error_field: constraint) }
+      let(:database_error) { PG::UniqueViolation.new("duplicate value") }
+      let(:write_error) { ActiveRecord::RecordNotUnique.new("duplicate value") }
+
+      before do
+        allow(database_error).to receive(:result).and_return(database_result)
+        allow(customer).to receive(:save!) { raise write_error, cause: database_error }
+      end
+
+      it "returns a validation error for an external ID collision" do
+        original_attributes = customer.attributes
+
+        expect(result.error.messages).to eq(external_id: ["value_already_exist"])
+        expect(customer.reload.attributes).to eq(original_attributes)
+        expect(SendWebhookJob).not_to have_been_enqueued.with("customer.updated", customer)
+      end
+
+      context "with another constraint" do
+        let(:constraint) { "customers_pkey" }
+
+        it "does not hide the database error" do
+          expect { result }.to raise_error(ActiveRecord::RecordNotUnique)
+        end
+      end
+    end
+
+    context "when tax assignment fails" do
+      let(:update_args) { super().merge(tax_codes: ["unknown-tax"]) }
+
+      it "rolls back customer changes" do
+        original_attributes = customer.attributes
+
+        result = customers_service.call
+
+        expect(result).to be_failure
+        expect(customer.reload.attributes).to eq(original_attributes)
+        expect(SendWebhookJob).not_to have_been_enqueued.with("customer.updated", customer)
+      end
+    end
+
+    context "with invoice custom section codes" do
+      let(:section) { create(:invoice_custom_section, organization:) }
+      let(:update_args) { super().merge(invoice_custom_section_codes: [section.code]) }
+
+      it "assigns sections by code" do
+        result = customers_service.call
+
+        expect(result).to be_success
+        expect(customer.reload.manual_selected_invoice_custom_sections).to eq([section])
+      end
+    end
+
     it "updates a customer and calls SendWebhookJob" do
       result = customers_service.call
       updated_customer = result.customer
@@ -91,6 +147,28 @@ RSpec.describe Customers::UpdateService do
       it "sanitizes the email before saving" do
         result = customers_service.call
         expect(result.customer.email).to eq("hello@something-other.com")
+      end
+    end
+
+    context "with a line break in the address" do
+      let(:update_args) { {id: customer.id, address_line2: "Line A\nLine B"} }
+
+      it "stores the line break" do
+        result = customers_service.call
+
+        expect(result).to be_success
+        expect(customer.reload.address_line2).to eq("Line A\nLine B")
+      end
+    end
+
+    context "with a tab in the address" do
+      let(:update_args) { {id: customer.id, address_line2: "Floor 2\tSuite 4"} }
+
+      it "stores the tab" do
+        result = customers_service.call
+
+        expect(result).to be_success
+        expect(customer.reload.address_line2).to eq("Floor 2\tSuite 4")
       end
     end
 
@@ -622,6 +700,7 @@ RSpec.describe Customers::UpdateService do
         organization.update(eu_tax_management: true)
 
         eu_tax_result.tax_code = tax_code
+        eu_tax_result.tax_codes = [tax_code]
         allow(Customers::EuAutoTaxesService).to receive(:call).and_return(eu_tax_result)
       end
 
@@ -738,6 +817,116 @@ RSpec.describe Customers::UpdateService do
 
           expect(result).to be_success
           expect(result.customer.taxes.pluck(:code)).to eq(["lago_eu_fr_standard"])
+        end
+      end
+    end
+
+    context "when a non EU customer without tax identification number has a custom tax" do
+      let_it_be(:eu_billing_entity) { create(:billing_entity, organization:, country: "FR", eu_tax_management: true) }
+      let_it_be(:exempt_tax) { create(:tax, organization:, code: "lago_eu_tax_exempt", rate: 0.0) }
+      let_it_be(:custom_tax) { create(:tax, organization:, code: "uk_vat", rate: 20.0) }
+      let(:customer) do
+        create(:customer, organization:, billing_entity: eu_billing_entity, country: "GB", zipcode: "SW1A 1AA", tax_identification_number: nil)
+      end
+
+      before { create(:customer_applied_tax, organization:, customer:, tax: custom_tax) }
+
+      context "when the name changes" do
+        let(:update_args) { {id: customer.id, name: "New name"} }
+
+        it "keeps the custom tax without refreshing draft invoices" do
+          invoice = create(:invoice, :draft, organization:, customer:)
+          result = customers_service.call
+
+          expect(result).to be_success
+          expect(result.customer.taxes.pluck(:code)).to eq(["uk_vat"])
+          expect(invoice.reload.ready_to_be_refreshed).to be(false)
+        end
+      end
+
+      context "when the customer also has the EU exemption" do
+        let(:update_args) { {id: customer.id, zipcode: "EC1A 1BB"} }
+
+        before { create(:customer_applied_tax, organization:, customer:, tax: exempt_tax) }
+
+        it "removes the EU exemption" do
+          result = customers_service.call
+
+          expect(result).to be_success
+          expect(result.customer.taxes.pluck(:code)).to eq(["uk_vat"])
+        end
+      end
+
+      context "when the zipcode changes without tax codes" do
+        let(:update_args) { {id: customer.id, zipcode: "EC1A 1BB"} }
+
+        it "keeps the custom tax" do
+          result = customers_service.call
+
+          expect(result).to be_success
+          expect(result.customer.taxes.pluck(:code)).to eq(["uk_vat"])
+        end
+      end
+
+      context "when the customer moves to an EU country" do
+        let(:update_args) { {id: customer.id, country: "DE", zipcode: "10115"} }
+
+        before { create(:tax, organization:, code: "lago_eu_de_standard", rate: 19.0) }
+
+        it "applies the EU country tax" do
+          result = customers_service.call
+
+          expect(result).to be_success
+          expect(result.customer.taxes.pluck(:code)).to eq(["lago_eu_de_standard"])
+        end
+      end
+
+      context "when a tax identification number is added" do
+        let(:update_args) { {id: customer.id, tax_identification_number: "GB123456789"} }
+
+        it "schedules a VIES check" do
+          result = customers_service.call
+
+          expect(result).to be_success
+          expect(result.customer.pending_vies_check).to be_present
+        end
+      end
+
+      context "when the custom tax is removed" do
+        let(:update_args) { {id: customer.id, tax_codes: []} }
+
+        it "applies the EU exemption" do
+          result = customers_service.call
+
+          expect(result).to be_success
+          expect(result.customer.taxes.pluck(:code)).to eq(["lago_eu_tax_exempt"])
+        end
+      end
+
+      context "when the customer leaves an EU country" do
+        let(:customer) do
+          create(:customer, organization:, billing_entity: eu_billing_entity, country: "FR", zipcode: "75001", tax_identification_number: nil)
+        end
+        let(:update_args) { {id: customer.id, country: "GB", zipcode: "SW1A 1AA"} }
+
+        before { create(:customer_applied_tax, organization:, customer:, tax: create(:tax, organization:, code: "lago_eu_fr_standard", rate: 20.0)) }
+
+        it "replaces the EU rate with the EU exemption" do
+          result = customers_service.call
+
+          expect(result).to be_success
+          expect(result.customer.taxes.pluck(:code)).to eq(["lago_eu_tax_exempt"])
+        end
+      end
+
+      context "when the exemption is sent with the custom tax" do
+        let(:update_args) { {id: customer.id, tax_codes: %w[lago_eu_tax_exempt uk_vat]} }
+
+        it "applies the custom tax only" do
+          result = customers_service.call
+
+          expect(result).to be_success
+          expect(result.customer.taxes.pluck(:code)).to eq(["uk_vat"])
         end
       end
     end

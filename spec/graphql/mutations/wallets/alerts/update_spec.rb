@@ -61,6 +61,27 @@ RSpec.describe Mutations::Wallets::Alerts::Update do
     )
   end
 
+  context "when a threshold already opted in and the update leaves notifyOn out" do
+    let(:alert) { create(:wallet_balance_amount_alert, wallet:, organization: membership.organization, thresholds: nil) }
+
+    before do
+      create(:alert_threshold, alert:, code: "warn", value: 10, notify_on: %w[triggered resolved])
+    end
+
+    it "keeps the opt-in" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {input: {id: alert.id, thresholds: [{code: "warn", value: "20"}]}}
+      )
+
+      expect(result["errors"]).to be_nil
+      expect(alert.reload.thresholds.sole).to have_attributes(value: 20, notify_on: %w[triggered resolved])
+    end
+  end
+
   context "when alert is not found" do
     it "returns an error" do
       result = execute_graphql(

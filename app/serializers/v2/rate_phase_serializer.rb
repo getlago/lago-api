@@ -9,6 +9,7 @@ module V2
         position: model.position,
         name: model.name,
         billing_interval_cycle_count: model.billing_interval_cycle_count,
+        deleted_at: format_time(model.deleted_at),
         rate_override: rate_override
       }
     end
@@ -18,7 +19,7 @@ module V2
     def rate_override
       return unless model.rate_override
 
-      ::V2::RateOverrideSerializer.new(model.rate_override).serialize
+      ::V2::RateOverrideSerializer.new(model.rate_override, nested_options).serialize
     end
   end
 end

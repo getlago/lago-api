@@ -120,6 +120,14 @@ RSpec.describe Mutations::CustomerPortal::UpdateCustomer do
     end
   end
 
+  context "with a control character in the legal name" do
+    let(:input) { {legalName: "Acme\nAPPROVED GOODWILL CREDIT"} }
+
+    it "returns a validation error" do
+      expect_unprocessable_entity(result, details: {legalName: ["invalid_characters"]})
+    end
+  end
+
   context "when updating not allowed fields" do
     let(:input) { {currency: "USD"} }
 

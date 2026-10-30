@@ -204,6 +204,28 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
         expect(event_store.count).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 1, events_count: 1))
       end
     end
+
+    context "when the recurring sum reads the delta of a snapshot period" do
+      let(:period) do
+        RecurringAggregationSnapshots::FetchService::Period.new(to_datetime: subscription.started_at, watermark: Time.current)
+      end
+
+      context "with a grouped_by value ending with a backslash" do
+        let(:filters) { {grouped_by_values: {"a\\" => "back\\"}} }
+
+        it "matches the literal value" do
+          expect(event_store.recurring_sum(watermark: Time.current, period:).value).to eq(2)
+        end
+      end
+
+      context "with a matching filter value ending with a backslash" do
+        let(:filters) { {matching_filters: {"a\\" => ["back\\"]}} }
+
+        it "matches the literal value" do
+          expect(event_store.recurring_sum(watermark: Time.current, period:).value).to eq(2)
+        end
+      end
+    end
   end
 
   # Pins the query shape behind #count. Deduplication relies on the `FINAL`

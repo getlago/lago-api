@@ -13,11 +13,12 @@ module X402
         "index_x402_settlements_on_pending_invoice_id" => "invoice_payment_pending"
       }.freeze
 
-      def initialize(verified_payment:, kind:, invoice: nil, purchase_settings: nil)
+      def initialize(verified_payment:, kind:, invoice: nil, purchase_settings: nil, request_key_digest: nil)
         @verified_payment = verified_payment
         @kind = kind
         @invoice = invoice
         @purchase_settings = purchase_settings
+        @request_key_digest = request_key_digest
 
         super
       end
@@ -38,7 +39,7 @@ module X402
 
       private
 
-      attr_reader :verified_payment, :kind, :invoice, :purchase_settings
+      attr_reader :verified_payment, :kind, :invoice, :purchase_settings, :request_key_digest
 
       delegate :connection, :network, :asset, to: :verified_payment, private: true
 
@@ -77,6 +78,7 @@ module X402
           settled_amount_atomic: verified_payment.settled_amount_atomic,
           settled_amount_cents: verified_payment.settled_amount_cents,
           payment_digest: verified_payment.payment_digest,
+          request_key_digest:,
           reconcile_after:,
           payload: {
             "payment" => verified_payment.payment,

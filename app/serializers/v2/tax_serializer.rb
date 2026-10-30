@@ -9,16 +9,10 @@ module V2
         code: model.code,
         rate: model.rate,
         description: model.description,
-        created_at: model.created_at.iso8601,
-        updated_at: model.updated_at.iso8601,
-        **deleted_at_payload
+        created_at: format_time(model.created_at),
+        updated_at: format_time(model.updated_at),
+        deleted_at: format_time(model.deleted_at)
       }
-    end
-
-    private
-
-    def deleted_at_payload
-      include?(:deleted_at) ? {deleted_at: model.deleted_at&.iso8601} : {}
     end
   end
 end

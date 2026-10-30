@@ -45,18 +45,11 @@ module AuthenticableUser
   end
 
   def session_claims
-    if token && decoded_token
-      decoded_token.slice("login_method", "sso_organization_id", "sso_issuer").symbolize_keys
-    else
-      {}
-    end
+    (token && decoded_token) ? Utils::AuthToken.session_claims(decoded_token) : {}
   end
 
-  # NOTE: Okta and Entra ID sessions issued before the SSO claims existed cannot be tied to an
-  #       identity provider, so they are treated as expired and the user logs in again.
   def sso_session_without_claims?
-    Organizations::AuthenticationMethods::SSO_INTEGRATION_TYPES.key?(decoded_token["login_method"]) &&
-      decoded_token["sso_organization_id"].blank?
+    Utils::AuthToken.sso_session_without_claims?(decoded_token)
   end
 
   def token

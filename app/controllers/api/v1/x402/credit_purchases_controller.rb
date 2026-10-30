@@ -4,10 +4,12 @@ module Api
   module V1
     module X402
       class CreditPurchasesController < BaseController
+        filter_audit_log_params! :idempotency_key
+
         def create
           result = ::X402::CreditPurchases::PurchaseService.call(
             organization: current_organization,
-            params: create_params.to_h.deep_symbolize_keys.merge(signed_payment_params)
+            params: create_params.to_h.deep_symbolize_keys.merge(raw_purchase_params)
           )
 
           if result.success?
@@ -23,12 +25,12 @@ module Api
           params.expect(credit_purchase: [:connection_code, :plan_code, :wallet_code, wallet: {}])
         end
 
-        def signed_payment_params
+        def raw_purchase_params
           body = JSON.parse(request.raw_post)
           purchase = body["credit_purchase"] if body.is_a?(Hash)
 
           if purchase.is_a?(Hash)
-            {payment: purchase["payment"], payment_requirements: purchase["payment_requirements"]}
+            {payment: purchase["payment"], payment_requirements: purchase["payment_requirements"], idempotency_key: purchase["idempotency_key"]}
           else
             {}
           end

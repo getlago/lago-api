@@ -44,9 +44,17 @@ RSpec.describe Fees::ChargeService do
       invoice:, invoiceable: product, fee_type: "product", charge_id: nil, subscription_id: nil,
       contract:, contract_rate_card:,
       product_filter_id: nil, charge_filter_id: nil, rate_card_rate:, rate_override_id: nil,
-      amount_cents: 400, units: 2, events_count: 2
+      amount_cents: 400, units: 2, events_count: 2, pay_in_advance: false
     )
     expect(result.fees.sole.properties).to eq(metered_item.filtered_for_charge_boundaries.as_json)
+  end
+
+  context "with an advance rate card shown on the invoice" do
+    let(:rate_card) { create(:rate_card, :advance, organization:, product:, product_filter:, currency: "USD") }
+
+    it "stores the advance billing timing on the fee" do
+      expect(result.fees.sole.pay_in_advance).to be(true)
+    end
   end
 
   context "when the interval was already billed" do
@@ -357,6 +365,7 @@ RSpec.describe Fees::ChargeService do
     it "only prices unmatched events for an unscoped rate card" do
       expect(result).to be_success
       expect(result.fees.sole).to have_attributes(product_filter_id: nil, units: 1, amount_cents: 200)
+      expect(result.fees.sole.properties["product_filter_values"]).to be_nil
       expect(invoice.fees.pluck(:product_filter_id, :charge_filter_id)).to eq([[nil, nil]])
     end
 
@@ -365,6 +374,23 @@ RSpec.describe Fees::ChargeService do
 
       it "only prices the rate card's selected bucket" do
         expect(result.fees.sole.reload).to have_attributes(product_filter_id: eu_filter.id, charge_filter_id: nil, units: 1, amount_cents: 200)
+      end
+
+      it "stores the selected filter values on the fee" do
+        expect(result.fees.sole.reload.properties["product_filter_values"]).to eq("region" => ["eu"])
+      end
+
+      context "when the filter selects every value of a key" do
+        let(:all_regions_filter) { create(:product_filter, organization:, product:) }
+        let(:product_filter) { all_regions_filter }
+
+        before do
+          create(:product_filter_value, organization:, product_filter: all_regions_filter, billable_metric_filter: region, value: nil)
+        end
+
+        it "keeps the all-values marker" do
+          expect(result.fees.sole.reload.properties["product_filter_values"]).to eq("region" => [nil])
+        end
       end
 
       context "with a minimum amount" do
@@ -379,6 +405,7 @@ RSpec.describe Fees::ChargeService do
             invoiceable: product, fee_type: "product", product_filter_id: nil,
             charge_filter_id: nil, true_up_parent_fee: fees.first, contract:, contract_rate_card:
           )
+          expect(fees.last.properties).not_to have_key("product_filter_values")
         end
       end
     end

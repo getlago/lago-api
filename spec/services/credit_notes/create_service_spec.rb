@@ -609,6 +609,8 @@ RSpec.describe CreditNotes::CreateService do
     end
 
     context "when crediting a contract product fee", :premium do
+      before { invoice.organization.enable_feature_flag!(:product_catalog) }
+
       let(:automatic) { false }
       let(:create_default_applied_taxes) { false }
       let(:credit_amount_cents) { 50 }
@@ -629,6 +631,18 @@ RSpec.describe CreditNotes::CreateService do
       let(:fee2) { nil }
       let(:items) { [{fee_id: fee1.id, amount_cents: 50}] }
 
+      context "when the product catalog flag is disabled" do
+        before { invoice.organization.disable_feature_flag!(:product_catalog) }
+
+        let(:automatic) { true }
+
+        it "rejects automatic credit notes for product fees" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          expect(result.error.code).to eq("feature_unavailable")
+        end
+      end
+
       it "creates a partial credit without changing the source invoice" do
         expect(result).to be_success
 
@@ -637,6 +651,76 @@ RSpec.describe CreditNotes::CreateService do
         expect(credit_note.invoice).to eq(invoice)
         expect(credit_note.fees.sole.subscription_id).to be_nil
         expect(invoice.reload).to have_attributes(status: "finalized", total_amount_cents: 100)
+      end
+
+      context "when the customer's billing entity and tax change after invoicing" do
+        let(:source_tax) { create(:tax, organization:, code: "source-tax", rate: 20) }
+        let(:invoice) do
+          create(:invoice, organization:, customer:, billing_entity: source_billing_entity, currency: "EUR",
+            fees_amount_cents: 100, coupons_amount_cents: 20, status: :finalized, total_amount_cents: 96,
+            total_paid_amount_cents: 96, taxes_amount_cents: 16, payment_status: :succeeded, version_number: 3)
+        end
+        let(:credit_amount_cents) { 48 }
+        let(:source_billing_entity) { create(:billing_entity, organization:) }
+        let(:fee1) do
+          create(:fee, invoice:, subscription: nil, fee_type: :product, amount_cents: 100, precise_amount_cents: 100,
+            precise_coupons_amount_cents: 20, invoiceable: contract_rate_card.rate_card.product, contract:,
+            contract_rate_card:, rate_card_rate:, taxes_amount_cents: 16, taxes_rate: 20, taxes_precise_amount_cents: 16)
+        end
+
+        before do
+          create(:fee_applied_tax, tax: source_tax, fee: fee1, tax_code: source_tax.code, tax_rate: 20,
+            amount_cents: 16, precise_amount_cents: 16)
+          create(:invoice_applied_tax, tax: source_tax, invoice:, tax_code: source_tax.code, tax_rate: 20,
+            fees_amount_cents: 80, amount_cents: 16)
+
+          current_billing_entity = create(:billing_entity, organization:)
+          create(:tax, :applied_to_billing_entity, organization:, code: "current-tax", rate: 5,
+            billing_entity: current_billing_entity)
+          customer.update!(billing_entity: current_billing_entity)
+          source_tax.update!(code: "changed-tax", rate: 10)
+        end
+
+        it "reverses the invoice's tax and coupon snapshots across partial credits" do
+          expect(invoice.applied_taxes.sole).to have_attributes(
+            tax_code: "source-tax",
+            tax_rate: 20,
+            fees_amount_cents: 80,
+            taxable_base_amount_cents: 0,
+            amount_cents: 16
+          )
+          expect(fee1.applied_taxes.sole).to have_attributes(tax_code: "source-tax", tax_rate: 20, amount_cents: 16)
+
+          first_result = create_service.call
+
+          expect(first_result).to be_success
+          first_credit_note = first_result.credit_note
+          expect(first_credit_note.billing_entity).to eq(source_billing_entity)
+          expect(first_credit_note.applied_taxes.sole).to have_attributes(
+            tax_code: "source-tax",
+            tax_rate: 20,
+            base_amount_cents: 40,
+            amount_cents: 8
+          )
+          expect(first_credit_note.coupons_adjustment_amount_cents).to eq(10)
+          expect(first_credit_note.total_amount_cents).to eq(48)
+
+          second_result = create_service.call
+
+          expect(second_result).to be_success
+          second_credit_note = second_result.credit_note
+          expect(second_credit_note.billing_entity).to eq(source_billing_entity)
+          expect(second_credit_note.applied_taxes.sole).to have_attributes(
+            tax_code: "source-tax",
+            tax_rate: 20,
+            base_amount_cents: 40,
+            amount_cents: 8
+          )
+          expect(second_credit_note.coupons_adjustment_amount_cents).to eq(10)
+          expect(CreditNote.where(invoice:).sum(:taxes_amount_cents)).to eq(16)
+          expect(CreditNote.where(invoice:).sum(:coupons_adjustment_amount_cents)).to eq(20)
+          expect(CreditNote.where(invoice:).sum(:total_amount_cents)).to eq(96)
+        end
       end
 
       context "when the fee belongs to another invoice" do

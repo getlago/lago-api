@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class TaxesController < Api::BaseController
+    class TaxesController < Api::V1::BaseController
       def create
         result = Taxes::CreateService.call(organization: current_organization, params: input_params)
 
@@ -46,8 +46,8 @@ module Api
         result = TaxesQuery.call(
           organization: current_organization,
           pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
+            page: page_number,
+            limit: page_size
           }
         )
 

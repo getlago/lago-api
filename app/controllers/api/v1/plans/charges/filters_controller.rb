@@ -13,8 +13,8 @@ module Api
           def index
             charge_filters = charge.filters
               .includes(:charge, :billable_metric_filters)
-              .page(params[:page])
-              .per(params[:per_page] || PER_PAGE)
+              .page(page_number)
+              .per(page_size)
 
             render(
               json: ::CollectionSerializer.new(

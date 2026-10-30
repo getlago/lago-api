@@ -156,7 +156,12 @@ module BillingEntities
 
     def handle_invoice_custom_sections
       existing_section_ids = billing_entity.selected_invoice_custom_sections.ids
-      new_section_ids = params[:invoice_custom_section_ids] || InvoiceCustomSection.where(code: params[:invoice_custom_section_codes]).ids
+      sections = billing_entity.organization.invoice_custom_sections
+      new_section_ids = if params[:invoice_custom_section_ids]
+        sections.where(id: params[:invoice_custom_section_ids]).ids
+      else
+        sections.where(code: params[:invoice_custom_section_codes]).ids
+      end
 
       billing_entity.applied_invoice_custom_sections.where.not(invoice_custom_section_id: new_section_ids).destroy_all
 

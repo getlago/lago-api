@@ -3,7 +3,7 @@
 module Api
   module V1
     module Subscriptions
-      class EntitlementsController < Api::BaseController
+      class EntitlementsController < Api::V1::BaseController
         # Shall we update BaseController to include hae active subscriptions only?
         before_action :find_subscription
 

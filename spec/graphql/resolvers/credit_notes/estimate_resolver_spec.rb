@@ -81,11 +81,15 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver, :premium do
   end
 
   context "with a contract product fee" do
+    before { Organization.find(organization.id).enable_feature_flag!(:product_catalog) }
+
     let(:invoice) do
-      create(:invoice, organization:, customer:, payment_status: :succeeded, currency: "EUR", status: :finalized,
+      create(:invoice, organization: contract_organization, customer:, payment_status: :succeeded, currency: "EUR", status: :finalized,
         fees_amount_cents: 100, total_amount_cents: 100, total_paid_amount_cents: 100, taxes_amount_cents: 0,
         version_number: 3)
     end
+    let(:contract_organization) { Organization.find(organization.id) }
+    let(:graphql_organization) { Organization.find(organization.id) }
     let(:contract) { create(:contract, organization:, customer:) }
     let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
     let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card) }
@@ -107,7 +111,7 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver, :premium do
     end
 
     it "estimates a partial credit without requiring a subscription" do
-      result = execute_graphql(current_user: membership.user, current_organization: organization,
+      result = execute_graphql(current_user: membership.user, current_organization: graphql_organization,
         permissions: "credit_notes:create", query:,
         variables: {invoiceId: invoice.id, items: [{feeId: fee.id, amountCents: 40}]})
 
@@ -117,8 +121,23 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver, :premium do
       expect(invoice.reload).to have_attributes(status: "finalized", total_amount_cents: 100)
     end
 
+    context "when the product catalog flag is disabled" do
+      before { Organization.find(organization.id).disable_feature_flag!(:product_catalog) }
+
+      it "rejects the estimate" do
+        result = nil
+        expect do
+          result = execute_graphql(current_user: membership.user, current_organization: graphql_organization,
+            permissions: "credit_notes:create", query:,
+            variables: {invoiceId: invoice.id, items: [{feeId: fee.id, amountCents: 40}]})
+        end.not_to change(CreditNote, :count)
+
+        expect(result.dig("errors", 0, "extensions", "code")).to eq("feature_unavailable")
+      end
+    end
+
     it "rejects a fee ID from another organization" do
-      result = execute_graphql(current_user: membership.user, current_organization: organization,
+      result = execute_graphql(current_user: membership.user, current_organization: graphql_organization,
         permissions: "credit_notes:create", query:,
         variables: {invoiceId: invoice.id, items: [{feeId: foreign_fee.id, amountCents: 40}]})
 

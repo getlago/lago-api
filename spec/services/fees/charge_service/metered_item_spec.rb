@@ -372,6 +372,12 @@ RSpec.describe Fees::ChargeService::MeteredItem do
 
         expect(metered_item.grouped_by_values).to eq("cloud" => "aws", "region" => nil)
       end
+
+      it "stores a blank event property as nil" do
+        event_properties["region"] = ""
+
+        expect(metered_item.grouped_by_values).to eq("cloud" => "aws", "region" => nil)
+      end
     end
 
     context "with legacy grouped_by properties" do

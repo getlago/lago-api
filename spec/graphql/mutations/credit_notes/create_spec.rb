@@ -110,11 +110,15 @@ RSpec.describe Mutations::CreditNotes::Create, :premium do
   end
 
   context "when crediting a contract product fee" do
+    before { Organization.find(organization.id).enable_feature_flag!(:product_catalog) }
+
     let(:invoice) do
-      create(:invoice, customer:, organization:, payment_status: :succeeded, currency: "EUR", status: :finalized,
+      create(:invoice, customer:, organization: contract_organization, payment_status: :succeeded, currency: "EUR", status: :finalized,
         fees_amount_cents: 100, total_amount_cents: 100, total_paid_amount_cents: 100, taxes_amount_cents: 0,
         version_number: 3)
     end
+    let(:contract_organization) { Organization.find(organization.id) }
+    let(:graphql_organization) { Organization.find(organization.id) }
     let(:contract) { create(:contract, organization:, customer:) }
     let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
     let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card) }
@@ -128,7 +132,7 @@ RSpec.describe Mutations::CreditNotes::Create, :premium do
     it "creates a partial credit against the invoice" do
       result = execute_graphql(
         current_user: membership.user,
-        current_organization: organization,
+        current_organization: graphql_organization,
         permissions: required_permission,
         query: mutation,
         variables: {input: {reason: "other", invoiceId: invoice.id, creditAmountCents: 50,
@@ -141,13 +145,29 @@ RSpec.describe Mutations::CreditNotes::Create, :premium do
       expect(credit_note.fees.sole.subscription_id).to be_nil
     end
 
+    context "when the product catalog flag is disabled" do
+      before { Organization.find(organization.id).disable_feature_flag!(:product_catalog) }
+
+      it "rejects the request without creating a credit note" do
+        result = nil
+        expect do
+          result = execute_graphql(current_user: membership.user, current_organization: graphql_organization,
+            permissions: required_permission, query: mutation,
+            variables: {input: {reason: "other", invoiceId: invoice.id, creditAmountCents: 50,
+                                refundAmountCents: 0, items: [{feeId: fee1.id, amountCents: 50}]}})
+        end.not_to change(CreditNote, :count)
+
+        expect(result.dig("errors", 0, "extensions", "code")).to eq("feature_unavailable")
+      end
+    end
+
     context "when the invoice belongs to another organization" do
       let(:other_organization) { create(:organization) }
       let(:other_customer) { create(:customer, organization: other_organization) }
       let(:other_invoice) { create(:invoice, organization: other_organization, customer: other_customer) }
 
       it "does not expose or credit the foreign invoice" do
-        result = execute_graphql(current_user: membership.user, current_organization: organization,
+        result = execute_graphql(current_user: membership.user, current_organization: graphql_organization,
           permissions: required_permission, query: mutation,
           variables: {input: {reason: "other", invoiceId: other_invoice.id, creditAmountCents: 50,
                               refundAmountCents: 0, items: [{feeId: fee1.id, amountCents: 50}]}})

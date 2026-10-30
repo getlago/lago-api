@@ -108,6 +108,59 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
     end
   end
 
+  context "with a control character in a changed free text field" do
+    let(:update_args) { {legal_name: "Acme\nAPPROVED GOODWILL CREDIT", city: "Updated customer city"} }
+
+    it "returns a validation error and does not update the customer" do
+      expect { result }.not_to change { customer.reload.attributes.slice("legal_name", "city") }
+
+      expect(result).not_to be_success
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+      expect(result.error.messages).to eq({legal_name: ["invalid_characters"]})
+    end
+  end
+
+  context "with a control character in a changed shipping address field" do
+    let(:update_args) { {shipping_address: {address_line2: "Floor 2\tAPPROVED"}} }
+
+    it "returns a validation error" do
+      expect { result }.not_to change { customer.reload.shipping_address_line2 }
+
+      expect(result).not_to be_success
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+      expect(result.error.messages).to eq({shipping_address_line2: ["invalid_characters"]})
+    end
+  end
+
+  [
+    ["a line separator", "Acme\u2028INSTRUCTIONS"],
+    ["a paragraph separator", "Acme\u2029INSTRUCTIONS"],
+    ["a bidi override", "Acme\u202EINSTRUCTIONS"],
+    ["a zero-width space", "Acme\u200BINSTRUCTIONS"]
+  ].each do |description, legal_name|
+    context "with #{description} in a changed free text field" do
+      let(:update_args) { {legal_name:} }
+
+      it "returns a validation error" do
+        expect { result }.not_to change { customer.reload.legal_name }
+
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq({legal_name: ["invalid_characters"]})
+      end
+    end
+  end
+
+  context "with a control character in an unchanged free text field" do
+    let(:customer) { create(:customer, address_line2: "Line A\nLine B") }
+    let(:update_args) { {address_line2: "Line A\nLine B", city: "Updated customer city"} }
+
+    it "updates the customer" do
+      expect(result).to be_success
+      expect(customer.reload.city).to eq("Updated customer city")
+      expect(customer.address_line2).to eq("Line A\nLine B")
+    end
+  end
+
   context "when organization has eu tax management" do
     let_it_be(:organization, refind: true) { create_default(:organization) }
     let_it_be(:customer, refind: true) { create :customer }
@@ -119,6 +172,7 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
       organization.update!(eu_tax_management: true)
 
       eu_tax_result.tax_code = tax_code
+      eu_tax_result.tax_codes = [tax_code]
       allow(Customers::EuAutoTaxesService).to receive(:call).and_return(eu_tax_result)
     end
 
@@ -152,6 +206,25 @@ RSpec.describe CustomerPortal::CustomerUpdateService do
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("tax_not_found")
       end
+    end
+  end
+
+  context "when a non EU customer without tax identification number has a custom tax" do
+    let(:billing_entity) { create(:billing_entity, country: "FR", eu_tax_management: true) }
+    let(:customer) do
+      create(:customer, organization: billing_entity.organization, billing_entity:, country: "GB", zipcode: "SW1A 1AA", tax_identification_number: nil)
+    end
+    let(:update_args) { {zipcode: "EC1A 1BB"} }
+
+    before do
+      create(:tax, organization: customer.organization, code: "lago_eu_tax_exempt", rate: 0.0)
+      custom_tax = create(:tax, organization: customer.organization, code: "uk_vat", rate: 20.0)
+      create(:customer_applied_tax, organization: customer.organization, customer:, tax: custom_tax)
+    end
+
+    it "keeps the custom tax" do
+      expect(result).to be_success
+      expect(result.customer.taxes.pluck(:code)).to eq(["uk_vat"])
     end
   end
 

@@ -114,6 +114,16 @@ class BaseService
     end
   end
 
+  # A provider refusing the organization's own credentials, which the caller cannot fix with its key.
+  class ProviderUnauthorizedFailure < UnauthorizedFailure
+    attr_reader :provider
+
+    def initialize(result, provider:, message:)
+      @provider = provider
+      super(result, message:)
+    end
+  end
+
   class ProviderFailure < FailedResult
     attr_reader :provider
 

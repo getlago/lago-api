@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 module CreditNoteIndex
-  include Pagination
   extend ActiveSupport::Concern
 
   def credit_note_index(external_customer_id:)
@@ -12,6 +11,7 @@ module CreditNoteIndex
       :applied_taxes,
       :error_details,
       :metadata,
+      :organization,
       invoice: :billing_entity,
       file_attachment: :blob,
       xml_file_attachment: :blob,
@@ -34,8 +34,8 @@ module CreditNoteIndex
       organization: current_organization,
       includes: includes,
       pagination: {
-        page: params[:page],
-        limit: params[:per_page] || PER_PAGE
+        page: page_number,
+        limit: page_size
       },
       search_term: params[:search_term],
       filters: {

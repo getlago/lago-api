@@ -17,7 +17,6 @@ class SecurityLogsQuery < BaseQuery
     return result.single_validation_failure!(field: :to_date, error_code: "value_is_mandatory") if filters.to_date.blank?
 
     security_logs = Clickhouse::SecurityLog.where(organization_id: organization.id)
-    security_logs = paginate(security_logs)
     security_logs = security_logs.order(logged_at: :desc)
 
     security_logs = with_logged_at_range(security_logs) if filters.from_date || filters.to_date
@@ -25,6 +24,8 @@ class SecurityLogsQuery < BaseQuery
     security_logs = with_user_ids(security_logs) if filters.user_ids.present?
     security_logs = with_log_types(security_logs) if filters.log_types.present?
     security_logs = with_log_events(security_logs) if filters.log_events.present?
+
+    security_logs = paginate(security_logs)
 
     result.security_logs = security_logs
     result

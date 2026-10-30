@@ -48,7 +48,7 @@ RSpec.describe RateCards::DestroyService, :capture_kafka_messages do
       perform_enqueued_jobs(only: SendWebhookJob) { result }
 
       webhook_payload = Webhook.find_by!(webhook_type: "rate_card.deleted").payload.fetch("rate_card")
-      expect(webhook_payload).to include("rates_count" => 0)
+      expect(webhook_payload).not_to have_key("rates_count")
       expect(webhook_payload).not_to have_key("active_rate")
       expect(webhook_payload).not_to have_key("rates")
       expect(webhook_payload).not_to have_key("taxes")
@@ -67,14 +67,15 @@ RSpec.describe RateCards::DestroyService, :capture_kafka_messages do
         perform_enqueued_jobs(only: SendWebhookJob) { result }
 
         webhook_payload = Webhook.find_by!(webhook_type: "rate_card.deleted").payload.fetch("rate_card")
-        expect(webhook_payload).to include("rates_count" => 0)
+        expect(webhook_payload).not_to have_key("rates_count")
         expect(webhook_payload).not_to have_key("active_rate")
         expect(webhook_payload).not_to have_key("rates")
         expect(webhook_payload).not_to have_key("taxes")
 
         activity_payload = JSON.parse(kafka_messages.first.fetch(:payload)).fetch("activity_object")
         expect(activity_payload).not_to have_key("active_rate")
-        expect(activity_payload).to include("rates_count" => 0, "rates" => [])
+        expect(activity_payload).not_to have_key("rates_count")
+        expect(activity_payload).to include("rates" => [])
         expect(activity_payload.fetch("taxes").map { |item| item.fetch("lago_id") }).to eq([tax.id])
       end
     end

@@ -11,6 +11,11 @@ RSpec.describe UsageMonitoring::TriggeredAlert do
         .backed_by_column_of_type(:enum)
         .validating
         .with_values(triggered: "triggered", resolved: "resolved", seeded: "seeded")
+      expect(subject).to define_enum_for(:resolution_reason)
+        .backed_by_column_of_type(:enum)
+        .validating(allowing_nil: true)
+        .with_values(recovered: "recovered", threshold_updated: "threshold_updated", threshold_removed: "threshold_removed")
+        .with_prefix
     end
   end
 
@@ -35,6 +40,27 @@ RSpec.describe UsageMonitoring::TriggeredAlert do
       resolved = create(:triggered_alert, kind: :resolved, in_alarm_thresholds: ["warn"], fully_resolved: false)
 
       expect(resolved.reload).to have_attributes(in_alarm_thresholds: ["warn"], fully_resolved: false)
+    end
+  end
+
+  describe "#alertable=" do
+    subject(:triggered_alert) { described_class.new }
+
+    let(:subscription) { create(:subscription) }
+    let(:wallet) { create(:wallet) }
+
+    it "assigns a subscription" do
+      triggered_alert.alertable = subscription
+      expect(triggered_alert).to have_attributes(subscription:, wallet: nil)
+    end
+
+    it "assigns a wallet" do
+      triggered_alert.alertable = wallet
+      expect(triggered_alert).to have_attributes(wallet:, subscription: nil)
+    end
+
+    it "rejects anything else" do
+      expect { triggered_alert.alertable = Customer.new }.to raise_error(ArgumentError, "unsupported alertable: Customer")
     end
   end
 end

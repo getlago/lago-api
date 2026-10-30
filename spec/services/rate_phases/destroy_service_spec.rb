@@ -170,13 +170,13 @@ RSpec.describe RatePhases::DestroyService do
       allow(Utils::ActivityLog).to receive(:produce_after_commit).and_call_original
     end
 
-    it "emits one owner update with ordered phases and the count delta" do
+    it "emits one owner update with ordered phases" do
       expect(result).to be_success
       payload = activity_payload(plan_rate_card, "plan_rate_card.updated")
       before_phases, after_phases = payload.fetch("activity_object_changes").fetch("rate_phases")
       expect([before_phases.map { |phase| phase.fetch("code") }, after_phases.map { |phase| phase.fetch("code") }])
         .to eq([%w[launch ramp forever], %w[launch forever]])
-      expect(payload.fetch("activity_object_changes").fetch("rate_phases_count")).to eq([3, 2])
+      expect(payload.fetch("activity_object_changes")).not_to have_key("rate_phases_count")
     end
   end
 end

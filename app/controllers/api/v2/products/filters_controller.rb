@@ -5,6 +5,7 @@ module Api
     module Products
       class FiltersController < Api::V2::BaseController
         cursor_paginated_index(ProductFilter)
+        serializable_with ::V2::ProductFilterSerializer
 
         before_action :find_product
         before_action :find_product_filter, only: %i[show update destroy]
@@ -18,16 +19,7 @@ module Api
           )
 
           if result.success?
-            page = ::CursorPagination::Page.new(records: result.product_filters, cursor:)
-
-            render(
-              json: ::CollectionSerializer.new(
-                page.records,
-                ::V2::ProductFilterSerializer,
-                collection_name: "filters",
-                meta: page.meta
-              )
-            )
+            render_filters(result.product_filters)
           else
             render_error_response(result)
           end
@@ -107,10 +99,6 @@ module Api
             :invoice_display_name,
             values: %i[key value]
           )
-        end
-
-        def render_filter(filter)
-          render(json: ::V2::ProductFilterSerializer.new(filter, root_name: "filter"))
         end
 
         def resource_name

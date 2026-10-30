@@ -3,8 +3,9 @@
 require "rails_helper"
 
 describe X402::Connection do
-  subject(:connection) { build(:x402_connection, networks:, payout_addresses:) }
+  subject(:connection) { build(:x402_connection, organization:, networks:, payout_addresses:) }
 
+  let(:organization) { create(:organization) }
   let(:networks) { ["eip155:84532"] }
   let(:payout_addresses) { {"evm" => evm_address} }
   let(:evm_address) { "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed" }
@@ -85,6 +86,43 @@ describe X402::Connection do
       context "with mainnet networks of both families" do
         let(:networks) { ["eip155:8453", "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"] }
         let(:payout_addresses) { {"evm" => evm_address, "svm" => svm_address} }
+
+        it { expect(connection.errors.messages[:networks]).to eq(["environment_not_enabled"]) }
+
+        context "with the mainnet flag" do
+          let(:organization) { create(:organization, feature_flags: ["x402_mainnet"]) }
+
+          it { expect(connection.errors).to be_empty }
+        end
+      end
+
+      context "with the mainnet flag" do
+        let(:organization) { create(:organization, feature_flags: ["x402_mainnet"]) }
+
+        it { expect(connection.errors.messages[:networks]).to eq(["environment_not_enabled"]) }
+      end
+
+      context "when a saved mainnet connection moves to testnet networks" do
+        subject(:connection) do
+          create(:x402_connection, :mainnet, :saved_before_switch, organization:).tap { |saved| saved.networks = networks }
+        end
+
+        it { expect(connection.errors.messages[:networks]).to eq(["mainnet_not_downgradable"]) }
+
+        context "with the mainnet flag" do
+          let(:organization) { create(:organization, feature_flags: ["x402_mainnet"]) }
+
+          it { expect(connection.errors.messages[:networks]).to eq(["environment_not_enabled"]) }
+        end
+      end
+
+      context "when a saved testnet connection moves to mainnet networks" do
+        subject(:connection) do
+          create(:x402_connection, :saved_before_switch, organization:).tap { |saved| saved.networks = networks }
+        end
+
+        let(:organization) { create(:organization, feature_flags: ["x402_mainnet"]) }
+        let(:networks) { ["eip155:8453"] }
 
         it { expect(connection.errors).to be_empty }
       end
@@ -193,6 +231,108 @@ describe X402::Connection do
 
       it { expect(connection.errors.messages[:auto_create_customers]).to eq(["value_is_invalid"]) }
     end
+
+    describe "allowed_origins validation" do
+      subject(:connection) { build(:x402_connection, allowed_origins:) }
+
+      let(:allowed_origins) { ["https://api.example.com"] }
+      let(:errors) { connection.errors.to_hash[:allowed_origins] }
+
+      before { connection.valid? }
+
+      context "with an empty list" do
+        let(:allowed_origins) { [] }
+
+        it { expect(errors).to eq(["value_is_mandatory"]) }
+      end
+
+      context "with nil" do
+        let(:allowed_origins) { nil }
+
+        it { expect(errors).to eq(["value_is_mandatory"]) }
+      end
+
+      context "with a non-canonical origin duplicating a canonical one" do
+        let(:allowed_origins) { ["HTTPS://API.example.com:443/", "https://api.example.com"] }
+
+        it "stores the canonical origin once" do
+          expect(connection.errors).to be_empty
+          expect(connection.allowed_origins).to eq(["https://api.example.com"])
+        end
+      end
+
+      context "with a non-default port" do
+        let(:allowed_origins) { ["https://api.example.com:8443"] }
+
+        it "keeps the port" do
+          expect(connection.errors).to be_empty
+          expect(connection.allowed_origins).to eq(["https://api.example.com:8443"])
+        end
+      end
+
+      context "with loopback origins over http" do
+        let(:allowed_origins) { ["http://localhost:3000", "http://127.0.0.1:3000", "http://[::1]:3000"] }
+
+        it { expect(connection.errors).to be_empty }
+      end
+
+      context "with http on a public host" do
+        let(:allowed_origins) { ["http://api.example.com"] }
+
+        it { expect(errors).to eq(["invalid_format"]) }
+      end
+
+      context "with a path" do
+        let(:allowed_origins) { ["https://api.example.com/v1"] }
+
+        it { expect(errors).to eq(["invalid_format"]) }
+      end
+
+      context "with credentials" do
+        let(:allowed_origins) { ["https://user@api.example.com"] }
+
+        it { expect(errors).to eq(["invalid_format"]) }
+      end
+
+      context "with another scheme" do
+        let(:allowed_origins) { ["ftp://api.example.com"] }
+
+        it { expect(errors).to eq(["invalid_format"]) }
+      end
+
+      context "without a scheme" do
+        let(:allowed_origins) { ["api.example.com"] }
+
+        it { expect(errors).to eq(["invalid_format"]) }
+      end
+
+      context "with a nil entry beside a valid origin" do
+        let(:allowed_origins) { ["https://api.example.com", nil] }
+
+        it { expect(errors).to eq(["invalid_format"]) }
+      end
+
+      context "with several invalid origins" do
+        let(:allowed_origins) { ["api.example.com", "ftp://api.example.com"] }
+
+        it { expect(errors).to eq(["invalid_format"]) }
+      end
+
+      context "with more than ten origins" do
+        let(:allowed_origins) { Array.new(11) { |n| "https://a#{n}.example.com" } }
+
+        it { expect(errors).to eq(["value_is_too_long"]) }
+      end
+
+      context "with more than ten entries that de-duplicate to ten" do
+        let(:allowed_origins) { Array.new(10) { |n| "https://a#{n}.example.com" } + ["HTTPS://A0.example.com"] }
+
+        it "is valid" do
+          expect(connection.errors).to be_empty
+          expect(connection.allowed_origins.size).to eq(10)
+        end
+      end
+    end
   end
 
   describe "#validation_error_messages" do
@@ -210,6 +350,38 @@ describe X402::Connection do
       let(:networks) { ["eip155:8453", "eip155:84532"] }
 
       it { expect(connection.validation_error_messages).to eq(networks: ["mixed_environments"]) }
+    end
+  end
+
+  describe "#environment_enabled?" do
+    it { expect(connection.environment_enabled?).to be(true) }
+
+    context "with mainnet networks" do
+      let(:networks) { ["eip155:8453"] }
+
+      it { expect(connection.environment_enabled?).to be(false) }
+    end
+
+    context "with the mainnet flag" do
+      let(:organization) { create(:organization, feature_flags: ["x402_mainnet"]) }
+
+      it { expect(connection.environment_enabled?).to be(false) }
+
+      context "with mainnet networks" do
+        let(:networks) { ["eip155:8453"] }
+
+        it { expect(connection.environment_enabled?).to be(true) }
+      end
+    end
+  end
+
+  describe "#mainnet?" do
+    it { expect(connection.mainnet?).to be(false) }
+
+    context "with mainnet networks" do
+      let(:networks) { ["eip155:8453"] }
+
+      it { expect(connection.mainnet?).to be(true) }
     end
   end
 

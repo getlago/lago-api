@@ -20,6 +20,8 @@ RSpec.describe ::V1::AttributedUsageSerializer do
   let(:default_amount_cents) { "25000" }
   let(:total_amount_cents) { "75000.5" }
   let(:unattributed_amount_cents) { "0" }
+  let(:split_charge_units) { "1500" } # filter 1000 + default 500
+  let(:unattributed_split_charge_units) { "0" }
 
   let(:filter_cell) { cell(charge_filter:, units: "1000", amount_cents: filter_amount_cents, events_count: 2) }
   let(:default_cell) { cell(charge_filter: nil, units: "500", amount_cents: default_amount_cents, events_count: 1) }
@@ -31,16 +33,18 @@ RSpec.describe ::V1::AttributedUsageSerializer do
       result.group_by = "team"
       result.rows = [
         UsageAttributions::QueryService::Row.new(
-          value: "eng", rank: 1, amount_cents: decimal(total_amount_cents), events_count: 3, cells: [filter_cell, default_cell]
+          value: "eng", rank: 1, amount_cents: decimal(total_amount_cents), events_count: 3,
+          split_charge_units: decimal(split_charge_units), cells: [filter_cell, default_cell]
         )
       ]
-      result.unattributed = aggregate(amount_cents: unattributed_amount_cents, events_count: 0, cells: [empty_cell])
-      result.totals = aggregate(amount_cents: total_amount_cents, events_count: 3, cells: [filter_cell, default_cell])
+      result.unattributed = aggregate(amount_cents: unattributed_amount_cents, events_count: 0, split_charge_units: unattributed_split_charge_units, cells: [empty_cell])
+      result.totals = aggregate(amount_cents: total_amount_cents, events_count: 3, split_charge_units:, cells: [filter_cell, default_cell])
       result.groups_count = 1
       result.basis = basis
       result.from_datetime = Time.zone.parse("2026-09-01")
       result.to_datetime = Time.zone.parse("2026-09-30").end_of_day
       result.currency = "EUR"
+      result.split_filters_count = 1
     end
   end
 
@@ -54,8 +58,10 @@ RSpec.describe ::V1::AttributedUsageSerializer do
     )
   end
 
-  def aggregate(amount_cents:, events_count:, cells:)
-    UsageAttributions::QueryService::Aggregate.new(amount_cents: decimal(amount_cents), events_count:, cells:)
+  def aggregate(amount_cents:, events_count:, split_charge_units:, cells:)
+    UsageAttributions::QueryService::Aggregate.new(
+      amount_cents: decimal(amount_cents), events_count:, split_charge_units: decimal(split_charge_units), cells:
+    )
   end
 
   before { create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: ["opus"]) }
@@ -68,7 +74,8 @@ RSpec.describe ::V1::AttributedUsageSerializer do
       "basis" => "amount",
       "from_datetime" => "2026-09-01T00:00:00Z",
       "to_datetime" => "2026-09-30T23:59:59Z",
-      "currency" => "EUR"
+      "currency" => "EUR",
+      "split_filters_count" => 1
     )
   end
 
@@ -81,6 +88,7 @@ RSpec.describe ::V1::AttributedUsageSerializer do
           "amount_cents" => 75_001,
           "precise_amount_cents" => "75000.5",
           "events_count" => 3,
+          "split_charge_units" => "1500.0",
           "charges_usage" => [
             {
               "lago_charge_id" => charge.id,
@@ -113,9 +121,9 @@ RSpec.describe ::V1::AttributedUsageSerializer do
   end
 
   it "serializes the unattributed usage and the totals" do
-    expect(result["unattributed"]).to include("amount_cents" => 0, "precise_amount_cents" => "0.0", "events_count" => 0)
+    expect(result["unattributed"]).to include("amount_cents" => 0, "precise_amount_cents" => "0.0", "events_count" => 0, "split_charge_units" => "0.0")
     expect(result["unattributed"]["charges_usage"].pluck("units")).to eq(["0.0"])
-    expect(result["totals"]).to include("amount_cents" => 75_001, "precise_amount_cents" => "75000.5", "events_count" => 3)
+    expect(result["totals"]).to include("amount_cents" => 75_001, "precise_amount_cents" => "75000.5", "events_count" => 3, "split_charge_units" => "1500.0")
     expect(result["totals"]["charges_usage"].pluck("lago_charge_filter_id")).to eq([charge_filter.id, nil])
   end
 
@@ -137,6 +145,17 @@ RSpec.describe ::V1::AttributedUsageSerializer do
         ]
       )
       expect(result["totals"]).to include("amount_cents" => nil, "events_count" => 3)
+    end
+  end
+
+  context "without a split charge" do
+    let(:split_charge_units) { nil }
+    let(:unattributed_split_charge_units) { nil }
+
+    it "serializes the split charge units as null" do
+      expect(result["rows"].first["split_charge_units"]).to be_nil
+      expect(result["unattributed"]["split_charge_units"]).to be_nil
+      expect(result["totals"]["split_charge_units"]).to be_nil
     end
   end
 end

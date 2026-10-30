@@ -222,20 +222,6 @@ RSpec.describe Invoices::PaidCreditService do
       end
     end
 
-    it "calls SegmentTrackJob" do
-      invoice = invoice_service.call.invoice
-
-      expect(SegmentTrackJob).to have_been_enqueued.with(
-        membership_id: CurrentContext.membership,
-        event: "invoice_created",
-        properties: {
-          organization_id: invoice.organization.id,
-          invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type
-        }
-      )
-    end
-
     it "creates a payment" do
       result = invoice_service.call
       expect(Invoices::Payments::CreateJob).to have_been_enqueued.with(invoice: result.invoice, payment_provider: :stripe, payment_method_params: {})

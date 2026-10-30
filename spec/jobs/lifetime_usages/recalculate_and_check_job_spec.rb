@@ -67,6 +67,16 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckJob do
             end.to raise_error(error_class)
           end
         end
+
+        context "when the job runs inline with a current usage" do
+          let(:current_usage) { SubscriptionUsage.new }
+
+          it "retries without the current usage" do
+            described_class.perform_now(lifetime_usage, current_usage:)
+
+            expect(described_class).to have_been_enqueued.with(lifetime_usage)
+          end
+        end
       end
     end
   end

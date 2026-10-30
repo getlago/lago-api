@@ -10,6 +10,27 @@ RSpec.describe Api::V1::PaymentReceiptsController do
 
     let(:params) { {} }
 
+    context "with receipt documents" do
+      def create_receipts_with_files(count)
+        create_list(:payment_receipt, count, organization:).each do |receipt|
+          receipt.file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.pdf")), filename: "receipt.pdf")
+        end
+      end
+
+      def organization_queries
+        capture_sql { get_with_token(organization, "/api/v1/payment_receipts") }.grep(/FROM "organizations"/).size
+      end
+
+      it "loads the organization once, whatever the number of receipts" do
+        create_receipts_with_files(1)
+        queries_with_one_receipt = organization_queries
+
+        create_receipts_with_files(3)
+
+        expect(organization_queries).to eq(queries_with_one_receipt)
+      end
+    end
+
     include_examples "requires API permission", "invoice", "read"
 
     it "returns organization's payments" do

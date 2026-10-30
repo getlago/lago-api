@@ -4,32 +4,29 @@ module RecurringAggregationSnapshots
   class PersistService < BaseService
     Result = BaseResult
 
-    # values: one {grouped_by:, units:, presentation_breakdowns:} per group of the charge filter,
-    # zero units included
-    def initialize(subscription:, charge:, charge_filter:, to_datetime:, watermark:, values:)
+    # buckets: one {charge_filter:, values:} per pricing bucket of the charge
+    # values: one {grouped_by:, units:, events_count:, presentation_breakdowns:} per group of the bucket
+    def initialize(subscription:, charge:, to_datetime:, watermark:, buckets:)
       @subscription = subscription
       @charge = charge
-      @charge_filter = charge_filter
       @to_datetime = to_datetime
       @watermark = watermark
-      @values = values
+      @buckets = buckets
 
       super
     end
 
     def call
-      if values.any?
-        # Overlapping runs of the same period: the latest watermark has seen the most events
-        RecurringAggregationSnapshot.upsert_all( # rubocop:disable Rails/SkipsModelValidations
-          rows,
-          unique_by: :idx_recurring_aggregation_snapshots_unique,
-          on_duplicate: Arel.sql(<<~SQL.squish),
-            units = EXCLUDED.units, presentation_breakdowns = EXCLUDED.presentation_breakdowns,
-            watermark = EXCLUDED.watermark, updated_at = CURRENT_TIMESTAMP
-            WHERE recurring_aggregation_snapshots.watermark <= EXCLUDED.watermark
-          SQL
-          returning: false
-        )
+      # Without it, a run with an older watermark could insert a group a newer run left out.
+      # Held until the outer transaction commits: the whole invoice when called while invoicing.
+      LockService.call!(subscription:, charge:, to_datetime:) do
+        # Overlapping runs of the same period: the latest watermark has seen the most events.
+        # Checked on the whole charge, as an empty filter leaves no row holding the watermark of its run.
+        next if period_snapshots.exists?(["watermark > ?", watermark])
+
+        # A group or filter missing from a later run of the period dropped to zero units
+        period_snapshots.delete_all
+        RecurringAggregationSnapshot.insert_all(rows, returning: false) if rows.any? # rubocop:disable Rails/SkipsModelValidations
       end
 
       result
@@ -37,22 +34,34 @@ module RecurringAggregationSnapshots
 
     private
 
-    attr_reader :subscription, :charge, :charge_filter, :to_datetime, :watermark, :values
+    attr_reader :subscription, :charge, :to_datetime, :watermark, :buckets
+
+    def period_snapshots
+      RecurringAggregationSnapshot.where(
+        organization_id: subscription.organization_id,
+        subscription_id: subscription.id,
+        charge_id: charge.id,
+        to_datetime:
+      )
+    end
 
     def rows
-      values.map do |value|
-        {
-          organization_id: subscription.organization_id,
-          subscription_id: subscription.id,
-          charge_id: charge.id,
-          charge_filter_id: charge_filter&.id,
-          billable_metric_id: charge.billable_metric_id,
-          grouped_by: value[:grouped_by] || {},
-          to_datetime:,
-          watermark:,
-          units: value[:units],
-          presentation_breakdowns: value[:presentation_breakdowns] || []
-        }
+      @rows ||= buckets.flat_map do |bucket|
+        bucket[:values].map do |value|
+          {
+            organization_id: subscription.organization_id,
+            subscription_id: subscription.id,
+            charge_id: charge.id,
+            charge_filter_id: bucket[:charge_filter]&.id,
+            billable_metric_id: charge.billable_metric_id,
+            grouped_by: value[:grouped_by] || {},
+            to_datetime:,
+            watermark:,
+            units: value[:units],
+            events_count: value[:events_count] || 0,
+            presentation_breakdowns: value[:presentation_breakdowns] || []
+          }
+        end
       end
     end
   end
