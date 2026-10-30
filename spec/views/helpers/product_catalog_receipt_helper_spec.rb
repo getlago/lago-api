@@ -67,6 +67,43 @@ RSpec.describe ProductCatalogReceiptHelper do
     end
   end
 
+  context "when billed products have been discarded" do
+    let(:compute_fee) { product_fee(compute) }
+    let(:storage_fee) { product_fee(storage) }
+    let(:seats_fee) { product_fee(seats) }
+    let(:true_up_fee) { product_fee(compute, true_up_parent_fee: compute_fee) }
+
+    before do
+      storage_fee
+      true_up_fee
+      seats_fee
+      [compute, storage, seats].each(&:discard!)
+      invoice.reload
+    end
+
+    it "keeps product ordering, names and true-up parents after reloading" do
+      fees = described_class.contracts(invoice).sole.last
+      ordered = described_class.periods(fees).sole.fees
+
+      expect(ordered.map(&:id)).to eq([seats_fee.id, compute_fee.id, true_up_fee.id, storage_fee.id])
+      expect(ordered.map { FeeDisplayHelper.fee_title(it) }).to eq([seats.invoice_name, compute.invoice_name, compute.invoice_name, storage.invoice_name])
+      expect(ordered.third.true_up_parent_fee.invoice_name).to eq(compute.invoice_name)
+    end
+
+    it "resolves the historical product names without additional queries after preloading" do
+      fees = described_class.contracts(invoice).sole.last
+
+      queries = capture_sql do
+        fees.each do |fee|
+          FeeDisplayHelper.fee_title(fee)
+          fee.true_up_parent_fee&.invoice_name
+        end
+      end
+
+      expect(queries).to be_empty
+    end
+  end
+
   describe ".contract_total" do
     it "adds the taxes of the contract's fees to their amount" do
       fees = [product_fee(compute, amount_cents: 1_000, taxes_amount_cents: 200), product_fee(storage, amount_cents: 500, taxes_amount_cents: 100)]

@@ -10,7 +10,7 @@ class ProductCatalogReceiptHelper
 
   def self.contracts(invoice)
     fees = invoice.fees.product
-      .includes(:invoiceable, :product_filter, :pricing_unit_usage, :rate_card_rate, :rate_override, :applied_taxes, true_up_parent_fee: :invoiceable, contract: :catalog_plan)
+      .includes(:billed_product, :product_filter, :pricing_unit_usage, :rate_card_rate, :rate_override, :applied_taxes, true_up_parent_fee: :billed_product, contract: :catalog_plan)
       .to_a
 
     fees.group_by(&:contract).sort_by { |contract, _| ProductCatalogInvoiceHelper.contract_name(contract).to_s.downcase }
@@ -22,7 +22,7 @@ class ProductCatalogReceiptHelper
     true_ups, billed = fees.partition(&:true_up_parent_fee_id)
 
     billed.group_by { it.properties.values_at("from_datetime", "to_datetime") }.sort_by { |(from, _), _| from.to_s }.map do |(from, to), period_fees|
-      ordered = period_fees.sort_by { [it.invoiceable.fixed? ? 0 : 1, FeeDisplayHelper.fee_title(it).downcase] }
+      ordered = period_fees.sort_by { [it.billed_product.fixed? ? 0 : 1, FeeDisplayHelper.fee_title(it).downcase] }
       Period.new(
         from_datetime: from.presence && Time.zone.parse(from),
         to_datetime: to.presence && Time.zone.parse(to),
