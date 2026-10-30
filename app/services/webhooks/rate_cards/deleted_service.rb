@@ -8,7 +8,7 @@ module Webhooks
       # Flat, the body this event has always sent: its rates are discarded with the card, so `rates`
       # would be empty and `active_rate` null, but `taxes` would list the taxes still linked to it.
       def object_serializer
-        ::V2::RateCardSerializer.new(object, root_name: object_type)
+        ::V2::RateCardSerializer.new(object, root_name: object_type) # rubocop:disable Lago/V2WebhookSerializer
       end
 
       def webhook_type

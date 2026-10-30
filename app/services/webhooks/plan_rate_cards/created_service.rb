@@ -6,7 +6,7 @@ module Webhooks
       private
 
       def object_serializer
-        ::V2::PlanRateCardSerializer.new(object, root_name: "plan_rate_card")
+        ::V2::PlanRateCardSerializer.new(object, root_name: "plan_rate_card", webhook: true)
       end
 
       def webhook_type
