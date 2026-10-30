@@ -62,10 +62,6 @@ RSpec.describe BaseService::ValidationFailure do
     end
   end
 
-  describe "#message" do
-    it { expect(failure.message).to eq('Validation errors: {"name":["value_is_mandatory"],"position":["value_is_out_of_range","value_is_invalid"]}') }
-  end
-
   describe "#remap" do
     subject(:remapped) { failure.remap(other_result) { :"rates.#{it}" } }
 

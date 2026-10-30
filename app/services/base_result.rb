@@ -51,8 +51,7 @@ class BaseResult
     fail_with_error!(BaseService::MethodNotAllowedFailure.new(self, code:))
   end
 
-  # A block renames the fields, their meta with them: a nested record's errors under the key of its
-  # parent.
+  # A block renames the fields and their meta: a nested record's errors under the key of its parent.
   def record_validation_failure!(record:, &rename)
     failure = BaseService::ValidationFailure.from_errors(self, record.errors)
     fail_with_error!(rename ? failure.remap(self, &rename) : failure)

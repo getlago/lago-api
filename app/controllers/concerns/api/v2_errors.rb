@@ -27,7 +27,7 @@ module Api
     end
 
     # One entry per code, in the order of messages, with the meta of its field. Messages that are not a
-    # hash, as a few services build, are one code on base, which error_detail checks like any other.
+    # hash, as a few services build, are one code on base.
     def validation_errors(errors:, meta: {})
       details = if errors.is_a?(Hash)
         errors.flat_map { |field, codes| Array.wrap(codes).map { error_detail(code: it, field:, meta: meta.fetch(field, {})) } }
@@ -117,9 +117,8 @@ module Api
       render_v2_error(status, code:, details: [error_detail(code:, field: :base, meta: meta.compact)])
     end
 
-    # Every v2 entry goes through the registry of meta keys. v1 and GraphQL keep a code that is a
-    # sentence ("is not a number"); v2 renders it as value_is_invalid, reported so that its producer
-    # gets fixed: by its class only, as a sentence can quote the request.
+    # v1 and GraphQL keep a code that is a sentence ("is not a number"); v2 renders value_is_invalid and
+    # reports the code by its class only, as a sentence can quote the request.
     def error_detail(code:, field:, meta: {})
       token = (code.is_a?(String) || code.is_a?(Symbol)) && code.match?(TOKEN)
       unless token

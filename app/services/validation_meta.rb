@@ -22,9 +22,8 @@ module ValidationMeta
 
   module_function
 
-  # The meta as its JSON reads, Symbols as Strings, with Symbol keys and without nil values. A key that
-  # is not registered with its type raises in development and test. Elsewhere it is reported and the
-  # whole meta is dropped, so that a client never reads half of it, such as a min without its max.
+  # The meta as its JSON reads, with Symbol keys. A key not registered with its type raises in development
+  # and test; elsewhere it is reported and the whole meta dropped, so that no client reads a min without its max.
   def check(meta)
     checked = (meta || {}).compact.as_json.symbolize_keys
     refused = checked.reject { |key, value| registered?(key, value) }
