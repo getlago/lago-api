@@ -1,0 +1,35 @@
+# frozen_string_literal: true
+
+module X402
+  class InvoicePaymentsController < ApplicationController
+    include Api::V1Errors
+
+    before_action { NullByteGuard.sanitize_params!(request, params) }
+
+    def create
+      invoice = Invoice.find_by(x402_payment_token: params[:token])
+      return not_found_error(resource: "invoice") unless invoice
+      return forbidden_error(code: "feature_unavailable") unless invoice.organization.x402_payments_enabled?
+
+      render_challenge(invoice)
+    end
+
+    private
+
+    def render_challenge(invoice, error: nil)
+      challenge = X402::Invoices::GenerateChallengeService.call(invoice:)
+
+      if challenge.success?
+        payment_required = X402::Wire::V2Codec.payment_required(
+          requirements: challenge.requirements,
+          resource: X402::Wire::V2Codec.invoice_resource(invoice),
+          error:
+        )
+        response.headers[X402::Wire::V2Codec::PAYMENT_REQUIRED] = X402::Wire::V2Codec.encode(payment_required)
+        render(json: payment_required, status: :payment_required)
+      else
+        render_error_response(challenge)
+      end
+    end
+  end
+end

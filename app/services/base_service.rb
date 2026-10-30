@@ -56,6 +56,26 @@ class BaseService
     end
   end
 
+  class GoneFailure < FailedResult
+    attr_reader :code
+
+    def initialize(result, code:)
+      @code = code
+
+      super(result, code)
+    end
+  end
+
+  class ConflictFailure < FailedResult
+    attr_reader :code
+
+    def initialize(result, code:)
+      @code = code
+
+      super(result, code)
+    end
+  end
+
   class ValidationFailure < FailedResult
     attr_reader :messages
 
