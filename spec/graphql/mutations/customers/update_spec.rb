@@ -343,14 +343,14 @@ RSpec.describe Mutations::Customers::Update do
       expect(customer.reload.payment_term).to be_nil
     end
 
-    it "rejects conflicting aliases without changing the record" do
+    it "lets payment_term win over a conflicting alias" do
       customer.update!(payment_term: {term_type: "net", days: 10}, net_payment_term: 10)
 
       response = update_payment_term({termType: "net", days: 30}, netPaymentTerm: 60)
 
-      expect_unprocessable_entity(response)
-      expect(customer.reload.payment_term).to eq("term_type" => "net", "days" => 10)
-      expect(customer.net_payment_term).to eq(10)
+      expect(response["errors"]).to be_nil
+      expect(response.dig("data", "updateCustomer", "paymentTerm", "days")).to eq(30)
+      expect(customer.reload).to have_attributes(payment_term: {"term_type" => "net", "days" => 30}, net_payment_term: 30)
     end
 
     it "accepts a null alias echoed back with a structured term" do
