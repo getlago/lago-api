@@ -25,14 +25,14 @@ class PaymentTerm < Data.define(:term_type, :days, :day_of_month, :month_offset)
   def initialize(term_type:, days: nil, day_of_month: nil, month_offset: nil)
     # Data freezes the object, not its members: copy so the caller's string cannot change the term
     term_type = term_type.to_s.dup.freeze
-    fields = FIELDS_BY_TERM_TYPE.fetch(term_type, [])
+    fields = FIELDS_BY_TERM_TYPE.fetch(term_type) { raise ArgumentError, "unknown term_type: #{term_type}" }
 
     super(
       term_type:,
-      days: (days&.to_i if fields.include?("days")),
-      day_of_month: (day_of_month&.to_i if fields.include?("day_of_month")),
+      days: (required_integer(:days, days, 0.., term_type) if fields.include?("days")),
+      day_of_month: (required_integer(:day_of_month, day_of_month, 1..31, term_type) if fields.include?("day_of_month")),
       # If absent - next month (1) by default.
-      month_offset: ((month_offset || 1).to_i if fields.include?("month_offset"))
+      month_offset: (required_integer(:month_offset, month_offset || 1, 0.., term_type) if fields.include?("month_offset"))
     )
   end
 
@@ -70,6 +70,14 @@ class PaymentTerm < Data.define(:term_type, :days, :day_of_month, :month_offset)
   end
 
   private
+
+  # Runs before Data sets the members, so term_type comes in as an argument
+  def required_integer(field, value, range, term_type)
+    integer = value.is_a?(Integer) ? value : Integer(value.to_s, 10, exception: false)
+    return integer if integer && range.cover?(integer)
+
+    raise ArgumentError, "invalid #{field} for #{term_type}: #{value.inspect}"
+  end
 
   # month_offset → clamp → roll forward (only reachable with offset 0) → re-clamp
   def day_of_month_due_date(issuing_date)

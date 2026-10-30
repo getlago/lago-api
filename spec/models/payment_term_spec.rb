@@ -3,27 +3,46 @@
 require "rails_helper"
 
 RSpec.describe PaymentTerm do
+  subject(:term) { described_class.from_h(attributes) }
+
+  let(:attributes) { {term_type: "net", days: 30} }
   let(:issuing_date) { Date.new(2026, 7, 15) }
 
   describe ".from_h" do
-    it "builds a term from a jsonb-style hash with string keys" do
-      term = described_class.from_h("term_type" => "net", "days" => 30)
+    context "with string keys" do
+      let(:attributes) { {"term_type" => "net", "days" => 30} }
 
-      expect(term.term_type).to eq("net")
-      expect(term.days).to eq(30)
+      it "builds the term" do
+        expect(term).to have_attributes(term_type: "net", days: 30)
+      end
     end
 
-    it "builds a term from a hash with symbol keys" do
-      term = described_class.from_h(term_type: "day_of_month", day_of_month: 15, month_offset: 2)
+    context "with symbol keys" do
+      let(:attributes) { {term_type: "day_of_month", day_of_month: 15, month_offset: 2} }
 
-      expect(term.term_type).to eq("day_of_month")
-      expect(term.day_of_month).to eq(15)
-      expect(term.month_offset).to eq(2)
+      it "builds the term" do
+        expect(term).to have_attributes(term_type: "day_of_month", day_of_month: 15, month_offset: 2)
+      end
+    end
+
+    context "with integer strings" do
+      let(:attributes) { {term_type: "day_of_month", day_of_month: "15", month_offset: "2"} }
+
+      it "casts them to integers" do
+        expect(term).to have_attributes(day_of_month: 15, month_offset: 2)
+      end
+    end
+
+    context "when day_of_month has no month_offset" do
+      let(:attributes) { {term_type: "day_of_month", day_of_month: 15} }
+
+      it "defaults month_offset to 1" do
+        expect(term.month_offset).to eq(1)
+      end
     end
 
     context "when the caller later mutates the term_type string" do
-      subject(:term) { described_class.from_h("term_type" => term_type, "days" => 30) }
-
+      let(:attributes) { {"term_type" => term_type, "days" => 30} }
       let(:term_type) { +"net" }
 
       it "keeps its own frozen copy" do
@@ -36,208 +55,290 @@ RSpec.describe PaymentTerm do
       end
     end
 
-    it "defaults month_offset to 1 for day_of_month" do
-      term = described_class.from_h(term_type: "day_of_month", day_of_month: 15)
+    context "when the term type is unknown" do
+      let(:attributes) { {term_type: "fortnightly"} }
 
-      expect(term.month_offset).to eq(1)
+      it "raises an ArgumentError" do
+        expect { term }.to raise_error(ArgumentError, "unknown term_type: fortnightly")
+      end
+    end
+
+    context "when days is missing" do
+      let(:attributes) { {term_type: "net_end_of_month"} }
+
+      it "raises an ArgumentError" do
+        expect { term }.to raise_error(ArgumentError, "invalid days for net_end_of_month: nil")
+      end
+    end
+
+    context "when days is not an integer" do
+      let(:attributes) { {term_type: "net", days: "thirty"} }
+
+      it "raises an ArgumentError" do
+        expect { term }.to raise_error(ArgumentError, 'invalid days for net: "thirty"')
+      end
+    end
+
+    context "when days is negative" do
+      let(:attributes) { {term_type: "net", days: -1} }
+
+      it "raises an ArgumentError" do
+        expect { term }.to raise_error(ArgumentError, "invalid days for net: -1")
+      end
+    end
+
+    context "when day_of_month is missing" do
+      let(:attributes) { {term_type: "day_of_month"} }
+
+      it "raises an ArgumentError" do
+        expect { term }.to raise_error(ArgumentError, "invalid day_of_month for day_of_month: nil")
+      end
+    end
+
+    context "when day_of_month is out of range" do
+      let(:attributes) { {term_type: "day_of_month", day_of_month: 0} }
+
+      it "raises an ArgumentError" do
+        expect { term }.to raise_error(ArgumentError, "invalid day_of_month for day_of_month: 0")
+      end
+    end
+
+    context "when month_offset is negative" do
+      let(:attributes) { {term_type: "day_of_month", day_of_month: 15, month_offset: -1} }
+
+      it "raises an ArgumentError" do
+        expect { term }.to raise_error(ArgumentError, "invalid month_offset for day_of_month: -1")
+      end
     end
   end
 
   describe "#to_h" do
-    it "serializes only the fields carried by the term type" do
-      expect(described_class.from_h(term_type: "due_on_receipt").to_h)
-        .to eq("term_type" => "due_on_receipt")
-      expect(described_class.from_h(term_type: "net", days: 30).to_h)
-        .to eq("term_type" => "net", "days" => 30)
-      expect(described_class.from_h(term_type: "end_of_month").to_h)
-        .to eq("term_type" => "end_of_month")
-      expect(described_class.from_h(term_type: "day_of_month", day_of_month: 31).to_h)
-        .to eq("term_type" => "day_of_month", "day_of_month" => 31, "month_offset" => 1)
+    context "when due_on_receipt" do
+      let(:attributes) { {term_type: "due_on_receipt"} }
+
+      it "serializes the term type only" do
+        expect(term.to_h).to eq("term_type" => "due_on_receipt")
+      end
     end
 
-    it "round-trips through from_h" do
-      hash = {"term_type" => "days_end_of_month", "days" => 30}
-
-      expect(described_class.from_h(hash).to_h).to eq(hash)
+    context "when net" do
+      it "serializes the days" do
+        expect(term.to_h).to eq("term_type" => "net", "days" => 30)
+      end
     end
 
-    it "drops fields not carried by the term type" do
-      term = described_class.from_h(term_type: "end_of_month", days: 5, day_of_month: 10, month_offset: 2)
+    context "when day_of_month" do
+      let(:attributes) { {term_type: "day_of_month", day_of_month: 31} }
 
-      expect(term.to_h).to eq("term_type" => "end_of_month")
+      it "serializes the day and the defaulted month_offset" do
+        expect(term.to_h).to eq("term_type" => "day_of_month", "day_of_month" => 31, "month_offset" => 1)
+      end
+    end
+
+    context "when fields not carried by the term type are given" do
+      let(:attributes) { {term_type: "end_of_month", days: 5, day_of_month: 10, month_offset: 2} }
+
+      it "drops them" do
+        expect(term.to_h).to eq("term_type" => "end_of_month")
+      end
+    end
+
+    context "when built from its own output" do
+      let(:attributes) { {"term_type" => "days_end_of_month", "days" => 30} }
+
+      it "round-trips" do
+        expect(term.to_h).to eq(attributes)
+      end
     end
   end
 
   describe "#net_payment_term_alias" do
-    it "returns N for net, 0 for due_on_receipt and nil for the four new types" do
-      expect(described_class.from_h(term_type: "net", days: 30).net_payment_term_alias).to eq(30)
-      expect(described_class.from_h(term_type: "due_on_receipt").net_payment_term_alias).to eq(0)
-      expect(described_class.from_h(term_type: "end_of_month").net_payment_term_alias).to be_nil
-      expect(described_class.from_h(term_type: "net_end_of_month", days: 30).net_payment_term_alias).to be_nil
-      expect(described_class.from_h(term_type: "days_end_of_month", days: 30).net_payment_term_alias).to be_nil
-      expect(described_class.from_h(term_type: "day_of_month", day_of_month: 15).net_payment_term_alias).to be_nil
+    subject(:net_payment_term_alias) { term.net_payment_term_alias }
+
+    context "when net" do
+      it { is_expected.to eq(30) }
     end
 
-    context "when the term type is unknown" do
-      subject(:term) { described_class.from_h(term_type: "fortnightly") }
+    context "when due_on_receipt" do
+      let(:attributes) { {term_type: "due_on_receipt"} }
 
-      it "raises an ArgumentError" do
-        expect { term.net_payment_term_alias }
-          .to raise_error(ArgumentError, "unknown term_type: fortnightly")
+      it { is_expected.to eq(0) }
+    end
+
+    [
+      {term_type: "end_of_month"},
+      {term_type: "net_end_of_month", days: 30},
+      {term_type: "days_end_of_month", days: 30},
+      {term_type: "day_of_month", day_of_month: 15}
+    ].each do |term_attributes|
+      context "when #{term_attributes[:term_type]}" do
+        let(:attributes) { term_attributes }
+
+        it { is_expected.to be_nil }
       end
     end
   end
 
   describe "#due_date_for" do
-    context "when due_on_receipt" do
-      it "returns the issuing date" do
-        term = described_class.from_h(term_type: "due_on_receipt")
+    subject(:due_date) { term.due_date_for(date) }
 
-        expect(term.due_date_for(issuing_date)).to eq(Date.new(2026, 7, 15))
+    let(:date) { issuing_date }
+
+    context "when due_on_receipt" do
+      let(:attributes) { {term_type: "due_on_receipt"} }
+
+      it "returns the issuing date" do
+        expect(due_date).to eq(Date.new(2026, 7, 15))
       end
     end
 
     context "when the issuing date is a Time" do
+      let(:date) { Time.zone.parse("2026-07-15 10:30:00") }
+
       it "coerces to a Date so days are added as days, not seconds" do
-        term = described_class.from_h(term_type: "net", days: 30)
-
-        due_date = term.due_date_for(Time.zone.parse("2026-07-15 10:30:00"))
-
         expect(due_date).to eq(Date.new(2026, 8, 14))
         expect(due_date).to be_a(Date)
       end
     end
 
-    context "when the term type is unknown" do
-      it "raises an ArgumentError" do
-        term = described_class.from_h(term_type: "fortnightly")
-
-        expect { term.due_date_for(issuing_date) }
-          .to raise_error(ArgumentError, "unknown term_type: fortnightly")
-      end
-    end
-
     context "when net" do
       it "adds N days to the issuing date" do
-        term = described_class.from_h(term_type: "net", days: 30)
-
-        expect(term.due_date_for(issuing_date)).to eq(Date.new(2026, 8, 14))
+        expect(due_date).to eq(Date.new(2026, 8, 14))
       end
 
-      it "equals due_on_receipt when days is 0" do
-        term = described_class.from_h(term_type: "net", days: 0)
+      context "with 0 days" do
+        let(:attributes) { {term_type: "net", days: 0} }
 
-        expect(term.due_date_for(issuing_date)).to eq(issuing_date)
+        it "equals due_on_receipt" do
+          expect(due_date).to eq(issuing_date)
+        end
       end
     end
 
     context "when end_of_month" do
-      it "returns the last day of the issuing month" do
-        term = described_class.from_h(term_type: "end_of_month")
+      let(:attributes) { {term_type: "end_of_month"} }
 
-        expect(term.due_date_for(issuing_date)).to eq(Date.new(2026, 7, 31))
+      it "returns the last day of the issuing month" do
+        expect(due_date).to eq(Date.new(2026, 7, 31))
       end
 
-      it "handles February in a leap year" do
-        term = described_class.from_h(term_type: "end_of_month")
+      context "when issued in February of a leap year" do
+        let(:date) { Date.new(2028, 2, 10) }
 
-        expect(term.due_date_for(Date.new(2028, 2, 10))).to eq(Date.new(2028, 2, 29))
+        it "returns February 29" do
+          expect(due_date).to eq(Date.new(2028, 2, 29))
+        end
       end
     end
 
     context "when net_end_of_month (US)" do
-      it "goes to end of month, then adds N days" do
-        term = described_class.from_h(term_type: "net_end_of_month", days: 30)
+      let(:attributes) { {term_type: "net_end_of_month", days: 30} }
 
-        expect(term.due_date_for(issuing_date)).to eq(Date.new(2026, 8, 30))
+      it "goes to end of month, then adds N days" do
+        expect(due_date).to eq(Date.new(2026, 8, 30))
       end
 
-      it "equals end_of_month when days is 0" do
-        term = described_class.from_h(term_type: "net_end_of_month", days: 0)
+      context "with 0 days" do
+        let(:attributes) { {term_type: "net_end_of_month", days: 0} }
 
-        expect(term.due_date_for(issuing_date)).to eq(Date.new(2026, 7, 31))
+        it "equals end_of_month" do
+          expect(due_date).to eq(Date.new(2026, 7, 31))
+        end
       end
     end
 
     context "when days_end_of_month (EU)" do
+      let(:attributes) { {term_type: "days_end_of_month", days: 30} }
+
       it "adds N days, then goes to end of month" do
-        term = described_class.from_h(term_type: "days_end_of_month", days: 30)
-
-        expect(term.due_date_for(issuing_date)).to eq(Date.new(2026, 8, 31))
+        expect(due_date).to eq(Date.new(2026, 8, 31))
       end
 
-      it "equals end_of_month when days is 0" do
-        term = described_class.from_h(term_type: "days_end_of_month", days: 0)
+      context "with 0 days" do
+        let(:attributes) { {term_type: "days_end_of_month", days: 0} }
 
-        expect(term.due_date_for(issuing_date)).to eq(Date.new(2026, 7, 31))
-      end
-    end
-
-    context "when the two end-of-month types share the same days value" do
-      it "produces diverging due dates because the order of operations differs" do
-        us = described_class.from_h(term_type: "net_end_of_month", days: 30)
-        eu = described_class.from_h(term_type: "days_end_of_month", days: 30)
-
-        expect(us.due_date_for(issuing_date)).to eq(Date.new(2026, 8, 30))
-        expect(eu.due_date_for(issuing_date)).to eq(Date.new(2026, 8, 31))
+        it "equals end_of_month" do
+          expect(due_date).to eq(Date.new(2026, 7, 31))
+        end
       end
     end
 
     context "when day_of_month" do
+      let(:attributes) { {term_type: "day_of_month", day_of_month:, month_offset:} }
+      let(:day_of_month) { 15 }
+      let(:month_offset) { nil }
+
       it "returns the Dth day of the month after month_offset" do
-        term = described_class.from_h(term_type: "day_of_month", day_of_month: 15)
-
-        expect(term.due_date_for(issuing_date)).to eq(Date.new(2026, 8, 15))
+        expect(due_date).to eq(Date.new(2026, 8, 15))
       end
 
-      it "supports a month_offset greater than 1" do
-        term = described_class.from_h(term_type: "day_of_month", day_of_month: 15, month_offset: 2)
+      context "with a month_offset greater than 1" do
+        let(:month_offset) { 2 }
 
-        expect(term.due_date_for(issuing_date)).to eq(Date.new(2026, 9, 15))
+        it "skips that many months" do
+          expect(due_date).to eq(Date.new(2026, 9, 15))
+        end
       end
 
-      it "clamps the day to the last day of a shorter month" do
-        term = described_class.from_h(term_type: "day_of_month", day_of_month: 31)
+      context "when the day does not exist in the due month" do
+        let(:day_of_month) { 31 }
+        let(:date) { Date.new(2026, 8, 15) }
 
-        expect(term.due_date_for(Date.new(2026, 8, 15))).to eq(Date.new(2026, 9, 30))
+        it "clamps to the last day of the month" do
+          expect(due_date).to eq(Date.new(2026, 9, 30))
+        end
       end
 
-      it "clamps to February 28 in a non-leap year" do
-        term = described_class.from_h(term_type: "day_of_month", day_of_month: 31)
+      context "when the due month is February of a non-leap year" do
+        let(:day_of_month) { 31 }
+        let(:date) { Date.new(2026, 1, 15) }
 
-        expect(term.due_date_for(Date.new(2026, 1, 15))).to eq(Date.new(2026, 2, 28))
+        it "clamps to February 28" do
+          expect(due_date).to eq(Date.new(2026, 2, 28))
+        end
       end
 
-      it "clamps to February 29 in a leap year" do
-        term = described_class.from_h(term_type: "day_of_month", day_of_month: 31)
+      context "when the due month is February of a leap year" do
+        let(:day_of_month) { 31 }
+        let(:date) { Date.new(2028, 1, 15) }
 
-        expect(term.due_date_for(Date.new(2028, 1, 15))).to eq(Date.new(2028, 2, 29))
+        it "clamps to February 29" do
+          expect(due_date).to eq(Date.new(2028, 2, 29))
+        end
       end
 
       context "with month_offset 0" do
-        it "rolls forward to the next month when the day is before the issuing date" do
-          term = described_class.from_h(term_type: "day_of_month", day_of_month: 10, month_offset: 0)
+        let(:month_offset) { 0 }
 
-          expect(term.due_date_for(issuing_date)).to eq(Date.new(2026, 8, 10))
+        context "when the day is before the issuing date" do
+          let(:day_of_month) { 10 }
+
+          it "rolls forward to the next month" do
+            expect(due_date).to eq(Date.new(2026, 8, 10))
+          end
         end
 
-        it "does not roll when the day equals the issuing date" do
-          term = described_class.from_h(term_type: "day_of_month", day_of_month: 15, month_offset: 0)
-
-          expect(term.due_date_for(issuing_date)).to eq(Date.new(2026, 7, 15))
+        context "when the day equals the issuing date" do
+          it "does not roll" do
+            expect(due_date).to eq(Date.new(2026, 7, 15))
+          end
         end
 
-        it "does not roll when the day is after the issuing date" do
-          term = described_class.from_h(term_type: "day_of_month", day_of_month: 20, month_offset: 0)
+        context "when the day is after the issuing date" do
+          let(:day_of_month) { 20 }
 
-          expect(term.due_date_for(issuing_date)).to eq(Date.new(2026, 7, 20))
+          it "does not roll" do
+            expect(due_date).to eq(Date.new(2026, 7, 20))
+          end
         end
 
-        it "re-clamps when the roll lands on a shorter month" do
-          # issued Jan 31, day 30 → Jan 30 is in the past → roll → Feb 28
-          term = described_class.from_h(term_type: "day_of_month", day_of_month: 30, month_offset: 0)
+        context "when the roll lands on a shorter month" do
+          let(:day_of_month) { 30 }
+          let(:date) { Date.new(2026, 1, 31) }
 
-          expect(term.due_date_for(Date.new(2026, 1, 31))).to eq(Date.new(2026, 2, 28))
+          it "re-clamps" do
+            expect(due_date).to eq(Date.new(2026, 2, 28))
+          end
         end
       end
     end
