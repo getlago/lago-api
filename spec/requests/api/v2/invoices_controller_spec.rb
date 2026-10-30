@@ -227,7 +227,7 @@ RSpec.describe Api::V2::InvoicesController do
         expect(response).to have_http_status(:bad_request)
         expect(json).to eq(
           code: "expansion_too_large",
-          details: [{code: "expansion_too_large", field: "expands", meta: {invalid_values: ["fees"], max: 1}}]
+          details: [{code: "expansion_too_large", field: "expands", meta: {invalid_values: ["fees"], max_items: 1}}]
         )
       end
 

@@ -13,6 +13,9 @@ module Api
   module V2Errors
     extend ActiveSupport::Concern
 
+    # A Lago error code, which a client switches on.
+    TOKEN = /\A[a-z][a-z0-9_]*\z/
+
     # The v1 message is the reason phrase, which the v2 body leaves out.
     def unauthorized_error = render_v2_error(401, code: "unauthorized")
 
@@ -23,11 +26,13 @@ module Api
       render_v2_error(404, code: "resource_not_found", details: [error_detail(code: "resource_not_found", field: :base, meta: {resource:})])
     end
 
-    # One entry per code of ValidationFailure#messages, in order and duplicates kept, so that
-    # grouping the entries by field gives the hash back.
-    def validation_errors(errors:)
-      details = errors.flat_map do |field, codes|
-        Array.wrap(codes).map { error_detail(code: it, field:) }
+    # One entry per code, in the order of messages, with the meta of its field. Messages that are not a
+    # hash, as a few services build, are one code on base.
+    def validation_errors(errors:, meta: {})
+      details = if errors.is_a?(Hash)
+        errors.flat_map { |field, codes| Array.wrap(codes).map { error_detail(code: it, field:, meta: meta.fetch(field, {})) } }
+      else
+        [error_detail(code: errors, field: :base)]
       end
 
       render_v2_error(422, code: "validation_errors", details:)
@@ -43,7 +48,7 @@ module Api
       when BaseService::MethodNotAllowedFailure then render_v2_error(422, code: error.code)
       # Ahead of ValidationFailure, its parent: its messages are the sentences of the contract.
       when BaseQuery::FiltersFailure then filter_errors(error.filters)
-      when BaseService::ValidationFailure then validation_errors(errors: error.messages)
+      when BaseService::ValidationFailure then validation_errors(errors: error.messages, meta: error.meta)
       when BaseService::ForbiddenFailure then forbidden_error(code: error.code)
       # A provider refusing the organization's own credentials. The API key of the request is fine, so
       # not a 401: on v2, a 401 always means the Lago API key was refused. Ahead of its parent.
@@ -85,7 +90,7 @@ module Api
     def not_found = render_v2_error(404, code: "resource_not_found")
 
     # A 400 keyed by the offending parameter, `{param => {reason:, **meta}}`. Without a reason, the
-    # code of the error is the code of its entry.
+    # code of the error is the code of its entry. Its meta may echo the parameter received.
     def invalid_request_error(code:, error_details:)
       details = error_details.map do |param, detail|
         error_detail(code: detail.fetch(:reason, code), field: param, meta: detail.except(:reason))
@@ -105,15 +110,23 @@ module Api
     # the client nothing the status of the response does not.
     def provider_error_code(code)
       code = code.to_s
-      code if code.match?(/\A[a-z][a-z0-9_]*\z/)
+      code if code.match?(TOKEN)
     end
 
     def render_provider_error(status, code:, **meta)
       render_v2_error(status, code:, details: [error_detail(code:, field: :base, meta: meta.compact)])
     end
 
+    # v1 and GraphQL keep a code that is a sentence ("is not a number"); v2 renders value_is_invalid and
+    # reports the code by its class only, as a sentence can quote the request.
     def error_detail(code:, field:, meta: {})
-      {code:, field: field.to_s, meta:}
+      token = (code.is_a?(String) || code.is_a?(Symbol)) && code.match?(TOKEN)
+      unless token
+        ValidationMeta.report("code of #{field} is not a token: #{code.class}")
+        code = "value_is_invalid"
+      end
+
+      {code:, field: field.to_s, meta: ValidationMeta.check(meta)}
     end
 
     def render_v2_error(status, code:, details: [])

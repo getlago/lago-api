@@ -85,8 +85,7 @@ module RateCards
         RateCardRates::CreateService.call!(rate_card:, params: rate_params, emit_events: false)
       end
     rescue BaseService::ValidationFailure => e
-      errors = e.messages.transform_keys { |key| :"rates.#{key}" }
-      result.validation_failure!(errors:).raise_if_error!
+      result.fail_with_error!(e.remap(result) { :"rates.#{it}" }).raise_if_error!
     end
   end
 end

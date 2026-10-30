@@ -90,6 +90,23 @@ RSpec.describe Api::V2Errors do
             :base => ["value_is_out_of_range"],
             "code" => ["value_already_exist"]
           })
+        # A sentence, as a contract or Rails gives one, and an indexed hash of them.
+        when "validation_with_sentences"
+          result.validation_failure!(errors: {
+            net_payment_term: ["is not a number"],
+            account_type: {0 => ["must be one of: customer, partner"]},
+            "rates.rate_properties": [:invalid_amount, "invalidAmount"],
+            name: ["value_is_mandatory"]
+          })
+        # A few services give a String.
+        when "validation_with_string" then result.validation_failure!(errors: "is not a number")
+        when "validation_with_meta"
+          result.validation_failure!(errors: {position: %w[value_is_out_of_range value_is_invalid], name: ["value_is_mandatory"]}, meta: {position: {min: 1, max: 3}})
+        when "record_validation_with_bounds"
+          record = Customer.new
+          record.errors.add(:name, :too_long, count: 255)
+          record.errors.add(:external_id, :blank)
+          result.record_validation_failure!(record:)
         end
       end
 
@@ -268,6 +285,85 @@ RSpec.describe Api::V2Errors do
           {code: "invalid_amount", field: "rates.rate_properties", meta: {}},
           {code: "value_is_out_of_range", field: "base", meta: {}},
           {code: "value_already_exist", field: "code", meta: {}}
+        ]
+      )
+    end
+  end
+
+  context "with a validation failure whose codes are not tokens" do
+    let(:failure) { "validation_with_sentences" }
+
+    it "raises in development and test" do
+      expect { show }.to raise_error(ArgumentError, "code of net_payment_term is not a token: String")
+    end
+
+    context "when the environment is not local" do
+      before do
+        allow(Rails.env).to receive(:local?).and_return(false)
+        allow(Sentry).to receive(:capture_exception)
+      end
+
+      it "returns value_is_invalid in their place and reports each one" do
+        show
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(
+          code: "validation_errors",
+          details: [
+            {code: "value_is_invalid", field: "net_payment_term", meta: {}},
+            {code: "value_is_invalid", field: "account_type", meta: {}},
+            {code: "invalid_amount", field: "rates.rate_properties", meta: {}},
+            {code: "value_is_invalid", field: "rates.rate_properties", meta: {}},
+            {code: "value_is_mandatory", field: "name", meta: {}}
+          ]
+        )
+        expect(Sentry).to have_received(:capture_exception).exactly(3).times
+        expect(Sentry).to have_received(:capture_exception)
+          .with(an_object_having_attributes(message: "code of account_type is not a token: Hash"))
+        expect(Sentry).to have_received(:capture_exception)
+          .with(an_object_having_attributes(message: "code of rates.rate_properties is not a token: String"))
+      end
+    end
+  end
+
+  context "with a validation failure whose messages are a String" do
+    let(:failure) { "validation_with_string" }
+
+    it "raises in development and test, as a code that is not a token" do
+      expect { show }.to raise_error(ArgumentError, "code of base is not a token: String")
+    end
+  end
+
+  context "with a validation failure carrying meta" do
+    let(:failure) { "validation_with_meta" }
+
+    it "returns the meta of a field with each of its codes, and an empty object for a field without" do
+      show
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(json).to eq(
+        code: "validation_errors",
+        details: [
+          {code: "value_is_out_of_range", field: "position", meta: {min: 1, max: 3}},
+          {code: "value_is_invalid", field: "position", meta: {min: 1, max: 3}},
+          {code: "value_is_mandatory", field: "name", meta: {}}
+        ]
+      )
+    end
+  end
+
+  context "with a record whose errors have bounds" do
+    let(:failure) { "record_validation_with_bounds" }
+
+    it "returns the bound of each field" do
+      show
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(json).to eq(
+        code: "validation_errors",
+        details: [
+          {code: "value_is_too_long", field: "name", meta: {max_length: 255}},
+          {code: "value_is_mandatory", field: "external_id", meta: {}}
         ]
       )
     end

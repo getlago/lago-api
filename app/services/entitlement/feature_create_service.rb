@@ -43,8 +43,7 @@ module Entitlement
     rescue ActiveRecord::RecordInvalid => e
       if e.record.is_a?(Privilege)
         # because you can get "code" error from feature or privilege, I think prefixing the field name is helpful!
-        errors = e.record.errors.messages.transform_keys { |key| :"privilege.#{key}" }
-        result.validation_failure!(errors:)
+        result.record_validation_failure!(record: e.record) { :"privilege.#{it}" }
       else
         result.record_validation_failure!(record: e.record)
       end

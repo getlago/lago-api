@@ -35,7 +35,15 @@ module Contracts
       fees = result.rate_card_usages.flat_map(&:fees)
       if apply_taxes && customer_provider_taxation?
         taxes_result = apply_provider_taxes(fees.select(&:taxable?))
-        return result.validation_failure!(errors: {tax_error: [taxes_result.error.message]}) unless taxes_result.success?
+        unless taxes_result.success?
+          # The provider refused the taxes, which nothing in the request can fix. Its code may come from
+          # the integration that relays the provider, or from Lago, so it is not given as the provider's.
+          return result.third_party_failure!(
+            third_party: customer.tax_customer.integration.provider_key,
+            error_code: nil,
+            error_message: taxes_result.error.message
+          )
+        end
       elsif apply_taxes
         fees.each { |fee| Fees::ApplyTaxesService.call!(fee:, customer:) }
       end
