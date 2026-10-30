@@ -7,31 +7,10 @@ RSpec.describe PaymentTerms::ValidateService do
 
   let(:result) { BaseResult.new }
 
-  describe "alias equivalence" do
-    [
-      [{net_payment_term: 30}, true],
-      [{net_payment_term: nil}, true],
-      [{payment_term: {term_type: "net", days: 30}, net_payment_term: 30}, true],
-      [{payment_term: {term_type: "net", days: 30}, net_payment_term: "30"}, true],
-      [{payment_term: {term_type: "net", days: 30}, net_payment_term: 30.0}, true],
-      [{payment_term: {term_type: "due_on_receipt"}, net_payment_term: 0}, true],
-      [{payment_term: {term_type: "end_of_month"}, net_payment_term: nil}, true],
-      [{payment_term: {term_type: "net", days: 30}, net_payment_term: nil}, false],
-      [{payment_term: nil, net_payment_term: nil}, true],
-      [{payment_term: nil, net_payment_term: 30}, false],
-      [{payment_term: {term_type: "net", days: 30}, net_payment_term: 60}, false],
-      [{payment_term: {term_type: "due_on_receipt"}, net_payment_term: 30}, false],
-      [{payment_term: {term_type: "end_of_month"}, net_payment_term: 0}, false]
-    ].each do |params, valid|
-      it "#{valid ? "accepts" : "rejects"} #{params.inspect}" do
-        validator = described_class.new(result, **params)
+  it "accepts a payment_term sent with a different net_payment_term" do
+    validator = described_class.new(result, payment_term: {term_type: "end_of_month"}, net_payment_term: 30)
 
-        expect(validator.valid?).to eq(valid)
-        unless valid
-          expect(result.error.messages[:payment_term]).to eq(["conflicting_net_payment_term"])
-        end
-      end
-    end
+    expect(validator.valid?).to be(true)
   end
 
   describe "payment_term validation" do

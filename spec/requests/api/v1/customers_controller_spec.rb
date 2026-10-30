@@ -49,11 +49,12 @@ RSpec.describe Api::V1::CustomersController do
     context "with a payment_term conflicting with the net_payment_term sent alongside" do
       before { create_params.merge!(payment_term: {term_type: "net", days: 30}, net_payment_term: 60) }
 
-      it "returns a validation error" do
+      it "lets payment_term win" do
         subject
 
-        expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:error_details][:payment_term]).to eq(["conflicting_net_payment_term"])
+        expect(response).to have_http_status(:success)
+        expect(json[:customer][:payment_term]).to eq(term_type: "net", days: 30)
+        expect(json[:customer][:net_payment_term]).to eq(30)
       end
     end
 
@@ -124,12 +125,12 @@ RSpec.describe Api::V1::CustomersController do
 
       before { create_params.merge!(external_id: customer.external_id, net_payment_term: 20, payment_term: nil) }
 
-      it "rejects the pair and keeps the term" do
+      it "lets the null payment_term win and clears both" do
         subject
 
-        expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:error_details][:payment_term]).to eq(["conflicting_net_payment_term"])
-        expect(customer.reload.payment_term).to eq("term_type" => "net", "days" => 30)
+        expect(response).to have_http_status(:success)
+        expect(json[:customer][:payment_term]).to be_nil
+        expect(json[:customer][:net_payment_term]).to be_nil
       end
     end
 
