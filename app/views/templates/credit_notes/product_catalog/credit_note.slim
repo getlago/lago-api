@@ -1,0 +1,185 @@
+doctype html
+html lang=I18n.locale
+  head
+    meta charset='UTF-8'
+    title = I18n.t('credit_note.document_name')
+    == SlimHelper.render('templates/invoices/product_catalog/_styles', self)
+  body
+    .document.body-1
+      - self_billed = invoice.self_billed?
+      - issuer, recipient = self_billed ? %w[_customer _billing_entity] : %w[_billing_entity _customer]
+      - catalog = CreditNoteProductCatalogHelper.new(self)
+      - catalog_blocks = catalog.contract_blocks
+      - credit_items = items.includes(:fee).to_a unless for_credit_invoice?
+      - has_product_items = credit_items&.any? { |item| item.fee.product? }
+      - has_non_product_items = credit_items&.any? { |item| !item.fee.product? }
+      - grouped_product_summary = has_product_items && !has_non_product_items
+      .document-section
+        - if billing_entity.logo.present? && !self_billed
+          img.header-logo src="data:#{billing_entity.logo.content_type};base64,#{billing_entity.base64_logo}"
+        h1.title = I18n.t('credit_note.document_name')
+
+      .document-section.document-columns
+        div
+          table.info-table
+            tbody
+              tr
+                td.body-1-emphasis
+                  span.info-label = I18n.t('credit_note.credit_note_number')
+                td.body-1 data-document-reference=true = number
+              tr
+                td.body-1-emphasis
+                  span.info-label = I18n.t('credit_note.invoice_number')
+                td.body-1 = invoice.number
+              - if invoice.purchase_order_number.present?
+                tr
+                  td.body-1-emphasis
+                    span.info-label = I18n.t('credit_note.purchase_order_number')
+                  td.body-1 = invoice.purchase_order_number
+              tr
+                td.body-1-emphasis
+                  span.info-label = I18n.t('credit_note.issue_date')
+                td.body-1 = I18n.l(issuing_date, format: :default)
+        div
+          - metadata = customer.metadata.displayable.order(created_at: :asc).to_a
+          - if metadata.any?
+            table.info-table
+              tbody
+                - metadata.each do |item|
+                  tr
+                    td.body-1-emphasis
+                      span.info-label = item.key
+                    td.body-1 = item.value
+
+      .document-section.document-columns
+        div
+          .body-1-emphasis = I18n.t('credit_note.credit_from')
+          == SlimHelper.render("templates/invoices/product_catalog/#{issuer}", self)
+        div
+          .body-1-emphasis = I18n.t('credit_note.credit_to')
+          == SlimHelper.render("templates/invoices/product_catalog/#{recipient}", self)
+
+      .document-section
+        h2.amount-due = MoneyHelper.format(total_amount)
+        - formatted_date = I18n.l(issuing_date, format: :default)
+        - if [credited?, refunded?, has_offset?].count(true) > 1
+          p.body-1-emphasis = I18n.t('credit_note.issued_notice', issuing_date: formatted_date)
+        - elsif credited?
+          p.body-1-emphasis = I18n.t('credit_note.credited_notice', issuing_date: formatted_date)
+        - elsif refunded?
+          p.body-1-emphasis = I18n.t('credit_note.refunded_notice', issuing_date: formatted_date)
+        - elsif has_offset?
+          p.body-1-emphasis = I18n.t('credit_note.offset_invoice_notice', invoice_number: invoice.number, issuing_date: formatted_date)
+
+      .document-section
+        table.document-table.document-table--summary
+          colgroup
+            col.description-column
+            col.amount-column
+          thead
+            tr.row--header
+              th.document-cell.cell--description.cell--header.body-3.color-muted scope='col' = I18n.t('invoice.description')
+              th.document-cell.cell--amount.cell--header.body-3.color-muted scope='col' = I18n.t('invoice.amount')
+          tbody
+            - if for_credit_invoice?
+              tr.row--summary
+                td.document-cell.cell--description.cell--summary.cell--at-end.body-2 = I18n.t('credit_note.prepaid_credits_for_wallet', wallet_name: invoice.associated_active_wallet&.name)
+                td.document-cell.cell--amount.cell--summary.cell--at-end.body-2.numeric = MoneyHelper.format(refund_amount)
+            - else
+              - if grouped_product_summary
+                - summary_lines = catalog.summary_lines
+                - summary_lines.each_with_index do |line, index|
+                  - at_end = ('cell--at-end' if index == summary_lines.size - 1)
+                  tr.row--summary
+                    td class=['document-cell', 'cell--description', 'cell--summary', 'body-2', at_end] = line.name
+                    td class=['document-cell', 'cell--amount', 'cell--summary', 'body-2', 'numeric', at_end] = MoneyHelper.format(Money.new(line.amount_cents, currency))
+              - else
+                - summary_rows = CreditNoteDetailsHelper.new(self).rows
+                - summary_rows.each_with_index do |row, index|
+                  - at_end = ('cell--at-end' if index == summary_rows.size - 1)
+                  tr.row--summary
+                    td class=['document-cell', 'cell--description', 'cell--summary', 'body-2', at_end] = row.label
+                    td class=['document-cell', 'cell--amount', 'cell--summary', 'body-2', 'numeric', at_end] = row.formatted_amount
+
+        table.document-totals
+          colgroup
+            col
+            col
+          tbody
+            - if coupons_adjustment_amount_cents.positive?
+              tr.row--summary
+                td.document-cell.cell--description.cell--summary.body-2 = I18n.t('credit_note.coupon_adjustment')
+                td.document-cell.cell--amount.cell--summary.body-2.numeric = '-' + MoneyHelper.format(coupons_adjustment_amount)
+            - unless for_credit_invoice?
+              tr.row--summary
+                td.document-cell.cell--description.cell--summary.body-2 = I18n.t('credit_note.sub_total_without_tax')
+                td.document-cell.cell--amount.cell--summary.body-2.numeric = MoneyHelper.format(sub_total_excluding_taxes_amount)
+            - if applied_taxes.present?
+              - applied_taxes.order(tax_rate: :desc).each do |applied_tax|
+                tr.row--summary
+                  td.document-cell.cell--description.cell--summary.body-2 = I18n.t('credit_note.tax', name: applied_tax.tax_name, rate: applied_tax.tax_rate, amount: MoneyHelper.format(applied_tax.base_amount))
+                  td.document-cell.cell--amount.cell--summary.body-2.numeric = MoneyHelper.format(applied_tax.amount)
+            - elsif !for_credit_invoice?
+              tr.row--summary
+                td.document-cell.cell--description.cell--summary.body-2 = I18n.t('invoice.tax_name_with_details', name: 'Tax', rate: 0)
+                td.document-cell.cell--amount.cell--summary.body-2.numeric = MoneyHelper.format(0.to_money(currency))
+            - if has_offset?
+              tr.row--summary
+                td.document-cell.cell--description.cell--summary.body-2 = I18n.t('credit_note.offset_invoice', invoice_number: invoice.number)
+                td.document-cell.cell--amount.cell--summary.body-2.numeric = MoneyHelper.format(offset_amount)
+            - if credited?
+              tr.row--summary
+                td.document-cell.cell--description.cell--summary.body-2 = I18n.t('credit_note.credited_on_customer_balance')
+                td.document-cell.cell--amount.cell--summary.body-2.numeric = MoneyHelper.format(credit_amount)
+            - if refunded?
+              tr.row--summary
+                td.document-cell.cell--description.cell--summary.body-2 = I18n.t('credit_note.refunded')
+                td.document-cell.cell--amount.cell--summary.body-2.numeric = MoneyHelper.format(refund_amount)
+            tr.row--total
+              td.document-cell.cell--description.cell--total.body-2-emphasis = I18n.t('credit_note.total')
+              td.document-cell.cell--amount.cell--total.body-2-emphasis.numeric = MoneyHelper.format(total_amount)
+
+      == SlimHelper.render('templates/credit_notes/_eu_tax_management', self)
+      - footer = self_billed ? I18n.t('credit_note.self_billed.footer') : billing_entity.invoice_footer
+      - if footer.present?
+        p.document-custom-footer.body-2.color-muted = LineBreakHelper.break_lines(footer)
+      == SlimHelper.render('templates/credit_notes/_powered_by_logo', self)
+
+      - if has_product_items
+        - catalog_blocks.each do |block|
+          .details-page
+            .details-heading.document-stack.document-stack--tight
+              h1.title = I18n.t('invoice.details_title')
+              p.body-1.color-muted = block.title
+            table.document-table.document-table--details
+              colgroup
+                col.description-column
+                col.amount-column
+              thead
+                tr.row--header
+                  th.document-cell.cell--description.cell--header.body-3.color-muted scope='col' = I18n.t('invoice.description')
+                  th.document-cell.cell--amount.cell--header.body-3.color-muted scope='col' = I18n.t('invoice.amount')
+              tbody
+                - block.sections.each do |section|
+                  - rows = CreditNoteProductCatalogHelper.detail_rows(section, currency)
+                  - rows.each_with_index do |row, index|
+                    - if row.kind == :category
+                      tr.row--category
+                        td.document-heading-cell.cell--category.body-2-emphasis colspan=2
+                          .document-heading class="indent-#{row.indent}"
+                            span.document-heading-label = row.label
+                            span.document-heading-amount.numeric = row.amount
+                    - elsif row.kind == :product
+                      tr.row--product
+                        td.document-heading-cell.cell--product.body-2-emphasis colspan=2
+                          .document-heading class="indent-#{row.indent}"
+                            span.document-heading-label = row.label
+                            span.document-heading-amount.numeric = row.amount
+                    - elsif row.kind == :filter
+                      tr.row--filter
+                        td.document-cell.cell--description.cell--filter.body-3-emphasis class="indent-#{row.indent}" colspan=2 = row.label
+                    - else
+                      - at_end = ('cell--at-end' if index == rows.size - 1)
+                      tr.row--segment
+                        td class=['document-cell', 'cell--description', 'cell--segment', 'body-3', "indent-#{row.indent}", at_end] = row.label
+                        td class=['document-cell', 'cell--amount', 'cell--segment', 'body-3', 'color-muted', at_end, 'numeric'] = row.amount

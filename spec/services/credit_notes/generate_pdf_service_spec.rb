@@ -67,6 +67,32 @@ RSpec.describe CreditNotes::GeneratePdfService do
         expect(result.credit_note.file.download.force_encoding(Encoding::UTF_8)).to include("Contract product display name", "€20.00")
       end
 
+      it "uses the product catalog credit note template" do
+        credit_note_generate_service.call
+
+        expect(Utils::PdfGenerator).to have_received(:call).with(
+          template: "credit_notes/product_catalog/credit_note",
+          context: credit_note,
+          footer: "credit_notes/product_catalog/footer",
+          margin_bottom: "1.0167"
+        )
+      end
+
+      context "when the invoice is also self billed" do
+        let(:invoice) { create(:invoice, :self_billed, customer:, organization:) }
+
+        it "uses the product catalog credit note template" do
+          credit_note_generate_service.call
+
+          expect(Utils::PdfGenerator).to have_received(:call).with(
+            template: "credit_notes/product_catalog/credit_note",
+            context: credit_note,
+            footer: "credit_notes/product_catalog/footer",
+            margin_bottom: "1.0167"
+          )
+        end
+      end
+
       context "without a fee display name" do
         let(:invoice_display_name) { nil }
 
