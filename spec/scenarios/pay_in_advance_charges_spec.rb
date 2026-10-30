@@ -1176,8 +1176,7 @@ describe "Pay in advance charges Scenarios", transaction: false do
   end
 
   describe "with prorated recurring sum_agg / standard" do
-    let(:organization) { create(:organization, webhook_url: nil, feature_flags:) }
-    let(:feature_flags) { [] }
+    let(:organization) { create(:organization, webhook_url: nil) }
     let(:customer) { create(:customer, organization:, timezone: "UTC") }
     let(:plan) { create(:plan, organization:, amount_cents: 0, interval: "monthly") }
     let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:, field_name: "amount") }
@@ -1241,13 +1240,11 @@ describe "Pay in advance charges Scenarios", transaction: false do
       }
     end
 
-    it "bills from the full history" do
-      expect(bill_recurring_sum).to eq(billed)
-      expect(RecurringAggregationSnapshot.where(subscription:)).to be_empty
+    it "bills from the full history with the snapshot read forced off" do
+      expect(RecurringAggregationSnapshots.with_forced_read(false) { bill_recurring_sum }).to eq(billed)
     end
 
     context "with snapshots" do
-      let(:feature_flags) { %w[recurring_aggregation_snapshots] }
       let(:read_periods) { [] }
 
       before do
