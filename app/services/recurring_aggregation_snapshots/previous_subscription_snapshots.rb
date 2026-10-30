@@ -15,7 +15,8 @@ module RecurringAggregationSnapshots
     # Marker and snapshots of the latest period of the previous charge's bucket that holds the same
     # events, or nil when the aggregation must fall back to a full scan (see FetchService).
     # all_buckets: false loads only that bucket, for a caller reading one.
-    def period(charge:, charge_filter:, all_buckets: true)
+    # grouped_by_values: loads only the snapshots of that group, plus one per bucket (see of_group).
+    def period(charge:, charge_filter:, all_buckets: true, grouped_by_values: nil)
       return unless subscription.previous_subscription_id
 
       # Two matching charges would read the same events, but a plan with both is ambiguous enough
@@ -31,7 +32,7 @@ module RecurringAggregationSnapshots
       return if charge_filter&.persisted? && previous_filter.nil?
 
       bucket_ids = all_buckets ? [nil, *previous_charge.filters.map(&:id)] : [nil, previous_filter&.id].uniq
-      marker, records = latest_period(previous_charge, bucket_ids)
+      marker, records = latest_period(previous_charge, bucket_ids, grouped_by_values.presence)
       return if marker.nil? || filters_changed_since?(previous_charge, marker)
 
       bucket_records = records.fetch(previous_filter&.id, [])
@@ -55,8 +56,8 @@ module RecurringAggregationSnapshots
     end
 
     # Not bounded by from_datetime: an upgrade stamps the termination just after the new start.
-    def latest_period(previous_charge, bucket_ids)
-      @latest_periods[[previous_charge.id, bucket_ids]] ||= begin
+    def latest_period(previous_charge, bucket_ids, grouped_by_values)
+      @latest_periods[[previous_charge.id, bucket_ids, grouped_by_values]] ||= begin
         scope = RecurringAggregationSnapshot.where(
           organization_id: subscription.organization_id,
           subscription_id: subscription.previous_subscription_id,
@@ -64,7 +65,9 @@ module RecurringAggregationSnapshots
         )
         # One statement reads the marker and the buckets, so a run rewriting the period cannot land in between
         latest_to_datetime = scope.where(charge_filter_id: nil).order(to_datetime: :desc).limit(1).select(:to_datetime)
-        records = scope.where(charge_filter_id: bucket_ids).of_period(latest_to_datetime).group_by(&:charge_filter_id)
+        period_snapshots = scope.where(charge_filter_id: bucket_ids).of_period(latest_to_datetime)
+        period_snapshots = period_snapshots.of_group(grouped_by_values) if grouped_by_values
+        records = period_snapshots.group_by(&:charge_filter_id)
         marker = records[nil]&.first
 
         marker ? [marker, records] : []

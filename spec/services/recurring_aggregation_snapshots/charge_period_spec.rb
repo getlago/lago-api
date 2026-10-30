@@ -76,6 +76,49 @@ RSpec.describe RecurringAggregationSnapshots::ChargePeriod do
       end
     end
 
+    context "with grouped_by_values" do
+      subject(:charge_period) { described_class.new(subscription:, charge:, from_datetime:, grouped_by_values:) }
+
+      let(:grouped_by_values) { {"region" => "eu", "cloud" => nil} }
+
+      before do
+        [
+          {"region" => "eu", "cloud" => nil},
+          {"region" => "eu", "cloud" => "aws"},
+          {"region" => "us", "cloud" => nil}
+        ].each_with_index do |grouped_by, index|
+          create_snapshot(to_datetime: previous_to_datetime, charge_filter: eu_filter, grouped_by:, units: 100 + index)
+        end
+      end
+
+      it "loads the group's snapshots and the first snapshot of each bucket" do
+        first_eu_units = RecurringAggregationSnapshot.where(charge_filter: eu_filter).order(:id).first.units
+
+        expect(charge_period.period(charge_filter: eu_filter).last.map(&:units)).to match_array([100, first_eu_units].uniq(&:to_d))
+        expect(charge_period.period(charge_filter: nil).last.map(&:units)).to eq([10])
+      end
+
+      context "with a blank value stored for a missing one" do
+        let(:grouped_by_values) { {"region" => "apac", "cloud" => ""} }
+
+        before do
+          create_snapshot(to_datetime: previous_to_datetime, charge_filter: eu_filter, grouped_by: {"region" => "apac", "cloud" => " "}, units: 7)
+        end
+
+        it "loads it" do
+          expect(charge_period.period(charge_filter: eu_filter).last.map(&:units)).to include(7)
+        end
+      end
+
+      context "without a value for a key" do
+        let(:grouped_by_values) { {"region" => "eu"} }
+
+        it "loads every value of that key" do
+          expect(charge_period.period(charge_filter: eu_filter).last.map(&:units)).to include(100, 101)
+        end
+      end
+    end
+
     context "when a filter of the charge changed since the marker" do
       before { create_filter(created_at: watermark + 1.minute) }
 

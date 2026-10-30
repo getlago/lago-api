@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe RecurringAggregationSnapshots::FetchService do
   subject(:fetch_service) do
-    described_class.new(subscription:, charge:, charge_filter:, grouped_by_keys:, from_datetime:)
+    described_class.new(subscription:, charge:, charge_filter:, grouped_by_keys:, from_datetime:, grouped_by_values:)
   end
 
   let(:organization) { create(:organization) }
@@ -12,6 +12,7 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
   let(:subscription) { create(:subscription, organization:, plan: charge.plan) }
   let(:charge_filter) { nil }
   let(:grouped_by_keys) { nil }
+  let(:grouped_by_values) { nil }
   let(:from_datetime) { Time.zone.parse("2026-10-01T00:00:00") }
   let(:previous_to_datetime) { Time.zone.parse("2026-09-30T23:59:59") }
   let(:watermark) { Time.zone.parse("2026-10-01T00:05:00") }
@@ -354,6 +355,34 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
         expect(fetch_service.call.snapshots.map { [it.grouped_by, it.units] })
           .to match_array([[{"region" => "eu"}, 3], [{"region" => "us"}, 0]])
       end
+
+      context "with grouped_by_values" do
+        let(:grouped_by_values) { {"region" => "eu"} }
+
+        it "returns the snapshot of that group only" do
+          expect(fetch_service.call.snapshots.map { [it.grouped_by, it.units] }).to eq([[{"region" => "eu"}, 3]])
+        end
+
+        context "when the group had no usage at the period" do
+          let(:grouped_by_values) { {"region" => "apac"} }
+
+          it "returns the period without snapshot" do
+            result = fetch_service.call
+
+            expect(result.period).to eq(described_class::Period.new(to_datetime: previous_to_datetime, watermark:))
+            expect(result.snapshots).to eq([])
+          end
+        end
+
+        context "when the grouped_by keys changed since the snapshot" do
+          let(:grouped_by_keys) { %w[region country] }
+          let(:grouped_by_values) { {"region" => "eu", "country" => "fr"} }
+
+          it "returns no snapshot" do
+            expect(fetch_service.call.period).to be_nil
+          end
+        end
+      end
     end
 
     context "when the grouped_by keys changed since the snapshot" do
@@ -480,6 +509,14 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
         it "returns every group of the previous subscription" do
           expect(fetch_service.call.snapshots.map { [it.grouped_by, it.units] })
             .to match_array([[{"region" => "eu"}, 3], [{"region" => "us"}, 0]])
+        end
+
+        context "with grouped_by_values" do
+          let(:grouped_by_values) { {"region" => "us"} }
+
+          it "returns the snapshot of that group only" do
+            expect(fetch_service.call.snapshots.map { [it.grouped_by, it.units] }).to eq([[{"region" => "us"}, 0]])
+          end
         end
       end
 

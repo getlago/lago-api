@@ -19,6 +19,20 @@ class RecurringAggregationSnapshot < ApplicationRecord
 
   # Compared to a scalar subquery: the period index then serves to_datetime, which an IN subquery does not
   scope :of_period, ->(to_datetime_query) { where(arel_table[:to_datetime].eq(Arel::Nodes::Grouping.new(to_datetime_query.arel))) }
+  # The snapshots of one group, plus one per bucket for the marker and the grouping keys check. A key left
+  # out matches every value, and a blank value matches a missing one, as the stores group them together.
+  scope :of_group, lambda { |grouped_by_values|
+    conditions = grouped_by_values.map do |key, value|
+      if value.to_s.strip.empty?
+        sanitize_sql_for_conditions(["COALESCE(TRIM(grouped_by ->> ?), '') = ''", key.to_s])
+      else
+        sanitize_sql_for_conditions(["grouped_by ->> ? = ?", key.to_s, value.to_s])
+      end
+    end
+    bucket_snapshots = select("DISTINCT ON (charge_filter_id) id").order(:charge_filter_id, :id)
+
+    where(id: bucket_snapshots).or(where(conditions.join(" AND ")))
+  }
 
   # Snapshots are keyed on a subscription, which billing segments do not bill
   def self.eligible?(metered_item:, billing_context:)
