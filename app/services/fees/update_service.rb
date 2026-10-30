@@ -21,7 +21,8 @@ module Fees
         unless valid_payment_status?(params[:payment_status])
           return result.single_validation_failure!(
             field: :payment_status,
-            error_code: "value_is_invalid"
+            error_code: "value_is_invalid",
+            meta: {allowed_values: Fee::PAYMENT_STATUS.map(&:to_s)}
           )
         end
 

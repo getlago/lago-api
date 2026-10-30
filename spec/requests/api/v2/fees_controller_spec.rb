@@ -137,7 +137,7 @@ RSpec.describe Api::V2::FeesController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:details]).to eq([{code: "value_is_invalid", field: "payment_status", meta: {}}])
+        expect(json[:details]).to eq([{code: "value_is_invalid", field: "payment_status", meta: {allowed_values: %w[pending succeeded failed refunded]}}])
       end
     end
 
@@ -256,7 +256,7 @@ RSpec.describe Api::V2::FeesController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:details]).to eq([{code: "value_is_invalid", field: "payment_status", meta: {}}])
+        expect(json[:details]).to eq([{code: "value_is_invalid", field: "payment_status", meta: {allowed_values: %w[pending succeeded failed refunded]}}])
       end
     end
 
@@ -267,7 +267,7 @@ RSpec.describe Api::V2::FeesController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "payment_status", meta: {}}])
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "payment_status", meta: {allowed_values: %w[pending succeeded failed refunded]}}])
         expect(fee.reload).to be_payment_pending
       end
     end
