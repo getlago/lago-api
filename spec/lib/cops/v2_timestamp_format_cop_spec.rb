@@ -6,42 +6,42 @@ RSpec.describe Cops::V2TimestampFormatCop, :config do
   it "registers an offense when formatting with iso8601" do
     expect_offense(<<~RUBY)
       { name: model.name, ended: model.ended_at.iso8601 }
-                                 ^^^^^^^^^^^^^^^^^^^^^^ Render v2 timestamps with `format_time` or `format_date` instead of `iso8601`.
+                                 ^^^^^^^^^^^^^^^^^^^^^^ Declare v2 datetimes with `timestamps` and render dates with `format_date` instead of `iso8601`.
     RUBY
   end
 
   it "registers an offense when formatting with a safe navigation and a precision" do
     expect_offense(<<~RUBY)
       model.ended_at&.iso8601(6)
-      ^^^^^^^^^^^^^^^^^^^^^^^^^^ Render v2 timestamps with `format_time` or `format_date` instead of `iso8601`.
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^ Declare v2 datetimes with `timestamps` and render dates with `format_date` instead of `iso8601`.
     RUBY
   end
 
   it "registers an offense when formatting with xmlschema" do
     expect_offense(<<~RUBY)
       model.created_at.xmlschema
-      ^^^^^^^^^^^^^^^^^^^^^^^^^^ Render v2 timestamps with `format_time` or `format_date` instead of `xmlschema`.
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^ Declare v2 datetimes with `timestamps` and render dates with `format_date` instead of `xmlschema`.
     RUBY
   end
 
   it "registers an offense when formatting with rfc3339" do
     expect_offense(<<~RUBY)
       model.effective_from.rfc3339
-      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Render v2 timestamps with `format_time` or `format_date` instead of `rfc3339`.
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Declare v2 datetimes with `timestamps` and render dates with `format_date` instead of `rfc3339`.
     RUBY
   end
 
   it "registers an offense when formatting with strftime" do
     expect_offense(<<~RUBY)
       model.effective_from.strftime("%F")
-      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Render v2 timestamps with `format_time` or `format_date` instead of `strftime`.
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Declare v2 datetimes with `timestamps` and render dates with `format_date` instead of `strftime`.
     RUBY
   end
 
   it "registers an offense for a raw datetime" do
     expect_offense(<<~RUBY)
       { ended_at: model.ended_at }
-        ^^^^^^^^^^^^^^^^^^^^^^^^ Render `ended_at` with `format_time`.
+        ^^^^^^^^^^^^^^^^^^^^^^^^ Declare `ended_at` with `timestamps`.
     RUBY
   end
 
@@ -76,7 +76,7 @@ RSpec.describe Cops::V2TimestampFormatCop, :config do
   it "registers an offense for a datetime rendered as a date" do
     expect_offense(<<~RUBY)
       { started_at: format_date(model.started_at) }
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Render `started_at` with `format_time`.
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Declare `started_at` with `timestamps`.
     RUBY
   end
 
@@ -90,25 +90,21 @@ RSpec.describe Cops::V2TimestampFormatCop, :config do
   it "registers both offenses for a pair formatted with iso8601" do
     expect_offense(<<~RUBY)
       { ended_at: model.ended_at.iso8601 }
-                  ^^^^^^^^^^^^^^^^^^^^^^ Render v2 timestamps with `format_time` or `format_date` instead of `iso8601`.
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Render `ended_at` with `format_time`.
+                  ^^^^^^^^^^^^^^^^^^^^^^ Declare v2 datetimes with `timestamps` and render dates with `format_date` instead of `iso8601`.
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Declare `ended_at` with `timestamps`.
     RUBY
   end
 
-  it "does not register an offense for the formatters" do
+  it "does not register an offense for a date rendered with format_date" do
     expect_no_offenses(<<~RUBY)
-      {
-        effective_date: format_date(model.effective_date),
-        next_billing_at: format_time(model.next_billing_at),
-        effective_from: format_time(model.effective_from)
-      }
+      { effective_date: format_date(model.effective_date) }
     RUBY
   end
 
   it "registers an offense for a raw datetime merged into a payload" do
     expect_offense(<<~RUBY)
       payload.merge(started_at: model.started_at)
-                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Render `started_at` with `format_time`.
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Declare `started_at` with `timestamps`.
     RUBY
   end
 
@@ -116,7 +112,7 @@ RSpec.describe Cops::V2TimestampFormatCop, :config do
     it "registers an offense for a raw datetime passed to #{method}" do
       expect_offense(<<~RUBY, method:)
         payload.%{method}(started_at: model.started_at)
-                _{method} ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Render `started_at` with `format_time`.
+                _{method} ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Declare `started_at` with `timestamps`.
       RUBY
     end
   end
@@ -124,7 +120,7 @@ RSpec.describe Cops::V2TimestampFormatCop, :config do
   it "registers an offense for a raw datetime in a nested hash" do
     expect_offense(<<~RUBY)
       { product: { ended_at: model.ended_at } }
-                   ^^^^^^^^^^^^^^^^^^^^^^^^ Render `ended_at` with `format_time`.
+                   ^^^^^^^^^^^^^^^^^^^^^^^^ Declare `ended_at` with `timestamps`.
     RUBY
   end
 
