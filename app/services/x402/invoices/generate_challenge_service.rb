@@ -15,6 +15,7 @@ module X402
         refusal = invoice.x402_payment_refusal
         return result.single_validation_failure!(error_code: refusal) if refusal
         return result.not_found_failure!(resource: "connection") unless invoice.x402_connection
+        return result.single_validation_failure!(field: :connection_code, error_code: "environment_not_enabled") unless invoice.x402_connection.environment_enabled?
 
         requirements = X402::PaymentRequirementsService.call(connection: invoice.x402_connection, amount_cents: invoice.total_due_amount_cents)
 
