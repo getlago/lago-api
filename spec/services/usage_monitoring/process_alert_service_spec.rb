@@ -85,6 +85,33 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
       end
     end
 
+    context "when a lifetime usage alert was created above a line", :premium do
+      # A fresh copy, so the shared organization stays frozen while this one gets the integration
+      let(:lifetime_organization) { Organization.find(organization.id) }
+      let(:alert) do
+        UsageMonitoring::CreateAlertService.call!(
+          organization: lifetime_organization,
+          alertable: subscription,
+          params: {alert_type: "lifetime_usage_amount", code: "lifetime", thresholds: [{code: "warn80", value: 80}]}
+        ).alert
+      end
+      let(:current_metrics) { subscription.lifetime_usage.reload }
+
+      before do
+        lifetime_organization.update!(premium_integrations: ["lifetime_usage"])
+        create(:lifetime_usage, organization:, subscription:, historical_usage_amount_cents: 90)
+      end
+
+      it "triggers the line on the first evaluation" do
+        expect(result).to be_success
+
+        triggered = alert.all_triggered_alerts.sole
+        expect(triggered).to have_attributes(kind: "triggered", previous_value: 0, current_value: 90)
+        expect(triggered.crossed_thresholds.map(&:symbolize_keys)).to eq([{code: "warn80", value: "80.0", recurring: false}])
+        expect(SendWebhookJob).to have_been_enqueued.once.with("alert.triggered", triggered)
+      end
+    end
+
     context "when recurring thresholds are crossed" do
       let(:current_metrics) { instance_double(SubscriptionUsage, to_datetime: period_end, amount_cents: 161) }
 
