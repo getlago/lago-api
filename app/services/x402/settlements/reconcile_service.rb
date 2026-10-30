@@ -16,7 +16,11 @@ module X402
       def call
         raise "#{self.class.name} must run outside a database transaction" if in_transaction?
 
-        reconcile if settlement.pending?
+        if settlement.pending?
+          reconcile
+        elsif unpaid?
+          finish_payment(settlement.transaction_hash)
+        end
         grant if ungranted?
 
         result.settlement = settlement
@@ -54,6 +58,14 @@ module X402
         end
       end
 
+      def unpaid?
+        settlement.invoice_payment? && settlement.settled? && settlement.payment_id.nil? && settlement.error_reason != "payment_not_recorded"
+      end
+
+      def finish_payment(transaction_hash)
+        X402::Invoices::FinishPaymentService.call(settlement:, transaction_hash:)
+      end
+
       def reader
         @reader ||= READERS.fetch(X402::Network.family_of_network(settlement.network)).new(
           network: settlement.network,
@@ -64,7 +76,11 @@ module X402
       end
 
       def mark_settled(transaction_hash)
-        transition(status: :settled, transaction_hash:)
+        if settlement.invoice_payment?
+          finish_payment(transaction_hash)
+        else
+          transition(status: :settled, transaction_hash:)
+        end
       rescue ActiveRecord::RecordNotUnique => e
         raise unless e.message.include?(TRANSACTION_INDEX)
 

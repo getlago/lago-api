@@ -81,16 +81,57 @@ describe X402::Settlements::ReconcileService do
     end
 
     context "with an invoice payment" do
-      let(:settlement) { create(:x402_settlement, :pending, :invoice_payment, x402_connection:, reconcile_after: 1.minute.ago, payload:) }
+      let(:invoice) { create(:invoice, organization: x402_connection.organization, currency: "USD", total_amount_cents: 100) }
+      let(:settlement) do
+        create(:x402_settlement, :pending, :invoice_payment, x402_connection:, invoice:, reconcile_after: 1.minute.ago, payload:)
+      end
 
       it "marks the row settled" do
-        expect(result.settlement.reload).to be_settled
+        expect(result.settlement.reload).to have_attributes(status: "settled", transaction_hash: chain_hash)
       end
 
       it "grants nothing" do
         result
 
         expect(X402::CreditPurchases::GrantService).not_to have_received(:call)
+      end
+
+      it "records the payment" do
+        expect(result.settlement.reload.payment).to have_attributes(payment_type: "x402", amount_cents: 100, payable: invoice)
+      end
+
+      it "marks the invoice paid" do
+        result
+
+        expect(invoice.reload.payment_status).to eq("succeeded")
+      end
+
+      context "when the payment cannot be recorded" do
+        let(:invoice) { create(:invoice, organization: x402_connection.organization, currency: "USD", total_amount_cents: 50) }
+
+        it "keeps the row settled" do
+          expect(result.settlement.reload).to have_attributes(status: "settled", payment_id: nil)
+        end
+
+        it "reports the failure" do
+          result
+
+          expect(Sentry).to have_received(:capture_exception).with(instance_of(BaseService::ValidationFailure), extra: hash_including(settlement_id: settlement.id))
+        end
+      end
+
+      context "with the transaction held by another row" do
+        before { create(:x402_settlement, transaction_hash: chain_hash) }
+
+        it "marks the row failed" do
+          expect(result.settlement.reload).to have_attributes(status: "failed", error_reason: "transaction_already_recorded")
+        end
+
+        it "leaves the invoice alone" do
+          result
+
+          expect(invoice.reload.payment_status).to eq("pending")
+        end
       end
     end
 
@@ -319,6 +360,30 @@ describe X402::Settlements::ReconcileService do
 
     it "keeps the settle's reason" do
       expect(result.settlement.reload.error_reason).to eq("no_response")
+    end
+
+    context "with an invoice payment" do
+      let(:invoice) { create(:invoice, organization: x402_connection.organization, currency: "USD", total_amount_cents: 100) }
+      let(:settlement) do
+        create(
+          :x402_settlement, :pending, :invoice_payment,
+          x402_connection:, invoice:, reconcile_after: 1.minute.ago, error_reason: "no_response", payload:
+        )
+      end
+
+      it "marks the row failed" do
+        expect(result.settlement.reload).to be_failed
+      end
+
+      it "leaves the invoice pending" do
+        result
+
+        expect(invoice.reload.payment_status).to eq("pending")
+      end
+
+      it "sends no webhook" do
+        expect { result }.not_to have_enqueued_job(SendWebhookJob).with("invoice.payment_status_updated", invoice)
+      end
     end
 
     context "with the hash of a settlement_pending answer" do
@@ -567,12 +632,51 @@ describe X402::Settlements::ReconcileService do
   end
 
   context "with a settled invoice payment" do
-    let(:settlement) { create(:x402_settlement, :invoice_payment, x402_connection:) }
+    let(:invoice) { create(:invoice, organization: x402_connection.organization, currency: "USD", total_amount_cents: 100) }
+    let(:settlement) { create(:x402_settlement, :invoice_payment, x402_connection:, invoice:) }
 
     it "grants nothing" do
       result
 
       expect(X402::CreditPurchases::GrantService).not_to have_received(:call)
+    end
+
+    it "records the payment" do
+      expect(result.settlement.reload.payment).to be_present
+    end
+
+    it "keeps the row's transaction" do
+      expect { result }.not_to change { settlement.reload.transaction_hash }
+    end
+
+    context "with a recorded payment" do
+      let(:settlement) do
+        create(:x402_settlement, :invoice_payment, x402_connection:, invoice:, payment: create(:payment, payable: invoice))
+      end
+
+      before { settlement }
+
+      it "records nothing more" do
+        expect { result }.not_to change(Payment, :count)
+      end
+    end
+
+    context "when its payment was not recorded" do
+      let(:settlement) { create(:x402_settlement, :invoice_payment, x402_connection:, invoice:, error_reason: "payment_not_recorded") }
+
+      it "records nothing" do
+        expect { result }.not_to change(Payment, :count)
+      end
+
+      context "with an amount due below the payment" do
+        let(:invoice) { create(:invoice, organization: x402_connection.organization, currency: "USD", total_amount_cents: 50) }
+
+        it "reports nothing again" do
+          result
+
+          expect(Sentry).not_to have_received(:capture_exception)
+        end
+      end
     end
   end
 
