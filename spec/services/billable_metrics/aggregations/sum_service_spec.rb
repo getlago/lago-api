@@ -165,11 +165,15 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
         timestamp:, created_at:, properties: {total_count: value, region:})
     end
 
-    def aggregate(period, initial_value:, initial_period: nil, options: {})
+    def aggregator(period, **initial)
       period_boundaries = {from_datetime: period.begin, to_datetime: period.end}
       store = event_store_class.new(code: billable_metric.code, billing_context:, boundaries: period_boundaries, filters:)
 
-      described_class.new(event_store: store, metered_item:, billing_context:, boundaries: period_boundaries, filters:, initial_value:, initial_period:)
+      described_class.new(event_store: store, metered_item:, billing_context:, boundaries: period_boundaries, filters:, **initial)
+    end
+
+    def aggregate(period, initial_value:, initial_period: nil, options: {})
+      aggregator(period, initial_value:, initial_period:)
         .aggregate(options: {recurring_watermark: watermark(period)}.merge(options))
     end
 
@@ -235,6 +239,34 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
       result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first))
 
       expect(result.aggregation).to eq(1000 + 7 + 20)
+    end
+
+    context "with snapshots to fetch" do
+      let(:fetches) { [] }
+      let(:fetched) do
+        RecurringAggregationSnapshots::FetchService::Result.new.tap do |result|
+          result.snapshots = [snapshot(periods.first, aggregate(periods.first, initial_value: nil)).with(units: 1000)]
+          result.period = closed(periods.first)
+        end
+      end
+      let(:sum_aggregator) do
+        fetch = lambda do
+          fetches << :fetch
+          fetched
+        end
+
+        aggregator(periods.second, initial_snapshots: fetch)
+      end
+
+      it "fetches them once, when the aggregation reads them" do
+        sum_aggregator.empty_results
+        expect(fetches).to be_empty
+
+        result = sum_aggregator.aggregate(options: {recurring_watermark: watermark(periods.second)})
+
+        expect(result.aggregation).to eq(1000 + 7 + 20)
+        expect(fetches).to eq([:fetch])
+      end
     end
 
     context "when the bucket had no usage at the end of the previous period" do
@@ -349,6 +381,17 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
           result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first), options:)
 
           expect(result.aggregation).to eq(40)
+        end
+
+        context "with snapshots to fetch" do
+          let(:fetches) { [] }
+
+          it "does not fetch them" do
+            result = aggregator(periods.second, initial_snapshots: -> { fetches << :fetch }).aggregate(options:)
+
+            expect(result.aggregation).to eq(40)
+            expect(fetches).to be_empty
+          end
         end
       end
     end
