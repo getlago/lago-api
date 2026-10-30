@@ -10,7 +10,7 @@ class ProductCatalogReceiptHelper
 
   def self.contracts(invoice)
     fees = invoice.fees.product
-      .includes(:invoiceable, :product_filter, :pricing_unit_usage, :rate_card_rate, :rate_override, :applied_taxes, true_up_parent_fee: :invoiceable, contract: :catalog_plan)
+      .includes(:product_filter, :pricing_unit_usage, :rate_card_rate, :rate_override, :applied_taxes, invoiceable: :billable_metric, contract_rate_card: :rate_card, true_up_parent_fee: :invoiceable, contract: :catalog_plan)
       .to_a
 
     fees.group_by(&:contract).sort_by { |contract, _| ProductCatalogInvoiceHelper.contract_name(contract).to_s.downcase }
@@ -37,6 +37,31 @@ class ProductCatalogReceiptHelper
 
   def self.percentage?(fee)
     %w[percentage graduated_percentage].include?(fee.rate_model)
+  end
+
+  # The fees a v1 receipt breaks down day by day (Invoice#recurring_fees): recurring sums and unique
+  # counts billed in arrears, per product, for the products that billed units.
+  def self.recurring_fees(fees)
+    fees
+      .select { recurring_breakdown?(it) }
+      .sort_by { [it.properties["charges_from_datetime"].to_s, it.filter_display_name.to_s.downcase] }
+      .group_by(&:invoiceable_id)
+      .values
+      .select { |product_fees| product_fees.sum(&:units).positive? }
+      .sort_by { |product_fees| product_fees.first.invoice_name.downcase }
+  end
+
+  def self.recurring_breakdown(fee)
+    BillingSegments::Fees::RecurringBreakdownService.call!(fee:).breakdown
+  end
+
+  def self.recurring_breakdown?(fee)
+    metric = fee.invoiceable.billable_metric
+
+    !fee.true_up_parent_fee_id? &&
+      fee.contract_rate_card.rate_card.arrears? &&
+      metric&.recurring? &&
+      BillingSegments::Fees::RecurringBreakdownService::BREAKDOWN_SERVICES.key?(metric.aggregation_type)
   end
 
   def self.contract_total(fees)

@@ -98,6 +98,90 @@ RSpec.describe "templates/payment_receipts/product_catalog.slim" do
     expect(rendered_text).not_to include("Amount due")
   end
 
+  it "does not break down a metric that is not recurring" do
+    expect(rendered_text).not_to include("Breakdown")
+  end
+
+  context "when the contract bills a recurring metric in arrears" do
+    let(:users_metric) { create(:sum_billable_metric, organization:, field_name: "users", recurring: true) }
+    let(:users) { create(:product, organization:, name: "Users", invoice_display_name: nil, billable_metric: users_metric) }
+    let(:users_filter) { nil }
+    let(:proration) { false }
+    let(:rate_card) { create(:rate_card, organization:, product: users, product_filter: users_filter, proration:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+    let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card:) }
+    let(:billing_segment) do
+      create(
+        :billing_segment,
+        organization:,
+        customer:,
+        contract:,
+        contract_rate_card:,
+        rate_card_rate:,
+        cycle_started_at: Time.utc(2026, 10, 1),
+        started_at: Time.utc(2026, 10, 1),
+        ended_at: BillingSegment.inclusive_end(Time.utc(2026, 11, 1)),
+        billing_at: Time.utc(2026, 11, 1)
+      )
+    end
+
+    before do
+      [[Time.utc(2026, 9, 20), 10], [Time.utc(2026, 10, 10), 5]].each do |timestamp, count|
+        create(:event, organization:, customer:, external_subscription_id: contract.external_id, code: users_metric.code, timestamp:, properties: {"users" => count})
+      end
+
+      create(
+        :fee,
+        invoice:,
+        subscription: nil,
+        fee_type: "product",
+        invoiceable: users,
+        invoice_display_name: nil,
+        contract:,
+        contract_rate_card:,
+        rate_card_rate:,
+        product_filter: users_filter,
+        amount_cents: 0,
+        taxes_amount_cents: 0,
+        amount_currency: invoice.currency,
+        units: 15,
+        properties: {
+          "from_datetime" => billing_segment.started_at.iso8601(6),
+          "to_datetime" => billing_segment.ended_at.iso8601(6),
+          "charges_from_datetime" => billing_segment.started_at.iso8601(6),
+          "charges_to_datetime" => billing_segment.ended_at.iso8601(6),
+          "charges_duration" => 31
+        }
+      )
+    end
+
+    it "breaks the metric down day by day after the totals, like a v1 receipt" do
+      expect(rendered_text).to include(
+        "Total €28.00 Platform details Users Breakdown " \
+        "Oct 01, 2026 Used 31 out of 31 days +10.0 Users " \
+        "Oct 10, 2026 Used 22 out of 31 days +5.0 Users " \
+        "Regardless of when an event is received, the unit is not prorated, we charge the full price."
+      )
+    end
+
+    context "when the rate card is prorated" do
+      let(:proration) { true }
+
+      it "explains the proration over the days of the period" do
+        expect(rendered_text).to include("+5.0 Users If a unit is added or removed during the monthly plan")
+        expect(rendered_text).to include("if 15 days are left in a 31-day period, we charge 15/31 of the period price")
+      end
+    end
+
+    context "when the fee bills a product filter" do
+      let(:users_filter) { create(:product_filter, organization:, product: users, name: "EU", invoice_display_name: nil) }
+
+      it "names the filter it breaks down" do
+        expect(rendered_text).to include("Platform details Users Breakdown of EU Oct 01, 2026 Used 31 out of 31 days +10.0 Users")
+      end
+    end
+  end
+
   context "when the fee is billed on a product filter" do
     let(:product_filter) { create(:product_filter, organization:, product:, name: "EU", invoice_display_name: nil) }
 
