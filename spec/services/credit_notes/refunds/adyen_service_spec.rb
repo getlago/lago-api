@@ -275,6 +275,21 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
       )
     end
 
+    context "when refund belongs to another organization" do
+      it "does not update the refund nor the credit note" do
+        result = adyen_service.update_status(
+          organization_id: create(:organization).id,
+          provider_refund_id: refund.provider_refund_id,
+          status: "succeeded"
+        )
+
+        expect(result).to be_success
+        expect(result.refund).to be_nil
+        expect(refund.reload.status).not_to eq("succeeded")
+        expect(credit_note.reload).not_to be_succeeded
+      end
+    end
+
     context "when refund is not found" do
       let(:refund) { nil }
 

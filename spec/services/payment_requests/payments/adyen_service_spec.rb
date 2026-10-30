@@ -143,6 +143,41 @@ RSpec.describe PaymentRequests::Payments::AdyenService do
       payment
     end
 
+    context "when one-time payment references a payment request from another organization" do
+      it "does not create a payment" do
+        result = nil
+
+        expect do
+          result = described_class.call(
+            :update_payment_status,
+            organization_id: create(:organization).id,
+            provider_payment_id: "psp_new",
+            status: "succeeded",
+            metadata: {lago_payable_id: payment_request.id, lago_payable_type: "PaymentRequest", payment_type: "one-time"}
+          )
+        end.not_to change(Payment, :count)
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(payment_request.reload).not_to be_payment_succeeded
+      end
+    end
+
+    context "when payment belongs to another organization" do
+      subject(:result) do
+        described_class.call(
+          :update_payment_status, organization_id: create(:organization).id, provider_payment_id:, status:
+        )
+      end
+
+      it "does not update the payment nor the payment request" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(payment.reload.status).to eq("Pending")
+        expect(payment_request.reload).not_to be_payment_succeeded
+      end
+    end
+
     it "updates the payment, payment_request and invoices payment_status" do
       expect(result).to be_success
       expect(result.payment.status).to eq(status)

@@ -39,6 +39,22 @@ RSpec.describe Invoices::Payments::GocardlessService do
       payment
     end
 
+    context "when payment belongs to another organization" do
+      it "does not update the payment nor the invoice" do
+        result = described_class.call(
+          :update_payment_status,
+          organization_id: create(:organization).id,
+          provider_payment_id: "ch_123456",
+          status: "paid_out"
+        )
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(payment.reload.status).to eq("pending_submission")
+        expect(invoice.reload.payment_status).not_to eq("succeeded")
+      end
+    end
+
     it "updates the payment and invoice payment_status" do
       result = described_class.call(
         :update_payment_status,
