@@ -114,6 +114,8 @@ module X402
           answer_replay(own)
         elsif codes.include?("x402_connection_changed")
           result.not_found_failure!(resource: "invoice")
+        elsif codes.include?("invoice_payment_pending")
+          result.conflict_failure!(code: "invoice_payment_pending")
         else
           result.fail_with_error!(error)
         end
@@ -125,8 +127,12 @@ module X402
       end
 
       def answer(settlement)
-        result.settlement = settlement
-        result
+        if settlement.settled?
+          result.settlement = settlement
+          result
+        else
+          result.conflict_failure!(code: "invoice_payment_pending")
+        end
       end
 
       def refuse(field, code)

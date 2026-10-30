@@ -174,7 +174,7 @@ describe X402::Invoices::SettleService do
         before { create(:x402_settlement, :invoice_payment, x402_connection:, invoice:, payment_digest: digest, payer_address:, payee_address:) }
 
         it "answers that an attempt is pending" do
-          expect(result.error.messages).to eq({base: ["invoice_payment_pending"]})
+          expect(result.error).to be_a(BaseService::ConflictFailure).and have_attributes(code: "invoice_payment_pending")
         end
       end
     end
@@ -185,7 +185,7 @@ describe X402::Invoices::SettleService do
       end
 
       it "answers that an attempt is pending" do
-        expect(result.error.messages).to eq({base: ["invoice_payment_pending"]})
+        expect(result.error).to be_a(BaseService::ConflictFailure).and have_attributes(code: "invoice_payment_pending")
       end
 
       it "verifies nothing" do
@@ -264,7 +264,7 @@ describe X402::Invoices::SettleService do
       end
 
       it "answers that an attempt is pending" do
-        expect(result.error.messages).to eq({base: ["invoice_payment_pending"]})
+        expect(result.error).to be_a(BaseService::ConflictFailure).and have_attributes(code: "invoice_payment_pending")
       end
 
       it "never settles" do
@@ -286,8 +286,8 @@ describe X402::Invoices::SettleService do
         end
       end
 
-      it "answers the pending attempt" do
-        expect(result.settlement).to eq(racer)
+      it "answers that an attempt is pending" do
+        expect(result.error).to be_a(BaseService::ConflictFailure).and have_attributes(code: "invoice_payment_pending")
       end
 
       it "never settles" do
@@ -306,7 +306,7 @@ describe X402::Invoices::SettleService do
       end
 
       it "answers that an attempt is pending" do
-        expect(result.error.messages).to eq({base: ["invoice_payment_pending"]})
+        expect(result.error).to be_a(BaseService::ConflictFailure).and have_attributes(code: "invoice_payment_pending")
       end
 
       it "fails the attempt" do
@@ -321,8 +321,8 @@ describe X402::Invoices::SettleService do
         allow(X402::Invoices::FinishPaymentService).to receive(:call).and_raise(ActiveRecord::StatementInvalid)
       end
 
-      it "answers the pending attempt" do
-        expect(result.settlement).to have_attributes(status: "pending", transaction_hash: nil)
+      it "answers that an attempt is pending" do
+        expect(result.error).to be_a(BaseService::ConflictFailure).and have_attributes(code: "invoice_payment_pending")
       end
 
       it "logs the failure" do
@@ -349,8 +349,8 @@ describe X402::Invoices::SettleService do
     context "with settlement_pending" do
       let(:fault) { :settlement_pending }
 
-      it "answers the pending attempt" do
-        expect(result.settlement).to have_attributes(status: "pending", transaction_hash: "0x#{"cd" * 32}")
+      it "answers that an attempt is pending" do
+        expect(result.error).to be_a(BaseService::ConflictFailure).and have_attributes(code: "invoice_payment_pending")
       end
 
       it "leaves the invoice unpaid" do

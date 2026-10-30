@@ -30,10 +30,8 @@ module X402
     def render_payment(invoice, result)
       code = refusal_code(result.error)
 
-      if result.success? && result.settlement.settled?
+      if result.success?
         render_receipt(result.settlement)
-      elsif result.success?
-        conflict_error(code: "invoice_payment_pending")
       elsif code && INVOICE_REFUSALS.exclude?(code)
         render_challenge(invoice, error: code)
       else
