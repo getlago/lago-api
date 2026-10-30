@@ -63,7 +63,7 @@ module PaymentProviders
           provider_refund_id = event["pspReference"]
           status = (event["success"] == "true") ? :succeeded : :failed
 
-          result = service.update_status(provider_refund_id:, status:)
+          result = service.update_status(organization_id: organization.id, provider_refund_id:, status:)
           result.raise_if_error!
         when "CHARGEBACK"
           PaymentProviders::Adyen::Webhooks::ChargebackService.call(
@@ -77,7 +77,7 @@ module PaymentProviders
 
           provider_refund_id = event["pspReference"]
 
-          result = service.update_status(provider_refund_id:, status: :failed)
+          result = service.update_status(organization_id: organization.id, provider_refund_id:, status: :failed)
           result.raise_if_error!
         end
       end

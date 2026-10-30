@@ -35,6 +35,7 @@ module PaymentProviders
           if REFUND_ACTIONS.include?(event.action)
             CreditNotes::Refunds::GocardlessService
               .new.update_status(
+                organization_id: payment_provider.organization_id,
                 provider_refund_id: event.links.refund,
                 status: event.action,
                 metadata: event.metadata

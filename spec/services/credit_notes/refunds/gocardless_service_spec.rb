@@ -269,6 +269,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
 
     it "updates the refund status" do
       result = gocardless_service.update_status(
+        organization_id: organization.id,
         provider_refund_id: refund.provider_refund_id,
         status: "paid"
       )
@@ -283,6 +284,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
 
     it "calls SegmentTrackJob" do
       gocardless_service.update_status(
+        organization_id: organization.id,
         provider_refund_id: refund.provider_refund_id,
         status: "paid"
       )
@@ -301,6 +303,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
     context "when refund is not found" do
       it "returns an empty result" do
         result = gocardless_service.update_status(
+          organization_id: organization.id,
           provider_refund_id: "foo",
           status: "paid"
         )
@@ -313,6 +316,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
     context "when status is not valid" do
       it "fails" do
         result = gocardless_service.update_status(
+          organization_id: organization.id,
           provider_refund_id: refund.provider_refund_id,
           status: "invalid"
         )
@@ -331,6 +335,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
 
       it "delivers an error webhook" do
         result = gocardless_service.update_status(
+          organization_id: organization.id,
           provider_refund_id: refund.provider_refund_id,
           status: "failed"
         )
@@ -355,6 +360,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService do
 
       it "produces an activity log" do
         gocardless_service.update_status(
+          organization_id: organization.id,
           provider_refund_id: refund.provider_refund_id,
           status: "failed"
         )

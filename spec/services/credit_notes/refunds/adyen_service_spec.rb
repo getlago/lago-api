@@ -244,6 +244,7 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
 
     it "updates the refund status" do
       result = adyen_service.update_status(
+        organization_id: organization.id,
         provider_refund_id: refund.provider_refund_id,
         status: "succeeded"
       )
@@ -258,6 +259,7 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
 
     it "calls SegmentTrackJob" do
       adyen_service.update_status(
+        organization_id: organization.id,
         provider_refund_id: refund.provider_refund_id,
         status: "succeeded"
       )
@@ -278,6 +280,7 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
 
       it "returns an empty result" do
         result = adyen_service.update_status(
+          organization_id: organization.id,
           provider_refund_id: "foo",
           status: "succeeded"
         )
@@ -289,6 +292,7 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
       context "with invoice id in metadata" do
         it "returns an empty result" do
           result = adyen_service.update_status(
+            organization_id: organization.id,
             provider_refund_id: "foo",
             status: "succeeded",
             metadata: {lago_invoice_id: SecureRandom.uuid}
@@ -303,6 +307,7 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
 
           it "returns a not found failure" do
             result = adyen_service.update_status(
+              organization_id: organization.id,
               provider_refund_id: "re_123456",
               status: "succeeded",
               metadata: {lago_invoice_id: invoice.id}
@@ -319,6 +324,7 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
     context "when status is not valid" do
       it "fails" do
         result = adyen_service.update_status(
+          organization_id: organization.id,
           provider_refund_id: refund.provider_refund_id,
           status: "invalid"
         )
@@ -337,6 +343,7 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
 
       it "delivers an error webhook" do
         result = adyen_service.update_status(
+          organization_id: organization.id,
           provider_refund_id: refund.provider_refund_id,
           status: "failed"
         )
@@ -361,6 +368,7 @@ RSpec.describe CreditNotes::Refunds::AdyenService do
 
       it "produces an activity log" do
         adyen_service.update_status(
+          organization_id: organization.id,
           provider_refund_id: refund.provider_refund_id,
           status: "failed"
         )

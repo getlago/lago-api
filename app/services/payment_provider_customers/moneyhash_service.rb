@@ -71,7 +71,7 @@ module PaymentProviderCustomers
     end
 
     def update_payment_method(organization_id:, customer_id:, payment_method_id:, metadata: {}, card_details: {})
-      moneyhash_customer = PaymentProviderCustomers::MoneyhashCustomer.find_by(customer_id: customer_id)
+      moneyhash_customer = PaymentProviderCustomers::MoneyhashCustomer.find_by(customer_id:, organization_id:)
       return handle_missing_customer(organization_id, metadata) unless moneyhash_customer
 
       moneyhash_customer.payment_method_id = payment_method_id
@@ -100,7 +100,7 @@ module PaymentProviderCustomers
     end
 
     def delete_payment_method(organization_id:, customer_id:, payment_method_id:, metadata: {})
-      moneyhash_customer = PaymentProviderCustomers::MoneyhashCustomer.find_by(customer_id: customer_id)
+      moneyhash_customer = PaymentProviderCustomers::MoneyhashCustomer.find_by(customer_id:, organization_id:)
       return handle_missing_customer(organization_id, metadata) unless moneyhash_customer
 
       if moneyhash_customer.payment_method_id == payment_method_id
