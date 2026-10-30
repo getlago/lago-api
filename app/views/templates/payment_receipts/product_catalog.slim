@@ -1,0 +1,14 @@
+doctype html
+html lang=I18n.locale
+  head
+    meta charset='UTF-8'
+    title = I18n.t('payment_receipt.document_name')
+    == SlimHelper.render('templates/invoices/product_catalog/_styles', self)
+  body
+    - invoice = payment.payable
+    - catalog = ProductCatalogInvoiceHelper.new(invoice)
+    .document.body-1
+      == SlimHelper.render('templates/payment_receipts/product_catalog/_header', self)
+      == SlimHelper.render('templates/invoices/product_catalog/_summary', invoice, catalog:)
+      == SlimHelper.render('templates/invoices/product_catalog/_notes', invoice)
+      == SlimHelper.render('templates/invoices/product_catalog/_details_pages', invoice, catalog:)

@@ -1,0 +1,50 @@
+- invoice = payment.payable
+- issuer, recipient = invoice.self_billed? ? %w[_customer _billing_entity] : %w[_billing_entity _customer]
+- paid_on = I18n.l(payment.created_at.in_time_zone(invoice.customer.applicable_timezone).to_date, format: :default)
+
+.document-section
+  - if billing_entity.logo.present? && !invoice.self_billed?
+    img.header-logo src="data:#{billing_entity.logo.content_type};base64,#{billing_entity.base64_logo}"
+  h1.title = I18n.t('payment_receipt.document_name')
+.document-section.document-columns
+  div
+    table.info-table
+      tbody
+        tr
+          td.body-1-emphasis
+            span.info-label = I18n.t('payment_receipt.number')
+          td.body-1 data-document-reference=true = number
+        tr
+          td.body-1-emphasis
+            span.info-label = I18n.t('invoice.invoice_number')
+          td.body-1
+            a style="text-decoration: none" target="_blank" href=invoice.file_url = invoice.number
+        - if payment.method_display_name.present?
+          tr
+            td.body-1-emphasis
+              span.info-label = I18n.t('payment_receipt.payment_method')
+            td.body-1 = payment.method_display_name
+        tr
+          td.body-1-emphasis
+            span.info-label = I18n.t('payment_receipt.payment_date')
+          td.body-1 = paid_on
+  div
+    - metadata = invoice.customer.metadata.displayable.order(created_at: :asc).to_a
+    - if metadata.any?
+      table.info-table
+        tbody
+          - metadata.each do |item|
+            tr
+              td.body-1-emphasis
+                span.info-label = item.key
+              td.body-1 = item.value
+.document-section.document-columns
+  div
+    .body-1-emphasis = I18n.t('invoice.bill_from')
+    == SlimHelper.render("templates/invoices/product_catalog/#{issuer}", invoice)
+  div
+    .body-1-emphasis = I18n.t('invoice.bill_to')
+    == SlimHelper.render("templates/invoices/product_catalog/#{recipient}", invoice)
+.document-section.document-stack.document-stack--tight
+  p.title = MoneyHelper.format(payment.amount)
+  p.body-1.color-muted = I18n.t('payment_receipt.paid_on', date: paid_on, total_due_amount: MoneyHelper.format(invoice.total_due_amount))
