@@ -51,6 +51,14 @@ class BaseResult
     fail_with_error!(BaseService::MethodNotAllowedFailure.new(self, code:))
   end
 
+  def gone_failure!(code:)
+    fail_with_error!(BaseService::GoneFailure.new(self, code:))
+  end
+
+  def conflict_failure!(code:)
+    fail_with_error!(BaseService::ConflictFailure.new(self, code:))
+  end
+
   # A block renames the fields and their meta: a nested record's errors under the key of its parent.
   def record_validation_failure!(record:, &rename)
     failure = BaseService::ValidationFailure.from_errors(self, record.errors)
