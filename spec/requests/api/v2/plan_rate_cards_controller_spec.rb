@@ -35,7 +35,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("plan")
+        expect(response).to be_v2_not_found_error("plan")
       end
     end
 
@@ -45,7 +45,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("rate_card")
+        expect(response).to be_v2_not_found_error("rate_card")
       end
     end
   end
@@ -103,13 +103,18 @@ RSpec.describe Api::V2::PlanRateCardsController do
       let(:other_table_record) { create(:contract_rate_card, organization:) }
     end
 
+    it_behaves_like "a v2 list filtered on created_at", collection: :applied_rate_cards do
+      let(:filtered_path) { "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards" }
+      let(:create_filtered_record) { ->(created_at) { create(:plan_rate_card, organization:, catalog_plan:, created_at:) } }
+    end
+
     context "when the plan does not exist" do
       let(:plan_code) { "unknown" }
 
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("plan")
+        expect(response).to be_v2_not_found_error("plan")
       end
     end
   end
@@ -149,7 +154,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json.dig(:error_details, :rate_phases)).to eq(["last_phase_must_be_indefinite"])
+        expect(json[:details]).to eq([{code: "last_phase_must_be_indefinite", field: "rate_phases", meta: {}}])
       end
     end
 
@@ -164,7 +169,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json.dig(:error_details, :rate_phases)).to eq(["value_is_mandatory"])
+        expect(json[:details]).to eq([{code: "value_is_mandatory", field: "rate_phases", meta: {}}])
       end
     end
   end
@@ -191,7 +196,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("applied_rate_card")
+        expect(response).to be_v2_not_found_error("applied_rate_card")
       end
     end
   end
@@ -226,7 +231,7 @@ RSpec.describe Api::V2::PlanRateCardsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("applied_rate_card")
+        expect(response).to be_v2_not_found_error("applied_rate_card")
       end
     end
   end

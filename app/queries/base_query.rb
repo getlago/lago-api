@@ -9,6 +9,39 @@ class BaseQuery < BaseService
   Pagination = Struct.new(:page, :limit, keyword_init: true)
   Filters = BaseFilters
 
+  # Filters that the contract of the query refuses. Its messages are the sentences of the contract,
+  # which v1 and GraphQL render, indexed by position for an array; native v2 renders #filters.
+  class FiltersFailure < BaseService::ValidationFailure
+    def initialize(result, contract_errors:)
+      @contract_errors = contract_errors
+
+      super(result, messages: contract_errors.to_h)
+    end
+
+    # {filter => meta}, one per refused filter. A value outside a closed list gets the values
+    # allowed, which the v1 sentence lists; the values received are left out, as in any other 422.
+    def filters
+      @contract_errors.group_by { it.path.first }.transform_values { meta_of(it) }
+    end
+
+    private
+
+    def meta_of(errors)
+      if errors.all? { inclusion?(it) }
+        {allowed_values: errors.first.args.first}
+      else
+        {}
+      end
+    end
+
+    # A rule failure has no predicate, and the message of an or-schema (`value(...) | array(...)`) is
+    # not a Dry::Schema::Message, which would raise on #predicate.
+    def inclusion?(error)
+      error.is_a?(Dry::Schema::Message) && error.predicate == :included_in? &&
+        error.args.first.is_a?(Array) && error.args.first.all?(String)
+    end
+  end
+
   # Restores a capped `total_count` on a `without_count` relation, so that pagination
   # metadata keeps working without counting every matching row.
   module CappedTotalCount
@@ -64,8 +97,7 @@ class BaseQuery < BaseService
     validation_result = filters_contract.call(filters.to_h)
 
     unless validation_result.success?
-      errors = validation_result.errors.to_h
-      result.validation_failure!(errors:)
+      result.fail_with_error!(FiltersFailure.new(result, contract_errors: validation_result.errors))
     end
 
     result
@@ -105,6 +137,25 @@ class BaseQuery < BaseService
 
     result.single_validation_failure!(field: field_name.to_sym, error_code: "invalid_date")
       .raise_if_error!
+  end
+
+  # Narrows `scope` on the `<column>_from` and `<column>_to` filters, both bounds included, so a
+  # date-only `_to` covers its whole day. An invalid bound raises the `invalid_date` failure.
+  def with_date_range(scope, column)
+    from = filters[:"#{column}_from"]
+    to = filters[:"#{column}_to"]
+
+    scope = scope.where(column => parse_datetime_filter(:"#{column}_from")..) if from.present?
+    if to.present?
+      to_bound = parse_datetime_filter(:"#{column}_to")
+      scope = date_only?(to) ? scope.where(column => ...to_bound.next_day) : scope.where(column => ..to_bound)
+    end
+    scope
+  end
+
+  # `Date._iso8601` only returns an hour for a value that carries a time.
+  def date_only?(value)
+    value.is_a?(String) && !Date._iso8601(value).key?(:hour)
   end
 
   # Apply consistent ordering across query objects

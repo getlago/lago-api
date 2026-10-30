@@ -144,6 +144,51 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
       end
     end
 
+    context "when invoice belongs to another organization" do
+      let(:other_organization) { create(:organization) }
+
+      it "does not create a payment nor update the invoice" do
+        result = nil
+
+        expect do
+          result = described_class.call(
+            :update_payment_status,
+            organization_id: other_organization.id,
+            status: :succeeded,
+            flutterwave_payment:
+          )
+        end.not_to change(Payment, :count)
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(invoice.reload.payment_status).not_to eq("succeeded")
+      end
+    end
+
+    context "when existing payment belongs to another organization" do
+      let(:other_organization) { create(:organization) }
+      let(:flutterwave_payment) do
+        build(:flutterwave_payment, id: "flw_payment_123", metadata: {payment_type: "recurring"})
+      end
+
+      before do
+        create(:payment, payable: invoice, payment_provider: flutterwave_provider, provider_payment_id: "flw_payment_123", status: :pending)
+      end
+
+      it "does not update the payment" do
+        result = described_class.call(
+          :update_payment_status,
+          organization_id: other_organization.id,
+          status: :succeeded,
+          flutterwave_payment:
+        )
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(invoice.reload.payment_status).not_to eq("succeeded")
+      end
+    end
+
     context "when payment already succeeded" do
       let(:succeeded_invoice) { create(:invoice, organization: organization, customer: customer, payment_status: :succeeded) }
       let(:existing_payment) do

@@ -114,6 +114,42 @@ describe Api::V1::X402::ConnectionsController, :premium do
       end
     end
 
+    context "with a mainnet network" do
+      let(:params) { super().merge(networks: ["eip155:8453"]) }
+
+      it "returns a validation error" do
+        subject
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(networks: ["environment_not_enabled"])
+      end
+
+      it "calls CDP for nothing" do
+        subject
+        expect(a_request(:any, /api\.cdp\.coinbase\.com/)).not_to have_been_made
+      end
+
+      context "when the organization runs on mainnet" do
+        let(:organization) { create(:organization, feature_flags: ["x402_payments", "x402_mainnet"]) }
+
+        it "creates the connection" do
+          expect { subject }.to change { organization.x402_connections.count }.by(1)
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:x402_connection][:networks]).to eq(["eip155:8453"])
+        end
+      end
+    end
+
+    context "when the organization runs on mainnet" do
+      let(:organization) { create(:organization, feature_flags: ["x402_payments", "x402_mainnet"]) }
+
+      it "returns a validation error" do
+        subject
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(networks: ["environment_not_enabled"])
+      end
+    end
+
     context "with a wrong checksum EVM address" do
       let(:params) { super().merge(payout_addresses: {evm: "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAeD"}) }
 
@@ -237,6 +273,16 @@ describe Api::V1::X402::ConnectionsController, :premium do
       expect(json[:x402_connections].map { |c| c[:lago_id] }).to eq([connection.id])
       expect(json[:meta]).to include(current_page: 1, total_count: 1)
     end
+
+    context "when the organization moved back to testnet" do
+      let!(:connection) { create(:x402_connection, :mainnet, :saved_before_switch, organization:) }
+
+      it "lists its mainnet connection" do
+        subject
+        expect(response).to have_http_status(:ok)
+        expect(json[:x402_connections].map { |c| c[:lago_id] }).to eq([connection.id])
+      end
+    end
   end
 
   describe "GET /api/v1/x402_connections/:code" do
@@ -253,6 +299,17 @@ describe Api::V1::X402::ConnectionsController, :premium do
       expect(response).to have_http_status(:ok)
       expect(json[:x402_connection][:lago_id]).to eq(connection.id)
       expect(json[:x402_connection].keys.grep(/secret|cdp_api_key/)).to be_empty
+    end
+
+    context "when the organization moved to mainnet" do
+      let(:organization) { create(:organization, feature_flags: ["x402_payments", "x402_mainnet"]) }
+      let(:connection) { create(:x402_connection, :saved_before_switch, organization:) }
+
+      it "renders its testnet connection" do
+        subject
+        expect(response).to have_http_status(:ok)
+        expect(json[:x402_connection][:lago_id]).to eq(connection.id)
+      end
     end
 
     context "with an unknown code" do
@@ -338,6 +395,48 @@ describe Api::V1::X402::ConnectionsController, :premium do
 
         expect(response).to have_http_status(:unprocessable_content)
         expect(json[:error_details]).to eq(allowed_origins: ["value_is_mandatory"])
+      end
+    end
+
+    context "when the organization moved to mainnet" do
+      let(:organization) { create(:organization, feature_flags: ["x402_payments", "x402_mainnet"]) }
+      let(:connection) do
+        create(:x402_connection, :saved_before_switch, organization:, cdp_api_key_id:, cdp_api_key_secret:)
+      end
+
+      it "returns a validation error" do
+        subject
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(networks: ["environment_not_enabled"])
+      end
+
+      it "calls CDP for nothing" do
+        subject
+        expect(a_request(:any, /api\.cdp\.coinbase\.com/)).not_to have_been_made
+      end
+
+      context "with mainnet networks" do
+        let(:params) { {networks: ["eip155:8453"]} }
+
+        it "moves the connection to mainnet" do
+          subject
+          expect(response).to have_http_status(:ok)
+          expect(connection.reload.networks).to eq(["eip155:8453"])
+        end
+      end
+    end
+
+    context "when the organization moved back to testnet" do
+      let(:connection) do
+        create(:x402_connection, :mainnet, :saved_before_switch, organization:, cdp_api_key_id:, cdp_api_key_secret:)
+      end
+      let(:params) { {networks: ["eip155:84532"]} }
+
+      it "returns a validation error and keeps the networks" do
+        expect { subject }.not_to change { connection.reload.networks }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(networks: ["mainnet_not_downgradable"])
       end
     end
 
@@ -427,6 +526,17 @@ describe Api::V1::X402::ConnectionsController, :premium do
       expect(response).to have_http_status(:ok)
       expect(json[:x402_connection][:lago_id]).to eq(connection.id)
       expect(connection.reload).to be_discarded
+    end
+
+    context "when the organization moved to mainnet" do
+      let(:organization) { create(:organization, feature_flags: ["x402_payments", "x402_mainnet"]) }
+      let(:connection) { create(:x402_connection, :saved_before_switch, organization:) }
+
+      it "discards its testnet connection" do
+        subject
+        expect(response).to have_http_status(:ok)
+        expect(connection.reload).to be_discarded
+      end
     end
 
     context "with an unknown code" do

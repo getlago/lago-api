@@ -416,67 +416,67 @@ rate_card_rate_deleted:
 plan_rate_card_created:
   name: plan_rate_card.created
   description: A plan rate card association has been created
-  category: Product Catalog
+  category: Plans
   deprecated: false
   product_catalog_only: true
 plan_rate_card_updated:
   name: plan_rate_card.updated
   description: A plan rate card association has been updated
-  category: Product Catalog
+  category: Plans
   deprecated: false
   product_catalog_only: true
 plan_rate_card_deleted:
   name: plan_rate_card.deleted
   description: A plan rate card association has been deleted
-  category: Product Catalog
+  category: Plans
   deprecated: false
   product_catalog_only: true
 contract_rate_card_created:
   name: contract_rate_card.created
   description: A contract rate card association has been created
-  category: Product Catalog
+  category: Contracts
   deprecated: false
   product_catalog_only: true
 contract_rate_card_updated:
   name: contract_rate_card.updated
   description: A contract rate card association has been updated
-  category: Product Catalog
+  category: Contracts
   deprecated: false
   product_catalog_only: true
 contract_rate_card_deleted:
   name: contract_rate_card.deleted
   description: A contract rate card association has been deleted
-  category: Product Catalog
+  category: Contracts
   deprecated: false
   product_catalog_only: true
 contract_created:
   name: contract.created
   description: A new contract has been created
-  category: Product Catalog
+  category: Contracts
   deprecated: false
   product_catalog_only: true
 contract_updated:
   name: contract.updated
   description: A contract has been updated
-  category: Product Catalog
+  category: Contracts
   deprecated: false
   product_catalog_only: true
 contract_started:
   name: contract.started
   description: A contract has started
-  category: Product Catalog
+  category: Contracts
   deprecated: false
   product_catalog_only: true
 contract_terminated:
   name: contract.terminated
   description: A contract has been terminated
-  category: Product Catalog
+  category: Contracts
   deprecated: false
   product_catalog_only: true
 contract_canceled:
   name: contract.canceled
   description: A contract has been canceled
-  category: Product Catalog
+  category: Contracts
   deprecated: false
   product_catalog_only: true
 quote_created:

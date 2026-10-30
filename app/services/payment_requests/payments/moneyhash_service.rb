@@ -61,12 +61,8 @@ module PaymentRequests
       end
 
       def update_payment_status(organization_id:, provider_payment_id:, status:, amount_cents: nil, metadata: {})
-        payment_obj = Payment.find_or_initialize_by(provider_payment_id: provider_payment_id)
-        payment = if payment_obj.persisted?
-          payment_obj
-        else
-          create_payment(provider_payment_id:, metadata:)
-        end
+        payment = Payment.find_by(provider_payment_id:, organization_id:) ||
+          create_payment(organization_id:, provider_payment_id:, metadata:)
 
         return handle_missing_payment(organization_id, metadata) unless payment
 
@@ -101,8 +97,8 @@ module PaymentRequests
         result.not_found_failure!(resource: "moneyhash_payment")
       end
 
-      def create_payment(provider_payment_id:, metadata:)
-        @payable = payable || PaymentRequest.find_by(id: metadata["lago_payable_id"])
+      def create_payment(organization_id:, provider_payment_id:, metadata:)
+        @payable = payable || PaymentRequest.find_by(id: metadata["lago_payable_id"], organization_id:)
 
         unless payable
           result.not_found_failure!(resource: "payment_request")

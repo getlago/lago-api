@@ -96,7 +96,7 @@ RSpec.describe Api::V2::CustomersController do
         expect { request }.not_to change(organization.customers, :count)
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details][:external_id]).to eq(["value_already_exist"])
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_already_exist", field: "external_id", meta: {}}])
         expect(existing_customer.reload.name).to eq("Existing")
         expect(existing_customer.metadata).to be_empty
         expect(SendWebhookJob).not_to have_been_enqueued.with("customer.updated", existing_customer)
@@ -145,7 +145,7 @@ RSpec.describe Api::V2::CustomersController do
         expect { request }.not_to change(organization.customers, :count)
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details][:external_id]).to eq(["value_is_mandatory"])
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_mandatory", field: "external_id", meta: {}}])
       end
     end
 
@@ -156,7 +156,7 @@ RSpec.describe Api::V2::CustomersController do
         request
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details][:finalize_zero_amount_invoice]).to eq(["invalid_value"])
+        expect(json).to eq(code: "validation_errors", details: [{code: "invalid_value", field: "finalize_zero_amount_invoice", meta: {}}])
       end
     end
 
@@ -167,7 +167,23 @@ RSpec.describe Api::V2::CustomersController do
         expect { request }.not_to change(organization.customers, :count)
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details][:integration_customers]).to eq(["invalid_count_per_integration_type"])
+        expect(json).to eq(
+          code: "validation_errors",
+          details: [{code: "invalid_count_per_integration_type", field: "integration_customers", meta: {}}]
+        )
+      end
+    end
+
+    [nil, "bogus"].each do |integration_type|
+      context "with #{integration_type.inspect} as integration type" do
+        let(:attributes) { super().merge(integration_customers: [{integration_type:, integration_code: "netsuite"}.compact]) }
+
+        it "rejects the request without creating a customer" do
+          expect { request }.not_to change(organization.customers, :count)
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "integration_type", meta: {}}])
+        end
       end
     end
 
@@ -263,7 +279,7 @@ RSpec.describe Api::V2::CustomersController do
         expect { request }.not_to change(organization.customers, :count)
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details]).to eq(base: [error_code])
+        expect(json).to eq(code: "validation_errors", details: [{code: error_code, field: "base", meta: {}}])
         expect(PaymentProviderCustomers::StripeCreateJob).not_to have_been_enqueued
       end
 
@@ -275,7 +291,7 @@ RSpec.describe Api::V2::CustomersController do
           expect { request }.not_to change(organization.customers, :count)
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:error_details]).to eq(base: ["payment_provider_not_found"])
+          expect(json).to eq(code: "validation_errors", details: [{code: "payment_provider_not_found", field: "base", meta: {}}])
         end
       end
 
@@ -289,7 +305,7 @@ RSpec.describe Api::V2::CustomersController do
           expect { request }.not_to change(organization.customers, :count)
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:error_details]).to eq(base: [error_code])
+          expect(json).to eq(code: "validation_errors", details: [{code: error_code, field: "base", meta: {}}])
         end
       end
     end
@@ -314,7 +330,7 @@ RSpec.describe Api::V2::CustomersController do
         it "does not create the customer or attach the foreign tax" do
           expect { request }.not_to change(organization.customers, :count)
 
-          expect(response).to be_not_found_error("tax")
+          expect(response).to be_v2_not_found_error("tax")
         end
       end
     end
@@ -354,7 +370,7 @@ RSpec.describe Api::V2::CustomersController do
             expect { request }.not_to change(organization.customers, :count)
 
             expect(response).to have_http_status(:unprocessable_content)
-            expect(json[:error_details]).to eq(field => ["value_is_invalid"])
+            expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: field.to_s, meta: {}}])
           end
         end
       end
@@ -377,7 +393,10 @@ RSpec.describe Api::V2::CustomersController do
         expect { request }.not_to change(organization.customers, :count)
 
         expect(response).to have_http_status(:bad_request)
-        expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: ["metadata"]})
+        expect(json).to eq(
+          code: "expand_not_supported",
+          details: [{code: "action_not_expandable", field: "expands", meta: {invalid_values: ["metadata"]}}]
+        )
       end
     end
 
@@ -428,7 +447,7 @@ RSpec.describe Api::V2::CustomersController do
 
           expect { request }.not_to change { customer.reload.attributes }
 
-          expect(response).to be_not_found_error("tax")
+          expect(response).to be_v2_not_found_error("tax")
           expect(invoice.reload.attributes).to eq(original_invoice_attributes)
           expect(Invoices::FinalizeJob).not_to have_been_enqueued.with(invoice)
           expect(SendWebhookJob).not_to have_been_enqueued.with("customer.updated", customer)
@@ -507,6 +526,49 @@ RSpec.describe Api::V2::CustomersController do
         end
       end
 
+      context "when the provider fails on the provider customer id" do
+        let(:customer) { create(:customer, :with_stripe_payment_provider, organization:) }
+        let(:attributes) do
+          {payment_provider: "stripe", payment_provider_code: customer.stripe_customer.payment_provider.code, provider_customer_id: "cus_unknown"}
+        end
+        let(:provider_response) do
+          {status: 404, body: {error: {type: "invalid_request_error", code: "resource_missing", message: "No such customer: 'cus_unknown'"}}}
+        end
+
+        before do
+          stub_request(:post, "https://api.stripe.com/v1/customers/cus_unknown")
+            .to_return(**provider_response, body: provider_response[:body].to_json, headers: {"Content-Type" => "application/json"})
+        end
+
+        it "returns a provider error naming the provider, without its message" do
+          request
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(
+            code: "provider_error",
+            details: [{code: "provider_error", field: "base", meta: {provider_name: "stripe", provider_error_code: "resource_missing"}}]
+          )
+        end
+
+        context "when the provider refuses the key of the organization" do
+          let(:provider_response) { {status: 401, body: {error: {type: "invalid_request_error", message: "Invalid API Key provided"}}} }
+
+          it "returns an unprocessable provider unauthorized error naming the provider, apart from an invalid API key" do
+            request
+
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json).to eq(
+              code: "provider_unauthorized",
+              details: [{
+                code: "provider_unauthorized",
+                field: "base",
+                meta: {provider_name: "stripe", provider_code: customer.stripe_customer.payment_provider.code}
+              }]
+            )
+          end
+        end
+      end
+
       context "when removing the payment provider" do
         let(:customer) { create(:customer, :with_stripe_payment_provider, organization:) }
         let(:provider_customer) { customer.stripe_customer }
@@ -533,7 +595,7 @@ RSpec.describe Api::V2::CustomersController do
           expect { request }.not_to change { customer.reload.attributes }
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:error_details]).to eq(base: [error_code])
+          expect(json).to eq(code: "validation_errors", details: [{code: error_code, field: "base", meta: {}}])
           expect(PaymentProviderCustomers::StripeCreateJob).not_to have_been_enqueued
           expect(SendWebhookJob).not_to have_been_enqueued.with("customer.updated", customer)
         end
@@ -548,7 +610,7 @@ RSpec.describe Api::V2::CustomersController do
             expect { request }.not_to change { customer.reload.attributes }
 
             expect(response).to have_http_status(:unprocessable_content)
-            expect(json[:error_details]).to eq(base: [error_code])
+            expect(json).to eq(code: "validation_errors", details: [{code: error_code, field: "base", meta: {}}])
           end
         end
       end
@@ -561,7 +623,7 @@ RSpec.describe Api::V2::CustomersController do
             expect { request }.not_to change { customer.reload.attributes }
 
             expect(response).to have_http_status(:unprocessable_content)
-            expect(json[:error_details]).to eq(field => ["value_is_invalid"])
+            expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: field.to_s, meta: {}}])
           end
         end
       end
@@ -573,7 +635,7 @@ RSpec.describe Api::V2::CustomersController do
           expect { request }.not_to change { customer.reload.attributes }
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:error_details][:finalize_zero_amount_invoice]).to eq(["invalid_value"])
+          expect(json).to eq(code: "validation_errors", details: [{code: "invalid_value", field: "finalize_zero_amount_invoice", meta: {}}])
         end
       end
 
@@ -584,7 +646,27 @@ RSpec.describe Api::V2::CustomersController do
           expect { request }.not_to change { customer.reload.attributes }
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:error_details][:integration_customers]).to eq(["invalid_count_per_integration_type"])
+          expect(json).to eq(
+            code: "validation_errors",
+            details: [{code: "invalid_count_per_integration_type", field: "integration_customers", meta: {}}]
+          )
+        end
+      end
+
+      [nil, "bogus"].each do |integration_type|
+        context "with #{integration_type.inspect} as integration type" do
+          let(:attributes) { {name: "Must not change", integration_customers: [{integration_type:, integration_code: "netsuite"}.compact]} }
+          let(:integration_customer) { create(:netsuite_customer, customer:) }
+
+          before { integration_customer }
+
+          it "rejects the request before modifying the customer or its integrations" do
+            expect { request }.not_to change { customer.reload.attributes }
+
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "integration_type", meta: {}}])
+            expect(customer.integration_customers).to eq([integration_customer])
+          end
         end
       end
 
@@ -630,7 +712,7 @@ RSpec.describe Api::V2::CustomersController do
         it "does not create a customer" do
           expect { request }.not_to change(organization.customers, :count)
 
-          expect(response).to be_not_found_error("customer")
+          expect(response).to be_v2_not_found_error("customer")
         end
       end
 
@@ -640,7 +722,7 @@ RSpec.describe Api::V2::CustomersController do
         it "does not modify the foreign customer" do
           expect { request }.not_to change { customer.reload.attributes }
 
-          expect(response).to be_not_found_error("customer")
+          expect(response).to be_v2_not_found_error("customer")
         end
       end
 
@@ -664,7 +746,7 @@ RSpec.describe Api::V2::CustomersController do
           expect { request }.not_to change { customer.reload.external_id }
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:error_details][:external_id]).to eq(["value_already_exist"])
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_already_exist", field: "external_id", meta: {}}])
         end
       end
 
@@ -811,7 +893,10 @@ RSpec.describe Api::V2::CustomersController do
           expect { request }.not_to change { customer.reload.attributes }
 
           expect(response).to have_http_status(:bad_request)
-          expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: ["taxes"]})
+          expect(json).to eq(
+            code: "expand_not_supported",
+            details: [{code: "action_not_expandable", field: "expands", meta: {invalid_values: ["taxes"]}}]
+          )
         end
       end
     end
@@ -873,8 +958,10 @@ RSpec.describe Api::V2::CustomersController do
         request
 
         expect(response).to have_http_status(:bad_request)
-        expect(json[:code]).to eq("invalid_expand")
-        expect(json[:error_details]).to eq(expands: {invalid_values: ["unknown"], allowed_values: %w[metadata taxes integration_customers]})
+        expect(json).to eq(
+          code: "invalid_expand",
+          details: [{code: "invalid_expand", field: "expands", meta: {invalid_values: ["unknown"], allowed_values: %w[metadata taxes integration_customers]}}]
+        )
       end
     end
 
@@ -897,8 +984,10 @@ RSpec.describe Api::V2::CustomersController do
           request
 
           expect(response).to have_http_status(:bad_request)
-          expect(json[:code]).to eq("invalid_expand")
-          expect(json[:error_details]).to eq(expands: {reason: "malformed", allowed_values: %w[metadata taxes integration_customers]})
+          expect(json).to eq(
+            code: "invalid_expand",
+            details: [{code: "malformed", field: "expands", meta: {allowed_values: %w[metadata taxes integration_customers]}}]
+          )
         end
       end
     end
@@ -935,7 +1024,7 @@ RSpec.describe Api::V2::CustomersController do
       it "does not expose the customer" do
         request
 
-        expect(response).to be_not_found_error("customer")
+        expect(response).to be_v2_not_found_error("customer")
       end
     end
 
@@ -945,7 +1034,7 @@ RSpec.describe Api::V2::CustomersController do
       it "returns not found" do
         request
 
-        expect(response).to be_not_found_error("customer")
+        expect(response).to be_v2_not_found_error("customer")
       end
     end
   end
@@ -960,6 +1049,11 @@ RSpec.describe Api::V2::CustomersController do
     it_behaves_like "a cursor paginated v2 endpoint", collection: :customers, model: Customer do
       let(:paginated_path) { "/api/v2/customers" }
       let(:create_paginated_record) { ->(created_at) { create(:customer, organization:, created_at:) } }
+    end
+
+    it_behaves_like "a v2 list filtered on created_at", collection: :customers do
+      let(:filtered_path) { "/api/v2/customers" }
+      let(:create_filtered_record) { ->(created_at) { create(:customer, organization:, created_at:) } }
     end
 
     context "with customers of different organizations" do
@@ -1003,7 +1097,7 @@ RSpec.describe Api::V2::CustomersController do
       it "returns not found" do
         request
 
-        expect(response).to be_not_found_error("billing_entity")
+        expect(response).to be_v2_not_found_error("billing_entity")
       end
     end
 
@@ -1015,6 +1109,34 @@ RSpec.describe Api::V2::CustomersController do
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("expand_not_supported")
+      end
+    end
+
+    context "with filters outside their allowed values" do
+      let(:parameters) { {account_type: %w[bogus customer other], has_customer_type: "maybe"} }
+
+      it "returns a validation error on each filter with the values it allows" do
+        request
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(
+          code: "validation_errors",
+          details: [
+            {code: "value_is_invalid", field: "account_type", meta: {allowed_values: %w[customer partner]}},
+            {code: "value_is_invalid", field: "has_customer_type", meta: {allowed_values: %w[true false]}}
+          ]
+        )
+      end
+    end
+
+    context "with filters that contradict each other" do
+      let(:parameters) { {has_customer_type: "false", customer_type: "company"} }
+
+      it "returns a validation error on the refused filter" do
+        request
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "customer_type", meta: {}}])
       end
     end
   end
@@ -1043,7 +1165,10 @@ RSpec.describe Api::V2::CustomersController do
         expect { request }.not_to change { customer.reload.deleted_at }
 
         expect(response).to have_http_status(:bad_request)
-        expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: ["taxes"]})
+        expect(json).to eq(
+          code: "expand_not_supported",
+          details: [{code: "action_not_expandable", field: "expands", meta: {invalid_values: ["taxes"]}}]
+        )
       end
     end
 
@@ -1053,7 +1178,7 @@ RSpec.describe Api::V2::CustomersController do
       it "does not discard it" do
         expect { request }.not_to change { customer.reload.deleted_at }
 
-        expect(response).to be_not_found_error("customer")
+        expect(response).to be_v2_not_found_error("customer")
       end
     end
   end

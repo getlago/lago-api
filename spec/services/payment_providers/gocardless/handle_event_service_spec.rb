@@ -27,7 +27,7 @@ RSpec.describe PaymentProviders::Gocardless::HandleEventService do
         event_service.call
 
         expect(Invoices::Payments::GocardlessService).to have_received(:call)
-          .with(:update_payment_status, provider_payment_id: "PM0068WBTXDQ0Q", status: "paid_out")
+          .with(:update_payment_status, organization_id: payment_provider.organization_id, provider_payment_id: "PM0068WBTXDQ0Q", status: "paid_out")
       end
     end
 
@@ -46,7 +46,7 @@ RSpec.describe PaymentProviders::Gocardless::HandleEventService do
         event_service.call
 
         expect(PaymentRequests::Payments::GocardlessService).to have_received(:call)
-          .with(:update_payment_status, provider_payment_id: "PM0068WBTXDQ0Q", status: "paid_out")
+          .with(:update_payment_status, organization_id: payment_provider.organization_id, provider_payment_id: "PM0068WBTXDQ0Q", status: "paid_out")
       end
     end
 

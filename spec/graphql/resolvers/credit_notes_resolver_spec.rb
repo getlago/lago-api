@@ -466,4 +466,33 @@ RSpec.describe Resolvers::CreditNotesResolver do
       )
     end
   end
+
+  context "with N+1 queries detection on document urls", bullet: {unused_eager_loading: false} do
+    before do
+      # NOTE: Attachments are loaded one by one for any document url, this is not covered here
+      Bullet.add_safelist(type: :n_plus_one_query, class_name: "CreditNote", association: :file_attachment)
+      Bullet.add_safelist(type: :n_plus_one_query, class_name: "ActiveStorage::Attachment", association: :blob)
+
+      create_list(:credit_note, 3, customer:, organization:).each do |credit_note|
+        credit_note.file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.pdf")), filename: "credit_note.pdf")
+      end
+    end
+
+    it "does not trigger N+1 queries for document urls" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: <<~GQL
+          query {
+            creditNotes(limit: 5) {
+              collection { id fileUrl fileUrlExpiresAt }
+            }
+          }
+        GQL
+      )
+
+      expect(result.dig("data", "creditNotes", "collection").pluck("fileUrlExpiresAt")).to all(be_present)
+    end
+  end
 end

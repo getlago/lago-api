@@ -244,6 +244,12 @@ module Clockwork
       .perform_later
   end
 
+  every(1.hour, "schedule:retry_pending_vies_checks", at: "*:35") do
+    Clock::RetryPendingViesChecksJob
+      .set(sentry: {"slug" => "lago_retry_pending_vies_checks", "cron" => "35 */1 * * *"})
+      .perform_later
+  end
+
   every(15.minutes, "schedule:retry_inbound_webhooks") do
     Clock::InboundWebhooksRetryJob
       .set(sentry: {"slug" => "lago_retry_inbound_webhooks", "cron" => "*/15 * * * *"})

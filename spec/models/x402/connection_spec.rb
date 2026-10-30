@@ -3,8 +3,9 @@
 require "rails_helper"
 
 describe X402::Connection do
-  subject(:connection) { build(:x402_connection, networks:, payout_addresses:) }
+  subject(:connection) { build(:x402_connection, organization:, networks:, payout_addresses:) }
 
+  let(:organization) { create(:organization) }
   let(:networks) { ["eip155:84532"] }
   let(:payout_addresses) { {"evm" => evm_address} }
   let(:evm_address) { "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed" }
@@ -85,6 +86,43 @@ describe X402::Connection do
       context "with mainnet networks of both families" do
         let(:networks) { ["eip155:8453", "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"] }
         let(:payout_addresses) { {"evm" => evm_address, "svm" => svm_address} }
+
+        it { expect(connection.errors.messages[:networks]).to eq(["environment_not_enabled"]) }
+
+        context "with the mainnet flag" do
+          let(:organization) { create(:organization, feature_flags: ["x402_mainnet"]) }
+
+          it { expect(connection.errors).to be_empty }
+        end
+      end
+
+      context "with the mainnet flag" do
+        let(:organization) { create(:organization, feature_flags: ["x402_mainnet"]) }
+
+        it { expect(connection.errors.messages[:networks]).to eq(["environment_not_enabled"]) }
+      end
+
+      context "when a saved mainnet connection moves to testnet networks" do
+        subject(:connection) do
+          create(:x402_connection, :mainnet, :saved_before_switch, organization:).tap { |saved| saved.networks = networks }
+        end
+
+        it { expect(connection.errors.messages[:networks]).to eq(["mainnet_not_downgradable"]) }
+
+        context "with the mainnet flag" do
+          let(:organization) { create(:organization, feature_flags: ["x402_mainnet"]) }
+
+          it { expect(connection.errors.messages[:networks]).to eq(["environment_not_enabled"]) }
+        end
+      end
+
+      context "when a saved testnet connection moves to mainnet networks" do
+        subject(:connection) do
+          create(:x402_connection, :saved_before_switch, organization:).tap { |saved| saved.networks = networks }
+        end
+
+        let(:organization) { create(:organization, feature_flags: ["x402_mainnet"]) }
+        let(:networks) { ["eip155:8453"] }
 
         it { expect(connection.errors).to be_empty }
       end
@@ -312,6 +350,38 @@ describe X402::Connection do
       let(:networks) { ["eip155:8453", "eip155:84532"] }
 
       it { expect(connection.validation_error_messages).to eq(networks: ["mixed_environments"]) }
+    end
+  end
+
+  describe "#environment_enabled?" do
+    it { expect(connection.environment_enabled?).to be(true) }
+
+    context "with mainnet networks" do
+      let(:networks) { ["eip155:8453"] }
+
+      it { expect(connection.environment_enabled?).to be(false) }
+    end
+
+    context "with the mainnet flag" do
+      let(:organization) { create(:organization, feature_flags: ["x402_mainnet"]) }
+
+      it { expect(connection.environment_enabled?).to be(false) }
+
+      context "with mainnet networks" do
+        let(:networks) { ["eip155:8453"] }
+
+        it { expect(connection.environment_enabled?).to be(true) }
+      end
+    end
+  end
+
+  describe "#mainnet?" do
+    it { expect(connection.mainnet?).to be(false) }
+
+    context "with mainnet networks" do
+      let(:networks) { ["eip155:8453"] }
+
+      it { expect(connection.mainnet?).to be(true) }
     end
   end
 

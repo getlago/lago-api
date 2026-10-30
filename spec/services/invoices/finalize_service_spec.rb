@@ -44,6 +44,62 @@ RSpec.describe Invoices::FinalizeService do
           expect(result.invoice.reload.purchase_order_number).to eq("PO-ORIGINAL")
         end
       end
+
+      context "when the draft has a non-zero total and the customer has an active wallet" do
+        let(:invoice) { create(:invoice, :draft, customer:, organization:, total_amount_cents: 850_00) }
+
+        before { create(:wallet, organization:, customer:) }
+
+        it "flags the customer wallets for refresh" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.invoice.reload).to be_finalized
+          expect(customer.reload.awaiting_wallet_refresh).to be(true)
+        end
+      end
+
+      context "when the draft has a non-zero total and the customer has no active wallet" do
+        let(:invoice) { create(:invoice, :draft, customer:, organization:, total_amount_cents: 850_00) }
+
+        it "does not flag the customer wallets for refresh" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.invoice.reload).to be_finalized
+          expect(customer.reload.awaiting_wallet_refresh).to be(false)
+        end
+      end
+
+      context "when the draft has a zero total" do
+        let(:invoice) { create(:invoice, :draft, customer:, organization:, total_amount_cents: 0) }
+
+        before { create(:wallet, organization:, customer:) }
+
+        it "does not flag the customer wallets for refresh" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.invoice.reload).to be_finalized
+          expect(customer.reload.awaiting_wallet_refresh).to be(false)
+        end
+      end
+
+      context "when the invoice is not a draft" do
+        let(:invoice) do
+          create(:invoice, status: :open, invoice_type: :credit, total_amount_cents: 850_00, customer:, organization:)
+        end
+
+        before { create(:wallet, organization:, customer:) }
+
+        it "finalizes the invoice without flagging the customer wallets for refresh" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.invoice.reload).to be_finalized
+          expect(customer.reload.awaiting_wallet_refresh).to be(false)
+        end
+      end
     end
 
     context "when invoice is already finalized" do
@@ -52,12 +108,15 @@ RSpec.describe Invoices::FinalizeService do
       end
       let(:finalized_at) { 2.days.ago }
 
+      before { create(:wallet, organization:, customer:) }
+
       it "returns success without changes" do
         result = service.call
 
         expect(result).to be_success
         expect(result.invoice).to be_finalized
         expect(result.invoice.finalized_at).to eq(finalized_at)
+        expect(customer.reload.awaiting_wallet_refresh).to be(false)
       end
     end
 

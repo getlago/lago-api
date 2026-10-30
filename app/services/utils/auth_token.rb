@@ -5,6 +5,7 @@ module Utils
     THREE_HOURS = 10800
     ALGORITHM = "HS256"
     LAGO_TOKEN_HEADER = "x-lago-token"
+    SESSION_CLAIMS = %w[login_method sso_organization_id sso_issuer].freeze
 
     def self.encode(user: nil, user_id: nil, **extra)
       return nil if (user_id || user&.id).blank?
@@ -16,6 +17,17 @@ module Utils
       return nil if token.blank?
 
       JWT.decode(token, ENV["SECRET_KEY_BASE"], true, {algorithm: ALGORITHM}).reduce({}, :merge)
+    end
+
+    def self.session_claims(decoded_token)
+      decoded_token.slice(*SESSION_CLAIMS).symbolize_keys
+    end
+
+    # NOTE: Okta and Entra ID sessions issued before the SSO claims existed cannot be tied to an
+    #       identity provider, so they are treated as expired and the user logs in again.
+    def self.sso_session_without_claims?(decoded_token)
+      Organizations::AuthenticationMethods::SSO_INTEGRATION_TYPES.key?(decoded_token["login_method"]) &&
+        decoded_token["sso_organization_id"].blank?
     end
 
     def self.renew(token:)

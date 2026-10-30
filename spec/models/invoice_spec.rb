@@ -620,6 +620,10 @@ RSpec.describe Invoice do
 
       it { expect(described_class.product_catalog).to be_empty }
     end
+
+    it "looks up the fees of each invoice rather than every catalog fee" do
+      expect(described_class.product_catalog.to_sql).to match(/EXISTS \(SELECT .+ FROM "fees" WHERE .*"fees"\."invoice_id" = "invoices"\."id"/)
+    end
   end
 
   describe "#product_catalog?" do

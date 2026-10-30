@@ -633,6 +633,32 @@ RSpec.describe Utils::ActivityLog, :capture_kafka_messages do
           end
         end
 
+        context "with a catalog invoice" do
+          let(:record) { create(:invoice, organization:, customer: create(:customer, organization:), invoice_type: :contract) }
+          let(:activity_type) { "invoice.created" }
+
+          it "serializes the v2 body its webhooks send" do
+            produce
+
+            expected = V2::InvoiceSerializer.new(record, includes: V2::InvoiceSerializer::EVENT_INCLUDES).serialize
+            expect(produced_payload[:activity_object]).to eq(JSON.parse(expected.to_json, symbolize_names: true))
+            expect(produced_payload[:activity_object]).to include(:contracts)
+            expect(produced_payload[:activity_object]).not_to include(:subscriptions, :billing_periods, :fees)
+          end
+        end
+
+        context "with a subscription invoice" do
+          let(:record) { create(:invoice, organization:, customer: create(:customer, organization:)) }
+          let(:activity_type) { "invoice.created" }
+
+          it "keeps the v1 body" do
+            produce
+
+            expect(produced_payload[:activity_object]).to include(:subscriptions, :billing_periods, :fees)
+            expect(produced_payload[:activity_object]).not_to include(:contracts)
+          end
+        end
+
         context "with a contract applied rate card" do
           let(:record) { contract_rate_card }
           let(:activity_type) { "contract_rate_card.created" }

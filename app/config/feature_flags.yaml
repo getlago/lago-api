@@ -54,6 +54,10 @@ x402_reservation_counter_disabled:
   description: "Switch off the x402 reservation counter for an organization; the gate check then applies the static per-call floor. Operated by Lago"
   owners: ["@osmarluz"]
 
+x402_mainnet:
+  description: "Run the x402 connections of an organization on mainnet networks; without it they run on testnet networks only. Operated by Lago"
+  owners: ["@osmarluz"]
+
 usage_prefilter_short_cache:
   description: "Reuse the ClickHouse pre-filter result of the current usage API for 15 seconds, bounding how often polling clients scan the events of a subscription"
   owners: ["@jdenquin"]

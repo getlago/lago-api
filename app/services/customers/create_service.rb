@@ -34,6 +34,9 @@ module Customers
         )
       end
 
+      integration_customers_validation = IntegrationCustomers::ValidateBatchService.call(integration_customers: args[:integration_customers])
+      return result.fail_with_error!(integration_customers_validation.error) unless integration_customers_validation.success?
+
       customer = billing_entity.customers.new(
         organization_id: organization.id,
         external_id: args[:external_id],
@@ -93,12 +96,13 @@ module Customers
       ActiveRecord::Base.transaction do
         customer.save!
 
-        eu_tax_code_result = Customers::EuAutoTaxesService.call(customer:, new_record: true, tax_attributes_changed: true)
-
-        if eu_tax_code_result.success?
-          args[:tax_codes] ||= []
-          args[:tax_codes] = (args[:tax_codes] + [eu_tax_code_result.tax_code]).uniq
-        end
+        eu_tax_code_result = Customers::EuAutoTaxesService.call(
+          customer:,
+          new_record: true,
+          tax_attributes_changed: true,
+          tax_codes: args[:tax_codes]
+        )
+        args[:tax_codes] = eu_tax_code_result.tax_codes if eu_tax_code_result.success?
 
         if args[:tax_codes].present?
           taxes_result = Customers::ApplyTaxesService.call(customer:, tax_codes: args[:tax_codes])

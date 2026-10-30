@@ -33,11 +33,11 @@ module PaymentRequests
         result.third_party_failure!(third_party: PROVIDER_NAME, error_code: e.code, error_message: e.msg)
       end
 
-      def update_payment_status(provider_payment_id:, status:, amount_cents: nil, metadata: {})
+      def update_payment_status(organization_id:, provider_payment_id:, status:, amount_cents: nil, metadata: {})
         payment = if metadata[:payment_type] == "one-time"
-          create_payment(provider_payment_id:, metadata:)
+          create_payment(organization_id:, provider_payment_id:, metadata:)
         else
-          Payment.find_by(provider_payment_id:)
+          Payment.find_by(provider_payment_id:, organization_id:)
         end
         return result.not_found_failure!(resource: "adyen_payment") unless payment
 
@@ -140,8 +140,9 @@ module PaymentRequests
         payment_status.to_sym == :succeeded
       end
 
-      def create_payment(provider_payment_id:, metadata:)
-        @payable = PaymentRequest.find(metadata[:lago_payable_id])
+      def create_payment(organization_id:, provider_payment_id:, metadata:)
+        @payable = PaymentRequest.find_by(id: metadata[:lago_payable_id], organization_id:)
+        return unless payable
 
         payable.increment_payment_attempts!
 

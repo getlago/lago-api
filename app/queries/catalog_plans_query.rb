@@ -3,7 +3,7 @@
 class CatalogPlansQuery < BaseQuery
   Result = BaseResult[:catalog_plans]
 
-  class Filters < BaseFilters[:product_ids, :product_filter_ids, :product_category_ids, :rate_card_ids]
+  class Filters < BaseFilters[:product_ids, :product_filter_ids, :product_category_ids, :rate_card_ids, :created_at_from, :created_at_to]
     def rate_card_scoped?
       [product_ids, product_filter_ids, product_category_ids, rate_card_ids].any?(&:present?)
     end
@@ -12,9 +12,12 @@ class CatalogPlansQuery < BaseQuery
   def call
     catalog_plans = base_scope.result
     catalog_plans = with_rate_cards(catalog_plans) if filters.rate_card_scoped?
+    catalog_plans = with_date_range(catalog_plans, :created_at)
     catalog_plans = apply_consistent_ordering(catalog_plans)
 
     result.catalog_plans = paginate(catalog_plans)
+    result
+  rescue BaseService::FailedResult
     result
   end
 

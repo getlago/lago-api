@@ -557,7 +557,7 @@ RSpec.describe Invoices::Payments::StripeService do
           )
         end
 
-        it "raises a not found failure" do
+        it "ignores the event" do
           result = described_class.call(
             :update_payment_status,
             organization_id: organization.id,
@@ -565,9 +565,29 @@ RSpec.describe Invoices::Payments::StripeService do
             stripe_payment:
           )
 
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.message).to eq("invoice_not_found")
+          expect(result).to be_success
+          expect(result.payment).to be_nil
+        end
+      end
+
+      context "when invoice belongs to another organization" do
+        let(:other_organization) { create(:organization) }
+
+        it "does not create a payment nor update the invoice" do
+          result = nil
+
+          expect do
+            result = described_class.call(
+              :update_payment_status,
+              organization_id: other_organization.id,
+              status: "succeeded",
+              stripe_payment:
+            )
+          end.not_to change(Payment, :count)
+
+          expect(result).to be_success
+          expect(result.payment).to be_nil
+          expect(invoice.reload.payment_status).not_to eq("succeeded")
         end
       end
     end

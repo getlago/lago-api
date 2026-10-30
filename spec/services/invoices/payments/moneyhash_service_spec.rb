@@ -24,6 +24,42 @@ RSpec.describe Invoices::Payments::MoneyhashService do
       moneyhash_customer
     end
 
+    context "when the invoice belongs to another organization" do
+      it "does not create a payment nor update the invoice" do
+        expect do
+          described_class.call(
+            :update_payment_status,
+            organization_id: create(:organization).id,
+            provider_payment_id: intent_processed_json.dig("data", "intent_id"),
+            status: "SUCCESSFUL",
+            metadata: intent_processed_json.dig("data", "intent", "custom_fields")
+          )
+        end.not_to change(Payment, :count)
+
+        expect(invoice.reload.payment_status).not_to eq("succeeded")
+      end
+    end
+
+    context "when the existing payment belongs to another organization" do
+      let!(:payment) do
+        create(:payment, payable: invoice, payment_provider: moneyhash_provider,
+          provider_payment_id: intent_processed_json.dig("data", "intent_id"), status: "pending")
+      end
+
+      it "does not update the payment nor the invoice" do
+        described_class.call(
+          :update_payment_status,
+          organization_id: create(:organization).id,
+          provider_payment_id: intent_processed_json.dig("data", "intent_id"),
+          status: "SUCCESSFUL",
+          metadata: intent_processed_json.dig("data", "intent", "custom_fields")
+        )
+
+        expect(payment.reload.status).to eq("pending")
+        expect(invoice.reload.payment_status).not_to eq("succeeded")
+      end
+    end
+
     it "creates a payment and updates the invoice payment status" do
       result = described_class.call(
         :update_payment_status,

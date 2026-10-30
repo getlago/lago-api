@@ -38,7 +38,7 @@ RSpec.describe Api::V2::ContractRateCardsController do
 
       it "returns a not found error" do
         subject
-        expect(response).to be_not_found_error("contract")
+        expect(response).to be_v2_not_found_error("contract")
       end
     end
 
@@ -47,7 +47,7 @@ RSpec.describe Api::V2::ContractRateCardsController do
 
       it "returns a not found error" do
         subject
-        expect(response).to be_not_found_error("rate_card")
+        expect(response).to be_v2_not_found_error("rate_card")
       end
     end
 
@@ -127,6 +127,11 @@ RSpec.describe Api::V2::ContractRateCardsController do
       # Rendered under the same collection name, from another table.
       let(:other_table_record) { create(:plan_rate_card, organization:) }
     end
+
+    it_behaves_like "a v2 list filtered on created_at", collection: :applied_rate_cards do
+      let(:filtered_path) { "/api/v2/contracts/#{contract.external_id}/applied_rate_cards" }
+      let(:create_filtered_record) { ->(created_at) { create(:contract_rate_card, organization:, contract:, created_at:) } }
+    end
   end
 
   describe "GET /api/v2/contracts/:external_id/applied_rate_cards/:code" do
@@ -163,7 +168,7 @@ RSpec.describe Api::V2::ContractRateCardsController do
 
       it "returns a not found error" do
         subject
-        expect(response).to be_not_found_error("applied_rate_card")
+        expect(response).to be_v2_not_found_error("applied_rate_card")
       end
     end
   end

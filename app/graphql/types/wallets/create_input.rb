@@ -10,20 +10,31 @@ module Types
       argument :currency, Types::CurrencyEnum, required: true
       argument :customer_id, ID, required: true
       argument :expiration_at, GraphQL::Types::ISO8601DateTime, required: false
-      argument :granted_credits, String, required: true
       argument :invoice_requires_successful_payment, Boolean, required: false
       argument :name, String, required: false
-      argument :paid_credits, String, required: true
       argument :priority, Integer, required: true
       argument :purchase_order_number, String, required: false
       argument :rate_amount, String, required: true
 
-      argument :ignore_paid_top_up_limits_on_creation, Boolean, required: false
+      # NOTE: The app no longer creates a transaction when creating a wallet. These arguments only
+      #       stay until the front-end stops sending them, then they will be removed.
+      argument :granted_credits, String,
+        required: false,
+        deprecation_reason: "The app no longer creates a transaction on wallet creation. Use createCustomerWalletTransaction."
+      argument :ignore_paid_top_up_limits_on_creation, Boolean,
+        required: false,
+        deprecation_reason: "The app no longer creates a transaction on wallet creation. Use createCustomerWalletTransaction."
+      argument :paid_credits, String,
+        required: false,
+        deprecation_reason: "The app no longer creates a transaction on wallet creation. Use createCustomerWalletTransaction."
+      argument :transaction_name, String,
+        required: false,
+        deprecation_reason: "The app no longer creates a transaction on wallet creation. Use createCustomerWalletTransaction."
+
       argument :paid_top_up_max_amount_cents, GraphQL::Types::BigInt, required: false
       argument :paid_top_up_min_amount_cents, GraphQL::Types::BigInt, required: false
 
       argument :recurring_transaction_rules, [Types::Wallets::RecurringTransactionRules::CreateInput], required: false
-      argument :transaction_name, String, required: false
 
       argument :invoice_custom_section, Types::InvoiceCustomSections::ReferenceInput, required: false
 

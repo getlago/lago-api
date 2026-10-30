@@ -135,6 +135,8 @@ module Utils
       serializer = case object
       when PlanRateCard then V2::PlanRateCardSerializer
       when ContractRateCard then V2::ContractAppliedRateCardSerializer
+      # A catalog invoice logs the body its webhooks send.
+      when Invoice then object.product_catalog? ? V2::InvoiceSerializer : V1::InvoiceSerializer
       else
         # V1-first keeps legacy records' existing shapes.
         "V1::#{name}".safe_constantize || "V2::#{name}".constantize
@@ -153,7 +155,9 @@ module Utils
           []
         end
       when :invoice
-        if object.fees.count > MAX_SERIALIZED_FEES
+        if object.product_catalog?
+          V2::InvoiceSerializer::EVENT_INCLUDES
+        elsif object.fees.count > MAX_SERIALIZED_FEES
           SERIALIZED_INCLUDED_OBJECTS[:invoice] - [:fees]
         else
           SERIALIZED_INCLUDED_OBJECTS[:invoice]

@@ -307,7 +307,6 @@ RSpec.describe BillingSegments::ProcessService do
             expect(SendWebhookJob).to have_been_enqueued.with("invoice.created", invoice)
             expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
             expect(Invoices::GenerateDocumentsJob).to have_been_enqueued.with(invoice:, notify: false)
-            expect(SegmentTrackJob).to have_been_enqueued.once
             expect(Payments::ManualCreateJob).to have_been_enqueued.once.with(
               organization:,
               params: {

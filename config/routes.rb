@@ -16,6 +16,8 @@ Rails.application.routes.draw do
   get "/health", to: "application#health"
   get "/ready", to: "application#ready"
 
+  get "/documents/:signed_id/*filename", to: "documents#show", as: :document
+
   namespace :api do
     namespace :v1 do
       resources :activity_logs, param: :activity_id, only: %i[index show]
@@ -27,7 +29,20 @@ Rails.application.routes.draw do
     # Drawn first so version-specific routes win recognition; everything else on /api/v2
     # falls through to v1.
     namespace :v2 do
-      resources :customers, param: :external_id, constraints: {external_id: /[^\/]+/}, only: %i[index show create update destroy]
+      resources :billing_entities, param: :code, constraints: {code: /[^\/]+/}, only: %i[index show create update]
+      get "/organizations", to: "organizations#show"
+      put "/organizations", to: "organizations#update"
+      resources :customers, param: :external_id, constraints: {external_id: /[^\/]+/}, only: %i[index show create update destroy] do
+        scope module: :customers do
+          post :checkout_url, to: "checkout_urls#create"
+          resources :invoices, only: :index
+          resources :payments, only: :index
+          resources :payment_requests, only: :index
+          resources :payment_methods, only: %i[index destroy] do
+            put :set_as_default, on: :member
+          end
+        end
+      end
       resources :taxes, param: :code, code: /.*/, only: %i[index show create update destroy]
       resources :products, param: :code, code: /.*/, only: %i[index show create update destroy] do
         resources :filters, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "products/filters"
@@ -57,8 +72,16 @@ Rails.application.routes.draw do
       # A contract is never destroyed — DELETE ends its lifecycle, the same
       # idiom subscriptions follow.
       delete "/contracts/:external_id", to: "contracts#terminate", constraints: {external_id: /[^\/]+/}
-      resources :invoices, only: [] do
+      resources :invoices, only: %i[index show update destroy] do
         post :void, on: :member
+        post :lose_dispute, on: :member
+        post :download_pdf, on: :member
+        post :resend_email, on: :member
+        post :retry_taxes, on: :member
+        post :retry_payment, on: :member
+        post :payment_url, on: :member, to: "invoices/payment_urls#create"
+        put :refresh, on: :member
+        put :finalize, on: :member
       end
       resources :fees, only: %i[index show update destroy]
       # The v2 log endpoints have their own route here and a matching v1 route
@@ -67,6 +90,8 @@ Rails.application.routes.draw do
       resources :activity_logs, param: :activity_id, only: %i[index show]
       resources :api_logs, param: :request_id, only: %i[index show]
       resources :security_logs, param: :log_id, only: %i[index show]
+      # An invoice route v2 does not serve is unknown on v2, not a v1 fallback.
+      match "invoices(/*path)", to: "/application#not_found", via: :all
     end
 
     namespace :v2, module: :v1 do

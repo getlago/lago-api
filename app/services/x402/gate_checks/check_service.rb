@@ -18,6 +18,7 @@ module X402
       def call
         return result.validation_failure!(errors: input_errors) if input_errors.any?
         return result.not_found_failure!(resource: "connection") unless connection
+        return result.single_validation_failure!(field: :connection_code, error_code: "environment_not_enabled") unless connection.environment_enabled?
 
         route = RouteCheckService.call(organization:, plan_code: params[:plan_code], billable_metric_code: params[:billable_metric_code])
         return result.fail_with_error!(route.error) unless route.success?

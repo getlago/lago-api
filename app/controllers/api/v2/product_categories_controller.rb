@@ -4,6 +4,7 @@ module Api
   module V2
     class ProductCategoriesController < Api::V2::BaseController
       cursor_paginated_index(ProductCategory)
+      date_range_filtered_index(:created_at)
       serializable_with ::V2::ProductCategorySerializer
 
       def create
@@ -53,7 +54,8 @@ module Api
         result = ::ProductCategoriesQuery.call(
           organization: current_organization,
           search_term: params[:search_term],
-          pagination: cursor
+          pagination: cursor,
+          filters: date_range_filters
         )
 
         if result.success?

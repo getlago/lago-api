@@ -51,7 +51,7 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
       it "returns an unprocessable entity error" do
         subject
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:error_details][:rate_phase]).to eq(["contract_locked"])
+        expect(json[:details]).to eq([{code: "contract_locked", field: "rate_phase", meta: {}}])
       end
     end
 
@@ -106,7 +106,7 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:error_details][:rate_phase]).to eq(["contract_locked"])
+        expect(json[:details]).to eq([{code: "contract_locked", field: "rate_phase", meta: {}}])
       end
     end
   end
@@ -152,7 +152,7 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:error_details][:rate_phase]).to eq(["indefinite_phase_not_deletable"])
+        expect(json[:details]).to eq([{code: "indefinite_phase_not_deletable", field: "rate_phase", meta: {}}])
         expect(contract_rate_card.rate_phases.order(:position).map(&:code)).to eq(%w[extra default])
       end
     end

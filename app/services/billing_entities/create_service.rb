@@ -38,6 +38,12 @@ module BillingEntities
         end
 
         billing_entity.save!
+
+        if params.key?(:tax_codes)
+          BillingEntities::Taxes::ManageTaxesService.call!(billing_entity:, tax_codes: params[:tax_codes])
+        end
+
+        attach_invoice_custom_sections if params.key?(:invoice_custom_section_ids) || params.key?(:invoice_custom_section_codes)
       end
 
       track_billing_entity_created
@@ -100,6 +106,19 @@ module BillingEntities
         filename: "logo",
         content_type:
       )
+    end
+
+    def attach_invoice_custom_sections
+      sections = organization.invoice_custom_sections
+      sections = if params[:invoice_custom_section_ids]
+        sections.where(id: params[:invoice_custom_section_ids])
+      else
+        sections.where(code: params[:invoice_custom_section_codes])
+      end
+
+      sections.ids.each do |invoice_custom_section_id|
+        billing_entity.applied_invoice_custom_sections.create!(invoice_custom_section_id:, organization:)
+      end
     end
 
     def handle_eu_tax_management

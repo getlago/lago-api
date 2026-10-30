@@ -232,7 +232,8 @@ RSpec.describe Customers::ViesCheckService do
       "SERVICE_UNAVAILABLE" => "service_unavailable",
       "TIMEOUT" => "timeout",
       "VAT_BLOCKED" => "blocked",
-      "INVALID_REQUESTER_INFO" => "invalid_requester"
+      "INVALID_REQUESTER_INFO" => "invalid_requester",
+      "SERVER_BUSY" => "unknown"
     }.each do |fault_string, error_type|
       context "when VIES check raises #{error_type} error" do
         it_behaves_like "a VIES check error",
@@ -250,6 +251,76 @@ RSpec.describe Customers::ViesCheckService do
         it_behaves_like "a VIES check error",
           http_status: http_status,
           error_type: "service_unavailable"
+      end
+    end
+
+    {
+      Errno::ECONNRESET => "service_unavailable",
+      Errno::ENETUNREACH => "service_unavailable",
+      Errno::ETIMEDOUT => "service_unavailable",
+      Errno::EPIPE => "service_unavailable",
+      OpenSSL::SSL::SSLError => "service_unavailable",
+      Net::OpenTimeout => "timeout",
+      Net::WriteTimeout => "timeout"
+    }.each do |network_error, error_type|
+      context "when the connection to VIES fails with #{network_error}" do
+        before do
+          stub_request(:post, "https://ec.europa.eu/taxation_customs/vies/services/checkVatService")
+            .to_raise(network_error)
+        end
+
+        it "returns an error" do
+          result = vies_check_service.call
+
+          expect(result).not_to be_success
+          expect(result.tax_code).to be_nil
+          expect(result.error.code).to eq("vies_check_failed")
+        end
+
+        context "when the pending_vies_check was never attempted" do
+          before { create(:pending_vies_check, customer:, attempts_count: 0, last_attempt_at: nil, last_error_type: nil) }
+
+          it "records the attempt so ViesCheckJob schedules a retry" do
+            result = vies_check_service.call
+
+            expect(result.pending_vies_check).to have_attributes(attempts_count: 1, last_error_type: error_type)
+            expect(result.pending_vies_check.last_attempt_at).to be_present
+          end
+        end
+
+        it "sends a vies_check webhook with error details" do
+          expect { vies_check_service.call }
+            .to have_enqueued_job(SendWebhookJob)
+            .with(
+              "customer.vies_check",
+              customer,
+              vies_check: {valid: false, valid_format: true, error: network_error.new("Exception from WebMock").message}
+            )
+        end
+
+        it "does not report the error to Sentry" do
+          allow(Sentry).to receive(:capture_exception)
+
+          vies_check_service.call
+
+          expect(Sentry).not_to have_received(:capture_exception)
+        end
+      end
+    end
+
+    context "when VIES returns a fault Valvat does not map" do
+      before do
+        stub_request(:post, "https://ec.europa.eu/taxation_customs/vies/services/checkVatService")
+          .to_return(status: 200, body: "<?xml version=\"1.0\" encoding=\"UTF-8\"?><env:Envelope xmlns:env=\"http://schemas.xmlsoap.org/soap/envelope/\"><env:Body><env:Fault><faultcode>env:Server</faultcode><faultstring>SERVER_BUSY</faultstring></env:Fault></env:Body></env:Envelope>")
+        allow(Sentry).to receive(:capture_exception)
+      end
+
+      it "reports the error to Sentry while keeping the check pending" do
+        result = vies_check_service.call
+
+        expect(result.pending_vies_check.last_error_type).to eq("unknown")
+        expect(Sentry).to have_received(:capture_exception)
+          .with(Valvat::UnknownLookupError, extra: {customer_id: customer.id, attempts_count: 1})
       end
     end
   end

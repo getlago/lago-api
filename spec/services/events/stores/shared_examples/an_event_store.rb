@@ -145,6 +145,22 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         expect(retrieved_events.map { |e| e.properties[billable_metric.field_name].to_s }).to match_array(["1", "2", "3", "4", "5"])
       end
 
+      context "with a nil grouped_by_values value" do
+        let(:grouped_by_values) { {"region" => nil} }
+
+        before do
+          create_event(timestamp: subscription_started_at + 6.days, value: 6, properties: {"region" => ""})
+          create_event(timestamp: subscription_started_at + 7.days, value: 7, properties: {"region" => " \t\n\u00A0\u3000"})
+          create_event(timestamp: subscription_started_at + 8.days, value: 8, properties: {"region" => " eu "})
+        end
+
+        it "returns the events with a missing, blank or whitespace-only value" do
+          values = event_store.events.map { |e| e.properties[billable_metric.field_name].to_s }
+
+          expect(values).to match_array(["2", "4", "6", "7"])
+        end
+      end
+
       context "when ordered is true" do
         it "returns the events ordered by timestamp" do
           retrieved_events = event_store.events(ordered: true)
@@ -344,6 +360,17 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
           it "returns the number of unique events" do
             expect(event_store.count).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 2, events_count: 2))
+          end
+
+          context "with blank and whitespace-only values" do
+            before do
+              create_event(timestamp: subscription_started_at + 6.days, value: 6, properties: {"region" => ""})
+              create_event(timestamp: subscription_started_at + 7.days, value: 7, properties: {"region" => " \t\u00A0\u3000"})
+            end
+
+            it "counts them with the missing values, as the grouped reads do" do
+              expect(event_store.count).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 4, events_count: 4))
+            end
           end
         end
       end
@@ -3189,9 +3216,9 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     end
   end
 
-  describe "grouped reads with a missing and a blank group value" do
+  describe "grouped reads with a missing, a blank and a whitespace-only group value" do
     let(:grouped_by) { %w[region] }
-    let(:expected_groups) { [{"region" => nil}, {"region" => "europe"}] }
+    let(:expected_groups) { [{"region" => nil}, {"region" => "europe"}, {"region" => " eu "}] }
     let(:numeric_property) { true }
 
     before do
@@ -3199,6 +3226,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       event_store.numeric_property = numeric_property
 
       create_event(timestamp: subscription_started_at + 6.days, value: 7, properties: {"region" => ""})
+      create_event(timestamp: subscription_started_at + 7.days, value: 5, properties: {"region" => Events::Stores::BaseStore::BLANK_VALUE_CHARS.join})
+      create_event(timestamp: subscription_started_at + 8.days, value: 4, properties: {"region" => " eu "})
     end
 
     def groups_of(results)
@@ -3208,8 +3237,9 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     if include_feature?(:grouped_sum)
       it "returns a single group from #grouped_sum" do
         expect(event_store.grouped_sum).to match_array([
-          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => nil}, value: 13, events_count: 3),
-          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => "europe"}, value: 9, events_count: 3)
+          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => nil}, value: 18, events_count: 4),
+          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => "europe"}, value: 9, events_count: 3),
+          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => " eu "}, value: 4, events_count: 1)
         ])
       end
     end
@@ -3217,8 +3247,9 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     if include_feature?(:grouped_count)
       it "returns a single group from #grouped_count" do
         expect(event_store.grouped_count).to match_array([
-          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => nil}, value: 3, events_count: 3),
-          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => "europe"}, value: 3, events_count: 3)
+          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => nil}, value: 4, events_count: 4),
+          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => "europe"}, value: 3, events_count: 3),
+          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => " eu "}, value: 1, events_count: 1)
         ])
       end
     end
@@ -3254,6 +3285,18 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         it "returns a single group from #grouped_unique_count" do
           expect(groups_of(event_store.grouped_unique_count)).to match_array(expected_groups)
         end
+
+        if include_feature?(:grouped_prorated_unique_count)
+          it "returns a single group from #grouped_prorated_unique_count" do
+            expect(groups_of(event_store.grouped_prorated_unique_count)).to match_array(expected_groups)
+          end
+        end
+      end
+    end
+
+    if include_feature?(:recurring_sum)
+      it "returns a single group from #grouped_recurring_sum" do
+        expect(groups_of(event_store.grouped_recurring_sum(watermark: Time.current + 1.hour))).to match_array(expected_groups)
       end
     end
 

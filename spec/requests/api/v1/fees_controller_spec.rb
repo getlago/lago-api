@@ -132,6 +132,18 @@ RSpec.describe Api::V1::FeesController do
         expect(response).to have_http_status(:not_found)
       end
     end
+
+    context "when payment_status is not a string" do
+      let(:update_params) { {payment_status: 1} }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error_details]).to eq({payment_status: %w[value_is_invalid]})
+        expect(fee.reload).to be_payment_pending
+      end
+    end
   end
 
   describe "DELETE /api/v1/fees/:id" do

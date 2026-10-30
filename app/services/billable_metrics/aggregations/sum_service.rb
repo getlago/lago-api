@@ -95,24 +95,10 @@ module BillableMetrics
         return unless billable_metric.recurring?
 
         if (period = delta_period(options))
-          deltas = merge_groups(event_store.grouped_recurring_sum(watermark: delta_watermark(options), period:))
+          deltas = event_store.grouped_recurring_sum(watermark: delta_watermark(options), period:)
           with_grouped_snapshots(deltas.index_by(&:groups))
         elsif options[:recurring_watermark]
-          merge_groups(event_store.grouped_recurring_sum(watermark: options[:recurring_watermark]))
-        end
-      end
-
-      # The stores return one row per blank value ("" and " "), which all read as the null group
-      def merge_groups(results)
-        results.group_by(&:groups).map do |_groups, group_results|
-          group_results.reduce do |sum, row|
-            sum.with(
-              value: sum.value + row.value,
-              snapshot_value: sum.snapshot_value + row.snapshot_value,
-              events_count: sum.events_count + row.events_count,
-              snapshot_events_count: sum.snapshot_events_count + row.snapshot_events_count
-            )
-          end
+          event_store.grouped_recurring_sum(watermark: options[:recurring_watermark])
         end
       end
 
@@ -132,7 +118,7 @@ module BillableMetrics
       # No group up to the watermark: the bucket closes at zero units rather than without a snapshot
       def empty_recurring_results(options)
         empty_results
-        if snapshot_units?(options) && !options[:precomputed_grouped_aggregations]
+        if snapshot_units?(options)
           result.aggregations.each do
             it.recurring_units = 0
             it.recurring_events_count = 0
@@ -142,9 +128,9 @@ module BillableMetrics
       end
 
       # Without snapshots, the period still bounds the delta: the bucket starts from zero.
-      # Pay in advance and current usage served by the incremental scan keep their own read.
+      # Current usage served by the incremental scan keeps its own read.
       def delta_period(options)
-        return if initial_period.nil? || options[:is_pay_in_advance]
+        return if initial_period.nil?
         return if options[:is_current_usage] && event_store.incremental_sum?
 
         initial_period
@@ -174,7 +160,7 @@ module BillableMetrics
         )
       end
 
-      # A precomputed prorated result is not bounded by the watermark, so it persists no snapshot
+      # A sum read without a watermark carries no snapshot value: it persists no snapshot
       def assign_recurring_snapshot(target_result, sum_result)
         return unless billable_metric.recurring? && sum_result.respond_to?(:snapshot_value)
 
