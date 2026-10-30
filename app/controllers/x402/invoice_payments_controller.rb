@@ -11,16 +11,19 @@ module X402
     INVOICE_REFUSALS = %w[invoice_currency_not_supported wallet_not_x402_enabled].freeze
 
     def show
-      render_challenge(invoice)
+      if payment_header.present?
+        response.headers["Allow"] = "POST"
+        method_not_allowed_error(code: "payment_requires_post")
+      else
+        render_challenge(invoice)
+      end
     end
 
     def create
-      header = request.headers[X402::Wire::V2Codec::PAYMENT_SIGNATURE]
-
-      if header.present?
-        render_payment(invoice, X402::Invoices::SettleService.call(invoice:, payment: X402::Wire::V2Codec.decode(header)))
-      else
+      if payment_header.blank?
         render_challenge(invoice)
+      else
+        render_payment(invoice, X402::Invoices::SettleService.call(invoice:, payment: X402::Wire::V2Codec.decode(payment_header)))
       end
     end
 
@@ -36,6 +39,10 @@ module X402
 
     def ensure_x402_payments_enabled
       forbidden_error(code: "feature_unavailable") unless invoice.organization.x402_payments_enabled?
+    end
+
+    def payment_header
+      request.headers[X402::Wire::V2Codec::PAYMENT_SIGNATURE]
     end
 
     def render_payment(invoice, result)

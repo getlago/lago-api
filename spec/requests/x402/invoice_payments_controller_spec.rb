@@ -283,11 +283,18 @@ describe X402::InvoicePaymentsController, :premium do
     context "with a GET" do
       subject { get("/x402/invoice_payments/#{token}", headers: {"PAYMENT-SIGNATURE" => header}) }
 
-      it "answers the receipt" do
+      it "answers 405 pointing at POST" do
         subject
 
-        expect(response).to have_http_status(:ok)
-        expect(payment_response).to eq(receipt)
+        expect(response).to have_http_status(:method_not_allowed)
+        expect(response.headers["Allow"]).to eq("POST")
+        expect(json).to eq(status: 405, error: "Method Not Allowed", code: "payment_requires_post")
+      end
+
+      it "verifies nothing" do
+        subject
+
+        expect(a_request(:post, "#{cdp_facilitator_url}/verify")).not_to have_been_made
       end
     end
 
