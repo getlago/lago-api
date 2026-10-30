@@ -2,7 +2,7 @@
 
 module X402
   class InvoicePaymentsController < ApplicationController
-    include ApiErrors
+    include Api::V1Errors
 
     before_action { NullByteGuard.sanitize_params!(request, params) }
 
