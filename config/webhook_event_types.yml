@@ -167,7 +167,7 @@ fee_tax_provider_error:
   name: fee.tax_provider_error
   description: An error was encountered while fetching taxes for a fee on a tax provider
   category: Subscriptions and Fees
-  deprecated: false
+  deprecated: true
 invoice_created:
   name: invoice.created
   description: A new invoice has been emitted
