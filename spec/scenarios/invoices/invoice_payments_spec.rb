@@ -17,7 +17,7 @@ describe "Invoice Payments Scenarios" do
 
   let(:webhooks_sent) { [] }
 
-  let(:customer) { create(:customer, organization:, net_payment_term: 2) }
+  let(:customer) { create(:customer, organization:, net_payment_term: 2, payment_term: {term_type: "net", days: 2}) }
 
   include_context "with Stripe configured for customer"
 
