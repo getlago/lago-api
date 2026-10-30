@@ -505,5 +505,32 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
         expect(alert.reload.last_processed_at).to be_within(5.seconds).of(Time.current)
       end
     end
+
+    context "with a wallet loaded before its balance moved" do
+      subject(:result) { described_class.call(alert:, alertable: stale_wallet, current_metrics: stale_wallet) }
+
+      let(:wallet) { create(:wallet, organization:, ongoing_balance_cents: 600) }
+      let(:stale_wallet) { Wallet.find(wallet.id) }
+      let(:alert) do
+        create(
+          :wallet_ongoing_balance_amount_alert,
+          organization:,
+          wallet:,
+          thresholds: [500],
+          previous_value: 400,
+          direction: "decreasing"
+        )
+      end
+
+      before do
+        stale_wallet
+        wallet.update!(ongoing_balance_cents: 400)
+      end
+
+      it "evaluates the balance read under the lock" do
+        expect { result }.not_to change(UsageMonitoring::TriggeredAlert, :count)
+        expect(alert.reload.previous_value).to eq(400)
+      end
+    end
   end
 end

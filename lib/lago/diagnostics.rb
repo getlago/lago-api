@@ -571,6 +571,7 @@ module Lago
           setting("API logs topic", "LAGO_KAFKA_API_LOGS_TOPIC")
           setting("Activity logs topic", "LAGO_KAFKA_ACTIVITY_LOGS_TOPIC")
           setting("Security logs topic", "LAGO_KAFKA_SECURITY_LOGS_TOPIC")
+          setting("Wallet alerts topic", "LAGO_KAFKA_WALLET_ALERTS_TOPIC")
         end
       end
     end
