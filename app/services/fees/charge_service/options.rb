@@ -2,7 +2,7 @@
 
 module Fees
   class ChargeService
-    CONTEXTS = [nil, :current_usage, :invoice_preview, :recurring, :finalize].freeze
+    CONTEXTS = [nil, :advance_renewal, :current_usage, :invoice_preview, :recurring, :finalize].freeze
     # NOTE: Accepted for callers that still use invoice-level contexts with charge fee calculation.
     DEPRECATED_CONTEXTS = [:refresh, :draft].freeze
 
@@ -43,6 +43,10 @@ module Fees
 
       def recurring?
         context == :recurring
+      end
+
+      def advance_renewal?
+        context == :advance_renewal
       end
 
       def finalize?

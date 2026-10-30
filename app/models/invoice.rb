@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Invoice < ApplicationRecord
+  include PreloadableAggregations
+
   self.ignored_columns += [:negative_amount_cents] # TODO: remove when negative_amount_cents is removed from the database
 
   include AASM
@@ -8,6 +10,7 @@ class Invoice < ApplicationRecord
   include Sequenced
   include RansackUuidSearch
   include HasPurchaseOrderNumber
+  include ExpiringDocumentUrl
 
   CREDIT_NOTES_MIN_VERSION = 2
   COUPON_BEFORE_VAT_VERSION = 3
@@ -24,6 +27,7 @@ class Invoice < ApplicationRecord
   belongs_to :x402_connection, class_name: "X402::Connection", optional: true
 
   has_many :fees
+  has_many :contract_fees, -> { where.not(contract_id: nil) }, class_name: "Fee"
   has_many :credits
   has_many :wallet_transactions
   has_many :invoice_subscriptions
@@ -66,6 +70,8 @@ class Invoice < ApplicationRecord
   has_one_attached :file
   has_one_attached :xml_file
 
+  expiring_document_urls :file, :xml_file
+
   monetize :coupons_amount_cents,
     :credit_notes_amount_cents,
     :fees_amount_cents,
@@ -93,7 +99,7 @@ class Invoice < ApplicationRecord
     allow_nil: true,
     with_model_currency: :currency
 
-  INVOICE_TYPES = %i[subscription add_on credit one_off advance_charges progressive_billing].freeze
+  INVOICE_TYPES = %i[subscription add_on credit one_off advance_charges progressive_billing contract].freeze
   PAYMENT_STATUS = %i[pending succeeded failed].freeze
   TAX_STATUSES = {
     pending: "pending",
@@ -167,6 +173,13 @@ class Invoice < ApplicationRecord
       .distinct
   }
 
+  # A correlated EXISTS, so that a list only probes the fees of the invoices it walks: an
+  # `IN` under the `OR` would read the catalog fees of every organization.
+  scope :product_catalog, -> {
+    where(invoice_type: :contract)
+      .or(where(Fee.where(Fee.arel_table[:invoice_id].eq(arel_table[:id])).where.not(contract_id: nil).arel.exists))
+  }
+
   scope :self_billed, -> { where(self_billed: true) }
   scope :non_self_billed, -> { where(self_billed: false) }
 
@@ -176,7 +189,30 @@ class Invoice < ApplicationRecord
   validates :payment_dispute_lost_at, absence: true, unless: :payment_dispute_losable?
   validate :validate_x402_connection_organization, if: :x402_connection_id_changed?
 
-  attr_writer :precalculated_offset_amount_cents
+  preloadable_aggregation :offset_amount_cents do |ids|
+    CreditNote.where(invoice_id: ids).finalized.group(:invoice_id).sum(:offset_amount_cents)
+  end
+
+  preloadable_aggregation :refunded_amount_cents do |ids|
+    CreditNote.where(invoice_id: ids).group(:invoice_id).sum(:refund_amount_cents)
+  end
+
+  # For each requested id, check existence without re-scanning the invoices
+  # table: unnest feeds the ids straight into a correlated EXISTS that stops at
+  # the first non-voided credit note.
+  preloadable_aggregation :has_non_voided_credit_notes?, default: false do |ids|
+    sql = sanitize_sql_array([<<~SQL.squish, ids, CreditNote.credit_statuses[:voided]])
+      SELECT invoice_ids.id
+      FROM unnest(ARRAY[?]::uuid[]) AS invoice_ids(id)
+      WHERE EXISTS (
+        SELECT 1 FROM credit_notes
+        WHERE credit_notes.invoice_id = invoice_ids.id AND credit_notes.credit_status <> ?
+      )
+    SQL
+    connection.select_values(sql).index_with(true)
+  end
+
+  preloadable_associated_aggregation :fees, :credited_amount_cents
 
   def self.ransackable_attributes(_ = nil)
     %w[id number]
@@ -184,30 +220,6 @@ class Invoice < ApplicationRecord
 
   def self.ransackable_associations(_ = nil)
     %w[customer]
-  end
-
-  # Batch-loads offset_amount_cents for a collection of invoices in a single query,
-  # caching the result on each instance to avoid N+1 queries during serialization.
-  # Wrapped in :direct — invoices.map(&:id) fires the eager-load, which exceeds
-  # RDS Proxy's 16 KB pin threshold under the index endpoints' .includes(...) chain.
-  def self.preload_offset_amounts(invoices)
-    return unless invoices
-
-    ApplicationRecord.connected_to(role: :direct) do
-      invoice_ids = invoices.map(&:id).compact
-
-      offset_amounts = CreditNote
-        .where(invoice_id: invoice_ids)
-        .finalized
-        .group(:invoice_id)
-        .sum(:offset_amount_cents)
-
-      invoices.each do |invoice|
-        invoice.precalculated_offset_amount_cents = (offset_amounts[invoice.id] || 0)
-      end
-
-      invoices
-    end
   end
 
   def payment_invoices
@@ -220,28 +232,6 @@ class Invoice < ApplicationRecord
 
   def invisible?
     INVISIBLE_STATUS.key?(status.to_sym)
-  end
-
-  def file_url
-    return if file.blank?
-
-    blob_path = Rails.application.routes.url_helpers.rails_blob_path(
-      file,
-      host: "void"
-    )
-
-    File.join(ENV["LAGO_API_URL"], blob_path)
-  end
-
-  def xml_url
-    return if xml_file.blank?
-
-    blob_path = Rails.application.routes.url_helpers.rails_blob_path(
-      xml_file,
-      host: "void"
-    )
-
-    File.join(ENV["LAGO_API_URL"], blob_path)
   end
 
   def web_url
@@ -413,12 +403,6 @@ class Invoice < ApplicationRecord
     }
   end
 
-  def offset_amount_cents
-    return @precalculated_offset_amount_cents if instance_variable_defined?(:@precalculated_offset_amount_cents)
-
-    credit_notes.finalized.sum(:offset_amount_cents)
-  end
-
   def total_due_amount_cents
     return 0 if voided?
     total_amount_cents - total_paid_amount_cents - offset_amount_cents
@@ -458,8 +442,7 @@ class Invoice < ApplicationRecord
     return 0 if version_number < CREDIT_NOTES_MIN_VERSION || draft?
     return 0 if !payment_succeeded? && total_paid_amount_cents == total_amount_cents
 
-    already_refunded_cents = credit_notes.sum("refund_amount_cents")
-    remaining_paid_cents = total_paid_amount_cents - already_refunded_cents
+    remaining_paid_cents = total_paid_amount_cents - refunded_amount_cents
 
     # when invoice is for pre paid credits we can issue a credit note only as refund
     # so creditable_amount_cents is always 0 but on that case we should allow to issue a credit note
@@ -496,6 +479,14 @@ class Invoice < ApplicationRecord
     finalized? || voided?
   end
 
+  def product_catalog?
+    return true if contract?
+    return contract_fees.any? if contract_fees.loaded?
+    return fees.any? { it.contract_id.present? } if fees.loaded?
+
+    contract_fees.exists?
+  end
+
   def subscription_gated?
     open? && subscriptions.any?(&:gated?)
   end
@@ -505,7 +496,7 @@ class Invoice < ApplicationRecord
   end
 
   def voidable?
-    if payment_dispute_lost_at? || total_paid_amount_cents > 0 || credit_notes.where.not(credit_status: :voided).any?
+    if payment_dispute_lost_at? || total_paid_amount_cents > 0 || has_non_voided_credit_notes?
       return false
     end
 
@@ -560,7 +551,9 @@ class Invoice < ApplicationRecord
   end
 
   def should_sync_invoice?
-    !self_billed && finalized? && customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_invoices }
+    !self_billed && finalized? &&
+      customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_invoices } &&
+      !product_catalog?
   end
 
   def should_sync_hubspot_invoice?
@@ -626,6 +619,10 @@ class Invoice < ApplicationRecord
   end
 
   private
+
+  def document_url_anchor_date
+    payment_due_date || issuing_date
+  end
 
   def fees_available_to_credit_amount_cents
     booked_tax = booked_tax_by_fee

@@ -43,7 +43,7 @@ RSpec.describe "An advance usage fee waits for the end of its contract period" d
       perform_enqueued_jobs { BillingSegments::ScheduleJob.perform_now(customer.id) }
     end
 
-    segment = BillingSegment.where(customer:).sole
+    segment = BillingSegment.where(customer:, started_at: period_started_at).sole
     {active_period:, segment:, invoice: segment.invoice}
   end
 

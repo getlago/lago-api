@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class SendHttpWebhookJob < ApplicationJob
-  queue_as { SendWebhookJob.queue_for }
+  queue_as { SendWebhookJob.queue_for(arguments.first&.webhook_type) }
 
   # Retry in case of in transactional webhooks, discard after 3 retries
   retry_on ActiveJob::DeserializationError, wait: :polynomially_longer, attempts: 3 do |job, error|

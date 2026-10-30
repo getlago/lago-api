@@ -6,6 +6,8 @@ module Events
       class ReEnrichSubscriptionEventsService < BaseService
         Result = BaseResult[:events_count, :batch_count]
 
+        SNAPSHOT_REINVALIDATION_DELAY = 15.minutes
+
         def initialize(subscription:, codes: [], reprocess: true, batch_size: 1000, sleep_seconds: 0.5)
           @subscription = subscription
           @codes = codes
@@ -32,6 +34,10 @@ module Events
 
             sleep(sleep_seconds)
           end
+
+          RecurringAggregationSnapshots::InvalidateService.call!(subscription:, codes:)
+          # Messages are enriched asynchronously: a snapshot persisted before they land would count them twice
+          RecurringAggregationSnapshots::InvalidateJob.set(wait: SNAPSHOT_REINVALIDATION_DELAY).perform_later(subscription, codes)
 
           result.events_count = events_count
           result.batch_count = batches

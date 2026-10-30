@@ -5614,6 +5614,18 @@
               "deprecationReason": null
             },
             {
+              "name": "splitFiltersCount",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "Int",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "subscriptionId",
               "description": null,
               "args": [],
@@ -5743,6 +5755,18 @@
             {
               "name": "preciseAmountCents",
               "description": "Null with the units basis",
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "Float",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "splitChargeUnits",
+              "description": "Units of the split charge over all its filters. Null without a split charge",
               "args": [],
               "type": {
                 "kind": "SCALAR",
@@ -6008,6 +6032,18 @@
                   "name": "Int",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "splitChargeUnits",
+              "description": "Units of the split charge over all its filters. Null without a split charge",
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "Float",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null
@@ -11103,6 +11139,22 @@
                 "ofType": {
                   "kind": "SCALAR",
                   "name": "ISO8601Date",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "Contract",
                   "ofType": null
                 }
               },
@@ -21489,6 +21541,18 @@
               "deprecationReason": null
             },
             {
+              "name": "fileUrlExpiresAt",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "id",
               "description": null,
               "args": [],
@@ -21823,6 +21887,18 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "xmlUrlExpiresAt",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -23859,6 +23935,22 @@
                 "ofType": {
                   "kind": "ENUM",
                   "name": "DocumentNumberingEnum",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "documentUrlExpirationDays",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Int",
                   "ofType": null
                 }
               },
@@ -34245,6 +34337,12 @@
               "deprecationReason": null
             },
             {
+              "name": "CONTRACTS",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "WALLETS_AND_CREDITS",
               "description": null,
               "isDeprecated": false,
@@ -34326,6 +34424,12 @@
             },
             {
               "name": "add_on_deleted",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "alert_resolved",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -35133,6 +35237,12 @@
               "deprecationReason": null
             },
             {
+              "name": "persisted_recurring_values",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "skip_credit_invoice_auto_payment_delay",
               "description": null,
               "isDeprecated": false,
@@ -35157,6 +35267,12 @@
               "deprecationReason": null
             },
             {
+              "name": "x402_mainnet",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "usage_prefilter_short_cache",
               "description": null,
               "isDeprecated": false,
@@ -35176,6 +35292,12 @@
             },
             {
               "name": "sso_cross_organization_sessions",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "recurring_aggregation_snapshots",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -41534,6 +41656,18 @@
               "deprecationReason": null
             },
             {
+              "name": "fileUrlExpiresAt",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "id",
               "description": null,
               "args": [],
@@ -42240,6 +42374,18 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "xmlUrlExpiresAt",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -43569,6 +43715,12 @@
             },
             {
               "name": "progressive_billing",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -53687,6 +53839,18 @@
               "deprecationReason": null
             },
             {
+              "name": "signedDocumentUrlExpiresAt",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "status",
               "description": null,
               "args": [],
@@ -55263,6 +55427,18 @@
               "deprecationReason": null
             },
             {
+              "name": "fileUrlExpiresAt",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "id",
               "description": null,
               "args": [],
@@ -55333,6 +55509,18 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "xmlUrlExpiresAt",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -59481,6 +59669,22 @@
           "name": "PlanAppliedRateCard",
           "description": "Rate card applied to a plan",
           "fields": [
+            {
+              "name": "catalogPlan",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "CatalogPlan",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
             {
               "name": "createdAt",
               "description": null,
@@ -64675,6 +64879,18 @@
                   "deprecationReason": null
                 },
                 {
+                  "name": "splitFiltersOffset",
+                  "description": "Index of the first filter of the split charge to list",
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Int",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
                   "name": "limit",
                   "description": null,
                   "type": {
@@ -65113,6 +65329,35 @@
               "type": {
                 "kind": "OBJECT",
                 "name": "Contract",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contractAppliedRateCard",
+              "description": "Query a single rate card applied to a contract",
+              "args": [
+                {
+                  "name": "id",
+                  "description": "Uniq ID of the applied rate card",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "OBJECT",
+                "name": "ContractAppliedRateCard",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -70498,6 +70743,35 @@
               "deprecationReason": null
             },
             {
+              "name": "planAppliedRateCard",
+              "description": "Query a single rate card applied to a plan",
+              "args": [
+                {
+                  "name": "id",
+                  "description": "Uniq ID of the applied rate card",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "OBJECT",
+                "name": "PlanAppliedRateCard",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "planAppliedRateCards",
               "description": "Query rate cards applied to a plan",
               "args": [
@@ -71515,6 +71789,30 @@
                   "type": {
                     "kind": "ENUM",
                     "name": "CurrencyEnum",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "excludePricedOnContractId",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "ID",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "excludePricedOnPlanId",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "ID",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -87806,6 +88104,18 @@
               "type": {
                 "kind": "INPUT_OBJECT",
                 "name": "OrganizationBillingConfigurationInput",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "documentUrlExpirationDays",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Int",
                 "ofType": null
               },
               "defaultValue": null,

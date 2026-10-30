@@ -3,7 +3,13 @@
 require Rails.root.join("lib/lago_http_client/lago_http_client")
 
 class SendWebhookJob < ApplicationJob
+  # Raised for a webhook type this process does not know, for example on a worker that still runs the previous
+  # release during a rolling deploy. Retrying gives a worker with the new release time to take the job.
+  class UnknownWebhookTypeError < StandardError; end
+
   queue_as { self.class.queue_for(arguments.first) }
+
+  retry_on UnknownWebhookTypeError, wait: :polynomially_longer, attempts: 5
 
   retry_on ActiveJob::DeserializationError, wait: :polynomially_longer, attempts: 6
 
@@ -14,6 +20,7 @@ class SendWebhookJob < ApplicationJob
     "add_on.created" => Webhooks::AddOns::CreatedService,
     "add_on.updated" => Webhooks::AddOns::UpdatedService,
     "add_on.deleted" => Webhooks::AddOns::DeletedService,
+    "alert.resolved" => Webhooks::UsageMonitoring::AlertResolvedService,
     "alert.triggered" => Webhooks::UsageMonitoring::AlertTriggeredService,
     "billable_metric.created" => Webhooks::BillableMetrics::CreatedService,
     "billable_metric.updated" => Webhooks::BillableMetrics::UpdatedService,
@@ -72,6 +79,32 @@ class SendWebhookJob < ApplicationJob
     "plan.created" => Webhooks::Plans::CreatedService,
     "plan.deleted" => Webhooks::Plans::DeletedService,
     "plan.updated" => Webhooks::Plans::UpdatedService,
+    "product_category.created" => Webhooks::ProductCategories::CreatedService,
+    "product_category.updated" => Webhooks::ProductCategories::UpdatedService,
+    "product_category.deleted" => Webhooks::ProductCategories::DeletedService,
+    "product.created" => Webhooks::Products::CreatedService,
+    "product.updated" => Webhooks::Products::UpdatedService,
+    "product.deleted" => Webhooks::Products::DeletedService,
+    "product_filter.created" => Webhooks::ProductFilters::CreatedService,
+    "product_filter.updated" => Webhooks::ProductFilters::UpdatedService,
+    "product_filter.deleted" => Webhooks::ProductFilters::DeletedService,
+    "rate_card.created" => Webhooks::RateCards::CreatedService,
+    "rate_card.updated" => Webhooks::RateCards::UpdatedService,
+    "rate_card.deleted" => Webhooks::RateCards::DeletedService,
+    "rate_card_rate.created" => Webhooks::RateCardRates::CreatedService,
+    "rate_card_rate.updated" => Webhooks::RateCardRates::UpdatedService,
+    "rate_card_rate.deleted" => Webhooks::RateCardRates::DeletedService,
+    "plan_rate_card.created" => Webhooks::PlanRateCards::CreatedService,
+    "plan_rate_card.updated" => Webhooks::PlanRateCards::UpdatedService,
+    "plan_rate_card.deleted" => Webhooks::PlanRateCards::DeletedService,
+    "contract_rate_card.created" => Webhooks::ContractRateCards::CreatedService,
+    "contract_rate_card.updated" => Webhooks::ContractRateCards::UpdatedService,
+    "contract_rate_card.deleted" => Webhooks::ContractRateCards::DeletedService,
+    "contract.created" => Webhooks::Contracts::CreatedService,
+    "contract.updated" => Webhooks::Contracts::UpdatedService,
+    "contract.started" => Webhooks::Contracts::StartedService,
+    "contract.terminated" => Webhooks::Contracts::TerminatedService,
+    "contract.canceled" => Webhooks::Contracts::CanceledService,
     "feature.created" => Webhooks::Features::CreatedService,
     "feature.updated" => Webhooks::Features::UpdatedService,
     "feature.deleted" => Webhooks::Features::DeletedService,
@@ -95,10 +128,17 @@ class SendWebhookJob < ApplicationJob
     "wallet_transaction.payment_failure" => Webhooks::PaymentProviders::WalletTransactionPaymentFailureService
   }.freeze
 
-  HIGH_PRIORITY_WEBHOOK_TYPES = %w[alert.triggered].freeze
+  HIGH_PRIORITY_WEBHOOK_TYPES = %w[
+    alert.triggered
+    alert.resolved
+    subscription.usage_threshold_reached
+    wallet.depleted_ongoing_balance
+  ].freeze
 
   def self.queue_for(webhook_type = nil)
-    if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_WEBHOOK"])
+    if HIGH_PRIORITY_WEBHOOK_TYPES.include?(webhook_type) && ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_WEBHOOK_ALERT"])
+      :webhook_alert_worker
+    elsif ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_WEBHOOK"])
       HIGH_PRIORITY_WEBHOOK_TYPES.include?(webhook_type) ? :webhook_worker_high_priority : :webhook_worker
     else
       :webhook
@@ -120,10 +160,10 @@ class SendWebhookJob < ApplicationJob
   end
 
   def perform(webhook_type, object, options = {}, webhook_id = nil)
-    # Producers keep enqueuing the former names for one release, so workers of the previous release can run them.
-    # TODO: Next release, enqueue the current names, remove this mapping and rewrite stored event_types again.
+    # Jobs enqueued by the previous release still use the former names.
+    # TODO: Remove after one release.
     webhook_type = WebhookEndpoint::RENAMED_EVENT_TYPES.fetch(webhook_type, webhook_type)
-    raise(NotImplementedError) unless WEBHOOK_SERVICES.include?(webhook_type)
+    raise(UnknownWebhookTypeError, webhook_type.to_s) unless WEBHOOK_SERVICES.include?(webhook_type)
 
     # NOTE: This condition is only temporary to handle enqueued jobs
     # TODO: Remove this condition after queued jobs are processed

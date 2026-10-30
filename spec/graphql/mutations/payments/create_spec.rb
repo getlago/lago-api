@@ -20,13 +20,15 @@ RSpec.describe Mutations::Payments::Create do
       invoiceId: invoice.id,
       reference: "ref1",
       amountCents: 100,
-      createdAt: 1.day.ago.iso8601
+      createdAt: paid_at.iso8601
     }
   end
+  let(:paid_at) { 1.day.ago.change(usec: 0) }
   let(:mutation) do
     <<-GQL
       mutation($input: CreatePaymentInput!) {
         createPayment(input: $input) {
+          createdAt
           id
           payablePaymentStatus
           paymentType
@@ -47,6 +49,7 @@ RSpec.describe Mutations::Payments::Create do
     it "creates a manual payment" do
       expect(result["data"]).to include(
         "createPayment" => {
+          "createdAt" => paid_at.iso8601,
           "id" => anything,
           "payablePaymentStatus" => "succeeded",
           "paymentType" => "manual"

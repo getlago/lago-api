@@ -1,11 +1,20 @@
 # frozen_string_literal: true
 
 class LagoApiSchema < GraphQL::Schema
+  # The ActionCable transport delivers a subscription's final update (unsubscribe with a value) but keeps the
+  # subscription registered. It is removed here once delivered, as GraphQL::Subscriptions#execute does.
+  class ActionCableSubscriptions < GraphQL::Subscriptions::ActionCableSubscriptions
+    def deliver(subscription_id, result)
+      super
+      delete_subscription(subscription_id) if result.context.namespace(:subscriptions)[:final_update]
+    end
+  end
+
   mutation(Types::MutationType)
   query(Types::QueryType)
   subscription(Types::GraphqlSubscriptionType)
 
-  use GraphQL::Subscriptions::ActionCableSubscriptions
+  use ActionCableSubscriptions
 
   # For batch-loading (see https://graphql-ruby.org/dataloader/overview.html)
   use GraphQL::Dataloader

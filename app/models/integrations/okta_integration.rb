@@ -15,7 +15,7 @@ module Integrations
     HOST_FORMAT = /\A[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?\z/i
 
     def host
-      get_from_settings("host") || "#{organization_name.downcase}.okta.com"
+      get_from_settings("host").presence || "#{organization_name.downcase}.okta.com"
     end
 
     # The Okta org that answers the token request built from `host`. A session it issues can

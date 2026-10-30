@@ -20,6 +20,7 @@ module Integrations
           return result unless integration
           return result unless integration.sync_credit_notes
           return result unless credit_note.finalized?
+          return result if invoice.product_catalog?
           return result if payload.integration_credit_note
 
           throttle!(:anrok, :netsuite, :xero)
@@ -46,7 +47,7 @@ module Integrations
 
           result
         rescue LagoHttpClient::HttpError => e
-          raise RequestLimitError(e) if request_limit_error?(e)
+          raise RequestLimitError.new(e) if request_limit_error?(e)
 
           code = code(e)
           message = message(e)

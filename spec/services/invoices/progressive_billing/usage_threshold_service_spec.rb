@@ -291,20 +291,6 @@ RSpec.describe Invoices::ProgressiveBilling::UsageThresholdService, transaction:
       end
     end
 
-    it "calls SegmentTrackJob" do
-      invoice = create_service.call.invoice
-
-      expect(SegmentTrackJob).to have_been_enqueued.with(
-        membership_id: CurrentContext.membership,
-        event: "invoice_created",
-        properties: {
-          organization_id: organization.id,
-          invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type
-        }
-      )
-    end
-
     it "creates a payment" do
       allow(Invoices::Payments::CreateService).to receive(:call_async)
 

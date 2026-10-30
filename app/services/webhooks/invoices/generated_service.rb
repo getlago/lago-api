@@ -3,14 +3,12 @@
 module Webhooks
   module Invoices
     class GeneratedService < Webhooks::BaseService
+      include Webhooks::Invoices::ProductCatalogPayload
+
       private
 
-      def object_serializer
-        ::V1::InvoiceSerializer.new(
-          object,
-          root_name: "invoice",
-          includes: %i[customer]
-        )
+      def v1_includes
+        %i[customer]
       end
 
       def webhook_type

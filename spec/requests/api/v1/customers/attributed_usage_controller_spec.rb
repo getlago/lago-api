@@ -69,7 +69,8 @@ RSpec.describe Api::V1::Customers::AttributedUsageController, clickhouse: {clean
         basis: "units",
         from_datetime: "2026-09-01T00:00:00Z",
         to_datetime: "2026-09-30T23:59:59Z",
-        currency: "EUR"
+        currency: "EUR",
+        split_filters_count: nil
       )
       expect(json[:attributed_usage][:rows].map { it.slice(:value, :rank, :events_count, :amount_cents) }).to eq(
         [
@@ -154,6 +155,67 @@ RSpec.describe Api::V1::Customers::AttributedUsageController, clickhouse: {clean
             {lago_charge_filter_id: nil, charge_filter_values: nil, charge_filter_invoice_display_name: nil, units: "500.0"}
           ]
         )
+        expect(json[:attributed_usage][:split_filters_count]).to eq(1)
+        expect(json[:attributed_usage][:rows].find { it[:value] == "eng" }[:split_charge_units]).to eq("1500.0") # opus 1000 + default 500
+      end
+
+      context "with an offset past the last filter" do
+        let(:params) do
+          {
+            external_subscription_id: subscription.external_id,
+            group_by: "team",
+            charge_codes: ["tokens"],
+            split_charge_code: "tokens",
+            split_filters_offset: "1"
+          }
+        end
+
+        it "returns the default price only" do
+          subject
+
+          cells = json[:attributed_usage][:rows].find { it[:value] == "eng" }[:charges_usage]
+          expect(cells.map { it.slice(:lago_charge_filter_id, :units) }).to eq([{lago_charge_filter_id: nil, units: "500.0"}])
+        end
+      end
+
+      context "with an invalid offset" do
+        let(:params) do
+          {external_subscription_id: subscription.external_id, group_by: "team", split_charge_code: "tokens", split_filters_offset: "first"}
+        end
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq(split_filters_offset: ["value_is_out_of_range"])
+        end
+      end
+
+      context "with an offset above the maximum" do
+        let(:params) do
+          {external_subscription_id: subscription.external_id, group_by: "team", split_charge_code: "tokens", split_filters_offset: "100000000000000000000"}
+        end
+
+        it "returns a validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq(split_filters_offset: ["value_is_out_of_range"])
+        end
+      end
+
+      context "with a zero-padded offset" do
+        let(:params) do
+          {external_subscription_id: subscription.external_id, group_by: "team", split_charge_code: "tokens", split_filters_offset: "08"}
+        end
+
+        it "reads it as a decimal number" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          cells = json[:attributed_usage][:rows].find { it[:value] == "eng" }[:charges_usage]
+          expect(cells.map { it.slice(:lago_charge_filter_id, :units) }).to include({lago_charge_filter_id: nil, units: "500.0"})
+        end
       end
     end
 
@@ -201,20 +263,146 @@ RSpec.describe Api::V1::Customers::AttributedUsageController, clickhouse: {clean
       end
     end
 
-    context "with invalid parameters" do
+    context "with a search" do
+      let(:params) { {external_subscription_id: subscription.external_id, group_by: "team", search_term: "a", per_page: 1} }
+
+      it "pages through the matching values" do
+        subject
+
+        expect(json[:attributed_usage][:rows].map { it.slice(:value, :rank) }).to eq([{value: "data", rank: 2}])
+        expect(json[:meta]).to eq(current_page: 1, next_page: nil, prev_page: nil, total_pages: 1, total_count: 1)
+      end
+    end
+
+    context "with page=0, per_page above its own maximum and an invalid datetime" do
       let(:params) do
         {external_subscription_id: subscription.external_id, group_by: "team", from_datetime: "yesterday", page: 0, per_page: 101}
       end
+
+      it "returns the per_page error only" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(per_page: ["value_is_out_of_range"])
+      end
+    end
+
+    context "with an invalid datetime" do
+      let(:params) { {external_subscription_id: subscription.external_id, group_by: "team", from_datetime: "yesterday"} }
 
       it "returns a validation error" do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details]).to eq(
-          from_datetime: ["invalid_date"],
-          page: ["value_is_out_of_range"],
-          per_page: ["value_is_out_of_range"]
-        )
+        expect(json[:error_details]).to eq(from_datetime: ["invalid_date"])
+      end
+    end
+
+    context "with per_page at its own maximum" do
+      let(:params) { {external_subscription_id: subscription.external_id, group_by: "team", per_page: 100} }
+
+      it "returns the attributed usage" do
+        subject
+
+        expect(response).to have_http_status(:success)
+      end
+    end
+
+    context "with per_page above its own maximum" do
+      let(:params) { {external_subscription_id: subscription.external_id, group_by: "team", per_page: 101} }
+
+      it "returns a validation error on per_page" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(per_page: ["value_is_out_of_range"])
+      end
+    end
+
+    context "with per_page above its own maximum but within the API page size limit" do
+      let(:params) { {external_subscription_id: subscription.external_id, group_by: "team", per_page: 150} }
+
+      it "returns a validation error on per_page" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(per_page: ["value_is_out_of_range"])
+      end
+    end
+
+    context "with page=0 and a per_page that is not an integer" do
+      let(:params) { {external_subscription_id: subscription.external_id, group_by: "team", page: 0, per_page: "abc"} }
+
+      it "returns the first page with the default page size" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:meta]).to include(current_page: 1, prev_page: nil)
+      end
+    end
+
+    context "with an organization page size limit below its own maximum" do
+      let(:organization) do
+        create(:organization, clickhouse_events_store: true, feature_flags: ["account_tree"], pagination_max_page_size: 50)
+      end
+
+      context "with per_page at the organization limit" do
+        let(:params) { {external_subscription_id: subscription.external_id, group_by: "team", per_page: 50} }
+
+        it "returns the attributed usage" do
+          subject
+
+          expect(response).to have_http_status(:success)
+        end
+      end
+
+      context "with per_page above the organization limit" do
+        let(:params) { {external_subscription_id: subscription.external_id, group_by: "team", per_page: 51} }
+
+        it "returns a validation error on per_page" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq(per_page: ["value_is_out_of_range"])
+        end
+      end
+    end
+
+    context "with an organization page size limit below the default per_page" do
+      let(:organization) do
+        create(:organization, clickhouse_events_store: true, feature_flags: ["account_tree"], pagination_max_page_size: 10)
+      end
+
+      it "returns the attributed usage" do
+        subject
+
+        expect(response).to have_http_status(:success)
+      end
+    end
+
+    context "with an organization page size limit above its own maximum" do
+      let(:organization) do
+        create(:organization, clickhouse_events_store: true, feature_flags: ["account_tree"], pagination_max_page_size: 1000)
+      end
+      let(:params) { {external_subscription_id: subscription.external_id, group_by: "team", per_page: 101} }
+
+      it "returns a validation error on per_page" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(per_page: ["value_is_out_of_range"])
+      end
+    end
+
+    context "with an unknown customer and per_page above its own maximum" do
+      let(:customer_external_id) { "unknown" }
+      let(:params) { {external_subscription_id: subscription.external_id, group_by: "team", per_page: 101} }
+
+      it "returns a validation error on per_page" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(per_page: ["value_is_out_of_range"])
       end
     end
 
@@ -294,6 +482,18 @@ RSpec.describe Api::V1::Customers::AttributedUsageController, clickhouse: {clean
 
         expect(response).to have_http_status(:forbidden)
         expect(json[:code]).to eq("feature_unavailable")
+      end
+    end
+
+    context "when the feature flag is disabled and per_page is above its own maximum" do
+      let(:organization) { create(:organization, clickhouse_events_store: true) }
+      let(:params) { {external_subscription_id: subscription.external_id, group_by: "team", per_page: 101} }
+
+      it "returns a validation error on per_page" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(per_page: ["value_is_out_of_range"])
       end
     end
   end

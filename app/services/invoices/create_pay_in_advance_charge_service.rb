@@ -13,6 +13,13 @@ module Invoices
     end
 
     def call
+      with_advance_state_lock { create_invoice }
+      result
+    end
+
+    private
+
+    def create_invoice
       fee_result = generate_fees
       fees = fee_result.fees
       return result if fees.none?
@@ -22,6 +29,7 @@ module Invoices
       ApplicationRecord.transaction do
         create_generating_invoice
         fees.each { |f| f.update!(invoice:) }
+        fee_result.cached_aggregations.each(&:save!)
 
         invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
         invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
@@ -57,7 +65,6 @@ module Invoices
       end
 
       unless invoice.closed?
-        Utils::SegmentTrack.invoice_created(invoice)
         deliver_webhooks
         Utils::ActivityLog.produce(invoice, "invoice.created")
         GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?)
@@ -80,16 +87,26 @@ module Invoices
       result.fail_with_error!(e)
     end
 
-    private
-
     attr_reader :timestamp, :invoice, :metered_item, :billing_context
 
     delegate :event, to: :metered_item
 
+    # Subscription charges are not serialized yet.
+    def with_advance_state_lock(&)
+      return yield unless metered_item.billing_segment
+
+      Contracts::AdvanceStateLockService.call(
+        contract: metered_item.contract,
+        product: metered_item.invoiceable,
+        product_filter: metered_item.contract_rate_card.rate_card.product_filter,
+        &
+      )
+    end
+
     def create_generating_invoice
       invoice_result = Invoices::CreateGeneratingService.call(
         customer: billing_context.customer,
-        invoice_type: :subscription,
+        invoice_type: billing_context.contract? ? :contract : :subscription,
         currency: metered_item.currency.iso_code,
         datetime: Time.zone.at(timestamp),
         charge_in_advance: true,

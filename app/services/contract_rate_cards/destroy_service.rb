@@ -6,8 +6,15 @@ module ContractRateCards
   class DestroyService < BaseService
     Result = BaseResult[:contract_rate_card]
 
-    def initialize(contract_rate_card:)
+    activity_loggable(
+      action: "contract_rate_card.deleted",
+      record: -> { contract_rate_card },
+      condition: -> { emit_events }
+    )
+
+    def initialize(contract_rate_card:, emit_events: true)
       @contract_rate_card = contract_rate_card
+      @emit_events = emit_events
       super
     end
 
@@ -28,6 +35,9 @@ module ContractRateCards
         RateOverride.where(id: phases.filter_map(&:rate_override_id)).discard_all!
         contract_rate_card.rate_phases.discard_all!
         contract_rate_card.discard!
+        if emit_events
+          SendWebhookJob.perform_after_commit("contract_rate_card.deleted", contract_rate_card)
+        end
       end
 
       result.contract_rate_card = contract_rate_card
@@ -36,6 +46,6 @@ module ContractRateCards
 
     private
 
-    attr_reader :contract_rate_card
+    attr_reader :contract_rate_card, :emit_events
   end
 end

@@ -23,8 +23,8 @@ module Fees
         )
       end
 
-      def self.from_billing_segment(billing_segment:, product_filter: nil, event: nil)
-        new(source: Sources::BillingSegment.new(billing_segment:, product_filter:), event:)
+      def self.from_billing_segment(billing_segment:, product_filter: nil, max_timestamp: nil, event: nil)
+        new(source: Sources::BillingSegment.new(billing_segment:, product_filter:, max_timestamp:), event:)
       end
 
       delegate :charge,
@@ -81,6 +81,16 @@ module Fees
         selected_filter&.id
       end
 
+      # Rate changes reset advance state through the segment's aggregation window;
+      # recurring closing balances remain available across those windows.
+      def cached_aggregation_identity
+        if billing_segment
+          {contract_id: contract.id, product_id: invoiceable.id, product_filter_id: product_filter&.id}
+        else
+          {charge_id:, charge_filter_id: charge_filter&.id}
+        end
+      end
+
       # Charge sources resolve the event's matching filter before selecting the bucket.
       def pricing_buckets
         source.pricing_buckets(event:).map { |bucket| with(source: bucket) }
@@ -109,7 +119,7 @@ module Fees
         return {} unless event
 
         event_properties = event.properties || {}
-        grouped_by_values = pricing_group_keys.index_with { |key| event_properties[key] }
+        grouped_by_values = pricing_group_keys.index_with { |key| event_properties[key].presence }
 
         if charge&.accepts_target_wallet? && grouped_by_values[::Charge::EVENT_TARGET_WALLET_CODE].blank?
           grouped_by_values.delete(::Charge::EVENT_TARGET_WALLET_CODE)
@@ -135,6 +145,7 @@ module Fees
         properties["fixed_charges_from_datetime"] = nil
         properties["fixed_charges_to_datetime"] = nil
         properties["fixed_charges_duration"] = nil
+        properties["product_filter_values"] = product_filter&.to_h if billing_segment
         properties
       end
     end

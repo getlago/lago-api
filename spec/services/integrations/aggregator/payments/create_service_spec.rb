@@ -83,6 +83,18 @@ RSpec.describe Integrations::Aggregator::Payments::CreateService do
   end
 
   describe "#call" do
+    context "when the payment is for a product catalog invoice" do
+      before do
+        invoice.update!(invoice_type: :contract, status: :finalized)
+        allow(lago_client).to receive(:post_with_response)
+      end
+
+      it "does not send it to the integration" do
+        expect(service_call).to be_success
+        expect(lago_client).not_to have_received(:post_with_response)
+      end
+    end
+
     context "when integration_payment exists" do
       let(:integration_payment) do
         create(:integration_resource, integration:, syncable: payment, resource_type: "payment")
@@ -229,6 +241,15 @@ RSpec.describe Integrations::Aggregator::Payments::CreateService do
         end
 
         it_behaves_like "throttles!", :netsuite, :xero
+      end
+
+      context "when it is a request limit error" do
+        let(:error_code) { 429 }
+        let(:body) { {error: {code: "SSS_REQUEST_LIMIT_EXCEEDED"}}.to_json }
+
+        it "raises RequestLimitError" do
+          expect { service_call }.to raise_error(Integrations::Aggregator::RequestLimitError)
+        end
       end
     end
   end

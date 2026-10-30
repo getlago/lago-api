@@ -4,7 +4,7 @@ module Api
   module V1
     module Subscriptions
       module Entitlements
-        class PrivilegesController < Api::BaseController
+        class PrivilegesController < Api::V1::BaseController
           before_action :find_subscription
 
           def destroy

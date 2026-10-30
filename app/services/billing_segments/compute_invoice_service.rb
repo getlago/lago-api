@@ -21,8 +21,11 @@ module BillingSegments
       attach_metered_fees(metered_segments, filtered_aggregations)
 
       invoice.fees.reload
-      compute_taxes_and_totals
-      invoice.save!
+      totals_result = compute_taxes_and_totals
+      ActiveRecord::Base.transaction do
+        apply_credit_notes if context == :finalize && totals_result.success?
+        invoice.save!
+      end
 
       result.invoice = invoice
       result
@@ -57,9 +60,12 @@ module BillingSegments
     def compute_metered_fees(segment, filtered_aggregations)
       fees_result = ::Fees::ChargeService.call!(
         invoice:,
-        metered_item: ::Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: segment),
+        metered_item: build_metered_item(segment),
         billing_context: Billing::Context.from(contract: segment.contract),
-        options: ::Fees::ChargeService::Options.new(context:, skip_adjusted_fees: true),
+        options: ::Fees::ChargeService::Options.new(
+          context: charge_service_context(segment),
+          skip_adjusted_fees: true
+        ),
         filtered_aggregations: filtered_aggregations[segment.target_key]&.keys || []
       )
 
@@ -85,12 +91,36 @@ module BillingSegments
       if totals_result.failure? && !totals_result.error.is_a?(BaseService::UnknownTaxFailure)
         totals_result.raise_if_error!
       end
+
+      totals_result
+    end
+
+    def apply_credit_notes
+      credit_result = Credits::CreditNoteService.call!(invoice:)
+      invoice.total_amount_cents -= Array(credit_result.credits).sum(&:amount_cents)
+      invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
     end
 
     def customer_provider_taxation?
       return @customer_provider_taxation if defined?(@customer_provider_taxation)
 
       @customer_provider_taxation = invoice.customer.tax_customer.present?
+    end
+
+    def build_metered_item(segment)
+      max_timestamp = if segment.recurring_advance_invoiceable?
+        ::BillingSegment.inclusive_end(segment.started_at)
+      end
+
+      ::Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment: segment, max_timestamp:)
+    end
+
+    def charge_service_context(segment)
+      if segment.recurring_advance_invoiceable?
+        :advance_renewal
+      else
+        context
+      end
     end
 
     def event_filters(metered_segments)

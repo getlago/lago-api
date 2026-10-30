@@ -2,7 +2,7 @@
 
 module Api
   module V1
-    class WalletTransactionsController < Api::BaseController
+    class WalletTransactionsController < Api::V1::BaseController
       def create
         result = WalletTransactions::CreateFromParamsService.call(
           organization: current_organization,
@@ -27,8 +27,8 @@ module Api
           organization: current_organization,
           wallet_id: params[:id],
           pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
+            page: page_number,
+            limit: page_size
           },
           filters: {
             status: params[:status],
@@ -97,7 +97,7 @@ module Api
       def wallet_transaction_consumptions(direction:)
         result = WalletTransactionConsumptionsQuery.call(
           organization: current_organization,
-          pagination: {page: params[:page], limit: params[:per_page] || PER_PAGE},
+          pagination: {page: page_number, limit: page_size},
           filters: {
             wallet_transaction_id: params[:id],
             direction: direction.to_s

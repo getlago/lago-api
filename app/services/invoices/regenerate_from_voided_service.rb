@@ -19,7 +19,7 @@ module Invoices
 
     def call
       return result.not_found_failure!(resource: "invoice") unless voided_invoice
-      return result.not_allowed_failure!(code: "product_catalog_invoice_not_regenerable") if product_catalog_invoice?
+      return result.not_allowed_failure!(code: "product_catalog_invoice_not_regenerable") if voided_invoice.product_catalog?
 
       ActiveRecord::Base.transaction do
         create_regenerated_invoice
@@ -69,11 +69,6 @@ module Invoices
     attr_reader :voided_invoice, :fees_params, :purchase_order_number
 
     delegate :customer, to: :voided_invoice
-
-    # Contract invoices not supported yet.
-    def product_catalog_invoice?
-      voided_invoice.fees.where.not(contract_id: nil).exists?
-    end
 
     def issuing_date
       @issuing_date ||= Time.current.in_time_zone(customer.applicable_timezone).to_date
@@ -309,7 +304,6 @@ module Invoices
     def call_invoice_finalization_jobs(invoice)
       return if invoice.closed?
 
-      Utils::SegmentTrack.invoice_created(invoice)
       SendWebhookJob.perform_later("invoice.created", invoice)
       Utils::ActivityLog.produce(invoice, "invoice.created")
       GenerateDocumentsJob.perform_later(invoice:, notify: should_deliver_email?)

@@ -150,6 +150,66 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
       end
     end
 
+    context "when userinfo email casing differs from the state one" do
+      let(:okta_userinfo_response) { {"email" => "Foo@Bar.com"} }
+
+      it "authenticates the user" do
+        result = service.call
+
+        expect(result).to be_success
+        expect(result.user.email).to eq("foo@bar.com")
+      end
+    end
+
+    context "when userinfo has no email" do
+      let(:okta_userinfo_response) { {} }
+
+      it "returns error" do
+        result = service.call
+
+        expect(result).not_to be_success
+        expect(result.error.messages.values.flatten).to include("okta_userinfo_error")
+      end
+    end
+
+    context "when an existing user differs from the typed email only by casing" do
+      let!(:user) { create(:user, email: "Foo@Bar.com") }
+
+      before { create(:membership, user:, organization: okta_integration.organization) }
+
+      it "signs in the existing user instead of creating a new one" do
+        result = nil
+
+        expect { result = service.call }.not_to change(User, :count)
+        expect(result.user).to eq(user)
+      end
+    end
+
+    context "when an existing user of another organization differs from the typed email only by casing" do
+      before { create(:membership, user: create(:user, email: "Foo@Bar.com")) }
+
+      it "refuses the login without creating a new user" do
+        result = nil
+
+        expect { result = service.call }.not_to change(User, :count)
+        expect(result).not_to be_success
+        expect(result.error.messages[:okta]).to eq(["login_method_not_authorized"])
+      end
+    end
+
+    context "when users exist with the typed casing and with another casing" do
+      let!(:exact_user) { create(:user, email: "foo@bar.com") }
+
+      before do
+        create(:user, email: "FOO@bar.com", created_at: 1.year.ago)
+        create(:membership, user: exact_user, organization: okta_integration.organization)
+      end
+
+      it "signs in the user with the exact casing" do
+        expect(service.call.user).to eq(exact_user)
+      end
+    end
+
     context "when user already exists" do
       let(:user) { create(:user, email: "foo@bar.com") }
 

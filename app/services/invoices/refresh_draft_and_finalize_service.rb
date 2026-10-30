@@ -11,7 +11,7 @@ module Invoices
 
     def call
       return result.not_found_failure!(resource: "invoice") if invoice.nil?
-      return result.forbidden_failure! unless invoice.subscription?
+      return result.forbidden_failure! unless invoice.subscription? || invoice.contract?
 
       invoice.with_lock do
         result.invoice = invoice
@@ -50,7 +50,6 @@ module Invoices
           Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
           Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
           Invoices::Payments::CreateService.call_async(invoice:)
-          Utils::SegmentTrack.invoice_created(invoice)
         end
 
         invoice.credit_notes.each do |credit_note|

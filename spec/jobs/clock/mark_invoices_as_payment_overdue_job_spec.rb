@@ -26,10 +26,17 @@ describe Clock::MarkInvoicesAsPaymentOverdueJob, job: true do
   describe "index usage" do
     # Force PostgreSQL to use indexes even on a tiny test dataset so we can
     # verify the planner CAN use them for the query patterns the job produces.
+    # enable_sort is also disabled: the query orders by payment_due_date, and
+    # the partial index is the only one providing that order, so disabling the
+    # sort removes the planner's freedom to pick a different index on a tiny
+    # dataset (the source of the flake). The id tiebreaker still uses an
+    # incremental sort on top of the index.
     around do |example|
       ActiveRecord::Base.connection.execute("SET enable_seqscan = off")
+      ActiveRecord::Base.connection.execute("SET enable_sort = off")
       example.run
     ensure
+      ActiveRecord::Base.connection.execute("SET enable_sort = on")
       ActiveRecord::Base.connection.execute("SET enable_seqscan = on")
     end
 

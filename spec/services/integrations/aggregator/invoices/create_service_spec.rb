@@ -340,6 +340,20 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
   end
 
   describe "#call" do
+    context "when the invoice is a product catalog invoice" do
+      before do
+        invoice.update!(invoice_type: :contract, status: :finalized)
+        allow(lago_client).to receive(:post_with_response)
+      end
+
+      it "does not send it to the integration" do
+        result = service_call
+
+        expect(result).to be_success
+        expect(lago_client).not_to have_received(:post_with_response)
+      end
+    end
+
     context "when integration_invoice exists" do
       let(:integration_invoice) { create(:integration_resource, integration:, syncable: invoice) }
       let(:response) { instance_double(Net::HTTPOK) }
@@ -483,6 +497,15 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
 
         it "enqueues a SendWebhookJob" do
           expect { service_call }.to have_enqueued_job(SendWebhookJob)
+        end
+      end
+
+      context "when it is a request limit error" do
+        let(:error_code) { 429 }
+        let(:body) { {error: {code: "SSS_REQUEST_LIMIT_EXCEEDED"}}.to_json }
+
+        it "raises RequestLimitError" do
+          expect { service_call }.to raise_error(Integrations::Aggregator::RequestLimitError)
         end
       end
     end

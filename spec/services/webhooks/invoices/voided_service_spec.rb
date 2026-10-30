@@ -17,5 +17,6 @@ RSpec.describe Webhooks::Invoices::VoidedService do
 
   describe ".call" do
     it_behaves_like "creates webhook", "invoice.voided", "invoice", {"fees" => Array, "credits" => Array}
+    it_behaves_like "sends the catalog invoice on v2"
   end
 end

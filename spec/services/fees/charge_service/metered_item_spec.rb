@@ -66,6 +66,7 @@ RSpec.describe Fees::ChargeService::MeteredItem do
         ended_at: Time.zone.parse("2026-09-30").end_of_day
       )
     end
+    let(:max_timestamp) { Time.zone.parse("2026-09-15 12:34:56") }
 
     describe "#filtered_for_charge_boundaries" do
       subject(:properties) { described_class.from_billing_segment(billing_segment: billing_segment).filtered_for_charge_boundaries.as_json }
@@ -99,6 +100,13 @@ RSpec.describe Fees::ChargeService::MeteredItem do
         charges_duration: 30,
         timestamp: billing_segment.billing_at
       )
+    end
+
+    it "passes the optional max timestamp to the billing segment source" do
+      metered_item = described_class.from_billing_segment(billing_segment:, max_timestamp:)
+
+      expect(metered_item.source.max_timestamp).to eq(max_timestamp)
+      expect(metered_item.boundaries.max_timestamp).to eq(max_timestamp)
     end
 
     it "defaults absent attributes without masking segment references" do
@@ -361,6 +369,12 @@ RSpec.describe Fees::ChargeService::MeteredItem do
 
       it "keeps configured keys when an event property is absent" do
         event_properties.delete("region")
+
+        expect(metered_item.grouped_by_values).to eq("cloud" => "aws", "region" => nil)
+      end
+
+      it "stores a blank event property as nil" do
+        event_properties["region"] = ""
 
         expect(metered_item.grouped_by_values).to eq("cloud" => "aws", "region" => nil)
       end

@@ -5,10 +5,12 @@ require "rails_helper"
 RSpec.describe ProductCategories::UpdateService do
   subject(:result) { described_class.call(product_category:, params:) }
 
-  let_it_be(:organization) { create(:organization) }
+  let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
   let(:product_category) { create(:product_category, organization:, name: "Before", code: "before") }
 
   let(:params) { {name: "After", description: "new", invoice_display_name: "Display"} }
+
+  before { allow(Utils::ActivityLog).to receive(:produce).and_call_original }
 
   it "updates the mutable attributes" do
     expect(result).to be_success
@@ -47,8 +49,34 @@ RSpec.describe ProductCategories::UpdateService do
   end
 
   it "produces an activity log" do
-    result
-    expect(Utils::ActivityLog).to have_produced("product_category.updated").after_commit.with(product_category)
+    update_result = described_class.call(product_category:, params: {name: "After"})
+
+    expect(update_result).to be_success
+    expect(Utils::ActivityLog).to have_received(:produce).with(product_category, "product_category.updated", after_commit: true)
+  end
+
+  it "enqueues a product_category.updated webhook" do
+    expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("product_category.updated", product_category)
+  end
+
+  context "when the update does not change persisted attributes" do
+    let(:params) { {name: "Before"} }
+
+    it "publishes both event channels" do
+      expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("product_category.updated", product_category)
+      expect(result).to be_success
+      expect(Utils::ActivityLog).to have_received(:produce).with(product_category, "product_category.updated", after_commit: true)
+    end
+  end
+
+  context "when the catalog flag is disabled" do
+    let(:organization) { create(:organization) }
+
+    it "updates and publishes the category event" do
+      expect { result }.to have_enqueued_job(SendWebhookJob).with("product_category.updated", product_category)
+      expect(result).to be_success
+      expect(Utils::ActivityLog).to have_received(:produce).with(product_category, "product_category.updated", after_commit: true)
+    end
   end
 
   context "when product_category is nil" do
@@ -57,6 +85,37 @@ RSpec.describe ProductCategories::UpdateService do
     it "returns a not found failure" do
       expect(result).not_to be_success
       expect(result.error.resource).to eq("product_category")
+    end
+  end
+
+  context "when the update fails validation" do
+    let(:params) { {name: ""} }
+
+    before { allow(Utils::ActivityLog).to receive(:available?).and_return(true) }
+
+    it "delivers neither event channel", :capture_kafka_messages do
+      expect { result }.not_to have_enqueued_job(SendWebhookJob)
+      expect(result).not_to be_success
+      expect(kafka_messages).to be_empty
+    end
+  end
+
+  context "when the surrounding transaction rolls back" do
+    before do
+      product_category
+      allow(Utils::ActivityLog).to receive(:available?).and_return(true)
+    end
+
+    it "suppresses both event channels", :capture_kafka_messages, transaction: false do
+      expect do
+        ActiveRecord::Base.transaction do
+          expect(result).to be_success
+          raise ActiveRecord::Rollback
+        end
+      end.not_to have_enqueued_job(SendWebhookJob)
+
+      expect(product_category.reload.name).to eq("Before")
+      expect(kafka_messages).to be_empty
     end
   end
 

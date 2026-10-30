@@ -912,4 +912,33 @@ RSpec.describe Resolvers::InvoicesResolver do
       end
     end
   end
+
+  context "with N+1 query detection on document urls", bullet: {unused_eager_loading: false} do
+    before do
+      # NOTE: Attachments are loaded one by one for any document url, this is not covered here
+      Bullet.add_safelist(type: :n_plus_one_query, class_name: "Invoice", association: :file_attachment)
+      Bullet.add_safelist(type: :n_plus_one_query, class_name: "ActiveStorage::Attachment", association: :blob)
+
+      create_list(:invoice, 3, customer: customer_first, organization:).each do |invoice|
+        invoice.file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.pdf")), filename: "invoice.pdf")
+      end
+    end
+
+    it "does not trigger N+1 queries for document urls" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: <<~GQL
+          query {
+            invoices(limit: 5) {
+              collection { id fileUrl fileUrlExpiresAt }
+            }
+          }
+        GQL
+      )
+
+      expect(result.dig("data", "invoices", "collection").pluck("fileUrlExpiresAt").compact.length).to eq(3)
+    end
+  end
 end

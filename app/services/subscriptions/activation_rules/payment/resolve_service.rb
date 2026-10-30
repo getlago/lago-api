@@ -44,7 +44,6 @@ module Subscriptions
             Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
             Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
             Integrations::Aggregator::Taxes::Invoices::CreateJob.perform_later(invoice:) if invoice.customer.tax_customer
-            Utils::SegmentTrack.invoice_created(invoice)
 
             # The PSP-side payment record carries a placeholder reference set
             # at activation time (the invoice had no number yet). Now that the

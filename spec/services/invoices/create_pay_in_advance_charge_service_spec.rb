@@ -86,6 +86,23 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
     end
 
+    context "when calculating fees without an existing transaction", transaction: false do
+      let(:aggregation_isolations) { [] }
+
+      before do
+        allow(Charges::PayInAdvanceAggregationService).to receive(:call).and_wrap_original do |method, **kwargs|
+          aggregation_isolations << ApplicationRecord.connection.select_value("SHOW transaction_isolation")
+          method.call(**kwargs)
+        end
+        allow(Charges::ApplyPayInAdvanceChargeModelService).to receive(:call).and_return(charge_result)
+      end
+
+      it "calculates the invoiceable fee in a repeatable-read transaction" do
+        expect(invoice_service.call).to be_success
+        expect(aggregation_isolations).to eq(["repeatable read"])
+      end
+    end
+
     it "creates an invoice" do
       result = invoice_service.call
 
@@ -143,6 +160,12 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
       expect(Fee.where(pay_in_advance_event_transaction_id: event.transaction_id).count).to eq(1)
     end
 
+    it "enqueues the fee webhook once with the fee attached to its invoice" do
+      invoice = invoice_service.call.invoice
+
+      expect(SendWebhookJob).to have_been_enqueued.with("fee.created", invoice.fees.sole).once
+    end
+
     it "creates InvoiceSubscription object" do
       expect { invoice_service.call.invoice }.to change(InvoiceSubscription, :count).by(1)
     end
@@ -193,10 +216,42 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
           customer:,
           billing_entity:,
           currency: "EUR",
-          purchase_order_number: "PO-CONTRACT-123"
+          purchase_order_number: "PO-CONTRACT-123",
+          invoice_type: "contract"
         )
         expect(result.invoice.invoice_subscriptions).to be_empty
         expect(result.invoice.fees.sole).to have_attributes(subscription: nil, charge: nil, fee_type: "product")
+      end
+
+      context "with aggregation state" do
+        let(:aggregation_result) do
+          super().tap do |result|
+            result.current_aggregation = 7
+            result.max_aggregation = 10
+          end
+        end
+
+        it "does not advance state or create another invoice on retry" do
+          invoice_service.call
+
+          expect { invoice_service.call }.to not_change(CachedAggregation, :count)
+            .and not_change(Fee, :count)
+            .and not_change(Invoice, :count)
+        end
+
+        context "when invoice calculation fails" do
+          before do
+            allow(Invoices::ComputeTaxesAndTotalsService).to receive(:call).and_raise("invoice failure")
+          end
+
+          it "rolls back the fees and aggregation state together" do
+            expect(invoice_service.call).not_to be_success
+            expect(CachedAggregation.where(contract:, product:)).to be_empty
+            expect(Fee.where(contract:)).to be_empty
+            expect(Invoice.where(customer:)).to be_empty
+            expect(SendWebhookJob).not_to have_been_enqueued.with("fee.created", anything)
+          end
+        end
       end
 
       context "when the contract selects an invoice custom section" do
@@ -241,6 +296,51 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
       end
     end
 
+    context "when two events of the same contract product are priced at once", transaction: false do
+      let(:billable_metric) { create(:unique_count_billable_metric, organization:, field_name: "user_id") }
+      let(:contract) { create(:contract, organization:, customer:, billing_entity:) }
+      let(:product) { create(:product, :metered, organization:, billable_metric:) }
+      let(:rate_card) { create(:rate_card, :advance, organization:, product:) }
+      let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+      let(:billing_segment) do
+        create(:billing_segment, organization:, customer:, contract:, contract_rate_card:, currency: "EUR",
+          rate_properties: {"amount" => "10"})
+      end
+      let(:billing_context) { Billing::Context.from(contract:) }
+      let(:metered_items) do
+        %w[user_1 user_2].map do |user_id|
+          source = create(:event, organization_id: organization.id, external_subscription_id: contract.external_id,
+            external_customer_id: customer.external_id, code: billable_metric.code,
+            timestamp: billing_segment.started_at, properties: {"user_id" => user_id})
+          Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment:, event: Events::CommonFactory.new_instance(source:))
+        end
+      end
+      let(:both_priced) { Concurrent::CountDownLatch.new(2) }
+
+      before do
+        metered_items
+        allow(Charges::PayInAdvanceAggregationService).to receive(:call).and_call_original
+        allow(Charges::ApplyPayInAdvanceChargeModelService).to receive(:call).and_call_original
+
+        # Holds each fee between pricing and saving, so both read the state before either writes it.
+        allow(Fees::CreatePayInAdvanceService).to receive(:call!).and_wrap_original do |method, **kwargs|
+          method.call(**kwargs).tap do
+            both_priced.count_down
+            both_priced.wait(1)
+          end
+        end
+      end
+
+      it "counts both events in the persisted state" do
+        metered_items.map { |metered_item|
+          Thread.new { described_class.call(metered_item:, billing_context:, timestamp: metered_item.event.timestamp.to_i) }
+        }.each(&:join)
+
+        expect(Fee.where(contract:).count).to eq(2)
+        expect(CachedAggregation.where(contract:, product:).maximum(:current_aggregation)).to eq(2)
+      end
+    end
+
     context "with billing entity resolution" do
       it "stamps the customer's billing_entity when subscription has none" do
         invoice = invoice_service.call.invoice
@@ -271,20 +371,6 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
 
         expect(invoice.purchase_order_number).to eq("PO-SUB-123")
       end
-    end
-
-    it "calls SegmentTrackJob" do
-      invoice = invoice_service.call.invoice
-
-      expect(SegmentTrackJob).to have_been_enqueued.with(
-        membership_id: CurrentContext.membership,
-        event: "invoice_created",
-        properties: {
-          organization_id: invoice.organization.id,
-          invoice_id: invoice.id,
-          invoice_type: invoice.invoice_type
-        }
-      )
     end
 
     it "creates a payment" do
@@ -421,7 +507,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService do
       it "enqueues fee webhooks but not invoice webhooks" do
         invoice_service.call
 
-        expect(SendWebhookJob).to have_been_enqueued.with("fee.created", anything)
+        expect(SendWebhookJob).to have_been_enqueued.with("fee.created", anything).once
         expect(SendWebhookJob).not_to have_been_enqueued.with("invoice.created", anything)
       end
 

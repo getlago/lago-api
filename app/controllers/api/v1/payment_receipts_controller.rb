@@ -2,13 +2,13 @@
 
 module Api
   module V1
-    class PaymentReceiptsController < Api::BaseController
+    class PaymentReceiptsController < Api::V1::BaseController
       def index
         result = PaymentReceiptsQuery.call(
           organization: current_organization,
           pagination: {
-            page: params[:page],
-            limit: params[:per_page] || PER_PAGE
+            page: page_number,
+            limit: page_size
           },
           filters: index_filters
         )
@@ -16,7 +16,7 @@ module Api
         if result.success?
           render(
             json: ::CollectionSerializer.new(
-              result.payment_receipts,
+              result.payment_receipts.includes(:organization),
               ::V1::PaymentReceiptSerializer,
               collection_name: serialized_resource_name.pluralize,
               meta: pagination_metadata(result.payment_receipts)

@@ -780,4 +780,290 @@ RSpec.describe Api::V1::CreditNotesController do
       end
     end
   end
+
+  describe "contract product-fee credit notes through shared API versions", :premium do
+    ["v1", "v2"].each do |api_version|
+      context "with /api/#{api_version}" do
+        before { organization.enable_feature_flag!(:product_catalog) }
+
+        let(:path) { "/api/#{api_version}/credit_notes" }
+        let(:contract) { create(:contract, organization:, customer:) }
+        let(:rate_card) { create(:rate_card, organization:) }
+        let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+        let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card:) }
+        let(:invoice) do
+          create(
+            :invoice,
+            organization:,
+            customer:,
+            status: invoice_status,
+            payment_status: invoice_payment_status,
+            currency: "EUR",
+            fees_amount_cents: 100,
+            total_amount_cents: 100,
+            total_paid_amount_cents: 100
+          )
+        end
+        let(:invoice_status) { "finalized" }
+        let(:invoice_payment_status) { "succeeded" }
+        let(:product_fee) do
+          create(
+            :product_fee,
+            invoice:,
+            subscription: nil,
+            rate_card_rate:,
+            contract:,
+            contract_rate_card:,
+            amount_cents: 100
+          )
+        end
+
+        describe "POST /credit_notes" do
+          subject do
+            post_with_token(organization, path, credit_note: {
+              invoice_id: invoice.id,
+              reason: "other",
+              credit_amount_cents: 50,
+              items: [{fee_id: product_fee.id, amount_cents: item_amount_cents}]
+            })
+          end
+
+          let(:item_amount_cents) { 50 }
+
+          it "creates a credit note for the contract product fee and its source invoice" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:credit_note][:lago_invoice_id]).to eq(invoice.id)
+            expect(json[:credit_note][:items].pluck(:fee).pluck(:lago_id)).to eq([product_fee.id])
+          end
+
+          context "when the product catalog flag is disabled" do
+            before { organization.disable_feature_flag!(:product_catalog) }
+
+            it "rejects the request without creating a credit note" do
+              expect { subject }.not_to change(CreditNote, :count)
+
+              expect(response).to have_http_status(:forbidden)
+            end
+          end
+
+          ["pending", "failed"].each do |status|
+            context "when the source invoice status is #{status}" do
+              let(:invoice_status) { status }
+
+              it "returns an invalid type or status error without creating a credit note" do
+                expect { subject }.not_to change(CreditNote, :count)
+
+                expect(response).to have_http_status(:method_not_allowed)
+                expect(json[:code]).to eq("invalid_type_or_status")
+              end
+            end
+          end
+
+          ["pending", "failed"].each do |payment_status|
+            context "when a finalized invoice has payment status #{payment_status}" do
+              let(:invoice_payment_status) { payment_status }
+
+              it "creates the credit note" do
+                subject
+                expect(response).to have_http_status(:success)
+              end
+            end
+          end
+
+          context "when the item amount is malformed" do
+            let(:item_amount_cents) { "bogus" }
+
+            it "returns a validation error without creating a credit note" do
+              expect { subject }.not_to change(CreditNote, :count)
+              expect(response).to have_http_status(:unprocessable_content)
+            end
+          end
+
+          context "when the item amount is a numeric string" do
+            let(:item_amount_cents) { "50" }
+
+            it "creates the credit note" do
+              subject
+
+              expect(response).to have_http_status(:success)
+              expect(json[:credit_note][:items].first[:amount_cents]).to eq(50)
+            end
+          end
+
+          context "when the fee is not a member of the source invoice" do
+            let(:other_invoice) { create(:invoice, organization:, customer:) }
+            let(:product_fee) do
+              create(
+                :product_fee,
+                invoice: other_invoice,
+                subscription: nil,
+                rate_card_rate:,
+                contract:,
+                contract_rate_card:,
+                amount_cents: 100
+              )
+            end
+
+            it "rejects the fee" do
+              subject
+              expect(response).not_to have_http_status(:success)
+            end
+          end
+
+          context "when the source invoice belongs to another organization" do
+            let(:foreign_invoice) { create(:invoice) }
+
+            it "does not expose the foreign invoice" do
+              post_with_token(organization, path, credit_note: {
+                invoice_id: foreign_invoice.id,
+                reason: "other",
+                credit_amount_cents: 50,
+                items: [{fee_id: product_fee.id, amount_cents: 50}]
+              })
+
+              expect(response).to have_http_status(:not_found)
+            end
+          end
+        end
+
+        describe "POST /credit_notes/estimate" do
+          subject do
+            post_with_token(organization, "#{path}/estimate", credit_note: {
+              invoice_id: invoice.id,
+              items: [{fee_id: product_fee.id, amount_cents: item_amount_cents}]
+            })
+          end
+
+          let(:item_amount_cents) { 50 }
+
+          it "estimates the contract product fee against its source invoice" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:estimated_credit_note][:lago_invoice_id]).to eq(invoice.id)
+            expect(json[:estimated_credit_note][:items].first[:amount_cents]).to eq(50)
+          end
+
+          context "when the product catalog flag is disabled" do
+            before { organization.disable_feature_flag!(:product_catalog) }
+
+            it "rejects the request" do
+              expect { subject }.not_to change(CreditNote, :count)
+
+              expect(response).to have_http_status(:forbidden)
+            end
+          end
+
+          ["pending", "failed"].each do |status|
+            context "when the source invoice status is #{status}" do
+              let(:invoice_status) { status }
+
+              it "returns an invalid type or status error without creating a credit note" do
+                expect { subject }.not_to change(CreditNote, :count)
+
+                expect(response).to have_http_status(:method_not_allowed)
+                expect(json[:code]).to eq("invalid_type_or_status")
+              end
+            end
+          end
+
+          ["pending", "failed"].each do |payment_status|
+            context "when a finalized invoice has payment status #{payment_status}" do
+              let(:invoice_payment_status) { payment_status }
+
+              it "returns the estimate" do
+                subject
+                expect(response).to have_http_status(:success)
+              end
+            end
+          end
+
+          context "when the item amount is malformed" do
+            let(:item_amount_cents) { "bogus" }
+
+            it "returns a validation error without creating a credit note" do
+              expect { subject }.not_to change(CreditNote, :count)
+              expect(response).to have_http_status(:unprocessable_content)
+            end
+          end
+
+          context "when the item amount is a numeric string" do
+            let(:item_amount_cents) { "50" }
+
+            it "returns the estimate" do
+              subject
+
+              expect(response).to have_http_status(:success)
+              expect(json[:estimated_credit_note][:items].first[:amount_cents]).to eq(50)
+            end
+          end
+
+          context "when the fee belongs to another invoice" do
+            let(:other_invoice) { create(:invoice, organization:, customer:) }
+            let(:product_fee) do
+              create(
+                :product_fee,
+                invoice: other_invoice,
+                subscription: nil,
+                rate_card_rate:,
+                contract:,
+                contract_rate_card:,
+                amount_cents: 100
+              )
+            end
+
+            it "rejects the fee" do
+              subject
+              expect(response).not_to have_http_status(:success)
+            end
+          end
+
+          context "when the source invoice belongs to another organization" do
+            let(:foreign_invoice) { create(:invoice) }
+
+            it "does not expose the foreign invoice" do
+              post_with_token(organization, "#{path}/estimate", credit_note: {
+                invoice_id: foreign_invoice.id,
+                items: [{fee_id: product_fee.id, amount_cents: 50}]
+              })
+
+              expect(response).to have_http_status(:not_found)
+            end
+          end
+        end
+
+        ["pdf", "xml"].each do |format|
+          describe "POST /credit_notes/:id/download_#{format}" do
+            subject do
+              post_with_token(organization, "#{path}/#{credit_note.id}/download_#{format}")
+            end
+
+            let(:credit_note) { create(:credit_note, :with_file, invoice:, customer:) }
+
+            before do
+              create(:credit_note_item, credit_note:, fee: product_fee) if credit_note.invoice_id == invoice.id
+            end
+
+            it "returns the existing credit note file response" do
+              subject
+
+              expect(response).to have_http_status(:success)
+              expect(json[:credit_note][:lago_id]).to eq(credit_note.id)
+            end
+
+            context "when the credit note belongs to another organization" do
+              let(:credit_note) { create(:credit_note, :with_file) }
+
+              it "returns not found" do
+                subject
+                expect(response).to have_http_status(:not_found)
+              end
+            end
+          end
+        end
+      end
+    end
+  end
 end

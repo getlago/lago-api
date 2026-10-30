@@ -95,6 +95,23 @@ RSpec.describe Customers::ViesCheckJob do
     end
   end
 
+  context "when a customer outside the EU with a tax identification number has a custom tax" do
+    let(:customer) { create(:customer, country: "GB", tax_identification_number: "GB123456789") }
+    let(:vies_response) { false }
+
+    before do
+      create(:tax, organization: customer.organization, code: "lago_eu_tax_exempt", rate: 0.0)
+      custom_tax = create(:tax, organization: customer.organization, code: "uk_vat", rate: 20.0)
+      create(:customer_applied_tax, customer:, tax: custom_tax)
+    end
+
+    it "replaces the custom tax with the EU exemption" do
+      described_class.perform_now(customer)
+
+      expect(customer.reload.taxes.pluck(:code)).to eq(["lago_eu_tax_exempt"])
+    end
+  end
+
   context "when valvat has an error" do
     let_it_be(:pending_invoice, refind: true) do
       create(:invoice, :pending, customer:, organization: customer.organization, tax_status: :pending)

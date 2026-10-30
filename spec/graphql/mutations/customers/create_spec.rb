@@ -179,6 +179,30 @@ RSpec.describe Mutations::Customers::Create do
       expect(connection.category).to eq("accounting")
       expect(connection.is_default).to be(true)
     end
+
+    # The GraphQL enum lists every premium integration, not only those a customer can connect to.
+    [nil, "progressive_billing"].each do |integration_type|
+      context "with #{integration_type.inspect} as integration type" do
+        it "returns a validation error without creating the customer" do
+          result = execute_graphql(
+            current_user: membership.user,
+            current_organization: organization,
+            permissions: required_permissions,
+            query: mutation,
+            variables: {
+              input: {
+                name: "Acme",
+                externalId: "acme_1",
+                integrationCustomers: [{integrationType: integration_type, integrationCode: integration.code}.compact]
+              }
+            }
+          )
+
+          expect_unprocessable_entity(result, details: {integrationType: ["value_is_invalid"]})
+          expect(organization.customers.find_by(external_id: "acme_1")).to be_nil
+        end
+      end
+    end
   end
 
   context "with premium feature", :premium do

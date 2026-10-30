@@ -91,6 +91,27 @@ describe Clockwork do
     end
   end
 
+  describe "schedule:terminate_ended_contracts" do
+    let(:job) { "schedule:terminate_ended_contracts" }
+    let(:start_time) { Time.zone.parse("1 Apr 2022 00:01:00") }
+    let(:end_time) { Time.zone.parse("1 Apr 2022 00:31:00") }
+
+    it "enqueues a terminate ended contracts job" do
+      Clockwork::Test.run(
+        file: clock_file,
+        start_time:,
+        end_time:,
+        tick_speed: 1.second
+      )
+
+      expect(Clockwork::Test).to be_ran_job(job)
+      expect(Clockwork::Test.times_run(job)).to eq(6)
+
+      Clockwork::Test.block_for(job).call
+      expect(Clock::TerminateEndedContractsJob).to have_been_enqueued
+    end
+  end
+
   describe "schedule:process_subscription_activity" do
     let(:job) { "schedule:process_subscription_activity" }
     let(:start_time) { Time.zone.parse("1 Apr 2022 00:01:00") }
@@ -346,6 +367,27 @@ describe Clockwork do
 
       Clockwork::Test.block_for(job).call
       expect(Clock::RecordDeletionsCleanupJob).to have_been_enqueued
+    end
+  end
+
+  describe "schedule:clean_x402_sign_in_nonces" do
+    let(:job) { "schedule:clean_x402_sign_in_nonces" }
+    let(:start_time) { Time.zone.parse("1 Apr 2022 00:01:00") }
+    let(:end_time) { Time.zone.parse("2 Apr 2022 00:00:00") }
+
+    it "enqueue a clean x402 sign-in nonces job" do
+      Clockwork::Test.run(
+        file: clock_file,
+        start_time:,
+        end_time:,
+        tick_speed: 1.minute
+      )
+
+      expect(Clockwork::Test).to be_ran_job(job)
+      expect(Clockwork::Test.times_run(job)).to eq(1)
+
+      Clockwork::Test.block_for(job).call
+      expect(Clock::X402SignInNoncesCleanupJob).to have_been_enqueued
     end
   end
 

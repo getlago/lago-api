@@ -4,17 +4,17 @@ module RateCardRates
   class CreateService < BaseService
     Result = BaseResult[:rate_card_rate]
 
-    def initialize(rate_card:, params:, emit_activity_log: true)
+    def initialize(rate_card:, params:, emit_events: true)
       @rate_card = rate_card
       @params = params.to_h.with_indifferent_access
-      @emit_activity_log = emit_activity_log
+      @emit_events = emit_events
       super
     end
 
     activity_loggable(
-      action: "rate_card.updated",
-      record: -> { rate_card },
-      condition: -> { emit_activity_log }
+      action: "rate_card_rate.created",
+      record: -> { result.rate_card_rate },
+      condition: -> { emit_events }
     )
 
     def call
@@ -27,19 +27,24 @@ module RateCardRates
       normalized = ::RateProperties::NormalizeRangesService.call(rate_properties: params[:rate_properties])
       return result.fail_with_error!(normalized.error) if normalized.failure?
 
-      rate = rate_card.rates.create!(
-        organization_id: rate_card.organization_id,
-        code: params[:code].presence,
-        effective_from: params[:effective_from],
-        rate_model: params[:rate_model],
-        rate_properties: normalized.rate_properties,
-        min_amount_cents: params[:min_amount_cents] || 0,
-        billing_interval_count: params[:billing_interval_count] || 1,
-        billing_interval_unit: params[:billing_interval_unit],
-        applied_pricing_unit_conversion_rate: params[:applied_pricing_unit_conversion_rate]
-      )
+      ActiveRecord::Base.transaction do
+        rate = rate_card.rates.create!(
+          organization_id: rate_card.organization_id,
+          code: params[:code].presence,
+          effective_from: params[:effective_from],
+          rate_model: params[:rate_model],
+          rate_properties: normalized.rate_properties,
+          min_amount_cents: params[:min_amount_cents] || 0,
+          billing_interval_count: params[:billing_interval_count] || 1,
+          billing_interval_unit: params[:billing_interval_unit],
+          applied_pricing_unit_conversion_rate: params[:applied_pricing_unit_conversion_rate]
+        )
 
-      result.rate_card_rate = rate
+        result.rate_card_rate = rate
+        if emit_events
+          SendWebhookJob.perform_after_commit("rate_card_rate.created", rate)
+        end
+      end
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -47,6 +52,6 @@ module RateCardRates
 
     private
 
-    attr_reader :rate_card, :params, :emit_activity_log
+    attr_reader :rate_card, :params, :emit_events
   end
 end

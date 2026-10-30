@@ -249,6 +249,8 @@ RSpec.describe CreditNotes::EstimateService, :premium do
   end
 
   context "when estimating a contract product fee" do
+    before { Organization.find(invoice.organization_id).enable_feature_flag!(:product_catalog) }
+
     let(:invoice) do
       create(:invoice, organization:, customer:, currency: "EUR", fees_amount_cents: 100, status: :finalized,
         total_amount_cents: 100, total_paid_amount_cents: 100, taxes_amount_cents: 0,
@@ -263,6 +265,18 @@ RSpec.describe CreditNotes::EstimateService, :premium do
         taxes_precise_amount_cents: 0)
     end
     let(:items) { [{fee_id: fee.id, amount_cents: 40}] }
+
+    context "when the product catalog flag is disabled" do
+      before { Organization.find(invoice.organization_id).disable_feature_flag!(:product_catalog) }
+
+      it "rejects estimates for product fees" do
+        result = estimate_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("feature_unavailable")
+      end
+    end
 
     it "estimates a partial credit without assuming a subscription" do
       result = estimate_service.call
