@@ -110,6 +110,17 @@ RSpec.describe Api::V2::PaymentRequestsController do
       end
     end
 
+    context "with an invalid payment_status filter" do
+      let(:params) { {payment_status: "bogus"} }
+
+      it "returns a validation error" do
+        request
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "payment_status", meta: {}}])
+      end
+    end
+
     context "with a currency filter" do
       let(:params) { {currency: "EUR"} }
 
@@ -135,6 +146,38 @@ RSpec.describe Api::V2::PaymentRequestsController do
 
         expect(response).to have_http_status(:ok)
         expect(json[:payment_requests]).to eq([expected_payload])
+      end
+
+      context "with a scalar code" do
+        let(:params) { {billing_entity_codes: invoice.billing_entity.code} }
+
+        it "returns only that billing entity's payment requests" do
+          request
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:payment_requests]).to eq([expected_payload])
+        end
+      end
+
+      context "with an unknown scalar code" do
+        let(:params) { {billing_entity_codes: "unknown"} }
+
+        it "returns not found" do
+          request
+
+          expect(response).to be_v2_not_found_error("billing_entity")
+        end
+      end
+
+      context "with another organization's scalar code" do
+        let(:foreign_entity) { create(:billing_entity, organization: create(:organization), code: "foreign") }
+        let(:params) { {billing_entity_codes: foreign_entity.code} }
+
+        it "returns not found" do
+          request
+
+          expect(response).to be_v2_not_found_error("billing_entity")
+        end
       end
 
       context "when a billing entity is archived" do

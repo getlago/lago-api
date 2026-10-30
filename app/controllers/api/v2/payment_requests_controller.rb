@@ -10,10 +10,17 @@ module Api
       before_action :set_billing_entity_ids, only: :index
 
       def index
+        filters = index_filters
+        payment_status = filters[:payment_status]
+
+        if payment_status.present? && !PaymentRequest.payment_statuses.key?(payment_status)
+          return validation_errors(errors: {payment_status: ["value_is_invalid"]})
+        end
+
         result = ::PaymentRequestsQuery.call(
           organization: current_organization,
           pagination: cursor,
-          filters: index_filters
+          filters:
         )
 
         if result.success?
@@ -53,12 +60,13 @@ module Api
       end
 
       def set_billing_entity_ids
-        codes = params.permit(billing_entity_codes: [])[:billing_entity_codes]
+        permitted_params = params.permit(:billing_entity_codes, billing_entity_codes: [])
+        codes = Array(permitted_params[:billing_entity_codes]).uniq
         return if codes.blank?
 
         @billing_entity_ids = current_organization.all_billing_entities.where(code: codes).ids
 
-        if @billing_entity_ids.size != codes.uniq.size
+        if @billing_entity_ids.size != codes.size
           not_found_error(resource: "billing_entity")
         end
       end
