@@ -188,6 +188,8 @@ class Organization < ApplicationRecord
   validates :invoice_grace_period, numericality: {greater_than_or_equal_to: 0}
   validates :pagination_max_page_size, numericality: {only_integer: true, greater_than: 0}, allow_nil: true
   validates :net_payment_term, numericality: {greater_than_or_equal_to: 0}
+  # Rows stored above 365 before the cap stay valid until net_payment_term changes
+  validates :net_payment_term, numericality: {less_than_or_equal_to: 365}, allow_nil: true, if: :will_save_change_to_net_payment_term?
   validates :document_url_expiration_days, numericality: {only_integer: true, greater_than_or_equal_to: 30, less_than_or_equal_to: 120}
   validates :logo,
     image: {authorized_content_type: %w[image/png image/jpg image/jpeg], max_size: 800.kilobytes},

@@ -30,7 +30,7 @@ RSpec.describe Api::V1::CustomersController do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details]).to eq({base: ["value_is_out_of_range"]})
+        expect(json[:error_details]).to eq({net_payment_term: ["value_is_out_of_range"]})
       end
     end
 
