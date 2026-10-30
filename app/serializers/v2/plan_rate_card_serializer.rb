@@ -2,16 +2,15 @@
 
 module V2
   class PlanRateCardSerializer < ModelSerializer
+    timestamps :created_at, :updated_at, :deleted_at
+
     def serialize
       {
         lago_id: model.id,
         plan_code: model.catalog_plan.code,
         rate_card_code: model.rate_card.code,
         units: model.units,
-        **(include?(:rate_phases) ? {rate_phases: rate_phases} : {}),
-        created_at: format_time(model.created_at),
-        updated_at: format_time(model.updated_at),
-        deleted_at: format_time(model.deleted_at)
+        **(include?(:rate_phases) ? {rate_phases: rate_phases} : {})
       }
     end
 

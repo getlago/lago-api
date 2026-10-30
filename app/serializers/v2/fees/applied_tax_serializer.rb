@@ -3,6 +3,8 @@
 module V2
   module Fees
     class AppliedTaxSerializer < ModelSerializer
+      timestamps :created_at, :updated_at
+
       def serialize
         {
           lago_id: model.id,
@@ -12,9 +14,7 @@ module V2
           tax_code: model.tax_code,
           tax_rate: model.tax_rate,
           tax_description: model.tax_description,
-          amount_cents: model.amount_cents,
-          created_at: format_time(model.created_at),
-          updated_at: format_time(model.updated_at)
+          amount_cents: model.amount_cents
         }
       end
     end

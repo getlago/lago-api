@@ -2,6 +2,8 @@
 
 module V2
   class RatePhaseSerializer < ModelSerializer
+    timestamps :deleted_at
+
     def serialize
       {
         lago_id: model.id,
@@ -9,7 +11,6 @@ module V2
         position: model.position,
         name: model.name,
         billing_interval_cycle_count: model.billing_interval_cycle_count,
-        deleted_at: format_time(model.deleted_at),
         rate_override: rate_override
       }
     end

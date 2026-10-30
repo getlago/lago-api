@@ -4,6 +4,9 @@ module V2
   # A fee billed from the product catalog: it names the contract, product and
   # rate card it was priced from, not the v1 subscription and charge.
   class FeeSerializer < ModelSerializer
+    timestamps :from_datetime, :to_datetime, :succeeded_at, :failed_at, :refunded_at, :created_at,
+      :updated_at, :deleted_at
+
     expandable :applied_taxes, serializer: ::V2::Fees::AppliedTaxSerializer, webhooks: true
     expandable :invoice, serializer: ::V2::InvoiceSerializer
     expandable :product, serializer: ::V2::ProductSerializer
@@ -54,8 +57,6 @@ module V2
         filters:,
         billing_timing: model.pay_in_advance? ? "advance" : "arrears",
         grouped_by: model.grouped_by,
-        from_datetime: datetime_property("from_datetime"),
-        to_datetime: datetime_property("to_datetime"),
         currency: model.amount_currency,
         units: model.units,
         total_aggregated_units: model.total_aggregated_units,
@@ -70,13 +71,7 @@ module V2
         total_amount_cents: model.total_amount_cents,
         amount_details: ::RateProperties.present(model.amount_details),
         pricing_unit_details:,
-        payment_status: model.payment_status,
-        succeeded_at: format_time(model.succeeded_at),
-        failed_at: format_time(model.failed_at),
-        refunded_at: format_time(model.refunded_at),
-        created_at: format_time(model.created_at),
-        updated_at: format_time(model.updated_at),
-        deleted_at: format_time(model.deleted_at)
+        payment_status: model.payment_status
       }
     end
 
@@ -122,8 +117,12 @@ module V2
       end
     end
 
+    def from_datetime = datetime_property("from_datetime")
+
+    def to_datetime = datetime_property("to_datetime")
+
     def datetime_property(key)
-      format_time(model.properties[key]&.to_time&.utc)
+      model.properties[key]&.to_time&.utc
     end
 
     def pricing_unit_details
