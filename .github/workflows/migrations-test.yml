@@ -59,7 +59,7 @@ jobs:
         name: Install Ruby and gems
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "4.0.6"
+          ruby-version: "4.0.9"
           bundler-cache: true
       - &install-pg
         name: Install pg 15
