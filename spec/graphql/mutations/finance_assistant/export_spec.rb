@@ -9,7 +9,7 @@ RSpec.describe Mutations::FinanceAssistant::Export do
     execute_graphql(
       current_user: membership.user,
       current_organization: organization,
-      permissions: required_permission,
+      permissions:,
       query:,
       variables: {input: {messageId: message_id}}
     )
@@ -34,6 +34,7 @@ RSpec.describe Mutations::FinanceAssistant::Export do
   end
 
   let(:required_permission) { "ai_conversations:view" }
+  let(:permissions) { [required_permission, *AiConversations::ToolPolicy::FINANCE_ASSISTANT_PERMISSIONS] }
 
   let_it_be(:membership) { create_default(:membership) }
 
@@ -52,6 +53,17 @@ RSpec.describe Mutations::FinanceAssistant::Export do
   end
 
   context "with premium feature", :premium do
+    context "when the member cannot view the billing data" do
+      let(:permissions) { [required_permission, "analytics:view"] }
+
+      it "returns a forbidden error without calling the finance assistant" do
+        expect(result["data"]["exportFinanceAssistantResult"]).to be_nil
+        expect_forbidden_error(result)
+        expect(result["errors"].first["extensions"]["required_permissions"]).to include("invoices:view", "customers:view")
+        expect(FinanceAssistant::ExportService).not_to have_received(:call)
+      end
+    end
+
     it "returns the signed download url and filename" do
       data = result["data"]["exportFinanceAssistantResult"]
 

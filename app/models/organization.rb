@@ -24,6 +24,7 @@ class Organization < ApplicationRecord
 
   has_many :activity_logs, class_name: "Clickhouse::ActivityLog"
   has_many :ai_conversations
+  has_many :ai_conversation_tool_calls
   has_many :api_logs, class_name: "Clickhouse::ApiLog"
   has_many :api_keys
   has_many :security_logs, class_name: "Clickhouse::SecurityLog"

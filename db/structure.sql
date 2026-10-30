@@ -77,6 +77,7 @@ ALTER TABLE IF EXISTS ONLY public.idempotency_records DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.wallet_transaction_consumptions DROP CONSTRAINT IF EXISTS fk_rails_d4abfdb375;
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_d384ec1ebf;
 ALTER TABLE IF EXISTS ONLY public.quote_versions DROP CONSTRAINT IF EXISTS fk_rails_d2d917b73a;
+ALTER TABLE IF EXISTS ONLY public.ai_conversation_tool_calls DROP CONSTRAINT IF EXISTS fk_rails_d1819cb02a;
 ALTER TABLE IF EXISTS ONLY public.item_metadata DROP CONSTRAINT IF EXISTS fk_rails_d0b1714507;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_d07bc24ce3;
 ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS fk_rails_ce2c63d69f;
@@ -307,6 +308,7 @@ ALTER TABLE IF EXISTS ONLY public.invoice_settlements DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS fk_rails_3acf9e789c;
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_3ab959bfc4;
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_3a303bf667;
+ALTER TABLE IF EXISTS ONLY public.ai_conversation_tool_calls DROP CONSTRAINT IF EXISTS fk_rails_396137f629;
 ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS fk_rails_3926855f12;
 ALTER TABLE IF EXISTS ONLY public.products DROP CONSTRAINT IF EXISTS fk_rails_37c75ac37a;
 ALTER TABLE IF EXISTS ONLY public.product_filter_values DROP CONSTRAINT IF EXISTS fk_rails_36e9122b3e;
@@ -374,6 +376,7 @@ ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS fk_ra
 ALTER TABLE IF EXISTS ONLY public.rate_cards_taxes DROP CONSTRAINT IF EXISTS fk_rails_133ae613c4;
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_12d29bc654;
 ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS fk_rails_123667657c;
+ALTER TABLE IF EXISTS ONLY public.ai_conversation_tool_calls DROP CONSTRAINT IF EXISTS fk_rails_118194ca6b;
 ALTER TABLE IF EXISTS ONLY public.x402_settlements DROP CONSTRAINT IF EXISTS fk_rails_1124f79783;
 ALTER TABLE IF EXISTS ONLY public.quote_versions DROP CONSTRAINT IF EXISTS fk_rails_10ee148d0d;
 ALTER TABLE IF EXISTS ONLY public.applied_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_10428ecad2;
@@ -1026,6 +1029,9 @@ DROP INDEX IF EXISTS public.index_api_keys_on_value;
 DROP INDEX IF EXISTS public.index_api_keys_on_organization_id;
 DROP INDEX IF EXISTS public.index_ai_conversations_on_organization_id;
 DROP INDEX IF EXISTS public.index_ai_conversations_on_membership_id;
+DROP INDEX IF EXISTS public.index_ai_conversation_tool_calls_on_organization_id;
+DROP INDEX IF EXISTS public.index_ai_conversation_tool_calls_on_membership_id;
+DROP INDEX IF EXISTS public.index_ai_conversation_tool_calls_on_conversation_and_submitted;
 DROP INDEX IF EXISTS public.index_adjusted_fees_on_subscription_id;
 DROP INDEX IF EXISTS public.index_adjusted_fees_on_organization_id;
 DROP INDEX IF EXISTS public.index_adjusted_fees_on_invoice_id;
@@ -1279,6 +1285,7 @@ ALTER TABLE IF EXISTS ONLY public.applied_coupons DROP CONSTRAINT IF EXISTS appl
 ALTER TABLE IF EXISTS ONLY public.applied_add_ons DROP CONSTRAINT IF EXISTS applied_add_ons_pkey;
 ALTER TABLE IF EXISTS ONLY public.api_keys DROP CONSTRAINT IF EXISTS api_keys_pkey;
 ALTER TABLE IF EXISTS ONLY public.ai_conversations DROP CONSTRAINT IF EXISTS ai_conversations_pkey;
+ALTER TABLE IF EXISTS ONLY public.ai_conversation_tool_calls DROP CONSTRAINT IF EXISTS ai_conversation_tool_calls_pkey;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS adjusted_fees_pkey;
 ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS add_ons_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.add_ons DROP CONSTRAINT IF EXISTS add_ons_pkey;
@@ -1469,6 +1476,7 @@ DROP TABLE IF EXISTS public.applied_coupons;
 DROP TABLE IF EXISTS public.applied_add_ons;
 DROP TABLE IF EXISTS public.api_keys;
 DROP TABLE IF EXISTS public.ai_conversations;
+DROP TABLE IF EXISTS public.ai_conversation_tool_calls;
 DROP TABLE IF EXISTS public.adjusted_fees;
 DROP TABLE IF EXISTS public.add_ons_taxes;
 DROP TABLE IF EXISTS public.add_ons;
@@ -1530,6 +1538,7 @@ DROP TYPE IF EXISTS public.billing_segment_status;
 DROP TYPE IF EXISTS public.billing_object_connection_behavior;
 DROP TYPE IF EXISTS public.billable_metric_weighted_interval;
 DROP TYPE IF EXISTS public.billable_metric_rounding_function;
+DROP TYPE IF EXISTS public.ai_conversation_tool_call_status;
 DROP EXTENSION IF EXISTS unaccent;
 DROP EXTENSION IF EXISTS pgcrypto;
 DROP EXTENSION IF EXISTS pg_trgm;
@@ -1584,6 +1593,19 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
 --
 
 CREATE EXTENSION IF NOT EXISTS unaccent WITH SCHEMA public;
+
+
+--
+-- Name: ai_conversation_tool_call_status; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.ai_conversation_tool_call_status AS ENUM (
+    'pending',
+    'confirmed',
+    'executing',
+    'cancelled',
+    'completed'
+);
 
 
 --
@@ -2348,6 +2370,29 @@ CREATE TABLE public.adjusted_fees (
 
 
 --
+-- Name: ai_conversation_tool_calls; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ai_conversation_tool_calls (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    ai_conversation_id uuid NOT NULL,
+    membership_id uuid NOT NULL,
+    tool_call_id character varying NOT NULL,
+    name character varying NOT NULL,
+    arguments jsonb DEFAULT '{}'::jsonb NOT NULL,
+    status public.ai_conversation_tool_call_status DEFAULT 'pending'::public.ai_conversation_tool_call_status NOT NULL,
+    requires_confirmation boolean DEFAULT false NOT NULL,
+    "position" integer DEFAULT 0 NOT NULL,
+    result text,
+    decided_at timestamp(6) without time zone,
+    submitted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: ai_conversations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2358,7 +2403,8 @@ CREATE TABLE public.ai_conversations (
     name character varying NOT NULL,
     mistral_conversation_id character varying,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    resuming_at timestamp(6) without time zone
 );
 
 
@@ -6533,6 +6579,14 @@ ALTER TABLE ONLY public.adjusted_fees
 
 
 --
+-- Name: ai_conversation_tool_calls ai_conversation_tool_calls_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_conversation_tool_calls
+    ADD CONSTRAINT ai_conversation_tool_calls_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: ai_conversations ai_conversations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8476,6 +8530,27 @@ CREATE INDEX index_adjusted_fees_on_organization_id ON public.adjusted_fees USIN
 --
 
 CREATE INDEX index_adjusted_fees_on_subscription_id ON public.adjusted_fees USING btree (subscription_id);
+
+
+--
+-- Name: index_ai_conversation_tool_calls_on_conversation_and_submitted; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_ai_conversation_tool_calls_on_conversation_and_submitted ON public.ai_conversation_tool_calls USING btree (ai_conversation_id, submitted_at);
+
+
+--
+-- Name: index_ai_conversation_tool_calls_on_membership_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_ai_conversation_tool_calls_on_membership_id ON public.ai_conversation_tool_calls USING btree (membership_id);
+
+
+--
+-- Name: index_ai_conversation_tool_calls_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_ai_conversation_tool_calls_on_organization_id ON public.ai_conversation_tool_calls USING btree (organization_id);
 
 
 --
@@ -13037,6 +13112,14 @@ ALTER TABLE ONLY public.x402_settlements
 
 
 --
+-- Name: ai_conversation_tool_calls fk_rails_118194ca6b; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_conversation_tool_calls
+    ADD CONSTRAINT fk_rails_118194ca6b FOREIGN KEY (ai_conversation_id) REFERENCES public.ai_conversations(id);
+
+
+--
 -- Name: entitlement_subscription_feature_removals fk_rails_123667657c; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -13570,6 +13653,14 @@ ALTER TABLE ONLY public.products
 
 ALTER TABLE ONLY public.quantified_events
     ADD CONSTRAINT fk_rails_3926855f12 FOREIGN KEY (group_id) REFERENCES public.groups(id);
+
+
+--
+-- Name: ai_conversation_tool_calls fk_rails_396137f629; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_conversation_tool_calls
+    ADD CONSTRAINT fk_rails_396137f629 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -15413,6 +15504,14 @@ ALTER TABLE ONLY public.item_metadata
 
 
 --
+-- Name: ai_conversation_tool_calls fk_rails_d1819cb02a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_conversation_tool_calls
+    ADD CONSTRAINT fk_rails_d1819cb02a FOREIGN KEY (membership_id) REFERENCES public.memberships(id);
+
+
+--
 -- Name: quote_versions fk_rails_d2d917b73a; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -15968,6 +16067,8 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261028184731'),
 ('20261026150420'),
 ('20261026101445'),
+('20261023180000'),
+('20261023090000'),
 ('20261022090030'),
 ('20261021200000'),
 ('20261020144205'),
