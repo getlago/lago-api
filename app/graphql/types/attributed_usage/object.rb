@@ -15,6 +15,7 @@ module Types
       field :to_datetime, GraphQL::Types::ISO8601DateTime, null: false
 
       field :split_filters_count, Integer, null: true
+      field :split_filters_limit, Integer, null: true
 
       field :rows, [Types::AttributedUsage::Row], null: false
       field :totals, Types::AttributedUsage::Aggregate, null: false

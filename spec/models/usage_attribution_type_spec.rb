@@ -9,7 +9,7 @@ RSpec.describe UsageAttributionType do
     it do
       expect(subject).to define_enum_for(:role)
         .backed_by_column_of_type(:enum)
-        .validating
+        .validating(allowing_nil: true)
         .with_values(hierarchical: "hierarchical", flat: "flat")
     end
   end
@@ -37,6 +37,7 @@ RSpec.describe UsageAttributionType do
   describe "validations" do
     it do
       expect(usage_attribution_type).to validate_presence_of(:code)
+      expect(usage_attribution_type).to validate_presence_of(:role)
       expect(usage_attribution_type).to validate_presence_of(:attribution_keys)
       expect(usage_attribution_type).to validate_length_of(:code).is_at_most(255)
       expect(usage_attribution_type).to validate_length_of(:name).is_at_most(255)

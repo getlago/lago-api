@@ -44,7 +44,7 @@ RSpec.describe Resolvers::AttributedUsageResolver, clickhouse: {clean_before: tr
           chargeIds: $chargeIds, splitChargeId: $splitChargeId, splitFiltersOffset: $splitFiltersOffset,
           fromDatetime: $fromDatetime, toDatetime: $toDatetime, page: $page, limit: $limit, searchTerm: $searchTerm
         ) {
-          subscriptionId externalSubscriptionId groupBy basis currency fromDatetime toDatetime splitFiltersCount
+          subscriptionId externalSubscriptionId groupBy basis currency fromDatetime toDatetime splitFiltersCount splitFiltersLimit
           rows {
             value rank amountCents preciseAmountCents eventsCount splitChargeUnits
             chargesUsage { charge { id } chargeFilter { id values } units amountCents preciseAmountCents eventsCount }
@@ -160,6 +160,7 @@ RSpec.describe Resolvers::AttributedUsageResolver, clickhouse: {clean_before: tr
         ]
       )
       expect(attributed_usage["splitFiltersCount"]).to eq(1)
+      expect(attributed_usage["splitFiltersLimit"]).to eq(10)
     end
 
     it "returns the units of the whole split charge" do

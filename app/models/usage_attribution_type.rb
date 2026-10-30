@@ -17,7 +17,7 @@ class UsageAttributionType < ApplicationRecord
   has_many :children, -> { order(:code) }, class_name: "UsageAttributionType", foreign_key: :parent_id, inverse_of: :parent
   has_many :usage_attribution_values
 
-  enum :role, ROLES, validate: true
+  enum :role, ROLES, validate: {allow_nil: true}
 
   normalizes :attribution_keys, with: ->(attribution_keys) do
     Array(attribution_keys).filter_map { it.to_s.strip.presence }.uniq
@@ -25,6 +25,7 @@ class UsageAttributionType < ApplicationRecord
 
   validates :code, presence: true, length: {maximum: 255}, uniqueness: {scope: :organization_id, conditions: -> { where(deleted_at: nil) }}
   validates :name, length: {maximum: 255}
+  validates :role, presence: true
   validates :attribution_keys, presence: true, length: {maximum: MAX_ATTRIBUTION_KEYS}
 
   validate :validate_attribution_keys
