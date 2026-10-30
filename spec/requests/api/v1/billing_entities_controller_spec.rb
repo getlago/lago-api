@@ -326,22 +326,24 @@ RSpec.describe Api::V1::BillingEntitiesController do
     context "when updating net_payment_term with a digit string" do
       let(:update_params) { {billing_entity: {net_payment_term: "45"}} }
 
-      it "fails with invalid_format" do
+      it "casts it to an integer" do
         subject
 
-        expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:error_details][:net_payment_term]).to eq(["invalid_format"])
+        expect(response).to be_successful
+        expect(json[:billing_entity][:net_payment_term]).to eq(45)
+        expect(json[:billing_entity][:payment_term]).to eq(term_type: "net", days: 45)
       end
     end
 
     context "when updating net_payment_term with a decimal" do
       let(:update_params) { {billing_entity: {net_payment_term: 30.5}} }
 
-      it "fails with invalid_format" do
+      it "truncates it to an integer" do
         subject
 
-        expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:error_details][:net_payment_term]).to eq(["invalid_format"])
+        expect(response).to be_successful
+        expect(json[:billing_entity][:net_payment_term]).to eq(30)
+        expect(json[:billing_entity][:payment_term]).to eq(term_type: "net", days: 30)
       end
     end
 
