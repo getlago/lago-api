@@ -25,7 +25,8 @@ module PaymentTerms
       return true unless args.key?(:payment_term) && args.key?(:net_payment_term)
 
       alias_value = payment_term && PaymentTerm.from_h(payment_term).net_payment_term_alias
-      if alias_value != args[:net_payment_term]
+      # Compared as the integer column casts it, so the legacy "30" and 30.0 inputs still match
+      if alias_value != ActiveModel::Type::Integer.new.cast(args[:net_payment_term])
         add_error(field: :payment_term, error_code: "conflicting_net_payment_term")
       else
         true
