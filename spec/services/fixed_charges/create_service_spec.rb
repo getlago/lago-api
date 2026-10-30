@@ -63,6 +63,30 @@ RSpec.describe FixedCharges::CreateService do
         end
       end
 
+      context "when neither add_on_id nor add_on_code is provided" do
+        let(:params) { {charge_model: "standard"} }
+
+        it "returns a validation failure and does not create fixed charge" do
+          expect { result }.not_to change(FixedCharge, :count)
+
+          expect(result).to be_a_failure
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq({add_on_id: ["value_is_mandatory"]})
+        end
+      end
+
+      context "when add_on_id and add_on_code are blank" do
+        let(:params) { {add_on_id: "", add_on_code: "", charge_model: "standard"} }
+
+        it "returns a validation failure and does not create fixed charge" do
+          expect { result }.not_to change(FixedCharge, :count)
+
+          expect(result).to be_a_failure
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to eq({add_on_id: ["value_is_mandatory"]})
+        end
+      end
+
       context "when a fixed charge with the same code already exists on the plan" do
         let(:params) do
           {

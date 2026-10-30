@@ -186,6 +186,22 @@ RSpec.describe Api::V1::Plans::FixedChargesController do
       end
     end
 
+    context "when no add-on is given" do
+      let(:create_params) do
+        {
+          code: "new_fixed_charge_code",
+          charge_model: "standard"
+        }
+      end
+
+      it "returns a validation error and creates no fixed charge" do
+        expect { subject }.not_to change { plan.fixed_charges.count }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq({add_on_id: ["value_is_mandatory"]})
+      end
+    end
+
     context "with taxes" do
       let(:tax) { create(:tax, organization:) }
       let(:create_params) do
