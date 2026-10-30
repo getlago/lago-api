@@ -561,10 +561,28 @@ RSpec.describe PaymentRequests::Payments::StripeService do
           )
         end
 
-        it "raises a not found failure" do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.message).to eq("payment_request_not_found")
+        it "ignores the event" do
+          expect(result).to be_success
+          expect(result.payment).to be_nil
+        end
+      end
+
+      context "when payment request belongs to another organization" do
+        subject(:result) do
+          described_class.call(
+            :update_payment_status,
+            organization_id: create(:organization).id,
+            status: "succeeded",
+            stripe_payment:
+          )
+        end
+
+        it "does not create a payment nor update the payment request" do
+          expect { result }.not_to change(Payment, :count)
+
+          expect(result).to be_success
+          expect(result.payment).to be_nil
+          expect(payment_request.reload).not_to be_payment_succeeded
         end
       end
     end
@@ -708,7 +726,7 @@ RSpec.describe PaymentRequests::Payments::StripeService do
               # The rescue's re-fetch then finds the row the winning writer (a parallel webhook worker
               # or PaymentProviders::Stripe::Payments::CreateService) committed in the meantime.
               allow(Payment).to receive(:find_by)
-                .with(provider_payment_id: stripe_payment.id)
+                .with(provider_payment_id: stripe_payment.id, organization_id: organization.id)
                 .and_return(nil, payment)
             end
 

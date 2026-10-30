@@ -49,7 +49,7 @@ RSpec.describe PaymentRequests::Payments::GocardlessService do
   describe ".call(:update_payment_status)" do
     subject(:result) do
       described_class.call(
-        :update_payment_status, provider_payment_id:, status:
+        :update_payment_status, organization_id: organization.id, provider_payment_id:, status:
       )
     end
 
@@ -69,6 +69,21 @@ RSpec.describe PaymentRequests::Payments::GocardlessService do
 
     before do
       payment
+    end
+
+    context "when payment belongs to another organization" do
+      subject(:result) do
+        described_class.call(
+          :update_payment_status, organization_id: create(:organization).id, provider_payment_id:, status:
+        )
+      end
+
+      it "does not update the payment nor the payment request" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(payment.reload.status).to eq("pending_submission")
+        expect(payment_request.reload).not_to be_payment_succeeded
+      end
     end
 
     it "updates the payment, payment_request and invoice payment_status" do

@@ -134,6 +134,25 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
       end
     end
 
+    context "when payment request belongs to another organization" do
+      it "does not create a payment nor update the payment request" do
+        result = nil
+
+        expect do
+          result = described_class.call(
+            :update_payment_status,
+            organization_id: create(:organization).id,
+            status: :succeeded,
+            flutterwave_payment:
+          )
+        end.not_to change(Payment, :count)
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(payment_request.reload).not_to be_payment_succeeded
+      end
+    end
+
     context "when updating existing payment" do
       let(:existing_payment) do
         create(:payment,

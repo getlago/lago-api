@@ -26,8 +26,8 @@ module PaymentRequests
 
       private
 
-      def update_payment_status(provider_payment_id:, status:)
-        payment = Payment.find_by(provider_payment_id:)
+      def update_payment_status(organization_id:, provider_payment_id:, status:)
+        payment = Payment.find_by(provider_payment_id:, organization_id:)
         return result.not_found_failure!(resource: "gocardless_payment") unless payment
 
         @payable = payment.payable

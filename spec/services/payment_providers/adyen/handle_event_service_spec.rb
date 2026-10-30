@@ -236,6 +236,7 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
 
         expect(PaymentRequests::Payments::AdyenService).to have_received(:call).with(
           :update_payment_status,
+          organization_id: organization.id,
           provider_payment_id: "PSPREF123",
           status: "Cancelled",
           metadata: {lago_payable_type: "PaymentRequest"}

@@ -9,7 +9,7 @@ module PaymentProviders
           reason = event["reason"]
           provider_payment_id = event["pspReference"]
 
-          payment = Payment.find_by(provider_payment_id:)
+          payment = Payment.find_by(provider_payment_id:, organization_id: organization.id)
           return result.not_found_failure!(resource: "adyen_payment") unless payment
 
           if status == "Lost" && event["success"] == "true"
