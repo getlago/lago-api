@@ -136,6 +136,37 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
 
         expect(CreditNotes::Refunds::AdyenService).to have_received(:new)
         expect(refund_service).to have_received(:update_status)
+          .with(hash_including(organization_id: organization.id, status: :succeeded))
+      end
+    end
+
+    context "when succeeded refund failed event" do
+      let(:refund_service) { instance_double(CreditNotes::Refunds::AdyenService) }
+      let(:service_result) { BaseService::Result.new }
+
+      let(:event_json) do
+        JSON.parse(event_response_json)["notificationItems"]
+          .first&.dig("NotificationRequestItem")
+          &.merge("eventCode" => "REFUND_FAILED", "success" => "true").to_json
+      end
+
+      let(:event_response_json) do
+        path = Rails.root.join("spec/fixtures/adyen/webhook_refund_response.json")
+        File.read(path)
+      end
+
+      before do
+        allow(CreditNotes::Refunds::AdyenService).to receive(:new)
+          .and_return(refund_service)
+        allow(refund_service).to receive(:update_status)
+          .and_return(service_result)
+      end
+
+      it "routes the event to the refund service scoped to the organization" do
+        event_service.call
+
+        expect(refund_service).to have_received(:update_status)
+          .with(hash_including(organization_id: organization.id, status: :failed))
       end
     end
 
@@ -168,6 +199,32 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
           status: "Cancelled",
           metadata: {lago_payable_type: "Invoice"}
         )
+      end
+    end
+
+    context "when cancellation event references a payment from another organization" do
+      let(:event_json) do
+        JSON.parse(event_response_json)["notificationItems"]
+          .first&.dig("NotificationRequestItem").to_json
+      end
+
+      let(:event_response_json) do
+        path = Rails.root.join("spec/fixtures/adyen/webhook_cancellation_response.json")
+        File.read(path)
+      end
+
+      before do
+        other_organization = create(:organization)
+        invoice = create(:invoice, organization: other_organization, customer: create(:customer, organization: other_organization))
+        create(:payment, payable: invoice, organization: other_organization,
+          provider_payment_id: "PSPREF123", payable_payment_status: :pending,
+          status: "Authorised")
+      end
+
+      it "does not route the event to a payment service" do
+        event_service.call
+
+        expect(Invoices::Payments::AdyenService).not_to have_received(:call)
       end
     end
 
