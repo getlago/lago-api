@@ -14,14 +14,24 @@ class PaymentReceipt < ApplicationRecord
 
   expiring_document_urls :file, :xml_file
 
-  # A payment request counts when it covers at least one catalog invoice.
+  # Correlated EXISTS on the payment, so that a receipt only probes the invoices it pays: an `IN`
+  # under the `OR` would read the invoices of every organization. A payment request counts when
+  # it covers at least one catalog invoice.
   scope :product_catalog, -> {
-    catalog_invoices = Invoice.product_catalog.select(:id)
-    catalog_payment_requests = PaymentRequest::AppliedInvoice.where(invoice_id: catalog_invoices).select(:payment_request_id)
-    catalog_payments = Payment.where(payable_type: "Invoice", payable_id: catalog_invoices)
-      .or(Payment.where(payable_type: "PaymentRequest", payable_id: catalog_payment_requests))
+    payments = Payment.arel_table
+    invoices = Invoice.arel_table
+    applied_invoices = PaymentRequest::AppliedInvoice.arel_table
 
-    where(payment_id: catalog_payments.select(:id))
+    paid_invoice = Invoice.product_catalog.where(invoices[:id].eq(payments[:payable_id]))
+    requested_invoice = PaymentRequest::AppliedInvoice
+      .where(applied_invoices[:payment_request_id].eq(payments[:payable_id]))
+      .where(Invoice.product_catalog.where(invoices[:id].eq(applied_invoices[:invoice_id])).arel.exists)
+    catalog_payment = Payment.where(payments[:id].eq(arel_table[:payment_id])).where(
+      payments[:payable_type].eq("Invoice").and(paid_invoice.arel.exists)
+        .or(payments[:payable_type].eq("PaymentRequest").and(requested_invoice.arel.exists))
+    )
+
+    where(catalog_payment.arel.exists)
   }
 end
 
