@@ -21,7 +21,8 @@ class ModelSerializer
   # Lets a native v2 endpoint embed `model.<name>` on `expands[]=<name>`, or what a private method
   # of the serializer with that name returns, for records that are ordered or computed. One record
   # or a list, each rendered by `serializer` with `nested_options` only, so that it stays flat. It
-  # comes last in `serialize`. `webhooks: true` also embeds it in a render with `webhook: true`.
+  # comes last in `serialize`. `webhooks: true` also embeds it in the record's webhooks: see
+  # `for_webhook`.
   def self.expandable(name, serializer:, webhooks: false)
     prepend(RendersExpansions)
 
@@ -42,12 +43,12 @@ class ModelSerializer
   #   when used with `included_relations`.
   #   Example:
   #     included_relations(:plan, default: [:charges])`
-  # - webhook: true renders the record as its webhooks send it. A webhook cannot ask for
-  #   expansions: it gets `webhook_includes`, and its own includes are internal ones, such as
-  #   `:counts`.
+  # - webhook: true renders the record as its webhooks send it, with `webhook_includes`, and false
+  #   keeps a webhook body flat. Either way a webhook cannot ask for expansions: its own includes
+  #   are internal ones, such as `:counts`.
   def initialize(model, options = {})
     @model = model
-    @options = options[:webhook] ? with_webhook_includes(options) : options
+    @options = options.key?(:webhook) ? webhook_options(options) : options
   end
 
   def serialize
@@ -94,6 +95,16 @@ class ModelSerializer
     include[value]
   end
 
+  # The render of a webhook body, as Webhooks::BaseService asks for it: with `webhook: true`,
+  # unless the service chose a `webhook` option. A serializer without expansions has none to add.
+  def for_webhook
+    if self.class.expandable_names.empty? || options.key?(:webhook)
+      self
+    else
+      self.class.new(model, options.merge(webhook: true))
+    end
+  end
+
   private
 
   # At the microsecond precision the columns store when the render passes `:usec_timestamps`, as
@@ -109,13 +120,15 @@ class ModelSerializer
 
   # An expansion reaches a webhook only through `webhooks: true`, so that the declarations stay
   # the one list of what webhooks embed.
-  def with_webhook_includes(options)
+  def webhook_options(options)
     includes = Array(options[:includes])
 
-    if self.class.expandable_names.intersect?(includes)
+    if self.class.expandable_names.intersect?(includes.flat_map { it.is_a?(Hash) ? it.keys : it })
       raise ArgumentError, "#{self.class.name} embeds an expansion in a webhook only through `webhooks: true`"
-    else
+    elsif options[:webhook]
       options.merge(includes: [*self.class.webhook_includes, *includes])
+    else
+      options
     end
   end
 

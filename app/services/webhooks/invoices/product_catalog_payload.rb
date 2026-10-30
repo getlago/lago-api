@@ -8,7 +8,7 @@ module Webhooks
 
       def object_serializer
         if object.product_catalog?
-          ::V2::InvoiceSerializer.new(object, root_name: "invoice", webhook: true)
+          ::V2::InvoiceSerializer.new(object, root_name: "invoice")
         else
           ::V1::InvoiceSerializer.new(object, root_name: "invoice", includes: v1_includes)
         end

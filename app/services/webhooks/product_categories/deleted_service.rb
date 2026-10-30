@@ -6,7 +6,7 @@ module Webhooks
       private
 
       def object_serializer
-        ::V2::ProductCategorySerializer.new(object, root_name: object_type, webhook: true)
+        ::V2::ProductCategorySerializer.new(object, root_name: object_type)
       end
 
       def webhook_type

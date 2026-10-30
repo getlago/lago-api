@@ -6,7 +6,7 @@ module Webhooks
       private
 
       def object_serializer
-        ::V2::ContractSerializer.new(object, root_name: "contract", webhook: true)
+        ::V2::ContractSerializer.new(object, root_name: "contract")
       end
 
       def webhook_type

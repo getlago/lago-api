@@ -6,11 +6,13 @@ module Webhooks
       private
 
       def object_serializer
-        if object.product_catalog?
-          ::V2::Invoices::PaymentDisputeLostSerializer.new(object, root_name: object_type, provider_error: options[:provider_error], webhook: true)
-        else
-          ::V1::Invoices::PaymentDisputeLostSerializer.new(object, root_name: object_type, provider_error: options[:provider_error])
-        end
+        serializer_class = object.product_catalog? ? ::V2::Invoices::PaymentDisputeLostSerializer : ::V1::Invoices::PaymentDisputeLostSerializer
+
+        serializer_class.new(
+          object,
+          root_name: object_type,
+          provider_error: options[:provider_error]
+        )
       end
 
       def webhook_type

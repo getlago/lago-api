@@ -18,7 +18,7 @@ module Webhooks
         :webhook_type => webhook_type,
         :object_type => object_type,
         :organization_id => current_organization.id,
-        object_type => object_serializer.serialize
+        object_type => object_serializer.for_webhook.serialize
       }
 
       # TODO: Wrap in transaction so we create all webhook models or none
@@ -44,6 +44,8 @@ module Webhooks
       webhook_endpoint.event_types.include?(webhook_type)
     end
 
+    # The record's render. `call` sends it through `for_webhook`, which embeds the expansions its
+    # serializer declares with `webhooks: true`, unless the service built it with `webhook: false`.
     def object_serializer
       # Empty
     end

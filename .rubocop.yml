@@ -23,7 +23,6 @@ require:
   - ./dev/cops/stub_perform_all_later_cop.rb
   - ./dev/cops/no_expect_receive_on_job_cop.rb
   - ./dev/cops/v2_timestamp_format_cop.rb
-  - ./dev/cops/v2_webhook_serializer_cop.rb
 
 inherit_gem:
   standard: config/base.yml
@@ -51,10 +50,6 @@ Lago/NoExpectReceiveOnJob:
 Lago/V2TimestampFormat:
   Include:
     - "app/serializers/v2/**/*.rb"
-
-Lago/V2WebhookSerializer:
-  Include:
-    - "app/services/webhooks/**/*.rb"
 
 Lago/NoDropColumnOrTable:
   Include:

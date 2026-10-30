@@ -964,7 +964,7 @@ RSpec.describe SendWebhookJob do
 
           webhook = Webhook.order(created_at: :desc).first
           expect(webhook.object_id).to eq(product.id)
-          expect(V2::ProductSerializer).to have_received(:new).with(product, root_name: "product", webhook: true)
+          expect(V2::ProductSerializer).to have_received(:new).with(product, root_name: "product")
           expect(webhook.payload.fetch("product")).to include("name" => "Changed before delivery")
         end
       end
