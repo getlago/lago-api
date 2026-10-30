@@ -33,7 +33,7 @@ RSpec.describe RealtimeUsage::Reports::BillableMetricsService, clickhouse: {clea
     end
   end
 
-  def insert_bucket(bucket:, units:, charge: self.charge, subscription: self.subscription, charge_filter: nil, grouped_by: "{}", billable_metric: self.billable_metric, last_event_at: nil)
+  def insert_bucket(bucket:, units:, charge: self.charge, subscription: self.subscription, charge_filter: nil, grouped_by: "{}", billable_metric: self.billable_metric, last_event_at: nil, plan_id: subscription.plan_id)
     create(
       :clickhouse_usage_bucket,
       subscription:,
@@ -41,6 +41,7 @@ RSpec.describe RealtimeUsage::Reports::BillableMetricsService, clickhouse: {clea
       organization:,
       billable_metric:,
       charge:,
+      plan_id:,
       bucket: Time.zone.parse("2026-08-24 #{bucket}"),
       charge_filter_id: charge_filter&.id || "",
       grouped_by:,
@@ -245,7 +246,7 @@ RSpec.describe RealtimeUsage::Reports::BillableMetricsService, clickhouse: {clea
 
     before do
       insert_bucket(bucket: "09:30", units: 10, charge_filter: region_filter(charge, "eu"))
-      insert_bucket(bucket: "10:30", units: 5, charge: override_charge)
+      insert_bucket(bucket: "10:30", units: 5, charge: override_charge, plan_id: override_charge.plan_id)
     end
 
     it "keeps the usage read by both charges" do

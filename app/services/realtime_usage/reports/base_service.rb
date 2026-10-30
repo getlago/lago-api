@@ -123,14 +123,14 @@ module RealtimeUsage
       # The charges of one metric on a subscription each read every event of the metric, but can
       # split them on different dimensions: one per region, another not at all. Adding them up
       # would count the events twice, and keeping the biggest per dimension would count the
-      # filtered ones twice, so a single charge is read per subscription, metric and bucket.
+      # filtered ones twice, so a single charge is read per subscription, metric and plan.
       #
       # Returns the SQL of [code, (period,) series, units] rows.
       def usage_sql(billable_metrics:, dimension_key:, dimension_keys: nil, keys: nil, by_period: false, series_sql: "dimension")
         codes = billable_metrics.map(&:code)
         metric_scope = base_scope.where(code: codes)
 
-        scope = metric_scope.where("(code, subscription_id, bucket, charge_id) IN (#{read_charges_sql(metric_scope)})")
+        scope = metric_scope.where("(code, subscription_id, plan_id, charge_id) IN (#{read_charges_sql(metric_scope)})")
         scope = scope.where("#{dimension_key.sql} IN (#{quote_list(dimension_keys)})") if dimension_keys
         scope = scope.where("#{dimension_key.sql} IN (#{quote_list(keys)})") if keys
 
@@ -151,22 +151,21 @@ module RealtimeUsage
         SQL
       end
 
-      # The charge splitting the usage the finest, then the smallest id, ranked on the whole
-      # window before any dimension filter, so every read of a report splits the usage the same
-      # way. The pick is made per bucket: a plan override moves a subscription to new charges
-      # without changing its id, and each half of the window keeps the charges it was read on.
+      # The charge splitting the usage the finest, then the smallest id, ranked before any
+      # dimension filter, so every read of a report splits the usage the same way. The pick is
+      # made per plan: a plan override moves a subscription to a new plan and new charges without
+      # changing its id, and each half of the window keeps the charges it was read on. Picking per
+      # bucket would do the same with a set one tuple per bucket, which makes the reads far slower.
       def read_charges_sql(scope)
-        ranked = scope
-          .select(<<~SQL.squish)
-            code, subscription_id, bucket, charge_id,
-            uniqExact(charge_filter_id, grouped_by) OVER (PARTITION BY code, subscription_id, charge_id) AS dimensions
-          SQL
+        per_charge = scope
+          .group(:code, :subscription_id, :plan_id, :charge_id)
+          .select("code, subscription_id, plan_id, charge_id, uniqExact(charge_filter_id, grouped_by) AS dimensions")
           .to_sql
 
         <<~SQL.squish
-          SELECT code, subscription_id, bucket, argMin(charge_id, (-toInt64(dimensions), charge_id))
-          FROM (#{ranked})
-          GROUP BY code, subscription_id, bucket
+          SELECT code, subscription_id, plan_id, argMin(charge_id, (-toInt64(dimensions), charge_id))
+          FROM (#{per_charge})
+          GROUP BY code, subscription_id, plan_id
         SQL
       end
 
