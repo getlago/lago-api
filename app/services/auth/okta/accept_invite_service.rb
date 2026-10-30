@@ -16,8 +16,8 @@ module Auth
       def call
         check_state
         check_code
-        check_okta_integration(result.email)
         check_invite(result.email)
+        check_okta_integration(result.email, organization_id: result.invite.organization_id)
         query_okta_access_token
         check_userinfo(result.email)
         return login_method_not_authorized_failure unless integration_organization_allows_login_method?
