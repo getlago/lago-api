@@ -4,10 +4,12 @@ module RecurringAggregationSnapshots
   # The latest period of a charge closed before from_datetime. Loads the marker, the filter check
   # and the snapshots once, for all charge filters.
   class ChargePeriod
-    def initialize(subscription:, charge:, from_datetime:)
+    # charge_filter_ids: the buckets to load besides the default one, every filter of the charge when nil
+    def initialize(subscription:, charge:, from_datetime:, charge_filter_ids: nil)
       @subscription = subscription
       @charge = charge
       @from_datetime = from_datetime
+      @charge_filter_ids = charge_filter_ids
     end
 
     # Marker and snapshots of the charge filter's bucket, or nil without a marker. A marker the
@@ -21,7 +23,7 @@ module RecurringAggregationSnapshots
 
     private
 
-    attr_reader :subscription, :charge, :from_datetime
+    attr_reader :subscription, :charge, :from_datetime, :charge_filter_ids
 
     def charge_snapshots
       RecurringAggregationSnapshot.where(
@@ -48,7 +50,7 @@ module RecurringAggregationSnapshots
 
         # Listing the buckets lets the period index serve to_datetime too
         charge_snapshots
-          .where(charge_filter_id: [nil, *charge.filters.ids])
+          .where(charge_filter_id: [nil, *(charge_filter_ids || charge.filters.ids)])
           .of_period(latest_to_datetime)
           .group_by(&:charge_filter_id)
       end

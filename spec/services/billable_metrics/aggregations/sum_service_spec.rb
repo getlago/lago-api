@@ -382,6 +382,17 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
 
           expect(result.aggregation).to eq(40)
         end
+
+        context "with snapshots to fetch" do
+          let(:fetches) { [] }
+
+          it "does not fetch them" do
+            result = aggregator(periods.second, initial_snapshots: -> { fetches << :fetch }).aggregate(options:)
+
+            expect(result.aggregation).to eq(40)
+            expect(fetches).to be_empty
+          end
+        end
       end
     end
   end
