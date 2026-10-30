@@ -83,5 +83,53 @@ namespace :daily_usages do
 
     puts "enqueued #{enqueued} jobs in #{(Time.current - enqueue_start).round}s"
   end
+
+  desc "Recompute the usage_diff of daily usages written after a charge's filters were edited mid-period"
+  task recompute_diffs: :environment do
+    Rails.logger.level = Logger::INFO
+
+    organization = TaskPrompt.ask_for_organization
+
+    subscription_ids = TaskPrompt.ask_for_subscription_ids
+
+    default_from_date = DailyUsage::DEFAULT_HISTORY_DAYS.days.ago.to_date
+    from_date = TaskPrompt.ask_for_date("From date (YYYY-MM-DD)", default: default_from_date)
+
+    subscriptions = organization.subscriptions.where(id: DailyUsage.where("usage_date >= ?", from_date).select(:subscription_id))
+    subscriptions = subscriptions.where(id: subscription_ids) if subscription_ids.present?
+
+    # ----- recon (read-only) -----
+    affected = subscriptions.find_each.each_with_object({}) do |subscription, result|
+      daily_usages = DailyUsages::RecomputeDiffsService.call!(subscription:, from_date:, dry_run: true).daily_usages
+      result[subscription] = daily_usages if daily_usages.any?
+    end
+
+    puts ""
+    puts "----- recon -----"
+    puts "organization          : #{organization.name} (#{organization.id})"
+    puts "requested subs        : #{subscription_ids.present? ? subscription_ids.size : "all"}"
+    puts "from date             : #{from_date}"
+    puts "affected subscriptions: #{affected.size}"
+    puts "affected daily_usages : #{affected.values.sum(&:size)}"
+    affected.each do |subscription, daily_usages|
+      puts "  #{subscription.id}: #{daily_usages.map(&:usage_date).join(", ")}"
+    end
+    puts "-----------------"
+
+    if affected.empty?
+      puts "No daily usage to recompute. Nothing to do."
+      next
+    end
+
+    puts ""
+    puts "This will recompute the usage_diff of the #{affected.values.sum(&:size)} daily_usages above"
+    TaskPrompt.confirm!("Continue? (y/n): ")
+
+    updated = affected.keys.sum do |subscription|
+      DailyUsages::RecomputeDiffsService.call!(subscription:, from_date:).daily_usages.size
+    end
+
+    puts "recomputed #{updated} daily_usages"
+  end
 end
 # rubocop:enable Rails/Output,Rails/Exit

@@ -1380,4 +1380,455 @@ RSpec.describe DailyUsages::ComputeDiffService do
       end
     end
   end
+
+  describe "filters edited between snapshots" do
+    def usage_values(amount_cents, units, events_count)
+      {"amount_cents" => amount_cents, "units" => units, "events_count" => events_count}
+    end
+
+    def filter_usage(values, amount_cents, units, events_count, presentation_breakdowns: [])
+      {
+        "values" => values,
+        "invoice_display_name" => nil,
+        "presentation_breakdowns" => presentation_breakdowns,
+        **usage_values(amount_cents, units, events_count)
+      }
+    end
+
+    def usage_payload(filters, amount_cents, units, events_count)
+      {
+        "amount_cents" => amount_cents,
+        "taxes_amount_cents" => 0,
+        "charges_usage" => [
+          {
+            "charge" => {"lago_id" => "charge-a"},
+            "filters" => filters,
+            "grouped_usage" => [],
+            "presentation_breakdowns" => [],
+            **usage_values(amount_cents, units, events_count)
+          }
+        ]
+      }
+    end
+
+    let(:diff_charge) { diff_service.call.usage_diff.fetch("charges_usage").first }
+    let(:diff_filters) { diff_charge.fetch("filters").map { |f| f.slice("values", "amount_cents", "units", "events_count") } }
+
+    context "when filter values are edited without new usage" do
+      let(:previous_usage) do
+        usage_payload([filter_usage({"model" => %w[a b]}, 1000, "10.0", 10)], 1000, "10.0", 10)
+      end
+
+      let(:usage) do
+        usage_payload([filter_usage({"model" => %w[b]}, 1000, "10.0", 10)], 1000, "10.0", 10)
+      end
+
+      it "does not count the period-to-date usage of the edited filter as a new diff" do
+        expect(diff_charge.slice("amount_cents", "units", "events_count")).to eq(usage_values(0, "0.0", 0))
+        expect(diff_filters).to eq([{"values" => {"model" => %w[b]}, **usage_values(0, "0.0", 0)}])
+      end
+    end
+
+    context "when a filter value is moved into a new filter and usage is received" do
+      let(:previous_usage) do
+        usage_payload([filter_usage({"model" => %w[a b]}, 1000, "10.0", 10)], 1000, "10.0", 10)
+      end
+
+      let(:usage) do
+        usage_payload(
+          [
+            filter_usage({"model" => %w[b]}, 700, "7.0", 7),
+            filter_usage({"model" => %w[a]}, 400, "4.0", 4)
+          ],
+          1100, "11.0", 11
+        )
+      end
+
+      it "allocates the dropped filter usage so that filter diffs add up to the charge diff" do
+        expect(diff_charge.slice("amount_cents", "units", "events_count")).to eq(usage_values(100, "1.0", 1))
+        expect(diff_filters.map { |f| f["amount_cents"] }).to eq([64, 36])
+        expect(diff_filters.sum { |f| f["events_count"] }).to eq(1)
+        expect(diff_filters.sum { |f| BigDecimal(f["units"]) }).to eq(BigDecimal("1.0"))
+      end
+    end
+
+    context "when a filter is removed and its usage falls back into the default bucket" do
+      let(:previous_usage) do
+        usage_payload(
+          [
+            filter_usage({"model" => %w[a]}, 300, "3.0", 3),
+            filter_usage(nil, 700, "7.0", 7)
+          ],
+          1000, "10.0", 10
+        )
+      end
+
+      let(:usage) do
+        usage_payload([filter_usage(nil, 1050, "10.5", 11)], 1050, "10.5", 11)
+      end
+
+      it "deducts the removed filter usage from the remaining filters" do
+        expect(diff_filters).to eq([{"values" => nil, **usage_values(50, "0.5", 1)}])
+      end
+    end
+
+    context "when a filter is removed and its usage falls back into the default bucket next to an untouched filter" do
+      let(:previous_usage) do
+        usage_payload(
+          [
+            filter_usage({"model" => %w[a]}, 100, "1.0", 1),
+            filter_usage({"model" => %w[b]}, 100, "1.0", 1),
+            filter_usage(nil, 100, "1.0", 1)
+          ],
+          300, "3.0", 3
+        )
+      end
+
+      let(:usage) do
+        usage_payload(
+          [
+            filter_usage({"model" => %w[b]}, 100, "1.0", 1),
+            filter_usage(nil, 200, "2.0", 2)
+          ],
+          300, "3.0", 3
+        )
+      end
+
+      it "deducts the removed filter usage from the bucket that received it only" do
+        expect(diff_filters).to eq(
+          [
+            {"values" => {"model" => %w[b]}, **usage_values(0, "0.0", 0)},
+            {"values" => nil, **usage_values(0, "0.0", 0)}
+          ]
+        )
+      end
+    end
+
+    context "when a filter is removed while an unrelated filter receives new usage" do
+      let(:previous_usage) do
+        usage_payload(
+          [
+            filter_usage({"model" => %w[a]}, 100, "1.0", 1),
+            filter_usage({"model" => %w[b]}, 100, "1.0", 1),
+            filter_usage(nil, 100, "1.0", 1)
+          ],
+          300, "3.0", 3
+        )
+      end
+
+      let(:usage) do
+        usage_payload(
+          [
+            filter_usage({"model" => %w[b]}, 150, "1.5", 2),
+            filter_usage(nil, 200, "2.0", 2)
+          ],
+          350, "3.5", 4
+        )
+      end
+
+      it "keeps the unrelated filter's own diff" do
+        expect(diff_filters).to eq(
+          [
+            {"values" => {"model" => %w[b]}, **usage_values(50, "0.5", 1)},
+            {"values" => nil, **usage_values(0, "0.0", 0)}
+          ]
+        )
+      end
+    end
+
+    context "when a filter is replaced while an unrelated filter is added" do
+      let(:previous_usage) do
+        usage_payload([filter_usage({"model" => %w[a b]}, 1000, "10.0", 10)], 1000, "10.0", 10)
+      end
+
+      let(:usage) do
+        usage_payload(
+          [
+            filter_usage({"model" => %w[a b]}, 1000, "10.0", 10).merge("values" => {"model" => %w[a b c]}),
+            filter_usage({"region" => %w[eu], "model" => %w[d]}, 100, "1.0", 1)
+          ],
+          1100, "11.0", 11
+        )
+      end
+
+      it "deducts the dropped filter from the filter overlapping it only" do
+        expect(diff_filters).to eq(
+          [
+            {"values" => {"model" => %w[a b c]}, **usage_values(0, "0.0", 0)},
+            {"values" => {"region" => %w[eu], "model" => %w[d]}, **usage_values(100, "1.0", 1)}
+          ]
+        )
+      end
+    end
+
+    context "when a filter is replaced by fully specified filters and a more specific one" do
+      let(:previous_usage) do
+        usage_payload(
+          [
+            filter_usage({"model" => %w[a b]}, 1000, "10.0", 10),
+            filter_usage(nil, 50, "1.0", 1)
+          ],
+          1050, "11.0", 11
+        )
+      end
+
+      # Every a or b event is billed by a configured filter, so the default bucket only keeps its own gain
+      let(:usage) do
+        usage_payload(
+          [
+            filter_usage({"model" => %w[a]}, 600, "6.0", 6),
+            filter_usage({"model" => %w[b]}, 300, "3.0", 3),
+            filter_usage({"model" => %w[a], "region" => %w[eu]}, 100, "1.0", 1),
+            filter_usage(nil, 70, "1.4", 2)
+          ],
+          1070, "11.4", 12
+        )
+      end
+
+      it "does not deduct the dropped filter from the default bucket" do
+        expect(diff_filters).to eq(
+          [
+            {"values" => {"model" => %w[a]}, **usage_values(0, "0.0", 0)},
+            {"values" => {"model" => %w[b]}, **usage_values(0, "0.0", 0)},
+            {"values" => {"model" => %w[a], "region" => %w[eu]}, **usage_values(0, "0.0", 0)},
+            {"values" => nil, **usage_values(20, "0.4", 1)}
+          ]
+        )
+      end
+    end
+
+    context "when a dropped filter's values are matched by a filter with more keys only" do
+      let(:previous_usage) do
+        usage_payload(
+          [
+            filter_usage({"model" => %w[a]}, 100, "1.0", 1),
+            filter_usage(nil, 50, "1.0", 1)
+          ],
+          150, "2.0", 2
+        )
+      end
+
+      # Events of model a outside eu fall back to the default bucket
+      let(:usage) do
+        usage_payload(
+          [
+            filter_usage({"model" => %w[a], "region" => %w[eu]}, 40, "0.4", 1),
+            filter_usage(nil, 110, "1.6", 1)
+          ],
+          150, "2.0", 2
+        )
+      end
+
+      it "keeps the default bucket as a receiver" do
+        expect(diff_filters.sum { |f| f["amount_cents"] }).to eq(0)
+        expect(diff_filters.map { |f| f["amount_cents"] }).to eq([0, 0])
+      end
+    end
+
+    context "when a filter allowing all values is replaced" do
+      let(:previous_usage) do
+        usage_payload([filter_usage({"model" => %w[__ALL_FILTER_VALUES__]}, 1000, "10.0", 10)], 1000, "10.0", 10)
+      end
+
+      let(:usage) do
+        usage_payload([filter_usage({"model" => %w[a]}, 1000, "10.0", 10)], 1000, "10.0", 10)
+      end
+
+      it "treats it as overlapping every value" do
+        expect(diff_filters).to eq([{"values" => {"model" => %w[a]}, **usage_values(0, "0.0", 0)}])
+      end
+    end
+
+    context "when existing usage is split into new filters with different prices" do
+      let(:previous_usage) do
+        usage_payload([filter_usage({"model" => %w[a b]}, 200, "2.0", 2)], 200, "2.0", 2)
+      end
+
+      let(:usage) do
+        usage_payload(
+          [
+            filter_usage({"model" => %w[a]}, 100, "1.0", 1),
+            filter_usage({"model" => %w[b]}, 1000, "1.0", 1)
+          ],
+          1100, "2.0", 2
+        )
+      end
+
+      it "allocates units and events on their own weights and the amount at the dropped filter's price" do
+        expect(diff_filters).to eq(
+          [
+            {"values" => {"model" => %w[a]}, **usage_values(0, "0.0", 0)},
+            {"values" => {"model" => %w[b]}, **usage_values(900, "0.0", 0)}
+          ]
+        )
+      end
+    end
+
+    context "when the edited filter has presentation breakdowns" do
+      let(:previous_usage) do
+        usage_payload(
+          [
+            filter_usage(
+              {"model" => %w[a b]}, 1000, "10.0", 10,
+              presentation_breakdowns: [{"presentation_by" => {"provider" => "aws"}, "units" => "10.0"}]
+            )
+          ],
+          1000, "10.0", 10
+        )
+      end
+
+      let(:usage) do
+        usage_payload(
+          [
+            filter_usage(
+              {"model" => %w[b]}, 1100, "11.0", 11,
+              presentation_breakdowns: [
+                {"presentation_by" => {"provider" => "aws"}, "units" => "10.0"},
+                {"presentation_by" => {"provider" => "gcp"}, "units" => "1.0"}
+              ]
+            )
+          ],
+          1100, "11.0", 11
+        )
+      end
+
+      it "deducts the dropped breakdowns from the new filter breakdowns" do
+        filter = diff_charge.fetch("filters").sole
+        expect(filter["units"]).to eq("1.0")
+        expect(filter["presentation_breakdowns"]).to eq(
+          [
+            {"presentation_by" => {"provider" => "aws"}, "units" => "0.0"},
+            {"presentation_by" => {"provider" => "gcp"}, "units" => "1.0"}
+          ]
+        )
+      end
+    end
+
+    context "when a dropped presentation breakdown has no units" do
+      let(:previous_usage) do
+        usage_payload(
+          [
+            filter_usage(
+              {"model" => %w[a b]}, 1000, "10.0", 10,
+              presentation_breakdowns: [{"presentation_by" => {"provider" => "aws"}, "units" => nil}]
+            )
+          ],
+          1000, "10.0", 10
+        )
+      end
+
+      let(:usage) do
+        usage_payload(
+          [
+            filter_usage(
+              {"model" => %w[b]}, 1000, "10.0", 10,
+              presentation_breakdowns: [{"presentation_by" => {"provider" => "aws"}, "units" => "10.0"}]
+            )
+          ],
+          1000, "10.0", 10
+        )
+      end
+
+      it "treats it as zero" do
+        filter = diff_charge.fetch("filters").sole
+        expect(filter.slice("amount_cents", "units", "events_count")).to eq(usage_values(0, "0.0", 0))
+        expect(filter["presentation_breakdowns"]).to eq([{"presentation_by" => {"provider" => "aws"}, "units" => "10.0"}])
+      end
+    end
+
+    context "when all filters are removed from the charge" do
+      let(:previous_usage) do
+        usage_payload([filter_usage({"model" => %w[a b]}, 1000, "10.0", 10)], 1000, "10.0", 10)
+      end
+
+      let(:usage) { usage_payload([], 1100, "11.0", 11) }
+
+      it "keeps the charge diff and no filter" do
+        expect(diff_charge.slice("amount_cents", "units", "events_count")).to eq(usage_values(100, "1.0", 1))
+        expect(diff_filters).to eq([])
+      end
+    end
+
+    context "when a single cent and event are split across receivers with half shares and a zero share" do
+      let(:previous_usage) do
+        usage_payload([filter_usage({"model" => %w[a b c]}, 1, "1.0", 1)], 1, "1.0", 1)
+      end
+
+      # The dropped filter's unit and event go to a and b in halves (equal gains), none to c
+      let(:usage) do
+        usage_payload(
+          [
+            filter_usage({"model" => %w[a]}, 1, "1.0", 1),
+            filter_usage({"model" => %w[b]}, 1, "1.0", 1),
+            filter_usage({"model" => %w[c]}, 0, "0.0", 0)
+          ],
+          2, "2.0", 2
+        )
+      end
+
+      it "never deducts more than the total nor gives anything to the receiver without share" do
+        expect(diff_filters.sum { |f| f["amount_cents"] }).to eq(1)
+        expect(diff_filters.sum { |f| f["events_count"] }).to eq(1)
+        expect(diff_filters.map { |f| f["amount_cents"] }).to all(be >= 0)
+        expect(diff_filters.map { |f| f["events_count"] }).to all(be >= 0)
+        expect(diff_filters.last).to eq({"values" => {"model" => %w[c]}, **usage_values(0, "0.0", 0)})
+      end
+    end
+
+    context "when units are split across receivers in thirds" do
+      let(:previous_usage) do
+        usage_payload([filter_usage({"model" => %w[a b c]}, 0, "1.0", 0)], 0, "1.0", 0)
+      end
+
+      let(:usage) do
+        usage_payload(
+          [
+            filter_usage({"model" => %w[a]}, 0, "1.0", 0),
+            filter_usage({"model" => %w[b]}, 0, "1.0", 0),
+            filter_usage({"model" => %w[c]}, 0, "1.0", 0)
+          ],
+          0, "3.0", 0
+        )
+      end
+
+      it "keeps the units exact and non-negative" do
+        units = diff_filters.map { |f| BigDecimal(f["units"]) }
+        expect(units.sum).to eq(BigDecimal("2.0"))
+        expect(units).to all(be >= 0)
+      end
+    end
+
+    context "when filters nested in grouped usage are edited" do
+      let(:previous_usage) do
+        payload = usage_payload([], 1000, "10.0", 10)
+        payload["charges_usage"].first["grouped_usage"] = [
+          {
+            "grouped_by" => {"region" => "eu"},
+            "filters" => [filter_usage({"model" => %w[a b]}, 1000, "10.0", 10)],
+            "presentation_breakdowns" => [],
+            **usage_values(1000, "10.0", 10)
+          }
+        ]
+        payload
+      end
+
+      let(:usage) do
+        payload = usage_payload([], 1020, "10.2", 12)
+        payload["charges_usage"].first["grouped_usage"] = [
+          {
+            "grouped_by" => {"region" => "eu"},
+            "filters" => [filter_usage({"model" => %w[b]}, 1020, "10.2", 12)],
+            "presentation_breakdowns" => [],
+            **usage_values(1020, "10.2", 12)
+          }
+        ]
+        payload
+      end
+
+      it "reconciles the grouped filters with the grouped diff" do
+        grouped_filter = diff_charge.fetch("grouped_usage").first.fetch("filters").first
+        expect(grouped_filter.slice("amount_cents", "units", "events_count")).to eq(usage_values(20, "0.2", 2))
+      end
+    end
+  end
 end
