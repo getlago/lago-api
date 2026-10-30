@@ -96,6 +96,7 @@ class BillingEntity < ApplicationRecord
   validates :document_number_prefix, length: {minimum: 1, maximum: 10}, allow_nil: true, on: :create
   validates :document_number_prefix, length: {minimum: 1, maximum: 10}, on: :update
   validates :invoice_grace_period, numericality: {greater_than_or_equal_to: 0}
+  # NOTE: the column is already nullable; allow_nil comes back with the jsonb-based due date math.
   validates :net_payment_term, numericality: {greater_than_or_equal_to: 0}
   # Rows stored above 365 before the cap stay valid until net_payment_term changes
   validates :net_payment_term, numericality: {less_than_or_equal_to: 365}, allow_nil: true, if: :will_save_change_to_net_payment_term?
@@ -211,7 +212,7 @@ end
 #  legal_number                                 :string
 #  logo                                         :string
 #  name                                         :string           not null
-#  net_payment_term                             :integer          default(0), not null
+#  net_payment_term                             :integer          default(0)
 #  payment_term                                 :jsonb
 #  phone                                        :string
 #  state                                        :string
