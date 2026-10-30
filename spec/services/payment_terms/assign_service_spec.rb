@@ -43,6 +43,38 @@ RSpec.describe PaymentTerms::AssignService do
           expect(record.payment_term).to eq(existing_term)
         end
       end
+
+      context "with net_payment_term as an empty string" do
+        let(:params) { {net_payment_term: ""} }
+
+        it "clears both columns, as the integer column casts it to null" do
+          result
+
+          expect(record.net_payment_term).to be_nil
+          expect(record.payment_term).to be_nil
+        end
+      end
+
+      context "with a boolean net_payment_term" do
+        let(:params) { {net_payment_term: true} }
+
+        it "leaves the rejection to the model validation" do
+          expect(result).to be_success
+          expect(record).not_to be_valid
+          expect(record.errors[:net_payment_term]).to be_present
+        end
+      end
+
+      context "with a negative net_payment_term" do
+        let(:params) { {net_payment_term: -5} }
+
+        it "derives no term and leaves the rejection to the model validation" do
+          expect(result).to be_success
+          expect(record.payment_term).to be_nil
+          expect(record).not_to be_valid
+          expect(record.errors[:net_payment_term]).to be_present
+        end
+      end
     end
 
     context "when payment_term is sent" do

@@ -23,7 +23,8 @@ module PaymentTerms
         record.net_payment_term = term&.net_payment_term_alias
       elsif params.key?(:net_payment_term)
         record.net_payment_term = params[:net_payment_term]
-        record.payment_term = PaymentTerm.from_net_payment_term(params[:net_payment_term])&.to_h
+        # From the cast column value, so input like "" leaves both columns in agreement
+        record.payment_term = PaymentTerm.from_net_payment_term(record.net_payment_term)&.to_h
       end
 
       result

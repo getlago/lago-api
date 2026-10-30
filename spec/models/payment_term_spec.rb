@@ -123,6 +123,11 @@ RSpec.describe PaymentTerm do
     it "returns nil when the legacy alias is cleared" do
       expect(described_class.from_net_payment_term(nil)).to be_nil
     end
+
+    it "returns nil for a value the model validation rejects" do
+      expect(described_class.from_net_payment_term(-5)).to be_nil
+      expect(described_class.from_net_payment_term("30")).to be_nil
+    end
   end
 
   describe "#to_h" do
