@@ -434,11 +434,16 @@ describe X402::InvoicePaymentsController, :premium do
     context "when the facilitator is unavailable" do
       before { stub_cdp_answer("/verify", status: 503, body: {errorType: "internal_server_error"}) }
 
-      it "answers a third-party error without the merchant's failure" do
+      it "answers a third-party error naming the failure" do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json).to eq(status: 422, error: "Unprocessable Entity", code: "third_party_error")
+        expect(json).to eq(
+          status: 422,
+          error: "Unprocessable Entity",
+          code: "third_party_error",
+          error_details: {third_party: "coinbase_cdp", thirdparty_error: "unavailable_error: verify: HTTP 503"}
+        )
       end
     end
 
@@ -497,6 +502,19 @@ describe X402::InvoicePaymentsController, :premium do
 
         expect(response).to have_http_status(:unprocessable_content)
         expect(json[:error_details]).to eq(base: ["wallet_not_x402_enabled"])
+        expect(a_request(:post, "#{cdp_facilitator_url}/verify")).not_to have_been_made
+      end
+    end
+
+    context "with a testnet connection on an organization running on mainnet" do
+      let(:organization) { create(:organization, feature_flags: ["x402_payments", "x402_mainnet"]) }
+      let(:x402_connection) { create(:x402_connection, :saved_before_switch, organization:) }
+
+      it "answers 422 naming the environment rule without verifying" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(connection_code: ["environment_not_enabled"])
         expect(a_request(:post, "#{cdp_facilitator_url}/verify")).not_to have_been_made
       end
     end
