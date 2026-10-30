@@ -57,100 +57,47 @@ class BaseService
   end
 
   class ValidationFailure < FailedResult
-    # One code of the failure, under the path of its field in the request (see Api::V2Errors::FIELD),
-    # with the facts that let a client fix its next request (see ValidationMeta::KEYS). Only native v2
-    # errors render them. The meta is checked when the entry is built, so that a bad key raises in
-    # tests at the line that added it, not in the renderer.
-    Entry = Data.define(:field, :code, :meta) do
-      def initialize(field:, code:, meta: {})
-        super(field:, code:, meta: ValidationMeta.check(meta).freeze)
-      end
-    end
-
-    # The meta keys of the bounds that the length and numericality validators give as an Integer
-    # count, so that a model states each bound once. An exclusive bound (greater_than) or a decimal
-    # one has no key yet.
-    BOUND_KEYS = {
-      greater_than_or_equal_to: %i[min],
-      less_than_or_equal_to: %i[max],
-      too_short: %i[min_length],
-      too_long: %i[max_length],
-      wrong_length: %i[min_length max_length]
-    }.freeze
-
-    attr_reader :messages
-
-    # The errors of a record, read now: valid? clears them in place, and ActiveModel computes each
-    # message when it is read.
-    def self.from_errors(result, errors)
-      entries = errors.group_by_attribute.flat_map do |field, field_errors|
-        field_errors.map { Entry.new(field:, code: it.message, meta: meta_of(it)) }
-      end
-
-      new(result, messages: errors.messages, entries:)
-    end
-
-    # The bound of its validator, then its `meta:` option, which wins key by key. Its other options are
-    # not meta: `value:` echoes the request.
-    def self.meta_of(error)
-      count = error.options[:count]
-      keys = count.is_a?(Integer) ? BOUND_KEYS.fetch(error.type, []) : []
-      keys = [] if keys.intersect?(%i[min_length max_length]) && !text?(error)
-      meta = error.options.fetch(:meta, {})
-
-      meta.is_a?(Hash) ? keys.index_with(count).merge(meta.symbolize_keys) : meta
-    end
-
-    # The length validator also counts the elements of a list, which min_length and max_length do not
-    # mean. An error imported from another record reads its value there.
-    def self.text?(error)
-      error = error.inner_error if error.is_a?(ActiveModel::NestedError)
-      value = error.base.read_attribute_for_validation(error.attribute) if error.base.respond_to?(error.attribute)
-
-      value.nil? || value.is_a?(String)
-    end
-    private_class_method :meta_of, :text?
-
-    # One entry per code, in the order of messages, duplicates kept, each code as it is: v2 renders a
-    # code that is not a token as value_is_invalid. Messages that are not a hash become
-    # value_is_invalid on base, reported so that their producer gets fixed.
-    def self.entries_from(messages)
-      if messages.is_a?(Hash)
-        messages.flat_map { |field, codes| Array.wrap(codes).map { Entry.new(field:, code: it) } }
-      else
-        ValidationMeta.report("validation messages are not a Hash: #{messages.class}")
-        [Entry.new(field: :base, code: "value_is_invalid")]
-      end
-    end
-
-    # Entries a service collects itself, with their meta. The messages group their codes by field, as
-    # the messages of a record do.
-    def self.from_entries(result, entries)
-      new(result, messages: entries.group_by(&:field).transform_values { it.map(&:code) }, entries:)
-    end
+    # The meta keys of the inclusive Integer bounds that the numericality and length validators give
+    # as their count, so that a model states each bound once.
+    VALUE_BOUNDS = {greater_than_or_equal_to: :min, less_than_or_equal_to: :max}.freeze
+    LENGTH_BOUNDS = {too_short: :min_length, too_long: :max_length}.freeze
 
     # messages: {field => [code]}, or one of the String, indexed and nested shapes a few services
-    # build, kept as they are. entries: derived from messages when the producer adds no meta.
-    def initialize(result, messages:, entries: nil)
+    # build, which v1 and GraphQL render as they are. meta: {field => facts} (see ValidationMeta::KEYS).
+    attr_reader :messages, :meta
+
+    # The errors of a record, read now: valid? clears them in place.
+    def self.from_errors(result, errors)
+      meta = errors.group_by_attribute.transform_values { |field_errors| field_errors.filter_map { bound_of(it) }.to_h }
+
+      new(result, messages: errors.messages, meta: meta.compact_blank)
+    end
+
+    # The length validator also counts the elements of a list, which min_length and max_length do not mean.
+    def self.bound_of(error)
+      key = VALUE_BOUNDS[error.type] || (LENGTH_BOUNDS[error.type] if text?(error))
+      count = error.options[:count]
+
+      [key, count] if key && count.is_a?(Integer)
+    end
+
+    def self.text?(error)
+      value = error.base.read_attribute_for_validation(error.attribute) if error.base.respond_to?(error.attribute)
+      value.nil? || value.is_a?(String)
+    end
+    private_class_method :bound_of, :text?
+
+    def initialize(result, messages:, meta: {})
       @messages = messages
-      @given_entries = entries
+      @meta = meta
 
       super(result, format_messages)
     end
 
-    # Derived on the first read, which only native v2 does: a v1 or GraphQL failure, whose messages
-    # may be nested, never builds them.
-    def entries
-      @entries ||= (@given_entries || self.class.entries_from(messages)).freeze
-    end
-
-    # The same codes on the result of the caller, under the fields the block gives, the meta of each
-    # kept: a nested record's errors under the key of its parent, a column under its parameter. A
-    # plain ValidationFailure, as the block may rename what a subclass reads its facts from.
+    # The same codes and meta under the fields the block gives, on the result of the caller. A plain
+    # ValidationFailure: a subclass reads its facts from its own state.
     def remap(result, &)
-      entries = @given_entries&.map { it.with(field: yield(it.field)) }
-
-      ValidationFailure.new(result, messages: messages.transform_keys(&), entries:)
+      ValidationFailure.new(result, messages: messages.transform_keys(&), meta: meta.transform_keys(&))
     end
 
     private

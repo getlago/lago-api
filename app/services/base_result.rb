@@ -51,28 +51,21 @@ class BaseResult
     fail_with_error!(BaseService::MethodNotAllowedFailure.new(self, code:))
   end
 
-  # A block renames the fields, the meta of each error kept: a nested record's errors under the key
-  # of its parent.
+  # A block renames the fields, their meta with them: a nested record's errors under the key of its
+  # parent.
   def record_validation_failure!(record:, &rename)
     failure = BaseService::ValidationFailure.from_errors(self, record.errors)
-    failure = failure.remap(self, &rename) if rename
-
-    fail_with_error!(failure)
+    fail_with_error!(rename ? failure.remap(self, &rename) : failure)
   end
 
-  # errors: {field => [code]}. entries: one ValidationFailure::Entry per code, for codes that carry meta.
-  def validation_failure!(errors: nil, entries: nil)
-    failure = if entries.nil?
-      BaseService::ValidationFailure.new(self, messages: errors)
-    else
-      BaseService::ValidationFailure.from_entries(self, entries)
-    end
-
-    fail_with_error!(failure)
+  # errors: {field => [code]}. meta: {field => facts}, which native v2 renders with each code of the field.
+  def validation_failure!(errors:, meta: {})
+    fail_with_error!(BaseService::ValidationFailure.new(self, messages: errors, meta:))
   end
 
   def single_validation_failure!(error_code:, field: :base, meta: {})
-    validation_failure!(entries: [BaseService::ValidationFailure::Entry.new(field: field.to_sym, code: error_code, meta:)])
+    field = field.to_sym
+    validation_failure!(errors: {field => [error_code]}, meta: {field => meta}.compact_blank)
   end
 
   def service_failure!(code:, message:, error: nil)

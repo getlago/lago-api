@@ -108,25 +108,14 @@ RSpec.shared_examples "a result object" do
     it { expect(result.error).to be_a(BaseService::ValidationFailure) }
     it { expect(result.error.messages).to eq({field: ["error"]}) }
     it { expect(result.error.message).to eq('Validation errors: {"field":["error"]}') }
-    it { expect(result.error.entries).to eq([BaseService::ValidationFailure::Entry.new(field: :field, code: "error", meta: {})]) }
+    it { expect(result.error.meta).to eq({}) }
 
     it { expect { result.raise_if_error! }.to raise_error(BaseService::ValidationFailure) }
 
-    context "when passing entries" do
-      let(:entries) do
-        [
-          BaseService::ValidationFailure::Entry.new(field: :position, code: "value_is_out_of_range", meta: {min: 1, max: 3}),
-          BaseService::ValidationFailure::Entry.new(field: :name, code: "value_is_mandatory"),
-          BaseService::ValidationFailure::Entry.new(field: :position, code: "value_is_invalid")
-        ]
-      end
+    context "when passing meta" do
+      before { result.validation_failure!(errors: {position: ["value_is_out_of_range"]}, meta: {position: {min: 1, max: 3}}) }
 
-      before { result.validation_failure!(entries:) }
-
-      it "keeps them, and groups their codes by field as messages" do
-        expect(result.error.entries).to eq(entries)
-        expect(result.error.messages).to eq({position: %w[value_is_out_of_range value_is_invalid], name: ["value_is_mandatory"]})
-      end
+      it { expect(result.error.meta).to eq({position: {min: 1, max: 3}}) }
     end
   end
 
@@ -143,38 +132,28 @@ RSpec.shared_examples "a result object" do
 
     it { expect { result.raise_if_error! }.to raise_error(BaseService::ValidationFailure) }
 
-    context "when an error of the record carries meta" do
+    context "when an error of the record has a bound" do
       let(:record) do
         Customer.new.tap do |customer|
           customer.errors.add(:external_id, :blank)
-          customer.errors.add(:external_id, :invalid, meta: {allowed_values: %w[a b]})
-          customer.errors.add(:currency, :inclusion)
+          customer.errors.add(:name, :too_long, count: 255)
         end
       end
 
-      it "keeps the messages of the record and takes the meta from the option" do
-        expect(result.error.messages).to eq(record.errors.messages)
-        expect(result.error.messages).to eq({external_id: %w[value_is_mandatory value_is_invalid], currency: ["value_is_invalid"]})
+      it "keeps the messages of the record and takes the meta from the bound" do
         # The hash of ActiveModel as it is, frozen and with an empty default, not a copy.
+        expect(result.error.messages).to eq({external_id: ["value_is_mandatory"], name: ["value_is_too_long"]})
         expect(result.error.messages).to be_frozen
-        expect(result.error.messages[:name]).to eq([])
-        expect(result.error.entries.map { [it.code, it.meta] }).to eq([
-          ["value_is_mandatory", {}],
-          ["value_is_invalid", {allowed_values: %w[a b]}],
-          ["value_is_invalid", {}]
-        ])
+        expect(result.error.messages[:currency]).to eq([])
+        expect(result.error.meta).to eq({name: {max_length: 255}})
       end
 
       context "with a block renaming the fields" do
         before { result.record_validation_failure!(record:) { :"customer.#{it}" } }
 
-        it "renames the fields of the messages and of the entries, the meta kept" do
-          expect(result.error.messages).to eq({"customer.external_id": %w[value_is_mandatory value_is_invalid], "customer.currency": ["value_is_invalid"]})
-          expect(result.error.entries.map { [it.field, it.meta] }).to eq([
-            [:"customer.external_id", {}],
-            [:"customer.external_id", {allowed_values: %w[a b]}],
-            [:"customer.currency", {}]
-          ])
+        it "renames the fields of the messages and of the meta" do
+          expect(result.error.messages).to eq({"customer.external_id": ["value_is_mandatory"], "customer.name": ["value_is_too_long"]})
+          expect(result.error.meta).to eq({"customer.name": {max_length: 255}})
           expect(result.error.result).to eq(result)
         end
       end
@@ -189,7 +168,7 @@ RSpec.shared_examples "a result object" do
     it { expect(result.error).to be_a(BaseService::ValidationFailure) }
     it { expect(result.error.messages).to eq({base: ["error_code"]}) }
     it { expect(result.error.message).to eq('Validation errors: {"base":["error_code"]}') }
-    it { expect(result.error.entries).to eq([BaseService::ValidationFailure::Entry.new(field: :base, code: "error_code", meta: {})]) }
+    it { expect(result.error.meta).to eq({}) }
 
     it { expect { result.raise_if_error! }.to raise_error(BaseService::ValidationFailure) }
 
@@ -205,7 +184,7 @@ RSpec.shared_examples "a result object" do
 
       it { expect(result.error.messages).to eq({position: ["value_is_out_of_range"]}) }
       it { expect(result.error.message).to eq('Validation errors: {"position":["value_is_out_of_range"]}') }
-      it { expect(result.error.entries).to eq([BaseService::ValidationFailure::Entry.new(field: :position, code: "value_is_out_of_range", meta: {min: 1, max: 3})]) }
+      it { expect(result.error.meta).to eq({position: {min: 1, max: 3}}) }
     end
   end
 

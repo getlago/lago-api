@@ -3,148 +3,62 @@
 require "rails_helper"
 
 RSpec.describe BaseService::ValidationFailure do
-  subject(:failure) { described_class.new(result, messages:) }
+  subject(:failure) { described_class.new(result, messages:, meta:) }
 
   let(:result) { BaseResult.new }
   let(:messages) { {name: ["value_is_mandatory"], position: %w[value_is_out_of_range value_is_invalid]} }
-
-  def entry(field, code, meta = {})
-    described_class::Entry.new(field:, code:, meta:)
-  end
+  let(:meta) { {position: {min: 1, max: 3}} }
 
   describe ".from_errors" do
     subject(:failure) { described_class.from_errors(result, record.errors) }
 
     let(:record) do
-      build(:rate_card_rate).tap do |rate|
-        rate.errors.add(:billing_interval_count, :greater_than_or_equal_to, count: 1, value: 0)
-        rate.errors.add(:code, :blank)
-        rate.errors.add(:billing_interval_count, :not_allowed_for_billing_timing, meta: {min: 1, max: 3})
-        rate.errors.add(:rate_model, :not_allowed_for_product, meta: {allowed_values: %w[standard package]})
+      build(:customer, name: "a" * 256, net_payment_term: -1).tap(&:valid?).tap do |customer|
+        customer.errors.add(:legal_name, :too_short, count: 2)
+        customer.errors.add(:legal_name, :invalid)
+        customer.errors.add(:city, :less_than_or_equal_to, count: 10)
+        customer.errors.add(:state, :greater_than, count: 0)
+        customer.errors.add(:firstname, :greater_than_or_equal_to, count: BigDecimal("0.5"))
       end
     end
 
-    it "keeps the messages of the record and the meta option of each error, grouped as messages are" do
-      expect(failure.messages).to eq(
-        billing_interval_count: %w[value_is_out_of_range not_allowed_for_billing_timing],
-        code: %w[value_is_mandatory],
-        rate_model: %w[not_allowed_for_product]
-      )
-      # The count of the validator is its bound; value echoes the request.
-      expect(failure.entries).to eq([
-        entry(:billing_interval_count, "value_is_out_of_range", {min: 1}),
-        entry(:billing_interval_count, "not_allowed_for_billing_timing", {min: 1, max: 3}),
-        entry(:code, "value_is_mandatory"),
-        entry(:rate_model, "not_allowed_for_product", {allowed_values: %w[standard package]})
-      ])
-      expect(failure.entries.group_by(&:field).transform_values { it.map(&:code) }).to eq(failure.messages)
+    # An exclusive or decimal bound has no key.
+    it "keeps the messages of the record and derives the inclusive Integer bounds of each field" do
+      expect(failure.messages).to eq(record.errors.messages)
+      expect(failure.meta).to eq(name: {max_length: 255}, net_payment_term: {min: 0}, legal_name: {min_length: 2}, city: {max: 10})
     end
 
     it "keeps them once the record is validated again" do
       failure
       record.errors.clear
 
-      expect(failure.messages.keys).to eq(%i[billing_interval_count code rate_model])
-      expect(failure.entries.size).to eq(4)
+      expect(failure.messages.keys).to eq(%i[name net_payment_term legal_name city state firstname])
+      expect(failure.meta.keys).to eq(%i[name net_payment_term legal_name city])
     end
 
-    context "with the errors of the length and numericality validators" do
-      let(:record) do
-        build(:customer, name: "a" * 256, net_payment_term: -1).tap(&:valid?).tap do |customer|
-          customer.errors.add(:legal_name, :too_short, count: 2)
-          customer.errors.add(:zipcode, :wrong_length, count: 5)
-          customer.errors.add(:city, :less_than_or_equal_to, count: 10)
-          customer.errors.add(:state, :greater_than, count: 0)
-          customer.errors.add(:firstname, :greater_than_or_equal_to, count: BigDecimal("0.5"))
-          customer.errors.add(:invoice_grace_period, :greater_than_or_equal_to, count: 0, meta: {min: 1, max: 365})
-        end
-      end
+    context "when the length validator counts the elements of a list" do
+      let(:record) { build(:usage_attribution_type, attribution_keys: %w[a b c d e]).tap(&:valid?) }
 
-      # An exclusive or decimal bound has no key, and the meta option wins over the bound.
-      it "derives the inclusive Integer bounds" do
-        expect(failure.entries.map { [it.field, it.code, it.meta] }).to eq([
-          [:name, "value_is_too_long", {max_length: 255}],
-          [:net_payment_term, "value_is_out_of_range", {min: 0}],
-          [:legal_name, "value_is_too_short", {min_length: 2}],
-          # No code of Lago's own: v2 renders the sentence of Rails as value_is_invalid.
-          [:zipcode, "is the wrong length (should be 5 characters)", {min_length: 5, max_length: 5}],
-          [:city, "value_is_out_of_range", {max: 10}],
-          [:state, "value_is_out_of_range", {}],
-          [:firstname, "value_is_out_of_range", {}],
-          [:invoice_grace_period, "value_is_out_of_range", {min: 1, max: 365}]
-        ])
-      end
-
-      context "with length errors imported from other records" do
-        let(:record) do
-          build(:rate_card_rate).tap do |rate|
-            text = ActiveModel::Error.new(build(:customer, name: "abc"), :name, :too_long, count: 2)
-            list = ActiveModel::Error.new(build(:usage_attribution_type, attribution_keys: %w[a b]), :attribution_keys, :too_long, count: 1)
-            rate.errors.import(text, attribute: :"customer.name")
-            rate.errors.import(list, attribute: :"usage_attribution_type.attribution_keys")
-          end
-        end
-
-        it "reads the value they bound on the record they come from" do
-          expect(failure.entries.map { [it.field, it.meta] }).to eq([
-            [:"customer.name", {max_length: 2}],
-            [:"usage_attribution_type.attribution_keys", {}]
-          ])
-        end
-      end
-
-      context "when the length validator counts the elements of a list" do
-        let(:record) { build(:usage_attribution_type, attribution_keys: %w[a b c d e]).tap(&:valid?) }
-
-        it "derives no length bound" do
-          expect(failure.entries.select { it.field == :attribution_keys }.map { [it.code, it.meta] }).to eq([["value_is_too_long", {}]])
-        end
+      it "derives no length bound" do
+        expect(failure.messages[:attribution_keys]).to eq(["value_is_too_long"])
+        expect(failure.meta).not_to have_key(:attribution_keys)
       end
     end
 
-    context "when an error carries a key that is not registered" do
+    context "with errors imported under other attributes" do
       let(:record) do
         build(:rate_card_rate).tap do |rate|
-          rate.errors.add(:billing_interval_count, :not_allowed_for_billing_timing, meta: {min: "1"})
+          rate.errors.import(ActiveModel::Error.new(rate, :billing_interval_count, :greater_than_or_equal_to, count: 1), attribute: :"rates.billing_interval_count")
+          rate.errors.import(ActiveModel::Error.new(rate, :code, :too_long, count: 255), attribute: :"rates.code")
         end
       end
 
-      it "raises when the failure reads the errors, in development and test" do
-        expect { failure }.to raise_error(ArgumentError, 'meta min: "1" is not a registered key and type')
+      # Autosaved associations import the errors of their records so. The record has no such attribute
+      # to read, so a length bound is kept.
+      it "keeps their bounds under the new attributes" do
+        expect(failure.messages).to eq("rates.billing_interval_count": ["value_is_out_of_range"], "rates.code": ["value_is_too_long"])
+        expect(failure.meta).to eq("rates.billing_interval_count": {min: 1}, "rates.code": {max_length: 255})
       end
-    end
-
-    context "with an error imported under another attribute" do
-      let(:record) do
-        build(:rate_card_rate).tap do |rate|
-          error = ActiveModel::Error.new(rate, :billing_interval_count, :not_allowed_for_billing_timing, meta: {min: 1})
-          rate.errors.import(error, attribute: :"rates.billing_interval_count")
-        end
-      end
-
-      # Autosaved associations import their errors so, and re-keying a failure can do the same.
-      it "keeps its meta under the new attribute" do
-        expect(failure.messages).to eq("rates.billing_interval_count": ["not_allowed_for_billing_timing"])
-        expect(failure.entries).to eq([entry(:"rates.billing_interval_count", "not_allowed_for_billing_timing", {min: 1})])
-      end
-    end
-  end
-
-  describe ".from_entries" do
-    subject(:failure) { described_class.from_entries(result, entries) }
-
-    let(:entries) do
-      [
-        entry(:position, "value_is_out_of_range", {min: 1, max: 3}),
-        entry(:name, "value_is_mandatory"),
-        entry(:position, "value_is_invalid")
-      ]
-    end
-
-    it "keeps the entries and groups their codes by field as messages" do
-      expect(failure.entries).to eq(entries)
-      expect(failure.messages).to eq(position: %w[value_is_out_of_range value_is_invalid], name: ["value_is_mandatory"])
-      expect(failure.result).to eq(result)
     end
   end
 
@@ -152,103 +66,15 @@ RSpec.describe BaseService::ValidationFailure do
     it { expect(failure.message).to eq('Validation errors: {"name":["value_is_mandatory"],"position":["value_is_out_of_range","value_is_invalid"]}') }
   end
 
-  describe "#entries" do
-    it "returns one entry per code, in the order of messages, without meta" do
-      expect(failure.entries).to eq([
-        entry(:name, "value_is_mandatory"),
-        entry(:position, "value_is_out_of_range"),
-        entry(:position, "value_is_invalid")
-      ])
-      expect(failure.entries).to be_frozen
-    end
-
-    context "when fields have string and symbol keys" do
-      let(:messages) { {"billing_interval_count" => ["value_is_out_of_range"], :name => ["value_is_mandatory"]} }
-
-      it "keeps each field as given" do
-        expect(failure.entries).to eq([entry("billing_interval_count", "value_is_out_of_range"), entry(:name, "value_is_mandatory")])
-      end
-    end
-
-    context "when codes are symbols" do
-      let(:messages) { {base: [:invalid_date]} }
-
-      it { expect(failure.entries).to eq([entry(:base, :invalid_date)]) }
-    end
-
-    context "when messages is a String" do
-      let(:messages) { "invalid_payload" }
-
-      it "builds nothing until they are read, then raises in development and test" do
-        expect { failure }.not_to raise_error
-        expect { failure.entries }.to raise_error(ArgumentError, "validation messages are not a Hash: String")
-      end
-
-      context "when the environment is not local" do
-        before do
-          allow(Rails.env).to receive(:local?).and_return(false)
-          allow(Sentry).to receive(:capture_exception)
-        end
-
-        it "returns value_is_invalid on base and reports it" do
-          expect(failure.entries).to eq([entry(:base, "value_is_invalid")])
-          expect(Sentry).to have_received(:capture_exception)
-            .with(an_object_having_attributes(message: "validation messages are not a Hash: String"))
-        end
-      end
-    end
-
-    context "when a code is not a token" do
-      let(:messages) { {account_type: {0 => ["must be one of: customer, partner"]}, name: ["is not a number"]} }
-
-      # v1 and GraphQL render them as they are; the v2 renderer replaces them.
-      it "keeps it as it is" do
-        expect(failure.entries).to eq([
-          entry(:account_type, {0 => ["must be one of: customer, partner"]}),
-          entry(:name, "is not a number")
-        ])
-      end
-    end
-
-    context "with entries given" do
-      subject(:failure) { described_class.new(result, messages: {position: ["value_is_out_of_range"]}, entries:) }
-
-      let(:entries) { [entry(:position, "value_is_out_of_range", {min: 1, max: 3})] }
-
-      it { expect(failure.entries).to eq(entries) }
-
-      context "when an entry carries a key that is not registered" do
-        it "raises when the entry is built, in development and test" do
-          expect { entry(:position, "value_is_out_of_range", {min: 1, max: 1.5}) }
-            .to raise_error(ArgumentError, "meta max: 1.5 is not a registered key and type")
-        end
-      end
-    end
-  end
-
   describe "#remap" do
     subject(:remapped) { failure.remap(other_result) { :"rates.#{it}" } }
 
     let(:other_result) { BaseResult.new }
 
-    it "renames the fields of the messages, on the result given" do
-      expect(remapped).to be_a(described_class)
+    it "renames the fields of the messages and the meta, on the result given" do
       expect(remapped.result).to eq(other_result)
       expect(remapped.messages).to eq("rates.name": ["value_is_mandatory"], "rates.position": %w[value_is_out_of_range value_is_invalid])
-      expect(remapped.entries).to eq([
-        entry(:"rates.name", "value_is_mandatory"),
-        entry(:"rates.position", "value_is_out_of_range"),
-        entry(:"rates.position", "value_is_invalid")
-      ])
-    end
-
-    context "with entries given" do
-      let(:failure) { described_class.from_entries(result, [entry(:position, "value_is_out_of_range", {min: 1, max: 3})]) }
-
-      it "renames their fields and keeps their meta" do
-        expect(remapped.messages).to eq("rates.position": ["value_is_out_of_range"])
-        expect(remapped.entries).to eq([entry(:"rates.position", "value_is_out_of_range", {min: 1, max: 3})])
-      end
+      expect(remapped.meta).to eq("rates.position": {min: 1, max: 3})
     end
   end
 end

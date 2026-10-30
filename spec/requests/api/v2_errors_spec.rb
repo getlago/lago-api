@@ -103,11 +103,13 @@ RSpec.describe Api::V2Errors do
             :"rates[1].rate_properties.amount" => ["invalid_amount"],
             "rate properties" => ["value_is_invalid"]
           })
+        # A few services give a String.
+        when "validation_with_string" then result.validation_failure!(errors: "is not a number")
         when "validation_with_meta"
-          result.single_validation_failure!(field: :position, error_code: "value_is_out_of_range", meta: {min: 1, max: 3})
-        when "record_validation_with_meta"
+          result.validation_failure!(errors: {position: %w[value_is_out_of_range value_is_invalid], name: ["value_is_mandatory"]}, meta: {position: {min: 1, max: 3}})
+        when "record_validation_with_bounds"
           record = Customer.new
-          record.errors.add(:currency, :inclusion, meta: {allowed_values: %w[EUR USD]})
+          record.errors.add(:name, :too_long, count: 255)
           record.errors.add(:external_id, :blank)
           result.record_validation_failure!(record:)
         end
@@ -358,28 +360,43 @@ RSpec.describe Api::V2Errors do
     end
   end
 
-  context "with a validation failure carrying meta" do
-    let(:failure) { "validation_with_meta" }
+  context "with a validation failure whose messages are a String" do
+    let(:failure) { "validation_with_string" }
 
-    it "returns the meta of the code" do
-      show
-
-      expect(response).to have_http_status(:unprocessable_content)
-      expect(json).to eq(code: "validation_errors", details: [{code: "value_is_out_of_range", field: "position", meta: {min: 1, max: 3}}])
+    it "raises in development and test, as a code that is not a token" do
+      expect { show }.to raise_error(ArgumentError, "code of base is not a token: String")
     end
   end
 
-  context "with a record whose errors carry meta" do
-    let(:failure) { "record_validation_with_meta" }
+  context "with a validation failure carrying meta" do
+    let(:failure) { "validation_with_meta" }
 
-    it "returns the meta option of each error, and an empty object for an error without" do
+    it "returns the meta of a field with each of its codes, and an empty object for a field without" do
       show
 
       expect(response).to have_http_status(:unprocessable_content)
       expect(json).to eq(
         code: "validation_errors",
         details: [
-          {code: "value_is_invalid", field: "currency", meta: {allowed_values: %w[EUR USD]}},
+          {code: "value_is_out_of_range", field: "position", meta: {min: 1, max: 3}},
+          {code: "value_is_invalid", field: "position", meta: {min: 1, max: 3}},
+          {code: "value_is_mandatory", field: "name", meta: {}}
+        ]
+      )
+    end
+  end
+
+  context "with a record whose errors have bounds" do
+    let(:failure) { "record_validation_with_bounds" }
+
+    it "returns the bound of each field" do
+      show
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(json).to eq(
+        code: "validation_errors",
+        details: [
+          {code: "value_is_too_long", field: "name", meta: {max_length: 255}},
           {code: "value_is_mandatory", field: "external_id", meta: {}}
         ]
       )
