@@ -30,10 +30,10 @@ RSpec.describe "templates/payment_receipts/product_catalog.slim" do
     )
   end
   let(:contract) { create(:contract, organization:, customer:, name: "Platform") }
-  let(:category) { create(:product_category, organization:, name: "Infrastructure", invoice_display_name: nil) }
-  let(:product) { create(:product, organization:, product_category: category, name: "Compute", invoice_display_name: nil) }
-  let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card: create(:rate_card, organization:, product:)) }
+  let(:product) { create(:product, organization:, name: "Compute", invoice_display_name: nil) }
   let(:product_filter) { nil }
+  let(:rate_card_rate_attributes) { {} }
+  let(:amount_details) { {} }
   let(:payment) do
     create(
       :payment,
@@ -49,8 +49,9 @@ RSpec.describe "templates/payment_receipts/product_catalog.slim" do
   end
   let(:payment_receipt) { create(:payment_receipt, payment:, organization:, billing_entity:, number: "RCT-001") }
 
-  before do
-    billing_entity.update!(name: "Hooli", legal_name: nil, invoice_footer: "Hooli footer")
+  def product_fee(fee_contract:, amount_cents:, **attributes)
+    contract_rate_card = create(:contract_rate_card, organization:, contract: fee_contract, rate_card: create(:rate_card, organization:, product:))
+
     create(
       :fee,
       invoice:,
@@ -59,16 +60,23 @@ RSpec.describe "templates/payment_receipts/product_catalog.slim" do
       invoiceable_type: "Product",
       invoiceable_id: product.id,
       invoice_display_name: nil,
-      contract:,
+      contract: fee_contract,
       contract_rate_card:,
-      product_filter:,
-      rate_card_rate: create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card),
-      amount_cents: 2_800,
+      rate_card_rate: create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card, **rate_card_rate_attributes),
+      amount_cents:,
+      taxes_amount_cents: 0,
       amount_currency: invoice.currency,
       units: 280,
       precise_unit_amount: 0.1,
-      properties: {"from_datetime" => "2026-10-01T00:00:00Z", "to_datetime" => "2026-10-31T23:59:59Z"}
+      succeeded_at: Time.zone.parse("2026-10-15T10:00:00Z"),
+      properties: {"from_datetime" => "2026-10-01T00:00:00Z", "to_datetime" => "2026-10-31T23:59:59Z"},
+      **attributes
     )
+  end
+
+  before do
+    billing_entity.update!(name: "Hooli", legal_name: nil, invoice_footer: "Hooli footer")
+    product_fee(fee_contract: contract, amount_cents: 2_800, product_filter:, amount_details:)
   end
 
   it "identifies the receipt, the invoice it pays and the payment date" do
@@ -78,34 +86,69 @@ RSpec.describe "templates/payment_receipts/product_catalog.slim" do
   it "bills from the billing entity to the customer, then states the amount paid" do
     expect(rendered_text).to match(/From Hooli.*Bill to Pied Piper/)
     expect(rendered_text).to include("€28.00 Paid on #{I18n.l(Date.new(2026, 11, 2), format: :default)} (Remaining to pay: €0.00)")
-  end
-
-  it "summarizes the invoice with one line per category, then the totals" do
-    expect(rendered_text).to include("Item Amount Infrastructure €28.00")
-    expect(rendered_text).to include("Subtotal (excl. tax) €28.00 Total €28.00 Amount due €0.00")
     expect(rendered_text).to include("Hooli footer")
   end
 
-  it "details each contract down to the billing period" do
-    expect(rendered_text).to include("Details Platform - Invoice INV-001")
-    expect(rendered_text).to include("Compute €28.00 From 1 Oct to 31 Oct 2026 280")
+  it "details the contract's fees per billing period, like a v1 receipt details a subscription" do
+    expect(rendered_text).to include("Platform details Fees from Oct 01, 2026 to Oct 31, 2026 Units Unit price Tax rate Amount Compute 280 €0.10 0.0% €28.00")
+  end
+
+  it "ends with the v1 totals" do
+    expect(rendered_text).to include("Subtotal (excl. tax) €28.00 Tax (0%) €0.00 Subtotal (incl. tax) €28.00 Total €28.00")
+    expect(rendered_text).not_to include("Amount due")
   end
 
   context "when the fee is billed on a product filter" do
     let(:product_filter) { create(:product_filter, organization:, product:, name: "EU", invoice_display_name: nil) }
 
-    it "details the fee under its filter" do
-      expect(rendered_text).to include("Compute €28.00 EU From 1 Oct to 31 Oct 2026 280")
+    it "names the filter after the product" do
+      expect(rendered_text).to include("Compute • EU 280 €0.10 0.0% €28.00")
+    end
+  end
+
+  context "when the fee is graduated" do
+    let(:rate_card_rate_attributes) do
+      {
+        rate_model: "graduated",
+        rate_properties: {"graduated_ranges" => [
+          {"from_value" => 0, "to_value" => 100, "per_unit_amount" => "0.1", "flat_amount" => "0"},
+          {"from_value" => 100, "to_value" => nil, "per_unit_amount" => "0.1", "flat_amount" => "0"}
+        ]}
+      }
+    end
+    let(:amount_details) do
+      {"graduated_ranges" => [
+        {"from_value" => 0, "to_value" => 100, "units" => "100.0", "per_unit_amount" => "0.1", "per_unit_total_amount" => "10.0", "flat_unit_amount" => "0.0"},
+        {"from_value" => 100, "to_value" => nil, "units" => "180.0", "per_unit_amount" => "0.1", "per_unit_total_amount" => "18.0", "flat_unit_amount" => "0.0"}
+      ]}
+    end
+
+    it "details the tiers with a subtotal, as v1 does" do
+      expect(rendered_text).to include(
+        "Compute Fee per unit for the first 100 100 €0.10 0.0% €10.00 Fee per unit for 100 and above 180 €0.10 0.0% €18.00 Subtotal €28.00"
+      )
     end
   end
 
   context "when the invoice bills fees paid in advance" do
     let(:invoice_type) { :advance_charges }
 
-    it "shows the total as already paid, with nothing due" do
-      expect(rendered_text).to include("Item Amount Infrastructure €28.00")
-      expect(rendered_text).to include("Subtotal (excl. tax) €28.00 Already paid €28.00")
-      expect(rendered_text).not_to include("Amount due")
+    it "lists the fees with their payment date and ends on already paid" do
+      expect(rendered_text).to include("Item Units Unit price Tax rate Amount Compute #{I18n.l(Date.new(2026, 10, 15), format: :default)} 280 €0.10 0.0% €28.00")
+      expect(rendered_text).to include("Subtotal (incl. tax) €28.00 Already paid €28.00")
+    end
+  end
+
+  context "when the invoice bills several contracts" do
+    let(:other_contract) { create(:contract, organization:, customer:, name: "Analytics") }
+
+    before { product_fee(fee_contract: other_contract, amount_cents: 1_200) }
+
+    it "sums each contract up front, then details it on its own page" do
+      expect(rendered_text).to include("Item Amount Analytics €12.00 Platform €28.00")
+      expect(rendered_text).to include("Analytics details Fees from Oct 01, 2026 to Oct 31, 2026")
+      expect(rendered_text).to include("Platform details Fees from Oct 01, 2026 to Oct 31, 2026")
+      expect(rendered_text).to include("Total €12.00")
     end
   end
 end

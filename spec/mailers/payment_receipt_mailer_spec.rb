@@ -63,7 +63,7 @@ RSpec.describe PaymentReceiptMailer do
           expect(mail.to).to eq([customer.email])
           expect(mail.attachments.map(&:filename)).to eq(["receipt-#{payment_receipt.number}.pdf", "invoice-#{invoice.number}.pdf"])
           expect(payment_receipt.reload.file).to be_attached
-          expect(mail.attachments["receipt-#{payment_receipt.number}.pdf"].body.decoded).to include("Infrastructure")
+          expect(mail.attachments["receipt-#{payment_receipt.number}.pdf"].body.decoded).to include("Compute")
           expect(mail.attachments["invoice-#{invoice.number}.pdf"].body.decoded).to include("Infrastructure")
         end
 

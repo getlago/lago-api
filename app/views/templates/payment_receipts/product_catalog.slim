@@ -101,8 +101,14 @@ html
           total_due_amount: MoneyHelper.format(@total_due_amount))
 
       - invoice = payment.payable
+      - contracts = ProductCatalogReceiptHelper.contracts(invoice)
       .invoice-resume.mb-24.overflow-auto
-        == SlimHelper.render('templates/payment_receipts/product_catalog/_summary', invoice)
+        - if invoice.advance_charges?
+          == SlimHelper.render('templates/payment_receipts/product_catalog/_advance_fees', invoice, contracts:)
+        - elsif contracts.one?
+          == SlimHelper.render('templates/payment_receipts/product_catalog/_contract', invoice, contract: contracts.first.first, fees: contracts.first.last, several: false)
+        - else
+          == SlimHelper.render('templates/payment_receipts/product_catalog/_contracts_summary', invoice, contracts:)
 
       == SlimHelper.render('templates/invoices/v4/_eu_tax_management', invoice)
 
@@ -113,4 +119,6 @@ html
 
       == SlimHelper.render('templates/invoices/v4/_powered_by_logo', invoice)
 
-      == SlimHelper.render('templates/payment_receipts/product_catalog/_details', invoice)
+      - if !invoice.advance_charges? && contracts.many?
+        - contracts.each do |contract, fees|
+          == SlimHelper.render('templates/payment_receipts/product_catalog/_contract', invoice, contract:, fees:, several: true)

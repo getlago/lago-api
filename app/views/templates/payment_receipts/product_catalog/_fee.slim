@@ -1,0 +1,42 @@
+- fee = self
+
+- if fee.true_up_parent_fee_id?
+  - rate = fee.true_up_parent_fee.rate_override || fee.true_up_parent_fee.rate_card_rate
+  tr.fee
+    td
+      .body-1 = I18n.t('invoice.true_up_metric', metric: fee.true_up_parent_fee.invoice_name)
+      - if rate&.min_amount_cents
+        .body-3 = I18n.t('invoice.true_up_details', min_amount: MoneyHelper.format(Money.new(rate.min_amount_cents, fee.amount_currency)))
+    td.body-2 = 1
+    td.body-2 = FeeDisplayHelper.format_amount(fee)
+    td.body-2 == TaxHelper.applied_taxes(fee)
+    td.body-2 = FeeDisplayHelper.format_amount(fee)
+- elsif ProductCatalogReceiptHelper.detailed?(fee)
+  tr.charge-name.fee
+    td.body-1
+      = FeeDisplayHelper.fee_title(fee)
+      - if ProductCatalogReceiptHelper.percentage?(fee)
+        .body-3 = I18n.t('invoice.total_events', count: fee.events_count)
+    td.body-2
+    td.body-2
+    td.body-2
+    td.body-2
+  == SlimHelper.render("templates/invoices/v4/_#{fee.rate_model}", fee)
+- else
+  tr.fee
+    td
+      .body-1 = FeeDisplayHelper.fee_title(fee)
+      - if ProductCatalogReceiptHelper.percentage?(fee)
+        .body-3 = I18n.t('invoice.total_events', count: fee.events_count)
+    td.body-2 = RoundingHelper.round_decimal_part(fee.units)
+    td.body-2 = FeeDisplayHelper.format_precise_unit_amount(fee)
+    td.body-2 == TaxHelper.applied_taxes(fee)
+    td.body-2 = FeeDisplayHelper.format_amount(fee)
+
+- if fee.pricing_unit_usage
+  tr.details.subtotal
+    td.body-2 = "#{I18n.t('invoice.conversion_rate')}: 1 #{fee.pricing_unit_usage.short_name} = #{MoneyHelper.format_with_precision(fee.pricing_unit_usage.conversion_rate, fee.amount_currency)}"
+    td.body-2
+    td.body-2
+    td.body-2
+    td.body-2 = MoneyHelper.format(fee.amount)
