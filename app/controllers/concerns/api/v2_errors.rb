@@ -16,12 +16,6 @@ module Api
     # A Lago error code, which a client switches on.
     TOKEN = /\A[a-z][a-z0-9_]*\z/
 
-    # The field of an entry is a path into the request: a key per level, joined by dots, and [n] for
-    # the n-th element of a list, from 0 (rates[1].rate_properties.amount). base is the request as a
-    # whole. A 422 never echoes a value, so the index is how a client finds the element refused. The
-    # rates of a rate card and the values of a product filter do not give it yet.
-    FIELD = /\A[a-zA-Z_][a-zA-Z0-9_]*(\[\d+\])*(\.[a-zA-Z_][a-zA-Z0-9_]*(\[\d+\])*)*\z/
-
     # The v1 message is the reason phrase, which the v2 body leaves out.
     def unauthorized_error = render_v2_error(401, code: "unauthorized")
 
@@ -99,7 +93,7 @@ module Api
     # code of the error is the code of its entry. Its meta may echo the parameter received.
     def invalid_request_error(code:, error_details:)
       details = error_details.map do |param, detail|
-        error_detail(code: detail.fetch(:reason, code), field: param, meta: detail.except(:reason), echo: true)
+        error_detail(code: detail.fetch(:reason, code), field: param, meta: detail.except(:reason))
       end
 
       render_v2_error(400, code:, details:)
@@ -116,36 +110,24 @@ module Api
     # the client nothing the status of the response does not.
     def provider_error_code(code)
       code = code.to_s
-      code if code.match?(/\A[a-z][a-z0-9_]*\z/)
+      code if code.match?(TOKEN)
     end
 
     def render_provider_error(status, code:, **meta)
       render_v2_error(status, code:, details: [error_detail(code:, field: :base, meta: meta.compact)])
     end
 
-    # Every v2 entry, 400, 422 and 429 alike, goes through the registry of meta keys and the token and path checks.
-    def error_detail(code:, field:, meta: {}, echo: false)
-      {code: token_or_invalid(code, field), field: checked_field(field), meta: ValidationMeta.check(meta, echo:)}
-    end
-
-    # Rendered as it is, as the client has nothing better to map, and reported so that its producer
-    # gets fixed.
-    def checked_field(field)
-      field = field.to_s
-      ValidationMeta.report("field #{field.truncate(80).inspect} is not a path into the request") unless field.match?(FIELD)
-      field
-    end
-
-    # v1 and GraphQL keep the code a service or Rails gives, a sentence included ("is not a number").
-    # v2 renders it as value_is_invalid, reported so that its producer gets fixed: by its class only, as
-    # a sentence can quote the request (an email address the client sent).
-    def token_or_invalid(code, field)
-      if (code.is_a?(String) || code.is_a?(Symbol)) && code.match?(TOKEN)
-        code
-      else
+    # Every v2 entry goes through the registry of meta keys. v1 and GraphQL keep a code that is a
+    # sentence ("is not a number"); v2 renders it as value_is_invalid, reported so that its producer
+    # gets fixed: by its class only, as a sentence can quote the request.
+    def error_detail(code:, field:, meta: {})
+      token = (code.is_a?(String) || code.is_a?(Symbol)) && code.match?(TOKEN)
+      unless token
         ValidationMeta.report("code of #{field} is not a token: #{code.class}")
-        "value_is_invalid"
+        code = "value_is_invalid"
       end
+
+      {code:, field: field.to_s, meta: ValidationMeta.check(meta)}
     end
 
     def render_v2_error(status, code:, details: [])

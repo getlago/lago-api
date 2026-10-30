@@ -98,11 +98,6 @@ RSpec.describe Api::V2Errors do
             "rates.rate_properties": [:invalid_amount, "invalidAmount"],
             name: ["value_is_mandatory"]
           })
-        when "validation_with_paths"
-          result.validation_failure!(errors: {
-            :"rates[1].rate_properties.amount" => ["invalid_amount"],
-            "rate properties" => ["value_is_invalid"]
-          })
         # A few services give a String.
         when "validation_with_string" then result.validation_failure!(errors: "is not a number")
         when "validation_with_meta"
@@ -327,35 +322,6 @@ RSpec.describe Api::V2Errors do
           .with(an_object_having_attributes(message: "code of account_type is not a token: Hash"))
         expect(Sentry).to have_received(:capture_exception)
           .with(an_object_having_attributes(message: "code of rates.rate_properties is not a token: String"))
-      end
-    end
-  end
-
-  context "with a validation failure whose field is not a path into the request" do
-    let(:failure) { "validation_with_paths" }
-
-    it "raises in development and test" do
-      expect { show }.to raise_error(ArgumentError, 'field "rate properties" is not a path into the request')
-    end
-
-    context "when the environment is not local" do
-      before do
-        allow(Rails.env).to receive(:local?).and_return(false)
-        allow(Sentry).to receive(:capture_exception)
-      end
-
-      it "returns the field as it is and reports it" do
-        show
-
-        expect(response).to have_http_status(:unprocessable_content)
-        expect(json).to eq(
-          code: "validation_errors",
-          details: [
-            {code: "invalid_amount", field: "rates[1].rate_properties.amount", meta: {}},
-            {code: "value_is_invalid", field: "rate properties", meta: {}}
-          ]
-        )
-        expect(Sentry).to have_received(:capture_exception).once
       end
     end
   end

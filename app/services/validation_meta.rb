@@ -20,46 +20,20 @@ module ValidationMeta
     provider_error_code: String # the provider's own error token, such as resource_missing or card_declined
   }.freeze
 
-  # They echo the request, which only a 400 may do.
-  ECHO_KEYS = %i[value invalid_values].freeze
-
   module_function
 
-  # Symbol keys, without nil values, and Symbols rendered as the Strings their JSON is. A key that is
-  # not registered with its type, or that echoes the request outside a 400, raises in development and
-  # test. Elsewhere it is reported and the whole meta is dropped, so that the error stays a 4xx and a
-  # client never reads half of it, such as a min without its max.
-  def check(meta, echo: false)
-    if meta.is_a?(Hash)
-      # symbolize_keys leaves a key that has no Symbol form, such as an Integer, as it is.
-      checked = meta.compact.symbolize_keys.transform_values { stringify_symbols(it) }
-      refusals = checked.filter_map { |key, value| refusal(key, value, echo) }
+  # The meta as its JSON reads, Symbols as Strings, with Symbol keys and without nil values. A key that
+  # is not registered with its type raises in development and test. Elsewhere it is reported and the
+  # whole meta is dropped, so that a client never reads half of it, such as a min without its max.
+  def check(meta)
+    checked = (meta || {}).compact.as_json.symbolize_keys
+    refused = checked.reject { |key, value| registered?(key, value) }
 
-      if refusals.empty?
-        checked
-      else
-        refusals.each { report(it) }
-        {}
-      end
+    if refused.empty?
+      checked
     else
-      report("meta is not a Hash: #{meta.class}") unless meta.nil?
+      refused.each { |key, value| report("meta #{key}: #{value.inspect} is not a registered key and type") }
       {}
-    end
-  end
-
-  def refusal(key, value, echo)
-    if !registered?(key, value)
-      "meta #{key}: #{value.inspect} is not a registered key and type"
-    elsif !echo && ECHO_KEYS.include?(key)
-      "meta #{key} echoes the request, which only a 400 may do"
-    end
-  end
-
-  def stringify_symbols(value)
-    case value
-    when Symbol then value.to_s
-    when Array then value.map { it.is_a?(Symbol) ? it.to_s : it }
-    else value
     end
   end
 
@@ -85,5 +59,5 @@ module ValidationMeta
     end
   end
 
-  private_class_method :refusal, :stringify_symbols, :registered?
+  private_class_method :registered?
 end
