@@ -101,9 +101,10 @@ html
           total_due_amount: MoneyHelper.format(@total_due_amount))
 
       - if payment.payable.is_a?(Invoice)
+        - product_catalog = payment.payable.product_catalog?
         .invoice-resume.mb-24.overflow-auto
           / Catalog advance fees invoices also have the advance_charges type.
-          - if payment.payable.product_catalog?
+          - if product_catalog
             == SlimHelper.render('templates/payment_receipts/v1/_product_catalog', payment.payable)
           - elsif payment.payable.credit?
             == SlimHelper.render('templates/invoices/v4/_credit', payment.payable)
@@ -132,7 +133,9 @@ html
 
         == SlimHelper.render('templates/invoices/v4/_powered_by_logo', payment.payable)
 
-        - if payment.payable.subscriptions.count > 1
+        - if product_catalog
+          == SlimHelper.render('templates/payment_receipts/v1/_product_catalog_details', payment.payable)
+        - elsif payment.payable.subscriptions.count > 1
           == SlimHelper.render('templates/invoices/v4/_subscription_details', payment.payable, disable_presentation_breakdowns: true)
 
       - else
