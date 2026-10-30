@@ -2,6 +2,8 @@
 
 module RealtimeUsage
   class HourlyBreakdownService < BaseService
+    include BucketReads
+
     Result = BaseResult[:usage]
 
     Usage = Struct.new(:from_datetime, :to_datetime, :timezone, :aggregation_type, :last_ingested_at, :filters, :hours)
@@ -80,15 +82,7 @@ module RealtimeUsage
     # Both ends widen to the wall they sit on rather than cutting the bucket, and the window
     # the caller reads back is the span the units describe.
     def window_end
-      @window_end ||= begin
-        seconds = BUCKET_DURATION.to_i
-
-        aligned?(to_datetime) ? to_datetime : Time.zone.at(to_datetime.to_i - (to_datetime.to_i % seconds) + seconds)
-      end
-    end
-
-    def aligned?(time)
-      (time.to_i % BUCKET_DURATION.to_i).zero? && time.usec.zero?
+      @window_end ||= RealtimeUsage.ceil_to_bucket(to_datetime)
     end
 
     # Every filter with usage in the window, biggest first, so the caller can assign colors by
@@ -177,7 +171,7 @@ module RealtimeUsage
     def filter_key(kept_ids)
       return "charge_filter_id" if kept_ids.nil?
 
-      "if(charge_filter_id IN (#{kept_ids.map { |id| quote(id) }.join(", ")}), charge_filter_id, #{quote(OTHER_KEY)})"
+      "if(charge_filter_id IN (#{quote_list(kept_ids)}), charge_filter_id, #{quote(OTHER_KEY)})"
     end
 
     # The sink tombstones a row it has retracted, which the engine only drops on a merge, so
@@ -191,14 +185,6 @@ module RealtimeUsage
           is_deleted: 0
         )
         .where("bucket >= ? AND bucket < ?", window_start, window_end)
-    end
-
-    def quote(value)
-      Clickhouse::UsageBucket.connection.quote(value)
-    end
-
-    def with_retry(&)
-      Events::Stores::Utils::ClickhouseConnection.with_retry(&)
     end
 
     def hour_walls

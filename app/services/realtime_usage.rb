@@ -53,6 +53,18 @@ module RealtimeUsage
       organization.feature_flag_enabled?(:realtime_usage)
     end
 
+    def floor_to_bucket(time)
+      Time.zone.at(time.to_i - (time.to_i % BUCKET_DURATION.to_i))
+    end
+
+    # A bucket is summed whole, so an end inside one widens to the wall after it rather than
+    # cutting the bucket.
+    def ceil_to_bucket(time)
+      floor = floor_to_bucket(time)
+
+      (floor == time) ? floor : floor + BUCKET_DURATION
+    end
+
     def supported_charge?(charge)
       unsupported_reason(charge).nil?
     end
