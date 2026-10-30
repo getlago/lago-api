@@ -202,6 +202,43 @@ RSpec.describe "Contract usage billing behavior" do
       end
     end
 
+    context "with overlapping product filters on a non-recurring metric" do
+      let(:recurring) { false }
+      let(:product_filter) { create(:product_filter, organization:, product:, created_at: started_at) }
+      let(:overlapping_filter) { create(:product_filter, organization:, product:, created_at: started_at + 1.second) }
+      let(:metric_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[25 50 75]) }
+      let(:inputs) do
+        [[3, "25"], [7, "50"], [5, "75"], [11, "other"]].map do |value, region|
+          {value: value.to_s, properties: {"region" => region}}
+        end
+      end
+
+      before do
+        create(:product_filter_value, organization:, product_filter:, billable_metric_filter: metric_filter, value: "25")
+        create(:product_filter_value, organization:, product_filter:, billable_metric_filter: metric_filter, value: "50")
+        create(:product_filter_value, organization:, product_filter: overlapping_filter,
+          billable_metric_filter: metric_filter, value: "50")
+        create(:product_filter_value, organization:, product_filter: overlapping_filter,
+          billable_metric_filter: metric_filter, value: "75")
+      end
+
+      it "aggregates only the selected filter's events and excludes unmatched usage" do
+        expect(event_fees.map(&:amount_cents)).to eq([300, 700])
+        expect(CachedAggregation.where(contract:, product:).order(:created_at).pluck(:current_aggregation)).to eq([3, 10])
+
+        shared_event = Event.where(organization:, external_subscription_id: contract.external_id).order(:created_at).second
+        selection = Events::PayInAdvanceMeteredItemsResolver.call!(event: shared_event).selections.sole
+        usage = Fees::ChargeService.call!(
+          invoice: nil,
+          metered_item: selection.metered_item,
+          billing_context: selection.billing_context,
+          options: Fees::ChargeService::Options.new(context: :current_usage)
+        )
+
+        expect(usage.fees.sole.units).to eq(10)
+      end
+    end
+
     it "bills only the unit above the previously billed maximum with standard pricing" do
       event_fees
       expect(CachedAggregation.where(contract:, product:).order(:created_at).pluck(:current_aggregation, :max_aggregation))

@@ -48,7 +48,11 @@ module Fees
         end
 
         def pricing_buckets(event: nil)
-          return [with_filter(rate_card.product_filter)] unless event
+          unless event
+            return [] if rate_card.product_filter && rate_card.product_filter.to_h_with_all_values.empty?
+
+            return [with_filter(rate_card.product_filter)]
+          end
 
           matching_filter = Events::BillingPeriodFilters::EventMatchingService.call(
             target_filter: Events::BillingPeriodFilters::FilterTarget.from_billing_segment(billing_segment:),

@@ -11,8 +11,7 @@ module Events
         new(source: Sources::BillingSegment.new(billing_segment:, filter:))
       end
 
-      delegate :all_filter_values?,
-        :billable_metric,
+      delegate :billable_metric,
         :filter_match_values,
         :filter_precedence,
         :filter_values,

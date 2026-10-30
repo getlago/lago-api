@@ -354,6 +354,14 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
       it "returns the rate card product filter" do
         expect(pricing_buckets.sole).to have_attributes(product_filter:)
       end
+
+      context "when the explicit product filter is empty" do
+        before { product_filter.values.destroy_all }
+
+        it "does not create an empty-filter fee bucket" do
+          expect(pricing_buckets).to be_empty
+        end
+      end
     end
 
     context "when the event matches the rate card product filter" do
@@ -373,6 +381,26 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
       end
 
       it "returns no pricing buckets" do
+        expect(pricing_buckets).to be_empty
+      end
+    end
+
+    context "when a more specific product filter wins for the event" do
+      let(:event) do
+        build(:common_event, organization_id: organization.id, code: billable_metric.code,
+          properties: {"region" => "eu", "kind" => "paid"})
+      end
+
+      before do
+        kind_filter = create(:billable_metric_filter, organization:, billable_metric:, key: "kind", values: ["paid"])
+        precise_filter = create(:product_filter, organization:, product:, created_at: 1.day.from_now)
+        create(:product_filter_value, organization:, product_filter: precise_filter,
+          billable_metric_filter: region_filter, value: "eu")
+        create(:product_filter_value, organization:, product_filter: precise_filter,
+          billable_metric_filter: kind_filter, value: "paid")
+      end
+
+      it "does not assign current usage to the less-specific rate-card filter bucket" do
         expect(pricing_buckets).to be_empty
       end
     end
@@ -457,10 +485,7 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
 
         it "excludes the more specific filter and the remaining configured region" do
           expect(service_result.matching_filters).to eq("region" => ["us"])
-          expect(service_result.ignored_filters).to match_array([
-            {"region" => ["us"], "size" => ["512"]},
-            {"region" => ["eu"]}
-          ])
+          expect(service_result.ignored_filters).to eq([{"region" => ["us"], "size" => ["512"]}])
         end
 
         it "uses default-bucket exclusions when the selected filter is cleared" do
