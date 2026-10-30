@@ -26,7 +26,7 @@ module PaymentReceipts
 
     def render_html
       I18n.with_locale(payment_receipt.payment.customer.preferred_document_locale) do
-        Utils::PdfGenerator.new(template:, context: payment_receipt, **page_layout).render_html
+        Utils::PdfGenerator.new(template:, context: payment_receipt).render_html
       end
     end
 
@@ -46,7 +46,7 @@ module PaymentReceipts
     end
 
     def build_pdf_file
-      pdf_content = Utils::PdfGenerator.call(template:, context: payment_receipt, **page_layout).io.read
+      pdf_content = Utils::PdfGenerator.call(template:, context: payment_receipt).io.read
 
       pdf_file = Tempfile.new([payment_receipt.number, ".pdf"])
       pdf_file.binmode
@@ -88,20 +88,10 @@ module PaymentReceipts
       pdf_file&.unlink
     end
 
-    # A catalog invoice's receipt follows the catalog invoice PDF, as a v1 receipt follows the v1 invoice.
+    # Catalog invoices have no subscriptions or charges for the v1 receipt body to render.
     def template
-      product_catalog? ? "payment_receipts/product_catalog" : "payment_receipts/v1"
-    end
-
-    def page_layout
-      product_catalog? ? {footer: "invoices/product_catalog/footer", margin_bottom: "1.0167"} : {}
-    end
-
-    def product_catalog?
-      return @product_catalog if defined?(@product_catalog)
-
       payable = payment_receipt.payment.payable
-      @product_catalog = payable.is_a?(Invoice) && payable.product_catalog?
+      (payable.is_a?(Invoice) && payable.product_catalog?) ? "payment_receipts/product_catalog" : "payment_receipts/v1"
     end
   end
 end
