@@ -26,6 +26,7 @@ module PaymentProviders
           if PAYMENT_ACTIONS.include?(event.action)
             payment_service_klass(event).call!(
               :update_payment_status,
+              organization_id: payment_provider.organization_id,
               provider_payment_id: event.links.payment,
               status: event.action
             )

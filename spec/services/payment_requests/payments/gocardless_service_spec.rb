@@ -49,7 +49,7 @@ RSpec.describe PaymentRequests::Payments::GocardlessService do
   describe ".call(:update_payment_status)" do
     subject(:result) do
       described_class.call(
-        :update_payment_status, provider_payment_id:, status:
+        :update_payment_status, organization_id: organization.id, provider_payment_id:, status:
       )
     end
 

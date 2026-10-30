@@ -33,11 +33,15 @@ module PaymentRequests
       end
 
       def update_payment_status(organization_id:, status:, stripe_payment:, amount_cents: nil)
-        payment = Payment.find_by(provider_payment_id: stripe_payment.id)
-        return result if payment&.payable&.organization_id.present? && payment.payable.organization_id != organization_id
+        payment = Payment.find_by(provider_payment_id: stripe_payment.id, organization_id:)
 
         if !payment && stripe_payment.metadata[:payment_type] == "one-time"
-          payment = create_payment(stripe_payment)
+          # NOTE: Payment Request does not belong to this lago organization
+          #       It means the same Stripe secret key is used for multiple organizations
+          payment_request = PaymentRequest.find_by(id: stripe_payment.metadata[:lago_payable_id], organization_id:)
+          return result unless payment_request
+
+          payment = create_payment(stripe_payment, payable: payment_request)
         end
 
         payment ||= handle_missing_payment(organization_id, stripe_payment)
@@ -79,7 +83,7 @@ module PaymentRequests
         # NOTE: Another writer (a parallel webhook worker, or PaymentProviders::Stripe::Payments::CreateService)
         #       committed the Payment first. Return the persisted row so the
         #       caller can still enqueue downstream side effects (e.g. SetPaymentMethodAndCreateReceiptJob).
-        payment = Payment.find_by(provider_payment_id: stripe_payment.id)
+        payment = Payment.find_by(provider_payment_id: stripe_payment.id, organization_id:)
         if payment
           @payable = payment.payable
           result.payment = payment
@@ -196,14 +200,8 @@ module PaymentRequests
         create_payment(stripe_payment, payable: payment_request)
       end
 
-      def create_payment(stripe_payment, payable: nil)
-        @payable = payable || PaymentRequest.find_by(id: stripe_payment.metadata[:lago_payable_id])
-
-        unless @payable
-          result.not_found_failure!(resource: "payment_request")
-          return
-        end
-
+      def create_payment(stripe_payment, payable:)
+        @payable = payable
         @payable.increment_payment_attempts!
 
         Payment.new(

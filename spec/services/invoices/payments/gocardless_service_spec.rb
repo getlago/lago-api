@@ -42,6 +42,7 @@ RSpec.describe Invoices::Payments::GocardlessService do
     it "updates the payment and invoice payment_status" do
       result = described_class.call(
         :update_payment_status,
+        organization_id: organization.id,
         provider_payment_id: "ch_123456",
         status: "paid_out"
       )
@@ -60,6 +61,7 @@ RSpec.describe Invoices::Payments::GocardlessService do
       expect do
         described_class.call(
           :update_payment_status,
+          organization_id: organization.id,
           provider_payment_id: "ch_123456",
           status: "paid_out"
         )
@@ -70,6 +72,7 @@ RSpec.describe Invoices::Payments::GocardlessService do
       let(:service_call) do
         described_class.call(
           :update_payment_status,
+          organization_id: organization.id,
           provider_payment_id: "ch_123456",
           status: "paid_out"
         )
@@ -81,6 +84,7 @@ RSpec.describe Invoices::Payments::GocardlessService do
         expect do
           described_class.call(
             :update_payment_status,
+            organization_id: organization.id,
             provider_payment_id: "ch_123456",
             status: "paid_out"
           )
@@ -92,6 +96,7 @@ RSpec.describe Invoices::Payments::GocardlessService do
       it "updates the payment and invoice status" do
         result = described_class.call(
           :update_payment_status,
+          organization_id: organization.id,
           provider_payment_id: "ch_123456",
           status: "failed"
         )
@@ -115,6 +120,7 @@ RSpec.describe Invoices::Payments::GocardlessService do
           expect do
             described_class.call(
               :update_payment_status,
+              organization_id: organization.id,
               provider_payment_id: "ch_123456",
               status: "failed"
             )
@@ -129,6 +135,7 @@ RSpec.describe Invoices::Payments::GocardlessService do
       it "does not update the status of invoice and payment" do
         result = described_class.call(
           :update_payment_status,
+          organization_id: organization.id,
           provider_payment_id: "ch_123456",
           status: "paid_out"
         )
@@ -142,6 +149,7 @@ RSpec.describe Invoices::Payments::GocardlessService do
       it "does not update the payment_status of invoice" do
         result = described_class.call(
           :update_payment_status,
+          organization_id: organization.id,
           provider_payment_id: "ch_123456",
           status: "foo-bar"
         )
