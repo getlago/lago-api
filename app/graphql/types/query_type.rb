@@ -149,6 +149,7 @@ module Types
     field :webhooks, resolver: Resolvers::WebhooksResolver
     field :x402_connection, resolver: Resolvers::X402ConnectionResolver
     field :x402_connections, resolver: Resolvers::X402ConnectionsResolver
+    field :x402_networks, resolver: Resolvers::X402NetworksResolver
 
     field :data_api_mrrs, resolver: Resolvers::DataApi::MrrsResolver
     field :data_api_mrrs_plans, resolver: Resolvers::DataApi::Mrrs::PlansResolver
