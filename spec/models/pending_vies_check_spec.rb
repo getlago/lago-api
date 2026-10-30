@@ -34,15 +34,19 @@ RSpec.describe PendingViesCheck, type: :model do
       expect(described_class.error_type_for(Valvat::MemberStateUnavailable.new("error", :vies))).to eq("member_state_unavailable")
     end
 
-    it "maps transport failures to network_error" do
-      expect(described_class.error_type_for(Errno::ECONNRESET.new)).to eq("network_error")
-      expect(described_class.error_type_for(Errno::ENETUNREACH.new)).to eq("network_error")
-      expect(described_class.error_type_for(Net::ReadTimeout.new)).to eq("network_error")
-      expect(described_class.error_type_for(Errno::ETIMEDOUT.new)).to eq("network_error")
-      expect(described_class.error_type_for(Errno::ECONNABORTED.new)).to eq("network_error")
-      expect(described_class.error_type_for(Net::WriteTimeout.new)).to eq("network_error")
-      expect(described_class.error_type_for(EOFError.new)).to eq("network_error")
-      expect(described_class.error_type_for(OpenSSL::SSL::SSLError.new)).to eq("network_error")
+    it "maps transport timeouts to timeout" do
+      expect(described_class.error_type_for(Net::OpenTimeout.new)).to eq("timeout")
+      expect(described_class.error_type_for(Net::ReadTimeout.new)).to eq("timeout")
+      expect(described_class.error_type_for(Net::WriteTimeout.new)).to eq("timeout")
+    end
+
+    it "maps other transport failures to service_unavailable" do
+      expect(described_class.error_type_for(Errno::ECONNRESET.new)).to eq("service_unavailable")
+      expect(described_class.error_type_for(Errno::ENETUNREACH.new)).to eq("service_unavailable")
+      expect(described_class.error_type_for(Errno::ETIMEDOUT.new)).to eq("service_unavailable")
+      expect(described_class.error_type_for(Errno::ECONNABORTED.new)).to eq("service_unavailable")
+      expect(described_class.error_type_for(EOFError.new)).to eq("service_unavailable")
+      expect(described_class.error_type_for(OpenSSL::SSL::SSLError.new)).to eq("service_unavailable")
     end
 
     it "returns 'unknown' for unmapped Valvat lookup errors" do

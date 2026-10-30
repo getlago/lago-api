@@ -21,7 +21,7 @@ class PendingViesCheck < ApplicationRecord
     Timeout::Error
   ].freeze
 
-  KNOWN_ERROR_TYPES = (ERROR_TYPE_MAPPING.values + ["network_error", "unknown"]).freeze
+  KNOWN_ERROR_TYPES = (ERROR_TYPE_MAPPING.values + ["unknown"]).freeze
 
   belongs_to :organization
   belongs_to :billing_entity
@@ -32,7 +32,8 @@ class PendingViesCheck < ApplicationRecord
   validates :last_error_type, inclusion: {in: KNOWN_ERROR_TYPES}, allow_nil: true
 
   def self.error_type_for(exception)
-    return "network_error" if NETWORK_ERRORS.any? { |klass| exception.is_a?(klass) }
+    return "timeout" if exception.is_a?(Timeout::Error)
+    return "service_unavailable" if NETWORK_ERRORS.any? { |klass| exception.is_a?(klass) }
 
     ERROR_TYPE_MAPPING.fetch(exception.class, "unknown")
   end

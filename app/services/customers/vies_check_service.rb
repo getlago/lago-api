@@ -45,6 +45,11 @@ module Customers
     def handle_error(e)
       pending_vies_check = create_or_update_pending_vies_check(e)
 
+      # Unmapped VIES faults may never clear on their own, so keep them visible while retrying.
+      if pending_vies_check.last_error_type == "unknown"
+        Sentry.capture_exception(e, extra: {customer_id: customer.id, attempts_count: pending_vies_check.attempts_count})
+      end
+
       SendWebhookJob.perform_after_commit(
         "customer.vies_check",
         customer,

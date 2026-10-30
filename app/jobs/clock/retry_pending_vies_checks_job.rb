@@ -10,7 +10,7 @@ module Clock
 
     def perform
       PendingViesCheck
-        .joins(:billing_entity, :customer)
+        .joins(customer: :billing_entity)
         .where(billing_entities: {eu_tax_management: true}, customers: {deleted_at: nil})
         .where(updated_at: ...STALE_AFTER.ago)
         .includes(:customer)
