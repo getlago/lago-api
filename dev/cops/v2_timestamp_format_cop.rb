@@ -6,15 +6,20 @@ module Cops
   # V2 serializers render temporal values through `ModelSerializer#format_time` and
   # `#format_date`, which give native v2 endpoints microseconds and keep webhooks and activity
   # logs at seconds. A direct `iso8601` would pick one precision for all of them, and a raw
-  # value would be encoded by ActiveSupport at milliseconds.
+  # value would be encoded by ActiveSupport at milliseconds. `created_at`, `updated_at` and
+  # `deleted_at` are declared with `timestamps`, which renders them with `format_time`.
   #
-  # Flags formatting calls, and the pairs whose key ends in `_at` or `_date` without the
-  # matching formatter: `format_time` for `_at`, `format_date` for `_date`. Fields named
-  # otherwise, such as `effective_from`, are left to the request spec check. Only the pairs of
-  # rendered hashes are checked: not the arguments of a query (`where(deleted_at: nil)`) or a pattern.
+  # Flags formatting calls, `created_at`, `updated_at` and `deleted_at` written in a rendered hash,
+  # and the other pairs whose key ends in `_at` or `_date` without the matching formatter:
+  # `format_time` for `_at`, `format_date` for `_date`. Fields named otherwise, such as
+  # `effective_from`, are left to the request spec check. Only the pairs of rendered hashes are
+  # checked: not the arguments of a query (`where(deleted_at: nil)`) or a pattern.
   class V2TimestampFormatCop < ::RuboCop::Cop::Base
     CALL_MSG = "Render v2 timestamps with `format_time` or `format_date` instead of `%<method>s`."
     PAIR_MSG = "Render `%<key>s` with `%<formatter>s`."
+    DECLARE_MSG = "Declare `%<key>s` with `timestamps`."
+
+    DECLARED_KEYS = %w[created_at updated_at deleted_at].freeze
 
     RESTRICT_ON_SEND = %i[iso8601 xmlschema rfc3339 strftime].freeze
     # Calls whose hash argument is rendered.
@@ -37,10 +42,12 @@ module Cops
       return unless node.key.type?(:sym, :str) && rendered?(node.parent)
 
       key = node.key.value.to_s
-      formatter = expected_formatter(key)
-      return if formatter.nil? || formatter_call?(node.value, formatter)
-
-      add_offense(node, message: format(PAIR_MSG, key:, formatter:))
+      if DECLARED_KEYS.include?(key)
+        add_offense(node, message: format(DECLARE_MSG, key:))
+      else
+        formatter = expected_formatter(key)
+        add_offense(node, message: format(PAIR_MSG, key:, formatter:)) unless formatter.nil? || formatter_call?(node.value, formatter)
+      end
     end
 
     private

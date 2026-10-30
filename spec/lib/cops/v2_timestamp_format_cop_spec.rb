@@ -40,8 +40,29 @@ RSpec.describe Cops::V2TimestampFormatCop, :config do
 
   it "registers an offense for a raw datetime" do
     expect_offense(<<~RUBY)
-      { created_at: model.created_at }
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Render `created_at` with `format_time`.
+      { ended_at: model.ended_at }
+        ^^^^^^^^^^^^^^^^^^^^^^^^ Render `ended_at` with `format_time`.
+    RUBY
+  end
+
+  it "registers an offense for a record timestamp, even formatted" do
+    expect_offense(<<~RUBY)
+      { created_at: format_time(model.created_at) }
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Declare `created_at` with `timestamps`.
+    RUBY
+  end
+
+  it "registers one offense for a raw record timestamp" do
+    expect_offense(<<~RUBY)
+      { deleted_at: model.deleted_at }
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Declare `deleted_at` with `timestamps`.
+    RUBY
+  end
+
+  it "registers an offense for a record timestamp merged into a payload" do
+    expect_offense(<<~RUBY)
+      payload.merge(updated_at: format_time(model.updated_at))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Declare `updated_at` with `timestamps`.
     RUBY
   end
 
@@ -68,9 +89,9 @@ RSpec.describe Cops::V2TimestampFormatCop, :config do
 
   it "registers both offenses for a pair formatted with iso8601" do
     expect_offense(<<~RUBY)
-      { updated_at: model.updated_at.iso8601 }
-                    ^^^^^^^^^^^^^^^^^^^^^^^^ Render v2 timestamps with `format_time` or `format_date` instead of `iso8601`.
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Render `updated_at` with `format_time`.
+      { ended_at: model.ended_at.iso8601 }
+                  ^^^^^^^^^^^^^^^^^^^^^^ Render v2 timestamps with `format_time` or `format_date` instead of `iso8601`.
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Render `ended_at` with `format_time`.
     RUBY
   end
 
@@ -102,8 +123,8 @@ RSpec.describe Cops::V2TimestampFormatCop, :config do
 
   it "registers an offense for a raw datetime in a nested hash" do
     expect_offense(<<~RUBY)
-      { product: { created_at: model.created_at } }
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Render `created_at` with `format_time`.
+      { product: { ended_at: model.ended_at } }
+                   ^^^^^^^^^^^^^^^^^^^^^^^^ Render `ended_at` with `format_time`.
     RUBY
   end
 
