@@ -935,6 +935,7 @@ end
 #  index_invoices_by_cursor                                        (organization_id,issuing_date DESC,created_at DESC,id)
 #  index_invoices_on_customer_billing_entity_sequential            (customer_id,billing_entity_id,sequential_id) UNIQUE
 #  index_invoices_on_number                                        (number)
+#  index_invoices_on_organization_id_and_created_at                (organization_id,created_at)
 #  index_invoices_on_organization_id_and_customer_id               (customer_id,organization_id)
 #  index_invoices_on_organization_id_lower_purchase_order_number   (organization_id, lower((purchase_order_number)::text))
 #  index_invoices_on_organization_id_number_gin_trgm_ops           (organization_id,number) USING gin
