@@ -3678,13 +3678,13 @@ input CreateCustomerWalletInput {
   currency: CurrencyEnum!
   customerId: ID!
   expirationAt: ISO8601DateTime
-  grantedCredits: String!
-  ignorePaidTopUpLimitsOnCreation: Boolean
+  grantedCredits: String @deprecated(reason: "The app no longer creates a transaction on wallet creation. Use createCustomerWalletTransaction.")
+  ignorePaidTopUpLimitsOnCreation: Boolean @deprecated(reason: "The app no longer creates a transaction on wallet creation. Use createCustomerWalletTransaction.")
   invoiceCustomSection: InvoiceCustomSectionsReferenceInput
   invoiceRequiresSuccessfulPayment: Boolean
   metadata: [MetadataInput!]
   name: String
-  paidCredits: String!
+  paidCredits: String @deprecated(reason: "The app no longer creates a transaction on wallet creation. Use createCustomerWalletTransaction.")
   paidTopUpMaxAmountCents: BigInt
   paidTopUpMinAmountCents: BigInt
   paymentMethod: PaymentMethodReferenceInput
@@ -3692,7 +3692,7 @@ input CreateCustomerWalletInput {
   purchaseOrderNumber: String
   rateAmount: String!
   recurringTransactionRules: [CreateRecurringTransactionRuleInput!]
-  transactionName: String
+  transactionName: String @deprecated(reason: "The app no longer creates a transaction on wallet creation. Use createCustomerWalletTransaction.")
 }
 
 """
