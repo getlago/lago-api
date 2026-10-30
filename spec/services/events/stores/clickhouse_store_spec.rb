@@ -499,4 +499,39 @@ RSpec.describe Events::Stores::ClickhouseStore, clickhouse: {clean_before: true}
       expect(event_store.count).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 1, events_count: 1))
     end
   end
+
+  # Events from the API keep their JSON types, while events_enriched stores every property as text.
+  describe "#active_unique_property? with a numeric property" do
+    subject(:event_store) do
+      described_class.new(
+        code: billable_metric.code,
+        billing_context: Billing::Context.from(subscription:),
+        boundaries: {from_datetime: subscription.started_at, to_datetime: subscription.started_at + 1.month}
+      )
+    end
+
+    let(:billable_metric) { create(:unique_count_billable_metric, field_name: "user_id") }
+    let(:organization) { billable_metric.organization }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:, started_at: Time.zone.parse("2026-10-01")) }
+    let(:event) do
+      Events::Common.new(
+        organization_id: organization.id,
+        transaction_id: SecureRandom.uuid,
+        external_subscription_id: subscription.external_id,
+        code: billable_metric.code,
+        timestamp: subscription.started_at + 2.days,
+        properties: {"user_id" => 1}
+      )
+    end
+
+    before do
+      event_store.aggregation_property = "user_id"
+      create_event(timestamp: subscription.started_at + 1.day, value: "1")
+    end
+
+    it "matches an earlier event storing the same value as text" do
+      expect(event_store).to be_active_unique_property(event)
+    end
+  end
 end
