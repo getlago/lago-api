@@ -56,6 +56,10 @@ class ProductCatalogInvoiceHelper
     new(invoice).contract_blocks
   end
 
+  def self.contract_name(contract)
+    contract.name.presence || contract.catalog_plan&.invoice_display_name.presence || contract.catalog_plan&.name
+  end
+
   def self.period_label(fee)
     from_datetime, to_datetime = fee.properties.values_at("from_datetime", "to_datetime")
 
@@ -363,7 +367,7 @@ class ProductCatalogInvoiceHelper
   end
 
   def contract_name(contract)
-    contract.name.presence || contract.catalog_plan&.invoice_display_name.presence || contract.catalog_plan&.name
+    self.class.contract_name(contract)
   end
 
   def contract_title(contract)

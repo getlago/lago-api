@@ -179,7 +179,7 @@ class Fee < ApplicationRecord
   end
 
   def invoice_name
-    return invoice_display_name.presence || invoiceable.invoice_name if product?
+    return invoice_display_name.presence || (billed_product || invoiceable).invoice_name if product?
     return invoice_display_name if invoice_display_name.present?
     return charge.invoice_display_name.presence || billable_metric.name if charge?
     return add_on.invoice_name if add_on?

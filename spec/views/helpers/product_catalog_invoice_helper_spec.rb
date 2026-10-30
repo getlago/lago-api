@@ -77,6 +77,16 @@ RSpec.describe ProductCatalogInvoiceHelper do
     end
   end
 
+  describe ".contract_name" do
+    let(:catalog_plan) { create(:catalog_plan, organization:, name: "Growth", invoice_display_name: "Growth plan") }
+
+    it "prefers the contract name, then the plan's invoice display name, then the plan name" do
+      expect(described_class.contract_name(contract)).to eq("Platform")
+      expect(described_class.contract_name(build(:contract, organization:, customer:, name: nil, catalog_plan:))).to eq("Growth plan")
+      expect(described_class.contract_name(build(:contract, organization:, customer:, name: nil, catalog_plan: build(:catalog_plan, organization:, name: "Growth", invoice_display_name: nil)))).to eq("Growth")
+    end
+  end
+
   describe ".contract_blocks" do
     subject(:block) { described_class.contract_blocks(invoice).sole }
 

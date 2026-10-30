@@ -1,0 +1,23 @@
+h2.title-2.mb-24 class=('invoice-details-title' if several) = I18n.t('invoice.details', resource: ProductCatalogInvoiceHelper.contract_name(contract))
+
+- ProductCatalogReceiptHelper.periods(fees).each_with_index do |period, index|
+  .invoice-resume.overflow-auto class=('mt-24' if index.positive?)
+    table.invoice-resume-table width="100%"
+      tr.first_child
+        td.body-2 = period.from_datetime && period.to_datetime ? FeeBoundariesHelper.format_billing_period(period, customer:) : ''
+        td.body-2 = I18n.t('invoice.units')
+        td.body-2 = I18n.t('invoice.unit_price')
+        td.body-2 = I18n.t('invoice.tax_rate')
+        td.body-2 = I18n.t('invoice.amount')
+      - period.fees.each do |fee|
+        == SlimHelper.render('templates/payment_receipts/product_catalog/_fee', fee)
+
+.invoice-resume.overflow-auto
+  - if several
+    table.total-table width="100%"
+      tr
+        td.body-2
+        td.body-1 = I18n.t('invoice.total')
+        td.body-1 = MoneyHelper.format(ProductCatalogReceiptHelper.contract_total(fees))
+  - else
+    == SlimHelper.render('templates/payment_receipts/product_catalog/_totals', self)
