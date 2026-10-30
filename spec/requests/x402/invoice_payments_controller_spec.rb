@@ -204,11 +204,16 @@ describe X402::InvoicePaymentsController, :premium do
     context "when CDP is unavailable" do
       before { stub_cdp_supported(status: 503) }
 
-      it "answers a third-party error without the merchant's failure" do
+      it "answers a third-party error naming the failure" do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json).to eq(status: 422, error: "Unprocessable Entity", code: "third_party_error")
+        expect(json).to eq(
+          status: 422,
+          error: "Unprocessable Entity",
+          code: "third_party_error",
+          error_details: {third_party: "coinbase_cdp", thirdparty_error: "unavailable_error: supported: HTTP 503"}
+        )
       end
     end
   end

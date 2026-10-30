@@ -13,7 +13,7 @@ module X402
 
       def call
         refusal = invoice.x402_payment_refusal
-        return result.single_validation_failure!(error_code: refusal) if refusal
+        return refuse(refusal) if refusal
         return result.not_found_failure!(resource: "connection") unless invoice.x402_connection
         return result.single_validation_failure!(field: :connection_code, error_code: "environment_not_enabled") unless invoice.x402_connection.environment_enabled?
 
@@ -30,6 +30,14 @@ module X402
       private
 
       attr_reader :invoice
+
+      def refuse(refusal)
+        case refusal
+        when "invalid_invoice_status_or_payment_status" then result.gone_failure!(code: refusal)
+        when "invoice_payment_pending" then result.conflict_failure!(code: refusal)
+        else result.single_validation_failure!(error_code: refusal)
+        end
+      end
     end
   end
 end
