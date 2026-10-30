@@ -1,0 +1,74 @@
+# The premium axis, proven live. Both rows build the same world and run the same timeline; only
+# `setup.premium` differs. Plans::CreateService (app/services/plans/create_service.rb:82) creates the
+# minimum commitment only when `args[:minimum_commitment].present? && License.premium?`, and answers
+# 200 either way — so without the licence the commitment is dropped in silence and the invoice is
+# short by the true-up. The two rows must disagree; if they ever agree the axis is a label again.
+
+- id: premium_gating/minimum-commitment/premium
+  area: premium_gating
+  axes: {premium: true, feature: minimum_commitment}
+  control: premium_gating/minimum-commitment/no-premium
+  setup:
+    premium: true
+    metrics: [{code: m_pg_cmt, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: p_pg_cmt, interval: monthly, amount_cents: 2000, pay_in_advance: false, minimum_commitment: {amount_cents: 10000}}
+    charges: [{metric: m_pg_cmt, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: cust_pg_cmt}
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_pg_cmt, plan_code: p_pg_cmt}
+    - at: 2026-03-05T10:00:00Z
+      do: ingest_events
+      events: [{properties: {amount: 15}, count: 2}]
+    - {at: 2026-04-01T01:00:00Z, do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 10000
+      total_amount_cents: 10000
+      fees_count: 3
+      fees:
+        - {fee_type: subscription, amount_cents: 2000}
+        - {fee_type: charge, units: 30, amount_cents: 3000}
+        - {fee_type: commitment, amount_cents: 5000}
+  math: >-
+    With License.premium? true, Plans::CreateService#call takes its minimum_commitment branch and the
+    plan carries a 10_000¢ floor. March is a whole calendar month on a subscription started 1 March, so
+    Commitments::CalculateProratedCoefficientService gives 1 and the floor stays 10_000¢. Fees before
+    the true-up: 2_000¢ plan + 2 × 15 = 30 units × 1.00 = 3_000¢ charge = 5_000¢.
+    Commitments::Minimum::InArrears::CalculateTrueUpFeeService#amount_cents = 10_000 − 5_000 = 5_000¢,
+    so the invoice reads 10_000¢ across three fees.
+
+- id: premium_gating/minimum-commitment/no-premium
+  area: premium_gating
+  axes: {premium: false, feature: minimum_commitment}
+  control: premium_gating/minimum-commitment/premium
+  setup:
+    premium: false
+    metrics: [{code: m_pg_cmt0, aggregation_type: sum_agg, field_name: amount}]
+    plan: {code: p_pg_cmt0, interval: monthly, amount_cents: 2000, pay_in_advance: false, minimum_commitment: {amount_cents: 10000}}
+    charges: [{metric: m_pg_cmt0, charge_model: standard, properties: {amount: "1"}}]
+    customer: {external_id: cust_pg_cmt0}
+  timeline:
+    - {at: 2026-03-01, do: create_subscription, external_id: sub_pg_cmt0, plan_code: p_pg_cmt0}
+    - at: 2026-03-05T10:00:00Z
+      do: ingest_events
+      events: [{properties: {amount: 15}, count: 2}]
+    - {at: 2026-04-01T01:00:00Z, do: perform_billing}
+  expect:
+    invoices: 1
+    invoice:
+      fees_amount_cents: 5000
+      total_amount_cents: 5000
+      fees_count: 2
+      fees:
+        - {fee_type: subscription, amount_cents: 2000}
+        - {fee_type: charge, units: 30, amount_cents: 3000}
+  math: >-
+    Same plan body, same events, License.premium? false. POST /plans still answers 200, but
+    Plans::CreateService#call skips `args[:minimum_commitment].present? && License.premium?`, so
+    plan.minimum_commitment is nil, CalculateTrueUpFeeService#amount_cents returns 0 and
+    Invoices::CalculateFeesService#should_create_minimum_commitment_true_up_fee? is false. March bills
+    2_000¢ plan + 30 × 1.00 = 3_000¢ charge = 5_000¢ over two fees — the control's 10_000¢ minus the
+    5_000¢ true-up the licence gates. This is Lago's documented gating, not a defect; the row exists
+    so that the premium axis is demonstrably live, and so that a future change that starts honouring
+    the commitment without a licence (or starts rejecting the request) shows up here.
