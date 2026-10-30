@@ -95,24 +95,10 @@ module BillableMetrics
         return unless billable_metric.recurring?
 
         if (period = delta_period(options))
-          deltas = merge_groups(event_store.grouped_recurring_sum(watermark: delta_watermark(options), period:))
+          deltas = event_store.grouped_recurring_sum(watermark: delta_watermark(options), period:)
           with_grouped_snapshots(deltas.index_by(&:groups))
         elsif options[:recurring_watermark]
-          merge_groups(event_store.grouped_recurring_sum(watermark: options[:recurring_watermark]))
-        end
-      end
-
-      # The stores return one row per blank value ("" and " "), which all read as the null group
-      def merge_groups(results)
-        results.group_by(&:groups).map do |_groups, group_results|
-          group_results.reduce do |sum, row|
-            sum.with(
-              value: sum.value + row.value,
-              snapshot_value: sum.snapshot_value + row.snapshot_value,
-              events_count: sum.events_count + row.events_count,
-              snapshot_events_count: sum.snapshot_events_count + row.snapshot_events_count
-            )
-          end
+          event_store.grouped_recurring_sum(watermark: options[:recurring_watermark])
         end
       end
 

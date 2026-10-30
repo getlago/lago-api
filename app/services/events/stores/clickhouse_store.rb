@@ -871,7 +871,7 @@ module Events
           scope = if grouped_by_value.present?
             scope.where("events_enriched.properties[?] = ?", grouped_by, grouped_by_value)
           else
-            scope.where("COALESCE(events_enriched.properties[?], '') = ''", grouped_by)
+            scope.where("match(events_enriched.properties[?], ?)", grouped_by, BLANK_VALUE_PATTERN)
           end
         end
 
@@ -883,15 +883,7 @@ module Events
           query = if grouped_by_value.present?
             query.where(Arel::Nodes::SqlLiteral.new(sanitized_property_name(grouped_by)).eq(grouped_by_value))
           else
-            query.where(
-              Arel::Nodes::NamedFunction.new(
-                "COALESCE",
-                [
-                  Arel::Nodes::SqlLiteral.new(sanitized_property_name(grouped_by)),
-                  Arel::Nodes::SqlLiteral.new("''")
-                ]
-              ).eq(Arel::Nodes::SqlLiteral.new("''"))
-            )
+            query.where(Arel::Nodes::SqlLiteral.new(blank_value_condition(grouped_by)))
           end
         end
 
@@ -976,9 +968,18 @@ module Events
       def grouped_arel_columns(columns = grouped_by)
         names = Array.new(columns.count) { |i| "g_#{i}" }
         [
-          columns.map.with_index { |col, i| Arel::Nodes::SqlLiteral.new(sanitized_property_name(col)).as("g_#{i}") },
+          columns.map.with_index { |col, i| Arel::Nodes::SqlLiteral.new(sanitized_group_name(col)).as("g_#{i}") },
           names.join(", ")
         ]
+      end
+
+      # A whitespace-only value is one group with a missing one, which reads as ''
+      def sanitized_group_name(property)
+        "if(#{blank_value_condition(property)}, '', #{sanitized_property_name(property)})"
+      end
+
+      def blank_value_condition(property)
+        sanitize_clickhouse_sql(["match(events_enriched.properties[?], ?)", property, BLANK_VALUE_PATTERN])
       end
 
       def grouped_by_columns(values)
