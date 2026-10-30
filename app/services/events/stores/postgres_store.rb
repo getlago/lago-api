@@ -111,7 +111,9 @@ module Events
       #       unique property
       def active_unique_property?(event)
         previous_events = events.where.not(id: event.id)
-          .where("events.properties @> ?", {aggregation_property => event.properties[aggregation_property]}.to_json)
+          .where(
+            sanitize_sql_for_conditions(["events.properties->>? = ?", aggregation_property, event.properties[aggregation_property]&.to_s])
+          )
 
         if event.persisted? && event.id.present? && event.created_at.present?
           previous_events = previous_events.where(

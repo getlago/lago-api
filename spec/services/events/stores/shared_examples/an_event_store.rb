@@ -161,8 +161,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         end
       end
 
-      context "with a numeric grouped_by_values value" do
-        let(:grouped_by_values) { {"region" => 1} }
+      context "with events storing the group value as a number" do
+        let(:grouped_by_values) { {"region" => "1"} }
 
         before do
           create_event(timestamp: subscription_started_at + 6.days, value: 6, properties: {"region" => 1})
@@ -674,6 +674,31 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           expect(event_store).not_to be_active_unique_property(event_one)
           expect(event_store).to be_active_unique_property(event_two)
           expect(event_store).not_to be_active_unique_property(event_three)
+        end
+
+        context "when the event stores the property as a number" do
+          let(:event_one) do
+            create_event(
+              timestamp: same_timestamp,
+              value: 1,
+              properties: {user_id: "1"},
+              transaction_id: "numeric_unique_property_e1",
+              created_at: Time.zone.parse("2026-10-06T15:18:14.156149Z")
+            )
+          end
+          let(:event_two) do
+            create_event(
+              timestamp: same_timestamp,
+              value: 1,
+              properties: {user_id: 1},
+              transaction_id: "numeric_unique_property_e2",
+              created_at: Time.zone.parse("2026-10-06T15:18:14.444518Z")
+            )
+          end
+
+          it "matches the property as text" do
+            expect(event_store).to be_active_unique_property(event_two)
+          end
         end
 
         it "does not let a future tied receipt affect an earlier lookup" do
@@ -1620,8 +1645,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         expect(result.events_count).to eq(5)
       end
 
-      context "with a numeric grouped_by_values value" do
-        let(:grouped_by_values) { {"region" => 1} }
+      context "with events storing the group value as a number" do
+        let(:grouped_by_values) { {"region" => "1"} }
 
         before do
           create_event(timestamp: subscription_started_at + 6.days, value: 6, properties: {"region" => 1})

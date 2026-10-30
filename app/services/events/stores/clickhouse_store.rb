@@ -247,7 +247,7 @@ module Events
       def active_unique_property?(event)
         previous_event = Events::Stores::Utils::ClickhouseConnection.with_retry do
           query = events
-            .where("events_enriched.properties[?] = ?", aggregation_property, event.properties[aggregation_property])
+            .where("events_enriched.properties[?] = ?", aggregation_property, event.properties[aggregation_property]&.to_s)
 
           if event.persisted? && event.transaction_id.present?
             query
@@ -869,7 +869,7 @@ module Events
       def apply_grouped_by_values(scope)
         grouped_by_values.each do |grouped_by, grouped_by_value|
           scope = if grouped_by_value.present?
-            scope.where("events_enriched.properties[?] = ?", grouped_by, grouped_by_value.to_s)
+            scope.where("events_enriched.properties[?] = ?", grouped_by, grouped_by_value)
           else
             scope.where("match(events_enriched.properties[?], ?)", grouped_by, BLANK_VALUE_PATTERN)
           end
@@ -881,7 +881,7 @@ module Events
       def apply_arel_grouped_by_values(query)
         grouped_by_values.each do |grouped_by, grouped_by_value|
           query = if grouped_by_value.present?
-            query.where(Arel::Nodes::SqlLiteral.new(sanitized_property_name(grouped_by)).eq(grouped_by_value.to_s))
+            query.where(Arel::Nodes::SqlLiteral.new(sanitized_property_name(grouped_by)).eq(grouped_by_value))
           else
             query.where(Arel::Nodes::SqlLiteral.new(blank_value_condition(grouped_by)))
           end
