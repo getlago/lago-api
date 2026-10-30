@@ -4,6 +4,7 @@ module Api
   module V2
     class RateCardsController < Api::V2::BaseController
       cursor_paginated_index(RateCard)
+      date_range_filtered_index(:created_at)
       serializable_with ::V2::RateCardSerializer
 
       def create
@@ -65,7 +66,8 @@ module Api
             product_filter_ids: Array(params[:product_filter_id]).presence,
             code: params[:code],
             product_code: params[:product_code],
-            product_filter_code: params[:product_filter_code]
+            product_filter_code: params[:product_filter_code],
+            **date_range_filters
           }
         )
 

@@ -17,7 +17,9 @@ class CustomersQuery < BaseQuery
     :has_tax_identification_number,
     :metadata,
     :customer_type,
-    :has_customer_type
+    :has_customer_type,
+    :created_at_from,
+    :created_at_to
   ]
 
   SEARCHABLE_FIELDS = %i[name firstname lastname legal_name external_id email].freeze
@@ -36,11 +38,14 @@ class CustomersQuery < BaseQuery
     customers = with_currencies(customers) if filters.currencies.present?
     customers = with_has_tax_identification_number(customers) if filters.key?(:has_tax_identification_number)
     customers = with_metadata(customers) if filters.metadata.present?
+    customers = with_date_range(customers, :created_at)
 
     customers = customers.with_discarded if filters.with_deleted
     customers = apply_consistent_ordering(customers)
 
     result.customers = paginate(customers)
+    result
+  rescue BaseService::FailedResult
     result
   end
 

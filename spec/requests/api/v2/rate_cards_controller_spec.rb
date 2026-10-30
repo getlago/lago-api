@@ -606,6 +606,11 @@ RSpec.describe Api::V2::RateCardsController do
       let(:create_paginated_record) { ->(created_at) { create(:rate_card, organization:, created_at:) } }
     end
 
+    it_behaves_like "a v2 list filtered on created_at", collection: :rate_cards do
+      let(:filtered_path) { "/api/v2/rate_cards" }
+      let(:create_filtered_record) { ->(created_at) { create(:rate_card, organization:, created_at:) } }
+    end
+
     context "with a product_id filter" do
       let(:query_params) { "?product_id=#{product.id}" }
 

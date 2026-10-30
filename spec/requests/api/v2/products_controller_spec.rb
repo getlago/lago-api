@@ -323,6 +323,11 @@ RSpec.describe Api::V2::ProductsController do
       let(:create_paginated_record) { ->(created_at) { create(:product, organization:, created_at:) } }
     end
 
+    it_behaves_like "a v2 list filtered on created_at", collection: :products do
+      let(:filtered_path) { "/api/v2/products" }
+      let(:create_filtered_record) { ->(created_at) { create(:product, organization:, created_at:) } }
+    end
+
     context "with an invalid limit and an unknown product category" do
       let(:query_params) { "?limit=0&product_category_code=unknown" }
 

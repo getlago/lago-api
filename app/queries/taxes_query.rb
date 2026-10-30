@@ -2,7 +2,7 @@
 
 class TaxesQuery < BaseQuery
   Result = BaseResult[:taxes]
-  Filters = BaseFilters[:auto_generated, :applied_to_organization]
+  Filters = BaseFilters[:auto_generated, :applied_to_organization, :created_at_from, :created_at_to]
 
   DEFAULT_ORDER = "name"
 
@@ -11,11 +11,14 @@ class TaxesQuery < BaseQuery
 
     taxes = with_auto_generated(taxes) if filters.auto_generated.present?
     taxes = with_applied_to_organization(taxes) unless filters.applied_to_organization.nil?
+    taxes = with_date_range(taxes, :created_at)
 
     taxes = taxes.order(order)
     taxes = apply_consistent_ordering(taxes)
 
     result.taxes = paginate(taxes)
+    result
+  rescue BaseService::FailedResult
     result
   end
 

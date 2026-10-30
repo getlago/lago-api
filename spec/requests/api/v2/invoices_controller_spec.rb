@@ -40,6 +40,11 @@ RSpec.describe Api::V2::InvoicesController do
       let(:create_paginated_record) { ->(created_at) { create(:invoice, organization:, customer:, invoice_type: :contract, created_at:) } }
     end
 
+    it_behaves_like "a v2 list filtered on created_at", collection: :invoices do
+      let(:filtered_path) { "/api/v2/invoices" }
+      let(:create_filtered_record) { ->(created_at) { create(:invoice, organization:, customer:, invoice_type: :contract, created_at:) } }
+    end
+
     [{per_page: 1_000_000_000}, {page: 0}].each do |offset_params|
       context "with #{offset_params.keys.sole}, which the cursor replaces" do
         let(:params) { offset_params }

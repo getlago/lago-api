@@ -4,6 +4,7 @@ module Api
   module V2
     class FeesController < Api::V2::BaseController
       cursor_paginated_index(Fee)
+      date_range_filtered_index(*::ProductFeesQuery::DATE_RANGES)
       serializable_with ::V2::FeeSerializer
 
       def index
@@ -66,16 +67,8 @@ module Api
           :product_code,
           :rate_card_code,
           :currency,
-          :event_transaction_id,
-          :created_at_from,
-          :created_at_to,
-          :succeeded_at_from,
-          :succeeded_at_to,
-          :failed_at_from,
-          :failed_at_to,
-          :refunded_at_from,
-          :refunded_at_to
-        )
+          :event_transaction_id
+        ).to_h.merge(date_range_filters)
       end
 
       def resource_name

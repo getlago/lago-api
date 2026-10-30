@@ -157,6 +157,11 @@ RSpec.describe Api::V2::ContractsController do
       let(:create_paginated_record) { ->(created_at) { create(:contract, organization:, customer:, created_at:) } }
     end
 
+    it_behaves_like "a v2 list filtered on created_at", collection: :contracts do
+      let(:filtered_path) { "/api/v2/contracts" }
+      let(:create_filtered_record) { ->(created_at) { create(:contract, organization:, customer:, created_at:) } }
+    end
+
     context "with a pending contract" do
       let!(:pending_contract) { create(:contract, :pending, organization:, customer:) }
 

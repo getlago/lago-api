@@ -1051,6 +1051,11 @@ RSpec.describe Api::V2::CustomersController do
       let(:create_paginated_record) { ->(created_at) { create(:customer, organization:, created_at:) } }
     end
 
+    it_behaves_like "a v2 list filtered on created_at", collection: :customers do
+      let(:filtered_path) { "/api/v2/customers" }
+      let(:create_filtered_record) { ->(created_at) { create(:customer, organization:, created_at:) } }
+    end
+
     context "with customers of different organizations" do
       let!(:customer) { create(:customer, organization:) }
 

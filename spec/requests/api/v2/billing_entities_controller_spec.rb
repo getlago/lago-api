@@ -814,6 +814,11 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
       let(:create_paginated_record) { ->(created_at) { create(:billing_entity, organization:, created_at:) } }
     end
 
+    it_behaves_like "a v2 list filtered on created_at", collection: :billing_entities do
+      let(:filtered_path) { "/api/v2/billing_entities" }
+      let(:create_filtered_record) { ->(created_at) { create(:billing_entity, organization:, created_at:) } }
+    end
+
     context "with foreign, archived and deleted entities", bullet: {n_plus_one_query: true, unused_eager_loading: false} do
       let(:billing_entity) { create(:billing_entity, organization:) }
 

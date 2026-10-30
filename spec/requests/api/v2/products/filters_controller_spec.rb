@@ -235,6 +235,11 @@ RSpec.describe Api::V2::Products::FiltersController do
       let(:create_paginated_record) { ->(created_at) { create(:product_filter, organization:, product:, created_at:) } }
     end
 
+    it_behaves_like "a v2 list filtered on created_at", collection: :filters do
+      let(:filtered_path) { "/api/v2/products/#{product.code}/filters" }
+      let(:create_filtered_record) { ->(created_at) { create(:product_filter, organization:, product:, created_at:) } }
+    end
+
     context "with a search term" do
       subject { get_with_token(organization, "/api/v2/products/#{product.code}/filters?search_term=findme") }
 
