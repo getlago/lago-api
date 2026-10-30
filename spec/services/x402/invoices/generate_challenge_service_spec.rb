@@ -95,6 +95,23 @@ describe X402::Invoices::GenerateChallengeService do
     end
   end
 
+  context "with a testnet connection on an organization running on mainnet" do
+    let(:organization) { create(:organization, feature_flags: ["x402_mainnet"]) }
+    let(:x402_connection) do
+      create(:x402_connection, :saved_before_switch, :solana, organization:, cdp_api_key_id:, cdp_api_key_secret:)
+    end
+
+    it "refuses the connection" do
+      expect(result.error.messages).to eq({connection_code: ["environment_not_enabled"]})
+    end
+
+    it "asks CDP nothing" do
+      result
+
+      expect(a_request(:get, "#{cdp_host}/platform/v2/x402/supported")).not_to have_been_made
+    end
+  end
+
   context "when CDP is unavailable" do
     let(:supported_status) { 503 }
 

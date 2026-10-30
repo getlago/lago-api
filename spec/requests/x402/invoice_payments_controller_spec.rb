@@ -188,6 +188,19 @@ describe X402::InvoicePaymentsController, :premium do
       end
     end
 
+    context "with a testnet connection on an organization running on mainnet" do
+      let(:organization) { create(:organization, feature_flags: ["x402_payments", "x402_mainnet"]) }
+      let(:x402_connection) { create(:x402_connection, :saved_before_switch, organization:) }
+
+      it "answers 422 naming the environment rule" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(connection_code: ["environment_not_enabled"])
+        expect(response.headers["PAYMENT-REQUIRED"]).to be_nil
+      end
+    end
+
     context "when CDP is unavailable" do
       before { stub_cdp_supported(status: 503) }
 
