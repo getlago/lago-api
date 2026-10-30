@@ -539,6 +539,7 @@ module Fees
 
     def persist_recurring_value(aggregation_results, selected_metered_item, breakdowns_by_group)
       return if options.current_usage? || options.invoice_preview? || options.advance_renewal?
+      return if snapshot_eligible?(selected_metered_item)
 
       # NOTE: Only weighted sum and custom aggregations are setting this value
       return unless aggregation_results.first&.recurring_updated_at
@@ -625,7 +626,6 @@ module Fees
     end
 
     def snapshot_recurring_units?(selected_metered_item)
-      return false unless billing_context.organization.feature_flag_enabled?(:recurring_aggregation_snapshots)
       return false if options.current_usage? || options.invoice_preview?
 
       # A progressive billing invoice stops mid-period, its units do not close the period

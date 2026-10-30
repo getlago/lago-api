@@ -7184,11 +7184,9 @@ enum FeatureFlagEnum {
   incremental_charge_cache
   multi_connection
   order_forms
-  persisted_recurring_values
   postgres_enriched_events
   product_catalog
   realtime_usage
-  recurring_aggregation_snapshots
   skip_credit_invoice_auto_payment_delay
   sso_cross_organization_sessions
   stripe_shared_payment_token

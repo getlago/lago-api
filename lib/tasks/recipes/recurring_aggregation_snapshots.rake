@@ -51,8 +51,8 @@ namespace :recipes do
     task compare_usage: :environment do
       Rails.logger.level = Logger::Severity::ERROR
 
-      puts "The persisted_recurring_values flag is forced on for the snapshot run and off for the"
-      puts "full scan run, whatever it is set to for the organization. Nothing is persisted."
+      puts "The snapshot read is forced on for the snapshot run and off for the full scan run."
+      puts "Nothing is persisted."
       puts ""
 
       organization = TaskPrompt.ask_for_organization
