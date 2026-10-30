@@ -658,6 +658,7 @@ DROP INDEX IF EXISTS public.index_payments_by_cursor;
 DROP INDEX IF EXISTS public.index_payment_requests_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_requests_on_dunning_campaign_id;
 DROP INDEX IF EXISTS public.index_payment_requests_on_customer_id;
+DROP INDEX IF EXISTS public.index_payment_requests_by_cursor;
 DROP INDEX IF EXISTS public.index_payment_receipts_on_payment_id;
 DROP INDEX IF EXISTS public.index_payment_receipts_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_receipts_on_billing_entity_id;
@@ -11055,6 +11056,13 @@ CREATE UNIQUE INDEX index_payment_receipts_on_payment_id ON public.payment_recei
 
 
 --
+-- Name: index_payment_requests_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payment_requests_by_cursor ON public.payment_requests USING btree (organization_id, created_at DESC, id DESC);
+
+
+--
 -- Name: index_payment_requests_on_customer_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -15963,6 +15971,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261029112805'),
 ('20261029111437'),
 ('20261028184732'),
 ('20261028184731'),
