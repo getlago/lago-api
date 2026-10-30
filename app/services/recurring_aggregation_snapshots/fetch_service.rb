@@ -13,14 +13,15 @@ module RecurringAggregationSnapshots
     Result = BaseResult[:snapshots, :period]
 
     # charge_period: a ChargePeriod shared by the charge filters of the charge, loaded once for all of them
-    # all_buckets: false loads only the charge filter's bucket of the previous subscription, as pay in advance reads one
+    # all_buckets: false loads only the charge filter's bucket, as pay in advance reads one
     def initialize(subscription:, charge:, charge_filter:, grouped_by_keys:, from_datetime:, charge_period: nil, all_buckets: true)
       @subscription = subscription
       @charge = charge
       @charge_filter = charge_filter
       @grouped_by_keys = grouped_by_keys
       @from_datetime = from_datetime
-      @charge_period = charge_period || ChargePeriod.new(subscription:, charge:, from_datetime:)
+      @charge_period = charge_period ||
+        ChargePeriod.new(subscription:, charge:, from_datetime:, charge_filter_ids: (all_buckets ? nil : [charge_filter&.id].compact))
       @all_buckets = all_buckets
 
       super

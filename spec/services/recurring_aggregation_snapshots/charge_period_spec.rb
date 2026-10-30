@@ -56,6 +56,18 @@ RSpec.describe RecurringAggregationSnapshots::ChargePeriod do
       expect(other_buckets_queries).to eq(0)
     end
 
+    context "with charge_filter_ids" do
+      subject(:charge_period) { described_class.new(subscription:, charge:, from_datetime:, charge_filter_ids: [eu_filter.id]) }
+
+      before { create_snapshot(to_datetime: previous_to_datetime, charge_filter: us_filter, units: 2) }
+
+      it "loads only the default bucket and those buckets" do
+        expect(charge_period.period(charge_filter: eu_filter).last.map(&:units)).to eq([4])
+        expect(charge_period.period(charge_filter: nil).last.map(&:units)).to eq([10])
+        expect(charge_period.period(charge_filter: us_filter).last).to eq([])
+      end
+    end
+
     context "without a marker before from_datetime" do
       let(:from_datetime) { previous_to_datetime - 1.month }
 
