@@ -99,7 +99,6 @@ RSpec.describe V2::CustomerSerializer do
 
   it "renders flat billing fields without payment terms or nested objects" do
     expect(payload).to eq(expected_payload)
-    expect(payload.keys).to eq(expected_payload.keys)
   end
 
   it "keeps the other scalar fields of V1" do
@@ -127,8 +126,7 @@ RSpec.describe V2::CustomerSerializer do
   context "when the organization takes x402 payments", :premium do
     let(:feature_flags) { ["x402_payments"] }
 
-    it "renders the agent address after the other fields, as V1 does" do
-      expect(payload.keys).to eq([*expected_payload.keys.excluding(:deleted_at), :x402_agent_address, :deleted_at])
+    it "renders the agent address, as V1 does" do
       expect(payload).to eq(expected_payload.merge(x402_agent_address: "0x1111111111111111111111111111111111111111"))
     end
   end

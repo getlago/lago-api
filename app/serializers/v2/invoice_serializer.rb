@@ -4,6 +4,8 @@ module V2
   # An invoice billed from the product catalog: it names the contracts its
   # fees came from, not the v1 subscriptions and billing periods.
   class InvoiceSerializer < ModelSerializer
+    timestamps :created_at, :updated_at
+
     # Webhooks and activity logs leave out the fees, so that their size does not grow with the
     # invoice, and the customer: a consumer reads both through the API.
     expandable :fees, serializer: ::V2::FeeSerializer
@@ -40,9 +42,7 @@ module V2
         total_due_amount_cents: model.total_due_amount_cents,
         pdf_url: model.file_url,
         xml_url: model.xml_url,
-        voided_at: format_time(model.voided_at),
-        created_at: format_time(model.created_at),
-        updated_at: format_time(model.updated_at)
+        voided_at: format_time(model.voided_at)
       }
     end
 
