@@ -45,24 +45,25 @@ RSpec.describe Cops::V2TimestampFormatCop, :config do
     RUBY
   end
 
-  it "registers an offense for a record timestamp, even formatted" do
+  it "registers both offenses for a datetime rendered with format_time" do
     expect_offense(<<~RUBY)
       { created_at: format_time(model.created_at) }
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Declare v2 datetimes with `timestamps` instead of rendering them with `format_time`.
         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Declare `created_at` with `timestamps`.
     RUBY
   end
 
-  it "registers one offense for a raw record timestamp" do
+  it "registers an offense for format_time under another key" do
     expect_offense(<<~RUBY)
-      { deleted_at: model.deleted_at }
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Declare `deleted_at` with `timestamps`.
+      { effective_from: format_time(model.effective_from) }
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Declare v2 datetimes with `timestamps` instead of rendering them with `format_time`.
     RUBY
   end
 
-  it "registers an offense for a record timestamp merged into a payload" do
+  it "registers an offense for format_time assigned into a payload" do
     expect_offense(<<~RUBY)
-      payload.merge(updated_at: format_time(model.updated_at))
-                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Declare `updated_at` with `timestamps`.
+      payload[:voided_at] = format_time(model.voided_at)
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Declare v2 datetimes with `timestamps` instead of rendering them with `format_time`.
     RUBY
   end
 
@@ -80,9 +81,10 @@ RSpec.describe Cops::V2TimestampFormatCop, :config do
     RUBY
   end
 
-  it "registers an offense for a date rendered as a datetime" do
+  it "registers both offenses for a date rendered as a datetime" do
     expect_offense(<<~RUBY)
       { effective_date: format_time(model.effective_date) }
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Declare v2 datetimes with `timestamps` instead of rendering them with `format_time`.
         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Render `effective_date` with `format_date`.
     RUBY
   end

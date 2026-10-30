@@ -8,16 +8,18 @@ module Cops
   # get microseconds, webhooks and activity logs keep seconds. A direct `iso8601` would pick one
   # precision for all of them, and a raw value would be encoded by ActiveSupport at milliseconds.
   #
-  # Flags formatting calls, the pairs whose key ends in `_at` written in a rendered hash, and the
-  # pairs whose key ends in `_date` without `format_date`. Fields named otherwise, such as
-  # `from_datetime`, are left to the request spec check. Only the pairs of rendered hashes are
-  # checked: not the arguments of a query (`where(deleted_at: nil)`) or a pattern.
+  # Flags formatting calls, `format_time` calls, the pairs whose key ends in `_at` written in a
+  # rendered hash, and the pairs whose key ends in `_date` without `format_date`. A raw datetime
+  # under another name, such as `from_datetime`, is left to the request spec check of its precision.
+  # Only the pairs of rendered hashes are checked: not the arguments of a query
+  # (`where(deleted_at: nil)`) or a pattern.
   class V2TimestampFormatCop < ::RuboCop::Cop::Base
     CALL_MSG = "Declare v2 datetimes with `timestamps` and render dates with `format_date` instead of `%<method>s`."
     DECLARE_MSG = "Declare `%<key>s` with `timestamps`."
+    FORMAT_TIME_MSG = "Declare v2 datetimes with `timestamps` instead of rendering them with `format_time`."
     DATE_MSG = "Render `%<key>s` with `format_date`."
 
-    RESTRICT_ON_SEND = %i[iso8601 xmlschema rfc3339 strftime].freeze
+    RESTRICT_ON_SEND = %i[iso8601 xmlschema rfc3339 strftime format_time].freeze
     # Calls whose hash argument is rendered.
     MERGE_METHODS = %i[merge merge! deep_merge deep_merge! reverse_merge reverse_merge! with_defaults with_defaults!].freeze
 
@@ -30,7 +32,11 @@ module Cops
     end
 
     def on_send(node)
-      add_offense(node, message: format(CALL_MSG, method: node.method_name))
+      if node.method?(:format_time)
+        add_offense(node, message: FORMAT_TIME_MSG) if node.receiver.nil?
+      else
+        add_offense(node, message: format(CALL_MSG, method: node.method_name))
+      end
     end
     alias_method :on_csend, :on_send
 
