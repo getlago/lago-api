@@ -15,10 +15,13 @@ module X402
 
       header = request.headers[X402::Wire::V2Codec::PAYMENT_SIGNATURE]
 
-      if header.present?
+      if header.blank?
+        render_challenge(invoice)
+      elsif request.post?
         render_payment(invoice, X402::Invoices::SettleService.call(invoice:, payment: X402::Wire::V2Codec.decode(header)))
       else
-        render_challenge(invoice)
+        response.headers["Allow"] = "POST"
+        method_not_allowed_error(code: "payment_requires_post")
       end
     end
 
