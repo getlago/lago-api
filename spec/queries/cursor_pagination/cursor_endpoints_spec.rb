@@ -379,12 +379,11 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
         PaymentReceiptsQuery.call(
           organization:,
           pagination:,
-          filters: {invoice_id: SecureRandom.uuid, product_catalog: true}
+          filters: {invoice_id: SecureRandom.uuid, created_at_from: "2026-10-01", created_at_to: "2026-10-31"}
         ).payment_receipts
       end
     end
 
-    # No cursor index: a receipt is issued per payment, and the organization index bounds the page.
     it_behaves_like "a keyset-paginated query", table: "payment_receipts"
   end
 end

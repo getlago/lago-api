@@ -22,26 +22,30 @@ RSpec.describe Api::V2::PaymentReceiptsController do
 
     include_examples "requires API permission", "payment_receipt", "read"
 
-    it "lists the receipts of catalog invoices only" do
+    it "lists every receipt of the organization, as the v2 payments do" do
       subject
 
       expect(response).to have_http_status(:success)
-      expect(json[:payment_receipts].map { it[:lago_id] }).to eq([payment_receipt.id])
+      expect(json[:payment_receipts].map { it[:lago_id] }).to match_array([payment_receipt.id, legacy_receipt.id])
       expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
     end
 
     it_behaves_like "a cursor paginated v2 endpoint", collection: :payment_receipts, model: PaymentReceipt do
       let(:paginated_path) { "/api/v2/payment_receipts" }
       let(:create_paginated_record) do
-        lambda do |created_at|
-          catalog_invoice = create(:invoice, organization:, customer:, invoice_type: :contract)
-          create(:payment_receipt, organization:, created_at:, payment: create(:payment, payable: catalog_invoice))
-        end
+        ->(created_at) { create(:payment_receipt, organization:, created_at:, payment: create(:payment, payable: create(:invoice, organization:, customer:))) }
       end
     end
 
-    context "with a lago_invoice_id" do
-      let(:params) { {lago_invoice_id: other_invoice.id} }
+    it_behaves_like "a v2 list filtered on created_at", collection: :payment_receipts do
+      let(:filtered_path) { "/api/v2/payment_receipts" }
+      let(:create_filtered_record) do
+        ->(created_at) { create(:payment_receipt, organization:, created_at:, payment: create(:payment, payable: create(:invoice, organization:, customer:))) }
+      end
+    end
+
+    context "with an invoice_id" do
+      let(:params) { {invoice_id: other_invoice.id} }
       let(:other_invoice) { create(:invoice, organization:, customer:, invoice_type: :contract) }
       let(:other_receipt) { create(:payment_receipt, organization:, payment: create(:payment, payable: other_invoice)) }
 
@@ -54,16 +58,16 @@ RSpec.describe Api::V2::PaymentReceiptsController do
       end
     end
 
-    context "with an invalid lago_invoice_id" do
-      let(:params) { {lago_invoice_id: "not-a-uuid"} }
+    context "with an invalid invoice_id" do
+      let(:params) { {invoice_id: "not-a-uuid"} }
 
-      it "reports the public filter name" do
+      it "returns a validation error on the filter" do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
         expect(json).to eq(
           code: "validation_errors",
-          details: [{code: "value_is_invalid", field: "lago_invoice_id", meta: {}}]
+          details: [{code: "value_is_invalid", field: "invoice_id", meta: {}}]
         )
       end
     end

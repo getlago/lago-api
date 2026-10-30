@@ -4,14 +4,14 @@ module Api
   module V2
     class PaymentReceiptsController < Api::V2::BaseController
       cursor_paginated_index(PaymentReceipt)
+      date_range_filtered_index(:created_at)
       serializable_with ::V2::PaymentReceiptSerializer
 
-      # Receipts of legacy invoices are served by v1: on v2 they do not exist.
       def index
         result = ::PaymentReceiptsQuery.call(
           organization: current_organization,
           pagination: cursor,
-          filters: {invoice_id: params[:lago_invoice_id], product_catalog: true}
+          filters: params.permit(:invoice_id).to_h.symbolize_keys.merge(date_range_filters)
         )
 
         if result.success?
@@ -32,10 +32,6 @@ module Api
       end
 
       private
-
-      def filter_errors(filters)
-        super(filters.transform_keys(invoice_id: :lago_invoice_id))
-      end
 
       def resource_name
         "payment_receipt"
