@@ -58,6 +58,37 @@ RSpec.describe RecurringAggregationSnapshot do
     end
   end
 
+  describe ".readable?" do
+    subject(:readable) { described_class.readable?(metered_item:, billing_context:) }
+
+    let(:organization) { create(:organization) }
+    let(:billable_metric) { build_stubbed(:sum_billable_metric, :recurring) }
+    let(:metered_item) { instance_double(Fees::ChargeService::MeteredItem, billable_metric:, billing_segment: nil) }
+    let(:billing_context) { Billing::Context.from(subscription: build_stubbed(:subscription, organization:)) }
+
+    before { organization.enable_feature_flag!(:persisted_recurring_values) }
+
+    it { is_expected.to be(true) }
+
+    context "without the persisted_recurring_values feature flag" do
+      before { organization.disable_feature_flag!(:persisted_recurring_values) }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "with a metric that is not recurring" do
+      let(:billable_metric) { build_stubbed(:sum_billable_metric) }
+
+      it { is_expected.to be(false) }
+    end
+
+    context "with an aggregation type without snapshots" do
+      let(:billable_metric) { build_stubbed(:billable_metric, :recurring, aggregation_type: "count_agg") }
+
+      it { is_expected.to be(false) }
+    end
+  end
+
   describe "unique index" do
     let(:existing) { create(:recurring_aggregation_snapshot, grouped_by:) }
     let(:grouped_by) { {} }

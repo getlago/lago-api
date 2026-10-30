@@ -44,7 +44,7 @@ module Charges
     end
 
     def recurring_initial_value
-      return unless RecurringAggregationSnapshots::FetchService.readable?(metered_item:, billing_context:)
+      return unless RecurringAggregationSnapshot.readable?(metered_item:, billing_context:)
 
       fetched = RecurringAggregationSnapshots::FetchService.call!(
         subscription: billing_context.subscription,

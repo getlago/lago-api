@@ -12,13 +12,6 @@ module RecurringAggregationSnapshots
 
     Result = BaseResult[:snapshots, :period]
 
-    # Invoicing and pay in advance both check it, so they start the same charge from the same units
-    def self.readable?(metered_item:, billing_context:)
-      metered_item.billable_metric.recurring? &&
-        RecurringAggregationSnapshot.eligible?(metered_item:, billing_context:) &&
-        billing_context.organization.feature_flag_enabled?(:persisted_recurring_values)
-    end
-
     def initialize(subscription:, charge:, charge_filter:, grouped_by_keys:, from_datetime:)
       @subscription = subscription
       @charge = charge

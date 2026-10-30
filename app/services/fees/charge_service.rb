@@ -640,16 +640,16 @@ module Fees
 
     # Usage filtered by group narrows the events read, but snapshots hold every group's units
     def recurring_initial_value(selected_metered_item)
-      return unless RecurringAggregationSnapshots::FetchService.readable?(metered_item: selected_metered_item, billing_context:)
-      return if options.usage_filters.filter_by_group.present?
-
-      RecurringAggregationSnapshots::FetchService.call!(
-        subscription:,
-        charge: selected_metered_item.charge,
-        charge_filter: selected_metered_item.charge_filter,
-        grouped_by_keys: grouped_by_keys(selected_metered_item:),
-        from_datetime: selected_metered_item.boundaries.charges_from_datetime
-      )
+      if RecurringAggregationSnapshot.readable?(metered_item: selected_metered_item, billing_context:) &&
+          options.usage_filters.filter_by_group.blank?
+        RecurringAggregationSnapshots::FetchService.call!(
+          subscription:,
+          charge: selected_metered_item.charge,
+          charge_filter: selected_metered_item.charge_filter,
+          grouped_by_keys: grouped_by_keys(selected_metered_item:),
+          from_datetime: selected_metered_item.boundaries.charges_from_datetime
+        )
+      end
     end
 
     def recurring_snapshots

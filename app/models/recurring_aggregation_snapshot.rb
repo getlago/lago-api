@@ -19,10 +19,16 @@ class RecurringAggregationSnapshot < ApplicationRecord
 
   # Snapshots are keyed on a subscription, which billing segments do not bill
   def self.eligible?(metered_item:, billing_context:)
-    return false if metered_item.billing_segment
-    return false unless billing_context.subscription?
+    metered_item.billing_segment.nil? &&
+      billing_context.subscription? &&
+      AGGREGATION_TYPES.include?(metered_item.billable_metric.aggregation_type)
+  end
 
-    AGGREGATION_TYPES.include?(metered_item.billable_metric.aggregation_type)
+  # Invoicing and pay in advance both check it, so they start the same charge from the same units
+  def self.readable?(metered_item:, billing_context:)
+    metered_item.billable_metric.recurring? &&
+      eligible?(metered_item:, billing_context:) &&
+      billing_context.organization.feature_flag_enabled?(:persisted_recurring_values)
   end
 end
 
