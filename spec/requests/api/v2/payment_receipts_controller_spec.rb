@@ -55,10 +55,11 @@ RSpec.describe Api::V2::PaymentReceiptsController do
     context "when the receipt pays a legacy invoice" do
       let(:invoice) { create(:invoice, organization:, customer:, invoice_type: :subscription) }
 
-      it "returns a not found error" do
+      it "returns it, as the v2 payments do" do
         subject
 
-        expect(response).to be_v2_not_found_error("payment_receipt")
+        expect(response).to have_http_status(:success)
+        expect(json[:payment_receipt][:lago_id]).to eq(payment_receipt.id)
       end
     end
 
