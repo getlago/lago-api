@@ -111,11 +111,11 @@ RSpec.describe Resolvers::AttributedUsageResolver, clickhouse: {clean_before: tr
     )
     expect(rows_summary).to eq(
       [
-        {"value" => "eng", "rank" => 1, "eventsCount" => 3, "amountCents" => nil},
-        {"value" => "data", "rank" => 2, "eventsCount" => 1, "amountCents" => nil}
+        {"value" => "data", "rank" => 1, "eventsCount" => 1, "amountCents" => nil},
+        {"value" => "eng", "rank" => 2, "eventsCount" => 3, "amountCents" => nil}
       ]
     )
-    expect(attributed_usage["rows"].first["chargesUsage"]).to match_array(
+    expect(attributed_usage["rows"].find { it["value"] == "eng" }["chargesUsage"]).to match_array(
       [
         {"charge" => {"id" => tokens_charge.id}, "chargeFilter" => nil, "units" => 1500.0, "amountCents" => nil, "preciseAmountCents" => nil, "eventsCount" => 2},
         {"charge" => {"id" => requests_charge.id}, "chargeFilter" => nil, "units" => 1.0, "amountCents" => nil, "preciseAmountCents" => nil, "eventsCount" => 1}
@@ -164,7 +164,7 @@ RSpec.describe Resolvers::AttributedUsageResolver, clickhouse: {clean_before: tr
     end
 
     it "returns the units of the whole split charge" do
-      expect(attributed_usage["rows"].map { [it["value"], it["splitChargeUnits"]] }).to eq([["eng", 1500.0], ["data", 2000.0]])
+      expect(attributed_usage["rows"].map { [it["value"], it["splitChargeUnits"]] }).to eq([["data", 2000.0], ["eng", 1500.0]])
       expect(attributed_usage["unattributed"]["splitChargeUnits"]).to eq(100.0)
       expect(attributed_usage["totals"]["splitChargeUnits"]).to eq(2000.0 + 1500.0 + 100.0) # data + eng + unattributed
     end
@@ -222,16 +222,16 @@ RSpec.describe Resolvers::AttributedUsageResolver, clickhouse: {clean_before: tr
     let(:variables) { {subscriptionId: subscription.id, groupBy: "team", page: 2, limit: 1} }
 
     it "returns the requested page" do
-      expect(rows_summary.map { it.slice("value", "rank") }).to eq([{"value" => "data", "rank" => 2}])
+      expect(rows_summary.map { it.slice("value", "rank") }).to eq([{"value" => "eng", "rank" => 2}])
       expect(attributed_usage["metadata"]).to eq("currentPage" => 2, "limitValue" => 1, "totalCount" => 2, "totalPages" => 2)
     end
   end
 
   context "with a search" do
-    let(:variables) { {subscriptionId: subscription.id, groupBy: "team", searchTerm: "a", limit: 1} }
+    let(:variables) { {subscriptionId: subscription.id, groupBy: "team", searchTerm: "e", limit: 1} }
 
     it "pages through the matching values" do
-      expect(rows_summary.map { it.slice("value", "rank") }).to eq([{"value" => "data", "rank" => 2}])
+      expect(rows_summary.map { it.slice("value", "rank") }).to eq([{"value" => "eng", "rank" => 2}])
       expect(attributed_usage["metadata"]).to eq("currentPage" => 1, "limitValue" => 1, "totalCount" => 1, "totalPages" => 1)
     end
   end
