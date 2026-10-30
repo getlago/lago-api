@@ -22,6 +22,14 @@ class PaymentTerm < Data.define(:term_type, :days, :day_of_month, :month_offset)
     )
   end
 
+  # Backward compatibility for the legacy net_payment_term field. A value the model
+  # validation rejects maps to no term, so the caller gets a 422 instead of an error here.
+  def self.from_net_payment_term(days)
+    return if !days.is_a?(Integer) || days.negative?
+
+    new(term_type: "net", days:)
+  end
+
   def initialize(term_type:, days: nil, day_of_month: nil, month_offset: nil)
     # Data freezes the object, not its members: copy so the caller's string cannot change the term
     term_type = term_type.to_s.dup.freeze

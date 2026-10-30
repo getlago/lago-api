@@ -112,6 +112,24 @@ RSpec.describe PaymentTerm do
     end
   end
 
+  describe ".from_net_payment_term" do
+    it "builds a net term from the legacy alias" do
+      expect(described_class.from_net_payment_term(0)&.to_h)
+        .to eq("term_type" => "net", "days" => 0)
+      expect(described_class.from_net_payment_term(30)&.to_h)
+        .to eq("term_type" => "net", "days" => 30)
+    end
+
+    it "returns nil when the legacy alias is cleared" do
+      expect(described_class.from_net_payment_term(nil)).to be_nil
+    end
+
+    it "returns nil for a value the model validation rejects" do
+      expect(described_class.from_net_payment_term(-5)).to be_nil
+      expect(described_class.from_net_payment_term("30")).to be_nil
+    end
+  end
+
   describe "#to_h" do
     context "when due_on_receipt" do
       let(:attributes) { {term_type: "due_on_receipt"} }
