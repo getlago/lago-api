@@ -55,6 +55,8 @@ module X402
           UnsignedInteger.parse(authorization["validBefore"]),
           authorization["nonce"].downcase
         ]
+      rescue ArgumentError
+        invalid("invalid_authorization")
       end
 
       def svm_canonical
