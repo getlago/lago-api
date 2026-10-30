@@ -7,7 +7,7 @@ module Webhooks
 
       def object_serializer
         if object.product?
-          ::V2::FeeSerializer.new(object, root_name: "fee", includes: ::V2::FeeSerializer.webhook_includes)
+          ::V2::FeeSerializer.new(object, root_name: "fee", webhook: true)
         else
           ::V1::FeeSerializer.new(object, root_name: "fee")
         end

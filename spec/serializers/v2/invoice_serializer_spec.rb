@@ -241,8 +241,8 @@ RSpec.describe V2::InvoiceSerializer do
       )
     end
 
-    context "with the webhook includes" do
-      let(:includes) { described_class.webhook_includes }
+    context "with webhook: true" do
+      subject(:serializer) { described_class.new(invoice, root_name: "invoice", webhook: true) }
 
       it "leaves the fees and the customer out" do
         expect(result.keys.last(4)).to eq(%w[applied_taxes contracts applied_invoice_custom_sections error_details])

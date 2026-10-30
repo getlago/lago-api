@@ -186,8 +186,8 @@ RSpec.describe ModelSerializer do
       end
     end
 
-    context "with the webhook includes" do
-      let(:options) { {includes: serializer_class.webhook_includes} }
+    context "with webhook: true" do
+      let(:options) { {webhook: true} }
 
       let(:serializer_class) do
         embedded_serializer = self.embedded_serializer
@@ -203,6 +203,22 @@ RSpec.describe ModelSerializer do
 
       it "adds the expansions declared with webhooks only" do
         expect(payload).to eq(code: "parent", second: nil, third: {code: "first", options: {}})
+      end
+
+      context "with an internal include" do
+        let(:options) { {webhook: true, includes: %i[usec_timestamps]} }
+
+        it "keeps it next to the webhook includes" do
+          expect(payload).to eq(code: "parent", second: nil, third: {code: "first", options: {includes: %i[usec_timestamps]}})
+        end
+      end
+
+      context "with an expansion in its includes" do
+        let(:options) { {webhook: true, includes: %i[first]} }
+
+        it "raises, since only webhooks: true embeds an expansion in a webhook" do
+          expect { payload }.to raise_error(ArgumentError, /only through `webhooks: true`/)
+        end
       end
     end
 

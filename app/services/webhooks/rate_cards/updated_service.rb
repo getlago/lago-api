@@ -6,7 +6,7 @@ module Webhooks
       private
 
       def object_serializer
-        ::V2::RateCardSerializer.new(object, root_name: object_type, includes: ::V2::RateCardSerializer.webhook_includes)
+        ::V2::RateCardSerializer.new(object, root_name: object_type, webhook: true)
       end
 
       def webhook_type

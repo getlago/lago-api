@@ -22,7 +22,7 @@ RSpec.describe ::V2::Invoices::PaymentDisputeLostSerializer do
     it "serializes the v2 invoice with the provider error" do
       result = JSON.parse(serializer.to_json)
 
-      expect(result["data"]["invoice"]).to include("lago_id" => invoice.id, "invoice_type" => "contract", "contracts" => [], "applied_taxes" => [])
+      expect(result["data"]["invoice"]).to include("lago_id" => invoice.id, "invoice_type" => "contract", "applied_taxes" => [], "contracts" => [], "applied_invoice_custom_sections" => [], "error_details" => [])
       expect(result["data"]["invoice"]).not_to include("fees", "customer")
       expect(result["data"]["invoice"]).not_to have_key("subscriptions")
       expect(result["data"]["provider_error"]).to eq(options[:provider_error])
