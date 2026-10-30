@@ -106,6 +106,31 @@ RSpec.describe "templates/payment_receipts/product_catalog.slim" do
     end
   end
 
+  context "when the billed product has been discarded" do
+    let(:product_filter) { create(:product_filter, organization:, product:, name: "EU", invoice_display_name: nil) }
+
+    before do
+      product_fee(fee_contract: contract, amount_cents: 200, true_up_parent_fee: invoice.fees.sole)
+      product.discard!
+      invoice.reload
+      payment_receipt.reload
+    end
+
+    it "keeps the product, filter and true-up names in contract details" do
+      expect(rendered_text).to include("Compute • EU 280 €0.10 0.0% €28.00")
+      expect(rendered_text).to include(I18n.t("invoice.true_up_metric", metric: "Compute"))
+    end
+
+    context "when the invoice bills fees paid in advance" do
+      let(:invoice_type) { :advance_charges }
+
+      it "keeps the product and filter in advance fee lines" do
+        expect(rendered_text).to include("Compute • EU")
+        expect(rendered_text).to include("Already paid")
+      end
+    end
+  end
+
   context "when the fee is graduated" do
     let(:rate_card_rate_attributes) do
       {

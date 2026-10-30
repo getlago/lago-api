@@ -270,6 +270,22 @@ RSpec.describe Fee do
       end
     end
 
+    context "when the billed product has been discarded" do
+      let(:product) { create(:product, invoice_display_name: "Historical product") }
+      let(:rate_card_rate) { create(:rate_card_rate, rate_card: create(:rate_card, product:, organization: product.organization)) }
+      let(:fee) { create(:fee, fee_type: :product, invoiceable: product, invoice_display_name: nil, rate_card_rate:) }
+
+      before do
+        fee
+        product.discard!
+        fee.reload
+      end
+
+      it "keeps the product invoice name" do
+        expect(fee_invoice_name).to eq("Historical product")
+      end
+    end
+
     context "when invoice display name is blank" do
       let(:invoice_display_name) { [nil, ""].sample }
 

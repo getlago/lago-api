@@ -67,6 +67,21 @@ RSpec.describe PaymentReceiptMailer do
           expect(mail.attachments["invoice-#{invoice.number}.pdf"].body.decoded).to include("Infrastructure")
         end
 
+        context "when the billed product has been discarded" do
+          before do
+            product.discard!
+            invoice.reload
+            payment_receipt.reload
+          end
+
+          it "generates and emails a receipt retaining the product name" do
+            mail = payment_receipt_mailer.with(payment_receipt:).created.deliver_now
+
+            expect(ActionMailer::Base.deliveries).to include(mail)
+            expect(mail.attachments["receipt-#{payment_receipt.number}.pdf"].body.decoded).to include("Compute")
+          end
+        end
+
         context "when the invoice PDF is not ready" do
           let(:generate_invoice_pdf) { false }
 
