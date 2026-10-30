@@ -5,6 +5,8 @@ module Types
     class Object < Types::BaseObject
       graphql_name "Customer"
 
+      dataload_association :organization
+
       field :id, ID, null: false
 
       field :account_type, Types::Customers::AccountTypeEnum, null: false
@@ -150,7 +152,7 @@ module Types
       end
 
       def x402_agent_address
-        object.x402_agent_address if object.organization.x402_payments_enabled?
+        object.x402_agent_address if organization.x402_payments_enabled?
       end
 
       def overdue_balances
