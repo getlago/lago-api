@@ -21,7 +21,8 @@ module V1
         legal_name: model.legal_name,
         legal_number: model.legal_number,
         timezone: model.timezone,
-        net_payment_term: model.net_payment_term,
+        net_payment_term:,
+        payment_term: model.default_billing_entity&.payment_term,
         email_settings: model.email_settings,
         document_numbering: model.document_numbering,
         document_number_prefix: model.document_number_prefix,
@@ -45,6 +46,13 @@ module V1
         invoice_grace_period: model.invoice_grace_period,
         document_locale: model.document_locale
       }
+    end
+
+    # The organization column is no longer written when the default billing entity's term changes.
+    def net_payment_term
+      return model.net_payment_term unless model.default_billing_entity
+
+      model.default_billing_entity.net_payment_term
     end
 
     def taxes

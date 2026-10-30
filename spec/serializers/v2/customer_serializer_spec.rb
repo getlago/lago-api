@@ -40,6 +40,7 @@ RSpec.describe V2::CustomerSerializer do
       tax_identification_number: "FR12345678901",
       timezone: nil,
       net_payment_term: 30,
+      payment_term: {"term_type" => "net", "days" => 30},
       external_salesforce_id: "sf_001",
       finalize_zero_amount_invoice: "skip",
       skip_invoice_custom_sections: true,
@@ -103,7 +104,7 @@ RSpec.describe V2::CustomerSerializer do
   end
 
   it "keeps the other scalar fields of V1" do
-    excluded = %i[billing_configuration shipping_address metadata net_payment_term]
+    excluded = %i[billing_configuration shipping_address metadata net_payment_term payment_term]
     v1_payload = V1::CustomerSerializer.new(customer).serialize.except(*excluded)
 
     expect(payload.slice(*v1_payload.keys)).to eq(v1_payload)
