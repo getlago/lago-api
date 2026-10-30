@@ -13666,6 +13666,11 @@ type Query {
   Query the x402 connections of an organization
   """
   x402Connections(limit: Int, page: Int): X402ConnectionObjectCollection!
+
+  """
+  Query the networks an x402 connection can accept payments on
+  """
+  x402Networks: [X402Network!]!
 }
 
 type Quote {
@@ -17458,6 +17463,23 @@ type X402ConnectionObjectCollection {
 
 enum X402FacilitatorEnum {
   coinbase_cdp
+}
+
+type X402Network {
+  environment: X402NetworkEnvironmentEnum!
+  family: X402NetworkFamilyEnum!
+  id: ID!
+  name: String!
+}
+
+enum X402NetworkEnvironmentEnum {
+  mainnet
+  testnet
+}
+
+enum X402NetworkFamilyEnum {
+  evm
+  svm
 }
 
 type X402PayoutAddresses {

@@ -11,6 +11,13 @@ module X402
       "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1" => :testnet
     }.freeze
 
+    NAMES = {
+      "eip155:8453" => "Base",
+      "eip155:84532" => "Base Sepolia",
+      "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp" => "Solana",
+      "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1" => "Solana Devnet"
+    }.freeze
+
     EVM_ADDRESS = /\A0x\h{40}\z/
     SVM_ADDRESS_BYTES = 32
 
