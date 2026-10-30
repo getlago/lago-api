@@ -572,6 +572,14 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
     end
   end
 
+  context "without group_by" do
+    let(:group_by) { nil }
+
+    it "returns a validation failure" do
+      expect(result.error.messages).to eq(group_by: ["value_is_mandatory"])
+    end
+  end
+
   context "with an unknown group_by type" do
     let(:group_by) { "department" }
 
@@ -608,6 +616,7 @@ RSpec.describe UsageAttributions::QueryService, clickhouse: {clean_before: true}
 
     it "lists the first page of filters and the default price" do
       expect(result.split_filters_count).to eq(12)
+      expect(result.split_filters_limit).to eq(10)
       expect(split_cells(result.totals)).to eq(
         [[charge_filters[0], 3_000], [charge_filters[1], 500]] + charge_filters[2...10].map { [it, 0] } + [[nil, 100]]
       )
