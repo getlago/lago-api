@@ -5,6 +5,8 @@ class RecurringAggregationSnapshot < ApplicationRecord
   # Same margin as the other enriched_at readers (ChargeFiltersScan::IncrementalCache::INGESTION_MARGIN).
   WATERMARK_LAG = 5.minutes
 
+  AGGREGATION_TYPES = %w[sum_agg weighted_sum_agg].freeze
+
   belongs_to :organization
   belongs_to :subscription
   belongs_to :charge, -> { with_discarded }
@@ -14,6 +16,20 @@ class RecurringAggregationSnapshot < ApplicationRecord
   validates :to_datetime, presence: true
   validates :watermark, presence: true
   validates :units, numericality: true
+
+  # Snapshots are keyed on a subscription, which billing segments do not bill
+  def self.eligible?(metered_item:, billing_context:)
+    metered_item.billing_segment.nil? &&
+      billing_context.subscription? &&
+      AGGREGATION_TYPES.include?(metered_item.billable_metric.aggregation_type)
+  end
+
+  # Invoicing and pay in advance both check it, so they start the same charge from the same units
+  def self.readable?(metered_item:, billing_context:)
+    metered_item.billable_metric.recurring? &&
+      eligible?(metered_item:, billing_context:) &&
+      billing_context.organization.feature_flag_enabled?(:persisted_recurring_values)
+  end
 end
 
 # == Schema Information
