@@ -58,15 +58,19 @@ module PaymentTerms
       payment_term[:term_type]
     end
 
+    def term_fields
+      PaymentTerm::FIELDS_BY_TERM_TYPE.fetch(term_type)
+    end
+
     def valid_fields?
-      unexpected = payment_term.keys.map(&:to_s) - ["term_type"] - PaymentTerm::FIELDS_BY_TERM_TYPE.fetch(term_type)
+      unexpected = payment_term.keys.map(&:to_s) - ["term_type"] - term_fields
       return true if unexpected.empty?
 
       add_error(field: :payment_term, error_code: "unexpected_fields")
     end
 
     def valid_days?
-      return true unless PaymentTerm::FIELDS_BY_TERM_TYPE.fetch(term_type).include?("days")
+      return true unless term_fields.include?("days")
 
       days = payment_term[:days]
 
@@ -76,7 +80,7 @@ module PaymentTerms
     end
 
     def valid_day_of_month?
-      return true unless term_type == "day_of_month"
+      return true unless term_fields.include?("day_of_month")
 
       day = payment_term[:day_of_month]
       return true if day.is_a?(Integer) && DAY_OF_MONTH_RANGE.cover?(day)
@@ -85,7 +89,7 @@ module PaymentTerms
     end
 
     def valid_month_offset?
-      return true unless term_type == "day_of_month"
+      return true unless term_fields.include?("month_offset")
 
       offset = payment_term[:month_offset]
       # Absent is fine: PaymentTerm.from_h fills the default (1).

@@ -4,8 +4,6 @@ module PaymentTerms
   class ResolveService < BaseService
     Result = BaseResult[:payment_term, :source]
 
-    DEFAULT_TERM = {"term_type" => "due_on_receipt"}.freeze
-
     def initialize(customer:)
       @customer = customer
       super
@@ -19,7 +17,7 @@ module PaymentTerms
         result.payment_term = PaymentTerm.from_h(customer.billing_entity.payment_term)
         result.source = "billing_entity"
       else
-        result.payment_term = PaymentTerm.from_h(DEFAULT_TERM)
+        result.payment_term = PaymentTerm.new(term_type: "due_on_receipt")
         result.source = "default"
       end
 
