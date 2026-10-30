@@ -8,6 +8,82 @@ RSpec.describe Api::V2::PaymentReceiptsController do
   let(:invoice) { create(:invoice, organization:, customer:, invoice_type: :contract) }
   let(:payment_receipt) { create(:payment_receipt, organization:, payment: create(:payment, payable: invoice)) }
 
+  describe "GET /api/v2/payment_receipts" do
+    subject { get_with_token(organization, "/api/v2/payment_receipts", params) }
+
+    let(:params) { {} }
+    let(:legacy_invoice) { create(:invoice, organization:, customer:, invoice_type: :subscription) }
+    let(:legacy_receipt) { create(:payment_receipt, organization:, payment: create(:payment, payable: legacy_invoice)) }
+
+    before do
+      payment_receipt
+      legacy_receipt
+    end
+
+    include_examples "requires API permission", "payment_receipt", "read"
+
+    it "lists every receipt of the organization, as the v2 payments do" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:payment_receipts].map { it[:lago_id] }).to match_array([payment_receipt.id, legacy_receipt.id])
+      expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
+    end
+
+    it_behaves_like "a cursor paginated v2 endpoint", collection: :payment_receipts, model: PaymentReceipt do
+      let(:paginated_path) { "/api/v2/payment_receipts" }
+      let(:create_paginated_record) do
+        ->(created_at) { create(:payment_receipt, organization:, created_at:, payment: create(:payment, payable: create(:invoice, organization:, customer:))) }
+      end
+    end
+
+    it_behaves_like "a v2 list filtered on created_at", collection: :payment_receipts do
+      let(:filtered_path) { "/api/v2/payment_receipts" }
+      let(:create_filtered_record) do
+        ->(created_at) { create(:payment_receipt, organization:, created_at:, payment: create(:payment, payable: create(:invoice, organization:, customer:))) }
+      end
+    end
+
+    context "with an invoice_id" do
+      let(:params) { {invoice_id: other_invoice.id} }
+      let(:other_invoice) { create(:invoice, organization:, customer:, invoice_type: :contract) }
+      let(:other_receipt) { create(:payment_receipt, organization:, payment: create(:payment, payable: other_invoice)) }
+
+      before { other_receipt }
+
+      it "lists the receipts of that invoice" do
+        subject
+
+        expect(json[:payment_receipts].map { it[:lago_id] }).to eq([other_receipt.id])
+      end
+    end
+
+    context "with an invalid invoice_id" do
+      let(:params) { {invoice_id: "not-a-uuid"} }
+
+      it "returns a validation error on the filter" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(
+          code: "validation_errors",
+          details: [{code: "value_is_invalid", field: "invoice_id", meta: {}}]
+        )
+      end
+    end
+
+    context "when the organization is not on the product catalog", product_catalog: false do
+      let(:organization) { create(:organization) }
+
+      it "returns a forbidden error" do
+        subject
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:code]).to eq("feature_unavailable")
+      end
+    end
+  end
+
   describe "GET /api/v2/payment_receipts/:id" do
     subject { get_with_token(organization, "/api/v2/payment_receipts/#{payment_receipt_id}") }
 
