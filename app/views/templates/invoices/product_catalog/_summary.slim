@@ -1,0 +1,65 @@
+- summary_lines = catalog.summary_lines
+- single_event_fee = catalog.single_event_fee?
+.document-section
+  - if single_event_fee
+    - catalog.contract_blocks.flat_map(&:sections).each do |section|
+      == SlimHelper.render('templates/invoices/product_catalog/_details_table', self, section:, spaced: false)
+  - else
+    table.document-table.document-table--summary
+      colgroup
+        col.description-column
+        col.amount-column
+      thead
+        tr.row--header
+          th.document-cell.cell--description.cell--header.body-3.indent-0.color-muted scope='col' = I18n.t('invoice.description')
+          th.document-cell.cell--amount.cell--header.body-3.color-muted scope='col' = I18n.t('invoice.amount')
+      tbody
+        - summary_lines.each_with_index do |line, index|
+          - at_end = ('cell--at-end' if index == summary_lines.size - 1)
+          tr.row--summary
+            td class=['document-cell', 'cell--description', 'cell--summary', 'body-2', 'indent-0', at_end] = line.name
+            td class=['document-cell', 'cell--amount', 'cell--summary', 'body-2', at_end, 'numeric'] = MoneyHelper.format(Money.new(line.amount_cents, currency))
+  table.document-totals
+    colgroup
+      col
+      col
+    tbody
+      - credits.coupon_kind.order(created_at: :asc).each do |credit|
+        tr.row--summary
+          td.document-cell.cell--description.cell--summary.body-2 = credit.invoice_coupon_display_name
+          td.document-cell.cell--amount.cell--summary.body-2.numeric = '-' + MoneyHelper.format(credit.amount)
+      tr.row--summary
+        td.document-cell.cell--description.cell--summary.body-2 = I18n.t('invoice.sub_total_without_tax')
+        td.document-cell.cell--amount.cell--summary.body-2.numeric = MoneyHelper.format(sub_total_excluding_taxes_amount)
+      - applied_taxes.order(tax_rate: :desc).each do |applied_tax|
+        tr.row--summary
+          - if applied_tax.applied_on_whole_invoice?
+            td.document-cell.cell--description.cell--summary.body-2 = I18n.t('invoice.tax_name_only.' + applied_tax.tax_code)
+            td.document-cell.cell--amount.cell--summary.body-2.numeric
+          - else
+            td.document-cell.cell--description.cell--summary.body-2 = I18n.t('invoice.tax_name', name: applied_tax.tax_name, rate: applied_tax.tax_rate, amount: MoneyHelper.format(applied_tax.taxable_amount))
+            td.document-cell.cell--amount.cell--summary.body-2.numeric = MoneyHelper.format(applied_tax.amount)
+      - if credit_notes_amount_cents.positive?
+        tr.row--summary
+          td.document-cell.cell--description.cell--summary.body-2 = I18n.t('invoice.credit_notes')
+          td.document-cell.cell--amount.cell--summary.body-2.numeric = '-' + MoneyHelper.format(credit_notes_amount)
+      - if prepaid_granted_credit_amount_cents.present? || prepaid_purchased_credit_amount_cents.present?
+        - if prepaid_granted_credit_amount_cents&.positive?
+          tr.row--summary
+            td.document-cell.cell--description.cell--summary.body-2 = I18n.t('invoice.free_credits')
+            td.document-cell.cell--amount.cell--summary.body-2.numeric = '-' + MoneyHelper.format(prepaid_granted_credit_amount)
+        - if prepaid_purchased_credit_amount_cents&.positive?
+          tr.row--summary
+            td.document-cell.cell--description.cell--summary.body-2 = I18n.t('invoice.prepaid_credits')
+            td.document-cell.cell--amount.cell--summary.body-2.numeric = '-' + MoneyHelper.format(prepaid_purchased_credit_amount)
+      - elsif prepaid_credit_amount_cents.positive?
+        tr.row--summary
+          td.document-cell.cell--description.cell--summary.body-2 = I18n.t('invoice.prepaid_credits')
+          td.document-cell.cell--amount.cell--summary.body-2.numeric = '-' + MoneyHelper.format(prepaid_credit_amount)
+      tr.row--total
+        td.document-cell.cell--description.cell--total.body-2-emphasis = advance_charges? ? I18n.t('invoice.already_paid') : I18n.t('invoice.total')
+        td.document-cell.cell--amount.cell--total.body-2-emphasis.numeric = MoneyHelper.format(total_amount)
+      - unless advance_charges?
+        tr.row--total
+          td.document-cell.cell--description.cell--total.body-2-emphasis = I18n.t('invoice.total_due_amount')
+          td.document-cell.cell--amount.cell--total.body-2-emphasis.numeric = MoneyHelper.format(total_due_amount)

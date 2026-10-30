@@ -1,0 +1,8 @@
+- unless catalog.single_event_fee?
+  - catalog.contract_blocks.each do |block|
+    .details-page
+      .details-heading.document-stack.document-stack--tight
+        h1.title = I18n.t('invoice.details_title')
+        p.body-1.color-muted = block.title
+      - block.sections.each do |section|
+        == SlimHelper.render('templates/invoices/product_catalog/_details_table', self, section:, spaced: true)
