@@ -2,6 +2,8 @@
 
 module V2
   class RateCardUsageSerializer < ModelSerializer
+    timestamps :from_datetime, :to_datetime
+
     def serialize
       {
         rate_card_code: rate_card.code,
@@ -16,8 +18,6 @@ module V2
         product_type: product.product_type,
         billable_metric_code: product.billable_metric&.code,
         billing_timing: rate_card.billing_timing,
-        from_datetime: format_time(model.billing_segment.started_at),
-        to_datetime: format_time(model.billing_segment.ended_at),
         rate_phase_code: model.rate_phase&.code,
         rate_phase_name: model.rate_phase&.name,
         rate_source: model.rate_source,
@@ -30,6 +30,10 @@ module V2
     end
 
     private
+
+    def from_datetime = model.billing_segment.started_at
+
+    def to_datetime = model.billing_segment.ended_at
 
     def rate_card
       model.contract_rate_card.rate_card

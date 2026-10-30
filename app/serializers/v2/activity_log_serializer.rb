@@ -2,7 +2,7 @@
 
 module V2
   class ActivityLogSerializer < ModelSerializer
-    timestamps :created_at
+    timestamps :logged_at, :created_at
 
     def serialize
       {
@@ -15,8 +15,7 @@ module V2
         resource_id: model.resource_id,
         resource_type: model.resource_type,
         external_customer_id: model.external_customer_id,
-        external_subscription_id: model.external_subscription_id,
-        logged_at: format_time(model.logged_at)
+        external_subscription_id: model.external_subscription_id
       }
     end
 

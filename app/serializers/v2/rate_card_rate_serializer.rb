@@ -2,14 +2,13 @@
 
 module V2
   class RateCardRateSerializer < ModelSerializer
-    timestamps :created_at, :updated_at, :deleted_at
+    timestamps :effective_from, :created_at, :updated_at, :deleted_at
 
     def serialize
       {
         lago_id: model.id,
         code: model.code,
         rate_card_code: model.rate_card&.code,
-        effective_from: format_time(model.effective_from),
         status: model.status,
         rate_model: model.rate_model,
         rate_properties: ::RateProperties.present(model.rate_properties),

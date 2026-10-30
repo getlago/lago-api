@@ -390,6 +390,24 @@ RSpec.describe ModelSerializer do
         end
       end
 
+      context "with a private method named after a timestamp" do
+        let(:serializer_class) do
+          Class.new(described_class) do
+            timestamps :created_at, :ended_at
+
+            def serialize = {code: "parent"}
+
+            private
+
+            def ended_at = model.created_at + 1.day
+          end
+        end
+
+        it "renders what the method returns instead of the model's value" do
+          expect(payload).to eq(code: "parent", created_at: "2026-03-22T12:00:00Z", ended_at: "2026-03-23T12:00:00Z")
+        end
+      end
+
       context "with a subclass that declares one more" do
         let(:parent_class) do
           embedded_serializer = self.embedded_serializer

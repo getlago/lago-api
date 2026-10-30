@@ -2,7 +2,7 @@
 
 module V2
   class ApiLogSerializer < ModelSerializer
-    timestamps :created_at
+    timestamps :logged_at, :created_at
 
     def serialize
       {
@@ -14,8 +14,7 @@ module V2
         request_path: model.request_path,
         request_body: deep_json_parser(model.request_body),
         request_response: deep_json_parser(model.request_response),
-        api_version: model.api_version,
-        logged_at: format_time(model.logged_at)
+        api_version: model.api_version
       }
     end
 

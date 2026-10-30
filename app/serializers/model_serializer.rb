@@ -20,8 +20,8 @@ class ModelSerializer
 
   attr_reader :model, :options
 
-  # Renders each `model.<name>` with `format_time`. V2 serializers declare `created_at`,
-  # `updated_at` and `deleted_at` with it.
+  # Renders each `model.<name>`, or what a private method of the serializer with that name returns,
+  # with `format_time`. V2 serializers declare their datetimes with it.
   def self.timestamps(*names)
     prepend(RendersDeclaredFields)
 
@@ -150,7 +150,7 @@ class ModelSerializer
   end
 
   def timestamps_payload
-    self.class.timestamp_names.index_with { format_time(model.public_send(it)) }
+    self.class.timestamp_names.index_with { format_time(declared_value(it)) }
   end
 
   # The declared expansions found in `includes`, in their declared order: Api::Serializable
@@ -159,13 +159,13 @@ class ModelSerializer
     self.class.expansions.each_with_object({}) do |(name, expansion), payload|
       next unless include?(name)
 
-      payload[name] = render_expansion(expanded_records(name), expansion.serializer)
+      payload[name] = render_expansion(declared_value(name), expansion.serializer)
     end
   end
 
   # Only a method the serializer defines itself overrides the model: one inherited from
   # ModelSerializer or Kernel never does.
-  def expanded_records(name)
+  def declared_value(name)
     if respond_to?(name, true) && method(name).owner < ModelSerializer
       send(name)
     else
