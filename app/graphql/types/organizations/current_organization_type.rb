@@ -47,6 +47,7 @@ module Types
       field :feature_flags, [Types::Organizations::FeatureFlagEnum], null: false
 
       field :billing_configuration, Types::Organizations::BillingConfiguration, permission: "organization:invoices:view"
+      field :customer_portal_locked_fields, [Types::Organizations::CustomerPortalFieldEnum], null: false
       field :document_url_expiration_days, Integer, null: false
       field :email_settings, [Types::Organizations::EmailSettingsEnum], permission: "organization:emails:view"
       field :finalize_zero_amount_invoice, Boolean, null: false

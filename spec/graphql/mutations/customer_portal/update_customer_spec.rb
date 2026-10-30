@@ -13,7 +13,7 @@ RSpec.describe Mutations::CustomerPortal::UpdateCustomer do
     )
   end
 
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let(:customer) { create(:customer, legal_name: nil) }
 
   let(:mutation) do
@@ -79,6 +79,10 @@ RSpec.describe Mutations::CustomerPortal::UpdateCustomer do
     }
   end
 
+  before do
+    organization.update!(customer_portal_locked_fields: [])
+  end
+
   it_behaves_like "requires a customer portal user"
 
   it "updates a customer" do
@@ -133,6 +137,20 @@ RSpec.describe Mutations::CustomerPortal::UpdateCustomer do
 
     it "does not change the fields not changed" do
       expect { result }.not_to change { customer.reload.currency }
+    end
+  end
+
+  context "when updating fields the organization does not allow" do
+    let(:input) { {name: "Updated customer name", country: "US"} }
+
+    before do
+      organization.update!(customer_portal_locked_fields: Organization::DEFAULT_CUSTOMER_PORTAL_LOCKED_FIELDS)
+    end
+
+    it "returns a validation error and does not update the customer" do
+      expect { result }.not_to change { customer.reload.attributes }
+
+      expect_graphql_error(result:, message: "unprocessable_entity")
     end
   end
 end

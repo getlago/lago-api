@@ -32,6 +32,9 @@ module Organizations
       organization.net_payment_term = params[:net_payment_term] if params.key?(:net_payment_term)
       organization.document_url_expiration_days = params[:document_url_expiration_days] if params.key?(:document_url_expiration_days)
       organization.document_numbering = params[:document_numbering] if params.key?(:document_numbering)
+      if params.key?(:customer_portal_locked_fields)
+        organization.customer_portal_locked_fields = params[:customer_portal_locked_fields]&.uniq
+      end
       if params.key?(:authentication_methods)
         deletions = organization.authentication_methods - params[:authentication_methods]
         additions = params[:authentication_methods] - organization.authentication_methods

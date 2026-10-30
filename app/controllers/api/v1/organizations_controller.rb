@@ -53,6 +53,7 @@ module Api
           :document_url_expiration_days,
           :slug,
           email_settings: [],
+          customer_portal_locked_fields: [],
           billing_configuration: [
             :invoice_footer,
             :invoice_grace_period,
