@@ -125,6 +125,26 @@ RSpec.describe ModelSerializer do
     end
   end
 
+  describe ".timestamps" do
+    let(:serializer_class) { Class.new(described_class) { timestamps :created_at, :updated_at } }
+
+    it "declares nothing by default" do
+      expect(described_class.timestamp_names).to eq([])
+    end
+
+    it "lists the declared names, in their order" do
+      serializer_class.timestamps :deleted_at
+
+      expect(serializer_class.timestamp_names).to eq(%i[created_at updated_at deleted_at])
+    end
+
+    it "leaves the other serializers' list unchanged" do
+      serializer_class
+
+      expect(described_class.timestamp_names).to eq([])
+    end
+  end
+
   describe ".webhook_includes" do
     let(:serializer_class) do
       Class.new(described_class) do
@@ -332,6 +352,60 @@ RSpec.describe ModelSerializer do
             second: [{code: "a", options: nested}, {code: "b", options: nested}],
             third: []
           )
+        end
+      end
+    end
+
+    context "with timestamps" do
+      let(:model) { Struct.new(:first, :created_at, :deleted_at).new(first_record, Time.zone.parse("2026-03-22T12:00:00.123456Z"), nil) }
+      let(:options) { {includes: %i[first]} }
+
+      let(:serializer_class) do
+        embedded_serializer = self.embedded_serializer
+
+        Class.new(described_class) do
+          expandable :first, serializer: embedded_serializer
+          timestamps :created_at, :deleted_at
+
+          def serialize = {code: "parent"}
+        end
+      end
+
+      it "adds them to its payload, at whole seconds" do
+        expect(payload).to eq(code: "parent", created_at: "2026-03-22T12:00:00Z", deleted_at: nil, first: {code: "first", options: {}})
+      end
+
+      context "with the usec_timestamps include" do
+        let(:options) { {includes: %i[usec_timestamps]} }
+        let(:serializer_class) do
+          Class.new(described_class) do
+            timestamps :created_at, :deleted_at
+
+            def serialize = {code: "parent"}
+          end
+        end
+
+        it "renders them to the microsecond" do
+          expect(payload).to eq(code: "parent", created_at: "2026-03-22T12:00:00.123456Z", deleted_at: nil)
+        end
+      end
+
+      context "with a subclass that declares one more" do
+        let(:parent_class) do
+          embedded_serializer = self.embedded_serializer
+
+          Class.new(described_class) do
+            expandable :first, serializer: embedded_serializer
+            timestamps :created_at
+
+            def serialize = {code: "parent"}
+          end
+        end
+        let(:serializer_class) { Class.new(parent_class) { timestamps :deleted_at } }
+
+        it "renders the timestamps of both, and leaves the parent's unchanged" do
+          expect(payload).to eq(code: "parent", created_at: "2026-03-22T12:00:00Z", deleted_at: nil, first: {code: "first", options: {}})
+          expect(parent_class.timestamp_names).to eq(%i[created_at])
         end
       end
     end

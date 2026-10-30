@@ -2,16 +2,15 @@
 
 module V2
   class ProductCategorySerializer < ModelSerializer
+    timestamps :created_at, :updated_at, :deleted_at
+
     def serialize
       {
         lago_id: model.id,
         name: model.name,
         code: model.code,
         description: model.description,
-        invoice_display_name: model.invoice_display_name,
-        created_at: format_time(model.created_at),
-        updated_at: format_time(model.updated_at),
-        deleted_at: format_time(model.deleted_at)
+        invoice_display_name: model.invoice_display_name
       }
     end
   end

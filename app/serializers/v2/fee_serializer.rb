@@ -4,6 +4,8 @@ module V2
   # A fee billed from the product catalog: it names the contract, product and
   # rate card it was priced from, not the v1 subscription and charge.
   class FeeSerializer < ModelSerializer
+    timestamps :created_at, :updated_at, :deleted_at
+
     expandable :applied_taxes, serializer: ::V2::Fees::AppliedTaxSerializer, webhooks: true
     expandable :invoice, serializer: ::V2::InvoiceSerializer
     expandable :product, serializer: ::V2::ProductSerializer
@@ -73,10 +75,7 @@ module V2
         payment_status: model.payment_status,
         succeeded_at: format_time(model.succeeded_at),
         failed_at: format_time(model.failed_at),
-        refunded_at: format_time(model.refunded_at),
-        created_at: format_time(model.created_at),
-        updated_at: format_time(model.updated_at),
-        deleted_at: format_time(model.deleted_at)
+        refunded_at: format_time(model.refunded_at)
       }
     end
 

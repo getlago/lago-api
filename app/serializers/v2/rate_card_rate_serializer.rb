@@ -2,6 +2,8 @@
 
 module V2
   class RateCardRateSerializer < ModelSerializer
+    timestamps :created_at, :updated_at, :deleted_at
+
     def serialize
       {
         lago_id: model.id,
@@ -14,10 +16,7 @@ module V2
         min_amount_cents: model.min_amount_cents,
         billing_interval_count: model.billing_interval_count,
         billing_interval_unit: model.billing_interval_unit,
-        applied_pricing_unit_conversion_rate: model.applied_pricing_unit_conversion_rate,
-        created_at: format_time(model.created_at),
-        updated_at: format_time(model.updated_at),
-        deleted_at: format_time(model.deleted_at)
+        applied_pricing_unit_conversion_rate: model.applied_pricing_unit_conversion_rate
       }
     end
   end

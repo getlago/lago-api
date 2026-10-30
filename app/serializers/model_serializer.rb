@@ -1,22 +1,32 @@
 # frozen_string_literal: true
 
 class ModelSerializer
-  # Prepended by `expandable`, so that a serializer cannot declare an expansion and forget to
-  # render it.
-  module RendersExpansions
+  # Prepended by `timestamps` and `expandable`, so that a serializer cannot declare a field and
+  # forget to render it. One module, so that the expansions come last whatever the declaration order.
+  module RendersDeclaredFields
     def serialize
-      super.merge(expanded_payload)
+      super.merge(timestamps_payload, expanded_payload)
     end
   end
 
   Expansion = Data.define(:serializer, :webhooks)
 
   NO_EXPANSIONS = {}.freeze
+  NO_TIMESTAMPS = [].freeze
 
-  # Set once per serializer, when its class is loaded, through `expandable`.
+  # Set once per serializer, when its class is loaded, through `expandable` and `timestamps`.
   class_attribute :expansions, instance_accessor: false, instance_predicate: false, default: NO_EXPANSIONS # rubocop:disable ThreadSafety/ClassAndModuleAttributes
+  class_attribute :timestamp_names, instance_accessor: false, instance_predicate: false, default: NO_TIMESTAMPS # rubocop:disable ThreadSafety/ClassAndModuleAttributes
 
   attr_reader :model, :options
+
+  # Renders each `model.<name>` with `format_time`. V2 serializers declare `created_at`,
+  # `updated_at` and `deleted_at` with it.
+  def self.timestamps(*names)
+    prepend(RendersDeclaredFields)
+
+    self.timestamp_names = [*timestamp_names, *names.map(&:to_sym)].freeze
+  end
 
   # Lets a native v2 endpoint embed `model.<name>` on `expands[]=<name>`, or what a private method
   # of the serializer with that name returns, for records that are ordered or computed. One record
@@ -24,7 +34,7 @@ class ModelSerializer
   # comes last in `serialize`. `webhooks: true` also embeds it in the record's webhooks: see
   # `for_webhook!`.
   def self.expandable(name, serializer:, webhooks: false)
-    prepend(RendersExpansions)
+    prepend(RendersDeclaredFields)
 
     self.expansions = expansions.merge(name.to_sym => Expansion.new(serializer:, webhooks:)).freeze
   end
@@ -137,6 +147,10 @@ class ModelSerializer
   # expansion, so that the record stays flat.
   def nested_options
     include?(:usec_timestamps) ? {includes: %i[usec_timestamps]} : {}
+  end
+
+  def timestamps_payload
+    self.class.timestamp_names.index_with { format_time(model.public_send(it)) }
   end
 
   # The declared expansions found in `includes`, in their declared order: Api::Serializable
