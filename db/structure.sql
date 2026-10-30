@@ -4123,7 +4123,8 @@ CREATE TABLE public.subscriptions (
     skip_daily_usage boolean DEFAULT false NOT NULL,
     cancellation_reason public.subscription_cancellation_reasons,
     purchase_order_number character varying,
-    billing_anchor_date date
+    billing_anchor_date date,
+    payment_term jsonb
 );
 
 
@@ -5097,6 +5098,7 @@ CREATE TABLE public.wallets (
     code character varying,
     billing_entity_id uuid,
     purchase_order_number character varying,
+    payment_term jsonb,
     x402_enabled boolean DEFAULT false NOT NULL,
     ongoing_billable_metric_amounts jsonb DEFAULT '{}'::jsonb NOT NULL
 );
@@ -16059,6 +16061,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20260826235314'),
 ('20260826235313'),
 ('20260826235312'),
+('20260826191346'),
 ('20260824115446'),
 ('20260819134550'),
 ('20260819134021'),
