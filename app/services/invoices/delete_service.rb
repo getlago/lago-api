@@ -26,6 +26,8 @@ module Invoices
         mark_credit_notes_as_deleted!
 
         invoice.mark_as_deleted!
+        # A non-zero draft is reserved in the wallet ongoing balance until it leaves draft
+        invoice.customer.flag_wallets_for_refresh unless invoice.total_amount_cents.zero?
       end
 
       return result unless result.success?
