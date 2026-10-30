@@ -2,6 +2,8 @@
 
 module V2
   class CustomerSerializer < ModelSerializer
+    timestamps :created_at, :updated_at, :deleted_at
+
     expandable :metadata, serializer: ::V2::Customers::MetadataSerializer
     expandable :taxes, serializer: ::V2::TaxSerializer
     expandable :integration_customers, serializer: ::V1::IntegrationCustomerSerializer
@@ -18,8 +20,6 @@ module V2
         customer_type: model.customer_type,
         sequential_id: model.sequential_id,
         slug: model.slug,
-        created_at: format_time(model.created_at),
-        updated_at: format_time(model.updated_at),
         country: model.country,
         address_line1: model.address_line1,
         address_line2: model.address_line2,
@@ -40,8 +40,7 @@ module V2
         finalize_zero_amount_invoice: model.finalize_zero_amount_invoice,
         skip_invoice_custom_sections: model.skip_invoice_custom_sections,
         **billing_fields,
-        **x402_payload,
-        deleted_at: format_time(model.deleted_at)
+        **x402_payload
       }
 
       if options[:include_shipping_address]

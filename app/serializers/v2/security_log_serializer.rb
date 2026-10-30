@@ -2,6 +2,8 @@
 
 module V2
   class SecurityLogSerializer < ModelSerializer
+    timestamps :created_at
+
     def serialize
       {
         log_id: model.log_id,
@@ -9,7 +11,6 @@ module V2
         log_event: model.log_event,
         user_email: model.user&.email,
         logged_at: format_time(model.logged_at),
-        created_at: format_time(model.created_at),
         # resources and device_info are deep-parsed in Clickhouse::SecurityLog
         # (JSON-encoded map values, with the raw value kept on JSON::ParserError).
         resources: model.resources,
