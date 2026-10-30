@@ -191,8 +191,11 @@ RSpec.describe Api::V2::PaymentReceiptsController do
       end
     end
 
-    context "when the receipt pays a legacy invoice", :premium do
-      let(:invoice) { create(:invoice, organization:, customer:, invoice_type: :subscription) }
+    context "when the receipt belongs to another organization", :premium do
+      let(:other_invoice) { create(:invoice) }
+      let(:payment_receipt_id) do
+        create(:payment_receipt, organization: other_invoice.organization, payment: create(:payment, payable: other_invoice)).id
+      end
 
       it "returns a not found error" do
         expect { subject }.not_to have_enqueued_mail(PaymentReceiptMailer, :created)
