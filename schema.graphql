@@ -11807,6 +11807,14 @@ type Permissions {
   pricingUnitsCreate: Boolean!
   pricingUnitsUpdate: Boolean!
   pricingUnitsView: Boolean!
+  productCategoriesCreate: Boolean! @deprecated(reason: "Use productsCreate instead.")
+  productCategoriesDelete: Boolean! @deprecated(reason: "Use productsDelete instead.")
+  productCategoriesUpdate: Boolean! @deprecated(reason: "Use productsUpdate instead.")
+  productCategoriesView: Boolean! @deprecated(reason: "Use productsView instead.")
+  productFiltersCreate: Boolean! @deprecated(reason: "Use productsCreate instead.")
+  productFiltersDelete: Boolean! @deprecated(reason: "Use productsDelete instead.")
+  productFiltersUpdate: Boolean! @deprecated(reason: "Use productsUpdate instead.")
+  productFiltersView: Boolean! @deprecated(reason: "Use productsView instead.")
   productsCreate: Boolean!
   productsDelete: Boolean!
   productsUpdate: Boolean!
