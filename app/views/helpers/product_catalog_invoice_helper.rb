@@ -296,7 +296,7 @@ class ProductCatalogInvoiceHelper
   attr_reader :invoice
 
   def product_fees
-    @product_fees ||= invoice.fees.product.includes(:product_filter, :pricing_unit_usage, :rate_card_rate, :rate_override, invoice: :customer, contract: :catalog_plan, true_up_parent_fee: [:product_filter, :invoiceable]).to_a
+    @product_fees ||= invoice.fees.product.includes(:product_filter, :pricing_unit_usage, :rate_card_rate, :rate_override, invoice: :customer, contract: :catalog_plan, true_up_parent_fee: [:product_filter, :billed_product]).to_a
   end
 
   def products

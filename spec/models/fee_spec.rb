@@ -217,6 +217,21 @@ RSpec.describe Fee do
       it "returns the product code" do
         expect(described_class.new(invoiceable: product, fee_type: "product").item_code).to eq("compute")
       end
+
+      context "when the product has been deleted since billing" do
+        let(:rate_card_rate) { create(:rate_card_rate, rate_card: create(:rate_card, product:, organization: product.organization)) }
+        let(:fee) { create(:fee, fee_type: :product, invoiceable: product, rate_card_rate:) }
+
+        before do
+          fee
+          product.discard!
+          fee.reload
+        end
+
+        it "returns the product code" do
+          expect(fee.item_code).to eq("compute")
+        end
+      end
     end
   end
 
@@ -250,7 +265,7 @@ RSpec.describe Fee do
     end
 
     context "when it is a product fee" do
-      let(:product) { build(:product, invoice_display_name: "Product invoice name") }
+      let(:product) { create(:product, invoice_display_name: "Product invoice name") }
 
       context "when fee invoice display name is present" do
         let(:fee) { build(:fee, fee_type: :product, invoiceable: product, invoice_display_name: "Billed product name") }
@@ -263,6 +278,21 @@ RSpec.describe Fee do
       context "when fee invoice display name is blank" do
         let(:invoice_display_name) { [nil, ""].sample }
         let(:fee) { build(:fee, fee_type: :product, invoiceable: product, invoice_display_name:) }
+
+        it "returns product invoice name" do
+          expect(fee_invoice_name).to eq("Product invoice name")
+        end
+      end
+
+      context "when the product has been deleted since billing" do
+        let(:rate_card_rate) { create(:rate_card_rate, rate_card: create(:rate_card, product:, organization: product.organization)) }
+        let(:fee) { create(:fee, fee_type: :product, invoiceable: product, invoice_display_name: nil, rate_card_rate:) }
+
+        before do
+          fee
+          product.discard!
+          fee.reload
+        end
 
         it "returns product invoice name" do
           expect(fee_invoice_name).to eq("Product invoice name")
@@ -472,6 +502,21 @@ RSpec.describe Fee do
       it "returns the product name" do
         expect(described_class.new(invoiceable: product, fee_type: "product").item_name).to eq("Compute")
       end
+
+      context "when the product has been deleted since billing" do
+        let(:rate_card_rate) { create(:rate_card_rate, rate_card: create(:rate_card, product:, organization: product.organization)) }
+        let(:fee) { create(:fee, fee_type: :product, invoiceable: product, rate_card_rate:) }
+
+        before do
+          fee
+          product.discard!
+          fee.reload
+        end
+
+        it "returns the product name" do
+          expect(fee.item_name).to eq("Compute")
+        end
+      end
     end
   end
 
@@ -531,6 +576,21 @@ RSpec.describe Fee do
 
       it "returns the product description" do
         expect(described_class.new(invoiceable: product, fee_type: "product").item_description).to eq("Compute usage")
+      end
+
+      context "when the product has been deleted since billing" do
+        let(:rate_card_rate) { create(:rate_card_rate, rate_card: create(:rate_card, product:, organization: product.organization)) }
+        let(:fee) { create(:fee, fee_type: :product, invoiceable: product, rate_card_rate:) }
+
+        before do
+          fee
+          product.discard!
+          fee.reload
+        end
+
+        it "returns the product description" do
+          expect(fee.item_description).to eq("Compute usage")
+        end
       end
     end
   end
@@ -649,6 +709,21 @@ RSpec.describe Fee do
 
       it "returns the product code" do
         expect(described_class.new(invoiceable: product, fee_type: "product").item_source).to eq("compute")
+      end
+
+      context "when the product has been deleted since billing" do
+        let(:rate_card_rate) { create(:rate_card_rate, rate_card: create(:rate_card, product:, organization: product.organization)) }
+        let(:fee) { create(:fee, fee_type: :product, invoiceable: product, rate_card_rate:) }
+
+        before do
+          fee
+          product.discard!
+          fee.reload
+        end
+
+        it "returns the product code" do
+          expect(fee.item_source).to eq("compute")
+        end
       end
     end
   end
