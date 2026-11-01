@@ -237,6 +237,15 @@ RSpec.describe "Contract usage billing behavior" do
 
         expect(usage.fees.sole.units).to eq(10)
       end
+
+      context "when the contract does not price the older overlapping filter" do
+        let(:overlapping_filter) { create(:product_filter, organization:, product:, created_at: started_at - 1.second) }
+
+        it "bills the shared event on the priced filter" do
+          expect(event_fees.map(&:amount_cents)).to eq([300, 700])
+          expect(CachedAggregation.where(contract:, product:).order(:created_at).pluck(:current_aggregation)).to eq([3, 10])
+        end
+      end
     end
 
     it "bills only the unit above the previously billed maximum with standard pricing" do

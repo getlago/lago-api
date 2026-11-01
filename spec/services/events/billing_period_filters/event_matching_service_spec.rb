@@ -149,6 +149,21 @@ RSpec.describe Events::BillingPeriodFilters::EventMatchingService do
       end
     end
 
+    context "when only a lower-ranked filter is priced on the contract" do
+      let(:card_filter) { create(:product_filter, organization:, product:) }
+
+      before do
+        create(:product_filter_value, value: "card", billable_metric_filter: payment_method, product_filter: card_filter)
+        priced_rate_card = create(:rate_card, organization:, product:, product_filter:)
+        create(:contract_rate_card, organization:, contract:, rate_card: priced_rate_card)
+      end
+
+      it "selects the priced filter" do
+        expect(service_result.matching_filters).to eq([product_filter, card_filter])
+        expect(service_result.filter).to eq(product_filter)
+      end
+    end
+
     context "when a filter has no values" do
       let(:empty_filter) { create(:product_filter, organization:, product:) }
 

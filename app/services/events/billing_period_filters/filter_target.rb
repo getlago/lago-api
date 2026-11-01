@@ -20,10 +20,6 @@ module Events
         :target_key,
         :with_filter,
         to: :source
-
-      def charge?
-        source.is_a?(Sources::Charge)
-      end
     end
   end
 end

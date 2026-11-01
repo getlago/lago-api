@@ -45,6 +45,42 @@ RSpec.describe Events::BillingPeriodFilters::BillingSegmentsResolver do
       expect(Events::BillingPeriodFilters::FilterTarget).to have_received(:from_billing_segment).once
     end
 
+    context "when matching a product filter priced by a rate card" do
+      let(:priced_filter) { create(:product_filter, organization:, product:) }
+      let(:specific_filter) { create(:product_filter, organization:, product:) }
+      let(:region_filter) { create(:billable_metric_filter, organization:, billable_metric:, key: "region", values: %w[eu us]) }
+      let(:event) do
+        create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+          code: billable_metric.code, properties: {"region" => "us"}, timestamp: billing_segment.started_at + 1.hour)
+      end
+      let(:target_filter) { Events::BillingPeriodFilters::FilterTarget.from_billing_segment(billing_segment:) }
+      let(:matching) { Events::BillingPeriodFilters::EventMatchingService.call(target_filter:, event:) }
+      let(:priced_rate_card) { create(:rate_card, organization:, product:, product_filter: priced_filter) }
+
+      before do
+        create(:product_filter_value, organization:, product_filter: priced_filter, billable_metric_filter: region_filter, value: "eu")
+        create(:product_filter_value, organization:, product_filter: priced_filter, billable_metric_filter: region_filter, value: "us")
+        create(:product_filter_value, organization:, product_filter: specific_filter, billable_metric_filter: region_filter, value: "us")
+        contract_rate_card.update!(rate_card: priced_rate_card, effective_date: effective_date)
+      end
+
+      context "when the applied card is effective before the segment" do
+        let(:effective_date) { Date.new(2026, 8, 31) }
+
+        it "does not give the out-of-window card pricing precedence" do
+          expect(matching.filter).to eq(specific_filter)
+        end
+      end
+
+      context "when the applied card is effective after the segment" do
+        let(:effective_date) { Date.new(2026, 10, 1) }
+
+        it "does not give the out-of-window card pricing precedence" do
+          expect(matching.filter).to eq(specific_filter)
+        end
+      end
+    end
+
     context "with overlapping product filters" do
       let(:filter_key) { create(:billable_metric_filter, organization:, billable_metric:, key: "region", values: %w[25 50 75]) }
       let(:kind_key) { create(:billable_metric_filter, organization:, billable_metric:, key: "kind", values: ["x"]) }

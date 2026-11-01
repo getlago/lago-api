@@ -325,7 +325,7 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
     let(:product) { create(:product, organization:, billable_metric:) }
     let(:product_filter) { create(:product_filter, organization:, product:) }
     let(:rate_card) { create(:rate_card, organization:, product:, product_filter:) }
-    let(:contract_rate_card) { create(:contract_rate_card, organization:, rate_card:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, rate_card:, effective_date: Date.new(2026, 9, 1)) }
     let(:region_filter) do
       create(:billable_metric_filter, organization:, billable_metric:, key: "region", values: %w[eu us])
     end
@@ -391,17 +391,32 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
           properties: {"region" => "eu", "kind" => "paid"})
       end
 
+      let(:precise_filter) { create(:product_filter, organization:, product:, created_at: 1.day.from_now) }
+      let(:precise_filter_priced) { true }
+
       before do
         kind_filter = create(:billable_metric_filter, organization:, billable_metric:, key: "kind", values: ["paid"])
-        precise_filter = create(:product_filter, organization:, product:, created_at: 1.day.from_now)
         create(:product_filter_value, organization:, product_filter: precise_filter,
           billable_metric_filter: region_filter, value: "eu")
         create(:product_filter_value, organization:, product_filter: precise_filter,
           billable_metric_filter: kind_filter, value: "paid")
+        if precise_filter_priced
+          precise_rate_card = create(:rate_card, organization:, product:, product_filter: precise_filter)
+          create(:contract_rate_card, organization:, contract: contract_rate_card.contract, rate_card: precise_rate_card,
+            effective_date: Date.new(2026, 9, 1))
+        end
       end
 
       it "does not assign current usage to the less-specific rate-card filter bucket" do
         expect(pricing_buckets).to be_empty
+      end
+
+      context "when the contract does not price the more specific filter" do
+        let(:precise_filter_priced) { false }
+
+        it "assigns the usage to the rate-card filter bucket" do
+          expect(pricing_buckets.sole).to have_attributes(product_filter:)
+        end
       end
     end
 
@@ -427,7 +442,7 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
 
     let(:source) { described_class.new(billing_segment:, product_filter:) }
     let(:product_filter) { nil }
-    let(:contract_rate_card) { create(:contract_rate_card, organization:, rate_card:) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, rate_card:, effective_date: Date.new(2026, 9, 1)) }
 
     it "memoizes the result per source without sharing it with a new filter source" do
       allow(Events::BillingPeriodFilters::MatchingAndIgnoredService).to receive(:call).and_return(BaseResult.new)
@@ -482,6 +497,15 @@ RSpec.describe Fees::ChargeService::Sources::BillingSegment do
 
       context "with an explicit filter value" do
         let(:product_filter) { us_filter }
+
+        context "when the contract prices only the selected filter" do
+          let(:rate_card) { build(:rate_card, organization:, product:, product_filter: us_filter, currency: "USD") }
+
+          it "does not exclude the unpriced more specific filter" do
+            expect(service_result.matching_filters).to eq("region" => ["us"])
+            expect(service_result.ignored_filters).to eq([])
+          end
+        end
 
         it "excludes the more specific filter and the remaining configured region" do
           expect(service_result.matching_filters).to eq("region" => ["us"])
