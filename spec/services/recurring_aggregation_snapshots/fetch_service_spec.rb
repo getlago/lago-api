@@ -306,6 +306,19 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
         end
       end
 
+      context "when the charge started accepting target wallets, with only other groups in the bucket" do
+        let(:grouped_by_keys) { %w[region target_wallet_code] }
+        let(:grouped_by_values) { {"region" => "eu"} }
+        let(:filter_grouped_by) { {"region" => "us"} }
+
+        it "returns no snapshot, as the bucket's rows are grouped on other keys" do
+          result = fetch_service.call
+
+          expect(result.snapshots).to be_nil
+          expect(result.period).to be_nil
+        end
+      end
+
       context "without the marker of the default bucket" do
         before { RecurringAggregationSnapshot.where(charge_filter_id: nil).delete_all }
 

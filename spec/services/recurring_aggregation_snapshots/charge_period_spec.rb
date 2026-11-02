@@ -82,19 +82,17 @@ RSpec.describe RecurringAggregationSnapshots::ChargePeriod do
       let(:grouped_by_values) { {"region" => "eu", "cloud" => nil} }
 
       before do
-        [
-          {"region" => "eu", "cloud" => nil},
-          {"region" => "eu", "cloud" => "aws"},
-          {"region" => "us", "cloud" => nil}
-        ].each_with_index do |grouped_by, index|
-          create_snapshot(to_datetime: previous_to_datetime, charge_filter: eu_filter, grouped_by:, units: 100 + index)
-        end
+        create_snapshot(to_datetime: previous_to_datetime, charge_filter: eu_filter, grouped_by: {"region" => "eu", "cloud" => nil}, units: 100)
+        create_snapshot(to_datetime: previous_to_datetime, charge_filter: eu_filter, grouped_by: {"region" => "eu", "cloud" => "aws"}, units: 101)
+        # Lowest id of the bucket, so it is the row loaded for the marker and the grouping keys check
+        create_snapshot(
+          id: "00000000-0000-0000-0000-000000000001",
+          to_datetime: previous_to_datetime, charge_filter: eu_filter, grouped_by: {"region" => "us", "cloud" => nil}, units: 102
+        )
       end
 
       it "loads the group's snapshots and the first snapshot of each bucket" do
-        first_eu_units = RecurringAggregationSnapshot.where(charge_filter: eu_filter).order(:id).first.units
-
-        expect(charge_period.period(charge_filter: eu_filter).last.map(&:units)).to match_array([100, first_eu_units].uniq(&:to_d))
+        expect(charge_period.period(charge_filter: eu_filter).last.map(&:units)).to match_array([100, 102])
         expect(charge_period.period(charge_filter: nil).last.map(&:units)).to eq([10])
       end
 

@@ -117,20 +117,21 @@ RSpec.describe RecurringAggregationSnapshots::PreviousSubscriptionSnapshots do
 
         context "with grouped_by_values" do
           before do
-            create_previous_snapshot(to_datetime: termination_datetime, charge_filter: previous_eu_filter, grouped_by: {"cloud" => "aws"}, units: 5)
+            # Lowest id of the bucket, so it is the row loaded for the marker and the grouping keys check
+            create_previous_snapshot(
+              id: "00000000-0000-0000-0000-000000000001",
+              to_datetime: termination_datetime, charge_filter: previous_eu_filter, grouped_by: {"cloud" => "aws"}, units: 5
+            )
             create_previous_snapshot(to_datetime: termination_datetime, charge_filter: previous_eu_filter, grouped_by: {"cloud" => "gcp"}, units: 6)
           end
 
           it "loads only the group's snapshots and the first snapshot of each bucket" do
-            first_eu_units = RecurringAggregationSnapshot.where(charge_filter: previous_eu_filter, to_datetime: termination_datetime).order(:id).first.units
-            expected_units = [6, first_eu_units].uniq(&:to_d)
-
             loaded = count_loaded_snapshots do
               records = lookup.period(charge:, charge_filter: eu_filter, all_buckets: false, grouped_by_values: {"cloud" => "gcp"}).last
-              expect(records.map(&:units)).to match_array(expected_units)
+              expect(records.map(&:units)).to match_array([5, 6])
             end
 
-            expect(loaded).to eq(1 + expected_units.size)
+            expect(loaded).to eq(3)
           end
         end
 
