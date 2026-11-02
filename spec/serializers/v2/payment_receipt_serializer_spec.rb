@@ -44,6 +44,14 @@ RSpec.describe V2::PaymentReceiptSerializer do
       )
     end
 
+    it "serializes preloaded documents without extra queries" do
+      receipt = PaymentReceipt.preload(described_class::PRELOADS).find(payment_receipt.id)
+
+      queries = capture_sql { described_class.new(receipt).serialize }
+
+      expect(queries).to be_empty
+    end
+
     context "with API v2 timestamps" do
       let(:includes) { [:usec_timestamps] }
 
