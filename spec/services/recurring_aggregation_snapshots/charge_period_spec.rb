@@ -84,4 +84,14 @@ RSpec.describe RecurringAggregationSnapshots::ChargePeriod do
       end
     end
   end
+
+  describe "#all_buckets?" do
+    it { is_expected.to be_all_buckets }
+
+    context "with charge_filter_ids" do
+      subject(:charge_period) { described_class.new(subscription:, charge:, from_datetime:, charge_filter_ids: []) }
+
+      it { is_expected.not_to be_all_buckets }
+    end
+  end
 end

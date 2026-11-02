@@ -267,6 +267,15 @@ RSpec.describe BillableMetrics::Aggregations::SumService, transaction: false do
         expect(result.aggregation).to eq(1000 + 7 + 20)
         expect(fetches).to eq([:fetch])
       end
+
+      context "when the snapshots cannot be read" do
+        let(:fetched) { raise ActiveRecord::StatementInvalid, "canceling statement due to statement timeout" }
+
+        it "raises instead of failing as an event aggregation" do
+          expect { sum_aggregator.aggregate(options: {recurring_watermark: watermark(periods.second)}) }
+            .to raise_error(ActiveRecord::StatementInvalid, /statement timeout/)
+        end
+      end
     end
 
     context "when the bucket had no usage at the end of the previous period" do

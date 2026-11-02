@@ -13,7 +13,8 @@ module RecurringAggregationSnapshots
     Result = BaseResult[:snapshots, :period]
 
     # charge_period: a ChargePeriod shared by the charge filters of the charge, loaded once for all of them
-    # all_buckets: false loads only the charge filter's bucket, as pay in advance reads one
+    # all_buckets: false loads only the charge filter's bucket, as pay in advance reads one. A charge_period
+    # given carries its own choice, which the previous subscription lookup follows too.
     def initialize(subscription:, charge:, charge_filter:, grouped_by_keys:, from_datetime:, charge_period: nil, all_buckets: true)
       @subscription = subscription
       @charge = charge
@@ -22,7 +23,6 @@ module RecurringAggregationSnapshots
       @from_datetime = from_datetime
       @charge_period = charge_period ||
         ChargePeriod.new(subscription:, charge:, from_datetime:, charge_filter_ids: (all_buckets ? nil : [charge_filter&.id].compact))
-      @all_buckets = all_buckets
 
       super
     end
@@ -40,7 +40,7 @@ module RecurringAggregationSnapshots
 
     private
 
-    attr_reader :subscription, :charge, :charge_filter, :grouped_by_keys, :from_datetime, :charge_period, :all_buckets
+    attr_reader :subscription, :charge, :charge_filter, :grouped_by_keys, :from_datetime, :charge_period
 
     def own_period
       period = charge_period.period(charge_filter:)
@@ -51,7 +51,7 @@ module RecurringAggregationSnapshots
     # An upgrade or downgrade keeps the external id, so the events counted by the previous
     # subscription are the ones this one reads.
     def previous_subscription_period
-      subscription.previous_recurring_aggregation_snapshots.period(charge:, charge_filter:, all_buckets:)
+      subscription.previous_recurring_aggregation_snapshots.period(charge:, charge_filter:, all_buckets: charge_period.all_buckets?)
     end
 
     # Snapshots grouped on other keys cannot be regrouped, only a full scan can. Checked on the

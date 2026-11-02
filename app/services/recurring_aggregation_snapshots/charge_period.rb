@@ -16,9 +16,16 @@ module RecurringAggregationSnapshots
     # filters changed since gives [], a full scan rather than the previous subscription.
     def period(charge_filter:)
       return unless marker
-      return [] if filters_changed?
 
-      [marker, records.fetch(charge_filter&.id, [])]
+      if filters_changed?
+        []
+      else
+        [marker, records.fetch(charge_filter&.id, [])]
+      end
+    end
+
+    def all_buckets?
+      charge_filter_ids.nil?
     end
 
     private
@@ -39,21 +46,11 @@ module RecurringAggregationSnapshots
       records[nil]&.first
     end
 
-    # One statement reads the marker and the buckets, so a run rewriting the period cannot land in between
+    # Listing the buckets lets the period index serve to_datetime too
     def records
-      @records ||= begin
-        latest_to_datetime = charge_snapshots
-          .where(charge_filter_id: nil, to_datetime: ...from_datetime)
-          .order(to_datetime: :desc)
-          .limit(1)
-          .select(:to_datetime)
-
-        # Listing the buckets lets the period index serve to_datetime too
-        charge_snapshots
-          .where(charge_filter_id: [nil, *(charge_filter_ids || charge.filters.ids)])
-          .of_period(latest_to_datetime)
-          .group_by(&:charge_filter_id)
-      end
+      @records ||= charge_snapshots
+        .latest_period([nil, *(charge_filter_ids || charge.filters.ids)], before: from_datetime)
+        .group_by(&:charge_filter_id)
     end
 
     def filters_changed?

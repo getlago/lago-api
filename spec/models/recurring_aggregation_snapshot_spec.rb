@@ -30,6 +30,31 @@ RSpec.describe RecurringAggregationSnapshot do
         expect(described_class.of_period(latest_to_datetime)).to eq([snapshot])
       end
     end
+
+    describe ".latest_period" do
+      let(:marker) { create(:recurring_aggregation_snapshot, to_datetime: Time.zone.parse("2026-09-30T23:59:59")) }
+      let(:charge_filter) { create(:charge_filter, charge: marker.charge) }
+      let(:bucket_snapshot) { create_snapshot(to_datetime: marker.to_datetime, charge_filter:) }
+      let(:older_marker) { create_snapshot(to_datetime: Time.zone.parse("2026-08-31T23:59:59")) }
+
+      def create_snapshot(**attributes)
+        create(:recurring_aggregation_snapshot, organization: marker.organization, subscription: marker.subscription, charge: marker.charge, **attributes)
+      end
+
+      before do
+        bucket_snapshot
+        older_marker
+        create_snapshot(to_datetime: marker.to_datetime, charge_filter: create(:charge_filter, charge: marker.charge))
+      end
+
+      it "returns the snapshots of the listed buckets in the latest period" do
+        expect(described_class.latest_period([nil, charge_filter.id])).to match_array([marker, bucket_snapshot])
+      end
+
+      it "returns the latest period closed before the given time" do
+        expect(described_class.latest_period([nil, charge_filter.id], before: marker.to_datetime)).to eq([older_marker])
+      end
+    end
   end
 
   describe "validations" do

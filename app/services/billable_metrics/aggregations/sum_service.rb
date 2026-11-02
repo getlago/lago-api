@@ -34,7 +34,7 @@ module BillableMetrics
         result.options = {running_total: running_total(options)}
         result
       rescue ActiveRecord::StatementInvalid => e
-        result.service_failure!(code: "aggregation_failure", message: e.message)
+        fail_aggregation!(e)
       end
 
       # NOTE: Apply the grouped_by filter to the aggregation
@@ -73,7 +73,7 @@ module BillableMetrics
           group_result
         end
       rescue ActiveRecord::StatementInvalid => e
-        result.service_failure!(code: "aggregation_failure", message: e.message)
+        fail_aggregation!(e)
       end
 
       # With a snapshot period: stored units plus the events they missed. Otherwise invoicing scans
@@ -130,10 +130,7 @@ module BillableMetrics
       # Without snapshots, the period still bounds the delta: the bucket starts from zero.
       # Current usage served by the incremental scan keeps its own read.
       def delta_period(options)
-        return if options[:is_current_usage] && event_store.incremental_sum?
-        return if initial_period.nil?
-
-        initial_period
+        initial_period unless options[:is_current_usage] && event_store.incremental_sum?
       end
 
       # Current usage persists no snapshot: its delta needs no watermark of its own.

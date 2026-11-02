@@ -145,6 +145,10 @@ module BillableMetrics
 
       protected
 
+      def snapshot_read_error?(error)
+        error.equal?(@snapshot_read_error)
+      end
+
       attr_accessor :event_store,
         :metered_item,
         :billing_context,
@@ -276,6 +280,19 @@ module BillableMetrics
         @initial_snapshots = nil
         @initial_value = fetched&.snapshots
         @initial_period = fetched&.period
+      rescue ActiveRecord::StatementInvalid => e
+        @snapshot_read_error = e
+        raise
+      end
+
+      # The snapshots are read lazily, inside the rescue of the aggregation: their failure is not
+      # an event aggregation failure, so it raises as it did when they were read before aggregating.
+      def fail_aggregation!(error)
+        if snapshot_read_error?(error)
+          raise error
+        else
+          result.service_failure!(code: "aggregation_failure", message: error.message)
+        end
       end
     end
   end
