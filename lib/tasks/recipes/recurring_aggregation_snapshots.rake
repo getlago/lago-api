@@ -19,6 +19,8 @@ RECURRING_SNAPSHOTS_CSV_HEADERS = %w[
   full_scan_amount_cents
   snapshot_events_count
   full_scan_events_count
+  snapshot_presentation_breakdowns
+  full_scan_presentation_breakdowns
 ].freeze
 
 namespace :recipes do
@@ -80,12 +82,14 @@ namespace :recipes do
       puts ""
       puts(if compared.zero?
         "No subscription could be compared."
+      elsif mismatching.positive?
+        "Mismatches detected, investigate before enabling the organization."
+      elsif failed.positive?
+        "#{failed} subscription(s) could not be compared: this run is inconclusive."
       elsif compared == without_snapshot
         "No subscription read a snapshot: this run says nothing about parity."
-      elsif mismatching.zero?
-        "No mismatch over the charges read from a snapshot."
       else
-        "Mismatches detected, investigate before enabling the organization."
+        "No mismatch over the charges read from a snapshot."
       end)
     end
   end
@@ -126,7 +130,13 @@ def recurring_snapshots_csv_rows(subscription, comparison)
       row.snapshot.amount_cents,
       row.full_scan.amount_cents,
       row.snapshot.events_count,
-      row.full_scan.events_count
+      row.full_scan.events_count,
+      recurring_snapshots_breakdowns_json(row.snapshot),
+      recurring_snapshots_breakdowns_json(row.full_scan)
     ]
   end
+end
+
+def recurring_snapshots_breakdowns_json(totals)
+  totals.presentation_breakdowns.map { |groups, units| {groups:, units: units.to_s("F")} }.to_json
 end

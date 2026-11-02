@@ -24,8 +24,14 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
       charge_filter_id: nil,
       grouped_by: {},
       snapshot_read: true,
-      snapshot: totals.new(units: snapshot_units, total_aggregated_units: snapshot_units, amount_cents: 1000, events_count: 4),
-      full_scan: totals.new(units: BigDecimal(10), total_aggregated_units: BigDecimal(10), amount_cents: 1000, events_count: 4)
+      snapshot: totals.new(
+        units: snapshot_units, total_aggregated_units: snapshot_units, amount_cents: 1000, events_count: 4,
+        presentation_breakdowns: {{"region" => "eu"} => snapshot_units}
+      ),
+      full_scan: totals.new(
+        units: BigDecimal(10), total_aggregated_units: BigDecimal(10), amount_cents: 1000, events_count: 4,
+        presentation_breakdowns: {{"region" => "eu"} => BigDecimal(10)}
+      )
     )
   end
 
@@ -79,7 +85,9 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
           "1000",
           "1000",
           "4",
-          "4"
+          "4",
+          [{groups: {region: "eu"}, units: "10.0"}].to_json,
+          [{groups: {region: "eu"}, units: "10.0"}].to_json
         ]
       )
     end
@@ -110,6 +118,21 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
 
     it "says nothing could be compared" do
       expect { task.invoke }.to output(/No subscription could be compared/).to_stdout
+    end
+  end
+
+  context "when one comparison fails and the others match" do
+    let(:other_subscription) { create(:subscription, organization:, customer: subscription.customer) }
+
+    before do
+      allow(RecurringAggregationSnapshots::CompareUsageService).to receive(:call)
+        .with(subscription: other_subscription)
+        .and_return(BaseService::Result.new.service_failure!(code: "boom", message: "boom"))
+      stub_stdin(organization.id, "y", "#{subscription.id} #{other_subscription.id}", csv_path)
+    end
+
+    it "says the run is inconclusive" do
+      expect { task.invoke }.to output(/1 subscription\(s\) could not be compared: this run is inconclusive/).to_stdout
     end
   end
 

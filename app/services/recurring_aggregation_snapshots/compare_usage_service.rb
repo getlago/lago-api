@@ -10,8 +10,10 @@ module RecurringAggregationSnapshots
 
     RECHECK_DELAY = 5.seconds
 
-    Totals = Data.define(:units, :total_aggregated_units, :amount_cents, :events_count)
-    EMPTY_TOTALS = Totals.new(units: BigDecimal(0), total_aggregated_units: BigDecimal(0), amount_cents: 0, events_count: 0)
+    Totals = Data.define(:units, :total_aggregated_units, :amount_cents, :events_count, :presentation_breakdowns)
+    EMPTY_TOTALS = Totals.new(
+      units: BigDecimal(0), total_aggregated_units: BigDecimal(0), amount_cents: 0, events_count: 0, presentation_breakdowns: {}
+    )
 
     Row = Data.define(:charge_id, :billable_metric_code, :charge_filter_id, :grouped_by, :snapshot_read, :snapshot, :full_scan) do
       # Without a snapshot both runs scan the full history: a difference there is an event ingested
@@ -103,39 +105,56 @@ module RecurringAggregationSnapshots
           units: current.units + fee.units.to_d,
           total_aggregated_units: current.total_aggregated_units + fee.total_aggregated_units.to_d,
           amount_cents: current.amount_cents + fee.amount_cents.to_i,
-          events_count: current.events_count + fee.events_count.to_i
+          events_count: current.events_count + fee.events_count.to_i,
+          presentation_breakdowns: add_breakdowns(current.presentation_breakdowns, fee)
         )
       end
     end
 
-    # The snapshot path reads group values back from JSON, the full scan from the events.
+    # Zero lines are skipped: a group closing a period at zero keeps no snapshot row, so the snapshot
+    # run drops the zero lines the full scan carries from the cached aggregation.
+    def add_breakdowns(breakdowns, fee)
+      fee.presentation_breakdowns.each_with_object(breakdowns.dup) do |breakdown, sums|
+        next if breakdown.units.to_d.zero?
+
+        presentation_by = normalized_values(breakdown.presentation_by)
+        sums[presentation_by] = sums.fetch(presentation_by, BigDecimal(0)) + breakdown.units.to_d
+      end
+    end
+
     def normalized_groups(fee)
-      (fee.grouped_by || {}).transform_values { it&.to_s }
+      normalized_values(fee.grouped_by)
+    end
+
+    # The snapshot path reads group values back from JSON, the full scan from the events.
+    def normalized_values(values)
+      (values || {}).transform_values { it&.to_s }
     end
 
     # The (charge, charge filter) pairs the snapshot run starts from a snapshot, rejected as the
     # aggregators reject them. A pair without one scans its full history on both sides.
+    # Buckets and their grouping keys come from Fees::ChargeService, which adds target_wallet_code.
     def snapshot_keys
       @snapshot_keys ||= compared_charges.flat_map do |charge|
-        [nil, *charge.filters].filter_map do |charge_filter|
-          [charge.id, charge_filter&.id] if snapshot_read?(charge, charge_filter)
+        Fees::ChargeService::Sources::Charge.new(charge:, boundaries: nil).pricing_buckets.filter_map do |bucket|
+          [charge.id, bucket.charge_filter&.id] if snapshot_read?(bucket)
         end
       end.to_set
     end
 
     # A bucket without usage at the period has no snapshot, yet starts from the period.
-    def snapshot_read?(charge, charge_filter)
+    def snapshot_read?(bucket)
       period = RecurringAggregationSnapshots::FetchService.call!(
         subscription:,
-        charge:,
-        charge_filter:,
-        grouped_by_keys: (charge_filter || charge).pricing_group_keys.presence,
+        charge: bucket.charge,
+        charge_filter: bucket.charge_filter,
+        grouped_by_keys: bucket.pricing_group_keys.presence,
         from_datetime: date_service.charges_from_datetime
       ).period
       return false unless period
 
       # BillableMetrics::Aggregations::WeightedSumService#latest_snapshots, SumService#delta_period
-      !charge.billable_metric.weighted_sum_agg? || period.to_datetime >= date_service.charges_from_datetime - 1.second
+      !bucket.billable_metric.weighted_sum_agg? || period.to_datetime >= date_service.charges_from_datetime - 1.second
     end
 
     def compared_charges

@@ -14,6 +14,9 @@ RSpec.describe RecurringAggregationSnapshots::CompareUsageService do
   let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "1"}) }
   let(:snapshot_units) { 5 }
   let(:snapshot_to_datetime) { Time.zone.parse("2022-04-30").end_of_day }
+  let(:snapshot_grouped_by) { {} }
+  let(:snapshot_presentation_breakdowns) { [] }
+  let(:event_properties) { {} }
 
   before do
     charge
@@ -27,8 +30,10 @@ RSpec.describe RecurringAggregationSnapshots::CompareUsageService do
       charge:,
       to_datetime: snapshot_to_datetime,
       watermark: Time.zone.parse("2022-05-01"),
+      grouped_by: snapshot_grouped_by,
       units: snapshot_units,
-      events_count: 1
+      events_count: 1,
+      presentation_breakdowns: snapshot_presentation_breakdowns
     )
 
     travel_to(Time.zone.parse("2022-05-15"))
@@ -43,7 +48,7 @@ RSpec.describe RecurringAggregationSnapshots::CompareUsageService do
       code: billable_metric.code,
       timestamp:,
       created_at: timestamp,
-      properties: {value:}
+      properties: {value:, **event_properties}
     )
   end
 
@@ -81,6 +86,52 @@ RSpec.describe RecurringAggregationSnapshots::CompareUsageService do
         snapshot: have_attributes(units: 23),
         full_scan: have_attributes(units: 8)
       )
+    end
+  end
+
+  context "when the charge accepts target wallets", :premium do
+    let(:organization) { create(:organization, premium_integrations: ["events_targeting_wallets"]) }
+    let(:charge) { create(:standard_charge, plan:, billable_metric:, accepts_target_wallet: true, properties: {amount: "1"}) }
+    let(:snapshot_grouped_by) { {"target_wallet_code" => nil} }
+    let(:snapshot_units) { 20 }
+
+    it "reads the snapshots grouped on the target wallet and reports their difference" do
+      expect(result.snapshot_charges_count).to eq(1)
+      expect(result.differences.sole).to have_attributes(
+        grouped_by: {"target_wallet_code" => nil},
+        snapshot: have_attributes(units: 23),
+        full_scan: have_attributes(units: 8)
+      )
+    end
+  end
+
+  context "when only the presentation breakdowns differ" do
+    let(:billable_metric) { create(:weighted_sum_billable_metric, organization:, recurring: true, field_name: "value") }
+    let(:charge) do
+      create(:standard_charge, plan:, billable_metric:, properties: {amount: "1", presentation_group_keys: [{value: "region"}]})
+    end
+    let(:event_properties) { {region: "eu"} }
+    let(:snapshot_presentation_breakdowns) { [{"groups" => {"region" => "us"}, "value" => "5.0"}] }
+
+    # The full scan of a weighted sum starts from the cached aggregation of the previous period
+    before do
+      create(
+        :cached_aggregation,
+        organization:,
+        charge:,
+        external_subscription_id: subscription.external_id,
+        timestamp: snapshot_to_datetime,
+        current_aggregation: snapshot_units,
+        presentation_breakdowns: [{"groups" => {"region" => "eu"}, "value" => "5.0"}]
+      )
+    end
+
+    it "reports the leaf with the same units" do
+      difference = result.differences.sole
+
+      expect(difference.snapshot.units).to eq(difference.full_scan.units)
+      expect(difference.snapshot.presentation_breakdowns.keys).to match_array([{"region" => "us"}, {"region" => "eu"}])
+      expect(difference.full_scan.presentation_breakdowns.keys).to eq([{"region" => "eu"}])
     end
   end
 
