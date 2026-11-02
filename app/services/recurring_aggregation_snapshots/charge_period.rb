@@ -1,0 +1,64 @@
+# frozen_string_literal: true
+
+module RecurringAggregationSnapshots
+  # The latest period of a charge closed before from_datetime. Loads the marker, the filter check
+  # and the snapshots once, for all charge filters.
+  class ChargePeriod
+    # charge_filter_ids: the buckets to load besides the default one, every filter of the charge when nil
+    def initialize(subscription:, charge:, from_datetime:, charge_filter_ids: nil)
+      @subscription = subscription
+      @charge = charge
+      @from_datetime = from_datetime
+      @charge_filter_ids = charge_filter_ids
+    end
+
+    # Marker and snapshots of the charge filter's bucket, or nil without a marker. A marker the
+    # filters changed since gives [], a full scan rather than the previous subscription.
+    def period(charge_filter:)
+      return unless marker
+
+      if filters_changed?
+        []
+      else
+        [marker, records.fetch(charge_filter&.id, [])]
+      end
+    end
+
+    def all_buckets?
+      charge_filter_ids.nil?
+    end
+
+    private
+
+    attr_reader :subscription, :charge, :from_datetime, :charge_filter_ids
+
+    def charge_snapshots
+      RecurringAggregationSnapshot.where(
+        organization_id: subscription.organization_id,
+        subscription_id: subscription.id,
+        charge_id: charge.id
+      )
+    end
+
+    # The default bucket keeps a row for every closed period, other buckets only for groups with
+    # units or events: the marker tells a bucket without usage from a period never closed.
+    def marker
+      records[nil]&.first
+    end
+
+    # Listing the buckets lets the period index serve to_datetime too
+    def records
+      @records ||= charge_snapshots
+        .latest_period([nil, *(charge_filter_ids || charge.filters.ids)], before: from_datetime)
+        .group_by(&:charge_filter_id)
+    end
+
+    def filters_changed?
+      return @filters_changed if defined?(@filters_changed)
+
+      @filters_changed = RecurringAggregationSnapshot.filters_changed_since?(
+        organization_id: subscription.organization_id, charge_ids: charge.id, watermark: marker.watermark
+      )
+    end
+  end
+end

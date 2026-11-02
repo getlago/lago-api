@@ -90,6 +90,40 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
         expect(fetch_service.call.snapshots.map(&:units)).to eq([4])
       end
 
+      context "with all_buckets: false" do
+        subject(:fetch_service) do
+          described_class.new(subscription:, charge:, charge_filter:, grouped_by_keys:, from_datetime:, all_buckets: false)
+        end
+
+        before { allow(RecurringAggregationSnapshots::ChargePeriod).to receive(:new).and_call_original }
+
+        it "loads only the bucket of the charge filter" do
+          expect(fetch_service.call.snapshots.map(&:units)).to eq([4])
+          expect(RecurringAggregationSnapshots::ChargePeriod).to have_received(:new).with(hash_including(charge_filter_ids: [charge_filter.id]))
+        end
+      end
+
+      context "with a charge period of only some buckets" do
+        subject(:fetch_service) do
+          described_class.new(subscription:, charge:, charge_filter:, grouped_by_keys:, from_datetime:, charge_period:)
+        end
+
+        let(:charge_period) do
+          RecurringAggregationSnapshots::ChargePeriod.new(subscription:, charge:, from_datetime:, charge_filter_ids: [charge_filter.id])
+        end
+
+        before do
+          RecurringAggregationSnapshot.delete_all
+          allow(subscription.previous_recurring_aggregation_snapshots).to receive(:period).and_return(nil)
+        end
+
+        it "reads the same buckets from the previous subscription" do
+          fetch_service.call
+
+          expect(subscription.previous_recurring_aggregation_snapshots).to have_received(:period).with(charge:, charge_filter:, all_buckets: false)
+        end
+      end
+
       context "without a snapshot of its own in the latest period" do
         before { RecurringAggregationSnapshot.where(charge_filter:).delete_all }
 

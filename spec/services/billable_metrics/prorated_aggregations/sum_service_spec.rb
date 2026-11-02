@@ -209,6 +209,21 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
       expect(result.aggregation).to eq((1007 + 20 * 18.fdiv(28)).ceil(5))
     end
 
+    context "when the snapshots cannot be read" do
+      it "raises instead of failing as an event aggregation" do
+        period = periods.second
+        period_boundaries = {from_datetime: period.begin, to_datetime: period.end, charges_duration: 28}
+        store = event_store_class.new(code: billable_metric.code, billing_context:, boundaries: period_boundaries, filters:)
+        aggregator = described_class.new(
+          event_store: store, metered_item:, billing_context:, boundaries: period_boundaries, filters:,
+          initial_snapshots: -> { raise ActiveRecord::StatementInvalid, "canceling statement due to statement timeout" }
+        )
+
+        expect { aggregator.aggregate(options: {recurring_watermark: watermark(period)}) }
+          .to raise_error(ActiveRecord::StatementInvalid, /statement timeout/)
+      end
+    end
+
     context "when the bucket had no usage at the end of the previous period" do
       it "starts from zero and only reads the events the period did not count" do
         result = aggregate(periods.second, initial_value: [], initial_period: closed(periods.first))

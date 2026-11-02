@@ -19,6 +19,13 @@ class RecurringAggregationSnapshot < ApplicationRecord
 
   # Compared to a scalar subquery: the period index then serves to_datetime, which an IN subquery does not
   scope :of_period, ->(to_datetime_query) { where(arel_table[:to_datetime].eq(Arel::Nodes::Grouping.new(to_datetime_query.arel))) }
+  # The default bucket keeps a row for every closed period: its latest row before `before` marks the period.
+  # One statement reads the marker and the buckets, so a run rewriting the period cannot land in between.
+  scope :latest_period, lambda { |bucket_ids, before: nil|
+    markers = where(charge_filter_id: nil)
+    markers = markers.where(to_datetime: ...before) if before
+    where(charge_filter_id: bucket_ids).of_period(markers.order(to_datetime: :desc).limit(1).select(:to_datetime))
+  }
 
   # Snapshots are keyed on a subscription, which billing segments do not bill
   def self.eligible?(metered_item:, billing_context:)

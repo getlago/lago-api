@@ -65,9 +65,7 @@ module RecurringAggregationSnapshots
           subscription_id: subscription.previous_subscription_id,
           charge_id: previous_charge.id
         )
-        # One statement reads the marker and the buckets, so a run rewriting the period cannot land in between
-        latest_to_datetime = scope.where(charge_filter_id: nil).order(to_datetime: :desc).limit(1).select(:to_datetime)
-        records = scope.where(charge_filter_id: bucket_ids).of_period(latest_to_datetime).group_by(&:charge_filter_id)
+        records = scope.latest_period(bucket_ids).group_by(&:charge_filter_id)
         marker = records[nil]&.first
 
         marker ? [marker, records] : []
