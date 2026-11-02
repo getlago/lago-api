@@ -154,7 +154,8 @@ module RecurringAggregationSnapshots
       return false unless period
 
       # BillableMetrics::Aggregations::WeightedSumService#latest_snapshots, SumService#delta_period
-      !bucket.billable_metric.weighted_sum_agg? || period.to_datetime >= date_service.charges_from_datetime - 1.second
+      from_datetime = date_service.charges_from_datetime
+      !bucket.billable_metric.weighted_sum_agg? || period.to_datetime.between?(from_datetime - 1.second, from_datetime)
     end
 
     def compared_charges

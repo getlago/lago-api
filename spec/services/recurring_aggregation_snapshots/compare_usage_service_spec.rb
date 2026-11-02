@@ -14,6 +14,8 @@ RSpec.describe RecurringAggregationSnapshots::CompareUsageService do
   let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "1"}) }
   let(:snapshot_units) { 5 }
   let(:snapshot_to_datetime) { Time.zone.parse("2022-04-30").end_of_day }
+  let(:snapshot_watermark) { Time.zone.parse("2022-05-01") }
+  let(:snapshot_subscription) { subscription }
   let(:snapshot_grouped_by) { {} }
   let(:snapshot_presentation_breakdowns) { [] }
   let(:event_properties) { {} }
@@ -26,10 +28,10 @@ RSpec.describe RecurringAggregationSnapshots::CompareUsageService do
     create(
       :recurring_aggregation_snapshot,
       organization:,
-      subscription:,
+      subscription: snapshot_subscription,
       charge:,
       to_datetime: snapshot_to_datetime,
-      watermark: Time.zone.parse("2022-05-01"),
+      watermark: snapshot_watermark,
       grouped_by: snapshot_grouped_by,
       units: snapshot_units,
       events_count: 1,
@@ -141,6 +143,24 @@ RSpec.describe RecurringAggregationSnapshots::CompareUsageService do
     let(:snapshot_units) { 20 }
 
     it "does not count it as read from a snapshot nor report its difference" do
+      expect(result.snapshot_charges_count).to eq(0)
+      expect(result.rows).to be_empty
+    end
+  end
+
+  context "when a weighted sum snapshot of the previous subscription closes after the upgrade" do
+    let(:billable_metric) { create(:weighted_sum_billable_metric, organization:, recurring: true, field_name: "value") }
+    let(:upgraded_at) { Time.zone.parse("2022-05-10 12:00:00") }
+    let(:previous_subscription) { create(:subscription, :terminated, organization:, customer:, plan:, started_at:, terminated_at: upgraded_at) }
+    let(:subscription) do
+      create(:subscription, organization:, customer:, plan:, started_at: upgraded_at, subscription_at: started_at, previous_subscription:, external_id: previous_subscription.external_id)
+    end
+    let(:snapshot_subscription) { previous_subscription }
+    # The termination of an upgrade is stamped just after the new subscription starts
+    let(:snapshot_to_datetime) { upgraded_at + 0.001.seconds }
+    let(:snapshot_watermark) { upgraded_at + 1.second }
+
+    it "does not count it as read from a snapshot" do
       expect(result.snapshot_charges_count).to eq(0)
       expect(result.rows).to be_empty
     end
