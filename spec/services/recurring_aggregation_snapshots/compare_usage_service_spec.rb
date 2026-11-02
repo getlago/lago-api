@@ -91,6 +91,18 @@ RSpec.describe RecurringAggregationSnapshots::CompareUsageService do
     end
   end
 
+  context "when the usage computation fails" do
+    before do
+      failure = BaseResult.new.tap { it.service_failure!(code: "usage_failed", message: "boom") }
+      allow(Invoices::CustomerUsageService).to receive(:call!).and_raise(BaseService::FailedResult.new(failure, "boom"))
+    end
+
+    it "returns the failure" do
+      expect(result).to be_failure
+      expect(result.error.code).to eq("usage_failed")
+    end
+  end
+
   context "when the charge accepts target wallets", :premium do
     let(:organization) { create(:organization, premium_integrations: ["events_targeting_wallets"]) }
     let(:charge) { create(:standard_charge, plan:, billable_metric:, accepts_target_wallet: true, properties: {amount: "1"}) }
