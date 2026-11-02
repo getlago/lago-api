@@ -4793,6 +4793,38 @@ RSpec.describe Fees::ChargeService, :premium do
       end
     end
 
+    context "with the snapshot_backfill context" do
+      let(:organization) { create_default(:organization) }
+      let(:context) { :snapshot_backfill }
+      let(:invoice) { nil }
+
+      before do
+        create(:charge_fee, invoice: nil, organization:, subscription:, charge:, properties: boundaries.to_h)
+      end
+
+      it "persists the snapshots without the flag, saving no fee" do
+        expect { charge_subscription_service.call }.not_to change(Fee, :count)
+
+        expect(snapshots.sole).to have_attributes(
+          charge_filter_id: nil,
+          to_datetime: boundaries.charges_to_datetime.floor(6),
+          watermark: now - RecurringAggregationSnapshot::WATERMARK_LAG,
+          units: 15,
+          events_count: 2
+        )
+      end
+
+      context "with a recurring weighted sum" do
+        let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:, field_name: "value") }
+
+        it "persists the snapshots without caching the aggregation" do
+          expect { charge_subscription_service.call }.not_to change(CachedAggregation, :count)
+
+          expect(snapshots.sole.units).to eq(15)
+        end
+      end
+    end
+
     context "with an event ingested after the watermark" do
       before do
         create(:event, organization:, subscription:, code: billable_metric.code, created_at: now - 1.second,

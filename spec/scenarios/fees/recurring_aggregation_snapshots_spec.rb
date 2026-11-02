@@ -18,6 +18,8 @@ describe "Recurring aggregation snapshots", transaction: false do
   # One read per bucket, nil when it falls back to the full history
   let(:invoice_reads) { [nil, march_snapshot, april_snapshot] }
   let(:usage_reads) { [march_snapshot, april_snapshot] }
+  # Pricing buckets of the charge at the March invoice, each one read with reads on
+  let(:march_buckets) { 1 }
 
   before do
     allow(RecurringAggregationSnapshots::FetchService).to receive(:call!).and_wrap_original do |method, **args|
@@ -176,6 +178,25 @@ describe "Recurring aggregation snapshots", transaction: false do
         expect(bill.slice(*billed.keys)).to eq(billed)
         expect(written_snapshots).to be_empty
         expect(read_periods.values.flatten.uniq).to eq([nil])
+      end
+    end
+
+    context "with the snapshots of the March invoice backfilled, then writes and reads" do
+      # Backfilled at the March invoice run, the snapshot has its watermark
+      def bill_at(time)
+        billed = super
+        return billed unless time == march_billed_at
+
+        travel_to(time) { RecurringAggregationSnapshots::BackfillService.call!(subscription:) }
+        organization.update!(feature_flags: %w[recurring_aggregation_snapshots persisted_recurring_values])
+        billed
+      end
+
+      it "bills what the full history bills, starting from the backfilled snapshots" do
+        expect(bill.slice(*billed.keys)).to eq(billed)
+        expect(written_snapshots).to match_array(expected_snapshots)
+        # The March invoice ran with reads off
+        expect(read_periods).to eq(invoice: invoice_reads.drop(march_buckets), usage: usage_reads)
       end
     end
   end
@@ -352,6 +373,7 @@ describe "Recurring aggregation snapshots", transaction: false do
     end
     # Every bucket of the charge reads the full history until a snapshot is written after the change
     let(:invoice_reads) { [nil, nil, nil, nil, nil, april_snapshot, april_snapshot, april_snapshot] }
+    let(:march_buckets) { 2 }
     let(:usage_reads) { [nil, nil, nil, april_snapshot, april_snapshot, april_snapshot] }
 
     def send_event(amount, **)
@@ -392,6 +414,7 @@ describe "Recurring aggregation snapshots", transaction: false do
       ]
     end
     let(:invoice_reads) { [nil, nil, nil, nil, april_snapshot, april_snapshot] }
+    let(:march_buckets) { 2 }
     let(:usage_reads) { [nil, nil, april_snapshot, april_snapshot] }
 
     def send_event(amount, **)
@@ -450,6 +473,7 @@ describe "Recurring aggregation snapshots", transaction: false do
       ]
     end
     let(:invoice_reads) { [nil, nil, march_snapshot, march_snapshot, april_snapshot, april_snapshot] }
+    let(:march_buckets) { 2 }
     let(:usage_reads) { [march_snapshot, march_snapshot, april_snapshot, april_snapshot] }
 
     def bill

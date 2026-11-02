@@ -2,7 +2,7 @@
 
 module Fees
   class ChargeService
-    CONTEXTS = [nil, :advance_renewal, :current_usage, :invoice_preview, :recurring, :finalize].freeze
+    CONTEXTS = [nil, :advance_renewal, :current_usage, :invoice_preview, :recurring, :finalize, :snapshot_backfill].freeze
     # NOTE: Accepted for callers that still use invoice-level contexts with charge fee calculation.
     DEPRECATED_CONTEXTS = [:refresh, :draft].freeze
 
@@ -51,6 +51,11 @@ module Fees
 
       def finalize?
         context == :finalize
+      end
+
+      # Aggregates a closed period again to write its recurring snapshots only: no fee, no cached aggregation
+      def snapshot_backfill?
+        context == :snapshot_backfill
       end
 
       private
