@@ -535,6 +535,7 @@ RSpec.describe Api::V2::BillableMetricsController do
       post_with_token(organization, "/api/v2/billable_metrics/evaluate_expression", expression: "1 + 1")
 
       expect(response).to have_http_status(:not_found)
+      expect(json).to eq(code: "resource_not_found", details: [])
     end
   end
 end

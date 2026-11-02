@@ -71,7 +71,7 @@ RSpec.describe "API v2 routing parity" do
   it "does not route billable metric expression evaluation to v1 under v2" do
     path = "/billable_metrics/evaluate_expression"
     expect(Rails.application.routes.recognize_path("/api/v2#{path}", method: :post))
-      .to include(controller: "application", action: "not_found")
+      .to include(controller: "api/unknown_v2_routes", action: "show")
     expect(Rails.application.routes.recognize_path("/api/v1#{path}", method: :post))
       .to include(controller: "api/v1/billable_metrics", action: "evaluate_expression")
   end
@@ -161,7 +161,7 @@ RSpec.describe "API v2 routing parity" do
     end
 
     unsupported = Rails.application.routes.recognize_path("/api/v2/credit_notes/#{id}/download", method: :post)
-    expect(unsupported.slice(:controller, :action)).to eq(controller: "application", action: "not_found")
+    expect(unsupported.slice(:controller, :action)).to eq(controller: "api/unknown_v2_routes", action: "show")
     expect(Rails.application.routes.recognize_path("/api/v1/credit_notes/#{id}/download", method: :post)[:controller])
       .to eq("api/v1/credit_notes")
 

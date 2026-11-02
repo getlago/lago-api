@@ -27,6 +27,8 @@ module LagoApi
     ]
 
     config.api_only = true
+    # Resolved at each call, so that the constant reloads in development.
+    config.exceptions_app = ->(env) { Lago::V2ExceptionsApp.new.call(env) }
     config.active_job.queue_adapter = :sidekiq
     config.active_storage.variant_processor = :disabled
     config.lago_front_url = ENV["LAGO_FRONT_URL"].presence || "https://app.getlago.com"

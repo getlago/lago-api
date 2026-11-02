@@ -111,16 +111,20 @@ Rails.application.routes.draw do
       resources :api_logs, param: :request_id, only: %i[index show]
       resources :security_logs, param: :log_id, only: %i[index show]
       # An invoice route v2 does not serve is unknown on v2, not a v1 fallback.
-      match "invoices(/*path)", to: "/application#not_found", via: :all
-      match "billable_metrics(/*path)", to: "/application#not_found", via: :all
+      match "invoices(/*path)", to: "/api/unknown_v2_routes#show", via: :all
+      match "billable_metrics(/*path)", to: "/api/unknown_v2_routes#show", via: :all
       # Credit-note paths are native v2 only when explicitly routed above. Do not
       # let unsupported actions fall through to their v1 beta equivalents.
-      match "credit_notes(/*path)", to: "/application#not_found", via: :all
+      match "credit_notes(/*path)", to: "/api/unknown_v2_routes#show", via: :all
     end
 
     namespace :v2, module: :v1 do
       draw(:shared_api)
     end
+
+    # After the shared routes, so that an /api/v2 path no route serves answers the v2 404. The path
+    # is optional, as a glob matches one character at least and Rails drops a trailing slash.
+    match "v2(/*path)", to: "unknown_v2_routes#show", via: :all
   end
   resources :webhooks, only: [] do
     post "stripe/:organization_id", to: "webhooks#stripe", on: :collection, as: :stripe
