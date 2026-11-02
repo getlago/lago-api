@@ -218,7 +218,7 @@ RSpec.describe UsageMonitoring::AnnounceMissedThresholdsService do
 
   context "when the thresholds were edited after the creation" do
     before do
-      travel_to(alert_created_at + 2.minutes) do
+      travel_to(alert_created_at + 61.seconds) do
         alert.thresholds.create!(value: 300, code: "edited", organization:)
       end
     end
@@ -231,7 +231,7 @@ RSpec.describe UsageMonitoring::AnnounceMissedThresholdsService do
 
   context "when a threshold was saved within the creation tolerance" do
     before do
-      travel_to(alert_created_at + 30.seconds) do
+      travel_to(alert_created_at + 59.seconds) do
         alert.thresholds.create!(value: 300, code: "late", organization:)
       end
     end
@@ -256,6 +256,22 @@ RSpec.describe UsageMonitoring::AnnounceMissedThresholdsService do
 
     it "skips the alert" do
       expect(result.report).to eq([entry(status: :skipped, reason: :period_ended)])
+    end
+  end
+
+  context "when the monthly charges period of a yearly plan renewed since the last evaluation" do
+    let(:yearly_plan) { create(:plan, organization:, interval: :yearly, bill_charges_monthly: true) }
+    let(:alert_subscription) do
+      create(:subscription, :calendar, organization:, customer:, plan: yearly_plan, external_id: "yearly-sub",
+        started_at: Time.zone.parse("2026-01-01T00:00:00Z"))
+    end
+    # The yearly period starts on 2026-01-01, the monthly charges period on 2026-04-01
+    let(:now) { Time.zone.parse("2026-04-15T12:00:00Z") }
+    let(:last_processed_at) { Time.zone.parse("2026-03-31T11:00:00Z") }
+
+    it "skips the alert" do
+      expect(result.report).to eq([entry(status: :skipped, reason: :period_ended)])
+      expect(alert.all_triggered_alerts).to be_empty
     end
   end
 
@@ -291,6 +307,17 @@ RSpec.describe UsageMonitoring::AnnounceMissedThresholdsService do
     end
   end
 
+  context "when the alert was discarded before the run" do
+    before { alert.discard }
+
+    it "leaves it out of the report" do
+      expect(UsageMonitoring::Alert.unscoped.where(id: alert.id)).to exist
+      expect(result.report).to eq([])
+      expect(UsageMonitoring::TriggeredAlert.triggered).to be_empty
+      expect(SendWebhookJob).not_to have_been_enqueued
+    end
+  end
+
   context "with alerts outside the window or of another organization" do
     let(:before_window) do
       travel_to(Time.zone.parse("2026-02-01T00:00:00Z")) do
@@ -315,6 +342,17 @@ RSpec.describe UsageMonitoring::AnnounceMissedThresholdsService do
       before_window
       other_organization_alert
       wallet_alert
+    end
+
+    it "includes alerts created exactly at from and to and excludes ones 1 second outside" do
+      boundary_alerts = [from, to, from - 1.second, to + 1.second].map do |created_at|
+        travel_to(created_at) do
+          create(:billable_metric_lifetime_usage_units_alert, organization:, subscription_external_id: subscription.external_id,
+            billable_metric:, thresholds: [50], previous_value: 150, last_processed_at:)
+        end
+      end
+
+      expect(result.report.pluck(:alert_id)).to match_array([alert.id, boundary_alerts[0].id, boundary_alerts[1].id])
     end
 
     it "only considers the subscription alerts of the organization created in the window" do

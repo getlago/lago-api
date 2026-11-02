@@ -83,11 +83,13 @@ module UsageMonitoring
 
     # The regular evaluation announces again from 0 once a resetting window renews, so the lines missed in an
     # ended period are no longer due. Lifetime alerts and other current usage ones keep their baseline across
-    # renewals: only current usage alert types can reset their window.
+    # renewals: only current usage alert types can reset their window. The window is the charges period, the
+    # start the regular evaluation resets on (monthly charges of a yearly plan renew each month).
     def period_ended?(alert, subscription)
       return false unless alert.window_resets_each_period?(subscription)
 
-      period_start = Subscriptions::DatesService.new_instance(subscription, Time.current, current_usage: true).from_datetime
+      period_start = Subscriptions::DatesService.new_instance(subscription, Time.current, current_usage: true)
+        .charges_from_datetime
       period_start > alert.created_at || alert.last_processed_at < period_start
     end
 
