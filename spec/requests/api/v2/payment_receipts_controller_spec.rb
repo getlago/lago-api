@@ -20,7 +20,7 @@ RSpec.describe Api::V2::PaymentReceiptsController do
       legacy_receipt
     end
 
-    include_examples "requires API permission", "payment_receipt", "read"
+    include_examples "requires API permission", "invoice", "read"
 
     it "lists every receipt of the organization, as the v2 payments do" do
       subject
