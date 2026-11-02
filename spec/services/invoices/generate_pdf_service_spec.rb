@@ -162,15 +162,7 @@ RSpec.describe Invoices::GeneratePdfService do
     end
 
     context "when the PDF renderer returns a PDF" do
-      let(:pdf_generator) { instance_double(Utils::PdfGenerator, call_with_middlewares: pdf_response) }
-
-      let(:pdf_response) do
-        Utils::PdfGenerator::Result.new.tap { |r| r.io = StringIO.new(File.read(blank_pdf_path)) }
-      end
-
-      before do
-        allow(Utils::PdfGenerator).to receive(:new).and_return(pdf_generator)
-      end
+      before { stub_pdf_generation(pdf: File.binread(blank_pdf_path)) }
 
       it "attaches it as an application/pdf file named after the invoice number" do
         result = described_class.call(invoice:, context:)

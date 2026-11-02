@@ -47,11 +47,7 @@ RSpec.describe PaymentReceipts::GeneratePdfService do
     end
 
     context "when the PDF generator returns a PDF" do
-      let(:pdf_result) do
-        Utils::PdfGenerator::Result.new.tap { |r| r.io = StringIO.new(File.read(blank_pdf_path)) }
-      end
-
-      before { allow(Utils::PdfGenerator).to receive(:call).and_return(pdf_result) }
+      before { stub_pdf_generation(pdf: File.binread(blank_pdf_path)) }
 
       it "attaches the PDF named after the payment receipt number" do
         result = payment_receipt_generate_service.call
@@ -208,11 +204,7 @@ RSpec.describe PaymentReceipts::GeneratePdfService do
         end
 
         context "when the PDF generator returns a PDF" do
-          let(:pdf_result) do
-            Utils::PdfGenerator::Result.new.tap { |r| r.io = StringIO.new(File.read(blank_pdf_path)) }
-          end
-
-          before { allow(Utils::PdfGenerator).to receive(:call).and_return(pdf_result) }
+          before { stub_pdf_generation(pdf: File.binread(blank_pdf_path)) }
 
           it "attaches the PDF named after the payment receipt number" do
             result = described_class.call(payment_receipt:, context:)
