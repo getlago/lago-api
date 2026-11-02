@@ -43,7 +43,7 @@ RSpec.describe Api::V2::CreditNotesController do
         request
 
         expect(response).to have_http_status(:not_found)
-        expect(response).to be_not_found_error("credit_note")
+        expect(response).to be_v2_not_found_error("credit_note")
       end
     end
 
@@ -155,7 +155,7 @@ RSpec.describe Api::V2::CreditNotesController do
       it "returns not found" do
         request
 
-        expect(response).to be_not_found_error("invoice")
+        expect(response).to be_v2_not_found_error("invoice")
       end
     end
   end
@@ -194,7 +194,7 @@ RSpec.describe Api::V2::CreditNotesController do
       it "returns not found" do
         request
 
-        expect(response).to be_not_found_error("invoice")
+        expect(response).to be_v2_not_found_error("invoice")
       end
     end
   end
@@ -331,7 +331,10 @@ RSpec.describe Api::V2::CreditNotesController do
         expect { request }.not_to have_enqueued_mail(CreditNoteMailer, :created)
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details][:to]).to be_present
+        expect(json).to eq(
+          code: "validation_errors",
+          details: [{code: "invalid_email_format", field: "to", meta: {}}]
+        )
       end
     end
 
@@ -341,7 +344,7 @@ RSpec.describe Api::V2::CreditNotesController do
       it "returns not found without sending an email" do
         expect { request }.not_to have_enqueued_mail(CreditNoteMailer, :created)
 
-        expect(response).to be_not_found_error("credit_note")
+        expect(response).to be_v2_not_found_error("credit_note")
       end
     end
 
@@ -351,7 +354,7 @@ RSpec.describe Api::V2::CreditNotesController do
       it "returns not found without sending an email" do
         expect { request }.not_to have_enqueued_mail(CreditNoteMailer, :created)
 
-        expect(response).to be_not_found_error("credit_note")
+        expect(response).to be_v2_not_found_error("credit_note")
       end
     end
   end
@@ -429,8 +432,8 @@ RSpec.describe Api::V2::CreditNotesController do
           it "returns an invalid type or status error without creating a credit note" do
             expect { subject }.not_to change(CreditNote, :count)
 
-            expect(response).to have_http_status(:method_not_allowed)
-            expect(json[:code]).to eq("invalid_type_or_status")
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json).to eq(code: "invalid_type_or_status", details: [])
           end
         end
       end
@@ -498,7 +501,7 @@ RSpec.describe Api::V2::CreditNotesController do
             items: [{fee_id: product_fee.id, amount_cents: 50}]
           })
 
-          expect(response).to have_http_status(:not_found)
+          expect(response).to be_v2_not_found_error("invoice")
         end
       end
     end
@@ -538,8 +541,8 @@ RSpec.describe Api::V2::CreditNotesController do
           it "returns an invalid type or status error without creating a credit note" do
             expect { subject }.not_to change(CreditNote, :count)
 
-            expect(response).to have_http_status(:method_not_allowed)
-            expect(json[:code]).to eq("invalid_type_or_status")
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json).to eq(code: "invalid_type_or_status", details: [])
           end
         end
       end
@@ -604,7 +607,7 @@ RSpec.describe Api::V2::CreditNotesController do
             items: [{fee_id: product_fee.id, amount_cents: 50}]
           })
 
-          expect(response).to have_http_status(:not_found)
+          expect(response).to be_v2_not_found_error("invoice")
         end
       end
     end
@@ -639,7 +642,7 @@ RSpec.describe Api::V2::CreditNotesController do
 
           it "returns not found" do
             subject
-            expect(response).to have_http_status(:not_found)
+            expect(response).to be_v2_not_found_error("credit_note")
           end
         end
       end

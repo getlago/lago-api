@@ -4,6 +4,8 @@ module Api
   module V2
     module CreditNotes
       class MetadataController < Api::V2::BaseController
+        serializable_with ::V1::MetadataSerializer, root: :metadata, expand_on: []
+
         before_action :find_credit_note
 
         def create
@@ -26,7 +28,7 @@ module Api
           return not_found_error(resource: "metadata") unless credit_note.metadata
 
           result = Metadata::DeleteItemKeyService.call(item: credit_note.metadata, key: params[:key])
-          result.success? ? render_metadata : render_error_response(result)
+          result.success? ? render_resource(credit_note.reload.metadata) : render_error_response(result)
         end
 
         private
@@ -40,7 +42,7 @@ module Api
 
         def update_metadata(**attributes)
           result = ::CreditNotes::UpdateService.call(credit_note:, **attributes)
-          result.success? ? render_metadata : render_error_response(result)
+          result.success? ? render_resource(credit_note.reload.metadata) : render_error_response(result)
         end
 
         def metadata
@@ -64,10 +66,6 @@ module Api
             code: "value_is_invalid",
             error_details: {metadata: details}
           )
-        end
-
-        def render_metadata
-          render(json: {metadata: credit_note.reload.metadata&.value})
         end
 
         def resource_name
