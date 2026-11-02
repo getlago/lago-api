@@ -121,7 +121,8 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
         it "reads the same buckets from the previous subscription" do
           fetch_service.call
 
-          expect(subscription.previous_recurring_aggregation_snapshots).to have_received(:period).with(charge:, charge_filter:, all_buckets: false, grouped_by_values: nil)
+          expect(subscription.previous_recurring_aggregation_snapshots).to have_received(:period)
+            .with(charge:, charge_filter:, all_buckets: false, grouped_by_values: nil, grouped_by_keys: [])
         end
       end
 
@@ -416,6 +417,20 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
             expect(fetch_service.call.period).to be_nil
           end
         end
+      end
+    end
+
+    context "with grouped_by_values holding a blank value" do
+      let(:grouped_by_keys) { %w[region cloud] }
+      let(:grouped_by_values) { {"region" => " ", "cloud" => "aws"} }
+
+      before do
+        create_snapshot(to_datetime: previous_to_datetime, grouped_by: {"region" => "eu", "cloud" => nil}, units: 3)
+        create_snapshot(to_datetime: previous_to_datetime, grouped_by: {"region" => nil, "cloud" => "aws"}, units: 5)
+      end
+
+      it "returns the snapshot of the missing value" do
+        expect(fetch_service.call.snapshots.map { [it.grouped_by, it.units] }).to eq([[{"region" => nil, "cloud" => "aws"}, 5]])
       end
     end
 

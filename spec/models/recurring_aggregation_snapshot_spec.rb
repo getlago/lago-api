@@ -57,21 +57,43 @@ RSpec.describe RecurringAggregationSnapshot do
     end
 
     describe ".of_group" do
-      let(:snapshot) { create(:recurring_aggregation_snapshot, grouped_by: {"region" => "eu", "cloud" => "aws"}) }
-      let(:bucket_snapshots) do
-        [{"region" => "eu", "cloud" => " "}, {"region" => "us", "cloud" => nil}, {"region" => "us", "cloud" => "aws"}].map do |grouped_by|
-          create(:recurring_aggregation_snapshot, organization: snapshot.organization, subscription: snapshot.subscription,
-            charge: snapshot.charge, grouped_by:)
-        end
-      end
-      let(:first_snapshot) { ([snapshot] + bucket_snapshots).min_by(&:id) }
+      let(:marker) { create(:recurring_aggregation_snapshot, grouped_by: {"region" => nil, "cloud" => nil}) }
+      let(:charge_filter) { create(:charge_filter, charge: marker.charge) }
+      let(:grouped_by_keys) { %w[region cloud] }
+      # null sorts before any string in jsonb, so it is the first snapshot of the bucket
+      let(:eu_snapshot) { create_snapshot(grouped_by: {"region" => "eu", "cloud" => nil}) }
+      let(:eu_aws_snapshot) { create_snapshot(grouped_by: {"region" => "eu", "cloud" => "aws"}) }
+      let(:us_aws_snapshot) { create_snapshot(grouped_by: {"region" => "us", "cloud" => "aws"}) }
 
-      it "returns the snapshots of the group and the first snapshot of the bucket" do
-        expect(described_class.of_group({"region" => "us", "cloud" => "aws"})).to match_array([bucket_snapshots.last, first_snapshot].uniq)
+      def create_snapshot(**attributes)
+        create(:recurring_aggregation_snapshot, organization: marker.organization, subscription: marker.subscription,
+          charge: marker.charge, charge_filter:, **attributes)
       end
 
-      it "matches a blank value with a missing one" do
-        expect(described_class.of_group({"cloud" => ""})).to match_array([*bucket_snapshots.first(2), first_snapshot].uniq)
+      def of_group(grouped_by_values)
+        described_class.of_group(grouped_by_values, grouped_by_keys:, bucket_ids: [nil, charge_filter.id])
+      end
+
+      before do
+        eu_snapshot
+        eu_aws_snapshot
+        us_aws_snapshot
+      end
+
+      it "returns the snapshots of the group and the first snapshot of each bucket" do
+        expect(of_group({"region" => "us", "cloud" => "aws"})).to match_array([marker, eu_snapshot, us_aws_snapshot])
+      end
+
+      it "matches a missing value with the null stored for it" do
+        expect(of_group({"region" => "eu", "cloud" => nil})).to match_array([marker, eu_snapshot])
+      end
+
+      it "matches every value of a key left out" do
+        expect(of_group({"region" => "eu"})).to match_array([marker, eu_snapshot, eu_aws_snapshot])
+      end
+
+      it "returns every snapshot without grouped_by_values" do
+        expect(of_group(nil)).to match_array([marker, eu_snapshot, eu_aws_snapshot, us_aws_snapshot])
       end
     end
   end

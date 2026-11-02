@@ -18,7 +18,7 @@ module RecurringAggregationSnapshots
     # events, or nil when the aggregation must fall back to a full scan (see FetchService).
     # all_buckets: false loads only that bucket, for a caller reading one.
     # grouped_by_values: loads only the snapshots of that group, plus one per bucket (see of_group).
-    def period(charge:, charge_filter:, all_buckets: true, grouped_by_values: nil)
+    def period(charge:, charge_filter:, all_buckets: true, grouped_by_values: nil, grouped_by_keys: [])
       return unless subscription.previous_subscription_id
 
       # Two matching charges would read the same events, but a plan with both is ambiguous enough
@@ -34,7 +34,7 @@ module RecurringAggregationSnapshots
       return if charge_filter&.persisted? && previous_filter.nil?
 
       bucket_ids = all_buckets ? [nil, *previous_charge.filters.map(&:id)] : [nil, previous_filter&.id].uniq
-      marker, records = latest_period(previous_charge, bucket_ids, grouped_by_values.presence)
+      marker, records = latest_period(previous_charge, bucket_ids, grouped_by_values, grouped_by_keys)
       return if marker.nil? || filters_changed_since?(previous_charge, marker)
 
       bucket_records = records.fetch(previous_filter&.id, [])
@@ -59,16 +59,14 @@ module RecurringAggregationSnapshots
     end
 
     # Not bounded by from_datetime: an upgrade stamps the termination just after the new start.
-    def latest_period(previous_charge, bucket_ids, grouped_by_values)
-      @latest_periods[[previous_charge.id, bucket_ids, grouped_by_values]] ||= begin
+    def latest_period(previous_charge, bucket_ids, grouped_by_values, grouped_by_keys)
+      @latest_periods[[previous_charge.id, bucket_ids, grouped_by_values, grouped_by_keys]] ||= begin
         scope = RecurringAggregationSnapshot.where(
           organization_id: subscription.organization_id,
           subscription_id: subscription.previous_subscription_id,
           charge_id: previous_charge.id
         )
-        period_snapshots = scope.latest_period(bucket_ids)
-        period_snapshots = period_snapshots.of_group(grouped_by_values) if grouped_by_values
-        records = period_snapshots.group_by(&:charge_filter_id)
+        records = scope.latest_period(bucket_ids).of_group(grouped_by_values, grouped_by_keys:, bucket_ids:).group_by(&:charge_filter_id)
         marker = records[nil]&.first
 
         marker ? [marker, records] : []

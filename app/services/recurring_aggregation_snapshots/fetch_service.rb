@@ -24,9 +24,10 @@ module RecurringAggregationSnapshots
       @charge_filter = charge_filter
       @grouped_by_keys = grouped_by_keys
       @from_datetime = from_datetime
-      @grouped_by_values = grouped_by_values && normalized_group(grouped_by_values)
+      @grouped_by_values = grouped_by_values.presence && normalized_group(grouped_by_values)
       @charge_period = charge_period || ChargePeriod.new(
-        subscription:, charge:, from_datetime:, grouped_by_values:, charge_filter_ids: (all_buckets ? nil : [charge_filter&.id].compact)
+        subscription:, charge:, from_datetime:, grouped_by_values: @grouped_by_values, grouped_by_keys: Array(grouped_by_keys),
+        charge_filter_ids: (all_buckets ? nil : [charge_filter&.id].compact)
       )
 
       super
@@ -57,7 +58,7 @@ module RecurringAggregationSnapshots
     # subscription are the ones this one reads.
     def previous_subscription_period
       subscription.previous_recurring_aggregation_snapshots.period(
-        charge:, charge_filter:, all_buckets: charge_period.all_buckets?, grouped_by_values:
+        charge:, charge_filter:, all_buckets: charge_period.all_buckets?, grouped_by_values:, grouped_by_keys: Array(grouped_by_keys)
       )
     end
 
@@ -74,9 +75,9 @@ module RecurringAggregationSnapshots
     end
 
     # A group without a snapshot had neither units nor events at the period, so it starts from zero.
-    # A key left out, such as the target wallet of an event targeting none, matches every value.
+    # Same match as of_group, which also loads one snapshot of another group per bucket.
     def in_group?(record)
-      grouped_by_values.nil? || normalized_group(record.grouped_by.slice(*grouped_by_values.keys)) == grouped_by_values
+      grouped_by_values.nil? || record.grouped_by.slice(*grouped_by_values.keys) == grouped_by_values
     end
 
     # The stores group a blank value with a missing one, so a snapshot holds an event's "" as nil
