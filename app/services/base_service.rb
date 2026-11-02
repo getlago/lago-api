@@ -105,9 +105,15 @@ class BaseService
     end
 
     # The same codes and meta under the fields the block gives, on the result of the caller. A plain
-    # ValidationFailure: a subclass reads its facts from its own state.
-    def remap(result, &)
-      ValidationFailure.new(result, messages: messages.transform_keys(&), meta: meta.transform_keys(&), codes: codes.transform_keys(&))
+    # ValidationFailure: a subclass reads its facts from its own state. v2_only keeps the messages under
+    # their fields, for a service whose v1 or GraphQL clients read them there.
+    def remap(result, v2_only: false, &)
+      ValidationFailure.new(
+        result,
+        messages: v2_only ? messages : messages.transform_keys(&),
+        meta: meta.transform_keys(&),
+        codes: codes.transform_keys(&)
+      )
     end
 
     private

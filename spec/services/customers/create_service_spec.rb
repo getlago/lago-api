@@ -325,6 +325,16 @@ RSpec.describe Customers::CreateService do
       expect(result).to be_success
       expect(result.customer.metadata.count).to eq(2)
     end
+
+    context "when the model refuses an entry" do
+      let(:create_args) { super().merge(metadata: [{key: "manager", value: "John"}, {key: "manager", value: "Jane"}]) }
+
+      it "rolls the customer back and fails under the path of the entry for native v2" do
+        expect { result }.not_to change(Customer, :count)
+        expect(result.error.messages).to eq(key: ["value_already_exist"])
+        expect(result.error.codes).to eq("metadata[1].key": ["value_already_exist"])
+      end
+    end
   end
 
   context "when customer already exists" do

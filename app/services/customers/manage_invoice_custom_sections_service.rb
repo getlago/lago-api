@@ -43,11 +43,17 @@ module Customers
     attr_reader :customer, :section_ids, :skip_invoice_custom_sections, :section_codes
 
     def fail_with_double_selection
-      result.validation_failure!(errors: {invoice_custom_sections: ["section_ids_and_section_codes_sent_together"]})
+      fail_on_sections("section_ids_and_section_codes_sent_together")
     end
 
     def fail_with_invalid_params
-      result.validation_failure!(errors: {invoice_custom_sections: ["skip_sections_and_selected_ids_sent_together"]})
+      fail_on_sections("skip_sections_and_selected_ids_sent_together")
+    end
+
+    # v1 and GraphQL clients read the error under invoice_custom_sections, which no request has; native v2
+    # puts it on the sections the request selects.
+    def fail_on_sections(error_code)
+      result.single_validation_failure!(field: :invoice_custom_sections, v2_field: :invoice_custom_section_codes, error_code:)
     end
 
     def selected_sections_match?

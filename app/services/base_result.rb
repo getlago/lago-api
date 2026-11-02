@@ -52,9 +52,10 @@ class BaseResult
   end
 
   # A block renames the fields and their meta: a nested record's errors under the key of its parent.
-  def record_validation_failure!(record:, &rename)
+  # v2_only renames them for native v2 alone (see ValidationFailure#remap).
+  def record_validation_failure!(record:, v2_only: false, &rename)
     failure = BaseService::ValidationFailure.from_errors(self, record.errors)
-    fail_with_error!(rename ? failure.remap(self, &rename) : failure)
+    fail_with_error!(rename ? failure.remap(self, v2_only:, &rename) : failure)
   end
 
   # errors: {field => [code]}. meta: {field => facts}, which native v2 renders with each code of the field.
@@ -63,9 +64,13 @@ class BaseResult
     fail_with_error!(BaseService::ValidationFailure.new(self, messages: errors, meta:, codes:))
   end
 
-  def single_validation_failure!(error_code:, field: :base, meta: {})
+  # v2_field: the path native v2 renders the error under, for a service whose v1 or GraphQL clients read
+  # it under field.
+  def single_validation_failure!(error_code:, field: :base, meta: {}, v2_field: nil)
     field = field.to_sym
-    validation_failure!(errors: {field => [error_code]}, meta: {field => meta}.compact_blank)
+    v2_field = v2_field&.to_sym
+    codes = {v2_field => [error_code]} if v2_field
+    validation_failure!(errors: {field => [error_code]}, meta: {v2_field || field => meta}.compact_blank, codes:)
   end
 
   def service_failure!(code:, message:, error: nil)

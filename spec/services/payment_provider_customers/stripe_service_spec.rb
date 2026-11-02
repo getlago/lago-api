@@ -608,11 +608,12 @@ RSpec.describe PaymentProviderCustomers::StripeService do
     context "when payment methods do not require setup" do
       let(:stripe_customer) { create(:stripe_customer, customer:, provider_customer_id: nil, provider_payment_methods: %w[crypto]) }
 
-      it "returns an error result" do
+      it "returns an error result, on base for native v2" do
         result = described_class.call(:generate_checkout_url, stripe_customer)
 
         expect(result).not_to be_success
         expect(result.error.messages).to eq(provider_payment_methods: ["no_payment_methods_to_setup_available"])
+        expect(result.error.codes).to eq(base: ["no_payment_methods_to_setup_available"])
       end
     end
   end

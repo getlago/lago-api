@@ -187,14 +187,49 @@ RSpec.describe Api::V2::CustomersController do
 
     [nil, "bogus"].each do |integration_type|
       context "with #{integration_type.inspect} as integration type" do
-        let(:attributes) { super().merge(integration_customers: [{integration_type:, integration_code: "netsuite"}.compact]) }
+        let(:attributes) do
+          super().merge(integration_customers: [{integration_type: "anrok", integration_code: "anrok"}, {integration_type:, integration_code: "netsuite"}.compact])
+        end
 
-        it "rejects the request without creating a customer" do
+        it "rejects the request without creating a customer, naming the entry" do
           expect { request }.not_to change(organization.customers, :count)
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "integration_type", meta: {}}])
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "integration_customers[1].integration_type", meta: {}}])
         end
+      end
+    end
+
+    context "with an invalid shipping country" do
+      let(:attributes) { super().merge(shipping_address: {city: "Paris", country: "XX"}) }
+
+      it "returns a validation error under the path of the shipping address" do
+        expect { request }.not_to change(organization.customers, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "not_a_valid_country_code", field: "shipping_address.country", meta: {}}])
+      end
+    end
+
+    context "with metadata the model refuses" do
+      let(:attributes) { super().merge(metadata: [{key: "reference", value: "123"}, {key: "reference", value: "456"}]) }
+
+      it "returns a validation error naming the entry, without creating a customer" do
+        expect { request }.not_to change(organization.customers, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_already_exist", field: "metadata[1].key", meta: {}}])
+      end
+    end
+
+    context "with invoice custom section codes while skipping the sections" do
+      let(:attributes) { super().merge(skip_invoice_custom_sections: true, invoice_custom_section_codes: ["section"]) }
+
+      it "returns a validation error on the section codes, without creating a customer" do
+        expect { request }.not_to change(organization.customers, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "skip_sections_and_selected_ids_sent_together", field: "invoice_custom_section_codes", meta: {}}])
       end
     end
 
@@ -681,7 +716,7 @@ RSpec.describe Api::V2::CustomersController do
             expect { request }.not_to change { customer.reload.attributes }
 
             expect(response).to have_http_status(:unprocessable_content)
-            expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "integration_type", meta: {}}])
+            expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "integration_customers[0].integration_type", meta: {}}])
             expect(customer.integration_customers).to eq([integration_customer])
           end
         end
@@ -874,6 +909,28 @@ RSpec.describe Api::V2::CustomersController do
 
           expect(response).to have_http_status(:ok)
           expect(metadata.reload).to have_attributes(value: "changed", display_in_invoice: false)
+        end
+
+        context "when the model refuses an entry" do
+          let(:attributes) { {name: "Must not change", metadata: [{id: metadata.id, key: metadata.key, value: "a" * 101}]} }
+
+          it "returns a validation error naming the entry, without modifying the customer" do
+            expect { request }.not_to change { [customer.reload.attributes, metadata.reload.attributes] }
+
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json).to eq(code: "validation_errors", details: [{code: "value_is_too_long", field: "metadata[0].value", meta: {max_length: 100}}])
+          end
+        end
+      end
+
+      context "with a shipping address line longer than the model allows" do
+        let(:attributes) { {name: "Must not change", shipping_address: {address_line1: "a" * 501}} }
+
+        it "returns a validation error under the path of the shipping address" do
+          expect { request }.not_to change { customer.reload.attributes }
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_too_long", field: "shipping_address.address_line1", meta: {max_length: 500}}])
         end
       end
 

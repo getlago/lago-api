@@ -28,6 +28,16 @@ module Api
         provider_payment_methods
       ].freeze
 
+      # REST paths of the shipping columns, which v1 and GraphQL errors name.
+      SHIPPING_ADDRESS_FIELDS = {
+        shipping_address_line1: :"shipping_address.address_line1",
+        shipping_address_line2: :"shipping_address.address_line2",
+        shipping_city: :"shipping_address.city",
+        shipping_zipcode: :"shipping_address.zipcode",
+        shipping_state: :"shipping_address.state",
+        shipping_country: :"shipping_address.country"
+      }.freeze
+
       cursor_paginated_index(Customer)
       date_range_filtered_index(:created_at)
       serializable_with ::V2::CustomerSerializer, serializer_options: {include_shipping_address: true}
@@ -78,7 +88,7 @@ module Api
         if result.success?
           render_customer(result.customer)
         else
-          render_error_response(result)
+          render_write_error(result)
         end
       end
 
@@ -95,7 +105,7 @@ module Api
         if result.success?
           render_customer(result.customer)
         else
-          render_error_response(result)
+          render_write_error(result)
         end
       end
 
@@ -111,6 +121,14 @@ module Api
       end
 
       private
+
+      def render_write_error(result)
+        if result.error.is_a?(BaseService::ValidationFailure)
+          result.fail_with_error!(result.error.remap(result) { SHIPPING_ADDRESS_FIELDS.fetch(it.to_sym, it) })
+        end
+
+        render_error_response(result)
+      end
 
       def customer_payload
         payload = params.require(:customer)

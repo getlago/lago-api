@@ -118,7 +118,7 @@ module Customers
           ).raise_if_error!
         end
 
-        args[:metadata].each { |m| create_metadata(customer:, args: m) } if args[:metadata].present?
+        args[:metadata].each_with_index { |m, index| create_metadata(customer:, args: m, index:) } if args[:metadata].present?
       end
 
       # NOTE: the payment_provider_customers array (new shape) takes precedence over the singular
@@ -172,13 +172,16 @@ module Customers
       false
     end
 
-    def create_metadata(customer:, args:)
+    # GraphQL clients read the errors of an entry under its own fields.
+    def create_metadata(customer:, args:, index:)
       customer.metadata.create!(
         organization_id: organization.id,
         key: args[:key],
         value: args[:value],
         display_in_invoice: args[:display_in_invoice] || false
       )
+    rescue ActiveRecord::RecordInvalid => e
+      result.record_validation_failure!(record: e.record, v2_only: true) { BaseService::ValidationFailure.item_field(:metadata, index, it) }.raise_if_error!
     end
 
     def assign_premium_attributes(customer, args)

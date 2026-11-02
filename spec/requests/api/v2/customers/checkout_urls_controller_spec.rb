@@ -35,6 +35,17 @@ RSpec.describe Api::V2::Customers::CheckoutUrlsController do
           }
         )
       end
+
+      context "when no payment method of the customer needs a setup" do
+        before { customer.stripe_customer.update!(provider_payment_methods: %w[crypto]) }
+
+        it "returns a validation error on base, as the request names no payment methods" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "validation_errors", details: [{code: "no_payment_methods_to_setup_available", field: "base", meta: {}}])
+        end
+      end
     end
 
     context "without a payment provider" do

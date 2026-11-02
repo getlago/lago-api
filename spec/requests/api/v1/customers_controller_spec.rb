@@ -374,6 +374,18 @@ RSpec.describe Api::V1::CustomersController do
         expect(metadata.first[:value]).to eq("Hi")
         expect(metadata.first[:display_in_invoice]).to eq(true)
       end
+
+      context "when the model refuses an entry of an existing customer" do
+        let(:customer) { create(:customer, organization:) }
+        let(:create_params) { {external_id: customer.external_id, name: "Must not change", metadata: [{key: "a" * 21, value: "Hi"}]} }
+
+        it "returns the errors under the fields of the entry, without updating the customer" do
+          expect { subject }.not_to change { customer.reload.attributes }
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(status: 422, error: "Unprocessable Entity", code: "validation_errors", error_details: {key: ["value_is_too_long"]})
+        end
+      end
     end
 
     context "with invisible characters in email" do

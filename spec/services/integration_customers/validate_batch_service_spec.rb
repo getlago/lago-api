@@ -35,9 +35,10 @@ RSpec.describe IntegrationCustomers::ValidateBatchService do
         [{integration_type: "netsuite", integration_code: "netsuite"}, {integration_type:, integration_code: "code"}.compact]
       end
 
-      it "returns a validation error" do
+      it "returns a validation error, under the path of the entry for native v2" do
         expect(result).to be_failure
         expect(result.error.messages).to eq(integration_type: ["value_is_invalid"])
+        expect(result.error.codes).to eq("integration_customers[1].integration_type": ["value_is_invalid"])
       end
     end
   end

@@ -75,4 +75,24 @@ RSpec.describe BaseResult do
       it { expect(result).not_to eq(other_result) }
     end
   end
+
+  describe "#single_validation_failure!" do
+    it "fails on the field, with its meta" do
+      result.single_validation_failure!(field: "position", error_code: "value_is_out_of_range", meta: {min: 1})
+
+      expect(result.error.messages).to eq(position: ["value_is_out_of_range"])
+      expect(result.error.codes).to eq(position: ["value_is_out_of_range"])
+      expect(result.error.meta).to eq(position: {min: 1})
+    end
+
+    context "with a v2 field" do
+      it "keeps the field for v1 and GraphQL, and keys the codes and the meta by the v2 field" do
+        result.single_validation_failure!(field: :position, v2_field: "rate_phases[1].position", error_code: "value_is_out_of_range", meta: {min: 1})
+
+        expect(result.error.messages).to eq(position: ["value_is_out_of_range"])
+        expect(result.error.codes).to eq("rate_phases[1].position": ["value_is_out_of_range"])
+        expect(result.error.meta).to eq("rate_phases[1].position": {min: 1})
+      end
+    end
+  end
 end

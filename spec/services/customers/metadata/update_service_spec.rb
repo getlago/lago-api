@@ -62,5 +62,17 @@ RSpec.describe Customers::Metadata::UpdateService do
       expect(result.customer.metadata.count).to eq(2)
       expect(metadata_ids).not_to include(another_customer_metadata.id)
     end
+
+    context "when the model refuses an entry" do
+      let(:params) { [{id: customer_metadata.id, key: "new key", value: "new value"}, {key: "new key", value: "a" * 101}] }
+
+      it "raises its errors, under the path of the entry for native v2" do
+        expect { update_service.call }.to raise_error(BaseService::FailedResult) do |error|
+          expect(error.result.error.messages).to eq(key: ["value_already_exist"], value: ["value_is_too_long"])
+          expect(error.result.error.codes).to eq("metadata[1].key": ["value_already_exist"], "metadata[1].value": ["value_is_too_long"])
+          expect(error.result.error.meta).to eq("metadata[1].value": {max_length: 100})
+        end
+      end
+    end
   end
 end

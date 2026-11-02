@@ -104,5 +104,15 @@ RSpec.describe BaseService::ValidationFailure do
         expect(remapped.codes).to eq("rates.base": ["value_is_invalid"])
       end
     end
+
+    context "with v2_only" do
+      subject(:remapped) { failure.remap(other_result, v2_only: true) { :"rates.#{it}" } }
+
+      it "keeps the messages under their fields and renames the codes and the meta" do
+        expect(remapped.messages).to eq(messages)
+        expect(remapped.codes).to eq("rates.name": ["value_is_mandatory"], "rates.position": %w[value_is_out_of_range value_is_invalid])
+        expect(remapped.meta).to eq("rates.position": {min: 1, max: 3})
+      end
+    end
   end
 end

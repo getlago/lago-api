@@ -83,9 +83,12 @@ module PaymentProviderCustomers
       return result unless customer # NOTE: Customer is nil when deleted.
       return result if customer.organization.webhook_endpoints.none? && send_webhook && payment_provider(customer)
 
+      # v1 and GraphQL clients read the error under provider_payment_methods; native v2 puts it on base, as
+      # the request names no payment methods.
       unless payment_methods_require_setup?
         return result.single_validation_failure!(
           field: :provider_payment_methods,
+          v2_field: :base,
           error_code: "no_payment_methods_to_setup_available"
         )
       end

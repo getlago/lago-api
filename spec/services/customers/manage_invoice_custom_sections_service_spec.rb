@@ -33,7 +33,8 @@ RSpec.describe Customers::ManageInvoiceCustomSectionsService do
       it "returns a validation failure" do
         expect(result).to be_failure
         expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.message).to include("section_ids_and_section_codes_sent_together")
+        expect(result.error.messages).to eq(invoice_custom_sections: ["section_ids_and_section_codes_sent_together"])
+        expect(result.error.codes).to eq(invoice_custom_section_codes: ["section_ids_and_section_codes_sent_together"])
       end
     end
 
@@ -45,7 +46,8 @@ RSpec.describe Customers::ManageInvoiceCustomSectionsService do
         it "returns a validation failure" do
           expect(result).to be_failure
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.message).to include("skip_sections_and_selected_ids_sent_together")
+          expect(result.error.messages).to eq(invoice_custom_sections: ["skip_sections_and_selected_ids_sent_together"])
+          expect(result.error.codes).to eq(invoice_custom_section_codes: ["skip_sections_and_selected_ids_sent_together"])
         end
       end
 
@@ -134,7 +136,8 @@ RSpec.describe Customers::ManageInvoiceCustomSectionsService do
         it "returns a validation failure" do
           expect(result).to be_failure
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.message).to include("skip_sections_and_selected_ids_sent_together")
+          expect(result.error.messages).to eq(invoice_custom_sections: ["skip_sections_and_selected_ids_sent_together"])
+          expect(result.error.codes).to eq(invoice_custom_section_codes: ["skip_sections_and_selected_ids_sent_together"])
         end
       end
 
