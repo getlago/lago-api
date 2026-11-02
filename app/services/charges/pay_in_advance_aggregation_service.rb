@@ -47,11 +47,7 @@ module Charges
       return unless RecurringAggregationSnapshot.readable?(metered_item:, billing_context:)
 
       fetched = RecurringAggregationSnapshots::FetchService.call!(
-        subscription: billing_context.subscription,
-        charge: metered_item.charge,
-        charge_filter: metered_item.charge_filter,
-        grouped_by_keys: metered_item.pricing_group_keys,
-        from_datetime: metered_item.boundaries.charges_from_datetime,
+        **RecurringAggregationSnapshot.fetch_arguments(metered_item:, billing_context:),
         grouped_by_values: metered_item.grouped_by_values,
         all_buckets: false
       )

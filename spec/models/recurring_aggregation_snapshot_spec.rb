@@ -172,6 +172,34 @@ RSpec.describe RecurringAggregationSnapshot do
     end
   end
 
+  describe ".fetch_arguments" do
+    subject(:arguments) { described_class.fetch_arguments(metered_item:, billing_context:) }
+
+    let(:subscription) { build_stubbed(:subscription) }
+    let(:billing_context) { Billing::Context.from(subscription:) }
+    let(:charge) { build_stubbed(:standard_charge) }
+    let(:charge_filter) { build_stubbed(:charge_filter, charge:) }
+    let(:from_datetime) { Time.zone.parse("2026-10-01T00:00:00") }
+    let(:boundaries) { instance_double(BillingPeriodBoundaries, charges_from_datetime: from_datetime) }
+    let(:metered_item) do
+      instance_double(Fees::ChargeService::MeteredItem, charge:, charge_filter:, pricing_group_keys: %w[region], boundaries:)
+    end
+
+    it "returns the subscription, charge, filter, grouping keys and period start" do
+      expect(arguments).to eq(
+        subscription:, charge:, charge_filter:, grouped_by_keys: %w[region], from_datetime:
+      )
+    end
+
+    context "with grouping keys given" do
+      subject(:arguments) { described_class.fetch_arguments(metered_item:, billing_context:, grouped_by_keys: nil) }
+
+      it "uses them instead of the charge's" do
+        expect(arguments[:grouped_by_keys]).to be_nil
+      end
+    end
+  end
+
   describe ".filters_changed_since?" do
     subject(:filters_changed) { described_class.filters_changed_since?(organization_id: charge.organization_id, charge_ids: charge.id, watermark:) }
 

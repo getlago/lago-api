@@ -642,16 +642,14 @@ module Fees
       return unless RecurringAggregationSnapshot.readable?(metered_item: selected_metered_item, billing_context:)
       return if options.usage_filters.filter_by_group.present?
 
-      from_datetime = selected_metered_item.boundaries.charges_from_datetime
+      arguments = RecurringAggregationSnapshot.fetch_arguments(
+        metered_item: selected_metered_item, billing_context:, grouped_by_keys: grouped_by_keys(selected_metered_item:)
+      )
 
       lambda do
         RecurringAggregationSnapshots::FetchService.call!(
-          subscription:,
-          charge: selected_metered_item.charge,
-          charge_filter: selected_metered_item.charge_filter,
-          grouped_by_keys: grouped_by_keys(selected_metered_item:),
-          from_datetime:,
-          charge_period: recurring_charge_period(selected_metered_item.charge, from_datetime)
+          **arguments,
+          charge_period: recurring_charge_period(arguments[:charge], arguments[:from_datetime])
         )
       end
     end
