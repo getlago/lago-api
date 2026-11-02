@@ -195,7 +195,7 @@ RSpec.describe Auth::EntraId::AcceptInviteService, :premium, cache: :memory do
         create(:membership, user:, organization: user_organization)
         allow(Invite).to receive(:pending).and_return(pending_invites)
         allow(pending_invites).to receive(:find_by).with(token: invite_token).and_return(invite)
-        allow(invite).to receive(:existing_user).and_return(nil, user)
+        allow(invite).to receive(:existing_user).and_return(nil, user.reload)
       end
 
       it "refuses the invite without adding the user to the organization" do
