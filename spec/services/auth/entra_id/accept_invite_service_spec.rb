@@ -154,16 +154,35 @@ RSpec.describe Auth::EntraId::AcceptInviteService, :premium, cache: :memory do
 
     context "when the invited email belongs to a member of another organization" do
       let(:user) { create(:user, email: "foo@bar.com") }
+      let(:user_organization) { create(:organization) }
 
-      before { create(:membership, user:) }
+      before { create(:membership, user:, organization: user_organization) }
 
-      it "adds the user to the invited organization" do
-        result = service.call
+      it "refuses the invite without adding the user to the organization" do
+        result = nil
 
-        expect(result).to be_success
-        expect(result.user).to eq(user)
-        expect(invite.reload).to be_accepted
-        expect(user.memberships.active.where(organization:)).to exist
+        expect { result = service.call }.not_to change(Membership, :count)
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq({entra_id: ["login_method_not_authorized"]})
+        expect(invite.reload).to be_pending
+        expect(user.memberships.active.where(organization:)).not_to exist
+      end
+
+      context "when the user's organization trusts the same issuer" do
+        let(:user_organization) { create(:organization, authentication_methods: %w[email_password entra_id]) }
+
+        before do
+          create(:entra_id_integration, domain: "baz.com", tenant_id: entra_id_integration.tenant_id, organization: user_organization)
+        end
+
+        it "accepts the invite" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.user).to eq(user)
+          expect(invite.reload).to be_accepted
+          expect(user.memberships.active.where(organization:)).to exist
+        end
       end
     end
   end
