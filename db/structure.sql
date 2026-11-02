@@ -806,6 +806,7 @@ DROP INDEX IF EXISTS public.index_fixed_charge_events_on_subscription_id;
 DROP INDEX IF EXISTS public.index_fixed_charge_events_on_organization_id;
 DROP INDEX IF EXISTS public.index_fixed_charge_events_on_fixed_charge_id;
 DROP INDEX IF EXISTS public.index_fixed_charge_events_on_deleted_at;
+DROP INDEX IF EXISTS public.index_finalized_credit_notes_by_cursor;
 DROP INDEX IF EXISTS public.index_fees_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_fees_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_fees_taxes_on_fee_id_and_tax_id;
@@ -10028,6 +10029,13 @@ CREATE INDEX index_fees_taxes_on_tax_id ON public.fees_taxes USING btree (tax_id
 
 
 --
+-- Name: index_finalized_credit_notes_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_finalized_credit_notes_by_cursor ON public.credit_notes USING btree (organization_id, created_at DESC, id DESC) WHERE (status = 1);
+
+
+--
 -- Name: index_fixed_charge_events_on_deleted_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -15976,6 +15984,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261029111437'),
 ('20261028184732'),
 ('20261028184731'),
+('20261027135959'),
 ('20261027100000'),
 ('20261026150420'),
 ('20261026101445'),
@@ -17184,4 +17193,3 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
-

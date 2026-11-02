@@ -14,6 +14,7 @@ RSpec.describe "API v2 routing parity" do
 
   it "exposes every v1 endpoint under v2" do
     missing = api_routes("v1") - api_routes("v2")
+    missing.reject! { |_, path| path.match?(%r{\A/credit_notes/[^/]+/download\z}) }
 
     expect(missing).to be_empty
   end
@@ -28,7 +29,7 @@ RSpec.describe "API v2 routing parity" do
   it "keeps customer-nested paths on their shared controllers" do
     recognized = Rails.application.routes.recognize_path("/api/v2/customers/customer/credit_notes", method: :get)
 
-    expect(recognized[:controller]).to eq("api/v1/customers/credit_notes")
+    expect(recognized[:controller]).to eq("api/v2/customers/credit_notes")
     expect(recognized[:customer_external_id]).to eq("customer")
   end
 
@@ -101,6 +102,46 @@ RSpec.describe "API v2 routing parity" do
         expect(Rails.application.routes.recognize_path(path, method:)[:controller]).to eq("api/v2/fees")
       end
     end
+  end
+
+  it "routes credit note actions to v2 while preserving the v1 controller" do
+    id = SecureRandom.uuid
+    paths = {
+      get: ["/api/v2/credit_notes", "/api/v2/credit_notes/#{id}"],
+      post: ["/api/v2/credit_notes", "/api/v2/credit_notes/estimate", "/api/v2/credit_notes/#{id}/download_pdf", "/api/v2/credit_notes/#{id}/download_xml", "/api/v2/credit_notes/#{id}/resend_email"],
+      put: ["/api/v2/credit_notes/#{id}", "/api/v2/credit_notes/#{id}/void"],
+      patch: ["/api/v2/credit_notes/#{id}"]
+    }
+
+    paths.each do |method, urls|
+      urls.each do |url|
+        expect(Rails.application.routes.recognize_path(url, method:)[:controller]).to eq("api/v2/credit_notes")
+      end
+    end
+
+    expect(Rails.application.routes.recognize_path("/api/v1/credit_notes", method: :get)[:controller]).to eq("api/v1/credit_notes")
+  end
+
+  it "routes credit-note metadata actions to v2 and keeps unsupported actions out of v1 fallback" do
+    id = SecureRandom.uuid
+
+    [
+      [:post, "/api/v2/credit_notes/#{id}/metadata"],
+      [:patch, "/api/v2/credit_notes/#{id}/metadata"],
+      [:delete, "/api/v2/credit_notes/#{id}/metadata"],
+      [:delete, "/api/v2/credit_notes/#{id}/metadata/key"]
+    ].each do |method, path|
+      recognized = Rails.application.routes.recognize_path(path, method:)
+      expect(recognized[:controller]).to eq("api/v2/credit_notes/metadata")
+    end
+
+    unsupported = Rails.application.routes.recognize_path("/api/v2/credit_notes/#{id}/download", method: :post)
+    expect(unsupported.slice(:controller, :action)).to eq(controller: "application", action: "not_found")
+    expect(Rails.application.routes.recognize_path("/api/v1/credit_notes/#{id}/download", method: :post)[:controller])
+      .to eq("api/v1/credit_notes")
+
+    beta_fallback = Rails.application.routes.recognize_path("/api/v2/add_ons", method: :get)
+    expect(beta_fallback[:controller]).to eq("api/v1/add_ons")
   end
 
   it "routes the invoice payment URL to its v2 controller" do
