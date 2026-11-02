@@ -187,6 +187,18 @@ RSpec.describe UsageMonitoring::AnnounceMissedThresholdsService do
     end
   end
 
+  context "when a triggered row stopped exactly on a missed line" do
+    before do
+      create(:triggered_alert, alert:, organization:, subscription:, current_value: 100, previous_value: 0)
+    end
+
+    it "does not announce that line again" do
+      expect(result.report).to eq([entry(status: :skipped, reason: :already_announced)])
+      expect(alert.triggered_alerts.count).to eq(1)
+      expect(SendWebhookJob).not_to have_been_enqueued
+    end
+  end
+
   context "when the task runs a second time" do
     before { travel_to(now) { described_class.call(from:, to:, organization_id:, dry_run: false) } }
 
