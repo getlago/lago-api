@@ -88,8 +88,12 @@ module RecurringAggregationSnapshots
       end
     end
 
+    # A period persisted or invalidated during the snapshot run leaves its read unknown: the row is
+    # compared rather than a difference dropped, and a false one goes through the recheck.
     def build_row(event, metered_item, billing_context)
+      snapshot_read = snapshot_read?(metered_item, billing_context)
       snapshot = RecurringAggregationSnapshots.with_forced_read(true) { aggregate(metered_item, billing_context) }
+      snapshot_read ||= snapshot_read?(metered_item, billing_context)
       full_scan = RecurringAggregationSnapshots.with_forced_read(false) { aggregate(metered_item, billing_context) }
 
       Row.new(
@@ -99,7 +103,7 @@ module RecurringAggregationSnapshots
         billable_metric_code: metered_item.billable_metric.code,
         charge_filter_id: metered_item.charge_filter&.persisted? ? metered_item.charge_filter.id : nil,
         grouped_by: metered_item.grouped_by_values,
-        snapshot_read: snapshot_read?(metered_item, billing_context),
+        snapshot_read:,
         snapshot:,
         full_scan:
       )
@@ -125,7 +129,7 @@ module RecurringAggregationSnapshots
     end
 
     # The latest events of the period put max_timestamp late in it, where the delta is the largest.
-    # events_raw keeps every insert of a re-sent event until it merges: the latest one is replayed.
+    # events_raw keeps every insert of a re-sent event: the latest one is replayed.
     # Events without the metric's field are left out, as Events::PayInAdvanceService#can_create_fee? bills none.
     def events
       @events ||= compared_charges.map(&:billable_metric).uniq(&:code).flat_map do |billable_metric|
@@ -152,7 +156,8 @@ module RecurringAggregationSnapshots
     end
 
     # Deduplicated before the limit, so the inserts of one event cannot crowd out the others.
-    # An event is a (transaction_id, timestamp) pair, as for the event stores.
+    # An event is a (transaction_id, timestamp) pair, as for the event stores, and its field is read
+    # from the latest insert, which replaces the others in events_enriched.
     def clickhouse_events(billable_metric)
       scope = Clickhouse::EventsRaw.where(
         organization_id: subscription.organization_id,
@@ -161,8 +166,8 @@ module RecurringAggregationSnapshots
         timestamp: date_service.charges_from_datetime..timestamp
       )
       latest_inserts = scope
-        .where("trimBoth(properties[?]) != ''", billable_metric.field_name)
         .group(:transaction_id, :timestamp)
+        .having("trimBoth(argMax(properties[?], ingested_at)) != ''", billable_metric.field_name)
         .order(timestamp: :desc, transaction_id: :asc)
         .limit(EVENTS_PER_BILLABLE_METRIC)
         .select(:transaction_id, :timestamp, "max(ingested_at)")
@@ -178,6 +183,7 @@ module RecurringAggregationSnapshots
     def compared_charges
       @compared_charges ||= subscription.plan.charges.pay_in_advance.includes(:billable_metric).select do |charge|
         charge.billable_metric.recurring? &&
+          charge.billable_metric.payable_in_advance? &&
           RecurringAggregationSnapshot::AGGREGATION_TYPES.include?(charge.billable_metric.aggregation_type)
       end
     end

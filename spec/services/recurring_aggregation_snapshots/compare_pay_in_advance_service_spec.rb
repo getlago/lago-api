@@ -93,6 +93,48 @@ RSpec.describe RecurringAggregationSnapshots::ComparePayInAdvanceService do
     end
   end
 
+  context "without a snapshot period" do
+    before { RecurringAggregationSnapshot.delete_all }
+
+    it "does not count the event as read from a snapshot" do
+      expect(result.differences).to be_empty
+      expect(result.rows.sole).to have_attributes(
+        snapshot_read: false,
+        snapshot: have_attributes(aggregation: 8),
+        full_scan: have_attributes(aggregation: 8)
+      )
+    end
+  end
+
+  context "when the snapshot period is invalidated during the snapshot run" do
+    let(:snapshot_units) { 20 }
+
+    before do
+      allow(Charges::PayInAdvanceAggregationService).to receive(:call!).and_wrap_original do |original, **args|
+        original.call(**args).tap do
+          RecurringAggregationSnapshot.delete_all if RecurringAggregationSnapshots.read_enabled?(organization)
+        end
+      end
+    end
+
+    it "checks the difference of the snapshot run again" do
+      expect(result.rechecked).to be(true)
+      expect(result.differences).to be_empty
+    end
+  end
+
+  context "when the aggregation fails" do
+    before do
+      failure = BaseResult.new.tap { it.service_failure!(code: "aggregation_failed", message: "boom") }
+      allow(Charges::PayInAdvanceAggregationService).to receive(:call!).and_raise(BaseService::FailedResult.new(failure, "boom"))
+    end
+
+    it "returns the failure" do
+      expect(result).to be_failure
+      expect(result.error.code).to eq("aggregation_failed")
+    end
+  end
+
   context "when the snapshots of the period miss the event group" do
     let(:charge) do
       create(:standard_charge, :pay_in_advance, plan:, billable_metric:, properties: {amount: "1", pricing_group_keys: ["region"]})
@@ -167,6 +209,17 @@ RSpec.describe RecurringAggregationSnapshots::ComparePayInAdvanceService do
 
         it "replays the latest insert" do
           expect(result.rows.sole.full_scan).to have_attributes(pay_in_advance_aggregation: 6)
+        end
+      end
+
+      context "when the latest insert has no value for the metric field" do
+        before do
+          create(:clickhouse_events_raw, raw_event.attributes.symbolize_keys.merge(ingested_at: Time.zone.parse("2022-05-14"), properties: {}))
+        end
+
+        it "does not replay an older insert" do
+          expect(result.compared_events_count).to eq(0)
+          expect(result.rows).to be_empty
         end
       end
     end
