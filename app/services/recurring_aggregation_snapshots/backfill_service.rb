@@ -6,11 +6,14 @@ module RecurringAggregationSnapshots
   class BackfillService < BaseService
     Result = BaseResult[:invoice_subscription, :written_charges, :skipped_charges, :failed_charges]
 
-    # One charge failing on the events store leaves the others to run: a rerun only redoes the failed ones
+    # One charge failing on the events store leaves the others to run: a rerun only redoes the failed ones.
+    # The network errors are those Events::Stores::Utils::ClickhouseConnection raises again after its retries.
     CHARGE_ERRORS = [
       ActiveRecord::ActiveRecordError,
       BaseService::FailedResult,
-      Events::Stores::Clickhouse::MemoryLimitError
+      Events::Stores::Clickhouse::MemoryLimitError,
+      Errno::ECONNRESET,
+      Net::ReadTimeout
     ].freeze
 
     def initialize(subscription:)

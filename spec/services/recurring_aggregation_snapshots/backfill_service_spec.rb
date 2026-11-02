@@ -106,24 +106,31 @@ RSpec.describe RecurringAggregationSnapshots::BackfillService do
     end
   end
 
-  context "when a charge raises on the events store" do
-    let(:other_metric) { create(:sum_billable_metric, :recurring, organization:, field_name: "value") }
-    let(:other_charge) { create(:standard_charge, plan:, billable_metric: other_metric) }
+  [
+    ActiveRecord::StatementInvalid,
+    Events::Stores::Clickhouse::MemoryLimitError,
+    Errno::ECONNRESET,
+    Net::ReadTimeout
+  ].each do |error|
+    context "when a charge raises #{error} on the events store" do
+      let(:other_metric) { create(:sum_billable_metric, :recurring, organization:, field_name: "value") }
+      let(:other_charge) { create(:standard_charge, plan:, billable_metric: other_metric) }
 
-    before do
-      other_charge
-      allow(Fees::ChargeService).to receive(:call).and_wrap_original do |method, **args|
-        raise ActiveRecord::StatementInvalid, "timeout" if args[:metered_item].charge == charge
+      before do
+        other_charge
+        allow(Fees::ChargeService).to receive(:call).and_wrap_original do |method, **args|
+          raise error if args[:metered_item].charge == charge
 
-        method.call(**args)
+          method.call(**args)
+        end
       end
-    end
 
-    it "reports it as failed and backfills the other charges" do
-      expect(result).to be_success
-      expect(result.failed_charges).to eq([charge])
-      expect(result.written_charges).to eq([other_charge])
-      expect(snapshots.pluck(:charge_id)).to eq([other_charge.id])
+      it "reports it as failed and backfills the other charges" do
+        expect(result).to be_success
+        expect(result.failed_charges).to eq([charge])
+        expect(result.written_charges).to eq([other_charge])
+        expect(snapshots.pluck(:charge_id)).to eq([other_charge.id])
+      end
     end
   end
 
