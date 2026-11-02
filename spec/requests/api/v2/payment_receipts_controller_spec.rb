@@ -13,7 +13,7 @@ RSpec.describe Api::V2::PaymentReceiptsController do
 
     let(:payment_receipt_id) { payment_receipt.id }
 
-    include_examples "requires API permission", "payment_receipt", "read"
+    include_examples "requires API permission", "invoice", "read"
 
     it "returns the payment receipt" do
       subject

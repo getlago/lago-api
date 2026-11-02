@@ -18,7 +18,7 @@ module Api
       private
 
       def resource_name
-        "payment_receipt"
+        "invoice"
       end
     end
   end
