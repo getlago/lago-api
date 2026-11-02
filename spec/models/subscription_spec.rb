@@ -601,6 +601,16 @@ RSpec.describe Subscription do
     end
   end
 
+  describe "#reload" do
+    let(:subscription) { create(:subscription) }
+
+    it "drops the previous recurring aggregation snapshots lookup" do
+      lookup = subscription.previous_recurring_aggregation_snapshots
+
+      expect(subscription.reload.previous_recurring_aggregation_snapshots).not_to be(lookup)
+    end
+  end
+
   describe "#trial_end_date" do
     let(:plan) { create(:plan, trial_period: 3) }
 

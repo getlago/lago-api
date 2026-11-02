@@ -7,7 +7,7 @@ RSpec.describe RecurringAggregationSnapshots::PreviousSubscriptionSnapshots do
 
   let(:organization) { create(:organization) }
   let(:billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
-  let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
+  let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us fr]) }
   let(:charge) { create(:standard_charge, organization:, billable_metric:) }
   let(:previous_charge) { create(:standard_charge, organization:, billable_metric:) }
   let(:previous_subscription) { create(:subscription, organization:, plan: previous_charge.plan) }
@@ -120,6 +120,44 @@ RSpec.describe RecurringAggregationSnapshots::PreviousSubscriptionSnapshots do
 
           expect(lookup.period(charge:, charge_filter: us_filter).last.map(&:units)).to eq([2])
         end
+      end
+    end
+
+    it "matches the current filters again when they are loaded again after an edit" do
+      lookup.period(charge:, charge_filter: eu_filter)
+      eu_filter.values.sole.update!(values: %w[fr])
+      fresh_charge = Charge.includes(filters: {values: :billable_metric_filter}).find(charge.id)
+
+      expect(lookup.period(charge: fresh_charge, charge_filter: fresh_charge.filters.find { it.id == eu_filter.id })).to be_nil
+    end
+
+    context "with snapshots of another metric's charge" do
+      before do
+        other_charge = create(:standard_charge, organization:, plan: previous_charge.plan)
+        create(:recurring_aggregation_snapshot, organization:, subscription: previous_subscription, charge: other_charge, watermark:, to_datetime: termination_datetime)
+      end
+
+      it "loads only the charges of the metric" do
+        loaded = 0
+        counter = ->(*, payload) { loaded += payload[:record_count] if payload[:class_name] == "Charge" }
+        ActiveSupport::Notifications.subscribed(counter, "instantiation.active_record") do
+          expect(lookup.period(charge:, charge_filter: eu_filter).last.map(&:units)).to eq([3])
+        end
+
+        expect(loaded).to eq(1)
+      end
+    end
+
+    context "when the previous filters changed before a newer period" do
+      before { previous_eu_filter.values.sole.update!(updated_at: watermark + 1.day) }
+
+      it "checks the filter changes against the watermark of each period read" do
+        expect(lookup.period(charge:, charge_filter: eu_filter, all_buckets: false)).to be_nil
+
+        create_previous_snapshot(to_datetime: termination_datetime + 1.month, watermark: watermark + 1.month, units: 8)
+        create_previous_snapshot(to_datetime: termination_datetime + 1.month, watermark: watermark + 1.month, charge_filter: previous_eu_filter, units: 4)
+
+        expect(lookup.period(charge:, charge_filter: eu_filter).last.map(&:units)).to eq([4])
       end
     end
 

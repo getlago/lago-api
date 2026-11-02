@@ -171,9 +171,14 @@ class Subscription < ApplicationRecord
   end
 
   # Memoized on the instance, which every charge of one usage or invoice computation shares.
-  # A stale copy is still correct: the delta is read from the bounds of the snapshot it returns.
+  # A stale copy only misses a newer previous period: the delta is read from the bounds of the snapshot it returns.
   def previous_recurring_aggregation_snapshots
     @previous_recurring_aggregation_snapshots ||= RecurringAggregationSnapshots::PreviousSubscriptionSnapshots.new(self)
+  end
+
+  def reload(...)
+    @previous_recurring_aggregation_snapshots = nil
+    super
   end
 
   # The anchor a rate card inherits when it is created without one: the

@@ -6,10 +6,12 @@ module RecurringAggregationSnapshots
   class PreviousSubscriptionSnapshots
     def initialize(subscription)
       @subscription = subscription
+      @previous_charges = {}
       @latest_periods = {}
       @filters_changed = {}
-      @bucket_signatures = {}
-      @signatures = {}
+      # Keyed on the charge object: a charge loaded again after a filter edit gets its signatures again
+      @bucket_signatures = {}.compare_by_identity
+      @signatures = {}.compare_by_identity
     end
 
     # Marker and snapshots of the latest period of the previous charge's bucket that holds the same
@@ -20,7 +22,7 @@ module RecurringAggregationSnapshots
 
       # Two matching charges would read the same events, but a plan with both is ambiguous enough
       # to pay one full scan rather than guess
-      matching_charges = previous_charges.fetch(charge.billable_metric_id, []).select do |previous_charge|
+      matching_charges = previous_charges(charge.billable_metric_id).select do |previous_charge|
         filters_signature(previous_charge) == filters_signature(charge) &&
           previous_charge.presentation_group_keys_values.sort == charge.presentation_group_keys_values.sort
       end
@@ -44,14 +46,15 @@ module RecurringAggregationSnapshots
 
     # Weighted sum stores its breakdowns per presentation group, which only the same keys can read.
     # A discarded charge is skipped, its filters are discarded with it and would no longer tell its buckets apart.
-    def previous_charges
-      @previous_charges ||= Charge
-        .where(
-          organization_id: subscription.organization_id,
-          id: RecurringAggregationSnapshot.where(organization_id: subscription.organization_id, subscription_id: subscription.previous_subscription_id).distinct.select(:charge_id)
-        )
-        .includes(filters: {values: :billable_metric_filter})
-        .group_by(&:billable_metric_id)
+    def previous_charges(billable_metric_id)
+      @previous_charges[billable_metric_id] ||= begin
+        charge_ids = RecurringAggregationSnapshot
+          .where(organization_id: subscription.organization_id, subscription_id: subscription.previous_subscription_id, billable_metric_id:)
+          .distinct
+          .select(:charge_id)
+
+        Charge.where(organization_id: subscription.organization_id, id: charge_ids).includes(filters: {values: :billable_metric_filter}).to_a
+      end
     end
 
     # Not bounded by from_datetime: an upgrade stamps the termination just after the new start.
@@ -74,8 +77,8 @@ module RecurringAggregationSnapshots
     # The previous snapshots hold the same events only while the previous charge's filters did not
     # move them. The current filters match them by signature, whenever they were created.
     def filters_changed_since?(previous_charge, marker)
-      @filters_changed.fetch(previous_charge.id) do
-        @filters_changed[previous_charge.id] = RecurringAggregationSnapshot.filters_changed_since?(
+      @filters_changed.fetch([previous_charge.id, marker.watermark]) do
+        @filters_changed[[previous_charge.id, marker.watermark]] = RecurringAggregationSnapshot.filters_changed_since?(
           organization_id: subscription.organization_id, charge_ids: previous_charge.id, watermark: marker.watermark
         )
       end
