@@ -86,7 +86,9 @@ Rails.application.routes.draw do
         put :finalize, on: :member
       end
       resources :fees, only: %i[index show update destroy]
-      resources :payment_receipts, only: %i[index show]
+      resources :payment_receipts, only: %i[index show] do
+        post :resend_email, on: :member
+      end
       # The v2 log endpoints have their own route here and a matching v1 route
       # above, rather than a shared definition, so each version maps to its own
       # controller (v2 for the cursor pagination and v2 error body).
