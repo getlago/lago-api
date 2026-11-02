@@ -4,7 +4,7 @@ module Invites
   class AcceptService < BaseService
     Result = BaseResult[:membership, :organization, :token, :user]
 
-    def call(**args)
+    def call(**args, &user_validator)
       invite = args[:invite] || Invite.find_by(token: args[:token], status: :pending)
       return result.not_found_failure!(resource: "invite") unless invite
       unless invite.organization.accessible_by_session?(login_method: args[:login_method], **args.fetch(:token_claims, {}))
@@ -18,18 +18,19 @@ module Invites
         return join_as_existing_user(invite, existing_user, args) if existing_user
       end
 
-      register_new_user(invite, args)
+      register_new_user(invite, args, &user_validator)
     end
 
     private
 
-    def register_new_user(invite, args)
+    def register_new_user(invite, args, &user_validator)
       ActiveRecord::Base.transaction do
         registration_result = UsersService.call(
           :register_from_invite,
           invite,
           args[:password],
-          login_method: args[:login_method]
+          login_method: args[:login_method],
+          &user_validator
         )
         return result.fail_with_error!(registration_result.error) unless registration_result.success?
 

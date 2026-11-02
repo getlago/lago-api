@@ -30,7 +30,7 @@ module Auth
           password: SecureRandom.hex,
           login_method: Organizations::AuthenticationMethods::OKTA,
           token_claims: sso_token_claims
-        )
+        ) { |user| user_trusted_by_integration?(user) }
       rescue ValidationError => e
         result.single_validation_failure!(error_code: e.message)
       rescue LagoHttpClient::HttpError

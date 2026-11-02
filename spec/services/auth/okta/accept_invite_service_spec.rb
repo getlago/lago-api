@@ -193,5 +193,28 @@ RSpec.describe Auth::Okta::AcceptInviteService, :premium, cache: :memory do
         end
       end
     end
+
+    context "when an existing user appears after the preliminary trust check" do
+      let(:user) { create(:user, email: "foo@bar.com") }
+      let(:user_organization) { create(:organization) }
+      let(:pending_invites) { instance_double(ActiveRecord::Relation) }
+
+      before do
+        create(:membership, user:, organization: user_organization)
+        allow(Invite).to receive(:pending).and_return(pending_invites)
+        allow(pending_invites).to receive(:find_by).with(token: invite_token).and_return(invite)
+        allow(invite).to receive(:existing_user).and_return(nil, user)
+      end
+
+      it "refuses the invite without adding the user to the organization" do
+        result = nil
+
+        expect { result = service.call }.not_to change(Membership, :count)
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq({okta: ["login_method_not_authorized"]})
+        expect(invite.reload).to be_pending
+        expect(user.memberships.active.where(organization:)).not_to exist
+      end
+    end
   end
 end

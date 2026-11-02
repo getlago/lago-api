@@ -86,11 +86,15 @@ class UsersService < BaseService
     result
   end
 
-  def register_from_invite(invite, password, login_method:)
+  def register_from_invite(invite, password, login_method:, &user_validator)
     ActiveRecord::Base.transaction do
       # NOTE: Same case insensitive lookup as Invite#existing_user, so an invitation never creates
       #       a second user for an email that only differs by case.
       user = invite.existing_user || User.new(email: invite.email)
+
+      if user.persisted? && user_validator && !yield(user)
+        return result.single_validation_failure!(field: login_method, error_code: "login_method_not_authorized")
+      end
 
       # The caller's earlier lookup can become stale, so authenticate the account found here.
       if user.persisted? && login_method == Organizations::AuthenticationMethods::EMAIL_PASSWORD
