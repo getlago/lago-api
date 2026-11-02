@@ -86,7 +86,8 @@ module Invoices
         result.provider_session_id = res["id"]
 
         result
-      rescue ::Stripe::CardError, ::Stripe::InvalidRequestError, ::Stripe::AuthenticationError, Stripe::PermissionError => e
+      # A refusal, or a connection or rate limit error that the request cannot wait for.
+      rescue ::Stripe::StripeError => e
         result.third_party_failure!(third_party: PROVIDER_NAME, error_code: e.code, error_message: e.message)
       end
 

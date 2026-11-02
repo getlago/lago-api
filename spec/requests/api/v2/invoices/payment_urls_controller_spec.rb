@@ -35,6 +35,40 @@ RSpec.describe Api::V2::Invoices::PaymentUrlsController do
       )
     end
 
+    context "when Adyen refuses the payment link" do
+      let(:customer) { create(:customer, organization:, payment_provider: "adyen", payment_provider_code: adyen_provider.code) }
+      let(:adyen_provider) { create(:adyen_provider, organization:) }
+      let(:adyen_customer) { create(:adyen_customer, customer:, payment_provider: adyen_provider) }
+      let(:adyen_client) { instance_double(Adyen::Client) }
+      let(:checkout) { Adyen::Checkout.new(adyen_client, 70) }
+      let(:payment_links_api) { Adyen::PaymentLinksApi.new(adyen_client, 70) }
+
+      before do
+        adyen_customer
+
+        allow(Adyen::Client).to receive(:new).and_return(adyen_client)
+        allow(adyen_client).to receive(:checkout).and_return(checkout)
+        allow(checkout).to receive(:payment_links_api).and_return(payment_links_api)
+        allow(payment_links_api).to receive(:payment_links).and_return(generate(:adyen_payment_links_error_response))
+      end
+
+      it "returns a provider error naming the provider, with a single error webhook" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(
+          code: "provider_error",
+          details: [{code: "provider_error", field: "base", meta: {provider_name: "adyen", provider_error_code: "validation"}}]
+        )
+        expect(SendWebhookJob).to have_been_enqueued.once.with(
+          "invoice.payment_failure",
+          invoice,
+          provider_customer_id: adyen_customer.provider_customer_id,
+          provider_error: {message: "There are no payment methods available for the given parameters.", error_code: "validation"}
+        )
+      end
+    end
+
     context "when the invoice is a draft" do
       let(:status) { :draft }
 

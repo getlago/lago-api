@@ -151,6 +151,20 @@ RSpec.describe Invoices::Payments::StripeService do
         expect(result.error.error_message).to eq("error")
       end
     end
+
+    context "when Stripe cannot be reached" do
+      before do
+        allow(::Stripe::Checkout::Session).to receive(:create)
+          .and_raise(::Stripe::APIConnectionError.new("Connection refused"))
+      end
+
+      it "returns a third-party failure" do
+        result = described_class.call(:generate_payment_url, invoice, payment_intent)
+
+        expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+        expect(result.error).to have_attributes(third_party: "Stripe", error_code: nil, error_message: "Connection refused")
+      end
+    end
   end
 
   describe ".call(:expire_payment_url)" do

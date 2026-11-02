@@ -22,6 +22,14 @@ module Customers
 
       PaymentProviderCustomers::Factory.for(provider_customer)
         .call(:generate_checkout_url, provider_customer, send_webhook: false)
+    # The provider services raise these for the checkout URL jobs, which retry on them. A request
+    # answers them at once.
+    rescue ::Adyen::AdyenError => e
+      result.third_party_failure!(third_party: "Adyen", error_code: e.code, error_message: e.msg)
+    rescue ::GoCardlessPro::Error => e
+      result.third_party_failure!(third_party: "GoCardless", error_code: e.code, error_message: e.message)
+    rescue ::Stripe::StripeError => e
+      result.third_party_failure!(third_party: "Stripe", error_code: e.code, error_message: e.message)
     end
 
     private
