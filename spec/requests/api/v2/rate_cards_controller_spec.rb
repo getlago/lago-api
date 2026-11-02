@@ -145,6 +145,31 @@ RSpec.describe Api::V2::RateCardsController do
           expect(RateCard.count).to eq(0)
         end
       end
+
+      context "when a nested rate is under a bound of its model" do
+        let(:create_params) do
+          {
+            product_code: product.code,
+            name: "Standard",
+            code: "standard",
+            currency: "EUR",
+            rates: [
+              {code: "bad", effective_from: Time.current.to_date.iso8601, rate_model: "standard", rate_properties: {amount: "10"}, billing_interval_unit: "month", billing_interval_count: 0}
+            ]
+          }
+        end
+
+        it "returns the bound under the prefixed field" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json).to eq(
+            code: "validation_errors",
+            details: [{code: "value_is_out_of_range", field: "rates.billing_interval_count", meta: {min: 1}}]
+          )
+          expect(RateCard.count).to eq(0)
+        end
+      end
     end
 
     context "with a product_filter_code" do
