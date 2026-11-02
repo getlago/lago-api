@@ -7,6 +7,9 @@ module CursorPagination
   # planner's row estimate, flagged as estimated. The estimate alone is unreliable with
   # correlated filters and between two `ANALYZE`, hence only used where precision
   # matters least, and never reported below the cap once the cap is reached.
+  #
+  # The timeout and the estimate are PostgreSQL's: a ClickHouse list only gets the capped count,
+  # flagged as estimated beyond the cap.
   class TotalCount
     MAX_COUNTED_RECORDS = 10_000
     DEFAULT_TIMEOUT_MS = 2_000
@@ -41,8 +44,10 @@ module CursorPagination
 
       if counted <= MAX_COUNTED_RECORDS
         Result.new(value: counted, outcome: :exact)
-      else
+      elsif postgresql?
         Result.new(value: [planner_estimate, counted].max, outcome: :capped)
+      else
+        Result.new(value: counted, outcome: :capped)
       end
     rescue ActiveRecord::QueryCanceled
       Result.new(value: planner_estimate, outcome: :timed_out)
@@ -50,6 +55,8 @@ module CursorPagination
 
     # Counts one past the cap, so that a list landing exactly on it is reported exactly.
     def capped_count
+      return relation.limit(MAX_COUNTED_RECORDS + 1).count unless postgresql?
+
       relation.transaction(requires_new: true) do
         restrict_statement_timeout
         relation.limit(MAX_COUNTED_RECORDS + 1).count
@@ -76,6 +83,10 @@ module CursorPagination
       plan = relation.connection.select_value("EXPLAIN (FORMAT JSON) #{relation.to_sql}")
       plan = JSON.parse(plan) if plan.is_a?(String)
       plan.dig(0, "Plan", "Plan Rows").to_i
+    end
+
+    def postgresql?
+      relation.connection.adapter_name == "PostgreSQL"
     end
 
     def timeout_ms

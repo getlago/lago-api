@@ -29,6 +29,8 @@ class SecurityLogsQuery < BaseQuery
 
     result.security_logs = security_logs
     result
+  rescue BaseService::FailedResult
+    result
   end
 
   def self.available?

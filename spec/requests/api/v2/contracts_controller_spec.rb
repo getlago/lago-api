@@ -166,6 +166,17 @@ RSpec.describe Api::V2::ContractsController do
       let(:create_filtered_record) { ->(created_at) { create(:contract, organization:, customer:, created_at:) } }
     end
 
+    context "with a billing entity id that is not a UUID" do
+      subject { get_with_token(organization, "/api/v2/contracts", {billing_entity_ids: ["not-a-uuid"]}) }
+
+      it "returns a validation error on the filter" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "billing_entity_ids", meta: {}}])
+      end
+    end
+
     context "with a pending contract" do
       let!(:pending_contract) { create(:contract, :pending, organization:, customer:) }
 

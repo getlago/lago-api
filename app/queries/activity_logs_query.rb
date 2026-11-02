@@ -37,6 +37,8 @@ class ActivityLogsQuery < BaseQuery
     activity_logs = paginate(activity_logs)
     result.activity_logs = activity_logs
     result
+  rescue BaseService::FailedResult
+    result
   end
 
   private

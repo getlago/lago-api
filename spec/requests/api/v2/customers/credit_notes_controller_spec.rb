@@ -59,6 +59,17 @@ RSpec.describe Api::V2::Customers::CreditNotesController do
       end
     end
 
+    context "with an amount bound that is not an integer" do
+      let(:params) { {amount_from: "abc"} }
+
+      it "returns a validation error on the bound" do
+        request
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "amount_from", meta: {}}])
+      end
+    end
+
     context "when the customer does not belong to the organization" do
       let(:foreign_customer) { create(:customer, external_id: "foreign-customer") }
       let(:path) { "/api/v2/customers/#{foreign_customer.external_id}/credit_notes" }

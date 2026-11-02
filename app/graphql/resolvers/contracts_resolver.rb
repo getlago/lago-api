@@ -40,7 +40,7 @@ module Resolvers
         search_term:
       )
 
-      result.contracts
+      result.success? ? result.contracts : result_error(result)
     end
   end
 end

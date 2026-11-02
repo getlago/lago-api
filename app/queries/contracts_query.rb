@@ -14,6 +14,8 @@ class ContractsQuery < BaseQuery
   ]
 
   def call
+    return result unless validate_filters.success?
+
     contracts = base_scope
     contracts = apply_consistent_ordering(contracts)
 
@@ -32,6 +34,10 @@ class ContractsQuery < BaseQuery
   end
 
   private
+
+  def filters_contract
+    @filters_contract ||= Queries::ContractsQueryFiltersContract.new
+  end
 
   def base_scope
     scope = Contract.where(organization:)

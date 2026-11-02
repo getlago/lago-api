@@ -80,6 +80,14 @@ RSpec.describe Resolvers::ContractsResolver do
     it "returns only contracts on that billing entity" do
       expect(execution["data"]["contracts"]["collection"].map { it["id"] }).to eq([matching_contract.id])
     end
+
+    context "when the id is not a UUID" do
+      let(:variables) { {billingEntityIds: ["not-a-uuid"]} }
+
+      it "returns a validation error" do
+        expect_unprocessable_entity(execution, details: {billingEntityIds: {0 => ["is in invalid format"]}})
+      end
+    end
   end
 
   context "with a has_rate_overrides filter" do

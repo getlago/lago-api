@@ -69,6 +69,28 @@ RSpec.describe Api::V2::ActivityLogsController, clickhouse: true do
     context "with premium organization", :premium do
       include_examples "requires API permission", "activity_log", "read"
 
+      context "with a from_date that is not a datetime" do
+        let(:params) { {from_date: "yesterday"} }
+
+        it "returns an invalid_date error on the filter" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "validation_errors", details: [{code: "invalid_date", field: "from_date", meta: {}}])
+        end
+      end
+
+      context "with include_total_count" do
+        let(:params) { {include_total_count: "true"} }
+
+        it "counts the ClickHouse rows" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil, total_count: 1)
+        end
+      end
+
       context "with JSON-encoded fields" do
         let(:activity_object) { {"foo" => '{"a": 1}', "baz" => "qux"} }
         let(:activity_object_changes) { {"foo" => '{"old": "bar", "new": "baz"}'} }

@@ -16,6 +16,10 @@ class ApiLogsQuery < BaseQuery
 
   def call
     return result.forbidden_failure! unless Utils::ApiLog.available?
+    # A JSON body can send numbers or booleans in the list, which the path match below cannot read.
+    unless Array(filters.request_paths).all?(String)
+      return result.single_validation_failure!(field: :request_paths, error_code: "value_is_invalid")
+    end
 
     api_logs = Clickhouse::ApiLog.where(organization_id: organization.id)
     api_logs = api_logs.order(logged_at: :desc)

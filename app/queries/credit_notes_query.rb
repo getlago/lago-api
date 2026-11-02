@@ -26,6 +26,8 @@ class CreditNotesQuery < BaseQuery
   end
 
   def call
+    return result unless validate_filters.success?
+
     credit_notes = base_scope.result
 
     credit_notes = with_billing_entity_ids(credit_notes) if filters.billing_entity_ids.present?
@@ -52,6 +54,10 @@ class CreditNotesQuery < BaseQuery
   end
 
   private
+
+  def filters_contract
+    @filters_contract ||= Queries::CreditNotesQueryFiltersContract.new
+  end
 
   def base_scope
     scope = CreditNote

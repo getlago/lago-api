@@ -2,6 +2,10 @@
 
 module Utils
   class Datetime
+    # The years of ISO 8601's four digits. Ruby parses the others, which PostgreSQL either refuses
+    # (year 0, before 4713 BC) or cannot store (past 294276 for a timestamp).
+    YEARS = (1..9999)
+
     def self.datetime_like?(value)
       value.respond_to?(:strftime)
     end
@@ -10,7 +14,8 @@ module Utils
       return datetime if datetime_like?(datetime)
       return unless datetime.is_a?(String)
 
-      DateTime.iso8601(datetime)
+      parsed = DateTime.iso8601(datetime)
+      parsed if YEARS.cover?(parsed.year)
     # Date::Error inherits from ArgumentError so it is caught here too.
     # A bare ArgumentError is raised e.g. for strings longer than 128 chars
     # ("string length exceeds the limit 128").
@@ -22,7 +27,8 @@ module Utils
       return date.to_date if datetime_like?(date)
       return unless date.is_a?(String)
 
-      Date.iso8601(date)
+      parsed = Date.iso8601(date)
+      parsed if YEARS.cover?(parsed.year)
     # Date::Error inherits from ArgumentError so it is caught here too.
     # A bare ArgumentError is raised e.g. for strings longer than 128 chars
     # ("string length exceeds the limit 128").
@@ -34,12 +40,13 @@ module Utils
       return true if datetime_like?(datetime)
       return false unless datetime.is_a?(String)
 
-      case format
+      parsed = case format
       when :any
-        Time.zone.parse(datetime).present?
+        Time.zone.parse(datetime)
       else
-        Time.zone.iso8601(datetime).present?
+        Time.zone.iso8601(datetime)
       end
+      parsed.present? && YEARS.cover?(parsed.year)
     rescue ArgumentError
       false
     end

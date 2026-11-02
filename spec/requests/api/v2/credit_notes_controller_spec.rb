@@ -108,6 +108,46 @@ RSpec.describe Api::V2::CreditNotesController do
         expect(json[:code]).to eq("invalid_pagination_parameter")
       end
     end
+
+    context "with an amount range" do
+      let(:credit_notes) { [50, 150, 250].map { create(:credit_note, invoice:, customer:, total_amount_cents: it) } }
+      let(:params) { {amount_from: "100", amount_to: "200"} }
+
+      it "returns the credit notes whose total is within the range" do
+        request
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:credit_notes].map { it[:lago_id] }).to eq([credit_notes.second.id])
+      end
+    end
+
+    context "with amount bounds that are not integers" do
+      let(:params) { {amount_from: "abc", amount_to: "10.5"} }
+
+      it "returns a validation error on each bound" do
+        request
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(
+          code: "validation_errors",
+          details: [
+            {code: "value_is_invalid", field: "amount_from", meta: {}},
+            {code: "value_is_invalid", field: "amount_to", meta: {}}
+          ]
+        )
+      end
+    end
+
+    context "with an issuing date whose year PostgreSQL cannot store" do
+      let(:params) { {issuing_date_from: "9999999-01-01"} }
+
+      it "returns an invalid_date error on the filter" do
+        request
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "invalid_date", field: "issuing_date_from", meta: {}}])
+      end
+    end
   end
 
   describe "POST /api/v2/credit_notes/estimate", :premium do

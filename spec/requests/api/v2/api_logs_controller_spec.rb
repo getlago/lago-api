@@ -153,6 +153,34 @@ RSpec.describe Api::V2::ApiLogsController, clickhouse: true do
         end
       end
 
+      context "with include_total_count" do
+        let(:params) { {include_total_count: "true"} }
+
+        it "counts the ClickHouse rows" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil, total_count: 1)
+        end
+      end
+
+      context "with a request_paths element that is not a string" do
+        # Only a JSON body carries one: a query string sends every element as a string.
+        subject { get(path, headers:, env: {"RAW_POST_DATA" => body, "CONTENT_LENGTH" => body.bytesize.to_s}) }
+
+        let(:body) { {request_paths: [1]}.to_json }
+        let(:headers) { {} }
+
+        before { set_headers(organization, headers) }
+
+        it "returns a validation error on the filter" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "request_paths", meta: {}}])
+        end
+      end
+
       context "when filtering by from_date" do
         let(:params) { {from_date: api_log.logged_at.iso8601} }
         let(:older_api_log) { create(:clickhouse_api_log, organization:, logged_at: 2.days.ago) }

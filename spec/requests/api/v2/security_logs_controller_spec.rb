@@ -85,6 +85,17 @@ RSpec.describe Api::V2::SecurityLogsController, :premium, clickhouse: true do
       end
     end
 
+    context "when to_date is not a datetime" do
+      let(:to_date) { "2026-13-45" }
+
+      it "returns an invalid_date error on the filter" do
+        request
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "invalid_date", field: "to_date", meta: {}}])
+      end
+    end
+
     context "with stored security logs" do
       before do
         create_security_log(
@@ -111,6 +122,17 @@ RSpec.describe Api::V2::SecurityLogsController, :premium, clickhouse: true do
         request
 
         expect(json[:meta].keys).to eq(%i[next_cursor prev_cursor])
+      end
+
+      context "with include_total_count" do
+        let(:params) { {to_date:, include_total_count: "true"} }
+
+        it "counts the ClickHouse rows" do
+          request
+
+          expect(response).to have_http_status(:success)
+          expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil, total_count: 1)
+        end
       end
     end
 

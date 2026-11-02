@@ -61,6 +61,14 @@ RSpec.describe Utils::Datetime do
         expect(datetime.parse_iso8601(123)).to be_nil
       end
     end
+
+    context "when the year has more or fewer than four digits" do
+      it "returns nil" do
+        %w[300000-01-01T00:00:00Z 0000-01-01T00:00:00Z -5000-01-01T00:00:00Z].each do |value|
+          expect(datetime.parse_iso8601(value)).to be_nil
+        end
+      end
+    end
   end
 
   describe ".parse_iso8601_date" do
@@ -93,6 +101,14 @@ RSpec.describe Utils::Datetime do
 
       it "returns nil" do
         expect(datetime.parse_iso8601_date(value)).to be_nil
+      end
+    end
+
+    context "when the year has more or fewer than four digits" do
+      it "returns nil" do
+        %w[9999999-01-01 0000-01-01 -5000-01-01].each do |value|
+          expect(datetime.parse_iso8601_date(value)).to be_nil
+        end
       end
     end
   end
@@ -128,6 +144,14 @@ RSpec.describe Utils::Datetime do
           expect(datetime).not_to be_valid_format("2022-W50-2")
         end
       end
+
+      context "when the year has more or fewer than four digits" do
+        it "returns false" do
+          expect(datetime).not_to be_valid_format("300000-01-01T00:00:00Z")
+          expect(datetime).not_to be_valid_format("0000-01-01T00:00:00Z")
+          expect(datetime).to be_valid_format("9999-12-31T23:59:59Z")
+        end
+      end
     end
 
     context "when the parameter is neither a string nor a datetime object" do
@@ -155,6 +179,12 @@ RSpec.describe Utils::Datetime do
       context "when the date is invalid" do
         it "returns false" do
           expect(datetime).not_to be_valid_format("aaa", format: :any)
+        end
+      end
+
+      context "when the year has more than four digits" do
+        it "returns false" do
+          expect(datetime).not_to be_valid_format("300000-01-01 00:00:00Z", format: :any)
         end
       end
     end

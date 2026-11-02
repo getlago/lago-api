@@ -38,6 +38,13 @@ RSpec.shared_examples "a v2 list filtered on created_at" do |collection:|
     expect(json).to eq(code: "validation_errors", details: [{code: "invalid_date", field: "created_at_from", meta: {}}])
   end
 
+  it "rejects a bound whose year PostgreSQL cannot store" do
+    get_with_token(organization, filtered_path, created_at_to: "300000-01-01")
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(json).to eq(code: "validation_errors", details: [{code: "invalid_date", field: "created_at_to", meta: {}}])
+  end
+
   it "rejects a bound that is not a string, rather than ignoring it" do
     get_with_token(organization, filtered_path, created_at_to: {lte: created_at_bound.iso8601(6)})
 
