@@ -77,7 +77,8 @@ class BaseService
 
     # The length validator also counts the elements of a list, which min_length and max_length do not mean.
     def self.bound_of(error)
-      key = VALUE_BOUNDS[error.type] || (LENGTH_BOUNDS[error.type] if text?(error))
+      key = VALUE_BOUNDS[error.type]
+      key ||= LENGTH_BOUNDS[error.type] if LENGTH_BOUNDS.key?(error.type) && text?(error)
       count = error.options[:count]
 
       [key, count] if key && count.is_a?(Integer)
