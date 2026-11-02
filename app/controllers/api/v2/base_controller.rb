@@ -56,6 +56,14 @@ module Api
         date_range_columns.flat_map { |column| [:"#{column}_from", :"#{column}_to"] }.index_with { params[it] }
       end
 
+      # `require` returns a scalar or a list wrapper as is, and `permit` then raises NoMethodError,
+      # so such a wrapper is a missing parameter too.
+      def require_object(key)
+        params.require(key).tap do |value|
+          raise ActionController::ParameterMissing, key unless value.is_a?(ActionController::Parameters)
+        end
+      end
+
       # For a list returned whole: it still rejects `page` and `per_page`, which a
       # client paging until an empty page would otherwise send forever.
       def reject_offset_pagination!

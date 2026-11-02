@@ -26,6 +26,10 @@ RSpec.describe Api::V2::RateCardsController do
 
     include_examples "requires API permission", "rate_card", "write"
 
+    it_behaves_like "a v2 action requiring an object wrapper", :rate_card do
+      let(:create_params) { wrapper }
+    end
+
     it "creates the rate card and returns it flat" do
       subject
 
@@ -274,6 +278,10 @@ RSpec.describe Api::V2::RateCardsController do
     let(:update_params) { {name: "After"} }
 
     include_examples "requires API permission", "rate_card", "write"
+
+    it_behaves_like "a v2 action requiring an object wrapper", :rate_card do
+      let(:update_params) { wrapper }
+    end
 
     it "updates the rate card and returns it flat" do
       subject

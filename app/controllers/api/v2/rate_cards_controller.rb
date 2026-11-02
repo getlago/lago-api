@@ -95,7 +95,7 @@ module Api
       end
 
       def create_params
-        params.require(:rate_card).permit(
+        require_object(:rate_card).permit(
           :product_code,
           :product_filter_code,
           :name,
@@ -122,7 +122,7 @@ module Api
       end
 
       def update_params
-        params.require(:rate_card).permit(
+        require_object(:rate_card).permit(
           :name,
           :code,
           :description,

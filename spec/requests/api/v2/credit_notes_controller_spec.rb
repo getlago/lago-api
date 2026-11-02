@@ -119,6 +119,10 @@ RSpec.describe Api::V2::CreditNotesController do
 
     include_examples "requires API permission", "credit_note", "write"
 
+    it_behaves_like "a v2 action requiring an object wrapper", :credit_note do
+      subject(:request) { post_with_token(organization, "/api/v2/credit_notes/estimate", credit_note: wrapper) }
+    end
+
     it "returns selected amounts without creating a credit note" do
       expect { request }.not_to change(CreditNote, :count)
 
@@ -169,6 +173,10 @@ RSpec.describe Api::V2::CreditNotesController do
 
     include_examples "requires API permission", "credit_note", "write"
 
+    it_behaves_like "a v2 action requiring an object wrapper", :credit_note do
+      subject(:request) { post_with_token(organization, "/api/v2/credit_notes", credit_note: wrapper) }
+    end
+
     it "creates and returns a v2 credit note" do
       request
 
@@ -203,6 +211,10 @@ RSpec.describe Api::V2::CreditNotesController do
     subject(:request) { put_with_token(organization, "/api/v2/credit_notes/#{credit_note.id}", credit_note: {refund_status: "succeeded"}) }
 
     include_examples "requires API permission", "credit_note", "write"
+
+    it_behaves_like "a v2 action requiring an object wrapper", :credit_note do
+      subject(:request) { put_with_token(organization, "/api/v2/credit_notes/#{credit_note.id}", credit_note: wrapper) }
+    end
 
     it "returns the updated v2 payload" do
       request

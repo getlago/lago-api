@@ -99,18 +99,18 @@ module Api
       end
 
       def input_params
-        params.require(:credit_note).permit(
+        require_object(:credit_note).permit(
           :invoice_id, :reason, :description, :credit_amount_cents, :refund_amount_cents, :offset_amount_cents,
           metadata: {}, items: %i[fee_id amount_cents]
         )
       end
 
       def update_params
-        params.require(:credit_note).permit(:refund_status, metadata: {})
+        require_object(:credit_note).permit(:refund_status, metadata: {})
       end
 
       def estimate_params
-        params.require(:credit_note).permit(:invoice_id, items: %i[fee_id amount_cents])
+        require_object(:credit_note).permit(:invoice_id, items: %i[fee_id amount_cents])
       end
 
       def resend_email_params

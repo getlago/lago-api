@@ -12,6 +12,10 @@ RSpec.describe Api::V2::TaxesController do
 
     include_examples "requires API permission", "tax", "write"
 
+    it_behaves_like "a v2 action requiring an object wrapper", :tax do
+      let(:create_params) { wrapper }
+    end
+
     it "creates a tax" do
       expect { request }.to change(organization.taxes, :count).by(1)
 
@@ -85,6 +89,10 @@ RSpec.describe Api::V2::TaxesController do
       let(:update_params) { {code: "updated-vat", name: "Reduced VAT", description: "Reduced rate", rate: 5} }
 
       include_examples "requires API permission", "tax", "write"
+
+      it_behaves_like "a v2 action requiring an object wrapper", :tax do
+        let(:update_params) { wrapper }
+      end
 
       it "updates the tax" do
         request

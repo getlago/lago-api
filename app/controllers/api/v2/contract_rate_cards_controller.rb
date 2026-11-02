@@ -87,7 +87,7 @@ module Api
       end
 
       def create_params
-        params.require(:applied_rate_card).permit(
+        require_object(:applied_rate_card).permit(
           :rate_card_code, :units, :billing_anchor_date,
           rate_phases: [
             :code,
@@ -115,7 +115,7 @@ module Api
       end
 
       def update_params
-        params.require(:applied_rate_card).permit(:units, :billing_anchor_date)
+        require_object(:applied_rate_card).permit(:units, :billing_anchor_date)
       end
 
       def resource_name

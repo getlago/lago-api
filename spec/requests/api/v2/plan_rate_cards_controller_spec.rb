@@ -18,6 +18,10 @@ RSpec.describe Api::V2::PlanRateCardsController do
 
     include_examples "requires API permission", "plan_rate_card", "write"
 
+    it_behaves_like "a v2 action requiring an object wrapper", :applied_rate_card do
+      let(:create_params) { wrapper }
+    end
+
     it "assigns the rate card to the plan with a default rate phase" do
       subject
 
@@ -207,6 +211,10 @@ RSpec.describe Api::V2::PlanRateCardsController do
     let(:plan_rate_card) { create(:plan_rate_card, organization:, catalog_plan:, units: 5) }
 
     include_examples "requires API permission", "plan_rate_card", "write"
+
+    it_behaves_like "a v2 action requiring an object wrapper", :applied_rate_card do
+      subject { put_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/#{plan_rate_card.rate_card.code}", {applied_rate_card: wrapper}) }
+    end
 
     it "updates the entry" do
       subject

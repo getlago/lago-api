@@ -762,6 +762,10 @@ RSpec.describe Api::V2::InvoicesController do
 
     include_examples "requires API permission", "invoice", "write"
 
+    it_behaves_like "a v2 action requiring an object wrapper", :invoice do
+      subject { put_with_token(organization, "/api/v2/invoices/#{invoice_id}", {invoice: wrapper}) }
+    end
+
     it "updates the payment status and returns the invoice" do
       subject
 

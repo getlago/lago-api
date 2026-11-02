@@ -23,7 +23,7 @@ RSpec.describe Api::V2::BaseController, type: :controller do
     end
 
     def create
-      params.require(:product)
+      require_object(:product)
       head(:ok)
     end
 
@@ -176,6 +176,19 @@ RSpec.describe Api::V2::BaseController, type: :controller do
 
       expect(response).to have_http_status(:bad_request)
       expect(json).to eq(code: "missing_parameter", details: [{code: "missing", field: "product", meta: {}}])
+    end
+  end
+
+  ["x", ["x"], 1, true].each do |wrapper|
+    context "when the required parameter is #{wrapper.inspect}, not an object" do
+      subject(:create_request) { post(:create, params: {product: wrapper}, as: :json) }
+
+      it "returns the missing parameter error" do
+        create_request
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(code: "missing_parameter", details: [{code: "missing", field: "product", meta: {}}])
+      end
     end
   end
 

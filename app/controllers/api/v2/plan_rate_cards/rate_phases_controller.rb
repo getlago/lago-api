@@ -70,7 +70,7 @@ module Api
         end
 
         def create_params
-          params.require(:rate_phase).permit(
+          require_object(:rate_phase).permit(
             :code, :position, :name, :billing_interval_cycle_count,
             rate_override: [
               :rate_model,
@@ -106,7 +106,7 @@ module Api
         end
 
         def permitted_update_params
-          params.require(:rate_phase).permit(
+          require_object(:rate_phase).permit(
             :code, :position, :name, :billing_interval_cycle_count,
             rate_override: [
               :rate_model,

@@ -75,12 +75,7 @@ module Api
       end
 
       def create_params
-        input = params.require(:payment_request)
-        unless input.is_a?(ActionController::Parameters)
-          raise ActionController::ParameterMissing, :payment_request
-        end
-
-        input.permit(
+        require_object(:payment_request).permit(
           :email,
           :external_customer_id,
           lago_invoice_ids: [],

@@ -62,7 +62,7 @@ module Api
       private
 
       def input_params
-        params.require(:tax).permit(:code, :description, :name, :rate)
+        require_object(:tax).permit(:code, :description, :name, :rate)
       end
 
       def resource_name

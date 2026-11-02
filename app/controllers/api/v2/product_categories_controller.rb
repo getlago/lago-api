@@ -68,7 +68,7 @@ module Api
       private
 
       def input_params
-        params.require(:product_category).permit(
+        require_object(:product_category).permit(
           :name,
           :code,
           :description,
@@ -77,7 +77,7 @@ module Api
       end
 
       def update_params
-        params.require(:product_category).permit(
+        require_object(:product_category).permit(
           :name,
           :code,
           :description,

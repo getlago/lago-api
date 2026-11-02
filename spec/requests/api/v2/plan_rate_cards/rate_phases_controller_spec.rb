@@ -44,6 +44,10 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
 
     include_examples "requires API permission", "plan_rate_card", "write"
 
+    it_behaves_like "a v2 action requiring an object wrapper", :rate_phase do
+      let(:phase_params) { wrapper }
+    end
+
     it "inserts the phase before the indefinite tail" do
       subject
 
@@ -97,6 +101,16 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
     let!(:rate_phase) { create(:rate_phase, organization:, plan_rate_card:, position: 1, code: "launch") }
 
     include_examples "requires API permission", "plan_rate_card", "write"
+
+    it_behaves_like "a v2 action requiring an object wrapper", :rate_phase do
+      subject do
+        put_with_token(
+          organization,
+          "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/#{rate_card.code}/rate_phases/#{rate_phase.code}",
+          {rate_phase: wrapper}
+        )
+      end
+    end
 
     it "updates the phase" do
       subject

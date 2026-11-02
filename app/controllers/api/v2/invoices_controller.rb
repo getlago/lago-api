@@ -182,7 +182,7 @@ module Api
       end
 
       def update_params
-        params.require(:invoice).permit(:payment_status)
+        require_object(:invoice).permit(:payment_status)
       end
 
       def resend_email_params

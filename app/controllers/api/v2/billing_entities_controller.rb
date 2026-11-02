@@ -67,12 +67,7 @@ module Api
       private
 
       def billing_entity_payload
-        payload = params.require(:billing_entity)
-        unless payload.is_a?(ActionController::Parameters)
-          raise ActionController::ParameterMissing, :billing_entity
-        end
-
-        payload
+        require_object(:billing_entity)
       end
 
       def input_params

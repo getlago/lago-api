@@ -21,6 +21,10 @@ RSpec.describe Api::V2::Products::FiltersController do
 
     include_examples "requires API permission", "product", "write"
 
+    it_behaves_like "a v2 action requiring an object wrapper", :filter do
+      let(:create_params) { wrapper }
+    end
+
     it "creates a filter with its values" do
       subject
 
@@ -120,6 +124,10 @@ RSpec.describe Api::V2::Products::FiltersController do
     let(:update_params) { {name: "After", values: [{key: region_filter.key, value: "eu"}]} }
 
     include_examples "requires API permission", "product", "write"
+
+    it_behaves_like "a v2 action requiring an object wrapper", :filter do
+      let(:update_params) { wrapper }
+    end
 
     it "updates the filter and replaces its values" do
       subject

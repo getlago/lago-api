@@ -84,7 +84,7 @@ module Api
         end
 
         def input_params
-          params.require(:rate).permit(
+          require_object(:rate).permit(
             :code,
             :effective_from,
             :rate_model,

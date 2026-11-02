@@ -103,7 +103,7 @@ module Api
       end
 
       def create_params
-        params.require(:contract).permit(
+        require_object(:contract).permit(
           :external_customer_id,
           :external_id,
           :name,
@@ -122,7 +122,7 @@ module Api
       # contract. Contracts::UpdateService decides which of the rest may change
       # for the contract's status.
       def update_params
-        params.require(:contract).permit(
+        require_object(:contract).permit(
           :name,
           :plan_code,
           :billing_time,

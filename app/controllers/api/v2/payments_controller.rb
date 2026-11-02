@@ -54,12 +54,7 @@ module Api
       private
 
       def create_params
-        input = params.require(:payment)
-        unless input.is_a?(ActionController::Parameters)
-          raise ActionController::ParameterMissing, :payment
-        end
-
-        input.permit(:invoice_id, :amount_cents, :reference, :paid_at).to_h.deep_symbolize_keys
+        require_object(:payment).permit(:invoice_id, :amount_cents, :reference, :paid_at).to_h.deep_symbolize_keys
       end
 
       def resource_name

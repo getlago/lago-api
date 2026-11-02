@@ -29,6 +29,10 @@ RSpec.describe Api::V2::ProductsController do
 
     include_examples "requires API permission", "product", "write"
 
+    it_behaves_like "a v2 action requiring an object wrapper", :product do
+      let(:create_params) { wrapper }
+    end
+
     it "creates a product" do
       subject
 
@@ -94,6 +98,10 @@ RSpec.describe Api::V2::ProductsController do
     let(:update_params) { {name: "After"} }
 
     include_examples "requires API permission", "product", "write"
+
+    it_behaves_like "a v2 action requiring an object wrapper", :product do
+      let(:update_params) { wrapper }
+    end
 
     it "updates the product" do
       subject

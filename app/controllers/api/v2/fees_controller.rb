@@ -30,7 +30,7 @@ module Api
       def update
         return not_found_error(resource: "fee") unless fee
 
-        result = ::Fees::UpdateService.call(fee:, params: params.require(:fee).permit(:payment_status))
+        result = ::Fees::UpdateService.call(fee:, params: require_object(:fee).permit(:payment_status))
 
         if result.success?
           render_fee(result.fee)

@@ -85,7 +85,7 @@ module Api
       end
 
       def create_params
-        params.require(:applied_rate_card).permit(
+        require_object(:applied_rate_card).permit(
           :rate_card_code, :units,
           rate_phases: [
             :code,
@@ -113,7 +113,7 @@ module Api
       end
 
       def update_params
-        params.require(:applied_rate_card).permit(:units)
+        require_object(:applied_rate_card).permit(:units)
       end
 
       def resource_name

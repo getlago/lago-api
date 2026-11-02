@@ -83,7 +83,7 @@ module Api
         end
 
         def input_params
-          params.require(:filter).permit(
+          require_object(:filter).permit(
             :name,
             :code,
             :description,
@@ -93,7 +93,7 @@ module Api
         end
 
         def update_params
-          params.require(:filter).permit(
+          require_object(:filter).permit(
             :name,
             :code,
             :description,

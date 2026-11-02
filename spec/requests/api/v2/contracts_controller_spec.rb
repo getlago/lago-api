@@ -28,6 +28,10 @@ RSpec.describe Api::V2::ContractsController do
 
     include_examples "requires API permission", "contract", "write"
 
+    it_behaves_like "a v2 action requiring an object wrapper", :contract do
+      let(:create_params) { wrapper }
+    end
+
     context "with a rate card on the plan" do
       let(:rate_card) { create(:rate_card, organization:) }
 
@@ -615,6 +619,10 @@ RSpec.describe Api::V2::ContractsController do
     let(:update_params) { {name: "Renamed"} }
 
     include_examples "requires API permission", "contract", "write"
+
+    it_behaves_like "a v2 action requiring an object wrapper", :contract do
+      let(:update_params) { wrapper }
+    end
 
     it "updates the contract and returns it flat" do
       subject

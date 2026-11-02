@@ -113,10 +113,7 @@ module Api
       private
 
       def customer_payload
-        payload = params.require(:customer)
-        unless payload.is_a?(ActionController::Parameters)
-          raise ActionController::ParameterMissing, :customer
-        end
+        payload = require_object(:customer)
 
         if payload[:shipping_address].is_a?(Array)
           raise ActionController::ParameterMissing, :shipping_address

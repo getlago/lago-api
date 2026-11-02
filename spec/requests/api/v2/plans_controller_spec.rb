@@ -13,6 +13,10 @@ RSpec.describe Api::V2::PlansController do
 
     include_examples "requires API permission", "plan", "write"
 
+    it_behaves_like "a v2 action requiring an object wrapper", :plan do
+      let(:create_params) { wrapper }
+    end
+
     it "creates a catalog plan" do
       subject
 
@@ -85,6 +89,10 @@ RSpec.describe Api::V2::PlansController do
     let(:catalog_plan) { create(:catalog_plan, organization:) }
 
     include_examples "requires API permission", "plan", "write"
+
+    it_behaves_like "a v2 action requiring an object wrapper", :plan do
+      subject { put_with_token(organization, "/api/v2/plans/#{catalog_plan.code}", {plan: wrapper}) }
+    end
 
     it "updates the plan" do
       subject

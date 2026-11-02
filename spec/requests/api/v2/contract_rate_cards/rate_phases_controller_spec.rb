@@ -37,6 +37,10 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
 
     include_examples "requires API permission", "contract_rate_card", "write"
 
+    it_behaves_like "a v2 action requiring an object wrapper", :rate_phase do
+      subject { post_with_token(organization, base_path, {rate_phase: wrapper}) }
+    end
+
     it "inserts a phase" do
       subject
 
@@ -73,6 +77,10 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
     subject { put_with_token(organization, "#{base_path}/default", {rate_phase: {name: "Renamed"}}) }
 
     include_examples "requires API permission", "contract_rate_card", "write"
+
+    it_behaves_like "a v2 action requiring an object wrapper", :rate_phase do
+      subject { put_with_token(organization, "#{base_path}/default", {rate_phase: wrapper}) }
+    end
 
     it "updates the phase" do
       subject

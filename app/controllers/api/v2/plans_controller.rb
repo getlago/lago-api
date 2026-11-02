@@ -59,7 +59,7 @@ module Api
       private
 
       def input_params
-        params.require(:plan).permit(:name, :code, :description, :invoice_display_name, :currency, tax_codes: [])
+        require_object(:plan).permit(:name, :code, :description, :invoice_display_name, :currency, tax_codes: [])
       end
 
       def resource_name

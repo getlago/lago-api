@@ -22,6 +22,10 @@ RSpec.describe Api::V2::ContractRateCardsController do
 
     include_examples "requires API permission", "contract_rate_card", "write"
 
+    it_behaves_like "a v2 action requiring an object wrapper", :applied_rate_card do
+      let(:create_params) { wrapper }
+    end
+
     it "attaches the rate card to the contract with a default rate phase" do
       subject
 
@@ -179,6 +183,10 @@ RSpec.describe Api::V2::ContractRateCardsController do
     let!(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:, units: 1) }
 
     include_examples "requires API permission", "contract_rate_card", "write"
+
+    it_behaves_like "a v2 action requiring an object wrapper", :applied_rate_card do
+      subject { put_with_token(organization, "/api/v2/contracts/#{contract.external_id}/applied_rate_cards/#{rate_card.code}", {applied_rate_card: wrapper}) }
+    end
 
     it "updates the units" do
       subject

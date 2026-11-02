@@ -26,12 +26,7 @@ module Api
       private
 
       def input_params
-        input = params.require(:organization)
-        unless input.is_a?(ActionController::Parameters)
-          raise ActionController::ParameterMissing, :organization
-        end
-
-        input.permit(:email, :slug)
+        require_object(:organization).permit(:email, :slug)
       end
 
       def resource_name

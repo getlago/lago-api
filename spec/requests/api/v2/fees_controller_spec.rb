@@ -216,6 +216,10 @@ RSpec.describe Api::V2::FeesController do
 
     include_examples "requires API permission", "fee", "write"
 
+    it_behaves_like "a v2 action requiring an object wrapper", :fee do
+      subject { put_with_token(organization, "/api/v2/fees/#{fee_id}", fee: wrapper) }
+    end
+
     it "updates the payment status and returns the fee" do
       freeze_time do
         subject
