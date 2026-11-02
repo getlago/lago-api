@@ -15,8 +15,9 @@ describe "Recurring aggregation snapshots", transaction: false do
   let(:march_watermark) { march_billed_at - RecurringAggregationSnapshot::WATERMARK_LAG }
   let(:march_snapshot) { Time.utc(2026, 3, 31).end_of_day.floor(6) }
   let(:april_snapshot) { Time.utc(2026, 4, 30).end_of_day.floor(6) }
-  let(:snapshot_reads) { [march_snapshot, april_snapshot] }
-  let(:usage_snapshot_reads) { snapshot_reads }
+  # One read per bucket, nil when it falls back to the full history
+  let(:invoice_reads) { [nil, march_snapshot, april_snapshot] }
+  let(:usage_reads) { [march_snapshot, april_snapshot] }
 
   before do
     allow(RecurringAggregationSnapshots::FetchService).to receive(:call!).and_wrap_original do |method, **args|
@@ -60,7 +61,7 @@ describe "Recurring aggregation snapshots", transaction: false do
   end
 
   def last_invoice_fees
-    charge_fees(customer.invoices.order(:created_at, :sequential_id).last)
+    charge_fees(customer.invoices.where(created_at: Time.current).sole)
   end
 
   def usage_at(time)
@@ -103,7 +104,8 @@ describe "Recurring aggregation snapshots", transaction: false do
   end
 
   def expected_snapshots
-    snapshots.map { {subscription_id: subscription.id, charge_id: charge.id}.merge(it) }
+    subscription_id = subscription.id
+    snapshots.map { {subscription_id:, charge_id: charge.id}.merge(it) }
   end
 
   # The event ingested at the watermark of the March invoice is in the March snapshot, so a delta reading
@@ -163,8 +165,7 @@ describe "Recurring aggregation snapshots", transaction: false do
       it "bills what the full history bills, starting from the snapshots" do
         expect(bill).to eq(billed)
         expect(written_snapshots).to match_array(expected_snapshots)
-        expect(read_periods[:invoice].compact.uniq).to eq(snapshot_reads)
-        expect(read_periods[:usage].compact.uniq).to eq(usage_snapshot_reads)
+        expect(read_periods).to eq(invoice: invoice_reads, usage: usage_reads)
       end
     end
 
@@ -198,6 +199,25 @@ describe "Recurring aggregation snapshots", transaction: false do
     end
 
     include_examples "bills the same with every snapshot flag"
+
+    context "with a snapshot edited after it was written" do
+      let(:feature_flags) { %w[recurring_aggregation_snapshots persisted_recurring_values] }
+
+      # A read that ignores the stored values bills the full history, as every other example expects
+      def change_catalog
+        RecurringAggregationSnapshot.where(organization:).sole.update!(units: 115, events_count: 4)
+      end
+
+      it "adds the stored values to the delta" do
+        expect(bill).to eq(
+          march_invoice: [{amount_cents: 1600, units: 16, events_count: 4}],
+          april_usage: {amount_cents: 12800, units: 128, events_count: 7},
+          april_invoice: [{amount_cents: 12800, units: 128, events_count: 7}],
+          june_usage: {amount_cents: 13200, units: 132, events_count: 8},
+          may_invoice: [{amount_cents: 13200, units: 132, events_count: 8}]
+        )
+      end
+    end
   end
 
   describe "with an in-arrears recurring sum" do
@@ -327,7 +347,8 @@ describe "Recurring aggregation snapshots", transaction: false do
       ]
     end
     # Every bucket of the charge reads the full history until a snapshot is written after the change
-    let(:snapshot_reads) { [april_snapshot] }
+    let(:invoice_reads) { [nil, nil, nil, nil, nil, april_snapshot, april_snapshot, april_snapshot] }
+    let(:usage_reads) { [nil, nil, nil, april_snapshot, april_snapshot, april_snapshot] }
 
     def send_event(amount, **)
       super(amount, region: "us", **)
@@ -366,7 +387,8 @@ describe "Recurring aggregation snapshots", transaction: false do
         {to: Date.new(2026, 5, 31), filter: {"region" => [ChargeFilterValue::ALL_FILTER_VALUES]}, units: 32, events_count: 7}
       ]
     end
-    let(:snapshot_reads) { [april_snapshot] }
+    let(:invoice_reads) { [nil, nil, nil, nil, april_snapshot, april_snapshot] }
+    let(:usage_reads) { [nil, nil, april_snapshot, april_snapshot] }
 
     def send_event(amount, **)
       super(amount, region: "fr", **)
@@ -423,6 +445,8 @@ describe "Recurring aggregation snapshots", transaction: false do
         {to: Date.new(2026, 5, 31), grouped_by: {"workspace" => "b"}, units: 12, events_count: 3}
       ]
     end
+    let(:invoice_reads) { [nil, nil, march_snapshot, march_snapshot, april_snapshot, april_snapshot] }
+    let(:usage_reads) { [march_snapshot, march_snapshot, april_snapshot, april_snapshot] }
 
     def bill
       start_subscription
@@ -474,7 +498,7 @@ describe "Recurring aggregation snapshots", transaction: false do
         {to: Date.new(2026, 5, 15), units: 32, events_count: 7}
       ]
     end
-    let(:usage_snapshot_reads) { [] }
+    let(:usage_reads) { [] }
 
     def bill
       start_subscription
@@ -517,7 +541,7 @@ describe "Recurring aggregation snapshots", transaction: false do
         {charge_id: upgraded_charge.id, to: Date.new(2026, 5, 31), units: 32, events_count: 7}
       ]
     end
-    let(:usage_snapshot_reads) { [march_snapshot] }
+    let(:usage_reads) { [march_snapshot] }
 
     def bill
       start_subscription
