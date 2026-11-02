@@ -82,8 +82,9 @@ module Analytics
               0 AS total_refund_amount_cents
             FROM fees f
             LEFT JOIN subscriptions s ON f.subscription_id = s.id
-            LEFT JOIN customers c ON c.id = s.customer_id
-            WHERE c.organization_id = :organization_id
+            LEFT JOIN contracts ct ON f.contract_id = ct.id
+            LEFT JOIN customers c ON c.id = COALESCE(s.customer_id, ct.customer_id)
+            WHERE f.organization_id = :organization_id
             AND f.invoice_id IS NULL
             AND f.pay_in_advance IS TRUE
             #{and_external_customer_id_sql}
