@@ -72,7 +72,7 @@ module Contracts
     def effective_cards
       cards = contract.applied_rate_cards
         .starting_before_contract_end
-        .includes(rate_card: [:product_filter, {product: [:billable_metric, :product_category]}])
+        .includes(rate_card: [{product_filter: {values: :billable_metric_filter}}, {product: [:billable_metric, :product_category]}])
         .order(:effective_date, :created_at, :id)
         .to_a
       date = timestamp.in_time_zone(customer.applicable_timezone).to_date

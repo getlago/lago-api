@@ -27,15 +27,15 @@ module DailyUsages
       diff = daily_usage.usage.deep_dup
       previous_usage = previous_daily_usage.usage
 
-      previous_charges_index = previous_usage["charges_usage"].index_by { |cu| cu["charge"]["lago_id"] }
+      previous_charges_index = previous_usage["charges_usage"].index_by { |cu| charge_usage_key(cu) }
 
       diff["charges_usage"].each do |current_charge_usage|
-        previous_charge_usage = previous_charges_index[current_charge_usage["charge"]["lago_id"]]
+        previous_charge_usage = previous_charges_index[charge_usage_key(current_charge_usage)]
         next unless previous_charge_usage
 
-        charge_id = current_charge_usage["charge"]["lago_id"]
+        source = metric_source_of(current_charge_usage)
         apply_diff(previous_charge_usage, current_charge_usage)
-        apply_filters_diff(previous_charge_usage, current_charge_usage, charge_id)
+        apply_filters_diff(previous_charge_usage, current_charge_usage, source)
         apply_presentation_breakdowns_diff(previous_charge_usage, current_charge_usage)
 
         previous_grouped_index = previous_charge_usage["grouped_usage"].index_by { |gu| gu["grouped_by"] }
@@ -44,7 +44,7 @@ module DailyUsages
           next unless previous_grouped_usage
 
           apply_diff(previous_grouped_usage, current_grouped_usage)
-          apply_filters_diff(previous_grouped_usage, current_grouped_usage, charge_id)
+          apply_filters_diff(previous_grouped_usage, current_grouped_usage, source)
           apply_presentation_breakdowns_diff(previous_grouped_usage, current_grouped_usage)
         end
       end
@@ -61,10 +61,10 @@ module DailyUsages
 
     attr_reader :daily_usage
 
-    delegate :subscription, :usage_date, :from_datetime, :to_datetime, to: :daily_usage
+    delegate :subscription, :contract_rate_card, :usage_date, :from_datetime, :to_datetime, to: :daily_usage
 
-    # Returns the most recent daily_usage for the same subscription and billing period that is
-    # strictly older than the current usage_date.
+    # Returns the most recent daily_usage for the same subscription or contract rate card and
+    # billing period that is strictly older than the current usage_date.
     #
     # We intentionally do NOT restrict the lookup to `usage_date - 1.day`. On days without events,
     # no daily_usage row is saved (see DailyUsages::ComputeAllService `last_received_event_on`
@@ -73,7 +73,7 @@ module DailyUsages
     # in those cases would double-count the gap days in downstream analytics that sum
     # `usage_diff` (see lago-data `data_pipeline/models/usage/usage_daily_base.sql`).
     def previous_daily_usage
-      @previous_daily_usage ||= subscription.daily_usages
+      @previous_daily_usage ||= (contract_rate_card || subscription).daily_usages
         .where(from_datetime:, to_datetime:)
         .where("usage_date < ?", usage_date)
         .order(usage_date: :desc)
@@ -90,14 +90,28 @@ module DailyUsages
       return previous_usage["taxes_amount_cents"] unless previous_usage["amount_cents"].positive?
 
       previous_common_amount = diff["charges_usage"].sum do |cu|
-        previous_charges_index.dig(cu["charge"]["lago_id"], "amount_cents") || 0
+        previous_charges_index.dig(charge_usage_key(cu), "amount_cents") || 0
       end
 
       common_ratio = previous_common_amount.fdiv(previous_usage["amount_cents"])
       (previous_usage["taxes_amount_cents"] * common_ratio).round
     end
 
-    def apply_filters_diff(previous_parent, current_parent, charge_id)
+    # A subscription's entries are charges, a contract's are rate cards.
+    def charge_usage_key(charge_usage)
+      (charge_usage["charge"] || charge_usage["contract_rate_card"])["lago_id"]
+    end
+
+    # A contract's entry names its product's billable metric, a subscription's is found through its charge.
+    def metric_source_of(charge_usage)
+      if charge_usage["charge"]
+        [:charge, charge_usage["charge"]["lago_id"]]
+      else
+        [:billable_metric, charge_usage.dig("billable_metric", "lago_id")]
+      end
+    end
+
+    def apply_filters_diff(previous_parent, current_parent, metric_source)
       current_filters = current_parent["filters"]
       return if current_filters.empty?
 
@@ -106,7 +120,7 @@ module DailyUsages
 
       # A filter only shows up once it gets its first event, so new buckets alone are not an edit
       if previous_filters.empty? || previous_filters.any? { |fu| !current_keys.include?(filter_key(fu)) }
-        reroute_filters(previous_filters.presence || [unfiltered_bucket(previous_parent)], current_filters, charge_id)
+        reroute_filters(previous_filters.presence || [unfiltered_bucket(previous_parent)], current_filters, metric_source)
       else
         previous_index = previous_filters.index_by { |fu| filter_key(fu) }
         current_filters.each do |fu|
@@ -130,8 +144,8 @@ module DailyUsages
       apply_presentation_breakdowns_diff(previous_filter, current_filter)
     end
 
-    def reroute_filters(previous_filters, current_filters, charge_id)
-      single, multiple = previous_filters.zip(filter_routes(previous_filters, current_filters, charge_id))
+    def reroute_filters(previous_filters, current_filters, metric_source)
+      single, multiple = previous_filters.zip(filter_routes(previous_filters, current_filters, metric_source))
         .partition { |_filter, receivers| receivers.one? }
 
       single.each { |filter, receivers| apply_bucket_diff(filter, receivers.first) }
@@ -383,9 +397,9 @@ module DailyUsages
       plan + unit_slots.zip(unit_parts) + amount_slots.zip(amount_parts) + event_slots.zip(event_parts)
     end
 
-    def filter_routes(previous_filters, current_filters, charge_id)
-      previous_expanded = previous_filters.map { |fu| expand_all_values(fu["values"], charge_id) }
-      current_expanded = current_filters.map { |fu| expand_all_values(fu["values"], charge_id) }
+    def filter_routes(previous_filters, current_filters, metric_source)
+      previous_expanded = previous_filters.map { |fu| expand_all_values(fu["values"], metric_source) }
+      current_expanded = current_filters.map { |fu| expand_all_values(fu["values"], metric_source) }
 
       cells = value_cells(previous_expanded + current_expanded)
       return Array.new(previous_filters.size, current_filters) unless cells
@@ -410,17 +424,18 @@ module DailyUsages
     end
 
     # Billing matches an all-values filter on the values of the billable metric filter
-    def expand_all_values(values, charge_id)
+    def expand_all_values(values, metric_source)
       values&.to_h do |key, allowed|
-        all_values = metric_filter_values(charge_id)[key] if Array(allowed).include?(ChargeFilterValue::ALL_FILTER_VALUES)
+        all_values = metric_filter_values(metric_source)[key] if Array(allowed).include?(ChargeFilterValue::ALL_FILTER_VALUES)
         [key, all_values || allowed]
       end
     end
 
-    def metric_filter_values(charge_id)
+    def metric_filter_values(metric_source)
       @metric_filter_values ||= {}
-      @metric_filter_values[charge_id] ||= begin
-        billable_metric_id = Charge.with_discarded.where(id: charge_id).pick(:billable_metric_id)
+      @metric_filter_values[metric_source] ||= begin
+        kind, id = metric_source
+        billable_metric_id = (kind == :charge) ? Charge.with_discarded.where(id:).pick(:billable_metric_id) : id
         BillableMetricFilter.where(billable_metric_id:).pluck(:key, :values).to_h
       end
     end
