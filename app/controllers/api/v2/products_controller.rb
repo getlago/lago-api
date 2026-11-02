@@ -149,8 +149,7 @@ module Api
 
       def render_item_error(result)
         if result.error.is_a?(BaseService::ValidationFailure)
-          messages = result.error.messages.transform_keys { |key| ERROR_FIELDS[key.to_sym] || key }
-          return validation_errors(errors: messages)
+          result.fail_with_error!(result.error.remap(result) { ERROR_FIELDS[it.to_sym] || it })
         end
 
         render_error_response(result)

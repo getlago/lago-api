@@ -119,6 +119,7 @@ RSpec.describe Emails::ResendService do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages[:from]).to include("must have a sender email address configured")
+          expect(result.error.codes).to eq(base: ["sender_email_not_configured"])
         end
 
         context "when the organization sends from its own email address" do
@@ -143,6 +144,7 @@ RSpec.describe Emails::ResendService do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages[:invoice]).to include("must have a non-zero fees amount")
+          expect(result.error.codes).to eq(base: ["zero_amount_invoice"])
         end
       end
 
@@ -157,6 +159,7 @@ RSpec.describe Emails::ResendService do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages[:billing_entity]).to include("must have email configured")
+          expect(result.error.codes).to eq(base: ["billing_entity_email_not_configured"])
         end
       end
 
@@ -170,6 +173,40 @@ RSpec.describe Emails::ResendService do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages[:to]).to include("invalid email format: invalid-email")
+          expect(result.error.codes).to eq(to: ["invalid_email_format"])
+        end
+      end
+
+      context "when cc and bcc recipients have an invalid email format" do
+        let(:status) { :finalized }
+        let(:cc) { ["cc@example.com", "invalid-cc"] }
+        let(:bcc) { ["invalid-bcc", "other-invalid-bcc"] }
+
+        it "returns a validation failure on each field" do
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages).to eq(cc: ["invalid email format: invalid-cc"], bcc: ["invalid email format: invalid-bcc, other-invalid-bcc"])
+          expect(result.error.codes).to eq(cc: ["invalid_email_format"], bcc: ["invalid_email_format"])
+        end
+      end
+
+      context "when the billing entity has no email and the invoice has no fees" do
+        let(:status) { :finalized }
+        let(:resource) { create(:invoice, organization:, customer:, status:, fees_amount_cents: 0) }
+        let(:to) { ["invalid-email"] }
+
+        before { billing_entity.update!(email: nil) }
+
+        it "returns every refusal, on base for the fields that are not recipients" do
+          result = service.call
+
+          expect(result.error.messages).to eq(
+            billing_entity: ["must have email configured"],
+            invoice: ["must have a non-zero fees amount"],
+            to: ["invalid email format: invalid-email"]
+          )
+          expect(result.error.codes).to eq(base: %w[billing_entity_email_not_configured zero_amount_invoice], to: ["invalid_email_format"])
         end
       end
 
@@ -196,6 +233,7 @@ RSpec.describe Emails::ResendService do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages[:to]).to include("must have at least one recipient")
+          expect(result.error.codes).to eq(to: ["value_is_mandatory"])
         end
       end
     end

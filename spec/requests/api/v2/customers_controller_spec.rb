@@ -149,6 +149,17 @@ RSpec.describe Api::V2::CustomersController do
       end
     end
 
+    context "with a name longer than the model allows" do
+      let(:attributes) { super().merge(name: "a" * 256) }
+
+      it "returns a validation error with the bound of the model" do
+        expect { request }.not_to change(organization.customers, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_too_long", field: "name", meta: {max_length: 255}}])
+      end
+    end
+
     context "with a non-string enum value" do
       let(:attributes) { super().merge(finalize_zero_amount_invoice: false) }
 

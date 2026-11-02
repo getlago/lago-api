@@ -22,7 +22,7 @@ module Api
         if fees_count.to_i > MAX_EXPANDED_FEES
           return invalid_request_error(
             code: "expansion_too_large",
-            error_details: {expands: {invalid_values: ["fees"], max: MAX_EXPANDED_FEES}}
+            error_details: {expands: {invalid_values: ["fees"], max_items: MAX_EXPANDED_FEES}}
           )
         end
 

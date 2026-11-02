@@ -201,14 +201,11 @@ RSpec.describe Api::V2::Contracts::UsageController do
           .to_return(body: File.read(Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")))
       end
 
-      it "answers with the tax error" do
+      it "answers with a provider error naming the provider, without its message" do
         subject
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json).to eq(
-          code: "validation_errors",
-          details: [{code: "taxDateTooFarInFuture: Service failure", field: "tax_error", meta: {}}]
-        )
+        expect(json).to eq(code: "provider_error", details: [{code: "provider_error", field: "base", meta: {provider_name: "anrok"}}])
       end
     end
 
