@@ -76679,6 +76679,22 @@
           "description": "Units of a billable metric over the window, per period and per dimension",
           "fields": [
             {
+              "name": "aggregationType",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "AggregationTypeEnum",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "billableMetricCode",
               "description": null,
               "args": [],

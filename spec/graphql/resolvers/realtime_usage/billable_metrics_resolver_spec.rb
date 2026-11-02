@@ -9,7 +9,7 @@ RSpec.describe Resolvers::RealtimeUsage::BillableMetricsResolver, clickhouse: {c
       query($page: Int, $limit: Int, $fromDatetime: ISO8601DateTime, $toDatetime: ISO8601DateTime) {
         realtimeUsageBillableMetrics(page: $page, limit: $limit, fromDatetime: $fromDatetime, toDatetime: $toDatetime) {
           collection {
-            billableMetricCode billableMetricName units timeGranularity
+            aggregationType billableMetricCode billableMetricName units timeGranularity
             dimensions { name units other }
             points { time units breakdown { units } }
           }
@@ -47,6 +47,7 @@ RSpec.describe Resolvers::RealtimeUsage::BillableMetricsResolver, clickhouse: {c
     expect(result["data"]["realtimeUsageBillableMetrics"]).to eq(
       "collection" => [
         {
+          "aggregationType" => "count_agg",
           "billableMetricCode" => api_calls.code,
           "billableMetricName" => "API calls",
           "units" => 5.0,

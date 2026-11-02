@@ -6,6 +6,7 @@ module Types
       graphql_name "RealtimeUsageBillableMetric"
       description "Units of a billable metric over the window, per period and per dimension"
 
+      field :aggregation_type, Types::BillableMetrics::AggregationTypeEnum, null: false
       field :billable_metric_code, String, null: false
       field :billable_metric_id, ID, null: false
       field :billable_metric_name, String, null: false
@@ -16,6 +17,10 @@ module Types
       field :timezone, Types::TimezoneEnum, null: false
       field :to_datetime, GraphQL::Types::ISO8601DateTime, null: false
       field :units, GraphQL::Types::Float, null: false
+
+      def aggregation_type
+        object.billable_metric.aggregation_type
+      end
 
       def billable_metric_code
         object.billable_metric.code
