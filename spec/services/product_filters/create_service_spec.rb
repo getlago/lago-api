@@ -63,6 +63,15 @@ RSpec.describe ProductFilters::CreateService do
         expect(result.error.messages).to eq("values[1].key": ["value_is_invalid"])
       end
     end
+
+    context "with a value that names no filter" do
+      let(:params) { {name: "Broken", code: "broken", values: [{key: region_filter.key, value: "us"}, {value: "eu"}]} }
+
+      it "returns a validation failure on the key of that value" do
+        expect { result }.not_to change(ProductFilter, :count)
+        expect(result.error.messages).to eq("values[1].key": ["value_is_mandatory"])
+      end
+    end
   end
 
   context "with a key-only value selection" do
@@ -159,6 +168,14 @@ RSpec.describe ProductFilters::CreateService do
     it "returns a validation failure on the filter of that value" do
       expect(result).not_to be_success
       expect(result.error.messages).to eq("values[1].billable_metric_filter": ["value_is_invalid"])
+    end
+  end
+
+  context "when a value carries a blank filter id, as GraphQL can send" do
+    before { params[:values] = [{billable_metric_filter_id: "", value: "us"}] }
+
+    it "returns a validation failure on the filter, not on a key GraphQL has no field for" do
+      expect(result.error.messages).to eq("values[0].billable_metric_filter": ["value_is_invalid"])
     end
   end
 
@@ -283,6 +300,15 @@ RSpec.describe ProductFilters::CreateService do
       expect { result }.not_to change(ProductFilter, :count)
       expect(result).not_to be_success
       expect(result.error.messages).to eq("values[0].billable_metric_filter": ["billable_metric_deleted"])
+    end
+
+    context "when the value names its filter by key" do
+      let(:params) { {name: "US", code: "us", values: [{key: region_filter.key, value: "us"}]} }
+
+      it "fails on the key the request sent" do
+        expect { result }.not_to change(ProductFilter, :count)
+        expect(result.error.messages).to eq("values[0].key": ["billable_metric_deleted"])
+      end
     end
   end
 end

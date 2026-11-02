@@ -91,7 +91,7 @@ module ProductFilters
           value: value_params[:value]
         )
       rescue ActiveRecord::RecordInvalid => e
-        result.record_validation_failure!(record: e.record) { BaseService::ValidationFailure.item_field(:values, index, it) }.raise_if_error!
+        result.record_validation_failure!(record: e.record) { ResolveValuesService.field(value_params, index, it) }.raise_if_error!
       end
     end
   end

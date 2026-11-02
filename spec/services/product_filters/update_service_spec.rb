@@ -44,6 +44,20 @@ RSpec.describe ProductFilters::UpdateService do
     end
   end
 
+  context "when the billable metric was just deleted and a value names its filter by key" do
+    let(:params) { {values: [{key: region_filter.key, value: "eu"}]} }
+
+    before do
+      product_filter
+      billable_metric.discard!
+    end
+
+    it "fails on the key the request sent and keeps the values it had" do
+      expect(result.error.messages).to eq("values[0].key": ["billable_metric_deleted"])
+      expect(product_filter.reload.to_h).to eq("region" => %w[us])
+    end
+  end
+
   describe "code editability" do
     let(:params) { {code: "after"} }
 
