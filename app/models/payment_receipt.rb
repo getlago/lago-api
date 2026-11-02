@@ -30,6 +30,7 @@ end
 #
 # Indexes
 #
+#  index_payment_receipts_by_cursor             (organization_id,created_at DESC,id DESC)
 #  index_payment_receipts_on_billing_entity_id  (billing_entity_id)
 #  index_payment_receipts_on_organization_id    (organization_id)
 #  index_payment_receipts_on_payment_id         (payment_id) UNIQUE
