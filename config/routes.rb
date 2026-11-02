@@ -102,6 +102,7 @@ Rails.application.routes.draw do
       resources :payment_receipts, only: %i[index show] do
         post :resend_email, on: :member
       end
+      resources :webhook_endpoints, only: %i[index show create update destroy]
       # The v2 log endpoints have their own route here and a matching v1 route
       # above, rather than a shared definition, so each version maps to its own
       # controller (v2 for the cursor pagination and v2 error body).

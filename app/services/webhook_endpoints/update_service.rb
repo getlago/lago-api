@@ -28,7 +28,8 @@ module WebhookEndpoints
       result.webhook_endpoint = webhook_endpoint
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.record_validation_failure!(record: e.record)
+      failure = BaseService::ValidationFailure.from_errors(result, e.record.errors)
+      result.validation_failure!(errors: failure.messages, meta: failure.meta, codes: WebhookEndpoint.validation_codes(e.record.errors))
     end
 
     private

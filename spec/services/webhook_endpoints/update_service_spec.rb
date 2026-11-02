@@ -95,11 +95,13 @@ RSpec.describe WebhookEndpoints::UpdateService do
         }
       end
 
-      it "returns a validation failure" do
+      it "returns the sentence to v1 and GraphQL and a token to native v2" do
         result = update_service.call
 
         expect(result).not_to be_success
         expect(result.error.class).to eq(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(event_types: ["contains invalid types: [\"invalid.event\"]"])
+        expect(result.error.codes).to eq(event_types: ["value_is_invalid"])
       end
     end
 

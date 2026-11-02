@@ -2,16 +2,19 @@
 
 class WebhookEndpointsQuery < BaseQuery
   Result = BaseResult[:webhook_endpoints]
+  Filters = BaseFilters[:created_at_from, :created_at_to]
 
   def call
     webhook_endpoints = base_scope.result
-    webhook_endpoints = paginate(webhook_endpoints)
+    webhook_endpoints = with_date_range(webhook_endpoints, :created_at)
     webhook_endpoints = apply_consistent_ordering(
       webhook_endpoints,
       default_order: {webhook_url: :asc, created_at: :desc}
     )
 
-    result.webhook_endpoints = webhook_endpoints
+    result.webhook_endpoints = paginate(webhook_endpoints)
+    result
+  rescue BaseService::FailedResult
     result
   end
 

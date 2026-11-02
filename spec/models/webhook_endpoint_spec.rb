@@ -103,6 +103,22 @@ RSpec.describe WebhookEndpoint do
     end
   end
 
+  describe ".validation_codes" do
+    subject(:codes) { described_class.validation_codes(webhook_endpoint.errors) }
+
+    let(:webhook_endpoint) { build(:webhook_endpoint, webhook_url: "foobar", event_types: ["wrong.type"]) }
+
+    before { webhook_endpoint.valid? }
+
+    it "replaces the sentences with a token and keeps the codes" do
+      expect(webhook_endpoint.errors.messages).to eq(
+        webhook_url: ["url_is_invalid"],
+        event_types: ["contains invalid types: [\"wrong.type\"]"]
+      )
+      expect(codes).to eq(webhook_url: ["url_is_invalid"], event_types: ["value_is_invalid"])
+    end
+  end
+
   describe "callbacks" do
     describe "#normalize_event_types" do
       subject(:webhook_endpoint) { build(:webhook_endpoint, event_types:) }

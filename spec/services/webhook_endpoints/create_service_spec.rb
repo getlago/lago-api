@@ -86,11 +86,27 @@ RSpec.describe WebhookEndpoints::CreateService do
         }
       end
 
-      it "returns a validation failure" do
+      it "returns the sentence to v1 and GraphQL and a token to native v2" do
         result = create_service.call
 
         expect(result).not_to be_success
         expect(result.error.class).to eq(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq(event_types: ["contains invalid types: [\"invalid.event\"]"])
+        expect(result.error.codes).to eq(event_types: ["value_is_invalid"])
+      end
+    end
+
+    context "when the organization has reached the endpoint limit" do
+      before do
+        create_list(:webhook_endpoint, WebhookEndpoint::LIMIT - organization.webhook_endpoints.count, organization:)
+      end
+
+      it "returns the sentence to v1 and GraphQL and a token to native v2" do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq(base: ["Maximum number of webhook endpoints was reached"])
+        expect(result.error.codes).to eq(base: ["exceeded_limit"])
       end
     end
   end
