@@ -62,6 +62,21 @@ RSpec.describe BaseService::ValidationFailure do
     end
   end
 
+  describe "#codes" do
+    it "defaults to the messages" do
+      expect(failure.codes).to eq(messages)
+    end
+
+    context "when codes are given for v2" do
+      subject(:failure) { described_class.new(result, messages: {to: ["invalid email format: a"]}, codes: {to: ["invalid_email_format"]}) }
+
+      it "keeps them apart from the messages" do
+        expect(failure.messages).to eq(to: ["invalid email format: a"])
+        expect(failure.codes).to eq(to: ["invalid_email_format"])
+      end
+    end
+  end
+
   describe "#remap" do
     subject(:remapped) { failure.remap(other_result) { :"rates.#{it}" } }
 
@@ -71,6 +86,15 @@ RSpec.describe BaseService::ValidationFailure do
       expect(remapped.result).to eq(other_result)
       expect(remapped.messages).to eq("rates.name": ["value_is_mandatory"], "rates.position": %w[value_is_out_of_range value_is_invalid])
       expect(remapped.meta).to eq("rates.position": {min: 1, max: 3})
+    end
+
+    context "when codes are given for v2" do
+      let(:failure) { described_class.new(result, messages: {to: ["invalid email format: a"]}, codes: {base: ["value_is_invalid"]}) }
+
+      it "renames their fields too" do
+        expect(remapped.messages).to eq("rates.to": ["invalid email format: a"])
+        expect(remapped.codes).to eq("rates.base": ["value_is_invalid"])
+      end
     end
   end
 end

@@ -102,6 +102,12 @@ RSpec.describe Api::V2Errors do
         when "validation_with_string" then result.validation_failure!(errors: "is not a number")
         when "validation_with_meta"
           result.validation_failure!(errors: {position: %w[value_is_out_of_range value_is_invalid], name: ["value_is_mandatory"]}, meta: {position: {min: 1, max: 3}})
+        # Sentences that v1 and GraphQL clients read, with the codes of v2 under fields of their own.
+        when "validation_with_codes"
+          result.validation_failure!(
+            errors: {billing_entity: ["must have email configured"], to: ["invalid email format: a@"]},
+            codes: {base: ["billing_entity_email_not_configured"], to: ["invalid_email_format"]}
+          )
         when "record_validation_with_bounds"
           record = Customer.new
           record.errors.add(:name, :too_long, count: 255)
@@ -347,6 +353,23 @@ RSpec.describe Api::V2Errors do
           {code: "value_is_out_of_range", field: "position", meta: {min: 1, max: 3}},
           {code: "value_is_invalid", field: "position", meta: {min: 1, max: 3}},
           {code: "value_is_mandatory", field: "name", meta: {}}
+        ]
+      )
+    end
+  end
+
+  context "with a validation failure carrying codes for v2" do
+    let(:failure) { "validation_with_codes" }
+
+    it "returns the codes in place of the sentences" do
+      show
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(json).to eq(
+        code: "validation_errors",
+        details: [
+          {code: "billing_entity_email_not_configured", field: "base", meta: {}},
+          {code: "invalid_email_format", field: "to", meta: {}}
         ]
       )
     end
