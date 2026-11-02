@@ -390,6 +390,41 @@ RSpec.describe Contracts::CurrentUsageService do
       end
     end
 
+    context "when the provider's request limit is reached" do
+      subject(:result) { described_class.call(contract:, timestamp:, apply_taxes:, filters:) }
+
+      before do
+        stub_request(:post, endpoint).to_return(status: 429, body: {error: {code: "SSS_REQUEST_LIMIT_EXCEEDED"}}.to_json)
+      end
+
+      it "returns a too many provider requests failure instead of usage" do
+        expect(result.error).to be_a(BaseService::TooManyProviderRequestsFailure)
+        expect(result.error).to have_attributes(provider_name: "anrok", error: an_instance_of(Integrations::Aggregator::RequestLimitError))
+      end
+    end
+
+    context "when the provider fails with a transient error" do
+      subject(:result) { described_class.call(contract:, timestamp:, apply_taxes:, filters:) }
+
+      before { stub_request(:post, endpoint).to_return(status: 502, body: "") }
+
+      it "returns a failure of the provider instead of usage" do
+        expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+        expect(result.error).to have_attributes(third_party: "anrok", error_code: nil)
+      end
+    end
+
+    context "when the provider does not answer in time" do
+      subject(:result) { described_class.call(contract:, timestamp:, apply_taxes:, filters:) }
+
+      before { stub_request(:post, endpoint).to_raise(Net::ReadTimeout) }
+
+      it "returns a failure of the provider instead of usage" do
+        expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+        expect(result.error).to have_attributes(third_party: "anrok", error_code: nil, error_message: start_with("Net::ReadTimeout"))
+      end
+    end
+
     context "when taxes are skipped" do
       let(:apply_taxes) { false }
 

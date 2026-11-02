@@ -229,6 +229,43 @@ RSpec.describe Api::V2::Contracts::UsageController do
       end
     end
 
+    # As above, the error renders no entry, so the eager loading the entries need goes unused.
+    context "when the customer's tax provider fails with a transient error", bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+      let(:integration) { create(:anrok_integration, organization:) }
+
+      before do
+        create(:anrok_customer, integration:, customer:)
+        stub_request(:post, "https://api.nango.dev/v1/anrok/draft_invoices").to_return(status: 502, body: "")
+      end
+
+      it "answers with a provider error naming the provider" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "provider_error", details: [{code: "provider_error", field: "base", meta: {provider_name: "anrok"}}])
+      end
+    end
+
+    context "when the request limit of the customer's tax provider is reached", bullet: {n_plus_one_query: true, unused_eager_loading: false} do
+      let(:integration) { create(:anrok_integration, organization:) }
+
+      before do
+        create(:anrok_customer, integration:, customer:)
+        stub_request(:post, "https://api.nango.dev/v1/anrok/draft_invoices")
+          .to_return(status: 429, body: {error: {code: "SSS_REQUEST_LIMIT_EXCEEDED"}}.to_json)
+      end
+
+      it "answers with a too many provider requests error naming the provider" do
+        subject
+
+        expect(response).to have_http_status(:too_many_requests)
+        expect(json).to eq(
+          code: "too_many_provider_requests",
+          details: [{code: "too_many_provider_requests", field: "base", meta: {provider_name: "anrok"}}]
+        )
+      end
+    end
+
     context "with a pending replacement" do
       before do
         create(:contract, :pending, organization:, customer:, external_id: contract.external_id)
