@@ -121,8 +121,9 @@ module Invoices
       Utils::ActivityLog.produce_after_commit(invoice, "invoice.payment_status_updated")
     end
 
+    # A JSON body can carry any scalar here (1, true), not only a string
     def valid_payment_status?(payment_status)
-      Invoice::PAYMENT_STATUS.include?(payment_status&.to_sym)
+      Invoice::PAYMENT_STATUS.map(&:to_s).include?(payment_status.to_s)
     end
 
     def handle_prepaid_credits(payment_status)

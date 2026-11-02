@@ -5,6 +5,8 @@ module BillingEntities
     Result = BaseResult
 
     BOOLEAN_FIELDS = %i[eu_tax_management einvoicing finalize_zero_amount_invoice].freeze
+    # Upcased before they are stored, which only a string supports.
+    STRING_FIELDS = %i[country default_currency document_number_prefix].freeze
 
     # Allowed values per stored attribute, with the REST field an error is reported under.
     ENUMS = {
@@ -45,6 +47,10 @@ module BillingEntities
 
       BOOLEAN_FIELDS.each do |field|
         errors[field] = ["value_is_invalid"] if params.key?(field) && ![true, false, "true", "false"].include?(params[field])
+      end
+
+      STRING_FIELDS.each do |field|
+        errors[field] = ["value_is_invalid"] unless params[field].nil? || params[field].is_a?(String)
       end
 
       if params[:logo].present? && (!params[:logo].is_a?(String) || !params[:logo].match?(%r{\Adata:image/(png|jpe?g);base64,[A-Za-z0-9+/=\s]+\z}))

@@ -148,6 +148,19 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
       end
     end
 
+    %i[country default_currency document_number_prefix].each do |field|
+      context "with a #{field} that is not a string" do
+        let(:attributes) { super().merge(field => 33) }
+
+        it "rejects the request without creating an entity" do
+          expect { request }.not_to change(organization.all_billing_entities, :count)
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: field.to_s, meta: {}}])
+        end
+      end
+    end
+
     %i[eu_tax_management einvoicing finalize_zero_amount_invoice].each do |field|
       context "with an invalid boolean for #{field}" do
         let(:attributes) { super().merge(field => "banana") }
@@ -585,6 +598,19 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
               expect(response).to have_http_status(:unprocessable_content)
               expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: field.to_s, meta: {}}])
             end
+          end
+        end
+      end
+
+      %i[country default_currency document_number_prefix].each do |field|
+        context "with a #{field} that is not a string" do
+          let(:attributes) { {name: "Must not change"}.merge(field => false) }
+
+          it "rejects the request without updating the entity" do
+            expect { request }.not_to change { billing_entity.reload.attributes }
+
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: field.to_s, meta: {}}])
           end
         end
       end

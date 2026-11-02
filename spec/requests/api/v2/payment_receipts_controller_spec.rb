@@ -219,6 +219,17 @@ RSpec.describe Api::V2::PaymentReceiptsController do
       end
     end
 
+    context "when a recipient is not a string", :premium do
+      let(:params) { {to: [42]} }
+
+      it "returns an invalid email format code" do
+        expect { subject }.not_to have_enqueued_mail(PaymentReceiptMailer, :created)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "invalid_email_format", field: "to", meta: {}}])
+      end
+    end
+
     context "when the receipt belongs to another organization", :premium do
       let(:other_invoice) { create(:invoice) }
       let(:payment_receipt_id) do

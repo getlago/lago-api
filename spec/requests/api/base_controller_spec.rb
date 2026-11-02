@@ -39,8 +39,10 @@ RSpec.describe Api::BaseController, type: :controller do
   end
 
   describe "#authenticate" do
+    let(:authorization) { "Bearer #{api_key.value}" }
+
     before do
-      request.headers["Authorization"] = "Bearer #{api_key.value}"
+      request.headers["Authorization"] = authorization
       get :index
     end
 
@@ -54,6 +56,14 @@ RSpec.describe Api::BaseController, type: :controller do
 
     context "with invalid authentication header" do
       let(:api_key) { create(:api_key, :expired) }
+
+      it "returns an authentication error" do
+        expect(response).to have_http_status(:unauthorized)
+      end
+    end
+
+    context "with a token whose bytes are not UTF-8" do
+      let(:authorization) { "Bearer \xFF".b }
 
       it "returns an authentication error" do
         expect(response).to have_http_status(:unauthorized)

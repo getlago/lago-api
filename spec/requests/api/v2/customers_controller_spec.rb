@@ -373,6 +373,22 @@ RSpec.describe Api::V2::CustomersController do
     end
 
     {
+      country: {country: 33},
+      "shipping_address.country": {shipping_address: {country: true}}
+    }.each do |field, country_attributes|
+      context "with a #{field} that is not a string" do
+        let(:attributes) { super().merge(country_attributes) }
+
+        it "returns a validation error on the field" do
+          expect { request }.not_to change(organization.customers, :count)
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: field.to_s, meta: {}}])
+        end
+      end
+    end
+
+    {
       periodic_invoice_issuing_date_anchor: %w[current_period_end next_period_start],
       periodic_invoice_issuing_date_adjustment: %w[keep_anchor align_with_finalization_date]
     }.each do |field, allowed_values|
@@ -437,6 +453,17 @@ RSpec.describe Api::V2::CustomersController do
       include_examples "requires API permission", "customer", "write"
 
       it_behaves_like "payment provider synchronization"
+
+      context "with a country that is not a string" do
+        let(:attributes) { {country: 1} }
+
+        it "returns a validation error without updating the customer" do
+          expect { request }.not_to change { customer.reload.attributes }
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "country", meta: {}}])
+        end
+      end
 
       it "updates without requiring external_id in the body or changing omitted settings" do
         request

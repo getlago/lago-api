@@ -33,6 +33,11 @@ module Customers
         end
       end
 
+      # Upcased before they are stored, which only a string supports.
+      {country: params[:country], "shipping_address.country": params.dig(:shipping_address, :country)}.each do |field, country|
+        return result.single_validation_failure!(field:, error_code: "value_is_invalid") unless country.nil? || country.is_a?(String)
+      end
+
       integration_types = params[:integration_customers]&.map { |entry| entry[:integration_type] } || []
       if integration_types.uniq.size != integration_types.size
         return result.single_validation_failure!(field: :integration_customers, error_code: "invalid_count_per_integration_type")

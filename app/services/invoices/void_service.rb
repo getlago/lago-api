@@ -8,8 +8,8 @@ module Invoices
       @invoice = invoice
       @params = params
       @generate_credit_note = ActiveModel::Type::Boolean.new.cast(params[:generate_credit_note])
-      @refund_amount = params[:refund_amount].to_i
-      @credit_amount = params[:credit_amount].to_i
+      @refund_amount = cast_amount(params[:refund_amount])
+      @credit_amount = cast_amount(params[:credit_amount])
       super
     end
 
@@ -20,6 +20,9 @@ module Invoices
 
     def call
       return result.not_found_failure!(resource: "invoice") unless invoice
+      if (field = {credit_amount:, refund_amount:}.find { |_field, amount| !amount.is_a?(Integer) }&.first)
+        return result.single_validation_failure!(field:, error_code: "value_is_invalid")
+      end
       return result.forbidden_failure! unless generate_credit_note_allowed?
       unless valid_credit_note_amounts?
         return result.single_validation_failure!(
@@ -69,6 +72,11 @@ module Invoices
     private
 
     attr_reader :invoice, :params, :generate_credit_note, :credit_amount, :refund_amount
+
+    # A JSON body can send a boolean, which has no integer value: it is kept as sent, for `call` to refuse.
+    def cast_amount(value)
+      value.respond_to?(:to_i) ? value.to_i : value
+    end
 
     def generate_credit_note_allowed?
       return true unless generate_credit_note

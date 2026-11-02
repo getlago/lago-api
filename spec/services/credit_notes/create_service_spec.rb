@@ -1211,6 +1211,19 @@ RSpec.describe CreditNotes::CreateService do
         expect(invoice_settlement.target_invoice).to eq(invoice)
       end
 
+      context "when the amount is sent as a string" do
+        let(:args) { {offset_amount_cents: "18"} }
+
+        it "settles the amount the credit note stores" do
+          result = nil
+          expect { result = create_service.call }.to change(InvoiceSettlement, :count).by(1)
+
+          expect(result).to be_success
+          expect(result.credit_note.offset_amount_cents).to eq(18)
+          expect(InvoiceSettlement.last.amount_cents).to eq(18)
+        end
+      end
+
       it "does not create invoice settlement when offset is zero" do
         create_service_with_args = described_class.new(
           invoice:, items:, reason: "other",
@@ -1274,6 +1287,18 @@ RSpec.describe CreditNotes::CreateService do
           service = described_class.new(
             invoice:, items:, reason: "other",
             credit_amount_cents: 0, refund_amount_cents: 500
+          )
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(result.error.code).to eq("invalid_type_or_status")
+        end
+
+        it "rejects a credit_amount_cents sent as a string" do
+          service = described_class.new(
+            invoice:, items:, reason: "other",
+            credit_amount_cents: "500", refund_amount_cents: 0
           )
           result = service.call
 

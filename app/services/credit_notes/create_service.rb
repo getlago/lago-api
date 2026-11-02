@@ -81,11 +81,11 @@ module CreditNotes
 
         credit_note.save!
 
-        if offset_amount_cents.positive?
+        if credit_note.offset_amount_cents.positive?
           InvoiceSettlements::CreateService.call!(
             invoice: invoice,
             source_credit_note: credit_note,
-            amount_cents: offset_amount_cents,
+            amount_cents: credit_note.offset_amount_cents,
             amount_currency: invoice.currency
           )
         end
@@ -170,8 +170,9 @@ module CreditNotes
       invoice.version_number >= Invoice::CREDIT_NOTES_MIN_VERSION
     end
 
+    # Read as the record casts them: a JSON body can send the amounts as strings.
     def non_offset_amounts_present?
-      credit_amount_cents.positive? || refund_amount_cents.positive?
+      [credit_amount_cents, refund_amount_cents].any? { ActiveModel::Type::Integer.new.cast(it).to_i.positive? }
     end
 
     # NOTE: credit notes only support draft/finalized; voided invoices map to

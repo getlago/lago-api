@@ -37,7 +37,8 @@ module Api
     end
 
     def authenticate
-      return unauthorized_error unless auth_token
+      # API keys are ASCII, and PostgreSQL refuses a lookup on bytes that are not UTF-8.
+      return unauthorized_error unless auth_token&.ascii_only?
 
       @current_api_key, organization = ApiKeys::CacheService.call(auth_token, with_cache: cached_api_key?)
       return unauthorized_error unless current_api_key

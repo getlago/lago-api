@@ -124,7 +124,7 @@ module Emails
     end
 
     def valid_email?(email)
-      email.match?(Regex::EMAIL)
+      email.is_a?(String) && email.match?(Regex::EMAIL)
     end
 
     # Zero-amount invoices are intentionally never emailed (#1559), so InvoiceMailer
