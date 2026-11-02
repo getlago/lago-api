@@ -385,6 +385,18 @@ RSpec.describe Api::V2::InvoicesController do
       end
     end
 
+    context "when the requested credit amount exceeds what the invoice allows", :premium do
+      let(:params) { {generate_credit_note: true, credit_amount: 999_999_999} }
+
+      it "returns a validation error on the credit amount and keeps the invoice finalized" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "total_amount_exceeds_invoice_amount", field: "credit_amount", meta: {}}])
+        expect(invoice.reload).to be_finalized
+      end
+    end
+
     context "when the credit note void fails", :premium do
       let(:params) { {generate_credit_note: true} }
       let(:invoice) do

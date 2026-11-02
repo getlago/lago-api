@@ -31,6 +31,18 @@ RSpec.describe Api::V2::CreditNotes::MetadataController do
       end
     end
 
+    context "when the model refuses a value" do
+      let(:request_params) { {metadata: {foo: "bar", nested: {key: "value"}}} }
+
+      it "returns a validation error under the path of the value" do
+        request
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "nested_structure_not_allowed", field: "metadata.nested", meta: {}}])
+        expect(credit_note.reload.metadata).to be_nil
+      end
+    end
+
     context "when metadata is omitted" do
       let(:request_params) { {} }
 

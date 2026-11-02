@@ -112,7 +112,11 @@ module CreditNotes
 
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.record_validation_failure!(record: e.record)
+      if e.record.is_a?(Metadata::ItemMetadata)
+        result.fail_with_error!(Metadata::UpdateItemService.validation_failure(result, e.record))
+      else
+        result.record_validation_failure!(record: e.record)
+      end
     rescue BaseService::FailedResult => e
       e.result
     end
@@ -191,9 +195,13 @@ module CreditNotes
     def create_items
       return result.validation_failure!(errors: {items: ["must_be_an_array"]}) unless items_attr.is_a?(Array)
 
-      items_attr.each do |item_attr|
+      items_attr.each_with_index do |item_attr, index|
         amount_cents = parse_item_amount_cents(item_attr[:amount_cents])
-        return result.single_validation_failure!(field: :amount_cents, error_code: "invalid_value") unless amount_cents
+        unless amount_cents
+          # v1 and GraphQL clients read the error under the field of the item; native v2 names the item.
+          field = BaseService::ValidationFailure.item_field(:items, index, :amount_cents)
+          return result.single_validation_failure!(field: :amount_cents, v2_field: field, error_code: "invalid_value")
+        end
 
         item = credit_note.items.new(
           organization_id: invoice.organization_id,
@@ -202,7 +210,7 @@ module CreditNotes
           precise_amount_cents: amount_cents,
           amount_currency: invoice.currency
         )
-        break unless valid_item?(item)
+        break unless valid_item?(item, index)
 
         item.save! unless context == :preview
       end
@@ -218,8 +226,8 @@ module CreditNotes
       nil
     end
 
-    def valid_item?(item)
-      CreditNotes::ValidateItemService.new(result, item:).valid?
+    def valid_item?(item, index)
+      CreditNotes::ValidateItemService.new(result, item:, index:).valid?
     end
 
     def valid_credit_note?

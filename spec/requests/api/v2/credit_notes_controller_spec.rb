@@ -158,6 +158,19 @@ RSpec.describe Api::V2::CreditNotesController do
         expect(response).to be_v2_not_found_error("invoice")
       end
     end
+
+    context "with an item amount that is not a number" do
+      subject(:request) do
+        post_with_token(organization, "/api/v2/credit_notes/estimate", credit_note: {invoice_id: invoice.id, items: [{fee_id: fee.id, amount_cents: 50}, {fee_id: fee.id, amount_cents: "bogus"}]})
+      end
+
+      it "returns a validation error naming the item" do
+        request
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "invalid_value", field: "items[1].amount_cents", meta: {}}])
+      end
+    end
   end
 
   describe "POST /api/v2/credit_notes", :premium do
@@ -175,6 +188,45 @@ RSpec.describe Api::V2::CreditNotesController do
       expect(response).to have_http_status(:ok)
       expect(json[:credit_note]).to include(lago_invoice_id: invoice.id)
       expect(json[:credit_note]).not_to have_key(:coupons_adjustment_amount_cents)
+    end
+
+    context "with an item its fee cannot cover" do
+      subject(:request) do
+        post_with_token(organization, "/api/v2/credit_notes", credit_note: {invoice_id: invoice.id, reason: "other", credit_amount_cents: 10, items: [{fee_id: fee.id, amount_cents: 10}, {fee_id: fee.id, amount_cents: 1_000}]})
+      end
+
+      it "returns a validation error naming the item, without creating a credit note" do
+        expect { request }.not_to change(CreditNote, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "higher_than_remaining_fee_amount", field: "items[1].amount_cents", meta: {}}])
+      end
+    end
+
+    context "with a credit amount that is not a number" do
+      subject(:request) do
+        post_with_token(organization, "/api/v2/credit_notes", credit_note: {invoice_id: invoice.id, reason: "other", credit_amount_cents: "abc", items: [{fee_id: fee.id, amount_cents: 10}]})
+      end
+
+      it "returns a token rather than the sentence of the model, without creating a credit note" do
+        expect { request }.not_to change(CreditNote, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "credit_amount_cents", meta: {}}])
+      end
+    end
+
+    context "with metadata the model refuses" do
+      subject(:request) do
+        post_with_token(organization, "/api/v2/credit_notes", credit_note: {invoice_id: invoice.id, reason: "other", credit_amount_cents: 10, items: [{fee_id: fee.id, amount_cents: 10}], metadata: {reference: "a" * 256}})
+      end
+
+      it "returns a validation error under the path of the value, without creating a credit note" do
+        expect { request }.not_to change(CreditNote, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_too_long", field: "metadata.reference", meta: {max_length: 255}}])
+      end
     end
 
     context "when the product catalog is disabled" do

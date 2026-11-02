@@ -8,8 +8,10 @@ module CreditNotes
       valid_item_amount?
       valid_individual_amount?
 
+      # v1 and GraphQL clients read the errors under the fields of the item; native v2 names the item, at
+      # its index in the request.
       if errors?
-        result.validation_failure!(errors:)
+        result.validation_failure!(errors:, codes: errors.transform_keys { BaseService::ValidationFailure.item_field(:items, args[:index], it) })
         return false
       end
 

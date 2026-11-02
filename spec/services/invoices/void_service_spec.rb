@@ -244,6 +244,30 @@ RSpec.describe Invoices::VoidService do
         end
       end
 
+      context "when the requested amounts exceed what the invoice allows", :premium do
+        let(:invoice) { create(:invoice, status: :finalized) }
+
+        before { allow(invoice).to receive_messages(creditable_amount_cents: 100, refundable_amount_cents: 60) }
+
+        {
+          {credit_amount: 150} => :credit_amount,
+          {refund_amount: 80} => :refund_amount,
+          {credit_amount: 60, refund_amount: 50} => :base
+        }.each do |amounts, field|
+          context "with #{amounts}" do
+            let(:params) { {generate_credit_note: true, **amounts} }
+
+            it "fails without voiding the invoice, on #{field} for native v2" do
+              result = void_service.call
+
+              expect(result.error.messages).to eq(credit_refund_amount: ["total_amount_exceeds_invoice_amount"])
+              expect(result.error.codes).to eq(field => ["total_amount_exceeds_invoice_amount"])
+              expect(invoice.reload).to be_finalized
+            end
+          end
+        end
+      end
+
       context "when the invoice has progressive billing credits", :premium do
         let(:params) { {generate_credit_note: true, credit_amount: 200} }
         let(:organization) { create(:organization) }

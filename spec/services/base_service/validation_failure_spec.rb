@@ -25,7 +25,27 @@ RSpec.describe BaseService::ValidationFailure do
     # An exclusive or decimal bound has no key.
     it "keeps the messages of the record and derives the inclusive Integer bounds of each field" do
       expect(failure.messages).to eq(record.errors.messages)
+      expect(failure.codes).to eq(record.errors.messages)
       expect(failure.meta).to eq(name: {max_length: 255}, net_payment_term: {min: 0}, legal_name: {min_length: 2}, city: {max: 10})
+    end
+
+    context "with errors whose default message is a sentence" do
+      let(:record) do
+        build(:customer, invoice_grace_period: "abc").tap(&:valid?).tap do |customer|
+          customer.errors.add(:invoice_grace_period, :not_a_number)
+          customer.errors.add(:net_payment_term, :not_an_integer)
+          customer.errors.add(:city, :not_a_number, message: "invalid_amount")
+        end
+      end
+
+      it "keeps the sentences for v1 and GraphQL, and gives native v2 each token of a field once" do
+        expect(failure.messages).to eq(
+          invoice_grace_period: ["is not a number", "is not a number"],
+          net_payment_term: ["must be an integer"],
+          city: ["invalid_amount"]
+        )
+        expect(failure.codes).to eq(invoice_grace_period: ["value_is_invalid"], net_payment_term: ["value_is_invalid"], city: ["invalid_amount"])
+      end
     end
 
     it "keeps them once the record is validated again" do

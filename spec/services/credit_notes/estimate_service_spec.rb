@@ -121,6 +121,18 @@ RSpec.describe CreditNotes::EstimateService, :premium do
             higher_than_remaining_fee_amount
           ]
         )
+        expect(result.error.codes).to eq("items[1].amount_cents": ["higher_than_remaining_fee_amount"])
+      end
+    end
+
+    context "with an item amount that is not a number" do
+      let(:items) { [{fee_id: fee1.id, amount_cents: 10}, {fee_id: fee2.id, amount_cents: "bogus"}] }
+
+      it "returns a failed result, under the path of the item for native v2" do
+        result = estimate_service.call
+
+        expect(result.error.messages).to eq(amount_cents: ["invalid_value"])
+        expect(result.error.codes).to eq("items[1].amount_cents": ["invalid_value"])
       end
     end
 

@@ -61,6 +61,9 @@ class BaseService
     # as their count, so that a model states each bound once.
     VALUE_BOUNDS = {greater_than_or_equal_to: :min, less_than_or_equal_to: :max}.freeze
     LENGTH_BOUNDS = {too_short: :min_length, too_long: :max_length}.freeze
+    # The codes of the Rails error types whose default message is a sentence, which v1 and GraphQL
+    # clients keep reading.
+    TYPE_CODES = {not_a_number: "value_is_invalid", not_an_integer: "value_is_invalid"}.freeze
 
     # messages: {field => [code]}, or one of the String, indexed and nested shapes a few services
     # build, which v1 and GraphQL render as they are. meta: {field => facts} (see ValidationMeta::KEYS).
@@ -68,11 +71,19 @@ class BaseService
     # v1 and GraphQL clients keep reading; meta is then keyed by its fields. The messages otherwise.
     attr_reader :messages, :meta, :codes
 
-    # The errors of a record, read now: valid? clears them in place.
+    # The errors of a record, read now: valid? clears them in place. Native v2 renders each code of a
+    # field once, as two validators can refuse a value for the same reason.
     def self.from_errors(result, errors)
-      meta = errors.group_by_attribute.transform_values { |field_errors| field_errors.filter_map { bound_of(it) }.to_h }
+      by_field = errors.group_by_attribute
+      meta = by_field.transform_values { |field_errors| field_errors.filter_map { bound_of(it) }.to_h }
+      codes = by_field.transform_values { |field_errors| field_errors.map { code_of(it) }.uniq }
 
-      new(result, messages: errors.messages, meta: meta.compact_blank)
+      new(result, messages: errors.messages, meta: meta.compact_blank, codes:)
+    end
+
+    # A message given to the validator is the model's own code.
+    def self.code_of(error)
+      error.options.key?(:message) ? error.message : TYPE_CODES.fetch(error.type, error.message)
     end
 
     # The length validator also counts the elements of a list, which min_length and max_length do not mean.
@@ -88,7 +99,7 @@ class BaseService
       value = error.base.read_attribute_for_validation(error.attribute) if error.base.respond_to?(error.attribute)
       value.nil? || value.is_a?(String)
     end
-    private_class_method :bound_of, :text?
+    private_class_method :code_of, :bound_of, :text?
 
     # The field of the n-th element of a list in the request, such as rates[1].code, or rates[1] for an
     # error on the element as a whole.

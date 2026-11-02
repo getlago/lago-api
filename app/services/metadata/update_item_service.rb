@@ -23,6 +23,28 @@ module Metadata
   class UpdateItemService < BaseService
     Result = BaseResult[:metadata, :metadata_changed]
 
+    BOUNDS = {
+      "too_many_keys" => {max_items: ItemMetadata::MAX_NUMBER_OF_KEYS},
+      "key_too_long" => {max_length: ItemMetadata::MAX_KEY_LENGTH},
+      "value_too_long" => {max_length: ItemMetadata::MAX_VALUE_LENGTH}
+    }.freeze
+
+    # v1 and GraphQL clients read the sentences of the record, under value. Native v2 renders their tokens
+    # under the path in the request of the value they refuse, or of the metadata as a whole, with the
+    # bounds they crossed.
+    def self.validation_failure(result, record)
+      codes = {}
+      meta = {}
+      record.errors.each do |error|
+        field = error.options.key?(:key) ? :"metadata.#{error.options[:key]}" : :metadata
+        code = error.options.fetch(:code, error.message)
+        codes[field] = (codes[field] || []) | [code]
+        meta[field] = (meta[field] || {}).merge(BOUNDS.fetch(code, {}))
+      end
+
+      BaseService::ValidationFailure.new(result, messages: record.errors.messages, codes:, meta: meta.compact_blank)
+    end
+
     # @param [ActiveRecord::Base] owner The record whose metadata is to be updated
     # @option [#to_h] :value The new content of the metadata item
     # @option [Boolean] :partial Whether to merge the existing content (replace by default)
@@ -49,7 +71,7 @@ module Metadata
       result.metadata_changed = (metadata&.previous_changes&.any? || metadata&.destroyed?).present?
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.record_validation_failure!(record: e.record)
+      result.fail_with_error!(self.class.validation_failure(result, e.record))
     end
 
     private

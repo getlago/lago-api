@@ -61,9 +61,13 @@ module CreditNotes
     def validate_items
       return result.validation_failure!(errors: {items: ["must_be_an_array"]}) unless items.is_a?(Array)
 
-      items.each do |item_attr|
+      items.each_with_index do |item_attr, index|
         amount_cents = parse_item_amount_cents(item_attr[:amount_cents])
-        return result.single_validation_failure!(field: :amount_cents, error_code: "invalid_value") unless amount_cents
+        unless amount_cents
+          # v1 and GraphQL clients read the error under the field of the item; native v2 names the item.
+          field = BaseService::ValidationFailure.item_field(:items, index, :amount_cents)
+          return result.single_validation_failure!(field: :amount_cents, v2_field: field, error_code: "invalid_value")
+        end
 
         item = CreditNoteItem.new(
           organization_id: invoice.organization_id,
@@ -74,7 +78,7 @@ module CreditNotes
         )
         credit_note.items << item
 
-        break unless valid_item?(item)
+        break unless valid_item?(item, index)
       end
     end
 
@@ -92,8 +96,8 @@ module CreditNotes
       CreditNotes::ValidateService.new(result, item: credit_note).valid?
     end
 
-    def valid_item?(item)
-      CreditNotes::ValidateItemService.new(result, item:).valid?
+    def valid_item?(item, index)
+      CreditNotes::ValidateItemService.new(result, item:, index:).valid?
     end
 
     def compute_amounts_and_taxes

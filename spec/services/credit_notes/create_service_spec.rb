@@ -315,6 +315,19 @@ RSpec.describe CreditNotes::CreateService do
       it "creates ItemMetadata record" do
         expect { create_service.call }.to change(Metadata::ItemMetadata, :count).by(1)
       end
+
+      context "when the model refuses a value" do
+        let(:args) { {metadata: {"key1" => "value1", "key2" => "a" * 256}} }
+
+        it "fails without a credit note, with a token under the path of the value for native v2" do
+          result = nil
+          expect { result = create_service.call }.not_to change(CreditNote, :count)
+
+          expect(result.error.messages).to eq(value: ["value for key 'key2' must be empty or a String up to 255 characters"])
+          expect(result.error.codes).to eq("metadata.key2": ["value_too_long"])
+          expect(result.error.meta).to eq("metadata.key2": {max_length: 255})
+        end
+      end
     end
 
     it "enqueues SegmentTrackJob after commit" do
@@ -405,6 +418,29 @@ RSpec.describe CreditNotes::CreateService do
             higher_than_remaining_fee_amount
           ]
         )
+        expect(result.error.codes).to eq("items[1].amount_cents": ["higher_than_remaining_fee_amount"])
+      end
+    end
+
+    context "with an item amount that is not a number" do
+      let(:items) { [{fee_id: fee1.id, amount_cents: 10}, {fee_id: fee2.id, amount_cents: "bogus"}] }
+
+      it "returns a failed result, under the path of the item for native v2" do
+        result = create_service.call
+
+        expect(result.error.messages).to eq(amount_cents: ["invalid_value"])
+        expect(result.error.codes).to eq("items[1].amount_cents": ["invalid_value"])
+      end
+    end
+
+    context "with a credit amount that is not a number" do
+      let(:credit_amount_cents) { "abc" }
+
+      it "keeps the sentence of the model for v1 and GraphQL, and gives native v2 a token" do
+        result = create_service.call
+
+        expect(result.error.messages[:credit_amount_cents]).to all(eq("is not a number"))
+        expect(result.error.codes).to eq(credit_amount_cents: ["value_is_invalid"])
       end
     end
 

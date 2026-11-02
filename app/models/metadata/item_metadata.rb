@@ -14,27 +14,40 @@ module Metadata
 
     private
 
+    # The sentences, which v1 and GraphQL clients read, carry the token of their error as `code`, and the
+    # key of the value they refuse as `key` (see Metadata::UpdateItemService.validation_failure).
     def value_correctness
       return if value.blank?
 
       unless value.is_a?(Hash)
-        errors.add(:value, "must be a Hash")
+        errors.add(:value, "must be a Hash", code: "invalid_type")
         return
       end
 
       if value.size > MAX_NUMBER_OF_KEYS
-        errors.add(:value, "cannot have more than #{MAX_NUMBER_OF_KEYS} keys")
+        errors.add(:value, "cannot have more than #{MAX_NUMBER_OF_KEYS} keys", code: "too_many_keys")
       end
 
       value.each do |key, val|
         unless key.is_a?(String) && key.length <= MAX_KEY_LENGTH
-          errors.add(:value, "key '#{key}' must be a String up to #{MAX_KEY_LENGTH} characters")
+          code = key.is_a?(String) ? "key_too_long" : "invalid_type"
+          errors.add(:value, "key '#{key}' must be a String up to #{MAX_KEY_LENGTH} characters", code:)
         end
 
         valid_value = val.nil? || (val.is_a?(String) && val.length <= MAX_VALUE_LENGTH)
         unless valid_value
-          errors.add(:value, "value for key '#{key}' must be empty or a String up to #{MAX_VALUE_LENGTH} characters")
+          errors.add(:value, "value for key '#{key}' must be empty or a String up to #{MAX_VALUE_LENGTH} characters", code: value_code(val), key:)
         end
+      end
+    end
+
+    def value_code(val)
+      if val.is_a?(String)
+        "value_too_long"
+      elsif val.is_a?(Hash) || val.is_a?(Array)
+        "nested_structure_not_allowed"
+      else
+        "invalid_type"
       end
     end
   end

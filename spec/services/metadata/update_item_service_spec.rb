@@ -192,6 +192,54 @@ RSpec.describe Metadata::UpdateItemService do
       end
     end
 
+    context "with values the model refuses" do
+      let(:value) { {"a" * 101 => "x", "nested" => {"b" => "c"}, "long" => "a" * 256, "count" => 5} }
+
+      it "keeps the sentences for v1 and GraphQL, and gives native v2 tokens under the paths of the values" do
+        result = service.call
+
+        expect(result.error.messages).to eq(
+          value: [
+            "key '#{"a" * 101}' must be a String up to 100 characters",
+            "value for key 'nested' must be empty or a String up to 255 characters",
+            "value for key 'long' must be empty or a String up to 255 characters",
+            "value for key 'count' must be empty or a String up to 255 characters"
+          ]
+        )
+        expect(result.error.codes).to eq(
+          metadata: ["key_too_long"],
+          "metadata.nested": ["nested_structure_not_allowed"],
+          "metadata.long": ["value_too_long"],
+          "metadata.count": ["invalid_type"]
+        )
+        expect(result.error.meta).to eq(metadata: {max_length: 100}, "metadata.long": {max_length: 255})
+      end
+    end
+
+    context "with more keys than the model allows" do
+      let(:value) { (1..51).to_h { ["key#{it}", "value"] } }
+
+      it "gives native v2 the bound under metadata" do
+        result = service.call
+
+        expect(result.error.messages).to eq(value: ["cannot have more than 50 keys"])
+        expect(result.error.codes).to eq(metadata: ["too_many_keys"])
+        expect(result.error.meta).to eq(metadata: {max_items: 50})
+      end
+    end
+
+    context "with a value that is not a Hash" do
+      let(:value) { "metadata" }
+
+      it "gives native v2 a token under metadata" do
+        result = service.call
+
+        expect(result.error.messages).to eq(value: ["must be a Hash"])
+        expect(result.error.codes).to eq(metadata: ["invalid_type"])
+        expect(result.error.meta).to eq({})
+      end
+    end
+
     context "with metadata overwriting existing key" do
       let(:value) { {"foo" => "new"} }
       let(:partial) { true }

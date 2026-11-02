@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe CreditNotes::ValidateItemService do
-  subject(:validator) { described_class.new(result, item:) }
+  subject(:validator) { described_class.new(result, item:, index: 2) }
 
   before_all do
     create_default(:organization)
@@ -82,11 +82,12 @@ RSpec.describe CreditNotes::ValidateItemService do
     context "when amount is negative" do
       let(:amount_cents) { -3 }
 
-      it "fails the validation" do
+      it "fails the validation, under the path of the item for native v2" do
         expect(validator).not_to be_valid
 
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages[:amount_cents]).to eq(["invalid_value"])
+        expect(result.error.codes).to eq("items[2].amount_cents": ["invalid_value"])
       end
     end
 

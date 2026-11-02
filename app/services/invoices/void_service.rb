@@ -21,11 +21,11 @@ module Invoices
     def call
       return result.not_found_failure!(resource: "invoice") unless invoice
       return result.forbidden_failure! unless generate_credit_note_allowed?
-      unless valid_credit_note_amounts?
-        return result.single_validation_failure!(
-          field: :credit_refund_amount,
-          error_code: "total_amount_exceeds_invoice_amount"
-        )
+
+      # v1 and GraphQL clients read the error under credit_refund_amount, which no request has; native v2
+      # names the amount that exceeds, or base when only their sum does.
+      if (v2_field = exceeding_amount_field)
+        return result.single_validation_failure!(field: :credit_refund_amount, v2_field:, error_code: "total_amount_exceeds_invoice_amount")
       end
 
       invoice.with_lock do
@@ -89,14 +89,16 @@ module Invoices
       end
     end
 
-    def valid_credit_note_amounts?
-      return true unless generate_credit_note
+    def exceeding_amount_field
+      return unless generate_credit_note
 
-      return false if credit_amount > invoice.creditable_amount_cents
-      return false if refund_amount > invoice.refundable_amount_cents
-      return false if (credit_amount + refund_amount) > invoice.creditable_amount_cents
-
-      true
+      if credit_amount > invoice.creditable_amount_cents
+        :credit_amount
+      elsif refund_amount > invoice.refundable_amount_cents
+        :refund_amount
+      elsif (credit_amount + refund_amount) > invoice.creditable_amount_cents
+        :base
+      end
     end
 
     def create_credit_notes!
