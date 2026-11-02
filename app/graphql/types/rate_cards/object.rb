@@ -33,6 +33,7 @@ module Types
       field :taxes, [Types::Taxes::Object], null: false
 
       field :active_rate, Types::RateCardRates::Object, null: true
+      field :pending_rate, Types::RateCardRates::Object, null: true
       field :rates_count, Integer, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
@@ -52,6 +53,10 @@ module Types
 
       def active_rate
         dataloader.with(Sources::ActiveRate).load(object.id)
+      end
+
+      def pending_rate
+        dataloader.with(Sources::PendingRate).load(object.id)
       end
     end
   end

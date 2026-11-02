@@ -75075,6 +75075,18 @@
               "deprecationReason": null
             },
             {
+              "name": "pendingRate",
+              "description": null,
+              "args": [],
+              "type": {
+                "kind": "OBJECT",
+                "name": "RateCardRate",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "product",
               "description": null,
               "args": [],

@@ -18,6 +18,7 @@ RSpec.describe Resolvers::RateCardResolver do
   let(:organization) { membership.organization }
   let(:rate_card) { create(:rate_card, organization:) }
   let!(:rate) { create(:rate_card_rate, organization:, rate_card:) }
+  let!(:pending_rate) { create(:rate_card_rate, organization:, rate_card:, code: "pending", effective_from: 1.month.from_now.beginning_of_day) }
 
   let(:query) do
     <<~GQL
@@ -26,6 +27,7 @@ RSpec.describe Resolvers::RateCardResolver do
           id name code currency
           ratesCount
           activeRate { id }
+          pendingRate { id }
           taxes { id code rate }
         }
       }
@@ -36,15 +38,16 @@ RSpec.describe Resolvers::RateCardResolver do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "rate_cards:view"
 
-  it "returns a single rate card with its rates count, active rate, and taxes" do
+  it "returns a single rate card with its rates count, active rate, pending rate, and taxes" do
     tax = create(:tax, organization:)
     create(:rate_card_applied_tax, rate_card:, tax:, organization:)
 
     response = execution["data"]["rateCard"]
 
     expect(response["id"]).to eq(rate_card.id)
-    expect(response["ratesCount"]).to eq(1)
+    expect(response["ratesCount"]).to eq(2)
     expect(response["activeRate"]["id"]).to eq(rate.id)
+    expect(response["pendingRate"]["id"]).to eq(pending_rate.id)
     expect(response["taxes"].pluck("code")).to eq([tax.code])
   end
 
