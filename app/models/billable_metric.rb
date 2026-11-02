@@ -153,6 +153,7 @@ end
 # Indexes
 #
 #  idx_billable_metrics_id_agg_type                    (id)
+#  index_billable_metrics_by_cursor                    (organization_id,created_at DESC,id DESC)
 #  index_billable_metrics_on_deleted_at                (deleted_at)
 #  index_billable_metrics_on_org_id_and_code_and_expr  (organization_id,code,expression) WHERE ((expression IS NOT NULL) AND ((expression)::text <> ''::text))
 #  index_billable_metrics_on_organization_id           (organization_id)

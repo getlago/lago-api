@@ -51,6 +51,31 @@ RSpec.describe "API v2 routing parity" do
     expect(Rails.application.routes.recognize_path("/api/v1/customers", method: :post)[:controller]).to eq("api/v1/customers")
   end
 
+  it "routes billable metric CRUD to v2 without changing v1" do
+    {
+      get: %w[/billable_metrics /billable_metrics/api.requests],
+      post: %w[/billable_metrics],
+      put: %w[/billable_metrics/api.requests],
+      patch: %w[/billable_metrics/api.requests],
+      delete: %w[/billable_metrics/api.requests]
+    }.each do |method, paths|
+      paths.each do |path|
+        recognized = Rails.application.routes.recognize_path("/api/v2#{path}", method:)
+        expect(recognized[:controller]).to eq("api/v2/billable_metrics")
+        expect(recognized[:code]).to eq("api.requests") if path.end_with?("api.requests")
+        expect(Rails.application.routes.recognize_path("/api/v1#{path}", method:)[:controller]).to eq("api/v1/billable_metrics")
+      end
+    end
+  end
+
+  it "does not route billable metric expression evaluation to v1 under v2" do
+    path = "/billable_metrics/evaluate_expression"
+    expect(Rails.application.routes.recognize_path("/api/v2#{path}", method: :post))
+      .to include(controller: "application", action: "not_found")
+    expect(Rails.application.routes.recognize_path("/api/v1#{path}", method: :post))
+      .to include(controller: "api/v1/billable_metrics", action: "evaluate_expression")
+  end
+
   it "routes billing entity endpoints to v2 without changing v1" do
     {
       get: %w[/billing_entities /billing_entities/entity.eu],

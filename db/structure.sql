@@ -1009,6 +1009,7 @@ DROP INDEX IF EXISTS public.index_billable_metrics_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_billable_metrics_on_organization_id;
 DROP INDEX IF EXISTS public.index_billable_metrics_on_org_id_and_code_and_expr;
 DROP INDEX IF EXISTS public.index_billable_metrics_on_deleted_at;
+DROP INDEX IF EXISTS public.index_billable_metrics_by_cursor;
 DROP INDEX IF EXISTS public.index_billable_metric_filters_on_organization_id;
 DROP INDEX IF EXISTS public.index_billable_metric_filters_on_deleted_at;
 DROP INDEX IF EXISTS public.index_billable_metric_filters_on_billable_metric_id;
@@ -8631,6 +8632,13 @@ CREATE INDEX index_billable_metric_filters_on_organization_id ON public.billable
 
 
 --
+-- Name: index_billable_metrics_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_billable_metrics_by_cursor ON public.billable_metrics USING btree (organization_id, created_at DESC, id DESC);
+
+
+--
 -- Name: index_billable_metrics_on_deleted_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -15998,6 +16006,7 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20261103084714'),
 ('20261103084708'),
+('20261102160958'),
 ('20261029112805'),
 ('20261029111437'),
 ('20261028184732'),
