@@ -28,10 +28,7 @@ module Api
       end
 
       def create
-        input = input_params
-        return invalid_signature_algo_error unless valid_signature_algo?(input)
-
-        result = ::WebhookEndpoints::CreateService.call(organization: current_organization, params: input)
+        result = ::WebhookEndpoints::CreateService.call(organization: current_organization, params: input_params)
 
         if result.success?
           render_webhook_endpoint(result.webhook_endpoint)
@@ -41,10 +38,7 @@ module Api
       end
 
       def update
-        input = input_params
-        return invalid_signature_algo_error unless valid_signature_algo?(input)
-
-        result = ::WebhookEndpoints::UpdateService.call(id: params[:id], organization: current_organization, params: input)
+        result = ::WebhookEndpoints::UpdateService.call(id: params[:id], organization: current_organization, params: input_params)
 
         if result.success?
           render_webhook_endpoint(result.webhook_endpoint)
@@ -78,18 +72,6 @@ module Api
         # A scalar event_types is dropped by permit: the model refuses it rather than ignoring it.
         input[:event_types] = raw_input[:event_types] if raw_input.key?(:event_types) && !input.key?(:event_types)
         input
-      end
-
-      # The services cast it to an enum value, which raises on an unknown one.
-      def valid_signature_algo?(input)
-        !input.key?(:signature_algo) || WebhookEndpoint.signature_algos.key?(input[:signature_algo])
-      end
-
-      def invalid_signature_algo_error
-        validation_errors(
-          errors: {signature_algo: ["value_is_invalid"]},
-          meta: {signature_algo: {allowed_values: WebhookEndpoint.signature_algos.keys}}
-        )
       end
 
       def resource_name

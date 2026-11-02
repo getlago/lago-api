@@ -253,6 +253,17 @@ RSpec.describe Api::V2::WebhookEndpointsController do
         end
       end
 
+      context "when the webhook endpoint does not exist and the signature_algo is unknown" do
+        let(:webhook_endpoint) { build_stubbed(:webhook_endpoint) }
+        let(:update_params) { {signature_algo: "md5"} }
+
+        it "returns a not found error before validating the input" do
+          request
+
+          expect(response).to be_v2_not_found_error("webhook_endpoint")
+        end
+      end
+
       context "when the webhook endpoint belongs to another organization" do
         let(:webhook_endpoint) { create(:webhook_endpoint, organization: create(:organization)) }
 

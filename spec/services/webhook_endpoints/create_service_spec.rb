@@ -63,6 +63,30 @@ RSpec.describe WebhookEndpoints::CreateService do
       end
     end
 
+    context "without a signature_algo" do
+      let(:create_params) { {webhook_url: "http://foo.bar"} }
+
+      it "signs with JWT" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.webhook_endpoint.signature_algo).to eq("jwt")
+      end
+    end
+
+    context "when signature_algo is unknown" do
+      let(:create_params) { {webhook_url: "http://foo.bar", signature_algo: "md5"} }
+
+      it "returns a validation failure with the allowed values, without creating the endpoint" do
+        result = nil
+        expect { result = create_service.call }.not_to change(WebhookEndpoint, :count)
+
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq(signature_algo: ["value_is_invalid"])
+        expect(result.error.meta).to eq(signature_algo: {allowed_values: %w[jwt hmac]})
+      end
+    end
+
     context "when webhook url is invalid" do
       let(:create_params) do
         {

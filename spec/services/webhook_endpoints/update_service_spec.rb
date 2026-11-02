@@ -54,6 +54,21 @@ RSpec.describe WebhookEndpoints::UpdateService do
       before { update_service.call }
     end
 
+    [["md5", "unknown"], [nil, "null"]].each do |signature_algo, label|
+      context "when signature_algo is #{label}" do
+        let(:update_params) { {name: "Updated Webhook", signature_algo:} }
+
+        it "returns a validation failure with the allowed values, without changing the endpoint" do
+          result = nil
+          expect { result = update_service.call }.not_to change { webhook_endpoint.reload.attributes }
+
+          expect(result).not_to be_success
+          expect(result.error.messages).to eq(signature_algo: ["value_is_invalid"])
+          expect(result.error.meta).to eq(signature_algo: {allowed_values: %w[jwt hmac]})
+        end
+      end
+    end
+
     context "when webhook endpoint does not exist" do
       let(:webhook_endpoint) { instance_double(WebhookEndpoint, id: "123456") }
 
