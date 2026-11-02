@@ -82,6 +82,22 @@ class BillingSegment < ApplicationRecord
     ProductFilter.new(organization:, product: contract_rate_card.rate_card.product)
   end
 
+  # Product filters priced by applied rate cards effective during this segment.
+  # effective_date is a customer-local day, so derive both boundaries in that timezone.
+  def priced_product_filter_ids
+    product = contract_rate_card.rate_card.product
+    timezone = customer.applicable_timezone
+    date_range = started_at.in_time_zone(timezone).to_date..ended_at.in_time_zone(timezone).to_date
+    cache_key = [product.id, date_range]
+    @priced_product_filter_ids_cache ||= {}
+    @priced_product_filter_ids_cache[cache_key] ||= contract.applied_rate_cards
+      .joins(:rate_card)
+      .where(effective_date: date_range)
+      .where(rate_cards: {product_id: product.id})
+      .where.not(rate_cards: {product_filter_id: nil})
+      .pluck("rate_cards.product_filter_id")
+  end
+
   def duration_in_days
     Billing::Days.between(
       started_at,
