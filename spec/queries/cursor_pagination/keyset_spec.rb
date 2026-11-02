@@ -84,6 +84,52 @@ RSpec.describe CursorPagination::Keyset do
     end
   end
 
+  context "with a sort on the issuing date" do
+    subject(:scope) { described_class.apply(Invoice.where(organization:), cursor) }
+
+    let(:sort) { {issuing_date: :desc, created_at: :desc, id: :desc} }
+    let(:cursor) { CursorPagination::Cursor.new(table: "invoices", sort:, limit: 2, **cursor_params) }
+    let(:anchor_token) { CursorPagination::Token.encode(table: "invoices", record: anchor, sort:) }
+    let(:anchor) { invoices[2] }
+    let(:customer) { create(:customer, organization:) }
+
+    # Listed in the expected order: the two in the middle share both the issuing date and
+    # the timestamp, so that only the id tells them apart.
+    let(:invoices) do
+      [
+        create(:invoice, customer:, issuing_date: Date.new(2026, 9, 28), created_at:),
+        create(:invoice, customer:, issuing_date: Date.new(2026, 9, 27), created_at: created_at + 1.second),
+        *create_list(:invoice, 2, customer:, issuing_date: Date.new(2026, 9, 27), created_at:).sort_by(&:id).reverse,
+        create(:invoice, customer:, issuing_date: Date.new(2026, 9, 26), created_at: created_at + 1.day)
+      ]
+    end
+
+    before { invoices }
+
+    it "orders the first page on the sort" do
+      expect(scope.to_sql).to end_with(%(ORDER BY "invoices"."issuing_date" DESC, "invoices"."created_at" DESC, "invoices"."id" DESC LIMIT 3))
+      expect(scope.to_a).to eq(invoices.first(3))
+    end
+
+    context "with an after cursor" do
+      let(:cursor_params) { {after: anchor_token} }
+
+      it "bounds the page with one row-value comparison over the three columns" do
+        expect(scope.to_sql).to include(%{("invoices"."issuing_date", "invoices"."created_at", "invoices"."id") < ('2026-09-27', })
+        expect(scope.to_a).to eq(invoices[3..])
+      end
+    end
+
+    context "with a before cursor" do
+      let(:cursor_params) { {before: anchor_token} }
+
+      it "returns the rows before the anchor, closest first" do
+        expect(scope.to_sql).to include(%{("invoices"."issuing_date", "invoices"."created_at", "invoices"."id") > ('2026-09-27', })
+        expect(scope.to_a).to eq(invoices[0..1].reverse)
+      end
+    end
+  end
+
   context "when the cursor was built for another table" do
     let(:cursor) { CursorPagination::Cursor.new(table: "product_categories") }
 

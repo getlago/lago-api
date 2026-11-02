@@ -48,20 +48,25 @@ module Events
         end
       end
 
-      def recurring_sum(watermark:)
-        if scanned?(operation: :recurring_sum)
+      # The delta of a closed period keeps the store's own read, pruned by timestamp and enriched_at.
+      def recurring_sum(watermark:, period: nil)
+        if period.nil? && scanned?(operation: :recurring_sum)
           scan.recurring_sum(__getobj__, watermark:)
         else
           super
         end
       end
 
-      def grouped_recurring_sum(watermark:)
-        if scanned?(operation: :recurring_sum)
+      def grouped_recurring_sum(watermark:, period: nil)
+        if period.nil? && scanned?(operation: :recurring_sum)
           scan.grouped_recurring_sum(__getobj__, watermark:)
         else
           super
         end
+      end
+
+      def incremental_sum?
+        scan.incremental? && scanned?(operation: :sum)
       end
 
       def max(with_count: true)

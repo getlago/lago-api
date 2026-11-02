@@ -15,6 +15,14 @@ FactoryBot.define do
       deleted_at { Time.current }
     end
 
+    trait :mainnet do
+      networks { ["eip155:8453"] }
+    end
+
+    trait :saved_before_switch do
+      to_create { |connection| connection.save!(validate: false) }
+    end
+
     trait :solana do
       networks { ["solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"] }
       payout_addresses { {"svm" => "2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4"} }

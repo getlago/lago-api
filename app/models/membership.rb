@@ -6,6 +6,7 @@ class Membership < ApplicationRecord
   belongs_to :organization
   belongs_to :user
 
+  has_many :ai_conversations
   has_many :data_exports
   has_many :membership_roles
   has_many :roles, through: :membership_roles

@@ -4,6 +4,8 @@ module Api
   module V2
     # Parent of the native v2 controllers, for the behaviour they share and v1 does not.
     class BaseController < Api::BaseController
+      # The v2 error body, in place of the Api::V1Errors and ApiResponses renderers that v1 keeps.
+      include Api::V2Errors
       # Every native v2 endpoint belongs to the product catalog. Included ahead of the cursor
       # callback, so that a disabled catalog is a 403 before any pagination parameter is read.
       include Api::RequiresProductCatalog
@@ -26,6 +28,12 @@ module Api
         private(define_method(:paginated_sort) { sort })
       end
 
+      # Declares the date ranges the index filters on, read by `date_range_filters` as
+      # `<column>_from` and `<column>_to`.
+      def self.date_range_filtered_index(*columns)
+        private(define_method(:date_range_columns) { columns })
+      end
+
       private
 
       attr_reader :cursor
@@ -42,6 +50,12 @@ module Api
         ::CursorPagination::Cursor.from_params(params, table: model.table_name, sort:)
       end
 
+      # Read raw rather than permitted, so that a non scalar bound is an `invalid_date` error,
+      # not an ignored filter.
+      def date_range_filters
+        date_range_columns.flat_map { |column| [:"#{column}_from", :"#{column}_to"] }.index_with { params[it] }
+      end
+
       # For a list returned whole: it still rejects `page` and `per_page`, which a
       # client paging until an empty page would otherwise send forever.
       def reject_offset_pagination!
@@ -55,19 +69,6 @@ module Api
       def pagination_error(error)
         Yabeda.api_pagination.errors_total.increment({code: error.code})
         invalid_request_error(code: error.code, error_details: error.details)
-      end
-
-      # Every v2 400 shares this body, keyed by the offending parameter.
-      def invalid_request_error(code:, error_details:)
-        render(
-          json: {
-            status: 400,
-            error: "Bad Request",
-            code:,
-            error_details:
-          },
-          status: :bad_request
-        )
       end
     end
   end

@@ -9,6 +9,7 @@ module Types
       field :charges_usage, [Types::AttributedUsage::ChargeUsage], null: false, method: :cells
       field :events_count, Integer, null: false
       field :precise_amount_cents, GraphQL::Types::Float, null: true, description: "Null with the units basis"
+      field :split_charge_units, GraphQL::Types::Float, null: true, description: "Units of the split charge over all its filters. Null without a split charge"
 
       def amount_cents
         object.amount_cents&.round

@@ -5,6 +5,7 @@ module Api
     module Products
       class FiltersController < Api::V2::BaseController
         cursor_paginated_index(ProductFilter)
+        date_range_filtered_index(:created_at)
         serializable_with ::V2::ProductFilterSerializer
 
         before_action :find_product
@@ -15,7 +16,7 @@ module Api
             organization: current_organization,
             search_term: params[:search_term],
             pagination: cursor,
-            filters: {product_id: product.id}
+            filters: {product_id: product.id, **date_range_filters}
           )
 
           if result.success?

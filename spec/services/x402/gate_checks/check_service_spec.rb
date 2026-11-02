@@ -45,7 +45,8 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
 
     it "passes on the computed base while the stored ongoing balance is stale" do
       expect(result).to have_attributes(
-        requirements: nil, sign_in_chains: nil, external_subscription_id: subscription.external_id, balance_credits: 13
+        requirements: nil, sign_in_chains: nil, external_subscription_id: subscription.external_id,
+        subscription_started_at: subscription.reload.started_at, balance_credits: 13
       )
     end
 
@@ -270,7 +271,10 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
     end
 
     it "challenges for the route's top-up" do
-      expect(result).to have_attributes(requirements: [evm_requirement], external_subscription_id: subscription.external_id, balance_credits: 9)
+      expect(result).to have_attributes(
+        requirements: [evm_requirement], external_subscription_id: subscription.external_id,
+        subscription_started_at: subscription.reload.started_at, balance_credits: 9
+      )
     end
 
     it "records the nonce" do
@@ -324,7 +328,7 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
   context "with a stranger" do
     it "challenges at a zero balance" do
       expect(result).to have_attributes(
-        requirements: [evm_requirement], external_subscription_id: nil, balance_credits: 0,
+        requirements: [evm_requirement], external_subscription_id: nil, subscription_started_at: nil, balance_credits: 0,
         sign_in_chains: ["eip155:84532"]
       )
     end
@@ -582,6 +586,25 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
     end
   end
 
+  context "with a testnet connection on an organization running on mainnet" do
+    let(:organization) do
+      create(:organization, premium_integrations: ["events_targeting_wallets"], feature_flags: ["x402_mainnet"])
+    end
+    let(:connection) do
+      create(:x402_connection, :solana, :saved_before_switch, organization:, cdp_api_key_id:, cdp_api_key_secret:)
+    end
+    let(:params) { super().except(:siwx) }
+
+    it "refuses with environment_not_enabled" do
+      expect(result.error.messages).to eq(connection_code: ["environment_not_enabled"])
+    end
+
+    it "makes no facilitator call" do
+      result
+      expect(a_request(:any, /api\.cdp\.coinbase\.com/)).not_to have_been_made
+    end
+  end
+
   context "with a misconfigured route" do
     let(:plan) { create(:plan, organization:, amount_cents: 0, amount_currency: "EUR") }
 
@@ -830,6 +853,9 @@ describe X402::GateChecks::CheckService, :premium, cache: :null do
   end
 
   context "with a mainnet connection" do
+    let(:organization) do
+      create(:organization, premium_integrations: ["events_targeting_wallets"], feature_flags: ["x402_mainnet"])
+    end
     let(:connection) { create(:x402_connection, organization:, networks: ["eip155:8453"]) }
     let(:siwx) { signed_siwx(agent_key, chainId: "eip155:8453") }
 

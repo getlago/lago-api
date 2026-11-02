@@ -188,6 +188,45 @@ RSpec.describe Invoices::Payments::CashfreeService do
           ready_for_payment_processing: false
         )
       end
+
+      context "when invoice belongs to another organization" do
+        let(:other_organization) { create(:organization) }
+
+        it "does not create a payment nor update the invoice" do
+          result = nil
+
+          expect do
+            result = described_class.call(
+              :update_payment_status,
+              organization_id: other_organization.id,
+              status: cashfree_payment.status,
+              cashfree_payment:
+            )
+          end.not_to change(Payment, :count)
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(invoice.reload.payment_status).not_to eq("succeeded")
+        end
+      end
+    end
+
+    context "when existing payment belongs to another organization" do
+      let(:other_organization) { create(:organization) }
+
+      it "does not update the payment" do
+        result = described_class.call(
+          :update_payment_status,
+          organization_id: other_organization.id,
+          status: cashfree_payment.status,
+          cashfree_payment:
+        )
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(payment.reload.status).to eq("pending")
+        expect(invoice.reload.payment_status).not_to eq("succeeded")
+      end
     end
   end
 

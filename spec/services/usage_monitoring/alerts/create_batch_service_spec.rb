@@ -106,6 +106,42 @@ RSpec.describe UsageMonitoring::Alerts::CreateBatchService do
       end
     end
 
+    context "when a threshold sends recurring as null" do
+      let(:alerts_params) do
+        [
+          {
+            alert_type: "current_usage_amount",
+            code: "alert1",
+            thresholds: [{code: "warning", value: "5", recurring: nil, notify_on: ["triggered"]}]
+          }
+        ]
+      end
+
+      it "stores the threshold as not recurring" do
+        expect { result }.to change(UsageMonitoring::Alert, :count).by(1)
+        expect(result).to be_success
+        expect(result.alerts.sole.thresholds.reload.map { |t| [t.code, t.recurring] }).to eq([["warning", false]])
+      end
+    end
+
+    context "when a threshold sends recurring as an empty string" do
+      let(:alerts_params) do
+        [
+          {
+            alert_type: "current_usage_amount",
+            code: "alert1",
+            thresholds: [{code: "warning", value: "5", recurring: "", notify_on: ["triggered"]}]
+          }
+        ]
+      end
+
+      it "stores the threshold as not recurring" do
+        expect { result }.to change(UsageMonitoring::Alert, :count).by(1)
+        expect(result).to be_success
+        expect(result.alerts.sole.thresholds.reload.map { |t| [t.code, t.recurring] }).to eq([["warning", false]])
+      end
+    end
+
     context "when alerts_params is empty" do
       let(:alerts_params) { [] }
 

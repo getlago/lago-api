@@ -60,6 +60,8 @@ RSpec.describe Types::Invoices::Object do
 
     expect(subject).to have_field(:file_url).of_type("String")
     expect(subject).to have_field(:xml_url).of_type("String")
+    expect(subject).to have_field(:file_url_expires_at).of_type("ISO8601DateTime")
+    expect(subject).to have_field(:xml_url_expires_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:metadata).of_type("[InvoiceMetadata!]").with_permissions(%w[invoices:view invoices:update])
 
     expect(subject).to have_field(:activity_logs).of_type("[ActivityLog!]").with_permission("audit_logs:view")

@@ -79,7 +79,7 @@ RSpec.describe Api::V2::ProductCategoriesController do
           subject
 
           expect(response).to have_http_status(:unprocessable_entity)
-          expect(json[:error_details][:code]).to eq(%w[attached_to_plan_or_subscription])
+          expect(json[:details]).to eq([{code: "attached_to_plan_or_subscription", field: "code", meta: {}}])
         end
       end
     end
@@ -90,7 +90,7 @@ RSpec.describe Api::V2::ProductCategoriesController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("product_category")
+        expect(response).to be_v2_not_found_error("product_category")
       end
     end
   end
@@ -135,7 +135,7 @@ RSpec.describe Api::V2::ProductCategoriesController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("product_category")
+        expect(response).to be_v2_not_found_error("product_category")
       end
     end
 
@@ -145,7 +145,7 @@ RSpec.describe Api::V2::ProductCategoriesController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("product_category")
+        expect(response).to be_v2_not_found_error("product_category")
       end
     end
   end
@@ -171,6 +171,11 @@ RSpec.describe Api::V2::ProductCategoriesController do
     it_behaves_like "a cursor paginated v2 endpoint", collection: :product_categories, model: ProductCategory do
       let(:paginated_path) { "/api/v2/product_categories" }
       let(:create_paginated_record) { ->(created_at) { create(:product_category, organization:, created_at:) } }
+    end
+
+    it_behaves_like "a v2 list filtered on created_at", collection: :product_categories do
+      let(:filtered_path) { "/api/v2/product_categories" }
+      let(:create_filtered_record) { ->(created_at) { create(:product_category, organization:, created_at:) } }
     end
 
     it "returns the flat product_categories" do
@@ -230,7 +235,7 @@ RSpec.describe Api::V2::ProductCategoriesController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("product_category")
+        expect(response).to be_v2_not_found_error("product_category")
       end
     end
   end

@@ -125,7 +125,8 @@ namespace :customers do
         result = Customers::EuAutoTaxesService.call(
           customer: customer,
           new_record: false,
-          tax_attributes_changed: true
+          tax_attributes_changed: true,
+          tax_codes: customer.taxes.where.not("code ILIKE 'lago_eu%'").pluck(:code)
         )
         raise ActiveRecord::Rollback
       end
@@ -134,7 +135,7 @@ namespace :customers do
 
       if result.success?
         counters[:reapply] += 1
-        puts "  [DRY RUN] customer=#{customer.id} country=#{customer.country} current_eu=#{current_eu_codes.inspect} -> target=#{result.tax_code} (would re-apply)"
+        puts "  [DRY RUN] customer=#{customer.id} country=#{customer.country} current_eu=#{current_eu_codes.inspect} -> target=#{result.tax_codes.join(",")} (would re-apply)"
       elsif result.error.is_a?(BaseService::ServiceFailure) && result.error.code == "vies_check_pending"
         counters[:vies_pending] += 1
         puts "  [DRY RUN] customer=#{customer.id} country=#{customer.country} current_eu=#{current_eu_codes.inspect} would schedule VIES check"
@@ -172,17 +173,16 @@ namespace :customers do
         break if customer_ids.empty?
 
         Customer.where(id: customer_ids).find_each do |customer|
+          preserved_codes = customer.taxes.where.not("code ILIKE 'lago_eu%'").pluck(:code)
           result = Customers::EuAutoTaxesService.call(
             customer: customer,
             new_record: false,
-            tax_attributes_changed: true
+            tax_attributes_changed: true,
+            tax_codes: preserved_codes
           )
           next unless result.success?
 
-          preserved_codes = customer.taxes.where.not("code ILIKE 'lago_eu%'").pluck(:code)
-          tax_codes = (preserved_codes + [result.tax_code]).uniq
-
-          Customers::ApplyTaxesService.call!(customer: customer, tax_codes: tax_codes)
+          Customers::ApplyTaxesService.call!(customer: customer, tax_codes: result.tax_codes)
         end
 
         total_processed += customer_ids.size
@@ -199,4 +199,3 @@ namespace :customers do
     end
   end
 end
-

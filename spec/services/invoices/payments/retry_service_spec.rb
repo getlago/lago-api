@@ -91,6 +91,49 @@ RSpec.describe Invoices::Payments::RetryService do
       end
     end
 
+    context "when the payment method is validated" do
+      subject(:retry_service) { described_class.new(invoice:, payment_method_params:, validate_payment_method: true) }
+
+      let(:payment_method) { create(:payment_method, customer:, organization: customer.organization) }
+
+      [
+        {payment_method_type: "foo"},
+        {payment_method_type: "manual", payment_method_id: :payment_method},
+        {payment_method_type: "provider", payment_method_id: SecureRandom.uuid},
+        {payment_method_id: :payment_method}
+      ].each do |params|
+        context "with #{params}" do
+          let(:payment_method_params) { params.transform_values { (it == :payment_method) ? payment_method.id : it } }
+
+          it "refuses it without creating a payment" do
+            result = nil
+
+            expect { result = retry_service.call }.not_to have_enqueued_job(Invoices::Payments::CreateJob)
+            expect(result).not_to be_success
+            expect(result.error.messages).to eq(payment_method: ["invalid_payment_method"])
+          end
+        end
+      end
+
+      context "with a payment method of the customer" do
+        let(:payment_method_params) { {payment_method_type: "provider", payment_method_id: payment_method.id} }
+
+        it "enqueues a job to create the payment with it" do
+          expect { retry_service.call }
+            .to have_enqueued_job(Invoices::Payments::CreateJob)
+            .with(invoice:, payment_provider: payment_provider.to_sym, payment_method_params:)
+        end
+      end
+
+      context "without a payment method override" do
+        let(:payment_method_params) { nil }
+
+        it "enqueues a job to create the payment" do
+          expect { retry_service.call }.to have_enqueued_job(Invoices::Payments::CreateJob)
+        end
+      end
+    end
+
     context "when no payment provider" do
       let(:payment_provider) { nil }
 

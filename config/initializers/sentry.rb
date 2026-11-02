@@ -8,5 +8,13 @@ if ENV["SENTRY_DSN"].present?
     config.traces_sample_rate = 0
     config.traces_sample_rate = ENV["SENTRY_TRACES_SAMPLE_RATE"].to_f
     config.environment = ENV["SENTRY_ENVIRONMENT"] || Rails.env
+
+    # Sentry keeps every header but Authorization and Cookie, and the cable token travels in this one.
+    drop_websocket_protocol = lambda do |event, _hint|
+      event.request&.headers&.delete("Sec-Websocket-Protocol")
+      event
+    end
+    config.before_send = drop_websocket_protocol
+    config.before_send_transaction = drop_websocket_protocol
   end
 end

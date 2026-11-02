@@ -45,8 +45,7 @@ module ProductFilters
       result
     rescue ActiveRecord::RecordInvalid => e
       if e.record.is_a?(ProductFilterValue)
-        errors = e.record.errors.messages.transform_keys { |key| :"values.#{key}" }
-        result.validation_failure!(errors:)
+        result.record_validation_failure!(record: e.record) { :"values.#{it}" }
       else
         result.record_validation_failure!(record: e.record)
       end

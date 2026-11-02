@@ -3,6 +3,13 @@
 module Events
   module Stores
     class BaseStore
+      # Unicode White_Space, as Ruby's `blank?`: `[[:space:]]` is ASCII-only in RE2 and locale-dependent in PostgreSQL
+      BLANK_VALUE_CHARS = [*0x09..0x0D, 0x20, 0x85, 0xA0, 0x1680, *0x2000..0x200A, 0x2028, 0x2029, 0x202F, 0x205F, 0x3000]
+        .map { it.chr(Encoding::UTF_8) }.freeze
+
+      # Matches the values Ruby's `blank?` reads as missing, so SQL groups them like `build_groups`
+      BLANK_VALUE_PATTERN = "^[#{BLANK_VALUE_CHARS.join}]*$"
+
       AggregationResult = Data.define(
         :value,
         :events_count
@@ -189,18 +196,25 @@ module Events
         raise NotImplementedError
       end
 
-      # NOTE: sum of a recurring metric over its full history. `watermark` bounds the snapshot_value
-      #       of the snapshot to persist for this period.
-      def recurring_sum(watermark:)
+      # NOTE: sum of a recurring metric. Without a period, it covers the full history. With the period
+      #       of the latest snapshots, it only covers what they did not count: the events dated after
+      #       it, and the late events dated before it but ingested after its watermark.
+      #       `watermark` bounds the snapshot_value of the snapshot to persist for this period.
+      def recurring_sum(watermark:, period: nil)
         raise NotImplementedError
       end
 
-      def grouped_recurring_sum(watermark:)
+      def grouped_recurring_sum(watermark:, period: nil)
         raise NotImplementedError
       end
 
       def prorated_sum(period_duration:, persisted_duration: nil)
         raise NotImplementedError
+      end
+
+      # A store keeping its rows between computations answers a sum cheaper than a snapshot delta.
+      def incremental_sum?
+        false
       end
 
       def grouped_prorated_sum(period_duration:, persisted_duration: nil)

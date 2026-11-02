@@ -294,6 +294,20 @@ describe X402::Settlements::ReconcileService do
         expect(result.settlement.reload.wallet_transaction).to be_present
       end
     end
+
+    context "with a testnet connection on an organization running on mainnet" do
+      let(:x402_connection) do
+        create(:x402_connection, :saved_before_switch, organization: create(:organization, feature_flags: ["x402_payments", "x402_mainnet"]))
+      end
+
+      it "marks the row settled" do
+        expect(result.settlement.reload).to be_settled
+      end
+
+      it "grants the credits" do
+        expect(result.settlement.reload.wallet_transaction).to be_present
+      end
+    end
   end
 
   context "when nothing landed" do

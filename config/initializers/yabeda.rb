@@ -45,6 +45,23 @@ Yabeda.configure do
       buckets: [0.1, 0.25, 0.5, 1, 2, 5]
   end
 
+  # The wallet alerts lane: how a moved balance reached evaluation, and what the consumer did with
+  # it. Like the refresh lane, no organization or wallet id is ever a tag.
+  group :usage_monitoring do
+    counter :wallet_alerts_dispatched_total,
+      comment: "Wallets handed to alert evaluation, by the way they were sent (kafka, job, job_fallback)",
+      tags: %i[via]
+
+    counter :wallet_alerts_outcomes_total,
+      comment: "Wallets a consumed batch resolved to, by what the consumer did with them",
+      tags: %i[outcome reason]
+
+    histogram :wallet_alerts_latency,
+      comment: "Dispatch of a moved balance to the end of its alert evaluation",
+      unit: :seconds,
+      buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30]
+  end
+
   # Draft tax requests answered from the cache instead of the tax provider. Tags are bounded by
   # the provider list.
   group :tax_providers do

@@ -9,6 +9,9 @@ RSpec.describe Types::PaymentReceipts::Object do
     expect(subject).to have_field(:id).of_type("ID!")
 
     expect(subject).to have_field(:file_url).of_type("String")
+    expect(subject).to have_field(:file_url_expires_at).of_type("ISO8601DateTime")
+    expect(subject).to have_field(:xml_url).of_type("String")
+    expect(subject).to have_field(:xml_url_expires_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:number).of_type("String!")
     expect(subject).to have_field(:payment).of_type("Payment!")
     expect(subject).to have_field(:organization).of_type("Organization!")

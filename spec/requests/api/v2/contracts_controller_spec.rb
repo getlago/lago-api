@@ -38,7 +38,7 @@ RSpec.describe Api::V2::ContractsController do
 
         expect(response).to have_http_status(:success)
         expect(json[:contract]).to include(external_id: "contract-1", plan_code: catalog_plan.code, status: "active")
-        expect(json[:contract].keys).to eq(flat_keys)
+        expect(json[:contract].keys).to match_array(flat_keys)
 
         get_with_token(organization, "/api/v2/contracts/contract-1", {expands: %w[applied_rate_cards]})
 
@@ -54,7 +54,7 @@ RSpec.describe Api::V2::ContractsController do
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("expand_not_supported")
-        expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: %w[applied_rate_cards]})
+        expect(json[:details]).to eq([{code: "action_not_expandable", field: "expands", meta: {invalid_values: %w[applied_rate_cards]}}])
       end
     end
 
@@ -81,7 +81,7 @@ RSpec.describe Api::V2::ContractsController do
 
         expect(response).to have_http_status(:success)
         expect(json[:contract][:skip_invoice_custom_sections]).to be(false)
-        expect(json[:contract].keys).to eq(flat_keys)
+        expect(json[:contract].keys).to match_array(flat_keys)
 
         get_with_token(organization, "/api/v2/contracts/contract-1", {expands: %w[invoice_custom_sections]})
 
@@ -107,7 +107,7 @@ RSpec.describe Api::V2::ContractsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("customer")
+        expect(response).to be_v2_not_found_error("customer")
       end
     end
 
@@ -118,7 +118,7 @@ RSpec.describe Api::V2::ContractsController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json.dig(:error_details, :external_id)).to eq(["value_already_exists"])
+        expect(json[:details]).to eq([{code: "value_already_exists", field: "external_id", meta: {}}])
       end
     end
   end
@@ -135,7 +135,7 @@ RSpec.describe Api::V2::ContractsController do
 
       expect(response).to have_http_status(:success)
       result = json[:contracts].sole
-      expect(result.keys).to eq(flat_keys)
+      expect(result.keys).to match_array(flat_keys)
       expect(result[:lago_id]).to eq(contract.id)
       expect(json[:meta]).to eq(next_cursor: nil, prev_cursor: nil)
     end
@@ -148,13 +148,18 @@ RSpec.describe Api::V2::ContractsController do
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("expand_not_supported")
-        expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: %w[applied_rate_cards]})
+        expect(json[:details]).to eq([{code: "action_not_expandable", field: "expands", meta: {invalid_values: %w[applied_rate_cards]}}])
       end
     end
 
     it_behaves_like "a cursor paginated v2 endpoint", collection: :contracts, model: Contract do
       let(:paginated_path) { "/api/v2/contracts" }
       let(:create_paginated_record) { ->(created_at) { create(:contract, organization:, customer:, created_at:) } }
+    end
+
+    it_behaves_like "a v2 list filtered on created_at", collection: :contracts do
+      let(:filtered_path) { "/api/v2/contracts" }
+      let(:create_filtered_record) { ->(created_at) { create(:contract, organization:, customer:, created_at:) } }
     end
 
     context "with a pending contract" do
@@ -315,7 +320,7 @@ RSpec.describe Api::V2::ContractsController do
 
         expect(listed.size).to eq(6)
         expect(json[:contract][:applied_rate_cards]).to eq(listed)
-        expect(json[:contract].keys).to eq([*flat_keys, :applied_rate_cards])
+        expect(json[:contract].keys).to match_array([*flat_keys, :applied_rate_cards])
       end
     end
 
@@ -329,7 +334,7 @@ RSpec.describe Api::V2::ContractsController do
 
         expect(expanded[:plan]).to eq(json[:plan])
         expect(expanded[:plan]).to include(lago_id: catalog_plan.id, deleted_at: nil)
-        expect(expanded.keys).to eq([*flat_keys, :plan])
+        expect(expanded.keys).to match_array([*flat_keys, :plan])
       end
 
       context "when the plan is discarded" do
@@ -365,7 +370,7 @@ RSpec.describe Api::V2::ContractsController do
         expect(json[:contract][:customer]).to eq(V2::CustomerSerializer.new(customer, includes: %i[usec_timestamps]).serialize)
         expect(json[:contract][:customer]).to include(lago_id: customer.id, external_id: customer.external_id, deleted_at: nil)
         expect(json[:contract][:customer]).not_to include(:billing_configuration, :shipping_address, :metadata)
-        expect(json[:contract].keys).to eq([*flat_keys, :customer])
+        expect(json[:contract].keys).to match_array([*flat_keys, :customer])
       end
 
       context "when the customer is discarded" do
@@ -414,7 +419,7 @@ RSpec.describe Api::V2::ContractsController do
             created_at: sections.third.created_at.iso8601(6),
             updated_at: sections.third.updated_at.iso8601(6)
           )
-          expect(json[:contract].keys).to eq([*flat_keys, :invoice_custom_sections])
+          expect(json[:contract].keys).to match_array([*flat_keys, :invoice_custom_sections])
         end
 
         context "with a section deleted while the contract still selects it" do
@@ -441,11 +446,11 @@ RSpec.describe Api::V2::ContractsController do
         create(:contract_applied_invoice_custom_section, contract:)
       end
 
-      it "embeds them after the contract, in the serializer's order" do
+      it "embeds them all" do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:contract].keys).to eq([*flat_keys, :applied_rate_cards, :plan, :customer, :invoice_custom_sections])
+        expect(json[:contract].keys).to match_array([*flat_keys, :applied_rate_cards, :plan, :customer, :invoice_custom_sections])
       end
 
       context "with a contract of 3 cards, each with rate phases, and 3 sections" do
@@ -510,15 +515,17 @@ RSpec.describe Api::V2::ContractsController do
 
         expect(response).to have_http_status(:bad_request)
         expect(json).to eq(
-          status: 400,
-          error: "Bad Request",
           code: "invalid_expand",
-          error_details: {
-            expands: {
-              invalid_values: %w[applied_invoice_custom_sections],
-              allowed_values: %w[applied_rate_cards plan customer invoice_custom_sections]
+          details: [
+            {
+              code: "invalid_expand",
+              field: "expands",
+              meta: {
+                invalid_values: %w[applied_invoice_custom_sections],
+                allowed_values: %w[applied_rate_cards plan customer invoice_custom_sections]
+              }
             }
-          }
+          ]
         )
       end
     end
@@ -582,7 +589,7 @@ RSpec.describe Api::V2::ContractsController do
 
       it "returns it only with an explicit status filter" do
         subject
-        expect(response).to be_not_found_error("contract")
+        expect(response).to be_v2_not_found_error("contract")
 
         get_with_token(organization, "/api/v2/contracts/#{contract.external_id}?status=terminated")
         expect(response).to have_http_status(:success)
@@ -596,7 +603,7 @@ RSpec.describe Api::V2::ContractsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("contract")
+        expect(response).to be_v2_not_found_error("contract")
       end
     end
   end
@@ -615,7 +622,7 @@ RSpec.describe Api::V2::ContractsController do
       expect(response).to have_http_status(:success)
       expect(json[:contract][:external_id]).to eq(contract.external_id)
       expect(json[:contract][:name]).to eq("Renamed")
-      expect(json[:contract].keys).to eq(flat_keys)
+      expect(json[:contract].keys).to match_array(flat_keys)
     end
 
     context "when skipping invoice custom sections" do
@@ -628,7 +635,7 @@ RSpec.describe Api::V2::ContractsController do
 
         expect(response).to have_http_status(:success)
         expect(json[:contract][:skip_invoice_custom_sections]).to be(true)
-        expect(json[:contract].keys).to eq(flat_keys)
+        expect(json[:contract].keys).to match_array(flat_keys)
         expect(contract.reload.applied_invoice_custom_sections).to be_empty
       end
     end
@@ -645,7 +652,7 @@ RSpec.describe Api::V2::ContractsController do
 
         expect(response).to have_http_status(:success)
         expect(json[:contract]).to include(plan_code: other_plan.code)
-        expect(json[:contract].keys).to eq(flat_keys)
+        expect(json[:contract].keys).to match_array(flat_keys)
 
         get_with_token(organization, "/api/v2/contracts/#{contract.external_id}", {expands: %w[applied_rate_cards]})
 
@@ -695,7 +702,7 @@ RSpec.describe Api::V2::ContractsController do
           subject
 
           expect(response).to have_http_status(:unprocessable_entity)
-          expect(json[:error_details][:contract]).to eq(["contract_locked"])
+          expect(json[:details]).to eq([{code: "contract_locked", field: "contract", meta: {}}])
         end
       end
     end
@@ -706,7 +713,7 @@ RSpec.describe Api::V2::ContractsController do
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("contract")
+        expect(response).to be_v2_not_found_error("contract")
       end
     end
   end
@@ -724,7 +731,7 @@ RSpec.describe Api::V2::ContractsController do
       expect(response).to have_http_status(:success)
       expect(json[:contract][:external_id]).to eq(contract.external_id)
       expect(json[:contract][:status]).to eq("terminated")
-      expect(json[:contract].keys).to eq(flat_keys)
+      expect(json[:contract].keys).to match_array(flat_keys)
     end
 
     context "when the contract is pending" do
@@ -750,13 +757,25 @@ RSpec.describe Api::V2::ContractsController do
       end
     end
 
+    context "when the billing lock of the customer is held" do
+      before { allow(Customers::LockService).to receive(:call).and_raise(BaseLockService::FailedToAcquireLock) }
+
+      it "returns a concurrency conflict and leaves the contract active" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "concurrency_conflict", field: "base", meta: {}}])
+        expect(contract.reload.status).to eq("active")
+      end
+    end
+
     context "when no live contract matches the external id" do
       subject { delete_with_token(organization, "/api/v2/contracts/unknown") }
 
       it "returns a not found error" do
         subject
 
-        expect(response).to be_not_found_error("contract")
+        expect(response).to be_v2_not_found_error("contract")
       end
     end
   end

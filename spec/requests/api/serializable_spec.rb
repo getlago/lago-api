@@ -237,7 +237,7 @@ RSpec.describe Api::Serializable do
       show
 
       expect(response).to have_http_status(:bad_request)
-      expect(json[:error_details]).to eq(expands: {reason: "malformed", allowed_values: %w[product_category billable_metric]})
+      expect(json[:details]).to eq([{code: "malformed", field: "expands", meta: {allowed_values: %w[product_category billable_metric]}}])
     end
   end
 
@@ -291,10 +291,8 @@ RSpec.describe Api::Serializable do
 
       expect(response).to have_http_status(:bad_request)
       expect(json).to eq(
-        status: 400,
-        error: "Bad Request",
         code: "invalid_expand",
-        error_details: {expands: {invalid_values: ["fees"], allowed_values: %w[product_category billable_metric]}}
+        details: [{code: "invalid_expand", field: "expands", meta: {invalid_values: ["fees"], allowed_values: %w[product_category billable_metric]}}]
       )
     end
   end
@@ -314,7 +312,7 @@ RSpec.describe Api::Serializable do
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("invalid_expand")
-        expect(json[:error_details]).to eq(expands: {invalid_values:, allowed_values: %w[product_category billable_metric]})
+        expect(json[:details]).to eq([{code: "invalid_expand", field: "expands", meta: {invalid_values:, allowed_values: %w[product_category billable_metric]}}])
       end
     end
   end
@@ -325,7 +323,7 @@ RSpec.describe Api::Serializable do
     it "returns it once" do
       show
 
-      expect(json[:error_details]).to eq(expands: {invalid_values: ["fees"], allowed_values: %w[product_category billable_metric]})
+      expect(json[:details]).to eq([{code: "invalid_expand", field: "expands", meta: {invalid_values: ["fees"], allowed_values: %w[product_category billable_metric]}}])
     end
   end
 
@@ -344,7 +342,7 @@ RSpec.describe Api::Serializable do
 
         expect(response).to have_http_status(:bad_request)
         expect(json[:code]).to eq("invalid_expand")
-        expect(json[:error_details]).to eq(expands: {reason: "malformed", allowed_values: %w[product_category billable_metric]})
+        expect(json[:details]).to eq([{code: "malformed", field: "expands", meta: {allowed_values: %w[product_category billable_metric]}}])
       end
     end
   end
@@ -357,7 +355,7 @@ RSpec.describe Api::Serializable do
       show
 
       expect(response).to have_http_status(:bad_request)
-      expect(json[:error_details]).to eq(expands: {reason: "malformed", allowed_values: %w[product_category billable_metric]})
+      expect(json[:details]).to eq([{code: "malformed", field: "expands", meta: {allowed_values: %w[product_category billable_metric]}}])
     end
   end
 
@@ -369,7 +367,7 @@ RSpec.describe Api::Serializable do
         create_request
 
         expect(response).to have_http_status(:bad_request)
-        expect(json[:error_details]).to eq(expands: {reason: "malformed", allowed_values: []})
+        expect(json[:details]).to eq([{code: "malformed", field: "expands", meta: {allowed_values: []}}])
       end
     end
   end
@@ -382,10 +380,8 @@ RSpec.describe Api::Serializable do
 
       expect(response).to have_http_status(:bad_request)
       expect(json).to eq(
-        status: 400,
-        error: "Bad Request",
         code: "expand_not_supported",
-        error_details: {expands: {reason: "action_not_expandable", invalid_values: ["product_category"]}}
+        details: [{code: "action_not_expandable", field: "expands", meta: {invalid_values: ["product_category"]}}]
       )
     end
   end
@@ -398,7 +394,7 @@ RSpec.describe Api::Serializable do
 
       expect(response).to have_http_status(:bad_request)
       expect(json[:code]).to eq("expand_not_supported")
-      expect(json[:error_details]).to eq(expands: {reason: "action_not_expandable", invalid_values: ["product_category"]})
+      expect(json[:details]).to eq([{code: "action_not_expandable", field: "expands", meta: {invalid_values: ["product_category"]}}])
     end
   end
 
@@ -421,7 +417,7 @@ RSpec.describe Api::Serializable do
 
       expect(response).to have_http_status(:bad_request)
       expect(json[:code]).to eq("expand_not_supported")
-      expect(json[:error_details]).to eq(expands: {reason: "not_expandable", invalid_values: ["product_category"]})
+      expect(json[:details]).to eq([{code: "not_expandable", field: "expands", meta: {invalid_values: ["product_category"]}}])
     end
   end
 
@@ -432,7 +428,7 @@ RSpec.describe Api::Serializable do
       show
 
       expect(response).to have_http_status(:bad_request)
-      expect(json[:error_details]).to eq(expands: {reason: "not_expandable", invalid_values: ["product_category"]})
+      expect(json[:details]).to eq([{code: "not_expandable", field: "expands", meta: {invalid_values: ["product_category"]}}])
     end
   end
 
@@ -452,7 +448,7 @@ RSpec.describe Api::Serializable do
         show
 
         expect(response).to have_http_status(:bad_request)
-        expect(json[:error_details]).to eq(expands: {reason: "not_expandable", invalid_values: ["product_category"]})
+        expect(json[:details]).to eq([{code: "not_expandable", field: "expands", meta: {invalid_values: ["product_category"]}}])
       end
     end
   end
@@ -498,7 +494,7 @@ RSpec.describe Api::Serializable do
       it "returns a not found error" do
         show
 
-        expect(response).to be_not_found_error("product")
+        expect(response).to be_v2_not_found_error("product")
       end
     end
 

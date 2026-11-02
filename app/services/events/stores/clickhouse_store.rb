@@ -247,7 +247,7 @@ module Events
       def active_unique_property?(event)
         previous_event = Events::Stores::Utils::ClickhouseConnection.with_retry do
           query = events
-            .where("events_enriched.properties[?] = ?", aggregation_property, event.properties[aggregation_property])
+            .where("events_enriched.properties[?] = ?", aggregation_property, event.properties[aggregation_property]&.to_s)
 
           if event.persisted? && event.transaction_id.present?
             query
@@ -542,11 +542,12 @@ module Events
         end
       end
 
-      def recurring_sum(watermark:)
+      def recurring_sum(watermark:, period: nil)
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          ctes_sql = events_cte_queries(
+          ctes_sql = recurring_events_cte_queries(
+            period,
             select: [arel_table[:decimal_value].as("property"), arel_table[:enriched_at]],
-            deduplicated_columns: %w[decimal_value enriched_at]
+            deduplicated_columns: %w[decimal_value]
           )
 
           sql = with_ctes(ctes_sql, <<-SQL)
@@ -558,13 +559,14 @@ module Events
         end
       end
 
-      def grouped_recurring_sum(watermark:)
+      def grouped_recurring_sum(watermark:, period: nil)
         groups, column_names = grouped_arel_columns
 
         Events::Stores::Utils::ClickhouseConnection.connection_with_retry do |connection|
-          ctes_sql = events_cte_queries(
+          ctes_sql = recurring_events_cte_queries(
+            period,
             select: groups + [arel_table[:decimal_value].as("property"), arel_table[:enriched_at]],
-            deduplicated_columns: %w[decimal_value properties enriched_at]
+            deduplicated_columns: %w[decimal_value properties]
           )
 
           sql = with_ctes(ctes_sql, <<-SQL)
@@ -770,6 +772,32 @@ module Events
         end
       end
 
+      def recurring_events_cte_queries(period, select:, deduplicated_columns:)
+        return events_cte_queries(select:, deduplicated_columns: deduplicated_columns + %w[enriched_at]) if period.nil?
+
+        query = arel_table
+        query = apply_arel_grouped_by_values(query) if grouped_by_values?
+        query = arel_filters_scope(query)
+
+        {
+          "events_enriched" => snapshot_delta_events_sql(period, deduplicated_columns:),
+          "events" => query.project(select).to_sql(::Clickhouse::EventsEnriched)
+        }
+      end
+
+      # The events dated after the period and the late ones are read in two branches rather than
+      # one OR, so that the first is pruned by the primary key and the second by the enriched_at index.
+      # The branches cannot share a deduplication key, as the timestamp is part of it.
+      def snapshot_delta_events_sql(period, deduplicated_columns:)
+        columns = (DEDUP_KEY_COLUMNS + deduplicated_columns + %w[properties enriched_at]).uniq.join(", ")
+        where_sql = deduplicated_events_where_sql(from_datetime: nil, to_datetime: applicable_to_datetime)
+
+        [
+          sql_condition("timestamp > ?", period.to_datetime),
+          sql_condition("timestamp <= ? AND enriched_at > ?", period.to_datetime, period.watermark)
+        ].map { "SELECT #{columns} FROM events_enriched FINAL WHERE #{where_sql} AND #{it}" }.join(" UNION ALL ")
+      end
+
       def recurring_sum_sql(watermark)
         <<~SQL.squish
           sum(events.property) AS value,
@@ -843,7 +871,7 @@ module Events
           scope = if grouped_by_value.present?
             scope.where("events_enriched.properties[?] = ?", grouped_by, grouped_by_value)
           else
-            scope.where("COALESCE(events_enriched.properties[?], '') = ''", grouped_by)
+            scope.where("match(events_enriched.properties[?], ?)", grouped_by, BLANK_VALUE_PATTERN)
           end
         end
 
@@ -855,15 +883,7 @@ module Events
           query = if grouped_by_value.present?
             query.where(Arel::Nodes::SqlLiteral.new(sanitized_property_name(grouped_by)).eq(grouped_by_value))
           else
-            query.where(
-              Arel::Nodes::NamedFunction.new(
-                "COALESCE",
-                [
-                  Arel::Nodes::SqlLiteral.new(sanitized_property_name(grouped_by)),
-                  Arel::Nodes::SqlLiteral.new("''")
-                ]
-              ).eq(Arel::Nodes::SqlLiteral.new("''"))
-            )
+            query.where(Arel::Nodes::SqlLiteral.new(blank_value_condition(grouped_by)))
           end
         end
 
@@ -948,9 +968,18 @@ module Events
       def grouped_arel_columns(columns = grouped_by)
         names = Array.new(columns.count) { |i| "g_#{i}" }
         [
-          columns.map.with_index { |col, i| Arel::Nodes::SqlLiteral.new(sanitized_property_name(col)).as("g_#{i}") },
+          columns.map.with_index { |col, i| Arel::Nodes::SqlLiteral.new(sanitized_group_name(col)).as("g_#{i}") },
           names.join(", ")
         ]
+      end
+
+      # A whitespace-only value is one group with a missing one, which reads as ''
+      def sanitized_group_name(property)
+        "if(#{blank_value_condition(property)}, '', #{sanitized_property_name(property)})"
+      end
+
+      def blank_value_condition(property)
+        sanitize_clickhouse_sql(["match(events_enriched.properties[?], ?)", property, BLANK_VALUE_PATTERN])
       end
 
       def grouped_by_columns(values)

@@ -17,7 +17,11 @@ module Invoices
         return result
       end
 
+      # A non-zero draft is reserved in the wallet ongoing balance until it leaves draft
+      reserved_draft = invoice.draft? && invoice.total_amount_cents != 0
+
       invoice.finalized!
+      invoice.customer.flag_wallets_for_refresh if reserved_draft
 
       Invoices::RefreshSearchTermsService.call!(invoice:)
 

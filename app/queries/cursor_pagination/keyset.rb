@@ -15,9 +15,9 @@ module CursorPagination
       sort = cursor.sort
       scope = case cursor.direction
       when :forward
-        scope.where("#{row(scope, sort)} #{operator(sort, :forward)} (?, ?)", *bound_key(cursor.key))
+        scope.where("#{row(scope, sort)} #{operator(sort, :forward)} #{placeholders(sort)}", *bound_key(cursor.key))
       when :backward
-        scope.where("#{row(scope, sort)} #{operator(sort, :backward)} (?, ?)", *bound_key(cursor.key))
+        scope.where("#{row(scope, sort)} #{operator(sort, :backward)} #{placeholders(sort)}", *bound_key(cursor.key))
       else
         scope
       end
@@ -35,8 +35,8 @@ module CursorPagination
     # Binds a Time/DateTime from the cursor key as a microsecond-precision UTC literal,
     # which both ClickHouse DateTime64(3) and Postgres timestamptz parse. Passing the raw
     # Time through the ClickHouse adapter's `quoted_date` truncates it to the whole second
-    # (`value.to_fs(:db)`), dropping rows that share the anchor's second. The string
-    # tiebreak is bound unchanged.
+    # (`value.to_fs(:db)`), dropping rows that share the anchor's second. A date and the
+    # tiebreak are bound unchanged.
     def self.bound_key(key)
       key.map do |value|
         (value.is_a?(Time) || value.is_a?(DateTime)) ? value.utc.strftime("%Y-%m-%d %H:%M:%S.%6N") : value
@@ -49,6 +49,11 @@ module CursorPagination
       "(#{columns.join(", ")})"
     end
     private_class_method :row
+
+    def self.placeholders(sort)
+      "(#{Array.new(sort.size, "?").join(", ")})"
+    end
+    private_class_method :placeholders
 
     # The rows past the anchor, in the direction being paged: lower values when walking
     # forward a descending sort, higher ones when walking it backward, and the other way

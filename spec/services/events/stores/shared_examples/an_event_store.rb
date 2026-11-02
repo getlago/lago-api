@@ -145,6 +145,38 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         expect(retrieved_events.map { |e| e.properties[billable_metric.field_name].to_s }).to match_array(["1", "2", "3", "4", "5"])
       end
 
+      context "with a nil grouped_by_values value" do
+        let(:grouped_by_values) { {"region" => nil} }
+
+        before do
+          create_event(timestamp: subscription_started_at + 6.days, value: 6, properties: {"region" => ""})
+          create_event(timestamp: subscription_started_at + 7.days, value: 7, properties: {"region" => " \t\n\u00A0\u3000"})
+          create_event(timestamp: subscription_started_at + 8.days, value: 8, properties: {"region" => " eu "})
+        end
+
+        it "returns the events with a missing, blank or whitespace-only value" do
+          values = event_store.events.map { |e| e.properties[billable_metric.field_name].to_s }
+
+          expect(values).to match_array(["2", "4", "6", "7"])
+        end
+      end
+
+      context "with events storing the group value as a number" do
+        let(:grouped_by_values) { {"region" => "1"} }
+
+        before do
+          create_event(timestamp: subscription_started_at + 6.days, value: 6, properties: {"region" => 1})
+          create_event(timestamp: subscription_started_at + 7.days, value: 7, properties: {"region" => "1"})
+          create_event(timestamp: subscription_started_at + 8.days, value: 8, properties: {"region" => 10})
+        end
+
+        it "returns the events whose value reads as the same text, as the grouped reads do" do
+          values = event_store.events.map { |e| e.properties[billable_metric.field_name].to_s }
+
+          expect(values).to match_array(["6", "7"])
+        end
+      end
+
       context "when ordered is true" do
         it "returns the events ordered by timestamp" do
           retrieved_events = event_store.events(ordered: true)
@@ -344,6 +376,17 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
           it "returns the number of unique events" do
             expect(event_store.count).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 2, events_count: 2))
+          end
+
+          context "with blank and whitespace-only values" do
+            before do
+              create_event(timestamp: subscription_started_at + 6.days, value: 6, properties: {"region" => ""})
+              create_event(timestamp: subscription_started_at + 7.days, value: 7, properties: {"region" => " \t\u00A0\u3000"})
+            end
+
+            it "counts them with the missing values, as the grouped reads do" do
+              expect(event_store.count).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 4, events_count: 4))
+            end
           end
         end
       end
@@ -631,6 +674,31 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           expect(event_store).not_to be_active_unique_property(event_one)
           expect(event_store).to be_active_unique_property(event_two)
           expect(event_store).not_to be_active_unique_property(event_three)
+        end
+
+        context "when the event stores the property as a number" do
+          let(:event_one) do
+            create_event(
+              timestamp: same_timestamp,
+              value: 1,
+              properties: {user_id: "1"},
+              transaction_id: "numeric_unique_property_e1",
+              created_at: Time.zone.parse("2026-10-06T15:18:14.156149Z")
+            )
+          end
+          let(:event_two) do
+            create_event(
+              timestamp: same_timestamp,
+              value: 1,
+              properties: {user_id: 1},
+              transaction_id: "numeric_unique_property_e2",
+              created_at: Time.zone.parse("2026-10-06T15:18:14.444518Z")
+            )
+          end
+
+          it "matches the property as text" do
+            expect(event_store).to be_active_unique_property(event_two)
+          end
         end
 
         it "does not let a future tied receipt affect an earlier lookup" do
@@ -1577,6 +1645,20 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         expect(result.events_count).to eq(5)
       end
 
+      context "with events storing the group value as a number" do
+        let(:grouped_by_values) { {"region" => "1"} }
+
+        before do
+          create_event(timestamp: subscription_started_at + 6.days, value: 6, properties: {"region" => 1})
+          create_event(timestamp: subscription_started_at + 7.days, value: 7, properties: {"region" => "1"})
+          create_event(timestamp: subscription_started_at + 8.days, value: 8, properties: {"region" => 10})
+        end
+
+        it "sums the events whose value reads as the same text" do
+          expect(event_store.sum).to eq(Events::Stores::BaseStore::AggregationResult.new(value: 13, events_count: 2))
+        end
+      end
+
       if with_event_duplication
         context "with only duplicated transaction_id" do
           before do
@@ -1767,9 +1849,10 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
 
   if include_feature?(:recurring_sum)
     describe "#recurring_sum" do
-      subject(:result) { event_store.recurring_sum(watermark:) }
+      subject(:result) { event_store.recurring_sum(watermark:, period:) }
 
       let(:watermark) { Time.current + 1.minute }
+      let(:period) { nil }
 
       before do
         event_store.aggregation_property = billable_metric.field_name
@@ -1812,13 +1895,83 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
           )
         end
       end
+
+      context "with the period of the latest snapshots" do
+        let(:period) do
+          RecurringAggregationSnapshots::FetchService::Period.new(
+            to_datetime: subscription_started_at + 3.days,
+            watermark: period_watermark
+          )
+        end
+        let(:period_watermark) { (Time.current + 1.minute).floor(3) }
+        let(:watermark) { Time.current + 2.hours }
+
+        it "sums the events dated after the period and the late events" do
+          expect(result).to eq(
+            Events::Stores::BaseStore::RecurringAggregationResult.new(value: 1009, snapshot_value: 1009, events_count: 3, snapshot_events_count: 3)
+          )
+        end
+
+        context "with late events ingested at the period watermark" do
+          before do
+            create_event(timestamp: subscription_started_at + 2.days, value: 10_000, created_at: period_watermark)
+            create_event(timestamp: subscription_started_at + 2.days, value: 100_000, created_at: period_watermark + 0.001)
+          end
+
+          it "leaves the event ingested at the period watermark to the snapshots" do
+            expect(result).to eq(
+              Events::Stores::BaseStore::RecurringAggregationResult.new(value: 101_009, snapshot_value: 101_009, events_count: 4, snapshot_events_count: 4)
+            )
+          end
+        end
+
+        context "with an event dated at the end of the period and ingested before its watermark" do
+          before do
+            create_event(timestamp: period.to_datetime, value: 10_000, created_at: Time.current - 1.hour)
+          end
+
+          it "leaves the event to the snapshots" do
+            expect(result).to eq(
+              Events::Stores::BaseStore::RecurringAggregationResult.new(value: 1009, snapshot_value: 1009, events_count: 3, snapshot_events_count: 3)
+            )
+          end
+        end
+
+        context "with an event dated after the period and ingested before its watermark" do
+          before do
+            create_event(timestamp: period.to_datetime + 1.second, value: 10_000, created_at: Time.current - 1.hour)
+          end
+
+          it "counts the event once" do
+            expect(result).to eq(
+              Events::Stores::BaseStore::RecurringAggregationResult.new(value: 11_009, snapshot_value: 11_009, events_count: 4, snapshot_events_count: 4)
+            )
+          end
+        end
+
+        context "when the late event is ingested after the watermark" do
+          let(:watermark) { Time.current + 30.minutes }
+
+          it "excludes it from the snapshot value" do
+            expect(result).to eq(
+              Events::Stores::BaseStore::RecurringAggregationResult.new(value: 1009, snapshot_value: 9, events_count: 3, snapshot_events_count: 2)
+            )
+          end
+        end
+      end
     end
 
     describe "#grouped_recurring_sum" do
-      subject(:result) { event_store.grouped_recurring_sum(watermark:) }
+      subject(:result) { event_store.grouped_recurring_sum(watermark:, period:) }
 
       let(:grouped_by) { %w[region] }
       let(:watermark) { Time.current + 30.minutes }
+      let(:period) do
+        RecurringAggregationSnapshots::FetchService::Period.new(
+          to_datetime: subscription_started_at + 3.days,
+          watermark: Time.current + 1.minute
+        )
+      end
 
       before do
         event_store.aggregation_property = billable_metric.field_name
@@ -1828,11 +1981,22 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         create_event(timestamp: subscription_started_at + 2.days, value: 1000, properties: {"region" => "europe"}, created_at: Time.current + 1.hour)
       end
 
-      it "sums the full history per group and bounds the snapshot value and count by the watermark" do
+      it "sums the events dated after the period and the late events per group" do
         expect(result).to match_array([
-          Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(groups: {"region" => nil}, value: 6, snapshot_value: 6, events_count: 2, snapshot_events_count: 2),
-          Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(groups: {"region" => "europe"}, value: 1009, snapshot_value: 9, events_count: 4, snapshot_events_count: 3)
+          Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(groups: {"region" => nil}, value: 4, snapshot_value: 4, events_count: 1, snapshot_events_count: 1),
+          Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(groups: {"region" => "europe"}, value: 1005, snapshot_value: 5, events_count: 2, snapshot_events_count: 1)
         ])
+      end
+
+      context "without a period" do
+        let(:period) { nil }
+
+        it "sums the full history per group" do
+          expect(result).to match_array([
+            Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(groups: {"region" => nil}, value: 6, snapshot_value: 6, events_count: 2, snapshot_events_count: 2),
+            Events::Stores::BaseStore::GroupedRecurringAggregationResult.new(groups: {"region" => "europe"}, value: 1009, snapshot_value: 9, events_count: 4, snapshot_events_count: 3)
+          ])
+        end
       end
     end
   end
@@ -3107,9 +3271,9 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     end
   end
 
-  describe "grouped reads with a missing and a blank group value" do
+  describe "grouped reads with a missing, a blank and a whitespace-only group value" do
     let(:grouped_by) { %w[region] }
-    let(:expected_groups) { [{"region" => nil}, {"region" => "europe"}] }
+    let(:expected_groups) { [{"region" => nil}, {"region" => "europe"}, {"region" => " eu "}] }
     let(:numeric_property) { true }
 
     before do
@@ -3117,6 +3281,8 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
       event_store.numeric_property = numeric_property
 
       create_event(timestamp: subscription_started_at + 6.days, value: 7, properties: {"region" => ""})
+      create_event(timestamp: subscription_started_at + 7.days, value: 5, properties: {"region" => Events::Stores::BaseStore::BLANK_VALUE_CHARS.join})
+      create_event(timestamp: subscription_started_at + 8.days, value: 4, properties: {"region" => " eu "})
     end
 
     def groups_of(results)
@@ -3126,8 +3292,9 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     if include_feature?(:grouped_sum)
       it "returns a single group from #grouped_sum" do
         expect(event_store.grouped_sum).to match_array([
-          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => nil}, value: 13, events_count: 3),
-          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => "europe"}, value: 9, events_count: 3)
+          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => nil}, value: 18, events_count: 4),
+          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => "europe"}, value: 9, events_count: 3),
+          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => " eu "}, value: 4, events_count: 1)
         ])
       end
     end
@@ -3135,8 +3302,9 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
     if include_feature?(:grouped_count)
       it "returns a single group from #grouped_count" do
         expect(event_store.grouped_count).to match_array([
-          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => nil}, value: 3, events_count: 3),
-          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => "europe"}, value: 3, events_count: 3)
+          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => nil}, value: 4, events_count: 4),
+          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => "europe"}, value: 3, events_count: 3),
+          Events::Stores::BaseStore::GroupedAggregationResult.new(groups: {"region" => " eu "}, value: 1, events_count: 1)
         ])
       end
     end
@@ -3172,6 +3340,18 @@ RSpec.shared_examples "an event store" do |with_event_duplication: true, excludi
         it "returns a single group from #grouped_unique_count" do
           expect(groups_of(event_store.grouped_unique_count)).to match_array(expected_groups)
         end
+
+        if include_feature?(:grouped_prorated_unique_count)
+          it "returns a single group from #grouped_prorated_unique_count" do
+            expect(groups_of(event_store.grouped_prorated_unique_count)).to match_array(expected_groups)
+          end
+        end
+      end
+    end
+
+    if include_feature?(:recurring_sum)
+      it "returns a single group from #grouped_recurring_sum" do
+        expect(groups_of(event_store.grouped_recurring_sum(watermark: Time.current + 1.hour))).to match_array(expected_groups)
       end
     end
 

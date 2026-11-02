@@ -2,19 +2,23 @@
 
 class PaymentRequestsQuery < BaseQuery
   Result = BaseResult[:payment_requests]
-  Filters = BaseFilters[:external_customer_id, :payment_status, :currency, :billing_entity_ids]
+  Filters = BaseFilters[:external_customer_id, :customer_id, :payment_status, :currency, :billing_entity_ids, :created_at_from, :created_at_to]
 
   def call
     payment_requests = PaymentRequest.where(organization:)
 
     payment_requests = with_billing_entity_ids(payment_requests) if filters.billing_entity_ids.present?
     payment_requests = with_external_customer(payment_requests) if filters.external_customer_id
+    payment_requests = payment_requests.where(customer_id: filters.customer_id) if filters.customer_id
     payment_requests = with_payment_status(payment_requests) if filters.payment_status
     payment_requests = with_currency(payment_requests) if filters.currency
+    payment_requests = with_date_range(payment_requests, :created_at)
 
     payment_requests = apply_consistent_ordering(payment_requests)
     payment_requests = paginate(payment_requests)
     result.payment_requests = payment_requests
+    result
+  rescue BaseService::FailedResult
     result
   end
 

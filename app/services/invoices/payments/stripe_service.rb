@@ -17,11 +17,15 @@ module Invoices
       private
 
       def update_payment_status(organization_id:, status:, stripe_payment:, amount_cents: nil)
-        payment = Payment.find_by(provider_payment_id: stripe_payment.id)
-        return result if payment&.payable&.organization_id.present? && payment.payable.organization_id != organization_id
+        payment = Payment.find_by(provider_payment_id: stripe_payment.id, organization_id:)
 
         if !payment && stripe_payment.metadata[:payment_type] == "one-time"
-          payment = create_payment(stripe_payment, amount_cents:)
+          # NOTE: Invoice does not belong to this lago organization
+          #       It means the same Stripe secret key is used for multiple organizations
+          invoice = Invoice.find_by(id: stripe_payment.metadata[:lago_invoice_id], organization_id:)
+          return result unless invoice
+
+          payment = create_payment(stripe_payment, invoice:, amount_cents:)
         end
 
         unless payment
@@ -113,12 +117,8 @@ module Invoices
 
       delegate :organization, :customer, to: :invoice
 
-      def create_payment(stripe_payment, invoice: nil, amount_cents: nil)
-        @invoice = invoice || Invoice.find_by(id: stripe_payment.metadata[:lago_invoice_id])
-        unless @invoice
-          result.not_found_failure!(resource: "invoice")
-          return
-        end
+      def create_payment(stripe_payment, invoice:, amount_cents: nil)
+        @invoice = invoice
 
         increment_payment_attempts
 

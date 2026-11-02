@@ -23,10 +23,12 @@ module V1
         timezone: model.timezone,
         net_payment_term: model.net_payment_term,
         email_settings: model.email_settings,
+        customer_portal_locked_fields: model.customer_portal_locked_fields,
         document_numbering: model.document_numbering,
         document_number_prefix: model.document_number_prefix,
         tax_identification_number: model.tax_identification_number,
         finalize_zero_amount_invoice: model.finalize_zero_amount_invoice,
+        document_url_expiration_days: model.document_url_expiration_days,
         billing_configuration:,
         events_store: model.events_store
       }

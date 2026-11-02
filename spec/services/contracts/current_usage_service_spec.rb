@@ -368,9 +368,25 @@ RSpec.describe Contracts::CurrentUsageService do
           .to_return(body: File.read(Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")))
       end
 
-      it "returns a tax error instead of usage" do
+      it "returns a failure of the provider instead of usage" do
         expect(result).not_to be_success
-        expect(result.error.messages).to eq(tax_error: ["taxDateTooFarInFuture: Service failure"])
+        expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+        expect(result.error).to have_attributes(third_party: "anrok", error_code: nil, error_message: "taxDateTooFarInFuture: Service failure")
+      end
+    end
+
+    context "when the provider throttles the request" do
+      subject(:result) { described_class.call(contract:, timestamp:, apply_taxes:, filters:) }
+
+      before do
+        allow(Throttling).to receive(:for).with(:anrok).and_return(instance_double(Throttling::Base, check: false))
+      end
+
+      it "returns a too many provider requests failure instead of usage" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::TooManyProviderRequestsFailure)
+        expect(result.error).to have_attributes(provider_name: :anrok, message: "Service anrok is not available. Try again later.")
+        expect(WebMock).not_to have_requested(:post, endpoint)
       end
     end
 

@@ -549,6 +549,7 @@ RSpec.describe CreditNotes::Refunds::StripeService do
 
     it "updates the refund status" do
       result = stripe_service.update_status(
+        organization_id: organization.id,
         provider_refund_id: refund.provider_refund_id,
         status: "succeeded"
       )
@@ -563,6 +564,7 @@ RSpec.describe CreditNotes::Refunds::StripeService do
 
     it "calls SegmentTrackJob" do
       stripe_service.update_status(
+        organization_id: organization.id,
         provider_refund_id: refund.provider_refund_id,
         status: "succeeded"
       )
@@ -578,11 +580,27 @@ RSpec.describe CreditNotes::Refunds::StripeService do
       )
     end
 
+    context "when refund belongs to another organization" do
+      it "does not update the refund nor the credit note" do
+        result = stripe_service.update_status(
+          organization_id: create(:organization).id,
+          provider_refund_id: refund.provider_refund_id,
+          status: "succeeded"
+        )
+
+        expect(result).to be_success
+        expect(result.refund).to be_nil
+        expect(refund.reload.status).not_to eq("succeeded")
+        expect(credit_note.reload).not_to be_succeeded
+      end
+    end
+
     context "when refund is not found" do
       let(:refund) { nil }
 
       it "returns an empty result" do
         result = stripe_service.update_status(
+          organization_id: organization.id,
           provider_refund_id: "foo",
           status: "succeeded"
         )
@@ -594,6 +612,7 @@ RSpec.describe CreditNotes::Refunds::StripeService do
       context "with invoice id in metadata" do
         it "returns an empty result" do
           result = stripe_service.update_status(
+            organization_id: organization.id,
             provider_refund_id: "foo",
             status: "succeeded",
             metadata: {lago_invoice_id: SecureRandom.uuid}
@@ -608,6 +627,7 @@ RSpec.describe CreditNotes::Refunds::StripeService do
 
           it "returns a not found failure" do
             result = stripe_service.update_status(
+              organization_id: organization.id,
               provider_refund_id: "re_123456",
               status: "succeeded",
               metadata: {lago_invoice_id: invoice.id}
@@ -624,6 +644,7 @@ RSpec.describe CreditNotes::Refunds::StripeService do
     context "when status is not valid" do
       it "fails" do
         result = stripe_service.update_status(
+          organization_id: organization.id,
           provider_refund_id: refund.provider_refund_id,
           status: "invalid"
         )
@@ -642,6 +663,7 @@ RSpec.describe CreditNotes::Refunds::StripeService do
 
       it "delivers an error webhook" do
         result = stripe_service.update_status(
+          organization_id: organization.id,
           provider_refund_id: refund.provider_refund_id,
           status: "failed"
         )
@@ -666,6 +688,7 @@ RSpec.describe CreditNotes::Refunds::StripeService do
 
       it "produces an activity log" do
         stripe_service.update_status(
+          organization_id: organization.id,
           provider_refund_id: refund.provider_refund_id,
           status: "failed"
         )

@@ -112,6 +112,16 @@ RSpec.describe Organizations::UpdateService do
       end
     end
 
+    context "when document_url_expiration_days is sent" do
+      before { params[:document_url_expiration_days] = 90 }
+
+      it "updates the document url expiration window" do
+        result = update_service.call
+
+        expect(result.organization.document_url_expiration_days).to eq(90)
+      end
+    end
+
     context "when document_number_prefix is invalid" do
       before { params[:document_number_prefix] = "aaaaaaaaaaaaaaa" }
 
@@ -121,6 +131,18 @@ RSpec.describe Organizations::UpdateService do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages[:document_number_prefix]).to eq(["value_is_too_long"])
+      end
+    end
+
+    context "when customer_portal_locked_fields is null" do
+      before { params[:customer_portal_locked_fields] = nil }
+
+      it "returns a validation error" do
+        result = update_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:customer_portal_locked_fields]).to eq(["value_is_mandatory"])
       end
     end
 

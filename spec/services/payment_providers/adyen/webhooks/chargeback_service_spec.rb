@@ -22,6 +22,19 @@ RSpec.describe PaymentProviders::Adyen::Webhooks::ChargebackService do
         File.read(path)
       end
 
+      context "when payment belongs to another organization" do
+        let(:status) { "finalized" }
+        let(:organization_id) { create(:organization).id }
+
+        it "does not mark the invoice payment dispute as lost" do
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(invoice.reload.payment_dispute_lost_at).to be_nil
+        end
+      end
+
       context "when invoice is draft" do
         let(:status) { "draft" }
 

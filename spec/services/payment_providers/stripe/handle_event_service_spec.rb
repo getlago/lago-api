@@ -93,6 +93,7 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
 
       expect(CreditNotes::Refunds::StripeService).to have_received(:new)
       expect(refund_service).to have_received(:update_status)
+        .with(hash_including(organization_id: organization.id))
     end
   end
 

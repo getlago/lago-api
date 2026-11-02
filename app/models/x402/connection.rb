@@ -42,10 +42,26 @@ module X402
       end
     end
 
+    def environment_enabled?
+      known_networks.all? { |network| X402::Network.environment(network) == enabled_environment }
+    end
+
+    def mainnet?
+      known_networks.any? { |network| X402::Network.environment(network) == :mainnet }
+    end
+
     private
 
     def known_networks
       Array(networks).select { |network| X402::Network::NETWORKS.key?(network) }
+    end
+
+    def enabled_environment
+      organization.feature_flag_enabled?(:x402_mainnet) ? :mainnet : :testnet
+    end
+
+    def stored_on_mainnet?
+      Array(networks_in_database).any? { |network| X402::Network::NETWORKS[network] == :mainnet }
     end
 
     def normalize_payout_addresses
@@ -79,8 +95,14 @@ module X402
         errors.add(:networks, :invalid)
       end
 
-      if known_networks.map { |network| X402::Network.environment(network) }.uniq.size > 1
+      environments = known_networks.map { |network| X402::Network.environment(network) }.uniq
+
+      if environments.size > 1
         errors.add(:networks, :mixed_environments)
+      elsif organization && !environment_enabled?
+        errors.add(:networks, :environment_not_enabled)
+      elsif environments == [:testnet] && stored_on_mainnet?
+        errors.add(:networks, :mainnet_not_downgradable)
       end
     end
 

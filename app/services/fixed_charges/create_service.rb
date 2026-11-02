@@ -15,6 +15,9 @@ module FixedCharges
 
     def call
       return result.not_found_failure!(resource: "plan") unless plan
+      if params[:add_on_id].blank? && params[:add_on_code].blank?
+        return result.single_validation_failure!(field: :add_on_id, error_code: "value_is_mandatory")
+      end
 
       ActiveRecord::Base.transaction do
         fixed_charge = plan.fixed_charges.new(
@@ -75,10 +78,8 @@ module FixedCharges
     def add_on
       @add_on ||= if params[:add_on_id].present?
         organization.add_ons.find(params[:add_on_id])
-      elsif params[:add_on_code].present?
-        organization.add_ons.find_by!(code: params[:add_on_code])
       else
-        raise ArgumentError, "Either add_on_id or add_on_code must be provided"
+        organization.add_ons.find_by!(code: params[:add_on_code])
       end
     end
   end

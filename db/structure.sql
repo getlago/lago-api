@@ -549,6 +549,7 @@ DROP INDEX IF EXISTS public.index_recurring_aggregation_snapshots_on_organizatio
 DROP INDEX IF EXISTS public.index_recurring_aggregation_snapshots_on_charge_id;
 DROP INDEX IF EXISTS public.index_recurring_aggregation_snapshots_on_charge_filter_id;
 DROP INDEX IF EXISTS public.index_recurring_aggregation_snapshots_on_billable_metric_id;
+DROP INDEX IF EXISTS public.index_recurring_aggregation_snapshots_by_period;
 DROP INDEX IF EXISTS public.index_record_deletions_on_updated_at;
 DROP INDEX IF EXISTS public.index_record_deletions_on_organization_id_and_deleted_at;
 DROP INDEX IF EXISTS public.index_record_deletions_on_deleted_at;
@@ -657,6 +658,7 @@ DROP INDEX IF EXISTS public.index_payments_by_cursor;
 DROP INDEX IF EXISTS public.index_payment_requests_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_requests_on_dunning_campaign_id;
 DROP INDEX IF EXISTS public.index_payment_requests_on_customer_id;
+DROP INDEX IF EXISTS public.index_payment_requests_by_cursor;
 DROP INDEX IF EXISTS public.index_payment_receipts_on_payment_id;
 DROP INDEX IF EXISTS public.index_payment_receipts_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_receipts_on_billing_entity_id;
@@ -723,6 +725,7 @@ DROP INDEX IF EXISTS public.index_invoices_on_organization_id_search_terms_gin_t
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_number_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_lower_purchase_order_number;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_and_customer_id;
+DROP INDEX IF EXISTS public.index_invoices_on_organization_id_and_created_at;
 DROP INDEX IF EXISTS public.index_invoices_on_number;
 DROP INDEX IF EXISTS public.index_invoices_on_customer_billing_entity_sequential;
 DROP INDEX IF EXISTS public.index_invoices_by_cursor;
@@ -3758,6 +3761,8 @@ CREATE TABLE public.organizations (
     max_wallets integer,
     slug character varying NOT NULL,
     pagination_max_page_size integer,
+    document_url_expiration_days integer DEFAULT 30 NOT NULL,
+    customer_portal_locked_fields character varying[] DEFAULT '{country,zipcode,tax_identification_number}'::character varying[] NOT NULL,
     CONSTRAINT check_organizations_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -6427,12 +6432,15 @@ CREATE TABLE public.x402_settlements (
     error_reason character varying,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
+    request_key_digest character varying,
     CONSTRAINT check_x402_settlements_amount_positive CHECK ((settled_amount_atomic > (0)::numeric)),
     CONSTRAINT check_x402_settlements_credit_purchase_has_settings CHECK (((kind <> 'credit_purchase'::public.x402_settlement_kind) OR (purchase_settings IS NOT NULL))),
     CONSTRAINT check_x402_settlements_granted_has_subscription CHECK (((wallet_transaction_id IS NULL) OR (subscription_id IS NOT NULL))),
     CONSTRAINT check_x402_settlements_invoice_payment_has_invoice CHECK (((kind <> 'invoice_payment'::public.x402_settlement_kind) OR (invoice_id IS NOT NULL))),
+    CONSTRAINT check_x402_settlements_invoice_payment_has_no_request_key CHECK (((kind <> 'invoice_payment'::public.x402_settlement_kind) OR (request_key_digest IS NULL))),
     CONSTRAINT check_x402_settlements_merchant_settled_credit_purchase CHECK (((settled_by = 'lago'::public.x402_settlement_settled_by) OR ((kind = 'credit_purchase'::public.x402_settlement_kind) AND (status = 'settled'::public.x402_settlement_status)))),
     CONSTRAINT check_x402_settlements_pending_has_reconcile_after CHECK (((status <> 'pending'::public.x402_settlement_status) OR (reconcile_after IS NOT NULL))),
+    CONSTRAINT check_x402_settlements_request_key_digest_format CHECK (((request_key_digest IS NULL) OR ((request_key_digest)::text ~ '^[0-9a-f]{64}$'::text))),
     CONSTRAINT check_x402_settlements_settled_has_hash CHECK (((status <> 'settled'::public.x402_settlement_status) OR (transaction_hash IS NOT NULL)))
 );
 
@@ -10588,6 +10596,13 @@ CREATE INDEX index_invoices_on_number ON public.invoices USING btree (number);
 
 
 --
+-- Name: index_invoices_on_organization_id_and_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoices_on_organization_id_and_created_at ON public.invoices USING btree (organization_id, created_at);
+
+
+--
 -- Name: index_invoices_on_organization_id_and_customer_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11047,6 +11062,13 @@ CREATE INDEX index_payment_receipts_on_organization_id ON public.payment_receipt
 --
 
 CREATE UNIQUE INDEX index_payment_receipts_on_payment_id ON public.payment_receipts USING btree (payment_id);
+
+
+--
+-- Name: index_payment_requests_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payment_requests_by_cursor ON public.payment_requests USING btree (organization_id, created_at DESC, id DESC);
 
 
 --
@@ -11803,6 +11825,13 @@ CREATE INDEX index_record_deletions_on_organization_id_and_deleted_at ON public.
 --
 
 CREATE INDEX index_record_deletions_on_updated_at ON public.record_deletions USING btree (updated_at);
+
+
+--
+-- Name: index_recurring_aggregation_snapshots_by_period; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_recurring_aggregation_snapshots_by_period ON public.recurring_aggregation_snapshots USING btree (subscription_id, charge_id, charge_filter_id, to_datetime);
 
 
 --
@@ -15951,9 +15980,16 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261029112805'),
+('20261029111437'),
+('20261028184732'),
+('20261028184731'),
 ('20261027135959'),
+('20261027100000'),
 ('20261026150420'),
+('20261026101445'),
 ('20261022090030'),
+('20261021200000'),
 ('20261020144205'),
 ('20261020074217'),
 ('20261019074555'),
@@ -17157,4 +17193,3 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
-

@@ -2,7 +2,7 @@
 
 module Admin
   class BaseController < ApplicationController
-    include ApiErrors
+    include Api::V1Errors
 
     before_action :authenticate
     before_action :set_context_source

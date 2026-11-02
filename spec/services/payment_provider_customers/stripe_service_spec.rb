@@ -141,7 +141,7 @@ RSpec.describe PaymentProviderCustomers::StripeService do
         result = described_class.call(:create, stripe_customer)
 
         expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::UnauthorizedFailure)
+        expect(result.error).to be_a(BaseService::ProviderUnauthorizedFailure).and(have_attributes(provider: stripe_provider))
         expect(result.error.message).to eq("Stripe authentication failed. API key invalid.")
       end
 
@@ -270,7 +270,7 @@ RSpec.describe PaymentProviderCustomers::StripeService do
             result = described_class.call(:update, stripe_customer)
 
             expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::UnauthorizedFailure)
+            expect(result.error).to be_a(BaseService::ProviderUnauthorizedFailure).and(have_attributes(provider: stripe_provider))
             expect(result.error.message).to eq("Stripe authentication failed. Invalid username.")
           end
 
@@ -588,7 +588,7 @@ RSpec.describe PaymentProviderCustomers::StripeService do
         result = described_class.call(:generate_checkout_url, stripe_customer)
 
         expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::UnauthorizedFailure)
+        expect(result.error).to be_a(BaseService::ProviderUnauthorizedFailure).and(have_attributes(provider: stripe_provider))
         expect(result.error.message).to eq("Stripe authentication failed. Expired API Key provided")
       end
 

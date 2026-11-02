@@ -33,6 +33,10 @@ module Lago
   # LAGO_REDIS_THROTTLING_URL, the URL and password default to REDIS_URL and
   # REDIS_PASSWORD.
   #
+  # `#cable` holds the password of the ActionCable Redis, whose URL comes from
+  # config/cable.yml: LAGO_REDIS_CABLE_PASSWORD with LAGO_REDIS_CABLE_URL,
+  # otherwise REDIS_PASSWORD, as the URL falls back to REDIS_URL.
+  #
   # Sentinel credentials are only applied when the corresponding sentinels are
   # configured. Blank credentials are omitted; leave the username unset for
   # password-only authentication.
@@ -123,6 +127,15 @@ module Lago
       password = dedicated ? ENV["LAGO_REDIS_THROTTLING_PASSWORD"] : ENV["REDIS_PASSWORD"]
       add_password(redis_config, password: password.presence)
       # No retry wiring, as for the cache: a failing store must not hold up the login requests.
+
+      redis_config.merge(extra_options)
+    end
+
+    def cable
+      # The password goes with the URL, as for throttling.
+      password = ENV["LAGO_REDIS_CABLE_URL"].present? ? ENV["LAGO_REDIS_CABLE_PASSWORD"] : ENV["REDIS_PASSWORD"]
+      redis_config = {}
+      add_password(redis_config, password: password.presence)
 
       redis_config.merge(extra_options)
     end

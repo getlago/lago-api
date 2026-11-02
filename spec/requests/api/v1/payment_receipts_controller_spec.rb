@@ -10,6 +10,27 @@ RSpec.describe Api::V1::PaymentReceiptsController do
 
     let(:params) { {} }
 
+    context "with receipt documents" do
+      def create_receipts_with_files(count)
+        create_list(:payment_receipt, count, organization:).each do |receipt|
+          receipt.file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.pdf")), filename: "receipt.pdf")
+        end
+      end
+
+      def organization_queries
+        capture_sql { get_with_token(organization, "/api/v1/payment_receipts") }.grep(/FROM "organizations"/).size
+      end
+
+      it "loads the organization once, whatever the number of receipts" do
+        create_receipts_with_files(1)
+        queries_with_one_receipt = organization_queries
+
+        create_receipts_with_files(3)
+
+        expect(organization_queries).to eq(queries_with_one_receipt)
+      end
+    end
+
     include_examples "requires API permission", "invoice", "read"
 
     it "returns organization's payments" do
@@ -210,8 +231,9 @@ RSpec.describe Api::V1::PaymentReceiptsController do
   end
 
   describe "POST /api/v1/payment_receipts/:id/resend_email" do
-    subject { post_with_token(organization, "/api/v1/payment_receipts/#{payment_receipt.id}/resend_email", {}) }
+    subject { post_with_token(organization, "/api/v1/payment_receipts/#{payment_receipt.id}/resend_email", params) }
 
+    let(:params) { {} }
     let(:customer) { create(:customer, organization:) }
     let(:invoice) { create(:invoice, customer:, organization:) }
     let(:payment) { create(:payment, payable: invoice) }
@@ -225,6 +247,19 @@ RSpec.describe Api::V1::PaymentReceiptsController do
 
         expect(response).to have_http_status(:method_not_allowed)
         expect(json[:code]).to eq("payable_not_found")
+      end
+    end
+
+    context "when a recipient has an invalid email format", :premium do
+      let(:params) { {to: ["not-an-email"]} }
+
+      before { customer.billing_entity.update!(email: "billing@example.com") }
+
+      it "returns the sentence that v1 clients read" do
+        expect { subject }.not_to have_enqueued_mail(PaymentReceiptMailer, :created)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(status: 422, error: "Unprocessable Entity", code: "validation_errors", error_details: {to: ["invalid email format: not-an-email"]})
       end
     end
   end

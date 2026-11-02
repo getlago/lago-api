@@ -4,8 +4,6 @@ module Fees
   class ChargeService < BaseService
     Result = BaseResult[:fees, :cached_aggregations]
 
-    SNAPSHOT_AGGREGATION_TYPES = %w[sum_agg weighted_sum_agg].freeze
-
     def initialize(
       invoice:,
       metered_item:,
@@ -506,6 +504,7 @@ module Fees
     def build_aggregator(selected_metered_item)
       aggregate = true
       aggregate = filtered_aggregations.include?(selected_metered_item.filter_id) unless filtered_aggregations.nil?
+      initial = recurring_initial_value(selected_metered_item)
 
       BillableMetrics::AggregationFactory.new_instance(
         metered_item: selected_metered_item,
@@ -515,7 +514,9 @@ module Fees
         boundaries: selected_metered_item.aggregation_boundaries,
         filters: aggregation_filters(selected_metered_item:, bypass_aggregation: !aggregate),
         bypass_aggregation: !aggregate,
-        aggregated_filter_ids: aggregated_filter_ids(selected_metered_item)
+        aggregated_filter_ids: aggregated_filter_ids(selected_metered_item),
+        initial_value: initial&.snapshots,
+        initial_period: initial&.period
       )
     end
 
@@ -628,14 +629,27 @@ module Fees
     def snapshot_recurring_units?(selected_metered_item)
       return false unless billing_context.organization.feature_flag_enabled?(:recurring_aggregation_snapshots)
       return false if options.current_usage? || options.invoice_preview?
-      return false if selected_metered_item.billing_segment
-      return false unless billing_context.subscription?
-      # Prorated sums have no snapshot read yet
-      return false if selected_metered_item.charge.prorated?
 
       # A progressive billing invoice stops mid-period, its units do not close the period
-      !invoice&.progressive_billing? &&
-        SNAPSHOT_AGGREGATION_TYPES.include?(selected_metered_item.billable_metric.aggregation_type)
+      !invoice&.progressive_billing? && snapshot_eligible?(selected_metered_item)
+    end
+
+    def snapshot_eligible?(selected_metered_item)
+      RecurringAggregationSnapshot.eligible?(metered_item: selected_metered_item, billing_context:)
+    end
+
+    # Usage filtered by group narrows the events read, but snapshots hold every group's units
+    def recurring_initial_value(selected_metered_item)
+      if RecurringAggregationSnapshot.readable?(metered_item: selected_metered_item, billing_context:) &&
+          options.usage_filters.filter_by_group.blank?
+        RecurringAggregationSnapshots::FetchService.call!(
+          subscription:,
+          charge: selected_metered_item.charge,
+          charge_filter: selected_metered_item.charge_filter,
+          grouped_by_keys: grouped_by_keys(selected_metered_item:),
+          from_datetime: selected_metered_item.boundaries.charges_from_datetime
+        )
+      end
     end
 
     def recurring_snapshots

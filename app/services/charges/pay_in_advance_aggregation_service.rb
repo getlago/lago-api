@@ -12,6 +12,7 @@ module Charges
     end
 
     def call
+      initial_value, initial_period = recurring_initial_value
       aggregator = BillableMetrics::AggregationFactory.new_instance(
         metered_item:,
         billing_context:,
@@ -21,7 +22,9 @@ module Charges
           charges_duration: metered_item.boundaries.charges_duration,
           max_timestamp: metered_item.event.timestamp
         },
-        filters: aggregation_filters
+        filters: aggregation_filters,
+        initial_value:,
+        initial_period:
       )
 
       aggregation_result = aggregator.aggregate(options: aggregation_options)
@@ -38,6 +41,33 @@ module Charges
         free_units_per_events: metered_item.properties["free_units_per_events"].to_i,
         free_units_per_total_aggregation: BigDecimal(metered_item.properties["free_units_per_total_aggregation"] || 0)
       }
+    end
+
+    def recurring_initial_value
+      return unless RecurringAggregationSnapshot.readable?(metered_item:, billing_context:)
+
+      fetched = RecurringAggregationSnapshots::FetchService.call!(
+        subscription: billing_context.subscription,
+        charge: metered_item.charge,
+        charge_filter: metered_item.charge_filter,
+        grouped_by_keys: metered_item.pricing_group_keys,
+        from_datetime: metered_item.boundaries.charges_from_datetime
+      )
+
+      [event_group_snapshots(fetched.snapshots), fetched.period] if fetched.period
+    end
+
+    # The aggregation only reads the group of the event. A group without a snapshot had neither
+    # units nor events at the period, so it starts from zero. An event without a target wallet
+    # reads every wallet, so it starts from the snapshots of every wallet.
+    def event_group_snapshots(snapshots)
+      grouped_by = normalized_group(metered_item.grouped_by_values)
+      snapshots.select { normalized_group(it.grouped_by.slice(*grouped_by.keys)) == grouped_by }
+    end
+
+    # The stores group a blank value with a missing one, so a snapshot holds an event's "" as nil
+    def normalized_group(grouped_by)
+      grouped_by.transform_values { it&.to_s.presence }
     end
 
     def aggregation_filters

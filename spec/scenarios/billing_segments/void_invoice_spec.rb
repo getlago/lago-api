@@ -98,7 +98,7 @@ describe "Void a contract invoice" do
       .to eq([fee])
   end
 
-  it "sends the invoice.voided webhook with the product fees" do
+  it "sends the invoice.voided webhook without the fees" do
     invoice = customer.invoices.sole
     create(:webhook_endpoint, organization:, webhook_url: "https://hooks.example.com/lago")
     stub_request(:post, "https://hooks.example.com/lago").to_return(status: 200)
@@ -108,7 +108,8 @@ describe "Void a contract invoice" do
     payload = organization.webhooks.where(webhook_type: "invoice.voided").sole.payload
     expect(payload.dig("invoice", "lago_id")).to eq(invoice.id)
     expect(payload.dig("invoice", "status")).to eq("voided")
-    expect(payload.dig("invoice", "fees").pluck("lago_id")).to eq([invoice.fees.sole.id])
+    expect(payload.dig("invoice", "contracts").pluck("lago_id")).to eq([contract.id])
+    expect(payload["invoice"]).not_to have_key("fees")
   end
 
   context "with a credit note for the voided amount", :premium do

@@ -76,6 +76,48 @@ RSpec.describe PaymentRequests::Payments::CashfreeService do
       payment
     end
 
+    context "when payment belongs to another organization" do
+      let(:result) do
+        described_class.call(
+          :update_payment_status,
+          organization_id: create(:organization).id,
+          status: cashfree_payment.status,
+          cashfree_payment:
+        )
+      end
+
+      it "does not update the payment nor the payment request" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(payment.reload.status).to eq("pending")
+        expect(payment_request.reload).not_to be_payment_succeeded
+      end
+    end
+
+    context "when one-time payment references a payment request from another organization" do
+      let(:payment) { nil }
+      let(:cashfree_payment) do
+        PaymentProviders::CashfreeProvider::CashfreePayment.new(
+          id: payment_request.id,
+          status: "PAID",
+          metadata: {payment_type: "one-time", lago_payable_id: payment_request.id}
+        )
+      end
+
+      it "does not create a payment" do
+        expect do
+          described_class.call(
+            :update_payment_status,
+            organization_id: create(:organization).id,
+            status: cashfree_payment.status,
+            cashfree_payment:
+          )
+        end.not_to change(Payment, :count)
+
+        expect(payment_request.reload).not_to be_payment_succeeded
+      end
+    end
+
     it "updates the payment and invoice payment_status" do
       expect(result).to be_success
 

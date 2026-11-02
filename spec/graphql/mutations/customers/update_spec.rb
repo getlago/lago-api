@@ -226,6 +226,31 @@ RSpec.describe Mutations::Customers::Update do
     end
   end
 
+  # The GraphQL enum lists every premium integration, not only those a customer can connect to.
+  [nil, "progressive_billing"].each do |integration_type|
+    context "with #{integration_type.inspect} as integration type" do
+      let(:integration_customer) { create(:netsuite_customer, customer:) }
+      let(:input) do
+        {
+          id: customer.id,
+          externalId: customer.external_id,
+          name: "Must not change",
+          integrationCustomers: [{integrationType: integration_type, integrationCode: integration_customer.integration.code}.compact]
+        }
+      end
+
+      before { integration_customer }
+
+      it "returns a validation error without modifying the customer or its integrations" do
+        result = execute_query(query: mutation, input:)
+
+        expect_unprocessable_entity(result, details: {integrationType: ["value_is_invalid"]})
+        expect(customer.reload.name).not_to eq("Must not change")
+        expect(customer.integration_customers).to eq([integration_customer])
+      end
+    end
+  end
+
   context "with the payment_provider_customers array" do
     let(:array_mutation) do
       <<~GQL

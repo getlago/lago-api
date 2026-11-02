@@ -57,12 +57,51 @@ class BaseService
   end
 
   class ValidationFailure < FailedResult
-    attr_reader :messages
+    # The meta keys of the inclusive Integer bounds that the numericality and length validators give
+    # as their count, so that a model states each bound once.
+    VALUE_BOUNDS = {greater_than_or_equal_to: :min, less_than_or_equal_to: :max}.freeze
+    LENGTH_BOUNDS = {too_short: :min_length, too_long: :max_length}.freeze
 
-    def initialize(result, messages:)
+    # messages: {field => [code]}, or one of the String, indexed and nested shapes a few services
+    # build, which v1 and GraphQL render as they are. meta: {field => facts} (see ValidationMeta::KEYS).
+    # codes: {field => [code]} that native v2 renders in place of messages that are sentences, which
+    # v1 and GraphQL clients keep reading; meta is then keyed by its fields. The messages otherwise.
+    attr_reader :messages, :meta, :codes
+
+    # The errors of a record, read now: valid? clears them in place.
+    def self.from_errors(result, errors)
+      meta = errors.group_by_attribute.transform_values { |field_errors| field_errors.filter_map { bound_of(it) }.to_h }
+
+      new(result, messages: errors.messages, meta: meta.compact_blank)
+    end
+
+    # The length validator also counts the elements of a list, which min_length and max_length do not mean.
+    def self.bound_of(error)
+      key = VALUE_BOUNDS[error.type]
+      key ||= LENGTH_BOUNDS[error.type] if LENGTH_BOUNDS.key?(error.type) && text?(error)
+      count = error.options[:count]
+
+      [key, count] if key && count.is_a?(Integer)
+    end
+
+    def self.text?(error)
+      value = error.base.read_attribute_for_validation(error.attribute) if error.base.respond_to?(error.attribute)
+      value.nil? || value.is_a?(String)
+    end
+    private_class_method :bound_of, :text?
+
+    def initialize(result, messages:, meta: {}, codes: nil)
       @messages = messages
+      @meta = meta
+      @codes = codes || messages
 
       super(result, format_messages)
+    end
+
+    # The same codes and meta under the fields the block gives, on the result of the caller. A plain
+    # ValidationFailure: a subclass reads its facts from its own state.
+    def remap(result, &)
+      ValidationFailure.new(result, messages: messages.transform_keys(&), meta: meta.transform_keys(&), codes: codes.transform_keys(&))
     end
 
     private
@@ -111,6 +150,16 @@ class BaseService
   class UnauthorizedFailure < FailedResult
     def initialize(result, message:)
       super(result, message)
+    end
+  end
+
+  # A provider refusing the organization's own credentials, which the caller cannot fix with its key.
+  class ProviderUnauthorizedFailure < UnauthorizedFailure
+    attr_reader :provider
+
+    def initialize(result, provider:, message:)
+      @provider = provider
+      super(result, message:)
     end
   end
 

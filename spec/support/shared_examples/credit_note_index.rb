@@ -392,6 +392,8 @@ RSpec.shared_examples "a credit note index endpoint" do
       Bullet.add_safelist(type: :unused_eager_loading, class_name: "Customer", association: :adyen_customer)
       Bullet.add_safelist(type: :unused_eager_loading, class_name: "Customer", association: :moneyhash_customer)
       Bullet.add_safelist(type: :unused_eager_loading, class_name: "Customer", association: :integration_customers)
+      # NOTE: The organization is only read to build expiring file urls, and these credit notes have no file
+      Bullet.add_safelist(type: :unused_eager_loading, class_name: "CreditNote", association: :organization)
 
       invoices = create_list(:invoice, 3, organization:, customer:)
       invoices.each do |invoice|

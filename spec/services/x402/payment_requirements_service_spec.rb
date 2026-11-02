@@ -63,7 +63,8 @@ describe X402::PaymentRequirementsService do
 
   context "with a mainnet connection offering both families" do
     let(:connection) do
-      create(:x402_connection, networks: ["eip155:8453", "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"],
+      create(:x402_connection, organization: create(:organization, feature_flags: ["x402_mainnet"]),
+        networks: ["eip155:8453", "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"],
         payout_addresses: {"evm" => evm_payout, "svm" => svm_payout}, cdp_api_key_id:, cdp_api_key_secret:)
     end
 

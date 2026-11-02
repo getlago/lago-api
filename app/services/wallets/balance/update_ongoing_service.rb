@@ -24,8 +24,9 @@ module Wallets
           end
 
           ::Wallets::ThresholdTopUpService.call(wallet:, state_changed:)
-          UsageMonitoring::ProcessWalletAlertsJob.perform_later(wallet)
         end
+
+        UsageMonitoring::DispatchWalletAlertsService.call(wallet:)
 
         result.wallet = wallet
         result

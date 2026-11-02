@@ -35,7 +35,15 @@ module Contracts
       fees = result.rate_card_usages.flat_map(&:fees)
       if apply_taxes && customer_provider_taxation?
         taxes_result = apply_provider_taxes(fees.select(&:taxable?))
-        return result.validation_failure!(errors: {tax_error: [taxes_result.error.message]}) unless taxes_result.success?
+        unless taxes_result.success?
+          # The taxes failed upstream (a provider refusal, or an error of the integration relaying it), which the
+          # request cannot fix. Its code may be the provider's, the integration's or a Lago fallback, so it is not sent.
+          return result.third_party_failure!(
+            third_party: customer.tax_customer.integration.provider_key,
+            error_code: nil,
+            error_message: taxes_result.error.message
+          )
+        end
       elsif apply_taxes
         fees.each { |fee| Fees::ApplyTaxesService.call!(fee:, customer:) }
       end
@@ -44,6 +52,8 @@ module Contracts
       result.taxes_amount_cents = result.rate_card_usages.sum(&:taxes_amount_cents)
       result.total_amount_cents = result.amount_cents + result.taxes_amount_cents
       result
+    rescue BaseService::ThrottlingError => error
+      result.too_many_provider_requests_failure!(provider_name: error.provider_name, error:)
     end
 
     private

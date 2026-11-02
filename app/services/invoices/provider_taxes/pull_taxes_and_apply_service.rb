@@ -40,6 +40,8 @@ module Invoices
           invoice.reload
           return result if invoice.finalized? || invoice.voided? || invoice.closed?
 
+          old_total_amount_cents = invoice.total_amount_cents
+
           unless invoice.draft?
             invoice.issuing_date = issuing_date
             invoice.payment_due_date = payment_due_date
@@ -58,6 +60,7 @@ module Invoices
           Invoices::TransitionToFinalStatusService.call(invoice:) unless invoice.draft?
 
           invoice.save!
+          customer.flag_wallets_for_refresh if invoice.draft? && old_total_amount_cents != invoice.total_amount_cents
           invoice.reload
 
           result.invoice = invoice
@@ -72,7 +75,6 @@ module Invoices
           Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
           Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
           Invoices::Payments::CreateService.call_async(invoice:)
-          Utils::SegmentTrack.invoice_created(invoice)
         elsif invoice.draft?
           notify_ready_to_finalize
         end

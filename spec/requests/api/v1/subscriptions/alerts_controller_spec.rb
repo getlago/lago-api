@@ -184,6 +184,42 @@ RSpec.describe Api::V1::Subscriptions::AlertsController do
       end
     end
 
+    context "when recurring is sent as null" do
+      let(:params) do
+        {
+          code: "test",
+          alert_type: "current_usage_amount",
+          thresholds: [{code: "warn", value: "5", recurring: nil}]
+        }
+      end
+
+      it "stores the default" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:alert][:thresholds].sole).to include({code: "warn", recurring: false})
+        expect(UsageMonitoring::Alert.find_by(code: "test").thresholds.sole.recurring).to be false
+      end
+    end
+
+    context "when recurring is sent as an empty string" do
+      let(:params) do
+        {
+          code: "test",
+          alert_type: "current_usage_amount",
+          thresholds: [{code: "warn", value: "5", recurring: ""}]
+        }
+      end
+
+      it "stores the default" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:alert][:thresholds].sole).to include({code: "warn", recurring: false})
+        expect(UsageMonitoring::Alert.find_by(code: "test").thresholds.sole.recurring).to be false
+      end
+    end
+
     context "when code already exists for this subscription" do
       it do
         create(:billable_metric_current_usage_amount_alert, organization:, code: params[:code], subscription_external_id: external_id)
@@ -397,6 +433,40 @@ RSpec.describe Api::V1::Subscriptions::AlertsController do
       end
     end
 
+    context "when an update sends recurring as null" do
+      let(:alert) { create(:alert, :processed, code:, subscription_external_id: external_id, organization:, thresholds: nil) }
+      let(:params) { {thresholds: [{code: :notice, value: 88_00, recurring: nil}]} }
+
+      before do
+        create(:alert_threshold, alert:, code: "notice", value: 1000, recurring: true)
+      end
+
+      it "resets the threshold to the default instead of keeping the previous value" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:alert][:thresholds].sole).to include({code: "notice", recurring: false})
+        expect(alert.reload.thresholds.sole).to have_attributes(value: 88_00, recurring: false)
+      end
+    end
+
+    context "when an update sends recurring as an empty string" do
+      let(:alert) { create(:alert, :processed, code:, subscription_external_id: external_id, organization:, thresholds: nil) }
+      let(:params) { {thresholds: [{code: :notice, value: 88_00, recurring: ""}]} }
+
+      before do
+        create(:alert_threshold, alert:, code: "notice", value: 1000, recurring: true)
+      end
+
+      it "resets the threshold to the default instead of keeping the previous value" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:alert][:thresholds].sole).to include({code: "notice", recurring: false})
+        expect(alert.reload.thresholds.sole).to have_attributes(value: 88_00, recurring: false)
+      end
+    end
+
     context "when trying to update alert_type" do
       let(:params) do
         {
@@ -521,6 +591,50 @@ RSpec.describe Api::V1::Subscriptions::AlertsController do
 
         expect(json[:alerts].sole[:thresholds].sole).to include({code: "notice", notify_on: %w[triggered resolved]})
         expect(UsageMonitoring::Alert.find_by(code: "alert1").thresholds.sole.notify_on).to eq %w[triggered resolved]
+      end
+    end
+
+    context "when a threshold sends recurring as null" do
+      let(:params) do
+        {
+          alerts: [
+            {
+              code: "alert1",
+              alert_type: "current_usage_amount",
+              thresholds: [{code: "warning", value: "5", recurring: nil, notify_on: %w[triggered]}]
+            }
+          ]
+        }
+      end
+
+      it "stores the default" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:alerts].sole[:thresholds].sole).to include({code: "warning", recurring: false})
+        expect(UsageMonitoring::Alert.find_by(code: "alert1").thresholds.sole.recurring).to be false
+      end
+    end
+
+    context "when a threshold sends recurring as an empty string" do
+      let(:params) do
+        {
+          alerts: [
+            {
+              code: "alert1",
+              alert_type: "current_usage_amount",
+              thresholds: [{code: "warning", value: "5", recurring: "", notify_on: %w[triggered]}]
+            }
+          ]
+        }
+      end
+
+      it "stores the default" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:alerts].sole[:thresholds].sole).to include({code: "warning", recurring: false})
+        expect(UsageMonitoring::Alert.find_by(code: "alert1").thresholds.sole.recurring).to be false
       end
     end
 

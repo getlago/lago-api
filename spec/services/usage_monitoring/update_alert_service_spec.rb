@@ -105,6 +105,22 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
       end
     end
 
+    context "when thresholds send recurring as null or blank" do
+      it "stores a null recurring as not recurring" do
+        result = described_class.call(alert:, params: {thresholds: [{code: "warn", value: 10, recurring: nil}]})
+
+        expect(result).to be_success
+        expect(alert.reload.thresholds.sole.recurring).to eq(false)
+      end
+
+      it "stores a blank recurring as not recurring" do
+        result = described_class.call(alert:, params: {thresholds: [{code: "warn", value: 10, recurring: ""}]})
+
+        expect(result).to be_success
+        expect(alert.reload.thresholds.sole.recurring).to eq(false)
+      end
+    end
+
     context "when a line is opted in while already past" do
       let(:alert) { create(:wallet_balance_amount_alert, thresholds: [100], organization:, previous_value: 0) }
       let(:params) { {thresholds: [{code: "critical", value: 100, notify_on: %w[triggered resolved]}]} }

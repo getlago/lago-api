@@ -390,6 +390,22 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
       expect(Events::Stores::Utils::ClickhouseConnection).to have_received(:connection_with_retry).once
     end
 
+    context "with the period of the latest snapshots" do
+      let(:period) do
+        RecurringAggregationSnapshots::FetchService::Period.new(
+          to_datetime: boundaries[:from_datetime] + 2.hours,
+          watermark: Time.current - 1.minute
+        )
+      end
+
+      it "leaves the delta to the filter stores" do
+        pricing_buckets.each do |item|
+          expect(recurring(scanned_store(item)).recurring_sum(watermark:, period:))
+            .to eq(recurring(filter_store(item)).recurring_sum(watermark:, period:))
+        end
+      end
+    end
+
     context "with a count charge" do
       let(:billable_metric) { create(:billable_metric, organization:) }
 
@@ -495,6 +511,33 @@ RSpec.describe Events::Stores::ChargeFiltersScan, clickhouse: {clean_before: tru
         store = filter_store(item).tap { it.grouped_by = ["workspace"] }
 
         expect(scan.covers?(store)).to be(false)
+      end
+    end
+  end
+
+  describe "ChargeFiltersScanStore#incremental_sum?" do
+    it "is false without the incremental cache" do
+      expect(pricing_buckets.map { scanned_store(it).incremental_sum? }).to all(be(false))
+    end
+
+    context "with the incremental cache" do
+      subject(:scan) do
+        described_class.new(
+          charge: loaded_charge,
+          incremental: Events::Stores::ChargeFiltersScan::IncrementalCache.new(subscription:, charge: loaded_charge)
+        )
+      end
+
+      it "is true for the stores the scan covers" do
+        expect(pricing_buckets.map { scanned_store(it).incremental_sum? }).to all(be(true))
+      end
+
+      it "is false for a store narrowed to one group" do
+        store = scanned_store(pricing_buckets.first)
+
+        store.with_grouped_by_values({"region" => "us"}) do
+          expect(store.incremental_sum?).to be(false)
+        end
       end
     end
   end

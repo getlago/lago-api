@@ -4,7 +4,11 @@ module V2
   # A fee billed from the product catalog: it names the contract, product and
   # rate card it was priced from, not the v1 subscription and charge.
   class FeeSerializer < ModelSerializer
-    expandable :applied_taxes, serializer: ::V2::Fees::AppliedTaxSerializer
+    timestamps :from_datetime, :to_datetime, :succeeded_at, :failed_at, :refunded_at, :created_at,
+      :updated_at, :deleted_at
+
+    expandable :applied_taxes, serializer: ::V2::Fees::AppliedTaxSerializer, webhooks: true
+    expandable :invoice, serializer: ::V2::InvoiceSerializer
     expandable :product, serializer: ::V2::ProductSerializer
     expandable :product_filter, serializer: ::V2::ProductFilterSerializer
     expandable :rate_card, serializer: ::V2::RateCardSerializer
@@ -20,7 +24,7 @@ module V2
       {invoice: :customer},
       {contract: :customer},
       {contract_rate_card: :rate_card},
-      {invoiceable: :product_category}
+      {billed_product: :product_category}
     ].freeze
 
     def serialize
@@ -53,32 +57,21 @@ module V2
         filters:,
         billing_timing: model.pay_in_advance? ? "advance" : "arrears",
         grouped_by: model.grouped_by,
-        from_datetime: datetime_property("from_datetime"),
-        to_datetime: datetime_property("to_datetime"),
         currency: model.amount_currency,
         units: model.units,
         total_aggregated_units: model.total_aggregated_units,
         events_count: model.events_count,
         unit_amount_cents: model.unit_amount_cents,
+        # The one precise amount kept: a blended unit price, such as a volume price with a flat
+        # fee, is fractional, and unit_amount_cents rounds it.
         precise_unit_amount_cents: model.precise_unit_amount * model.amount.currency.subunit_to_unit,
         amount_cents: model.amount_cents,
-        precise_amount_cents: model.precise_amount_cents,
-        precise_coupons_amount_cents: model.precise_coupons_amount_cents,
         sub_total_excluding_taxes_amount_cents: model.sub_total_excluding_taxes_amount_cents.round,
-        sub_total_excluding_taxes_precise_amount_cents: model.sub_total_excluding_taxes_precise_amount_cents,
         taxes_amount_cents: model.taxes_amount_cents,
-        taxes_precise_amount_cents: model.taxes_precise_amount_cents,
         total_amount_cents: model.total_amount_cents,
-        precise_total_amount_cents: model.precise_total_amount_cents,
         amount_details: ::RateProperties.present(model.amount_details),
         pricing_unit_details:,
-        payment_status: model.payment_status,
-        succeeded_at: format_time(model.succeeded_at),
-        failed_at: format_time(model.failed_at),
-        refunded_at: format_time(model.refunded_at),
-        created_at: format_time(model.created_at),
-        updated_at: format_time(model.updated_at),
-        deleted_at: format_time(model.deleted_at)
+        payment_status: model.payment_status
       }
     end
 
@@ -92,7 +85,7 @@ module V2
     def product
       return @product if defined?(@product)
 
-      @product = record_or_discarded(model.invoiceable, Product, model.invoiceable_id)
+      @product = record_or_discarded(model.billed_product, Product, model.invoiceable_id)
     end
 
     def product_category
@@ -124,8 +117,12 @@ module V2
       end
     end
 
+    def from_datetime = datetime_property("from_datetime")
+
+    def to_datetime = datetime_property("to_datetime")
+
     def datetime_property(key)
-      format_time(model.properties[key]&.to_time&.utc)
+      model.properties[key]&.to_time&.utc
     end
 
     def pricing_unit_details

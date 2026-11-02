@@ -15,6 +15,7 @@ RSpec.describe Types::OrderForms::Object do
     expect(subject).to have_field(:signed_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:voided_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:signed_document_url).of_type("String")
+    expect(subject).to have_field(:signed_document_url_expires_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:activity_logs).of_type("[ActivityLog!]").with_permission("audit_logs:view")
     expect(subject).to have_field(:customer).of_type("Customer!")
     expect(subject).to have_field(:order).of_type("Order")

@@ -78,7 +78,10 @@ RSpec.describe Api::V2::SecurityLogsController, :premium, clickhouse: true do
         request
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:error_details]).to include(:to_date)
+        expect(json).to eq(
+          code: "validation_errors",
+          details: [{code: "value_is_mandatory", field: "to_date", meta: {}}]
+        )
       end
     end
 
@@ -177,8 +180,10 @@ RSpec.describe Api::V2::SecurityLogsController, :premium, clickhouse: true do
         request
 
         expect(response).to have_http_status(:bad_request)
-        expect(json).to include(status: 400, error: "Bad Request", code: "invalid_pagination_cursor")
-        expect(json[:error_details]).to be_present
+        expect(json).to eq(
+          code: "invalid_pagination_cursor",
+          details: [{code: "malformed", field: "after", meta: {}}]
+        )
       end
     end
   end
@@ -227,7 +232,7 @@ RSpec.describe Api::V2::SecurityLogsController, :premium, clickhouse: true do
       it "returns a not found error" do
         request
 
-        expect(response).to be_not_found_error("security_log")
+        expect(response).to be_v2_not_found_error("security_log")
       end
     end
   end

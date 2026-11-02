@@ -51,7 +51,9 @@ RSpec.describe ::V1::InvoiceSerializer do
       "total_amount_cents" => invoice.total_amount_cents,
       "total_due_amount_cents" => invoice.total_due_amount_cents,
       "file_url" => invoice.file_url,
+      "file_url_expires_at" => nil,
       "xml_url" => invoice.xml_url,
+      "xml_url_expires_at" => nil,
       "web_url" => invoice.web_url,
       "error_details" => [
         {
@@ -269,6 +271,22 @@ RSpec.describe ::V1::InvoiceSerializer do
           end
         end
       end
+    end
+  end
+
+  context "with attached documents" do
+    before do
+      invoice.file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.pdf")), filename: "invoice.pdf")
+      invoice.xml_file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.xml")), filename: "invoice.xml")
+    end
+
+    it "serializes expiring urls with their expiry" do
+      result = JSON.parse(serializer.to_json)["invoice"]
+      expires_at = invoice.document_url_expires_at.iso8601
+
+      expect(result["file_url"]).to include("/documents/")
+      expect(result["xml_url"]).to include("/documents/")
+      expect(result).to include("file_url_expires_at" => expires_at, "xml_url_expires_at" => expires_at)
     end
   end
 end

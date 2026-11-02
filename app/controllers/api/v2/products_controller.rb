@@ -4,6 +4,7 @@ module Api
   module V2
     class ProductsController < Api::V2::BaseController
       cursor_paginated_index(Product)
+      date_range_filtered_index(:created_at)
       serializable_with ::V2::ProductSerializer
 
       ERROR_FIELDS = {billable_metric: :billable_metric_code, product_category: :product_category_code}.freeze
@@ -90,7 +91,8 @@ module Api
           filters: {
             product_category_ids: index_product_categories.map(&:id).presence,
             without_product_category: ActiveModel::Type::Boolean.new.cast(params[:without_product_category]),
-            product_type: params[:product_type]
+            product_type: params[:product_type],
+            **date_range_filters
           }
         )
 
@@ -147,8 +149,7 @@ module Api
 
       def render_item_error(result)
         if result.error.is_a?(BaseService::ValidationFailure)
-          messages = result.error.messages.transform_keys { |key| ERROR_FIELDS[key.to_sym] || key }
-          return validation_errors(errors: messages)
+          result.fail_with_error!(result.error.remap(result) { ERROR_FIELDS[it.to_sym] || it })
         end
 
         render_error_response(result)

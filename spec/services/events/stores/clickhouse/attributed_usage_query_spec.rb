@@ -33,7 +33,7 @@ RSpec.describe Events::Stores::Clickhouse::AttributedUsageQuery, clickhouse: {cl
   let(:requests_charge_id) { SecureRandom.uuid }
   let(:opus_eu_filter_id) { SecureRandom.uuid }
   let(:opus_filter_id) { SecureRandom.uuid }
-  let(:split) { false }
+  let(:split_filter_ids) { nil }
 
   # Ranked by specificity: {model, region} before {model}. Rank 3 is the charge's own price.
   let(:tokens_lookup) do
@@ -47,15 +47,15 @@ RSpec.describe Events::Stores::Clickhouse::AttributedUsageQuery, clickhouse: {cl
   let(:charge_columns) do
     [
       described_class::ChargeColumn.new(
-        charge_id: tokens_charge_id, code: "tokens", count: false, unit_amount_cents: BigDecimal(1), lookup: tokens_lookup, split:
+        charge_id: tokens_charge_id, code: "tokens", count: false, unit_amount_cents: BigDecimal(1), lookup: tokens_lookup, split_filter_ids:
       ),
       described_class::ChargeColumn.new(
-        charge_id: requests_charge_id, code: "requests", count: true, unit_amount_cents: nil, lookup: nil, split: false
+        charge_id: requests_charge_id, code: "requests", count: true, unit_amount_cents: nil, lookup: nil, split_filter_ids: nil
       )
     ]
   end
 
-  def create_event(code:, value:, labels:, properties: {}, timestamp: Time.zone.parse("2026-09-10"), transaction_id: SecureRandom.uuid)
+  def create_event(code:, value:, labels:, properties: {}, timestamp: Time.zone.parse("2026-09-10"), transaction_id: SecureRandom.uuid, enriched_at: Time.current)
     Clickhouse::EventsEnriched.create!(
       organization_id:,
       external_subscription_id:,
@@ -65,7 +65,8 @@ RSpec.describe Events::Stores::Clickhouse::AttributedUsageQuery, clickhouse: {cl
       properties:,
       attribution_labels: labels,
       value: value.to_s,
-      decimal_value: value
+      decimal_value: value,
+      enriched_at:
     )
   end
 
@@ -87,13 +88,13 @@ RSpec.describe Events::Stores::Clickhouse::AttributedUsageQuery, clickhouse: {cl
     end
 
     context "when the charge is split" do
-      let(:split) { true }
+      let(:split_filter_ids) { [opus_filter_id, opus_eu_filter_id] }
 
-      it "returns one cell per filter and one for the default price" do
+      it "returns one cell per listed filter and one for the default price" do
         expect(attributed_usage_query.cells.map { [it.charge_id, it.charge_filter_id, it.rank] }).to eq(
           [
-            [tokens_charge_id, opus_eu_filter_id, 1],
             [tokens_charge_id, opus_filter_id, 2],
+            [tokens_charge_id, opus_eu_filter_id, 1],
             [tokens_charge_id, nil, 3],
             [requests_charge_id, nil, nil]
           ]
@@ -135,6 +136,33 @@ RSpec.describe Events::Stores::Clickhouse::AttributedUsageQuery, clickhouse: {cl
     end
   end
 
+  describe "#ingested_since?" do
+    subject(:ingested) { attributed_usage_query.ingested_since?(Time.zone.parse("2026-10-20 12:00:00")) }
+
+    let(:label_filters) { {"team" => ["eng"]} }
+
+    before do
+      create_event(code: "tokens", value: 1, labels: {"team" => "eng"}, enriched_at: Time.zone.parse("2026-10-20 11:00:00"))
+      create_event(code: "other", value: 1, labels: {"team" => "eng"}, enriched_at: Time.zone.parse("2026-10-20 13:00:00"))
+      create_event(code: "tokens", value: 1, labels: {"team" => "data"}, enriched_at: Time.zone.parse("2026-10-20 13:00:00"))
+      create_event(code: "tokens", value: 1, labels: {"team" => "eng"}, timestamp: Time.zone.parse("2026-10-01"), enriched_at: Time.zone.parse("2026-10-20 13:00:00"))
+    end
+
+    it "ignores the events the query does not read" do
+      expect(ingested).to be(false)
+    end
+
+    context "when an event of the query was ingested since" do
+      before do
+        create_event(code: "tokens", value: 1, labels: {"team" => "eng"}, timestamp: Time.zone.parse("2026-09-02"), enriched_at: Time.zone.parse("2026-10-20 12:00:01"))
+      end
+
+      it "returns true" do
+        expect(ingested).to be(true)
+      end
+    end
+  end
+
   describe "#rows" do
     before do
       create_event(code: "tokens", value: 100, labels: {"team" => "eng"}, properties: {"model" => "opus"})
@@ -168,11 +196,33 @@ RSpec.describe Events::Stores::Clickhouse::AttributedUsageQuery, clickhouse: {cl
       expect(row("eng").keys.grep(/running/)).to eq([])
     end
 
+    it "returns no split units without a split charge" do
+      expect(row("eng").keys.grep(/split_units/)).to eq([])
+    end
+
     context "when the charge is split" do
-      let(:split) { true }
+      let(:split_filter_ids) { [opus_eu_filter_id, opus_filter_id] }
 
       it "sums each filter in its own cell" do
         expect(cells(row("eng"))).to eq([[10, 200, 1], [100, 1_000, 1], [5, 5, 1], [1, 0, 1]])
+      end
+
+      it "returns the units of the whole split charge" do
+        expect(row("eng")["split_units"].to_d).to eq(100 + 10 + 5) # opus + opus eu + default (haiku)
+        expect(row("eng")["total_split_units"].to_d).to eq(115 + 7) # eng + data
+      end
+
+      context "when only some filters are listed" do
+        let(:split_filter_ids) { [opus_filter_id] }
+
+        it "leaves the other filters out of the cells but not out of the amount" do
+          expect(cells(row("eng"))).to eq([[100, 1_000, 1], [5, 5, 1], [1, 0, 1]])
+          expect(row("eng")["amount"].to_d).to eq(1_205)
+        end
+
+        it "keeps the other filters in the split units" do
+          expect(row("eng")["split_units"].to_d).to eq(100 + 10 + 5) # opus + opus eu (unlisted) + default (haiku)
+        end
       end
     end
 

@@ -7,7 +7,7 @@ RSpec.describe Api::ForbidsLegacyBilling do
 
   # rubocop:disable RSpec/DescribedClass
   controller(ApplicationController) do
-    include ApiErrors
+    include Api::V1Errors
     include Api::ForbidsLegacyBilling
 
     attr_reader :current_organization
@@ -63,7 +63,7 @@ RSpec.describe Api::ForbidsLegacyBilling do
   describe "on a controller defining only a subset of the write actions" do
     # rubocop:disable RSpec/DescribedClass
     controller(ApplicationController) do
-      include ApiErrors
+      include Api::V1Errors
       include Api::ForbidsLegacyBilling
 
       attr_reader :current_organization

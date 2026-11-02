@@ -6,7 +6,7 @@ module X402
       DEGRADED_CALL_HEADROOM = 1_000
       MAX_ESTIMATED_CALL_COST_CENTS = 2**53 - 1
 
-      Result = BaseResult[:balance_credits, :requirements, :external_subscription_id, :sign_in_chains]
+      Result = BaseResult[:balance_credits, :requirements, :external_subscription_id, :subscription_started_at, :sign_in_chains]
 
       def initialize(organization:, params:)
         @organization = organization
@@ -18,6 +18,7 @@ module X402
       def call
         return result.validation_failure!(errors: input_errors) if input_errors.any?
         return result.not_found_failure!(resource: "connection") unless connection
+        return result.single_validation_failure!(field: :connection_code, error_code: "environment_not_enabled") unless connection.environment_enabled?
 
         route = RouteCheckService.call(organization:, plan_code: params[:plan_code], billable_metric_code: params[:billable_metric_code])
         return result.fail_with_error!(route.error) unless route.success?
@@ -31,6 +32,7 @@ module X402
         return refuse("subscription_not_active") if active_subscription.nil? && subscriptions.any?
 
         result.external_subscription_id = active_subscription&.external_id
+        result.subscription_started_at = active_subscription&.started_at
         result.balance_credits = balance_credits
 
         if active_subscription && wallet && covered?

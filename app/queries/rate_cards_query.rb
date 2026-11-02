@@ -10,10 +10,17 @@ class RateCardsQuery < BaseQuery
     :code,
     :currency,
     :product_code,
-    :product_filter_code
+    :product_filter_code,
+    :exclude_priced_on_plan_id,
+    :exclude_priced_on_contract_id,
+    :created_at_from,
+    :created_at_to
   ]
 
   def call
+    validate_filters
+    return result if result.error.present?
+
     rate_cards = base_scope.result
     rate_cards = apply_consistent_ordering(rate_cards)
 
@@ -26,8 +33,13 @@ class RateCardsQuery < BaseQuery
     rate_cards = with_currency(rate_cards) if filters.currency.present?
     rate_cards = with_product_code(rate_cards) if filters.product_code.present?
     rate_cards = with_product_filter_code(rate_cards) if filters.product_filter_code.present?
+    rate_cards = without_priced_on(rate_cards, catalog_plan.applied_rate_cards) if filters.exclude_priced_on_plan_id.present?
+    rate_cards = without_priced_on(rate_cards, contract.applied_rate_cards) if filters.exclude_priced_on_contract_id.present?
+    rate_cards = with_date_range(rate_cards, :created_at)
 
     result.rate_cards = paginate(rate_cards)
+    result
+  rescue BaseService::FailedResult
     result
   end
 
@@ -79,5 +91,32 @@ class RateCardsQuery < BaseQuery
 
   def with_product_filter_code(scope)
     scope.where(product_filter_id: organization.product_filters.where(code: filters.product_filter_code).select(:id))
+  end
+
+  # The create services accept one applied card per (product, product filter) slice: a card of a
+  # priced slice cannot be applied there.
+  def without_priced_on(scope, applied_rate_cards)
+    priced = applied_rate_cards
+      .joins("INNER JOIN rate_cards priced_rate_cards ON priced_rate_cards.id = #{applied_rate_cards.table_name}.rate_card_id")
+      .where("priced_rate_cards.product_id = rate_cards.product_id")
+      .where("priced_rate_cards.product_filter_id IS NOT DISTINCT FROM rate_cards.product_filter_id")
+
+    scope.where.not(priced.arel.exists)
+  end
+
+  def validate_filters
+    if filters.exclude_priced_on_plan_id.present? && catalog_plan.nil?
+      result.not_found_failure!(resource: "plan")
+    elsif filters.exclude_priced_on_contract_id.present? && contract.nil?
+      result.not_found_failure!(resource: "contract")
+    end
+  end
+
+  def catalog_plan
+    @catalog_plan ||= organization.catalog_plans.find_by(id: filters.exclude_priced_on_plan_id)
+  end
+
+  def contract
+    @contract ||= organization.contracts.find_by(id: filters.exclude_priced_on_contract_id)
   end
 end
