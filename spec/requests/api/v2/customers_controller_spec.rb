@@ -583,6 +583,18 @@ RSpec.describe Api::V2::CustomersController do
         end
       end
 
+      context "with a provider customer id but no payment provider" do
+        let(:attributes) { {name: "Updated", provider_customer_id: "cus_12345"} }
+
+        it "updates the customer without a provider customer" do
+          request
+
+          expect(response).to have_http_status(:ok)
+          expect(customer.reload).to have_attributes(name: "Updated", payment_provider: nil, provider_customer: nil)
+          expect(json[:customer]).to include(payment_provider: nil, provider_customer_id: nil)
+        end
+      end
+
       context "when removing the payment provider" do
         let(:customer) { create(:customer, :with_stripe_payment_provider, organization:) }
         let(:provider_customer) { customer.stripe_customer }
