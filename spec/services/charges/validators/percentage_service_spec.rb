@@ -330,6 +330,15 @@ RSpec.describe Charges::Validators::PercentageService do
         expect(validation_service.result.error.messages[:per_transaction_max_amount])
           .to include("per_transaction_max_lower_than_per_transaction_min")
       end
+
+      context "when one of them is not an amount" do
+        let(:percentage_properties) { super().merge(per_transaction_min_amount: "abc") }
+
+        it "refuses that amount without comparing them" do
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error.messages).to eq(per_transaction_min_amount: ["invalid_amount"])
+        end
+      end
     end
 
     it_behaves_like "pricing_group_keys property validation" do

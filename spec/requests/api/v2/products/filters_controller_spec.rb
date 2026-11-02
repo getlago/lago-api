@@ -25,6 +25,17 @@ RSpec.describe Api::V2::Products::FiltersController do
       let(:create_params) { wrapper }
     end
 
+    context "when the code is not a string" do
+      let(:create_params) { super().merge(code: 42) }
+
+      it "returns a value_is_invalid error" do
+        expect { subject }.not_to change(ProductFilter, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "code", meta: {}}])
+      end
+    end
+
     it "creates a filter with its values" do
       subject
 
@@ -127,6 +138,17 @@ RSpec.describe Api::V2::Products::FiltersController do
 
     it_behaves_like "a v2 action requiring an object wrapper", :filter do
       let(:update_params) { wrapper }
+    end
+
+    context "when the code is not a string" do
+      let(:update_params) { {code: 42} }
+
+      it "returns a value_is_invalid error without updating it" do
+        expect { subject }.not_to change { filter.reload.code }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "code", meta: {}}])
+      end
     end
 
     it "updates the filter and replaces its values" do

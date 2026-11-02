@@ -95,6 +95,16 @@ en:
           attributes:
             permissions:
               forbidden_keys: 'contains forbidden keys: %{keys}'
+        contract_rate_card:
+          not_a_number: value_is_invalid
+        plan_rate_card:
+          not_a_number: value_is_invalid
+        rate_card_rate:
+          not_a_number: value_is_invalid
+        rate_override:
+          not_a_number: value_is_invalid
+        rate_phase:
+          not_a_number: value_is_invalid
         webhook_endpoint:
           attributes:
             event_types:

@@ -24,6 +24,17 @@ RSpec.describe Api::V2::ProductCategoriesController do
       let(:create_params) { wrapper }
     end
 
+    context "when the code is not a string" do
+      let(:create_params) { super().merge(code: 42) }
+
+      it "returns a value_is_invalid error" do
+        expect { subject }.not_to change(ProductCategory, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "code", meta: {}}])
+      end
+    end
+
     it "creates a product_category" do
       subject
 
@@ -56,6 +67,17 @@ RSpec.describe Api::V2::ProductCategoriesController do
 
     it_behaves_like "a v2 action requiring an object wrapper", :product_category do
       let(:update_params) { wrapper }
+    end
+
+    context "when the code is not a string" do
+      let(:update_params) { {code: false} }
+
+      it "returns a value_is_invalid error without updating it" do
+        expect { subject }.not_to change { product_category.reload.code }
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "code", meta: {}}])
+      end
     end
 
     it "updates the product_category" do

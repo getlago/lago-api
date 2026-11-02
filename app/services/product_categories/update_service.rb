@@ -18,6 +18,11 @@ module ProductCategories
     def call
       return result.not_found_failure!(resource: "product_category") unless product_category
 
+      # A JSON body can send a number or a boolean, which has no strip.
+      unless params[:code].nil? || params[:code].is_a?(String)
+        return result.single_validation_failure!(field: :code, error_code: "value_is_invalid")
+      end
+
       product_category.with_lock do
         # NOTE: code can only be edited while the product_category is not yet in a plan or subscription
         if params.key?(:code) && params[:code]&.strip != product_category.code && product_category.attached_to_plan_or_subscription?

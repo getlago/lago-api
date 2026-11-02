@@ -18,6 +18,11 @@ module ProductFilters
     def call
       return result.not_found_failure!(resource: "product") unless product
 
+      # A JSON body can send a number or a boolean, which has no strip.
+      unless params[:code].nil? || params[:code].is_a?(String)
+        return result.single_validation_failure!(field: :code, error_code: "value_is_invalid")
+      end
+
       unless product.metered?
         return result.single_validation_failure!(field: :product, error_code: "not_allowed_for_product_type")
       end

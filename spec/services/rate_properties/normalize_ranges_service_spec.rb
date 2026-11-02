@@ -47,6 +47,14 @@ RSpec.describe RateProperties::NormalizeRangesService do
     end
   end
 
+  context "when the tiers are not a list" do
+    let(:ranges) { {"to_value" => nil} }
+
+    it "rejects the tiers" do
+      expect(result.error.messages[:graduated_ranges]).to eq(["invalid_graduated_ranges"])
+    end
+  end
+
   context "with properties that are not a hash" do
     let(:rate_properties) { nil }
 

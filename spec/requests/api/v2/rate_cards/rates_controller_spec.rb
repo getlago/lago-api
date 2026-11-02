@@ -34,6 +34,65 @@ RSpec.describe Api::V2::RateCards::RatesController do
       expect(json[:rate][:status]).to eq("pending")
     end
 
+    context "without rate_properties" do
+      before { create_params.delete(:rate_properties) }
+
+      it "returns a value_is_mandatory error without creating the rate" do
+        expect { subject }.not_to change(RateCardRate, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_mandatory", field: "rate_properties", meta: {}}])
+      end
+    end
+
+    context "with tiers that are not a list" do
+      let(:create_params) { super().merge(rate_model: "graduated", rate_properties: {graduated_ranges: "tiers"}) }
+
+      it "returns an invalid_graduated_ranges error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "invalid_graduated_ranges", field: "graduated_ranges", meta: {}}])
+      end
+    end
+
+    context "with presentation_group_keys that are not a list" do
+      let(:create_params) { super().merge(rate_properties: {amount: "12", presentation_group_keys: true}) }
+
+      it "returns an invalid_type error on rate_properties" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "invalid_type", field: "rate_properties", meta: {}}])
+      end
+    end
+
+    context "with a per transaction minimum that is not an amount", :premium do
+      let(:create_params) do
+        super().merge(rate_model: "percentage", rate_properties: {rate: "1", per_transaction_min_amount: "abc", per_transaction_max_amount: "1"})
+      end
+
+      it "returns an invalid_amount error on rate_properties" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "invalid_amount", field: "rate_properties", meta: {}}])
+      end
+    end
+
+    ["infinity", "-infinity"].each do |effective_from|
+      context "with effective_from #{effective_from}" do
+        before { create_params[:effective_from] = effective_from }
+
+        it "returns a value_is_invalid error without creating the rate" do
+          expect { subject }.not_to change(RateCardRate, :count)
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "effective_from", meta: {}}])
+        end
+      end
+    end
+
     it "returns effective_from as a midnight datetime on an arrears card" do
       subject
 
@@ -127,6 +186,17 @@ RSpec.describe Api::V2::RateCards::RatesController do
 
     it_behaves_like "a v2 action requiring an object wrapper", :rate do
       let(:update_params) { wrapper }
+    end
+
+    context "when the code is not a string" do
+      let(:update_params) { {code: 42} }
+
+      it "returns a value_is_invalid error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "code", meta: {}}])
+      end
     end
 
     context "when updating the code on an unattached card" do

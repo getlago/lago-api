@@ -18,6 +18,11 @@ module ProductCategories
     def call
       return result.not_found_failure!(resource: "organization") unless organization
 
+      # A JSON body can send a number or a boolean, which has no strip.
+      unless params[:code].nil? || params[:code].is_a?(String)
+        return result.single_validation_failure!(field: :code, error_code: "value_is_invalid")
+      end
+
       ActiveRecord::Base.transaction do
         product_category = organization.product_categories.create!(
           name: params[:name],

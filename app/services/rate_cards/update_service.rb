@@ -24,7 +24,12 @@ module RateCards
     def call
       return result.not_found_failure!(resource: "rate_card") unless rate_card
 
-      boolean_failure = boolean_params_failure
+      # A JSON body can send a number or a boolean, which has no strip.
+      unless params[:code].nil? || params[:code].is_a?(String)
+        return result.single_validation_failure!(field: :code, error_code: "value_is_invalid")
+      end
+
+      boolean_failure = boolean_params_failure(allow_nil: false)
       return boolean_failure if boolean_failure
 
       if params[:applied_pricing_unit_code].present? && !rate_card.organization.pricing_units.exists?(code: params[:applied_pricing_unit_code])

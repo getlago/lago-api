@@ -42,6 +42,12 @@ class RateOverride < ApplicationRecord
 
   def validate_properties
     return unless rate_model
+    return if errors[:rate_model].any?
+
+    unless rate_properties.is_a?(Hash)
+      errors.add(:rate_properties, rate_properties.nil? ? :blank : :invalid)
+      return
+    end
 
     validator = ChargePropertiesValidation::RATE_PROPERTIES_VALIDATORS[rate_model.to_sym]
     validator ||= Charges::Validators::BaseService

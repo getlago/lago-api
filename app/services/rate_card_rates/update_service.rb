@@ -23,6 +23,11 @@ module RateCardRates
     def call
       return result.not_found_failure!(resource: "rate_card_rate") unless rate_card_rate
 
+      # A JSON body can send a number or a boolean, which has no strip.
+      unless params[:code].nil? || params[:code].is_a?(String)
+        return result.single_validation_failure!(field: :code, error_code: "value_is_invalid")
+      end
+
       # On a card billed by subscriptions only pending rates stay editable:
       # the active rate prices live subscriptions, changes go through appends.
       if rate_card_rate.rate_card.attached_to_subscriptions? && !rate_card_rate.pending?

@@ -78,9 +78,10 @@ module Charges
           add_error(field: :per_transaction_max_amount, error_code: "invalid_amount")
         end
 
-        return if properties["per_transaction_min_amount"].nil? || properties["per_transaction_max_amount"].nil?
-        return if BigDecimal(properties["per_transaction_min_amount"]) <=
-          BigDecimal(properties["per_transaction_max_amount"])
+        # Only two valid amounts compare: an invalid one is refused above.
+        min_amount, max_amount = properties.values_at("per_transaction_min_amount", "per_transaction_max_amount")
+        return unless [min_amount, max_amount].all? { ::Validators::DecimalAmountService.valid_amount?(it) }
+        return if BigDecimal(min_amount) <= BigDecimal(max_amount)
 
         add_error(field: :per_transaction_max_amount, error_code: "per_transaction_max_lower_than_per_transaction_min")
       end

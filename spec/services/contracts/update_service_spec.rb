@@ -544,6 +544,24 @@ RSpec.describe Contracts::UpdateService do
     end
   end
 
+  context "with a billing anchor date that does not exist" do
+    let(:params) { {billing_anchor_date: "2026-02-30"} }
+
+    it "rejects it instead of silently clearing the anchor" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:billing_anchor_date]).to eq(["value_is_invalid"])
+    end
+
+    context "when the contract is active" do
+      let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
+
+      it "rejects it before comparing it with the stored anchor" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:billing_anchor_date]).to eq(["value_is_invalid"])
+      end
+    end
+  end
+
   context "with a boolean date value" do
     let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan:, ended_at: 1.month.from_now) }
     let(:params) { {ended_at: false} }

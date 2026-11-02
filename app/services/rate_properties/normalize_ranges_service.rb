@@ -22,7 +22,9 @@ module RateProperties
 
       RANGE_KEYS.each do |key|
         ranges = properties[key]
-        next unless ranges.is_a?(Array) && ranges.any?
+        next if ranges.nil?
+        return result.single_validation_failure!(field: key.to_sym, error_code: "invalid_#{key}") unless ranges.is_a?(Array)
+        next if ranges.empty?
 
         if ranges.any? { it.is_a?(Hash) && it.key?("from_value") }
           return result.single_validation_failure!(field: key.to_sym, error_code: "from_value_not_allowed")

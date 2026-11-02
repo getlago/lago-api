@@ -77,6 +77,23 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
       end
     end
 
+    {
+      "a boolean min_amount_cents" => [{rate_model: "standard", rate_properties: {amount: "0"}, min_amount_cents: true}, "value_is_invalid", "min_amount_cents"],
+      "a rate_model that is not a string" => [{rate_model: 5, rate_properties: {amount: "0"}}, "value_is_invalid", "rate_model"],
+      "no rate_properties" => [{rate_model: "standard"}, "value_is_mandatory", "rate_properties"]
+    }.each do |description, (rate_override, code, field)|
+      context "with a rate override with #{description}" do
+        let(:phase_params) { {code: "trial", name: "trial", billing_interval_cycle_count: 3, rate_override:} }
+
+        it "returns a validation error without creating the phase" do
+          expect { subject }.not_to change(RatePhase, :count)
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "validation_errors", details: [{code:, field:, meta: {}}])
+        end
+      end
+    end
+
     context "when inserting an indefinite phase before the end" do
       let(:phase_params) { {position: 1, billing_interval_cycle_count: nil} }
 

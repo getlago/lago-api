@@ -223,6 +223,18 @@ RSpec.describe Api::V2::PlanRateCardsController do
       expect(json[:applied_rate_card][:units]).to eq("12.0")
     end
 
+    context "when the units are not a number" do
+      subject { put_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/#{plan_rate_card.rate_card.code}", {applied_rate_card: {units: "ten"}}) }
+
+      it "returns a value_is_invalid error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "units", meta: {}}])
+        expect(plan_rate_card.reload.units).to eq(5)
+      end
+    end
+
     context "when the plan has contracts" do
       before { create(:contract, catalog_plan:, organization:) }
 

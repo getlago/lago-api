@@ -111,14 +111,15 @@ class RateCardRate < ApplicationRecord
   # Arrears rates apply per whole day, Advance rates keep full
   # instants — they price per event
   def normalize_effective_from
-    return if effective_from.blank?
+    return unless effective_from.acts_like?(:time)
     return unless rate_card&.arrears?
 
     self.effective_from = effective_from.beginning_of_day
   end
 
+  # "infinity" casts to a Float, not to nil.
   def validate_effective_from_parseable
-    return if effective_from.present?
+    return if effective_from.acts_like?(:time)
     return if effective_from_before_type_cast.blank?
 
     errors.add(:effective_from, :invalid)
@@ -142,7 +143,7 @@ class RateCardRate < ApplicationRecord
   # than the latest existing rate on the same card. No insertion between rates.
   # The past is immutable, the future is editable
   def validate_effective_from_is_appended
-    return if effective_from.blank?
+    return unless effective_from.acts_like?(:time)
     return if rate_card.blank?
     return unless new_record? || effective_from_changed?
 
@@ -169,6 +170,11 @@ class RateCardRate < ApplicationRecord
   def validate_properties
     return unless rate_model
     return if errors[:rate_model].any?
+
+    unless rate_properties.is_a?(Hash)
+      errors.add(:rate_properties, rate_properties.nil? ? :blank : :invalid)
+      return
+    end
 
     validator = ChargePropertiesValidation::RATE_PROPERTIES_VALIDATORS[rate_model.to_sym]
     validator ||= Charges::Validators::BaseService

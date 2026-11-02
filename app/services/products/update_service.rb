@@ -18,6 +18,11 @@ module Products
     def call
       return result.not_found_failure!(resource: "product") unless product
 
+      # A JSON body can send a number or a boolean, which has no strip.
+      unless params[:code].nil? || params[:code].is_a?(String)
+        return result.single_validation_failure!(field: :code, error_code: "value_is_invalid")
+      end
+
       product.with_lock do
         if product.attached_to_plan_or_subscription?
           if params.key?(:code) && params[:code]&.strip != product.code

@@ -20,8 +20,17 @@ module RateCards
     def call
       return result.not_found_failure!(resource: "product") unless product
 
+      # A JSON body can send a number or a boolean, which has no strip.
+      unless params[:code].nil? || params[:code].is_a?(String)
+        return result.single_validation_failure!(field: :code, error_code: "value_is_invalid")
+      end
+
       boolean_failure = boolean_params_failure
       return boolean_failure if boolean_failure
+
+      unless params[:rates].nil? || params[:rates].is_a?(Array)
+        return result.single_validation_failure!(field: :rates, error_code: "value_is_invalid")
+      end
 
       product_filter = nil
       if params[:product_filter_id].present?

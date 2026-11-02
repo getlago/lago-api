@@ -30,6 +30,15 @@ RSpec.shared_examples "presentation_group_keys property validation" do
     end
   end
 
+  context "when presentation_group_keys is not a list" do
+    let(:presentation_group_keys) { true }
+
+    it "is invalid" do
+      expect(validation_service).not_to be_valid
+      expect(validation_service.result.error.messages[:presentation_group_keys]).to eq(["invalid_type"])
+    end
+  end
+
   context "when presentation_group_keys has duplicated values" do
     let(:presentation_group_keys) { [{"value" => "country"}, {"value" => "country"}] }
 

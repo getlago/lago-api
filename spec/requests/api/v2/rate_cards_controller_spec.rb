@@ -234,6 +234,55 @@ RSpec.describe Api::V2::RateCardsController do
       end
     end
 
+    context "when the code is not a string" do
+      let(:create_params) { {product_code: product.code, name: "Standard", code: 42, currency: "EUR"} }
+
+      it "returns a value_is_invalid error" do
+        expect { subject }.not_to change(RateCard, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "code", meta: {}}])
+      end
+    end
+
+    context "when rates is an object, not a list" do
+      let(:create_params) do
+        {
+          product_code: product.code,
+          name: "Standard",
+          code: "standard",
+          currency: "EUR",
+          rates: {code: "launch", effective_from: Time.current.to_date.iso8601, rate_model: "standard", rate_properties: {amount: "1"}, billing_interval_unit: "month"}
+        }
+      end
+
+      it "returns a value_is_invalid error without creating the card" do
+        expect { subject }.not_to change(RateCard, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "rates", meta: {}}])
+      end
+    end
+
+    context "when a nested rate has no rate_properties" do
+      let(:create_params) do
+        {
+          product_code: product.code,
+          name: "Standard",
+          code: "standard",
+          currency: "EUR",
+          rates: [{code: "launch", effective_from: Time.current.to_date.iso8601, rate_model: "standard", billing_interval_unit: "month"}]
+        }
+      end
+
+      it "rolls the create back with the error under the path of the rate" do
+        expect { subject }.not_to change(RateCard, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_mandatory", field: "rates[0].rate_properties", meta: {}}])
+      end
+    end
+
     context "when the currency is invalid" do
       let(:create_params) { {product_code: product.code, name: "Standard", code: "standard", currency: "ABC"} }
 
@@ -289,6 +338,30 @@ RSpec.describe Api::V2::RateCardsController do
       expect(response).to have_http_status(:success)
       expect(json[:rate_card][:name]).to eq("After")
       expect(json[:rate_card].keys).to eq(flat_keys)
+    end
+
+    %i[proration display_on_invoice].each do |field|
+      context "when #{field} is null" do
+        let(:update_params) { {field => nil} }
+
+        it "returns a value_is_invalid error, as the column cannot be cleared" do
+          expect { subject }.not_to change { rate_card.reload.attributes }
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: field.to_s, meta: {}}])
+        end
+      end
+    end
+
+    context "when the code is not a string" do
+      let(:update_params) { {code: true} }
+
+      it "returns a value_is_invalid error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "code", meta: {}}])
+      end
     end
 
     context "with taxes" do

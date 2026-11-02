@@ -18,6 +18,11 @@ module Products
     def call
       return result.not_found_failure!(resource: "organization") unless organization
 
+      # A JSON body can send a number or a boolean, which has no strip.
+      unless params[:code].nil? || params[:code].is_a?(String)
+        return result.single_validation_failure!(field: :code, error_code: "value_is_invalid")
+      end
+
       product_category = nil
       if params[:product_category_id].present?
         product_category = organization.product_categories.find_by(id: params[:product_category_id])

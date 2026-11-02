@@ -76,9 +76,10 @@ module Contracts
         next unless params.key?(field)
         next if params[field].nil?
 
-        unless Utils::Datetime.valid_format?(params[field])
-          return result.single_validation_failure!(field:, error_code: "value_is_invalid")
-        end
+        valid = Utils::Datetime.valid_format?(params[field])
+        # The anchor is a date column, where an impossible day (2026-02-30) does not parse.
+        valid &&= Utils::Datetime.parse_iso8601_date(params[field]).present? if field == :billing_anchor_date
+        return result.single_validation_failure!(field:, error_code: "value_is_invalid") unless valid
       end
 
       if contract.active? && locked_field_changed?

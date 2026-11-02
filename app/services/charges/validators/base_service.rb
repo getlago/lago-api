@@ -93,7 +93,7 @@ module Charges
           )
         end
 
-        if raw_keys.size > 2
+        if raw_keys.is_a?(Array) && raw_keys.size > 2
           add_error(field: "presentation_group_keys", error_code: "too_many_keys")
         end
 

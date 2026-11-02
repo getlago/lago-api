@@ -2,15 +2,16 @@
 
 module RateCards
   # Rails casts any non-falsey value to true on boolean columns; reject
-  # non-boolean input from the permissive REST layer instead. nil is allowed.
+  # non-boolean input from the permissive REST layer instead. nil keeps the
+  # column default on create, and is refused on update: the columns are NOT NULL.
   module ValidatesBooleanParams
     BOOLEAN_FIELDS = %i[proration display_on_invoice].freeze
 
     private
 
-    def boolean_params_failure
+    def boolean_params_failure(allow_nil: true)
       invalid = BOOLEAN_FIELDS.select do |field|
-        params.key?(field) && !params[field].nil? && ![true, false].include?(params[field])
+        params.key?(field) && !(allow_nil && params[field].nil?) && ![true, false].include?(params[field])
       end
       return if invalid.empty?
 
