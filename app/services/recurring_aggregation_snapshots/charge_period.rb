@@ -5,11 +5,14 @@ module RecurringAggregationSnapshots
   # and the snapshots once, for all charge filters.
   class ChargePeriod
     # charge_filter_ids: the buckets to load besides the default one, every filter of the charge when nil
-    def initialize(subscription:, charge:, from_datetime:, charge_filter_ids: nil)
+    # grouped_by_values: loads only the snapshots of that group, plus one per bucket (see of_group)
+    def initialize(subscription:, charge:, from_datetime:, charge_filter_ids: nil, grouped_by_values: nil, grouped_by_keys: [])
       @subscription = subscription
       @charge = charge
       @from_datetime = from_datetime
       @charge_filter_ids = charge_filter_ids
+      @grouped_by_values = grouped_by_values
+      @grouped_by_keys = grouped_by_keys
     end
 
     # Marker and snapshots of the charge filter's bucket, or nil without a marker. A marker the
@@ -30,7 +33,7 @@ module RecurringAggregationSnapshots
 
     private
 
-    attr_reader :subscription, :charge, :from_datetime, :charge_filter_ids
+    attr_reader :subscription, :charge, :from_datetime, :charge_filter_ids, :grouped_by_values, :grouped_by_keys
 
     def charge_snapshots
       RecurringAggregationSnapshot.where(
@@ -48,9 +51,12 @@ module RecurringAggregationSnapshots
 
     # Listing the buckets lets the period index serve to_datetime too
     def records
-      @records ||= charge_snapshots
-        .latest_period([nil, *(charge_filter_ids || charge.filters.ids)], before: from_datetime)
-        .group_by(&:charge_filter_id)
+      @records ||= begin
+        bucket_ids = [nil, *(charge_filter_ids || charge.filters.ids)]
+        charge_snapshots.latest_period(bucket_ids, before: from_datetime)
+          .of_group(grouped_by_values, grouped_by_keys:, bucket_ids:)
+          .group_by(&:charge_filter_id)
+      end
     end
 
     def filters_changed?

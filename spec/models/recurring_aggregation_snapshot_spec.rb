@@ -55,6 +55,47 @@ RSpec.describe RecurringAggregationSnapshot do
         expect(described_class.latest_period([nil, charge_filter.id], before: marker.to_datetime)).to eq([older_marker])
       end
     end
+
+    describe ".of_group" do
+      let(:marker) { create(:recurring_aggregation_snapshot, grouped_by: {"region" => nil, "cloud" => nil}) }
+      let(:charge_filter) { create(:charge_filter, charge: marker.charge) }
+      let(:grouped_by_keys) { %w[region cloud] }
+      # null sorts before any string in jsonb, so it is the first snapshot of the bucket
+      let(:eu_snapshot) { create_snapshot(grouped_by: {"region" => "eu", "cloud" => nil}) }
+      let(:eu_aws_snapshot) { create_snapshot(grouped_by: {"region" => "eu", "cloud" => "aws"}) }
+      let(:us_aws_snapshot) { create_snapshot(grouped_by: {"region" => "us", "cloud" => "aws"}) }
+
+      def create_snapshot(**attributes)
+        create(:recurring_aggregation_snapshot, organization: marker.organization, subscription: marker.subscription,
+          charge: marker.charge, charge_filter:, **attributes)
+      end
+
+      def of_group(grouped_by_values)
+        described_class.of_group(grouped_by_values, grouped_by_keys:, bucket_ids: [nil, charge_filter.id])
+      end
+
+      before do
+        eu_snapshot
+        eu_aws_snapshot
+        us_aws_snapshot
+      end
+
+      it "returns the snapshots of the group and the first snapshot of each bucket" do
+        expect(of_group({"region" => "us", "cloud" => "aws"})).to match_array([marker, eu_snapshot, us_aws_snapshot])
+      end
+
+      it "matches a missing value with the null stored for it" do
+        expect(of_group({"region" => "eu", "cloud" => nil})).to match_array([marker, eu_snapshot])
+      end
+
+      it "matches every value of a key left out" do
+        expect(of_group({"region" => "eu"})).to match_array([marker, eu_snapshot, eu_aws_snapshot])
+      end
+
+      it "returns every snapshot without grouped_by_values" do
+        expect(of_group(nil)).to match_array([marker, eu_snapshot, eu_aws_snapshot, us_aws_snapshot])
+      end
+    end
   end
 
   describe "validations" do
