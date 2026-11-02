@@ -58,8 +58,9 @@ class BaseResult
   end
 
   # errors: {field => [code]}. meta: {field => facts}, which native v2 renders with each code of the field.
-  def validation_failure!(errors:, meta: {})
-    fail_with_error!(BaseService::ValidationFailure.new(self, messages: errors, meta:))
+  # codes: the {field => [code]} native v2 renders instead, when errors are sentences v1 clients read.
+  def validation_failure!(errors:, meta: {}, codes: nil)
+    fail_with_error!(BaseService::ValidationFailure.new(self, messages: errors, meta:, codes:))
   end
 
   def single_validation_failure!(error_code:, field: :base, meta: {})

@@ -64,7 +64,9 @@ class BaseService
 
     # messages: {field => [code]}, or one of the String, indexed and nested shapes a few services
     # build, which v1 and GraphQL render as they are. meta: {field => facts} (see ValidationMeta::KEYS).
-    attr_reader :messages, :meta
+    # codes: {field => [code]} that native v2 renders in place of messages that are sentences, which
+    # v1 and GraphQL clients keep reading; meta is then keyed by its fields. The messages otherwise.
+    attr_reader :messages, :meta, :codes
 
     # The errors of a record, read now: valid? clears them in place.
     def self.from_errors(result, errors)
@@ -87,9 +89,10 @@ class BaseService
     end
     private_class_method :bound_of, :text?
 
-    def initialize(result, messages:, meta: {})
+    def initialize(result, messages:, meta: {}, codes: nil)
       @messages = messages
       @meta = meta
+      @codes = codes || messages
 
       super(result, format_messages)
     end
@@ -97,7 +100,7 @@ class BaseService
     # The same codes and meta under the fields the block gives, on the result of the caller. A plain
     # ValidationFailure: a subclass reads its facts from its own state.
     def remap(result, &)
-      ValidationFailure.new(result, messages: messages.transform_keys(&), meta: meta.transform_keys(&))
+      ValidationFailure.new(result, messages: messages.transform_keys(&), meta: meta.transform_keys(&), codes: codes.transform_keys(&))
     end
 
     private

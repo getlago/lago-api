@@ -48,7 +48,7 @@ module Api
       when BaseService::MethodNotAllowedFailure then render_v2_error(422, code: error.code)
       # Ahead of ValidationFailure, its parent: its messages are the sentences of the contract.
       when BaseQuery::FiltersFailure then filter_errors(error.filters)
-      when BaseService::ValidationFailure then validation_errors(errors: error.messages, meta: error.meta)
+      when BaseService::ValidationFailure then validation_errors(errors: error.codes, meta: error.meta)
       when BaseService::ForbiddenFailure then forbidden_error(code: error.code)
       # A provider refusing the organization's own credentials. The API key of the request is fine, so
       # not a 401: on v2, a 401 always means the Lago API key was refused. Ahead of its parent.
