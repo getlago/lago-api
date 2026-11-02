@@ -61,15 +61,13 @@ module CreditNotes
       )
     end
 
-    # Upload before attaching: an attachment committed before its upload points to a missing file
-    # when the worker stops in between, and the re-run skips it as already generated.
     def attach_pdf_to_credit_note(pdf_file)
-      blob = ActiveStorage::Blob.create_and_upload!(
-        io: File.open(pdf_file.path),
+      Utils::DocumentAttachment.attach(
+        credit_note.file,
+        path: pdf_file.path,
         filename: "#{credit_note.number}.pdf",
         content_type: "application/pdf"
       )
-      credit_note.file.attach(blob)
     end
 
     def cleanup_tempfile(pdf_file)
