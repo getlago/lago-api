@@ -114,6 +114,7 @@ RSpec.describe PlanRateCards::DestroyService, :capture_kafka_messages do
     it "forbids the deletion" do
       expect(result).not_to be_success
       expect(result.error.messages[:plan]).to eq(["plan_locked"])
+      expect(result.error.codes).to eq(base: ["plan_locked"])
       expect(plan_rate_card.reload).not_to be_discarded
       expect(kafka_messages).to be_empty
     end

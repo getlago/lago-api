@@ -45,13 +45,33 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
       expect(contract_rate_card.rate_phases.order(:position).map(&:code)).to eq(%w[ramp default])
     end
 
+    context "when a tier of the override names its lower bound" do
+      subject do
+        post_with_token(organization, base_path, {
+          rate_phase: {
+            code: "ramp",
+            position: 1,
+            billing_interval_cycle_count: 2,
+            rate_override: {rate_model: "graduated", rate_properties: {graduated_ranges: [{from_value: 0, to_value: nil, per_unit_amount: "1", flat_amount: "0"}]}}
+          }
+        })
+      end
+
+      it "returns the error under the path of the ranges of the override, without inserting the phase" do
+        expect { subject }.not_to change(RatePhase, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json).to eq(code: "validation_errors", details: [{code: "from_value_not_allowed", field: "rate_override.rate_properties.graduated_ranges", meta: {}}])
+      end
+    end
+
     context "when the contract is active" do
       let(:contract) { create(:contract, organization:, customer:) }
 
       it "returns an unprocessable entity error" do
         subject
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:details]).to eq([{code: "contract_locked", field: "rate_phase", meta: {}}])
+        expect(json[:details]).to eq([{code: "contract_locked", field: "base", meta: {}}])
       end
     end
 
@@ -106,7 +126,7 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:details]).to eq([{code: "contract_locked", field: "rate_phase", meta: {}}])
+        expect(json[:details]).to eq([{code: "contract_locked", field: "base", meta: {}}])
       end
     end
   end
@@ -152,7 +172,7 @@ RSpec.describe Api::V2::ContractRateCards::RatePhasesController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:details]).to eq([{code: "indefinite_phase_not_deletable", field: "rate_phase", meta: {}}])
+        expect(json[:details]).to eq([{code: "indefinite_phase_not_deletable", field: "base", meta: {}}])
         expect(contract_rate_card.rate_phases.order(:position).map(&:code)).to eq(%w[extra default])
       end
     end

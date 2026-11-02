@@ -64,6 +64,7 @@ RSpec.describe PlanRateCards::CreateService do
     it "returns a validation failure" do
       expect(result).not_to be_success
       expect(result.error.messages[:rate_card]).to eq(["product_already_priced"])
+      expect(result.error.codes).to eq(rate_card_code: ["product_already_priced"])
     end
   end
 
@@ -77,6 +78,7 @@ RSpec.describe PlanRateCards::CreateService do
     it "returns a validation failure" do
       expect(result).not_to be_success
       expect(result.error.messages[:rate_card]).to eq(["product_filter_already_priced"])
+      expect(result.error.codes).to eq(rate_card_code: ["product_filter_already_priced"])
     end
   end
 
@@ -100,6 +102,7 @@ RSpec.describe PlanRateCards::CreateService do
 
       expect(result).not_to be_success
       expect(result.error.messages[:currency]).to eq(["currency_does_not_match"])
+      expect(result.error.codes).to eq(rate_card_code: ["currency_does_not_match"])
     end
   end
 
@@ -188,6 +191,7 @@ RSpec.describe PlanRateCards::CreateService do
     it "forbids adding a rate card" do
       expect(result).not_to be_success
       expect(result.error.messages[:plan]).to eq(["plan_locked"])
+      expect(result.error.codes).to eq(base: ["plan_locked"])
     end
   end
 end

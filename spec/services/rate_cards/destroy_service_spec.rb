@@ -126,6 +126,7 @@ RSpec.describe RateCards::DestroyService, :capture_kafka_messages do
     it "returns a validation failure and discards nothing" do
       expect(result).not_to be_success
       expect(result.error.messages[:rate_card]).to eq(["attached_to_plan_or_subscription"])
+      expect(result.error.codes).to eq(base: ["attached_to_plan_or_subscription"])
       expect(rate_card.reload).not_to be_discarded
     end
   end

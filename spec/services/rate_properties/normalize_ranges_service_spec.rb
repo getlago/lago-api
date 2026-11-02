@@ -44,6 +44,7 @@ RSpec.describe RateProperties::NormalizeRangesService do
 
     it "rejects the tiers" do
       expect(result.error.messages[:graduated_ranges]).to eq(["invalid_graduated_ranges"])
+      expect(result.error.codes).to eq("rate_properties.graduated_ranges": ["invalid_graduated_ranges"])
     end
   end
 
@@ -78,6 +79,7 @@ RSpec.describe RateProperties::NormalizeRangesService do
     it "rejects it" do
       expect(result).not_to be_success
       expect(result.error.messages[:graduated_ranges]).to eq(["from_value_not_allowed"])
+      expect(result.error.codes).to eq("rate_properties.graduated_ranges": ["from_value_not_allowed"])
     end
   end
 
@@ -98,6 +100,7 @@ RSpec.describe RateProperties::NormalizeRangesService do
       it "rejects the tiers" do
         expect(result).not_to be_success
         expect(result.error.messages[:graduated_ranges]).to eq(["invalid_graduated_ranges"])
+        expect(result.error.codes).to eq("rate_properties.graduated_ranges": ["invalid_graduated_ranges"])
       end
     end
   end

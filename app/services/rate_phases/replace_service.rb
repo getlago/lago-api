@@ -23,7 +23,7 @@ module RatePhases
       # mid-replace.
       applied_rate_card.with_lock do
         if (blocked = applied_rate_card.edit_error_code)
-          return result.single_validation_failure!(field: :rate_phases, error_code: blocked)
+          return result.single_validation_failure!(field: :rate_phases, v2_field: :base, error_code: blocked)
         end
 
         overrides = ordered_params.map { |phase| build_override(phase) }

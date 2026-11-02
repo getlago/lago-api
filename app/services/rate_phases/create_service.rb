@@ -30,7 +30,7 @@ module RatePhases
       # cannot slip past the edit check.
       applied_rate_card.with_lock do
         if (blocked = applied_rate_card.edit_error_code)
-          return result.single_validation_failure!(field: :rate_phase, error_code: blocked)
+          return result.single_validation_failure!(field: :rate_phase, v2_field: :base, error_code: blocked)
         end
 
         existing = applied_rate_card.rate_phases.order(:position).to_a
@@ -112,6 +112,10 @@ module RatePhases
         rate_card: applied_rate_card.rate_card,
         params: params[:rate_override]
       ).raise_if_error!.rate_override
+    rescue BaseService::ValidationFailure => e
+      # GraphQL clients read the errors of the override under its own fields; native v2 names their path.
+      renamed = e.remap(result, v2_only: true) { (it.to_sym == :base) ? :rate_override : :"rate_override.#{it}" }
+      result.fail_with_error!(renamed).raise_if_error!
     end
 
     # Omitted position appends at the end — except a definite phase lands just

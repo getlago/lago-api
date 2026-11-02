@@ -486,6 +486,18 @@ RSpec.describe Api::V2::ProductsController do
       expect(json[:product][:deleted_at]).to eq(product.deleted_at.iso8601(6))
     end
 
+    context "when the product is attached to a plan" do
+      before { create(:plan_rate_card, organization:, rate_card: create(:rate_card, organization:, product:)) }
+
+      it "returns a validation error on base without deleting it" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json).to eq(code: "validation_errors", details: [{code: "attached_to_plan_or_subscription", field: "base", meta: {}}])
+        expect(product.reload).not_to be_discarded
+      end
+    end
+
     context "when the product does not exist" do
       subject { delete_with_token(organization, "/api/v2/products/#{SecureRandom.uuid}") }
 

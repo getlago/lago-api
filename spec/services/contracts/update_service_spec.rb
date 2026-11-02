@@ -196,6 +196,7 @@ RSpec.describe Contracts::UpdateService do
       it "rejects the edit as locked and changes nothing" do
         expect(result).not_to be_success
         expect(result.error.messages[:contract]).to eq(["contract_locked"])
+        expect(result.error.codes).to eq(base: ["contract_locked"])
         expect(contract.reload).to have_attributes(name: nil, catalog_plan:)
       end
     end
@@ -211,6 +212,7 @@ RSpec.describe Contracts::UpdateService do
         it "rejects the edit as locked and changes nothing" do
           expect(result).not_to be_success
           expect(result.error.messages[:contract]).to eq(["contract_locked"])
+          expect(result.error.codes).to eq(base: ["contract_locked"])
           expect(contract.reload.name).to be_nil
         end
       end
@@ -225,6 +227,7 @@ RSpec.describe Contracts::UpdateService do
       it "rejects any edit as locked" do
         expect(result).not_to be_success
         expect(result.error.messages[:contract]).to eq(["contract_locked"])
+        expect(result.error.codes).to eq(base: ["contract_locked"])
         expect(contract.reload.name).to be_nil
       end
     end
@@ -267,6 +270,7 @@ RSpec.describe Contracts::UpdateService do
 
     it "rejects the edit and attaches nothing" do
       expect(result.error.messages[:contract]).to eq(["contract_locked"])
+      expect(result.error.codes).to eq(base: ["contract_locked"])
       expect(contract.reload.selected_invoice_custom_sections).to be_empty
     end
   end
@@ -278,6 +282,7 @@ RSpec.describe Contracts::UpdateService do
 
     it "rejects the edit" do
       expect(result.error.messages[:contract]).to eq(["contract_locked"])
+      expect(result.error.codes).to eq(base: ["contract_locked"])
       expect(contract.reload.selected_invoice_custom_sections).to be_empty
     end
   end
@@ -450,6 +455,7 @@ RSpec.describe Contracts::UpdateService do
 
       it "applies the active rules and leaves the start in place" do
         expect(result.error.messages[:contract]).to eq(["contract_locked"])
+        expect(result.error.codes).to eq(base: ["contract_locked"])
         expect(contract.reload.started_at).to eq(Time.zone.parse("2026-10-15"))
         expect(inherited_card.reload.effective_date).to eq(Date.new(2026, 10, 15))
       end

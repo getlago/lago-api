@@ -106,9 +106,10 @@ RSpec.describe RatePhases::UpdateService do
     context "when the override is an empty object" do
       let(:params) { {rate_override: {}} }
 
-      it "fails validation instead of clearing the override" do
+      it "fails validation instead of clearing the override, under the path of the override for native v2" do
         expect(result).not_to be_success
         expect(result.error.messages).to have_key(:rate_model)
+        expect(result.error.codes).to have_key(:"rate_override.rate_model")
         expect(rate_phase.reload.rate_override).to eq(previous_override)
         expect(previous_override.reload).not_to be_discarded
       end
@@ -285,6 +286,7 @@ RSpec.describe RatePhases::UpdateService do
     it "returns a validation failure" do
       expect(result).not_to be_success
       expect(result.error.messages[:rate_phase]).to eq(["plan_locked"])
+      expect(result.error.codes).to eq(base: ["plan_locked"])
     end
   end
 

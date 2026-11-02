@@ -244,6 +244,7 @@ RSpec.describe RatePhases::ReplaceService, :capture_kafka_messages do
     it "returns a plan_locked failure" do
       expect(result).not_to be_success
       expect(result.error.messages[:rate_phases]).to include("plan_locked")
+      expect(result.error.codes).to eq(base: ["plan_locked"])
     end
   end
 

@@ -74,6 +74,7 @@ RSpec.describe PlanRateCards::UpdateService do
       expect { result }.not_to have_enqueued_job(SendWebhookJob)
       expect(result).not_to be_success
       expect(result.error.messages[:plan]).to eq(["plan_locked"])
+      expect(result.error.codes).to eq(base: ["plan_locked"])
       expect(kafka_messages).to be_empty
     end
   end

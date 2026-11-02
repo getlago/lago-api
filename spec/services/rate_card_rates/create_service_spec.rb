@@ -66,6 +66,7 @@ RSpec.describe RateCardRates::CreateService do
       it "returns a validation failure" do
         expect { result }.not_to change(RateCardRate, :count)
         expect(result.error.messages[:graduated_ranges]).to eq(["from_value_not_allowed"])
+        expect(result.error.codes).to eq("rate_properties.graduated_ranges": ["from_value_not_allowed"])
       end
     end
   end

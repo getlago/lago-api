@@ -24,12 +24,14 @@ module RateProperties
         ranges = properties[key]
         next unless ranges.is_a?(Array) && ranges.any?
 
+        # GraphQL clients read the errors under the key of the ranges; native v2 names their path.
+        v2_field = :"rate_properties.#{key}"
         if ranges.any? { it.is_a?(Hash) && it.key?("from_value") }
-          return result.single_validation_failure!(field: key.to_sym, error_code: "from_value_not_allowed")
+          return result.single_validation_failure!(field: key.to_sym, v2_field:, error_code: "from_value_not_allowed")
         end
 
         bounds = ranges.all?(Hash) && upper_bounds(ranges)
-        return result.single_validation_failure!(field: key.to_sym, error_code: "invalid_#{key}") unless bounds
+        return result.single_validation_failure!(field: key.to_sym, v2_field:, error_code: "invalid_#{key}") unless bounds
 
         properties[key] = ranges.each_with_index.map do |range, index|
           range.merge("from_value" => index.zero? ? 0 : bounds[index - 1], "to_value" => bounds[index])

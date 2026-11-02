@@ -21,6 +21,17 @@ RSpec.describe Api::V2::Products::FiltersController do
 
     include_examples "requires API permission", "product", "write"
 
+    context "when the product is fixed" do
+      let(:product) { create(:product, :fixed, organization:) }
+
+      it "returns a validation error on base" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json).to eq(code: "validation_errors", details: [{code: "not_allowed_for_product_type", field: "base", meta: {}}])
+      end
+    end
+
     it "creates a filter with its values" do
       subject
 
@@ -292,7 +303,7 @@ RSpec.describe Api::V2::Products::FiltersController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:details]).to eq([{code: "attached_to_plan_or_subscription", field: "product_filter", meta: {}}])
+        expect(json[:details]).to eq([{code: "attached_to_plan_or_subscription", field: "base", meta: {}}])
         expect(filter.reload).not_to be_discarded
       end
     end

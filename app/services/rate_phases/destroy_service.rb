@@ -19,7 +19,7 @@ module RatePhases
       # deletions computing from the same positions would leave gaps.
       applied_rate_card.with_lock do
         if (blocked = applied_rate_card.edit_error_code)
-          return result.single_validation_failure!(field: :rate_phase, error_code: blocked)
+          return result.single_validation_failure!(field: :rate_phase, v2_field: :base, error_code: blocked)
         end
 
         rate_phase.reload
@@ -27,11 +27,11 @@ module RatePhases
 
         siblings = applied_rate_card.rate_phases.order(:position).to_a
         if siblings.last == rate_phase && rate_phase.billing_interval_cycle_count.nil?
-          return result.single_validation_failure!(field: :rate_phase, error_code: "indefinite_phase_not_deletable")
+          return result.single_validation_failure!(field: :rate_phase, v2_field: :base, error_code: "indefinite_phase_not_deletable")
         end
 
         if siblings.size == 1
-          return result.single_validation_failure!(field: :rate_phase, error_code: "cannot_delete_last_phase")
+          return result.single_validation_failure!(field: :rate_phase, v2_field: :base, error_code: "cannot_delete_last_phase")
         end
 
         publish_owner_update do

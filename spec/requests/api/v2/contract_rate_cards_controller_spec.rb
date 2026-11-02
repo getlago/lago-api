@@ -54,9 +54,30 @@ RSpec.describe Api::V2::ContractRateCardsController do
     context "when the contract is active" do
       let(:contract) { create(:contract, organization:, customer:) }
 
-      it "returns an unprocessable entity error" do
+      it "returns a validation error on base" do
         subject
         expect(response).to have_http_status(:unprocessable_entity)
+        expect(json).to eq(code: "validation_errors", details: [{code: "contract_locked", field: "base", meta: {}}])
+      end
+    end
+
+    context "when the rate card is in another currency" do
+      let(:rate_card) { create(:rate_card, organization:, currency: "USD") }
+
+      it "returns a validation error on the rate card code" do
+        subject
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json).to eq(code: "validation_errors", details: [{code: "currency_does_not_match", field: "rate_card_code", meta: {}}])
+      end
+    end
+
+    context "when the contract already prices the product" do
+      before { create(:contract_rate_card, organization:, contract:, rate_card: create(:rate_card, organization:, currency: "EUR", product: rate_card.product)) }
+
+      it "returns a validation error on the rate card code" do
+        subject
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json).to eq(code: "validation_errors", details: [{code: "product_already_priced", field: "rate_card_code", meta: {}}])
       end
     end
 

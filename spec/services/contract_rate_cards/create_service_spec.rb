@@ -109,6 +109,7 @@ RSpec.describe ContractRateCards::CreateService do
     it "fails with a contract_locked error" do
       expect(result).not_to be_success
       expect(result.error.messages[:contract]).to eq(["contract_locked"])
+      expect(result.error.codes).to eq(base: ["contract_locked"])
     end
   end
 
@@ -127,6 +128,7 @@ RSpec.describe ContractRateCards::CreateService do
     it "fails with a currency mismatch error" do
       expect(result).not_to be_success
       expect(result.error.messages[:currency]).to eq(["currency_does_not_match"])
+      expect(result.error.codes).to eq(rate_card_code: ["currency_does_not_match"])
     end
   end
 
@@ -144,6 +146,7 @@ RSpec.describe ContractRateCards::CreateService do
     it "fails with a product_already_priced error" do
       expect(result).not_to be_success
       expect(result.error.messages[:rate_card]).to eq(["product_already_priced"])
+      expect(result.error.codes).to eq(rate_card_code: ["product_already_priced"])
     end
   end
 end

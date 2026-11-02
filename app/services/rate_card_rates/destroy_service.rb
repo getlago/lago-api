@@ -19,7 +19,7 @@ module RateCardRates
 
       # Active and terminated rates are kept for audit.
       unless rate_card_rate.pending?
-        return result.single_validation_failure!(field: :status, error_code: "only_pending_rates_can_be_deleted")
+        return result.single_validation_failure!(field: :status, v2_field: :base, error_code: "only_pending_rates_can_be_deleted")
       end
 
       ActiveRecord::Base.transaction do

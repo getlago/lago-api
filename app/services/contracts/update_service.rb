@@ -58,7 +58,7 @@ module Contracts
 
     def update_contract
       unless Contract::LIVE_STATUSES.include?(contract.status)
-        return result.single_validation_failure!(field: :contract, error_code: "contract_locked")
+        return result.single_validation_failure!(field: :contract, v2_field: :base, error_code: "contract_locked")
       end
 
       if params[:plan_code].present? && catalog_plan.nil?
@@ -82,7 +82,7 @@ module Contracts
       end
 
       if contract.active? && locked_field_changed?
-        return result.single_validation_failure!(field: :contract, error_code: "contract_locked")
+        return result.single_validation_failure!(field: :contract, v2_field: :base, error_code: "contract_locked")
       end
 
       # A window that already closed would never terminate — reject it. A

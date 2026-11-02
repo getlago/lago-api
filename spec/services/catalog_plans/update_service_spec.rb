@@ -85,6 +85,7 @@ RSpec.describe CatalogPlans::UpdateService do
       expect(catalog_plan.applied_rate_cards).to be_empty
       expect(result).not_to be_success
       expect(result.error.messages[:plan]).to eq(["plan_locked"])
+      expect(result.error.codes).to eq(base: ["plan_locked"])
     end
   end
 
@@ -101,6 +102,7 @@ RSpec.describe CatalogPlans::UpdateService do
 
       expect(result).not_to be_success
       expect(result.error.messages[:plan]).to eq(["plan_locked"])
+      expect(result.error.codes).to eq(base: ["plan_locked"])
       expect(catalog_plan.reload.code).to eq("growth")
     end
 

@@ -72,6 +72,7 @@ RSpec.describe RatePhases::DestroyService do
       expect { result }.not_to have_enqueued_job(SendWebhookJob)
       expect(result).not_to be_success
       expect(result.error.messages[:rate_phase]).to eq(["indefinite_phase_not_deletable"])
+      expect(result.error.codes).to eq(base: ["indefinite_phase_not_deletable"])
       expect(terminal.reload).not_to be_discarded
       expect(ramp.reload.billing_interval_cycle_count).to eq(6)
       expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "plan_rate_card.updated", any_args)
@@ -100,6 +101,7 @@ RSpec.describe RatePhases::DestroyService do
     it "returns a validation failure" do
       expect(result).not_to be_success
       expect(result.error.messages[:rate_phase]).to eq(["cannot_delete_last_phase"])
+      expect(result.error.codes).to eq(base: ["cannot_delete_last_phase"])
     end
   end
 
@@ -111,6 +113,7 @@ RSpec.describe RatePhases::DestroyService do
     it "returns a validation failure" do
       expect(result).not_to be_success
       expect(result.error.messages[:rate_phase]).to eq(["plan_locked"])
+      expect(result.error.codes).to eq(base: ["plan_locked"])
     end
   end
 

@@ -18,7 +18,7 @@ module RateCards
       return result.not_found_failure!(resource: "rate_card") unless rate_card
 
       if rate_card.attached_to_plan_or_subscription?
-        return result.single_validation_failure!(field: :rate_card, error_code: "attached_to_plan_or_subscription")
+        return result.single_validation_failure!(field: :rate_card, v2_field: :base, error_code: "attached_to_plan_or_subscription")
       end
 
       ActiveRecord::Base.transaction do

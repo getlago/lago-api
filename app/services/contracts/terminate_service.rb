@@ -30,7 +30,7 @@ module Contracts
         contract.lock!
 
         unless contract.pending? || contract.active?
-          return result.single_validation_failure!(field: :contract, error_code: "cannot_terminate")
+          return result.single_validation_failure!(field: :contract, v2_field: :base, error_code: "cannot_terminate")
         end
 
         event_type = contract.active? ? "contract.terminated" : "contract.canceled"

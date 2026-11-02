@@ -74,6 +74,7 @@ RSpec.describe ProductFilters::DestroyService, :capture_kafka_messages do
       expect { result }.not_to have_enqueued_job(SendWebhookJob)
       expect(result).not_to be_success
       expect(result.error.messages[:product_filter]).to eq(["attached_to_plan_or_subscription"])
+      expect(result.error.codes).to eq(base: ["attached_to_plan_or_subscription"])
       expect(product_filter.reload).not_to be_discarded
       expect(SendWebhookJob).not_to have_been_enqueued
     end

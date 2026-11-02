@@ -18,7 +18,7 @@ module ProductCategories
       return result.not_found_failure!(resource: "product_category") unless product_category
 
       if product_category.attached_to_plan_or_subscription?
-        return result.single_validation_failure!(field: :product_category, error_code: "attached_to_plan_or_subscription")
+        return result.single_validation_failure!(field: :product_category, v2_field: :base, error_code: "attached_to_plan_or_subscription")
       end
 
       ActiveRecord::Base.transaction do

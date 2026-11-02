@@ -146,6 +146,34 @@ RSpec.describe Api::V2::RateCardsController do
         end
       end
 
+      context "when a tier of a nested rate names its lower bound" do
+        let(:create_params) do
+          {
+            product_code: product.code,
+            name: "Standard",
+            code: "standard",
+            currency: "EUR",
+            rates: [
+              {
+                code: "tiered",
+                effective_from: Time.current.to_date.iso8601,
+                rate_model: "graduated",
+                rate_properties: {graduated_ranges: [{from_value: 0, to_value: nil, per_unit_amount: "1", flat_amount: "0"}]},
+                billing_interval_unit: "month"
+              }
+            ]
+          }
+        end
+
+        it "returns the error under the path of the ranges of the rate" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json).to eq(code: "validation_errors", details: [{code: "from_value_not_allowed", field: "rates[0].rate_properties.graduated_ranges", meta: {}}])
+          expect(RateCard.count).to eq(0)
+        end
+      end
+
       context "when a nested rate is under a bound of its model" do
         let(:create_params) do
           {

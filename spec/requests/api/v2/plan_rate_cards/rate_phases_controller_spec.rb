@@ -261,7 +261,7 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:details]).to eq([{code: "not_overridable", field: "billing_timing", meta: {}}])
+        expect(json[:details]).to eq([{code: "not_overridable", field: "rate_override.billing_timing", meta: {}}])
         expect(rate_phase.reload.rate_override).to be_nil
       end
     end
@@ -322,7 +322,7 @@ RSpec.describe Api::V2::PlanRateCards::RatePhasesController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:details]).to eq([{code: "indefinite_phase_not_deletable", field: "rate_phase", meta: {}}])
+        expect(json[:details]).to eq([{code: "indefinite_phase_not_deletable", field: "base", meta: {}}])
         expect(terminal.reload).not_to be_discarded
         expect(launch.reload.billing_interval_cycle_count).to eq(3)
       end

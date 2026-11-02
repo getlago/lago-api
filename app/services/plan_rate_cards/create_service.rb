@@ -21,7 +21,7 @@ module PlanRateCards
       # A plan with contracts is immutable: pricing changes go through a new
       # plan and a contract migration.
       if catalog_plan.attached_to_contracts?
-        return result.single_validation_failure!(field: :plan, error_code: "plan_locked")
+        return result.single_validation_failure!(field: :plan, v2_field: :base, error_code: "plan_locked")
       end
 
       rate_card = organization.rate_cards.find_by(code: params[:rate_card_code])
@@ -31,14 +31,14 @@ module PlanRateCards
       # currency; a mismatch must fail at configuration time, not on the
       # first invoice.
       if rate_card.currency != catalog_plan.currency
-        return result.single_validation_failure!(field: :currency, error_code: "currency_does_not_match")
+        return result.single_validation_failure!(field: :currency, v2_field: :rate_card_code, error_code: "currency_does_not_match")
       end
 
       catalog_plan.with_lock do
         # One card per pricing slice: a plan may hold several cards of the same
         # item only when they cover different filter slices (default + EU, ...).
         if slice_already_priced?(rate_card)
-          return result.single_validation_failure!(field: :rate_card, error_code: slice_error_code(rate_card))
+          return result.single_validation_failure!(field: :rate_card, v2_field: :rate_card_code, error_code: slice_error_code(rate_card))
         end
 
         plan_rate_card = catalog_plan.applied_rate_cards.create!(

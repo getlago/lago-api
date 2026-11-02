@@ -22,7 +22,7 @@ module CatalogPlans
       return result.not_found_failure!(resource: "plan") unless catalog_plan
 
       if catalog_plan.attached_to_contracts?
-        return result.single_validation_failure!(field: :plan, error_code: "plan_locked")
+        return result.single_validation_failure!(field: :plan, v2_field: :base, error_code: "plan_locked")
       end
 
       ActiveRecord::Base.transaction do

@@ -48,6 +48,17 @@ RSpec.describe Api::V2::PlanRateCardsController do
         expect(response).to be_v2_not_found_error("rate_card")
       end
     end
+
+    context "when the rate card is in another currency" do
+      let(:rate_card) { create(:rate_card, organization:, currency: "USD") }
+
+      it "returns a validation error on the rate card code" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json).to eq(code: "validation_errors", details: [{code: "currency_does_not_match", field: "rate_card_code", meta: {}}])
+      end
+    end
   end
 
   describe "GET /api/v2/plans/:plan_code/applied_rate_cards" do
@@ -218,10 +229,22 @@ RSpec.describe Api::V2::PlanRateCardsController do
     context "when the plan has contracts" do
       before { create(:contract, catalog_plan:, organization:) }
 
-      it "returns a validation error" do
+      it "returns a validation error on base" do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
+        expect(json).to eq(code: "validation_errors", details: [{code: "plan_locked", field: "base", meta: {}}])
+      end
+    end
+
+    context "when the units are not a number" do
+      subject { put_with_token(organization, "/api/v2/plans/#{catalog_plan.code}/applied_rate_cards/#{plan_rate_card.rate_card.code}", {applied_rate_card: {units: "ten"}}) }
+
+      it "returns a token rather than the sentence of the model" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "units", meta: {}}])
       end
     end
 
@@ -254,10 +277,11 @@ RSpec.describe Api::V2::PlanRateCardsController do
     context "when the plan has contracts" do
       before { create(:contract, catalog_plan:, organization:) }
 
-      it "returns a validation error" do
+      it "returns a validation error on base" do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
+        expect(json).to eq(code: "validation_errors", details: [{code: "plan_locked", field: "base", meta: {}}])
       end
     end
   end

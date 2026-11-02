@@ -184,6 +184,7 @@ RSpec.describe Contracts::TerminateService do
       expect { result }.not_to have_enqueued_job(SendWebhookJob)
       expect(result).not_to be_success
       expect(result.error.messages[:contract]).to eq(["cannot_terminate"])
+      expect(result.error.codes).to eq(base: ["cannot_terminate"])
       expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "contract.terminated", any_args)
       expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "contract.canceled", any_args)
     end
@@ -196,6 +197,7 @@ RSpec.describe Contracts::TerminateService do
       expect { result }.not_to have_enqueued_job(SendWebhookJob)
       expect(result).not_to be_success
       expect(result.error.messages[:contract]).to eq(["cannot_terminate"])
+      expect(result.error.codes).to eq(base: ["cannot_terminate"])
       expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "contract.terminated", any_args)
       expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "contract.canceled", any_args)
     end

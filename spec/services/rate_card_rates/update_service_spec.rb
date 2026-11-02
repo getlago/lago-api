@@ -52,6 +52,7 @@ RSpec.describe RateCardRates::UpdateService do
 
         it "returns a validation failure and keeps the stored properties" do
           expect(result.error.messages[:graduated_ranges]).to eq(["from_value_not_allowed"])
+          expect(result.error.codes).to eq("rate_properties.graduated_ranges": ["from_value_not_allowed"])
           expect(rate_card_rate.reload.rate_properties).to eq("amount" => "10")
         end
       end
@@ -186,6 +187,7 @@ RSpec.describe RateCardRates::UpdateService do
     it "returns a validation failure" do
       expect(result).not_to be_success
       expect(result.error.messages[:status]).to eq(["terminated_rate_not_editable"])
+      expect(result.error.codes).to eq(base: ["terminated_rate_not_editable"])
     end
   end
 
@@ -250,6 +252,7 @@ RSpec.describe RateCardRates::UpdateService do
       it "forbids updating the rate" do
         expect(result).not_to be_success
         expect(result.error.messages[:rate_card]).to include("attached_to_subscriptions")
+        expect(result.error.codes).to eq(base: ["attached_to_subscriptions"])
       end
     end
   end

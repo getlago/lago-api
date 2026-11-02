@@ -172,12 +172,23 @@ RSpec.describe RatePhases::CreateService do
     end
   end
 
+  context "when the override names a structural field" do
+    let(:params) { super().merge(rate_override: {rate_model: "standard", billing_timing: "advance"}) }
+
+    it "fails under the field for GraphQL, and under the path of the override for native v2" do
+      expect { result }.not_to change(RatePhase, :count)
+      expect(result.error.messages).to eq(billing_timing: ["not_overridable"])
+      expect(result.error.codes).to eq("rate_override.billing_timing": ["not_overridable"])
+    end
+  end
+
   context "when the plan has contracts" do
     before { create(:contract, catalog_plan: plan_rate_card.catalog_plan, organization: plan_rate_card.organization) }
 
     it "returns a validation failure" do
       expect(result).not_to be_success
       expect(result.error.messages[:rate_phase]).to eq(["plan_locked"])
+      expect(result.error.codes).to eq(base: ["plan_locked"])
     end
   end
 

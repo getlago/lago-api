@@ -93,6 +93,30 @@ RSpec.describe Api::V2::RateCards::RatesController do
       end
     end
 
+    context "when min_amount_cents is not a number" do
+      let(:create_params) { super().merge(min_amount_cents: "abc") }
+
+      it "returns a token rather than the sentence of the model" do
+        expect { subject }.not_to change(RateCardRate, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "min_amount_cents", meta: {}}])
+      end
+    end
+
+    context "when a tier names its lower bound" do
+      let(:create_params) do
+        super().merge(rate_model: "graduated", rate_properties: {graduated_ranges: [{from_value: 0, to_value: nil, per_unit_amount: "1", flat_amount: "0"}]})
+      end
+
+      it "returns a validation error under the path of the ranges" do
+        expect { subject }.not_to change(RateCardRate, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "from_value_not_allowed", field: "rate_properties.graduated_ranges", meta: {}}])
+      end
+    end
+
     context "when min_amount_cents does not fit its column" do
       let(:create_params) { super().merge(min_amount_cents: 10**20) }
 
@@ -239,10 +263,11 @@ RSpec.describe Api::V2::RateCards::RatesController do
     context "when the rate is active" do
       let(:rate) { create(:rate_card_rate, organization:, rate_card:, effective_from: 1.day.ago.beginning_of_day) }
 
-      it "returns a validation error" do
+      it "returns a validation error on base" do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
+        expect(json).to eq(code: "validation_errors", details: [{code: "only_pending_rates_can_be_deleted", field: "base", meta: {}}])
       end
     end
   end

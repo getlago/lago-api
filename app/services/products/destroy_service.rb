@@ -20,7 +20,7 @@ module Products
       return result.not_found_failure!(resource: "product") unless product
 
       if product.attached_to_plan_or_subscription?
-        return result.single_validation_failure!(field: :product, error_code: "attached_to_plan_or_subscription")
+        return result.single_validation_failure!(field: :product, v2_field: :base, error_code: "attached_to_plan_or_subscription")
       end
 
       ActiveRecord::Base.transaction do

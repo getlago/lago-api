@@ -62,6 +62,7 @@ RSpec.describe CatalogPlans::DestroyService, :capture_kafka_messages do
     it "blocks the deletion" do
       expect(result).not_to be_success
       expect(result.error.messages[:plan]).to eq(["plan_locked"])
+      expect(result.error.codes).to eq(base: ["plan_locked"])
       expect(catalog_plan.reload).not_to be_discarded
       expect(SendWebhookJob).not_to have_been_enqueued
     end

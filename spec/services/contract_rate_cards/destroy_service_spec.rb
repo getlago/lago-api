@@ -70,6 +70,7 @@ RSpec.describe ContractRateCards::DestroyService do
     it "fails with a contract_locked error" do
       expect(result).not_to be_success
       expect(result.error.messages[:contract]).to eq(["contract_locked"])
+      expect(result.error.codes).to eq(base: ["contract_locked"])
       activity_call = activity_log_calls.sole
       expect(activity_call.fetch(:args).first(2)).to eq([contract_rate_card, "contract_rate_card.deleted"])
       expect(activity_call.fetch(:kwargs)).to eq(after_commit: true)
@@ -85,6 +86,7 @@ RSpec.describe ContractRateCards::DestroyService do
 
     it "fails with a contract_locked error and keeps the card" do
       expect(result.error.messages[:contract]).to eq(["contract_locked"])
+      expect(result.error.codes).to eq(base: ["contract_locked"])
       expect(contract_rate_card.reload).not_to be_discarded
     end
   end

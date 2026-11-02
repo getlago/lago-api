@@ -45,6 +45,7 @@ RSpec.describe ContractRateCards::UpdateService do
     it "does not deliver either event when the edit is rejected", :capture_kafka_messages do
       expect { result }.not_to have_enqueued_job(SendWebhookJob)
       expect(result.error.messages[:contract]).to eq(["contract_locked"])
+      expect(result.error.codes).to eq(base: ["contract_locked"])
       expect(kafka_messages).to be_empty
     end
   end
@@ -95,6 +96,7 @@ RSpec.describe ContractRateCards::UpdateService do
 
     it "fails with a contract_locked error" do
       expect(result.error.messages[:contract]).to eq(["contract_locked"])
+      expect(result.error.codes).to eq(base: ["contract_locked"])
       expect(contract_rate_card.reload.units).to eq(5)
     end
   end
@@ -114,6 +116,7 @@ RSpec.describe ContractRateCards::UpdateService do
     it "fails with a contract_locked error" do
       expect(result).not_to be_success
       expect(result.error.messages[:contract]).to eq(["contract_locked"])
+      expect(result.error.codes).to eq(base: ["contract_locked"])
     end
   end
 

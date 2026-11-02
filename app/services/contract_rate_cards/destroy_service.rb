@@ -24,7 +24,7 @@ module ContractRateCards
       # Locked so the editable check holds: the clock may activate the contract meanwhile.
       contract_rate_card.contract.with_lock do
         unless contract_rate_card.contract.editable?
-          return result.single_validation_failure!(field: :contract, error_code: "contract_locked")
+          return result.single_validation_failure!(field: :contract, v2_field: :base, error_code: "contract_locked")
         end
 
         # Phase moves renumber under the card lock; discarding the phases without

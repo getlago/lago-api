@@ -23,7 +23,7 @@ module ContractRateCards
       return result.not_found_failure!(resource: "contract") unless contract
 
       unless contract.editable?
-        return result.single_validation_failure!(field: :contract, error_code: "contract_locked")
+        return result.single_validation_failure!(field: :contract, v2_field: :base, error_code: "contract_locked")
       end
 
       # Date column: a malformed value would silently cast to nil instead of
@@ -39,19 +39,19 @@ module ContractRateCards
       # currency (its plan's, or the customer's for a plan-less contract); a
       # mismatch must fail at configuration time, not on the first invoice.
       if rate_card.currency != contract.currency
-        return result.single_validation_failure!(field: :currency, error_code: "currency_does_not_match")
+        return result.single_validation_failure!(field: :currency, v2_field: :rate_card_code, error_code: "currency_does_not_match")
       end
 
       contract.with_lock do
         # Re-checked under lock: the clock may have activated the contract since.
         unless contract.editable?
-          return result.single_validation_failure!(field: :contract, error_code: "contract_locked")
+          return result.single_validation_failure!(field: :contract, v2_field: :base, error_code: "contract_locked")
         end
 
         # One card per pricing slice: a contract may hold several cards of the
         # same item only when they cover different filter slices (default + EU).
         if slice_already_priced?(rate_card)
-          return result.single_validation_failure!(field: :rate_card, error_code: slice_error_code(rate_card))
+          return result.single_validation_failure!(field: :rate_card, v2_field: :rate_card_code, error_code: slice_error_code(rate_card))
         end
 
         contract_rate_card = contract.applied_rate_cards.create!(

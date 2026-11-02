@@ -26,11 +26,11 @@ module RateCardRates
       # On a card billed by subscriptions only pending rates stay editable:
       # the active rate prices live subscriptions, changes go through appends.
       if rate_card_rate.rate_card.attached_to_subscriptions? && !rate_card_rate.pending?
-        return result.single_validation_failure!(field: :rate_card, error_code: "attached_to_subscriptions")
+        return result.single_validation_failure!(field: :rate_card, v2_field: :base, error_code: "attached_to_subscriptions")
       end
 
       if rate_card_rate.terminated?
-        return result.single_validation_failure!(field: :status, error_code: "terminated_rate_not_editable")
+        return result.single_validation_failure!(field: :status, v2_field: :base, error_code: "terminated_rate_not_editable")
       end
 
       if rate_card_rate.active?

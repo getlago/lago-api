@@ -24,7 +24,7 @@ module PlanRateCards
         return result.not_found_failure!(resource: "applied_rate_card") if plan_rate_card.discarded?
 
         if plan_rate_card.catalog_plan.attached_to_contracts?
-          return result.single_validation_failure!(field: :plan, error_code: "plan_locked")
+          return result.single_validation_failure!(field: :plan, v2_field: :base, error_code: "plan_locked")
         end
 
         plan_rate_card.units = params[:units] if params.key?(:units)

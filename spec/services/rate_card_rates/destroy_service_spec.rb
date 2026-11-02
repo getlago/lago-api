@@ -76,6 +76,7 @@ RSpec.describe RateCardRates::DestroyService, :capture_kafka_messages do
     it "returns a validation failure" do
       expect(result).not_to be_success
       expect(result.error.messages[:status]).to eq(["only_pending_rates_can_be_deleted"])
+      expect(result.error.codes).to eq(base: ["only_pending_rates_can_be_deleted"])
     end
 
     it "does not publish catalog events" do

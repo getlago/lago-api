@@ -20,7 +20,7 @@ module ProductFilters
       # Same rule as product_categories and items: a catalog object cannot be deleted while
       # its item is attached to a plan or subscription. Detach first, then delete.
       if product_filter.attached_to_plan_or_subscription?
-        return result.single_validation_failure!(field: :product_filter, error_code: "attached_to_plan_or_subscription")
+        return result.single_validation_failure!(field: :product_filter, v2_field: :base, error_code: "attached_to_plan_or_subscription")
       end
 
       ActiveRecord::Base.transaction do

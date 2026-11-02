@@ -702,7 +702,7 @@ RSpec.describe Api::V2::ContractsController do
           subject
 
           expect(response).to have_http_status(:unprocessable_entity)
-          expect(json[:details]).to eq([{code: "contract_locked", field: "contract", meta: {}}])
+          expect(json[:details]).to eq([{code: "contract_locked", field: "base", meta: {}}])
         end
       end
     end
