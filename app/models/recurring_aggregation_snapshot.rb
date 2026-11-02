@@ -59,6 +59,18 @@ class RecurringAggregationSnapshot < ApplicationRecord
       billing_context.organization.feature_flag_enabled?(:persisted_recurring_values)
   end
 
+  # Arguments of RecurringAggregationSnapshots::FetchService shared by invoicing and pay in advance,
+  # so both select the same snapshots. grouped_by_keys follows the aggregation's own grouping.
+  def self.fetch_arguments(metered_item:, billing_context:, grouped_by_keys: metered_item.pricing_group_keys)
+    {
+      subscription: billing_context.subscription,
+      charge: metered_item.charge,
+      charge_filter: metered_item.charge_filter,
+      grouped_by_keys:,
+      from_datetime: metered_item.boundaries.charges_from_datetime
+    }
+  end
+
   # A filter or filter value created, edited or removed since the marker moves older events between
   # buckets, so the snapshots of every bucket of the charges are stale, not only the one of that filter.
   # A value set to all values reads the metric filter's values, which change without touching it.
