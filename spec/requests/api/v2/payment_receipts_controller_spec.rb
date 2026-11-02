@@ -172,7 +172,7 @@ RSpec.describe Api::V2::PaymentReceiptsController do
 
     before { payment_receipt.billing_entity.update!(email: "billing@example.com") }
 
-    include_examples "requires API permission", "payment_receipt", "write"
+    include_examples "requires API permission", "invoice", "write"
 
     it "resends the payment receipt email", :premium do
       expect { subject }.to have_enqueued_mail(PaymentReceiptMailer, :created)
