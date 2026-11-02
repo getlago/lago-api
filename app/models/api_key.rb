@@ -27,7 +27,8 @@ class ApiKey < ApplicationRecord
 
   default_scope { active }
 
-  scope :active, -> { where("expires_at IS NULL OR expires_at > ?", Time.current) }
+  # Arel, not a SQL string: a raw string makes the query non-retryable on a dropped connection.
+  scope :active, -> { where(arel_table[:expires_at].eq(nil).or(arel_table[:expires_at].gt(Time.current))) }
   scope :non_expiring, -> { where(expires_at: nil) }
   scope :with_most_permissions, -> { order(Arel.sql("(SELECT SUM(jsonb_array_length(value)) FROM jsonb_each(permissions))")).last }
 
