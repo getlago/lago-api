@@ -4,6 +4,8 @@ module V2
   # An invoice billed from the product catalog: it names the contracts its
   # fees came from, not the v1 subscriptions and billing periods.
   class InvoiceSerializer < ModelSerializer
+    timestamps :payment_dispute_lost_at, :voided_at, :created_at, :updated_at
+
     # Webhooks and activity logs leave out the fees, so that their size does not grow with the
     # invoice, and the customer: a consumer reads both through the API.
     expandable :fees, serializer: ::V2::FeeSerializer
@@ -27,7 +29,6 @@ module V2
         issuing_date: format_date(model.issuing_date),
         payment_due_date: format_date(model.payment_due_date),
         payment_overdue: model.payment_overdue,
-        payment_dispute_lost_at: format_time(model.payment_dispute_lost_at),
         purchase_order_number: model.purchase_order_number,
         fees_amount_cents: model.fees_amount_cents,
         sub_total_excluding_taxes_amount_cents: model.sub_total_excluding_taxes_amount_cents,
@@ -39,10 +40,7 @@ module V2
         total_paid_amount_cents: model.total_paid_amount_cents,
         total_due_amount_cents: model.total_due_amount_cents,
         pdf_url: model.file_url,
-        xml_url: model.xml_url,
-        voided_at: format_time(model.voided_at),
-        created_at: format_time(model.created_at),
-        updated_at: format_time(model.updated_at)
+        xml_url: model.xml_url
       }
     end
 

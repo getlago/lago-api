@@ -1,22 +1,32 @@
 # frozen_string_literal: true
 
 class ModelSerializer
-  # Prepended by `expandable`, so that a serializer cannot declare an expansion and forget to
-  # render it.
-  module RendersExpansions
+  # Prepended by `timestamps` and `expandable`, so that a serializer cannot declare a field and
+  # forget to render it. One module, so that the expansions come last whatever the declaration order.
+  module RendersDeclaredFields
     def serialize
-      super.merge(expanded_payload)
+      super.merge(timestamps_payload, expanded_payload)
     end
   end
 
   Expansion = Data.define(:serializer, :webhooks)
 
   NO_EXPANSIONS = {}.freeze
+  NO_TIMESTAMPS = [].freeze
 
-  # Set once per serializer, when its class is loaded, through `expandable`.
+  # Set once per serializer, when its class is loaded, through `expandable` and `timestamps`.
   class_attribute :expansions, instance_accessor: false, instance_predicate: false, default: NO_EXPANSIONS # rubocop:disable ThreadSafety/ClassAndModuleAttributes
+  class_attribute :timestamp_names, instance_accessor: false, instance_predicate: false, default: NO_TIMESTAMPS # rubocop:disable ThreadSafety/ClassAndModuleAttributes
 
   attr_reader :model, :options
+
+  # Renders each `model.<name>`, or what a private method of the serializer with that name returns,
+  # with `format_time`. V2 serializers declare their datetimes with it.
+  def self.timestamps(*names)
+    prepend(RendersDeclaredFields)
+
+    self.timestamp_names = [*timestamp_names, *names.map(&:to_sym)].freeze
+  end
 
   # Lets a native v2 endpoint embed `model.<name>` on `expands[]=<name>`, or what a private method
   # of the serializer with that name returns, for records that are ordered or computed. One record
@@ -24,7 +34,7 @@ class ModelSerializer
   # comes last in `serialize`. `webhooks: true` also embeds it in the record's webhooks: see
   # `for_webhook!`.
   def self.expandable(name, serializer:, webhooks: false)
-    prepend(RendersExpansions)
+    prepend(RendersDeclaredFields)
 
     self.expansions = expansions.merge(name.to_sym => Expansion.new(serializer:, webhooks:)).freeze
   end
@@ -139,19 +149,23 @@ class ModelSerializer
     include?(:usec_timestamps) ? {includes: %i[usec_timestamps]} : {}
   end
 
+  def timestamps_payload
+    self.class.timestamp_names.index_with { format_time(declared_value(it)) }
+  end
+
   # The declared expansions found in `includes`, in their declared order: Api::Serializable
   # passes the requested ones, and a nil record renders as null.
   def expanded_payload
     self.class.expansions.each_with_object({}) do |(name, expansion), payload|
       next unless include?(name)
 
-      payload[name] = render_expansion(expanded_records(name), expansion.serializer)
+      payload[name] = render_expansion(declared_value(name), expansion.serializer)
     end
   end
 
   # Only a method the serializer defines itself overrides the model: one inherited from
   # ModelSerializer or Kernel never does.
-  def expanded_records(name)
+  def declared_value(name)
     if respond_to?(name, true) && method(name).owner < ModelSerializer
       send(name)
     else

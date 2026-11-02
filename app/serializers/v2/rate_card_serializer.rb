@@ -2,6 +2,8 @@
 
 module V2
   class RateCardSerializer < ModelSerializer
+    timestamps :created_at, :updated_at, :deleted_at
+
     expandable :active_rate, serializer: ::V2::RateCardRateSerializer, webhooks: true
     expandable :taxes, serializer: ::V2::TaxSerializer, webhooks: true
     expandable :rates, serializer: ::V2::RateCardRateSerializer, webhooks: true
@@ -21,10 +23,7 @@ module V2
         proration: model.proration,
         display_on_invoice: model.display_on_invoice,
         regroup_paid_fees: model.regroup_paid_fees,
-        applied_pricing_unit_code: model.applied_pricing_unit_code,
-        created_at: format_time(model.created_at),
-        updated_at: format_time(model.updated_at),
-        deleted_at: format_time(model.deleted_at)
+        applied_pricing_unit_code: model.applied_pricing_unit_code
       }
     end
 

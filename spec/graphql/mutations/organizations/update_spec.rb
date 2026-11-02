@@ -24,6 +24,7 @@ RSpec.describe Mutations::Organizations::Update do
           netPaymentTerm
           timezone
           emailSettings
+          customerPortalLockedFields
           webhookUrl
           euTaxManagement,
           documentNumbering
@@ -69,6 +70,7 @@ RSpec.describe Mutations::Organizations::Update do
           webhookUrl: "https://app.test.dev",
           documentNumberPrefix: "ORG-2",
           finalizeZeroAmountInvoice: false,
+          customerPortalLockedFields: %w[name country],
           documentUrlExpirationDays: 90,
           billingConfiguration: {
             invoiceFooter: "invoice footer",
@@ -101,6 +103,7 @@ RSpec.describe Mutations::Organizations::Update do
     expect(result_data["euTaxManagement"]).to be_truthy
     expect(result_data["timezone"]).to eq("TZ_UTC")
     expect(result_data["finalizeZeroAmountInvoice"]).to be false
+    expect(result_data["customerPortalLockedFields"]).to eq(%w[name country])
     expect(result_data["documentUrlExpirationDays"]).to eq(90)
   end
 
