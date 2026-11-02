@@ -45,6 +45,7 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:backfill" do # rubocop:d
     it "writes the snapshots of each subscription and prints a summary" do
       expect { task.invoke }.to output(
         a_string_including(
+          "Warning: recurring_aggregation_snapshots is off",
           "Subscription #{subscription.id} (#{subscription.external_id}): period ending 2026-09-30T23:59:59Z, " \
           "1 charge(s) written, 0 skipped, 0 failed",
           "Subscription #{terminated_subscription.id} (#{terminated_subscription.external_id}): not backfilled, subscription_not_active",
@@ -66,19 +67,13 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:backfill" do # rubocop:d
     end
   end
 
-  context "when a subscription raises" do
-    before do
-      stub_stdin(organization.id, "y", subscription.id)
-      allow(RecurringAggregationSnapshots::BackfillService).to receive(:call).and_raise(ActiveRecord::StatementInvalid, "timeout")
-    end
+  context "with the snapshot writes on" do
+    let(:organization) { create(:organization, feature_flags: ["recurring_aggregation_snapshots"]) }
 
-    it "reports it and goes on" do
-      expect { task.invoke }.to output(
-        a_string_including(
-          "Subscription #{subscription.id} (#{subscription.external_id}): not backfilled, ActiveRecord::StatementInvalid: timeout",
-          "subscriptions not backfilled: 1"
-        )
-      ).to_stdout
+    before { stub_stdin(organization.id, "y", subscription.id) }
+
+    it "does not warn" do
+      expect { task.invoke }.not_to output(/Warning/).to_stdout
     end
   end
 end

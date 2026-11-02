@@ -15,14 +15,15 @@ RSpec.describe RecurringAggregationSnapshots::BackfillService do
   let(:now) { Time.utc(2026, 5, 10) }
   let(:march_end) { Time.utc(2026, 3, 31).end_of_day }
   let(:april_end) { Time.utc(2026, 4, 30).end_of_day }
+  let(:invoiced_periods) { [[Time.utc(2026, 3, 1), march_end], [Time.utc(2026, 4, 1), april_end]] }
 
-  def invoice_period(from, to, invoicing_reason: :subscription_periodic)
+  def invoice_period(from, to)
     create(
       :invoice_subscription,
       subscription:,
       invoice: create(:invoice, organization:, customer:),
-      recurring: invoicing_reason == :subscription_periodic,
-      invoicing_reason:,
+      recurring: true,
+      invoicing_reason: :subscription_periodic,
       timestamp: to + 1.second,
       from_datetime: from,
       to_datetime: to,
@@ -40,8 +41,7 @@ RSpec.describe RecurringAggregationSnapshots::BackfillService do
 
   before do
     charge
-    invoice_period(Time.utc(2026, 3, 1), march_end)
-    invoice_period(Time.utc(2026, 4, 1), april_end)
+    invoiced_periods.each { invoice_period(*it) }
 
     send_event(10, timestamp: Time.utc(2026, 3, 5))
     send_event(5, timestamp: Time.utc(2026, 4, 10))
@@ -82,13 +82,12 @@ RSpec.describe RecurringAggregationSnapshots::BackfillService do
     end
   end
 
-  context "with a terminating invoice after the periodic ones" do
-    before { invoice_period(Time.utc(2026, 5, 1), Time.utc(2026, 5, 4).end_of_day, invoicing_reason: :subscription_terminating) }
+  context "when the latest invoiced period has empty charge boundaries" do
+    let(:invoiced_periods) { super() + [[Time.utc(2026, 5, 1), Time.utc(2026, 5, 1)]] }
 
-    it "writes the period of the latest one" do
-      result
-
-      expect(snapshots.sole).to have_attributes(to_datetime: Time.utc(2026, 5, 4).end_of_day.floor(6), units: 18, events_count: 3)
+    it "writes the latest period with charges" do
+      expect(result.invoice_subscription.charges_to_datetime).to eq(april_end.floor(6))
+      expect(snapshots.sole).to have_attributes(to_datetime: april_end.floor(6), units: 15)
     end
   end
 
@@ -104,6 +103,27 @@ RSpec.describe RecurringAggregationSnapshots::BackfillService do
     it "leaves it out" do
       expect(result.written_charges).to eq([charge])
       expect(snapshots.pluck(:charge_id)).to eq([charge.id])
+    end
+  end
+
+  context "when a charge raises on the events store" do
+    let(:other_metric) { create(:sum_billable_metric, :recurring, organization:, field_name: "value") }
+    let(:other_charge) { create(:standard_charge, plan:, billable_metric: other_metric) }
+
+    before do
+      other_charge
+      allow(Fees::ChargeService).to receive(:call).and_wrap_original do |method, **args|
+        raise ActiveRecord::StatementInvalid, "timeout" if args[:metered_item].charge == charge
+
+        method.call(**args)
+      end
+    end
+
+    it "reports it as failed and backfills the other charges" do
+      expect(result).to be_success
+      expect(result.failed_charges).to eq([charge])
+      expect(result.written_charges).to eq([other_charge])
+      expect(snapshots.pluck(:charge_id)).to eq([other_charge.id])
     end
   end
 
@@ -130,7 +150,7 @@ RSpec.describe RecurringAggregationSnapshots::BackfillService do
   end
 
   context "without an invoiced period" do
-    before { InvoiceSubscription.where(subscription:).delete_all }
+    let(:invoiced_periods) { [] }
 
     it "writes nothing" do
       expect(result).to be_success

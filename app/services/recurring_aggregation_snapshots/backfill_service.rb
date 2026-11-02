@@ -1,11 +1,17 @@
 # frozen_string_literal: true
 
 module RecurringAggregationSnapshots
-  # Writes the snapshots of the latest invoiced period of a subscription, aggregated as its invoice
-  # aggregated them, so the read does not wait for a period to close with writes on. Older periods
-  # are left out: a read only starts from the latest one.
+  # Writes the snapshots of the latest invoiced period, aggregated as its invoice did, so reads need
+  # not wait for a period to close with writes on. A read only starts from the latest period.
   class BackfillService < BaseService
     Result = BaseResult[:invoice_subscription, :written_charges, :skipped_charges, :failed_charges]
+
+    # One charge failing on the events store leaves the others to run: a rerun only redoes the failed ones
+    CHARGE_ERRORS = [
+      ActiveRecord::ActiveRecordError,
+      BaseService::FailedResult,
+      Events::Stores::Clickhouse::MemoryLimitError
+    ].freeze
 
     def initialize(subscription:)
       @subscription = subscription
@@ -20,7 +26,7 @@ module RecurringAggregationSnapshots
       result.skipped_charges = []
       result.failed_charges = []
       result.invoice_subscription = invoice_subscription
-      return result unless invoice_subscription && boundaries.charges_from_datetime < boundaries.charges_to_datetime
+      return result unless invoice_subscription
 
       started_at = Time.current
 
@@ -28,20 +34,7 @@ module RecurringAggregationSnapshots
         metered_item = Fees::ChargeService::MeteredItem.from_charge(charge:, boundaries:)
         next unless RecurringAggregationSnapshot.eligible?(metered_item:, billing_context:)
 
-        charge_result = Fees::ChargeService.call(
-          invoice: nil,
-          metered_item:,
-          billing_context:,
-          options: Fees::ChargeService::Options.new(context: :snapshot_backfill, skip_adjusted_fees: true)
-        )
-
-        if charge_result.failure?
-          result.failed_charges << charge
-        elsif marker_written?(charge, since: started_at)
-          result.written_charges << charge
-        else
-          result.skipped_charges << charge
-        end
+        backfill_charge(charge, metered_item, started_at)
       end
 
       result
@@ -51,14 +44,34 @@ module RecurringAggregationSnapshots
 
     attr_reader :subscription
 
-    # Advance charges and pay in advance invoices can share the boundary of the period
+    def backfill_charge(charge, metered_item, started_at)
+      charge_result = Fees::ChargeService.call(
+        invoice: nil,
+        metered_item:,
+        billing_context:,
+        options: Fees::ChargeService::Options.new(context: :snapshot_backfill, skip_adjusted_fees: true)
+      )
+
+      if charge_result.failure?
+        result.failed_charges << charge
+      elsif marker_written?(charge, since: started_at)
+        result.written_charges << charge
+      else
+        result.skipped_charges << charge
+      end
+    rescue *CHARGE_ERRORS
+      result.failed_charges << charge
+    end
+
+    # Advance charges and pay in advance invoices can share the boundary of the period.
+    # An active subscription has no terminating invoice.
     def invoice_subscription
       return @invoice_subscription if defined?(@invoice_subscription)
 
       @invoice_subscription = subscription.invoice_subscriptions
-        .where(invoicing_reason: %i[subscription_periodic subscription_terminating])
-        .where.not(charges_from_datetime: nil)
-        .where.not(charges_to_datetime: nil)
+        .subscription_periodic
+        .where.not(timestamp: nil)
+        .where("charges_from_datetime < charges_to_datetime")
         .order(charges_to_datetime: :desc, created_at: :desc)
         .first
     end
@@ -83,7 +96,7 @@ module RecurringAggregationSnapshots
 
     def charges
       subscription.plan.charges
-        .includes(billable_metric: :organization, filters: {values: :billable_metric_filter})
+        .includes(:applied_pricing_unit, billable_metric: :organization, filters: {values: :billable_metric_filter})
         .joins(:billable_metric)
         .where(billable_metrics: {recurring: true})
     end

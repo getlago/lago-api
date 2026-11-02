@@ -9,6 +9,9 @@ namespace :recipes do
       Rails.logger.level = Logger::Severity::ERROR
 
       organization = TaskPrompt.ask_for_organization
+      unless organization.feature_flag_enabled?(:recurring_aggregation_snapshots)
+        puts "Warning: recurring_aggregation_snapshots is off, so no invoice will write the snapshots of later periods."
+      end
 
       subscriptions = TaskPrompt.ask_for_sampled_subscriptions(organization)
       abort "No subscription to backfill." if subscriptions.empty?
@@ -39,9 +42,6 @@ namespace :recipes do
                "#{backfill.written_charges.size} charge(s) written, #{backfill.skipped_charges.size} skipped, " \
                "#{backfill.failed_charges.size} failed#{" (#{backfill.failed_charges.map(&:id).join(", ")})" if backfill.failed_charges.any?}"
         end
-      rescue => e
-        failed_subscriptions += 1
-        puts "#{label}: not backfilled, #{e.class}: #{e.message}"
       end
 
       puts ""
