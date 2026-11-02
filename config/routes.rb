@@ -38,6 +38,7 @@ Rails.application.routes.draw do
         scope module: :customers do
           post :checkout_url, to: "checkout_urls#create"
           resources :invoices, only: :index
+          resources :credit_notes, only: :index
           resources :payments, only: :index
           resources :payment_requests, only: :index
           resources :payment_methods, only: %i[index destroy] do
@@ -86,12 +87,16 @@ Rails.application.routes.draw do
         put :finalize, on: :member
       end
       resources :credit_notes, only: %i[index show create update] do
-        post :download, on: :member, action: :download_pdf
         post :download_pdf, on: :member
         post :download_xml, on: :member
         post :resend_email, on: :member
         put :void, on: :member
         post :estimate, on: :collection
+        scope module: :credit_notes do
+          resource :metadata, only: %i[create update destroy] do
+            delete ":key", action: :destroy_key, on: :member
+          end
+        end
       end
       resources :fees, only: %i[index show update destroy]
       # The v2 log endpoints have their own route here and a matching v1 route
@@ -102,6 +107,9 @@ Rails.application.routes.draw do
       resources :security_logs, param: :log_id, only: %i[index show]
       # An invoice route v2 does not serve is unknown on v2, not a v1 fallback.
       match "invoices(/*path)", to: "/application#not_found", via: :all
+      # Credit-note paths are native v2 only when explicitly routed above. Do not
+      # let unsupported actions fall through to their v1 beta equivalents.
+      match "credit_notes(/*path)", to: "/application#not_found", via: :all
     end
 
     namespace :v2, module: :v1 do
