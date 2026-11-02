@@ -345,10 +345,11 @@ RSpec.describe UsageMonitoring::AnnounceMissedThresholdsService do
     end
 
     it "includes alerts created exactly at from and to and excludes ones 1 second outside" do
+      # One metric per alert: an alert type is unique per subscription and billable metric
       boundary_alerts = [from, to, from - 1.second, to + 1.second].map do |created_at|
         travel_to(created_at) do
           create(:billable_metric_lifetime_usage_units_alert, organization:, subscription_external_id: subscription.external_id,
-            billable_metric:, thresholds: [50], previous_value: 150, last_processed_at:)
+            billable_metric: create(:billable_metric, organization:), thresholds: [50], previous_value: 150, last_processed_at:)
         end
       end
 
