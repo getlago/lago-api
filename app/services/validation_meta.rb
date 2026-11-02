@@ -31,7 +31,8 @@ module ValidationMeta
     if refused.empty?
       checked
     else
-      refused.each { |key, value| report("meta #{key}: #{value.inspect} is not a registered key and type") }
+      # By its class only, as a refused value can be what the request sent.
+      refused.each { |key, value| report("meta #{key}: #{value.class} is not a registered key and type") }
       {}
     end
   end

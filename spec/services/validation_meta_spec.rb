@@ -37,12 +37,12 @@ RSpec.describe ValidationMeta do
     end
 
     {
-      {1 => 2} => "meta 1: 2",
-      {count: 1} => "meta count: 1",
-      {min: 1.5} => "meta min: 1.5",
-      {max: BigDecimal("3")} => 'meta max: "3.0"',
-      {value: 1} => "meta value: 1",
-      {allowed_values: ["day", 1]} => 'meta allowed_values: ["day", 1]'
+      {1 => 2} => "meta 1: Integer",
+      {count: 1} => "meta count: Integer",
+      {min: 1.5} => "meta min: Float",
+      {max: BigDecimal("3")} => "meta max: String",
+      {value: 1} => "meta value: Integer",
+      {allowed_values: ["day", 1]} => "meta allowed_values: Array"
     }.each do |given, refusal|
       context "with #{given}" do
         let(:meta) { given }
@@ -63,11 +63,11 @@ RSpec.describe ValidationMeta do
       # A min without its max would read as a value without an upper bound.
       it "drops the whole meta and reports each bad key" do
         expect(checked).to eq({})
-        expect(Rails.logger).to have_received(:warn).with("ValidationMeta: meta max: 1.5 is not a registered key and type")
+        expect(Rails.logger).to have_received(:warn).with("ValidationMeta: meta max: Float is not a registered key and type")
         expect(Rails.logger).to have_received(:warn).exactly(3).times
         expect(Sentry).to have_received(:capture_exception).exactly(3).times
-        expect(Sentry).to have_received(:capture_exception).with(an_object_having_attributes(message: "meta count: 2 is not a registered key and type"))
-        expect(Sentry).to have_received(:capture_exception).with(an_object_having_attributes(message: "meta 1: 2 is not a registered key and type"))
+        expect(Sentry).to have_received(:capture_exception).with(an_object_having_attributes(message: "meta count: Integer is not a registered key and type"))
+        expect(Sentry).to have_received(:capture_exception).with(an_object_having_attributes(message: "meta 1: Integer is not a registered key and type"))
       end
     end
   end
