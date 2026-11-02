@@ -13925,6 +13925,7 @@ input RateTierInput {
 Units of a billable metric over the window, per period and per dimension
 """
 type RealtimeUsageBillableMetric {
+  aggregationType: AggregationTypeEnum!
   billableMetricCode: String!
   billableMetricId: ID!
   billableMetricName: String!
