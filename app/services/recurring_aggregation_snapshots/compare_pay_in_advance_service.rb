@@ -149,7 +149,7 @@ module RecurringAggregationSnapshots
           code: billable_metric.code,
           timestamp: date_service.charges_from_datetime..timestamp
         )
-        .where("NULLIF(BTRIM(events.properties ->> ?), '') IS NOT NULL", billable_metric.field_name)
+        .where("COALESCE(events.properties ->> ?, '') !~ ?", billable_metric.field_name, Events::Stores::BaseStore::BLANK_VALUE_PATTERN)
         .order(timestamp: :desc, created_at: :desc)
         .limit(EVENTS_PER_BILLABLE_METRIC)
         .map { Events::CommonFactory.new_instance(source: it) }
@@ -167,7 +167,7 @@ module RecurringAggregationSnapshots
       )
       latest_inserts = scope
         .group(:transaction_id, :timestamp)
-        .having("trimBoth(argMax(properties[?], ingested_at)) != ''", billable_metric.field_name)
+        .having("NOT match(argMax(properties[?], ingested_at), ?)", billable_metric.field_name, Events::Stores::BaseStore::BLANK_VALUE_PATTERN)
         .order(timestamp: :desc, transaction_id: :asc)
         .limit(EVENTS_PER_BILLABLE_METRIC)
         .select(:transaction_id, :timestamp, "max(ingested_at)")

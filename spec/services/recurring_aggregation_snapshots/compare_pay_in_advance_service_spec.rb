@@ -73,6 +73,7 @@ RSpec.describe RecurringAggregationSnapshots::ComparePayInAdvanceService do
       create_event(timestamp: Time.zone.parse("2022-05-11"), properties: {})
       create_event(timestamp: Time.zone.parse("2022-05-12"), value: "")
       create_event(timestamp: Time.zone.parse("2022-05-13"), value: " ")
+      create_event(timestamp: Time.zone.parse("2022-05-14"), value: "\t\u00A0")
     end
 
     it "replays only the events billed in advance" do
@@ -174,14 +175,14 @@ RSpec.describe RecurringAggregationSnapshots::ComparePayInAdvanceService do
 
     context "when newer events have no value for the metric field" do
       before do
-        [{}, {value: ""}, {value: " "}].each.with_index(1) do |properties, day|
+        [{}, {value: ""}, {value: " "}, {value: "\t\u00A0"}].each.with_index(1) do |properties, hour|
           create(
             :clickhouse_events_raw,
             organization:,
             subscription:,
             billable_metric:,
-            timestamp: raw_event.timestamp + day.days,
-            ingested_at: raw_event.ingested_at + day.days,
+            timestamp: raw_event.timestamp + hour.hours,
+            ingested_at: raw_event.ingested_at + hour.hours,
             properties:
           )
         end
