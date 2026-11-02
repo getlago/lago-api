@@ -44,12 +44,15 @@ module PaymentReceipts
       xml_file
     end
 
+    # Upload before attaching: attach(io:) commits the attachment and uploads in after_commit,
+    # so a worker stopped in between leaves an attachment without a file, which the re-run skips.
     def attach_xml_to_payment_receipt(xml_file)
-      payment_receipt.xml_file.attach(
+      blob = ActiveStorage::Blob.create_and_upload!(
         io: File.open(xml_file.path),
         filename: "#{payment_receipt.number}.xml",
         content_type: "application/xml"
       )
+      payment_receipt.xml_file.attach(blob)
     end
 
     def cleanup_tempfiles(xml_file)

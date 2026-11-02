@@ -46,6 +46,28 @@ RSpec.describe PaymentReceipts::GeneratePdfService do
       expect(Utils::ActivityLog).to have_produced("payment_receipt.generated").with(receipt)
     end
 
+    context "when the PDF generator returns a PDF" do
+      let(:pdf_result) do
+        Utils::PdfGenerator::Result.new.tap { |r| r.io = StringIO.new(File.read(blank_pdf_path)) }
+      end
+
+      before { allow(Utils::PdfGenerator).to receive(:call).and_return(pdf_result) }
+
+      it "attaches the PDF named after the payment receipt number" do
+        result = payment_receipt_generate_service.call
+
+        expect(result.payment_receipt.file.filename.to_s).to eq("#{payment_receipt.number}.pdf")
+        expect(result.payment_receipt.file.content_type).to eq("application/pdf")
+      end
+    end
+
+    context "when the worker stops during the storage upload" do
+      it_behaves_like "an attachment uploaded before it is attached", :file, webhook: "payment_receipt.generated" do
+        let(:record) { payment_receipt }
+        let(:generate_document) { -> { described_class.call(payment_receipt:, context:) } }
+      end
+    end
+
     context "with not found payment receipt" do
       let(:payment_receipt) { nil }
 
@@ -183,6 +205,21 @@ RSpec.describe PaymentReceipts::GeneratePdfService do
           )
           expect(EInvoices::Payments::Cii::CreateService).to have_received(:call)
           expect(result.payment_receipt.file).to be_present
+        end
+
+        context "when the PDF generator returns a PDF" do
+          let(:pdf_result) do
+            Utils::PdfGenerator::Result.new.tap { |r| r.io = StringIO.new(File.read(blank_pdf_path)) }
+          end
+
+          before { allow(Utils::PdfGenerator).to receive(:call).and_return(pdf_result) }
+
+          it "attaches the PDF named after the payment receipt number" do
+            result = described_class.call(payment_receipt:, context:)
+
+            expect(result.payment_receipt.file.filename.to_s).to eq("#{payment_receipt.number}.pdf")
+            expect(result.payment_receipt.file.content_type).to eq("application/pdf")
+          end
         end
 
         context "when attaching the CII XML fails" do

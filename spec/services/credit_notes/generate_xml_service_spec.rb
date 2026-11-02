@@ -38,6 +38,16 @@ RSpec.describe CreditNotes::GenerateXmlService, type: :service do
       result = described_class.call(credit_note:, context:)
 
       expect(result.credit_note.xml_file).to be_present
+      expect(result.credit_note.xml_file.filename.to_s).to eq("#{credit_note.number}.xml")
+      expect(result.credit_note.xml_file.content_type).to eq("application/xml")
+      expect(result.credit_note.xml_file.download).to eq(fake_xml)
+    end
+
+    context "when the worker stops during the storage upload" do
+      it_behaves_like "an attachment uploaded before it is attached", :xml_file do
+        let(:record) { credit_note }
+        let(:generate_document) { -> { described_class.call(credit_note:, context:) } }
+      end
     end
 
     context "when using temp files" do

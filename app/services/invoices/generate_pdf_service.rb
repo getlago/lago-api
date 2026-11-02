@@ -67,12 +67,16 @@ module Invoices
       )
     end
 
+    # Upload before attaching: attach(io:) commits the attachment and uploads in after_commit,
+    # so an interrupted job would leave an attachment without a file and the re-run would skip.
     def attach_pdf_to_invoice(pdf_file)
-      invoice.file.attach(
+      blob = ActiveStorage::Blob.create_and_upload!(
         io: File.open(pdf_file.path),
         filename: "#{invoice.number}.pdf",
         content_type: "application/pdf"
       )
+
+      invoice.file.attach(blob)
     end
 
     def cleanup_tempfile(pdf_file)
