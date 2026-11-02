@@ -18,9 +18,11 @@ module ProductFilters
       end
 
       requested_ids = values_params.map { it[:billable_metric_filter_id].to_s }.uniq
-      known_ids = product.billable_metric.filters.where(id: requested_ids).ids
-      if known_ids.map(&:to_s).sort != requested_ids.sort
-        return result.single_validation_failure!(field: :"values.billable_metric_filter", error_code: "value_is_invalid")
+      known_ids = product.billable_metric.filters.where(id: requested_ids).ids.map(&:to_s)
+      unknown_index = values_params.index { !known_ids.include?(it[:billable_metric_filter_id].to_s) }
+      if unknown_index
+        field = BaseService::ValidationFailure.item_field(:values, unknown_index, :billable_metric_filter)
+        return result.single_validation_failure!(field:, error_code: "value_is_invalid")
       end
 
       # A key-only entry (no value) selects all configured values for the key,

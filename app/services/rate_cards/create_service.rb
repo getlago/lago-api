@@ -81,11 +81,11 @@ module RateCards
     end
 
     def create_rates(rate_card)
-      (params[:rates] || []).each do |rate_params|
+      (params[:rates] || []).each_with_index do |rate_params, index|
         RateCardRates::CreateService.call!(rate_card:, params: rate_params, emit_events: false)
+      rescue BaseService::ValidationFailure => e
+        result.fail_with_error!(e.remap(result) { BaseService::ValidationFailure.item_field(:rates, index, it) }).raise_if_error!
       end
-    rescue BaseService::ValidationFailure => e
-      result.fail_with_error!(e.remap(result) { :"rates.#{it}" }).raise_if_error!
     end
   end
 end
