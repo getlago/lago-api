@@ -230,6 +230,19 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
         expect { task.invoke }.to output(/Mismatches detected, investigate before enabling the organization/).to_stdout
       end
     end
+
+    context "when current usage read no snapshot" do
+      let(:comparison) { comparison_result(rows: [], snapshot_charges_count: 0) }
+
+      it "asks to rerun the failed comparison instead of reporting no snapshot" do
+        expect { task.invoke }.to output(
+          a_string_including(
+            "subscriptions without snapshot: 0",
+            "No mismatch over the comparisons that ran, but 1 failed: rerun them before enabling the organization."
+          )
+        ).to_stdout
+      end
+    end
   end
 
   context "with an unknown listed subscription" do

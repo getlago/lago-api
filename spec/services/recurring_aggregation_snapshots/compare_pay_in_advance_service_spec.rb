@@ -34,7 +34,7 @@ RSpec.describe RecurringAggregationSnapshots::ComparePayInAdvanceService do
     stub_const("#{described_class}::RECHECK_DELAY", 0)
   end
 
-  def create_event(timestamp:, value:)
+  def create_event(timestamp:, value: nil, properties: {value:})
     create(
       :event,
       organization_id: organization.id,
@@ -42,7 +42,7 @@ RSpec.describe RecurringAggregationSnapshots::ComparePayInAdvanceService do
       code: billable_metric.code,
       timestamp:,
       created_at: timestamp,
-      properties: {value:}
+      properties:
     )
   end
 
@@ -66,6 +66,19 @@ RSpec.describe RecurringAggregationSnapshots::ComparePayInAdvanceService do
   it "persists nothing and leaves the read gate untouched" do
     expect { result }.not_to change { [Fee.count, CachedAggregation.count, RecurringAggregationSnapshot.count] }
     expect(RecurringAggregationSnapshots.read_enabled?(organization)).to be(false)
+  end
+
+  context "when newer events have no value for the metric field" do
+    before do
+      create_event(timestamp: Time.zone.parse("2022-05-11"), properties: {})
+      create_event(timestamp: Time.zone.parse("2022-05-12"), value: "")
+      create_event(timestamp: Time.zone.parse("2022-05-13"), value: " ")
+    end
+
+    it "replays only the events billed in advance" do
+      expect(result.compared_events_count).to eq(1)
+      expect(result.rows.sole).to have_attributes(event_timestamp: Time.zone.parse("2022-05-10"))
+    end
   end
 
   context "when the snapshot disagrees with the full history" do
@@ -115,6 +128,26 @@ RSpec.describe RecurringAggregationSnapshots::ComparePayInAdvanceService do
     it "replays the latest raw events of the period" do
       expect(result.compared_events_count).to eq(1)
       expect(result.rows.sole).to have_attributes(event_transaction_id: raw_event.transaction_id, snapshot_read: true)
+    end
+
+    context "when newer events have no value for the metric field" do
+      before do
+        [{}, {value: ""}, {value: " "}].each.with_index(1) do |properties, day|
+          create(
+            :clickhouse_events_raw,
+            organization:,
+            subscription:,
+            billable_metric:,
+            timestamp: raw_event.timestamp + day.days,
+            ingested_at: raw_event.ingested_at + day.days,
+            properties:
+          )
+        end
+      end
+
+      it "replays only the events billed in advance" do
+        expect(result.rows.map(&:event_transaction_id)).to eq([raw_event.transaction_id])
+      end
     end
 
     context "when the event was inserted twice" do

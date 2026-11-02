@@ -126,24 +126,26 @@ module RecurringAggregationSnapshots
 
     # The latest events of the period put max_timestamp late in it, where the delta is the largest.
     # events_raw keeps every insert of a re-sent event until it merges: the latest one is replayed.
+    # Events without the metric's field are left out, as Events::PayInAdvanceService#can_create_fee? bills none.
     def events
-      @events ||= compared_charges.map { it.billable_metric.code }.uniq.flat_map do |code|
+      @events ||= compared_charges.map(&:billable_metric).uniq(&:code).flat_map do |billable_metric|
         if subscription.organization.clickhouse_events_store?
-          clickhouse_events(code)
+          clickhouse_events(billable_metric)
         else
-          postgres_events(code)
+          postgres_events(billable_metric)
         end
       end
     end
 
-    def postgres_events(code)
+    def postgres_events(billable_metric)
       Event
         .where(
           organization_id: subscription.organization_id,
           external_subscription_id: subscription.external_id,
-          code:,
+          code: billable_metric.code,
           timestamp: date_service.charges_from_datetime..timestamp
         )
+        .where("NULLIF(BTRIM(events.properties ->> ?), '') IS NOT NULL", billable_metric.field_name)
         .order(timestamp: :desc, created_at: :desc)
         .limit(EVENTS_PER_BILLABLE_METRIC)
         .map { Events::CommonFactory.new_instance(source: it) }
@@ -151,14 +153,15 @@ module RecurringAggregationSnapshots
 
     # Deduplicated before the limit, so the inserts of one event cannot crowd out the others.
     # An event is a (transaction_id, timestamp) pair, as for the event stores.
-    def clickhouse_events(code)
+    def clickhouse_events(billable_metric)
       scope = Clickhouse::EventsRaw.where(
         organization_id: subscription.organization_id,
         external_subscription_id: subscription.external_id,
-        code:,
+        code: billable_metric.code,
         timestamp: date_service.charges_from_datetime..timestamp
       )
       latest_inserts = scope
+        .where("trimBoth(properties[?]) != ''", billable_metric.field_name)
         .group(:transaction_id, :timestamp)
         .order(timestamp: :desc, transaction_id: :asc)
         .limit(EVENTS_PER_BILLABLE_METRIC)

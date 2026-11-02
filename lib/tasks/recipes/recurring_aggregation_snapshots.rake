@@ -104,7 +104,9 @@ namespace :recipes do
         end
 
         pay_in_advance_rows = pay_in_advance.success? ? pay_in_advance.rows : []
-        without_snapshot += 1 if comparison.snapshot_charges_count.zero? && pay_in_advance_rows.none?(&:snapshot_read)
+        if pay_in_advance.success? && comparison.snapshot_charges_count.zero? && pay_in_advance_rows.none?(&:snapshot_read)
+          without_snapshot += 1
+        end
         mismatching += 1 if comparison.differences.any? || pay_in_advance_rows.any?(&:different?)
       end
 
