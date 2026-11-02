@@ -21,7 +21,8 @@ env:
 jobs:
   run-migrations:
     name: Run migrations
-    runs-on: ubuntu-latest
+    # Both jobs: tj-actions/install-postgresql runs apt-key, which ubuntu-26.04 no longer ships
+    runs-on: ubuntu-24.04
     services: &services
       postgres:
         image: getlago/postgres-partman:15.0-alpine
@@ -59,7 +60,7 @@ jobs:
         name: Install Ruby and gems
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "4.0.6"
+          ruby-version: "4.0.9"
           bundler-cache: true
       - &install-pg
         name: Install pg 15
@@ -92,7 +93,7 @@ jobs:
 
   run-migrations-custom-schema:
     name: Run migrations in a custom schema
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services: *services
     env:
       # A fresh self-hosted install with `POSTGRES_SCHEMA`, which only the

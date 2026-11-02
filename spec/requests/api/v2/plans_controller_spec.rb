@@ -298,6 +298,11 @@ RSpec.describe Api::V2::PlansController do
       let(:create_paginated_record) { ->(created_at) { create(:catalog_plan, organization:, created_at:) } }
     end
 
+    it_behaves_like "a v2 list filtered on created_at", collection: :plans do
+      let(:filtered_path) { "/api/v2/plans" }
+      let(:create_filtered_record) { ->(created_at) { create(:catalog_plan, organization:, created_at:) } }
+    end
+
     context "when the organization is not on the product catalog", product_catalog: false do
       let(:organization) { create(:organization) }
 

@@ -4,8 +4,6 @@ module Fees
   class ChargeService < BaseService
     Result = BaseResult[:fees, :cached_aggregations]
 
-    SNAPSHOT_AGGREGATION_TYPES = %w[sum_agg weighted_sum_agg].freeze
-
     def initialize(
       invoice:,
       metered_item:,
@@ -637,18 +635,13 @@ module Fees
     end
 
     def snapshot_eligible?(selected_metered_item)
-      return false if selected_metered_item.billing_segment
-      return false unless billing_context.subscription?
-
-      SNAPSHOT_AGGREGATION_TYPES.include?(selected_metered_item.billable_metric.aggregation_type)
+      RecurringAggregationSnapshot.eligible?(metered_item: selected_metered_item, billing_context:)
     end
 
     # Usage filtered by group narrows the events read, but snapshots hold every group's units
     def recurring_initial_value(selected_metered_item)
-      return unless selected_metered_item.billable_metric.recurring? && snapshot_eligible?(selected_metered_item)
-      return if options.usage_filters.filter_by_group.present?
-
-      if billing_context.organization.feature_flag_enabled?(:persisted_recurring_values)
+      if RecurringAggregationSnapshot.readable?(metered_item: selected_metered_item, billing_context:) &&
+          options.usage_filters.filter_by_group.blank?
         RecurringAggregationSnapshots::FetchService.call!(
           subscription:,
           charge: selected_metered_item.charge,

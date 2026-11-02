@@ -49,6 +49,7 @@ module PaymentProviders
         when "charge.refund.updated"
           CreditNotes::Refunds::StripeService
             .new.update_status(
+              organization_id: organization.id,
               provider_refund_id: event.data.object.id,
               status: event.data.object.status,
               metadata: event.data.object.metadata.to_h.symbolize_keys

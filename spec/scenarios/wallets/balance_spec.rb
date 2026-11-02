@@ -543,6 +543,96 @@ describe "Use wallet's credits and recalculate balances", :premium, transaction:
     end
   end
 
+  context "when a draft invoice reserved in the ongoing balance leaves draft without using the wallet" do
+    let(:plan) { create(:plan, organization:, interval: "monthly", amount_cents: 850_00, pay_in_advance: true) }
+    let(:time_0) { DateTime.new(2022, 12, 1) }
+
+    # Returns the wallet and the subscription whose draft invoice is reserved in the ongoing balance
+    def create_reserved_draft
+      wallet = nil
+      subscription = nil
+
+      travel_to time_0 do
+        wallet = create_wallet_with_defaults(granted_credits: "0")
+        expect(wallet.balance_cents).to eq 0
+
+        # pay in advance: the full month subscription fee (850$) is billed at creation,
+        # and the grace period keeps the invoice in draft
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id,
+            plan_code: plan.code
+          }
+        )
+        subscription = customer.subscriptions.first
+        expect(subscription.invoices.sole.status).to eq("draft")
+        expect(subscription.invoices.sole.total_amount_cents).to eq(850_00)
+
+        recalculate_wallet_balances
+        wallet.reload
+        expect(wallet.balance_cents).to eq 0
+        expect(wallet.ongoing_balance_cents).to eq(-850_00)
+        expect(wallet.ongoing_usage_balance_cents).to eq 850_00
+      end
+
+      [wallet, subscription]
+    end
+
+    it "releases the draft reservation from the ongoing balance once finalized by the clock" do
+      wallet, subscription = create_reserved_draft
+
+      # end of the grace period: the draft is finalized, no credits are applied (balance is 0)
+      travel_to time_0 + 11.days do
+        perform_finalize_refresh
+        expect(subscription.invoices.sole.status).to eq("finalized")
+        expect(customer.reload.awaiting_wallet_refresh).to eq true
+
+        recalculate_wallet_balances
+        wallet.reload
+        expect(wallet.balance_cents).to eq 0
+        expect(wallet.ongoing_balance_cents).to eq 0
+        expect(wallet.ongoing_usage_balance_cents).to eq 0
+      end
+    end
+
+    it "releases the draft reservation from the ongoing balance once finalized through the API" do
+      wallet, subscription = create_reserved_draft
+
+      # still inside the grace period: the draft is finalized by hand, no credits are applied (balance is 0)
+      travel_to time_0 + 2.days do
+        finalize_invoice(subscription.invoices.sole)
+        expect(subscription.invoices.sole.status).to eq("finalized")
+        expect(customer.reload.awaiting_wallet_refresh).to eq true
+
+        recalculate_wallet_balances
+        wallet.reload
+        expect(wallet.balance_cents).to eq 0
+        expect(wallet.ongoing_balance_cents).to eq 0
+        expect(wallet.ongoing_usage_balance_cents).to eq 0
+      end
+    end
+
+    it "releases the draft reservation from the ongoing balance once deleted through the API" do
+      wallet, subscription = create_reserved_draft
+      invoice = subscription.invoices.sole
+
+      # still inside the grace period: the draft is deleted by hand
+      travel_to time_0 + 2.days do
+        delete_with_token(organization, "/api/v1/invoices/#{invoice.id}")
+        expect(response).to have_http_status(:success)
+        expect(invoice.reload).to be_deleted
+        expect(customer.reload.awaiting_wallet_refresh).to eq true
+
+        recalculate_wallet_balances
+        wallet.reload
+        expect(wallet.balance_cents).to eq 0
+        expect(wallet.ongoing_balance_cents).to eq 0
+        expect(wallet.ongoing_usage_balance_cents).to eq 0
+      end
+    end
+  end
+
   describe "multiple wallets" do
     def expect_wallet(wallet, balance:, credits:, balance_usage:, credits_usage:, ongoing_balance:, ongoing_credits:)
       wallet.reload

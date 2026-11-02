@@ -214,6 +214,11 @@ RSpec.describe Api::V2::TaxesController do
       let(:create_paginated_record) { ->(created_at) { create(:tax, organization:, created_at:) } }
     end
 
+    it_behaves_like "a v2 list filtered on created_at", collection: :taxes do
+      let(:filtered_path) { "/api/v2/taxes" }
+      let(:create_filtered_record) { ->(created_at) { create(:tax, organization:, created_at:) } }
+    end
+
     context "without product catalog enabled", product_catalog: false do
       it "requires the product catalog" do
         request

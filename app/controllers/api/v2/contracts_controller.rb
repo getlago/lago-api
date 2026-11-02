@@ -4,6 +4,7 @@ module Api
   module V2
     class ContractsController < Api::V2::BaseController
       cursor_paginated_index(Contract)
+      date_range_filtered_index(:created_at)
       serializable_with ::V2::ContractSerializer
 
       def create
@@ -50,6 +51,7 @@ module Api
 
       def index
         filters = params.permit(:plan_code, :external_customer_id, :external_id, :has_rate_overrides, billing_entity_ids: [])
+          .to_h.merge(date_range_filters)
         # Accept both ?status=pending and ?status[]=pending — strong params
         # would silently drop the scalar form and hand back active contracts
         # to a caller who believes they filtered.

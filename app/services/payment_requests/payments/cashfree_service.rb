@@ -32,9 +32,9 @@ module PaymentRequests
 
       def update_payment_status(organization_id:, status:, cashfree_payment:, amount_cents: nil)
         payment = if cashfree_payment.metadata[:payment_type] == "one-time"
-          create_payment(cashfree_payment)
+          create_payment(cashfree_payment, organization_id:)
         else
-          Payment.find_by(provider_payment_id: cashfree_payment.id)
+          Payment.find_by(provider_payment_id: cashfree_payment.id, organization_id:)
         end
         return result.not_found_failure!(resource: "cashfree_payment") unless payment
 
@@ -151,8 +151,9 @@ module PaymentRequests
         payment_status.to_sym == :succeeded
       end
 
-      def create_payment(cashfree_payment)
-        @payable = PaymentRequest.find(cashfree_payment.metadata[:lago_payable_id])
+      def create_payment(cashfree_payment, organization_id:)
+        @payable = PaymentRequest.find_by(id: cashfree_payment.metadata[:lago_payable_id], organization_id:)
+        return unless payable
 
         payable.increment_payment_attempts!
 

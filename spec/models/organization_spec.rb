@@ -189,6 +189,25 @@ RSpec.describe Organization do
       expect(organization.errors.first.type).to eq(:unsupported_value)
     end
 
+    it "locks the tax determining fields in the customer portal by default" do
+      expect(described_class.new.customer_portal_locked_fields).to match_array(described_class::DEFAULT_CUSTOMER_PORTAL_LOCKED_FIELDS)
+      expect(described_class::DEFAULT_CUSTOMER_PORTAL_LOCKED_FIELDS).to match_array(%w[country zipcode tax_identification_number])
+    end
+
+    it "is valid with every customer portal field locked" do
+      organization.customer_portal_locked_fields = described_class::CUSTOMER_PORTAL_FIELDS
+
+      expect(organization).to be_valid
+    end
+
+    it "is invalid with non permitted customer_portal_locked_fields value" do
+      organization.customer_portal_locked_fields = ["currency"]
+
+      expect(organization).not_to be_valid
+      expect(organization.errors.first.attribute).to eq(:customer_portal_locked_fields)
+      expect(organization.errors.first.type).to eq(:unsupported_value)
+    end
+
     it "dont allow finalize_zero_amount_invoice with null value" do
       expect(organization.finalize_zero_amount_invoice).to eq true
       organization.finalize_zero_amount_invoice = nil

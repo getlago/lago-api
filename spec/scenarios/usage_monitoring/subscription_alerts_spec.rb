@@ -246,7 +246,7 @@ describe "Subscriptions Alerting Scenario", :premium, cache: :redis do
   end
 
   context "when the alert is created after usage passed its lines" do
-    it "records the lines silently and announces only the recovery" do
+    it "announces the passed lines on the first evaluation, then the recovery" do
       create_subscription({
         external_customer_id: customer.external_id,
         external_id: subscription_external_id,
@@ -266,15 +266,27 @@ describe "Subscriptions Alerting Scenario", :premium, cache: :redis do
         ]
       })
       alert = UsageMonitoring::Alert.find(json[:alert][:lago_id])
-      expect(alert.previous_value).to eq(15)
+      expect(alert.previous_value).to eq(0)
+      expect(alert.last_processed_at).to be_nil
 
       perform_usage_update
-      expect(alert.all_triggered_alerts.pluck(:kind)).to eq(%w[seeded])
+      expect(alert.all_triggered_alerts.pluck(:kind)).to eq(%w[triggered])
+
+      triggered = webhooks_sent.select { it[:webhook_type] == "alert.triggered" }
+      expect(triggered.size).to eq(1)
+      expect(triggered.sole[:triggered_alert]).to include(
+        alert_code: "already_past",
+        previous_value: "0.0",
+        current_value: "15.0"
+      )
+      expect(triggered.sole[:triggered_alert][:crossed_thresholds]).to eq([
+        {code: "low", value: "5.0", recurring: false},
+        {code: "warn", value: "10.0", recurring: false}
+      ].map(&:with_indifferent_access))
 
       send_event!(code: billable_metric.code, properties: {ops_count: -10}, external_subscription_id: subscription_external_id)
       perform_usage_update
 
-      expect(webhooks_sent.map { it[:webhook_type] }).not_to include("alert.triggered")
       resolved = webhooks_sent.find { it[:webhook_type] == "alert.resolved" }
       expect(resolved[:resolved_alert]).to include(
         alert_code: "already_past",

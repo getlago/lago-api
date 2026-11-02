@@ -80,9 +80,9 @@ module PaymentProviders
         def find_payable
           case payable_type
           when "Invoice"
-            Invoice.find_by(id: provider_payment_id)
+            Invoice.find_by(id: provider_payment_id, organization_id:)
           when "PaymentRequest"
-            PaymentRequest.find_by(id: provider_payment_id)
+            PaymentRequest.find_by(id: provider_payment_id, organization_id:)
           end
         end
 

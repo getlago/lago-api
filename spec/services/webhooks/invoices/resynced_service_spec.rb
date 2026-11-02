@@ -13,18 +13,18 @@ RSpec.describe Webhooks::Invoices::ResyncedService do
     it_behaves_like "creates webhook", "invoice.resynced", "invoice"
     it_behaves_like "sends the catalog invoice on v2"
 
-    it "calls the InvoiceSerializer with integration_customers included" do
-      serializer_instance = instance_double(V1::InvoiceSerializer)
-      allow(V1::InvoiceSerializer).to receive(:new).and_return(serializer_instance)
-      allow(serializer_instance).to receive(:serialize).and_return({})
+    context "with a legacy invoice" do
+      before { allow(V1::InvoiceSerializer).to receive(:new).and_call_original }
 
-      webhook_service.call
+      it "calls the InvoiceSerializer with integration_customers included" do
+        webhook_service.call
 
-      expect(V1::InvoiceSerializer).to have_received(:new).with(
-        invoice,
-        root_name: "invoice",
-        includes: array_including(:customer, :integration_customers, :subscriptions, :fees, :credits, :applied_taxes)
-      )
+        expect(V1::InvoiceSerializer).to have_received(:new).with(
+          invoice,
+          root_name: "invoice",
+          includes: array_including(:customer, :integration_customers, :subscriptions, :fees, :credits, :applied_taxes)
+        )
+      end
     end
   end
 end

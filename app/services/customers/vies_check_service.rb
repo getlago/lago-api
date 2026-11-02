@@ -32,8 +32,9 @@ module Customers
       result.vies_check = vies_api_response.presence || error_vies_check
       delete_pending_vies_check_if_exists
       result
-    rescue Valvat::HTTPError, Valvat::RateLimitError, Valvat::Timeout, Valvat::BlockedError,
-      Valvat::InvalidRequester, Valvat::ServiceUnavailable, Valvat::MemberStateUnavailable => e
+    rescue Valvat::LookupError, *PendingViesCheck::NETWORK_ERRORS => e
+      # Any lookup or transport failure must go through handle_error: it records the attempt and
+      # lets ViesCheckJob schedule a retry. An unrescued error would kill the retry chain.
       handle_error(e)
     end
 
@@ -43,6 +44,11 @@ module Customers
 
     def handle_error(e)
       pending_vies_check = create_or_update_pending_vies_check(e)
+
+      # Unmapped VIES faults may never clear on their own, so keep them visible while retrying.
+      if pending_vies_check.last_error_type == "unknown"
+        Sentry.capture_exception(e, extra: {customer_id: customer.id, attempts_count: pending_vies_check.attempts_count})
+      end
 
       SendWebhookJob.perform_after_commit(
         "customer.vies_check",

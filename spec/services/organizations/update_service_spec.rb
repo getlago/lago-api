@@ -134,6 +134,18 @@ RSpec.describe Organizations::UpdateService do
       end
     end
 
+    context "when customer_portal_locked_fields is null" do
+      before { params[:customer_portal_locked_fields] = nil }
+
+      it "returns a validation error" do
+        result = update_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:customer_portal_locked_fields]).to eq(["value_is_mandatory"])
+      end
+    end
+
     context "when slug is sent" do
       before { params[:slug] = "new-slug" }
 

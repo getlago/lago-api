@@ -30,6 +30,7 @@ RSpec.describe Api::V1::OrganizationsController do
         timezone: "Europe/Paris",
         webhook_url:,
         email_settings: ["invoice.finalized"],
+        customer_portal_locked_fields: %w[name country],
         document_number_prefix: "ORG-2",
         finalize_zero_amount_invoice: false,
         document_url_expiration_days: 90,
@@ -56,6 +57,7 @@ RSpec.describe Api::V1::OrganizationsController do
       expect(json[:organization][:default_currency]).to eq("EUR")
       expect(json[:organization][:webhook_url]).to eq(webhook_url)
       expect(json[:organization][:webhook_urls]).to eq([webhook_url])
+      expect(json[:organization][:customer_portal_locked_fields]).to eq(%w[name country])
       expect(json[:organization][:document_numbering]).to eq("per_customer")
       expect(json[:organization][:document_number_prefix]).to eq("ORG-2")
       expect(json[:organization][:finalize_zero_amount_invoice]).to eq(false)

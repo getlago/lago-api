@@ -2,6 +2,8 @@
 
 module V2
   class PaymentSerializer < ModelSerializer
+    timestamps :created_at, :updated_at
+
     PRELOADS = [:customer, :payment_provider, :payment_provider_customer, {payable: :applied_invoices}].freeze
 
     def serialize
@@ -22,9 +24,7 @@ module V2
         payment_provider_type: model.payment_provider&.payment_type,
         provider_payment_id: model.provider_payment_id,
         provider_customer_id: model.payment_provider_customer&.provider_customer_id,
-        next_action: model.provider_payment_data,
-        created_at: format_time(model.created_at),
-        updated_at: format_time(model.updated_at)
+        next_action: model.provider_payment_data
       }
     end
 

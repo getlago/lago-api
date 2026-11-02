@@ -98,13 +98,4 @@ class ProductFeesQuery < BaseQuery
   def invalid_filter!(field)
     result.single_validation_failure!(field:, error_code: "value_is_invalid").raise_if_error!
   end
-
-  def with_date_range(scope, column)
-    from = filters[:"#{column}_from"]
-    to = filters[:"#{column}_to"]
-
-    scope = scope.where(column => parse_datetime_filter(:"#{column}_from")..) if from.present?
-    scope = scope.where(column => ..parse_datetime_filter(:"#{column}_to")) if to.present?
-    scope
-  end
 end

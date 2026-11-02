@@ -296,13 +296,18 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
     end
 
     context "when the charge is paid in advance" do
-      it "ignores the snapshot" do
-        initial_value = [snapshot(periods.first, aggregate(periods.first, initial_value: nil)).with(units: 1000)]
+      let(:initial_value) { [snapshot(periods.first, aggregate(periods.first, initial_value: nil)).with(units: 1000)] }
 
-        result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first), options: {is_pay_in_advance: true, is_current_usage: true})
+      it "bills the full amount from the snapshot" do
+        result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first), options: {is_pay_in_advance: true})
 
-        # Every event since the subscription start: 3 + 10 + 7 + 20
-        expect(result.current_usage_units).to eq(40)
+        expect(result.aggregation).to eq(1000 + 7 + 20)
+      end
+
+      it "reads the current usage from the snapshot" do
+        result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first), options: {recurring_watermark: nil, is_pay_in_advance: true, is_current_usage: true})
+
+        expect(result.current_usage_units).to eq(1000 + 7 + 20)
       end
     end
 

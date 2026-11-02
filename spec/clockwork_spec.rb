@@ -391,6 +391,27 @@ describe Clockwork do
     end
   end
 
+  describe "schedule:retry_pending_vies_checks" do
+    let(:job) { "schedule:retry_pending_vies_checks" }
+    let(:start_time) { Time.zone.parse("1 Apr 2022 00:05:00") }
+    let(:end_time) { Time.zone.parse("1 Apr 2022 01:05:00") }
+
+    it "enqueues a retry pending VIES checks job" do
+      Clockwork::Test.run(
+        file: clock_file,
+        start_time:,
+        end_time:,
+        tick_speed: 1.minute
+      )
+
+      expect(Clockwork::Test).to be_ran_job(job)
+      expect(Clockwork::Test.times_run(job)).to eq(1)
+
+      Clockwork::Test.block_for(job).call
+      expect(Clock::RetryPendingViesChecksJob).to have_been_enqueued
+    end
+  end
+
   describe "schedule:retry_inbound_webhooks" do
     let(:job) { "schedule:retry_inbound_webhooks" }
     let(:start_time) { Time.zone.parse("1 Apr 2022 00:05:00") }

@@ -658,6 +658,7 @@ DROP INDEX IF EXISTS public.index_payments_by_cursor;
 DROP INDEX IF EXISTS public.index_payment_requests_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_requests_on_dunning_campaign_id;
 DROP INDEX IF EXISTS public.index_payment_requests_on_customer_id;
+DROP INDEX IF EXISTS public.index_payment_requests_by_cursor;
 DROP INDEX IF EXISTS public.index_payment_receipts_on_payment_id;
 DROP INDEX IF EXISTS public.index_payment_receipts_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_receipts_on_billing_entity_id;
@@ -724,6 +725,7 @@ DROP INDEX IF EXISTS public.index_invoices_on_organization_id_search_terms_gin_t
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_number_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_lower_purchase_order_number;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_and_customer_id;
+DROP INDEX IF EXISTS public.index_invoices_on_organization_id_and_created_at;
 DROP INDEX IF EXISTS public.index_invoices_on_number;
 DROP INDEX IF EXISTS public.index_invoices_on_customer_billing_entity_sequential;
 DROP INDEX IF EXISTS public.index_invoices_by_cursor;
@@ -3759,6 +3761,7 @@ CREATE TABLE public.organizations (
     slug character varying NOT NULL,
     pagination_max_page_size integer,
     document_url_expiration_days integer DEFAULT 30 NOT NULL,
+    customer_portal_locked_fields character varying[] DEFAULT '{country,zipcode,tax_identification_number}'::character varying[] NOT NULL,
     CONSTRAINT check_organizations_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -10585,6 +10588,13 @@ CREATE INDEX index_invoices_on_number ON public.invoices USING btree (number);
 
 
 --
+-- Name: index_invoices_on_organization_id_and_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoices_on_organization_id_and_created_at ON public.invoices USING btree (organization_id, created_at);
+
+
+--
 -- Name: index_invoices_on_organization_id_and_customer_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11044,6 +11054,13 @@ CREATE INDEX index_payment_receipts_on_organization_id ON public.payment_receipt
 --
 
 CREATE UNIQUE INDEX index_payment_receipts_on_payment_id ON public.payment_receipts USING btree (payment_id);
+
+
+--
+-- Name: index_payment_requests_by_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payment_requests_by_cursor ON public.payment_requests USING btree (organization_id, created_at DESC, id DESC);
 
 
 --
@@ -15955,8 +15972,11 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261029112805'),
+('20261029111437'),
 ('20261028184732'),
 ('20261028184731'),
+('20261027100000'),
 ('20261026150420'),
 ('20261026101445'),
 ('20261022090030'),

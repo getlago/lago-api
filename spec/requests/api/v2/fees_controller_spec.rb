@@ -53,6 +53,11 @@ RSpec.describe Api::V2::FeesController do
       let(:create_paginated_record) { ->(created_at) { create(:fee, fee_attributes.merge(created_at:)) } }
     end
 
+    it_behaves_like "a v2 list filtered on created_at", collection: :fees do
+      let(:filtered_path) { "/api/v2/fees" }
+      let(:create_filtered_record) { ->(created_at) { create(:fee, fee_attributes.merge(created_at:)) } }
+    end
+
     context "with catalog code filters" do
       let(:params) { {product_code: fee.invoiceable.code, rate_card_code: contract_rate_card.rate_card.code} }
       let(:other_contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
@@ -97,6 +102,19 @@ RSpec.describe Api::V2::FeesController do
         subject
 
         expect(json[:fees].map { it[:lago_id] }).to eq([succeeded_fee.id])
+      end
+    end
+
+    %w[succeeded_at failed_at refunded_at].each do |column|
+      context "with a #{column} bound that is not a string" do
+        let(:params) { {"#{column}_from": {gte: "2026-10-01T00:00:00Z"}} }
+
+        it "rejects it rather than ignoring it" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "validation_errors", details: [{code: "invalid_date", field: "#{column}_from", meta: {}}])
+        end
       end
     end
 

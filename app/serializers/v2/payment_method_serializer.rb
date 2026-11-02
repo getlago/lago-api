@@ -2,6 +2,8 @@
 
 module V2
   class PaymentMethodSerializer < ModelSerializer
+    timestamps :created_at, :updated_at, :deleted_at
+
     PRELOADS = %i[customer payment_provider].freeze
 
     def serialize
@@ -13,10 +15,7 @@ module V2
         payment_provider_code: model.payment_provider&.code,
         payment_provider_name: model.payment_provider&.name,
         payment_provider_type: model.payment_provider_type,
-        provider_method_id: model.provider_method_id,
-        created_at: format_time(model.created_at),
-        updated_at: format_time(model.updated_at),
-        deleted_at: format_time(model.deleted_at)
+        provider_method_id: model.provider_method_id
       }
     end
   end

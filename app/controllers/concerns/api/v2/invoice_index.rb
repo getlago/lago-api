@@ -16,6 +16,7 @@ module Api
 
       included do
         cursor_paginated_index(Invoice, sort: SORT)
+        date_range_filtered_index(:created_at)
       end
 
       private
@@ -54,7 +55,8 @@ module Api
             product_catalog: true,
             purchase_order_number: filters[:purchase_order_number],
             settlements: filters[:settlements],
-            status: filters[:status] || filters[:statuses]
+            status: filters[:status] || filters[:statuses],
+            **date_range_filters
           }
         )
 

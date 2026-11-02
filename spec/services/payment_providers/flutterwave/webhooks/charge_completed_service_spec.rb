@@ -141,6 +141,20 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
           :update_payment_status, hash_including(amount_cents: 1_000_000)
         )
       end
+
+      context "when the invoice belongs to another organization" do
+        let(:other_organization) { create(:organization) }
+        let(:invoice) do
+          create(:invoice, organization: other_organization, customer: create(:customer, organization: other_organization))
+        end
+
+        it "does not update the payment status" do
+          result = charge_completed_service.call
+
+          expect(result).to be_success
+          expect(Invoices::Payments::FlutterwaveService).not_to have_received(:call)
+        end
+      end
     end
 
     context "when transaction status is not successful" do
@@ -351,6 +365,20 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
         expect(PaymentRequests::Payments::FlutterwaveService).to have_received(:call).with(
           :update_payment_status, hash_including(organization_id: organization.id, status: "successful")
         )
+      end
+
+      context "when the payment request belongs to another organization" do
+        let(:other_organization) { create(:organization) }
+        let(:payment_request) do
+          create(:payment_request, organization: other_organization, customer: create(:customer, organization: other_organization))
+        end
+
+        it "does not update the payment status" do
+          result = charge_completed_service.call
+
+          expect(result).to be_success
+          expect(PaymentRequests::Payments::FlutterwaveService).not_to have_received(:call)
+        end
       end
     end
 
