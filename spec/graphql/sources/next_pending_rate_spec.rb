@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Sources::PendingRate do
+RSpec.describe Sources::NextPendingRate do
   subject(:source) { described_class.new }
 
   let(:organization) { create(:organization) }

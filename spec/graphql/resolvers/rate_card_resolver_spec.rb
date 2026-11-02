@@ -27,7 +27,7 @@ RSpec.describe Resolvers::RateCardResolver do
           id name code currency
           ratesCount
           activeRate { id }
-          pendingRate { id }
+          nextPendingRate { id }
           taxes { id code rate }
         }
       }
@@ -47,7 +47,7 @@ RSpec.describe Resolvers::RateCardResolver do
     expect(response["id"]).to eq(rate_card.id)
     expect(response["ratesCount"]).to eq(2)
     expect(response["activeRate"]["id"]).to eq(rate.id)
-    expect(response["pendingRate"]["id"]).to eq(pending_rate.id)
+    expect(response["nextPendingRate"]["id"]).to eq(pending_rate.id)
     expect(response["taxes"].pluck("code")).to eq([tax.code])
   end
 

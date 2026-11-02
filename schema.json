@@ -75063,24 +75063,24 @@
               "deprecationReason": null
             },
             {
-              "name": "organization",
+              "name": "nextPendingRate",
               "description": null,
               "args": [],
               "type": {
                 "kind": "OBJECT",
-                "name": "Organization",
+                "name": "RateCardRate",
                 "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
-              "name": "pendingRate",
+              "name": "organization",
               "description": null,
               "args": [],
               "type": {
                 "kind": "OBJECT",
-                "name": "RateCardRate",
+                "name": "Organization",
                 "ofType": null
               },
               "isDeprecated": false,

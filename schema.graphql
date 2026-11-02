@@ -13701,8 +13701,8 @@ type RateCard {
   displayOnInvoice: Boolean!
   id: ID!
   name: String!
+  nextPendingRate: RateCardRate
   organization: Organization
-  pendingRate: RateCardRate
   product: Product!
   productFilter: ProductFilter
   proration: Boolean!

@@ -3,7 +3,7 @@
 module Sources
   # Batches RateCard#rates.pending: one DISTINCT ON query resolves the soonest
   # not-yet-effective rate of every card on the page.
-  class PendingRate < GraphQL::Dataloader::Source
+  class NextPendingRate < GraphQL::Dataloader::Source
     def fetch(ids)
       rates = RateCardRate.pending
         .where(rate_card_id: ids)
