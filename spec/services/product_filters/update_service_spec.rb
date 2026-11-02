@@ -31,6 +31,19 @@ RSpec.describe ProductFilters::UpdateService do
     expect { result }.not_to change { product_filter.reload.values.count }
   end
 
+  context "when the model refuses one of the new values" do
+    let(:params) do
+      {name: "After", values: [{billable_metric_filter_id: region_filter.id, value: "eu"}, {billable_metric_filter_id: region_filter.id, value: "mars"}]}
+    end
+
+    it "fails under the path of that value and rolls the whole update back" do
+      expect(result).not_to be_success
+      expect(result.error.messages.keys).to eq([:"values[1].value"])
+      expect(product_filter.reload.to_h).to eq("region" => %w[us])
+      expect(product_filter.name).to eq("Before")
+    end
+  end
+
   describe "code editability" do
     let(:params) { {code: "after"} }
 

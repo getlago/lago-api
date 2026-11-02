@@ -90,6 +90,12 @@ class BaseService
     end
     private_class_method :bound_of, :text?
 
+    # The field of the n-th element of a list in the request, such as rates[1].code, or rates[1] for an
+    # error on the element as a whole.
+    def self.item_field(list, index, field)
+      (field.to_sym == :base) ? :"#{list}[#{index}]" : :"#{list}[#{index}].#{field}"
+    end
+
     def initialize(result, messages:, meta: {}, codes: nil)
       @messages = messages
       @meta = meta
