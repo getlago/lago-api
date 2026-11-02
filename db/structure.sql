@@ -25,6 +25,7 @@ ALTER TABLE IF EXISTS ONLY public.usage_attribution_types DROP CONSTRAINT IF EXI
 ALTER TABLE IF EXISTS ONLY public.billing_entities DROP CONSTRAINT IF EXISTS fk_rails_f66617edcb;
 ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS fk_rails_f53ff93138;
 ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS fk_rails_f510acb495;
+ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_f485cf0ace;
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_f435d13904;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_f375d320ad;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_f32b205d44;
@@ -93,6 +94,7 @@ ALTER TABLE IF EXISTS ONLY public.invites DROP CONSTRAINT IF EXISTS fk_rails_c71
 ALTER TABLE IF EXISTS ONLY public.customers_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_c64033bcb0;
 ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_c60c12efbd;
 ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS fk_rails_c545103d57;
+ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_c4dcd99ad0;
 ALTER TABLE IF EXISTS ONLY public.x402_settlements DROP CONSTRAINT IF EXISTS fk_rails_c4c81e73af;
 ALTER TABLE IF EXISTS ONLY public.cs_admin_audit_logs DROP CONSTRAINT IF EXISTS fk_rails_c47aa068a0;
 ALTER TABLE IF EXISTS ONLY public.active_storage_attachments DROP CONSTRAINT IF EXISTS fk_rails_c3b3935057;
@@ -402,6 +404,7 @@ ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.pending_vies_checks DROP CONSTRAINT IF EXISTS fk_rails_019e2289e5;
 ALTER TABLE IF EXISTS ONLY public.payment_methods DROP CONSTRAINT IF EXISTS fk_rails_00e7a45b0b;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_fees_contract_rate_card_contract;
+ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_daily_usages_contract_rate_card_contract;
 DROP TRIGGER IF EXISTS record_deletions_on_invoices_taxes ON public.invoices_taxes;
 DROP TRIGGER IF EXISTS record_deletions_on_invoice_subscriptions ON public.invoice_subscriptions;
 DROP TRIGGER IF EXISTS record_deletions_on_fees_taxes ON public.fees_taxes;
@@ -883,8 +886,11 @@ DROP INDEX IF EXISTS public.index_data_export_parts_on_data_export_id;
 DROP INDEX IF EXISTS public.index_daily_usages_on_usage_date;
 DROP INDEX IF EXISTS public.index_daily_usages_on_subscription_id_and_usage_date;
 DROP INDEX IF EXISTS public.index_daily_usages_on_subscription_id;
+DROP INDEX IF EXISTS public.index_daily_usages_on_organization_id_and_external_contract_id;
 DROP INDEX IF EXISTS public.index_daily_usages_on_organization_id;
 DROP INDEX IF EXISTS public.index_daily_usages_on_customer_id;
+DROP INDEX IF EXISTS public.index_daily_usages_on_contract_rate_card_id_and_usage_date;
+DROP INDEX IF EXISTS public.index_daily_usages_on_contract_id_and_usage_date;
 DROP INDEX IF EXISTS public.index_customers_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_customers_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_customers_taxes_on_customer_id_and_tax_id;
@@ -1437,6 +1443,7 @@ DROP VIEW IF EXISTS public.exports_credit_notes_taxes;
 DROP VIEW IF EXISTS public.exports_credit_notes;
 DROP TABLE IF EXISTS public.item_metadata;
 DROP VIEW IF EXISTS public.exports_coupons;
+DROP VIEW IF EXISTS public.exports_contract_daily_usages;
 DROP VIEW IF EXISTS public.exports_charges;
 DROP VIEW IF EXISTS public.exports_billing_entities;
 DROP VIEW IF EXISTS public.exports_billable_metrics;
@@ -3191,8 +3198,8 @@ CREATE TABLE public.daily_usages (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     organization_id uuid NOT NULL,
     customer_id uuid NOT NULL,
-    subscription_id uuid NOT NULL,
-    external_subscription_id character varying NOT NULL,
+    subscription_id uuid,
+    external_subscription_id character varying,
     from_datetime timestamp(6) without time zone NOT NULL,
     to_datetime timestamp(6) without time zone NOT NULL,
     usage jsonb DEFAULT '"{}"'::jsonb NOT NULL,
@@ -3200,7 +3207,11 @@ CREATE TABLE public.daily_usages (
     updated_at timestamp(6) without time zone NOT NULL,
     refreshed_at timestamp(6) without time zone NOT NULL,
     usage_diff jsonb DEFAULT '"{}"'::jsonb NOT NULL,
-    usage_date date
+    usage_date date,
+    contract_id uuid,
+    contract_rate_card_id uuid,
+    external_contract_id character varying,
+    CONSTRAINT daily_usages_subscription_or_contract CHECK ((((subscription_id IS NOT NULL) AND (external_subscription_id IS NOT NULL) AND (contract_id IS NULL) AND (contract_rate_card_id IS NULL) AND (external_contract_id IS NULL)) OR ((subscription_id IS NULL) AND (external_subscription_id IS NULL) AND (contract_id IS NOT NULL) AND (contract_rate_card_id IS NOT NULL) AND (external_contract_id IS NOT NULL))))
 );
 
 
@@ -3606,6 +3617,29 @@ CREATE VIEW public.exports_charges AS
 
 
 --
+-- Name: exports_contract_daily_usages; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_contract_daily_usages AS
+ SELECT du.organization_id,
+    du.id AS lago_id,
+    du.from_datetime,
+    du.to_datetime,
+    du.refreshed_at,
+    du.usage_date,
+    du.usage AS daily_usage,
+    du.usage_diff AS daily_usage_diff,
+    du.created_at,
+    du.updated_at,
+    du.customer_id AS lago_customer_id,
+    du.contract_id AS lago_contract_id,
+    du.external_contract_id,
+    du.contract_rate_card_id AS lago_contract_rate_card_id
+   FROM public.daily_usages du
+  WHERE (du.contract_id IS NOT NULL);
+
+
+--
 -- Name: exports_coupons; Type: VIEW; Schema: public; Owner: -
 --
 
@@ -3898,7 +3932,8 @@ CREATE VIEW public.exports_daily_usages AS
     du.customer_id AS lago_customer_id,
     du.subscription_id AS lago_subscription_id,
     du.external_subscription_id
-   FROM public.daily_usages du;
+   FROM public.daily_usages du
+  WHERE (du.contract_id IS NULL);
 
 
 --
@@ -9703,6 +9738,20 @@ CREATE INDEX index_customers_taxes_on_tax_id ON public.customers_taxes USING btr
 
 
 --
+-- Name: index_daily_usages_on_contract_id_and_usage_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_daily_usages_on_contract_id_and_usage_date ON public.daily_usages USING btree (contract_id, usage_date) WHERE (contract_id IS NOT NULL);
+
+
+--
+-- Name: index_daily_usages_on_contract_rate_card_id_and_usage_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_daily_usages_on_contract_rate_card_id_and_usage_date ON public.daily_usages USING btree (contract_rate_card_id, usage_date) WHERE (contract_id IS NOT NULL);
+
+
+--
 -- Name: index_daily_usages_on_customer_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9714,6 +9763,13 @@ CREATE INDEX index_daily_usages_on_customer_id ON public.daily_usages USING btre
 --
 
 CREATE INDEX index_daily_usages_on_organization_id ON public.daily_usages USING btree (organization_id);
+
+
+--
+-- Name: index_daily_usages_on_organization_id_and_external_contract_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_daily_usages_on_organization_id_and_external_contract_id ON public.daily_usages USING btree (organization_id, external_contract_id) WHERE (contract_id IS NOT NULL);
 
 
 --
@@ -13052,6 +13108,14 @@ CREATE CONSTRAINT TRIGGER record_deletions_on_invoices_taxes AFTER DELETE ON pub
 
 
 --
+-- Name: daily_usages fk_daily_usages_contract_rate_card_contract; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.daily_usages
+    ADD CONSTRAINT fk_daily_usages_contract_rate_card_contract FOREIGN KEY (contract_rate_card_id, contract_id) REFERENCES public.contract_rate_cards(id, contract_id);
+
+
+--
 -- Name: fees fk_fees_contract_rate_card_contract; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -15524,6 +15588,14 @@ ALTER TABLE ONLY public.x402_settlements
 
 
 --
+-- Name: daily_usages fk_rails_c4dcd99ad0; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.daily_usages
+    ADD CONSTRAINT fk_rails_c4dcd99ad0 FOREIGN KEY (contract_rate_card_id) REFERENCES public.contract_rate_cards(id);
+
+
+--
 -- Name: pricing_unit_usages fk_rails_c545103d57; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -16068,6 +16140,14 @@ ALTER TABLE ONLY public.invoice_subscriptions
 
 
 --
+-- Name: daily_usages fk_rails_f485cf0ace; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.daily_usages
+    ADD CONSTRAINT fk_rails_f485cf0ace FOREIGN KEY (contract_id) REFERENCES public.contracts(id);
+
+
+--
 -- Name: quantified_events fk_rails_f510acb495; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -16209,6 +16289,11 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261103084714'),
 ('20261103084708'),
 ('20261102160958'),
+('20261102101504'),
+('20261102101503'),
+('20261102101502'),
+('20261102101501'),
+('20261102101500'),
 ('20261101111004'),
 ('20261029112805'),
 ('20261029111437'),

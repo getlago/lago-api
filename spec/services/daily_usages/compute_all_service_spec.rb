@@ -286,6 +286,59 @@ RSpec.describe DailyUsages::ComputeAllService do
       end
     end
 
+    context "with a contract" do
+      let(:contract) { create(:contract, organization:, customer:) }
+      let(:product) { create(:product, organization:) }
+      let(:rate_card) { create(:rate_card, organization:, product:) }
+      let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:) }
+
+      before do
+        contract_rate_card
+        create(:rate_card_rate, organization:, rate_card:)
+      end
+
+      it "enqueues a job to compute the daily usage of the contract" do
+        expect(compute_service.call).to be_success
+        expect(DailyUsages::ComputeContractJob).to have_been_enqueued.with(contract, timestamp:).at(a_value_between(0.minutes.from_now, 30.minutes.from_now))
+      end
+
+      context "when the contract usage was already computed" do
+        before { create(:daily_usage, :contract, customer:, contract:, contract_rate_card:, usage_date: timestamp.to_date - 1.day) }
+
+        it "does not enqueue any job for the contract" do
+          expect(compute_service.call).to be_success
+          expect(DailyUsages::ComputeContractJob).not_to have_been_enqueued
+        end
+      end
+
+      context "when the contract is not active" do
+        let(:contract) { create(:contract, :pending, organization:, customer:) }
+
+        it "does not enqueue any job for the contract" do
+          expect(compute_service.call).to be_success
+          expect(DailyUsages::ComputeContractJob).not_to have_been_enqueued
+        end
+      end
+
+      context "when the contract has no metered card" do
+        let(:product) { create(:product, :fixed, organization:) }
+
+        it "does not enqueue any job for the contract" do
+          expect(compute_service.call).to be_success
+          expect(DailyUsages::ComputeContractJob).not_to have_been_enqueued
+        end
+      end
+
+      context "when the customer is not entering a new day" do
+        let(:timestamp) { Time.zone.parse("2024-10-22 12:05:00") }
+
+        it "does not enqueue any job for the contract" do
+          expect(compute_service.call).to be_success
+          expect(DailyUsages::ComputeContractJob).not_to have_been_enqueued
+        end
+      end
+    end
+
     context "when revenue_analytics premium integration flag is not present" do
       let(:organization) { create_default(:organization, premium_integrations: []) }
 

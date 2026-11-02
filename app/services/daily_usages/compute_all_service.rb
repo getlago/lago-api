@@ -41,7 +41,12 @@ module DailyUsages
       # once per organization, instead of three times (once per leg) if it lived in base_scope.
       ids.subtract(already_computed_subscription_ids(organization))
 
-      enqueue(ids)
+      enqueue(Subscription, DailyUsages::ComputeJob, ids)
+
+      contract_ids = metered_contracts(organization).pluck("contracts.id").to_set
+      contract_ids.subtract(already_computed_contract_ids(organization))
+
+      enqueue(Contract, DailyUsages::ComputeContractJob, contract_ids)
     end
 
     def report_failure(organization, error)
@@ -123,32 +128,54 @@ module DailyUsages
         .select("charges.plan_id")
     end
 
-    # Load the matched subscriptions by primary key (cheap, indexed) and enqueue, in bounded slices
+    # Contracts have no last received event to select on: every active contract with a metered
+    # card is computed once a day, in the window its customer enters a new day.
+    def metered_contracts(organization)
+      Contract.where(organization_id: organization.id)
+        .active
+        .where(id: metered_contract_ids(organization))
+        .joins(customer: :billing_entity)
+        .where(timezone_window_sql, timestamp:)
+    end
+
+    # Returned as a relation so it composes as a subquery.
+    def metered_contract_ids(organization)
+      ContractRateCard.where(organization_id: organization.id)
+        .priced
+        .joins(rate_card: :product)
+        .where(products: {product_type: Product::PRODUCT_TYPES[:metered]})
+        .select(:contract_id)
+    end
+
+    # Load the matched records by primary key (cheap, indexed) and enqueue, in bounded slices
     # so we never hold more than ENQUEUE_BATCH_SIZE records in memory at once.
-    def enqueue(ids)
+    def enqueue(model, job, ids)
       ids.each_slice(ENQUEUE_BATCH_SIZE) do |batch|
         # rubocop:disable Rails/FindEach -- each_slice already bounds the batch to ENQUEUE_BATCH_SIZE;
         # find_each would add redundant keyset batching on top of an already-small `id IN (...)` query.
-        Subscription.where(id: batch).each do |subscription|
-          schedule_daily_usage(subscription)
+        model.where(id: batch).each do |record|
+          job.set(wait: job_wait_time).perform_later(record, timestamp:)
         end
         # rubocop:enable Rails/FindEach
       end
     end
 
-    # Subscriptions that already have a daily usage for yesterday (in the customer's timezone).
+    def already_computed_subscription_ids(organization)
+      computed_yesterday(organization).where.not(subscription_id: nil).pluck(:subscription_id)
+    end
+
+    def already_computed_contract_ids(organization)
+      computed_yesterday(organization).where.not(contract_id: nil).distinct.pluck(:contract_id)
+    end
+
+    # Daily usages already computed for yesterday (in the customer's timezone).
     # Pre-filters on the indexed raw usage_date before the timezone-aware match, to avoid scanning
     # the org's whole history.
-    def already_computed_subscription_ids(organization)
+    def computed_yesterday(organization)
       DailyUsage
         .usage_date_in_timezone(timestamp.to_date - 1.day)
         .where(organization_id: organization.id)
         .where(usage_date: (timestamp.to_date - 2.days)..timestamp.to_date)
-        .pluck(:subscription_id)
-    end
-
-    def schedule_daily_usage(subscription)
-      DailyUsages::ComputeJob.set(wait: job_wait_time).perform_later(subscription, timestamp:)
     end
 
     def yesterday

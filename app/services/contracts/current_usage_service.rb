@@ -65,7 +65,7 @@ module Contracts
       cards = contract.applied_rate_cards
         .starting_before_contract_end
         .includes(
-          {rate_card: [:rates, :product_filter, {product: [:billable_metric, :product_category]}]},
+          {rate_card: [:rates, {product_filter: {values: :billable_metric_filter}}, {product: [:billable_metric, :product_category]}]},
           {rate_phases: :rate_override},
           :organization,
           :product
