@@ -48,6 +48,12 @@ module RateCardRates
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue ActiveRecord::RecordNotUnique => e
+      unique_index_failure!(
+        e,
+        "index_rate_card_rates_on_rate_card_id_and_code" => :code,
+        "index_rate_card_rates_on_rate_card_id_and_effective_from" => :effective_from
+      )
     end
 
     private

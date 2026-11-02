@@ -53,6 +53,8 @@ module BillingEntities
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue ActiveRecord::RecordNotUnique => e
+      unique_index_failure!(e, "index_billing_entities_on_code_and_organization_id" => :code)
     rescue BaseService::FailedResult => e
       result.fail_with_error!(e)
     end
