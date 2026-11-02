@@ -387,6 +387,7 @@ RSpec.describe ProductCatalogInvoiceHelper do
     it "does not grow with true-ups and contracts" do
       product_fee(compute, amount_cents: 50, true_up_parent_fee: invoice.fees.find_by(amount_cents: 1_000))
       unnamed_contract_fee(200)
+      contract_blocks_query_count # Warm model schema metadata before comparing query counts.
       baseline = contract_blocks_query_count
 
       product_fee(analytics, amount_cents: 30, true_up_parent_fee: invoice.fees.find_by(amount_cents: 300))
