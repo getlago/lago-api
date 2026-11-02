@@ -25,6 +25,9 @@ module Api
       end
 
       def show
+        # As in index, whose query checks it: the logs live in ClickHouse.
+        return forbidden_error(code: "feature_unavailable") unless Utils::ActivityLog.available?
+
         activity_log = current_organization.activity_logs.find_by(activity_id: params[:activity_id])
 
         return not_found_error(resource: "activity_log") unless activity_log
