@@ -36,8 +36,8 @@ module Contracts
       if apply_taxes && customer_provider_taxation?
         taxes_result = apply_provider_taxes(fees.select(&:taxable?))
         unless taxes_result.success?
-          # The provider refused the taxes, which nothing in the request can fix. Its code may come from
-          # the integration that relays the provider, or from Lago, so it is not given as the provider's.
+          # The taxes failed upstream (a provider refusal, or an error of the integration relaying it), which the
+          # request cannot fix. Its code may be the provider's, the integration's or a Lago fallback, so it is not sent.
           return result.third_party_failure!(
             third_party: customer.tax_customer.integration.provider_key,
             error_code: nil,
