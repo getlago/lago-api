@@ -60,7 +60,7 @@ RSpec.describe ValidationMeta do
         allow(Sentry).to receive(:capture_exception)
       end
 
-      # A min without its max would read as a value without an upper bound.
+      # An entry gives all the facts of its producer or none.
       it "drops the whole meta and reports each bad key" do
         expect(checked).to eq({})
         expect(Rails.logger).to have_received(:warn).with("ValidationMeta: meta max: Float is not a registered key and type")

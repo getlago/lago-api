@@ -23,7 +23,7 @@ module ValidationMeta
   module_function
 
   # The meta as its JSON reads, with Symbol keys. A key not registered with its type raises in development
-  # and test; elsewhere it is reported and the whole meta dropped, so that no client reads a min without its max.
+  # and test; elsewhere it is reported and the whole meta dropped: an entry gives all its producer's facts or none.
   def check(meta)
     checked = (meta || {}).compact.as_json.symbolize_keys
     refused = checked.reject { |key, value| registered?(key, value) }
