@@ -488,6 +488,11 @@ RSpec.describe UsageMonitoring::CreateAlertService do
           let(:billable_metric) { create(:billable_metric, organization:) if alert_type.start_with?("billable_metric") }
           let(:params) { {alert_type:, billable_metric_id: billable_metric&.id, thresholds:, code: "first"} }
 
+          before do
+            create(:standard_charge, organization:, plan: subscription.plan, billable_metric:) if billable_metric
+            create(:lifetime_usage, organization:, subscription:, historical_usage_amount_cents: 90)
+          end
+
           it "starts from 0 so the first evaluation announces the lines already past" do
             expect(result).to be_success
             expect(result.alert).to have_attributes(alert_type:, previous_value: 0, last_processed_at: nil)
