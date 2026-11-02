@@ -69,8 +69,7 @@ RSpec.describe Api::V2::CreditNotesController do
           tax_rate: tax.tax_rate,
           tax_description: tax.tax_description,
           base_amount_cents: 25,
-          amount_cents: 5,
-          currency: "EUR"
+          amount_cents: 5
         }])
       end
     end

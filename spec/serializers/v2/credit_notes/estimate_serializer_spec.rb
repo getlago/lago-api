@@ -34,8 +34,7 @@ RSpec.describe V2::CreditNotes::EstimateSerializer do
         tax_rate: tax.tax_rate,
         tax_description: tax.tax_description,
         base_amount_cents: 2500,
-        amount_cents: 500,
-        currency: "EUR"
+        amount_cents: 500
       }]
     )
   end
@@ -51,8 +50,7 @@ RSpec.describe V2::CreditNotes::EstimateSerializer do
         tax_rate: 20,
         tax_description: tax.tax_description,
         base_amount_cents: 2000,
-        amount_cents: 400,
-        currency: "EUR"
+        amount_cents: 400
       )
     end
   end
@@ -71,8 +69,7 @@ RSpec.describe V2::CreditNotes::EstimateSerializer do
           tax_rate: tax.tax_rate,
           tax_description: tax.tax_description,
           base_amount_cents: 2500,
-          amount_cents: 500,
-          currency: "EUR"
+          amount_cents: 500
         },
         {
           lago_tax_id: second_tax.tax_id,
@@ -81,8 +78,7 @@ RSpec.describe V2::CreditNotes::EstimateSerializer do
           tax_rate: second_tax.tax_rate,
           tax_description: second_tax.tax_description,
           base_amount_cents: 1000,
-          amount_cents: 100,
-          currency: "EUR"
+          amount_cents: 100
         }
       ])
     end

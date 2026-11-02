@@ -61,8 +61,7 @@ RSpec.describe V2::CreditNoteSerializer do
         tax_rate: tax.tax_rate,
         tax_description: tax.tax_description,
         base_amount_cents: 2500,
-        amount_cents: 500,
-        currency: "EUR"
+        amount_cents: 500
       }])
     end
   end
