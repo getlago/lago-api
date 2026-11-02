@@ -2,11 +2,13 @@
 
 module V2
   class CreditNoteSerializer < ModelSerializer
-    expandable :items, serializer: ::V2::CreditNotes::ItemSerializer
-    expandable :applied_taxes, serializer: ::V2::CreditNotes::AppliedTaxSerializer
-    expandable :customer, serializer: ::V2::CustomerSerializer
+    timestamps :created_at, :updated_at
+
+    expandable :items, serializer: ::V2::CreditNotes::ItemSerializer, webhooks: true
+    expandable :applied_taxes, serializer: ::V2::CreditNotes::AppliedTaxSerializer, webhooks: true
+    expandable :customer, serializer: ::V2::CustomerSerializer, webhooks: true
     expandable :error_details, serializer: ::V1::ErrorDetailSerializer
-    expandable :metadata, serializer: ::V1::MetadataSerializer
+    expandable :metadata, serializer: ::V1::MetadataSerializer, webhooks: true
 
     def serialize
       {
@@ -31,8 +33,6 @@ module V2
         credit_amount_cents: model.credit_amount_cents,
         refund_amount_cents: model.refund_amount_cents,
         offset_amount_cents: model.offset_amount_cents,
-        created_at: format_time(model.created_at),
-        updated_at: format_time(model.updated_at),
         file_url: model.file_url,
         xml_url: model.xml_url,
         self_billed: model.invoice.self_billed
