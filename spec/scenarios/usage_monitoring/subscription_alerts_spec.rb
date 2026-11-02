@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require "rake"
 
 describe "Subscriptions Alerting Scenario", :premium, cache: :redis do
   let(:organization) { create(:organization, premium_integrations:) }
@@ -300,6 +301,8 @@ describe "Subscriptions Alerting Scenario", :premium, cache: :redis do
   end
 
   context "when an alert was created from its usage at creation" do
+    before { Rake.application.rake_require("tasks/migrations/announce_missed_alert_thresholds") }
+
     it "announces the passed lines once, from 0" do
       create_subscription({
         external_customer_id: customer.external_id,
@@ -330,7 +333,7 @@ describe "Subscriptions Alerting Scenario", :premium, cache: :redis do
       expect(webhooks_sent.count { it[:webhook_type] == "alert.triggered" }).to eq(0)
 
       freeze_time do
-        UsageMonitoring::AnnounceMissedThresholdsService.call(
+        AnnounceMissedAlertThresholds.call(
           from: 1.hour.ago, to: 1.hour.from_now, organization_id: organization.id, dry_run: false
         )
         perform_all_enqueued_jobs
@@ -365,7 +368,7 @@ describe "Subscriptions Alerting Scenario", :premium, cache: :redis do
       # The next evaluation without new usage and a second run announce nothing again
       UsageMonitoring::SubscriptionActivity.find_or_create_by!(organization:, subscription:)
       perform_usage_update
-      UsageMonitoring::AnnounceMissedThresholdsService.call(
+      AnnounceMissedAlertThresholds.call(
         from: 1.hour.ago, to: 1.hour.from_now, organization_id: organization.id, dry_run: false
       )
       perform_all_enqueued_jobs

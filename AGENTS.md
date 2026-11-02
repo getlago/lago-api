@@ -55,7 +55,7 @@ Never edit the schema files or annotations by hand. Revert changes that do not c
 
 ## Services
 
-Business logic, and every create, update or delete of a model, lives in a service in `app/services`. Model a new one on `app/services/x402/connections/create_service.rb`.
+Business logic, and every create, update or delete of a model, lives in a service in `app/services`, except one-off scripts (see "Migrations"). Model a new one on `app/services/x402/connections/create_service.rb`.
 
 - Name it `<Namespace>::<Action>Service`, such as `Customers::CreateService`.
 - It inherits `BaseService`, stores its keyword arguments in instance variables with private `attr_reader`s, then calls `super`. Its only public method is `call`, without arguments (cop `Lago/ServiceCall`), and it returns `result`.
@@ -114,6 +114,7 @@ Business logic, and every create, update or delete of a model, lives in a servic
 - A constraint added with `validate: false` is validated by a second migration in the same PR. If existing rows must be fixed first, register it in `db/not_valid_constraints.yml` with a `validate_by` date, and remove the entry once the constraint is validated (`spec/db/not_valid_constraints_spec.rb` checks both). Pass `column:` to `validate_foreign_key` when a table has several foreign keys to the same table.
 - Dropping a column or a table takes two releases: follow `docs/dropping_columns_and_tables.md` (cop `Lago/NoDropColumnOrTable`). Always `self.ignored_columns += [...]`, never `=`.
 - Small backfills run in the migration (`Model.unscoped.in_batches.update_all`, as the default scope hides discarded rows). Large ones are a `DatabaseMigrations::*Job` started by a rake task in `lib/tasks/migrations/`, not a job enqueued by a migration. See `app/jobs/database_migrations/backfill_invoices_search_terms_job.rb`.
+- A script meant to run once by hand (a data fix, notices missed by a past bug) is one rake task in `lib/tasks/migrations/`. Its logic stays in the task file, in a class defined there when it needs one (see `lib/tasks/migrations/wallet_traceability.rake`), never in a service in `app/services`. It runs as a dry run unless told otherwise.
 - SQL views use scenic: `db/views/<name>_v01.sql` with `create_view`, then a new numbered file and `update_view` for each change.
 
 ### ClickHouse
