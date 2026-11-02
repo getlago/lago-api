@@ -121,7 +121,7 @@ RSpec.describe RecurringAggregationSnapshots::FetchService do
         it "reads the same buckets from the previous subscription" do
           fetch_service.call
 
-          expect(subscription.previous_recurring_aggregation_snapshots).to have_received(:period).with(charge:, charge_filter:, all_buckets: false)
+          expect(subscription.previous_recurring_aggregation_snapshots).to have_received(:period).with(charge:, charge_filter:, all_buckets: false, grouped_by_values: nil)
         end
       end
 
