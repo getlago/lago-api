@@ -16,6 +16,25 @@ module RecurringAggregationSnapshots
       Net::ReadTimeout
     ].freeze
 
+    # Advance charges and pay in advance invoices can share the boundary of the period.
+    # An active subscription has no terminating invoice.
+    def self.invoiced_periods
+      InvoiceSubscription.subscription_periodic
+        .where.not(timestamp: nil)
+        .where("charges_from_datetime < charges_to_datetime")
+    end
+
+    def self.backfillable_subscriptions(organization)
+      recurring_charges = Charge.joins(:billable_metric).where(
+        organization_id: organization.id,
+        billable_metrics: {recurring: true, aggregation_type: RecurringAggregationSnapshot::AGGREGATION_TYPES}
+      )
+
+      organization.subscriptions.active
+        .where(plan_id: recurring_charges.select(:plan_id))
+        .where(id: invoiced_periods.where(organization_id: organization.id).select(:subscription_id))
+    end
+
     def initialize(subscription:)
       @subscription = subscription
 
@@ -66,15 +85,11 @@ module RecurringAggregationSnapshots
       result.failed_charges << charge
     end
 
-    # Advance charges and pay in advance invoices can share the boundary of the period.
-    # An active subscription has no terminating invoice.
     def invoice_subscription
       return @invoice_subscription if defined?(@invoice_subscription)
 
-      @invoice_subscription = subscription.invoice_subscriptions
-        .subscription_periodic
-        .where.not(timestamp: nil)
-        .where("charges_from_datetime < charges_to_datetime")
+      @invoice_subscription = self.class.invoiced_periods
+        .where(subscription_id: subscription.id)
         .order(charges_to_datetime: :desc, created_at: :desc)
         .first
     end
