@@ -48,7 +48,7 @@ RSpec.describe Resolvers::OrganizationResolver do
       GQL
     end
 
-    let(:membership) { create(:membership) }
+    let(:membership) { create(:membership, organization: create(:organization)) }
 
     before do
       organization.update!(net_payment_term: 30)
