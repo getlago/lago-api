@@ -192,6 +192,8 @@ class Customer < ApplicationRecord
     unless: :deleted_at
   validates :invoice_grace_period, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
   validates :net_payment_term, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
+  # Rows stored above 365 before the cap stay valid until net_payment_term changes
+  validates :net_payment_term, numericality: {less_than_or_equal_to: 365}, allow_nil: true, if: :will_save_change_to_net_payment_term?
   validates :payment_provider, inclusion: {in: PAYMENT_PROVIDERS}, allow_nil: true
   validates :timezone, timezone: true, allow_nil: true
   validates :email, email: true, if: -> { email? && will_save_change_to_email? }
