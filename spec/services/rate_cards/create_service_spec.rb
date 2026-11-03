@@ -162,11 +162,11 @@ RSpec.describe RateCards::CreateService do
     context "when a nested rate is invalid" do
       before { params[:rates] = [{code: "bad", rate_model: "standard", rate_properties: {}, billing_interval_unit: "month", effective_from: Time.current.beginning_of_day.iso8601}] }
 
-      it "returns a validation failure with prefixed keys and creates nothing" do
+      it "returns a validation failure under the path of the rate and creates nothing" do
         expect { result }.not_to change(RateCard, :count)
         expect(result).to be_a(described_class::Result)
         expect(result).not_to be_success
-        expect(result.error.messages[:"rates.rate_properties"]).to be_present
+        expect(result.error.messages.keys).to eq([:"rates[0].rate_properties"])
       end
 
       it "does not enqueue a webhook" do
@@ -260,6 +260,18 @@ RSpec.describe RateCards::CreateService do
     it "returns a not found failure" do
       expect(result).not_to be_success
       expect(result.error.resource).to eq("product")
+    end
+  end
+
+  context "when a concurrent request creates the same code" do
+    before do
+      create(:rate_card, organization:, code: "growth_usd")
+      # The uniqueness validation ran before the concurrent request committed.
+      allow_any_instance_of(ActiveRecord::Validations::UniquenessValidator).to receive(:validate_each) # rubocop:disable RSpec/AnyInstance
+    end
+
+    it "returns the validation error of a taken value" do
+      expect(result.error.messages).to eq(code: ["value_already_exist"])
     end
   end
 end

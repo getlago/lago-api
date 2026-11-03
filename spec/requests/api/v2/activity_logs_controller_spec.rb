@@ -268,6 +268,17 @@ RSpec.describe Api::V2::ActivityLogsController, clickhouse: true do
           expect(response).to be_v2_not_found_error("activity_log")
         end
       end
+
+      context "when activity logs are not available" do
+        before { allow(Utils::ActivityLog).to receive(:available?).and_return(false) }
+
+        it "returns a forbidden error, as the list does" do
+          subject
+
+          expect(response).to have_http_status(:forbidden)
+          expect(json).to eq(code: "feature_unavailable", details: [])
+        end
+      end
     end
   end
 end

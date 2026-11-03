@@ -29,13 +29,17 @@ Rails.application.routes.draw do
     # Drawn first so version-specific routes win recognition; everything else on /api/v2
     # falls through to v1.
     namespace :v2 do
+      resources :billable_metrics, param: :code, code: /.*/, only: %i[index show create update destroy]
       resources :billing_entities, param: :code, constraints: {code: /[^\/]+/}, only: %i[index show create update]
+      resources :payments, only: %i[index show create]
+      resources :payment_requests, only: %i[index show create]
       get "/organizations", to: "organizations#show"
       put "/organizations", to: "organizations#update"
       resources :customers, param: :external_id, constraints: {external_id: /[^\/]+/}, only: %i[index show create update destroy] do
         scope module: :customers do
           post :checkout_url, to: "checkout_urls#create"
           resources :invoices, only: :index
+          resources :credit_notes, only: :index
           resources :payments, only: :index
           resources :payment_requests, only: :index
           resources :payment_methods, only: %i[index destroy] do
@@ -83,7 +87,23 @@ Rails.application.routes.draw do
         put :refresh, on: :member
         put :finalize, on: :member
       end
+      resources :credit_notes, only: %i[index show create update] do
+        post :download_pdf, on: :member
+        post :download_xml, on: :member
+        post :resend_email, on: :member
+        put :void, on: :member
+        post :estimate, on: :collection
+        scope module: :credit_notes do
+          resource :metadata, only: %i[create update destroy] do
+            delete ":key", action: :destroy_key, on: :member
+          end
+        end
+      end
       resources :fees, only: %i[index show update destroy]
+      resources :payment_receipts, only: %i[index show] do
+        post :resend_email, on: :member
+      end
+      resources :webhook_endpoints, only: %i[index show create update destroy]
       # The v2 log endpoints have their own route here and a matching v1 route
       # above, rather than a shared definition, so each version maps to its own
       # controller (v2 for the cursor pagination and v2 error body).
@@ -92,6 +112,10 @@ Rails.application.routes.draw do
       resources :security_logs, param: :log_id, only: %i[index show]
       # An invoice route v2 does not serve is unknown on v2, not a v1 fallback.
       match "invoices(/*path)", to: "/application#not_found", via: :all
+      match "billable_metrics(/*path)", to: "/application#not_found", via: :all
+      # Credit-note paths are native v2 only when explicitly routed above. Do not
+      # let unsupported actions fall through to their v1 beta equivalents.
+      match "credit_notes(/*path)", to: "/application#not_found", via: :all
     end
 
     namespace :v2, module: :v1 do

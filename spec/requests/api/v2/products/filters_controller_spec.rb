@@ -41,6 +41,17 @@ RSpec.describe Api::V2::Products::FiltersController do
       end
     end
 
+    context "when a value has no key" do
+      let(:create_params) { {name: "US", code: "us", values: [{key: region_filter.key, value: "us"}, {value: "eu"}]} }
+
+      it "returns a validation error on the key of that value" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_mandatory", field: "values[1].key", meta: {}}])
+      end
+    end
+
     context "when values reference the metric filter by key" do
       let(:create_params) do
         {name: "US", code: "us_by_key", values: [{key: region_filter.key, value: "us"}]}
@@ -233,6 +244,11 @@ RSpec.describe Api::V2::Products::FiltersController do
     it_behaves_like "a cursor paginated v2 endpoint", collection: :filters, model: ProductFilter do
       let(:paginated_path) { "/api/v2/products/#{product.code}/filters" }
       let(:create_paginated_record) { ->(created_at) { create(:product_filter, organization:, product:, created_at:) } }
+    end
+
+    it_behaves_like "a v2 list filtered on created_at", collection: :filters do
+      let(:filtered_path) { "/api/v2/products/#{product.code}/filters" }
+      let(:create_filtered_record) { ->(created_at) { create(:product_filter, organization:, product:, created_at:) } }
     end
 
     context "with a search term" do

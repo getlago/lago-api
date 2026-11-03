@@ -5,13 +5,14 @@ module Api
     module Customers
       class PaymentMethodsController < BaseController
         cursor_paginated_index(PaymentMethod)
+        date_range_filtered_index(:created_at)
         serializable_with ::V2::PaymentMethodSerializer
 
         def index
           result = ::PaymentMethodsQuery.call(
             organization: current_organization,
             pagination: cursor,
-            filters: {external_customer_id: customer.external_id}
+            filters: {external_customer_id: customer.external_id, **date_range_filters}
           )
 
           if result.success?

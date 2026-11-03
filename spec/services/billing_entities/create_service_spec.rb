@@ -47,6 +47,12 @@ RSpec.describe BillingEntities::CreateService do
         before { result }
       end
 
+      it "mirrors the default alias into the structured payment term when net_payment_term is not provided" do
+        expect(result).to be_success
+        expect(result.billing_entity.reload.net_payment_term).to eq(0)
+        expect(result.billing_entity.reload.payment_term).to eq("term_type" => "net", "days" => 0)
+      end
+
       it "does not set eu_tax_management when not provided" do
         expect(result).to be_success
         expect(result.billing_entity.eu_tax_management).to be false
@@ -177,6 +183,7 @@ RSpec.describe BillingEntities::CreateService do
           expect(result.billing_entity.legal_name).to eq("Legal Name")
           expect(result.billing_entity.legal_number).to eq("Legal Number")
           expect(result.billing_entity.net_payment_term).to eq(90)
+          expect(result.billing_entity.payment_term).to eq("term_type" => "net", "days" => 90)
           expect(result.billing_entity.state).to eq("State")
           expect(result.billing_entity.tax_identification_number).to eq("EU123456789")
           expect(result.billing_entity.vat_rate).to eq(1)
@@ -314,6 +321,20 @@ RSpec.describe BillingEntities::CreateService do
           end
         end
       end
+    end
+  end
+
+  context "when a concurrent request creates the same code", :premium do
+    let(:organization) { create(:organization, premium_integrations: ["multi_entities_enterprise"]) }
+
+    before do
+      create(:billing_entity, organization:, code: "billing-entity")
+      # The uniqueness validation ran before the concurrent request committed.
+      allow_any_instance_of(ActiveRecord::Validations::UniquenessValidator).to receive(:validate_each) # rubocop:disable RSpec/AnyInstance
+    end
+
+    it "returns the validation error of a taken value" do
+      expect(result.error.messages).to eq(code: ["value_already_exist"])
     end
   end
 end

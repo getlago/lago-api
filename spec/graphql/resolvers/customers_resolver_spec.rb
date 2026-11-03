@@ -285,6 +285,182 @@ RSpec.describe Resolvers::CustomersResolver do
         variables: {metadata: [{key: "key_1", value: "value_1"}, {key: "key_2", value: ""}]}
       )
     end
+
+    context "with the capped count metadata" do
+      let(:query) do
+        <<~GQL
+          query($metadata: [CustomerMetadataFilter!]) {
+            customers(page: 1, limit: 1, metadata: $metadata) {
+              collection { id }
+              metadata { totalCount totalCountCapped hasNextPage }
+            }
+          }
+        GQL
+      end
+
+      let(:metadata_filter) { [{key: "key_1", value: "value_1"}, {key: "key_2", value: ""}] }
+      let(:metadata) { execute_query(query:, variables: {metadata: metadata_filter}).dig("data", "customers", "metadata") }
+
+      it "counts only the matching customers" do
+        expect(metadata).to eq(
+          "totalCount" => 1, # customer_with_metadata, the second customer has key_2
+          "totalCountCapped" => false,
+          "hasNextPage" => false
+        )
+      end
+
+      context "when both customers match and exceed the cap" do
+        let(:metadata_filter) { [{key: "key_1", value: "value_1"}] }
+
+        before { stub_const("BaseQuery::CappedTotalCount::MAX_COUNTED_RECORDS", 1) }
+
+        it "caps the total count" do
+          expect(metadata).to eq(
+            "totalCount" => 1, # the stubbed cap, not the 2 customers with key_1
+            "totalCountCapped" => true,
+            "hasNextPage" => true
+          )
+        end
+      end
+    end
+  end
+
+  describe "total count" do
+    let(:page) { 1 }
+    let(:metadata_fields) { "currentPage totalCount totalPages totalCountCapped hasNextPage" }
+    let(:query) do
+      <<~GQL
+        query {
+          customers(page: #{page}, limit: 1) {
+            collection { id }
+            metadata { #{metadata_fields} }
+          }
+        }
+      GQL
+    end
+
+    let(:result) { execute_query(query:) }
+    let(:metadata) { result.dig("data", "customers", "metadata") }
+
+    before do
+      stub_const("BaseQuery::CappedTotalCount::MAX_COUNTED_RECORDS", 3)
+      create_list(:customer, 2, organization:)
+    end
+
+    it "returns the exact total and advertises the next page" do
+      expect(metadata).to eq(
+        "currentPage" => 1,
+        "totalCount" => 2, # the 2 customers, below the cap of 3
+        "totalPages" => 2, # ceil(2 / 1)
+        "totalCountCapped" => false,
+        "hasNextPage" => true
+      )
+    end
+
+    it "does not count customers of another organization" do
+      create(:customer, organization: create(:organization))
+
+      expect(metadata).to eq(
+        "currentPage" => 1,
+        "totalCount" => 2, # the 2 customers of the organization, not the other one's
+        "totalPages" => 2, # ceil(2 / 1)
+        "totalCountCapped" => false,
+        "hasNextPage" => true
+      )
+    end
+
+    context "when the result set exceeds the cap" do
+      before { stub_const("BaseQuery::CappedTotalCount::MAX_COUNTED_RECORDS", 1) }
+
+      it "caps the total and keeps advertising the next page" do
+        expect(metadata).to eq(
+          "currentPage" => 1,
+          "totalCount" => 1, # the stubbed cap, not the 2 customers
+          "totalPages" => 1, # ceil(1 / 1)
+          "totalCountCapped" => true,
+          "hasNextPage" => true
+        )
+      end
+
+      context "when the app selects only the current metadata fields" do
+        let(:metadata_fields) { "currentPage totalCount totalPages" }
+
+        it "limits the count query to the cap" do
+          count_queries = []
+          callback = lambda do |*, payload|
+            count_queries << payload[:sql] if payload[:sql].match?(/SELECT COUNT/i) && payload[:sql].include?('"customers"')
+          end
+          ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { result }
+
+          expect(metadata).to eq(
+            "currentPage" => 1,
+            "totalCount" => 1, # the stubbed cap, not the 2 customers
+            "totalPages" => 1 # ceil(1 / 1)
+          )
+          expect(count_queries).not_to be_empty
+          expect(count_queries).to all(include("LIMIT"))
+        end
+      end
+
+      context "when on the last page" do
+        let(:page) { 2 }
+
+        it "reports no next page" do
+          expect(metadata).to include("totalCountCapped" => true, "hasNextPage" => false)
+        end
+      end
+    end
+
+    context "when the results land exactly on the cap" do
+      before { stub_const("BaseQuery::CappedTotalCount::MAX_COUNTED_RECORDS", 2) }
+
+      it "reports the total as exact" do
+        expect(metadata).to eq(
+          "currentPage" => 1,
+          "totalCount" => 2, # the 2 customers, equal to the cap
+          "totalPages" => 2, # ceil(2 / 1)
+          "totalCountCapped" => false,
+          "hasNextPage" => true
+        )
+      end
+
+      context "when on the last page" do
+        let(:page) { 2 }
+
+        it "reports no next page" do
+          expect(metadata).to include("totalCountCapped" => false, "hasNextPage" => false)
+        end
+      end
+
+      context "when past the last page" do
+        let(:page) { 3 }
+
+        it "reports no next page" do
+          expect(result.dig("data", "customers", "collection")).to eq([])
+          expect(metadata).to include("hasNextPage" => false)
+        end
+      end
+    end
+  end
+
+  context "when a filter is refused by the query contract" do
+    let(:query) do
+      <<~GQL
+        query($billingEntityIds: [ID!]) {
+          customers(page: 1, limit: 5, billingEntityIds: $billingEntityIds) {
+            collection { id }
+            metadata { currentPage totalCount }
+          }
+        }
+      GQL
+    end
+
+    let(:result) { execute_query(query:, variables: {billingEntityIds: ["not-a-uuid"]}) }
+
+    it "returns a validation error" do
+      expect(result["data"]).to be_nil
+      expect_graphql_error(result:, message: "Unprocessable Entity", details: {billingEntityIds: {0 => ["is in invalid format"]}})
+    end
   end
 
   context "with N+1 query detection on associations", bullet: {unused_eager_loading: false} do

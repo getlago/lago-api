@@ -2,6 +2,8 @@
 
 module V2
   class RateOverrideSerializer < ModelSerializer
+    timestamps :deleted_at
+
     def serialize
       {
         lago_id: model.id,
@@ -10,8 +12,7 @@ module V2
         min_amount_cents: model.min_amount_cents,
         billing_interval_count: model.billing_interval_count,
         billing_interval_unit: model.billing_interval_unit,
-        pricing_unit_conversion_rate: model.pricing_unit_conversion_rate,
-        deleted_at: format_time(model.deleted_at)
+        pricing_unit_conversion_rate: model.pricing_unit_conversion_rate
       }
     end
   end

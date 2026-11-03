@@ -69,6 +69,24 @@ RSpec.describe Mutations::Invoices::ResendEmail do
     end
   end
 
+  context "when a recipient has an invalid email format" do
+    it "returns the sentence that GraphQL clients read" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {input: {id: invoice.id, to: ["not-an-email"]}}
+      )
+
+      expect(result["errors"].first["extensions"]).to eq(
+        "status" => 422,
+        "code" => "unprocessable_entity",
+        "details" => {"to" => ["invalid email format: not-an-email"]}
+      )
+    end
+  end
+
   context "when invoice does not exist" do
     it "returns a not found error" do
       result = execute_graphql(

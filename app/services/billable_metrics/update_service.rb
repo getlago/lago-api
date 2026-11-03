@@ -4,9 +4,17 @@ module BillableMetrics
   class UpdateService < BaseService
     Result = BaseResult[:billable_metric]
 
-    def initialize(billable_metric:, params:)
+    # Fields that stop being editable once the metric is attached to a plan.
+    LOCKED_FIELDS = %i[
+      code aggregation_type weighted_interval field_name recurring rounding_function rounding_precision expression
+    ].freeze
+
+    # v1 and GraphQL ignore changes to the locked fields; native v2 refuses them with
+    # `reject_locked_changes: true`.
+    def initialize(billable_metric:, params:, reject_locked_changes: false)
       @billable_metric = billable_metric
       @params = params
+      @reject_locked_changes = reject_locked_changes
 
       super
     end
@@ -26,6 +34,12 @@ module BillableMetrics
       end
 
       billable_metric.with_lock do
+        attached_to_plan = billable_metric.attached_to_plan?
+
+        if attached_to_plan && reject_locked_changes && locked_changes.any?
+          return result.validation_failure!(errors: locked_changes.index_with { ["attached_to_plan"] })
+        end
+
         billable_metric.name = params[:name] if params.key?(:name)
         billable_metric.description = params[:description] if params.key?(:description)
 
@@ -38,7 +52,7 @@ module BillableMetrics
 
         # NOTE: Only name and description are editable if billable metric
         #       is attached to a plan
-        unless billable_metric.attached_to_plan?
+        unless attached_to_plan
           billable_metric.code = params[:code] if params.key?(:code)
           billable_metric.aggregation_type = params[:aggregation_type]&.to_sym if params.key?(:aggregation_type)
           billable_metric.weighted_interval = params[:weighted_interval]&.to_sym if params.key?(:weighted_interval)
@@ -69,8 +83,15 @@ module BillableMetrics
 
     private
 
-    attr_reader :billable_metric, :params
+    attr_reader :billable_metric, :params, :reject_locked_changes
 
     delegate :organization, to: :billable_metric
+
+    # Cast as the column would, so that a client sending back the current values is not refused.
+    def locked_changes
+      @locked_changes ||= LOCKED_FIELDS.select do |field|
+        params.key?(field) && BillableMetric.type_for_attribute(field).cast(params[field]) != billable_metric.public_send(field)
+      end
+    end
   end
 end

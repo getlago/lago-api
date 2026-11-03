@@ -38,7 +38,8 @@ RSpec.describe Invoices::CalculateFeesService do
       started_at:,
       created_at:,
       status:,
-      terminated_at:
+      terminated_at:,
+      trial_ended_at:
     )
   end
 
@@ -73,6 +74,7 @@ RSpec.describe Invoices::CalculateFeesService do
   let(:started_at) { Time.zone.now - 2.years }
   let(:created_at) { started_at }
   let(:terminated_at) { nil }
+  let(:trial_ended_at) { nil }
   let(:status) { :active }
 
   let(:plan) { create(:plan, organization:, interval:, pay_in_advance:, trial_period:) }
@@ -1462,6 +1464,54 @@ RSpec.describe Invoices::CalculateFeesService do
 
           expect(result).to be_success
           expect(invoice.fees.fixed_charge.count).to eq(1)
+        end
+      end
+
+      context "when the trial ends after the billing timestamp" do
+        let(:trial_period) { 10 }
+        let(:started_at) { Time.zone.parse("2024-09-25 12:00:00") }
+        let(:timestamp) { Time.zone.parse("2024-10-01 00:00:00") }
+
+        before { travel_to(Time.zone.parse("2024-10-07 12:00:00")) }
+
+        it "does not create a subscription fee when calculated after the trial ended" do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(invoice.fees.subscription.count).to eq(0)
+        end
+
+        context "when the trial end is recorded" do
+          let(:trial_ended_at) { started_at + trial_period.days }
+
+          it "does not create a subscription fee for a billing timestamp during the trial" do
+            result = invoice_service.call
+
+            expect(result).to be_success
+            expect(invoice.fees.subscription.count).to eq(0)
+          end
+        end
+
+        context "when the recorded trial ended before the billing timestamp" do
+          let(:trial_ended_at) { Time.zone.parse("2024-09-27 12:00:00") }
+
+          it "creates a subscription fee even if the plan's trial period ends later" do
+            result = invoice_service.call
+
+            expect(result).to be_success
+            expect(invoice.fees.subscription.sole.amount_cents).to be_positive
+          end
+        end
+
+        context "when the trial ends on the billing day" do
+          let(:started_at) { Time.zone.parse("2024-09-21 12:00:00") }
+
+          it "creates a subscription fee" do
+            result = invoice_service.call
+
+            expect(result).to be_success
+            expect(invoice.fees.subscription.count).to eq(1)
+          end
         end
       end
 

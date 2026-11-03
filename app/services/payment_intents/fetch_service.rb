@@ -34,6 +34,11 @@ module PaymentIntents
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    # A concurrent request created the active intent first. Retried, the request uses it.
+    rescue ActiveRecord::RecordNotUnique => e
+      raise unless violated_unique_index(e) == "index_payment_intents_on_invoice_id_and_status"
+
+      result.lock_acquisition_failure!(message: e.message, error: e)
     rescue BaseService::FailedResult => e
       e.result
     end

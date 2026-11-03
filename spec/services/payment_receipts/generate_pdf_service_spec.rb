@@ -69,6 +69,31 @@ RSpec.describe PaymentReceipts::GeneratePdfService do
       end
     end
 
+    context "when related to a catalog invoice of fees paid in advance" do
+      let(:invoice) { create(:invoice, customer:, status: :finalized, organization:, invoice_type: :advance_charges) }
+      let(:contract) { create(:contract, organization:, customer:) }
+      let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
+
+      before do
+        create(
+          :fee,
+          invoice:,
+          subscription: nil,
+          fee_type: :product,
+          invoiceable: contract_rate_card.rate_card.product,
+          contract:,
+          contract_rate_card:,
+          rate_card_rate: create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card)
+        )
+      end
+
+      it "renders the receipt from the catalog receipt template" do
+        result = payment_receipt_generate_service.call
+
+        expect(result.payment_receipt.file.download).to include("invoice-resume-table", I18n.t("invoice.already_paid"))
+      end
+    end
+
     context "with already generated file" do
       before do
         payment_receipt.file.attach(

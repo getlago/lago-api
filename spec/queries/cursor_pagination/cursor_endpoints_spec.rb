@@ -54,6 +54,22 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
     end
   end
 
+  context "with BillableMetricsQuery" do
+    let(:default_scope) { ->(pagination) { BillableMetricsQuery.call(organization:, pagination:).billable_metrics } }
+    let(:filtered_scope) do
+      lambda do |pagination|
+        BillableMetricsQuery.call(
+          organization:,
+          pagination:,
+          search_term: "requests",
+          filters: {recurring: false, aggregation_types: ["count_agg"], plan_id: SecureRandom.uuid, created_at_from: 1.day.ago.iso8601}
+        ).billable_metrics
+      end
+    end
+
+    it_behaves_like "a keyset-paginated query", table: "billable_metrics", index: "index_billable_metrics_by_cursor"
+  end
+
   context "with BillingEntitiesQuery" do
     let(:organization) { create(:organization, billing_entities: []) }
     let(:filtered_scope) { ->(pagination) { BillingEntitiesQuery.call(organization:, pagination:).billing_entities } }
@@ -102,6 +118,8 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
   end
 
   context "with PaymentRequestsQuery" do
+    let(:default_scope) { ->(pagination) { PaymentRequestsQuery.call(organization:, pagination:).payment_requests } }
+
     let(:filtered_scope) do
       lambda do |pagination|
         PaymentRequestsQuery.call(
@@ -112,7 +130,7 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
       end
     end
 
-    it_behaves_like "a keyset-paginated query", table: "payment_requests"
+    it_behaves_like "a keyset-paginated query", table: "payment_requests", index: "index_payment_requests_by_cursor"
   end
 
   context "with PaymentsQuery" do
@@ -369,5 +387,35 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
     end
 
     it_behaves_like "a keyset-paginated query", table: "contract_rate_cards", index: "index_contract_rate_cards_by_cursor"
+  end
+
+  context "with PaymentReceiptsQuery" do
+    let(:filtered_scope) do
+      lambda do |pagination|
+        PaymentReceiptsQuery.call(
+          organization:,
+          pagination:,
+          filters: {invoice_id: SecureRandom.uuid, created_at_from: "2026-10-01", created_at_to: "2026-10-31"}
+        ).payment_receipts
+      end
+    end
+
+    it_behaves_like "a keyset-paginated query", table: "payment_receipts"
+  end
+
+  # An organization has at most WebhookEndpoint::LIMIT endpoints: its organization_id index bounds the page.
+  context "with WebhookEndpointsQuery" do
+    let(:filtered_scope) do
+      lambda do |pagination|
+        WebhookEndpointsQuery.call(
+          organization:,
+          search_term: "lago",
+          pagination:,
+          filters: {created_at_from: "2026-10-01", created_at_to: "2026-10-31"}
+        ).webhook_endpoints
+      end
+    end
+
+    it_behaves_like "a keyset-paginated query", table: "webhook_endpoints"
   end
 end

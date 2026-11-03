@@ -18,7 +18,11 @@ module Contracts
 
     def call
       if filters[:product_type].present? && !Product::PRODUCT_TYPES.value?(filters[:product_type])
-        return result.single_validation_failure!(field: :product_type, error_code: "value_is_invalid")
+        return result.single_validation_failure!(
+          field: :product_type,
+          error_code: "value_is_invalid",
+          meta: {allowed_values: Product::PRODUCT_TYPES.values}
+        )
       end
 
       result.contract = contract
@@ -35,7 +39,11 @@ module Contracts
       fees = result.rate_card_usages.flat_map(&:fees)
       if apply_taxes && customer_provider_taxation?
         taxes_result = apply_provider_taxes(fees.select(&:taxable?))
-        return result.validation_failure!(errors: {tax_error: [taxes_result.error.message]}) unless taxes_result.success?
+        unless taxes_result.success?
+          # The taxes failed upstream (a provider refusal, or an error of the integration relaying it), which the
+          # request cannot fix. Its code may be the provider's, the integration's or a Lago fallback, so it is not sent.
+          return result.third_party_failure!(third_party: tax_provider, error_code: nil, error_message: taxes_result.error.message)
+        end
       elsif apply_taxes
         fees.each { |fee| Fees::ApplyTaxesService.call!(fee:, customer:) }
       end
@@ -46,6 +54,11 @@ module Contracts
       result
     rescue BaseService::ThrottlingError => error
       result.too_many_provider_requests_failure!(provider_name: error.provider_name, error:)
+    rescue Integrations::Aggregator::RequestLimitError => error
+      result.too_many_provider_requests_failure!(provider_name: tax_provider, error:)
+    # The tax jobs retry on these transient errors, which a request cannot wait for.
+    rescue *Integrations::Aggregator::BaseService.retryable_errors => error
+      result.third_party_failure!(third_party: tax_provider, error_code: nil, error_message: error.message)
     end
 
     private
@@ -144,6 +157,10 @@ module Contracts
       end
 
       taxes_result
+    end
+
+    def tax_provider
+      customer.tax_customer.integration.provider_key
     end
 
     # Never saved: it only carries what the provider prices a draft with.

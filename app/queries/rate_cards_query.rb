@@ -12,7 +12,9 @@ class RateCardsQuery < BaseQuery
     :product_code,
     :product_filter_code,
     :exclude_priced_on_plan_id,
-    :exclude_priced_on_contract_id
+    :exclude_priced_on_contract_id,
+    :created_at_from,
+    :created_at_to
   ]
 
   def call
@@ -33,8 +35,11 @@ class RateCardsQuery < BaseQuery
     rate_cards = with_product_filter_code(rate_cards) if filters.product_filter_code.present?
     rate_cards = without_priced_on(rate_cards, catalog_plan.applied_rate_cards) if filters.exclude_priced_on_plan_id.present?
     rate_cards = without_priced_on(rate_cards, contract.applied_rate_cards) if filters.exclude_priced_on_contract_id.present?
+    rate_cards = with_date_range(rate_cards, :created_at)
 
     result.rate_cards = paginate(rate_cards)
+    result
+  rescue BaseService::FailedResult
     result
   end
 

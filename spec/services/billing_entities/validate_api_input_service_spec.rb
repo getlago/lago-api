@@ -163,12 +163,23 @@ RSpec.describe BillingEntities::ValidateApiInputService do
         context "with #{invalid_value.inspect}" do
           let(:value) { invalid_value }
 
-          it "returns a validation error" do
+          it "returns a validation error with the values allowed" do
             expect(result).to be_failure
             expect(result.error.messages).to eq(field => ["value_is_invalid"])
+            expect(result.error.meta).to eq(field => {allowed_values: described_class::ENUMS[attribute].last.values})
           end
         end
       end
+    end
+  end
+
+  context "with an invalid enum and other invalid fields" do
+    let(:params) { {document_numbering: "invalid", tax_codes: [1], logo: 123} }
+
+    it "returns every error, in order, the values allowed on the enum only" do
+      expect(result.error.messages).to eq(document_numbering: ["value_is_invalid"], tax_codes: ["value_is_invalid"], logo: ["value_is_invalid"])
+      expect(result.error.messages.keys).to eq(%i[document_numbering tax_codes logo])
+      expect(result.error.meta).to eq(document_numbering: {allowed_values: %w[per_customer per_billing_entity]})
     end
   end
 

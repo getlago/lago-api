@@ -34,7 +34,7 @@ module BillableMetrics
         result.options = {running_total: running_total(options)}
         result
       rescue ActiveRecord::StatementInvalid => e
-        result.service_failure!(code: "aggregation_failure", message: e.message)
+        fail_aggregation!(e)
       end
 
       # NOTE: Apply the grouped_by filter to the aggregation
@@ -73,7 +73,7 @@ module BillableMetrics
           group_result
         end
       rescue ActiveRecord::StatementInvalid => e
-        result.service_failure!(code: "aggregation_failure", message: e.message)
+        fail_aggregation!(e)
       end
 
       # With a snapshot period: stored units plus the events they missed. Otherwise invoicing scans
@@ -95,24 +95,10 @@ module BillableMetrics
         return unless billable_metric.recurring?
 
         if (period = delta_period(options))
-          deltas = merge_groups(event_store.grouped_recurring_sum(watermark: delta_watermark(options), period:))
+          deltas = event_store.grouped_recurring_sum(watermark: delta_watermark(options), period:)
           with_grouped_snapshots(deltas.index_by(&:groups))
         elsif options[:recurring_watermark]
-          merge_groups(event_store.grouped_recurring_sum(watermark: options[:recurring_watermark]))
-        end
-      end
-
-      # The stores return one row per blank value ("" and " "), which all read as the null group
-      def merge_groups(results)
-        results.group_by(&:groups).map do |_groups, group_results|
-          group_results.reduce do |sum, row|
-            sum.with(
-              value: sum.value + row.value,
-              snapshot_value: sum.snapshot_value + row.snapshot_value,
-              events_count: sum.events_count + row.events_count,
-              snapshot_events_count: sum.snapshot_events_count + row.snapshot_events_count
-            )
-          end
+          event_store.grouped_recurring_sum(watermark: options[:recurring_watermark])
         end
       end
 
@@ -142,12 +128,9 @@ module BillableMetrics
       end
 
       # Without snapshots, the period still bounds the delta: the bucket starts from zero.
-      # Pay in advance and current usage served by the incremental scan keep their own read.
+      # Current usage served by the incremental scan keeps its own read.
       def delta_period(options)
-        return if initial_period.nil? || options[:is_pay_in_advance]
-        return if options[:is_current_usage] && event_store.incremental_sum?
-
-        initial_period
+        initial_period unless options[:is_current_usage] && event_store.incremental_sum?
       end
 
       # Current usage persists no snapshot: its delta needs no watermark of its own.

@@ -13,11 +13,17 @@ module Api
       }.freeze
 
       cursor_paginated_index(BillingEntity)
+      date_range_filtered_index(:created_at)
       serializable_with ::V2::BillingEntitySerializer
 
       def index
-        result = ::BillingEntitiesQuery.call(organization: current_organization, pagination: cursor)
-        render_billing_entities(result.billing_entities.with_attached_logo.preload(organization: :default_billing_entity))
+        result = ::BillingEntitiesQuery.call(organization: current_organization, pagination: cursor, filters: date_range_filters)
+
+        if result.success?
+          render_billing_entities(result.billing_entities.with_attached_logo.preload(organization: :default_billing_entity))
+        else
+          render_error_response(result)
+        end
       end
 
       def show

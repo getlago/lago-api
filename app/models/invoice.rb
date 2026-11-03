@@ -935,9 +935,12 @@ end
 #  index_invoices_by_cursor                                        (organization_id,issuing_date DESC,created_at DESC,id)
 #  index_invoices_on_customer_billing_entity_sequential            (customer_id,billing_entity_id,sequential_id) UNIQUE
 #  index_invoices_on_number                                        (number)
+#  index_invoices_on_organization_id_and_created_at                (organization_id,created_at)
 #  index_invoices_on_organization_id_and_customer_id               (customer_id,organization_id)
+#  index_invoices_on_organization_id_invoice_type_cursor           (organization_id,invoice_type,issuing_date DESC,created_at DESC,id)
 #  index_invoices_on_organization_id_lower_purchase_order_number   (organization_id, lower((purchase_order_number)::text))
 #  index_invoices_on_organization_id_number_gin_trgm_ops           (organization_id,number) USING gin
+#  index_invoices_on_organization_id_overdue_cursor                (organization_id,issuing_date DESC,created_at DESC,id) WHERE (payment_overdue = true)
 #  index_invoices_on_organization_id_search_terms_gin_trgm_ops     (organization_id,search_terms) USING gin
 #  index_invoices_on_payment_due_date                              (payment_due_date) WHERE ((status = 1) AND (payment_status <> 1) AND (payment_overdue = false) AND (payment_dispute_lost_at IS NULL))
 #  index_invoices_on_payment_method_id                             (payment_method_id)

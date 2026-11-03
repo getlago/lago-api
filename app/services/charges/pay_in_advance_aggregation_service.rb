@@ -12,6 +12,7 @@ module Charges
     end
 
     def call
+      initial_value, initial_period = recurring_initial_value
       aggregator = BillableMetrics::AggregationFactory.new_instance(
         metered_item:,
         billing_context:,
@@ -21,7 +22,9 @@ module Charges
           charges_duration: metered_item.boundaries.charges_duration,
           max_timestamp: metered_item.event.timestamp
         },
-        filters: aggregation_filters
+        filters: aggregation_filters,
+        initial_value:,
+        initial_period:
       )
 
       aggregation_result = aggregator.aggregate(options: aggregation_options)
@@ -38,6 +41,18 @@ module Charges
         free_units_per_events: metered_item.properties["free_units_per_events"].to_i,
         free_units_per_total_aggregation: BigDecimal(metered_item.properties["free_units_per_total_aggregation"] || 0)
       }
+    end
+
+    def recurring_initial_value
+      return unless RecurringAggregationSnapshot.readable?(metered_item:, billing_context:)
+
+      fetched = RecurringAggregationSnapshots::FetchService.call!(
+        **RecurringAggregationSnapshot.fetch_arguments(metered_item:, billing_context:),
+        grouped_by_values: metered_item.grouped_by_values,
+        all_buckets: false
+      )
+
+      [fetched.snapshots, fetched.period] if fetched.period
     end
 
     def aggregation_filters

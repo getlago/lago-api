@@ -29,10 +29,11 @@ module Api
       ].freeze
 
       cursor_paginated_index(Customer)
+      date_range_filtered_index(:created_at)
       serializable_with ::V2::CustomerSerializer, serializer_options: {include_shipping_address: true}
 
       def index
-        filters = index_filters.to_h.symbolize_keys
+        filters = index_filters.to_h.symbolize_keys.merge(date_range_filters)
         search_term = filters.delete(:search_term)
         billing_entity_codes = filters.delete(:billing_entity_codes)
 

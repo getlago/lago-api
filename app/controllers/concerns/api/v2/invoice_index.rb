@@ -16,6 +16,7 @@ module Api
 
       included do
         cursor_paginated_index(Invoice, sort: SORT)
+        date_range_filtered_index(:created_at)
       end
 
       private
@@ -24,7 +25,10 @@ module Api
         filters = index_filters
 
         if filters[:invoice_type].present? && !INVOICE_TYPES.key?(filters[:invoice_type])
-          return validation_errors(errors: {invoice_type: ["value_is_invalid"]})
+          return validation_errors(
+            errors: {invoice_type: ["value_is_invalid"]},
+            meta: {invoice_type: {allowed_values: INVOICE_TYPES.keys}}
+          )
         end
 
         billing_entity_codes = Array(filters[:billing_entity_codes]).uniq
@@ -54,7 +58,8 @@ module Api
             product_catalog: true,
             purchase_order_number: filters[:purchase_order_number],
             settlements: filters[:settlements],
-            status: filters[:status] || filters[:statuses]
+            status: filters[:status] || filters[:statuses],
+            **date_range_filters
           }
         )
 

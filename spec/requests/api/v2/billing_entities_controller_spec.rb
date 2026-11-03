@@ -322,7 +322,10 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
         expect { request }.not_to change(organization.all_billing_entities, :count)
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "document_numbering", meta: {}}])
+        expect(json).to eq(
+          code: "validation_errors",
+          details: [{code: "value_is_invalid", field: "document_numbering", meta: {allowed_values: %w[per_customer per_billing_entity]}}]
+        )
       end
     end
 
@@ -403,7 +406,14 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
           expect { request }.not_to change { billing_entity.reload.attributes }
 
           expect(response).to have_http_status(:unprocessable_content)
-          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "periodic_invoice_issuing_date_anchor", meta: {}}])
+          expect(json).to eq(
+            code: "validation_errors",
+            details: [{
+              code: "value_is_invalid",
+              field: "periodic_invoice_issuing_date_anchor",
+              meta: {allowed_values: %w[current_period_end next_period_start]}
+            }]
+          )
         end
       end
 
@@ -812,6 +822,11 @@ RSpec.describe Api::V2::BillingEntitiesController, :premium do
     it_behaves_like "a cursor paginated v2 endpoint", collection: :billing_entities, model: BillingEntity do
       let(:paginated_path) { "/api/v2/billing_entities" }
       let(:create_paginated_record) { ->(created_at) { create(:billing_entity, organization:, created_at:) } }
+    end
+
+    it_behaves_like "a v2 list filtered on created_at", collection: :billing_entities do
+      let(:filtered_path) { "/api/v2/billing_entities" }
+      let(:create_filtered_record) { ->(created_at) { create(:billing_entity, organization:, created_at:) } }
     end
 
     context "with foreign, archived and deleted entities", bullet: {n_plus_one_query: true, unused_eager_loading: false} do

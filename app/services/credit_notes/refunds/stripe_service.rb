@@ -69,9 +69,9 @@ module CreditNotes
         result.service_failure!(code: "stripe_error", message: e.message)
       end
 
-      def update_status(provider_refund_id:, status:, metadata: {})
-        refund = Refund.find_by(provider_refund_id:)
-        return handle_missing_refund(metadata) unless refund
+      def update_status(organization_id:, provider_refund_id:, status:, metadata: {})
+        refund = Refund.find_by(provider_refund_id:, organization_id:)
+        return handle_missing_refund(organization_id, metadata) unless refund
 
         result.refund = refund
         @credit_note = result.credit_note = refund.credit_note
@@ -83,7 +83,7 @@ module CreditNotes
 
         if status.to_sym == :failed
           deliver_error_webhook(message: "Payment refund failed", code: nil)
-          Utils::ActivityLog.produce(credit_note, "credit_note.provider_refund_failure")
+          Utils::ActivityLog.produce(credit_note, "credit_note.refund_failure")
           result.service_failure!(code: "refund_failed", message: "Refund failed to perform")
         end
 
@@ -194,7 +194,7 @@ module CreditNotes
       def handle_refund_failure(message:, code:)
         deliver_error_webhook(message:, code:)
         update_credit_note_status(:failed)
-        Utils::ActivityLog.produce(credit_note, "credit_note.provider_refund_failure")
+        Utils::ActivityLog.produce(credit_note, "credit_note.refund_failure")
       end
 
       def stripe_api_key
@@ -253,12 +253,12 @@ module CreditNotes
         credit_note.save!
       end
 
-      def handle_missing_refund(metadata)
+      def handle_missing_refund(organization_id, metadata)
         # NOTE: Refund was not initiated by lago
         return result unless metadata&.key?(:lago_invoice_id)
 
-        # NOTE: Invoice does not belongs to this lago instance
-        return result unless Invoice.find_by(id: metadata[:lago_invoice_id])
+        # NOTE: Invoice does not belong to this lago organization
+        return result unless Invoice.find_by(id: metadata[:lago_invoice_id], organization_id:)
 
         result.not_found_failure!(resource: "stripe_refund")
       end

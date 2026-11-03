@@ -256,6 +256,14 @@ RSpec.describe ProductFeesQuery do
       end
     end
 
+    context "with a date-only upper bound" do
+      let(:filters) { {created_at_to: "2026-01-10"} }
+
+      it "returns the fees created during that day" do
+        expect(result.fees).to contain_exactly(fee)
+      end
+    end
+
     context "with an invalid date" do
       let(:filters) { {created_at_from: "not-a-date"} }
 

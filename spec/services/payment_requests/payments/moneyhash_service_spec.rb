@@ -216,6 +216,23 @@ RSpec.describe PaymentRequests::Payments::MoneyhashService do
       payment_response_json["data"]["custom_fields"]["lago_payable_type"] = payable.class.name
     end
 
+    context "when payment and payable belong to another organization" do
+      it "does not update the payment nor the payable" do
+        expect do
+          described_class.call(
+            :update_payment_status,
+            organization_id: create(:organization).id,
+            provider_payment_id: payment_response_json.dig("data", "id"),
+            status: payment_response_json.dig("data", "status"),
+            metadata: payment_response_json.dig("data", "custom_fields")
+          )
+        end.not_to change(Payment, :count)
+
+        expect(payment.reload.status).not_to eq("succeeded")
+        expect(payable.reload).not_to be_payment_succeeded
+      end
+    end
+
     context "when payment exists" do
       it "updates payment, payable and invoices status" do
         result = described_class.call(

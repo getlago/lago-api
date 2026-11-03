@@ -108,8 +108,15 @@ RSpec.shared_examples "a result object" do
     it { expect(result.error).to be_a(BaseService::ValidationFailure) }
     it { expect(result.error.messages).to eq({field: ["error"]}) }
     it { expect(result.error.message).to eq('Validation errors: {"field":["error"]}') }
+    it { expect(result.error.meta).to eq({}) }
 
     it { expect { result.raise_if_error! }.to raise_error(BaseService::ValidationFailure) }
+
+    context "when passing meta" do
+      before { result.validation_failure!(errors: {position: ["value_is_out_of_range"]}, meta: {position: {min: 1, max: 3}}) }
+
+      it { expect(result.error.meta).to eq({position: {min: 1, max: 3}}) }
+    end
   end
 
   describe ".record_validation_failure!" do
@@ -124,6 +131,33 @@ RSpec.shared_examples "a result object" do
     it { expect(result.error.message).to eq("Validation errors: #{result.error.messages.to_json}") }
 
     it { expect { result.raise_if_error! }.to raise_error(BaseService::ValidationFailure) }
+
+    context "when an error of the record has a bound" do
+      let(:record) do
+        Customer.new.tap do |customer|
+          customer.errors.add(:external_id, :blank)
+          customer.errors.add(:name, :too_long, count: 255)
+        end
+      end
+
+      it "keeps the messages of the record and takes the meta from the bound" do
+        # The hash of ActiveModel as it is, frozen and with an empty default, not a copy.
+        expect(result.error.messages).to eq({external_id: ["value_is_mandatory"], name: ["value_is_too_long"]})
+        expect(result.error.messages).to be_frozen
+        expect(result.error.messages[:currency]).to eq([])
+        expect(result.error.meta).to eq({name: {max_length: 255}})
+      end
+
+      context "with a block renaming the fields" do
+        before { result.record_validation_failure!(record:) { :"customer.#{it}" } }
+
+        it "renames the fields of the messages and of the meta" do
+          expect(result.error.messages).to eq({"customer.external_id": ["value_is_mandatory"], "customer.name": ["value_is_too_long"]})
+          expect(result.error.meta).to eq({"customer.name": {max_length: 255}})
+          expect(result.error.result).to eq(result)
+        end
+      end
+    end
   end
 
   describe ".single_validation_failure!" do
@@ -134,6 +168,7 @@ RSpec.shared_examples "a result object" do
     it { expect(result.error).to be_a(BaseService::ValidationFailure) }
     it { expect(result.error.messages).to eq({base: ["error_code"]}) }
     it { expect(result.error.message).to eq('Validation errors: {"base":["error_code"]}') }
+    it { expect(result.error.meta).to eq({}) }
 
     it { expect { result.raise_if_error! }.to raise_error(BaseService::ValidationFailure) }
 
@@ -142,6 +177,14 @@ RSpec.shared_examples "a result object" do
 
       it { expect(result.error.messages).to eq({field: ["error"]}) }
       it { expect(result.error.message).to eq('Validation errors: {"field":["error"]}') }
+    end
+
+    context "when passing meta to the failure" do
+      before { result.single_validation_failure!(error_code: "value_is_out_of_range", field: "position", meta: {min: 1, max: 3}) }
+
+      it { expect(result.error.messages).to eq({position: ["value_is_out_of_range"]}) }
+      it { expect(result.error.message).to eq('Validation errors: {"position":["value_is_out_of_range"]}') }
+      it { expect(result.error.meta).to eq({position: {min: 1, max: 3}}) }
     end
   end
 

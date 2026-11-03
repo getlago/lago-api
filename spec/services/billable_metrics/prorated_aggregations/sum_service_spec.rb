@@ -209,6 +209,21 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
       expect(result.aggregation).to eq((1007 + 20 * 18.fdiv(28)).ceil(5))
     end
 
+    context "when the snapshots cannot be read" do
+      it "raises instead of failing as an event aggregation" do
+        period = periods.second
+        period_boundaries = {from_datetime: period.begin, to_datetime: period.end, charges_duration: 28}
+        store = event_store_class.new(code: billable_metric.code, billing_context:, boundaries: period_boundaries, filters:)
+        aggregator = described_class.new(
+          event_store: store, metered_item:, billing_context:, boundaries: period_boundaries, filters:,
+          initial_snapshots: -> { raise ActiveRecord::StatementInvalid, "canceling statement due to statement timeout" }
+        )
+
+        expect { aggregator.aggregate(options: {recurring_watermark: watermark(period)}) }
+          .to raise_error(ActiveRecord::StatementInvalid, /statement timeout/)
+      end
+    end
+
     context "when the bucket had no usage at the end of the previous period" do
       it "starts from zero and only reads the events the period did not count" do
         result = aggregate(periods.second, initial_value: [], initial_period: closed(periods.first))
@@ -296,13 +311,18 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
     end
 
     context "when the charge is paid in advance" do
-      it "ignores the snapshot" do
-        initial_value = [snapshot(periods.first, aggregate(periods.first, initial_value: nil)).with(units: 1000)]
+      let(:initial_value) { [snapshot(periods.first, aggregate(periods.first, initial_value: nil)).with(units: 1000)] }
 
-        result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first), options: {is_pay_in_advance: true, is_current_usage: true})
+      it "bills the full amount from the snapshot" do
+        result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first), options: {is_pay_in_advance: true})
 
-        # Every event since the subscription start: 3 + 10 + 7 + 20
-        expect(result.current_usage_units).to eq(40)
+        expect(result.aggregation).to eq(1000 + 7 + 20)
+      end
+
+      it "reads the current usage from the snapshot" do
+        result = aggregate(periods.second, initial_value:, initial_period: closed(periods.first), options: {recurring_watermark: nil, is_pay_in_advance: true, is_current_usage: true})
+
+        expect(result.current_usage_units).to eq(1000 + 7 + 20)
       end
     end
 

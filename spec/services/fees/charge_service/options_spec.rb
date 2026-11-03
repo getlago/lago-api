@@ -22,7 +22,7 @@ RSpec.describe Fees::ChargeService::Options do
       expect { described_class.new(context: :refresh) }.not_to raise_error
       expect { described_class.new(context: :draft) }.not_to raise_error
       expect { described_class.new(context: :unknown) }
-        .to raise_error(ArgumentError, "context 'unknown' must be one of: advance_renewal, current_usage, invoice_preview, recurring, finalize, refresh, draft")
+        .to raise_error(ArgumentError, "context 'unknown' must be one of: advance_renewal, current_usage, invoice_preview, recurring, finalize, snapshot_backfill, refresh, draft")
     end
 
     it "validates usage filters" do
@@ -48,6 +48,8 @@ RSpec.describe Fees::ChargeService::Options do
       expect(described_class.new(context: :recurring)).to be_recurring
       expect(described_class.new(context: :advance_renewal)).to be_advance_renewal
       expect(described_class.new(context: :finalize)).to be_finalize
+      expect(described_class.new(context: :snapshot_backfill)).to be_snapshot_backfill
+      expect(described_class.new(context: :finalize)).not_to be_snapshot_backfill
     end
   end
 end

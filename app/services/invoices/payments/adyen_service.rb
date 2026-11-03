@@ -20,7 +20,7 @@ module Invoices
         payment = if metadata[:payment_type] == "one-time"
           create_payment(organization_id:, provider_payment_id:, amount_cents:, metadata:)
         else
-          Payment.find_by(provider_payment_id:)
+          Payment.find_by(provider_payment_id:, organization_id:)
         end
         return result unless result.success?
         return result.not_found_failure!(resource: "adyen_payment") unless payment

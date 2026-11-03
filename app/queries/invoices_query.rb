@@ -23,7 +23,9 @@ class InvoicesQuery < BaseQuery
     :purchase_order_number,
     :self_billed,
     :subscription_id,
-    :settlements
+    :settlements,
+    :created_at_from,
+    :created_at_to
   ]
 
   def call
@@ -47,6 +49,7 @@ class InvoicesQuery < BaseQuery
     invoices = with_customer_id(invoices) if filters.customer_id.present?
     invoices = with_invoice_type(invoices) if filters.invoice_type.present?
     invoices = with_issuing_date_range(invoices) if filters.issuing_date_from || filters.issuing_date_to
+    invoices = with_date_range(invoices, :created_at)
     invoices = with_status(invoices)
     invoices = with_payment_status(invoices) if filters.payment_status.present?
     invoices = with_payment_dispute_lost(invoices) unless filters.payment_dispute_lost.nil?

@@ -72,6 +72,19 @@ RSpec.describe Api::V2::TaxesController do
         expect(response).to have_http_status(:unprocessable_content)
         expect(json[:details]).to eq([{code: "value_already_exist", field: "code", meta: {}}])
       end
+
+      context "when a concurrent request took it after the validation" do
+        before do
+          allow_any_instance_of(ActiveRecord::Validations::UniquenessValidator).to receive(:validate_each) # rubocop:disable RSpec/AnyInstance
+        end
+
+        it "returns the same validation error" do
+          request
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_already_exist", field: "code", meta: {}}])
+        end
+      end
     end
   end
 
@@ -212,6 +225,11 @@ RSpec.describe Api::V2::TaxesController do
     it_behaves_like "a cursor paginated v2 endpoint", collection: :taxes, model: Tax do
       let(:paginated_path) { "/api/v2/taxes" }
       let(:create_paginated_record) { ->(created_at) { create(:tax, organization:, created_at:) } }
+    end
+
+    it_behaves_like "a v2 list filtered on created_at", collection: :taxes do
+      let(:filtered_path) { "/api/v2/taxes" }
+      let(:create_filtered_record) { ->(created_at) { create(:tax, organization:, created_at:) } }
     end
 
     context "without product catalog enabled", product_catalog: false do

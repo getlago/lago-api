@@ -39,6 +39,11 @@ RSpec.describe Api::V2::Customers::PaymentMethodsController do
       let(:create_paginated_record) { ->(created_at) { create(:payment_method, organization:, customer:, is_default: false, created_at:) } }
     end
 
+    it_behaves_like "a v2 list filtered on created_at", collection: :payment_methods do
+      let(:filtered_path) { "#{customer_path}/payment_methods" }
+      let(:create_filtered_record) { ->(created_at) { create(:payment_method, organization:, customer:, is_default: false, created_at:) } }
+    end
+
     context "with offset pagination parameters" do
       let(:params) { {page: 2} }
 

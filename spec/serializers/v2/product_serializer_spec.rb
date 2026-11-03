@@ -55,5 +55,15 @@ RSpec.describe V2::ProductSerializer do
     it "embeds the billable metric as V2::BillableMetricSerializer renders it" do
       expect(payload).to eq(flat_payload.merge(billable_metric: V2::BillableMetricSerializer.new(product.billable_metric).serialize))
     end
+
+    context "with a nested filters expansion" do
+      let(:options) { {includes: [{billable_metric: [:filters]}]} }
+
+      before { create(:billable_metric_filter, billable_metric: product.billable_metric) }
+
+      it "keeps the expanded metric flat" do
+        expect(payload).to eq(flat_payload.merge(billable_metric: V2::BillableMetricSerializer.new(product.billable_metric).serialize))
+      end
+    end
   end
 end

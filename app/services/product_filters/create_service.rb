@@ -44,12 +44,9 @@ module ProductFilters
 
       result
     rescue ActiveRecord::RecordInvalid => e
-      if e.record.is_a?(ProductFilterValue)
-        errors = e.record.errors.messages.transform_keys { |key| :"values.#{key}" }
-        result.validation_failure!(errors:)
-      else
-        result.record_validation_failure!(record: e.record)
-      end
+      result.record_validation_failure!(record: e.record)
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e.result.error)
     end
 
     private
@@ -60,13 +57,16 @@ module ProductFilters
       @resolved_values ||= ProductFilters::ResolveValuesService.call(product:, values_params: params[:values])
     end
 
+    # A value its model refuses fails under its path in the request, and rolls the filter back.
     def create_values(product_filter)
-      resolved_values.values_params.each do |value_params|
+      resolved_values.values_params.each_with_index do |value_params, index|
         product_filter.values.create!(
           organization_id: product.organization_id,
           billable_metric_filter_id: value_params[:billable_metric_filter_id],
           value: value_params[:value]
         )
+      rescue ActiveRecord::RecordInvalid => e
+        result.record_validation_failure!(record: e.record) { ResolveValuesService.field(value_params, index, it) }.raise_if_error!
       end
     end
   end
