@@ -329,6 +329,23 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService do
       end
     end
 
+    context "with stripe api error" do
+      before do
+        allow(Stripe::PaymentIntent).to receive(:create)
+          .and_raise(::Stripe::APIError.new("An unknown error occurred", http_status: 500))
+      end
+
+      it "raises a retriable error and keeps the payment pending" do
+        expect { create_service.call }.to raise_error(Invoices::Payments::ConnectionError)
+
+        expect(payment.reload).to have_attributes(
+          status: "pending",
+          payable_payment_status: "pending",
+          provider_payment_id: nil
+        )
+      end
+    end
+
     context "when invoice has a too small amount" do
       let(:organization) { create(:organization) }
       let(:customer) { create(:customer, organization:) }

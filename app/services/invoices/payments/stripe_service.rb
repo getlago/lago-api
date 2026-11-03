@@ -18,6 +18,7 @@ module Invoices
 
       def update_payment_status(organization_id:, status:, stripe_payment:, amount_cents: nil)
         payment = Payment.find_by(provider_payment_id: stripe_payment.id, organization_id:)
+        payment ||= unlinked_payment(organization_id, stripe_payment)
 
         if !payment && stripe_payment.metadata[:payment_type] == "one-time"
           # NOTE: Invoice does not belong to this lago organization
@@ -231,6 +232,17 @@ module Invoices
             error_code: stripe_error.code
           }
         })
+      end
+
+      # NOTE: The PaymentIntent create call can fail without a response (e.g. a Stripe 5xx) after Stripe
+      #       has charged, leaving our payment without a provider_payment_id. Link it from the metadata.
+      def unlinked_payment(organization_id, stripe_payment)
+        payment_id = stripe_payment.metadata&.dig(:lago_payment_id)
+        return if payment_id.blank?
+
+        payment = Payment.find_by(id: payment_id, organization_id:, provider_payment_id: nil)
+        payment&.provider_payment_id = stripe_payment.id
+        payment
       end
 
       def handle_missing_payment(organization_id, stripe_payment)

@@ -53,6 +53,10 @@ module PaymentProviders
         rescue ::Stripe::APIConnectionError => e
           # Allow auto-retry with idempotency key
           raise Invoices::Payments::ConnectionError, e
+        rescue ::Stripe::APIError => e
+          # NOTE: A Stripe 5xx does not tell us whether the PaymentIntent was created.
+          #       Keep the payment pending and retry with the same idempotency key to avoid a double charge.
+          raise Invoices::Payments::ConnectionError, e
         rescue ::Stripe::StripeError => e
           prepare_failed_result(e, reraise: true)
         end
