@@ -12,6 +12,10 @@ namespace :recipes do
 
       organization = TaskPrompt.ask_for_organization
       abort "The organization is already using ClickHouse events store." if organization.clickhouse_events_store?
+      # Its ClickHouse usage would start from snapshots built on Postgres and fail the comparison below
+      if organization.feature_flag_enabled?(:persisted_recurring_values)
+        abort "Disable the persisted_recurring_values feature flag before switching, then enable it again."
+      end
 
       active_subscriptions_count = Subscription.active.where(organization_id: organization.id).count
       puts "Organization has #{active_subscriptions_count} active subscription(s)."

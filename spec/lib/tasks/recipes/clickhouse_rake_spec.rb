@@ -53,6 +53,21 @@ RSpec.describe "recipes:clickhouse:enable_clickhouse_events_store", clickhouse: 
     end
   end
 
+  context "when organization reads recurring aggregation snapshots" do
+    let(:organization) { create(:organization, feature_flags: ["persisted_recurring_values"]) }
+
+    before do
+      allow(Invoices::CustomerUsageService).to receive(:call)
+      stub_stdin(organization.id, "y")
+    end
+
+    it "aborts before comparing usage" do
+      expect { task.invoke }.to raise_error(SystemExit)
+      expect(organization.reload.clickhouse_events_store).to be(false)
+      expect(Invoices::CustomerUsageService).not_to have_received(:call)
+    end
+  end
+
   context "when Postgres and ClickHouse counts do not match" do
     before do
       create(:event,
