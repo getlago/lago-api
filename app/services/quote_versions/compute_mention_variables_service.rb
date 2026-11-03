@@ -26,7 +26,7 @@ module QuoteVersions
         "quote_currency" => quote_version.currency,
         "commercial_terms_term_duration" => term_duration,
         "commercial_terms_start_date" => term_start_date&.iso8601,
-        "commercial_terms_payment_terms" => customer.applicable_net_payment_term
+        "commercial_terms_payment_terms" => payment_terms
       }
 
       result
@@ -54,6 +54,11 @@ module QuoteVersions
         "administrative_area" => billing_entity.state,
         "country_code" => billing_entity.country
       }
+    end
+
+    # Resolved like the invoices the quote creates: customer, then the issuing entity.
+    def payment_terms
+      PaymentTerms::ResolveService.call!(customer:, billing_entity:).payment_term.to_h
     end
 
     # The calendar date is frozen as a fact: the datetime is resolved in the customer
