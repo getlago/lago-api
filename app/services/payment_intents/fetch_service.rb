@@ -24,9 +24,10 @@ module PaymentIntents
           return result.single_validation_failure!(error_code: "payment_provider_error")
         end
 
+        # Only Stripe returns a checkout session, which expire_payment_url closes later.
         payment_intent.update!(
           payment_url: payment_url_result.payment_url,
-          provider_session_id: payment_url_result.provider_session_id
+          provider_session_id: payment_url_result.try(:provider_session_id)
         )
       end
 
