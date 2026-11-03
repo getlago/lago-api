@@ -331,4 +331,18 @@ RSpec.describe RateCards::UpdateService do
       expect(result.error.resource).to eq("rate_card")
     end
   end
+
+  context "when a concurrent request takes the new code" do
+    let(:params) { {code: "taken"} }
+
+    before do
+      create(:rate_card, organization:, code: "taken")
+      # The uniqueness validation ran before the concurrent request committed.
+      allow_any_instance_of(ActiveRecord::Validations::UniquenessValidator).to receive(:validate_each) # rubocop:disable RSpec/AnyInstance
+    end
+
+    it "returns the validation error of a taken value" do
+      expect(result.error.messages).to eq(code: ["value_already_exist"])
+    end
+  end
 end

@@ -30,6 +30,8 @@ module ContractRateCards
         # Phase moves renumber under the card lock; discarding the phases without
         # it could lock them in the opposite order and deadlock.
         contract_rate_card.lock!
+        # A concurrent request removed it while this one waited for the lock.
+        return result.not_found_failure!(resource: "applied_rate_card") if contract_rate_card.discarded?
 
         phases = contract_rate_card.rate_phases.to_a
         RateOverride.where(id: phases.filter_map(&:rate_override_id)).discard_all!
