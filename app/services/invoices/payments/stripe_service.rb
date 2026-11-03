@@ -88,10 +88,6 @@ module Invoices
         result
       rescue ::Stripe::CardError, ::Stripe::InvalidRequestError, ::Stripe::AuthenticationError, Stripe::PermissionError => e
         result.third_party_failure!(third_party: PROVIDER_NAME, error_code: e.code, error_message: e.message)
-      # Not a refusal: no payment failure webhook, and the client can retry. Connection errors and the
-      # other API errors, such as the 409 of a concurrent request on the same idempotency key, raise.
-      rescue ::Stripe::RateLimitError => e
-        result.too_many_provider_requests_failure!(provider_name: "stripe", error: e)
       end
 
       # NOTE: Expires the hosted Stripe Checkout open Session so it can no longer be paid.

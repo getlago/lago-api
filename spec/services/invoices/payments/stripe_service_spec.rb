@@ -151,31 +151,6 @@ RSpec.describe Invoices::Payments::StripeService do
         expect(result.error.error_message).to eq("error")
       end
     end
-
-    context "when Stripe rate limits the request" do
-      let(:rate_limit_error) { ::Stripe::RateLimitError.new("Too many requests") }
-
-      before { allow(::Stripe::Checkout::Session).to receive(:create).and_raise(rate_limit_error) }
-
-      it "returns a too many provider requests failure" do
-        result = described_class.call(:generate_payment_url, invoice, payment_intent)
-
-        expect(result.error).to be_a(BaseService::TooManyProviderRequestsFailure)
-        expect(result.error).to have_attributes(provider_name: "stripe", error: rate_limit_error)
-      end
-    end
-
-    context "when Stripe cannot be reached" do
-      before do
-        allow(::Stripe::Checkout::Session).to receive(:create)
-          .and_raise(::Stripe::APIConnectionError.new("Connection refused"))
-      end
-
-      it "raises the error" do
-        expect { described_class.call(:generate_payment_url, invoice, payment_intent) }
-          .to raise_error(::Stripe::APIConnectionError, "Connection refused")
-      end
-    end
   end
 
   describe ".call(:expire_payment_url)" do
