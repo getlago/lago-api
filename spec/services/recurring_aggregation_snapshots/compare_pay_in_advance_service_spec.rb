@@ -176,7 +176,7 @@ RSpec.describe RecurringAggregationSnapshots::ComparePayInAdvanceService do
 
     context "when newer events have no value for the metric field" do
       before do
-        [{}, {value: ""}, {value: " "}, {value: "\t\u00A0"}].each.with_index(1) do |properties, hour|
+        [{}, {value: ""}, {value: " "}, {value: "\t\u00A0"}, {value: "false"}, {value: "[]"}, {value: "{}"}].each.with_index(1) do |properties, hour|
           create(
             :clickhouse_events_raw,
             organization:,

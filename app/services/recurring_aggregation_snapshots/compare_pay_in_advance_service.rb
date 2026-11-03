@@ -169,6 +169,8 @@ module RecurringAggregationSnapshots
       latest_inserts = scope
         .group(:transaction_id, :timestamp)
         .having("NOT match(argMax(properties[?], ingested_at), ?)", billable_metric.field_name, Events::Stores::BaseStore::BLANK_VALUE_PATTERN)
+        # events_raw stringifies JSON false, [] and {}, which the Kafka payload keeps and present? rejects
+        .having("argMax(properties[?], ingested_at) NOT IN ('false', '[]', '{}')", billable_metric.field_name)
         .order(timestamp: :desc, transaction_id: :asc)
         .limit(EVENTS_PER_BILLABLE_METRIC)
         .select(:transaction_id, :timestamp, "max(ingested_at)")
