@@ -119,9 +119,16 @@ module PaymentProviders
               nil
             end
           rescue LagoHttpClient::HttpError => e
+            raise if transient_http_error?(e)
+
             Rails.logger.error("Error verifying Flutterwave transaction: #{e.message}")
             nil
           end
+        end
+
+        def transient_http_error?(error)
+          code = error.error_code.to_i
+          code == 429 || code >= 500
         end
 
         def build_metadata(verified_transaction)

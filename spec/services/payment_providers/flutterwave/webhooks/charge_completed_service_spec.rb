@@ -289,10 +289,11 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
 
     context "when HTTP error occurs during verification" do
       let(:http_client) { instance_double(LagoHttpClient::Client) }
+      let(:error_code) { 401 }
 
       before do
         allow(LagoHttpClient::Client).to receive(:new).and_return(http_client)
-        allow(http_client).to receive(:get).and_raise(LagoHttpClient::HttpError.new(500, "Connection failed", "https://api.flutterwave.com"))
+        allow(http_client).to receive(:get).and_raise(LagoHttpClient::HttpError.new(error_code, "Invalid authorization key", "https://api.flutterwave.com"))
         allow(Rails.logger).to receive(:error)
         allow(Invoices::Payments::FlutterwaveService).to receive(:call)
       end
@@ -300,9 +301,38 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
       it "logs the error and does not update payment status" do
         result = charge_completed_service.call
 
-        expect(Rails.logger).to have_received(:error).with("Error verifying Flutterwave transaction: HTTP 500 - URI: https://api.flutterwave.com.\nError: Connection failed\nResponse headers: {}")
+        expect(Rails.logger).to have_received(:error).with("Error verifying Flutterwave transaction: HTTP 401 - URI: https://api.flutterwave.com.\nError: Invalid authorization key\nResponse headers: {}")
         expect(Invoices::Payments::FlutterwaveService).not_to have_received(:call)
         expect(result).to be_success
+      end
+
+      [429, 500, 503].each do |code|
+        context "when the error is a transient #{code}" do
+          let(:error_code) { code }
+
+          it "raises so the job can retry" do
+            expect { charge_completed_service.call }.to raise_error(LagoHttpClient::HttpError)
+
+            expect(Rails.logger).not_to have_received(:error)
+            expect(Invoices::Payments::FlutterwaveService).not_to have_received(:call)
+          end
+        end
+      end
+    end
+
+    context "when the verification request times out" do
+      let(:http_client) { instance_double(LagoHttpClient::Client) }
+
+      before do
+        allow(LagoHttpClient::Client).to receive(:new).and_return(http_client)
+        allow(http_client).to receive(:get).and_raise(Net::ReadTimeout)
+        allow(Invoices::Payments::FlutterwaveService).to receive(:call)
+      end
+
+      it "raises so the job can retry" do
+        expect { charge_completed_service.call }.to raise_error(Net::ReadTimeout)
+
+        expect(Invoices::Payments::FlutterwaveService).not_to have_received(:call)
       end
     end
 
