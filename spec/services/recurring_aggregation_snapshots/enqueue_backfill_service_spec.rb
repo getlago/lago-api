@@ -52,6 +52,17 @@ RSpec.describe RecurringAggregationSnapshots::EnqueueBackfillService do
     end
   end
 
+  context "with listed subscriptions" do
+    subject(:result) { described_class.call(organization:, subscription_ids: [subscription.id], poll_interval: 0) }
+
+    before { invoice_period(create(:subscription, organization:, plan:)) }
+
+    it "enqueues them only" do
+      expect { result }.to have_enqueued_job(RecurringAggregationSnapshots::BackfillJob).with(subscription).once
+      expect(result.subscription_ids).to eq([subscription.id])
+    end
+  end
+
   context "with a job already enqueued for the subscription" do
     around do |example|
       ActiveJob::Uniqueness.reset_manager!

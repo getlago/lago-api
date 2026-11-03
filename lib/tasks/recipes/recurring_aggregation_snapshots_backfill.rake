@@ -7,57 +7,20 @@ RECURRING_SNAPSHOTS_BACKFILL_POLL_INTERVAL = 15
 
 namespace :recipes do
   namespace :recurring_aggregation_snapshots do
-    desc "Write the snapshots of the latest invoiced period of existing subscriptions"
+    desc "Write with jobs the snapshots of the latest invoiced period of listed subscriptions, or of a whole organization"
     task backfill: :environment do
       Rails.logger.level = Logger::Severity::ERROR
 
       organization = TaskPrompt.ask_for_organization
       recurring_snapshots_backfill_warn_writes_off(organization)
-
-      subscriptions = TaskPrompt.ask_for_sampled_subscriptions(organization)
-      abort "No subscription to backfill." if subscriptions.empty?
-
-      puts ""
-      puts "Backfilling #{subscriptions.size} subscription(s)"
-
-      written = 0
-      skipped = 0
-      failed = 0
-      failed_subscriptions = 0
-
-      subscriptions.each do |subscription|
-        label = "  Subscription #{subscription.id} (#{subscription.external_id})"
-        backfill = RecurringAggregationSnapshots::BackfillService.call(subscription:)
-
-        if backfill.failure?
-          failed_subscriptions += 1
-          puts "#{label}: not backfilled, #{backfill.error.code}"
-        elsif backfill.invoice_subscription.nil?
-          puts "#{label}: no invoiced period"
-        else
-          written += backfill.written_charges.size
-          skipped += backfill.skipped_charges.size
-          failed += backfill.failed_charges.size
-
-          puts "#{label}: period ending #{backfill.invoice_subscription.charges_to_datetime.iso8601}, " \
-               "#{backfill.written_charges.size} charge(s) written, #{backfill.skipped_charges.size} skipped, " \
-               "#{backfill.failed_charges.size} failed#{" (#{backfill.failed_charges.map(&:id).join(", ")})" if backfill.failed_charges.any?}"
-        end
-      end
-
-      puts ""
-      puts "Charges written: #{written}, skipped: #{skipped}, failed: #{failed}, " \
-           "subscriptions not backfilled: #{failed_subscriptions}"
-    end
-
-    desc "Enqueue a backfill job per active subscription of an organization, then follow them until they ran"
-    task backfill_organization: :environment do
-      Rails.logger.level = Logger::Severity::ERROR
-
-      organization = TaskPrompt.ask_for_organization
-      recurring_snapshots_backfill_warn_writes_off(organization)
+      subscription_ids = TaskPrompt.ask_for_subscription_ids
 
       subscriptions = RecurringAggregationSnapshots::BackfillService.backfillable_subscriptions(organization)
+      if subscription_ids.any?
+        subscriptions = subscriptions.where(id: subscription_ids)
+        left_out_ids = subscription_ids - subscriptions.pluck(:id)
+        recurring_snapshots_backfill_list("Skipped, not found or without a recurring sum charge or an invoiced period", left_out_ids)
+      end
       total = subscriptions.count
       puts "#{total} active subscription(s) with a recurring sum charge and an invoiced period."
       abort "No subscription to backfill." if total.zero?
@@ -67,7 +30,7 @@ namespace :recipes do
       puts "Enqueuing, while #{RecurringAggregationSnapshots::BackfillJob.queue_name} holds less than " \
            "#{RecurringAggregationSnapshots::EnqueueBackfillService::MAX_QUEUE_SIZE} jobs..."
       started_at = Time.current
-      enqueued_ids = RecurringAggregationSnapshots::EnqueueBackfillService.call!(organization:).subscription_ids
+      enqueued_ids = RecurringAggregationSnapshots::EnqueueBackfillService.call!(organization:, subscription_ids: subscription_ids.presence).subscription_ids
       not_enqueued_ids = subscriptions.where.not(id: enqueued_ids).pluck(:id)
       puts "Enqueued #{enqueued_ids.size} job(s). Stopping this task leaves them running."
 
@@ -89,7 +52,7 @@ namespace :recipes do
       puts ""
       puts "Subscriptions backfilled: #{(backfilled_ids - failed_ids).size}/#{total}, failed: #{failed_ids.size}, " \
            "not enqueued: #{not_enqueued_ids.size}, nothing written: #{unwritten_ids.size}"
-      recurring_snapshots_backfill_list("Failed, rerun them by listing them in recipes:recurring_aggregation_snapshots:backfill", failed_ids)
+      recurring_snapshots_backfill_list("Failed, rerun them by listing them", failed_ids)
       recurring_snapshots_backfill_list("Not enqueued, a job of an earlier run still holds their lock (up to an hour)", not_enqueued_ids)
       recurring_snapshots_backfill_list("Nothing written, no snapshot to store (see Fees::ChargeService)", unwritten_ids)
     end

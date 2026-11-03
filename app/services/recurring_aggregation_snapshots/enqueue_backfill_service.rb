@@ -10,8 +10,9 @@ module RecurringAggregationSnapshots
     MAX_QUEUE_SIZE = 1_000
     POLL_INTERVAL = 5
 
-    def initialize(organization:, batch_size: BATCH_SIZE, max_queue_size: MAX_QUEUE_SIZE, poll_interval: POLL_INTERVAL)
+    def initialize(organization:, subscription_ids: nil, batch_size: BATCH_SIZE, max_queue_size: MAX_QUEUE_SIZE, poll_interval: POLL_INTERVAL)
       @organization = organization
+      @subscription_ids = subscription_ids
       @batch_size = batch_size
       @max_queue_size = max_queue_size
       @poll_interval = poll_interval
@@ -22,7 +23,7 @@ module RecurringAggregationSnapshots
     def call
       result.subscription_ids = []
 
-      BackfillService.backfillable_subscriptions(organization).find_in_batches(batch_size:) do |subscriptions|
+      subscriptions_to_backfill.find_in_batches(batch_size:) do |subscriptions|
         wait_for_room
         # A job still queued, or one that died, holds its unique lock until it expires: no second job then
         enqueued = subscriptions.select { BackfillJob.perform_later(it) }
@@ -34,7 +35,12 @@ module RecurringAggregationSnapshots
 
     private
 
-    attr_reader :organization, :batch_size, :max_queue_size, :poll_interval
+    attr_reader :organization, :subscription_ids, :batch_size, :max_queue_size, :poll_interval
+
+    def subscriptions_to_backfill
+      subscriptions = BackfillService.backfillable_subscriptions(organization)
+      subscription_ids ? subscriptions.where(id: subscription_ids) : subscriptions
+    end
 
     # The whole queue, as low_priority is shared with the other background work
     def wait_for_room
