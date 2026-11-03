@@ -29,7 +29,7 @@ module Resolvers
     argument :with_deleted, Boolean, required: false
     argument :zipcodes, [String], required: false
 
-    type Types::Customers::Object.collection_type, null: false
+    type Types::Customers::Object.collection_type(metadata_type: Types::Invoices::CollectionMetadata), null: false
 
     def resolve(search_term: nil, page: nil, limit: nil, metadata: nil, **filters)
       if metadata.present?
@@ -45,6 +45,9 @@ module Resolvers
         filters:
       )
 
+      return result_error(result) unless result.success?
+
+      # Caps the total count: a full COUNT of a large organization exceeds the statement timeout.
       result.customers.preload(
         :billing_entity,
         :metadata,
@@ -54,7 +57,7 @@ module Resolvers
         :netsuite_customer,
         :salesforce_customer,
         :xero_customer
-      )
+      ).without_count.extend(BaseQuery::CappedTotalCount)
     end
   end
 end

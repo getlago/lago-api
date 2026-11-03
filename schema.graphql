@@ -5508,7 +5508,7 @@ type CustomerCollection {
   """
   Pagination Metadata for navigating the Pagination
   """
-  metadata: CollectionMetadata!
+  metadata: InvoiceCollectionMetadata!
 }
 
 type CustomerCreditNotesBalance {
