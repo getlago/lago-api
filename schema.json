@@ -25956,7 +25956,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "OBJECT",
-                  "name": "CollectionMetadata",
+                  "name": "InvoiceCollectionMetadata",
                   "ofType": null
                 }
               },
