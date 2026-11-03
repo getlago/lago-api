@@ -75,11 +75,12 @@ module Analytics
               SELECT invoice_id, SUM(offset_amount_cents) AS offset_amount_cents_sum
               FROM credit_notes
               WHERE status = #{CreditNote.statuses[:finalized]}
+              AND organization_id = :organization_id
               GROUP BY invoice_id
             ) cn ON cn.invoice_id = i.id
             WHERE i.organization_id = :organization_id
             AND i.self_billed IS FALSE
-            AND i.payment_overdue IS TRUE
+            AND i.payment_overdue = TRUE
             AND i.status != #{Invoice.statuses[:deleted]}
             #{and_external_customer_id_sql}
             #{and_is_customer_tin_empty_sql}
