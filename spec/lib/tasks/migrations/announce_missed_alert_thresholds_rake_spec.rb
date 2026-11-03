@@ -426,6 +426,13 @@ RSpec.describe "migrations:announce_missed_alert_thresholds" do # rubocop:disabl
         create(:subscription, :terminated, organization:, customer:, plan:, external_id: "terminated-sub")
       end
 
+      # An active subscription with the same external_id in another organization must not be picked
+      before do
+        other_organization = create(:organization)
+        create(:subscription, organization: other_organization, customer: create(:customer, organization: other_organization),
+          external_id: "terminated-sub")
+      end
+
       it "skips the alert" do
         expect(report).to eq([entry(status: :skipped, reason: :no_active_subscription)])
         expect(alert.all_triggered_alerts).to be_empty
@@ -463,6 +470,14 @@ RSpec.describe "migrations:announce_missed_alert_thresholds" do # rubocop:disabl
       it "skips the alert" do
         expect(report).to eq([entry(status: :skipped, reason: :period_ended)])
         expect(alert.all_triggered_alerts).to be_empty
+      end
+    end
+
+    context "when a current usage alert was created at the start of the current period" do
+      let(:alert_created_at) { Time.zone.parse("2026-03-01T00:00:00Z") }
+
+      it "announces the alert" do
+        expect(report).to eq([entry(status: :announced, thresholds: [50, 100])])
       end
     end
 
