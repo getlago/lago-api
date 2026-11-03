@@ -379,6 +379,46 @@ RSpec.describe "migrations:announce_missed_alert_thresholds" do # rubocop:disabl
       end
     end
 
+    context "when the creation baseline passed every threshold and nothing was triggered" do
+      let(:previous_value) { 250 }
+
+      it "announces every threshold in a single alert" do
+        expect(report).to eq([entry(status: :announced, thresholds: [50, 100, 200])])
+
+        triggered_alert = alert.triggered_alerts.sole
+        expect(triggered_alert).to have_attributes(previous_value: 0, current_value: 250)
+        expect(triggered_alert.crossed_thresholds).to eq([
+          {"code" => "warn50", "value" => "50.0", "recurring" => false},
+          {"code" => "warn100", "value" => "100.0", "recurring" => false},
+          {"code" => "warn200", "value" => "200.0", "recurring" => false}
+        ])
+        expect(SendWebhookJob).to have_been_enqueued.with("alert.triggered", triggered_alert).once
+      end
+    end
+
+    context "when a regular evaluation announced a higher line after the creation baseline" do
+      let(:previous_value) { 250 }
+
+      before do
+        create(
+          :triggered_alert,
+          alert:,
+          organization:,
+          subscription:,
+          current_value: 250,
+          previous_value: 150,
+          crossed_thresholds: [{code: "warn200", value: "200.0", recurring: false}]
+        )
+      end
+
+      # 50 and 100 would arrive as a second notice after 200, so they are not sent
+      it "skips the alert without announcing the lower lines" do
+        expect(report).to eq([entry(status: :skipped, reason: :higher_threshold_announced)])
+        expect(alert.triggered_alerts.count).to eq(1)
+        expect(SendWebhookJob).not_to have_been_enqueued
+      end
+    end
+
     context "when a triggered row covers only the lower missed lines" do
       before do
         create(:triggered_alert, alert:, organization:, subscription:, current_value: 60, previous_value: 0)

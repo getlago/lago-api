@@ -107,8 +107,18 @@ class AnnounceMissedAlertThresholds
     end
   end
 
+  # A triggered row announced the lines between its previous and current value. A line no row covers was
+  # left out because a regular evaluation already announced a higher one.
   def below_or_announced(alert)
-    crossed_from_zero(alert).empty? ? :below_thresholds : :already_announced
+    crossed = crossed_from_zero(alert)
+    return :below_thresholds if crossed.empty?
+
+    ranges = alert.triggered_alerts.pluck(:previous_value, :current_value)
+    if crossed.all? { |line| ranges.any? { |from, to| line > from && line <= to } }
+      :already_announced
+    else
+      :higher_threshold_announced
+    end
   end
 
   def announce(alert, subscription, missed)
