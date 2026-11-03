@@ -48,6 +48,8 @@ RSpec.describe Resolvers::OrganizationResolver do
       GQL
     end
 
+    let(:membership) { create(:membership) }
+
     before do
       organization.update!(net_payment_term: 30)
       organization.default_billing_entity.update!(payment_term: {"term_type" => "end_of_month"}, net_payment_term: nil)
