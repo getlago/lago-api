@@ -1,10 +1,9 @@
 # frozen_string_literal: true
 
 module V2
-  # V1's fields plus updated_at and deleted_at, without its filters, so that the record stays flat, nor its
-  # counters, which V1 renders as constant zeros.
   class BillableMetricSerializer < ModelSerializer
     timestamps :created_at, :updated_at, :deleted_at
+    expandable :filters, serializer: ::V2::BillableMetricFilterSerializer
 
     def serialize
       {

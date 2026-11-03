@@ -58,4 +58,33 @@ RSpec.describe V2::BillableMetricSerializer do
       expect(payload).to eq(scalar_payload.merge(deleted_at: "2026-09-30T12:00:00Z"))
     end
   end
+
+  context "with the filters expansion" do
+    let(:billable_metric) do
+      create(
+        :weighted_sum_billable_metric,
+        recurring: true,
+        rounding_function: "round",
+        rounding_precision: 2,
+        expression: "round(event.properties.value)",
+        created_at: Time.zone.parse("2026-01-05T10:00:00Z"),
+        updated_at: Time.zone.parse("2026-01-06T11:30:00Z")
+      )
+    end
+    let(:includes) { %i[filters] }
+    let(:filter) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[us eu]) }
+
+    before { filter }
+
+    it "embeds filters without changing the scalar fields" do
+      expect(payload).to eq(scalar_payload.merge(filters: [{
+        lago_id: filter.id,
+        key: "region",
+        values: %w[eu us],
+        created_at: filter.created_at.iso8601,
+        updated_at: filter.updated_at.iso8601,
+        deleted_at: nil
+      }]))
+    end
+  end
 end

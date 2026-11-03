@@ -159,6 +159,41 @@ RSpec.describe BillableMetrics::UpdateService do
           rounding_precision: 2
         )
       end
+
+      context "when locked changes are rejected" do
+        subject(:result) { described_class.call(billable_metric:, params:, reject_locked_changes: true) }
+
+        it "refuses each changed locked field without updating the metric" do
+          expect { result }.not_to change { billable_metric.reload.attributes }
+
+          expect(result.error.messages).to eq(
+            code: ["attached_to_plan"],
+            aggregation_type: ["attached_to_plan"],
+            field_name: ["attached_to_plan"],
+            rounding_function: ["attached_to_plan"],
+            rounding_precision: ["attached_to_plan"],
+            expression: ["attached_to_plan"]
+          )
+        end
+
+        context "when the locked fields are sent back unchanged" do
+          let(:params) do
+            {
+              name: "New Metric",
+              code: billable_metric.code,
+              aggregation_type: billable_metric.aggregation_type.to_sym,
+              recurring: billable_metric.recurring.to_s,
+              rounding_precision: billable_metric.rounding_precision,
+              expression: billable_metric.expression
+            }
+          end
+
+          it "updates the editable fields" do
+            expect(result).to be_success
+            expect(billable_metric.reload.name).to eq("New Metric")
+          end
+        end
+      end
     end
 
     context "with two threads racing on the same invoice", transaction: false do
