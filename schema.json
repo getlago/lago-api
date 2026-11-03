@@ -75067,7 +75067,7 @@
               "description": null,
               "args": [
                 {
-                  "name": "asOf",
+                  "name": "effectiveFrom",
                   "description": "Perspective to resolve the soonest pending rate from. Defaults to now.",
                   "type": {
                     "kind": "SCALAR",

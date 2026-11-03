@@ -59,14 +59,14 @@ RSpec.describe Resolvers::RateCardResolver do
     end
   end
 
-  context "with an explicit asOf perspective on nextPendingRate" do
+  context "with an explicit effectiveFrom perspective on nextPendingRate" do
     subject(:execution) do
       execute_graphql(
         current_user: membership.user,
         current_organization: organization,
         permissions: required_permission,
         query:,
-        variables: {rateCardId: rate_card.id, asOf: as_of}
+        variables: {rateCardId: rate_card.id, effectiveFrom: effective_from}
       )
     end
 
@@ -78,17 +78,17 @@ RSpec.describe Resolvers::RateCardResolver do
 
     let(:query) do
       <<~GQL
-        query($rateCardId: ID!, $asOf: ISO8601DateTime) {
+        query($rateCardId: ID!, $effectiveFrom: ISO8601DateTime) {
           rateCard(id: $rateCardId) {
             id
-            nextPendingRate(asOf: $asOf) { id }
+            nextPendingRate(effectiveFrom: $effectiveFrom) { id }
           }
         }
       GQL
     end
 
     context "when opened before November" do
-      let(:as_of) { "2026-10-30T00:00:00Z" }
+      let(:effective_from) { "2026-10-30T00:00:00Z" }
 
       it "resolves Nov 1st as the soonest pending rate" do
         expect(execution["data"]["rateCard"]["nextPendingRate"]["id"]).to eq(nov_1.id)
@@ -96,7 +96,7 @@ RSpec.describe Resolvers::RateCardResolver do
     end
 
     context "when opened mid-November" do
-      let(:as_of) { "2026-11-15T00:00:00Z" }
+      let(:effective_from) { "2026-11-15T00:00:00Z" }
 
       it "skips the already-effective Nov 1st rate and resolves Nov 16th" do
         expect(execution["data"]["rateCard"]["nextPendingRate"]["id"]).to eq(nov_16.id)

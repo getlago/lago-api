@@ -36,7 +36,7 @@ module Types
       field :rates_count, Integer, null: false
 
       field :next_pending_rate, Types::RateCardRates::Object, null: true do
-        argument :as_of, GraphQL::Types::ISO8601DateTime, required: false,
+        argument :effective_from, GraphQL::Types::ISO8601DateTime, required: false,
           description: "Perspective to resolve the soonest pending rate from. Defaults to now."
       end
 
@@ -59,8 +59,8 @@ module Types
         dataloader.with(Sources::ActiveRate).load(object.id)
       end
 
-      def next_pending_rate(as_of: nil)
-        dataloader.with(Sources::NextPendingRate, as_of || Time.current).load(object.id)
+      def next_pending_rate(effective_from: nil)
+        dataloader.with(Sources::NextPendingRate, effective_from || Time.current).load(object.id)
       end
     end
   end
