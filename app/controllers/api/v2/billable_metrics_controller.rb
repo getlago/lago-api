@@ -28,11 +28,10 @@ module Api
       end
 
       def create
-        input = input_params
-        validation = ::BillableMetrics::ValidateApiInputService.call(params: input)
+        validation = ::BillableMetrics::ValidateApiInputService.call(params: raw_input_params)
         return render_error_response(validation) unless validation.success?
 
-        result = ::BillableMetrics::CreateService.call(input.merge(organization_id: current_organization.id))
+        result = ::BillableMetrics::CreateService.call(input_params.merge(organization_id: current_organization.id))
 
         if result.success?
           render_billable_metric(result.billable_metric)
@@ -45,11 +44,10 @@ module Api
         metric = current_organization.billable_metrics.find_by(code: params[:code])
         return not_found_error(resource: "billable_metric") unless metric
 
-        input = input_params
-        validation = ::BillableMetrics::ValidateApiInputService.call(params: input)
+        validation = ::BillableMetrics::ValidateApiInputService.call(params: raw_input_params)
         return render_error_response(validation) unless validation.success?
 
-        result = ::BillableMetrics::UpdateService.call(billable_metric: metric, params: input, reject_locked_changes: true)
+        result = ::BillableMetrics::UpdateService.call(billable_metric: metric, params: input_params, reject_locked_changes: true)
 
         if result.success?
           render_billable_metric(result.billable_metric)
@@ -70,6 +68,19 @@ module Api
       end
 
       private
+
+      # Rails removes null array entries before strong parameters run, so validate the original JSON.
+      def raw_input_params
+        input = params.expect(billable_metric: {}).to_h
+
+        if request.content_mime_type == Mime[:json] && request.raw_post.present?
+          body = JSON.parse(request.raw_post)
+          raw_input = body["billable_metric"] if body.is_a?(Hash)
+          input.merge!(NullByteGuard.sanitize(request, raw_input)) if raw_input.is_a?(Hash)
+        end
+
+        input.deep_symbolize_keys
+      end
 
       def input_params
         params.expect(billable_metric: [

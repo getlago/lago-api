@@ -84,6 +84,41 @@ RSpec.describe Api::V2::BillableMetricsController do
     end
   end
 
+  shared_examples "rejects malformed filter input" do
+    {
+      "a scalar filters value" => ["invalid", "filters"],
+      "an object instead of a filters array" => [{key: "region", values: ["eu"]}, "filters"],
+      "a null filters value" => [nil, "filters"],
+      "a scalar filter" => [["invalid"], "filters[0]"],
+      "a null filter" => [[nil], "filters[0]"],
+      "mixed valid and invalid filters" => [[{key: "region", values: ["eu"]}, "invalid"], "filters[1]"],
+      "mixed valid and null filters" => [[{key: "region", values: ["eu"]}, nil], "filters[1]"],
+      "an object filter key" => [[{key: {name: "region"}, values: ["eu"]}], "filters[0].key"],
+      "a scalar values field" => [[{key: "region", values: "eu"}], "filters[0].values"],
+      "an object values field" => [[{key: "region", values: {name: "eu"}}], "filters[0].values"],
+      "a numeric filter value" => [[{key: "region", values: ["eu", 123]}], "filters[0].values[1]"],
+      "a boolean filter value" => [[{key: "region", values: ["eu", false]}], "filters[0].values[1]"],
+      "a null filter value" => [[{key: "region", values: ["eu", nil]}], "filters[0].values[1]"],
+      "an object filter value" => [[{key: "region", values: ["eu", {name: "us"}]}], "filters[0].values[1]"]
+    }.each do |description, (filters, field)|
+      context "with #{description}" do
+        let(:attributes) { super().merge(filters:) }
+
+        it "rejects malformed filter input without changing metrics or filters" do
+          expect { request }.not_to change {
+            [
+              organization.billable_metrics.with_discarded.order(:id).map(&:attributes),
+              BillableMetricFilter.with_discarded.where(organization:).order(:id).map(&:attributes)
+            ]
+          }
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field:, meta: {}}])
+        end
+      end
+    end
+  end
+
   describe "GET /api/v2/billable_metrics" do
     subject(:request) { get_with_token(organization, "/api/v2/billable_metrics", params) }
 
@@ -209,6 +244,7 @@ RSpec.describe Api::V2::BillableMetricsController do
     include_examples "requires API permission", "billable_metric", "write"
     include_examples "validates billable metric input"
     include_examples "reports indexed filter errors"
+    include_examples "rejects malformed filter input"
 
     it "creates the metric and its filters but returns a flat payload" do
       expect { request }.to change(organization.billable_metrics, :count).by(1)
@@ -217,6 +253,17 @@ RSpec.describe Api::V2::BillableMetricsController do
       expect(json).to eq(billable_metric: expected_payload)
       expect(metric.filters.sole).to have_attributes(key: "region", values: %w[us eu])
       expect(SendWebhookJob).to have_been_enqueued.with("billable_metric.created", metric)
+    end
+
+    context "with null bytes in the filter key and values" do
+      let(:attributes) { super().merge(filters: [{key: "reg\u0000ion", values: ["e\u0000u"]}]) }
+
+      it "keeps the shared null-byte sanitization" do
+        request
+
+        expect(response).to have_http_status(:ok)
+        expect(metric.filters.sole).to have_attributes(key: "region", values: ["eu"])
+      end
     end
 
     context "with a decimal integer string for rounding precision" do
@@ -286,6 +333,34 @@ RSpec.describe Api::V2::BillableMetricsController do
         expect(metric.reload).to have_attributes(name: "Updated requests", code: "api.requests", aggregation_type: "count_agg")
         expect(json).to eq(billable_metric: expected_payload)
         expect(SendWebhookJob).to have_been_enqueued.with("billable_metric.updated", metric)
+      end
+
+      context "with existing filters" do
+        before do
+          create(:billable_metric_filter, organization:, billable_metric: metric, key: "region", values: %w[us eu])
+          create(:billable_metric_filter, organization:, billable_metric: metric, key: "cloud", values: %w[aws azure])
+        end
+
+        include_examples "rejects malformed filter input"
+
+        it "leaves filters unchanged when they are omitted" do
+          expect { request }.not_to change { metric.filters.order(:id).map(&:attributes) }
+
+          expect(response).to have_http_status(:ok)
+          expect(metric.reload.name).to eq("Updated requests")
+        end
+
+        context "when filters is explicitly empty" do
+          let(:attributes) { super().merge(filters: []) }
+
+          it "discards the existing filters" do
+            expect { request }.to change { metric.filters.count }.from(2).to(0)
+
+            expect(response).to have_http_status(:ok)
+            expect(metric.filters.with_discarded.count).to eq(2)
+            expect(metric.filters.with_discarded.all?(&:discarded?)).to be(true)
+          end
+        end
       end
 
       context "with a signed integer string for rounding precision" do

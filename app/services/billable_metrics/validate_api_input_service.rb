@@ -61,10 +61,18 @@ module BillableMetrics
     end
 
     def filter_errors
+      return {} unless params.key?(:filters)
+      return {filters: ["value_is_invalid"]} unless params[:filters].is_a?(Array)
+
       errors = {}
       seen_keys = {}
 
-      (params[:filters] || []).each_with_index do |filter, index|
+      params[:filters].each_with_index do |filter, index|
+        unless filter.is_a?(Hash)
+          errors[ValidationFailure.item_field(:filters, index, :base)] = ["value_is_invalid"]
+          next
+        end
+
         key = filter[:key]
         key_error = if !key.nil? && !key.is_a?(String)
           "value_is_invalid"
@@ -74,12 +82,26 @@ module BillableMetrics
           "value_already_exist"
         end
 
-        errors[:"filters[#{index}].key"] = [key_error] if key_error
-        errors[:"filters[#{index}].values"] = ["value_is_mandatory"] if filter[:values].blank?
+        errors[ValidationFailure.item_field(:filters, index, :key)] = [key_error] if key_error
+        errors.merge!(filter_values_errors(filter[:values], index))
         seen_keys[key] = true
       end
 
       errors
+    end
+
+    def filter_values_errors(values, index)
+      field = ValidationFailure.item_field(:filters, index, :values)
+
+      if values.nil? || values == []
+        {field => ["value_is_mandatory"]}
+      elsif !values.is_a?(Array)
+        {field => ["value_is_invalid"]}
+      else
+        values.each_with_index.with_object({}) do |(value, value_index), errors|
+          errors[:"#{field}[#{value_index}]"] = ["value_is_invalid"] unless value.is_a?(String)
+        end
+      end
     end
   end
 end

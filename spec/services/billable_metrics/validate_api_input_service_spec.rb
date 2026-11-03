@@ -56,6 +56,46 @@ RSpec.describe BillableMetrics::ValidateApiInputService do
       expect(result).to be_success
     end
 
+    [nil, false, "invalid", {}].each do |filters|
+      context "when filters is #{filters.inspect}" do
+        let(:params) { {filters:} }
+
+        it "requires an array" do
+          expect(result.error.messages).to eq(filters: ["value_is_invalid"])
+        end
+      end
+    end
+
+    [nil, false, 123, "invalid", []].each do |filter|
+      context "when a filter is #{filter.inspect}" do
+        let(:params) { {filters: [filter]} }
+
+        it "requires an object" do
+          expect(result.error.messages).to eq("filters[0]": ["value_is_invalid"])
+        end
+      end
+    end
+
+    [false, "eu", {name: "eu"}].each do |values|
+      context "when values is #{values.inspect}" do
+        let(:params) { {filters: [{key: "region", values:}]} }
+
+        it "requires an array of values" do
+          expect(result.error.messages).to eq("filters[0].values": ["value_is_invalid"])
+        end
+      end
+    end
+
+    [nil, false, 123, {name: "us"}, ["us"]].each do |value|
+      context "when a filter value is #{value.inspect}" do
+        let(:params) { {filters: [{key: "region", values: ["eu", value]}]} }
+
+        it "identifies the value that is not a string" do
+          expect(result.error.messages).to eq("filters[0].values[1]": ["value_is_invalid"])
+        end
+      end
+    end
+
     context "when a filter has an empty values array" do
       let(:params) { {filters: [{key: "region", values: ["eu"]}, {key: "cloud", values: []}]} }
 
