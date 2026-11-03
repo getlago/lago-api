@@ -4,11 +4,17 @@ RSpec::Matchers.define :have_produced do |activity_type|
   match do |actual|
     @actual = actual
     @activity_type = activity_type
+    # Activity logs of a type missing from this list break the GraphQL activity type enum.
+    @unknown_type = !Clickhouse::ActivityLog::ACTIVITY_TYPES.value?(activity_type)
 
     expected_params = [@object, activity_type]
     expected_params << {after_commit: @after_commit} unless @after_commit.nil?
 
-    expect(actual).to have_received(:produce).with(*expected_params)
+    if @unknown_type
+      false
+    else
+      expect(actual).to have_received(:produce).with(*expected_params)
+    end
   end
 
   chain :with do |object|
@@ -24,6 +30,8 @@ RSpec::Matchers.define :have_produced do |activity_type|
   end
 
   failure_message do
+    next "'#{@activity_type}' is not in Clickhouse::ActivityLog::ACTIVITY_TYPES" if @unknown_type
+
     base_message = "expected #{@actual} to have produced '#{@activity_type}'"
     base_message += " with #{@object.inspect} and {after_commit: #{@after_commit}}"
     base_message
