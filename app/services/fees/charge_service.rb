@@ -41,11 +41,16 @@ module Fees
     end
 
     def call
-      return result if !options.current_usage? && already_billed?
+      return result if !options.current_usage? && !options.snapshot_backfill? && already_billed?
 
       init_metered_items_fees
       return result if options.current_usage?
       return result unless result.success?
+
+      if options.snapshot_backfill?
+        persist_recurring_snapshots
+        return result
+      end
 
       if invoice.nil? || !invoice.progressive_billing?
         init_true_up_fee
@@ -538,7 +543,7 @@ module Fees
     end
 
     def persist_recurring_value(aggregation_results, selected_metered_item, breakdowns_by_group)
-      return if options.current_usage? || options.invoice_preview? || options.advance_renewal?
+      return if options.current_usage? || options.invoice_preview? || options.advance_renewal? || options.snapshot_backfill?
 
       # NOTE: Only weighted sum and custom aggregations are setting this value
       return unless aggregation_results.first&.recurring_updated_at
@@ -625,8 +630,9 @@ module Fees
     end
 
     def snapshot_recurring_units?(selected_metered_item)
-      return false unless billing_context.organization.feature_flag_enabled?(:recurring_aggregation_snapshots)
       return false if options.current_usage? || options.invoice_preview?
+      # A backfill is run by hand on the organizations its caller picked
+      return false unless options.snapshot_backfill? || billing_context.organization.feature_flag_enabled?(:recurring_aggregation_snapshots)
 
       # A progressive billing invoice stops mid-period, its units do not close the period
       !invoice&.progressive_billing? && snapshot_eligible?(selected_metered_item)
