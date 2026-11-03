@@ -358,6 +358,22 @@ RSpec.describe Api::V1::BillingEntitiesController do
       end
     end
 
+    context "when updating net_payment_term with an array" do
+      let(:update_params) { {billing_entity: {net_payment_term: [60]}} }
+
+      before do
+        billing_entity1.update!(payment_term: {"term_type" => "net", "days" => 30}, net_payment_term: 30)
+      end
+
+      it "ignores it and keeps the term" do
+        subject
+
+        expect(response).to be_successful
+        expect(billing_entity1.reload.net_payment_term).to eq(30)
+        expect(billing_entity1.payment_term).to eq("term_type" => "net", "days" => 30)
+      end
+    end
+
     context "when the payment_term shape is invalid" do
       let(:update_params) do
         {billing_entity: {payment_term: {term_type: "net"}}}

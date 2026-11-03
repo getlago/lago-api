@@ -4,15 +4,14 @@ module RawPaymentTermParams
   private
 
   # Strong params drop null and wrong-type values before validation.
-  # As a solution, this method copies raw values into the permitted params,
+  # As a solution, this method copies the raw payment_term into the permitted params,
   # so the PaymentTerms::ValidateService receives every value that the client sent.
+  # net_payment_term keeps the strong params behavior: an object or array is dropped, as before
+  # payment terms, instead of being cast to nil and clearing the term.
   def with_raw_payment_term(permitted, raw)
-    %i[payment_term net_payment_term].each do |key|
-      next unless raw.respond_to?(:key?) && raw.key?(key)
+    return permitted unless raw.respond_to?(:key?) && raw.key?(:payment_term)
 
-      permitted[key] = permit_raw_value(raw[key])
-    end
-
+    permitted[:payment_term] = permit_raw_value(raw[:payment_term])
     permitted
   end
 

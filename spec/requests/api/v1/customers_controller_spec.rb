@@ -169,6 +169,22 @@ RSpec.describe Api::V1::CustomersController do
       end
     end
 
+    context "with an object net_payment_term for an existing customer" do
+      let(:customer) do
+        create(:customer, organization:, currency: "EUR", net_payment_term: 30, payment_term: {"term_type" => "net", "days" => 30})
+      end
+
+      before { create_params.merge!(external_id: customer.external_id, net_payment_term: {days: 60}) }
+
+      it "ignores it and keeps the term" do
+        subject
+
+        expect(response).to be_successful
+        expect(customer.reload.net_payment_term).to eq(30)
+        expect(customer.payment_term).to eq("term_type" => "net", "days" => 30)
+      end
+    end
+
     context "when firstname and lastname contain null bytes" do
       let(:create_params) do
         {
