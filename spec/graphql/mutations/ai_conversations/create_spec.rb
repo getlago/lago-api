@@ -130,13 +130,22 @@ RSpec.describe Mutations::AiConversations::Create do
         )
       end
 
-      let(:ai_conversation) { create(:ai_conversation, organization: membership.organization, membership:) }
+      let(:ai_conversation) { create(:ai_conversation, organization: membership.organization, membership:, resuming_at:) }
+      let(:resuming_at) { 1.minute.ago }
 
       before { create(:ai_conversation_tool_call, ai_conversation:, status: "confirmed") }
 
       it "refuses the message" do
         expect { result }.not_to have_enqueued_job(AiConversations::StreamJob)
         expect(result["errors"].first["extensions"]["code"]).to eq("ai_conversation_tool_calls_pending")
+      end
+
+      context "when the resume gave up after its retries" do
+        let(:resuming_at) { (AiConversation::RESUME_TIMEOUT + 1.minute).ago }
+
+        it "accepts the message, so the conversation is not closed for good" do
+          expect { result }.to have_enqueued_job(AiConversations::StreamJob)
+        end
       end
     end
 
