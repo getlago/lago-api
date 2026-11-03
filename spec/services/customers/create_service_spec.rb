@@ -351,6 +351,22 @@ RSpec.describe Customers::CreateService do
     end
   end
 
+  context "with a provider customer id but no payment provider" do
+    let(:create_args) do
+      {
+        external_id: SecureRandom.uuid,
+        name: "Foo Bar",
+        organization_id: organization.id,
+        provider_customer: {provider_customer_id: "cus_12345"}
+      }
+    end
+
+    it "creates the customer without a provider customer" do
+      expect(result).to be_success
+      expect(result.customer).to have_attributes(payment_provider: nil, provider_customer: nil)
+    end
+  end
+
   context "with stripe payment provider" do
     before do
       create(
