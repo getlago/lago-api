@@ -74,6 +74,7 @@ RSpec.describe RecurringAggregationSnapshots::ComparePayInAdvanceService do
       create_event(timestamp: Time.zone.parse("2022-05-12"), value: "")
       create_event(timestamp: Time.zone.parse("2022-05-13"), value: " ")
       create_event(timestamp: Time.zone.parse("2022-05-14"), value: "\t\u00A0")
+      [false, [], {}].each.with_index(1) { |value, hour| create_event(timestamp: Time.zone.parse("2022-05-14") + hour.hours, value:) }
     end
 
     it "replays only the events billed in advance" do

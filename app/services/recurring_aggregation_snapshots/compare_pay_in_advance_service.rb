@@ -130,7 +130,7 @@ module RecurringAggregationSnapshots
 
     # The latest events of the period put max_timestamp late in it, where the delta is the largest.
     # events_raw keeps every insert of a re-sent event: the latest one is replayed.
-    # Events without the metric's field are left out, as Events::PayInAdvanceService#can_create_fee? bills none.
+    # Events whose metric field is not present? are left out, as Events::PayInAdvanceService#can_create_fee? bills none.
     def events
       @events ||= compared_charges.map(&:billable_metric).uniq(&:code).flat_map do |billable_metric|
         if subscription.organization.clickhouse_events_store?
@@ -150,6 +150,7 @@ module RecurringAggregationSnapshots
           timestamp: date_service.charges_from_datetime..timestamp
         )
         .where("COALESCE(events.properties ->> ?, '') !~ ?", billable_metric.field_name, Events::Stores::BaseStore::BLANK_VALUE_PATTERN)
+        .where("events.properties -> ? NOT IN ('false', '[]', '{}')", billable_metric.field_name)
         .order(timestamp: :desc, created_at: :desc)
         .limit(EVENTS_PER_BILLABLE_METRIC)
         .map { Events::CommonFactory.new_instance(source: it) }
