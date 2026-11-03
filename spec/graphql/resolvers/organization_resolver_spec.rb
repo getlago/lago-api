@@ -37,6 +37,34 @@ RSpec.describe Resolvers::OrganizationResolver do
     expect(data["city"]).to eq(organization.city)
   end
 
+  context "when the default billing entity's term differs from the organization column" do
+    let(:query) do
+      <<~GQL
+        query {
+          organization {
+            netPaymentTerm
+          }
+        }
+      GQL
+    end
+
+    before do
+      organization.update!(net_payment_term: 30)
+      organization.default_billing_entity.update!(payment_term: {"term_type" => "end_of_month"}, net_payment_term: nil)
+    end
+
+    it "returns the default billing entity's net_payment_term" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query:,
+        variables: {}
+      )
+
+      expect(result["data"]["organization"]["netPaymentTerm"]).to be_nil
+    end
+  end
+
   context "with field requiring permissions" do
     let(:query) do
       <<~GQL
