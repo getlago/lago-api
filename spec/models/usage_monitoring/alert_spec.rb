@@ -193,6 +193,23 @@ RSpec.describe UsageMonitoring::Alert do
         expect(alert.find_thresholds_crossed(0)).to eq([0])
       end
     end
+
+    context "when previous is given" do
+      it "crosses from it instead of the stored previous_value, which it leaves unchanged" do
+        alert.previous_value = 150
+        # one-time 10, 30, 50, then recurring lines every 100 past the last one-time line: 50 + 100 = 150
+        expect(alert.find_thresholds_crossed(150, previous: 0)).to eq([10, 30, 50, 150])
+        expect(alert.previous_value).to eq(150)
+      end
+
+      it "crosses from it when direction is decreasing" do
+        alert.direction = "decreasing"
+        alert.previous_value = -150
+        # one-time 50, 30, 10 below 60, then recurring lines every 100 below the first one-time line: 10 - 100 = -90
+        expect(alert.find_thresholds_crossed(-150, previous: 60)).to eq([-90, 10, 30, 50])
+        expect(alert.previous_value).to eq(-150)
+      end
+    end
   end
 
   describe "#formatted_crossed_thresholds" do

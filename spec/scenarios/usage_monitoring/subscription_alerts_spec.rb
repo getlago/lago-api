@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require "rake"
 
 describe "Subscriptions Alerting Scenario", :premium, cache: :redis do
   let(:organization) { create(:organization, premium_integrations:) }
@@ -296,6 +297,84 @@ describe "Subscriptions Alerting Scenario", :premium, cache: :redis do
         reason: "recovered"
       )
       expect(resolved[:resolved_alert][:recovered_thresholds]).to eq([{code: "warn", value: "10.0", recurring: false}.with_indifferent_access])
+    end
+  end
+
+  context "when an alert was created from its usage at creation" do
+    before { Rake.application.rake_require("tasks/migrations/announce_missed_alert_thresholds") }
+
+    it "announces the passed lines once, from 0" do
+      create_subscription({
+        external_customer_id: customer.external_id,
+        external_id: subscription_external_id,
+        plan_code: plan.code
+      })
+      subscription = customer.subscriptions.sole
+
+      send_event!(code: billable_metric.code, properties: {ops_count: 15}, external_subscription_id: subscription_external_id)
+      perform_usage_update
+
+      create_alert(subscription_external_id, {
+        alert_type: :billable_metric_current_usage_units,
+        code: :baseline,
+        billable_metric_code: billable_metric.code,
+        thresholds: [
+          {value: 5, code: :low},
+          {value: 10, code: :warn},
+          {value: 20, code: :high}
+        ]
+      })
+      alert = UsageMonitoring::Alert.find(json[:alert][:lago_id])
+
+      # The state the creation baseline wrote: usage at creation stored, so evaluations announce nothing
+      alert.update!(previous_value: 15, last_processed_at: Time.current)
+      perform_usage_update
+      expect(alert.all_triggered_alerts.count).to eq(0)
+      expect(webhooks_sent.count { it[:webhook_type] == "alert.triggered" }).to eq(0)
+
+      freeze_time do
+        AnnounceMissedAlertThresholds.call(
+          from: 1.hour.ago, to: 1.hour.from_now, organization_id: organization.id, dry_run: false
+        )
+        perform_all_enqueued_jobs
+
+        ta = alert.triggered_alerts.sole
+        triggered = webhooks_sent.select { it[:webhook_type] == "alert.triggered" }
+        expect(triggered.sole[:triggered_alert]).to eq({
+          lago_id: ta.id,
+          lago_organization_id: organization.id,
+          lago_alert_id: alert.id,
+          lago_subscription_id: subscription.id,
+          external_subscription_id: subscription_external_id,
+          lago_wallet_id: nil,
+          external_customer_id: customer.external_id,
+          billable_metric_code: billable_metric.code,
+          alert_name: nil,
+          alert_code: "baseline",
+          alert_type: "billable_metric_current_usage_units",
+          current_value: "15.0",
+          previous_value: "0.0",
+          crossed_thresholds: [
+            {code: "low", value: "5.0", recurring: false},
+            {code: "warn", value: "10.0", recurring: false}
+          ],
+          triggered_at: Time.current.iso8601,
+          subscription_external_id: subscription_external_id,
+          customer_external_id: customer.external_id
+        }.with_indifferent_access)
+      end
+      expect(alert.reload.previous_value).to eq(15)
+
+      # The next evaluation without new usage and a second run announce nothing again
+      UsageMonitoring::SubscriptionActivity.find_or_create_by!(organization:, subscription:)
+      perform_usage_update
+      AnnounceMissedAlertThresholds.call(
+        from: 1.hour.ago, to: 1.hour.from_now, organization_id: organization.id, dry_run: false
+      )
+      perform_all_enqueued_jobs
+
+      expect(webhooks_sent.count { it[:webhook_type] == "alert.triggered" }).to eq(1)
+      expect(alert.triggered_alerts.count).to eq(1)
     end
   end
 
