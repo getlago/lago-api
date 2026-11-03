@@ -46,38 +46,58 @@ RSpec.describe PaymentIntents::FetchService do
         end
       end
 
-      context "when a concurrent request created the active payment intent" do
-        let(:payment_intent) { create(:payment_intent, invoice:, payment_url:) }
+      context "when another request holds the lock on the invoice" do
+        before { stub_const("#{described_class}::LOCK_TIMEOUT", 0.seconds) }
 
-        before do
-          payment_intent
-
-          allow(PaymentIntent).to receive(:non_expired).and_wrap_original do |original|
-            original.call.tap do |relation|
-              allow(relation).to receive(:find_or_create_by!).and_raise(ActiveRecord::RecordNotUnique)
+        # A spec shares its connection with its threads, so another thread holds the lock on a connection of
+        # its own (the lock stack of the gem is per thread)
+        around do |test|
+          connection = ActiveRecord::ConnectionAdapters::PostgreSQLAdapter.new(ApplicationRecord.connection_db_config.configuration_hash)
+          locked = Queue.new
+          release = Queue.new
+          holder = Thread.new do
+            WithAdvisoryLock::PostgreSQL.new(connection, "payment_intent_invoice_#{invoice.id}", {}).yield_with_lock do
+              locked << true
+              release.pop
             end
           end
+          locked.pop
+          test.run
+        ensure
+          release << true
+          holder&.join
+          connection&.disconnect!
         end
 
-        it "returns the existing payment intent" do
+        it "fails with a lock acquisition failure without creating a payment intent" do
           expect { result }.not_to change(PaymentIntent, :count)
 
-          expect(result).to be_success
-          expect(result.payment_intent).to eq(payment_intent)
-          expect(Invoices::Payments::PaymentProviders::Factory).not_to have_received(:for)
+          expect(result).to be_failure
+          expect(result.error).to be_a(BaseService::LockAcquisitionFailure)
+          expect(result.error.code).to eq("lock_acquisition_failed")
+          expect(payment_provider_service).not_to have_received(:call!)
+        end
+      end
+
+      context "when the payment URL is generated" do
+        let(:held_advisory_locks) do
+          "SELECT count(*) FROM pg_locks WHERE locktype = 'advisory' AND granted AND pid = pg_backend_pid()"
+        end
+        let(:locks_during_provider_call) { [] }
+
+        before do
+          allow(payment_provider_service).to receive(:call!) do
+            locks_during_provider_call << ApplicationRecord.connection.select_value(held_advisory_locks)
+            generate_payment_url_result.tap { |r| r.payment_url = payment_url }
+          end
         end
 
-        context "when the concurrent intent has no payment URL" do
-          let(:payment_intent) { create(:payment_intent, invoice:, payment_url: nil) }
+        it "holds the invoice lock during the provider call only" do
+          locks_before = ApplicationRecord.connection.select_value(held_advisory_locks)
 
-          it "generates the payment URL on the existing payment intent" do
-            expect { result }.not_to change(PaymentIntent, :count)
-
-            expect(result).to be_success
-            expect(result.payment_intent).to eq(payment_intent)
-            expect(payment_provider_service).to have_received(:call!).with(:generate_payment_url, invoice, payment_intent)
-            expect(payment_intent.reload.payment_url).to eq(payment_url)
-          end
+          expect(result).to be_success
+          expect(locks_during_provider_call).to eq([locks_before + 1])
+          expect(ApplicationRecord.connection.select_value(held_advisory_locks)).to eq(locks_before)
         end
       end
 
