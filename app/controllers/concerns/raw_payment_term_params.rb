@@ -18,6 +18,8 @@ module RawPaymentTermParams
 
   # Wrong-type values reach the validator as they are, so nested parameters (a hash, or
   # hashes inside an array) must be permitted too, or `to_h` raises instead.
+  # Keys are not filtered here: PaymentTerms::ValidateService rejects unexpected ones with a 422,
+  # and PaymentTerms::AssignService stores only the PaymentTerm fields.
   def permit_raw_value(value)
     case value
     when ActionController::Parameters then value.permit!
