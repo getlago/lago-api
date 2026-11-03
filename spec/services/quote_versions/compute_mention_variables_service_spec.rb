@@ -20,10 +20,11 @@ RSpec.describe QuoteVersions::ComputeMentionVariablesService do
       city: "Paris",
       state: nil,
       country: "FR",
-      net_payment_term: 30
+      net_payment_term: 30,
+      payment_term: {"term_type" => "net", "days" => 30}
     )
   end
-  let(:customer_net_payment_term) { nil }
+  let(:customer_payment_term) { nil }
   let(:customer_document_locale) { nil }
   let(:customer) do
     create_default(
@@ -35,7 +36,7 @@ RSpec.describe QuoteVersions::ComputeMentionVariablesService do
       firstname: "Gavin",
       lastname: "Belson",
       email: "procurement@hooli.example",
-      net_payment_term: customer_net_payment_term,
+      payment_term: customer_payment_term,
       document_locale: customer_document_locale
     )
   end
@@ -86,7 +87,7 @@ RSpec.describe QuoteVersions::ComputeMentionVariablesService do
         "quote_currency" => "EUR",
         "commercial_terms_term_duration" => {"unit" => "years", "count" => 1},
         "commercial_terms_start_date" => "2026-04-01",
-        "commercial_terms_payment_terms" => 30
+        "commercial_terms_payment_terms" => {"term_type" => "net", "days" => 30}
       )
       expect(variables["quote_date"]).to match(/\A\d{4}-\d{2}-\d{2}\z/)
     end
@@ -104,7 +105,8 @@ RSpec.describe QuoteVersions::ComputeMentionVariablesService do
           zipcode: "94105",
           city: "San Francisco",
           state: "CA",
-          country: "US"
+          country: "US",
+          payment_term: {"term_type" => "end_of_month"}
         )
       end
       let(:quote_version) do
@@ -129,18 +131,26 @@ RSpec.describe QuoteVersions::ComputeMentionVariablesService do
         )
       end
 
-      # The invoice derives its own term from Customer#applicable_net_payment_term, i.e. the
-      # customer's entity, so the quote has to promise the same thing.
-      it "keeps the payment term on the customer's own chain" do
-        expect(variables["commercial_terms_payment_terms"]).to eq(30)
+      # The invoices the quote creates resolve their term through the issuing entity,
+      # so the quote has to promise the same thing.
+      it "uses the issuing entity's payment term" do
+        expect(variables["commercial_terms_payment_terms"]).to eq("term_type" => "end_of_month")
       end
     end
 
-    context "when the customer overrides the net payment term" do
-      let(:customer_net_payment_term) { 45 }
+    context "when the customer overrides the payment term" do
+      let(:customer_payment_term) { {"term_type" => "net", "days" => 45} }
 
       it "uses the customer's payment term" do
-        expect(variables["commercial_terms_payment_terms"]).to eq(45)
+        expect(variables["commercial_terms_payment_terms"]).to eq("term_type" => "net", "days" => 45)
+      end
+    end
+
+    context "when the customer has a term with no legacy days" do
+      let(:customer_payment_term) { {"term_type" => "day_of_month", "day_of_month" => 15, "month_offset" => 1} }
+
+      it "keeps the structured term rather than the entity's days" do
+        expect(variables["commercial_terms_payment_terms"]).to eq("term_type" => "day_of_month", "day_of_month" => 15, "month_offset" => 1)
       end
     end
 
@@ -151,7 +161,7 @@ RSpec.describe QuoteVersions::ComputeMentionVariablesService do
         expect(variables).to include(
           "commercial_terms_term_duration" => {"unit" => "years", "count" => 1},
           "commercial_terms_start_date" => "2026-04-01",
-          "commercial_terms_payment_terms" => 30,
+          "commercial_terms_payment_terms" => {"term_type" => "net", "days" => 30},
           "billing_entity_address" => raw_address
         )
       end
