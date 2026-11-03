@@ -14,11 +14,12 @@ RSpec.describe "ClickHouse transaction_id indexes", clickhouse: true do # ruboco
     SQL
   end
 
-  it "defines a Bloom-filter index on transaction_id for raw and enriched events" do
+  it "defines transaction_id Bloom-filter indexes for legacy and product events" do
     expect(indexes).to match_array(
       %w[
         events_raw.idx_events_raw_transaction_id
         events_enriched.idx_events_enriched_transaction_id
+        product_events_raw.idx_product_events_raw_transaction_id
       ]
     )
   end
