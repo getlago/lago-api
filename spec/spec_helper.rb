@@ -270,7 +270,7 @@ RSpec.configure do |config|
 
   # WebMock.reset! keeps after_request callbacks, so a callback of an earlier example would still run,
   # with records that no longer exist.
-  config.after { WebMock::CallbackRegistry.reset }
+  config.after { WebMock.reset_callbacks }
 
   # The last JSON response of the example: datetimes to the microsecond, dates as days. A spec of
   # an endpoint that renders a v1 payload opts out with `v2_timestamps: false`.
