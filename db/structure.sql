@@ -8635,7 +8635,7 @@ CREATE INDEX index_billable_metric_filters_on_organization_id ON public.billable
 -- Name: index_billable_metrics_by_cursor; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX index_billable_metrics_by_cursor ON public.billable_metrics USING btree (organization_id, created_at DESC, id DESC);
+CREATE INDEX index_billable_metrics_by_cursor ON public.billable_metrics USING btree (organization_id, created_at DESC, id DESC) WHERE (deleted_at IS NULL);
 
 
 --

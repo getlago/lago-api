@@ -11,6 +11,7 @@ class AddBillableMetricsCursorIndex < ActiveRecord::Migration[8.1]
     add_index :billable_metrics,
       [:organization_id, :created_at, :id],
       order: {created_at: :desc, id: :desc},
+      where: "deleted_at IS NULL",
       name: :index_billable_metrics_by_cursor,
       algorithm: :concurrently,
       if_not_exists: true
