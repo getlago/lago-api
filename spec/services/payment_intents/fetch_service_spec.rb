@@ -46,6 +46,41 @@ RSpec.describe PaymentIntents::FetchService do
         end
       end
 
+      context "when a concurrent request created the active payment intent" do
+        let(:payment_intent) { create(:payment_intent, invoice:, payment_url:) }
+
+        before do
+          payment_intent
+
+          allow(PaymentIntent).to receive(:non_expired).and_wrap_original do |original|
+            original.call.tap do |relation|
+              allow(relation).to receive(:find_or_create_by!).and_raise(ActiveRecord::RecordNotUnique)
+            end
+          end
+        end
+
+        it "returns the existing payment intent" do
+          expect { result }.not_to change(PaymentIntent, :count)
+
+          expect(result).to be_success
+          expect(result.payment_intent).to eq(payment_intent)
+          expect(Invoices::Payments::PaymentProviders::Factory).not_to have_received(:for)
+        end
+
+        context "when the concurrent intent has no payment URL" do
+          let(:payment_intent) { create(:payment_intent, invoice:, payment_url: nil) }
+
+          it "generates the payment URL on the existing payment intent" do
+            expect { result }.not_to change(PaymentIntent, :count)
+
+            expect(result).to be_success
+            expect(result.payment_intent).to eq(payment_intent)
+            expect(payment_provider_service).to have_received(:call!).with(:generate_payment_url, invoice, payment_intent)
+            expect(payment_intent.reload.payment_url).to eq(payment_url)
+          end
+        end
+      end
+
       context "when payment intent exists but has no payment URL" do
         let!(:payment_intent) { create(:payment_intent, invoice:, payment_url: nil) }
 

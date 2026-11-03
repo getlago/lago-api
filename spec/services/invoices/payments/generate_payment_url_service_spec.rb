@@ -29,6 +29,30 @@ RSpec.describe Invoices::Payments::GeneratePaymentUrlService do
       end
     end
 
+    context "when a concurrent request holds the Stripe idempotency key" do
+      let(:idempotency_conflict) do
+        ::Stripe::APIError.new(
+          "There is currently another in-progress request using this Idempotent Key",
+          http_status: 409
+        )
+      end
+
+      before do
+        allow(::Stripe::Checkout::Session).to receive(:create).and_raise(idempotency_conflict)
+      end
+
+      it "returns a lock acquisition failure without an error webhook" do
+        result = nil
+
+        expect { result = described_class.call(invoice:) }.not_to have_enqueued_job(SendWebhookJob)
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::LockAcquisitionFailure)
+        expect(result.error.code).to eq("lock_acquisition_failed")
+        expect(PaymentIntent.where(invoice:).sole.payment_url).to be_nil
+      end
+    end
+
     context "when invoice is blank" do
       it "returns an error" do
         result = described_class.new(invoice: nil).call
