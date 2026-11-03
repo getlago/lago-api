@@ -154,6 +154,10 @@ RSpec.configure do |config|
 
   # NOTE: Database cleaner config to turn off/on transactional mode
   config.before(:suite) do |example|
+    # Load EventsRecord before any `before_all`: TestProf pins the writing pool once for each pool
+    # `connects_to` establishes inside one, unpins it once, and leaves a transaction open.
+    EventsRecord.connection_pool
+
     # No need for `DatabaseCleaner[:active_record, db: EventsRecord].clean_with(:deletion)`
     # because both connections are using the same database.
     DatabaseCleaner[:active_record].clean_with(:deletion)
