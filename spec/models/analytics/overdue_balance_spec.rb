@@ -265,6 +265,54 @@ RSpec.describe Analytics::OverdueBalance do
           expect(invoice_ids).not_to include(deleted_invoice.id)
         end
       end
+
+      context "with an overdue invoice of another organization" do
+        let(:other_organization) { create(:organization) }
+        let(:other_invoice) do
+          create(:invoice, organization: other_organization, customer: create(:customer, organization: other_organization),
+            payment_overdue: true, payment_due_date: 1.month.ago, total_amount_cents: 5000, issuing_date: 1.month.ago)
+        end
+
+        before { other_invoice }
+
+        it "excludes invoices of other organizations from overdue balances" do
+          invoice_ids = overdue_balances.flat_map { |r| JSON.parse(r["lago_invoice_ids"]).flatten }
+          expect(invoice_ids).not_to include(other_invoice.id)
+        end
+      end
+
+      context "with a finalized credit note of another organization" do
+        let(:other_organization) { create(:organization) }
+        let(:other_customer) { create(:customer, organization: other_organization) }
+        let(:other_invoice) do
+          create(:invoice, organization: other_organization, customer: other_customer, payment_overdue: true,
+            payment_due_date: 1.month.ago, total_amount_cents: 1000, issuing_date: 1.month.ago)
+        end
+
+        before do
+          create(:credit_note, organization: other_organization, invoice: other_invoice, customer: other_customer,
+            status: :finalized, total_amount_cents: 300, credit_amount_cents: 300, balance_amount_cents: 300,
+            refund_amount_cents: 0, coupons_adjustment_amount_cents: 0, offset_amount_cents: 300)
+        end
+
+        it "returns the same overdue balances as without it" do
+          expect(overdue_balances).to match_array([
+            hash_including({
+              "month" => Time.current.beginning_of_month - 2.months,
+              "currency" => "EUR",
+              "billing_entity_id" => billing_entity2.id,
+              "amount_cents" => 400,
+              "lago_invoice_ids" => "[[\"#{invoice4.id}\"]]"
+            }), hash_including({
+              "month" => Time.current.beginning_of_month - 1.month,
+              "currency" => "EUR",
+              "billing_entity_id" => billing_entity1.id,
+              "amount_cents" => 100,
+              "lago_invoice_ids" => "[[\"#{invoice1.id}\"]]"
+            })
+          ])
+        end
+      end
     end
 
     context "with filters" do
@@ -439,6 +487,47 @@ RSpec.describe Analytics::OverdueBalance do
         # hits the cache written against the new token and returns 350.
         expect(overdue_amounts).to eq(350)
       end
+    end
+  end
+
+  describe "index usage", transaction: false do
+    # Force PostgreSQL to use indexes even on a tiny test dataset, so the spec
+    # checks that the planner can find the overdue invoices of an organization
+    # through an index rather than reading all of its invoices. The rows are
+    # committed and analyzed, and sorts are disabled, so the plan is stable.
+    around do |example|
+      ActiveRecord::Base.connection.execute("SET enable_seqscan = off")
+      ActiveRecord::Base.connection.execute("SET enable_sort = off")
+      example.run
+    ensure
+      ActiveRecord::Base.connection.execute("SET enable_sort = on")
+      ActiveRecord::Base.connection.execute("SET enable_seqscan = on")
+    end
+
+    let(:organization) { create(:organization) }
+    let(:customer) { create(:customer, organization:) }
+
+    before do
+      overdue_invoice = create(:invoice, organization:, customer:, payment_overdue: true, payment_due_date: 1.month.ago)
+      create_list(:invoice, 3, organization:, customer:, payment_overdue: false, payment_due_date: 1.month.ago)
+      create(:credit_note, organization:, invoice: overdue_invoice, customer:, status: :finalized)
+      ActiveRecord::Base.connection.execute("ANALYZE invoices")
+      ActiveRecord::Base.connection.execute("ANALYZE credit_notes")
+    end
+
+    it "uses the partial index on overdue invoices of the organization" do
+      sql = described_class.query(organization.id, currency: "EUR", months: 12)
+      plan = ActiveRecord::Base.connection.select_values("EXPLAIN #{sql}").join("\n")
+
+      expect(plan).to include("index_invoices_on_organization_id_overdue_cursor")
+    end
+
+    it "reads the finalized credit notes of the organization only" do
+      sql = described_class.query(organization.id, currency: "EUR", months: 12)
+      plan = ActiveRecord::Base.connection.select_values("EXPLAIN #{sql}").join("\n")
+      credit_notes_scan = plan.lines.each_cons(2).find { |scan, _| scan.include?("on credit_notes") }
+
+      expect(credit_notes_scan.last).to include("organization_id = '#{organization.id}'::uuid")
     end
   end
 end

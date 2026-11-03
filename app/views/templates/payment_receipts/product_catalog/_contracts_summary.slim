@@ -1,0 +1,10 @@
+table.invoice-resume-table width="100%"
+  tr
+    td.body-2 = I18n.t('invoice.item')
+    td.body-2 = I18n.t('invoice.amount')
+  - contracts.each do |contract, fees|
+    tr
+      td.body-1 = ProductCatalogInvoiceHelper.contract_name(contract)
+      td.body-2 = MoneyHelper.format(ProductCatalogReceiptHelper.contract_total(fees))
+
+== SlimHelper.render('templates/payment_receipts/product_catalog/_totals', self)

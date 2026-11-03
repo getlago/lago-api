@@ -26,6 +26,8 @@ class WebhookEndpoint < ApplicationRecord
   # Former names, still accepted from API clients and mapped to the current one.
   RENAMED_EVENT_TYPES = {"credit_note.provider_refund_failure" => "credit_note.refund_failure"}.freeze
 
+  V2_ERROR_CODES = {invalid_types: "value_is_invalid", exceeded_limit: "exceeded_limit"}.freeze
+
   belongs_to :organization
   has_many :webhooks, dependent: :delete_all
 
@@ -40,6 +42,13 @@ class WebhookEndpoint < ApplicationRecord
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[webhook_url]
+  end
+
+  # v1 and GraphQL clients read the sentences of these errors; native v2 renders a token in their place.
+  def self.validation_codes(errors)
+    errors.group_by_attribute.transform_values do |attribute_errors|
+      attribute_errors.map { V2_ERROR_CODES.fetch(it.type, it.message) }
+    end
   end
 
   private

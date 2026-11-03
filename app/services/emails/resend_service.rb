@@ -4,6 +4,9 @@ module Emails
   class ResendService < BaseService
     Result = BaseResult
 
+    # The parameters a refusal can name as its field on native v2, which puts the others on base.
+    REQUEST_FIELDS = %i[to cc bcc].freeze
+
     def initialize(resource:, to: nil, cc: nil, bcc: nil)
       @resource = resource
       @to = to
@@ -17,7 +20,9 @@ module Emails
       return result.not_allowed_failure!(code: "payable_not_found") if missing_payable?
       return result.not_allowed_failure!(code: "#{resource_type}_not_finalized") unless valid_status?
       return result.forbidden_failure!(code: "premium_license_required") unless License.premium?
-      return result.validation_failure!(errors: validation_errors) if validation_errors.any?
+
+      refusals = validation_refusals
+      return refuse(refusals) if refusals.any?
 
       send_email
       result
@@ -92,23 +97,30 @@ module Emails
       Array(bcc)
     end
 
-    def validation_errors
-      errors = {}
-      errors[:billing_entity] = ["must have email configured"] if billing_entity.email.blank?
-      errors[:from] = ["must have a sender email address configured"] if billing_entity.from_email_address.blank?
-      errors[:invoice] = ["must have a non-zero fees amount"] if zero_amount_invoice?
-      errors[:to] = ["must have at least one recipient"] if recipients_to.empty?
+    # {field => [code, message]}. v1 and GraphQL clients read the messages, sentences that quote the
+    # addresses refused; native v2 renders the codes, which never echo the request.
+    def validation_refusals
+      refusals = {}
+      refusals[:billing_entity] = ["billing_entity_email_not_configured", "must have email configured"] if billing_entity.email.blank?
+      refusals[:from] = ["sender_email_not_configured", "must have a sender email address configured"] if billing_entity.from_email_address.blank?
+      refusals[:invoice] = ["zero_amount_invoice", "must have a non-zero fees amount"] if zero_amount_invoice?
+      refusals[:to] = ["value_is_mandatory", "must have at least one recipient"] if recipients_to.empty?
 
-      invalid_to = recipients_to.reject { |email| valid_email?(email) }
-      errors[:to] = ["invalid email format: #{invalid_to.join(", ")}"] if invalid_to.any?
+      {to: recipients_to, cc: recipients_cc, bcc: recipients_bcc}.each do |field, emails|
+        invalid = emails.reject { |email| valid_email?(email) }
+        refusals[field] = ["invalid_email_format", "invalid email format: #{invalid.join(", ")}"] if invalid.any?
+      end
 
-      invalid_cc = recipients_cc.reject { |email| valid_email?(email) }
-      errors[:cc] = ["invalid email format: #{invalid_cc.join(", ")}"] if invalid_cc.any?
+      refusals
+    end
 
-      invalid_bcc = recipients_bcc.reject { |email| valid_email?(email) }
-      errors[:bcc] = ["invalid email format: #{invalid_bcc.join(", ")}"] if invalid_bcc.any?
+    def refuse(refusals)
+      errors = refusals.transform_values { |(_code, message)| [message] }
+      codes = refusals
+        .group_by { |field, _| REQUEST_FIELDS.include?(field) ? field : :base }
+        .transform_values { |entries| entries.map { |_field, (code, _message)| code } }
 
-      errors
+      result.validation_failure!(errors:, codes:)
     end
 
     def valid_email?(email)

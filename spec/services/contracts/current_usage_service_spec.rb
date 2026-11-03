@@ -368,9 +368,10 @@ RSpec.describe Contracts::CurrentUsageService do
           .to_return(body: File.read(Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")))
       end
 
-      it "returns a tax error instead of usage" do
+      it "returns a failure of the provider instead of usage" do
         expect(result).not_to be_success
-        expect(result.error.messages).to eq(tax_error: ["taxDateTooFarInFuture: Service failure"])
+        expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+        expect(result.error).to have_attributes(third_party: "anrok", error_code: nil, error_message: "taxDateTooFarInFuture: Service failure")
       end
     end
 

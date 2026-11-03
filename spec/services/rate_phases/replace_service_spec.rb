@@ -138,14 +138,29 @@ RSpec.describe RatePhases::ReplaceService, :capture_kafka_messages do
     context "when the override is invalid" do
       let(:rate_card) { create(:rate_card, organization:, applied_pricing_unit_code: "credits") }
 
-      it "propagates the override validation failure and rolls back" do
+      it "propagates the override validation failure under the path of its phase and rolls back" do
         existing_count = RatePhase.count
         expect { result }.not_to have_enqueued_job(SendWebhookJob)
         expect(RatePhase.count).to eq(existing_count)
         expect(result).not_to be_success
-        expect(result.error.messages[:pricing_unit_conversion_rate]).to include("value_is_mandatory")
+        expect(result.error.messages[:"rate_phases[0].rate_override.pricing_unit_conversion_rate"]).to include("value_is_mandatory")
         expect(Utils::ActivityLog).not_to have_received(:produce_after_commit).with(anything, "plan_rate_card.updated", any_args)
       end
+    end
+  end
+
+  context "when the model refuses a phase given out of order" do
+    let(:phases_params) do
+      [
+        {code: "standard", position: 2, billing_interval_cycle_count: nil},
+        {code: "trial", position: 1, billing_interval_cycle_count: 0}
+      ]
+    end
+
+    it "fails under the position of the phase in the request and creates nothing" do
+      expect { result }.not_to change(RatePhase, :count)
+      expect(result).not_to be_success
+      expect(result.error.messages.keys).to eq([:"rate_phases[1].billing_interval_cycle_count"])
     end
   end
 

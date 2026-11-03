@@ -12,9 +12,12 @@ module WebhookEndpoints
     end
 
     def call
+      signature_algo = params[:signature_algo].nil? ? "jwt" : params[:signature_algo]
+      return invalid_signature_algo_failure unless WebhookEndpoint.signature_algos.key?(signature_algo.to_s)
+
       webhook_endpoint = organization.webhook_endpoints.new(
         webhook_url: params[:webhook_url],
-        signature_algo: params[:signature_algo]&.to_sym || :jwt,
+        signature_algo:,
         name: params[:name],
         event_types: params[:event_types]
       )
@@ -26,12 +29,21 @@ module WebhookEndpoints
       register_security_log(webhook_endpoint)
       result
     rescue ActiveRecord::RecordInvalid => e
-      result.record_validation_failure!(record: e.record)
+      failure = BaseService::ValidationFailure.from_errors(result, e.record.errors)
+      result.validation_failure!(errors: failure.messages, meta: failure.meta, codes: WebhookEndpoint.validation_codes(e.record.errors))
     end
 
     private
 
     attr_reader :organization, :params
+
+    def invalid_signature_algo_failure
+      result.single_validation_failure!(
+        field: :signature_algo,
+        error_code: "value_is_invalid",
+        meta: {allowed_values: WebhookEndpoint.signature_algos.keys}
+      )
+    end
 
     def register_security_log(webhook_endpoint)
       Utils::SecurityLog.produce(

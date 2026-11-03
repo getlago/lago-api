@@ -4,6 +4,7 @@ class ChargeFilter < ApplicationRecord
   include PaperTrailTraceable
   include Discard::Model
   include ChargePropertiesValidation
+  include FilterPrecedence
 
   self.discard_column = :deleted_at
 
@@ -76,17 +77,6 @@ class ChargeFilter < ApplicationRecord
 
       result[filter_value.billable_metric_filter.key] = values
     end.freeze
-  end
-
-  # Sort key of the filter an event is billed on when several match it: the most keys, then the
-  # fewest allowed values, then the oldest. An unsaved filter (the default bucket) comes last.
-  def precedence
-    @precedence ||= begin
-      values = to_h_with_all_values
-      age = created_at ? [0, created_at, id] : [1]
-
-      [-values.size, values.sum { |_key, allowed| allowed.size }, age].freeze
-    end
   end
 
   def assign_code!

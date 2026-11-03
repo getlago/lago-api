@@ -20,6 +20,8 @@ module LagoHttpClient
       Errno::EHOSTUNREACH
     ].freeze
     RETRY_BACKOFF_RANGE = (0.25..0.5)
+    # No byte was sent when connecting fails this way, so the next address cannot receive the request twice.
+    CONNECT_FALLBACK_ERRORS = [Errno::ENETUNREACH, Errno::EHOSTUNREACH, Errno::EADDRNOTAVAIL, Errno::ECONNREFUSED].freeze
 
     attr_reader :uri, :retries_on, :retry_on_transient_errors, :block_private_addresses
 
@@ -110,14 +112,15 @@ module LagoHttpClient
 
       parser = EventStreamParser::Parser.new
 
-      pin_resolved_address(req)
-      http_client.start do |http|
-        http.request(req) do |response|
-          raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
+      with_pinned_addresses(req) do
+        http_client.start do |http|
+          http.request(req) do |response|
+            raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
 
-          response.read_body do |chunk|
-            parser.feed(chunk) do |type, data, id, reconnection_time|
-              yield(type, data, id, reconnection_time) if block_given?
+            response.read_body do |chunk|
+              parser.feed(chunk) do |type, data, id, reconnection_time|
+                yield(type, data, id, reconnection_time) if block_given?
+              end
             end
           end
         end
@@ -167,11 +170,30 @@ module LagoHttpClient
 
     # Resolving on every attempt and connecting to the checked IP defeats DNS rebinding,
     # while the hostname is still used for SNI, certificate verification and the Host header.
-    def pin_resolved_address(req)
-      return unless block_private_addresses && AddressGuard.enabled?
+    def resolved_addresses
+      if block_private_addresses && AddressGuard.enabled?
+        AddressGuard.resolve!(uri.hostname)
+      end
+    end
 
-      address = AddressGuard.resolve!(uri.hostname)
+    # Connecting by host name tried each resolved address, so the pinned connection does the same,
+    # only with the addresses of this check.
+    def with_pinned_addresses(req)
+      addresses = resolved_addresses
+      return yield if addresses.nil?
 
+      last_error = nil
+      addresses.each do |address|
+        pin_address(req, address)
+        return yield
+      rescue *CONNECT_FALLBACK_ERRORS => e
+        last_error = e
+      end
+
+      raise last_error
+    end
+
+    def pin_address(req, address)
       if http_client.use_ssl?
         http_client.ipaddr = address
       else
@@ -186,8 +208,7 @@ module LagoHttpClient
 
       begin
         attempt += 1
-        pin_resolved_address(req)
-        response = http_client.request(req, params)
+        response = with_pinned_addresses(req) { http_client.request(req, params) }
         raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
         response
       rescue => e

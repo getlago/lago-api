@@ -54,7 +54,8 @@ class ProductFeesQuery < BaseQuery
   end
 
   def with_payment_status(scope)
-    invalid_filter!(:payment_status) unless Fee::PAYMENT_STATUS.map(&:to_s).include?(filters.payment_status)
+    allowed_values = Fee::PAYMENT_STATUS.map(&:to_s)
+    invalid_filter!(:payment_status, allowed_values:) unless allowed_values.include?(filters.payment_status)
 
     scope.where(payment_status: filters.payment_status)
   end
@@ -95,7 +96,7 @@ class ProductFeesQuery < BaseQuery
     scope.where(rate_card_rate_id: RateCardRate.with_discarded.where(rate_card_id: rate_cards.select(:id)).select(:id))
   end
 
-  def invalid_filter!(field)
-    result.single_validation_failure!(field:, error_code: "value_is_invalid").raise_if_error!
+  def invalid_filter!(field, **meta)
+    result.single_validation_failure!(field:, error_code: "value_is_invalid", meta:).raise_if_error!
   end
 end

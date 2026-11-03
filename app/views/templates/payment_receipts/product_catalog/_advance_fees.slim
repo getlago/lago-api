@@ -1,0 +1,20 @@
+table.invoice-resume-table width="100%"
+  tr
+    td.body-2 = I18n.t('invoice.item')
+    td.body-2 = I18n.t('invoice.units')
+    td.body-2 = I18n.t('invoice.unit_price')
+    td.body-2 = I18n.t('invoice.tax_rate')
+    td.body-2 = I18n.t('invoice.amount')
+  - contracts.flat_map(&:last).sort_by { [it.succeeded_at || it.created_at, it.created_at] }.each do |fee|
+    tr.fee
+      td
+        .body-1 = FeeDisplayHelper.fee_title(fee)
+        - succeeded_at_date = fee.succeeded_at&.in_time_zone(customer.applicable_timezone)&.to_date
+        - if succeeded_at_date
+          .body-3 = I18n.l(succeeded_at_date, format: :default)
+      td.body-2 = RoundingHelper.round_decimal_part(fee.units)
+      td.body-2 = FeeDisplayHelper.format_precise_unit_amount(fee)
+      td.body-2 == TaxHelper.applied_taxes(fee)
+      td.body-2 = FeeDisplayHelper.format_amount(fee)
+
+== SlimHelper.render('templates/payment_receipts/product_catalog/_totals', self)

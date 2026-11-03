@@ -137,11 +137,37 @@ RSpec.describe Api::V2::RateCardsController do
           }
         end
 
-        it "rolls the whole create back with prefixed error keys" do
+        it "rolls the whole create back with the error under the path of the rate" do
           subject
 
           expect(response).to have_http_status(:unprocessable_entity)
-          expect(json[:details]).to eq([{code: "invalid_amount", field: "rates.rate_properties", meta: {}}])
+          expect(json[:details]).to eq([{code: "invalid_amount", field: "rates[0].rate_properties", meta: {}}])
+          expect(RateCard.count).to eq(0)
+        end
+      end
+
+      context "when a nested rate is under a bound of its model" do
+        let(:create_params) do
+          {
+            product_code: product.code,
+            name: "Standard",
+            code: "standard",
+            currency: "EUR",
+            rates: [
+              {code: "launch", effective_from: Time.current.to_date.iso8601, rate_model: "standard", rate_properties: {amount: "10"}, billing_interval_unit: "month"},
+              {code: "bad", effective_from: 1.month.from_now.to_date.iso8601, rate_model: "standard", rate_properties: {amount: "10"}, billing_interval_unit: "month", billing_interval_count: 0}
+            ]
+          }
+        end
+
+        it "returns the bound under the path of the second rate" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json).to eq(
+            code: "validation_errors",
+            details: [{code: "value_is_out_of_range", field: "rates[1].billing_interval_count", meta: {min: 1}}]
+          )
           expect(RateCard.count).to eq(0)
         end
       end

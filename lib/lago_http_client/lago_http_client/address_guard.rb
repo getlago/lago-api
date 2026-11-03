@@ -38,13 +38,14 @@ module LagoHttpClient
       !ActiveModel::Type::Boolean.new.cast(ENV["LAGO_WEBHOOK_ALLOW_PRIVATE_URLS"])
     end
 
+    # Returns every address of the host in DNS order, once all of them are checked.
     # Raises SocketError when the host does not resolve.
     def self.resolve!(host)
       addresses = Addrinfo.getaddrinfo(host, nil, nil, :STREAM).map(&:ip_address).uniq
       raise SocketError, "getaddrinfo: no address for #{host}" if addresses.empty?
       raise BlockedAddressError, host if addresses.any? { |address| blocked_ip?(address) }
 
-      addresses.first
+      addresses
     end
 
     def self.blocked_ip?(address)

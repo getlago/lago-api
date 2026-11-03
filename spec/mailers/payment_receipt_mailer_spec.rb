@@ -24,6 +24,89 @@ RSpec.describe PaymentReceiptMailer do
       expect(mailer.attachments.first.filename).to eq("receipt-#{payment_receipt.number}.pdf")
     end
 
+    context "when the receipt pays a catalog invoice" do
+      let(:organization) { create(:organization, :with_static_values) }
+      let(:customer) { create(:customer, :with_static_values, organization:) }
+      let(:invoice) do
+        create(:invoice, organization:, customer:, invoice_type:, status: :finalized, currency: "EUR",
+          fees_amount_cents: 2_800, sub_total_excluding_taxes_amount_cents: 2_800,
+          sub_total_including_taxes_amount_cents: 2_800, total_amount_cents: 2_800, total_paid_amount_cents: 2_800)
+      end
+      let(:contract) { create(:contract, organization:, customer:) }
+      let(:category) { create(:product_category, organization:, name: "Infrastructure", invoice_display_name: nil) }
+      let(:product) { create(:product, organization:, product_category: category, name: "Compute", invoice_display_name: nil) }
+      let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card: create(:rate_card, organization:, product:)) }
+      let(:payment) do
+        create(:payment, payable: invoice, organization:, customer:, amount_cents: 2_800, amount_currency: "EUR", status: "succeeded")
+      end
+      let(:payment_receipt) { create(:payment_receipt, payment:, organization:) }
+      let(:generate_invoice_pdf) { true }
+
+      before do
+        payment_receipt.file.purge
+        invoice.file.purge
+        allow(invoice).to receive(:file_url).and_call_original
+        create(:fee, invoice:, subscription: nil, fee_type: :product, invoiceable: product,
+          invoice_display_name: nil, contract:, contract_rate_card:,
+          rate_card_rate: create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card),
+          amount_cents: 2_800, amount_currency: "EUR", units: 280, precise_unit_amount: BigDecimal("0.1"),
+          properties: {"from_datetime" => "2026-10-01T00:00:00Z", "to_datetime" => "2026-10-31T23:59:59Z"})
+        stub_pdf_generation
+        Invoices::GeneratePdfService.call!(invoice:) if generate_invoice_pdf
+      end
+
+      shared_examples "a delivered catalog receipt" do
+        it "generates the receipt and delivers both rendered documents" do
+          mail = payment_receipt_mailer.with(payment_receipt:).created.deliver_now
+
+          expect(ActionMailer::Base.deliveries).to include(mail)
+          expect(mail.to).to eq([customer.email])
+          expect(mail.attachments.map(&:filename)).to eq(["receipt-#{payment_receipt.number}.pdf", "invoice-#{invoice.number}.pdf"])
+          expect(payment_receipt.reload.file).to be_attached
+          expect(mail.attachments["receipt-#{payment_receipt.number}.pdf"].body.decoded).to include("Compute")
+          expect(mail.attachments["invoice-#{invoice.number}.pdf"].body.decoded).to include("Infrastructure")
+        end
+
+        context "when the billed product has been discarded" do
+          before do
+            product.discard!
+            invoice.reload
+            payment_receipt.reload
+          end
+
+          it "generates and emails a receipt retaining the product name" do
+            mail = payment_receipt_mailer.with(payment_receipt:).created.deliver_now
+
+            expect(ActionMailer::Base.deliveries).to include(mail)
+            expect(mail.attachments["receipt-#{payment_receipt.number}.pdf"].body.decoded).to include("Compute")
+          end
+        end
+
+        context "when the invoice PDF is not ready" do
+          let(:generate_invoice_pdf) { false }
+
+          it "refuses delivery until the underlying invoice PDF is available" do
+            expect {
+              payment_receipt_mailer.with(payment_receipt:).created.deliver_now
+            }.to raise_error(PaymentReceipts::FilesNotReadyError)
+            expect(ActionMailer::Base.deliveries).to be_empty
+          end
+        end
+      end
+
+      context "with a contract invoice" do
+        let(:invoice_type) { :contract }
+
+        include_examples "a delivered catalog receipt"
+      end
+
+      context "with an advance charges invoice" do
+        let(:invoice_type) { :advance_charges }
+
+        include_examples "a delivered catalog receipt"
+      end
+    end
+
     context "when pdfs are disabled" do
       around do |example|
         ENV["LAGO_DISABLE_PDF_GENERATION"] = "true"
