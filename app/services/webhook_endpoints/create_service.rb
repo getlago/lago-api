@@ -12,7 +12,7 @@ module WebhookEndpoints
     end
 
     def call
-      signature_algo = params[:signature_algo] || "jwt"
+      signature_algo = params[:signature_algo].nil? ? "jwt" : params[:signature_algo]
       return invalid_signature_algo_failure unless WebhookEndpoint.signature_algos.key?(signature_algo.to_s)
 
       webhook_endpoint = organization.webhook_endpoints.new(

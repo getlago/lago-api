@@ -72,6 +72,17 @@ RSpec.describe Api::V2::WebhookEndpointsController do
       end
     end
 
+    context "with a false signature_algo" do
+      let(:create_params) { super().merge(signature_algo: false) }
+
+      it "returns a validation error rather than defaulting to JWT" do
+        expect { request }.not_to change(WebhookEndpoint, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:details]).to eq([{code: "value_is_invalid", field: "signature_algo", meta: {allowed_values: %w[jwt hmac]}}])
+      end
+    end
+
     context "with a scalar event_types" do
       let(:create_params) { super().merge(event_types: "customer.created") }
 
