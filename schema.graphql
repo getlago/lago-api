@@ -13660,6 +13660,12 @@ type RateCard {
   displayOnInvoice: Boolean!
   id: ID!
   name: String!
+  nextPendingRate(
+    """
+    Perspective to resolve the soonest pending rate from. Defaults to now.
+    """
+    effectiveFrom: ISO8601DateTime
+  ): RateCardRate
   organization: Organization
   product: Product!
   productFilter: ProductFilter
