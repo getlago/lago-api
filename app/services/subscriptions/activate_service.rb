@@ -153,29 +153,7 @@ module Subscriptions
     end
 
     def group_for_invoicing(subscriptions)
-      default_payment_method = subscription.customer.default_payment_method
-
-      subscriptions.group_by do |sub|
-        [
-          payment_method_key(sub, default_payment_method),
-          sub.plan.amount_currency,
-          sub.applicable_billing_entity_id,
-          sub.purchase_order_number,
-          sub.consolidate_invoice ? nil : sub.id
-        ]
-      end.values
-    end
-
-    def payment_method_key(sub, default_payment_method)
-      if sub.payment_method_id.present?
-        [sub.payment_method_id, sub.payment_method_type]
-      elsif sub.payment_method_type == "manual"
-        [nil, "manual"]
-      elsif default_payment_method.present?
-        [default_payment_method.id, "provider"]
-      else
-        [nil, sub.payment_method_type]
-      end
+      Subscriptions::InvoiceGroupingService.call!(subscriptions:).subscription_groups
     end
 
     def enqueue_gating_catch_up_jobs
