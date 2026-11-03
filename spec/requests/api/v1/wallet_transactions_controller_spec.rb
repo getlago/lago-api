@@ -557,6 +557,24 @@ RSpec.describe Api::V1::WalletTransactionsController do
           wallet_transaction_payment_details: hash_including(payment_url: generated_payment_url)
         })
       end
+
+      context "when a concurrent request holds the Stripe idempotency key" do
+        before do
+          allow(::Stripe::Checkout::Session).to receive(:create).and_raise(
+            ::Stripe::APIError.new(
+              "There is currently another in-progress request using this Idempotent Key",
+              http_status: 409
+            )
+          )
+        end
+
+        it "returns a lock acquisition error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:code]).to eq("lock_acquisition_failed")
+        end
+      end
     end
 
     context "when wallet_transaction does not exist" do

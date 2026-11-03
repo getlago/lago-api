@@ -122,5 +122,29 @@ RSpec.describe Mutations::Invoices::GeneratePaymentUrl do
         )
       end
     end
+
+    context "when error is LockAcquisitionFailure" do
+      let(:service_result) do
+        result = Invoices::Payments::GeneratePaymentUrlService::Result.new
+        result.lock_acquisition_failure!(message: "Another request is generating this payment URL")
+        result
+      end
+
+      it "returns a GraphQL error" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query: mutation,
+          variables: {
+            input: {
+              invoiceId: invoice.id
+            }
+          }
+        )
+
+        expect(result["errors"].sole["extensions"]).to eq("status" => 422, "code" => "lock_acquisition_failed")
+      end
+    end
   end
 end

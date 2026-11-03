@@ -1384,6 +1384,24 @@ RSpec.describe Api::V1::InvoicesController do
       end
     end
 
+    context "when a concurrent request holds the Stripe idempotency key" do
+      before do
+        allow(::Stripe::Checkout::Session).to receive(:create).and_raise(
+          ::Stripe::APIError.new(
+            "There is currently another in-progress request using this Idempotent Key",
+            http_status: 409
+          )
+        )
+      end
+
+      it "returns a lock acquisition error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:code]).to eq("lock_acquisition_failed")
+      end
+    end
+
     context "when invoice does not exist" do
       let(:invoice_id) { SecureRandom.uuid }
 

@@ -46,6 +46,24 @@ RSpec.describe Api::V2::Invoices::PaymentUrlsController do
       end
     end
 
+    context "when a concurrent request holds the Stripe idempotency key" do
+      before do
+        allow(::Stripe::Checkout::Session).to receive(:create).and_raise(
+          ::Stripe::APIError.new(
+            "There is currently another in-progress request using this Idempotent Key",
+            http_status: 409
+          )
+        )
+      end
+
+      it "returns a concurrency conflict" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors", details: [{code: "concurrency_conflict", field: "base", meta: {}}])
+      end
+    end
+
     context "when the invoice is a legacy one" do
       let(:invoice_id) { legacy_invoice.id }
 

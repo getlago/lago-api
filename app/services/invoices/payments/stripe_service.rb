@@ -88,6 +88,11 @@ module Invoices
         result
       rescue ::Stripe::CardError, ::Stripe::InvalidRequestError, ::Stripe::AuthenticationError, Stripe::PermissionError => e
         result.third_party_failure!(third_party: PROVIDER_NAME, error_code: e.code, error_message: e.message)
+      rescue ::Stripe::APIError => e
+        # A 409 means a concurrent request holds the idempotency key: the client retries and gets its stored URL.
+        raise unless e.http_status == 409
+
+        result.lock_acquisition_failure!(message: e.message, error: e)
       end
 
       # NOTE: Expires the hosted Stripe Checkout open Session so it can no longer be paid.

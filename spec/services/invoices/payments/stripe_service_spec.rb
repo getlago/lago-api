@@ -151,6 +151,37 @@ RSpec.describe Invoices::Payments::StripeService do
         expect(result.error.error_message).to eq("error")
       end
     end
+
+    context "when a concurrent request holds the Stripe idempotency key" do
+      before do
+        allow(::Stripe::Checkout::Session).to receive(:create).and_raise(
+          ::Stripe::APIError.new(
+            "There is currently another in-progress request using this Idempotent Key",
+            http_status: 409
+          )
+        )
+      end
+
+      it "returns a lock acquisition failure" do
+        result = described_class.call(:generate_payment_url, invoice, payment_intent)
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::LockAcquisitionFailure)
+        expect(result.error.code).to eq("lock_acquisition_failed")
+      end
+    end
+
+    context "with a Stripe API error other than an idempotency conflict" do
+      before do
+        allow(::Stripe::Checkout::Session).to receive(:create)
+          .and_raise(::Stripe::APIError.new("server error", http_status: 500))
+      end
+
+      it "raises the error" do
+        expect { described_class.call(:generate_payment_url, invoice, payment_intent) }
+          .to raise_error(::Stripe::APIError, "server error")
+      end
+    end
   end
 
   describe ".call(:expire_payment_url)" do
