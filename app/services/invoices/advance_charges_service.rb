@@ -61,7 +61,7 @@ module Invoices
         .group_by { |context| [context.currency, context.applicable_billing_entity_id, context.purchase_order_number] }
         .values
         .filter_map { |billing_contexts_group| create_group_invoice(billing_contexts_group) }
-end
+    end
 
     def create_group_invoice(billing_contexts_group)
       invoice = nil
