@@ -39,6 +39,17 @@ RSpec.describe Api::V1::WebhookEndpointsController do
       end
     end
 
+    context "with an unknown signature_algo" do
+      let(:create_params) { super().merge(signature_algo: "md5") }
+
+      it "returns unprocessable_content error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(signature_algo: ["value_is_invalid"])
+      end
+    end
+
     context "with event_types parameter provided" do
       context "when event_types is invalid" do
         let(:create_params) {

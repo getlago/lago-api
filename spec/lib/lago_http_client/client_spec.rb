@@ -792,6 +792,171 @@ RSpec.describe LagoHttpClient::Client do
       end
     end
 
+    context "when the host resolves to several addresses" do
+      let(:url) { "http://hooks.example.com/lago" }
+      let(:ipv6_url) { "http://[2606:4700::6812:11db]/lago" }
+      let(:ipv4_url) { "http://104.18.17.219/lago" }
+      let(:dual_stack_addresses) { [Addrinfo.tcp("2606:4700::6812:11db", 0), Addrinfo.tcp("104.18.17.219", 0)] }
+
+      before do
+        allow(Addrinfo).to receive(:getaddrinfo).and_return(dual_stack_addresses)
+        stub_request(:post, ipv4_url).to_return(body: "{}", status: 200)
+      end
+
+      described_class::CONNECT_FALLBACK_ERRORS.each do |error_class|
+        context "when the first address fails with #{error_class}" do
+          before { stub_request(:post, ipv6_url).to_raise(error_class) }
+
+          it "sends the request to the next address with the original Host header" do
+            response = client.post_with_response({}, {})
+
+            expect(response.code).to eq("200")
+            expect(WebMock).to have_requested(:post, ipv6_url).once
+            expect(WebMock).to have_requested(:post, ipv4_url).with(headers: {"Host" => "hooks.example.com"}).once
+            expect(WebMock).not_to have_requested(:post, url)
+            expect(Addrinfo).to have_received(:getaddrinfo).once
+          end
+        end
+      end
+
+      context "when every address is unreachable" do
+        before do
+          stub_request(:post, ipv6_url).to_raise(Errno::ENETUNREACH)
+          stub_request(:post, ipv4_url).to_raise(Errno::EADDRNOTAVAIL)
+        end
+
+        it "raises the last error after trying each address once" do
+          expect { client.post_with_response({}, {}) }.to raise_error(Errno::EADDRNOTAVAIL)
+          expect(WebMock).to have_requested(:post, ipv6_url).once
+          expect(WebMock).to have_requested(:post, ipv4_url).once
+          expect(WebMock).not_to have_requested(:post, url)
+        end
+      end
+
+      context "when every address is unreachable and transient errors are retried" do
+        let(:client_options) { {block_private_addresses: true, retry_on_transient_errors: true} }
+
+        before do
+          stub_request(:post, ipv6_url).to_raise(Errno::EHOSTUNREACH)
+          stub_request(:post, ipv4_url).to_raise(Errno::EHOSTUNREACH)
+        end
+
+        it "resolves the host again on each attempt" do
+          expect { client.post_with_response({}, {}) }.to raise_error(Errno::EHOSTUNREACH)
+          expect(Addrinfo).to have_received(:getaddrinfo).exactly(described_class::MAX_RETRIES_ATTEMPTS).times
+          expect(WebMock).to have_requested(:post, ipv6_url).times(described_class::MAX_RETRIES_ATTEMPTS)
+          expect(WebMock).to have_requested(:post, ipv4_url).times(described_class::MAX_RETRIES_ATTEMPTS)
+        end
+      end
+
+      [Net::OpenTimeout, OpenSSL::SSL::SSLError].each do |error_class|
+        context "when the first address fails with #{error_class}" do
+          before { stub_request(:post, ipv6_url).to_raise(error_class) }
+
+          it "raises without trying the next address" do
+            expect { client.post_with_response({}, {}) }.to raise_error(error_class)
+            expect(WebMock).not_to have_requested(:post, ipv4_url)
+          end
+        end
+      end
+
+      context "when the first address answers with an error status" do
+        before { stub_request(:post, ipv6_url).to_return(body: "Error", status: 500) }
+
+        it "raises without trying the next address" do
+          expect { client.post_with_response({}, {}) }.to raise_error(LagoHttpClient::HttpError)
+          expect(WebMock).not_to have_requested(:post, ipv4_url)
+        end
+      end
+
+      context "when one of the addresses is private" do
+        let(:dual_stack_addresses) { [Addrinfo.tcp("2606:4700::6812:11db", 0), Addrinfo.tcp("10.0.0.5", 0)] }
+
+        before { stub_request(:post, ipv6_url).to_raise(Errno::ENETUNREACH) }
+
+        it "raises without sending any request" do
+          expect { client.post_with_response({}, {}) }.to raise_error(LagoHttpClient::BlockedAddressError)
+          expect(WebMock).not_to have_requested(:post, ipv6_url)
+          expect(WebMock).not_to have_requested(:post, url)
+        end
+      end
+
+      context "when the URL uses HTTPS" do
+        let(:url) { "https://hooks.example.com/lago" }
+
+        before do
+          stub_request(:post, url).to_return(body: "{}", status: 200)
+          http = client.send(:http_client)
+          allow(http).to receive(:request).and_wrap_original do |original, *args, &block|
+            raise Errno::ENETUNREACH if http.ipaddr == "2606:4700::6812:11db"
+
+            original.call(*args, &block)
+          end
+        end
+
+        it "connects to the next address" do
+          response = client.post_with_response({}, {})
+
+          expect(response.code).to eq("200")
+          expect(client.send(:http_client).ipaddr).to eq("104.18.17.219")
+          expect(client.send(:http_client)).to have_received(:request).twice
+          expect(WebMock).to have_requested(:post, url).once
+        end
+      end
+
+      context "when streaming the response" do
+        let(:sse_response) { "event: message\ndata: {\"text\":\"Hello\"}\n\n" }
+
+        before do
+          stub_request(:post, ipv6_url).to_raise(Errno::ENETUNREACH)
+          stub_request(:post, ipv4_url).to_return(body: sse_response, status: 200)
+        end
+
+        it "streams the response from the next address" do
+          events = []
+          client.post_with_stream({}, {}) { |type, data| events << [type, data] }
+
+          expect(events).to eq([["message", '{"text":"Hello"}']])
+          expect(WebMock).to have_requested(:post, ipv4_url).with(headers: {"Host" => "hooks.example.com"}).once
+          expect(WebMock).not_to have_requested(:post, url)
+        end
+      end
+
+      context "when streaming and the first address answers with an error status" do
+        before { stub_request(:post, ipv6_url).to_return(body: "Error", status: 500) }
+
+        it "raises without trying the next address" do
+          expect { client.post_with_stream({}, {}) { |*| } }.to raise_error(LagoHttpClient::HttpError)
+          expect(WebMock).not_to have_requested(:post, ipv4_url)
+        end
+      end
+
+      context "when streaming and every address is unreachable" do
+        before do
+          stub_request(:post, ipv6_url).to_raise(Errno::ENETUNREACH)
+          stub_request(:post, ipv4_url).to_raise(Errno::ENETUNREACH)
+        end
+
+        it "raises the last error" do
+          expect { client.post_with_stream({}, {}) { |*| } }.to raise_error(Errno::ENETUNREACH)
+          expect(WebMock).to have_requested(:post, ipv4_url).once
+        end
+      end
+    end
+
+    context "when the protection is not requested and the host is unreachable" do
+      let(:url) { "http://hooks.example.com/lago" }
+      let(:client_options) { {} }
+
+      before { stub_request(:post, url).to_raise(Errno::ENETUNREACH) }
+
+      it "raises at once without resolving the host" do
+        expect { client.post_with_response({}, {}) }.to raise_error(Errno::ENETUNREACH)
+        expect(Addrinfo).not_to have_received(:getaddrinfo)
+        expect(WebMock).to have_requested(:post, url).once
+      end
+    end
+
     context "when private addresses are allowed" do
       let(:allow_private) { "true" }
 

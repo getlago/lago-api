@@ -77,6 +77,14 @@ RSpec.describe BaseService::ValidationFailure do
     end
   end
 
+  describe ".item_field" do
+    it "gives the path of a field of an element of a list, or of the element itself for base" do
+      expect(described_class.item_field(:rates, 1, :code)).to eq(:"rates[1].code")
+      expect(described_class.item_field(:values, 0, "key")).to eq(:"values[0].key")
+      expect(described_class.item_field(:rates, 1, :base)).to eq(:"rates[1]")
+    end
+  end
+
   describe "#remap" do
     subject(:remapped) { failure.remap(other_result) { :"rates.#{it}" } }
 

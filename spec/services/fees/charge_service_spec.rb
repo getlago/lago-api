@@ -4747,6 +4747,11 @@ RSpec.describe Fees::ChargeService, :premium do
   end
 
   describe "recurring aggregation snapshots" do
+    # The aggregator gets the fetch, not its result: calling it gives what the aggregation read
+    def fetching(**attributes)
+      have_attributes(call: have_attributes(**attributes))
+    end
+
     let(:organization) { create_default(:organization, feature_flags: ["recurring_aggregation_snapshots"]) }
     let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:, field_name: "value") }
     let(:snapshots) { RecurringAggregationSnapshot.where(subscription:, charge:) }
@@ -5115,8 +5120,10 @@ RSpec.describe Fees::ChargeService, :premium do
 
         expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(
           hash_including(
-            initial_value: [have_attributes(grouped_by: {}, units: 12, to_datetime: previous_to_datetime)],
-            initial_period: RecurringAggregationSnapshots::FetchService::Period.new(to_datetime: previous_to_datetime, watermark: now)
+            initial_snapshots: fetching(
+              snapshots: [have_attributes(grouped_by: {}, units: 12, to_datetime: previous_to_datetime)],
+              period: RecurringAggregationSnapshots::FetchService::Period.new(to_datetime: previous_to_datetime, watermark: now)
+            )
           )
         )
       end
@@ -5133,10 +5140,33 @@ RSpec.describe Fees::ChargeService, :premium do
           expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(
             hash_including(
               metered_item: have_attributes(charge_filter: eu_filter),
-              initial_value: [],
-              initial_period: RecurringAggregationSnapshots::FetchService::Period.new(to_datetime: previous_to_datetime, watermark: now)
+              initial_snapshots: fetching(
+                snapshots: [],
+                period: RecurringAggregationSnapshots::FetchService::Period.new(to_datetime: previous_to_datetime, watermark: now)
+              )
             )
           )
+        end
+      end
+
+      context "with several charge filters" do
+        let(:region) { create(:billable_metric_filter, billable_metric:, key: "region", values: %w[eu us]) }
+        let(:eu_filter) { create(:charge_filter, charge:, properties: {amount: "20"}) }
+        let(:us_filter) { create(:charge_filter, charge:, properties: {amount: "20"}) }
+
+        before do
+          create(:charge_filter_value, charge_filter: eu_filter, billable_metric_filter: region, values: ["eu"])
+          create(:charge_filter_value, charge_filter: us_filter, billable_metric_filter: region, values: ["us"])
+          allow(RecurringAggregationSnapshot).to receive(:filters_changed_since?).and_call_original
+        end
+
+        it "reads the latest period of the charge once for all its buckets" do
+          statements = capture_sql { charge_subscription_service.call }
+
+          expect(statements.grep(/FROM "recurring_aggregation_snapshots".*ORDER BY/m).size).to eq(1)
+          expect(RecurringAggregationSnapshot).to have_received(:filters_changed_since?).once
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
+            .with(hash_including(initial_snapshots: fetching(period: be_present))).exactly(3).times
         end
       end
 
@@ -5147,7 +5177,7 @@ RSpec.describe Fees::ChargeService, :premium do
           charge_subscription_service.call
 
           expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
-            .with(hash_including(initial_value: [have_attributes(units: 12)]))
+            .with(hash_including(initial_snapshots: fetching(snapshots: [have_attributes(units: 12)])))
         end
       end
 
@@ -5159,7 +5189,7 @@ RSpec.describe Fees::ChargeService, :premium do
         it "falls back to a full scan" do
           charge_subscription_service.call
 
-          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_value: nil, initial_period: nil))
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_snapshots: nil))
         end
       end
 
@@ -5169,7 +5199,7 @@ RSpec.describe Fees::ChargeService, :premium do
         it "falls back to a full scan" do
           charge_subscription_service.call
 
-          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_value: nil, initial_period: nil))
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_snapshots: fetching(snapshots: nil, period: nil)))
         end
       end
 
@@ -5179,7 +5209,7 @@ RSpec.describe Fees::ChargeService, :premium do
         it "falls back to a full scan" do
           charge_subscription_service.call
 
-          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_value: nil, initial_period: nil))
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_snapshots: nil))
         end
       end
 
@@ -5189,7 +5219,7 @@ RSpec.describe Fees::ChargeService, :premium do
         it "reads no snapshot" do
           charge_subscription_service.call
 
-          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_value: nil, initial_period: nil))
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_snapshots: nil))
         end
       end
 
@@ -5208,7 +5238,7 @@ RSpec.describe Fees::ChargeService, :premium do
         it "reads no snapshot" do
           charge_subscription_service.call
 
-          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_value: nil, initial_period: nil))
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_snapshots: nil))
         end
       end
 
@@ -5220,7 +5250,7 @@ RSpec.describe Fees::ChargeService, :premium do
         it "reads no snapshot" do
           charge_subscription_service.call
 
-          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_value: nil, initial_period: nil))
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_snapshots: nil))
         end
       end
 
@@ -5233,7 +5263,7 @@ RSpec.describe Fees::ChargeService, :premium do
           charge_subscription_service.call
 
           expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
-            .with(hash_including(initial_value: [have_attributes(units: 12)]))
+            .with(hash_including(initial_snapshots: fetching(snapshots: [have_attributes(units: 12)])))
         end
       end
 
@@ -5243,7 +5273,7 @@ RSpec.describe Fees::ChargeService, :premium do
         it "reads no snapshot" do
           charge_subscription_service.call
 
-          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_value: nil, initial_period: nil))
+          expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(hash_including(initial_snapshots: nil))
         end
       end
     end
@@ -5298,7 +5328,7 @@ RSpec.describe Fees::ChargeService, :premium do
         expect(bill(april)).to eq([[{}, 45, 5]])
         expect(bill(may)).to eq([[{}, 49, 6]])
         expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
-          .with(hash_including(initial_value: [have_attributes(grouped_by: {})])).twice
+          .with(hash_including(initial_snapshots: fetching(snapshots: [have_attributes(grouped_by: {})]))).twice
       end
 
       context "with pricing group keys" do
@@ -5314,7 +5344,7 @@ RSpec.describe Fees::ChargeService, :premium do
           expect(bill(april)).to match_array([[{"region" => "eu"}, 42, 4], [{"region" => "us"}, 3, 1]])
           expect(bill(may)).to match_array([[{"region" => "eu"}, 42, 4], [{"region" => "us"}, 3, 1], [{"region" => "apac"}, 4, 1]])
           expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
-            .with(hash_including(initial_value: be_present)).twice
+            .with(hash_including(initial_snapshots: fetching(snapshots: be_present))).twice
         end
       end
 
@@ -5339,9 +5369,9 @@ RSpec.describe Fees::ChargeService, :premium do
           # 45 from the snapshot at full weight, 4 on 10 May over 22 of 31 days
           expect(bill(may)).to eq([[49, (45 + BigDecimal(4 * 22) / 31).ceil(5) * 2_000]])
           expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
-            .with(hash_including(initial_value: [have_attributes(units: 18)])).once
+            .with(hash_including(initial_snapshots: fetching(snapshots: [have_attributes(units: 18)]))).once
           expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
-            .with(hash_including(initial_value: [have_attributes(units: 45)])).once
+            .with(hash_including(initial_snapshots: fetching(snapshots: [have_attributes(units: 45)]))).once
         end
       end
 
@@ -5389,7 +5419,7 @@ RSpec.describe Fees::ChargeService, :premium do
           expect(bill(april)).to match_array([[{}, 38, 4], [{}, 5, 1]])
           expect(bill(may)).to match_array([[{}, 38, 4], [{}, 9, 2]])
           expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
-            .with(hash_including(metered_item: have_attributes(charge_filter: apac_filter), initial_value: [], initial_period: be_present)).once
+            .with(hash_including(metered_item: have_attributes(charge_filter: apac_filter), initial_snapshots: fetching(snapshots: [], period: be_present))).once
         end
       end
 
@@ -5406,7 +5436,7 @@ RSpec.describe Fees::ChargeService, :premium do
           expect(bill(april)).to eq([[{}, 45, 5]])
           expect(bill(may)).to eq([[{}, 49, 6]])
           expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
-            .with(hash_including(initial_value: [have_attributes(grouped_by: {})])).twice
+            .with(hash_including(initial_snapshots: fetching(snapshots: [have_attributes(grouped_by: {})]))).twice
         end
 
         it "starts from the snapshot of the previous period" do
@@ -5433,7 +5463,7 @@ RSpec.describe Fees::ChargeService, :premium do
           expect(bill(may).sole.second.round(10)).to eq((38 + 4 * 22/31r).round(10))
           expect(snapshots.order(:to_datetime).pluck(:units)).to eq([18, 38, 42])
           expect(BillableMetrics::AggregationFactory).to have_received(:new_instance)
-            .with(hash_including(initial_value: [have_attributes(grouped_by: {})])).twice
+            .with(hash_including(initial_snapshots: fetching(snapshots: [have_attributes(grouped_by: {})]))).twice
         end
 
         context "with a group back to zero units" do

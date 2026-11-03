@@ -140,7 +140,7 @@ class Fee < ApplicationRecord
     return add_on.code if add_on?
     return fee_type if credit?
     return fixed_charge_add_on.code if fixed_charge?
-    return invoiceable.code if product?
+    return billed_product.code if product?
 
     subscription.plan.code
   end
@@ -150,7 +150,7 @@ class Fee < ApplicationRecord
     return add_on.name if add_on?
     return invoiceable&.name.presence || fee_type if credit?
     return fixed_charge_add_on.name if fixed_charge?
-    return invoiceable.name if product?
+    return billed_product.name if product?
 
     subscription.plan.name
   end
@@ -159,7 +159,7 @@ class Fee < ApplicationRecord
     return fixed_charge_add_on.code if fixed_charge?
     return add_on.code if add_on?
     return "consumed_credits" if credit?
-    return invoiceable.code if product?
+    return billed_product.code if product?
 
     subscription&.plan&.code.presence || billable_metric&.code
   end
@@ -169,7 +169,7 @@ class Fee < ApplicationRecord
     return add_on.description if add_on?
     return fee_type if credit?
     return fixed_charge_add_on.description if fixed_charge?
-    return invoiceable.description if product?
+    return billed_product.description if product?
 
     subscription.plan.description
   end
@@ -179,7 +179,7 @@ class Fee < ApplicationRecord
   end
 
   def invoice_name
-    return invoice_display_name.presence || invoiceable.invoice_name if product?
+    return invoice_display_name.presence || billed_product.invoice_name if product?
     return invoice_display_name if invoice_display_name.present?
     return charge.invoice_display_name.presence || billable_metric.name if charge?
     return add_on.invoice_name if add_on?

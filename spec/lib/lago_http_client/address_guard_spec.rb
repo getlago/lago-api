@@ -82,8 +82,8 @@ RSpec.describe LagoHttpClient::AddressGuard do
     context "when every address is public" do
       let(:addresses) { %w[93.184.215.14 2606:2800:21f:cb07:6820:80da:af6b:8b2c] }
 
-      it "returns the first address" do
-        expect(resolve).to eq("93.184.215.14")
+      it "returns every address in DNS order" do
+        expect(resolve).to eq(%w[93.184.215.14 2606:2800:21f:cb07:6820:80da:af6b:8b2c])
       end
     end
 

@@ -14,7 +14,10 @@ module Api
         payment_status = filters[:payment_status]
 
         if payment_status.present? && !PaymentRequest.payment_statuses.key?(payment_status)
-          return validation_errors(errors: {payment_status: ["value_is_invalid"]})
+          return validation_errors(
+            errors: {payment_status: ["value_is_invalid"]},
+            meta: {payment_status: {allowed_values: PaymentRequest.payment_statuses.keys}}
+          )
         end
 
         result = ::PaymentRequestsQuery.call(

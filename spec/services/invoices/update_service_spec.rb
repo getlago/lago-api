@@ -386,6 +386,7 @@ RSpec.describe Invoices::UpdateService do
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages.keys).to include(:payment_status)
         expect(result.error.messages[:payment_status]).to include("value_is_invalid")
+        expect(result.error.meta).to eq(payment_status: {allowed_values: %w[pending succeeded failed]})
       end
     end
 

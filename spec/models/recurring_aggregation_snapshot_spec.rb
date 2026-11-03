@@ -30,6 +30,72 @@ RSpec.describe RecurringAggregationSnapshot do
         expect(described_class.of_period(latest_to_datetime)).to eq([snapshot])
       end
     end
+
+    describe ".latest_period" do
+      let(:marker) { create(:recurring_aggregation_snapshot, to_datetime: Time.zone.parse("2026-09-30T23:59:59")) }
+      let(:charge_filter) { create(:charge_filter, charge: marker.charge) }
+      let(:bucket_snapshot) { create_snapshot(to_datetime: marker.to_datetime, charge_filter:) }
+      let(:older_marker) { create_snapshot(to_datetime: Time.zone.parse("2026-08-31T23:59:59")) }
+
+      def create_snapshot(**attributes)
+        create(:recurring_aggregation_snapshot, organization: marker.organization, subscription: marker.subscription, charge: marker.charge, **attributes)
+      end
+
+      before do
+        bucket_snapshot
+        older_marker
+        create_snapshot(to_datetime: marker.to_datetime, charge_filter: create(:charge_filter, charge: marker.charge))
+      end
+
+      it "returns the snapshots of the listed buckets in the latest period" do
+        expect(described_class.latest_period([nil, charge_filter.id])).to match_array([marker, bucket_snapshot])
+      end
+
+      it "returns the latest period closed before the given time" do
+        expect(described_class.latest_period([nil, charge_filter.id], before: marker.to_datetime)).to eq([older_marker])
+      end
+    end
+
+    describe ".of_group" do
+      let(:marker) { create(:recurring_aggregation_snapshot, grouped_by: {"region" => nil, "cloud" => nil}) }
+      let(:charge_filter) { create(:charge_filter, charge: marker.charge) }
+      let(:grouped_by_keys) { %w[region cloud] }
+      # null sorts before any string in jsonb, so it is the first snapshot of the bucket
+      let(:eu_snapshot) { create_snapshot(grouped_by: {"region" => "eu", "cloud" => nil}) }
+      let(:eu_aws_snapshot) { create_snapshot(grouped_by: {"region" => "eu", "cloud" => "aws"}) }
+      let(:us_aws_snapshot) { create_snapshot(grouped_by: {"region" => "us", "cloud" => "aws"}) }
+
+      def create_snapshot(**attributes)
+        create(:recurring_aggregation_snapshot, organization: marker.organization, subscription: marker.subscription,
+          charge: marker.charge, charge_filter:, **attributes)
+      end
+
+      def of_group(grouped_by_values)
+        described_class.of_group(grouped_by_values, grouped_by_keys:, bucket_ids: [nil, charge_filter.id])
+      end
+
+      before do
+        eu_snapshot
+        eu_aws_snapshot
+        us_aws_snapshot
+      end
+
+      it "returns the snapshots of the group and the first snapshot of each bucket" do
+        expect(of_group({"region" => "us", "cloud" => "aws"})).to match_array([marker, eu_snapshot, us_aws_snapshot])
+      end
+
+      it "matches a missing value with the null stored for it" do
+        expect(of_group({"region" => "eu", "cloud" => nil})).to match_array([marker, eu_snapshot])
+      end
+
+      it "matches every value of a key left out" do
+        expect(of_group({"region" => "eu"})).to match_array([marker, eu_snapshot, eu_aws_snapshot])
+      end
+
+      it "returns every snapshot without grouped_by_values" do
+        expect(of_group(nil)).to match_array([marker, eu_snapshot, eu_aws_snapshot, us_aws_snapshot])
+      end
+    end
   end
 
   describe "validations" do
@@ -103,6 +169,34 @@ RSpec.describe RecurringAggregationSnapshot do
       let(:billable_metric) { build_stubbed(:billable_metric, :recurring, aggregation_type: "count_agg") }
 
       it { is_expected.to be(false) }
+    end
+  end
+
+  describe ".fetch_arguments" do
+    subject(:arguments) { described_class.fetch_arguments(metered_item:, billing_context:) }
+
+    let(:subscription) { build_stubbed(:subscription) }
+    let(:billing_context) { Billing::Context.from(subscription:) }
+    let(:charge) { build_stubbed(:standard_charge) }
+    let(:charge_filter) { build_stubbed(:charge_filter, charge:) }
+    let(:from_datetime) { Time.zone.parse("2026-10-01T00:00:00") }
+    let(:boundaries) { instance_double(BillingPeriodBoundaries, charges_from_datetime: from_datetime) }
+    let(:metered_item) do
+      instance_double(Fees::ChargeService::MeteredItem, charge:, charge_filter:, pricing_group_keys: %w[region], boundaries:)
+    end
+
+    it "returns the subscription, charge, filter, grouping keys and period start" do
+      expect(arguments).to eq(
+        subscription:, charge:, charge_filter:, grouped_by_keys: %w[region], from_datetime:
+      )
+    end
+
+    context "with grouping keys given" do
+      subject(:arguments) { described_class.fetch_arguments(metered_item:, billing_context:, grouped_by_keys: nil) }
+
+      it "uses them instead of the charge's" do
+        expect(arguments[:grouped_by_keys]).to be_nil
+      end
     end
   end
 

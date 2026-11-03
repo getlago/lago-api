@@ -2,16 +2,19 @@
 
 class PaymentReceiptsQuery < BaseQuery
   Result = BaseResult[:payment_receipts]
-  Filters = BaseFilters[:invoice_id]
+  Filters = BaseFilters[:invoice_id, :created_at_from, :created_at_to]
 
   def call
     return result unless validate_filters.success?
 
     payment_receipts = apply_filters(base_scope)
-    payment_receipts = paginate(payment_receipts)
+    payment_receipts = with_date_range(payment_receipts, :created_at)
     payment_receipts = apply_consistent_ordering(payment_receipts)
+    payment_receipts = paginate(payment_receipts)
 
     result.payment_receipts = payment_receipts
+    result
+  rescue BaseService::FailedResult
     result
   end
 

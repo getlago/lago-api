@@ -372,4 +372,34 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
 
     it_behaves_like "a keyset-paginated query", table: "contract_rate_cards", index: "index_contract_rate_cards_by_cursor"
   end
+
+  context "with PaymentReceiptsQuery" do
+    let(:filtered_scope) do
+      lambda do |pagination|
+        PaymentReceiptsQuery.call(
+          organization:,
+          pagination:,
+          filters: {invoice_id: SecureRandom.uuid, created_at_from: "2026-10-01", created_at_to: "2026-10-31"}
+        ).payment_receipts
+      end
+    end
+
+    it_behaves_like "a keyset-paginated query", table: "payment_receipts"
+  end
+
+  # An organization has at most WebhookEndpoint::LIMIT endpoints: its organization_id index bounds the page.
+  context "with WebhookEndpointsQuery" do
+    let(:filtered_scope) do
+      lambda do |pagination|
+        WebhookEndpointsQuery.call(
+          organization:,
+          search_term: "lago",
+          pagination:,
+          filters: {created_at_from: "2026-10-01", created_at_to: "2026-10-31"}
+        ).webhook_endpoints
+      end
+    end
+
+    it_behaves_like "a keyset-paginated query", table: "webhook_endpoints"
+  end
 end

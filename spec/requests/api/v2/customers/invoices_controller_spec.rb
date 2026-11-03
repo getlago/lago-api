@@ -66,7 +66,10 @@ RSpec.describe Api::V2::Customers::InvoicesController do
         subject
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "invoice_type", meta: {}}])
+        expect(json).to eq(
+          code: "validation_errors",
+          details: [{code: "value_is_invalid", field: "invoice_type", meta: {allowed_values: %w[contract advance_fees]}}]
+        )
       end
     end
 
