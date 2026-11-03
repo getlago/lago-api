@@ -52,15 +52,15 @@ module Invoices
       )
     end
 
-    # NOTE: The re-expanded subscription set (matched by external_id) can span several
-    #       currencies, billing entities and purchase order numbers — e.g. a terminated and an
-    #       active subscription sharing an external_id after an upgrade. An invoice holds one of
-    #       each, so every (currency, billing entity, PO) must produce its own invoice.
+    # NOTE: The re-expanded subscription set (matched by external_id) can mix subscriptions that
+    #       periodic billing invoices apart — e.g. a terminated and an active subscription sharing
+    #       an external_id after an upgrade. Group them the same way.
     def create_group_invoices
-      pending_billing_contexts_with_fees
-        .group_by { |context| [context.currency, context.applicable_billing_entity_id, context.purchase_order_number] }
-        .values
-        .filter_map { |billing_contexts_group| create_group_invoice(billing_contexts_group) }
+      subscriptions = pending_billing_contexts_with_fees.map(&:subscription)
+
+      Subscriptions::InvoiceGroupingService.call!(subscriptions:).subscription_groups.filter_map do |subscriptions_group|
+        create_group_invoice(subscriptions_group.map { |subscription| Billing::Context.from(subscription:) })
+      end
     end
 
     def create_group_invoice(billing_contexts_group)

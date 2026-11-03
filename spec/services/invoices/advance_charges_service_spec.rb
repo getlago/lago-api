@@ -500,6 +500,101 @@ RSpec.describe Invoices::AdvanceChargesService do
       end
     end
 
+    context "when re-expanded subscriptions are invoiced apart by periodic billing" do
+      let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+
+      let(:charge) do
+        create(:charge, plan:, billable_metric:, prorated: true, pay_in_advance: true, invoiceable: false, regroup_paid_fees: "invoice", properties: {amount: "1"})
+      end
+
+      # Same external_id as `subscription` (an upgrade rotation), so the re-expansion
+      # by external_id pulls it in alongside `subscription`.
+      let(:subscription_2) do
+        create(
+          :subscription,
+          external_id: subscription.external_id,
+          customer:,
+          status: :terminated,
+          terminated_at: Time.current,
+          started_at: Time.current - 1.year,
+          plan:,
+          **subscription_2_attributes
+        )
+      end
+
+      before do
+        create(:fee, :succeeded, organization_id: organization.id, succeeded_at: fee_boundaries[:charges_to_datetime] - 2.days, invoice_id: nil, subscription:, amount_cents: 100, taxes_amount_cents: 0, properties: fee_boundaries, charge:)
+        create(:fee, :succeeded, organization_id: organization.id, succeeded_at: fee_boundaries[:charges_to_datetime] - 2.days, invoice_id: nil, subscription: subscription_2, amount_cents: 200, taxes_amount_cents: 0, properties: fee_boundaries, charge:)
+      end
+
+      shared_examples "an advance-charges invoice per subscription" do
+        it "creates a separate advance-charges invoice for each subscription" do
+          expect { invoice_service.call }
+            .to change { Invoice.where(invoice_type: :advance_charges).count }.by(2)
+
+          invoices = Invoice.where(invoice_type: :advance_charges)
+          expect(invoices.map { |invoice| invoice.fees.map(&:subscription_id) })
+            .to match_array([[subscription.id], [subscription_2.id]])
+        end
+      end
+
+      context "when they use different payment methods" do
+        let(:subscription_2_attributes) { {payment_method_type: "manual"} }
+
+        it_behaves_like "an advance-charges invoice per subscription"
+      end
+
+      context "when one of them opted out of invoice consolidation" do
+        let(:subscription_2_attributes) { {consolidate_invoice: false} }
+
+        it_behaves_like "an advance-charges invoice per subscription"
+      end
+    end
+
+    context "when re-expanded subscriptions are billed in different currencies" do
+      let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+      let(:plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_currency: "EUR") }
+      let(:usd_plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: true, amount_currency: "USD") }
+
+      let(:charge) do
+        create(:charge, plan:, billable_metric:, prorated: true, pay_in_advance: true, invoiceable: false, regroup_paid_fees: "invoice", properties: {amount: "1"})
+      end
+      let(:usd_charge) do
+        create(:charge, plan: usd_plan, billable_metric:, prorated: true, pay_in_advance: true, invoiceable: false, regroup_paid_fees: "invoice", properties: {amount: "1"})
+      end
+
+      # Same external_id as `subscription` (an upgrade to a plan in another currency), so the
+      # re-expansion by external_id pulls it in alongside `subscription` despite the other currency.
+      let(:subscription_2) do
+        create(
+          :subscription,
+          external_id: subscription.external_id,
+          customer:,
+          status: :terminated,
+          terminated_at: Time.current,
+          started_at: Time.current - 1.year,
+          plan: usd_plan
+        )
+      end
+
+      before do
+        create(:fee, :succeeded, organization_id: organization.id, succeeded_at: fee_boundaries[:charges_to_datetime] - 2.days, invoice_id: nil, subscription:, amount_cents: 100, amount_currency: "EUR", taxes_amount_cents: 0, properties: fee_boundaries, charge:)
+        create(:fee, :succeeded, organization_id: organization.id, succeeded_at: fee_boundaries[:charges_to_datetime] - 2.days, invoice_id: nil, subscription: subscription_2, amount_cents: 200, amount_currency: "USD", taxes_amount_cents: 0, properties: fee_boundaries, charge: usd_charge)
+      end
+
+      it "creates a separate advance-charges invoice per currency" do
+        expect { invoice_service.call }
+          .to change { Invoice.where(invoice_type: :advance_charges).count }.by(2)
+
+        invoices = Invoice.where(invoice_type: :advance_charges).index_by(&:currency)
+        expect(invoices.keys).to match_array(%w[EUR USD])
+        expect(invoices["EUR"].fees.map(&:subscription_id)).to eq([subscription.id])
+        expect(invoices["EUR"].fees_amount_cents).to eq(100)
+        expect(invoices["USD"].fees.map(&:subscription_id)).to eq([subscription_2.id])
+        expect(invoices["USD"].fees_amount_cents).to eq(200)
+      end
+    end
+
     context "when re-expanded subscriptions share the same purchase order number" do
       let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
 
