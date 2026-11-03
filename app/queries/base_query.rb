@@ -141,13 +141,13 @@ class BaseQuery < BaseService
 
   # Narrows `scope` on the `<column>_from` and `<column>_to` filters, both bounds included, so a
   # date-only `_to` covers its whole day. An invalid bound raises the `invalid_date` failure.
-  def with_date_range(scope, column)
-    from = filters[:"#{column}_from"]
-    to = filters[:"#{column}_to"]
+  def with_date_range(scope, column, filter_prefix: column)
+    from = filters[:"#{filter_prefix}_from"]
+    to = filters[:"#{filter_prefix}_to"]
 
-    scope = scope.where(column => parse_datetime_filter(:"#{column}_from")..) if from.present?
+    scope = scope.where(column => parse_datetime_filter(:"#{filter_prefix}_from")..) if from.present?
     if to.present?
-      to_bound = parse_datetime_filter(:"#{column}_to")
+      to_bound = parse_datetime_filter(:"#{filter_prefix}_to")
       scope = date_only?(to) ? scope.where(column => ...to_bound.next_day) : scope.where(column => ..to_bound)
     end
     scope

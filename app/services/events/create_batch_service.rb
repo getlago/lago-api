@@ -11,6 +11,7 @@ module Events
       @events_params = events_params[:events]
       @timestamp = timestamp
       @metadata = metadata
+      @expression_error_codes = {}
 
       super
     end
@@ -25,17 +26,27 @@ module Events
       end
 
       validate_events
-      return result.validation_failure!(errors: result.errors) if result.errors.present?
+      return result.validation_failure!(errors: result.errors, codes: validation_codes) if result.errors.present?
 
       post_validate_events
-      return result.validation_failure!(errors: result.errors) if result.errors.present?
+      return result.validation_failure!(errors: result.errors, codes: validation_codes) if result.errors.present?
 
       result
     end
 
     private
 
-    attr_reader :organization, :events_params, :timestamp, :metadata
+    attr_reader :organization, :events_params, :timestamp, :metadata, :expression_error_codes
+
+    # Native v2 reads flat field paths; v1 keeps the existing indexed messages.
+    def validation_codes
+      result.errors.each_with_object({}) do |(index, errors), codes|
+        fields = errors.is_a?(Hash) ? errors : {base: [expression_error_codes.fetch(index)]}
+        fields.each do |field, values|
+          codes[ValidationFailure.item_field(:events, index, field)] = values
+        end
+      end
+    end
 
     def validate_events
       result.events = []
@@ -63,7 +74,10 @@ module Events
         event.precise_total_amount_cents = event_params[:precise_total_amount_cents]
 
         expression_result = CalculateExpressionService.call(organization:, event:)
-        result.errors[index] = expression_result.error.message unless expression_result.success?
+        unless expression_result.success?
+          result.errors[index] = expression_result.error.message
+          expression_error_codes[index] = expression_result.error.code.to_s
+        end
 
         result.events.push(event)
         result.errors[index] = event.errors.messages unless event.valid?

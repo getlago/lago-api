@@ -54,6 +54,21 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
     end
   end
 
+  context "with V2::EventsQuery" do
+    let(:filtered_scope) do
+      lambda do |pagination|
+        V2::EventsQuery.call(
+          organization:,
+          pagination:,
+          filters: {code: "requests", external_contract_id: "contract", timestamp_from: 2.days.ago.iso8601,
+                    timestamp_to: Time.current.iso8601, created_at_from: 1.day.ago.iso8601}
+        ).events
+      end
+    end
+
+    it_behaves_like "a keyset-paginated query", table: "events"
+  end
+
   context "with BillableMetricsQuery" do
     let(:default_scope) { ->(pagination) { BillableMetricsQuery.call(organization:, pagination:).billable_metrics } }
     let(:filtered_scope) do

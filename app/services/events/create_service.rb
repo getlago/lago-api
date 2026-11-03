@@ -32,7 +32,9 @@ module Events
       event.precise_total_amount_cents = params[:precise_total_amount_cents]
 
       expression_result = CalculateExpressionService.call(organization:, event:)
-      return result.validation_failure!(errors: expression_result.error.message) unless expression_result.success?
+      unless expression_result.success?
+        return result.validation_failure!(errors: expression_result.error.message, codes: {base: [expression_result.error.code.to_s]})
+      end
 
       event.save! unless organization.clickhouse_events_store?
 
