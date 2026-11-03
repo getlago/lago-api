@@ -37,11 +37,11 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
     )
   end
 
-  def pay_in_advance_result(rows:)
+  def pay_in_advance_result(rows:, compared_charges_count: 1)
     RecurringAggregationSnapshots::ComparePayInAdvanceService::Result.new.tap do
       it.rows = rows
       it.differences = rows.select(&:different?)
-      it.compared_charges_count = 1
+      it.compared_charges_count = compared_charges_count
       it.compared_events_count = rows.size
       it.rechecked = false
     end
@@ -173,6 +173,27 @@ RSpec.describe "recipes:recurring_aggregation_snapshots:compare_usage" do # rubo
             "no pay in advance bucket read one: this run says nothing about pay in advance parity"
           )
         ).to_stdout
+      end
+    end
+
+    context "when no pay in advance event was replayed" do
+      let(:pay_in_advance_comparison) { pay_in_advance_result(rows: []) }
+
+      it "says the run proves nothing about pay in advance parity" do
+        expect { task.invoke }.to output(
+          a_string_including(
+            "pay in advance events replayed: 0",
+            "no pay in advance bucket read one: this run says nothing about pay in advance parity"
+          )
+        ).to_stdout
+      end
+
+      context "without a pay in advance charge" do
+        let(:pay_in_advance_comparison) { pay_in_advance_result(rows: [], compared_charges_count: 0) }
+
+        it "reports no mismatch" do
+          expect { task.invoke }.to output(/No mismatch over the charges and events read from a snapshot/).to_stdout
+        end
       end
     end
 

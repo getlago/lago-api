@@ -72,6 +72,7 @@ namespace :recipes do
 
       csv_rows = []
       pay_in_advance_csv_rows = []
+      pay_in_advance_charges = 0
       pay_in_advance_events = 0
       pay_in_advance_snapshot_buckets = 0
       compared = 0
@@ -96,6 +97,7 @@ namespace :recipes do
         pay_in_advance = RecurringAggregationSnapshots::ComparePayInAdvanceService.call(subscription:)
 
         if pay_in_advance.success?
+          pay_in_advance_charges += pay_in_advance.compared_charges_count
           pay_in_advance_events += pay_in_advance.compared_events_count
           pay_in_advance_snapshot_buckets += pay_in_advance.rows.count(&:snapshot_read)
           pay_in_advance_csv_rows.concat(recurring_snapshots_pay_in_advance_csv_rows(subscription, pay_in_advance))
@@ -140,7 +142,7 @@ namespace :recipes do
         "No mismatch over the comparisons that ran, but #{failed + pay_in_advance_failed} failed: rerun them before enabling the organization."
       elsif compared == without_snapshot
         "No subscription read a snapshot: this run says nothing about parity."
-      elsif pay_in_advance_events.positive? && pay_in_advance_snapshot_buckets.zero?
+      elsif pay_in_advance_charges.positive? && pay_in_advance_snapshot_buckets.zero?
         "No mismatch over the charges read from a snapshot, but no pay in advance bucket read one: this run says nothing about pay in advance parity."
       else
         "No mismatch over the charges and events read from a snapshot."
