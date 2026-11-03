@@ -106,8 +106,20 @@ namespace :recipes do
       puts "      Confirming below acknowledges this check has been performed."
       puts ""
       TaskPrompt.confirm!("Do you want to proceed? (y/n): ")
-      organization.update!(clickhouse_events_store: true)
+      ActiveRecord::Base.transaction do
+        organization.update!(clickhouse_events_store: true)
+        delete_recurring_aggregation_snapshots(organization)
+      end
       ApiKeys::CacheService.expire_all_cache(organization)
+
+      puts ""
+      puts "  Invoicing or backfill jobs started before the switch still read Postgres and can write"
+      puts "  snapshots after the deletion. Wait until they have finished, then delete again."
+      if TaskPrompt.confirm?("Delete the recurring aggregation snapshots again? (y/n): ")
+        delete_recurring_aggregation_snapshots(organization)
+      else
+        puts "  /!\\ Snapshots written by those jobs are kept and can double count events."
+      end
 
       puts "DONE."
     end
@@ -134,6 +146,12 @@ def compute_usage_totals(subscription)
   enriched_fees = enriched_result.usage&.fees || []
 
   [legacy_fees.sum(&:amount_cents), enriched_fees.sum(&:amount_cents), legacy_fees, enriched_fees]
+end
+
+# Their watermarks were compared with Postgres created_at, not ClickHouse enriched_at
+def delete_recurring_aggregation_snapshots(organization)
+  deleted_count = RecurringAggregationSnapshot.where(organization:).delete_all
+  puts "  Deleted #{deleted_count} recurring aggregation snapshot(s)."
 end
 
 def recent_events?(organization, subscription)
