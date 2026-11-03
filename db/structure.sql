@@ -722,8 +722,10 @@ DROP INDEX IF EXISTS public.index_invoices_on_ready_to_be_refreshed;
 DROP INDEX IF EXISTS public.index_invoices_on_payment_method_id;
 DROP INDEX IF EXISTS public.index_invoices_on_payment_due_date;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_search_terms_gin_trgm_ops;
+DROP INDEX IF EXISTS public.index_invoices_on_organization_id_overdue_cursor;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_number_gin_trgm_ops;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_lower_purchase_order_number;
+DROP INDEX IF EXISTS public.index_invoices_on_organization_id_invoice_type_cursor;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_and_customer_id;
 DROP INDEX IF EXISTS public.index_invoices_on_organization_id_and_created_at;
 DROP INDEX IF EXISTS public.index_invoices_on_number;
@@ -10610,6 +10612,13 @@ CREATE INDEX index_invoices_on_organization_id_and_customer_id ON public.invoice
 
 
 --
+-- Name: index_invoices_on_organization_id_invoice_type_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoices_on_organization_id_invoice_type_cursor ON public.invoices USING btree (organization_id, invoice_type, issuing_date DESC, created_at DESC, id);
+
+
+--
 -- Name: index_invoices_on_organization_id_lower_purchase_order_number; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10621,6 +10630,13 @@ CREATE INDEX index_invoices_on_organization_id_lower_purchase_order_number ON pu
 --
 
 CREATE INDEX index_invoices_on_organization_id_number_gin_trgm_ops ON public.invoices USING gin (organization_id, number public.gin_trgm_ops);
+
+
+--
+-- Name: index_invoices_on_organization_id_overdue_cursor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoices_on_organization_id_overdue_cursor ON public.invoices USING btree (organization_id, issuing_date DESC, created_at DESC, id) WHERE (payment_overdue = true);
 
 
 --
@@ -15980,6 +15996,8 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261103084714'),
+('20261103084708'),
 ('20261029112805'),
 ('20261029111437'),
 ('20261028184732'),
