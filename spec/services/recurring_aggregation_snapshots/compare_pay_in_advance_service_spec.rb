@@ -19,6 +19,13 @@ RSpec.describe RecurringAggregationSnapshots::ComparePayInAdvanceService do
 
     create_event(timestamp: Time.zone.parse("2022-04-10"), value: 5)
     create_event(timestamp: Time.zone.parse("2022-05-10"), value: 3)
+    create_snapshot
+
+    travel_to(Time.zone.parse("2022-05-15"))
+    stub_const("#{described_class}::RECHECK_DELAY", 0)
+  end
+
+  def create_snapshot
     create(
       :recurring_aggregation_snapshot,
       organization:,
@@ -29,9 +36,6 @@ RSpec.describe RecurringAggregationSnapshots::ComparePayInAdvanceService do
       units: snapshot_units,
       events_count: 1
     )
-
-    travel_to(Time.zone.parse("2022-05-15"))
-    stub_const("#{described_class}::RECHECK_DELAY", 0)
   end
 
   def create_event(timestamp:, value: nil, properties: {value:})
@@ -119,9 +123,49 @@ RSpec.describe RecurringAggregationSnapshots::ComparePayInAdvanceService do
       end
     end
 
-    it "checks the difference of the snapshot run again" do
-      expect(result.rechecked).to be(true)
+    it "builds the row again from the settled period" do
+      expect(result.rechecked).to be(false)
       expect(result.differences).to be_empty
+      expect(result.rows.sole).to have_attributes(snapshot_read: false)
+    end
+  end
+
+  context "when the snapshot period is persisted during the snapshot run" do
+    let(:snapshot_units) { 20 }
+
+    before do
+      RecurringAggregationSnapshot.delete_all
+
+      allow(Charges::PayInAdvanceAggregationService).to receive(:call!).and_wrap_original do |original, **args|
+        original.call(**args).tap do
+          create_snapshot if RecurringAggregationSnapshots.read_enabled?(organization) && RecurringAggregationSnapshot.none?
+        end
+      end
+    end
+
+    it "builds the row again and compares the snapshot it reads" do
+      expect(result.rows.sole).to have_attributes(snapshot_read: true)
+      expect(result.differences.sole).to have_attributes(
+        snapshot: have_attributes(aggregation: 23), # snapshot 20 + 3 on 10 May
+        full_scan: have_attributes(aggregation: 8) # 5 on 10 Apr + 3 on 10 May
+      )
+    end
+  end
+
+  context "when the snapshot period keeps changing during the snapshot run" do
+    before do
+      allow(Charges::PayInAdvanceAggregationService).to receive(:call!).and_wrap_original do |original, **args|
+        original.call(**args).tap do
+          next unless RecurringAggregationSnapshots.read_enabled?(organization)
+
+          RecurringAggregationSnapshot.any? ? RecurringAggregationSnapshot.delete_all : create_snapshot
+        end
+      end
+    end
+
+    it "fails the comparison as inconclusive" do
+      expect(result).to be_failure
+      expect(result.error.code).to eq("snapshot_period_unsettled")
     end
   end
 

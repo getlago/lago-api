@@ -88,12 +88,18 @@ module RecurringAggregationSnapshots
       end
     end
 
-    # A period persisted or invalidated during the snapshot run leaves its read unknown: the row is
-    # compared rather than a difference dropped, and a false one goes through the recheck.
-    def build_row(event, metered_item, billing_context)
+    # A period persisted or invalidated during the snapshot run leaves its read unknown either way:
+    # the row is built again, and a period that keeps moving fails the comparison as inconclusive.
+    def build_row(event, metered_item, billing_context, attempts: 2)
       snapshot_read = snapshot_read?(metered_item, billing_context)
       snapshot = RecurringAggregationSnapshots.with_forced_read(true) { aggregate(metered_item, billing_context) }
-      snapshot_read ||= snapshot_read?(metered_item, billing_context)
+
+      if snapshot_read != snapshot_read?(metered_item, billing_context)
+        return build_row(event, metered_item, billing_context, attempts: attempts - 1) if attempts > 1
+
+        result.service_failure!(code: "snapshot_period_unsettled", message: "snapshot period changed during the comparison").raise_if_error!
+      end
+
       full_scan = RecurringAggregationSnapshots.with_forced_read(false) { aggregate(metered_item, billing_context) }
 
       Row.new(
