@@ -232,4 +232,20 @@ RSpec.describe "API v2 routing parity" do
       end
     end
   end
+
+  it "routes webhook endpoint endpoints to the v2 controller" do
+    id = SecureRandom.uuid
+
+    {
+      get: ["/api/v2/webhook_endpoints", "/api/v2/webhook_endpoints/#{id}"],
+      post: ["/api/v2/webhook_endpoints"],
+      put: ["/api/v2/webhook_endpoints/#{id}"],
+      patch: ["/api/v2/webhook_endpoints/#{id}"],
+      delete: ["/api/v2/webhook_endpoints/#{id}"]
+    }.each do |method, paths|
+      paths.each do |path|
+        expect(Rails.application.routes.recognize_path(path, method:)[:controller]).to eq("api/v2/webhook_endpoints")
+      end
+    end
+  end
 end
