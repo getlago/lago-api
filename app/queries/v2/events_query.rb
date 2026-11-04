@@ -11,31 +11,27 @@ module V2
     def self.event_model(organization:)
       if organization.postgres_events_store?
         Event
-      elsif organization.product_catalog_enabled? && ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"].present?
-        Clickhouse::ProductEventsRaw
       else
-        Clickhouse::EventsRaw
+        Clickhouse::ProductEventsEnriched
       end
     end
 
     def self.cursor_sort(organization:)
       return CursorPagination::DEFAULT_SORT if organization.postgres_events_store?
 
-      contract_column = (event_model(organization:) == Clickhouse::ProductEventsRaw) ? :external_contract_id : :external_subscription_id
-      sort = {ingested_at: :desc, timestamp: :desc}
-      sort[contract_column] = :desc
-      sort.merge(code: :desc, transaction_id: :desc)
+      {timestamp: :desc, external_contract_id: :desc, code: :desc, transaction_id: :desc}
     end
 
     def call
       return result unless validate_filters.success?
 
       events = event_model.where(organization_id: organization.id)
+      # Reprocessing creates new versions; FINAL returns the latest version before paging.
+      events = events.from("#{event_model.quoted_table_name} FINAL") unless organization.postgres_events_store?
       events = events.where(transaction_id: filters.transaction_id) if filters.transaction_id.present?
       events = events.where(code: filters.code) if filters.code.present?
       events = events.where(contract_column => external_contract_id) if external_contract_id.present?
       events = with_timestamp_range(events)
-      events = with_date_range(events, created_at_column, filter_prefix: :created_at)
       events = events.order(self.class.cursor_sort(organization:))
 
       result.events = paginate(events)
@@ -54,12 +50,8 @@ module V2
       self.class.event_model(organization:)
     end
 
-    def created_at_column
-      organization.postgres_events_store? ? :created_at : :ingested_at
-    end
-
     def contract_column
-      (event_model == Clickhouse::ProductEventsRaw) ? :external_contract_id : :external_subscription_id
+      organization.postgres_events_store? ? :external_subscription_id : :external_contract_id
     end
 
     def external_contract_id

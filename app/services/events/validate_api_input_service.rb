@@ -5,6 +5,7 @@ module Events
     Result = BaseResult
 
     STRING_FIELDS = %i[transaction_id code external_contract_id external_subscription_id].freeze
+    MAX_TRANSACTION_ID_LENGTH = 1_000
 
     def initialize(params:, batch: false)
       @params = params
@@ -20,7 +21,7 @@ module Events
       end
 
       if errors.any?
-        result.validation_failure!(errors:)
+        result.validation_failure!(errors:, meta: validation_meta(errors))
       end
       result
     end
@@ -28,6 +29,12 @@ module Events
     private
 
     attr_reader :params, :batch
+
+    def validation_meta(errors)
+      errors.each_with_object({}) do |(field, codes), meta|
+        meta[field] = {max_length: MAX_TRANSACTION_ID_LENGTH} if codes.include?("value_is_too_long")
+      end
+    end
 
     def batch_errors
       return {events: ["no_events"]} if params.nil? || params == []
@@ -53,6 +60,10 @@ module Events
 
       %i[transaction_id code].each do |field|
         errors[field] ||= ["value_is_mandatory"] if event[field].blank?
+      end
+
+      if event[:transaction_id].is_a?(String) && event[:transaction_id].length > MAX_TRANSACTION_ID_LENGTH
+        errors[:transaction_id] ||= ["value_is_too_long"]
       end
 
       if event.key?(:properties) && !event[:properties].nil? && !event[:properties].is_a?(Hash)

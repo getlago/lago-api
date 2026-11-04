@@ -17,7 +17,7 @@ module CursorPagination
   DEFAULT_SORT = {created_at: :desc, id: :desc}.freeze
 
   # The type `Token` writes and reads a column's value as. Any other column is a string.
-  COLUMN_TYPES = {issuing_date: :date, created_at: :time, logged_at: :time, ingested_at: :time, timestamp: :time, id: :uuid}.freeze
+  COLUMN_TYPES = {issuing_date: :date, created_at: :time, logged_at: :time, timestamp: :time, id: :uuid}.freeze
 
   DIRECTIONS = %i[asc desc].freeze
 

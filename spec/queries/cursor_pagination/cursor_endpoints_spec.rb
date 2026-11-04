@@ -61,7 +61,7 @@ RSpec.describe "Cursor-paginated queries" do # rubocop:disable RSpec/DescribeCla
           organization:,
           pagination:,
           filters: {code: "requests", external_contract_id: "contract", timestamp_from: 2.days.ago.iso8601,
-                    timestamp_to: Time.current.iso8601, created_at_from: 1.day.ago.iso8601}
+                    timestamp_to: Time.current.iso8601}
         ).events
       end
     end

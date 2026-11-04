@@ -15,6 +15,12 @@ module Queries
         optional(:created_at_to)
       end
 
+      %i[created_at_from created_at_to].each do |field|
+        rule(field) do
+          key.failure("use timestamp_from and timestamp_to") if key?
+        end
+      end
+
       rule(:timestamp_from_started_at, :timestamp_from) do
         if values[:timestamp_from_started_at] == "true" && values[:timestamp_from].present?
           key(:timestamp_from).failure("cannot be used with timestamp_from_started_at")

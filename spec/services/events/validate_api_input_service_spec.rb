@@ -20,6 +20,23 @@ RSpec.describe Events::ValidateApiInputService do
     end
   end
 
+  context "with a 1,000-character transaction id" do
+    let(:params) { super().merge(transaction_id: "😀" * 1_000) }
+
+    it "accepts the limit in characters, not bytes" do
+      expect(result).to be_success
+    end
+  end
+
+  context "with a transaction id longer than 1,000 characters" do
+    let(:params) { super().merge(transaction_id: "a" * 1_001) }
+
+    it "returns the maximum length" do
+      expect(result.error.messages).to eq(transaction_id: ["value_is_too_long"])
+      expect(result.error.meta).to eq(transaction_id: {max_length: 1_000})
+    end
+  end
+
   context "with a finite amount" do
     let(:params) { super().merge(precise_total_amount_cents: "123.456") }
 
@@ -50,6 +67,15 @@ RSpec.describe Events::ValidateApiInputService do
 
     it "keeps the original index of the invalid entry" do
       expect(result.error.messages).to eq("events[1]": ["value_is_invalid"])
+    end
+
+    context "with an oversized transaction id after a valid event" do
+      let(:params) { [{transaction_id: "first", code: "requests"}, {transaction_id: "a" * 1_001, code: "requests"}] }
+
+      it "returns the indexed error and maximum length" do
+        expect(result.error.messages).to eq("events[1].transaction_id": ["value_is_too_long"])
+        expect(result.error.meta).to eq("events[1].transaction_id": {max_length: 1_000})
+      end
     end
   end
 end

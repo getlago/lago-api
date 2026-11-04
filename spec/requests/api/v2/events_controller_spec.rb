@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V2::EventsController do
+RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
   let(:organization) { create_default(:organization, feature_flags: ["product_catalog"]) }
   let(:attributes) { valid_attributes }
   let(:valid_attributes) do
@@ -28,7 +28,11 @@ RSpec.describe Api::V2::EventsController do
       timestamp: record.timestamp.iso8601(6),
       created_at: record.created_at.iso8601(6),
       updated_at: record.updated_at.iso8601(6),
-      deleted_at: record.deleted_at&.iso8601(6)
+      deleted_at: record.deleted_at&.iso8601(6),
+      enriched_at: nil,
+      value: nil,
+      decimal_value: nil,
+      attribution_labels: {}
     }
   end
 
@@ -56,10 +60,16 @@ RSpec.describe Api::V2::EventsController do
       end
     end
 
-    it_behaves_like "a v2 list filtered on created_at", collection: :events do
-      let(:filtered_path) { path }
-      let(:create_filtered_record) do
-        ->(created_at) { create(:event, organization:, external_subscription_id: contract.external_id, created_at:) }
+    %i[created_at_from created_at_to].each do |field|
+      context "when using #{field}" do
+        let(:params) { {field => Time.current.iso8601} }
+
+        it "rejects a creation-time filter instead of silently ignoring it" do
+          request
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: field.to_s, meta: {}}])
+        end
       end
     end
 
@@ -228,6 +238,32 @@ RSpec.describe Api::V2::EventsController do
   end
 
   shared_examples "validates event input" do
+    context "with a 1,000-character transaction id" do
+      let(:attributes) { super().merge(transaction_id: "a" * 1_000) }
+
+      it "accepts the maximum length without truncating it" do
+        request
+
+        expect(response).to have_http_status(:ok)
+        payload = json[:event] || json[:events].first
+        expect(payload[:transaction_id]).to eq(attributes[:transaction_id])
+      end
+    end
+
+    context "with a transaction id longer than 1,000 characters" do
+      let(:attributes) { super().merge(transaction_id: "a" * 1_001) }
+
+      it "rejects the request before storing or publishing any events" do
+        expect { request }.not_to change(Event, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors",
+          details: [{code: "value_is_too_long", field: "#{error_prefix}transaction_id", meta: {max_length: 1_000}}])
+        expect(Events::PostProcessJob).not_to have_been_enqueued
+        expect(karafka_producer).not_to have_received(:produce_many_async)
+      end
+    end
+
     {
       transaction_id: [123, [], {}], code: [123, [], {}], external_contract_id: [false, [], {}],
       properties: [123, "invalid", []], timestamp: [false, [], {}], precise_total_amount_cents: ["invalid", "NaN", [], {}]
@@ -409,6 +445,20 @@ RSpec.describe Api::V2::EventsController do
       end
     end
 
+    context "with an oversized transaction id on the second event" do
+      let(:batch) { [attributes, attributes.merge(transaction_id: "a" * 1_001)] }
+
+      it "rejects the whole batch without storing or publishing the first event" do
+        expect { request }.not_to change(Event, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors",
+          details: [{code: "value_is_too_long", field: "events[1].transaction_id", meta: {max_length: 1_000}}])
+        expect(Events::PostProcessJob).not_to have_been_enqueued
+        expect(karafka_producer).not_to have_received(:produce_many_async)
+      end
+    end
+
     context "with duplicate transaction ids", transaction: false do
       let(:batch) { [attributes, attributes] }
 
@@ -436,22 +486,59 @@ RSpec.describe Api::V2::EventsController do
     end
   end
 
+  describe "PostgreSQL ingestion without a product topic" do
+    before do
+      allow(ENV).to receive(:[]).and_call_original
+      allow(ENV).to receive(:[]).with("LAGO_KAFKA_BOOTSTRAP_SERVERS").and_return("kafka")
+      allow(ENV).to receive(:[]).with("LAGO_KAFKA_RAW_EVENTS_TOPIC").and_return("subscription-events")
+      allow(ENV).to receive(:[]).with("LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC").and_return(nil)
+    end
+
+    it "stores a single event without publishing to the subscription topic" do
+      expect { post_with_token(organization, "/api/v2/events", event: attributes) }.to change(Event, :count).by(1)
+
+      expect(response).to have_http_status(:ok)
+      expect(karafka_producer).not_to have_received(:produce_many_async)
+    end
+
+    it "stores a batch without publishing to the subscription topic" do
+      expect {
+        post_with_token(organization, "/api/v2/events/batch", events: [attributes, attributes.merge(transaction_id: "second-event")])
+      }.to change(Event, :count).by(2)
+
+      expect(response).to have_http_status(:ok)
+      expect(karafka_producer).not_to have_received(:produce_many_async)
+    end
+
+    context "without Kafka" do
+      before { allow(ENV).to receive(:[]).with("LAGO_KAFKA_BOOTSTRAP_SERVERS").and_return(nil) }
+
+      it "keeps PostgreSQL-only ingestion available" do
+        expect { post_with_token(organization, "/api/v2/events", event: attributes) }.to change(Event, :count).by(1)
+
+        expect(response).to have_http_status(:ok)
+        expect(Events::PostProcessJob).to have_been_enqueued.once
+      end
+    end
+  end
+
   describe "ClickHouse events", clickhouse: true do
     let(:organization) { create_default(:organization, feature_flags: ["product_catalog"], clickhouse_events_store: true) }
-    let(:ingested_at) { Time.zone.parse("2026-10-01T10:00:00.123Z") }
+    let(:enriched_at) { Time.zone.parse("2026-10-01T10:00:00.123Z") }
     let(:event_timestamp) { Time.zone.parse("2026-10-01T09:00:00.456Z") }
-    let(:raw_event) do
-      create(:clickhouse_product_events_raw, organization:, external_contract_id: "contract.eu", transaction_id: "transaction.eu",
-        timestamp: event_timestamp, ingested_at:, precise_total_amount_cents: "123.45")
+    let(:enriched_event) do
+      create(:clickhouse_product_events_enriched, organization:, external_contract_id: "contract.eu", transaction_id: "transaction.eu",
+        timestamp: event_timestamp, enriched_at:, precise_total_amount_cents: "123.45", attribution_labels: {"region" => "eu"})
     end
 
     before do
       allow(ENV).to receive(:[]).and_call_original
+      allow(ENV).to receive(:[]).with("LAGO_KAFKA_BOOTSTRAP_SERVERS").and_return("kafka")
       allow(ENV).to receive(:[]).with("LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC").and_return("product-events")
-      raw_event
+      enriched_event
     end
 
-    def expected_raw_payload(record)
+    def expected_enriched_payload(record)
       {
         lago_id: nil,
         transaction_id: record.transaction_id,
@@ -461,34 +548,38 @@ RSpec.describe Api::V2::EventsController do
         precise_total_amount_cents: record.precise_total_amount_cents&.to_s,
         properties: record.properties.deep_symbolize_keys,
         timestamp: record.timestamp.iso8601(6),
-        created_at: record.ingested_at.iso8601(6),
+        created_at: nil,
         updated_at: nil,
-        deleted_at: nil
+        deleted_at: nil,
+        enriched_at: record.enriched_at.iso8601(6),
+        value: record.value,
+        decimal_value: record.decimal_value&.to_s,
+        attribution_labels: record.attribution_labels.deep_symbolize_keys
       }
     end
 
-    it "lists product events rather than reading the legacy raw table" do
+    it "lists enriched product events" do
       get_with_token(organization, "/api/v2/events")
 
       expect(response).to have_http_status(:ok)
-      expect(json).to eq(events: [expected_raw_payload(raw_event)], meta: {next_cursor: nil, prev_cursor: nil})
+      expect(json).to eq(events: [expected_enriched_payload(enriched_event)], meta: {next_cursor: nil, prev_cursor: nil})
     end
 
     it "fetches a product event by its transaction id" do
       get_with_token(organization, "/api/v2/events/transaction.eu")
 
       expect(response).to have_http_status(:ok)
-      expect(json).to eq(event: expected_raw_payload(raw_event))
+      expect(json).to eq(event: expected_enriched_payload(enriched_event))
     end
 
-    it "uses ingestion time for the created_at date filter" do
-      get_with_token(organization, "/api/v2/events", created_at_from: ingested_at.iso8601(6), created_at_to: ingested_at.iso8601(6))
+    it "filters on event time rather than processing time" do
+      get_with_token(organization, "/api/v2/events", timestamp_from: event_timestamp.iso8601(6), timestamp_to: event_timestamp.iso8601(6))
 
       expect(response).to have_http_status(:ok)
-      expect(json[:events]).to eq([expected_raw_payload(raw_event)])
+      expect(json[:events]).to eq([expected_enriched_payload(enriched_event)])
     end
 
-    it "can count raw events without PostgreSQL-only settings" do
+    it "can count enriched events without PostgreSQL-only settings" do
       get_with_token(organization, "/api/v2/events", include_total_count: true)
 
       expect(response).to have_http_status(:ok)
@@ -496,7 +587,7 @@ RSpec.describe Api::V2::EventsController do
     end
 
     context "when the count is capped" do
-      let(:second_event) { create(:clickhouse_product_events_raw, organization:, transaction_id: "second", ingested_at:) }
+      let(:second_event) { create(:clickhouse_product_events_enriched, organization:, transaction_id: "second", enriched_at:) }
 
       before do
         second_event
@@ -511,15 +602,19 @@ RSpec.describe Api::V2::EventsController do
       end
     end
 
-    context "when multiple contracts reuse a transaction id and ingestion time" do
-      let(:raw_events) do
+    context "when multiple contracts reuse a transaction id and event time" do
+      let(:enriched_events) do
         %w[contract.a contract.b contract.c contract.d].map do |external_contract_id|
-          create(:clickhouse_product_events_raw, organization:, external_contract_id:, transaction_id: "same-transaction",
-            timestamp: event_timestamp, ingested_at:)
+          create(:clickhouse_product_events_enriched, organization:, external_contract_id:, transaction_id: "same-transaction",
+            timestamp: event_timestamp, enriched_at:)
         end
       end
+      let(:reprocessed_event) do
+        create(:clickhouse_product_events_enriched, organization:, external_contract_id: "contract.a", transaction_id: "same-transaction",
+          timestamp: event_timestamp, enriched_at: enriched_at + 1.day, value: "42.0")
+      end
 
-      before { raw_events }
+      before { enriched_events }
 
       def fetch_event_page(params = {})
         get_with_token(organization, "/api/v2/events", params)
@@ -555,14 +650,77 @@ RSpec.describe Api::V2::EventsController do
         get_with_token(organization, "/api/v2/events/same-transaction", external_contract_id: "contract.b")
 
         expect(response).to have_http_status(:ok)
-        expect(json).to eq(event: expected_raw_payload(raw_events.second))
+        expect(json).to eq(event: expected_enriched_payload(enriched_events.second))
+      end
+
+      it "does not skip an unseen event when it is reprocessed between pages" do
+        page = fetch_event_page(limit: 2)
+        seen_contracts = page[:events].map { it[:external_contract_id] }
+        reprocessed_event
+
+        while page[:meta][:next_cursor]
+          page = fetch_event_page(limit: 2, after: page[:meta][:next_cursor])
+          seen_contracts.concat(page[:events].map { it[:external_contract_id] })
+        end
+
+        expect(seen_contracts).to eq(%w[contract.eu contract.d contract.c contract.b contract.a])
+      end
+    end
+
+    context "when enrichment has not completed" do
+      let(:pending_event) do
+        create(:clickhouse_product_events_raw, organization:, external_contract_id: "contract.eu", transaction_id: "pending-event")
+      end
+
+      before { pending_event }
+
+      it "does not list the raw event" do
+        get_with_token(organization, "/api/v2/events")
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:events]).to eq([expected_enriched_payload(enriched_event)])
+      end
+
+      it "returns 404 rather than exposing a raw event" do
+        get_with_token(organization, "/api/v2/events/pending-event")
+
+        expect(response).to be_v2_not_found_error("event")
+      end
+    end
+
+    context "when an event has multiple enrichment versions" do
+      let(:new_version) do
+        create(:clickhouse_product_events_enriched, organization:, external_contract_id: enriched_event.external_contract_id,
+          code: enriched_event.code, transaction_id: enriched_event.transaction_id, timestamp: event_timestamp,
+          enriched_at: enriched_at + 1.minute, value: "42.0", precise_total_amount_cents: "123.45")
+      end
+
+      before do
+        Clickhouse::BaseRecord.connection.execute("SYSTEM STOP MERGES product_events_enriched")
+        new_version
+      end
+
+      after { Clickhouse::BaseRecord.connection.execute("SYSTEM START MERGES product_events_enriched") }
+
+      it "returns and counts only the latest version before background merges" do
+        get_with_token(organization, "/api/v2/events", limit: 1, include_total_count: true)
+
+        expect(response).to have_http_status(:ok)
+        expect(json).to eq(events: [expected_enriched_payload(new_version)], meta: {next_cursor: nil, prev_cursor: nil, total_count: 1})
+      end
+
+      it "fetches the latest version" do
+        get_with_token(organization, "/api/v2/events/transaction.eu")
+
+        expect(response).to have_http_status(:ok)
+        expect(json).to eq(event: expected_enriched_payload(new_version))
       end
     end
 
     context "when the catalog Kafka topic is not configured" do
       let(:legacy_event) do
         create(:clickhouse_events_raw, organization:, external_subscription_id: "contract.eu", transaction_id: "legacy-event",
-          timestamp: event_timestamp, ingested_at:)
+          timestamp: event_timestamp, ingested_at: enriched_at)
       end
 
       before do
@@ -570,12 +728,27 @@ RSpec.describe Api::V2::EventsController do
         legacy_event
       end
 
-      it "reads the same legacy fallback as the producer" do
+      it "still reads enriched product events, not the legacy fallback" do
         get_with_token(organization, "/api/v2/events")
 
         expect(response).to have_http_status(:ok)
-        expect(json[:events].map { it[:transaction_id] }).to eq(["legacy-event"])
-        expect(json[:events].first[:external_contract_id]).to eq("contract.eu")
+        expect(json[:events]).to eq([expected_enriched_payload(enriched_event)])
+      end
+
+      it "does not fetch the legacy event" do
+        get_with_token(organization, "/api/v2/events/legacy-event")
+
+        expect(response).to be_v2_not_found_error("event")
+      end
+
+      %w[/events /events/batch].each do |path|
+        it "refuses #{path} ingestion rather than publishing to the subscription topic" do
+          expect { post_with_token(organization, "/api/v2#{path}", event: attributes, events: [attributes]) }.not_to change(Event, :count)
+
+          expect(response).to have_http_status(:forbidden)
+          expect(json).to eq(code: "endpoint_not_available", details: [])
+          expect(karafka_producer).not_to have_received(:produce_many_async)
+        end
       end
     end
 
@@ -586,6 +759,23 @@ RSpec.describe Api::V2::EventsController do
         expect(response).to have_http_status(:ok)
         expect(json[:event][:external_contract_id]).to eq(contract.external_id)
         expect(Events::PostProcessJob).not_to have_been_enqueued
+        expect(kafka_messages.map { it[:topic] }).to eq(["product-events"])
+      end
+
+      it "acknowledges receipt before the event is available for GET" do
+        post_with_token(organization, "/api/v2/events", event: attributes)
+        expect(response).to have_http_status(:ok)
+
+        get_with_token(organization, "/api/v2/events/created-event")
+
+        expect(response).to be_v2_not_found_error("event")
+      end
+
+      it "publishes a batch only to the product topic" do
+        post_with_token(organization, "/api/v2/events/batch", events: [attributes, attributes.merge(transaction_id: "second-event")])
+
+        expect(response).to have_http_status(:ok)
+        expect(kafka_messages.map { it[:topic] }).to eq(%w[product-events product-events])
       end
 
       context "without required fields" do
@@ -597,6 +787,34 @@ RSpec.describe Api::V2::EventsController do
           expect(response).to have_http_status(:unprocessable_content)
           expect(json).to eq(code: "validation_errors", details: %w[transaction_id code].map { {code: "value_is_mandatory", field: it, meta: {}} })
         end
+      end
+
+      context "with an oversized transaction id" do
+        let(:attributes) { super().merge(transaction_id: "a" * 1_001) }
+
+        %w[/events /events/batch].each do |path|
+          it "rejects #{path} before publishing to Kafka" do
+            post_with_token(organization, "/api/v2#{path}", event: attributes, events: [attributes])
+
+            expect(response).to have_http_status(:unprocessable_content)
+            field = (path == "/events") ? "transaction_id" : "events[0].transaction_id"
+            expect(json).to eq(code: "validation_errors",
+              details: [{code: "value_is_too_long", field:, meta: {max_length: 1_000}}])
+            expect(karafka_producer).not_to have_received(:produce_many_async)
+          end
+        end
+      end
+    end
+
+    context "when Kafka is not configured" do
+      before { allow(ENV).to receive(:[]).with("LAGO_KAFKA_BOOTSTRAP_SERVERS").and_return(nil) }
+
+      it "does not acknowledge an event it cannot ingest" do
+        post_with_token(organization, "/api/v2/events", event: attributes)
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json).to eq(code: "endpoint_not_available", details: [])
+        expect(karafka_producer).not_to have_received(:produce_many_async)
       end
     end
   end

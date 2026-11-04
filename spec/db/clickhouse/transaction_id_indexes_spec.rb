@@ -19,7 +19,7 @@ RSpec.describe "ClickHouse transaction_id indexes", clickhouse: true do # ruboco
       %w[
         events_raw.idx_events_raw_transaction_id
         events_enriched.idx_events_enriched_transaction_id
-        product_events_raw.idx_product_events_raw_transaction_id
+        product_events_enriched.idx_product_events_enriched_transaction_id
       ]
     )
   end

@@ -83,27 +83,27 @@ RSpec.describe CursorPagination::Token do
   end
 
   describe "a sort with compound event identifiers" do
-    let(:sort) { {ingested_at: :desc, timestamp: :desc, external_contract_id: :desc, code: :desc, transaction_id: :desc} }
+    let(:sort) { {timestamp: :desc, external_contract_id: :desc, code: :desc, transaction_id: :desc} }
     let(:time) { Time.zone.parse("2026-09-28T10:11:12.123Z") }
     let(:contract_id) { "contract-" + "a" * 1024 }
-    let(:event) { Struct.new(:ingested_at, :timestamp, :external_contract_id, :code, :transaction_id).new(time, time, contract_id, "requests", "b" * 1024) }
+    let(:event) { Struct.new(:timestamp, :external_contract_id, :code, :transaction_id).new(time, contract_id, "requests", "b" * 1024) }
 
     it "round-trips timestamps and all identifiers without the two-column token limit" do
-      token = described_class.encode(table: "product_events_raw", record: event, sort:)
+      token = described_class.encode(table: "product_events_enriched", record: event, sort:)
 
       expect(token.bytesize).to be > 512
-      expect(described_class.decode(token, table: "product_events_raw", sort:, param: :after))
-        .to eq([time, time, contract_id, "requests", "b" * 1024])
+      expect(described_class.decode(token, table: "product_events_enriched", sort:, param: :after))
+        .to eq([time, contract_id, "requests", "b" * 1024])
     end
 
-    context "when an older raw event has no contract id" do
+    context "when an older event has no contract id" do
       let(:contract_id) { "" }
 
       it "keeps the empty component of the compound key" do
-        token = described_class.encode(table: "product_events_raw", record: event, sort:)
+        token = described_class.encode(table: "product_events_enriched", record: event, sort:)
 
-        expect(described_class.decode(token, table: "product_events_raw", sort:, param: :after))
-          .to eq([time, time, "", "requests", "b" * 1024])
+        expect(described_class.decode(token, table: "product_events_enriched", sort:, param: :after))
+          .to eq([time, "", "requests", "b" * 1024])
       end
     end
   end

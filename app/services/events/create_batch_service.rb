@@ -6,11 +6,12 @@ module Events
 
     Result = BaseResult[:events, :errors]
 
-    def initialize(organization:, events_params:, timestamp:, metadata:)
+    def initialize(organization:, events_params:, timestamp:, metadata:, catalog_events: false)
       @organization = organization
       @events_params = events_params[:events]
       @timestamp = timestamp
       @metadata = metadata
+      @catalog_events = catalog_events
       @expression_error_codes = {}
 
       super
@@ -36,7 +37,7 @@ module Events
 
     private
 
-    attr_reader :organization, :events_params, :timestamp, :metadata, :expression_error_codes
+    attr_reader :organization, :events_params, :timestamp, :metadata, :expression_error_codes, :catalog_events
 
     # Native v2 reads flat field paths; v1 keeps the existing indexed messages.
     def validation_codes
@@ -95,7 +96,7 @@ module Events
       # Enqueued before producing to Kafka so that a failed enqueue leaves nothing behind
       # downstream either.
       enqueue_post_process_jobs if organization.postgres_events_store?
-      KafkaProducerService.call!(events: result.events, organization:)
+      KafkaProducerService.call!(events: result.events, organization:, catalog_events:)
     end
 
     def bulk_insert_events

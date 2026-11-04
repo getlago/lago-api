@@ -4,11 +4,12 @@ module Events
   class CreateService < BaseService
     Result = BaseResult[:event]
 
-    def initialize(organization:, params:, timestamp:, metadata:)
+    def initialize(organization:, params:, timestamp:, metadata:, catalog_events: false)
       @organization = organization
       @params = params
       @timestamp = timestamp
       @metadata = metadata
+      @catalog_events = catalog_events
       super
     end
 
@@ -54,14 +55,14 @@ module Events
 
     private
 
-    attr_reader :organization, :params, :timestamp, :metadata
+    attr_reader :organization, :params, :timestamp, :metadata, :catalog_events
 
     def parse_timestamp
       TimestampWindow.parse(params[:timestamp], default: timestamp)
     end
 
     def produce_kafka_event(event)
-      Events::KafkaProducerService.call!(events: event, organization:)
+      Events::KafkaProducerService.call!(events: event, organization:, catalog_events:)
     end
 
     def enqueue_post_process(event)

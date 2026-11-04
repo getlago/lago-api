@@ -22,7 +22,11 @@ RSpec.describe V2::EventSerializer do
       timestamp: event.timestamp.iso8601(6),
       created_at: event.created_at.iso8601(6),
       updated_at: event.updated_at.iso8601(6),
-      deleted_at: nil
+      deleted_at: nil,
+      enriched_at: nil,
+      value: nil,
+      decimal_value: nil,
+      attribution_labels: {}
     )
   end
 
@@ -44,7 +48,11 @@ RSpec.describe V2::EventSerializer do
         timestamp: event.timestamp.iso8601(6),
         created_at: nil,
         updated_at: nil,
-        deleted_at: nil
+        deleted_at: nil,
+        enriched_at: nil,
+        value: nil,
+        decimal_value: nil,
+        attribution_labels: {}
       )
     end
   end

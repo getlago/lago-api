@@ -7,8 +7,9 @@ module Api
 
       skip_audit_logs!
 
-      date_range_filtered_index(:created_at)
       serializable_with ::V2::EventSerializer
+
+      before_action :ensure_product_event_pipeline!, only: %i[create batch]
 
       def index
         result = ::V2::EventsQuery.call(organization: current_organization, pagination: cursor, filters: index_filters)
@@ -43,7 +44,8 @@ module Api
           organization: current_organization,
           params: event_params,
           timestamp: Time.current.to_f,
-          metadata: event_metadata
+          metadata: event_metadata,
+          catalog_events: true
         )
 
         if result.success?
@@ -61,7 +63,8 @@ module Api
           organization: current_organization,
           events_params: batch_params,
           timestamp: Time.current.to_f,
-          metadata: event_metadata
+          metadata: event_metadata,
+          catalog_events: true
         )
 
         if result.success?
@@ -73,9 +76,7 @@ module Api
 
       private
 
-      # Cursor pagination on the store and sort of the organization, in place of
-      # `cursor_paginated_index`, which takes a fixed model. The read store follows the same
-      # catalog-topic fallback as the existing Kafka producer.
+      # The read store and cursor order depend on the organization's event storage.
       def paginated_model
         ::V2::EventsQuery.event_model(organization: current_organization)
       end
@@ -85,8 +86,8 @@ module Api
       end
 
       def index_filters
-        params.slice(:code, :external_contract_id, :external_subscription_id, :timestamp_from_started_at, :timestamp_from, :timestamp_to)
-          .to_unsafe_h.symbolize_keys.merge(date_range_filters)
+        params.slice(:code, :external_contract_id, :external_subscription_id, :timestamp_from_started_at,
+          :timestamp_from, :timestamp_to, :created_at_from, :created_at_to).to_unsafe_h.symbolize_keys
       end
 
       def event_params
@@ -109,6 +110,13 @@ module Api
 
       def event_metadata
         {user_agent: request.user_agent, ip_address: request.remote_ip}
+      end
+
+      def ensure_product_event_pipeline!
+        if current_organization.clickhouse_events_store? &&
+            (ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"].blank? || ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"].blank?)
+          forbidden_error(code: "endpoint_not_available")
+        end
       end
 
       def track_api_key_usage?

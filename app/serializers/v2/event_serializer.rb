@@ -2,17 +2,20 @@
 
 module V2
   class EventSerializer < ModelSerializer
-    timestamps :timestamp, :created_at, :updated_at, :deleted_at
+    timestamps :timestamp, :created_at, :updated_at, :deleted_at, :enriched_at
 
     def serialize
       {
-        lago_id: model.id,
+        lago_id: stored_attribute(:id),
         transaction_id: model.transaction_id,
         lago_customer_id: stored_attribute(:customer_id),
         external_contract_id: external_contract_id,
         code: model.code,
         precise_total_amount_cents: model.precise_total_amount_cents&.to_s,
-        properties: model.properties
+        properties: model.properties,
+        value: stored_attribute(:value),
+        decimal_value: stored_attribute(:decimal_value)&.to_s,
+        attribution_labels: stored_attribute(:attribution_labels) || {}
       }
     end
 
@@ -27,7 +30,11 @@ module V2
     end
 
     def created_at
-      model.respond_to?(:ingested_at) ? model.ingested_at : model.created_at
+      stored_attribute(:created_at)
+    end
+
+    def enriched_at
+      stored_attribute(:enriched_at)
     end
 
     def updated_at
