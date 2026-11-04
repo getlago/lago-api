@@ -187,7 +187,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
     context "when there is tax provider integration" do
       let(:integration) { create(:anrok_integration, organization:) }
       let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
-      let(:endpoint) { "https://api.nango.dev/v1/anrok/draft_invoices" }
+      let(:endpoint) { "https://api.nango.dev/action/trigger" }
       let(:integration_collection_mapping) do
         create(
           :netsuite_collection_mapping,
@@ -213,7 +213,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
             ))
 
             # setting item_id based on the test example
-            key = JSON.parse(request.body).first["fees"].last["item_key"]
+            key = JSON.parse(request.body)["input"].first["fees"].last["item_key"]
             response["succeededInvoices"].first["fees"].last["item_key"] = key
             response["succeededInvoices"].first["fees"].last["item_id"] = charge.billable_metric.id
             response["succeededInvoices"].first["fees"].last["amount_cents"] = 2532
@@ -269,7 +269,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
 
         before do
           stub_request(:post, endpoint).to_return do |request|
-            line_item = JSON.parse(request.body).first["fees"].sole
+            line_item = JSON.parse(request.body)["input"].first["fees"].sole
             requested_line_items << line_item
 
             taxed = line_item.merge(
@@ -322,7 +322,7 @@ RSpec.describe Invoices::CustomerUsageService, cache: :memory do
               Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")
             ))
 
-            key = JSON.parse(request.body).first["fees"].last["item_key"]
+            key = JSON.parse(request.body)["input"].first["fees"].last["item_key"]
             response["succeededInvoices"].first["fees"].last["item_key"] = key
             response["succeededInvoices"].first["fees"].last["item_id"] = charge.billable_metric.id
             response["succeededInvoices"].first["fees"].last["amount_cents"] = 2532

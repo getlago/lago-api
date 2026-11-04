@@ -31,7 +31,7 @@ RSpec.describe Mutations::IntegrationItems::FetchAccounts do
   before do
     allow(Integrations::Aggregator::SyncService).to receive(:call).and_return(BaseResult.new)
 
-    stub_request(:get, "https://api.nango.dev/v1/netsuite/accounts?limit=450")
+    stub_request(:get, "https://api.nango.dev/records?model=Account&limit=450")
       .to_return(status: 200, body: accounts_response, headers: {})
 
     integration_item

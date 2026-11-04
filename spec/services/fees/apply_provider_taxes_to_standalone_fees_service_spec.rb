@@ -16,7 +16,7 @@ RSpec.describe Fees::ApplyProviderTaxesToStandaloneFeesService do
 
   let(:response) { instance_double(Net::HTTPOK) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
-  let(:endpoint) { "https://api.nango.dev/v1/anrok/finalized_invoices" }
+  let(:endpoint) { "https://api.nango.dev/action/trigger" }
 
   let(:integration_collection_mapping) do
     create(
