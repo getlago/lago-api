@@ -43,7 +43,7 @@ Never edit the schema files or annotations by hand. Revert changes that do not c
 
 ## Ground rules
 
-- **Tenancy.** Load tenant data through its organization: `current_organization.customers.find_by(...)` or `Model.where(organization:)`. Every new table has a `NOT NULL` `organization_id` with a foreign key, not an organization reached `through:` another table. `spec/organization_id_column_spec.rb` fails when the column is missing (it does not check `NOT NULL` or the foreign key); never add a table to its skip list.
+- **Tenancy.** Load tenant data through its organization: `current_organization.customers.find_by(...)` or `Model.where(organization:)`. Every new table has a `NOT NULL` `organization_id` with a foreign key, not an organization reached `through:` another table. `spec/organization_id_column_spec.rb` fails when the column is missing (it does not check `NOT NULL` or the foreign key). Its skip list holds only authentication data written before any organization exists (users, password resets, user devices, pending signups) and tables older than the rule: add a table there only for that reason, with a comment saying so.
 - **Money.** Amounts are integer `*_amount_cents` columns next to a currency. Keep unrounded values as `BigDecimal` (`precise_*_amount_cents`) and round once, at the end. Never use `Float` for money.
 - **Dates.** Billing dates follow the customer timezone (`customer.applicable_timezone`, `*_in_customer_timezone` helpers), not `Time.zone`, UTC or a bare `.to_date`. Billing periods come from `Subscriptions::DatesService`.
 - **Compatibility.** SDKs, lago-front and customers rely on the REST API, the webhook payloads and the GraphQL schema. Add optional fields and parameters; do not rename or remove existing ones.
