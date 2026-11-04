@@ -16,7 +16,12 @@ module Resolvers
         guard_error = signup_guard_error(:signup_status)
         return guard_error if guard_error
 
-        {status: ::Signups::StatusService.call(signup_secret:).status.to_s}
+        result = ::Signups::StatusService.call(signup_secret:)
+        {
+          status: result.status.to_s,
+          resend_available_in_seconds: result.resend_available_in_seconds,
+          resend_limit_reached: result.resend_limit_reached
+        }
       end
     end
   end

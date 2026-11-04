@@ -218,6 +218,7 @@ module Types
 
     field :confirm_signup_email, mutation: Mutations::Signups::Confirm
     field :exchange_signup_secret, mutation: Mutations::Signups::ExchangeSecret
+    field :resend_signup_email, mutation: Mutations::Signups::Resend
     field :sign_up, mutation: Mutations::Signups::Create
 
     field :create_tax, mutation: Mutations::Taxes::Create
