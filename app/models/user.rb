@@ -23,12 +23,28 @@ class User < ApplicationRecord
 
   normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
 
+  # One query whether or not the email exists, so login timing does not reveal accounts. An exact match wins, then
+  # the oldest case-insensitive one, as legacy rows can differ only by case.
+  def self.lookup_by_email(email)
+    normalized = normalize_value_for(:email, email.to_s).to_s
+
+    where("LOWER(email) IN (?)", [normalized.downcase, email.to_s.downcase].uniq)
+      .order(Arel.sql(sanitize_sql_array(["email = ? DESC", normalized])), :created_at)
+      .first
+  end
+
   def can?(permission, organization:)
     memberships.find { |m| m.organization_id == organization.id }&.can?(permission)
   end
 
   def login_method_allowed?(login_method)
     active_organizations.pluck(:authentication_methods).flatten.uniq.include?(login_method)
+  end
+
+  # Only a user created by a self-serve signup (confirmed email link or company Google account) who never belonged
+  # to an organization may log in without one: a removed member regains access only through an invitation.
+  def needs_organization?
+    Lago::SelfServe.enabled? && self_serve_verified_at? && !cs_admin? && memberships.empty?
   end
 
   private

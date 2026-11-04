@@ -20,6 +20,7 @@ RSpec.describe Mutations::Auth::Google::LoginUser do
       mutation($input: GoogleLoginUserInput!) {
         googleLoginUser(input: $input) {
           token
+          needsOrganization
           user {
             id
             email
@@ -48,6 +49,7 @@ RSpec.describe Mutations::Auth::Google::LoginUser do
 
     expect(response["token"]).to eq("token")
     expect(response["user"]["id"]).to eq(user.id)
+    expect(response["needsOrganization"]).to be(false)
     expect(response["user"]["email"]).to eq(user.email)
   end
 
@@ -73,6 +75,22 @@ RSpec.describe Mutations::Auth::Google::LoginUser do
 
       expect(response["extensions"]["status"]).to eq(422)
       expect(response["message"]).to eq("Unprocessable Entity")
+    end
+  end
+
+  context "with a self-serve user who never had an organization" do
+    let(:user) { create(:user, :self_serve) }
+
+    include_context "with self-serve enabled"
+
+    it "returns a session that needs an organization" do
+      result = execute_graphql(
+        query: mutation,
+        request: Rack::Request.new(Rack::MockRequest.env_for("http://example.com")),
+        variables: {input: {code: "code"}}
+      )
+
+      expect(result["data"]["googleLoginUser"]["needsOrganization"]).to be(true)
     end
   end
 end

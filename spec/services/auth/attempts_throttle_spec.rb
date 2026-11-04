@@ -112,6 +112,16 @@ RSpec.describe Auth::AttemptsThrottle do
       end
     end
 
+    it "counts self-serve login attempts per IPv6 /64 and per IPv4 address" do
+      30.times { described_class.hit!(:login_per_ip_network, "2001:db8:1:2::#{(it + 1).to_s(16)}") }
+
+      expect(described_class.hit!(:login_per_ip_network, "2001:db8:1:2::ffff")).to be(true)
+      expect(described_class.hit!(:login_per_ip_network, "2001:db8:1:3::a")).to be(false)
+
+      30.times { described_class.hit!(:login_per_ip_network, "203.0.113.10") }
+      expect(described_class.hit!(:login_per_ip_network, "203.0.113.11")).to be(false)
+    end
+
     it "still counts IPv6 per address for a rule keyed on the IP" do
       30.times { described_class.hit!(:login_per_ip, "2001:db8:1:2::a") }
 

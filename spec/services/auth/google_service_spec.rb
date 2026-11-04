@@ -141,6 +141,41 @@ RSpec.describe Auth::GoogleService do
         expect(result.error.code).to eq("google_auth_missing_setup")
       end
     end
+
+    context "with a self-serve user who never had an organization" do
+      let(:oidc_response) { {"email" => "foo@bar.com", "email_verified" => true} }
+
+      before do
+        create(:user, :self_serve, email: "foo@bar.com")
+        allow(UserDevices::RegisterService).to receive(:call!)
+      end
+
+      context "when self-serve is on" do
+        include_context "with self-serve enabled"
+
+        it "opens a Google session that needs an organization" do
+          result = described_class.call(:login, "code")
+
+          expect(result).to be_success
+          expect(result.user.needs_organization?).to be(true)
+          expect(Utils::AuthToken.decode(token: result.token)["login_method"]).to eq(Organizations::AuthenticationMethods::GOOGLE_OAUTH)
+        end
+
+        it "refuses when Google did not verify the email" do
+          [{"email" => "foo@bar.com", "email_verified" => false}, {"email" => "foo@bar.com"}].each do |claims|
+            allow(Google::Auth::IDTokens).to receive(:verify_oidc).and_return(claims)
+
+            expect(described_class.call(:login, "code").error.messages).to eq(base: ["user_does_not_exist"])
+          end
+        end
+      end
+
+      context "when self-serve is off" do
+        it "refuses" do
+          expect(described_class.call(:login, "code").error.messages).to eq(base: ["user_does_not_exist"])
+        end
+      end
+    end
   end
 
   describe ".call(:register_user)" do

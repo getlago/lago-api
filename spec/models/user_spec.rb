@@ -59,6 +59,53 @@ RSpec.describe User do
     end
   end
 
+  describe "#needs_organization?" do
+    let(:user) { create(:user, :self_serve) }
+
+    context "when self-serve is on" do
+      include_context "with self-serve enabled"
+
+      it "is true only for a self-serve user, not a CS admin, who never had a membership" do
+        expect(user.needs_organization?).to be(true)
+        expect(create(:user).needs_organization?).to be(false)
+        expect(create(:user, :self_serve, cs_admin: true).needs_organization?).to be(false)
+      end
+
+      it "is false once the user had a membership, even revoked" do
+        create(:membership, :revoked, user:)
+
+        expect(user.reload.needs_organization?).to be(false)
+      end
+
+      it "is false with an active membership" do
+        create(:membership, user:)
+
+        expect(user.reload.needs_organization?).to be(false)
+      end
+    end
+
+    it "is false when self-serve is off" do
+      expect(user.needs_organization?).to be(false)
+    end
+  end
+
+  describe ".lookup_by_email" do
+    it "prefers the exact match, then the oldest case-insensitive one" do
+      older = create(:user, email: "Jane@GetLago.com", created_at: 2.days.ago)
+      exact = create(:user, email: "jane@getlago.com", created_at: 1.day.ago)
+
+      expect(described_class.lookup_by_email("jane@getlago.com")).to eq(exact)
+      expect(described_class.lookup_by_email("JANE@getlago.com")).to eq(older)
+    end
+
+    it "matches spelling variants and returns nil for an unknown email" do
+      user = create(:user, email: "jane-doe@getlago.com")
+
+      expect(described_class.lookup_by_email(" JANE\u2013doe@get\u200Blago.com ")).to eq(user)
+      expect(described_class.lookup_by_email("nobody@getlago.com")).to be_nil
+    end
+  end
+
   describe "Validations" do
     it "is valid with valid attributes" do
       expect(subject).to be_valid
