@@ -235,7 +235,7 @@ RSpec.describe Api::V2::Contracts::UsageController do
 
       before do
         create(:anrok_customer, integration:, customer:)
-        stub_request(:post, "https://api.nango.dev/v1/anrok/draft_invoices").to_return(status: 502, body: "")
+        stub_request(:post, "https://api.nango.dev/action/trigger").to_return(status: 502, body: "")
       end
 
       it "answers with a provider error naming the provider" do
@@ -251,7 +251,7 @@ RSpec.describe Api::V2::Contracts::UsageController do
 
       before do
         create(:anrok_customer, integration:, customer:)
-        stub_request(:post, "https://api.nango.dev/v1/anrok/draft_invoices")
+        stub_request(:post, "https://api.nango.dev/action/trigger")
           .to_return(status: 429, body: {error: {code: "SSS_REQUEST_LIMIT_EXCEEDED"}}.to_json)
       end
 
