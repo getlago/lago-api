@@ -64,6 +64,17 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Create do
     )
   end
 
+  context "when the integration belongs to another organization" do
+    let(:other_organization) { create(:organization) }
+    let(:integration) { create(:netsuite_integration, organization: other_organization) }
+
+    it "returns an error" do
+      result = create_integration_collection_mapping(input:, raw: true)
+
+      expect_graphql_error(result:, message: "Resource not found")
+    end
+  end
+
   context "with currencies" do
     let(:input) do
       {
