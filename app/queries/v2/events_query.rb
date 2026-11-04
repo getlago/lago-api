@@ -30,7 +30,7 @@ module V2
       events = events.from("#{event_model.quoted_table_name} FINAL") unless organization.postgres_events_store?
       events = events.where(transaction_id: filters.transaction_id) if filters.transaction_id.present?
       events = events.where(code: filters.code) if filters.code.present?
-      events = events.where(contract_column => external_contract_id) if external_contract_id.present?
+      events = events.where(contract_column => filters.external_contract_id) if filters.external_contract_id.present?
       events = with_timestamp_range(events)
       events = events.order(self.class.cursor_sort(organization:))
 
@@ -54,14 +54,10 @@ module V2
       organization.postgres_events_store? ? :external_subscription_id : :external_contract_id
     end
 
-    def external_contract_id
-      filters.external_subscription_id.presence || filters.external_contract_id
-    end
-
     def with_timestamp_range(scope)
       if ActiveModel::Type::Boolean.new.cast(filters.timestamp_from_started_at)
         contract = organization.contracts.order(Arel.sql("terminated_at DESC NULLS FIRST"), started_at: :desc, created_at: :desc)
-          .find_by(external_id: external_contract_id)
+          .find_by(external_id: filters.external_contract_id)
         scope = scope.where(timestamp: contract.started_at..) if contract&.started_at
       elsif filters.timestamp_from.present?
         scope = scope.where(timestamp: parse_datetime_filter(:timestamp_from)..)

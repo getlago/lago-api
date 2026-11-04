@@ -4,7 +4,7 @@ module Events
   class ValidateApiInputService < BaseService
     Result = BaseResult
 
-    STRING_FIELDS = %i[transaction_id code external_contract_id external_subscription_id].freeze
+    STRING_FIELDS = %i[transaction_id code external_contract_id].freeze
     MAX_TRANSACTION_ID_LENGTH = 1_000
 
     def initialize(params:, batch: false)
@@ -57,6 +57,8 @@ module Events
       errors = STRING_FIELDS.each_with_object({}) do |field, values|
         values[field] = ["value_is_invalid"] unless event[field].nil? || event[field].is_a?(String)
       end
+
+      errors[:external_subscription_id] = ["value_is_invalid"] if event.key?(:external_subscription_id)
 
       %i[transaction_id code].each do |field|
         errors[field] ||= ["value_is_mandatory"] if event[field].blank?

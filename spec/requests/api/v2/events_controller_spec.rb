@@ -36,6 +36,25 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
     }
   end
 
+  shared_examples "rejects subscription filters" do
+    [
+      {external_subscription_id: "contract.eu"},
+      {external_subscription_id: nil},
+      {external_subscription_id: "other", external_contract_id: "contract.eu"}
+    ].each do |filters|
+      context "with unsupported filters #{filters.inspect}" do
+        let(:params) { filters }
+
+        it "rejects the subscription filter instead of treating it as a contract id" do
+          request
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field: "external_subscription_id", meta: {}}])
+        end
+      end
+    end
+  end
+
   describe "GET /api/v2/events" do
     subject(:request) { get_with_token(organization, path, params) }
 
@@ -45,6 +64,7 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
     before { event }
 
     include_examples "requires API permission", "event", "read"
+    include_examples "rejects subscription filters"
 
     it "returns flat events with cursor metadata" do
       request
@@ -160,6 +180,7 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
     let(:params) { {} }
 
     include_examples "requires API permission", "event", "read"
+    include_examples "rejects subscription filters"
 
     it "looks up a dotted transaction id and returns the complete payload" do
       request
@@ -238,6 +259,26 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
   end
 
   shared_examples "validates event input" do
+    [
+      {external_subscription_id: "subscription"},
+      {external_subscription_id: nil, external_contract_id: "contract.eu"},
+      {external_subscription_id: "subscription", external_contract_id: "contract.eu"}
+    ].each do |identifiers|
+      context "with unsupported identifiers #{identifiers.inspect}" do
+        let(:attributes) { super().except(:external_contract_id).merge(identifiers) }
+
+        it "rejects the subscription field without storing or publishing any events" do
+          expect { request }.not_to change(Event, :count)
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "validation_errors",
+            details: [{code: "value_is_invalid", field: "#{error_prefix}external_subscription_id", meta: {}}])
+          expect(Events::PostProcessJob).not_to have_been_enqueued
+          expect(karafka_producer).not_to have_received(:produce_many_async)
+        end
+      end
+    end
+
     context "with a 1,000-character transaction id" do
       let(:attributes) { super().merge(transaction_id: "a" * 1_000) }
 
@@ -442,6 +483,20 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
 
         expect(response).to have_http_status(:unprocessable_content)
         expect(json).to eq(code: "validation_errors", details: [{code: "invalid_format", field: "events[1].timestamp", meta: {}}])
+      end
+    end
+
+    context "with a subscription id on the second event" do
+      let(:batch) { [attributes, attributes.merge(transaction_id: "second-event", external_subscription_id: "subscription")] }
+
+      it "rejects the whole batch without storing or publishing the first event" do
+        expect { request }.not_to change(Event, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json).to eq(code: "validation_errors",
+          details: [{code: "value_is_invalid", field: "events[1].external_subscription_id", meta: {}}])
+        expect(Events::PostProcessJob).not_to have_been_enqueued
+        expect(karafka_producer).not_to have_received(:produce_many_async)
       end
     end
 
@@ -776,6 +831,21 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
 
         expect(response).to have_http_status(:ok)
         expect(kafka_messages.map { it[:topic] }).to eq(%w[product-events product-events])
+      end
+
+      context "with a subscription id" do
+        let(:attributes) { super().merge(external_subscription_id: "subscription") }
+
+        %w[/events /events/batch].each do |path|
+          it "rejects #{path} before publishing to Kafka" do
+            post_with_token(organization, "/api/v2#{path}", event: attributes, events: [attributes])
+
+            expect(response).to have_http_status(:unprocessable_content)
+            field = (path == "/events") ? "external_subscription_id" : "events[0].external_subscription_id"
+            expect(json).to eq(code: "validation_errors", details: [{code: "value_is_invalid", field:, meta: {}}])
+            expect(karafka_producer).not_to have_received(:produce_many_async)
+          end
+        end
       end
 
       context "without required fields" do

@@ -20,6 +20,16 @@ RSpec.describe Events::ValidateApiInputService do
     end
   end
 
+  [nil, "", "subscription", [], {}].each do |value|
+    context "with external_subscription_id set to #{value.inspect}" do
+      let(:params) { super().merge(external_subscription_id: value) }
+
+      it "rejects the removed subscription field even alongside a contract id" do
+        expect(result.error&.messages).to eq(external_subscription_id: ["value_is_invalid"])
+      end
+    end
+  end
+
   context "with a 1,000-character transaction id" do
     let(:params) { super().merge(transaction_id: "😀" * 1_000) }
 
@@ -67,6 +77,14 @@ RSpec.describe Events::ValidateApiInputService do
 
     it "keeps the original index of the invalid entry" do
       expect(result.error.messages).to eq("events[1]": ["value_is_invalid"])
+    end
+
+    context "with a subscription id on the second event" do
+      let(:params) { [{transaction_id: "first", code: "requests"}, {transaction_id: "second", code: "requests", external_subscription_id: "subscription"}] }
+
+      it "rejects the subscription field at its original index" do
+        expect(result.error&.messages).to eq("events[1].external_subscription_id": ["value_is_invalid"])
+      end
     end
 
     context "with an oversized transaction id after a valid event" do

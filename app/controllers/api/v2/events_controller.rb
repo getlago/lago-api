@@ -3,7 +3,7 @@
 module Api
   module V2
     class EventsController < BaseController
-      EVENT_FIELDS = %i[transaction_id code timestamp external_contract_id external_subscription_id precise_total_amount_cents].freeze
+      EVENT_FIELDS = %i[transaction_id code timestamp external_contract_id precise_total_amount_cents].freeze
 
       skip_audit_logs!
 
@@ -86,6 +86,7 @@ module Api
       end
 
       def index_filters
+        # Pass removed filters through validation so they are rejected rather than ignored.
         params.slice(:code, :external_contract_id, :external_subscription_id, :timestamp_from_started_at,
           :timestamp_from, :timestamp_to, :created_at_from, :created_at_to).to_unsafe_h.symbolize_keys
       end
