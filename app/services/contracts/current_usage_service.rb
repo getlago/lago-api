@@ -79,6 +79,7 @@ module Contracts
         .includes(
           {rate_card: [:rates, :product_filter, {product: [:billable_metric, :product_category]}]},
           {rate_phases: :rate_override},
+          :units,
           :organization,
           :product
         )

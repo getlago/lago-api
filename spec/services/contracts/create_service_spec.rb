@@ -38,7 +38,8 @@ RSpec.describe Contracts::CreateService, :capture_kafka_messages do
       billing_time: "calendar"
     )
     expect(contract.started_at).to be_within(5.seconds).of(Time.current)
-    expect(contract.applied_rate_cards.sole).to have_attributes(rate_card:, units: 5)
+    expect(contract.applied_rate_cards.sole.rate_card).to eq(rate_card)
+    expect(contract.applied_rate_cards.sole.units.sole.units).to eq(5)
   end
 
   it "publishes created and started with the same post-materialization snapshot when immediately active" do

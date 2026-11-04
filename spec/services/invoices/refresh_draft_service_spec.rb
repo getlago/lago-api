@@ -362,6 +362,33 @@ RSpec.describe Invoices::RefreshDraftService do
         expect(invoice.fees.sole).to have_attributes(invoiceable: product, amount_cents: 7_500)
       end
 
+      context "with multiple billing segments" do
+        let(:second_product) { create(:product, :fixed, organization:) }
+        let(:second_rate_card) { create(:rate_card, organization:, product: second_product, currency: "USD") }
+        let(:second_contract_rate_card) do
+          create(:contract_rate_card, organization:, contract:, rate_card: second_rate_card, units: 2)
+        end
+        let(:second_rate_card_rate) do
+          create(:rate_card_rate, organization:, rate_card: second_rate_card, rate_properties: {"amount" => "5.00"})
+        end
+
+        before do
+          create(:billing_segment, organization:, customer:, contract:, contract_rate_card: second_contract_rate_card,
+            rate_card_rate: second_rate_card_rate, invoice:, status: :done, currency: "USD")
+        end
+
+        it "loads units for all segments in one query" do
+          billing_segment
+          refresh_service
+
+          refresh_result = nil
+          statements = capture_sql { refresh_result = refresh_service.call }
+
+          expect(refresh_result).to be_success
+          expect(statements.grep(/FROM "contract_rate_cards_units"/i).size).to eq(1)
+        end
+      end
+
       context "with recurring weighted usage" do
         let(:billable_metric) do
           create(

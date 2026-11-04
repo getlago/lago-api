@@ -16,8 +16,12 @@ module ContractRateCards
     end
 
     def call
-      contract_rate_card.update!(contract_rate_card.contract.default_rate_card_lifecycle(billing_anchor_date:))
-      ContractRateCards::ResetBillingClockService.call!(contract_rate_card:)
+      ActiveRecord::Base.transaction do
+        previous_effective_date = contract_rate_card.effective_date
+        contract_rate_card.update!(contract_rate_card.contract.default_rate_card_lifecycle(billing_anchor_date:))
+        sync_initial_unit_date(previous_effective_date) if previous_effective_date != contract_rate_card.effective_date
+        ContractRateCards::ResetBillingClockService.call!(contract_rate_card:)
+      end
 
       result.contract_rate_card = contract_rate_card
       result
@@ -30,5 +34,10 @@ module ContractRateCards
     private
 
     attr_reader :contract_rate_card, :billing_anchor_date
+
+    def sync_initial_unit_date(previous_effective_date)
+      unit = contract_rate_card.units.find_by(effective_date: previous_effective_date)
+      unit&.update!(effective_date: contract_rate_card.effective_date)
+    end
   end
 end

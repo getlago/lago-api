@@ -64,6 +64,28 @@ RSpec.describe BillingSegments::Fees::ComputeService do
         expect(result.true_up_fee).to be_nil
       end
 
+      it "looks up contract rate card units once when the association is not preloaded" do
+        billing_segment
+
+        statements = capture_sql { result }
+
+        expect(result.fee.units).to eq(15)
+        expect(statements.grep(/FROM "contract_rate_cards_units"/i).size).to eq(1)
+      end
+
+      context "without a units row" do
+        let(:units) { nil }
+
+        it "memoizes the missing units lookup" do
+          billing_segment
+
+          statements = capture_sql { result }
+
+          expect(result.fee.units).to eq(BigDecimal(0))
+          expect(statements.grep(/FROM "contract_rate_cards_units"/i).size).to eq(1)
+        end
+      end
+
       context "when multiple units rows exist" do
         before do
           create(
