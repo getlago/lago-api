@@ -67,6 +67,39 @@ RSpec.describe Resolvers::ContractAppliedRateCardResolver do
     )
   end
 
+  context "when there are no units rows" do
+    let(:contract_rate_card) do
+      create(
+        :contract_rate_card,
+        organization:,
+        contract:,
+        effective_date: Date.new(2026, 10, 1),
+        billing_anchor_date: Date.new(2026, 10, 15),
+        next_billing_at: Time.zone.parse("2026-10-15T00:00:00Z")
+      )
+    end
+
+    it "returns null units" do
+      expect(execution.dig("data", "contractAppliedRateCard", "units")).to be_nil
+    end
+  end
+
+  context "when multiple units rows exist" do
+    before do
+      create(
+        :contract_rate_card_unit,
+        organization:,
+        contract_rate_card:,
+        units: 7,
+        effective_date: Date.new(2026, 9, 1)
+      )
+    end
+
+    it "returns the first effective units row" do
+      expect(execution.dig("data", "contractAppliedRateCard", "units")).to eq(7.0)
+    end
+  end
+
   context "when the applied rate card belongs to another organization" do
     let(:contract_rate_card) { create(:contract_rate_card) }
 

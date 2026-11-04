@@ -64,6 +64,24 @@ RSpec.describe BillingSegments::Fees::ComputeService do
         expect(result.true_up_fee).to be_nil
       end
 
+      context "when multiple units rows exist" do
+        before do
+          create(
+            :contract_rate_card_unit,
+            organization:,
+            contract_rate_card:,
+            units: 7,
+            effective_date: Date.new(2026, 7, 1)
+          )
+        end
+
+        it "uses the first effective units row" do
+          expect(result).to be_success
+          expect(result.fee.units).to eq(7)
+          expect(result.fee.amount_cents).to eq(21_000)
+        end
+      end
+
       context "with an advance rate card" do
         let(:rate_card) { create(:rate_card, :advance, organization:, product: fixed_product, currency: "USD") }
 

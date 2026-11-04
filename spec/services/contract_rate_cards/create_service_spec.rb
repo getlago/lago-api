@@ -26,11 +26,53 @@ RSpec.describe ContractRateCards::CreateService do
     card = result.contract_rate_card
     expect(card.contract).to eq(contract)
     expect(card.rate_card).to eq(rate_card)
-    expect(card.units).to eq(10)
+    expect(card.units.sole).to have_attributes(units: 10, effective_date: card.effective_date)
     expect(card.effective_date).to eq(contract.started_at.in_time_zone(customer.applicable_timezone).to_date)
     expect(card.billing_anchor_date).to eq(contract.effective_billing_anchor_date)
     expect(card.next_billing_at).to eq(contract.started_at)
     expect(card.rate_phases.sole.code).to eq("default")
+  end
+
+  context "when units are omitted" do
+    let(:params) { {rate_card_code: rate_card.code} }
+
+    it "does not create a units row" do
+      expect(result.contract_rate_card.units).to be_empty
+    end
+  end
+
+  context "when units are explicitly nil" do
+    let(:params) { {rate_card_code: rate_card.code, units: nil} }
+
+    it "does not create a units row" do
+      expect(result.contract_rate_card.units).to be_empty
+    end
+  end
+
+  context "when units are zero" do
+    let(:params) { {rate_card_code: rate_card.code, units: "0"} }
+
+    it "persists the zero quantity" do
+      expect(result.contract_rate_card.units.sole.units).to eq(0)
+    end
+  end
+
+  context "when units are negative" do
+    let(:params) { {rate_card_code: rate_card.code, units: "-1"} }
+
+    it "fails on units and rolls back the card and its phases" do
+      expect { result }.not_to change(ContractRateCard, :count)
+      expect(result.error.messages[:units]).to be_present
+    end
+  end
+
+  context "when units are non-numeric" do
+    let(:params) { {rate_card_code: rate_card.code, units: "not-a-number"} }
+
+    it "fails with a units validation error" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:units]).to be_present
+    end
   end
 
   it "publishes one contract_rate_card.created pair after creating its phase" do

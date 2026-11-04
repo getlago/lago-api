@@ -14,6 +14,7 @@ ALTER TABLE IF EXISTS ONLY public.wallet_transactions_invoice_custom_sections DR
 ALTER TABLE IF EXISTS ONLY public.presentation_breakdowns DROP CONSTRAINT IF EXISTS fk_rails_ff548a9f4c;
 ALTER TABLE IF EXISTS ONLY public.fixed_charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_fea16bf2e7;
 ALTER TABLE IF EXISTS ONLY public.orders DROP CONSTRAINT IF EXISTS fk_rails_fe8af6535c;
+ALTER TABLE IF EXISTS ONLY public.contract_rate_cards_units DROP CONSTRAINT IF EXISTS fk_rails_fe4bc7e40a;
 ALTER TABLE IF EXISTS ONLY public.dunning_campaign_thresholds DROP CONSTRAINT IF EXISTS fk_rails_fd84cdb7c6;
 ALTER TABLE IF EXISTS ONLY public.subscription_activation_rules DROP CONSTRAINT IF EXISTS fk_rails_fd60209637;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_fd399a23d3;
@@ -197,6 +198,7 @@ ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_7eb
 ALTER TABLE IF EXISTS ONLY public.billable_metrics DROP CONSTRAINT IF EXISTS fk_rails_7e8a2f26e5;
 ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS fk_rails_7da558cadc;
 ALTER TABLE IF EXISTS ONLY public.wallet_targets DROP CONSTRAINT IF EXISTS fk_rails_7d0e61668f;
+ALTER TABLE IF EXISTS ONLY public.contract_rate_cards_units DROP CONSTRAINT IF EXISTS fk_rails_7cd9fd6d8b;
 ALTER TABLE IF EXISTS ONLY public.subscriptions_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_7c63dd13f0;
 ALTER TABLE IF EXISTS ONLY public.invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_7c0e340dbd;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_7b324610ad;
@@ -941,6 +943,8 @@ DROP INDEX IF EXISTS public.index_contracts_invoice_custom_sections_on_section_i
 DROP INDEX IF EXISTS public.index_contracts_invoice_custom_sections_on_organization_id;
 DROP INDEX IF EXISTS public.index_contracts_by_status_cursor;
 DROP INDEX IF EXISTS public.index_contracts_by_cursor;
+DROP INDEX IF EXISTS public.index_contract_rate_cards_units_on_organization_id;
+DROP INDEX IF EXISTS public.index_contract_rate_cards_units_on_card_and_effective_date;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_rate_card_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_organization_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_next_billing_at;
@@ -1259,6 +1263,7 @@ ALTER TABLE IF EXISTS ONLY public.coupons DROP CONSTRAINT IF EXISTS coupons_pkey
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS coupon_targets_pkey;
 ALTER TABLE IF EXISTS ONLY public.contracts DROP CONSTRAINT IF EXISTS contracts_pkey;
 ALTER TABLE IF EXISTS ONLY public.contracts_invoice_custom_sections DROP CONSTRAINT IF EXISTS contracts_invoice_custom_sections_pkey;
+ALTER TABLE IF EXISTS ONLY public.contract_rate_cards_units DROP CONSTRAINT IF EXISTS contract_rate_cards_units_pkey;
 ALTER TABLE IF EXISTS ONLY public.contract_rate_cards DROP CONSTRAINT IF EXISTS contract_rate_cards_pkey;
 ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS commitments_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.commitments DROP CONSTRAINT IF EXISTS commitments_pkey;
@@ -1449,6 +1454,7 @@ DROP TABLE IF EXISTS public.coupons;
 DROP TABLE IF EXISTS public.coupon_targets;
 DROP TABLE IF EXISTS public.contracts_invoice_custom_sections;
 DROP TABLE IF EXISTS public.contracts;
+DROP TABLE IF EXISTS public.contract_rate_cards_units;
 DROP TABLE IF EXISTS public.contract_rate_cards;
 DROP TABLE IF EXISTS public.commitments_taxes;
 DROP TABLE IF EXISTS public.commitments;
@@ -2827,6 +2833,21 @@ CREATE TABLE public.contract_rate_cards (
     effective_date date NOT NULL,
     units numeric,
     deleted_at timestamp without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: contract_rate_cards_units; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.contract_rate_cards_units (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    contract_rate_card_id uuid NOT NULL,
+    units numeric NOT NULL,
+    effective_date date NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
 );
@@ -6739,6 +6760,14 @@ ALTER TABLE ONLY public.contract_rate_cards
 
 
 --
+-- Name: contract_rate_cards_units contract_rate_cards_units_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contract_rate_cards_units
+    ADD CONSTRAINT contract_rate_cards_units_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: contracts_invoice_custom_sections contracts_invoice_custom_sections_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9112,6 +9141,20 @@ CREATE INDEX index_contract_rate_cards_on_organization_id ON public.contract_rat
 --
 
 CREATE INDEX index_contract_rate_cards_on_rate_card_id ON public.contract_rate_cards USING btree (rate_card_id);
+
+
+--
+-- Name: index_contract_rate_cards_units_on_card_and_effective_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_contract_rate_cards_units_on_card_and_effective_date ON public.contract_rate_cards_units USING btree (contract_rate_card_id, effective_date);
+
+
+--
+-- Name: index_contract_rate_cards_units_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_contract_rate_cards_units_on_organization_id ON public.contract_rate_cards_units USING btree (organization_id);
 
 
 --
@@ -14494,6 +14537,14 @@ ALTER TABLE ONLY public.subscriptions_invoice_custom_sections
 
 
 --
+-- Name: contract_rate_cards_units fk_rails_7cd9fd6d8b; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contract_rate_cards_units
+    ADD CONSTRAINT fk_rails_7cd9fd6d8b FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: wallet_targets fk_rails_7d0e61668f; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -15958,6 +16009,14 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 
 
 --
+-- Name: contract_rate_cards_units fk_rails_fe4bc7e40a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.contract_rate_cards_units
+    ADD CONSTRAINT fk_rails_fe4bc7e40a FOREIGN KEY (contract_rate_card_id) REFERENCES public.contract_rate_cards(id);
+
+
+--
 -- Name: orders fk_rails_fe8af6535c; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -16004,6 +16063,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261104144002'),
 ('20261103084714'),
 ('20261103084708'),
 ('20261102160958'),

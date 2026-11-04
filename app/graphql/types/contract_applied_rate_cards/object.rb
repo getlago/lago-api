@@ -25,6 +25,10 @@ module Types
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
+      def units
+        dataloader.with(Sources::ActiveRecordAssociation, :units).load(object).first&.units
+      end
+
       def rate_phases_count
         dataloader.with(Sources::CountByForeignKey, RatePhase, :contract_rate_card_id).load(object.id)
       end
