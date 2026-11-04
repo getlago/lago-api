@@ -17,7 +17,8 @@ describe "Wallet ongoing balance with a draft invoice awaiting provider taxes", 
     tax_integration_customer
     allow(LagoHttpClient::Client).to receive(:new).and_call_original
     allow(LagoHttpClient::Client).to receive(:new).with(nango_action_endpoint, anything).and_return(anrok_client)
-    allow(anrok_client).to receive(:post_with_response) do
+    allow(anrok_client).to receive(:post_with_response)
+      .with(hash_including(action_name: "anrok-create-ephemeral-transaction"), anything) do
       response = instance_double(Net::HTTPOK)
       allow(response).to receive(:body).and_return(success_body_for(customer.invoices.draft.sole))
       response
