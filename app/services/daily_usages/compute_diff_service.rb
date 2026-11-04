@@ -94,8 +94,6 @@ module DailyUsages
       (previous_usage["taxes_amount_cents"] * common_ratio).round
     end
 
-    # Filters have no identifier in the snapshot. When their values changed, the period-to-date usage of
-    # each previous bucket is deducted from the current buckets that bill its events now.
     def apply_filters_diff(previous_parent, current_parent)
       current_filters = current_parent["filters"]
       return if current_filters.empty?
@@ -110,7 +108,6 @@ module DailyUsages
       end
     end
 
-    # Usage of a charge without filters was all in the default bucket
     def unfiltered_bucket(parent)
       parent.slice("amount_cents", "units", "events_count")
         .merge("values" => nil, "presentation_breakdowns" => Array(parent["presentation_breakdowns"]))
@@ -121,8 +118,6 @@ module DailyUsages
       apply_presentation_breakdowns_diff(previous_filter, current_filter)
     end
 
-    # Buckets whose events all moved to one bucket are deducted exactly and first. The others are then
-    # split together, on the gains left, so the result does not depend on their order.
     def reroute_filters(previous_filters, current_filters)
       single, multiple = previous_filters.zip(filter_routes(previous_filters, current_filters))
         .partition { |_filter, receivers| receivers.one? }
@@ -133,8 +128,6 @@ module DailyUsages
         .each { |slot, part| subtract([slot], [part]) }
     end
 
-    # Breakdowns tell where the units went when they cover them all. The amount follows the units, as it
-    # was billed at the previous bucket's price, and the events follow their own gains.
     def deduction_plan(filter, receivers)
       plan = []
       breakdown_units = Array.new(receivers.size, BigDecimal(0))
@@ -176,8 +169,6 @@ module DailyUsages
       plan + unit_slots.zip(unit_parts) + amount_slots.zip(amount_parts) + event_slots.zip(event_parts)
     end
 
-    # For each previous bucket, the current buckets billing the events it billed. Events are grouped in
-    # cells of filter values and each cell is billed as ChargeFilter#precedence does.
     def filter_routes(previous_filters, current_filters)
       cells = value_cells(previous_filters + current_filters)
       return Array.new(previous_filters.size, current_filters) unless cells
@@ -201,7 +192,6 @@ module DailyUsages
       routes.map { |indexes| indexes.empty? ? current_filters : indexes.sort.map { |i| current_filters[i] } }
     end
 
-    # Every combination of the values named by the filters, with OTHER_VALUE for any other value
     def value_cells(filters)
       tokens = filters.filter_map { |fu| fu["values"] }.flat_map(&:to_a).group_by(&:first).transform_values do |pairs|
         (pairs.flat_map { |_key, allowed| Array(allowed) } - [ChargeFilterValue::ALL_FILTER_VALUES]).uniq + [OTHER_VALUE]
@@ -213,8 +203,6 @@ module DailyUsages
       first.product(*rest).map { |combination| tokens.keys.zip(combination).to_h }
     end
 
-    # Indexes of the filters billing a cell: the matching filters with the highest precedence, or the
-    # default bucket. An all-values filter ranks below any explicit list, as it does in billing.
     def billers(cell, filters)
       matching = filters.each_index.select do |index|
         filters[index]["values"]&.all? do |key, allowed|
@@ -231,6 +219,7 @@ module DailyUsages
       end
     end
 
+    # Same order as ChargeFilter#precedence, where an all-values filter ranks below any explicit list
     def filter_precedence(values)
       size = values.sum do |_key, allowed|
         Array(allowed).include?(ChargeFilterValue::ALL_FILTER_VALUES) ? Float::INFINITY : Array(allowed).size
@@ -239,7 +228,6 @@ module DailyUsages
       [-values.size, size]
     end
 
-    # Splits total in proportion to what each [hash, key] slot gained, equally when none gained anything
     def split(total, slots)
       return Array.new(slots.size, BigDecimal(0)) if total.zero? || slots.empty?
 

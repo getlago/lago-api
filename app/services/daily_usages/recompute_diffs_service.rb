@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
 module DailyUsages
-  # Recomputes the usage_diff of the daily usages written right after a charge's filters were edited,
-  # the only rows whose diff depends on how filters are matched between snapshots.
   class RecomputeDiffsService < BaseService
     Result = BaseResult[:daily_usages]
 
@@ -44,7 +42,6 @@ module DailyUsages
       end
     end
 
-    # Includes a charge getting its first filters, as its previous usage was all in the default bucket
     def filters_changed?(previous_usage, current_usage)
       previous_index = filter_values_index(previous_usage)
       current_index = filter_values_index(current_usage)
@@ -55,7 +52,6 @@ module DailyUsages
       end
     end
 
-    # Maps each charge, and each grouped usage of a charge, to the set of its filter values.
     def filter_values_index(usage)
       # usage defaults to the JSON string "{}" on rows that never got a snapshot
       return {} unless usage.is_a?(Hash)
