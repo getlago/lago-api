@@ -1777,6 +1777,64 @@ RSpec.describe DailyUsages::ComputeDiffService do
       end
     end
 
+    context "when a filter allowing all values overlaps a filter on another key" do
+      # Billing expands {model: ALL} to the metric's 2 values, so it outranks lists of 3 and 4 regions
+      let(:billable_metric) { create(:billable_metric) }
+      let(:charge) { create(:standard_charge, billable_metric:) }
+      let(:all_values) { {"model" => [ChargeFilterValue::ALL_FILTER_VALUES]} }
+
+      let(:previous_usage) do
+        with_charge(
+          usage_payload(
+            [filter_usage(all_values, 1000, "10.0", 10), filter_usage({"region" => %w[us eu ap]}, 300, "3.0", 3)],
+            1300, "13.0", 13
+          )
+        )
+      end
+
+      let(:usage) do
+        with_charge(
+          usage_payload(
+            [filter_usage(all_values, 1100, "11.0", 11), filter_usage({"region" => %w[us eu ap xx]}, 400, "4.0", 4)],
+            1500, "15.0", 15
+          )
+        )
+      end
+
+      before do
+        create(:billable_metric_filter, billable_metric:, key: "model", values: %w[a b])
+        create(:billable_metric_filter, billable_metric:, key: "region", values: %w[us eu ap xx])
+      end
+
+      def with_charge(payload)
+        payload["charges_usage"].first["charge"]["lago_id"] = charge.id
+        payload
+      end
+
+      it "ranks the filters on the metric's values, as billing does" do
+        expect(diff_filters).to eq(
+          [
+            {"values" => all_values, **usage_values(100, "1.0", 1)},
+            {"values" => {"region" => %w[us eu ap xx]}, **usage_values(100, "1.0", 1)}
+          ]
+        )
+      end
+    end
+
+    context "when the filter values are listed in another order" do
+      let(:previous_usage) do
+        usage_payload([filter_usage({"model" => %w[a b]}, 1000, "10.0", 10)], 1000, "10.0", 10)
+      end
+
+      let(:usage) do
+        usage_payload([filter_usage({"model" => %w[b a]}, 1200, "12.0", 12)], 1200, "12.0", 12)
+      end
+
+      it "diffs the filter against itself" do
+        expect(diff_filters).to eq([{"values" => {"model" => %w[b a]}, **usage_values(200, "2.0", 2)}])
+      end
+    end
+
     context "when filters with the same precedence overlap and are not edited" do
       let(:previous_usage) do
         usage_payload(

@@ -7,7 +7,7 @@ module DailyUsages
     # Above this number of value cells, edited filters are split among all the current filters
     MAX_VALUE_CELLS = 10_000
     DECIMAL_SCALE = 10**20
-    OTHER_VALUE = Object.new.freeze
+    OTHER_VALUE = :__other__
 
     def initialize(daily_usage:, previous_daily_usage: nil)
       @daily_usage = daily_usage
@@ -31,8 +31,9 @@ module DailyUsages
         previous_charge_usage = previous_charges_index[current_charge_usage["charge"]["lago_id"]]
         next unless previous_charge_usage
 
+        charge_id = current_charge_usage["charge"]["lago_id"]
         apply_diff(previous_charge_usage, current_charge_usage)
-        apply_filters_diff(previous_charge_usage, current_charge_usage)
+        apply_filters_diff(previous_charge_usage, current_charge_usage, charge_id)
         apply_presentation_breakdowns_diff(previous_charge_usage, current_charge_usage)
 
         previous_grouped_index = previous_charge_usage["grouped_usage"].index_by { |gu| gu["grouped_by"] }
@@ -41,7 +42,7 @@ module DailyUsages
           next unless previous_grouped_usage
 
           apply_diff(previous_grouped_usage, current_grouped_usage)
-          apply_filters_diff(previous_grouped_usage, current_grouped_usage)
+          apply_filters_diff(previous_grouped_usage, current_grouped_usage, charge_id)
           apply_presentation_breakdowns_diff(previous_grouped_usage, current_grouped_usage)
         end
       end
@@ -94,18 +95,22 @@ module DailyUsages
       (previous_usage["taxes_amount_cents"] * common_ratio).round
     end
 
-    def apply_filters_diff(previous_parent, current_parent)
+    def apply_filters_diff(previous_parent, current_parent, charge_id)
       current_filters = current_parent["filters"]
       return if current_filters.empty?
 
       previous_filters = previous_parent["filters"].presence || [unfiltered_bucket(previous_parent)]
 
-      if previous_filters.map { |fu| fu["values"] }.to_set == current_filters.map { |fu| fu["values"] }.to_set
-        previous_index = previous_filters.index_by { |fu| fu["values"] }
-        current_filters.each { |fu| apply_bucket_diff(previous_index[fu["values"]], fu) }
+      if previous_filters.map { |fu| filter_key(fu) }.to_set == current_filters.map { |fu| filter_key(fu) }.to_set
+        previous_index = previous_filters.index_by { |fu| filter_key(fu) }
+        current_filters.each { |fu| apply_bucket_diff(previous_index[filter_key(fu)], fu) }
       else
-        reroute_filters(previous_filters, current_filters)
+        reroute_filters(previous_filters, current_filters, charge_id)
       end
+    end
+
+    def filter_key(filter)
+      filter["values"]&.transform_values { |allowed| Array(allowed).sort }
     end
 
     def unfiltered_bucket(parent)
@@ -118,8 +123,8 @@ module DailyUsages
       apply_presentation_breakdowns_diff(previous_filter, current_filter)
     end
 
-    def reroute_filters(previous_filters, current_filters)
-      single, multiple = previous_filters.zip(filter_routes(previous_filters, current_filters))
+    def reroute_filters(previous_filters, current_filters, charge_id)
+      single, multiple = previous_filters.zip(filter_routes(previous_filters, current_filters, charge_id))
         .partition { |_filter, receivers| receivers.one? }
 
       single.each { |filter, receivers| apply_bucket_diff(filter, receivers.first) }
@@ -169,21 +174,24 @@ module DailyUsages
       plan + unit_slots.zip(unit_parts) + amount_slots.zip(amount_parts) + event_slots.zip(event_parts)
     end
 
-    def filter_routes(previous_filters, current_filters)
-      cells = value_cells(previous_filters + current_filters)
+    def filter_routes(previous_filters, current_filters, charge_id)
+      previous_expanded = previous_filters.map { |fu| expand_all_values(fu["values"], charge_id) }
+      current_expanded = current_filters.map { |fu| expand_all_values(fu["values"], charge_id) }
+
+      cells = value_cells(previous_expanded + current_expanded)
       return Array.new(previous_filters.size, current_filters) unless cells
 
-      previous_values = previous_filters.map { |fu| fu["values"] }.to_set
+      previous_keys = previous_filters.map { |fu| filter_key(fu) }.to_set
       routes = Array.new(previous_filters.size) { Set.new }
 
       cells.each do |cell|
-        current_billers = billers(cell, current_filters)
+        current_billers = billers(cell, current_expanded)
 
-        billers(cell, previous_filters).each do |index|
-          values = previous_filters[index]["values"]
-          same = current_billers.select { |i| current_filters[i]["values"] == values }
+        billers(cell, previous_expanded).each do |index|
+          key = filter_key(previous_filters[index])
+          same = current_billers.select { |i| filter_key(current_filters[i]) == key }
           # A tie is won by the oldest filter, so by a filter that existed before the edit
-          kept = current_billers.select { |i| previous_values.include?(current_filters[i]["values"]) }
+          kept = current_billers.select { |i| previous_keys.include?(filter_key(current_filters[i])) }
 
           routes[index].merge(same.presence || kept.presence || current_billers)
         end
@@ -192,8 +200,24 @@ module DailyUsages
       routes.map { |indexes| indexes.empty? ? current_filters : indexes.sort.map { |i| current_filters[i] } }
     end
 
-    def value_cells(filters)
-      tokens = filters.filter_map { |fu| fu["values"] }.flat_map(&:to_a).group_by(&:first).transform_values do |pairs|
+    # Billing matches an all-values filter on the values of the billable metric filter
+    def expand_all_values(values, charge_id)
+      values&.to_h do |key, allowed|
+        all_values = metric_filter_values(charge_id)[key] if Array(allowed).include?(ChargeFilterValue::ALL_FILTER_VALUES)
+        [key, all_values || allowed]
+      end
+    end
+
+    def metric_filter_values(charge_id)
+      @metric_filter_values ||= {}
+      @metric_filter_values[charge_id] ||= begin
+        billable_metric_id = Charge.with_discarded.where(id: charge_id).pick(:billable_metric_id)
+        BillableMetricFilter.where(billable_metric_id:).pluck(:key, :values).to_h
+      end
+    end
+
+    def value_cells(values_list)
+      tokens = values_list.compact.flat_map(&:to_a).group_by(&:first).transform_values do |pairs|
         (pairs.flat_map { |_key, allowed| Array(allowed) } - [ChargeFilterValue::ALL_FILTER_VALUES]).uniq + [OTHER_VALUE]
       end
       return [{}] if tokens.empty?
@@ -203,23 +227,24 @@ module DailyUsages
       first.product(*rest).map { |combination| tokens.keys.zip(combination).to_h }
     end
 
-    def billers(cell, filters)
-      matching = filters.each_index.select do |index|
-        filters[index]["values"]&.all? do |key, allowed|
+    def billers(cell, values_list)
+      matching = values_list.each_index.select do |index|
+        values_list[index]&.all? do |key, allowed|
           Array(allowed).include?(ChargeFilterValue::ALL_FILTER_VALUES) || Array(allowed).include?(cell[key])
         end
       end
 
       if matching.empty?
-        filters.each_index.select { |index| filters[index]["values"].nil? }
+        values_list.each_index.select { |index| values_list[index].nil? }
       else
-        precedence = ->(index) { filter_precedence(filters[index]["values"]) }
+        precedence = ->(index) { filter_precedence(values_list[index]) }
         best = matching.map(&precedence).min
         matching.select { |index| precedence.call(index) == best }
       end
     end
 
-    # Same order as ChargeFilter#precedence, where an all-values filter ranks below any explicit list
+    # Same order as ChargeFilter#precedence. An all-values filter left unexpanded, when its billable metric
+    # filter is gone, ranks below any explicit list.
     def filter_precedence(values)
       size = values.sum do |_key, allowed|
         Array(allowed).include?(ChargeFilterValue::ALL_FILTER_VALUES) ? Float::INFINITY : Array(allowed).size

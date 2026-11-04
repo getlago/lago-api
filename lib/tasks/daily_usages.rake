@@ -125,11 +125,13 @@ namespace :daily_usages do
     puts "This will recompute the usage_diff of the #{affected.values.sum(&:size)} daily_usages above"
     TaskPrompt.confirm!("Continue? (y/n): ")
 
-    updated = affected.keys.sum do |subscription|
-      DailyUsages::RecomputeDiffsService.call!(subscription:, from_date:).daily_usages.size
+    # Only the rows listed in the recon are recomputed
+    daily_usages = affected.values.flatten
+    daily_usages.each do |daily_usage|
+      daily_usage.update!(usage_diff: DailyUsages::ComputeDiffService.call!(daily_usage:).usage_diff)
     end
 
-    puts "recomputed #{updated} daily_usages"
+    puts "recomputed #{daily_usages.size} daily_usages"
   end
 end
 # rubocop:enable Rails/Output,Rails/Exit

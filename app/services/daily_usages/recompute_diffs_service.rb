@@ -67,7 +67,7 @@ module DailyUsages
     end
 
     def filter_values(usage)
-      usage.fetch("filters", []).map { |filter| filter["values"] }.to_set
+      usage.fetch("filters", []).map { |filter| filter["values"]&.transform_values { |allowed| Array(allowed).sort } }.to_set
     end
   end
 end
