@@ -15,7 +15,7 @@ gem "bootsnap", require: false
 gem "clockwork", require: false
 gem "parallel"
 gem "puma", "~> 7.2"
-gem "rails", "~> 8.1.4"
+gem "rails", "~> 8.1.4", ">= 8.1.4.1"
 gem "redis"
 gem "sidekiq"
 gem "sidekiq-prometheus-exporter"
