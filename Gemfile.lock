@@ -252,6 +252,7 @@ GEM
       dry-initializer (~> 3.2)
       dry-schema (~> 1.14)
       zeitwerk (~> 2.6)
+    email_data (1784427339.0.0)
     erb (6.0.4)
     erubi (1.13.1)
     event_stream_parser (1.0.0)
@@ -1115,6 +1116,7 @@ DEPENDENCIES
   dogstatsd-ruby
   dotenv
   dry-validation
+  email_data
   event_stream_parser
   factory_bot_rails
   faker
@@ -1153,6 +1155,7 @@ DEPENDENCIES
   parallel_tests (~> 5.3)
   pg
   pry-byebug
+  public_suffix
   puma (~> 7.2)
   rack-cors
   rails (~> 8.1.4)

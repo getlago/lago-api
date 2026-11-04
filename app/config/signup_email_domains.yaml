@@ -1,0 +1,6 @@
+# Personal or throwaway email providers refused by self-serve signup on top of the email_data gem lists.
+# An entry also refuses its subdomains. An entry that is a public suffix (co.uk) never matches.
+# Company domains refused by mistake go into LAGO_SIGNUP_ALLOWED_EMAIL_DOMAINS, never here: they name
+# prospects and this repository is public.
+denied:
+  - proton.me
