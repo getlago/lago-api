@@ -42,7 +42,7 @@ class UsersService < BaseService
   end
 
   def register(email, password, organization_name)
-    if ENV.fetch("LAGO_DISABLE_SIGNUP", "false") == "true"
+    if Lago::SelfServe.signup_disabled?
       return result.forbidden_failure!(code: "signup_disabled")
     end
 

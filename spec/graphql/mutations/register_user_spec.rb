@@ -28,6 +28,12 @@ RSpec.describe Mutations::RegisterUser do
     GQL
   end
 
+  let(:request) { instance_double(ActionDispatch::Request, remote_ip: "203.0.113.10") }
+
+  def register(email)
+    execute_graphql(query: mutation, request:, variables: {input: {email:, password: "ILoveLago", organizationName: "FooBar"}})
+  end
+
   context "with a valid new user" do
     subject(:result) do
       execute_graphql(
@@ -77,16 +83,57 @@ RSpec.describe Mutations::RegisterUser do
     end
   end
 
+  context "with self-serve enabled" do
+    subject(:result) { register(email) }
+
+    let(:email) { "foo@bar.com" }
+
+    include_context "with self-serve enabled"
+
+    it "refuses with legacy_signup_disabled and creates nothing" do
+      expect { result }.not_to change { [User.count, Organization.count, Membership.count] }
+      expect(result["errors"].first["extensions"]).to eq("status" => 403, "code" => "legacy_signup_disabled")
+      expect(result["data"]["registerUser"]).to be_nil
+    end
+
+    it_behaves_like "does not produce a security log" do
+      before { result }
+    end
+
+    context "with attempts throttling" do
+      let(:cache) { ActiveSupport::Cache::MemoryStore.new }
+
+      before { Auth::AttemptsThrottle.store = cache }
+
+      it "refuses before the attempt counts against the client IP, whose limit invites and password resets share" do
+        20.times { register(email) }
+
+        expect(Auth::AttemptsThrottle.hit!(:credentials_per_ip, "203.0.113.10")).to be(false)
+      end
+    end
+
+    context "with an existing user's email" do
+      let(:email) { create(:user).email }
+
+      it "gives the same answer" do
+        expect(result["errors"].first["extensions"]).to eq("status" => 403, "code" => "legacy_signup_disabled")
+      end
+    end
+
+    context "when signup is also disabled" do
+      let(:self_serve_env) { super().merge("LAGO_DISABLE_SIGNUP" => "true") }
+
+      it "refuses with legacy_signup_disabled" do
+        expect(result["errors"].first["extensions"]).to eq("status" => 403, "code" => "legacy_signup_disabled")
+      end
+    end
+  end
+
   context "with attempts throttling" do
     let(:cache) { ActiveSupport::Cache::MemoryStore.new }
-    let(:request) { instance_double(ActionDispatch::Request, remote_ip: "203.0.113.10") }
     let(:user) { create(:user) }
 
     before { Auth::AttemptsThrottle.store = cache }
-
-    def register(email)
-      execute_graphql(query: mutation, request:, variables: {input: {email:, password: "ILoveLago", organizationName: "FooBar"}})
-    end
 
     it "limits attempts per client IP" do
       20.times { register(user.email) }
