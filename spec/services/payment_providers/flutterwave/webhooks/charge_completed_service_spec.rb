@@ -396,8 +396,7 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
               type: "VERVE",
               expiry: "02/23"
             }, meta: {
-              lago_payable_id: payment_request.id,
-              lago_payable_type: "PaymentRequest"
+              lago_payment_request_id: payment_request.id
             }
           }
         }
@@ -425,6 +424,14 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
 
         expect(PaymentRequests::Payments::FlutterwaveService).to have_received(:call) do |_, args|
           expect(args[:flutterwave_payment].id).to eq(285959875)
+        end
+      end
+
+      it "normalizes the payment request id for the payment service" do
+        charge_completed_service.call
+
+        expect(PaymentRequests::Payments::FlutterwaveService).to have_received(:call) do |_, args|
+          expect(args[:flutterwave_payment].metadata[:lago_payable_id]).to eq(payment_request.id)
         end
       end
 

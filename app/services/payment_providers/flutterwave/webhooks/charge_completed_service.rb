@@ -66,11 +66,14 @@ module PaymentProviders
         def provider_payment_id
           @provider_payment_id ||= transaction_data.dig("meta", "lago_invoice_id") ||
             transaction_data.dig("meta", "lago_payable_id") ||
+            transaction_data.dig("meta", "lago_payment_request_id") ||
             transaction_data["tx_ref"]
         end
 
         def payable_type
-          @payable_type ||= transaction_data.dig("meta", "lago_payable_type") || "Invoice"
+          @payable_type ||= transaction_data.dig("meta", "lago_payable_type") ||
+            ("PaymentRequest" if transaction_data.dig("meta", "lago_payment_request_id")) ||
+            "Invoice"
         end
 
         def payment_service_class
@@ -127,7 +130,7 @@ module PaymentProviders
         end
 
         def build_metadata(verified_transaction)
-          {
+          metadata = {
             lago_invoice_id: provider_payment_id,
             lago_payable_type: payable_type,
             flutterwave_transaction_id: verified_transaction[:id],
@@ -137,6 +140,8 @@ module PaymentProviders
             currency: verified_transaction[:currency],
             payment_type: "one-time"
           }
+          metadata[:lago_payable_id] = provider_payment_id if payable_type == "PaymentRequest"
+          metadata
         end
 
         def transaction_matches_payable?(verified_transaction, payable)
