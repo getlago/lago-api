@@ -77,6 +77,61 @@ RSpec.describe Auth::AttemptsThrottle do
     it "does not store the identifier in clear" do
       expect(described_class.cache_key(:login_per_ip, "user@example.com")).not_to include("user@example.com")
     end
+
+    context "with a rule keyed on the client network" do
+      it "counts the IPv6 addresses of one /64 together, and other /64s apart" do
+        10.times { described_class.hit!(:signup_per_ip, "2001:db8:1:2::a") }
+
+        expect(described_class.hit!(:signup_per_ip, "2001:db8:1:3::a")).to be(false)
+        expect(described_class.hit!(:signup_per_ip, "2001:db8:1:2::b")).to be(true)
+      end
+
+      it "counts IPv4 per address, and an IPv4-mapped IPv6 address as its IPv4" do
+        10.times { described_class.hit!(:signup_per_ip, "203.0.113.10") }
+
+        expect(described_class.hit!(:signup_per_ip, "203.0.113.11")).to be(false)
+        expect(described_class.hit!(:signup_per_ip, "::ffff:203.0.113.10")).to be(true)
+      end
+
+      it "counts an unparsable identifier by its value" do
+        10.times { described_class.hit!(:signup_per_ip, "not-an-ip") }
+
+        expect(described_class.hit!(:signup_per_ip, "Not-An-IP ")).to be(true)
+      end
+    end
+
+    context "with a rule keyed on the client block" do
+      it "counts the IPv6 addresses of one /48 together, and IPv4 per address" do
+        50.times { described_class.hit!(:signup_per_ip_block, "2001:db8:1:2::a") }
+
+        expect(described_class.hit!(:signup_per_ip_block, "2001:db8:2::a")).to be(false)
+        expect(described_class.hit!(:signup_per_ip_block, "2001:db8:1:ff::a")).to be(true)
+
+        50.times { described_class.hit!(:signup_per_ip_block, "203.0.113.10") }
+        expect(described_class.hit!(:signup_per_ip_block, "203.0.113.11")).to be(false)
+      end
+    end
+
+    it "still counts IPv6 per address for a rule keyed on the IP" do
+      30.times { described_class.hit!(:login_per_ip, "2001:db8:1:2::a") }
+
+      expect(described_class.hit!(:login_per_ip, "2001:db8:1:2::b")).to be(false)
+    end
+
+    it "counts signup emails per mailbox key" do
+      mailbox_key = Signups::ValidateEmailService.mailbox_key("jane+1@acme.com")
+
+      3.times { described_class.hit!(:signup_email_per_hour, Signups::ValidateEmailService.mailbox_key("Jane+#{it}@Acme.com")) }
+
+      expect(described_class.hit!(:signup_email_per_hour, Signups::ValidateEmailService.mailbox_key("j.ane@acme.com"))).to be(false)
+      expect(described_class.hit!(:signup_email_per_hour, mailbox_key)).to be(true)
+    end
+  end
+
+  it "keys every signup rule on a client network, a client block or an email, never on a raw IP" do
+    signup_rules = described_class::RULES.select { |name, _| name.start_with?("signup_") }
+
+    expect(signup_rules.values.map(&:identifier).uniq).to match_array(%i[ip_network ip_block email])
   end
 
   describe ".reset!" do
