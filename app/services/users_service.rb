@@ -88,6 +88,10 @@ class UsersService < BaseService
 
   def register_from_invite(invite, password, login_method:)
     ActiveRecord::Base.transaction do
+      # Held until this transaction ends: serializes with a self-serve signup confirming the same address, since
+      # users.email has no unique index.
+      Users::EmailLockService.call(email: invite.email) { nil }
+
       # NOTE: Same case insensitive lookup as Invite#existing_user, so an invitation never creates
       #       a second user for an email that only differs by case.
       user = invite.existing_user || User.new(email: invite.email)
@@ -103,6 +107,8 @@ class UsersService < BaseService
       if user.new_record?
         user.password = password
         user.save!
+        # The address now has a user: its open self-serve signup attempts stop and drop their password digests.
+        Signups::CloseAttemptsService.call!(normalized_email: PendingSignup.normalize_email(invite.email))
       end
 
       result.user = user
@@ -116,6 +122,8 @@ class UsersService < BaseService
     end
 
     result
+  rescue BaseLockService::FailedToAcquireLock
+    result.lock_acquisition_failure!(message: "email lock not acquired")
   end
 
   def generate_token

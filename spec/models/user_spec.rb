@@ -73,5 +73,25 @@ RSpec.describe User do
       subject.password = nil
       expect(subject).not_to be_valid
     end
+
+    context "when built from the password digest of a confirmed signup" do
+      subject(:user) { described_class.new(email: "jane@getlago.com", password_digest: PendingSignup.digest_password("Lago-Passw0rd")) }
+
+      it "is valid without a password and accepts the Step 1 password" do
+        expect(user).to be_valid
+        expect(user.authenticate("Lago-Passw0rd")).to eq(user)
+      end
+    end
+
+    it "is not valid without a password or a digest" do
+      expect(described_class.new(email: "jane@getlago.com")).not_to be_valid
+    end
+
+    it "still needs a password when an existing user's digest is cleared" do
+      user = create(:user)
+      user.password_digest = nil
+
+      expect(user).not_to be_valid
+    end
   end
 end

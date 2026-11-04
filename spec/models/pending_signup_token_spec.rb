@@ -53,6 +53,69 @@ RSpec.describe PendingSignupToken do
     end
   end
 
+  describe "#verification_status" do
+    subject(:status) { record.verification_status }
+
+    let(:pending_signup) { create(:pending_signup, email: "jane@getlago.com") }
+    let(:record) { create(:pending_signup_token, pending_signup:) }
+
+    before { freeze_time }
+
+    it { is_expected.to eq(:valid) }
+
+    context "when expired" do
+      let(:record) { create(:pending_signup_token, pending_signup:, expires_at: Time.current) }
+
+      it "is expired from expires_at on" do
+        expect(status).to eq(:expired)
+        expect(record.verification_status(1.second.ago)).to eq(:valid)
+      end
+    end
+
+    context "when replaced" do
+      let(:record) { create(:pending_signup_token, :replaced, pending_signup:) }
+
+      it { is_expected.to eq(:replaced) }
+    end
+
+    context "when consumed" do
+      let(:record) { create(:pending_signup_token, :consumed, pending_signup:) }
+
+      it { is_expected.to eq(:already_verified) }
+    end
+
+    context "when replaced on a verified attempt" do
+      let(:pending_signup) { create(:pending_signup, :verified) }
+      let(:record) { create(:pending_signup_token, :replaced, pending_signup:) }
+
+      it { is_expected.to eq(:already_verified) }
+    end
+
+    context "when a user now exists for the address, whatever its case" do
+      before { create(:user, email: "Jane@GetLago.com") }
+
+      it { is_expected.to eq(:already_verified) }
+    end
+
+    context "with 5 password tries" do
+      let(:record) { create(:pending_signup_token, :locked, pending_signup:) }
+
+      it { is_expected.to eq(:locked) }
+    end
+
+    context "when its attempt was closed and the address has no user" do
+      let(:pending_signup) { create(:pending_signup, :closed) }
+
+      it { is_expected.to eq(:expired) }
+    end
+
+    context "when locked and expired" do
+      let(:record) { create(:pending_signup_token, :locked, pending_signup:, expires_at: 1.second.ago) }
+
+      it { is_expected.to eq(:expired) }
+    end
+  end
+
   describe "one live link per attempt" do
     let(:pending_signup) { create(:pending_signup) }
 

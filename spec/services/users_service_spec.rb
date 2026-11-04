@@ -242,6 +242,30 @@ RSpec.describe UsersService do
         expect(result.organization).to eq invite.organization
         expect(result.token).to be_present
       end
+
+      it "closes the open self-serve signup attempts of the address" do
+        attempt = create(:pending_signup, email:)
+        attempt_token = create(:pending_signup_token, pending_signup: attempt)
+
+        registration_result
+
+        expect(attempt.reload).to have_attributes(password_digest: nil, closed_at: be_present, verified_at: nil)
+        expect(attempt_token.reload).to be_replaced
+      end
+    end
+
+    context "when a self-serve signup holds the address", transaction: false do
+      let(:invite) { create(:invite, email:, organization: create(:organization)) }
+
+      before { stub_const("BaseLockService::ACQUIRE_LOCK_TIMEOUT", 0.seconds) }
+
+      it "answers lock_acquisition_failed and creates no user" do
+        with_email_lock(email) do
+          expect(registration_result.error.code).to eq("lock_acquisition_failed")
+        end
+
+        expect(User.where(email:)).not_to exist
+      end
     end
   end
 

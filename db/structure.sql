@@ -6330,7 +6330,8 @@ CREATE TABLE public.users (
     password_digest character varying,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    cs_admin boolean DEFAULT false NOT NULL
+    cs_admin boolean DEFAULT false NOT NULL,
+    self_serve_verified_at timestamp(6) without time zone
 );
 
 
@@ -16183,6 +16184,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261104134700'),
 ('20261104133620'),
 ('20261103084714'),
 ('20261103084708'),
