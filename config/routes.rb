@@ -133,7 +133,8 @@ Rails.application.routes.draw do
   end
 
   namespace :x402 do
-    match "invoice_payments/:token", to: "invoice_payments#create", via: %i[get post], as: :invoice_payment
+    get "invoice_payments/:token", to: "invoice_payments#show", as: :invoice_payment
+    post "invoice_payments/:token", to: "invoice_payments#create"
   end
 
   if Rails.env.local?
