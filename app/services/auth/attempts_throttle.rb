@@ -11,6 +11,9 @@ module Auth
 
     RULES = {
       login_per_ip: Rule.new(limit: 30, period: 1.minute, identifier: :ip),
+      # Self-serve: per IPv4 address or IPv6 /64, then per /48, so rotating IPv6 addresses does not reset the count.
+      login_per_ip_network: Rule.new(limit: 30, period: 1.minute, identifier: :ip_network),
+      login_per_ip_block: Rule.new(limit: 150, period: 1.minute, identifier: :ip_block),
       # Keyed on the pair, so that requests from other IPs cannot lock a user out of password login.
       login_per_email_and_ip: Rule.new(limit: 10, period: 15.minutes, identifier: %i[email ip]),
       # Password guessing spread over many IPs.
