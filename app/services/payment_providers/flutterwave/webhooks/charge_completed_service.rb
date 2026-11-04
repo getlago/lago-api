@@ -29,6 +29,8 @@ module PaymentProviders
 
           payable = find_payable
           return result unless payable
+          return result unless transaction_matches_payable?(verified_transaction, payable)
+          return result if transaction_already_used?(verified_transaction)
 
           payment_service_class.call!(
             :update_payment_status,
@@ -36,7 +38,7 @@ module PaymentProviders
             status: verified_transaction[:status],
             amount_cents: verified_amount_cents(verified_transaction),
             flutterwave_payment: PaymentProviders::FlutterwaveProvider::FlutterwavePayment.new(
-              id: provider_payment_id,
+              id: verified_transaction[:id],
               status: verified_transaction[:status],
               metadata: build_metadata(verified_transaction)
             )
@@ -47,7 +49,7 @@ module PaymentProviders
 
         private
 
-        attr_reader :organization_id, :event_json
+        attr_reader :organization_id, :event_json, :payment_provider
 
         def event
           @event ||= JSON.parse(event_json)
@@ -95,7 +97,7 @@ module PaymentProviders
 
           return nil unless payment_provider_result.success?
 
-          payment_provider = payment_provider_result.payment_provider
+          @payment_provider = payment_provider_result.payment_provider
 
           begin
             verification_url = "#{payment_provider.api_url}/transactions/#{transaction_data["id"]}/verify"
@@ -135,6 +137,27 @@ module PaymentProviders
             currency: verified_transaction[:currency],
             payment_type: "one-time"
           }
+        end
+
+        def transaction_matches_payable?(verified_transaction, payable)
+          verified_transaction[:reference] == transaction_reference(payable) &&
+            verified_transaction[:currency].to_s.casecmp?(payable.currency)
+        end
+
+        def transaction_reference(payable)
+          case payable_type
+          when "Invoice"
+            payable.id
+          when "PaymentRequest"
+            "lago_payment_request_#{payable.id}"
+          end
+        end
+
+        def transaction_already_used?(verified_transaction)
+          Payment.exists?(
+            provider_payment_id: verified_transaction[:id],
+            payment_provider_id: payment_provider.id
+          )
         end
 
         def verified_amount_cents(verified_transaction)

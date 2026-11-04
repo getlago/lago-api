@@ -11,8 +11,8 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
     create_default(:customer)
   end
 
-  let(:invoice) { create(:invoice, organization:) }
-  let(:payment_request) { create(:payment_request, organization:) }
+  let(:invoice) { create(:invoice, organization:, currency: "NGN") }
+  let(:payment_request) { create(:payment_request, organization:, amount_currency: "NGN") }
   let(:flutterwave_provider) { create(:flutterwave_provider, organization:) }
   let(:event_json) { payload.to_json }
   let(:update_payment_status_result) { Invoices::Payments::FlutterwaveService::RESULTS.fetch(:update_payment_status).new }
@@ -65,10 +65,10 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
       "status" => "success",
       "data" => {
         "id" => 285959875,
-        "tx_ref" => "lago_invoice_12345",
+        "tx_ref" => verified_transaction_reference,
         "flw_ref" => "LAGO/FLW270177170",
         "amount" => 10000,
-        "currency" => "NGN",
+        "currency" => verified_transaction_currency,
         "charged_amount" => 10000,
         "status" => "successful",
         "payment_type" => "card",
@@ -87,6 +87,9 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
       }
     }
   end
+
+  let(:verified_transaction_reference) { invoice.id }
+  let(:verified_transaction_currency) { "NGN" }
 
   before do
     allow(PaymentProviders::FindService)
@@ -120,17 +123,25 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
         expect(result).to be_success
       end
 
+      it "uses the verified Flutterwave transaction id as the provider payment id" do
+        charge_completed_service.call
+
+        expect(Invoices::Payments::FlutterwaveService).to have_received(:call) do |_, args|
+          expect(args[:flutterwave_payment].id).to eq(285959875)
+        end
+      end
+
       it "builds correct metadata" do
         charge_completed_service.call
 
-        expect(Invoices::Payments::FlutterwaveService).to have_received(:call) do |method, args|
+        expect(Invoices::Payments::FlutterwaveService).to have_received(:call) do |_, args|
           metadata = args[:flutterwave_payment].metadata
           expect(metadata[:lago_invoice_id]).to eq(invoice.id)
           expect(metadata[:lago_payable_type]).to eq("Invoice")
           expect(metadata[:flutterwave_transaction_id]).to eq(285959875)
           expect(metadata[:amount]).to eq(10000)
           expect(metadata[:currency]).to eq("NGN")
-          expect(metadata[:flw_ref]).to eq("lago_invoice_12345")
+          expect(metadata[:flw_ref]).to eq(invoice.id)
         end
       end
 
@@ -152,6 +163,47 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
           result = charge_completed_service.call
 
           expect(result).to be_success
+          expect(Invoices::Payments::FlutterwaveService).not_to have_received(:call)
+        end
+      end
+
+      context "when the verified transaction reference does not match the invoice" do
+        let(:verified_transaction_reference) { "another-invoice-id" }
+
+        it "does not update the payment status" do
+          charge_completed_service.call
+
+          expect(Invoices::Payments::FlutterwaveService).not_to have_received(:call)
+        end
+      end
+
+      context "when the verified transaction currency does not match the invoice" do
+        let(:verified_transaction_currency) { "USD" }
+
+        it "does not update the payment status" do
+          charge_completed_service.call
+
+          expect(Invoices::Payments::FlutterwaveService).not_to have_received(:call)
+        end
+      end
+
+      context "when the verified transaction was already used" do
+        let(:existing_payment) do
+          create(
+            :payment,
+            organization:,
+            payable: invoice,
+            payment_provider: flutterwave_provider,
+            payment_provider_customer: nil,
+            provider_payment_id: "285959875"
+          )
+        end
+
+        before { existing_payment }
+
+        it "does not update the payment status" do
+          charge_completed_service.call
+
           expect(Invoices::Payments::FlutterwaveService).not_to have_received(:call)
         end
       end
@@ -307,6 +359,7 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
     end
 
     context "when payable type is PaymentRequest" do
+      let(:verified_transaction_reference) { "lago_payment_request_#{payment_request.id}" }
       let(:payload) do
         {
           event: "charge.completed",
@@ -367,6 +420,14 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
         )
       end
 
+      it "uses the verified Flutterwave transaction id as the provider payment id" do
+        charge_completed_service.call
+
+        expect(PaymentRequests::Payments::FlutterwaveService).to have_received(:call) do |_, args|
+          expect(args[:flutterwave_payment].id).to eq(285959875)
+        end
+      end
+
       context "when the payment request belongs to another organization" do
         let(:other_organization) { create(:organization) }
         let(:payment_request) do
@@ -377,6 +438,47 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
           result = charge_completed_service.call
 
           expect(result).to be_success
+          expect(PaymentRequests::Payments::FlutterwaveService).not_to have_received(:call)
+        end
+      end
+
+      context "when the verified transaction reference does not match the payment request" do
+        let(:verified_transaction_reference) { "another-payment-request-id" }
+
+        it "does not update the payment status" do
+          charge_completed_service.call
+
+          expect(PaymentRequests::Payments::FlutterwaveService).not_to have_received(:call)
+        end
+      end
+
+      context "when the verified transaction currency does not match the payment request" do
+        let(:verified_transaction_currency) { "USD" }
+
+        it "does not update the payment status" do
+          charge_completed_service.call
+
+          expect(PaymentRequests::Payments::FlutterwaveService).not_to have_received(:call)
+        end
+      end
+
+      context "when the verified transaction was already used" do
+        let(:existing_payment) do
+          create(
+            :payment,
+            organization:,
+            payable: payment_request,
+            payment_provider: flutterwave_provider,
+            payment_provider_customer: nil,
+            provider_payment_id: "285959875"
+          )
+        end
+
+        before { existing_payment }
+
+        it "does not update the payment status" do
+          charge_completed_service.call
+
           expect(PaymentRequests::Payments::FlutterwaveService).not_to have_received(:call)
         end
       end
@@ -421,6 +523,7 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
     end
 
     context "when transaction has different currency precision" do
+      let(:invoice) { create(:invoice, organization:, currency: "USD") }
       let(:payload) do
         {
           event: "charge.completed",
@@ -453,7 +556,7 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
           "status" => "success",
           "data" => {
             "id" => 285959875,
-            "tx_ref" => "lago_invoice_12345",
+            "tx_ref" => invoice.id,
             "amount" => 100.50,
             "currency" => "USD",
             "charged_amount" => 100.50,
