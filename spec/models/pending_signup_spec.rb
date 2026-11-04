@@ -143,6 +143,52 @@ RSpec.describe PendingSignup do
     end
   end
 
+  describe "#resend_available_in_seconds and #resend_limit_reached?" do
+    before { freeze_time }
+
+    it "counts down from the attempt's last send" do
+      record = build(:pending_signup, emails_sent_at: [20.seconds.ago])
+
+      expect([record.resend_available_in_seconds(Time.current), record.resend_limit_reached?]).to eq([40, false])
+    end
+
+    it "also waits for the other emails to its mailbox" do
+      create(:pending_signup, email: "jane+a@getlago.com", emails_sent_at: [50.minutes.ago, 40.minutes.ago])
+      record = create(:pending_signup, email: "jane@getlago.com", emails_sent_at: [30.minutes.ago])
+
+      # 3 emails to the mailbox in the hour: the oldest, sent 50 minutes ago, leaves it in 10 minutes
+      expect(record.resend_available_in_seconds(Time.current)).to eq(10 * 60)
+    end
+
+    it "is nil when the wait would end after the attempt's window" do
+      create(:pending_signup, email: "jane+a@getlago.com", emails_sent_at: [50.minutes.ago, 40.minutes.ago])
+      record = create(:pending_signup, email: "jane@getlago.com", emails_sent_at: [30.minutes.ago], expires_at: 10.minutes.from_now)
+
+      # the mailbox opens again in 10 minutes, when this attempt's window closes
+      expect(record.resend_available_in_seconds(Time.current)).to be_nil
+    end
+
+    it "is nil once the attempt sent 3 emails or expired" do
+      exhausted = build(:pending_signup, :exhausted)
+      expired = build(:pending_signup, expires_at: Time.current)
+
+      expect([exhausted.resend_available_in_seconds(Time.current), exhausted.resend_limit_reached?]).to eq([nil, true])
+      expect(expired.resend_available_in_seconds(Time.current)).to be_nil
+    end
+  end
+
+  describe ".seconds_until_mailbox_send" do
+    it "waits until the oldest of 3 sends leaves the hour" do
+      freeze_time
+      start = Time.current
+      create(:pending_signup, email: "jane@acme.com", emails_sent_at: [start, start + 61.seconds])
+      create(:pending_signup, email: "jane+x@acme.com", emails_sent_at: [start + 122.seconds])
+
+      expect(described_class.seconds_until_mailbox_send("jane@acme.com", start + 200.seconds)).to eq(3600 - 200)
+      expect(described_class.seconds_until_mailbox_send("jane@acme.com", start + 3600.seconds)).to eq(0)
+    end
+  end
+
   describe "#sending_open?" do
     it "closes after 3 emails or at the expiry" do
       freeze_time

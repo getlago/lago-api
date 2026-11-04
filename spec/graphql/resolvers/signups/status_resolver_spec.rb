@@ -9,7 +9,7 @@ RSpec.describe Resolvers::Signups::StatusResolver do
   let(:query) do
     <<~GQL
       query($signupSecret: String!) {
-        signupStatus(signupSecret: $signupSecret) { status }
+        signupStatus(signupSecret: $signupSecret) { status resendAvailableInSeconds resendLimitReached }
       }
     GQL
   end
@@ -28,17 +28,27 @@ RSpec.describe Resolvers::Signups::StatusResolver do
   it_behaves_like "a self-serve entry point"
 
   it "answers pending, then verified once confirmed" do
-    expect(result["data"]["signupStatus"]).to eq("status" => "pending")
+    expect(result["data"]["signupStatus"]["status"]).to eq("pending")
 
     PendingSignup.sole.update!(verified_at: Time.current, user: create(:user), password_digest: nil)
 
-    expect(poll(signup_secret)["data"]["signupStatus"]).to eq("status" => "verified")
+    expect(poll(signup_secret)["data"]["signupStatus"]).to eq("status" => "verified", "resendAvailableInSeconds" => nil, "resendLimitReached" => false)
   end
 
   it "answers expired after 48 hours, and invalid for an unknown secret" do
-    expect(poll(PendingSignup.generate_signup_secret)["data"]["signupStatus"]).to eq("status" => "invalid")
+    expect(poll(PendingSignup.generate_signup_secret)["data"]["signupStatus"])
+      .to eq("status" => "invalid", "resendAvailableInSeconds" => nil, "resendLimitReached" => false)
 
-    travel_to(50.hours.from_now) { expect(result["data"]["signupStatus"]).to eq("status" => "expired") }
+    travel_to(50.hours.from_now) { expect(result["data"]["signupStatus"]["status"]).to eq("expired") }
+  end
+
+  it "restores the resend countdown and limit of a pending signup" do
+    freeze_time
+    PendingSignup.sole.update!(emails_sent_at: [20.seconds.ago])
+    expect(result["data"]["signupStatus"]).to eq("status" => "pending", "resendAvailableInSeconds" => 40, "resendLimitReached" => false)
+
+    PendingSignup.sole.update!(emails_sent_at: [3.minutes.ago] * 3)
+    expect(poll(signup_secret)["data"]["signupStatus"]).to eq("status" => "pending", "resendAvailableInSeconds" => nil, "resendLimitReached" => true)
   end
 
   it "limits polling per network" do

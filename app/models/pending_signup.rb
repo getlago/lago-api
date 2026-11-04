@@ -67,6 +67,17 @@ class PendingSignup < ApplicationRecord
     end
   end
 
+  # Seconds before a send to the mailbox is allowed: the minute rule, and the hour rule once 3 emails are in it.
+  def self.seconds_until_mailbox_send(mailbox_key, now)
+    sends = mailbox_sends(mailbox_key, now)
+    next_send_at = [
+      (sends.last + MIN_EMAIL_INTERVAL if sends.any?),
+      (sends[-MAX_EMAILS_PER_MAILBOX] + EMAIL_WINDOW if sends.size >= MAX_EMAILS_PER_MAILBOX)
+    ].compact.max
+
+    next_send_at ? [(next_send_at - now).ceil, 0].max : 0
+  end
+
   def signup_secret_matches?(secret)
     SECRET_FORMAT.match?(secret.to_s) &&
       ActiveSupport::SecurityUtils.secure_compare(signup_secret_digest, self.class.digest_signup_secret(secret))
@@ -91,6 +102,20 @@ class PendingSignup < ApplicationRecord
 
   def record_email_send(now)
     self.emails_sent_at += [now]
+  end
+
+  # Counts the other emails to the mailbox too, so a 0 means a resend goes out now; nil once it cannot send more,
+  # including when the wait would end after the attempt's window.
+  def resend_available_in_seconds(now)
+    if sending_open?(now)
+      own_delay = (emails_sent_at.max + MIN_EMAIL_INTERVAL - now).ceil
+      delay = [own_delay, self.class.seconds_until_mailbox_send(mailbox_key, now), 0].max
+      delay if now + delay < expires_at
+    end
+  end
+
+  def resend_limit_reached?
+    emails_sent_at.size >= MAX_EMAILS_PER_ATTEMPT
   end
 end
 
