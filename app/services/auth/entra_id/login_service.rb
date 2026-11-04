@@ -32,6 +32,8 @@ module Auth
       rescue ValidationError => e
         result.single_validation_failure!(error_code: e.message)
         result
+      rescue BaseLockService::FailedToAcquireLock
+        result.lock_acquisition_failure!(message: "email lock not acquired")
       end
 
       private
@@ -54,15 +56,26 @@ module Auth
       #       invited address creates a second user with no role. An exact match wins, then the
       #       oldest case-insensitive match.
       def find_or_create_user
-        user = User.find_by(email: result.email) ||
+        result.user = find_user || create_user
+      end
+
+      def find_user
+        User.find_by(email: result.email) ||
           User.where("LOWER(email) = ?", result.email.downcase).order(:created_at).first
+      end
 
-        if user.nil?
-          user = User.new(email: result.email, password: SecureRandom.hex(16))
+      # Under the email lock, as every user creation, which also ends the address's open self-serve signups.
+      def create_user
+        user = User.new(email: result.email, password: SecureRandom.hex(16)) # bcrypt runs here, outside the lock
+
+        Users::EmailLockService.call(email: result.email) do
+          existing_user = find_user
+          next existing_user if existing_user
+
           user.save!
-        end
-
-        result.user = user
+          Signups::CloseAttemptsService.call!(normalized_email: PendingSignup.normalize_email(result.email))
+          user
+        end.value
       end
 
       def find_or_create_membership

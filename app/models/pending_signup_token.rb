@@ -4,6 +4,7 @@
 class PendingSignupToken < ApplicationRecord
   STATUSES = {pending: "pending", consumed: "consumed", replaced: "replaced"}.freeze
   TTL = 24.hours
+  MAX_PASSWORD_ATTEMPTS = 5
   TOKEN_FORMAT = /\A[A-Za-z0-9_-]{43}\z/
 
   belongs_to :pending_signup
@@ -27,6 +28,27 @@ class PendingSignupToken < ApplicationRecord
   # Expiry is derived from the time, never stored as a status.
   def expired?(now = Time.current)
     expires_at <= now
+  end
+
+  def locked?
+    failed_password_attempts >= MAX_PASSWORD_ATTEMPTS
+  end
+
+  # One precedence for the state query and the confirm. Only the holder of the link sees it, so saying that the
+  # address has an account reveals nothing to a stranger.
+  def verification_status(now = Time.current)
+    if consumed? || pending_signup.verified? || pending_signup.email_registered?
+      :already_verified
+    elsif replaced?
+      :replaced
+    elsif expired?(now) || pending_signup.closed?
+      # A closed attempt with no user ended unconfirmed: its password digest is gone.
+      :expired
+    elsif locked?
+      :locked
+    else
+      :valid
+    end
   end
 end
 
