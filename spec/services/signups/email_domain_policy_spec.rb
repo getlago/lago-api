@@ -8,7 +8,8 @@ RSpec.describe Signups::EmailDomainPolicy do
       it "refuses the free providers, disposable domains and private relays" do
         domains = %w[gmail.com outlook.com yahoo.com icloud.com proton.me pm.me protonmail.com fastmail.com
           user.fastmail.com mailinator.com abc.mailinator.com privaterelay.appleid.com mozmail.com
-          outlook.fr hotmail.be yahoo.dk posteo.de protonmail.ch]
+          outlook.fr hotmail.be yahoo.dk posteo.de protonmail.ch acme.eu.org acme.dpdns.org ec2-3-80-0-1.compute-1.amazonaws.com
+          sg.one.gb.net primevista.it.com]
 
         expect(domains.index_with { described_class.refusal_reason(it) }).to eq(
           "gmail.com" => :free_provider,
@@ -21,6 +22,11 @@ RSpec.describe Signups::EmailDomainPolicy do
           "yahoo.dk" => :denied,
           "posteo.de" => :denied,
           "protonmail.ch" => :denied,
+          "acme.eu.org" => :disposable,
+          "acme.dpdns.org" => :disposable,
+          "ec2-3-80-0-1.compute-1.amazonaws.com" => :disposable,
+          "sg.one.gb.net" => :denied,
+          "primevista.it.com" => :denied,
           "pm.me" => :free_provider,
           "protonmail.com" => :free_provider,
           "fastmail.com" => :free_provider,
@@ -38,8 +44,15 @@ RSpec.describe Signups::EmailDomainPolicy do
         expect(domains.index_with { described_class.refusal_reason(it) }).to eq(domains.index_with { :denied })
       end
 
-      it "accepts company domains, including under multi-label suffixes" do
-        domains = %w[getlago.com eu.getlago.com bbc.co.uk abc.net.au stripe.com]
+      it "lists only private suffixes as company suffixes" do
+        suffixes = described_class::COMPANY_SUFFIXES
+
+        expect(suffixes.index_with { [PublicSuffix.domain(it), PublicSuffix.domain(it, ignore_private: true)] })
+          .to eq(suffixes.index_with { [nil, it] })
+      end
+
+      it "accepts company domains, including under multi-label and company suffixes" do
+        domains = %w[getlago.com eu.getlago.com bbc.co.uk abc.net.au stripe.com acme.us.com acme.com.de mail.acme.co.pl]
 
         expect(domains.index_with { described_class.refusal_reason(it) }).to eq(domains.index_with { nil })
       end
@@ -55,13 +68,14 @@ RSpec.describe Signups::EmailDomainPolicy do
   end
 
   describe "#refusal_reason" do
-    subject(:policy) { described_class.new(free:, disposable:, private_relays:, allowed:, denied:) }
+    subject(:policy) { described_class.new(free:, disposable:, private_relays:, allowed:, denied:, company_suffixes:) }
 
     let(:free) { Set["gmail.com", "fastmail.com"] }
     let(:disposable) { Set["mailinator.com", "com", "co.uk"] }
     let(:private_relays) { Set["mozmail.com"] }
     let(:allowed) { Set[] }
     let(:denied) { Set[] }
+    let(:company_suffixes) { Set[] }
 
     it "matches each list on the domain and its parents, whatever the case" do
       domains = %w[gmail.com mail.gmail.com alias.user.fastmail.com GMAIL.COM a.b.mailinator.com alias.mozmail.com]
@@ -93,6 +107,23 @@ RSpec.describe Signups::EmailDomainPolicy do
     it "raises on an email address or a non-domain, without echoing the input" do
       ["jane@gmail.com", "1.2.3.4", "0x7f.0.0.1", "gmail"].each do |input|
         expect { policy.refusal_reason(input) }.to raise_error(ArgumentError) { |error| expect(error.message).not_to include(input) }
+      end
+    end
+
+    context "with a company suffix that a list marks" do
+      let(:disposable) { Set["us.com", "dpdns.org"] }
+      let(:company_suffixes) { Set["us.com"] }
+
+      it "refuses that suffix only, not the companies under it" do
+        domains = %w[us.com acme.us.com mail.acme.us.com dpdns.org acme.dpdns.org]
+
+        expect(domains.index_with { policy.refusal_reason(it) }).to eq(
+          "us.com" => :disposable,
+          "acme.us.com" => nil,
+          "mail.acme.us.com" => nil,
+          "dpdns.org" => :disposable,
+          "acme.dpdns.org" => :disposable
+        )
       end
     end
 

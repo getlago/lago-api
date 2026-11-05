@@ -8,6 +8,7 @@ denied:
   - 012.net.il
   - 126.com
   - abv.bg
+  - amania.it.com
   - ameritech.net
   - aol.at
   - aol.be
@@ -237,6 +238,8 @@ denied:
   - numericable.fr
   - nvbell.net
   - ocn.ne.jp
+  - ohmyspins.com.de
+  - one.gb.net
   - onet.eu
   - online.de
   - op.pl
@@ -361,6 +364,7 @@ denied:
   - posteo.ug
   - posteo.uk
   - posteo.us
+  - primevista.it.com
   - prodigy.net
   - prodigy.net.mx
   - proton.me
@@ -455,3 +459,33 @@ denied:
   - ziggo.nl
   - zohomail.eu
   - zohomail.in
+
+# Private suffixes sold like a TLD, whose names companies buy (acme.us.com). The gem cuts each temp-mail domain to its
+# ICANN root, so its us.com entry stands for one service under us.com: an entry naming one of these refuses only itself.
+# Free registries, free DNS hosts and dynamic DNS (eu.org, duckdns.org) stay out, so names under them are refused.
+# Adding one: deny the live temp-mail hosts the upstream lists name under it (one.gb.net), which the gem dropped.
+company_suffixes:
+  - biz.ua
+  - br.com
+  - cn.com
+  - co.com
+  - co.pl
+  - co.ua
+  - com.de
+  - com.ru
+  - com.se
+  - eu.com
+  - gb.net
+  - gr.com
+  - in.net
+  - it.com
+  - msk.ru
+  - net.ru
+  - org.ru
+  - poznan.pl
+  - ru.com
+  - sa.com
+  - spb.ru
+  - uk.com
+  - us.com
+  - za.com
