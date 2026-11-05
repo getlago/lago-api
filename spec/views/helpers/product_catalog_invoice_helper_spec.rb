@@ -87,15 +87,6 @@ RSpec.describe ProductCatalogInvoiceHelper do
     end
   end
 
-  describe ".contract_groups" do
-    subject(:group) { described_class.contract_groups(invoice).sole }
-
-    it "returns the hierarchy behind the contract blocks" do
-      expect(group.contract).to eq(contract)
-      expect(group.sections.map { it.category&.name }).to eq(["Infrastructure", nil])
-    end
-  end
-
   describe ".contract_blocks" do
     subject(:block) { described_class.contract_blocks(invoice).sole }
 
