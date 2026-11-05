@@ -56,6 +56,26 @@ class BaseService
     end
   end
 
+  class GoneFailure < FailedResult
+    attr_reader :code
+
+    def initialize(result, code:)
+      @code = code
+
+      super(result, code)
+    end
+  end
+
+  class ConflictFailure < FailedResult
+    attr_reader :code
+
+    def initialize(result, code:)
+      @code = code
+
+      super(result, code)
+    end
+  end
+
   class ValidationFailure < FailedResult
     # The meta keys of the inclusive Integer bounds that the numericality and length validators give
     # as their count, so that a model states each bound once.
