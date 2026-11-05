@@ -118,7 +118,7 @@ RSpec.describe RecurringAggregationSnapshots::ComparePayInAdvanceService do
     before do
       allow(Charges::PayInAdvanceAggregationService).to receive(:call!).and_wrap_original do |original, **args|
         original.call(**args).tap do
-          RecurringAggregationSnapshot.delete_all if RecurringAggregationSnapshots.read_enabled?(organization)
+          RecurringAggregationSnapshot.delete_all if RecurringAggregationSnapshots.read_enabled?
         end
       end
     end
@@ -138,7 +138,7 @@ RSpec.describe RecurringAggregationSnapshots::ComparePayInAdvanceService do
 
       allow(Charges::PayInAdvanceAggregationService).to receive(:call!).and_wrap_original do |original, **args|
         original.call(**args).tap do
-          create_snapshot if RecurringAggregationSnapshots.read_enabled?(organization) && RecurringAggregationSnapshot.none?
+          create_snapshot if RecurringAggregationSnapshots.read_enabled? && RecurringAggregationSnapshot.none?
         end
       end
     end
@@ -156,7 +156,7 @@ RSpec.describe RecurringAggregationSnapshots::ComparePayInAdvanceService do
     before do
       allow(Charges::PayInAdvanceAggregationService).to receive(:call!).and_wrap_original do |original, **args|
         original.call(**args).tap do
-          next unless RecurringAggregationSnapshots.read_enabled?(organization)
+          next unless RecurringAggregationSnapshots.read_enabled?
 
           RecurringAggregationSnapshot.any? ? RecurringAggregationSnapshot.delete_all : create_snapshot
         end

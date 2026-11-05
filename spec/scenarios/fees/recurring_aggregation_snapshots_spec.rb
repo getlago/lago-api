@@ -3,8 +3,7 @@
 require "rails_helper"
 
 describe "Recurring aggregation snapshots", transaction: false do
-  let(:organization) { create(:organization, webhook_url: nil, feature_flags:, clickhouse_events_store:) }
-  let(:feature_flags) { [] }
+  let(:organization) { create(:organization, webhook_url: nil, clickhouse_events_store:) }
   let(:clickhouse_events_store) { false }
   let(:customer) { create(:customer, organization:, timezone: "UTC") }
   let(:plan) { create(:plan, organization:, amount_cents: 0, interval: "monthly") }
@@ -18,8 +17,11 @@ describe "Recurring aggregation snapshots", transaction: false do
   # One read per bucket, nil when it falls back to the full history
   let(:invoice_reads) { [nil, march_snapshot, april_snapshot] }
   let(:usage_reads) { [march_snapshot, april_snapshot] }
-  # Pricing buckets of the charge at the March invoice, each one read with reads on
+  # Pricing buckets of the charge at the March invoice, each one read by the backfill too
   let(:march_buckets) { 1 }
+  # Billed and written with the snapshot read forced off
+  let(:full_history_billed) { billed }
+  let(:full_history_snapshots) { snapshots }
 
   before do
     allow(RecurringAggregationSnapshots::FetchService).to receive(:call!).and_wrap_original do |method, **args|
@@ -105,7 +107,7 @@ describe "Recurring aggregation snapshots", transaction: false do
     end
   end
 
-  def expected_snapshots
+  def expected_snapshots(snapshots = self.snapshots)
     subscription_id = subscription.id
     snapshots.map { {subscription_id:, charge_id: charge.id}.merge(it) }
   end
@@ -142,61 +144,44 @@ describe "Recurring aggregation snapshots", transaction: false do
   def change_catalog
   end
 
-  shared_examples "bills the same with every snapshot flag" do
-    context "with both flags off" do
-      it "bills from the full history" do
-        expect(bill.slice(*billed.keys)).to eq(billed)
-        expect(written_snapshots).to be_empty
-        expect(read_periods).to eq(usage: [], invoice: [])
-      end
+  shared_examples "bills the same with and without the snapshot read" do
+    it "writes the snapshots and bills what the full history bills, starting from them" do
+      expect(bill.slice(*billed.keys)).to eq(billed)
+      expect(written_snapshots).to match_array(expected_snapshots)
+      expect(read_periods).to eq(invoice: invoice_reads, usage: usage_reads)
     end
 
-    context "with snapshot writes only" do
-      let(:feature_flags) { %w[recurring_aggregation_snapshots] }
+    context "with the snapshot read forced off" do
+      def bill
+        RecurringAggregationSnapshots.with_forced_read(false) { super }
+      end
 
       it "writes the snapshots and bills from the full history" do
-        expect(bill.slice(*billed.keys)).to eq(billed)
-        expect(written_snapshots).to match_array(expected_snapshots)
+        expect(bill.slice(*billed.keys)).to eq(full_history_billed)
+        expect(written_snapshots).to match_array(expected_snapshots(full_history_snapshots))
         expect(read_periods).to eq(usage: [], invoice: [])
       end
     end
 
-    context "with snapshot writes and reads" do
-      let(:feature_flags) { %w[recurring_aggregation_snapshots persisted_recurring_values] }
-
-      it "bills what the full history bills, starting from the snapshots" do
-        expect(bill.slice(*billed.keys)).to eq(billed)
-        expect(written_snapshots).to match_array(expected_snapshots)
-        expect(read_periods).to eq(invoice: invoice_reads, usage: usage_reads)
-      end
-    end
-
-    context "with snapshot reads only" do
-      let(:feature_flags) { %w[persisted_recurring_values] }
-
-      it "finds no snapshot and bills from the full history" do
-        expect(bill.slice(*billed.keys)).to eq(billed)
-        expect(written_snapshots).to be_empty
-        expect(read_periods.values.flatten.uniq).to eq([nil])
-      end
-    end
-
-    context "with the snapshots of the March invoice backfilled, then writes and reads" do
-      # Backfilled at the March invoice run, the snapshot has its watermark
+    context "with the snapshots of the March invoice backfilled" do
+      # Stands for a period invoiced before the snapshots were written. Backfilled at the March
+      # invoice run, the snapshot has its watermark.
       def bill_at(time)
         billed = super
         return billed unless time == march_billed_at
 
-        travel_to(time) { RecurringAggregationSnapshots::BackfillService.call!(subscription:) }
-        organization.update!(feature_flags: %w[recurring_aggregation_snapshots persisted_recurring_values])
+        travel_to(time) do
+          RecurringAggregationSnapshot.where(organization:).delete_all
+          RecurringAggregationSnapshots::BackfillService.call!(subscription:)
+        end
         billed
       end
 
       it "bills what the full history bills, starting from the backfilled snapshots" do
         expect(bill.slice(*billed.keys)).to eq(billed)
         expect(written_snapshots).to match_array(expected_snapshots)
-        # The March invoice ran with reads off
-        expect(read_periods).to eq(invoice: invoice_reads.drop(march_buckets), usage: usage_reads)
+        # The backfill reads each bucket of March too, before any snapshot exists
+        expect(read_periods).to eq(invoice: [nil] * march_buckets + invoice_reads, usage: usage_reads)
       end
     end
   end
@@ -219,11 +204,9 @@ describe "Recurring aggregation snapshots", transaction: false do
       ]
     end
 
-    include_examples "bills the same with every snapshot flag"
+    include_examples "bills the same with and without the snapshot read"
 
     context "with a snapshot edited after it was written" do
-      let(:feature_flags) { %w[recurring_aggregation_snapshots persisted_recurring_values] }
-
       # A read that ignores the stored values bills the full history, as every other example expects
       def change_catalog
         RecurringAggregationSnapshot.where(organization:).sole.update!(units: 115, events_count: 4)
@@ -274,7 +257,7 @@ describe "Recurring aggregation snapshots", transaction: false do
       ]
     end
 
-    include_examples "bills the same with every snapshot flag"
+    include_examples "bills the same with and without the snapshot read"
   end
 
   describe "with a prorated recurring sum" do
@@ -298,7 +281,7 @@ describe "Recurring aggregation snapshots", transaction: false do
         april_invoice: [{amount_cents: 1867, units: BigDecimal("18.6666666667"), events_count: 1}],
         # (21 × 9 + 25 × 22) / 31 days
         may_invoice: [{amount_cents: 2384, units: BigDecimal("23.8387096774"), events_count: 1}]
-        # No June usage: after an unbilled period it misses that period's events with every flag
+        # No June usage: after an unbilled period it misses that period's events, read or not
       }
     end
     let(:snapshots) do
@@ -308,8 +291,27 @@ describe "Recurring aggregation snapshots", transaction: false do
         {to: Date.new(2026, 5, 31), units: 25, events_count: 0}
       ]
     end
+    # Without a snapshot, the units carried over come from the events of the closed periods,
+    # the late March event of 7 included
+    let(:full_history_billed) do
+      {
+        march_invoice: billed[:march_invoice],
+        # (23 × 14 + 28 × 16) / 30 days
+        april_usage: {amount_cents: 2567, units: BigDecimal("25.6666666667"), events_count: 1},
+        april_invoice: [{amount_cents: 2567, units: BigDecimal("25.6666666667"), events_count: 1}],
+        # (28 × 9 + 32 × 22) / 31 days
+        may_invoice: [{amount_cents: 3084, units: BigDecimal("30.8387096774"), events_count: 1}]
+      }
+    end
+    let(:full_history_snapshots) do
+      [
+        {to: Date.new(2026, 3, 31), units: 16, events_count: 0},
+        {to: Date.new(2026, 4, 30), units: 28, events_count: 0},
+        {to: Date.new(2026, 5, 31), units: 32, events_count: 0}
+      ]
+    end
 
-    include_examples "bills the same with every snapshot flag"
+    include_examples "bills the same with and without the snapshot read"
   end
 
   describe "with a recurring weighted sum" do
@@ -342,7 +344,7 @@ describe "Recurring aggregation snapshots", transaction: false do
       ]
     end
 
-    include_examples "bills the same with every snapshot flag"
+    include_examples "bills the same with and without the snapshot read"
   end
 
   describe "with a charge filter added after a snapshot" do
@@ -373,8 +375,8 @@ describe "Recurring aggregation snapshots", transaction: false do
     end
     # Every bucket of the charge reads the full history until a snapshot is written after the change
     let(:invoice_reads) { [nil, nil, nil, nil, nil, april_snapshot, april_snapshot, april_snapshot] }
-    let(:march_buckets) { 2 }
     let(:usage_reads) { [nil, nil, nil, april_snapshot, april_snapshot, april_snapshot] }
+    let(:march_buckets) { 2 }
 
     def send_event(amount, **)
       super(amount, region: "us", **)
@@ -384,7 +386,7 @@ describe "Recurring aggregation snapshots", transaction: false do
       create_plan_charge_filter(plan, charge.code, {invoice_display_name: "US", properties: {amount: "3"}, values: {region: ["us"]}})
     end
 
-    include_examples "bills the same with every snapshot flag"
+    include_examples "bills the same with and without the snapshot read"
   end
 
   describe "with a metric filter edited after a snapshot" do
@@ -414,8 +416,8 @@ describe "Recurring aggregation snapshots", transaction: false do
       ]
     end
     let(:invoice_reads) { [nil, nil, nil, nil, april_snapshot, april_snapshot] }
-    let(:march_buckets) { 2 }
     let(:usage_reads) { [nil, nil, april_snapshot, april_snapshot] }
+    let(:march_buckets) { 2 }
 
     def send_event(amount, **)
       super(amount, region: "fr", **)
@@ -426,7 +428,7 @@ describe "Recurring aggregation snapshots", transaction: false do
       update_metric(billable_metric, {filters: [{key: "region", values: %w[eu us fr]}]})
     end
 
-    include_examples "bills the same with every snapshot flag"
+    include_examples "bills the same with and without the snapshot read"
   end
 
   shared_examples "a recurring sum with filters and groups" do
@@ -473,8 +475,8 @@ describe "Recurring aggregation snapshots", transaction: false do
       ]
     end
     let(:invoice_reads) { [nil, nil, march_snapshot, march_snapshot, april_snapshot, april_snapshot] }
-    let(:march_buckets) { 2 }
     let(:usage_reads) { [march_snapshot, march_snapshot, april_snapshot, april_snapshot] }
+    let(:march_buckets) { 2 }
 
     def bill
       start_subscription
@@ -498,7 +500,7 @@ describe "Recurring aggregation snapshots", transaction: false do
       {march_invoice:, april_usage:, april_invoice:, june_usage:, may_invoice: bill_at(Time.utc(2026, 6, 1, 1))}
     end
 
-    include_examples "bills the same with every snapshot flag"
+    include_examples "bills the same with and without the snapshot read"
   end
 
   describe "with charge filters and pricing group keys" do
@@ -546,7 +548,7 @@ describe "Recurring aggregation snapshots", transaction: false do
       {march_invoice:, april_invoice:, termination_invoice:}
     end
 
-    include_examples "bills the same with every snapshot flag"
+    include_examples "bills the same with and without the snapshot read"
   end
 
   describe "with a plan upgrade" do
@@ -592,6 +594,6 @@ describe "Recurring aggregation snapshots", transaction: false do
       {march_invoice:, upgrade_invoice:, april_usage:, april_invoice:, may_invoice: bill_at(Time.utc(2026, 6, 1, 1))}
     end
 
-    include_examples "bills the same with every snapshot flag"
+    include_examples "bills the same with and without the snapshot read"
   end
 end
