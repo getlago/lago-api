@@ -2001,6 +2001,11 @@ The contract's total computed usage for the current billing period, unfiltered
 type ContractCurrentUsageTotal {
   amountCents: BigInt!
   taxesAmountCents: BigInt!
+
+  """
+  True when the tax provider failed and amount/total above are the untaxed fallback
+  """
+  taxesUnavailable: Boolean!
   totalAmountCents: BigInt!
 }
 

@@ -11597,6 +11597,22 @@
               "deprecationReason": null
             },
             {
+              "name": "taxesUnavailable",
+              "description": "True when the tax provider failed and amount/total above are the untaxed fallback",
+              "args": [],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "totalAmountCents",
               "description": null,
               "args": [],
