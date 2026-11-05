@@ -58,7 +58,7 @@ module Api
 
         return not_found_error(resource: "webhook_endpoint") unless webhook_endpoint
 
-        render_webhook_endpoint(webhook_endpoint)
+        render_webhook_endpoint(webhook_endpoint, includes: %i[signing_keys])
       end
 
       def destroy
@@ -101,11 +101,12 @@ module Api
         permitted_options
       end
 
-      def render_webhook_endpoint(webhook_endpoint)
+      def render_webhook_endpoint(webhook_endpoint, includes: [])
         render(
           json: ::V1::WebhookEndpointSerializer.new(
             webhook_endpoint,
-            root_name: "webhook_endpoint"
+            root_name: "webhook_endpoint",
+            includes:
           )
         )
       end

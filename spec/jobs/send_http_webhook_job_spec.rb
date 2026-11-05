@@ -39,6 +39,21 @@ RSpec.describe SendHttpWebhookJob do
       expect(Webhooks::SendHttpService).to have_received(:call).with(webhook:)
     end
 
+    context "when a standard_webhooks endpoint has no usable signing key" do
+      let(:webhook_endpoint) do
+        create(:webhook_endpoint, organization: create(:organization, feature_flags: ["standard_webhooks_signature"]), signature_algo: :standard_webhooks)
+      end
+      let(:webhook) { create(:webhook, webhook_endpoint:) }
+
+      before { allow(Webhooks::SendHttpService).to receive(:call).and_call_original }
+
+      it "fails the job without retrying it" do
+        expect { send_http_webhook_job.perform_now(webhook) }
+          .to raise_error(Webhook::MissingSigningKeyError)
+          .and not_have_enqueued_job(described_class)
+      end
+    end
+
     context "when S3 throttles the payload storage" do
       let(:slow_down_error) { Aws::S3::Errors::SlowDown.new(nil, "Please reduce your request rate.") }
 

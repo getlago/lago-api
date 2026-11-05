@@ -52,10 +52,7 @@ module Organizations
       ActiveRecord::Base.transaction do
         handle_eu_tax_management(params[:eu_tax_management]) if params.key?(:eu_tax_management)
 
-        if params.key?(:webhook_url)
-          webhook_endpoint = organization.webhook_endpoints.first_or_initialize
-          webhook_endpoint.update!(webhook_url: params[:webhook_url])
-        end
+        update_webhook_endpoint if params.key?(:webhook_url)
 
         # TODO: only updates the organization grace period,
         #       it does not update related invoices payment due date, etc
@@ -115,6 +112,17 @@ module Organizations
           OrganizationMailer.with(organization:, user:, additions:, deletions:)
             .authentication_methods_updated.deliver_later
         end
+      end
+    end
+
+    def update_webhook_endpoint
+      webhook_endpoint = organization.webhook_endpoints.first
+      endpoint_params = {webhook_url: params[:webhook_url]}
+
+      if webhook_endpoint
+        WebhookEndpoints::UpdateService.call!(id: webhook_endpoint.id, organization:, params: endpoint_params)
+      else
+        WebhookEndpoints::CreateService.call!(organization:, params: endpoint_params)
       end
     end
 

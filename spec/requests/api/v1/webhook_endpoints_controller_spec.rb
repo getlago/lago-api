@@ -39,6 +39,18 @@ RSpec.describe Api::V1::WebhookEndpointsController do
       end
     end
 
+    context "with signature_algo hmac" do
+      let(:create_params) { super().merge(signature_algo: "hmac") }
+
+      it "creates the endpoint without the rollout flag" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:webhook_endpoint][:signature_algo]).to eq("hmac")
+        expect(json[:webhook_endpoint]).not_to have_key(:signing_keys)
+      end
+    end
+
     context "with an unknown signature_algo" do
       let(:create_params) { super().merge(signature_algo: "md5") }
 
@@ -47,6 +59,29 @@ RSpec.describe Api::V1::WebhookEndpointsController do
 
         expect(response).to have_http_status(:unprocessable_content)
         expect(json[:error_details]).to eq(signature_algo: ["value_is_invalid"])
+      end
+    end
+
+    context "with signature_algo standard_webhooks" do
+      let(:create_params) { super().merge(signature_algo: "standard_webhooks") }
+
+      it "returns unprocessable_content error without the rollout flag" do
+        expect { subject }.not_to change(WebhookEndpoint, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq(signature_algo: ["value_is_invalid"])
+      end
+
+      context "when the organization has the standard_webhooks_signature flag" do
+        before { organization.enable_feature_flag!(:standard_webhooks_signature) }
+
+        it "creates an endpoint signed with Standard Webhooks without rendering its signing keys" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:webhook_endpoint][:signature_algo]).to eq("standard_webhooks")
+          expect(json[:webhook_endpoint]).not_to have_key(:signing_keys)
+        end
       end
     end
 
@@ -125,6 +160,19 @@ RSpec.describe Api::V1::WebhookEndpointsController do
       expect(response).to have_http_status(:ok)
       expect(json[:meta][:total_count]).to eq(3)
     end
+
+    context "with an endpoint signed with standard webhooks" do
+      before { create(:webhook_endpoint, :standard_webhooks, organization:) }
+
+      it "renders no signing keys" do
+        subject
+
+        expect(response).to have_http_status(:ok)
+        expect(json[:webhook_endpoints].map { it[:signature_algo] }).to include("standard_webhooks")
+        expect(json[:webhook_endpoints].size).to eq(4)
+        expect(json[:webhook_endpoints].flat_map(&:keys)).not_to include(:signing_keys)
+      end
+    end
   end
 
   describe "GET /api/v1/webhook_endpoints/:id" do
@@ -142,7 +190,47 @@ RSpec.describe Api::V1::WebhookEndpointsController do
         subject
 
         expect(response).to have_http_status(:ok)
-        expect(json[:webhook_endpoint][:lago_id]).to eq(webhook_endpoint.id)
+        expect(json[:webhook_endpoint]).to include(lago_id: webhook_endpoint.id, signing_keys: [])
+      end
+
+      context "when the endpoint signs with standard webhooks" do
+        let(:webhook_endpoint) { create(:webhook_endpoint, :standard_webhooks) }
+        let(:signing_key) { webhook_endpoint.signing_keys.sole }
+
+        before { organization.disable_feature_flag!(:standard_webhooks_signature) }
+
+        it "returns its signing keys without the rollout flag" do
+          subject
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:webhook_endpoint][:signature_algo]).to eq("standard_webhooks")
+          expect(json[:webhook_endpoint][:signing_keys]).to eq(
+            [{lago_id: signing_key.id, secret_key: signing_key.secret_key, created_at: signing_key.created_at.iso8601}]
+          )
+          expect(signing_key.secret_key).to start_with("whsec_")
+        end
+      end
+
+      context "when the endpoint signs with jwt and kept a secret from standard webhooks" do
+        let(:webhook_endpoint) { create(:webhook_endpoint, signature_algo: :jwt, name: "Billing events", event_types: ["customer.created"]) }
+
+        before { create(:webhook_endpoint_signing_key, webhook_endpoint:) }
+
+        it "returns no signing keys and its other fields unchanged" do
+          subject
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:webhook_endpoint]).to eq(
+            lago_id: webhook_endpoint.id,
+            lago_organization_id: webhook_endpoint.organization_id,
+            webhook_url: webhook_endpoint.webhook_url,
+            signature_algo: "jwt",
+            name: "Billing events",
+            event_types: ["customer.created"],
+            created_at: webhook_endpoint.created_at.iso8601,
+            signing_keys: []
+          )
+        end
       end
     end
 
@@ -186,6 +274,18 @@ RSpec.describe Api::V1::WebhookEndpointsController do
 
       it_behaves_like "produces a security log", "webhook_endpoint.deleted" do
         before { subject }
+      end
+
+      context "when the endpoint signs with standard webhooks" do
+        let!(:webhook_endpoint) { create(:webhook_endpoint, :standard_webhooks) }
+
+        it "renders no signing keys" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:webhook_endpoint][:signature_algo]).to eq("standard_webhooks")
+          expect(json[:webhook_endpoint]).not_to have_key(:signing_keys)
+        end
       end
     end
 
@@ -236,8 +336,32 @@ RSpec.describe Api::V1::WebhookEndpointsController do
 
           expect(json[:webhook_endpoint][:webhook_url]).to eq("http://foo.bar")
           expect(json[:webhook_endpoint][:signature_algo]).to eq("hmac")
+          expect(json[:webhook_endpoint]).not_to have_key(:signing_keys)
           expect(json[:webhook_endpoint][:name]).to eq("Updated Webhook")
           expect(json[:webhook_endpoint][:event_types]).to eq(["invoice.created", "invoice.voided"])
+        end
+      end
+
+      context "when switching to standard_webhooks" do
+        let(:update_params) { super().merge(signature_algo: "standard_webhooks") }
+
+        it "returns unprocessable_content error without the rollout flag" do
+          expect { subject }.not_to change { webhook_endpoint.reload.attributes }
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:error_details]).to eq(signature_algo: ["value_is_invalid"])
+        end
+
+        context "when the organization has the standard_webhooks_signature flag" do
+          before { organization.enable_feature_flag!(:standard_webhooks_signature) }
+
+          it "switches the endpoint to Standard Webhooks without rendering its signing keys" do
+            subject
+
+            expect(response).to have_http_status(:success)
+            expect(json[:webhook_endpoint][:signature_algo]).to eq("standard_webhooks")
+            expect(json[:webhook_endpoint]).not_to have_key(:signing_keys)
+          end
         end
       end
 

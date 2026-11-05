@@ -5,7 +5,8 @@ class WebhookEndpoint < ApplicationRecord
 
   SIGNATURE_ALGOS = [
     :jwt,
-    :hmac
+    :hmac,
+    :standard_webhooks
   ].freeze
 
   WEBHOOK_EVENT_TYPE_CONFIG = YAML.safe_load_file(
@@ -30,15 +31,19 @@ class WebhookEndpoint < ApplicationRecord
 
   belongs_to :organization
   has_many :webhooks, dependent: :delete_all
+  has_many :signing_keys, class_name: "WebhookEndpointSigningKey", dependent: :delete_all
+  has_many :usable_signing_keys, -> { usable.order(:created_at, :id) }, class_name: "WebhookEndpointSigningKey"
 
   validates :webhook_url, presence: true, url: {block_private_addresses: true}
   validates :webhook_url, uniqueness: {scope: :organization_id}
   validate :max_webhook_endpoints, on: :create
   validate :validate_event_types, if: :event_types_changed?
+  # Existing endpoints keep their algorithm when the organization no longer allows it.
+  validate :validate_signature_algo_allowed, if: -> { new_record? || signature_algo_changed? }
 
   before_validation :normalize_event_types, if: :event_types_changed?
 
-  enum :signature_algo, SIGNATURE_ALGOS
+  enum :signature_algo, SIGNATURE_ALGOS, validate: true
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[webhook_url]
@@ -51,7 +56,40 @@ class WebhookEndpoint < ApplicationRecord
     end
   end
 
+  # The algorithms the organization accepts are returned with the error, so a client can fix its request.
+  def self.validation_meta(record, meta)
+    return meta unless record.errors.include?(:signature_algo)
+
+    meta.merge(signature_algo: {allowed_values: record.allowed_signature_algos})
+  end
+
+  def self.default_signature_algo(organization)
+    organization.product_catalog_enabled? ? "standard_webhooks" : "jwt"
+  end
+
+  # Product catalog organizations sign with Standard Webhooks only. Other organizations get it with the rollout flag.
+  def allowed_signature_algos
+    return %w[standard_webhooks] if organization&.product_catalog_enabled?
+
+    algos = %w[jwt hmac]
+    algos << "standard_webhooks" if organization&.feature_flag_enabled?(:standard_webhooks_signature)
+    algos
+  end
+
+  # The keys an endpoint shows in every API. A jwt or hmac endpoint that kept the key of a former switch does not sign with it.
+  def active_signing_keys
+    standard_webhooks? ? usable_signing_keys : WebhookEndpointSigningKey.none
+  end
+
   private
+
+  def validate_signature_algo_allowed
+    # An unknown value already fails the enum validation.
+    return unless self.class.signature_algos.key?(signature_algo.to_s)
+    return if allowed_signature_algos.include?(signature_algo.to_s)
+
+    errors.add(:signature_algo, :inclusion)
+  end
 
   def max_webhook_endpoints
     errors.add(:base, :exceeded_limit) if organization &&

@@ -30,4 +30,26 @@ RSpec.describe Api::V1::WebhooksController do
       expect(json[:webhook][:public_key]).to eq(Base64.encode64(RsaPublicKey.to_s))
     end
   end
+
+  describe "GET /api/v2/webhooks/public_key" do
+    subject { get_with_token(organization, "/api/v2/webhooks/public_key") }
+
+    it "still answers through the v1 controller" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to eq(Base64.encode64(RsaPublicKey.to_s))
+    end
+  end
+
+  describe "GET /api/v2/webhooks/json_public_key" do
+    subject { get_with_token(organization, "/api/v2/webhooks/json_public_key") }
+
+    it "still answers through the v1 controller" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:webhook][:public_key]).to eq(Base64.encode64(RsaPublicKey.to_s))
+    end
+  end
 end

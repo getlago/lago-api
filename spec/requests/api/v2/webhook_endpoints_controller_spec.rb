@@ -8,13 +8,17 @@ RSpec.describe Api::V2::WebhookEndpointsController do
   # Without the endpoint the organization factory creates, so that each example lists only its own.
   let_it_be(:organization, refind: true) { create_default(:organization, webhook_url: nil) }
 
-  describe "POST /api/v2/webhook_endpoints" do
-    subject(:request) { post_with_token(organization, "/api/v2/webhook_endpoints", {webhook_endpoint: create_params}) }
+  let(:invalid_algorithm_details) do
+    [{code: "value_is_invalid", field: "signature_algo", meta: {allowed_values: %w[standard_webhooks]}}]
+  end
 
+  describe "POST /api/v2/webhook_endpoints" do
+    subject(:request) { post_with_token(organization, "/api/v2/webhook_endpoints#{query}", {webhook_endpoint: create_params}) }
+
+    let(:query) { "" }
     let(:create_params) do
       {
         webhook_url: "https://example.com/webhooks",
-        signature_algo: "hmac",
         name: "Billing events",
         event_types: ["customer.created", "invoice.created"]
       }
@@ -22,13 +26,27 @@ RSpec.describe Api::V2::WebhookEndpointsController do
 
     include_examples "requires API permission", "webhook_endpoint", "write"
 
-    it "creates a webhook endpoint" do
+    it "creates a webhook endpoint signed with standard webhooks by default, without rendering its secret" do
       expect { request }.to change(organization.webhook_endpoints, :count).by(1)
 
       expect(response).to have_http_status(:ok)
       webhook_endpoint = organization.webhook_endpoints.sole
-      expect(webhook_endpoint).to have_attributes(**create_params)
-      expect(json[:webhook_endpoint][:lago_id]).to eq(webhook_endpoint.id)
+      expect(webhook_endpoint).to have_attributes(
+        webhook_url: "https://example.com/webhooks",
+        signature_algo: "standard_webhooks",
+        name: "Billing events",
+        event_types: ["customer.created", "invoice.created"]
+      )
+      expect(webhook_endpoint.signing_keys.count).to eq(1)
+      expect(json[:webhook_endpoint]).to eq(
+        lago_id: webhook_endpoint.id,
+        name: "Billing events",
+        webhook_url: "https://example.com/webhooks",
+        signature_algo: "standard_webhooks",
+        event_types: ["customer.created", "invoice.created"],
+        created_at: webhook_endpoint.created_at.iso8601(6),
+        updated_at: webhook_endpoint.updated_at.iso8601(6)
+      )
       expect(response.headers["X-Lago-Endpoint-Status"]).to eq("beta")
     end
 
@@ -36,14 +54,29 @@ RSpec.describe Api::V2::WebhookEndpointsController do
       before { request }
     end
 
-    context "without a signature_algo" do
-      let(:create_params) { super().except(:signature_algo) }
+    [["standard_webhooks", "standard_webhooks"], ["a null", nil]].each do |label, value|
+      context "with #{label} signature_algo" do
+        let(:create_params) { super().merge(signature_algo: value) }
 
-      it "signs with JWT" do
-        request
+        it "creates the endpoint signed with standard webhooks, with one secret" do
+          expect { request }.to change(WebhookEndpointSigningKey, :count).by(1)
 
-        expect(response).to have_http_status(:ok)
-        expect(json[:webhook_endpoint][:signature_algo]).to eq("jwt")
+          expect(response).to have_http_status(:ok)
+          expect(json[:webhook_endpoint][:signature_algo]).to eq("standard_webhooks")
+        end
+      end
+    end
+
+    [["jwt", "jwt"], ["hmac", "hmac"], ["an unknown", "md5"], ["a false", false]].each do |label, value|
+      context "with #{label} signature_algo" do
+        let(:create_params) { super().merge(signature_algo: value) }
+
+        it "returns a validation error with the allowed values, without creating the endpoint" do
+          expect { request }.not_to change(WebhookEndpoint, :count)
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json).to eq(code: "validation_errors", details: invalid_algorithm_details)
+        end
       end
     end
 
@@ -55,31 +88,6 @@ RSpec.describe Api::V2::WebhookEndpointsController do
 
         expect(response).to have_http_status(:ok)
         expect(json[:webhook_endpoint][:event_types]).to be_nil
-      end
-    end
-
-    context "with an unknown signature_algo" do
-      let(:create_params) { super().merge(signature_algo: "md5") }
-
-      it "returns a validation error with the allowed values, without creating the endpoint" do
-        expect { request }.not_to change(WebhookEndpoint, :count)
-
-        expect(response).to have_http_status(:unprocessable_content)
-        expect(json).to eq(
-          code: "validation_errors",
-          details: [{code: "value_is_invalid", field: "signature_algo", meta: {allowed_values: %w[jwt hmac]}}]
-        )
-      end
-    end
-
-    context "with a false signature_algo" do
-      let(:create_params) { super().merge(signature_algo: false) }
-
-      it "returns a validation error rather than defaulting to JWT" do
-        expect { request }.not_to change(WebhookEndpoint, :count)
-
-        expect(response).to have_http_status(:unprocessable_content)
-        expect(json[:details]).to eq([{code: "value_is_invalid", field: "signature_algo", meta: {allowed_values: %w[jwt hmac]}}])
       end
     end
 
@@ -114,7 +122,7 @@ RSpec.describe Api::V2::WebhookEndpointsController do
     context "with an invalid webhook_url" do
       let(:create_params) { super().merge(webhook_url: "not a url") }
 
-      it "returns a validation error" do
+      it "returns a validation error on webhook_url" do
         request
 
         expect(response).to have_http_status(:unprocessable_content)
@@ -126,9 +134,9 @@ RSpec.describe Api::V2::WebhookEndpointsController do
     end
 
     context "when the webhook_url is already used" do
-      before { create(:webhook_endpoint, organization:, webhook_url: create_params[:webhook_url]) }
+      before { create(:webhook_endpoint, :legacy_signature_algo, organization:, webhook_url: create_params[:webhook_url]) }
 
-      it "returns a validation error" do
+      it "returns a validation error on webhook_url" do
         request
 
         expect(response).to have_http_status(:unprocessable_content)
@@ -137,7 +145,7 @@ RSpec.describe Api::V2::WebhookEndpointsController do
     end
 
     context "when the organization has reached the endpoint limit" do
-      before { create_list(:webhook_endpoint, WebhookEndpoint::LIMIT, organization:) }
+      before { create_list(:webhook_endpoint, WebhookEndpoint::LIMIT, :legacy_signature_algo, organization:) }
 
       it "returns a token, not the sentence v1 renders" do
         expect { request }.not_to change(WebhookEndpoint, :count)
@@ -179,14 +187,18 @@ RSpec.describe Api::V2::WebhookEndpointsController do
   %i[put patch].each do |http_method|
     describe "#{http_method.upcase} /api/v2/webhook_endpoints/:id" do
       subject(:request) do
-        public_send(:"#{http_method}_with_token", organization, "/api/v2/webhook_endpoints/#{webhook_endpoint.id}", {webhook_endpoint: update_params})
+        public_send(:"#{http_method}_with_token", organization, "/api/v2/webhook_endpoints/#{webhook_endpoint.id}#{query}", {webhook_endpoint: update_params})
       end
 
-      let(:webhook_endpoint) { create(:webhook_endpoint, organization:, signature_algo: :jwt, event_types: ["customer.created"]) }
+      let(:query) { "" }
+      # A jwt endpoint created before the organization had the product catalog.
+      let(:webhook_endpoint) do
+        create(:webhook_endpoint, :legacy_signature_algo, organization:, signature_algo: :jwt, event_types: ["customer.created"])
+      end
       let(:update_params) do
         {
           webhook_url: "https://example.com/updated",
-          signature_algo: "hmac",
+          signature_algo: "standard_webhooks",
           name: "Renamed",
           event_types: ["invoice.created"]
         }
@@ -194,30 +206,111 @@ RSpec.describe Api::V2::WebhookEndpointsController do
 
       include_examples "requires API permission", "webhook_endpoint", "write"
 
-      it "updates the webhook endpoint" do
+      it "updates the webhook endpoint and switches it to standard webhooks with one secret" do
         request
 
         expect(response).to have_http_status(:ok)
-        expect(webhook_endpoint.reload).to have_attributes(**update_params)
-        expect(json[:webhook_endpoint][:lago_id]).to eq(webhook_endpoint.id)
+        expect(webhook_endpoint.reload).to have_attributes(
+          webhook_url: "https://example.com/updated",
+          signature_algo: "standard_webhooks",
+          name: "Renamed",
+          event_types: ["invoice.created"]
+        )
+        expect(webhook_endpoint.signing_keys.count).to eq(1)
+        expect(json[:webhook_endpoint]).to eq(
+          lago_id: webhook_endpoint.id,
+          name: "Renamed",
+          webhook_url: "https://example.com/updated",
+          signature_algo: "standard_webhooks",
+          event_types: ["invoice.created"],
+          created_at: webhook_endpoint.created_at.iso8601(6),
+          updated_at: webhook_endpoint.updated_at.iso8601(6)
+        )
       end
 
       it_behaves_like "produces a security log", "webhook_endpoint.updated" do
         before { request }
       end
 
+      context "when the endpoint already signs with standard webhooks" do
+        let(:webhook_endpoint) { create(:webhook_endpoint, :standard_webhooks, organization:) }
+
+        it "updates it and keeps its secret" do
+          signing_key_id = webhook_endpoint.signing_keys.sole.id
+
+          request
+
+          expect(response).to have_http_status(:ok)
+          expect(webhook_endpoint.reload).to have_attributes(webhook_url: "https://example.com/updated", name: "Renamed")
+          expect(webhook_endpoint.signing_keys.pluck(:id)).to eq([signing_key_id])
+        end
+      end
+
       context "with only a webhook_url" do
         let(:update_params) { {webhook_url: "https://example.com/updated"} }
 
-        it "keeps the other attributes" do
+        it "keeps the other attributes, the jwt algorithm included, without a secret" do
           request
 
           expect(response).to have_http_status(:ok)
           expect(webhook_endpoint.reload).to have_attributes(
             webhook_url: "https://example.com/updated",
             signature_algo: "jwt",
+            name: nil,
             event_types: ["customer.created"]
           )
+          expect(webhook_endpoint.signing_keys).to be_empty
+          expect(json[:webhook_endpoint][:signature_algo]).to eq("jwt")
+        end
+      end
+
+      context "with its current jwt signature_algo" do
+        let(:update_params) { {name: "Renamed", signature_algo: "jwt"} }
+
+        it "keeps the algorithm the organization no longer allows" do
+          request
+
+          expect(response).to have_http_status(:ok)
+          expect(webhook_endpoint.reload).to have_attributes(signature_algo: "jwt", name: "Renamed")
+        end
+      end
+
+      context "with only a name" do
+        let(:update_params) { {name: "Renamed"} }
+
+        it "keeps the url" do
+          url = webhook_endpoint.webhook_url
+
+          request
+
+          expect(response).to have_http_status(:ok)
+          expect(webhook_endpoint.reload).to have_attributes(webhook_url: url, signature_algo: "jwt", name: "Renamed")
+        end
+      end
+
+      [["hmac", "hmac"], ["an unknown", "md5"], ["a null", nil]].each do |label, value|
+        context "with #{label} signature_algo" do
+          let(:update_params) { {signature_algo: value} }
+
+          it "returns a validation error without changing the endpoint" do
+            expect { request }.not_to change { webhook_endpoint.reload.attributes }
+
+            expect(response).to have_http_status(:unprocessable_content)
+            expect(json).to eq(code: "validation_errors", details: invalid_algorithm_details)
+            expect(webhook_endpoint.signing_keys).to be_empty
+          end
+        end
+      end
+
+      context "when the webhook_url is used by another endpoint" do
+        let(:update_params) { {webhook_url: other.webhook_url} }
+        let(:other) { create(:webhook_endpoint, :standard_webhooks, organization:) }
+
+        it "returns a validation error on webhook_url" do
+          request
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(json[:details]).to eq([{code: "value_already_exist", field: "webhook_url", meta: {}}])
         end
       end
 
@@ -229,17 +322,6 @@ RSpec.describe Api::V2::WebhookEndpointsController do
 
           expect(response).to have_http_status(:ok)
           expect(webhook_endpoint.reload.event_types).to be_nil
-        end
-      end
-
-      context "with a null signature_algo" do
-        let(:update_params) { {signature_algo: nil} }
-
-        it "returns a validation error without changing the endpoint" do
-          expect { request }.not_to change { webhook_endpoint.reload.attributes }
-
-          expect(response).to have_http_status(:unprocessable_content)
-          expect(json[:details]).to eq([{code: "value_is_invalid", field: "signature_algo", meta: {allowed_values: %w[jwt hmac]}}])
         end
       end
 
@@ -288,15 +370,16 @@ RSpec.describe Api::V2::WebhookEndpointsController do
   end
 
   describe "GET /api/v2/webhook_endpoints/:id" do
-    subject(:request) { get_with_token(organization, "/api/v2/webhook_endpoints/#{webhook_endpoint.id}") }
+    subject(:request) { get_with_token(organization, "/api/v2/webhook_endpoints/#{webhook_endpoint.id}", params) }
 
+    let(:params) { {} }
     let(:webhook_endpoint) do
-      create(:webhook_endpoint, organization:, name: "Billing events", signature_algo: :hmac, event_types: ["customer.created"])
+      create(:webhook_endpoint, :legacy_signature_algo, organization:, name: "Billing events", signature_algo: :hmac, event_types: ["customer.created"])
     end
 
     include_examples "requires API permission", "webhook_endpoint", "read"
 
-    it "returns the webhook endpoint" do
+    it "returns the webhook endpoint without its signing keys" do
       request
 
       expect(response).to have_http_status(:ok)
@@ -332,7 +415,7 @@ RSpec.describe Api::V2::WebhookEndpointsController do
     end
 
     context "with an expansion" do
-      subject(:request) { get_with_token(organization, "/api/v2/webhook_endpoints/#{webhook_endpoint.id}", {expands: ["webhooks"]}) }
+      let(:params) { {expands: ["webhooks"]} }
 
       it "rejects it, as a webhook endpoint has no expandable relationship" do
         request
@@ -349,10 +432,10 @@ RSpec.describe Api::V2::WebhookEndpointsController do
   describe "GET /api/v2/webhook_endpoints" do
     subject(:request) { get_with_token(organization, "/api/v2/webhook_endpoints", {limit: 1}) }
 
-    let(:newest) { create(:webhook_endpoint, organization:, created_at: 1.day.ago) }
+    let(:newest) { create(:webhook_endpoint, :standard_webhooks, organization:, created_at: 1.day.ago) }
 
     before do
-      create(:webhook_endpoint, organization:, created_at: 2.days.ago)
+      create(:webhook_endpoint, :legacy_signature_algo, organization:, created_at: 2.days.ago)
       newest
       create(:webhook_endpoint, organization: create(:organization))
     end
@@ -371,29 +454,32 @@ RSpec.describe Api::V2::WebhookEndpointsController do
 
     it_behaves_like "a cursor paginated v2 endpoint", collection: :webhook_endpoints, model: WebhookEndpoint do
       let(:paginated_path) { "/api/v2/webhook_endpoints" }
-      let(:create_paginated_record) { ->(created_at) { create(:webhook_endpoint, organization:, created_at:) } }
+      let(:create_paginated_record) { ->(created_at) { create(:webhook_endpoint, :standard_webhooks, organization:, created_at:) } }
     end
 
     it_behaves_like "a v2 list filtered on created_at", collection: :webhook_endpoints do
       let(:filtered_path) { "/api/v2/webhook_endpoints" }
-      let(:create_filtered_record) { ->(created_at) { create(:webhook_endpoint, organization:, created_at:) } }
+      let(:create_filtered_record) { ->(created_at) { create(:webhook_endpoint, :standard_webhooks, organization:, created_at:) } }
     end
   end
 
   describe "DELETE /api/v2/webhook_endpoints/:id" do
-    subject(:request) { delete_with_token(organization, "/api/v2/webhook_endpoints/#{webhook_endpoint.id}") }
+    subject(:request) { delete_with_token(organization, "/api/v2/webhook_endpoints/#{webhook_endpoint.id}#{query}") }
 
-    let(:webhook_endpoint) { create(:webhook_endpoint, organization:) }
+    let(:query) { "" }
+    let(:webhook_endpoint) { create(:webhook_endpoint, :standard_webhooks, organization:) }
 
     before { webhook_endpoint }
 
     include_examples "requires API permission", "webhook_endpoint", "write"
 
-    it "deletes the webhook endpoint and returns it" do
+    it "deletes the webhook endpoint and its signing keys and returns it" do
       expect { request }.to change(WebhookEndpoint, :count).by(-1)
+        .and change(WebhookEndpointSigningKey, :count).by(-1)
 
       expect(response).to have_http_status(:ok)
       expect(json[:webhook_endpoint][:lago_id]).to eq(webhook_endpoint.id)
+      expect(json[:webhook_endpoint].keys).not_to include(:signing_keys)
     end
 
     it_behaves_like "produces a security log", "webhook_endpoint.deleted" do

@@ -77,3 +77,7 @@ sso_cross_organization_sessions:
 recurring_aggregation_snapshots:
   description: "Persist the units of recurring sum and weighted sum charges at the end of each billed period, so later periods can start from them instead of the full event history"
   owners: ["@vincent-pochet"]
+
+standard_webhooks_signature:
+  description: "Allow organizations without the product catalog to create webhook endpoints signed with Standard Webhooks, or switch endpoints to it. Turn it on once the deploy is complete, as older workers deliver these endpoints unsigned"
+  owners: ["@groyoh"]

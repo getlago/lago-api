@@ -5,8 +5,12 @@ require "rails_helper"
 RSpec.describe WebhookEndpoint do
   it { is_expected.to belong_to(:organization) }
   it { is_expected.to have_many(:webhooks).dependent(:delete_all) }
+  it { is_expected.to have_many(:signing_keys).class_name("WebhookEndpointSigningKey").dependent(:delete_all) }
+  it { is_expected.to have_many(:usable_signing_keys).class_name("WebhookEndpointSigningKey") }
 
   it { is_expected.to validate_presence_of(:webhook_url) }
+
+  it { is_expected.to define_enum_for(:signature_algo).validating.with_values(jwt: 0, hmac: 1, standard_webhooks: 2) }
 
   describe "validations" do
     subject(:webhook_endpoint) { build(:webhook_endpoint) }
@@ -57,6 +61,89 @@ RSpec.describe WebhookEndpoint do
 
       it "is invalid" do
         expect(webhook_endpoint).not_to be_valid
+      end
+    end
+
+    describe "signature_algo validation" do
+      subject(:webhook_endpoint) { build(:webhook_endpoint, organization:, signature_algo:) }
+
+      let(:organization) { create(:organization) }
+
+      context "when the organization has neither the product catalog nor the rollout flag" do
+        %w[jwt hmac].each do |algo|
+          context "with #{algo}" do
+            let(:signature_algo) { algo }
+
+            it { is_expected.to be_valid }
+          end
+        end
+
+        context "with standard_webhooks" do
+          let(:signature_algo) { "standard_webhooks" }
+
+          it "is invalid" do
+            expect(webhook_endpoint).not_to be_valid
+            expect(webhook_endpoint.errors.details[:signature_algo]).to eq([{error: :inclusion}])
+            expect(webhook_endpoint.errors.messages[:signature_algo]).to eq(["value_is_invalid"])
+          end
+        end
+      end
+
+      context "when the organization has the standard_webhooks_signature flag" do
+        let(:organization) { create(:organization, feature_flags: ["standard_webhooks_signature"]) }
+
+        %w[jwt hmac standard_webhooks].each do |algo|
+          context "with #{algo}" do
+            let(:signature_algo) { algo }
+
+            it { is_expected.to be_valid }
+          end
+        end
+      end
+
+      context "when the organization has the product catalog" do
+        let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
+
+        context "with standard_webhooks" do
+          let(:signature_algo) { "standard_webhooks" }
+
+          it { is_expected.to be_valid }
+        end
+
+        %w[jwt hmac].each do |algo|
+          context "with #{algo}" do
+            let(:signature_algo) { algo }
+
+            it "is invalid" do
+              expect(webhook_endpoint).not_to be_valid
+              expect(webhook_endpoint.errors.messages[:signature_algo]).to eq(["value_is_invalid"])
+            end
+          end
+        end
+
+        context "when an existing endpoint keeps an algorithm the organization no longer allows" do
+          subject(:webhook_endpoint) { create(:webhook_endpoint, :legacy_signature_algo, organization:, signature_algo: :jwt) }
+
+          it "can still be updated" do
+            expect(webhook_endpoint.update(name: "Renamed")).to be(true)
+          end
+
+          it "cannot switch to another refused algorithm" do
+            expect(webhook_endpoint.update(signature_algo: :hmac)).to be(false)
+            expect(webhook_endpoint.errors.messages[:signature_algo]).to eq(["value_is_invalid"])
+          end
+        end
+      end
+
+      [["an unknown value", "md5"], ["nil", nil]].each do |label, value|
+        context "with #{label}" do
+          let(:signature_algo) { value }
+
+          it "has a single value_is_invalid error" do
+            expect(webhook_endpoint).not_to be_valid
+            expect(webhook_endpoint.errors.messages[:signature_algo]).to eq(["value_is_invalid"])
+          end
+        end
       end
     end
 
@@ -116,6 +203,99 @@ RSpec.describe WebhookEndpoint do
         event_types: ["contains invalid types: [\"wrong.type\"]"]
       )
       expect(codes).to eq(webhook_url: ["url_is_invalid"], event_types: ["value_is_invalid"])
+    end
+  end
+
+  describe "#allowed_signature_algos" do
+    subject(:allowed_signature_algos) { build(:webhook_endpoint, organization:).allowed_signature_algos }
+
+    let(:organization) { create(:organization) }
+
+    it "returns jwt and hmac without the rollout flag" do
+      expect(allowed_signature_algos).to eq(%w[jwt hmac])
+    end
+
+    context "when the organization has the standard_webhooks_signature flag" do
+      let(:organization) { create(:organization, feature_flags: ["standard_webhooks_signature"]) }
+
+      it "returns the three algorithms" do
+        expect(allowed_signature_algos).to eq(%w[jwt hmac standard_webhooks])
+      end
+    end
+
+    context "when the organization has the product catalog" do
+      let(:organization) { create(:organization, feature_flags: ["product_catalog", "standard_webhooks_signature"]) }
+
+      it "returns only standard_webhooks, even with the rollout flag" do
+        expect(allowed_signature_algos).to eq(%w[standard_webhooks])
+      end
+    end
+  end
+
+  describe "#active_signing_keys" do
+    subject(:active_signing_keys) { webhook_endpoint.active_signing_keys }
+
+    let(:webhook_endpoint) { create(:webhook_endpoint, :legacy_signature_algo, signature_algo: :standard_webhooks) }
+    let(:newer_key) { create(:webhook_endpoint_signing_key, webhook_endpoint:, created_at: 1.day.ago) }
+    let(:older_key) { create(:webhook_endpoint_signing_key, webhook_endpoint:, created_at: 2.days.ago) }
+
+    before do
+      freeze_time
+
+      newer_key
+      older_key
+      create(:webhook_endpoint_signing_key, webhook_endpoint:, expires_at: 1.minute.ago)
+    end
+
+    it "returns the usable keys, oldest first" do
+      expect(active_signing_keys).to eq([older_key, newer_key])
+    end
+
+    context "when the endpoint signs with jwt and kept keys from a former switch" do
+      let(:webhook_endpoint) { create(:webhook_endpoint, signature_algo: :jwt) }
+
+      it "returns no key" do
+        expect(active_signing_keys).to be_empty
+      end
+    end
+  end
+
+  describe ".default_signature_algo" do
+    subject(:default_signature_algo) { described_class.default_signature_algo(organization) }
+
+    let(:organization) { build(:organization) }
+
+    it "returns jwt" do
+      expect(default_signature_algo).to eq("jwt")
+    end
+
+    context "when the organization has the product catalog" do
+      let(:organization) { build(:organization, feature_flags: ["product_catalog"]) }
+
+      it "returns standard_webhooks" do
+        expect(default_signature_algo).to eq("standard_webhooks")
+      end
+    end
+  end
+
+  describe ".validation_meta" do
+    subject(:validation_meta) { described_class.validation_meta(webhook_endpoint, {webhook_url: {max_length: 10}}) }
+
+    let(:organization) { create(:organization) }
+    let(:webhook_endpoint) { build(:webhook_endpoint, organization:, signature_algo: :standard_webhooks) }
+
+    before { webhook_endpoint.valid? }
+
+    it "adds the algorithms the organization allows to the given meta" do
+      expect(validation_meta).to eq(webhook_url: {max_length: 10}, signature_algo: {allowed_values: %w[jwt hmac]})
+    end
+
+    context "when the signature_algo has no error" do
+      let(:webhook_endpoint) { build(:webhook_endpoint, organization:, signature_algo: :hmac) }
+
+      it "returns the given meta" do
+        expect(validation_meta).to eq(webhook_url: {max_length: 10})
+      end
     end
   end
 

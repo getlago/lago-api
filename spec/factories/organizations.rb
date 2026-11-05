@@ -35,7 +35,9 @@ FactoryBot.define do
       # created att he same moment as the organization, so we need to reload it to get the correct scope
       organization.reload
       if evaluator.webhook_url
-        organization.webhook_endpoints.create!(webhook_url: evaluator.webhook_url)
+        create(:webhook_endpoint, organization:, webhook_url: evaluator.webhook_url)
+        # The endpoint limit validation loaded the association before the endpoint was saved.
+        organization.webhook_endpoints.reset
       end
     end
 
