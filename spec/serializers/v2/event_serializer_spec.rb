@@ -10,19 +10,14 @@ RSpec.describe V2::EventSerializer do
       code: "api.requests", customer_id: nil, precise_total_amount_cents: "123.45", properties: {"region" => "eu"})
   end
 
-  it "serializes the stored event with contract terminology and no relationships" do
+  it "serializes only the common event fields" do
     expect(payload).to eq(
-      lago_id: event.id,
       transaction_id: "transaction.eu",
-      lago_customer_id: nil,
       external_contract_id: "contract.eu",
       code: "api.requests",
       precise_total_amount_cents: "123.45",
       properties: {"region" => "eu"},
-      timestamp: event.timestamp.iso8601(6),
-      created_at: event.created_at.iso8601(6),
-      updated_at: event.updated_at.iso8601(6),
-      deleted_at: nil
+      timestamp: event.timestamp.iso8601(6)
     )
   end
 

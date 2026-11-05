@@ -18,17 +18,12 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
 
   def expected_payload(record)
     {
-      lago_id: record.id,
       transaction_id: record.transaction_id,
-      lago_customer_id: record.customer_id,
       external_contract_id: record.external_subscription_id,
       code: record.code,
       precise_total_amount_cents: record.precise_total_amount_cents&.to_s,
       properties: record.properties.deep_symbolize_keys,
-      timestamp: record.timestamp.iso8601(6),
-      created_at: record.created_at.iso8601(6),
-      updated_at: record.updated_at.iso8601(6),
-      deleted_at: record.deleted_at&.iso8601(6)
+      timestamp: record.timestamp.iso8601(6)
     }
   end
 
@@ -82,7 +77,7 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
       expect(json).to eq(events: [expected_payload(event)], meta: {next_cursor: nil, prev_cursor: nil})
     end
 
-    it_behaves_like "a cursor paginated v2 endpoint", collection: :events, model: Event do
+    it_behaves_like "a cursor paginated v2 endpoint", collection: :events, model: Event, response_id: :transaction_id, model_id: :transaction_id do
       let(:paginated_path) { path }
       let(:create_paginated_record) do
         ->(created_at) { create(:event, organization:, external_subscription_id: contract.external_id, created_at:) }
@@ -578,11 +573,7 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
         code: record.code,
         precise_total_amount_cents: record.precise_total_amount_cents&.to_s,
         properties: record.properties.deep_symbolize_keys,
-        timestamp: record.timestamp.iso8601(6),
-        enriched_at: record.enriched_at.iso8601(6),
-        value: record.value,
-        decimal_value: record.decimal_value&.to_s,
-        attribution_labels: record.attribution_labels.deep_symbolize_keys
+        timestamp: record.timestamp.iso8601(6)
       }
     end
 
@@ -720,7 +711,7 @@ RSpec.describe Api::V2::EventsController, :capture_kafka_messages do
       let(:new_version) do
         create(:clickhouse_product_events_enriched, organization:, external_contract_id: enriched_event.external_contract_id,
           code: enriched_event.code, transaction_id: enriched_event.transaction_id, timestamp: event_timestamp,
-          enriched_at: enriched_at + 1.minute, value: "42.0", precise_total_amount_cents: "123.45")
+          enriched_at: enriched_at + 1.minute, value: "42.0", precise_total_amount_cents: "456.78")
       end
 
       before do
