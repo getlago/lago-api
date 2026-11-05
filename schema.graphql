@@ -13796,7 +13796,7 @@ One rate card's computed usage on a contract's current billing window
 type RateCardUsage {
   amountCents: BigInt!
   billableMetricCode: String
-  billingTiming: String!
+  billingTiming: RateCardBillingTimingEnum!
   eventsCount: Int!
   fromDatetime: ISO8601DateTime!
   invoiceDisplayName: String!
@@ -13811,7 +13811,7 @@ type RateCardUsage {
   rateCardName: String!
   ratePhaseCode: String
   ratePhaseName: String
-  rateSource: String!
+  rateSource: RateCardUsageRateSourceEnum!
   toDatetime: ISO8601DateTime!
   units: Float!
 }
@@ -13829,6 +13829,11 @@ type RateCardUsageCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
+}
+
+enum RateCardUsageRateSourceEnum {
+  phase_override
+  rate
 }
 
 """

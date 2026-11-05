@@ -8,7 +8,7 @@ module Types
 
       field :amount_cents, GraphQL::Types::BigInt, null: false
       field :billable_metric_code, String, null: true
-      field :billing_timing, String, null: false
+      field :billing_timing, Types::RateCards::BillingTimingEnum, null: false
       field :events_count, Integer, null: false
       field :from_datetime, GraphQL::Types::ISO8601DateTime, null: false
       field :invoice_display_name, String, null: false
@@ -23,7 +23,7 @@ module Types
       field :rate_card_name, String, null: false
       field :rate_phase_code, String, null: true
       field :rate_phase_name, String, null: true
-      field :rate_source, String, null: false
+      field :rate_source, Types::RateCardUsages::RateSourceEnum, null: false
       field :to_datetime, GraphQL::Types::ISO8601DateTime, null: false
       field :units, GraphQL::Types::Float, null: false
 
