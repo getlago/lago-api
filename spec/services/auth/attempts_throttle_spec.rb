@@ -134,6 +134,23 @@ RSpec.describe Auth::AttemptsThrottle do
     expect(signup_rules.values.map(&:identifier).uniq).to match_array(%i[ip_network ip_block email])
   end
 
+  describe ".first_in_period?" do
+    it "answers true once per name and period" do
+      expect(Array.new(2) { described_class.first_in_period?("alert", 10.minutes) }).to eq([true, false])
+      expect(described_class.first_in_period?("other_alert", 10.minutes)).to be(true)
+
+      travel_to(11.minutes.from_now) { expect(described_class.first_in_period?("alert", 10.minutes)).to be(true) }
+    end
+
+    context "when the store fails" do
+      before { allow(cache).to receive(:write).and_return(nil) }
+
+      it "answers true, so an alert is never silenced by an outage" do
+        expect(Array.new(2) { described_class.first_in_period?("alert", 10.minutes) }).to eq([true, true])
+      end
+    end
+  end
+
   describe ".reset!" do
     it "clears the counter" do
       10.times { described_class.hit!(:login_per_email, "user@example.com") }

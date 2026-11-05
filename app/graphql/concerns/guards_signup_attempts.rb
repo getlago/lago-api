@@ -73,7 +73,7 @@ module GuardsSignupAttempts
     trusted = trusted_proxy_ip?
     Rails.logger.warn("#{GuardsSignupAttempts.name} limit reached rules=#{rules.join(",")} trusted_ip=#{trusted}")
 
-    if trusted
+    if trusted && Auth::AttemptsThrottle.first_in_period?("signup_trusted_proxy", 10.minutes)
       Sentry.capture_message("Signup attempts limit reached from a trusted proxy address", level: :warning, extra: {rules:})
     end
   end

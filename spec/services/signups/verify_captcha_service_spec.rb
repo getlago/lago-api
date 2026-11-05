@@ -176,6 +176,16 @@ RSpec.describe Signups::VerifyCaptchaService do
       expect(siteverify).not_to have_been_requested
       expect(sentry_events.last.level).to eq(:error)
     end
+
+    context "with the throttling store up" do
+      before { Auth::AttemptsThrottle.store = ActiveSupport::Cache::MemoryStore.new }
+
+      it "reports once per window, however many signups it refuses" do
+        3.times { described_class.call(token:, action:) }
+
+        expect(sentry_events.size).to eq(1)
+      end
+    end
   end
 
   context "when Google fails" do

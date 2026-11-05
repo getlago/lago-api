@@ -67,6 +67,12 @@ module Auth
       count.to_i > rule.limit
     end
 
+    # True the first time per name in each period, so an alert that would repeat on every request is reported once. A
+    # store error also answers true: only an earlier report in the period silences it.
+    def first_in_period?(name, period)
+      store.write("auth_attempts:once:#{name}", true, unless_exist: true, expires_in: period) != false
+    end
+
     def reset!(rule_name, *identifiers)
       return if identifiers.any?(&:blank?)
 

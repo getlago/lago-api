@@ -185,8 +185,8 @@ RSpec.describe GuardsSignupAttempts do
       expect(sentry_events).to be_empty
     end
 
-    it "warns when the client IP is a trusted proxy address", :sentry do
-      61.times { run("query { checkThing { ok } }", ip: "10.0.0.5") }
+    it "warns once per window when the client IP is a trusted proxy address", :sentry do
+      70.times { run("query { checkThing { ok } }", ip: "10.0.0.5") }
 
       expect(sentry_events.map(&:message)).to eq(["Signup attempts limit reached from a trusted proxy address"])
     end

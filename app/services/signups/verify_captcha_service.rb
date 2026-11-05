@@ -83,11 +83,13 @@ module Signups
 
     # Google enforces the key's domains, so a mismatch nearly always means this region's LAGO_FRONT_URL is wrong.
     def wrong_hostname!(hostname)
-      Sentry.capture_message(
-        "reCAPTCHA hostname differs from LAGO_FRONT_URL",
-        level: :warning,
-        extra: {action:, expected_hostname:, hostname:}
-      )
+      if Auth::AttemptsThrottle.first_in_period?("captcha_wrong_hostname", 10.minutes)
+        Sentry.capture_message(
+          "reCAPTCHA hostname differs from LAGO_FRONT_URL",
+          level: :warning,
+          extra: {action:, expected_hostname:, hostname:}
+        )
+      end
       refuse!("wrong_hostname")
     end
 
@@ -98,7 +100,10 @@ module Signups
 
     def unavailable!(reason)
       log("unavailable", reason:)
-      Sentry.capture_message("reCAPTCHA verification unavailable", level: :error, extra: {reason:, action:})
+      # Every signup fails while this lasts: one report per reason and window, the log keeps each occurrence.
+      if Auth::AttemptsThrottle.first_in_period?("captcha_unavailable:#{reason}", 10.minutes)
+        Sentry.capture_message("reCAPTCHA verification unavailable", level: :error, extra: {reason:, action:})
+      end
       result.service_failure!(code: "captcha_unavailable", message: reason)
     end
 
