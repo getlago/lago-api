@@ -646,6 +646,7 @@ DROP INDEX IF EXISTS public.index_pending_vies_checks_on_customer_id;
 DROP INDEX IF EXISTS public.index_pending_vies_checks_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_pending_signups_on_user_id;
 DROP INDEX IF EXISTS public.index_pending_signups_on_signup_secret_digest;
+DROP INDEX IF EXISTS public.index_pending_signups_on_open_expires_at;
 DROP INDEX IF EXISTS public.index_pending_signups_on_normalized_email;
 DROP INDEX IF EXISTS public.index_pending_signups_on_mailbox_key_and_created_at;
 DROP INDEX IF EXISTS public.index_pending_signups_on_created_at;
@@ -11346,6 +11347,13 @@ CREATE INDEX index_pending_signups_on_mailbox_key_and_created_at ON public.pendi
 --
 
 CREATE INDEX index_pending_signups_on_normalized_email ON public.pending_signups USING btree (normalized_email);
+
+
+--
+-- Name: index_pending_signups_on_open_expires_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pending_signups_on_open_expires_at ON public.pending_signups USING btree (expires_at) WHERE ((verified_at IS NULL) AND (closed_at IS NULL));
 
 
 --

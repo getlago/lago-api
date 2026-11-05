@@ -23,6 +23,7 @@ class CreatePendingSignups < ActiveRecord::Migration[8.1]
       t.index :normalized_email
       t.index %i[mailbox_key created_at]
       t.index :created_at
+      t.index :expires_at, where: "verified_at IS NULL AND closed_at IS NULL", name: "index_pending_signups_on_open_expires_at"
       t.check_constraint "password_digest IS NOT NULL OR verified_at IS NOT NULL OR closed_at IS NOT NULL",
         name: "check_pending_signups_password_digest"
     end

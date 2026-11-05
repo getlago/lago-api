@@ -48,5 +48,14 @@ describe Clock::PendingSignupsCleanupJob do
 
       expect { cleanup_job.perform_now }.to change(PendingSignup, :count).to(0)
     end
+
+    it "keeps going until every ended attempt of a larger batch is closed" do
+      stub_const("#{described_class}::BATCH_SIZE", 2)
+      ended = create_list(:pending_signup, 3, expires_at: PendingSignupToken::TTL.ago - 1.second)
+
+      cleanup_job.perform_now
+
+      expect(ended.map { it.reload.password_digest }).to eq([nil, nil, nil])
+    end
   end
 end

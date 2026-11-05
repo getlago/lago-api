@@ -108,6 +108,7 @@ end
 #  index_pending_signups_on_created_at                  (created_at)
 #  index_pending_signups_on_mailbox_key_and_created_at  (mailbox_key,created_at)
 #  index_pending_signups_on_normalized_email            (normalized_email)
+#  index_pending_signups_on_open_expires_at             (expires_at) WHERE ((verified_at IS NULL) AND (closed_at IS NULL))
 #  index_pending_signups_on_signup_secret_digest        (signup_secret_digest) UNIQUE
 #  index_pending_signups_on_user_id                     (user_id)
 #
