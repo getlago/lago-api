@@ -25,6 +25,21 @@ RSpec.describe WebhookEndpoints::DestroyService do
     end
   end
 
+  context "when endpoint signs with Standard Webhooks" do
+    let(:webhook_endpoint) { create(:webhook_endpoint, :standard_webhooks) }
+
+    before { create(:webhook_endpoint_signing_key, webhook_endpoint: create(:webhook_endpoint, :standard_webhooks)) }
+
+    it "destroys the endpoint and its signing keys only" do
+      webhook_endpoint
+
+      expect { destroy_service.call }
+        .to change(WebhookEndpoint, :count).by(-1)
+        .and change(WebhookEndpointSigningKey, :count).by(-1)
+      expect(WebhookEndpointSigningKey.where(webhook_endpoint_id: webhook_endpoint.id)).to be_empty
+    end
+  end
+
   context "when webhook endpoint does not exist" do
     let(:webhook_endpoint) { nil }
 

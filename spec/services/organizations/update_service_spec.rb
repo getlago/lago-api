@@ -208,8 +208,9 @@ RSpec.describe Organizations::UpdateService do
     end
 
     context "when webhook_url is sent for an organization without webhook endpoint" do
-      let(:organization) { create(:organization, webhook_url: nil) }
+      let(:organization) { create(:organization, webhook_url: nil, feature_flags:) }
       let(:params) { {webhook_url: "https://example.com/webhooks"} }
+      let(:feature_flags) { [] }
 
       it "creates a jwt endpoint" do
         result = update_service.call
@@ -218,6 +219,7 @@ RSpec.describe Organizations::UpdateService do
         expect(organization.webhook_endpoints.reload.sole).to have_attributes(
           webhook_url: "https://example.com/webhooks", signature_algo: "jwt"
         )
+        expect(WebhookEndpointSigningKey.count).to eq(0)
       end
 
       it_behaves_like "produces a security log", "webhook_endpoint.created" do
@@ -235,6 +237,21 @@ RSpec.describe Organizations::UpdateService do
 
         it_behaves_like "does not produce a security log" do
           before { update_service.call }
+        end
+      end
+
+      context "when the organization has the product catalog" do
+        let(:feature_flags) { ["product_catalog"] }
+
+        it "creates a standard_webhooks endpoint with its signing key" do
+          result = update_service.call
+
+          expect(result).to be_success
+          webhook_endpoint = organization.webhook_endpoints.reload.sole
+          expect(webhook_endpoint).to have_attributes(
+            webhook_url: "https://example.com/webhooks", signature_algo: "standard_webhooks"
+          )
+          expect(webhook_endpoint.signing_keys.count).to eq(1)
         end
       end
     end

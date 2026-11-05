@@ -12,9 +12,6 @@ module WebhookEndpoints
     end
 
     def call
-      signature_algo = params[:signature_algo].nil? ? "jwt" : params[:signature_algo]
-      return invalid_signature_algo_failure unless WebhookEndpoint.signature_algos.key?(signature_algo.to_s)
-
       webhook_endpoint = organization.webhook_endpoints.new(
         webhook_url: params[:webhook_url],
         signature_algo:,
@@ -22,7 +19,11 @@ module WebhookEndpoints
         event_types: params[:event_types]
       )
 
-      webhook_endpoint.save!
+      # A new endpoint has no concurrent writer, so it needs no row lock.
+      ActiveRecord::Base.transaction do
+        webhook_endpoint.save!
+        WebhookEndpoints::SigningKeys::EnsureService.call!(webhook_endpoint:) if webhook_endpoint.standard_webhooks?
+      end
 
       result.webhook_endpoint = webhook_endpoint
       # A caller's transaction can still roll the endpoint back.
@@ -33,19 +34,19 @@ module WebhookEndpoints
       result
     rescue ActiveRecord::RecordInvalid => e
       failure = BaseService::ValidationFailure.from_errors(result, e.record.errors)
-      result.validation_failure!(errors: failure.messages, meta: failure.meta, codes: WebhookEndpoint.validation_codes(e.record.errors))
+      result.validation_failure!(
+        errors: failure.messages,
+        meta: WebhookEndpoint.validation_meta(e.record, failure.meta),
+        codes: WebhookEndpoint.validation_codes(e.record.errors)
+      )
     end
 
     private
 
     attr_reader :organization, :params
 
-    def invalid_signature_algo_failure
-      result.single_validation_failure!(
-        field: :signature_algo,
-        error_code: "value_is_invalid",
-        meta: {allowed_values: WebhookEndpoint.signature_algos.keys}
-      )
+    def signature_algo
+      params[:signature_algo].nil? ? WebhookEndpoint.default_signature_algo(organization) : params[:signature_algo]
     end
 
     def register_security_log(webhook_endpoint)

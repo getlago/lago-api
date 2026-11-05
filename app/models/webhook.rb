@@ -3,6 +3,8 @@
 class Webhook < ApplicationRecord
   include RansackUuidSearch
 
+  class MissingSigningKeyError < StandardError; end
+
   STATUS = %i[pending succeeded failed retrying].freeze
 
   belongs_to :webhook_endpoint
@@ -55,6 +57,8 @@ class Webhook < ApplicationRecord
   end
 
   def generate_headers
+    return standard_webhooks_headers if webhook_endpoint.standard_webhooks?
+
     signature = case webhook_endpoint.signature_algo&.to_sym
     when :jwt
       jwt_signature
@@ -90,6 +94,23 @@ class Webhook < ApplicationRecord
   end
 
   private
+
+  # Standard Webhooks (https://www.standardwebhooks.com): the timestamp is taken at send time so each retry
+  # gets a fresh one, and the content uses the same serialization LagoHttpClient posts.
+  def standard_webhooks_headers
+    keys = webhook_endpoint.signing_keys.usable.order(:created_at, :id).to_a
+    # Fail closed: an unsigned delivery cannot be verified, and creating a key here would bypass the endpoint lock.
+    raise MissingSigningKeyError, "No usable signing key for webhook endpoint #{webhook_endpoint.id}" if keys.empty?
+
+    timestamp = Time.current.to_i.to_s
+    content = "#{id}.#{timestamp}.#{payload.to_json}"
+
+    {
+      "webhook-id" => id,
+      "webhook-timestamp" => timestamp,
+      "webhook-signature" => keys.map { "v1,#{it.sign(content)}" }.join(" ")
+    }
+  end
 
   def stored_payload
     @stored_payload ||= download_json(payload_key)

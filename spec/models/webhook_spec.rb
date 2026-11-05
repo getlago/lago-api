@@ -163,6 +163,70 @@ RSpec.describe Webhook do
         )
       end
     end
+
+    context "when signature algorithm is Standard Webhooks" do
+      let(:signature_algo) { :standard_webhooks }
+      let(:webhook_endpoint) do
+        create(:webhook_endpoint, organization: create(:organization, feature_flags: ["standard_webhooks_signature"]), signature_algo:)
+      end
+      let(:secret) { "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw" }
+      let(:other_secret) { "whsec_#{Base64.strict_encode64("b" * 24)}" }
+      let(:keys) { [{secret_key: secret, created_at: 2.days.ago}] }
+
+      # Standard Webhooks: base64(HMAC-SHA256(base64-decoded secret without "whsec_", "{id}.{timestamp}.{body}"))
+      def expected_signature(raw_secret)
+        content = "#{webhook.id}.#{Time.current.to_i}.#{webhook.payload.to_json}"
+        key = Base64.strict_decode64(raw_secret.delete_prefix("whsec_"))
+        "v1," + Base64.strict_encode64(OpenSSL::HMAC.digest("SHA256", key, content))
+      end
+
+      before do
+        freeze_time
+        keys.each { |attrs| create(:webhook_endpoint_signing_key, webhook_endpoint:, **attrs) }
+      end
+
+      it "returns the Standard Webhooks headers only" do
+        expect(subject).to eq(
+          "webhook-id" => webhook.id,
+          "webhook-timestamp" => Time.current.to_i.to_s,
+          "webhook-signature" => expected_signature(secret)
+        )
+      end
+
+      context "with two usable keys" do
+        let(:keys) { [{secret_key: other_secret, created_at: 1.day.ago}, {secret_key: secret, created_at: 2.days.ago}] }
+
+        it "sends one space-separated signature per key, oldest first" do
+          expect(subject["webhook-signature"]).to eq("#{expected_signature(secret)} #{expected_signature(other_secret)}")
+        end
+      end
+
+      context "with an expired key" do
+        let(:keys) { [{secret_key: secret, created_at: 2.days.ago}, {secret_key: other_secret, created_at: 3.days.ago, expires_at: 1.second.ago}] }
+
+        it "leaves the expired key out" do
+          expect(subject["webhook-signature"]).to eq(expected_signature(secret))
+        end
+      end
+
+      context "without any usable key" do
+        let(:keys) { [{secret_key: secret, expires_at: 1.second.ago}] }
+
+        it "raises without exposing the secret" do
+          expect { subject }.to raise_error(described_class::MissingSigningKeyError) { |error|
+            expect(error.message).to eq("No usable signing key for webhook endpoint #{webhook_endpoint.id}")
+          }
+        end
+      end
+
+      context "without any key" do
+        let(:keys) { [] }
+
+        it "raises" do
+          expect { subject }.to raise_error(described_class::MissingSigningKeyError)
+        end
+      end
+    end
   end
 
   describe "#jwt_signature" do

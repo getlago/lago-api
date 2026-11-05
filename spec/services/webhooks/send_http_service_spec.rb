@@ -43,6 +43,82 @@ RSpec.describe Webhooks::SendHttpService do
     end
   end
 
+  context "with a standard_webhooks endpoint" do
+    let(:webhook_endpoint) do
+      create(
+        :webhook_endpoint,
+        organization: create(:organization, feature_flags: ["standard_webhooks_signature"]),
+        webhook_url: "https://wh.test.com",
+        signature_algo: :standard_webhooks
+      )
+    end
+    let(:secret) { "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw" }
+    let(:expires_at) { nil }
+    let(:posted_requests) { [] }
+
+    before do
+      create(:webhook_endpoint_signing_key, webhook_endpoint:, secret_key: secret, expires_at:)
+      WebMock.stub_request(:post, "https://wh.test.com").to_return do |request|
+        posted_requests << request
+        {status: 200, body: "ok"}
+      end
+    end
+
+    it "signs the exact posted body with the Standard Webhooks headers" do
+      freeze_time do
+        service.call
+
+        request = posted_requests.sole
+        headers = request.headers.transform_keys(&:downcase)
+        # Standard Webhooks reference: base64(HMAC-SHA256(decoded secret, "{webhook-id}.{webhook-timestamp}.{raw body}"))
+        key = Base64.strict_decode64(secret.delete_prefix("whsec_"))
+        signed_content = "#{headers["webhook-id"]}.#{headers["webhook-timestamp"]}.#{request.body}"
+
+        expect(headers["webhook-signature"]).to eq("v1," + Base64.strict_encode64(OpenSSL::HMAC.digest("SHA256", key, signed_content)))
+        expect(headers["webhook-id"]).to eq(webhook.id)
+        expect(headers["webhook-timestamp"]).to eq(Time.current.to_i.to_s)
+        expect(headers.keys.grep(/\Ax-lago-/)).to be_empty
+        expect(webhook.reload).to be_succeeded
+      end
+    end
+
+    context "when a failed delivery is retried" do
+      let(:t1) { Time.zone.parse("2026-11-03T10:00:00Z") }
+      let(:statuses) { [500, 200] }
+
+      before do
+        WebMock.stub_request(:post, "https://wh.test.com").to_return do |request|
+          posted_requests << request
+          {status: statuses.shift, body: "ok"}
+        end
+      end
+
+      it "keeps the webhook-id and signs each attempt with its own timestamp" do
+        travel_to(t1) { described_class.new(webhook:).call }
+        travel_to(t1 + 5.minutes) { described_class.new(webhook: webhook.reload).call }
+
+        first, second = posted_requests.map { |request| request.headers.transform_keys(&:downcase) }
+        expect([first["webhook-id"], second["webhook-id"]]).to eq([webhook.id, webhook.id])
+        expect(first["webhook-timestamp"]).to eq(t1.to_i.to_s)
+        expect(second["webhook-timestamp"]).to eq((t1 + 5.minutes).to_i.to_s)
+        expect(first["webhook-signature"]).not_to eq(second["webhook-signature"])
+        expect(webhook.reload).to be_succeeded
+      end
+    end
+
+    context "when the endpoint has no usable key" do
+      let(:expires_at) { 1.minute.ago }
+
+      it "raises and sends nothing" do
+        expect { service.call }.to raise_error(Webhook::MissingSigningKeyError)
+
+        expect(a_request(:post, "https://wh.test.com")).not_to have_been_made
+        expect(webhook.reload).to be_pending
+        expect(SendHttpWebhookJob).not_to have_been_enqueued
+      end
+    end
+  end
+
   context "when client returns an error" do
     let(:error_body) do
       {
