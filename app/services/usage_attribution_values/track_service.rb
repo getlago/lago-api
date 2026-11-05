@@ -19,6 +19,11 @@ module UsageAttributionValues
   #
   # Placement and activity share last_seen_at: an event without the parent level makes older events
   # too old to move the value, so events are expected to carry their full ancestor chain.
+  #
+  # A customer holds at most UsageAttributionValue::MAX_PER_CUSTOMER_AND_TYPE values per type: past
+  # it, new values are skipped, and so are the new values below them, which no tree path would reach.
+  # Existing values are still refreshed. Concurrent calls each take the remaining capacity they read,
+  # so the limit can be passed by a batch per consumer.
   class TrackService < BaseService
     UNIQUE_INDEX = :index_usage_attribution_values_on_customer_type_and_value
     MAX_VALUE_LENGTH = 255
@@ -52,14 +57,25 @@ module UsageAttributionValues
 
       resolved_entries.sort_by { |_, _, seen_at| -seen_at.to_f }.each do |customer_id, labels, seen_at|
         value_ids_by_type = {}
+        skipped_type_ids = Set.new
 
         types_in_tree_order.each do |attribution_type|
           value = labels[attribution_type.code]
           next unless valid_value?(value)
 
-          parent_id = value_ids_by_type[attribution_type.parent_id]
           key = [customer_id, attribution_type.id, value]
-          value_ids[key] ||= upsert_value(customer_id, attribution_type, value, parent_id, seen_at)
+          unless value_ids.key?(key)
+            new_value = new_value?(customer_id, attribution_type, value)
+            if new_value && (skipped_type_ids.include?(attribution_type.parent_id) || !capacity_left?(customer_id, attribution_type))
+              skipped_type_ids << attribution_type.id
+              next
+            end
+
+            parent_id = value_ids_by_type[attribution_type.parent_id]
+            value_ids[key] = upsert_value(customer_id, attribution_type, value, parent_id, seen_at)
+            remaining_capacity[[customer_id, attribution_type.id]] -= 1 if new_value
+          end
+
           value_ids_by_type[attribution_type.id] = value_ids[key]
         end
       end
@@ -92,6 +108,31 @@ module UsageAttributionValues
       UsageAttributionValue
         .upsert(row, unique_by: UNIQUE_INDEX, on_duplicate: ON_DUPLICATE, returning: :id) # rubocop:disable Rails/SkipsModelValidations
         .first["id"]
+    end
+
+    def new_value?(customer_id, attribution_type, value)
+      !existing_values.include?([customer_id, attribution_type.id, value])
+    end
+
+    def existing_values
+      @existing_values ||= UsageAttributionValue
+        .where(
+          customer_id: resolved_entries.map(&:first).uniq,
+          usage_attribution_type_id: attribution_types.map(&:id),
+          value: resolved_entries.flat_map { |_, labels, _| labels.values.select { valid_value?(it) } }.uniq
+        )
+        .pluck(:customer_id, :usage_attribution_type_id, :value)
+        .to_set
+    end
+
+    def capacity_left?(customer_id, attribution_type)
+      key = [customer_id, attribution_type.id]
+      remaining_capacity[key] ||= UsageAttributionValue.remaining_capacity(customer_id:, usage_attribution_type_id: attribution_type.id)
+      remaining_capacity[key].positive?
+    end
+
+    def remaining_capacity
+      @remaining_capacity ||= {}
     end
 
     def attribution_types
