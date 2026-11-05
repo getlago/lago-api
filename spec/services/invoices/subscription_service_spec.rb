@@ -48,69 +48,6 @@ RSpec.describe Invoices::SubscriptionService do
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
     end
 
-    context "when the subscriptions resolve to different payment terms" do
-      let(:other_subscription) do
-        create(:subscription, plan:, customer:, subscription_at: started_at.to_date, started_at:, created_at: started_at)
-      end
-      let(:subscriptions) { [subscription, other_subscription] }
-
-      let(:net_resolution) do
-        PaymentTerms::ResolveService::Result.new.tap do |resolution|
-          resolution.payment_term = PaymentTerm.from_h({"term_type" => "net", "days" => 30})
-          resolution.source = "customer"
-        end
-      end
-
-      let(:end_of_month_resolution) do
-        PaymentTerms::ResolveService::Result.new.tap do |resolution|
-          resolution.payment_term = PaymentTerm.from_h({"term_type" => "end_of_month"})
-          resolution.source = "customer"
-        end
-      end
-
-      before { allow(PaymentTerms::ResolveService).to receive(:call!).and_return(net_resolution, end_of_month_resolution) }
-
-      it "fails before creating an invoice and returns one group per term" do
-        result = nil
-
-        expect { result = invoice_service.call }.not_to change(Invoice, :count)
-        expect(result).not_to be_success
-        expect(result.error.messages[:payment_term]).to eq(["mixed_payment_terms"])
-        expect(result.payment_term_groups).to eq([[subscription], [other_subscription]])
-      end
-    end
-
-    context "when the subscriptions resolve to the same term from different levels" do
-      let(:other_subscription) do
-        create(:subscription, plan:, customer:, subscription_at: started_at.to_date, started_at:, created_at: started_at)
-      end
-      let(:subscriptions) { [subscription, other_subscription] }
-
-      let(:customer_resolution) do
-        PaymentTerms::ResolveService::Result.new.tap do |resolution|
-          resolution.payment_term = PaymentTerm.from_h({"term_type" => "net", "days" => 30})
-          resolution.source = "customer"
-        end
-      end
-
-      let(:billing_entity_resolution) do
-        PaymentTerms::ResolveService::Result.new.tap do |resolution|
-          resolution.payment_term = PaymentTerm.from_h({"term_type" => "net", "days" => 30})
-          resolution.source = "billing_entity"
-        end
-      end
-
-      before { allow(PaymentTerms::ResolveService).to receive(:call!).and_return(customer_resolution, billing_entity_resolution) }
-
-      it "bills them on one invoice with a mixed source" do
-        result = invoice_service.call
-
-        expect(result).to be_success
-        expect(result.invoice.payment_term).to eq({"term_type" => "net", "days" => 30})
-        expect(result.invoice.payment_term_source).to eq("mixed")
-      end
-    end
-
     context "when no payment term is given and the subscription has its own term" do
       before { subscription.update!(payment_term: {term_type: "net", days: 60}) }
 
@@ -120,6 +57,19 @@ RSpec.describe Invoices::SubscriptionService do
         expect(invoice.payment_term).to eq({"term_type" => "net", "days" => 60})
         expect(invoice.payment_term_source).to eq("subscription")
         expect(invoice.net_payment_term).to eq(60)
+      end
+
+      context "when the subscription is terminating" do
+        let(:invoicing_reason) { :subscription_terminating }
+
+        before { subscription.update!(status: :terminated, terminated_at: timestamp) }
+
+        it "snapshots the subscription term on the termination invoice" do
+          invoice = invoice_service.call.invoice
+
+          expect(invoice.payment_term).to eq({"term_type" => "net", "days" => 60})
+          expect(invoice.payment_term_source).to eq("subscription")
+        end
       end
     end
 
@@ -137,30 +87,102 @@ RSpec.describe Invoices::SubscriptionService do
       end
       let(:subscriptions) { [subscription, other_subscription] }
 
-      it "fails with a mixed_payment_terms validation error" do
-        result = invoice_service.call
+      it "fails before creating an invoice and returns one group per term" do
+        result = nil
 
+        expect { result = invoice_service.call }.not_to change(Invoice, :count)
         expect(result).not_to be_success
         expect(result.error.messages[:payment_term]).to eq(["mixed_payment_terms"])
+        expect(result.payment_term_groups).to eq([[subscription], [other_subscription]])
       end
 
-      context "when a pre-resolved payment term is given" do
+      context "when retrying a generating invoice created before the terms diverged" do
         subject(:invoice_service) do
-          described_class.new(
-            subscriptions:,
-            timestamp: timestamp.to_i,
-            invoicing_reason:,
-            payment_term: PaymentTerm.from_h({"term_type" => "end_of_month"}),
-            payment_term_source: "subscription"
+          described_class.new(subscriptions:, timestamp: timestamp.to_i, invoicing_reason:, invoice: existing_invoice)
+        end
+
+        let(:existing_invoice) do
+          create(
+            :invoice,
+            customer:,
+            organization:,
+            invoice_type: :subscription,
+            status: :generating,
+            payment_term: {"term_type" => "net", "days" => 30},
+            payment_term_source: "customer",
+            net_payment_term: 30
           )
         end
 
-        it "skips the guard and uses the given term" do
+        before do
+          create(:invoice_subscription, :boundaries, invoice: existing_invoice, subscription:, timestamp:)
+          create(:invoice_subscription, :boundaries, invoice: existing_invoice, subscription: other_subscription, timestamp:)
+        end
+
+        it "completes the invoice with its frozen term" do
           result = invoice_service.call
 
           expect(result).to be_success
-          expect(result.invoice.payment_term).to eq({"term_type" => "end_of_month"})
+          expect(existing_invoice.reload.payment_term).to eq("term_type" => "net", "days" => 30)
         end
+      end
+    end
+
+    context "when subscriptions resolve to the same term from different levels" do
+      let(:other_subscription) do
+        create(
+          :subscription,
+          plan:,
+          customer:,
+          subscription_at: started_at.to_date,
+          started_at:,
+          created_at: started_at,
+          payment_term: {term_type: "net", days: 30}
+        )
+      end
+      let(:subscriptions) { [subscription, other_subscription] }
+
+      before { customer.update!(payment_term: {term_type: "net", days: 30}) }
+
+      it "bills them on one invoice with a mixed source" do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice.payment_term).to eq({"term_type" => "net", "days" => 30})
+        expect(result.invoice.payment_term_source).to eq("mixed")
+      end
+    end
+
+    context "when subscriptions resolve to different terms giving the same due date" do
+      let(:subscription) do
+        create(
+          :subscription,
+          plan:,
+          customer:,
+          subscription_at: started_at.to_date,
+          started_at:,
+          created_at: started_at,
+          payment_term: {term_type: "net", days: 0}
+        )
+      end
+      let(:other_subscription) do
+        create(
+          :subscription,
+          plan:,
+          customer:,
+          subscription_at: started_at.to_date,
+          started_at:,
+          created_at: started_at,
+          payment_term: {term_type: "due_on_receipt"}
+        )
+      end
+      let(:subscriptions) { [subscription, other_subscription] }
+
+      it "bills them on one invoice" do
+        result = invoice_service.call
+
+        expect(result).to be_success
+        expect(result.invoice.subscriptions).to contain_exactly(subscription, other_subscription)
       end
     end
 
