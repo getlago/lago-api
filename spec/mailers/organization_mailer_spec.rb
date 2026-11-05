@@ -34,6 +34,10 @@ RSpec.describe OrganizationMailer do
       expect(email_body).to include("Disabled Google Oauth")
     end
 
+    it_behaves_like "a mail with the Lago logo header" do
+      let(:mail) { organization_mailer }
+    end
+
     context "with a non-English document locale" do
       let(:organization) { create(:organization, document_locale: "fr") }
 
