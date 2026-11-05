@@ -211,6 +211,24 @@ RSpec.describe Api::V1::WebhookEndpointsController do
         end
       end
 
+      context "when the API key can only read webhook endpoints", :premium do
+        let(:webhook_endpoint) { create(:webhook_endpoint, :standard_webhooks) }
+
+        before do
+          organization.update!(premium_integrations: organization.premium_integrations.including("api_permissions"))
+          api_key = organization.api_keys.first
+          api_key.update!(permissions: api_key.permissions.merge("webhook_endpoint" => ["read"]))
+        end
+
+        it "returns the endpoint without its signing keys" do
+          subject
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:webhook_endpoint]).to include(lago_id: webhook_endpoint.id, signature_algo: "standard_webhooks")
+          expect(json[:webhook_endpoint]).not_to have_key(:signing_keys)
+        end
+      end
+
       context "when the endpoint signs with jwt and kept a secret from standard webhooks" do
         let(:webhook_endpoint) { create(:webhook_endpoint, signature_algo: :jwt, name: "Billing events", event_types: ["customer.created"]) }
 

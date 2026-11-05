@@ -58,7 +58,9 @@ module Api
 
         return not_found_error(resource: "webhook_endpoint") unless webhook_endpoint
 
-        render_webhook_endpoint(webhook_endpoint, includes: %i[signing_keys])
+        # A signing key lets its holder forge webhooks, so a read-only API key does not get it.
+        includes = current_api_key.permit?(resource_name, "write") ? %i[signing_keys] : []
+        render_webhook_endpoint(webhook_endpoint, includes:)
       end
 
       def destroy
