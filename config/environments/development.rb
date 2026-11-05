@@ -73,5 +73,6 @@ Rails.application.configure do
   }
   config.action_mailer.preview_paths << Rails.root.join("spec/mailers/previews").to_s
 
-  Dotenv.load
+  # QA branch only, never merged: an API worktree's own .env (self-serve on, its front URL, Mailhog) wins.
+  Dotenv.overload
 end
