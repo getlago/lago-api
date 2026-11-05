@@ -10,14 +10,6 @@ module Types
 
         field :amount_cents, GraphQL::Types::BigInt, null: false
         field :fees_count, Integer, null: false
-
-        def amount_cents
-          ProductCatalogHierarchyHelper.total(object.entries)
-        end
-
-        def fees_count
-          object.entries.size
-        end
       end
     end
   end
