@@ -21,9 +21,7 @@ module V1
     private
 
     def signing_keys
-      model.active_signing_keys.map do |signing_key|
-        {lago_id: signing_key.id, secret_key: signing_key.secret_key, created_at: signing_key.created_at.iso8601}
-      end
+      model.active_signing_keys.map { ::V2::WebhookEndpoints::SigningKeySerializer.new(it).serialize }
     end
   end
 end

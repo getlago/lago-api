@@ -67,6 +67,20 @@ RSpec.describe Api::V2::WebhookEndpointsController do
       end
     end
 
+    context "with expands[]=signing_keys" do
+      let(:query) { "?expands[]=signing_keys" }
+
+      it "creates nothing, as only show renders the signing keys" do
+        expect { request }.not_to change(WebhookEndpoint, :count)
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json).to eq(
+          code: "expand_not_supported",
+          details: [{code: "action_not_expandable", field: "expands", meta: {invalid_values: ["signing_keys"]}}]
+        )
+      end
+    end
+
     [["jwt", "jwt"], ["hmac", "hmac"], ["an unknown", "md5"], ["a false", false]].each do |label, value|
       context "with #{label} signature_algo" do
         let(:create_params) { super().merge(signature_algo: value) }
@@ -314,6 +328,18 @@ RSpec.describe Api::V2::WebhookEndpointsController do
         end
       end
 
+      context "with expands[]=signing_keys" do
+        let(:query) { "?expands[]=signing_keys" }
+
+        it "changes nothing, as only show renders the signing keys" do
+          expect { request }.not_to change { webhook_endpoint.reload.attributes }
+
+          expect(response).to have_http_status(:bad_request)
+          expect(json[:code]).to eq("expand_not_supported")
+          expect(webhook_endpoint.signing_keys).to be_empty
+        end
+      end
+
       context "with event_types null" do
         let(:update_params) { {event_types: nil} }
 
@@ -394,6 +420,53 @@ RSpec.describe Api::V2::WebhookEndpointsController do
       )
     end
 
+    context "with expands[]=signing_keys" do
+      let(:params) { {expands: %w[signing_keys]} }
+
+      context "when the endpoint signs with standard webhooks" do
+        let(:webhook_endpoint) { create(:webhook_endpoint, :standard_webhooks, organization:) }
+        let(:signing_key) { webhook_endpoint.signing_keys.sole }
+
+        it "returns its secret, stored encrypted" do
+          request
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:webhook_endpoint][:signing_keys]).to eq(
+            [{lago_id: signing_key.id, secret_key: signing_key.secret_key, created_at: signing_key.created_at.iso8601(6)}]
+          )
+          expect(signing_key.secret_key).to start_with("whsec_")
+          expect(signing_key.ciphertext_for(:secret_key)).not_to include(signing_key.secret_key)
+        end
+      end
+
+      %i[jwt hmac].each do |algo|
+        context "when the endpoint signs with #{algo}" do
+          let(:webhook_endpoint) { create(:webhook_endpoint, :legacy_signature_algo, organization:, signature_algo: algo) }
+
+          it "returns no secret" do
+            request
+
+            expect(response).to have_http_status(:ok)
+            expect(json[:webhook_endpoint][:signature_algo]).to eq(algo.to_s)
+            expect(json[:webhook_endpoint][:signing_keys]).to eq([])
+          end
+        end
+      end
+
+      context "when a jwt endpoint kept a secret from standard webhooks" do
+        let(:webhook_endpoint) { create(:webhook_endpoint, :legacy_signature_algo, organization:, signature_algo: :jwt) }
+
+        before { create(:webhook_endpoint_signing_key, webhook_endpoint:) }
+
+        it "returns no secret" do
+          request
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:webhook_endpoint][:signing_keys]).to eq([])
+        end
+      end
+    end
+
     context "when the webhook endpoint does not exist" do
       let(:webhook_endpoint) { build_stubbed(:webhook_endpoint) }
 
@@ -414,16 +487,16 @@ RSpec.describe Api::V2::WebhookEndpointsController do
       end
     end
 
-    context "with an expansion" do
+    context "with an unknown expansion" do
       let(:params) { {expands: ["webhooks"]} }
 
-      it "rejects it, as a webhook endpoint has no expandable relationship" do
+      it "rejects it and lists the allowed expansions" do
         request
 
         expect(response).to have_http_status(:bad_request)
         expect(json).to eq(
-          code: "expand_not_supported",
-          details: [{code: "not_expandable", field: "expands", meta: {invalid_values: ["webhooks"]}}]
+          code: "invalid_expand",
+          details: [{code: "invalid_expand", field: "expands", meta: {invalid_values: ["webhooks"], allowed_values: ["signing_keys"]}}]
         )
       end
     end
@@ -484,6 +557,17 @@ RSpec.describe Api::V2::WebhookEndpointsController do
 
     it_behaves_like "produces a security log", "webhook_endpoint.deleted" do
       before { request }
+    end
+
+    context "with expands[]=signing_keys" do
+      let(:query) { "?expands[]=signing_keys" }
+
+      it "deletes nothing, as only show renders the signing keys" do
+        expect { request }.not_to change(WebhookEndpoint, :count)
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:code]).to eq("expand_not_supported")
+      end
     end
 
     context "when the webhook endpoint does not exist" do
