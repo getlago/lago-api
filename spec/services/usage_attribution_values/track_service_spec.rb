@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe UsageAttributionValues::TrackService do
   subject(:track) { described_class.call!(organization:, entries:) }
 
-  let(:organization) { create(:organization, feature_flags: ["account_tree"]) }
+  let(:organization) { create(:organization, clickhouse_events_store: true, feature_flags: ["account_tree"]) }
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:, organization:, external_id: "sub_1", started_at: 1.month.ago) }
 
@@ -43,6 +43,22 @@ RSpec.describe UsageAttributionValues::TrackService do
     expect([rnd, eng, alice, opus].map(&:parent_id)).to eq([nil, rnd.id, eng.id, nil])
     expect([rnd, eng, alice, opus].map(&:last_seen_at)).to all(eq(seen_at))
     expect([rnd, eng, alice, opus].map(&:organization_id)).to all(eq(organization.id))
+  end
+
+  context "without the account_tree feature flag" do
+    let(:organization) { create(:organization, clickhouse_events_store: true) }
+
+    it "does not track the values" do
+      expect { track }.not_to change(UsageAttributionValue, :count)
+    end
+  end
+
+  context "when the organization uses the Postgres events store" do
+    let(:organization) { create(:organization, feature_flags: ["account_tree"]) }
+
+    it "does not track the values" do
+      expect { track }.not_to change(UsageAttributionValue, :count)
+    end
   end
 
   context "when the chain is partial" do
@@ -230,6 +246,86 @@ RSpec.describe UsageAttributionValues::TrackService do
 
     it "skips the entry" do
       expect { track }.not_to change(UsageAttributionValue, :count)
+    end
+  end
+
+  context "when an event is dated in the future" do
+    let(:entries) { [entry(labels, at: 1.year.from_now)] }
+
+    before { freeze_time }
+
+    it "counts it as seen now" do
+      track
+
+      expect(value_of(user, "alice").last_seen_at).to eq(Time.current)
+    end
+  end
+
+  context "when the timestamp is missing or not a number" do
+    let(:entries) do
+      [
+        {"subscription_id" => subscription.id, "attribution_labels" => labels},
+        {"subscription_id" => subscription.id, "attribution_labels" => labels, "timestamp" => "2026-10-09"},
+        {"subscription_id" => subscription.id, "attribution_labels" => labels, "timestamp" => [1]}
+      ]
+    end
+
+    it "skips the entries" do
+      expect { track }.not_to change(UsageAttributionValue, :count)
+    end
+  end
+
+  context "with values the API does not store" do
+    let(:labels) { {"department" => "rnd", "team" => "a" * 256, "user" => "al\0ice", "model" => " "} }
+    let(:entries) { [entry(labels), entry({"department" => "sales", "team" => 42})] }
+
+    it "skips them and tracks the others" do
+      track
+
+      expect(UsageAttributionValue.where(customer:).pluck(:value)).to match_array(%w[rnd sales])
+    end
+  end
+
+  context "with several entries sharing values" do
+    let(:entries) do
+      [
+        entry({"department" => "rnd", "team" => "eng", "user" => "alice"}),
+        entry({"department" => "rnd", "team" => "eng", "user" => "bob"}, at: seen_at + 1.hour)
+      ]
+    end
+
+    before { allow(UsageAttributionValue).to receive(:upsert).and_call_original }
+
+    it "upserts each value once" do
+      track
+
+      # rnd, eng, alice, bob
+      expect(UsageAttributionValue).to have_received(:upsert).exactly(4).times
+      expect(value_of(team, "eng").last_seen_at).to eq(seen_at + 1.hour)
+      expect([value_of(user, "alice"), value_of(user, "bob")].map(&:parent_id)).to all(eq(value_of(team, "eng").id))
+    end
+  end
+
+  context "when a delayed event places a value after an event without the parent level" do
+    let(:entries) { [entry(labels.merge("team" => "data"), at: seen_at + 30.minutes)] }
+
+    before do
+      described_class.call!(organization:, entries: [entry(labels)])
+      described_class.call!(organization:, entries: [entry({"department" => "rnd", "user" => "alice"}, at: seen_at + 1.hour)])
+    end
+
+    it "keeps its current parent" do
+      track
+
+      expect(value_of(user, "alice").parent_id).to eq(value_of(team, "eng").id)
+    end
+  end
+
+  context "when the customer was deleted" do
+    before { customer.discard! }
+
+    it "skips the entry" do
+      expect { track }.not_to change(UsageAttributionValue.with_discarded, :count)
     end
   end
 end

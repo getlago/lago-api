@@ -4,10 +4,6 @@ require "rails_helper"
 
 describe "Usage attribution values Scenarios" do
   let(:organization) { create(:organization, webhook_url: nil, clickhouse_events_store: true, feature_flags: ["account_tree"]) }
-  let(:customer) { create(:customer, organization:) }
-  let(:subscription) { create(:subscription, customer:, external_id: "sub_1", started_at: 1.month.ago) }
-  let(:consumer) { karafka.consumer_for(ENV["LAGO_KAFKA_USAGE_ATTRIBUTION_VALUES_TOPIC"]) }
-
   let(:reported_labels) do
     [
       {"department" => "rnd", "team" => "eng", "user" => "alice", "model" => "opus"},
@@ -19,7 +15,6 @@ describe "Usage attribution values Scenarios" do
       {"department" => "rnd", "user" => "erin"}
     ]
   end
-
   let(:expected_tree) do
     [
       ["department", "rnd", nil],
@@ -36,6 +31,20 @@ describe "Usage attribution values Scenarios" do
       ["model", "opus", nil],
       ["model", "sonnet", nil]
     ]
+  end
+  let(:customer) { create(:customer, organization:) }
+  let(:subscription) { create(:subscription, customer:, external_id: "sub_1", started_at: 1.month.ago) }
+  let(:consumer) { karafka.consumer_for("usage_attribution_values") }
+
+  # The topic is unset in tests, so karafka.rb draws no route.
+  before_all do
+    next if Karafka::App.routes.any? { it.name == "lago_usage_attribution_values_consumer" }
+
+    Karafka::App.routes.draw do
+      consumer_group :lago_usage_attribution_values_consumer do
+        topic("usage_attribution_values") { consumer UsageAttributionValuesConsumer }
+      end
+    end
   end
 
   def create_usage_attribution_type(params)

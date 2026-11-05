@@ -16,8 +16,12 @@ module UsageAttributionValues
   # another team moves with it), an older event never moves it back, and an event without the
   # parent level keeps the current parent. Usage is unaffected: each event's own labels are stamped
   # in ClickHouse.
+  #
+  # Placement and activity share last_seen_at: an event without the parent level makes older events
+  # too old to move the value, so events are expected to carry their full ancestor chain.
   class TrackService < BaseService
     UNIQUE_INDEX = :index_usage_attribution_values_on_customer_type_and_value
+    MAX_VALUE_LENGTH = 255
 
     # In ON CONFLICT DO UPDATE, every expression reads the stored row as it was before the update.
     ON_DUPLICATE = Arel.sql(<<~SQL.squish)
@@ -41,15 +45,22 @@ module UsageAttributionValues
     end
 
     def call
-      resolved_entries.each do |customer_id, labels, seen_at|
+      return result unless organization.account_tree_enabled? && organization.clickhouse_events_store?
+
+      # Newest first, so an older entry of the same value would change nothing and is not upserted.
+      value_ids = {}
+
+      resolved_entries.sort_by { |_, _, seen_at| -seen_at.to_f }.each do |customer_id, labels, seen_at|
         value_ids_by_type = {}
 
         types_in_tree_order.each do |attribution_type|
           value = labels[attribution_type.code]
-          next if value.nil?
+          next unless valid_value?(value)
 
           parent_id = value_ids_by_type[attribution_type.parent_id]
-          value_ids_by_type[attribution_type.id] = upsert_value(customer_id, attribution_type, value, parent_id, seen_at)
+          key = [customer_id, attribution_type.id, value]
+          value_ids[key] ||= upsert_value(customer_id, attribution_type, value, parent_id, seen_at)
+          value_ids_by_type[attribution_type.id] = value_ids[key]
         end
       end
 
@@ -60,11 +71,13 @@ module UsageAttributionValues
 
     attr_reader :organization, :entries
 
+    def valid_value?(value)
+      value.is_a?(String) && value.present? && value.length <= MAX_VALUE_LENGTH && !value.include?("\0")
+    end
+
     # One atomic statement per value, so consumers writing the same value at once cannot conflict.
     # Returns the id of the value, inserted or updated.
     def upsert_value(customer_id, attribution_type, value, parent_id, seen_at)
-      now = Time.current
-
       row = {
         organization_id: organization.id,
         customer_id:,
@@ -110,14 +123,21 @@ module UsageAttributionValues
         customer_id = customer_ids_by_subscription[entry["subscription_id"]]
         labels = entry["attribution_labels"]
 
-        if customer_id && labels.is_a?(Hash)
-          [customer_id, labels, Time.zone.at(entry["timestamp"].to_f)]
+        timestamp = entry["timestamp"]
+
+        if customer_id && labels.is_a?(Hash) && timestamp.is_a?(Numeric)
+          [customer_id, labels, [Time.zone.at(timestamp), now].min]
         end
       end
     end
 
+    def now
+      @now ||= Time.current
+    end
+
     def customer_ids_by_subscription
       @customer_ids_by_subscription ||= organization.subscriptions
+        .joins(:customer).merge(Customer.kept)
         .where(id: entries.pluck("subscription_id").compact.uniq)
         .pluck(:id, :customer_id)
         .to_h

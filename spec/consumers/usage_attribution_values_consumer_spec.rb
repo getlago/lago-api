@@ -3,7 +3,21 @@
 require "rails_helper"
 
 RSpec.describe UsageAttributionValuesConsumer do
-  subject(:consumer) { karafka.consumer_for(ENV["LAGO_KAFKA_USAGE_ATTRIBUTION_VALUES_TOPIC"]) }
+  subject(:consumer) { karafka.consumer_for("usage_attribution_values") }
+
+  # The topic is unset in tests, so karafka.rb draws no route.
+  before_all do
+    next if Karafka::App.routes.any? { it.name == "lago_usage_attribution_values_consumer" }
+
+    # The routing DSL is evaluated in its own context, where described_class is not defined.
+    consumer_class = described_class
+
+    Karafka::App.routes.draw do
+      consumer_group :lago_usage_attribution_values_consumer do
+        topic("usage_attribution_values") { consumer consumer_class }
+      end
+    end
+  end
 
   let(:organization) { create(:organization, clickhouse_events_store: true, feature_flags: ["account_tree"]) }
   let(:other_organization) { create(:organization, clickhouse_events_store: true, feature_flags: ["account_tree"]) }
@@ -45,39 +59,63 @@ RSpec.describe UsageAttributionValuesConsumer do
     end
   end
 
-  context "without the account_tree feature flag" do
-    let(:organization) { create(:organization, clickhouse_events_store: true) }
+  context "when a message is not a valid payload" do
+    before do
+      karafka.produce("not json")
+      karafka.produce([1, 2].to_json)
+      karafka.produce(nil)
+    end
 
-    it "skips the organization" do
+    it "skips it and tracks the others" do
       consumer.consume
 
-      expect(UsageAttributionValues::TrackService).not_to have_received(:call!).with(organization:, entries: anything)
+      expect(UsageAttributionValues::TrackService).to have_received(:call!).twice
+      expect(UsageAttributionValues::TrackService).to have_received(:call!)
+        .with(organization:, entries: [messages[0], messages[2]])
     end
   end
 
-  context "when the organization uses the Postgres events store" do
-    let(:organization) { create(:organization, clickhouse_events_store: false, feature_flags: ["account_tree"]) }
+  context "when tracking raises a transient error for an organization" do
+    let(:error) { ActiveRecord::ConnectionNotEstablished.new("boom") }
 
-    it "skips the organization" do
-      consumer.consume
+    before do
+      allow(UsageAttributionValues::TrackService).to receive(:call!).with(organization:, entries: anything).and_raise(error)
+    end
 
-      expect(UsageAttributionValues::TrackService).not_to have_received(:call!).with(organization:, entries: anything)
+    it "tracks the other organizations, then raises so that the batch is replayed" do
+      expect { consumer.consume }.to raise_error(error)
+
+      expect(UsageAttributionValues::TrackService).to have_received(:call!).with(organization: other_organization, entries: [messages[1]])
+    end
+
+    context "when it has been retried enough" do
+      before do
+        allow(consumer.coordinator.pause_tracker).to receive(:attempt).and_return(described_class::MAX_ATTEMPTS)
+      end
+
+      it "hands the failed organization to the job" do
+        expect { consumer.consume }.not_to raise_error
+
+        expect(UsageAttributionValues::TrackJob).to have_been_enqueued.once
+        expect(UsageAttributionValues::TrackJob).to have_been_enqueued.with(organization.id, [messages[0], messages[2]])
+      end
     end
   end
 
-  context "when tracking fails for an organization" do
-    let(:error) { ActiveRecord::StatementInvalid.new("boom") }
+  context "when tracking raises another error for an organization" do
+    let(:error) { StandardError.new("boom") }
 
     before do
       allow(UsageAttributionValues::TrackService).to receive(:call!).with(organization:, entries: anything).and_raise(error)
       allow(Sentry).to receive(:capture_exception)
     end
 
-    it "reports the error and still tracks the other organizations" do
+    it "reports it and tracks the other organizations" do
       expect { consumer.consume }.not_to raise_error
 
       expect(Sentry).to have_received(:capture_exception).with(error, extra: {organization_id: organization.id})
       expect(UsageAttributionValues::TrackService).to have_received(:call!).with(organization: other_organization, entries: [messages[1]])
+      expect(UsageAttributionValues::TrackJob).not_to have_been_enqueued
     end
   end
 end
