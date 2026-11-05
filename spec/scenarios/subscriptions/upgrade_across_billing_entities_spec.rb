@@ -34,6 +34,7 @@ describe "Subscription Upgrade Across Billing Entities Scenario", transaction: f
   let(:subscription_at) { DateTime.new(2024, 6, 5, 10, 0) }
   let(:upgrade_at) { DateTime.new(2024, 6, 20, 10, 0) }
   let(:subscription_billing_entity_code) { eu_entity.code }
+  let(:consolidate_invoice) { nil }
 
   def change_plan(plan, params = {})
     create_subscription(
@@ -80,7 +81,8 @@ describe "Subscription Upgrade Across Billing Entities Scenario", transaction: f
           plan_code: monthly_plan.code,
           billing_time: "anniversary",
           subscription_at: subscription_at.iso8601,
-          billing_entity_code: subscription_billing_entity_code
+          billing_entity_code: subscription_billing_entity_code,
+          consolidate_invoice:
         }.compact
       )
     end
@@ -210,6 +212,30 @@ describe "Subscription Upgrade Across Billing Entities Scenario", transaction: f
 
       upgrade_invoice = new_subscription.invoices.sole
       expect(upgrade_invoice.billing_entity_id).to eq(eu_entity.id)
+      expect(upgrade_invoice.subscriptions).to contain_exactly(subscription, new_subscription)
+      # NOTE: 5 API calls of the terminated subscription + 350 of 365 days of the yearly plan
+      expect(upgrade_invoice.fees_amount_cents).to eq(5 * 100 + (12_000 * 350.fdiv(365)).round)
+
+      expect_no_failed_invoice
+    end
+  end
+
+  context "when the subscription opted out of invoice consolidation" do
+    let(:consolidate_invoice) { false }
+
+    it "keeps billing the rotation on a single invoice" do
+      subscription = customer.subscriptions.sole
+
+      travel_to(upgrade_at) do
+        change_plan(yearly_plan)
+      end
+
+      new_subscription = customer.subscriptions.order(created_at: :asc).last
+      expect(new_subscription.consolidate_invoice).to be(false)
+
+      expect(customer.invoices.count).to eq(2)
+
+      upgrade_invoice = new_subscription.invoices.sole
       expect(upgrade_invoice.subscriptions).to contain_exactly(subscription, new_subscription)
       # NOTE: 5 API calls of the terminated subscription + 350 of 365 days of the yearly plan
       expect(upgrade_invoice.fees_amount_cents).to eq(5 * 100 + (12_000 * 350.fdiv(365)).round)

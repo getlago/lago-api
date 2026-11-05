@@ -9,7 +9,6 @@ module Invoices
       @billing_at = billing_at
 
       @customer = billing_contexts&.first&.customer
-      @currency = billing_contexts&.first&.currency
 
       super
     end
@@ -33,7 +32,7 @@ module Invoices
 
     private
 
-    attr_reader :billing_contexts, :billing_at, :customer, :currency
+    attr_reader :billing_contexts, :billing_at, :customer
 
     def pending_billing_contexts_with_fees
       return [] unless customer

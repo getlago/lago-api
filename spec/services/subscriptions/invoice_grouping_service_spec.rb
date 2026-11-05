@@ -103,6 +103,31 @@ RSpec.describe Subscriptions::InvoiceGroupingService do
       end
     end
 
+    context "when opted-out subscriptions share their external_id" do
+      let(:subscription1) { create(:subscription, :terminated, customer:, plan:, external_id: "sub-1", consolidate_invoice: false) }
+      let(:subscription2) { create(:subscription, customer:, plan:, external_id: "sub-1", consolidate_invoice: false) }
+      let(:subscription3) { create(:subscription, customer:, plan:, external_id: "sub-2", consolidate_invoice: false) }
+      let(:subscriptions) { [subscription1, subscription2, subscription3] }
+
+      it "keeps the rows of one subscription together and apart from the others" do
+        expect(result.subscription_groups).to eq([[subscription1, subscription2], [subscription3]])
+      end
+
+      context "when they also differ on another grouping criterion" do
+        let(:billing_entity) { create(:billing_entity, organization:) }
+        let(:subscription2) do
+          create(:subscription, customer:, plan:, external_id: "sub-1", consolidate_invoice: false, purchase_order_number: "PO-2")
+        end
+        let(:subscription3) do
+          create(:subscription, :terminated, customer:, plan:, external_id: "sub-1", consolidate_invoice: false, billing_entity:)
+        end
+
+        it "still splits them on that criterion" do
+          expect(result.subscription_groups).to eq([[subscription1], [subscription2], [subscription3]])
+        end
+      end
+    end
+
     context "when subscriptions have different purchase order numbers" do
       let(:subscription1) { create(:subscription, customer:, plan:, purchase_order_number: "PO-1") }
       let(:subscription2) { create(:subscription, customer:, plan:, purchase_order_number: "PO-2") }

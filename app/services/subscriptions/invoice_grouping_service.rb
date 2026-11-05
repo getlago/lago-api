@@ -33,13 +33,13 @@ module Subscriptions
       end
     end
 
-    # NOTE: Any subscription with `consolidate_invoice = false` must be billed
-    #       on its own invoice, regardless of the other grouping criteria. Split it out
-    #       of its current group into a one-element group.
+    # NOTE: A subscription with `consolidate_invoice = false` is never billed with other subscriptions,
+    #       regardless of the other grouping criteria. Rows sharing its external_id (the terminated and
+    #       the new subscription of a plan change) are the same subscription, so they stay together.
     def split_consolidation_opted_out(subscription_groups)
       subscription_groups.flat_map do |subscriptions|
         opted_out, consolidated = subscriptions.partition { |sub| !sub.consolidate_invoice }
-        groups = opted_out.map { |sub| [sub] }
+        groups = opted_out.group_by(&:external_id).values
         groups << consolidated if consolidated.any?
         groups
       end

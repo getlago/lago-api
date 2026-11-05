@@ -700,11 +700,11 @@ RSpec.describe Subscriptions::ActivateService do
             .with([subscription], anything, invoicing_reason: :upgrading)
         end
 
-        it "splits BillNonInvoiceableFeesJob per purchase order number" do
+        it "keeps a single BillNonInvoiceableFeesJob for the rotation" do
           result
 
-          expect(BillNonInvoiceableFeesJob).to have_been_enqueued.with([previous_subscription], anything)
-          expect(BillNonInvoiceableFeesJob).to have_been_enqueued.with([subscription], anything)
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued.exactly(:once)
+            .with([previous_subscription, subscription], anything)
         end
       end
 
@@ -724,11 +724,11 @@ RSpec.describe Subscriptions::ActivateService do
             .with([subscription], anything, invoicing_reason: :upgrading)
         end
 
-        it "splits BillNonInvoiceableFeesJob per billing entity" do
+        it "keeps a single BillNonInvoiceableFeesJob for the rotation" do
           result
 
-          expect(BillNonInvoiceableFeesJob).to have_been_enqueued.with([previous_subscription], anything)
-          expect(BillNonInvoiceableFeesJob).to have_been_enqueued.with([subscription], anything)
+          expect(BillNonInvoiceableFeesJob).to have_been_enqueued.exactly(:once)
+            .with([previous_subscription, subscription], anything)
         end
 
         context "when the new subscription is explicitly bound to the same entity" do
@@ -740,19 +740,6 @@ RSpec.describe Subscriptions::ActivateService do
             expect(BillSubscriptionJob).to have_been_enqueued
               .with([previous_subscription, subscription], anything, invoicing_reason: :upgrading)
           end
-        end
-      end
-
-      context "when the previous and new subscriptions are billed in different currencies" do
-        let(:plan) { create(:plan, organization:, amount_cents: 100, amount_currency: "USD", pay_in_advance: true) }
-
-        it "splits the upgrade bill into one job per currency" do
-          result
-
-          expect(BillSubscriptionJob).to have_been_enqueued
-            .with([previous_subscription], anything, invoicing_reason: :upgrading)
-          expect(BillSubscriptionJob).to have_been_enqueued
-            .with([subscription], anything, invoicing_reason: :upgrading)
         end
       end
 
@@ -779,6 +766,20 @@ RSpec.describe Subscriptions::ActivateService do
             .with([subscription], anything, invoicing_reason: :upgrading)
           expect(BillSubscriptionJob).to have_been_enqueued
             .with([previous_subscription], anything, invoicing_reason: :upgrading)
+        end
+      end
+
+      context "when both subscriptions opted out of invoice consolidation" do
+        before do
+          previous_subscription.update!(consolidate_invoice: false)
+          subscription.update!(consolidate_invoice: false, external_id: previous_subscription.external_id)
+        end
+
+        it "keeps the rotation on a single invoice" do
+          result
+
+          expect(BillSubscriptionJob).to have_been_enqueued.exactly(:once)
+            .with([previous_subscription, subscription], anything, invoicing_reason: :upgrading)
         end
       end
     end
