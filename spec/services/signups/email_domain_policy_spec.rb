@@ -7,7 +7,8 @@ RSpec.describe Signups::EmailDomainPolicy do
     context "with the bundled lists" do
       it "refuses the free providers, disposable domains and private relays" do
         domains = %w[gmail.com outlook.com yahoo.com icloud.com proton.me pm.me protonmail.com fastmail.com
-          user.fastmail.com mailinator.com abc.mailinator.com privaterelay.appleid.com mozmail.com]
+          user.fastmail.com mailinator.com abc.mailinator.com privaterelay.appleid.com mozmail.com
+          outlook.fr hotmail.be yahoo.dk posteo.de protonmail.ch]
 
         expect(domains.index_with { described_class.refusal_reason(it) }).to eq(
           "gmail.com" => :free_provider,
@@ -15,6 +16,11 @@ RSpec.describe Signups::EmailDomainPolicy do
           "yahoo.com" => :free_provider,
           "icloud.com" => :free_provider,
           "proton.me" => :denied,
+          "outlook.fr" => :denied,
+          "hotmail.be" => :denied,
+          "yahoo.dk" => :denied,
+          "posteo.de" => :denied,
+          "protonmail.ch" => :denied,
           "pm.me" => :free_provider,
           "protonmail.com" => :free_provider,
           "fastmail.com" => :free_provider,
@@ -24,6 +30,12 @@ RSpec.describe Signups::EmailDomainPolicy do
           "privaterelay.appleid.com" => :private_relay,
           "mozmail.com" => :private_relay
         )
+      end
+
+      it "refuses every entry of signup_email_domains.yaml as denied" do
+        domains = described_class::DENIED_DOMAINS
+
+        expect(domains.index_with { described_class.refusal_reason(it) }).to eq(domains.index_with { :denied })
       end
 
       it "accepts company domains, including under multi-label suffixes" do
