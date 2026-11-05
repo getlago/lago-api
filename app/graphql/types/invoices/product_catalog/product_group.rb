@@ -12,14 +12,6 @@ module Types
         field :fees_count, Integer, null: false
 
         field :filters, [Types::Invoices::ProductCatalog::FilterGroup], null: false
-
-        def amount_cents
-          ProductCatalogHierarchyHelper.total(object.entries)
-        end
-
-        def fees_count
-          object.entries.size
-        end
       end
     end
   end

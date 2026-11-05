@@ -56,10 +56,6 @@ class ProductCatalogInvoiceHelper
     new(invoice).contract_blocks
   end
 
-  def self.contract_groups(invoice)
-    new(invoice).contract_groups
-  end
-
   def self.contract_name(contract)
     contract.name.presence || contract.catalog_plan&.invoice_display_name.presence || contract.catalog_plan&.name
   end
@@ -286,13 +282,9 @@ class ProductCatalogInvoiceHelper
   end
 
   def contract_blocks
-    contract_groups.map do |group|
+    ProductCatalogHierarchyHelper.contract_groups(hierarchy_entries).map do |group|
       ContractBlock.new(title: contract_title(group.contract), sections: sections(group.sections))
     end
-  end
-
-  def contract_groups
-    ProductCatalogHierarchyHelper.contract_groups(hierarchy_entries)
   end
 
   private
