@@ -18,8 +18,8 @@ module Invites
       return result.not_found_failure!(resource: "invite") unless invite
       return result.not_found_failure!(resource: "user") unless user
 
-      # NOTE: Emails are saved with the case the user typed, so compare them ignoring case.
-      unless invite.email.casecmp?(user.email.to_s)
+      # NOTE: Emails are saved with the case the user typed, so compare them ignoring case and Unicode spelling.
+      unless PendingSignup.normalize_email(invite.email).casecmp?(PendingSignup.normalize_email(user.email))
         return result.single_validation_failure!(field: :email, error_code: "invite_email_mistmatch")
       end
 

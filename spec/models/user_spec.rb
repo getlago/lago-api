@@ -104,6 +104,27 @@ RSpec.describe User do
       expect(described_class.lookup_by_email(" JANE\u2013doe@get\u200Blago.com ")).to eq(user)
       expect(described_class.lookup_by_email("nobody@getlago.com")).to be_nil
     end
+
+    it "matches either Unicode spelling, and a row stored decomposed by its own" do
+      composed = create(:user, email: "jo\u00E3o@getlago.com")
+      decomposed = create(:user, email: "Mari\u0301a@getlago.com")
+
+      expect(described_class.lookup_by_email("Joa\u0303o@getlago.com")).to eq(composed)
+      expect(described_class.lookup_by_email("mari\u0301a@getlago.com")).to eq(decomposed)
+    end
+
+    it "finds the exact spelling even where PostgreSQL lowercases it otherwise than Ruby" do
+      user = create(:user, email: "\u0130lker@getlago.com")
+
+      expect(described_class.lookup_by_email("\u0130lker@getlago.com")).to eq(user)
+    end
+
+    it "prefers the typed spelling ignoring case to an older row in another Unicode spelling" do
+      create(:user, email: "jo\u00E3o@getlago.com", created_at: 2.days.ago)
+      typed = create(:user, email: "Joa\u0303o@getlago.com", created_at: 1.day.ago)
+
+      expect(described_class.lookup_by_email("joa\u0303o@getlago.com")).to eq(typed)
+    end
   end
 
   describe "Validations" do

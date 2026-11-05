@@ -7,10 +7,7 @@ module PasswordResets
     queue_as :default
 
     def perform(email)
-      user = User.find_by(email:) ||
-        User.where("LOWER(email) = ?", email.to_s.downcase).order(:created_at).first
-
-      PasswordResets::CreateService.call!(user:)
+      PasswordResets::CreateService.call!(user: User.lookup_by_email(email))
     end
   end
 end

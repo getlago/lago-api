@@ -30,6 +30,12 @@ RSpec.describe Auth::AttemptsThrottle do
       expect(described_class.hit!(:password_reset_per_email, "jane-doe@example.com")).to be(true)
     end
 
+    it "counts the Unicode spellings of one address together" do
+      ["jo\u00E3o@example.com", "Joa\u0303o@example.com", "JO\u00C3O@example.com"].each { described_class.hit!(:password_reset_per_email, it) }
+
+      expect(described_class.hit!(:password_reset_per_email, "joa\u0303o@example.com")).to be(true)
+    end
+
     it "keeps rules and identifiers separate" do
       3.times { described_class.hit!(:password_reset_per_email, "user@example.com") }
 
