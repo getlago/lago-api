@@ -2,17 +2,15 @@
 
 module Invoices
   class SubscriptionService < BaseService
-    Result = BaseResult[:invoice, :non_invoiceable_fees]
+    Result = BaseResult[:invoice, :non_invoiceable_fees, :payment_term_groups]
 
     ACTIVATION_BILLING_REASONS = %i[subscription_starting upgrading].freeze
 
-    def initialize(subscriptions:, timestamp:, invoicing_reason:, invoice: nil, skip_charges: false, payment_term: nil, payment_term_source: nil)
+    def initialize(subscriptions:, timestamp:, invoicing_reason:, invoice: nil, skip_charges: false)
       @subscriptions = subscriptions
       @timestamp = timestamp
       @invoicing_reason = invoicing_reason
       @recurring = invoicing_reason.to_sym == :subscription_periodic
-      @payment_term = payment_term
-      @payment_term_source = payment_term_source
 
       @customer = subscriptions&.first&.customer
       @currency = subscriptions&.first&.plan&.amount_currency
@@ -45,6 +43,13 @@ module Invoices
 
       if mixed_purchase_order_numbers?
         return result.validation_failure!(errors: {purchase_order_number: ["mixed_purchase_order_numbers"]})
+      end
+
+      # NOTE: A term can change between grouping and billing. The groups let the caller bill each
+      #       term apart; a given invoice already holds its frozen term, so a retry never re-checks.
+      if invoice.nil? && mixed_payment_terms?
+        result.payment_term_groups = payment_term_groups
+        return result.validation_failure!(errors: {payment_term: ["mixed_payment_terms"]})
       end
 
       create_generating_invoice unless invoice
@@ -143,9 +148,7 @@ module Invoices
       :customer,
       :currency,
       :invoice,
-      :skip_charges,
-      :payment_term,
-      :payment_term_source
+      :skip_charges
 
     # Cancelling a gated subscription takes the same lock, so holding it here orders the two:
     # cancellation either finds the gating invoice and closes it, or refuses until it exists.
@@ -207,8 +210,8 @@ module Invoices
         datetime: Time.zone.at(timestamp),
         skip_charges:,
         purchase_order_number: subscriptions.first&.purchase_order_number,
-        payment_term:,
-        payment_term_source:
+        payment_term: resolved_payment_terms.first&.payment_term,
+        payment_term_source: resolved_payment_term_source
       ) do |invoice|
         Invoices::CreateInvoiceSubscriptionService
           .call(invoice:, subscriptions:, timestamp:, invoicing_reason:)
@@ -232,6 +235,31 @@ module Invoices
 
     def mixed_billing_entities?
       subscriptions.map(&:applicable_billing_entity_id).uniq.many?
+    end
+
+    def resolved_payment_terms
+      @resolved_payment_terms ||= subscriptions.map { PaymentTerms::ResolveService.call!(customer:) }
+    end
+
+    def resolved_payment_term_source
+      sources = resolved_payment_terms.map(&:source).uniq
+
+      if sources.many?
+        "mixed"
+      else
+        sources.first
+      end
+    end
+
+    def mixed_payment_terms?
+      resolved_payment_terms.map { |resolution| resolution.payment_term.grouping_key }.uniq.many?
+    end
+
+    def payment_term_groups
+      subscriptions.zip(resolved_payment_terms)
+        .group_by { |_subscription, resolution| resolution.payment_term.grouping_key }
+        .values
+        .map { |pairs| pairs.map(&:first) }
     end
 
     def mixed_purchase_order_numbers?
