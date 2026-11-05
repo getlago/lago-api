@@ -160,7 +160,8 @@ RSpec.describe Types::Invoices::Object do
 
       before do
         create(:fee, invoice:, subscription: nil, fee_type: :product,
-          invoiceable: contract_rate_card.rate_card.product, contract:, contract_rate_card:)
+          invoiceable: contract_rate_card.rate_card.product, contract:, contract_rate_card:,
+          rate_card_rate: create(:rate_card_rate, organization: invoice.organization, rate_card: contract_rate_card.rate_card))
       end
 
       it "groups the fees by contract" do

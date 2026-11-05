@@ -43,6 +43,7 @@ RSpec.describe Invoices::ProductCatalogTreeService do
       invoiceable_id: product.id,
       contract:,
       contract_rate_card:,
+      rate_card_rate: create(:rate_card_rate, organization:, rate_card:),
       product_filter: true_up_parent_fee ? nil : product_filter,
       true_up_parent_fee:,
       amount_cents:
