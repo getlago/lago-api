@@ -99,13 +99,18 @@ module DailyUsages
       current_filters = current_parent["filters"]
       return if current_filters.empty?
 
-      previous_filters = previous_parent["filters"].presence || [unfiltered_bucket(previous_parent)]
+      previous_filters = previous_parent["filters"]
+      current_keys = current_filters.map { |fu| filter_key(fu) }.to_set
 
-      if previous_filters.map { |fu| filter_key(fu) }.to_set == current_filters.map { |fu| filter_key(fu) }.to_set
-        previous_index = previous_filters.index_by { |fu| filter_key(fu) }
-        current_filters.each { |fu| apply_bucket_diff(previous_index[filter_key(fu)], fu) }
+      # A filter only shows up once it gets its first event, so new buckets alone are not an edit
+      if previous_filters.empty? || previous_filters.any? { |fu| !current_keys.include?(filter_key(fu)) }
+        reroute_filters(previous_filters.presence || [unfiltered_bucket(previous_parent)], current_filters, charge_id)
       else
-        reroute_filters(previous_filters, current_filters, charge_id)
+        previous_index = previous_filters.index_by { |fu| filter_key(fu) }
+        current_filters.each do |fu|
+          previous_filter = previous_index[filter_key(fu)]
+          apply_bucket_diff(previous_filter, fu) if previous_filter
+        end
       end
     end
 
@@ -129,11 +134,25 @@ module DailyUsages
 
       single.each { |filter, receivers| apply_bucket_diff(filter, receivers.first) }
 
-      multiple.flat_map { |filter, receivers| deduction_plan(filter, receivers) }
+      claimants = {}.compare_by_identity
+      multiple.each { |filter, receivers| receivers.each { |receiver| (claimants[receiver] ||= []) << filter } }
+
+      multiple.flat_map { |filter, receivers| deduction_plan(filter, receivers, claimants) }
         .each { |slot, part| subtract([slot], [part]) }
     end
 
-    def deduction_plan(filter, receivers)
+    # The share of a receiver's usage a split filter can take, when other split filters route to it too
+    def claim_shares(filter, receivers, claimants, key)
+      receivers.map do |receiver|
+        others = claimants[receiver]
+        next 1 if others.one?
+
+        weights = others.map { |other| [slot_value([other, key]), BigDecimal(0)].max.to_r }
+        weights.sum.positive? ? [slot_value([filter, key]), BigDecimal(0)].max.to_r / weights.sum : Rational(1, others.size)
+      end
+    end
+
+    def deduction_plan(filter, receivers, claimants)
       plan = []
       breakdown_units = Array.new(receivers.size, BigDecimal(0))
       covered = Array(filter["presentation_breakdowns"]).any?
@@ -149,7 +168,8 @@ module DailyUsages
           next
         end
 
-        parts = split(slot_value([breakdown, "units"]), indexed_slots.map(&:first))
+        unit_shares = claim_shares(filter, receivers, claimants, "units")
+        parts = split(slot_value([breakdown, "units"]), indexed_slots.map(&:first), indexed_slots.map { |_slot, index| unit_shares[index] })
         indexed_slots.zip(parts).each do |(slot, index), part|
           plan << [slot, part]
           breakdown_units[index] += part
@@ -158,18 +178,22 @@ module DailyUsages
 
       units = slot_value([filter, "units"])
       unit_slots = receivers.map { |receiver| [receiver, "units"] }
-      unit_parts = (covered && breakdown_units.sum == units) ? breakdown_units : split(units, unit_slots)
+      unit_parts = if covered && breakdown_units.sum == units
+        breakdown_units
+      else
+        split(units, unit_slots, claim_shares(filter, receivers, claimants, "units"))
+      end
 
       amount = slot_value([filter, "amount_cents"])
       amount_slots = receivers.map { |receiver| [receiver, "amount_cents"] }
       amount_parts = if units.positive?
         allocate(amount, unit_parts.map { |part| part.to_r / units.to_r }, integer: integer_slots?(amount_slots))
       else
-        split(amount, amount_slots)
+        split(amount, amount_slots, claim_shares(filter, receivers, claimants, "amount_cents"))
       end
 
       event_slots = receivers.map { |receiver| [receiver, "events_count"] }
-      event_parts = split(slot_value([filter, "events_count"]), event_slots)
+      event_parts = split(slot_value([filter, "events_count"]), event_slots, claim_shares(filter, receivers, claimants, "events_count"))
 
       plan + unit_slots.zip(unit_parts) + amount_slots.zip(amount_parts) + event_slots.zip(event_parts)
     end
@@ -253,10 +277,10 @@ module DailyUsages
       [-values.size, size]
     end
 
-    def split(total, slots)
+    def split(total, slots, claims = Array.new(slots.size, 1))
       return Array.new(slots.size, BigDecimal(0)) if total.zero? || slots.empty?
 
-      gains = slots.map { |slot| [slot_value(slot), BigDecimal(0)].max.to_r }
+      gains = slots.zip(claims).map { |slot, claim| [slot_value(slot), BigDecimal(0)].max.to_r * claim }
       gains_total = gains.sum
       shares = if gains_total.positive?
         gains.map { |gain| gain / gains_total }

@@ -105,11 +105,20 @@ RSpec.describe DailyUsages::RecomputeDiffsService do
     end
   end
 
-  context "when a filter is added" do
+  context "when a filter gets its first event of the period" do
     let(:filters_after_edit) { [filter_usage({"model" => %w[a b]}, 1000), filter_usage({"model" => %w[c]}, 100)] }
 
-    it "flags the row" do
-      expect(recompute_service.call.daily_usages).to eq([edited_day])
+    it "does not flag the row" do
+      expect(recompute_service.call.daily_usages).to be_empty
+    end
+  end
+
+  context "when a filter gets its first event next to the default bucket" do
+    let(:filters_before_edit) { [filter_usage({"model" => %w[a]}, 1000), filter_usage(nil, 500)] }
+    let(:filters_after_edit) { [filter_usage({"model" => %w[a]}, 1000), filter_usage({"model" => %w[b]}, 100), filter_usage(nil, 500)] }
+
+    it "does not flag the row" do
+      expect(recompute_service.call.daily_usages).to be_empty
     end
   end
 

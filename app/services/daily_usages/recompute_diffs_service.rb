@@ -48,7 +48,7 @@ module DailyUsages
 
       current_index.any? do |key, current_values|
         previous_values = previous_index[key]
-        previous_values && current_values.any? && previous_values != current_values
+        previous_values && current_values.any? && (previous_values.empty? || !previous_values.subset?(current_values))
       end
     end
 

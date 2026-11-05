@@ -2033,6 +2033,90 @@ RSpec.describe DailyUsages::ComputeDiffService do
       end
     end
 
+    context "when an existing filter gets its first event next to the default bucket" do
+      let(:previous_usage) do
+        usage_payload(
+          [filter_usage({"model" => %w[a]}, 1000, "10.0", 10), filter_usage(nil, 500, "5.0", 5)],
+          1500, "15.0", 15
+        )
+      end
+
+      let(:usage) do
+        usage_payload(
+          [
+            filter_usage({"model" => %w[a]}, 1000, "10.0", 10),
+            filter_usage({"model" => %w[b]}, 100, "1.0", 1),
+            filter_usage(nil, 500, "5.0", 5)
+          ],
+          1600, "16.0", 16
+        )
+      end
+
+      it "gives the filter its first event only" do
+        expect(diff_filters).to eq(
+          [
+            {"values" => {"model" => %w[a]}, **usage_values(0, "0.0", 0)},
+            {"values" => {"model" => %w[b]}, **usage_values(100, "1.0", 1)},
+            {"values" => nil, **usage_values(0, "0.0", 0)}
+          ]
+        )
+      end
+    end
+
+    context "when a more specific filter gets its first event" do
+      let(:gold) { {"model" => %w[a], "tier" => %w[gold]} }
+
+      let(:previous_usage) { usage_payload([filter_usage({"model" => %w[a]}, 1000, "10.0", 10)], 1000, "10.0", 10) }
+
+      let(:usage) do
+        usage_payload(
+          [filter_usage({"model" => %w[a]}, 1000, "10.0", 10), filter_usage(gold, 300, "1.0", 1)],
+          1300, "11.0", 11
+        )
+      end
+
+      it "gives the filter its first event only" do
+        expect(diff_filters).to eq(
+          [
+            {"values" => {"model" => %w[a]}, **usage_values(0, "0.0", 0)},
+            {"values" => gold, **usage_values(300, "1.0", 1)}
+          ]
+        )
+      end
+    end
+
+    context "when two edited filters both route to the same new filter" do
+      let(:previous_usage) do
+        usage_payload(
+          [filter_usage({"model" => %w[a b]}, 1000, "10.0", 10), filter_usage({"model" => %w[c d]}, 1000, "10.0", 10)],
+          2000, "20.0", 20
+        )
+      end
+
+      let(:usage) do
+        usage_payload(
+          [
+            filter_usage({"model" => %w[a]}, 1000, "10.0", 10),
+            filter_usage({"model" => %w[b c]}, 100, "1.0", 1),
+            filter_usage({"model" => %w[d]}, 1000, "10.0", 10)
+          ],
+          2100, "21.0", 21
+        )
+      end
+
+      it "does not deduct more than the shared filter holds" do
+        expect(diff_filters.sum { |f| f["amount_cents"] }).to eq(100)
+        expect(diff_filters.sum { |f| BigDecimal(f["units"]) }).to eq(BigDecimal("1.0"))
+        expect(diff_filters.sum { |f| f["events_count"] }).to eq(1)
+
+        diff_filters.each do |f|
+          expect(f["amount_cents"]).to be_between(0, 100)
+          expect(BigDecimal(f["units"])).to be_between(0, 1)
+          expect(f["events_count"]).to be_between(0, 1)
+        end
+      end
+    end
+
     context "when filters nested in grouped usage are edited" do
       let(:previous_usage) do
         payload = usage_payload([], 1000, "10.0", 10)
