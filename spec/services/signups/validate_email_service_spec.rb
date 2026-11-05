@@ -46,11 +46,20 @@ RSpec.describe Signups::ValidateEmailService do
   end
 
   context "with a decomposed Unicode local part" do
-    let(:email) { "joão@getlago.com" }
+    let(:email) { "Joa\u0303o@getlago.com" }
 
-    it "keeps its form in the email and composes it in the mailbox key" do
-      expect(result.email).to eq("joão@getlago.com")
-      expect(result.mailbox_key).to eq("joão@getlago.com")
+    it "composes it in the email as in the mailbox key" do
+      expect(result.email).to eq("jo\u00E3o@getlago.com")
+      expect(result.mailbox_key).to eq("jo\u00E3o@getlago.com")
+    end
+  end
+
+  context "with a capital whose mark composes only once lowercased" do
+    let(:email) { "J\u030Cohn@getlago.com" }
+
+    it "gives the email and the mailbox key the same spelling" do
+      expect(result.email).to eq("\u01F0ohn@getlago.com")
+      expect(result.mailbox_key).to eq("\u01F0ohn@getlago.com")
     end
   end
 

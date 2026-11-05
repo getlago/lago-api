@@ -50,7 +50,8 @@ module Signups
       return failure("value_is_mandatory") if address.blank?
       return failure("invalid_email_format") unless address.match?(Regex::EMAIL) && address.count("@") == 1
 
-      address = address.downcase
+      # Composed after downcasing, as mailbox_key does: a capital and its mark can compose only once lowercased.
+      address = address.downcase.unicode_normalize(:nfc)
       local_part, _, domain = address.partition("@")
       return failure("invalid_email_format") unless well_formed?(address, local_part, domain)
       return failure("email_domain_not_allowed") if EmailDomainPolicy.refusal_reason(domain)
