@@ -19,6 +19,11 @@ RSpec.describe Types::Fees::Object do
     expect(subject).to have_field(:invoice_display_name).of_type("String")
     expect(subject).to have_field(:invoice_id).of_type("ID")
     expect(subject).to have_field(:invoice_name).of_type("String")
+    expect(subject).to have_field(:product).of_type("Product")
+    expect(subject).to have_field(:product_filter).of_type("ProductFilter")
+    expect(subject).to have_field(:rate_card_rate).of_type("RateCardRate")
+    expect(subject).to have_field(:rate_model).of_type("RateCardRateModelEnum")
+    expect(subject).to have_field(:rate_override).of_type("RateOverride")
     expect(subject).to have_field(:subscription).of_type("Subscription")
     expect(subject).to have_field(:true_up_fee).of_type("Fee")
     expect(subject).to have_field(:true_up_parent_fee).of_type("Fee")
@@ -73,6 +78,45 @@ RSpec.describe Types::Fees::Object do
         expect(run_graphql_field("Fee.contract", fee)).to eq(contract)
         expect(run_graphql_field("Fee.contractRateCard", fee)).to eq(contract_rate_card)
       end
+
+      it "resolves the product, its filter and the rate" do
+        expect(run_graphql_field("Fee.product", fee)).to eq(contract_rate_card.rate_card.product)
+        expect(run_graphql_field("Fee.productFilter", fee)).to be_nil
+        expect(run_graphql_field("Fee.rateCardRate", fee)).to eq(rate_card_rate)
+        expect(run_graphql_field("Fee.rateOverride", fee)).to be_nil
+        expect(run_graphql_field("Fee.rateModel", fee)).to eq("standard")
+      end
+
+      context "when the rate is overridden" do
+        let(:rate_override) do
+          create(:rate_override, organization:, rate_model: "package", rate_properties: {"amount" => "10", "package_size" => 10, "free_units" => 0})
+        end
+        let(:fee) do
+          create(:fee, invoice:, subscription: nil, fee_type: :product,
+            invoiceable: contract_rate_card.rate_card.product, contract:, contract_rate_card:, rate_card_rate:, rate_override:)
+        end
+
+        it "takes the rate model of the override" do
+          expect(run_graphql_field("Fee.rateOverride", fee)).to eq(rate_override)
+          expect(run_graphql_field("Fee.rateModel", fee)).to eq("package")
+        end
+      end
+
+      context "when the fee is the true-up of a filtered fee" do
+        let(:product_filter) { create(:product_filter, organization:, product: contract_rate_card.rate_card.product) }
+        let(:parent_fee) do
+          create(:fee, invoice:, subscription: nil, fee_type: :product,
+            invoiceable: contract_rate_card.rate_card.product, contract:, contract_rate_card:, rate_card_rate:, product_filter:)
+        end
+        let(:fee) do
+          create(:fee, invoice:, subscription: nil, fee_type: :product,
+            invoiceable: contract_rate_card.rate_card.product, contract:, contract_rate_card:, rate_card_rate:, true_up_parent_fee: parent_fee)
+        end
+
+        it "returns the filter of the fee it tops up" do
+          expect(run_graphql_field("Fee.productFilter", fee)).to eq(product_filter)
+        end
+      end
     end
 
     context "when the fee comes from a legacy subscription" do
@@ -82,6 +126,9 @@ RSpec.describe Types::Fees::Object do
       it "returns nil for contract provenance" do
         expect(run_graphql_field("Fee.contract", fee)).to be_nil
         expect(run_graphql_field("Fee.contractRateCard", fee)).to be_nil
+        expect(run_graphql_field("Fee.product", fee)).to be_nil
+        expect(run_graphql_field("Fee.productFilter", fee)).to be_nil
+        expect(run_graphql_field("Fee.rateModel", fee)).to be_nil
       end
     end
   end
