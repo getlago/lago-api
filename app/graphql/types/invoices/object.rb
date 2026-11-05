@@ -104,7 +104,7 @@ module Types
       end
 
       def product_catalog_contracts
-        ProductCatalogInvoiceHelper.contract_groups(object) if object.product_catalog?
+        ::Invoices::ProductCatalogTreeService.call!(invoice: object).contracts if object.product_catalog?
       end
 
       def applied_taxes
