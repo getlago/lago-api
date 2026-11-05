@@ -25,8 +25,11 @@ module WebhookEndpoints
       webhook_endpoint.save!
 
       result.webhook_endpoint = webhook_endpoint
-      track_webhook_webdpoint_created(result.webhook_endpoint)
-      register_security_log(webhook_endpoint)
+      # A caller's transaction can still roll the endpoint back.
+      after_commit do
+        track_webhook_webdpoint_created(webhook_endpoint)
+        register_security_log(webhook_endpoint)
+      end
       result
     rescue ActiveRecord::RecordInvalid => e
       failure = BaseService::ValidationFailure.from_errors(result, e.record.errors)

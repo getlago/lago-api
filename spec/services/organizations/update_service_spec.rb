@@ -207,6 +207,93 @@ RSpec.describe Organizations::UpdateService do
       end
     end
 
+    context "when webhook_url is sent for an organization without webhook endpoint" do
+      let(:organization) { create(:organization, webhook_url: nil) }
+      let(:params) { {webhook_url: "https://example.com/webhooks"} }
+
+      it "creates a jwt endpoint" do
+        result = update_service.call
+
+        expect(result).to be_success
+        expect(organization.webhook_endpoints.reload.sole).to have_attributes(
+          webhook_url: "https://example.com/webhooks", signature_algo: "jwt"
+        )
+      end
+
+      it_behaves_like "produces a security log", "webhook_endpoint.created" do
+        before { update_service.call }
+      end
+
+      context "when the organization update fails after the endpoint is created" do
+        let(:params) { {webhook_url: "https://example.com/webhooks", email: "not-an-email"} }
+
+        it "creates no endpoint and tracks nothing" do
+          expect { update_service.call }.not_to have_enqueued_job(SegmentTrackJob)
+
+          expect(organization.webhook_endpoints.reload).to be_empty
+        end
+
+        it_behaves_like "does not produce a security log" do
+          before { update_service.call }
+        end
+      end
+    end
+
+    context "when webhook_url is sent for an organization with a webhook endpoint" do
+      let(:organization) { create(:organization, webhook_url: "https://example.com/old") }
+      let(:params) { {webhook_url: "https://example.com/webhooks"} }
+
+      it "updates the endpoint url and keeps its algorithm" do
+        webhook_endpoint = organization.webhook_endpoints.sole
+
+        result = update_service.call
+
+        expect(result).to be_success
+        expect(organization.webhook_endpoints.reload.sole).to have_attributes(
+          id: webhook_endpoint.id, webhook_url: "https://example.com/webhooks", signature_algo: webhook_endpoint.signature_algo
+        )
+      end
+
+      it_behaves_like "produces a security log", "webhook_endpoint.updated" do
+        before { update_service.call }
+      end
+
+      context "when the url is unchanged" do
+        let(:params) { {webhook_url: "https://example.com/old"} }
+
+        it "produces no webhook endpoint security log" do
+          update_service.call
+
+          expect(security_logger).not_to have_received(:produce).with(hash_including(log_type: "webhook_endpoint"))
+        end
+      end
+
+      context "when the organization update fails after the webhook url changed" do
+        let(:params) { {webhook_url: "https://example.com/webhooks", email: "not-an-email"} }
+
+        before { update_service.call }
+
+        it "keeps the endpoint url" do
+          expect(organization.webhook_endpoints.reload.sole.webhook_url).to eq("https://example.com/old")
+        end
+
+        it_behaves_like "does not produce a security log"
+      end
+
+      context "when the url is invalid" do
+        let(:params) { {webhook_url: "not a url"} }
+
+        it "returns the validation failure of the endpoint and keeps its url" do
+          result = update_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to include(:webhook_url)
+          expect(organization.webhook_endpoints.reload.sole.webhook_url).to eq("https://example.com/old")
+        end
+      end
+    end
+
     context "with premium features", :premium do
       let(:timezone) { "Europe/Paris" }
       let(:email_settings) { ["invoice.finalized"] }

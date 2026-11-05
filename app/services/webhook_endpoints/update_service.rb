@@ -54,12 +54,15 @@ module WebhookEndpoints
         .transform_keys(&:to_sym)
         .transform_values { |v| {deleted: v[0], added: v[1]}.compact }
 
-      Utils::SecurityLog.produce(
-        organization: webhook_endpoint.organization,
-        log_type: "webhook_endpoint",
-        log_event: "webhook_endpoint.updated",
-        resources: {webhook_url: webhook_endpoint.webhook_url, **diff}
-      )
+      # A caller's transaction can still roll the update back.
+      after_commit do
+        Utils::SecurityLog.produce(
+          organization: webhook_endpoint.organization,
+          log_type: "webhook_endpoint",
+          log_event: "webhook_endpoint.updated",
+          resources: {webhook_url: webhook_endpoint.webhook_url, **diff}
+        )
+      end
     end
   end
 end
