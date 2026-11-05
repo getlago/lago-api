@@ -5,15 +5,15 @@ module Integrations
     module Taxes
       module Invoices
         class NegateService < BaseService
-          def action_path
-            "v1/#{provider}/negate_invoices"
+          def action_name
+            "anrok-negate-transaction"
           end
 
           def call
             return result unless integration
             return result unless integration.type == "Integrations::AnrokIntegration"
 
-            response = http_client.post_with_response(payload, headers)
+            response = trigger_action(payload)
             body = JSON.parse(response.body)
 
             process_void_response(body)

@@ -487,7 +487,7 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
 
             context "with provider taxes on a charge split by grouped_by" do
               let(:integration) { create(:anrok_integration, organization:) }
-              let(:endpoint) { "https://api.nango.dev/v1/anrok/draft_invoices" }
+              let(:endpoint) { "https://api.nango.dev/action/trigger" }
               let(:requested_line_items) { [] }
               let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
               let(:charge) do
@@ -523,7 +523,7 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
                 customer.reload
 
                 stub_request(:post, endpoint).to_return do |request|
-                  line_items = JSON.parse(request.body).first["fees"]
+                  line_items = JSON.parse(request.body)["input"].first["fees"]
                   requested_line_items.concat(line_items)
 
                   taxed = line_items.map do |item|
@@ -1772,7 +1772,7 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
         context "with provider taxes" do
           let(:integration) { create(:anrok_integration, organization:) }
           let(:integration_customer) { build(:anrok_customer, integration:, customer:) }
-          let(:endpoint) { "https://api.nango.dev/v1/anrok/draft_invoices" }
+          let(:endpoint) { "https://api.nango.dev/action/trigger" }
           let(:integration_collection_mapping) do
             create(
               :netsuite_collection_mapping,
@@ -1795,7 +1795,7 @@ RSpec.describe Invoices::PreviewService, cache: :memory do
                 ))
 
                 # setting item_id based on the test example
-                key = JSON.parse(request.body).first["fees"].last["item_key"]
+                key = JSON.parse(request.body)["input"].first["fees"].last["item_key"]
                 response["succeededInvoices"].first["fees"].last["item_key"] = key
                 response["succeededInvoices"].first["fees"].last["amount_cents"] = 6
                 response["succeededInvoices"].first["fees"].last["tax_amount_cents"] = 1
