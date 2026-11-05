@@ -37,6 +37,7 @@ module Types
     field :contract, resolver: Resolvers::ContractResolver
     field :contract_applied_rate_card, resolver: Resolvers::ContractAppliedRateCardResolver
     field :contract_applied_rate_cards, resolver: Resolvers::ContractAppliedRateCardsResolver
+    field :contract_usages, resolver: Resolvers::ContractUsagesResolver
     field :contracts, resolver: Resolvers::ContractsResolver
     field :coupon, resolver: Resolvers::CouponResolver
     field :coupons, resolver: Resolvers::CouponsResolver

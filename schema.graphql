@@ -12610,6 +12610,11 @@ type Query {
   contractAppliedRateCards(contractId: ID, hasRateOverrides: Boolean, limit: Int, page: Int, productCategoryIds: [ID!], productFilterIds: [ID!], productIds: [ID!], productType: ProductTypeEnum, searchTerm: String, withoutProductCategory: Boolean, withoutProductFilter: Boolean): ContractAppliedRateCardCollection!
 
   """
+  Query a contract's computed usage for the current billing period, paginated
+  """
+  contractUsages(contractId: ID!, limit: Int, page: Int, productCategoryIds: [ID!], productFilterIds: [ID!], productIds: [ID!], productType: ProductTypeEnum, searchTerm: String, withoutProductCategory: Boolean, withoutProductFilter: Boolean): RateCardUsageCollection!
+
+  """
   Query contracts of an organization
   """
   contracts(billingEntityIds: [ID!], externalCustomerId: String, externalId: String, hasRateOverrides: Boolean, limit: Int, page: Int, planCode: String, searchTerm: String, status: [ContractStatusEnum!]): ContractCollection!
@@ -13769,6 +13774,47 @@ enum RateCardRateStatusEnum {
 
 enum RateCardRegroupPaidFeesEnum {
   invoice
+}
+
+"""
+One rate card's computed usage on a contract's current billing window
+"""
+type RateCardUsage {
+  amountCents: BigInt!
+  billableMetricCode: String
+  billingTiming: String!
+  eventsCount: Int!
+  fromDatetime: ISO8601DateTime!
+  invoiceDisplayName: String!
+  productCategoryCode: String
+  productCategoryName: String
+  productCode: String!
+  productFilterCode: String
+  productFilterName: String
+  productName: String!
+  productType: ProductTypeEnum!
+  rateCardCode: String!
+  rateCardName: String!
+  ratePhaseCode: String
+  ratePhaseName: String
+  rateSource: String!
+  toDatetime: ISO8601DateTime!
+  units: Float!
+}
+
+"""
+RateCardUsageCollection type
+"""
+type RateCardUsageCollection {
+  """
+  A collection of paginated RateCardUsageCollection
+  """
+  collection: [RateCardUsage!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
 }
 
 """
