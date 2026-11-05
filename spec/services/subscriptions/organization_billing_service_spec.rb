@@ -1108,13 +1108,10 @@ RSpec.describe Subscriptions::OrganizationBillingService do
         )
       end
 
-      let(:invoices_per_customer) { Yabeda.payment_terms.invoices_per_customer }
-
       before do
         subscription.destroy
         first_subscription
         second_subscription
-        allow(invoices_per_customer).to receive(:measure)
       end
 
       it "groups subscriptions resolving to the same payment term into a single billing job" do
@@ -1126,7 +1123,6 @@ RSpec.describe Subscriptions::OrganizationBillingService do
             current_date.to_i,
             invoicing_reason: :subscription_periodic
           )
-        expect(invoices_per_customer).to have_received(:measure).with({}, 1)
       end
 
       context "when subscriptions resolve to different payment terms" do
@@ -1155,7 +1151,6 @@ RSpec.describe Subscriptions::OrganizationBillingService do
             .with([first_subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
           expect(BillSubscriptionJob).to have_been_enqueued
             .with([second_subscription], current_date.to_i, invoicing_reason: :subscription_periodic)
-          expect(invoices_per_customer).to have_received(:measure).with({}, 2)
         end
       end
 
@@ -1187,7 +1182,6 @@ RSpec.describe Subscriptions::OrganizationBillingService do
               current_date.to_i,
               invoicing_reason: :subscription_periodic
             )
-          expect(invoices_per_customer).to have_received(:measure).with({}, 1)
         end
       end
     end

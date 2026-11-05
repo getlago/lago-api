@@ -29,7 +29,6 @@ module Subscriptions
         subscription_groups = Subscriptions::InvoiceGroupingService
           .call!(subscriptions: billing_subscriptions)
           .subscription_groups
-        Yabeda.payment_terms.invoices_per_customer.measure({}, subscription_groups.size)
 
         subscription_groups.each do |subscriptions|
           BillSubscriptionJob.perform_later(
