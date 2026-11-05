@@ -19,6 +19,9 @@ module Signups
 
     Result = BaseResult[:score]
 
+    # Whether a token would be sent to Google at all: the guard counts only those against the Google budget.
+    def self.sendable?(token) = token.present? && token.length <= MAX_TOKEN_LENGTH
+
     def initialize(token:, action:, remote_ip: nil)
       @token = token
       @action = action
@@ -28,7 +31,7 @@ module Signups
 
     def call
       raise ArgumentError, "unknown reCAPTCHA action #{action.inspect}" unless ACTIONS.include?(action)
-      return refuse!("missing_token") if token.blank? || token.length > MAX_TOKEN_LENGTH
+      return refuse!("missing_token") unless self.class.sendable?(token)
       return unavailable!("missing_secret") if secret_key.blank?
       return unavailable!("invalid_min_score") unless min_score
 

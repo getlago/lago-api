@@ -61,6 +61,12 @@ RSpec.describe Signups::VerifyCaptchaService do
     end
   end
 
+  describe ".sendable?" do
+    it "accepts a present token up to the size Google takes" do
+      expect([nil, "", "x", "x" * 4096, "x" * 4097].map { described_class.sendable?(it) }).to eq([false, false, true, true, false])
+    end
+  end
+
   context "with a missing, blank or oversized token" do
     it "refuses without calling Google" do
       [nil, "", "a" * 4_097].each do |token|

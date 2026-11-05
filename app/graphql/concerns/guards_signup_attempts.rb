@@ -8,7 +8,7 @@ module GuardsSignupAttempts
 
   Guard = Data.define(:captcha_action, :rules)
 
-  # Counted before reCAPTCHA by every endpoint that checks it, to bound the calls to Google.
+  # Counted for each token that will reach Google, once the business limits pass, to bound those calls.
   CAPTCHA_RULES = %i[signup_captcha_per_ip signup_captcha_per_ip_block].freeze
   SIGNUP_RULES = %i[signup_per_ip signup_per_ip_daily signup_per_ip_block].freeze
 
@@ -45,36 +45,47 @@ module GuardsSignupAttempts
   private
 
   # nil when the request may go on, otherwise the GraphQL error to return. Business limits are counted only once
-  # reCAPTCHA passes, so refused attempts never use up the budget of a shared network.
+  # reCAPTCHA passes, so tokens Google refuses never use them up.
   def signup_guard_error(endpoint, captcha_token: nil)
     guard = GUARDS.fetch(endpoint)
-    error = signup_captcha_error(guard.captcha_action, captcha_token) if guard.captcha_action
+    error = signup_captcha_error(guard, captcha_token) if guard.captcha_action
     error || (too_many_attempts_error if signup_rules_over_limit?(guard.rules))
   end
 
-  def signup_captcha_error(action, captcha_token)
-    return too_many_attempts_error if signup_rules_over_limit?(CAPTCHA_RULES)
+  # A network already at a business limit stops before Google, and only tokens Google will see count against the budget
+  # that bounds those calls.
+  def signup_captcha_error(guard, captcha_token)
+    return too_many_attempts_error if signup_rules_at_limit?(guard.rules)
+    if Signups::VerifyCaptchaService.sendable?(captcha_token) && signup_rules_over_limit?(CAPTCHA_RULES)
+      return too_many_attempts_error
+    end
 
-    captcha = Signups::VerifyCaptchaService.call(token: captcha_token, action:, remote_ip: client_ip)
+    captcha = Signups::VerifyCaptchaService.call(token: captcha_token, action: guard.captcha_action, remote_ip: client_ip)
     result_error(captcha) unless captcha.success?
+  end
+
+  def signup_rules_at_limit?(rules)
+    rule = rules.find { Auth::AttemptsThrottle.at_limit?(it, client_ip) }
+    report_signup_limit(rule) if rule
+    rule.present?
   end
 
   # Stops at the first rule over its limit, so a refused attempt never uses up a wider budget (its /48, its day). Each
   # counter increments before its check, so concurrent requests cannot all pass under a limit.
   def signup_rules_over_limit?(rules)
     rule = rules.find { Auth::AttemptsThrottle.hit!(it, client_ip) }
-    report_signup_limit([rule]) if rule
-    !rule.nil?
+    report_signup_limit(rule) if rule
+    rule.present?
   end
 
   # Never logs the IP. A trip from a trusted proxy address usually means the proxy in front of the API forwards no client
   # address, so every client shares one counter. A public proxy missing from LAGO_TRUSTED_PROXIES never shows here.
-  def report_signup_limit(rules)
+  def report_signup_limit(rule)
     trusted = trusted_proxy_ip?
-    Rails.logger.warn("#{GuardsSignupAttempts.name} limit reached rules=#{rules.join(",")} trusted_ip=#{trusted}")
+    Rails.logger.warn("#{GuardsSignupAttempts.name} limit reached rule=#{rule} trusted_ip=#{trusted}")
 
     if trusted && Auth::AttemptsThrottle.first_in_period?("signup_trusted_proxy", 10.minutes)
-      Sentry.capture_message("Signup attempts limit reached from a trusted proxy address", level: :warning, extra: {rules:})
+      Sentry.capture_message("Signup attempts limit reached from a trusted proxy address", level: :warning, extra: {rule:})
     end
   end
 

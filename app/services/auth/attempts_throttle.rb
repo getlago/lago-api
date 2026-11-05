@@ -18,11 +18,11 @@ module Auth
       password_reset_per_ip: Rule.new(limit: 10, period: 1.hour, identifier: :ip),
       password_reset_per_email: Rule.new(limit: 3, period: 1.hour, identifier: :email),
       credentials_per_ip: Rule.new(limit: 20, period: 10.minutes, identifier: :ip),
-      # Self-serve signup. The endpoints reach these rules only through GuardsSignupAttempts::GUARDS, so a later
-      # change to a limit happens here. Counted before reCAPTCHA, to bound the calls to Google:
+      # Self-serve signup, reached only through GuardsSignupAttempts::GUARDS. Counted for each token that will reach
+      # Google, to bound those calls; junk tokens from one address can use it up for the rest of its window:
       signup_captcha_per_ip: Rule.new(limit: 60, period: 10.minutes, identifier: :ip_network),
       signup_captcha_per_ip_block: Rule.new(limit: 300, period: 10.minutes, identifier: :ip_block),
-      # Counted once reCAPTCHA passes, so junk tokens cannot use up the budget of a shared office network:
+      # Counted once reCAPTCHA passes, so tokens Google refuses never use these up:
       signup_per_ip: Rule.new(limit: 10, period: 1.hour, identifier: :ip_network),
       signup_per_ip_daily: Rule.new(limit: 30, period: 1.day, identifier: :ip_network),
       signup_per_ip_block: Rule.new(limit: 50, period: 1.hour, identifier: :ip_block),
@@ -65,6 +65,13 @@ module Auth
       rule = RULES.fetch(rule_name)
       count = store.increment(cache_key(rule_name, *identifiers), 1, expires_in: rule.period)
       count.to_i > rule.limit
+    end
+
+    # True when one more attempt would go over the limit, without recording one.
+    def at_limit?(rule_name, *identifiers)
+      return false if identifiers.any?(&:blank?)
+
+      store.read(cache_key(rule_name, *identifiers), raw: true).to_i >= RULES.fetch(rule_name).limit
     end
 
     # True the first time per name in each period, so an alert that would repeat on every request is reported once. A

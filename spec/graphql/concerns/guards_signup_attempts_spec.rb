@@ -109,11 +109,28 @@ RSpec.describe GuardsSignupAttempts do
     expect(Array.new(10) { code(start) }).to all(be_nil)
   end
 
-  it "bounds the calls to Google before checking the captcha" do
-    60.times { start }
+  context "with tokens Google refuses" do
+    let(:siteverify) { stub_recaptcha_siteverify(action: Signups::VerifyCaptchaService::SIGNUP, score: 0.1) }
+
+    it "bounds the calls to Google" do
+      60.times { start }
+
+      expect(code(start)).to eq("too_many_requests")
+      expect(siteverify).to have_been_requested.times(60)
+    end
+  end
+
+  it "does not count tokens that never reach Google against the Google budget" do
+    61.times { start(token: nil) }
+
+    expect(code(start)).to be_nil
+  end
+
+  it "refuses a network at its signup limit without calling Google" do
+    10.times { start }
 
     expect(code(start)).to eq("too_many_requests")
-    expect(siteverify).to have_been_requested.times(60)
+    expect(siteverify).to have_been_requested.times(10)
   end
 
   it "applies the daily limit across hours" do
@@ -157,6 +174,13 @@ RSpec.describe GuardsSignupAttempts do
     expect(code(confirm.call)).to eq("too_many_requests")
   end
 
+  it "keeps lookups refused by a network's own limit out of its /48's budget" do
+    61.times { run("query { checkThing { ok } }") }
+
+    block_key = Auth::AttemptsThrottle.cache_key(:signup_lookup_per_ip_block, remote_ip)
+    expect(Auth::AttemptsThrottle.store.read(block_key, raw: true).to_i).to eq(60)
+  end
+
   it "limits lookups without calling Google" do
     expect(Array.new(60) { code(run("query { checkThing { ok } }")) }).to all(be_nil)
 
@@ -178,10 +202,10 @@ RSpec.describe GuardsSignupAttempts do
   describe "limit reports" do
     before { allow(Rails.logger).to receive(:warn).and_call_original }
 
-    it "logs the rules without the IP", :sentry do
+    it "logs the rule without the IP", :sentry do
       61.times { run("query { checkThing { ok } }") }
 
-      expect(Rails.logger).to have_received(:warn).with("GuardsSignupAttempts limit reached rules=signup_status_per_ip trusted_ip=false")
+      expect(Rails.logger).to have_received(:warn).with("GuardsSignupAttempts limit reached rule=signup_status_per_ip trusted_ip=false")
       expect(sentry_events).to be_empty
     end
 

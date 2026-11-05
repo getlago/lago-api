@@ -134,6 +134,21 @@ RSpec.describe Auth::AttemptsThrottle do
     expect(signup_rules.values.map(&:identifier).uniq).to match_array(%i[ip_network ip_block email])
   end
 
+  describe ".at_limit?" do
+    it "answers whether one more attempt would go over the limit, without recording one" do
+      9.times { described_class.hit!(:signup_per_ip, "203.0.113.10") }
+      expect(described_class.at_limit?(:signup_per_ip, "203.0.113.10")).to be(false)
+
+      described_class.hit!(:signup_per_ip, "203.0.113.10")
+      expect(Array.new(2) { described_class.at_limit?(:signup_per_ip, "203.0.113.10") }).to eq([true, true])
+      expect(described_class.hit!(:signup_per_ip, "203.0.113.10")).to be(true)
+    end
+
+    it "answers false for a blank identifier" do
+      expect(described_class.at_limit?(:signup_per_ip, nil)).to be(false)
+    end
+  end
+
   describe ".first_in_period?" do
     it "answers true once per name and period" do
       expect(Array.new(2) { described_class.first_in_period?("alert", 10.minutes) }).to eq([true, false])
