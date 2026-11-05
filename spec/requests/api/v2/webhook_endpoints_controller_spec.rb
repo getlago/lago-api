@@ -465,6 +465,23 @@ RSpec.describe Api::V2::WebhookEndpointsController do
           expect(json[:webhook_endpoint][:signing_keys]).to eq([])
         end
       end
+
+      context "when the API key can only read webhook endpoints", :premium do
+        let(:webhook_endpoint) { create(:webhook_endpoint, :standard_webhooks, organization:) }
+
+        before do
+          organization.update!(premium_integrations: organization.premium_integrations.including("api_permissions"))
+          api_key = organization.api_keys.first
+          api_key.update!(permissions: api_key.permissions.merge("webhook_endpoint" => ["read"]))
+        end
+
+        it "refuses the expansion" do
+          request
+
+          expect(response).to have_http_status(:forbidden)
+          expect(json).to eq(code: "write_action_not_allowed_for_webhook_endpoint", details: [])
+        end
+      end
     end
 
     context "when the webhook endpoint does not exist" do

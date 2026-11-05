@@ -18,6 +18,11 @@ module Api
       end
 
       def show
+        # A signing key lets its holder forge webhooks, so a read-only API key cannot expand it.
+        if requested_expansions.include?(:signing_keys) && !current_api_key.permit?(resource_name, "write")
+          return forbidden_error(code: "write_action_not_allowed_for_webhook_endpoint")
+        end
+
         webhook_endpoint = find_webhook_endpoint
 
         if webhook_endpoint
