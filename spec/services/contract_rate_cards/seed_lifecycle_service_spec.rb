@@ -19,7 +19,7 @@ RSpec.describe ContractRateCards::SeedLifecycleService do
     )
   end
   let(:unit) do
-    create(:contract_rate_card_unit, organization:, contract_rate_card:, units: 12, effective_date: contract_rate_card.effective_date)
+    create(:contract_rate_card_term, organization:, contract_rate_card:, units: 12, effective_date: contract_rate_card.effective_date)
   end
   let(:billing_anchor_date) { nil }
 
@@ -38,7 +38,7 @@ RSpec.describe ContractRateCards::SeedLifecycleService do
   end
 
   context "with a later-dated unit" do
-    let(:later_unit) { create(:contract_rate_card_unit, organization:, contract_rate_card:, units: 25, effective_date: Date.new(2026, 12, 1)) }
+    let(:later_unit) { create(:contract_rate_card_term, organization:, contract_rate_card:, units: 25, effective_date: Date.new(2026, 12, 1)) }
 
     before do
       unit
@@ -48,7 +48,7 @@ RSpec.describe ContractRateCards::SeedLifecycleService do
     it "moves only the initial unit row when reseeding the card date" do
       expect(result).to be_success
 
-      expect(contract_rate_card.units.order(:effective_date).pluck(:effective_date, :units)).to eq([
+      expect(contract_rate_card.terms.order(:effective_date).pluck(:effective_date, :units)).to eq([
         [Date.new(2026, 11, 15), 12],
         [Date.new(2026, 12, 1), 25]
       ])
@@ -57,7 +57,7 @@ RSpec.describe ContractRateCards::SeedLifecycleService do
   end
 
   context "when a later unit already has the new card date" do
-    let(:later_unit) { create(:contract_rate_card_unit, organization:, contract_rate_card:, units: 25, effective_date: Date.new(2026, 11, 15)) }
+    let(:later_unit) { create(:contract_rate_card_term, organization:, contract_rate_card:, units: 25, effective_date: Date.new(2026, 11, 15)) }
 
     before do
       unit

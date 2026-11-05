@@ -33,12 +33,12 @@ module ContractRateCards
         end
 
         contract_rate_card.lock!
-        contract_rate_card.units.delete_all(:delete_all) if params.key?(:units)
+        contract_rate_card.terms.delete_all(:delete_all) if params.key?(:units)
         contract_rate_card.billing_anchor_date = params[:billing_anchor_date] if params.key?(:billing_anchor_date)
         contract_rate_card.updated_at = Time.current if params.key?(:units)
         contract_rate_card.save!
         if params.key?(:units) && params[:units].present?
-          contract_rate_card.units.create!(
+          contract_rate_card.terms.create!(
             organization: contract_rate_card.organization,
             units: params[:units],
             effective_date: contract_rate_card.effective_date

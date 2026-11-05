@@ -29,7 +29,7 @@ module Contracts
             **contract.default_rate_card_lifecycle
           )
           if plan_rate_card.units.present?
-            card.units.create!(organization: contract.organization, units: plan_rate_card.units, effective_date: card.effective_date)
+            card.terms.create!(organization: contract.organization, units: plan_rate_card.units, effective_date: card.effective_date)
           end
           copy_rate_phases(plan_rate_card, card)
           ContractRateCards::SeedLifecycleService.call!(contract_rate_card: card)

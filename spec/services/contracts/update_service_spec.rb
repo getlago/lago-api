@@ -313,7 +313,7 @@ RSpec.describe Contracts::UpdateService do
       expect(contract.reload.catalog_plan).to eq(other_plan)
       card = contract.applied_rate_cards.sole
       expect(card.rate_card).to eq(new_rate_card)
-      expect(card.units.sole.units).to eq(3)
+      expect(card.terms.sole.units).to eq(3)
       expect(card.rate_phases.map(&:code)).to eq(["intro"])
     end
 

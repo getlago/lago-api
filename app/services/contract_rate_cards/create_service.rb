@@ -59,7 +59,7 @@ module ContractRateCards
           rate_card:,
           **contract.default_rate_card_lifecycle(billing_anchor_date: params[:billing_anchor_date].presence)
         )
-        contract_rate_card.units.create!(organization:, units: params[:units], effective_date: contract_rate_card.effective_date) if params[:units].present?
+        contract_rate_card.terms.create!(organization:, units: params[:units], effective_date: contract_rate_card.effective_date) if params[:units].present?
 
         # Phases can be authored atomically with the card: a provided sequence
         # goes through the same validations as the single-phase ops (an

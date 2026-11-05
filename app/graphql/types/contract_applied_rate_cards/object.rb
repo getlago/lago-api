@@ -26,7 +26,7 @@ module Types
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
       def units
-        dataloader.with(Sources::ActiveRecordAssociation, :units).load(object).first&.units
+        dataloader.with(Sources::ActiveRecordAssociation, :terms).load(object).first&.units
       end
 
       def rate_phases_count

@@ -2,8 +2,8 @@
 
 require "rails_helper"
 
-RSpec.describe ContractRateCardUnit do
-  subject(:unit) { build(:contract_rate_card_unit) }
+RSpec.describe ContractRateCardTerm do
+  subject(:unit) { build(:contract_rate_card_term) }
 
   describe "enums" do
     it do
@@ -18,7 +18,7 @@ RSpec.describe ContractRateCardUnit do
   describe "associations" do
     it do
       expect(unit).to belong_to(:organization)
-      expect(unit).to belong_to(:contract_rate_card).inverse_of(:units)
+      expect(unit).to belong_to(:contract_rate_card).inverse_of(:terms)
     end
   end
 
@@ -30,7 +30,7 @@ RSpec.describe ContractRateCardUnit do
 
     context "when the organization differs from the parent card" do
       subject(:unit) do
-        build(:contract_rate_card_unit, organization: other_organization, contract_rate_card:)
+        build(:contract_rate_card_term, organization: other_organization, contract_rate_card:)
       end
 
       let(:other_organization) { create(:organization) }
@@ -45,14 +45,14 @@ RSpec.describe ContractRateCardUnit do
     context "when another row already exists for the card and date" do
       subject(:unit) do
         build(
-          :contract_rate_card_unit,
+          :contract_rate_card_term,
           organization: existing_unit.organization,
           contract_rate_card: existing_unit.contract_rate_card,
           effective_date: existing_unit.effective_date
         )
       end
 
-      let(:existing_unit) { create(:contract_rate_card_unit) }
+      let(:existing_unit) { create(:contract_rate_card_term) }
 
       it "is invalid" do
         expect(unit).not_to be_valid
@@ -62,14 +62,14 @@ RSpec.describe ContractRateCardUnit do
   end
 
   describe "application_timing persistence" do
-    let(:unit) { create(:contract_rate_card_unit, application_timing: :next_billing_cycle) }
+    let(:unit) { create(:contract_rate_card_term, application_timing: :next_billing_cycle) }
 
     it "persists next_billing_cycle" do
       expect(unit.reload.application_timing).to eq("next_billing_cycle")
     end
 
     context "when no timing is supplied" do
-      let(:unit) { create(:contract_rate_card_unit) }
+      let(:unit) { create(:contract_rate_card_term) }
 
       it "persists the default timing" do
         expect(unit.reload.application_timing).to eq("current_billing_cycle")
@@ -77,7 +77,7 @@ RSpec.describe ContractRateCardUnit do
     end
 
     context "with an invalid timing" do
-      let(:unit) { build(:contract_rate_card_unit, application_timing: "invalid") }
+      let(:unit) { build(:contract_rate_card_term, application_timing: "invalid") }
 
       it "rejects the value" do
         expect(unit).not_to be_valid

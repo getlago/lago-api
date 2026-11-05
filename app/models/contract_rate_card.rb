@@ -16,7 +16,7 @@ class ContractRateCard < ApplicationRecord
   has_one :product, through: :rate_card
 
   has_many :rate_phases, -> { order(:position) }
-  has_many :units, -> { order(:effective_date, :created_at, :id) }, class_name: "ContractRateCardUnit", inverse_of: :contract_rate_card
+  has_many :terms, -> { order(:effective_date, :created_at, :id) }, class_name: "ContractRateCardTerm", inverse_of: :contract_rate_card
   has_many :billing_segments
   has_many :fees
 

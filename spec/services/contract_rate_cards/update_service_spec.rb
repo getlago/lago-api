@@ -15,7 +15,7 @@ RSpec.describe ContractRateCards::UpdateService do
 
   it "replaces all unit rows while the contract is pending" do
     expect(result).to be_success
-    expect(result.contract_rate_card.reload.units.map { |unit| [unit.units, unit.effective_date] }).to eq([[20, contract_rate_card.effective_date]])
+    expect(result.contract_rate_card.reload.terms.map { |unit| [unit.units, unit.effective_date] }).to eq([[20, contract_rate_card.effective_date]])
   end
 
   context "when the units change after the card was last updated" do
@@ -34,7 +34,7 @@ RSpec.describe ContractRateCards::UpdateService do
   context "when the card has multiple dated unit rows" do
     before do
       create(
-        :contract_rate_card_unit,
+        :contract_rate_card_term,
         organization:,
         contract_rate_card:,
         units: 8,
@@ -44,7 +44,7 @@ RSpec.describe ContractRateCards::UpdateService do
 
     it "replaces the full collection with a row effective on the card start" do
       expect(result).to be_success
-      expect(contract_rate_card.reload.units.map { |unit| [unit.units, unit.effective_date] })
+      expect(contract_rate_card.reload.terms.map { |unit| [unit.units, unit.effective_date] })
         .to eq([[20, contract_rate_card.effective_date]])
     end
   end
@@ -53,8 +53,8 @@ RSpec.describe ContractRateCards::UpdateService do
     let(:params) { {billing_anchor_date: "2026-05-01"} }
 
     it "leaves the existing unit rows untouched" do
-      expect { result }.not_to change { contract_rate_card.units.count }
-      expect(contract_rate_card.units.sole.units).to eq(5)
+      expect { result }.not_to change { contract_rate_card.terms.count }
+      expect(contract_rate_card.terms.sole.units).to eq(5)
     end
   end
 
@@ -62,7 +62,7 @@ RSpec.describe ContractRateCards::UpdateService do
     let(:params) { {units: nil} }
 
     it "clears every unit row" do
-      expect { result }.to change { contract_rate_card.units.count }.from(1).to(0)
+      expect { result }.to change { contract_rate_card.terms.count }.from(1).to(0)
     end
   end
 
@@ -72,7 +72,7 @@ RSpec.describe ContractRateCards::UpdateService do
     it "fails and rolls back the deletion of existing rows" do
       expect(result).not_to be_success
       expect(result.error.messages[:units]).to be_present
-      expect(contract_rate_card.reload.units.sole.units).to eq(5)
+      expect(contract_rate_card.reload.terms.sole.units).to eq(5)
     end
   end
 
@@ -153,7 +153,7 @@ RSpec.describe ContractRateCards::UpdateService do
 
     it "fails with a contract_locked error" do
       expect(result.error.messages[:contract]).to eq(["contract_locked"])
-      expect(contract_rate_card.reload.units.sole.units).to eq(5)
+      expect(contract_rate_card.reload.terms.sole.units).to eq(5)
     end
   end
 

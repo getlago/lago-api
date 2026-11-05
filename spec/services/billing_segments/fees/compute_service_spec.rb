@@ -70,7 +70,7 @@ RSpec.describe BillingSegments::Fees::ComputeService do
         statements = capture_sql { result }
 
         expect(result.fee.units).to eq(15)
-        expect(statements.grep(/FROM "contract_rate_cards_units"/i).size).to eq(1)
+        expect(statements.grep(/FROM "contract_rate_cards_terms"/i).size).to eq(1)
       end
 
       context "without a units row" do
@@ -82,14 +82,14 @@ RSpec.describe BillingSegments::Fees::ComputeService do
           statements = capture_sql { result }
 
           expect(result.fee.units).to eq(BigDecimal(0))
-          expect(statements.grep(/FROM "contract_rate_cards_units"/i).size).to eq(1)
+          expect(statements.grep(/FROM "contract_rate_cards_terms"/i).size).to eq(1)
         end
       end
 
       context "when multiple units rows exist" do
         before do
           create(
-            :contract_rate_card_unit,
+            :contract_rate_card_term,
             organization:,
             contract_rate_card:,
             units: 7,

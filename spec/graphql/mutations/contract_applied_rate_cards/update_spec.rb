@@ -42,7 +42,7 @@ RSpec.describe Mutations::ContractAppliedRateCards::Update do
 
     expect(response["id"]).to eq(contract_rate_card.id)
     expect(response["units"]).to eq(20.0)
-    expect(contract_rate_card.reload.units.sole.units).to eq(20)
+    expect(contract_rate_card.reload.terms.sole.units).to eq(20)
   end
 
   context "when units are cleared" do
@@ -50,7 +50,7 @@ RSpec.describe Mutations::ContractAppliedRateCards::Update do
 
     it "removes the units" do
       expect(execution["data"]["updateContractAppliedRateCard"]["units"]).to be_nil
-      expect(contract_rate_card.reload.units).to be_empty
+      expect(contract_rate_card.reload.terms).to be_empty
     end
   end
 
@@ -103,7 +103,7 @@ RSpec.describe Mutations::ContractAppliedRateCards::Update do
     it "rejects the change as locked" do
       expect_unprocessable_entity(execution, details: {contract: ["contract_locked"]})
 
-      expect(contract_rate_card.reload.units.sole.units).to eq(5)
+      expect(contract_rate_card.reload.terms.sole.units).to eq(5)
     end
   end
 
@@ -113,7 +113,7 @@ RSpec.describe Mutations::ContractAppliedRateCards::Update do
     it "rejects the change as locked" do
       expect_unprocessable_entity(execution, details: {contract: ["contract_locked"]})
 
-      expect(contract_rate_card.reload.units.sole.units).to eq(5)
+      expect(contract_rate_card.reload.terms.sole.units).to eq(5)
     end
   end
 

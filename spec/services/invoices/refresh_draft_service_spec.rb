@@ -385,7 +385,7 @@ RSpec.describe Invoices::RefreshDraftService do
           statements = capture_sql { refresh_result = refresh_service.call }
 
           expect(refresh_result).to be_success
-          expect(statements.grep(/FROM "contract_rate_cards_units"/i).size).to eq(1)
+          expect(statements.grep(/FROM "contract_rate_cards_terms"/i).size).to eq(1)
         end
       end
 

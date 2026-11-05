@@ -87,7 +87,7 @@ RSpec.describe Resolvers::ContractAppliedRateCardResolver do
   context "when multiple units rows exist" do
     before do
       create(
-        :contract_rate_card_unit,
+        :contract_rate_card_term,
         organization:,
         contract_rate_card:,
         units: 7,

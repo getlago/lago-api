@@ -14,7 +14,7 @@ FactoryBot.define do
 
     after(:build) do |contract_rate_card, evaluator|
       if evaluator.units.present?
-        contract_rate_card.units.build(
+        contract_rate_card.terms.build(
           organization: contract_rate_card.organization,
           units: evaluator.units,
           effective_date: contract_rate_card.effective_date

@@ -36,7 +36,7 @@ module V2
 
     # As /applied_rate_cards lists them, with what each card renders.
     def applied_rate_cards
-      model.applied_rate_cards.preload(:rate_card, :contract, :units).order(::CursorPagination::DEFAULT_SORT)
+      model.applied_rate_cards.preload(:rate_card, :contract, :terms).order(::CursorPagination::DEFAULT_SORT)
     end
 
     # Read with_discarded, so that a deleted plan expands with its deleted_at.

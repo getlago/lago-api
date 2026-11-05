@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 FactoryBot.define do
-  factory :contract_rate_card_unit do
+  factory :contract_rate_card_term do
     organization
     contract_rate_card { association(:contract_rate_card, organization:) }
     units { 1 }

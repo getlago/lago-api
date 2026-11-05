@@ -93,7 +93,7 @@ module BillingSegments
       end
 
       def units
-        @units ||= contract_rate_card.units.first&.units || BigDecimal(0)
+        @units ||= contract_rate_card.terms.first&.units || BigDecimal(0)
       end
 
       def charge_model_result

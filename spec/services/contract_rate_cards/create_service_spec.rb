@@ -26,7 +26,7 @@ RSpec.describe ContractRateCards::CreateService do
     card = result.contract_rate_card
     expect(card.contract).to eq(contract)
     expect(card.rate_card).to eq(rate_card)
-    expect(card.units.sole).to have_attributes(units: 10, effective_date: card.effective_date)
+    expect(card.terms.sole).to have_attributes(units: 10, effective_date: card.effective_date)
     expect(card.effective_date).to eq(contract.started_at.in_time_zone(customer.applicable_timezone).to_date)
     expect(card.billing_anchor_date).to eq(contract.effective_billing_anchor_date)
     expect(card.next_billing_at).to eq(contract.started_at)
@@ -37,7 +37,7 @@ RSpec.describe ContractRateCards::CreateService do
     let(:params) { {rate_card_code: rate_card.code} }
 
     it "does not create a units row" do
-      expect(result.contract_rate_card.units).to be_empty
+      expect(result.contract_rate_card.terms).to be_empty
     end
   end
 
@@ -45,7 +45,7 @@ RSpec.describe ContractRateCards::CreateService do
     let(:params) { {rate_card_code: rate_card.code, units: nil} }
 
     it "does not create a units row" do
-      expect(result.contract_rate_card.units).to be_empty
+      expect(result.contract_rate_card.terms).to be_empty
     end
   end
 
@@ -53,7 +53,7 @@ RSpec.describe ContractRateCards::CreateService do
     let(:params) { {rate_card_code: rate_card.code, units: "0"} }
 
     it "persists the zero quantity" do
-      expect(result.contract_rate_card.units.sole.units).to eq(0)
+      expect(result.contract_rate_card.terms.sole.units).to eq(0)
     end
   end
 
