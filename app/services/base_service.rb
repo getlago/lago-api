@@ -56,6 +56,26 @@ class BaseService
     end
   end
 
+  class GoneFailure < FailedResult
+    attr_reader :code
+
+    def initialize(result, code:)
+      @code = code
+
+      super(result, code)
+    end
+  end
+
+  class ConflictFailure < FailedResult
+    attr_reader :code
+
+    def initialize(result, code:)
+      @code = code
+
+      super(result, code)
+    end
+  end
+
   class ValidationFailure < FailedResult
     # The meta keys of the inclusive Integer bounds that the numericality and length validators give
     # as their count, so that a model states each bound once.
@@ -285,6 +305,21 @@ class BaseService
 
   def graphql_context?
     source&.to_sym == :graphql
+  end
+
+  # The unique index that refused a write. A validation checks before writing, so a concurrent
+  # request can pass it with the same value and reach the index. Nil for any other error.
+  def violated_unique_index(error)
+    error.cause.result&.error_field(PG::Result::PG_DIAG_CONSTRAINT_NAME) if error.cause.is_a?(PG::UniqueViolation)
+  end
+
+  # Answers such a write as its uniqueness validation would, on the field of the index
+  # (`{index_name => field}`). Raises any other violation.
+  def unique_index_failure!(error, fields)
+    field = fields[violated_unique_index(error)]
+    raise error unless field
+
+    result.single_validation_failure!(field:, error_code: "value_already_exist")
   end
 
   def at_time_zone(customer: "customers", billing_entity: "billing_entities")

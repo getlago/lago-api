@@ -61,6 +61,8 @@ module RateCards
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue ActiveRecord::RecordNotUnique => e
+      unique_index_failure!(e, "index_rate_cards_on_organization_id_and_code" => :code)
     rescue BaseService::FailedResult => e
       result.fail_with_error!(e.result.error)
     end

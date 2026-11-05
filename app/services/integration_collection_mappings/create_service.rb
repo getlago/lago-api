@@ -4,32 +4,30 @@ module IntegrationCollectionMappings
   class CreateService < BaseService
     Result = BaseResult[:integration_collection_mapping]
 
-    attr_reader :params
-
-    def initialize(params:)
+    def initialize(organization:, params:)
+      @organization = organization
       @params = params
 
       super
     end
 
     def call
-      integration = Integrations::BaseIntegration.find_by(id: params[:integration_id])
+      integration = organization.integrations.find_by(id: params[:integration_id])
 
       return result.not_found_failure!(resource: "integration") unless integration
 
       if params[:billing_entity_id]
-        billing_entity = integration.organization.billing_entities.find_by(id: params[:billing_entity_id])
+        billing_entity = organization.billing_entities.find_by(id: params[:billing_entity_id])
         return result.not_found_failure!(resource: "billing_entity") unless billing_entity
       end
 
       integration_collection_mapping = IntegrationCollectionMappings::Factory.new_instance(integration:).new(
-        organization_id: params[:organization_id],
-        integration_id: params[:integration_id],
+        organization:,
+        integration:,
         mapping_type: params[:mapping_type],
-        billing_entity_id: params[:billing_entity_id]
+        billing_entity:
       )
 
-      integration_collection_mapping.organization = integration.organization
       integration_collection_mapping.external_id = params[:external_id] if params.key?(:external_id)
       if params.key?(:external_account_code)
         integration_collection_mapping.external_account_code = params[:external_account_code]
@@ -47,5 +45,9 @@ module IntegrationCollectionMappings
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     end
+
+    private
+
+    attr_reader :organization, :params
   end
 end

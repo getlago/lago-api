@@ -34,6 +34,9 @@ module Api
       end
 
       def show
+        # As in index, whose query checks it: the logs live in ClickHouse.
+        return forbidden_error(code: "feature_unavailable") unless SecurityLogsQuery.available?
+
         security_log = current_organization.security_logs.find_by(
           log_id: params[:log_id]
         )

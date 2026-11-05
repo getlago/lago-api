@@ -353,5 +353,25 @@ RSpec.describe Invoices::Payments::AdyenService do
         expect(result.error.error_message).to eq("error")
       end
     end
+
+    context "when Adyen refuses the payment link" do
+      before do
+        allow(payment_links_api).to receive(:payment_links)
+          .and_return(generate(:adyen_payment_links_error_response))
+      end
+
+      it "returns a third-party failure, whose webhook the caller delivers" do
+        result = nil
+
+        expect { result = described_class.call(:generate_payment_url, invoice, payment_intent) }
+          .not_to have_enqueued_job(SendWebhookJob)
+        expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+        expect(result.error).to have_attributes(
+          third_party: "Adyen",
+          error_code: "validation",
+          error_message: "There are no payment methods available for the given parameters."
+        )
+      end
+    end
   end
 end

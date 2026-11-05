@@ -321,6 +321,12 @@ module Customers
 
       # NOTE: Create service is modifying an other instance of the provider customer
       customer.reload
+    rescue BaseService::ThirdPartyFailure => e
+      # v1 answered an Adyen or Moneyhash refusal of a synchronous sync with this validation error
+      # before it was a third-party failure. A GoCardless refusal answered a 500.
+      raise unless %w[Adyen Moneyhash].include?(e.third_party)
+
+      result.single_validation_failure!(error_code: e.error_code).raise_if_error!
     end
 
     def discard_payment_methods(payment_methods)

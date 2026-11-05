@@ -5,8 +5,8 @@ module Integrations
     module Invoices
       module Hubspot
         class CreateCustomerAssociationService < BaseService
-          def action_path
-            "v1/#{provider}/association"
+          def action_name
+            "set-association"
           end
 
           def call
@@ -16,7 +16,7 @@ module Integrations
 
             throttle!(:hubspot)
 
-            http_client.put_with_response(payload.customer_association_body, headers)
+            trigger_action(payload.customer_association_body)
 
             result
           rescue LagoHttpClient::HttpError => e

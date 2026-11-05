@@ -375,4 +375,28 @@ RSpec.describe RateCardRates::CreateService do
       expect(result.error.messages[:rate_properties]).to be_present
     end
   end
+
+  context "when a concurrent request creates the same code" do
+    before do
+      create(:rate_card_rate, organization:, rate_card:, code: "standard_price", effective_from: 1.month.from_now)
+      # The uniqueness validation ran before the concurrent request committed.
+      allow_any_instance_of(ActiveRecord::Validations::UniquenessValidator).to receive(:validate_each) # rubocop:disable RSpec/AnyInstance
+    end
+
+    it "returns the validation error of a taken value" do
+      expect(result.error.messages).to eq(code: ["value_already_exist"])
+    end
+  end
+
+  context "when a concurrent request creates a rate on the same date" do
+    before do
+      create(:rate_card_rate, organization:, rate_card:, code: "other_price", effective_from: params[:effective_from])
+      # The uniqueness validation ran before the concurrent request committed.
+      allow_any_instance_of(RateCardRate).to receive(:validate_effective_from_is_appended) # rubocop:disable RSpec/AnyInstance
+    end
+
+    it "returns the validation error of a taken value" do
+      expect(result.error.messages).to eq(effective_from: ["value_already_exist"])
+    end
+  end
 end

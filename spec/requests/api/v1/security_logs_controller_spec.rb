@@ -174,6 +174,17 @@ RSpec.describe Api::V1::SecurityLogsController, clickhouse: true do
         expect(json[:security_log][:log_id]).to eq(stored_ids.first)
       end
 
+      context "when ClickHouse is not available" do
+        before { allow(SecurityLogsQuery).to receive(:available?).and_return(false) }
+
+        it "returns a forbidden error, as the list does" do
+          subject
+
+          expect(response).to have_http_status(:forbidden)
+          expect(json).to eq(status: 403, error: "Forbidden", code: "feature_unavailable")
+        end
+      end
+
       context "when security log does not exist" do
         subject { get_with_token(organization, "/api/v1/security_logs/unknown", params) }
 

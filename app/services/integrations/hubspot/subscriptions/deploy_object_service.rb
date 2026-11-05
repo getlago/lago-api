@@ -8,8 +8,8 @@ module Integrations
 
         VERSION = 1
 
-        def action_path
-          "v1/hubspot/object"
+        def action_name
+          "create-object"
         end
 
         def call
@@ -27,7 +27,7 @@ module Integrations
 
           throttle!(:hubspot)
 
-          response = http_client.post_with_response(payload, headers)
+          response = trigger_action(payload)
           ActiveRecord::Base.transaction do
             save_object_type_id(JSON.parse(response.body)["objectTypeId"])
           end
@@ -46,14 +46,6 @@ module Integrations
           integration.subscriptions_object_type_id = object_type_id
           integration.subscriptions_properties_version = VERSION
           integration.save!
-        end
-
-        def headers
-          {
-            "Provider-Config-Key" => "hubspot",
-            "Authorization" => "Bearer #{secret_key}",
-            "Connection-Id" => integration.connection_id
-          }
         end
 
         def payload
