@@ -219,6 +219,14 @@ RSpec.describe Mutations::LoginUser do
 
         expect(result["errors"].first.dig("extensions", "code")).to eq("too_many_requests")
       end
+
+      it "keeps attempts refused by a /64's own limit out of its /48's budget" do
+        151.times { |i| login("badpassword", email: "unknown-#{i}@example.com", request: request_from("2001:db8:1:2::#{i + 1}")) }
+
+        result = login("ILoveLago", request: request_from("2001:db8:1:ff::1"))
+
+        expect(result["data"]["loginUser"]["token"]).to be_present
+      end
     end
 
     context "when self-serve is off" do
