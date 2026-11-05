@@ -3,8 +3,11 @@
 # Company domains refused by mistake go into LAGO_SIGNUP_ALLOWED_EMAIL_DOMAINS, never here: they name
 # prospects and this repository is public.
 # Outlook.com, Yahoo, AOL, GMX and Posteo: their country domains whose MX is their consumer mail service (2026-11).
+# Others: consumer mailbox domains of ISPs, national and privacy providers whose own staff mail is on another domain.
 denied:
+  - 012.net.il
   - 126.com
+  - abv.bg
   - ameritech.net
   - aol.at
   - aol.be
@@ -35,12 +38,39 @@ denied:
   - aol.ru
   - aol.se
   - aol.tw
+  - aon.at
+  - atlas.cz
+  - au.com
+  - bbox.fr
+  - bell.net
+  - bezeqint.net
+  - biglobe.ne.jp
+  - blu.it
   - btinternet.com
+  - btopenworld.com
   - caramail.com
   - caramail.fr
+  - centurylink.net
+  - chello.at
+  - citromail.hu
+  - cogeco.ca
   - compuserve.com
   - cs.com
+  - daum.net
+  - disroot.org
+  - docomo.ne.jp
+  - dodo.com.au
+  - email.cz
+  - email.de
+  - email.it
+  - eonet.ne.jp
+  - etik.com
+  - ezweb.ne.jp
+  - fastwebnet.it
+  - fibertel.com.ar
   - flash.net
+  - foxmail.com
+  - giallo.it
   - gmx.at
   - gmx.biz
   - gmx.ca
@@ -68,6 +98,10 @@ denied:
   - gmx.tm
   - gmx.tw
   - hey.com
+  - hinet.net
+  - hispeed.ch
+  - hol.gr
+  - hot.ee
   - hotmail.ac
   - hotmail.as
   - hotmail.at
@@ -138,6 +172,21 @@ denied:
   - hotmail.sk
   - hotmail.ua
   - hotmail.vu
+  - hushmail.me
+  - i.softbank.jp
+  - iinet.net.au
+  - inbox.lv
+  - interia.eu
+  - interia.pl
+  - internet.ru
+  - internode.on.net
+  - inwind.it
+  - iol.it
+  - jcom.home.ne.jp
+  - kabelbw.de
+  - kabelmail.de
+  - kakao.com
+  - kpnmail.nl
   - live.at
   - live.be
   - live.ch
@@ -167,11 +216,32 @@ denied:
   - live.ph
   - live.ru
   - live.se
+  - magenta.de
+  - mail.bg
+  - mail.de
+  - mail.ee
+  - mail.kz
+  - mailo.com
+  - mediacombb.net
+  - meta.ua
+  - mindspring.com
   - msn.nl
+  - narod.ru
   - naver.com
+  - netcourrier.com
   - netscape.com
   - netscape.net
+  - netvigator.com
+  - netvision.net.il
+  - nifty.com
+  - numericable.fr
   - nvbell.net
+  - ocn.ne.jp
+  - onet.eu
+  - online.de
+  - op.pl
+  - optimum.net
+  - otenet.gr
   - outlook.at
   - outlook.be
   - outlook.bg
@@ -223,8 +293,13 @@ denied:
   - outlook.si
   - outlook.sk
   - outlook.uy
+  - ozemail.com.au
   - pacbell.net
   - passport.com
+  - plala.or.jp
+  - plusnet.com
+  - poczta.fm
+  - post.cz
   - posteo.ae
   - posteo.af
   - posteo.at
@@ -287,16 +362,53 @@ denied:
   - posteo.uk
   - posteo.us
   - prodigy.net
+  - prodigy.net.mx
   - proton.me
   - protonmail.ch
+  - q.com
+  - qwest.net
+  - riseup.net
+  - roadrunner.com
+  - runbox.com
+  - scarlet.be
+  - shaw.ca
+  - sina.cn
+  - singnet.com.sg
   - snet.net
+  - so-net.ne.jp
+  - softbank.ne.jp
+  - spectrum.net
+  - speedy.com.ar
+  - suddenlink.net
   - swbell.net
+  - t-online.hu
+  - talk21.com
+  - talktalk.net
+  - telefonica.net
+  - telkomsa.net
+  - telus.net
+  - tpg.com.au
+  - tuta.com
+  - uol.com.br
+  - upcmail.nl
+  - virgin.net
   - virginmedia.com
+  - vodafonemail.de
+  - vodamail.co.za
+  - volny.cz
+  - vp.pl
   - wans.net
+  - webmail.co.za
+  - westnet.com.au
   - windowslive.com
   - windowslive.es
   - wmconnect.com
+  - wo.cn
   - wow.com
+  - wp.pl
+  - xs4all.nl
+  - xtra.co.nz
+  - ya.ru
   - yahoo.at
   - yahoo.be
   - yahoo.bg
@@ -326,6 +438,7 @@ denied:
   - yahoo.ie
   - yahoo.lt
   - yahoo.lv
+  - yahoo.ne.jp
   - yahoo.nl
   - yahoo.no
   - yahoo.pl
@@ -333,4 +446,12 @@ denied:
   - yahoo.ro
   - yahoo.se
   - yahoo.sk
+  - yandex.com.tr
+  - yandex.kz
+  - ybb.ne.jp
   - ygm.com
+  - ymobile.ne.jp
+  - zaq.ne.jp
+  - ziggo.nl
+  - zohomail.eu
+  - zohomail.in
