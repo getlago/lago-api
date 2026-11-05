@@ -22,6 +22,21 @@ RSpec.describe Resolvers::ContractUsagesResolver do
       rate_properties: {"amount" => "2"})
   end
 
+  # A second, differently-scoped card - referenced only by tests that need to prove a filter
+  # argument actually reaches the service and excludes it, not just that the matching card appears.
+  let(:categorized_product) { create(:product, organization:, billable_metric: create(:billable_metric, organization:)) }
+  let(:categorized_rate_card) { create(:rate_card, organization:, product: categorized_product, currency: "EUR") }
+  let(:categorized_contract_rate_card) do
+    create(:contract_rate_card, organization:, contract:, rate_card: categorized_rate_card,
+      effective_date: Date.new(2027, 1, 1), billing_anchor_date: Date.new(2027, 1, 1))
+  end
+
+  def create_excluded_card
+    categorized_contract_rate_card
+    create(:rate_card_rate, organization:, rate_card: categorized_rate_card,
+      effective_from: Time.zone.parse("2027-01-01"), rate_properties: {"amount" => "9"})
+  end
+
   let(:query) do
     <<~GQL
       query($contractId: ID!, $withoutProductCategory: Boolean) {
@@ -58,6 +73,42 @@ RSpec.describe Resolvers::ContractUsagesResolver do
       expect(collection.sole).to include("rateCardCode" => rate_card.code, "productName" => product.name, "units" => 1.0, "amountCents" => "200")
     end
 
+    it "excludes a categorized card when withoutProductCategory is true, proving the argument reaches the service" do
+      create_excluded_card
+
+      result = execute_graphql(
+        current_user: membership.user, current_organization: organization,
+        permissions: required_permission, query:,
+        variables: {contractId: contract.id, withoutProductCategory: true}
+      )
+
+      expect(result["data"]["contractUsages"]["collection"].sole["rateCardCode"]).to eq(rate_card.code)
+    end
+
+    context "with searchTerm" do
+      let(:query) do
+        <<~GQL
+          query($contractId: ID!, $searchTerm: String) {
+            contractUsages(contractId: $contractId, searchTerm: $searchTerm) {
+              collection { rateCardCode }
+            }
+          }
+        GQL
+      end
+
+      it "matches on product name and excludes non-matching cards" do
+        create_excluded_card
+
+        result = execute_graphql(
+          current_user: membership.user, current_organization: organization,
+          permissions: required_permission, query:,
+          variables: {contractId: contract.id, searchTerm: product.name}
+        )
+
+        expect(result["data"]["contractUsages"]["collection"].sole["rateCardCode"]).to eq(rate_card.code)
+      end
+    end
+
     context "with page beyond the available rows" do
       let(:query) do
         <<~GQL
@@ -82,6 +133,50 @@ RSpec.describe Resolvers::ContractUsagesResolver do
       end
     end
 
+    context "with page 0" do
+      let(:query) do
+        <<~GQL
+          query($contractId: ID!, $page: Int) {
+            contractUsages(contractId: $contractId, page: $page) {
+              collection { rateCardCode }
+            }
+          }
+        GQL
+      end
+
+      it "returns a validation error instead of a negative-offset slice" do
+        result = execute_graphql(
+          current_user: membership.user, current_organization: organization,
+          permissions: required_permission, query:,
+          variables: {contractId: contract.id, page: 0}
+        )
+
+        expect_graphql_error(result:, message: "Unprocessable Entity")
+      end
+    end
+
+    context "with a non-positive limit" do
+      let(:query) do
+        <<~GQL
+          query($contractId: ID!, $limit: Int) {
+            contractUsages(contractId: $contractId, limit: $limit) {
+              collection { rateCardCode }
+            }
+          }
+        GQL
+      end
+
+      it "returns a validation error instead of crashing" do
+        result = execute_graphql(
+          current_user: membership.user, current_organization: organization,
+          permissions: required_permission, query:,
+          variables: {contractId: contract.id, limit: 0}
+        )
+
+        expect_graphql_error(result:, message: "Unprocessable Entity")
+      end
+    end
+
     context "with withoutProductFilter (the \"Not defined\" option)" do
       let(:query) do
         <<~GQL
@@ -93,7 +188,14 @@ RSpec.describe Resolvers::ContractUsagesResolver do
         GQL
       end
 
-      it "matches rate cards with no product filter" do
+      it "matches rate cards with no product filter, excluding a filtered one" do
+        product_filter = create(:product_filter, organization:, product: categorized_product)
+        filtered_rate_card = create(:rate_card, organization:, product: categorized_product, product_filter:, currency: "EUR")
+        create(:contract_rate_card, organization:, contract:, rate_card: filtered_rate_card,
+          effective_date: Date.new(2027, 1, 1), billing_anchor_date: Date.new(2027, 1, 1))
+        create(:rate_card_rate, organization:, rate_card: filtered_rate_card,
+          effective_from: Time.zone.parse("2027-01-01"), rate_properties: {"amount" => "9"})
+
         result = execute_graphql(
           current_user: membership.user, current_organization: organization,
           permissions: required_permission, query:,
