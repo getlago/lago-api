@@ -28,15 +28,49 @@ RSpec.describe Signups::DeliverVerificationJob do
     expect(SendEmailJob).not_to have_been_enqueued
   end
 
-  context "when delivery times out" do
+  {
+    "a timeout" => Net::OpenTimeout,
+    "a refused connection" => Errno::ECONNREFUSED,
+    "a reset connection" => Errno::ECONNRESET,
+    "an unreachable host" => Errno::EHOSTUNREACH,
+    "a busy relay" => Net::SMTPServerBusy.new("busy")
+  }.each do |reason, error|
+    context "when delivery fails on #{reason}" do
+      before do
+        allow_any_instance_of(Mail::Message).to receive(:deliver).and_raise(error) # rubocop:disable RSpec/AnyInstance
+      end
+
+      it "retries later" do
+        described_class.perform_now(pending_signup.id)
+
+        expect(described_class).to have_been_enqueued.with(pending_signup.id)
+      end
+    end
+  end
+
+  context "when the SMTP server refuses the message for good" do
     before do
-      allow_any_instance_of(Mail::Message).to receive(:deliver).and_raise(Net::OpenTimeout) # rubocop:disable RSpec/AnyInstance
+      allow_any_instance_of(Mail::Message).to receive(:deliver).and_raise(Net::SMTPFatalError.new("fatal")) # rubocop:disable RSpec/AnyInstance
     end
 
-    it "retries later" do
-      described_class.perform_now(pending_signup.id)
+    it "does not retry" do
+      expect { described_class.perform_now(pending_signup.id) }.to raise_error(Net::SMTPFatalError)
+      expect(described_class).not_to have_been_enqueued
+    end
+  end
 
-      expect(described_class).to have_been_enqueued.with(pending_signup.id)
+  context "when the relay is still busy on the 10th attempt" do
+    let(:job) { described_class.new(pending_signup.id) }
+
+    before do
+      allow_any_instance_of(Mail::Message).to receive(:deliver).and_raise(Net::SMTPServerBusy.new("busy")) # rubocop:disable RSpec/AnyInstance
+      # 9 retries waited n**4 + 2 s for n = 1..9 (15_351 s), plus up to 15% jitter: 4.3 to 4.9 h after Step 1
+      job.exception_executions["[Net::SMTPServerBusy]"] = 9
+    end
+
+    it "gives up, so the job reaches the dead set" do
+      expect { job.perform_now }.to raise_error(Net::SMTPServerBusy)
+      expect(described_class).not_to have_been_enqueued
     end
   end
 
